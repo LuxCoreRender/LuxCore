@@ -125,8 +125,9 @@ Spectrum MatteMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MatteMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & REFLECT) || (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
@@ -179,7 +180,11 @@ Spectrum MirrorMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & REFLECT))
+		return Spectrum();
+
 	*event = SPECULAR | REFLECT;
 
 	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
@@ -220,7 +225,8 @@ Spectrum GlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
@@ -237,7 +243,19 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return Spectrum();
+	}
+
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
@@ -315,7 +333,8 @@ Spectrum ArchGlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
@@ -332,7 +351,19 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return Spectrum();
+	}
+
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
@@ -497,12 +528,16 @@ Vector MetalMaterial::GlossyReflection(const Vector &localFixedDir, const float 
 Spectrum MetalMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & REFLECT))
+		return Spectrum();
+
 	const float e = 1.f / (Max(exponent->GetFloatValue(hitPoint), 0.f) + 1.f);
 	*localSampledDir = GlossyReflection(localFixedDir, e, u0, u1);
 
 	if (localSampledDir->z * localFixedDir.z > 0.f) {
-		*event = SPECULAR | REFLECT;
+		*event = GLOSSY | REFLECT;
 		*pdfW = 1.f;
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
@@ -636,7 +671,8 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
@@ -653,7 +689,7 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 
 	// Sample the first material
 	Spectrum result = matFirst->Sample(hitPoint, localFixedDir, localSampledDir,
-			u0, u1, passThroughEventFirst, pdfW, absCosSampledDir, event);
+			u0, u1, passThroughEventFirst, pdfW, absCosSampledDir, event, requestedEvent);
 	if (result.Black())
 		return Spectrum();
 	*pdfW *= weightFirst;
@@ -763,7 +799,11 @@ Spectrum NullMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & TRANSMIT))
+		return Spectrum();
+
 	//throw std::runtime_error("Internal error, called NullMaterial::Sample()");
 
 	*localSampledDir = -localFixedDir;
@@ -816,7 +856,8 @@ Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -825,14 +866,31 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	*pdfW *= .5f;
-
 	const Spectrum r = Kr->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum t = Kt->GetSpectrumValue(hitPoint).Clamp() * 
 		// Energy conservation
 		(Spectrum(1.f) - r);
 
-	if (passThroughEvent < .5f) {
+	const bool isKrBlack = r.Black();
+	const bool isKtBlack = t.Black();
+
+	// Decide to transmit or reflect
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return Spectrum();
+	}
+
+	*pdfW *= threshold;
+
+	if (passThroughEvent < threshold) {
 		*localSampledDir *= Sgn(localFixedDir.z);
 		*event = DIFFUSE | REFLECT;
 		return r * INV_PI;
@@ -1055,8 +1113,9 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & REFLECT) || (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
@@ -1259,8 +1318,9 @@ Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & REFLECT) || fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
@@ -1456,7 +1516,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -1489,7 +1550,19 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 	const float coso = fabsf(localFixedDir.z);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return Spectrum();
+	}
+
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
