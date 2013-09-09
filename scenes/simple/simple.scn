@@ -2,8 +2,13 @@ scene.camera.lookat = 5.951 -7.663 6.017 0.0 0.0 1.0
 # Orthographic-like camera
 #scene.camera.lookat = 50.951 -70.663 60.017 0.0 0.0 1.0
 #scene.camera.fieldofview = 5.0
+################################################################################
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.aglass.type = archglass
+scene.materials.aglass.kr = 0.0 0.0 0.0
+scene.materials.aglass.kt = 0.0 0.0 0.8
+scene.materials.aglass.iorinside = 1
 scene.materials.redmatte.type = matte
 scene.materials.redmatte.kd = 0.75 0.0 0.0
 scene.materials.blumatte.type = matte
@@ -14,6 +19,7 @@ scene.materials.greenmatte.kd = 0.0 0.57 0.0
 scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = 120.0 120.0 120.0
 scene.materials.whitelight.kd = 0.0 0.0 0.0
+################################################################################
 scene.objects.lightplanes.ply = scenes/simple/simple-lights.ply
 scene.objects.lightplanes.material = whitelight
 scene.objects.box1.ply = scenes/simple/simple-mat-cube1.ply
@@ -24,3 +30,8 @@ scene.objects.box3.ply = scenes/simple/simple-mat-back2.ply
 scene.objects.box3.material = blumatte
 scene.objects.box4.ply = scenes/simple/simple-mat-back.ply
 scene.objects.box4.material = whitematte
+################################################################################
+#scene.infinitelight.file = scenes/simple-mat/sky.exr
+##scene.infinitelight.file = scenes/simple-mat/arch.exr
+##scene.infinitelight.file = scenes/simple-mat/image.png
+#scene.infinitelight.gain = 2.0 2.0 2.0

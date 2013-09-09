@@ -417,10 +417,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
 
 				// Keep the same path state
-			}
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH) && (PARAM_DL_LIGHT_COUNT > 0)
-			else
+			} else
 #endif
 			{
 #if (PARAM_DL_LIGHT_COUNT > 0)
