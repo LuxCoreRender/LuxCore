@@ -56,13 +56,47 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
 
 	//--------------------------------------------------------------------------
+	// Create the filter
+	//--------------------------------------------------------------------------
+
+	const FilterType filterType = Filter::String2FilterType(cfg.GetString("film.filter.type", "GAUSSIAN"));
+	const float filterWidth = cfg.GetFloat("film.filter.width", 1.5f);
+
+	Filter *filter;
+	switch (filterType) {
+		case FILTER_NONE:
+			filter = NULL;
+			break;
+		case FILTER_BOX:
+			filter = new BoxFilter(filterWidth, filterWidth);
+			break;
+		case FILTER_GAUSSIAN: {
+			const float alpha = cfg.GetFloat("film.filter.gaussian.alpha", 2.f);
+			filter = new GaussianFilter(filterWidth, filterWidth, alpha);
+			break;
+		}
+		case FILTER_MITCHELL: {
+			const float b = cfg.GetFloat("film.filter.mitchell.b", 1.f / 3.f);
+			const float c = cfg.GetFloat("film.filter.mitchell.c", 1.f / 3.f);
+			filter = new MitchellFilter(filterWidth, filterWidth, b, c);
+			break;
+		}
+		case FILTER_MITCHELL_SS: {
+			const float b = cfg.GetFloat("film.filter.mitchellss.b", 1.f / 3.f);
+			const float c = cfg.GetFloat("film.filter.mitchellss.c", 1.f / 3.f);
+			filter = new MitchellFilterSS(filterWidth, filterWidth, b, c);
+			break;
+		}
+		default:
+			throw std::runtime_error("Unknown filter type: " + boost::lexical_cast<std::string>(filterType));
+	}
+
+	//--------------------------------------------------------------------------
 	// Create the Film
 	//--------------------------------------------------------------------------
 
 	film = new Film(filmFullWidth, filmFullHeight);
-
-	const FilterType filterType = Filter::String2FilterType(cfg.GetString("film.filter.type", "GAUSSIAN"));
-	film->SetFilterType(filterType);
+	film->SetFilter(filter);
 
 	const int toneMapType = cfg.GetInt("film.tonemap.type", 0);
 	if (toneMapType == 0) {

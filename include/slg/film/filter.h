@@ -54,12 +54,29 @@ public:
 	virtual FilterType GetType() const = 0;
 	virtual float Evaluate(const float x, const float y) const = 0;
 
+	virtual Filter *Clone() const = 0;
+
 	static FilterType String2FilterType(const std::string &type);
 
 	// Filter Public Data
 	const float xWidth, yWidth;
 	const float invXWidth, invYWidth;
 };
+
+class PrecomputedFilter {
+public:
+	PrecomputedFilter(const Filter *filter, const u_int size);
+	~PrecomputedFilter();
+
+	float Evaluate(const float x, const float y) const;
+
+private:
+	const Filter *filter;
+	u_int size;
+
+	float *lut;
+};
+
 
 class BoxFilter : public Filter {
 public:
@@ -74,6 +91,8 @@ public:
 	float Evaluate(const float x, const float y) const {
 		return 1.f;
 	}
+
+	virtual Filter *Clone() const { return new BoxFilter(); }
 };
 
 class GaussianFilter : public Filter {
@@ -92,6 +111,8 @@ public:
 	float Evaluate(const float x, const float y) const {
 		return Gaussian(x, expX) * Gaussian(y, expY);
 	}
+
+	virtual Filter *Clone() const { return new GaussianFilter(xWidth, yWidth, alpha); }
 
 private:
 	// GaussianFilter Private Data
@@ -121,6 +142,8 @@ public:
 		return Mitchell1D(distance);
 
 	}
+
+	virtual Filter *Clone() const { return new MitchellFilter(xWidth, yWidth, B, C); }
 
 private:
 	float Mitchell1D(float x) const {
@@ -160,6 +183,8 @@ public:
 			a1 * Mitchell1D(dist + 2.f / 3.f);
 	}
 
+	virtual Filter *Clone() const { return new MitchellFilterSS(xWidth, yWidth, B, C); }
+
 private:
 	float Mitchell1D(float x) const {
 		if (x >= 1.f)
@@ -183,34 +208,7 @@ private:
 
 class FilterLUT {
 public:
-	FilterLUT(const Filter &filter, const float offsetX, const float offsetY) {
-		const int x0 = luxrays::Ceil2Int(offsetX - filter.xWidth);
-		const int x1 = luxrays::Floor2Int(offsetX + filter.xWidth);
-		const int y0 = luxrays::Ceil2Int(offsetY - filter.yWidth);
-		const int y1 = luxrays::Floor2Int(offsetY + filter.yWidth);
-		lutWidth = x1 - x0 + 1;
-		lutHeight = y1 - y0 + 1;
-		lut = new float[lutWidth * lutHeight];
-
-		float filterNorm = 0.f;
-		unsigned int index = 0;
-		for (int iy = y0; iy <= y1; ++iy) {
-			for (int ix = x0; ix <= x1; ++ix) {
-				const float filterVal = filter.Evaluate(fabsf(ix - offsetX), fabsf(iy - offsetY));
-				filterNorm += filterVal;
-				lut[index++] = filterVal;
-			}
-		}
-
-		// Normalize LUT
-		filterNorm = 1.f / filterNorm;
-		index = 0;
-		for (int iy = y0; iy <= y1; ++iy) {
-			for (int ix = x0; ix <= x1; ++ix)
-				lut[index++] *= filterNorm;
-		}
-	}
-
+	FilterLUT(const Filter &filter, const float offsetX, const float offsetY);
 	~FilterLUT() {
 		delete[] lut;
 	}
@@ -249,34 +247,8 @@ inline std::ostream &operator<<(std::ostream &os, const FilterLUT &f) {
 
 class FilterLUTs {
 public:
-	FilterLUTs(const Filter &filter, const unsigned int size) {
-		lutsSize = size + 1;
-		step = 1.f / float(size);
-
-		luts = new FilterLUT*[lutsSize * lutsSize];
-
-		for (unsigned int iy = 0; iy < lutsSize; ++iy) {
-			for (unsigned int ix = 0; ix < lutsSize; ++ix) {
-				const float x = ix * step - 0.5f + step / 2.f;
-				const float y = iy * step - 0.5f + step / 2.f;
-
-				luts[ix + iy * lutsSize] = new FilterLUT(filter, x, y);
-				/*std::cout << "===============================================\n";
-				std::cout << ix << "," << iy << "\n";
-				std::cout << x << "," << y << "\n";
-				std::cout << *luts[ix + iy * lutsSize] << "\n";
-				std::cout << "===============================================\n";*/
-			}
-		}
-	}
-
-	~FilterLUTs() {
-		for (unsigned int iy = 0; iy < lutsSize; ++iy)
-			for (unsigned int ix = 0; ix < lutsSize; ++ix)
-				delete luts[ix + iy * lutsSize];
-
-		delete[] luts;
-	}
+	FilterLUTs(const Filter &filter, const unsigned int size);
+	~FilterLUTs() ;
 
 	const FilterLUT *GetLUT(const float x, const float y) const {
 		const int ix = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (x + 0.5f)), lutsSize - 1));

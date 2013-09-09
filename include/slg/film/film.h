@@ -98,8 +98,7 @@ public:
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
-	void SetFilterType(const FilterType filter);
-	FilterType GetFilterType() const { return filterType; }
+	void SetFilter(Filter *flt);
 	const Filter *GetFilter() const { return filter; }
 
 	const ToneMapParams *GetToneMapParams() const { return toneMapParams; }
@@ -110,11 +109,11 @@ public:
 	}
 
 	void CopyDynamicSettings(const Film &film) {
-		SetPerPixelNormalizedBufferFlag(HasPerPixelNormalizedBuffer());
-		SetPerScreenNormalizedBufferFlag(HasPerScreenNormalizedBuffer());
-		SetFrameBufferFlag(HasFrameBuffer());
+		SetPerPixelNormalizedBufferFlag(film.HasPerPixelNormalizedBuffer());
+		SetPerScreenNormalizedBufferFlag(film.HasPerScreenNormalizedBuffer());
+		SetFrameBufferFlag(film.HasFrameBuffer());
 		SetAlphaChannelFlag(film.IsAlphaChannelEnabled());
-		SetFilterType(film.GetFilterType());
+		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetToneMapParams(*(film.GetToneMapParams()));
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 	}
@@ -177,6 +176,7 @@ public:
 
 	void AddSample(const FilmBufferType type,
 		const u_int x, const u_int y,
+		const float u0, const float u1,
 		const luxrays::Spectrum &radiance, const float alpha,
 		const float weight = 1.f);
 
@@ -237,7 +237,6 @@ private:
 	float gamma;
 	float gammaTable[GAMMA_TABLE_SIZE];
 
-	FilterType filterType;
 	ToneMapParams *toneMapParams;
 
 	// Two sample buffers, one PER_PIXEL_NORMALIZED and the other PER_SCREEN_NORMALIZED
@@ -248,6 +247,7 @@ private:
 	ConvergenceTest *convTest;
 
 	Filter *filter;
+	PrecomputedFilter *precompFilter;
 	FilterLUTs *filterLUTs;
 
 	bool enableAlphaChannel, enabledOverlappedScreenBufferUpdate,

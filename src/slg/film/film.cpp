@@ -43,8 +43,9 @@ Film::Film(const unsigned int w, const unsigned int h) {
 	enabledOverlappedScreenBufferUpdate = true;
 
 	filter = NULL;
+	precompFilter = NULL;
 	filterLUTs = NULL;
-	SetFilterType(FILTER_GAUSSIAN);
+	SetFilter(new GaussianFilter(1.5f, 1.5f, 2.f));
 
 	toneMapParams = new LinearToneMapParams();
 
@@ -63,6 +64,7 @@ Film::~Film() {
 	delete frameBuffer;
 
 	delete filterLUTs;
+	delete precompFilter;
 	delete filter;
 }
 
@@ -121,36 +123,18 @@ void Film::InitGammaTable(const float g) {
 		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / g);
 }
 
-void Film::SetFilterType(const FilterType type) {
+void Film::SetFilter(Filter *flt) {
 	delete filterLUTs;
+	filterLUTs = NULL;
+	delete precompFilter;
+	precompFilter = NULL;
 	delete filter;
-
-	filterType = type;
-
-	// Initialize Filter LUTs
-	switch (type) {
-		case FILTER_NONE:
-			filter = NULL;
-			filterLUTs = NULL;
-			break;
-		case FILTER_BOX:
-			filter = new BoxFilter(1.5f, 1.5f);
-			break;
-		case FILTER_GAUSSIAN:
-			filter = new GaussianFilter(1.5f, 1.5f, 2.f);
-			break;
-		case FILTER_MITCHELL:
-			filter = new MitchellFilter(1.5f, 1.5f);
-			break;
-		case FILTER_MITCHELL_SS:
-			filter = new MitchellFilterSS(1.5f, 1.5f);
-			break;
-		default:
-			throw std::runtime_error("Unknown filter type: " + boost::lexical_cast<std::string>(type));
-	}
+	filter = flt;
 
 	if (filter) {
-		u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
+		precompFilter = new PrecomputedFilter(filter, 8);
+
+		const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
 		filterLUTs = new FilterLUTs(*filter, size);
 	}
 }
@@ -541,6 +525,7 @@ void Film::SetPixel(const FilmBufferType type,
 
 void Film::AddSample(const FilmBufferType type,
 		const u_int x, const u_int y,
+		const float u0, const float u1,
 		const luxrays::Spectrum &radiance, const float alpha,
 		const float weight) {
 	assert (!radiance.IsNaN() && !radiance.IsInf());
@@ -549,10 +534,13 @@ void Film::AddSample(const FilmBufferType type,
 			(x < 0) || (x >= width) || (y < 0) || (y >= height))
 		return;
 
-	AddRadiance(type, x, y, radiance, weight);
+	// Calculate the filter weight
+	const float filterWeight = (filter) ? precompFilter->Evaluate(u0, u1) : 1.f;
+	const float filteredWeight = weight * filterWeight;
+	AddRadiance(type, x, y, radiance, filteredWeight);
 
 	if (enableAlphaChannel)
-		AddAlpha(x, y, alpha, weight);
+		AddAlpha(x, y, alpha, filteredWeight);
 }
 
 void Film::SplatSample(const FilmBufferType type, const float screenX,
@@ -563,7 +551,7 @@ void Film::SplatSample(const FilmBufferType type, const float screenX,
 	if (radiance.IsNaN() || radiance.IsInf())
 		return;
 
-	if (filterType == FILTER_NONE) {
+	if (!filter) {
 		const int x = Ceil2Int(screenX - 0.5f);
 		const int y = Ceil2Int(screenY - 0.5f);
 
@@ -593,12 +581,12 @@ void Film::SplatSample(const FilmBufferType type, const float screenX,
 				break;
 
 			for (int ix = x0; ix < x1; ++ix) {
-				const float filterWt = *lut++;
+				const float filterWeight = *lut++;
 
 				if ((ix < 0) || (ix >= (int)width))
 					continue;
 
-				const float filteredWeight = weight * filterWt;
+				const float filteredWeight = weight * filterWeight;
 				AddRadiance(type, ix, iy, radiance, filteredWeight);
 
 				if (enableAlphaChannel)
@@ -614,18 +602,4 @@ void Film::ResetConvergenceTest() {
 
 unsigned int Film::RunConvergenceTest() {
 	return convTest->Test((const float *)frameBuffer->GetPixels());
-}
-
-FilterType Filter::String2FilterType(const std::string &type) {
-	if ((type.compare("0") == 0) || (type.compare("NONE") == 0))
-		return FILTER_NONE;
-	else if ((type.compare("1") == 0) || (type.compare("BOX") == 0))
-		return FILTER_BOX;
-	else if ((type.compare("2") == 0) || (type.compare("GAUSSIAN") == 0))
-		return FILTER_GAUSSIAN;
-	else if ((type.compare("3") == 0) || (type.compare("MITCHELL") == 0))
-		return FILTER_MITCHELL;
-	else if ((type.compare("4") == 0) || (type.compare("MITCHELL_SS") == 0))
-		return FILTER_MITCHELL_SS;
-	throw std::runtime_error("Unknown filter type: " + type);
 }
