@@ -42,9 +42,9 @@ void BiasPathCPURenderThread::SampleGrid(luxrays::RandomGenerator *rndGen, const
 		*u0 = rndGen->floatValue();
 		*u1 = rndGen->floatValue();
 	} else {
-		const float idim = 1.f / (size - 1.f);
-		*u0 = ix * idim + rndGen->floatValue();
-		*u1 = iy * idim + rndGen->floatValue();
+		const float idim = 1.f / size;
+		*u0 = (ix + rndGen->floatValue()) * idim;
+		*u1 = (iy + rndGen->floatValue()) * idim;
 	}
 }
 
@@ -284,10 +284,10 @@ void BiasPathCPURenderThread::RenderFunc() {
 						float u0, u1;
 						SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
 
-						u0 = (u0 * filterWidth) - filterWidth * .5f;
-						u1 = (u1 * filterWidth) - filterWidth * .5f;
-						const float screenX = Min(tile->xStart + x + .5f + u0, (float)(filmWidth - 1));
-						const float screenY = Min(tile->yStart + y + .5f + u1, (float)(filmHeight - 1));
+						u0 = filterWidth * (u0 - .5f);
+						u1 = filterWidth * (u1 - .5f);
+						const float screenX = tile->xStart + x + .5f + u0;
+						const float screenY = tile->yStart + y + .5f + u1;
 						Ray eyeRay;
 						camera->GenerateRay(screenX, screenY, &eyeRay,
 							rndGen->floatValue(), rndGen->floatValue());
@@ -297,10 +297,9 @@ void BiasPathCPURenderThread::RenderFunc() {
 						float alpha;
 						TracePath(rndGen, eyeRay, &radiance, &alpha);
 
-						// Calculate the filter weight
-						const float weight = (filter) ? filter->Evaluate(u0, u1) : 1.f;
 						tileFilm->AddSampleCount(1.0);
-						tileFilm->AddSample(PER_PIXEL_NORMALIZED, x, y, radiance, alpha, weight);
+						tileFilm->AddSample(PER_PIXEL_NORMALIZED, x, y, u0, u1,
+								radiance, alpha);
 
 						interruptionRequested = boost::this_thread::interruption_requested();
 
