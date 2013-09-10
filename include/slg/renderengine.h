@@ -271,6 +271,11 @@ protected:
 		u_int xStart, yStart;
 	} Tile;
 
+	void LinearTiles();
+	void HilberCurveTiles(const u_int n, const int xo, const int yo,
+		const int xd, const int yd, const int xp, const int yp,
+		const int xEnd, const int yEnd);
+
 	void InitTiles();
 	const Tile *NextTile(const Tile *tile, const Film *tileFilm);
 
