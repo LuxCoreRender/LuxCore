@@ -42,40 +42,44 @@ FilterType Filter::String2FilterType(const std::string &type) {
 // PrecomputedFilter
 //------------------------------------------------------------------------------
 
-PrecomputedFilter::PrecomputedFilter(const Filter *f, const u_int s) {
+FilterDistribution::FilterDistribution(const Filter *f, const u_int s) {
 	filter = f;
 	size = s;
-	lut = new float[size * size];
+	distrib = NULL;
 
-	float filterMax = 0.f;
+	if (!filter)
+		return;
+
+	float *data = new float[size * size];
+
 	const float isize = 1.f / (float)size;
 	for (u_int y = 0; y < size; ++y) {
 		for (u_int x = 0; x < size; ++x) {
-			const float filterVal = filter->Evaluate(x * isize * filter->xWidth,
-					y * isize * filter->yWidth);
-			filterMax = Max(filterMax, filterVal);
-			lut[x + y * size] = filterVal;
+			data[x + y * size] = filter->Evaluate(
+					filter->xWidth *((x + .5f) * isize - .5),
+					filter->yWidth *((y + .5f) * isize - .5));
 		}
 	}
 
-	// Normalize LUT
-	filterMax = 1.f / filterMax;
-	for (u_int y = 0; y < size; ++y) {
-		for (u_int x = 0; x < size; ++x) {
-			lut[x + y * size] *= filterMax;
-		}
+	distrib = new Distribution2D(data, size, size);
+	delete data;
+}
+
+FilterDistribution::~FilterDistribution() {
+	delete distrib;
+}
+void FilterDistribution::SampleContinuous(const float u0, const float u1, float *su0, float *su1) const {
+	if (filter) {
+		float uv[2];
+		float pdf;
+		distrib->SampleContinuous(u0, u1, uv, &pdf);
+
+		*su0 = (uv[0] - .5f) * filter->xWidth;
+		*su1 = (uv[1] - .5f) * filter->yWidth;
+	} else {
+		*su0 = (u0 - .5f) * filter->xWidth;
+		*su1 = (u1 - .5f) * filter->yWidth;
 	}
-}
-
-PrecomputedFilter::~PrecomputedFilter() {
-	delete lut;
-}
-
-float PrecomputedFilter::Evaluate(const float x, const float y) const {
-	const u_int ix = Min(Floor2UInt(size * fabsf(x) / (filter->xWidth * .5f)), size - 1);
-	const u_int iy = Min(Floor2UInt(size * fabsf(y) / (filter->yWidth * .5f)), size - 1);
-
-	return lut[ix + iy * size];
 }
 
 //------------------------------------------------------------------------------

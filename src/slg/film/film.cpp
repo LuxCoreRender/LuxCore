@@ -43,7 +43,6 @@ Film::Film(const unsigned int w, const unsigned int h) {
 	enabledOverlappedScreenBufferUpdate = true;
 
 	filter = NULL;
-	precompFilter = NULL;
 	filterLUTs = NULL;
 	SetFilter(new GaussianFilter(1.5f, 1.5f, 2.f));
 
@@ -64,7 +63,6 @@ Film::~Film() {
 	delete frameBuffer;
 
 	delete filterLUTs;
-	delete precompFilter;
 	delete filter;
 }
 
@@ -126,14 +124,10 @@ void Film::InitGammaTable(const float g) {
 void Film::SetFilter(Filter *flt) {
 	delete filterLUTs;
 	filterLUTs = NULL;
-	delete precompFilter;
-	precompFilter = NULL;
 	delete filter;
 	filter = flt;
 
 	if (filter) {
-		precompFilter = new PrecomputedFilter(filter, 8);
-
 		const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
 		filterLUTs = new FilterLUTs(*filter, size);
 	}
@@ -534,13 +528,10 @@ void Film::AddSample(const FilmBufferType type,
 			(x < 0) || (x >= width) || (y < 0) || (y >= height))
 		return;
 
-	// Calculate the filter weight
-	const float filterWeight = (filter) ? precompFilter->Evaluate(u0, u1) : 1.f;
-	const float filteredWeight = weight * filterWeight;
-	AddRadiance(type, x, y, radiance, filteredWeight);
+	AddRadiance(type, x, y, radiance, weight);
 
 	if (enableAlphaChannel)
-		AddAlpha(x, y, alpha, filteredWeight);
+		AddAlpha(x, y, alpha, weight);
 }
 
 void Film::SplatSample(const FilmBufferType type, const float screenX,

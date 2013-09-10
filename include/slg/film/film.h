@@ -247,7 +247,6 @@ private:
 	ConvergenceTest *convTest;
 
 	Filter *filter;
-	PrecomputedFilter *precompFilter;
 	FilterLUTs *filterLUTs;
 
 	bool enableAlphaChannel, enabledOverlappedScreenBufferUpdate,

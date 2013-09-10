@@ -258,9 +258,9 @@ void BiasPathCPURenderThread::RenderFunc() {
 	PerspectiveCamera *camera = scene->camera;
 	Film *film = engine->film;
 	const Filter *filter = film->GetFilter();
-	const float filterWidth = (filter) ? filter->xWidth : 1.f;
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();
+	const FilterDistribution filterDistribution(filter, 8);
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -284,8 +284,9 @@ void BiasPathCPURenderThread::RenderFunc() {
 						float u0, u1;
 						SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
 
-						u0 = filterWidth * (u0 - .5f);
-						u1 = filterWidth * (u1 - .5f);
+						// Sample according the pixel filter distribution
+						filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
+
 						const float screenX = tile->xStart + x + .5f + u0;
 						const float screenY = tile->yStart + y + .5f + u1;
 						Ray eyeRay;
