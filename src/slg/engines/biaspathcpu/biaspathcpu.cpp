@@ -44,11 +44,13 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
-	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
-	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
+	maxPathDepth = cfg.GetInt("biaspath.depth.max", 10);
 
-	aaSamples = Max(1, cfg.GetInt("biaspath.aa.size", 3));
+	// Samples
+	aaSamples = Max(1, cfg.GetInt("biaspath.samples.aa.size", 3));
+	diffuseSamples = Max(0, cfg.GetInt("biaspath.samples.diffuse.size", 2));
+	glossySamples = Max(0, cfg.GetInt("biaspath.samples.glossy.size", 2));
+	refractionSamples = Max(0, cfg.GetInt("biaspath.samples.refraction.size", 2));
 
 	CPUTileRenderEngine::StartLockLess();
 }

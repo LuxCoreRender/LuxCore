@@ -126,13 +126,14 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 Spectrum BSDF::Sample(Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const {
 	Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 	Vector localSampledDir;
 
 	Spectrum result = material->Sample(hitPoint,
 			localFixedDir, &localSampledDir, u0, u1, hitPoint.passThroughEvent,
-			pdfW, absCosSampledDir, event);
+			pdfW, absCosSampledDir, event, requestedEvent);
 	if (result.Black())
 		return result;
 

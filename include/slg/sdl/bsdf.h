@@ -57,6 +57,7 @@ public:
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
+	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 
 	luxrays::Spectrum GetPassThroughTransparency() const;
 
@@ -64,7 +65,8 @@ public:
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	luxrays::Spectrum Sample(luxrays::Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent = ALL) const;
 	void Pdf(const luxrays::Vector &sampledDir, float *directPdfW, float *reversePdfW) const;
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 

@@ -54,7 +54,7 @@ private:
 
 	void DirectLightSampling(const float u0, const float u1,
 			const float u2, const float u3, const float u4,
-			const luxrays::Spectrum &pathThrouput, const BSDF &bsdf, const int depth,
+			const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 			luxrays::Spectrum *radiance);
 
 	void DirectHitFiniteLight(const bool lastSpecular,
@@ -64,7 +64,13 @@ private:
 	void DirectHitInfiniteLight(const bool lastSpecular, const luxrays::Spectrum &pathThrouput,
 			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
 
-	void TracePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
+	void ContinueTracePath(luxrays::RandomGenerator *rndGen, int depth, luxrays::Ray ray,
+		luxrays::Spectrum pathThrouput, float lastPdfW, bool lastSpecular,
+		luxrays::Spectrum *radiance);
+	luxrays::Spectrum SampleComponent(luxrays::RandomGenerator *rndGen,
+		const BSDFEvent requestedEventTypes,
+		const u_int size, const int depth, const BSDF &bsdf);
+	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
 		luxrays::Spectrum *radiance, float *alpha);
 };
 
@@ -76,10 +82,8 @@ public:
 
 	// Signed because of the delta parameter
 	int maxPathDepth;
-	int rrDepth;
-	float rrImportanceCap;
 
-	u_int aaSamples;
+	u_int aaSamples, diffuseSamples, glossySamples, refractionSamples;
 
 	friend class BiasPathCPURenderThread;
 
