@@ -585,7 +585,6 @@ const CPUTileRenderEngine::Tile *CPUTileRenderEngine::NextTile(const Tile *tile,
 	if (tile) {
 		boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-		film->AddSampleCount(tileFilm->GetTotalSampleCount());
 		film->AddFilm(*tileFilm,
 				0, 0,
 				Min(tileSize, film->GetWidth() - tile->xStart),
@@ -634,20 +633,20 @@ void CPUTileRenderEngine::StopLockLess() {
 }
 
 void CPUTileRenderEngine::UpdateCounters() {
-	// Update the statistics only until when the rendering is not finished
+	// Update the sample count statistic
+	samplesCount = film->GetTotalSampleCount();
+
+	// Update the ray count statistic
+	double totalCount = 0.0;
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		const CPUTileRenderThread *thread = (CPUTileRenderThread *)renderThreads[i];
+		totalCount += thread->device->GetTotalRaysCount();
+	}
+	raysCount = totalCount;
+
+	// Update the time only until when the rendering is not finished
 	if ((todoTiles.size() > 0) || (pendingTiles.size() > 0)) {
 		elapsedTime = WallClockTime() - startTime;
-
-		// Update the sample count statistic
-		samplesCount = film->GetTotalSampleCount();
-
-		// Update the ray count statistic
-		double totalCount = 0.0;
-		for (size_t i = 0; i < renderThreads.size(); ++i) {
-			const CPUTileRenderThread *thread = (CPUTileRenderThread *)renderThreads[i];
-			totalCount += thread->device->GetTotalRaysCount();
-		}
-		raysCount = totalCount;
 	}
 }
 
