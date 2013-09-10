@@ -559,6 +559,17 @@ CPUTileRenderEngine::~CPUTileRenderEngine() {
 }
 
 void CPUTileRenderEngine::InitTiles() {
+	// Free all left tiles
+	BOOST_FOREACH(Tile *tile, todoTiles) {
+		delete tile;
+	}
+	todoTiles.clear();
+
+	BOOST_FOREACH(Tile *tile, pendingTiles) {
+		delete tile;
+	}
+	pendingTiles.clear();
+
 	u_int x = 0;
 	u_int y = 0;
 
@@ -630,6 +641,13 @@ void CPUTileRenderEngine::StopLockLess() {
 		delete tile;
 	}
 	pendingTiles.clear();
+}
+
+void CPUTileRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	film->Reset();
+	InitTiles();
+
+	CPURenderEngine::EndEditLockLess(editActions);
 }
 
 void CPUTileRenderEngine::UpdateCounters() {
