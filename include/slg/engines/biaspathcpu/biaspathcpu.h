@@ -35,6 +35,19 @@ namespace slg {
 // Biased path tracing CPU render engine
 //------------------------------------------------------------------------------
 
+class PathDepthInfo {
+public:
+	PathDepthInfo();
+	~PathDepthInfo() { }
+
+	void IncDepths(const BSDFEvent event);
+
+	bool CheckDepths(const PathDepthInfo &maxPathDepth) const;
+
+	u_int depth, diffuseDepth, glossyDepth,
+			reflectionDepth, refractionDepth;
+};
+
 class BiasPathCPURenderEngine;
 
 class BiasPathCPURenderThread : public CPUTileRenderThread {
@@ -64,12 +77,12 @@ private:
 	void DirectHitInfiniteLight(const bool lastSpecular, const luxrays::Spectrum &pathThrouput,
 			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
 
-	void ContinueTracePath(luxrays::RandomGenerator *rndGen, int depth, luxrays::Ray ray,
+	void ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
 		luxrays::Spectrum pathThrouput, float lastPdfW, bool lastSpecular,
 		luxrays::Spectrum *radiance);
 	luxrays::Spectrum SampleComponent(luxrays::RandomGenerator *rndGen,
 		const BSDFEvent requestedEventTypes,
-		const u_int size, const int depth, const BSDF &bsdf);
+		const u_int size, const PathDepthInfo &depthInfo, const BSDF &bsdf);
 	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
 		luxrays::Spectrum *radiance, float *alpha);
 };
@@ -80,11 +93,13 @@ public:
 
 	RenderEngineType GetEngineType() const { return BIASPATHCPU; }
 
-	// Signed because of the delta parameter
-	int maxPathDepth;
+	// Path depth settings
+	PathDepthInfo maxPathDepth;
 
+	// Samples settings
 	u_int aaSamples, diffuseSamples, glossySamples, refractionSamples;
 
+	// Clamping settings
 	bool clampValueEnabled;
 	float clampMaxValue;
 
