@@ -44,17 +44,53 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = cfg.GetInt("biaspath.depth.max", 10);
+	// Path depth settings
+	maxPathDepth.depth = Max(1, cfg.GetInt("biaspath.pathdepth.total", 10));
+	maxPathDepth.diffuseDepth = Max(0, cfg.GetInt("biaspath.pathdepth.diffuse", 1));
+	maxPathDepth.glossyDepth = Max(0, cfg.GetInt("biaspath.pathdepth.glossy", 1));
+	maxPathDepth.reflectionDepth = Max(0, cfg.GetInt("biaspath.pathdepth.reflection", 2));
+	maxPathDepth.refractionDepth = Max(0, cfg.GetInt("biaspath.pathdepth.refraction", 2));
 
-	// Samples
-	aaSamples = Max(1, cfg.GetInt("biaspath.samples.aa.size", 3));
-	diffuseSamples = Max(0, cfg.GetInt("biaspath.samples.diffuse.size", 2));
-	glossySamples = Max(0, cfg.GetInt("biaspath.samples.glossy.size", 2));
-	refractionSamples = Max(0, cfg.GetInt("biaspath.samples.refraction.size", 2));
+	// Samples settings
+	aaSamples = Max(1, cfg.GetInt("biaspath.sampling.aa.size", 3));
+	diffuseSamples = Max(0, cfg.GetInt("biaspath.sampling.diffuse.size", 2));
+	glossySamples = Max(0, cfg.GetInt("biaspath.sampling.glossy.size", 2));
+	refractionSamples = Max(0, cfg.GetInt("biaspath.sampling.refraction.size", 2));
 
-	// Clamping
+	// Clamping settings
 	clampValueEnabled = cfg.GetBoolean("biaspath.clamping.enable", true);
 	clampMaxValue = cfg.GetFloat("biaspath.clamping.maxvalue", 10.f);
 
 	CPUTileRenderEngine::StartLockLess();
+}
+
+PathDepthInfo::PathDepthInfo() {
+	depth = 0;
+	diffuseDepth = 0;
+	glossyDepth = 0;
+	reflectionDepth = 0;
+	refractionDepth = 0;
+}
+
+void PathDepthInfo::IncDepths(const BSDFEvent event) {
+	++depth;
+	if ((event & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT))
+		++diffuseDepth;
+	if ((event & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT))
+		++glossyDepth;
+	if ((event & (SPECULAR | REFLECT)) == (SPECULAR | REFLECT))
+		++reflectionDepth;
+	if (event & TRANSMIT)
+		++refractionDepth;
+}
+
+bool PathDepthInfo::CheckDepths(const PathDepthInfo &maxPathDepth) const {
+	if ((depth > maxPathDepth.depth) ||
+			(diffuseDepth > maxPathDepth.diffuseDepth) ||
+			(glossyDepth > maxPathDepth.glossyDepth) ||
+			(reflectionDepth > maxPathDepth.reflectionDepth) ||
+			(refractionDepth > maxPathDepth.refractionDepth))
+		return false;
+	else
+		return true;
 }

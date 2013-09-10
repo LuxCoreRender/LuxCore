@@ -154,14 +154,15 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 	}
 }
 
-void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen, int depth, Ray ray,
+void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
+		PathDepthInfo depthInfo, Ray ray,
 		Spectrum pathThrouput, float lastPdfW, bool lastSpecular,
 		luxrays::Spectrum *radiance) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
 	BSDF bsdf;
-	while (depth <= engine->maxPathDepth) {
+	for (;;) {
 		RayHit rayHit;
 		Spectrum connectionThroughput;
 		if (!scene->Intersect(device, false, rndGen->floatValue(),
@@ -208,22 +209,28 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen, int dep
 		if (bsdfSample.Black())
 			break;
 
+		// Check if I have to stop because of path depth
+		depthInfo.IncDepths(event);
+		if (!depthInfo.CheckDepths(engine->maxPathDepth))
+			break;
+
 		lastSpecular = ((event & SPECULAR) != 0);
 
 		pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
 		assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
 
 		ray = Ray(bsdf.hitPoint.p, sampledDir);
-		++depth;
 	}
 
 	assert (!radiance->IsNaN() && !radiance->IsInf());
 }
 
 luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenerator *rndGen,
-		 const BSDFEvent requestedEventTypes, const u_int size, const int depth, const BSDF &bsdf) {
-	Spectrum radiance;
+		 const BSDFEvent requestedEventTypes, const u_int size,
+		const PathDepthInfo &baseDepthInfo, const BSDF &bsdf) {
+	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 
+	Spectrum radiance;
 	for (u_int sampleY = 0; sampleY < size; ++sampleY) {
 		for (u_int sampleX = 0; sampleX < size; ++sampleX) {
 			float u0, u1;
@@ -239,12 +246,18 @@ luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenera
 			if (bsdfSample.Black())
 				continue;
 
+			// Check if I have to stop because of path depth
+			PathDepthInfo depthInfo = baseDepthInfo;
+			depthInfo.IncDepths(event);
+			if (!depthInfo.CheckDepths(engine->maxPathDepth))
+				continue;
+
 			const bool continueLastSpecular = ((event & SPECULAR) != 0);
 			const Spectrum continuePathThrouput = bsdfSample * (cosSampledDir / pdfW);
 			assert (!continuePathThrouput.IsNaN() && !continuePathThrouput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);
-			ContinueTracePath(rndGen, depth + 1, continueRay, continuePathThrouput,
+			ContinueTracePath(rndGen, depthInfo, continueRay, continuePathThrouput,
 					pdfW, continueLastSpecular, &radiance);
 		}
 	}
@@ -261,12 +274,12 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 
 	Ray eyeRay = ray;
 
-	int depth = 1;
+	PathDepthInfo depthInfo;
 	bool lastSpecular = true;
 	float lastPdfW = 1.f;
 	Spectrum pathThrouput(1.f, 1.f, 1.f);
 	BSDF bsdf;
-	while (depth <= engine->maxPathDepth) {
+	for (;;) {
 		RayHit eyeRayHit;
 		Spectrum connectionThroughput;
 		if (!scene->Intersect(device, false, rndGen->floatValue(),
@@ -275,7 +288,7 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, eyeRay.d,
 					lastPdfW, radiance);
 
-			if (depth == 1)
+			if (depthInfo.depth == 1)
 				*alpha = 0.f;
 			break;
 		}
@@ -319,13 +332,17 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			if (bsdfSample.Black())
 				break;
 
+			// Check if I have to stop because of path depth
+			depthInfo.IncDepths(event);
+			if (!depthInfo.CheckDepths(engine->maxPathDepth))
+				break;
+
 			lastSpecular = ((event & SPECULAR) != 0);
 
 			pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
 			assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
 
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
-			++depth;
 		} else {
 			// Split the initial path
 			const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
@@ -335,21 +352,21 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			//------------------------------------------------------------------
 
 			if ((engine->diffuseSamples > 0) && ((materialEventTypes & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT)))
-				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE | REFLECT, engine->diffuseSamples, depth, bsdf);
+				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE | REFLECT, engine->diffuseSamples, depthInfo, bsdf);
 
 			//------------------------------------------------------------------
 			// Sample the glossy component
 			//------------------------------------------------------------------
 
 			if ((engine->glossySamples > 0) && ((materialEventTypes & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT)))
-				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY | REFLECT, engine->glossySamples, depth, bsdf);
+				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY | REFLECT, engine->glossySamples, depthInfo, bsdf);
 
 			//------------------------------------------------------------------
 			// Sample the refraction component
 			//------------------------------------------------------------------
 
 			if ((engine->refractionSamples > 0) && (materialEventTypes & TRANSMIT))
-				*radiance += pathThrouput * SampleComponent(rndGen, TRANSMIT, engine->refractionSamples, depth, bsdf);
+				*radiance += pathThrouput * SampleComponent(rndGen, TRANSMIT, engine->refractionSamples, depthInfo, bsdf);
 
 			break;
 		}
