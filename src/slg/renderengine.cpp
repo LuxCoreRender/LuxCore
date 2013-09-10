@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <boost/format.hpp>
+
 #include "slg/renderengine.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/pathocl/rtpathocl.h"
@@ -662,8 +664,17 @@ const CPUTileRenderEngine::Tile *CPUTileRenderEngine::NextTile(const Tile *tile,
 		delete tile;
 	}
 
-	if (todoTiles.size() == 0)
+	if (todoTiles.size() == 0) {
+		if (pendingTiles.size() == 0) {
+			// Rendering done
+
+			elapsedTime = WallClockTime() - startTime;
+			
+			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+		}
+
 		return NULL;
+	}
 
 	Tile *newTile = todoTiles.front();
 	todoTiles.pop_front();

@@ -85,6 +85,9 @@ public:
 
 	u_int aaSamples, diffuseSamples, glossySamples, refractionSamples;
 
+	bool clampValueEnabled;
+	float clampMaxValue;
+
 	friend class BiasPathCPURenderThread;
 
 protected:
