@@ -558,18 +558,7 @@ CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mu
 CPUTileRenderEngine::~CPUTileRenderEngine() {
 }
 
-void CPUTileRenderEngine::InitTiles() {
-	// Free all left tiles
-	BOOST_FOREACH(Tile *tile, todoTiles) {
-		delete tile;
-	}
-	todoTiles.clear();
-
-	BOOST_FOREACH(Tile *tile, pendingTiles) {
-		delete tile;
-	}
-	pendingTiles.clear();
-
+void CPUTileRenderEngine::LinearTiles() {
 	u_int x = 0;
 	u_int y = 0;
 
@@ -589,6 +578,58 @@ void CPUTileRenderEngine::InitTiles() {
 				break;
 		}
 	}
+}
+
+void CPUTileRenderEngine::HilberCurveTiles(const u_int n, const int xo, const int yo,
+		const int xd, const int yd, const int xp, const int yp,
+		const int xEnd, const int yEnd) {
+	if (n <= 1) {
+		if((xo <= xEnd) && (yo <= yEnd)) {
+			Tile *tile = new Tile;
+			tile->xStart = xo;
+			tile->yStart = yo;
+			todoTiles.push_back(tile);
+		}
+	} else {
+		const u_int n2 = n >> 1;
+
+		HilberCurveTiles(n2,
+			xo,
+			yo,
+			xp, yp, xd, yd, xEnd, yEnd);
+		HilberCurveTiles(n2,
+			xo + xd * static_cast<int>(n2),
+			yo + yd * static_cast<int>(n2),
+			xd, yd, xp, yp, xEnd, yEnd);
+		HilberCurveTiles(n2,
+			xo + (xp + xd) * static_cast<int>(n2),
+			yo + (yp + yd) * static_cast<int>(n2),
+			xd, yd, xp, yp, xEnd, yEnd);
+		HilberCurveTiles(n2,
+			xo + xd * static_cast<int>(n2 - 1) + xp * static_cast<int>(n - 1),
+			yo + yd * static_cast<int>(n2 - 1) + yp * static_cast<int>(n - 1),
+			-xp, -yp, -xd, -yd, xEnd, yEnd);
+	}	
+}
+
+void CPUTileRenderEngine::InitTiles() {
+	// Free all left tiles
+	BOOST_FOREACH(Tile *tile, todoTiles) {
+		delete tile;
+	}
+	todoTiles.clear();
+
+	BOOST_FOREACH(Tile *tile, pendingTiles) {
+		delete tile;
+	}
+	pendingTiles.clear();
+
+	//LinearTiles();
+	
+	u_int n = RoundUp(Max(film->GetWidth(), film->GetHeight()), tileSize) / tileSize;
+	if (!IsPowerOf2(n))
+		n = RoundUpPow2(n);
+	HilberCurveTiles(n, 0, 0, 0, tileSize, tileSize, 0, film->GetWidth(), film->GetHeight());
 }
 
 const CPUTileRenderEngine::Tile *CPUTileRenderEngine::NextTile(const Tile *tile, const Film *tileFilm) {

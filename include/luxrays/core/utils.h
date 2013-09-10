@@ -242,6 +242,14 @@ inline std::string ToString(const Matrix4x4 &m) {
 	return ss.str();
 }
 
+inline bool IsPowerOf2(int v) {
+	return (v & (v - 1)) == 0;
+}
+
+inline bool IsPowerOf2(u_int v) {
+	return (v & (v - 1)) == 0;
+}
+
 template <class T> inline T RoundUp(const T a, const T b) {
 	const unsigned int r = a % b;
 	if (r == 0)
