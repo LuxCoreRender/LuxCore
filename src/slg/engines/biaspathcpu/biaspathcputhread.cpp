@@ -52,7 +52,7 @@ void BiasPathCPURenderThread::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const Spectrum &pathThrouput, const BSDF &bsdf,
-		const int depth, Spectrum *radiance) {
+		Spectrum *radiance) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 	
@@ -85,11 +85,6 @@ void BiasPathCPURenderThread::DirectLightSampling(
 					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = cosThetaToLight / directLightSamplingPdfW;
-
-					if (depth >= engine->rrDepth) {
-						// Russian Roulette
-						bsdfPdfW *= RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
-					}
 
 					// MIS between direct light sampling and BSDF sampling
 					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
@@ -159,7 +154,105 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 	}
 }
 
-void BiasPathCPURenderThread::TracePath(luxrays::RandomGenerator *rndGen, const Ray &ray,
+void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen, int depth, Ray ray,
+		Spectrum pathThrouput, float lastPdfW, bool lastSpecular,
+		luxrays::Spectrum *radiance) {
+	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
+
+	BSDF bsdf;
+	while (depth <= engine->maxPathDepth) {
+		RayHit rayHit;
+		Spectrum connectionThroughput;
+		if (!scene->Intersect(device, false, rndGen->floatValue(),
+				&ray, &rayHit, &bsdf, &connectionThroughput)) {
+			// Nothing was hit, look for infinitelight
+			DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, ray.d,
+					lastPdfW, radiance);
+			break;
+		}
+		pathThrouput *= connectionThroughput;
+
+		// Something was hit
+
+		// Check if it is a light source
+		if (bsdf.IsLightSource()) {
+			DirectHitFiniteLight(lastSpecular, pathThrouput,
+					rayHit.t, bsdf, lastPdfW, radiance);
+		}
+
+		// Note: pass-through check is done inside SceneIntersect()
+
+		//----------------------------------------------------------------------
+		// Direct light sampling
+		//----------------------------------------------------------------------
+
+		DirectLightSampling(rndGen->floatValue(),
+				rndGen->floatValue(),
+				rndGen->floatValue(),
+				rndGen->floatValue(),
+				rndGen->floatValue(),
+				pathThrouput, bsdf, radiance);
+
+		//----------------------------------------------------------------------
+		// Build the next vertex path ray
+		//----------------------------------------------------------------------
+
+		Vector sampledDir;
+		BSDFEvent event;
+		float cosSampledDir;
+		const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+				rndGen->floatValue(),
+				rndGen->floatValue(),
+				&lastPdfW, &cosSampledDir, &event);
+		if (bsdfSample.Black())
+			break;
+
+		lastSpecular = ((event & SPECULAR) != 0);
+
+		pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
+		assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
+
+		ray = Ray(bsdf.hitPoint.p, sampledDir);
+		++depth;
+	}
+
+	assert (!radiance->IsNaN() && !radiance->IsInf());
+}
+
+luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenerator *rndGen,
+		 const BSDFEvent requestedEventTypes, const u_int size, const int depth, const BSDF &bsdf) {
+	Spectrum radiance;
+
+	for (u_int sampleY = 0; sampleY < size; ++sampleY) {
+		for (u_int sampleX = 0; sampleX < size; ++sampleX) {
+			float u0, u1;
+			SampleGrid(rndGen, size, sampleX, sampleY, &u0, &u1);
+
+			Vector sampledDir;
+			BSDFEvent event;
+			float continuePdfW, cosSampledDir;
+			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+					rndGen->floatValue(),
+					rndGen->floatValue(),
+					&continuePdfW, &cosSampledDir, &event, requestedEventTypes);
+			if (bsdfSample.Black())
+				continue;
+
+			const bool continueLastSpecular = ((event & SPECULAR) != 0);
+			const Spectrum continuePathThrouput = bsdfSample * (cosSampledDir / continuePdfW);
+			assert (!continuePathThrouput.IsNaN() && !continuePathThrouput.IsInf());
+
+			Ray continueRay(bsdf.hitPoint.p, sampledDir);
+			ContinueTracePath(rndGen, depth + 1, continueRay, continuePathThrouput,
+					continuePdfW, continueLastSpecular, &radiance);
+		}
+	}
+
+	return radiance / (size * size);
+}
+
+void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, const Ray &ray,
 		luxrays::Spectrum *radiance, float *alpha) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -198,47 +291,68 @@ void BiasPathCPURenderThread::TracePath(luxrays::RandomGenerator *rndGen, const 
 
 		// Note: pass-through check is done inside SceneIntersect()
 
-		//------------------------------------------------------------------
+		//----------------------------------------------------------------------
 		// Direct light sampling
-		//------------------------------------------------------------------
+		//----------------------------------------------------------------------
 
 		DirectLightSampling(rndGen->floatValue(),
 				rndGen->floatValue(),
 				rndGen->floatValue(),
 				rndGen->floatValue(),
 				rndGen->floatValue(),
-				pathThrouput, bsdf, depth, radiance);
+				pathThrouput, bsdf, radiance);
 
-		//------------------------------------------------------------------
-		// Build the next vertex path ray
-		//------------------------------------------------------------------
+		//----------------------------------------------------------------------
+		// Split the path
+		//----------------------------------------------------------------------
 
-		Vector sampledDir;
-		BSDFEvent event;
-		float cosSampledDir;
-		const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-				rndGen->floatValue(),
-				rndGen->floatValue(),
-				&lastPdfW, &cosSampledDir, &event);
-		if (bsdfSample.Black())
-			break;
+		if (bsdf.IsDelta()) {
+			// Continue to trace the initial path
 
-		lastSpecular = ((event & SPECULAR) != 0);
-
-		if ((depth >= engine->rrDepth) && !lastSpecular) {
-			// Russian Roulette
-			const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-			if (rndGen->floatValue() < prob)
-				lastPdfW *= prob;
-			else
+			Vector sampledDir;
+			BSDFEvent event;
+			float cosSampledDir;
+			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+					rndGen->floatValue(),
+					rndGen->floatValue(),
+					&lastPdfW, &cosSampledDir, &event);
+			if (bsdfSample.Black())
 				break;
+
+			lastSpecular = ((event & SPECULAR) != 0);
+
+			pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
+			assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
+
+			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
+			++depth;
+		} else {
+			// Split the initial path
+			const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
+
+			//------------------------------------------------------------------
+			// Sample the diffuse component
+			//------------------------------------------------------------------
+
+			if ((materialEventTypes & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT))
+				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE | REFLECT, engine->diffuseSamples, depth, bsdf);
+
+			//------------------------------------------------------------------
+			// Sample the glossy component
+			//------------------------------------------------------------------
+
+			if ((materialEventTypes & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT))
+				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY | REFLECT, engine->glossySamples, depth, bsdf);
+
+			//------------------------------------------------------------------
+			// Sample the refraction component
+			//------------------------------------------------------------------
+
+			if (materialEventTypes & TRANSMIT)
+				*radiance += pathThrouput * SampleComponent(rndGen, TRANSMIT, engine->refractionSamples, depth, bsdf);
+
+			break;
 		}
-
-		pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
-		assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
-
-		eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
-		++depth;
 	}
 
 	assert (!radiance->IsNaN() && !radiance->IsInf());
@@ -260,7 +374,7 @@ void BiasPathCPURenderThread::RenderFunc() {
 	const Filter *filter = film->GetFilter();
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();
-	const FilterDistribution filterDistribution(filter, 8);
+	const FilterDistribution filterDistribution(filter, 64);
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -296,7 +410,7 @@ void BiasPathCPURenderThread::RenderFunc() {
 						// Trace the path
 						Spectrum radiance;
 						float alpha;
-						TracePath(rndGen, eyeRay, &radiance, &alpha);
+						TraceEyePath(rndGen, eyeRay, &radiance, &alpha);
 
 						tileFilm->AddSampleCount(1.0);
 						tileFilm->AddSample(PER_PIXEL_NORMALIZED, x, y, u0, u1,

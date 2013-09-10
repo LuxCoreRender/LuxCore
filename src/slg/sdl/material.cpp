@@ -127,7 +127,8 @@ Spectrum MatteMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & REFLECT) || (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
@@ -182,7 +183,7 @@ Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & REFLECT))
+	if (!(requestedEvent & (SPECULAR | REFLECT)))
 		return Spectrum();
 
 	*event = SPECULAR | REFLECT;
@@ -227,6 +228,9 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & SPECULAR))
+		return Spectrum();
+
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
@@ -335,6 +339,9 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & SPECULAR))
+		return Spectrum();
+
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
@@ -530,7 +537,7 @@ Spectrum MetalMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & REFLECT))
+	if (!(requestedEvent & (GLOSSY | REFLECT)))
 		return Spectrum();
 
 	const float e = 1.f / (Max(exponent->GetFloatValue(hitPoint), 0.f) + 1.f);
@@ -801,7 +808,7 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & TRANSMIT))
+	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
 		return Spectrum();
 
 	//throw std::runtime_error("Internal error, called NullMaterial::Sample()");
@@ -858,7 +865,8 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	if (!(requestedEvent & (DIFFUSE | REFLECT | TRANSMIT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	*localSampledDir = CosineSampleHemisphere(u0, u1, pdfW);
@@ -1115,7 +1123,8 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & REFLECT) || (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
@@ -1320,7 +1329,8 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & REFLECT) || fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
+			fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
@@ -1518,7 +1528,8 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	if (!(requestedEvent & (GLOSSY | REFLECT | TRANSMIT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();

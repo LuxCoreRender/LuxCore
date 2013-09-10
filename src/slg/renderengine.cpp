@@ -685,7 +685,6 @@ void CPUTileRenderEngine::StopLockLess() {
 }
 
 void CPUTileRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	film->Reset();
 	InitTiles();
 
 	CPURenderEngine::EndEditLockLess(editActions);
