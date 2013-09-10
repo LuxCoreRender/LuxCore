@@ -52,5 +52,9 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	glossySamples = Max(0, cfg.GetInt("biaspath.samples.glossy.size", 2));
 	refractionSamples = Max(0, cfg.GetInt("biaspath.samples.refraction.size", 2));
 
+	// Clamping
+	clampValueEnabled = cfg.GetBoolean("biaspath.clamping.enable", true);
+	clampMaxValue = cfg.GetFloat("biaspath.clamping.maxvalue", 10.f);
+
 	CPUTileRenderEngine::StartLockLess();
 }

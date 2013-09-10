@@ -334,21 +334,21 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			// Sample the diffuse component
 			//------------------------------------------------------------------
 
-			if ((materialEventTypes & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT))
+			if ((engine->diffuseSamples > 0) && ((materialEventTypes & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT)))
 				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE | REFLECT, engine->diffuseSamples, depth, bsdf);
 
 			//------------------------------------------------------------------
 			// Sample the glossy component
 			//------------------------------------------------------------------
 
-			if ((materialEventTypes & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT))
+			if ((engine->glossySamples > 0) && ((materialEventTypes & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT)))
 				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY | REFLECT, engine->glossySamples, depth, bsdf);
 
 			//------------------------------------------------------------------
 			// Sample the refraction component
 			//------------------------------------------------------------------
 
-			if (materialEventTypes & TRANSMIT)
+			if ((engine->refractionSamples > 0) && (materialEventTypes & TRANSMIT))
 				*radiance += pathThrouput * SampleComponent(rndGen, TRANSMIT, engine->refractionSamples, depth, bsdf);
 
 			break;
@@ -411,6 +411,10 @@ void BiasPathCPURenderThread::RenderFunc() {
 						Spectrum radiance;
 						float alpha;
 						TraceEyePath(rndGen, eyeRay, &radiance, &alpha);
+
+						// Clamping
+						if (engine->clampValueEnabled)
+							radiance = radiance.Clamp(0.f, engine->clampMaxValue);
 
 						tileFilm->AddSampleCount(1.0);
 						tileFilm->AddSample(PER_PIXEL_NORMALIZED, x, y, u0, u1,
