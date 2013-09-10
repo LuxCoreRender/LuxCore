@@ -24,6 +24,7 @@
 
 #include "luxrays/core/spectrum.h"
 #include "luxrays/core/utils.h"
+#include "slg/core/mc.h"
 
 namespace slg {
 	
@@ -63,20 +64,19 @@ public:
 	const float invXWidth, invYWidth;
 };
 
-class PrecomputedFilter {
+class FilterDistribution {
 public:
-	PrecomputedFilter(const Filter *filter, const u_int size);
-	~PrecomputedFilter();
+	FilterDistribution(const Filter *filter, const u_int size);
+	~FilterDistribution();
 
-	float Evaluate(const float x, const float y) const;
+	void SampleContinuous(const float u0, const float u1, float *su0, float *su1) const;
 
 private:
 	const Filter *filter;
 	u_int size;
 
-	float *lut;
+	Distribution2D *distrib;
 };
-
 
 class BoxFilter : public Filter {
 public:
