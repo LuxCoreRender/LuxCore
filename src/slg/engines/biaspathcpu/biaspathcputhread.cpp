@@ -231,21 +231,21 @@ luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenera
 
 			Vector sampledDir;
 			BSDFEvent event;
-			float continuePdfW, cosSampledDir;
+			float pdfW, cosSampledDir;
 			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 					rndGen->floatValue(),
 					rndGen->floatValue(),
-					&continuePdfW, &cosSampledDir, &event, requestedEventTypes);
+					&pdfW, &cosSampledDir, &event, requestedEventTypes);
 			if (bsdfSample.Black())
 				continue;
 
 			const bool continueLastSpecular = ((event & SPECULAR) != 0);
-			const Spectrum continuePathThrouput = bsdfSample * (cosSampledDir / continuePdfW);
+			const Spectrum continuePathThrouput = bsdfSample * (cosSampledDir / pdfW);
 			assert (!continuePathThrouput.IsNaN() && !continuePathThrouput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);
 			ContinueTracePath(rndGen, depth + 1, continueRay, continuePathThrouput,
-					continuePdfW, continueLastSpecular, &radiance);
+					pdfW, continueLastSpecular, &radiance);
 		}
 	}
 

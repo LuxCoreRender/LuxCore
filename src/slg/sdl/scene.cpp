@@ -921,7 +921,8 @@ Texture *Scene::GetTexture(const std::string &name) {
 
 				return tex;
 			} else
-				throw std::runtime_error("Wrong number of arguments in the implicit definition of a constant texture");
+				throw std::runtime_error("Wrong number of arguments in the implicit definition of a constant texture: " +
+						boost::lexical_cast<std::string>(floats.size()));
 		} catch (boost::bad_lexical_cast) {
 			throw std::runtime_error("Syntax error in texture name: " + name);
 		}
