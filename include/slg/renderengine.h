@@ -261,16 +261,19 @@ protected:
 
 class CPUTileRenderEngine : public CPURenderEngine {
 public:
-	CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	~CPUTileRenderEngine();
-
-	friend class CPUTileRenderThread;
-
-protected:
 	typedef struct {
 		u_int xStart, yStart;
 	} Tile;
 
+	CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~CPUTileRenderEngine();
+
+	void GetPendingTiles(vector<Tile> &tiles);
+	u_int GetTileSize() const { return tileSize; }
+
+	friend class CPUTileRenderThread;
+
+protected:
 	void LinearTiles();
 	void HilberCurveTiles(const u_int n, const int xo, const int yo,
 		const int xd, const int yd, const int xp, const int yp,

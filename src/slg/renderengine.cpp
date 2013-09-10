@@ -558,6 +558,14 @@ CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mu
 CPUTileRenderEngine::~CPUTileRenderEngine() {
 }
 
+void CPUTileRenderEngine::GetPendingTiles(vector<Tile> &tiles) {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	tiles.resize(pendingTiles.size());
+	for (u_int i = 0; i < pendingTiles.size(); ++i)
+		tiles[i] = *(pendingTiles[i]);
+}
+
 void CPUTileRenderEngine::LinearTiles() {
 	u_int x = 0;
 	u_int y = 0;

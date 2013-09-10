@@ -45,6 +45,7 @@
 #include "slg/film/film.h"
 #include "slg/engines/pathocl/rtpathocl.h"
 #include "luxrays/core/virtualdevice.h"
+#include "slg/engines/biaspathcpu/biaspathcpu.h"
 
 using namespace std;
 using namespace luxrays;
@@ -208,6 +209,27 @@ static void PrintCaptions() {
 	glRecti(0, 0, session->film->GetWidth() - 1, 18);
 	glDisable(GL_BLEND);
 
+	// Draw the pending tiles for BIASPATHCPU
+	if (session->renderEngine->GetEngineType() == BIASPATHCPU) {
+		CPUTileRenderEngine *engine = (CPUTileRenderEngine *)session->renderEngine;
+		vector<CPUTileRenderEngine::Tile> tiles;
+		engine->GetPendingTiles(tiles);
+
+		if (tiles.size() > 0) {
+			// Draw tiles borders
+			glColor3f(1.f, 1.f, 0.f);
+			const u_int tileSize = engine->GetTileSize();
+			BOOST_FOREACH(CPUTileRenderEngine::Tile &tile, tiles) {
+				glBegin(GL_LINE_LOOP);
+				glVertex2i(tile.xStart, tile.yStart);
+				glVertex2i(tile.xStart + tileSize, tile.yStart);
+				glVertex2i(tile.xStart + tileSize, tile.yStart + tileSize);
+				glVertex2i(tile.xStart, tile.yStart + tileSize);
+				glEnd();
+			}
+		}
+	}
+	
 	// Caption line 0
 	glColor3f(1.f, 1.f, 1.f);
 	glRasterPos2i(4, 5);
