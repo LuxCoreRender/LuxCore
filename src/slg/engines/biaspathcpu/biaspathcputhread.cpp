@@ -48,7 +48,7 @@ void BiasPathCPURenderThread::SampleGrid(luxrays::RandomGenerator *rndGen, const
 	}
 }
 
-void BiasPathCPURenderThread::DirectLightSampling(
+bool BiasPathCPURenderThread::DirectLightSampling(
 		const LightSource *light, const float lightPickPdf,
 		const float u0, const float u1,
 		const float u2, const float u3,
@@ -88,8 +88,12 @@ void BiasPathCPURenderThread::DirectLightSampling(
 			if (!scene->Intersect(device, false, u3, &shadowRay,
 					&shadowRayHit, &shadowBsdf, &connectionThroughput))
 				*radiance += connectionThroughput * illumRadiance;
+
+			return true;
 		}
 	}
+
+	return false;
 }
 
 void BiasPathCPURenderThread::DirectLightSamplingONE(
@@ -114,23 +118,28 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
+	Spectrum lightRadiance;
+	u_int sampleCount = 0;
 	const u_int lightsSize = scene->GetLightCount();
 	for (u_int i = 0; i < lightsSize; ++i) {
 		const LightSource *light = scene->GetLightByIndex(i);
 		const u_int samples = light->GetSamples();
-		const float samples2 = samples * samples;
 
 		for (u_int sampleY = 0; sampleY < samples; ++sampleY) {
 			for (u_int sampleX = 0; sampleX < samples; ++sampleX) {
 				float u0, u1;
 				SampleGrid(rndGen, samples, sampleX, sampleY, &u0, &u1);
 
-				DirectLightSampling(light, samples2, u0, u1,
+				if (DirectLightSampling(light, 1.f, u0, u1,
 						rndGen->floatValue(), rndGen->floatValue(),
-						pathThrouput, bsdf, radiance);
+						pathThrouput, bsdf, &lightRadiance))
+					++sampleCount;
 			}
 		}
 	}
+
+	if (sampleCount > 0)
+		*radiance += lightRadiance / sampleCount;
 }
 
 void BiasPathCPURenderThread::DirectHitFiniteLight(
