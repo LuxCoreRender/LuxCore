@@ -49,48 +49,84 @@ void BiasPathCPURenderThread::SampleGrid(luxrays::RandomGenerator *rndGen, const
 }
 
 void BiasPathCPURenderThread::DirectLightSampling(
-		const float u0, const float u1, const float u2,
-		const float u3, const float u4,
+		const LightSource *light, const float lightPickPdf,
+		const float u0, const float u1,
+		const float u2, const float u3,
 		const Spectrum &pathThrouput, const BSDF &bsdf,
 		Spectrum *radiance) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	
-	if (!bsdf.IsDelta()) {
-		// Pick a light source to sample
-		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(u0, &lightPickPdf);
 
-		Vector lightRayDir;
-		float distance, directPdfW;
-		Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
-				u1, u2, u3, &lightRayDir, &distance, &directPdfW);
+	Vector lightRayDir;
+	float distance, directPdfW;
+	Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
+			u0, u1, u2, &lightRayDir, &distance, &directPdfW);
 
-		if (!lightRadiance.Black()) {
-			BSDFEvent event;
-			float bsdfPdfW;
-			Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
+	if (!lightRadiance.Black()) {
+		BSDFEvent event;
+		float bsdfPdfW;
+		Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
-			if (!bsdfEval.Black()) {
-				const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
-				Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
-						epsilon,
-						distance - epsilon);
-				RayHit shadowRayHit;
-				BSDF shadowBsdf;
-				Spectrum connectionThroughput;
-				// Check if the light source is visible
-				if (!scene->Intersect(device, false, u4, &shadowRay,
-						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
-					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-					const float factor = cosThetaToLight / directLightSamplingPdfW;
+		if (!bsdfEval.Black()) {
+			const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
+			Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
+					epsilon,
+					distance - epsilon);
+			RayHit shadowRayHit;
+			BSDF shadowBsdf;
+			Spectrum connectionThroughput;
+			// Check if the light source is visible
+			if (!scene->Intersect(device, false, u3, &shadowRay,
+					&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
+				const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+				const float factor = cosThetaToLight / directLightSamplingPdfW;
 
-					// MIS between direct light sampling and BSDF sampling
-					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+				// MIS between direct light sampling and BSDF sampling
+				const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
-					*radiance += (weight * factor) * pathThrouput * connectionThroughput * lightRadiance * bsdfEval;
-				}
+				*radiance += (weight * factor) * pathThrouput * connectionThroughput * lightRadiance * bsdfEval;
+			}
+		}
+	}
+}
+
+void BiasPathCPURenderThread::DirectLightSamplingONE(
+		RandomGenerator *rndGen,
+		const Spectrum &pathThrouput, const BSDF &bsdf,
+		Spectrum *radiance) {
+	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
+
+	// Pick a light source to sample
+	float lightPickPdf;
+	const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightPickPdf);
+
+	DirectLightSampling(light, lightPickPdf, rndGen->floatValue(), rndGen->floatValue(),
+			rndGen->floatValue(), rndGen->floatValue(), pathThrouput, bsdf, radiance);
+}
+
+void BiasPathCPURenderThread::DirectLightSamplingALL(
+		RandomGenerator *rndGen,
+		const Spectrum &pathThrouput, const BSDF &bsdf,
+		Spectrum *radiance) {
+	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
+
+	const u_int lightsSize = scene->GetLightCount();
+	for (u_int i = 0; i < lightsSize; ++i) {
+		const LightSource *light = scene->GetLightByIndex(i);
+		const u_int samples = light->GetSamples();
+		const float samples2 = samples * samples;
+
+		for (u_int sampleY = 0; sampleY < samples; ++sampleY) {
+			for (u_int sampleX = 0; sampleX < samples; ++sampleX) {
+				float u0, u1;
+				SampleGrid(rndGen, samples, sampleX, sampleY, &u0, &u1);
+
+				DirectLightSampling(light, samples2, u0, u1,
+						rndGen->floatValue(), rndGen->floatValue(),
+						pathThrouput, bsdf, radiance);
 			}
 		}
 	}
@@ -109,6 +145,8 @@ void BiasPathCPURenderThread::DirectHitFiniteLight(
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!lastSpecular) {
+			// This PDF used for MIS is correct because lastSpecular is always
+			// true when using DirectLightSamplingALL()
 			const float lightPickProb = scene->PickLightPdf();
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
@@ -134,6 +172,9 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 		const Spectrum envRadiance = scene->envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!envRadiance.Black()) {
 			if(!lastSpecular) {
+				// This PDF used for MIS is correct because lastSpecular is always
+				// true when using DirectLightSamplingALL()
+
 				// MIS between BSDF sampling and direct light sampling
 				*radiance += pathThrouput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
 			} else
@@ -188,12 +229,8 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Direct light sampling
 		//----------------------------------------------------------------------
 
-		DirectLightSampling(rndGen->floatValue(),
-				rndGen->floatValue(),
-				rndGen->floatValue(),
-				rndGen->floatValue(),
-				rndGen->floatValue(),
-				pathThrouput, bsdf, radiance);
+		if (!bsdf.IsDelta())
+			DirectLightSamplingONE(rndGen, pathThrouput, bsdf, radiance);
 
 		//----------------------------------------------------------------------
 		// Build the next vertex path ray
@@ -308,12 +345,8 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		// Direct light sampling
 		//----------------------------------------------------------------------
 
-		DirectLightSampling(rndGen->floatValue(),
-				rndGen->floatValue(),
-				rndGen->floatValue(),
-				rndGen->floatValue(),
-				rndGen->floatValue(),
-				pathThrouput, bsdf, radiance);
+		if (!bsdf.IsDelta())
+			DirectLightSamplingALL(rndGen, pathThrouput, bsdf, radiance);
 
 		//----------------------------------------------------------------------
 		// Split the path

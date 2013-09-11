@@ -136,6 +136,7 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
 			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
 		);
+	props.SetString("scene.infinitelight.samples", ToString(samples));
 
 	return props;
 }
@@ -285,6 +286,7 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
 			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
 		);
+	props.SetString("scene.skylight.samples", ToString(samples));
 
 	return props;
 }
@@ -293,8 +295,8 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 // SunLight
 //------------------------------------------------------------------------------
 
-SunLight::SunLight(const luxrays::Transform &l2w, float turb, float size,
-		const Vector &sd) : lightToWorld(l2w) {
+SunLight::SunLight(const luxrays::Transform &l2w,
+		float turb, float size,	const Vector &sd) : lightToWorld(l2w), samples(1) {
 	turbidity = turb;
 	sunDir = Normalize(lightToWorld * sd);
 	gain = Spectrum(1.0f, 1.0f, 1.0f);
@@ -461,6 +463,7 @@ Properties SunLight::ToProperties() const {
 			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
 			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
 		);
+	props.SetString("scene.sunlight.samples", ToString(samples));
 
 	return props;
 }

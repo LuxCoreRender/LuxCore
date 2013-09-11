@@ -62,7 +62,7 @@ typedef enum {
 class Material {
 public:
 	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
-		emittedTex(emitted), bumpTex(bump), normalTex(normal) { }
+		emittedSamples(1), emittedTex(emitted), bumpTex(bump), normalTex(normal) { }
 	virtual ~Material() { }
 
 	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
@@ -134,6 +134,8 @@ public:
 			return luxrays::Spectrum();
 	}
 
+	const void SetEmittedSamples(const u_int samples) { emittedSamples = samples; }
+	const u_int GetEmittedSamples() const { return emittedSamples; }
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	const Texture *GetNormalTexture() const { return normalTex; }
@@ -172,6 +174,7 @@ public:
 		luxrays::Properties props;
 
 		const std::string name = GetName();
+		props.SetString("scene.materials." + name + ".emission.samples", luxrays::ToString(emittedSamples));
 		if (emittedTex)
 			props.SetString("scene.materials." + name + ".emission", emittedTex->GetName());
 		if (bumpTex)
@@ -183,6 +186,7 @@ public:
 	}
 
 protected:
+	u_int emittedSamples;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
 	const Texture *normalTex;

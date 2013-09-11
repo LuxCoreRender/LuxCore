@@ -65,10 +65,17 @@ private:
 	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const;
 
-	void DirectLightSampling(const float u0, const float u1,
-			const float u2, const float u3, const float u4,
-			const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-			luxrays::Spectrum *radiance);
+	void DirectLightSampling(const LightSource *light, const float lightPickPdf,
+		const float u0, const float u1,
+		const float u2, const float u3,
+		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
+		luxrays::Spectrum *radiance);
+	void DirectLightSamplingONE(luxrays::RandomGenerator *rndGen,
+		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
+		luxrays::Spectrum *radiance);
+	void DirectLightSamplingALL(luxrays::RandomGenerator *rndGen,
+		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
+		luxrays::Spectrum *radiance);
 
 	void DirectHitFiniteLight(const bool lastSpecular,
 			const luxrays::Spectrum &pathThrouput, const float distance, const BSDF &bsdf,

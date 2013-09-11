@@ -48,9 +48,12 @@ public:
 	Scene(const std::string &fileName, const float imageScale = 1.f);
 	~Scene();
 
+	const u_int GetLightCount() const;
 	LightSource *GetLightByType(const LightSourceType lightType) const;
+	LightSource *GetLightByIndex(const u_int index) const;
 	LightSource *SampleAllLights(const float u, float *pdf) const;
 	float PickLightPdf() const;
+
 	bool Intersect(luxrays::IntersectionDevice *device, const bool fromLight,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
