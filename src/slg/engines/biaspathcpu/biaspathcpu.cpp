@@ -64,7 +64,9 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	clampValueEnabled = cfg.GetBoolean("biaspath.clamping.enable", true);
 	clampMaxValue = Max(0.f, cfg.GetFloat("biaspath.clamping.maxvalue", 10.f));
 
-	lowLightThreashold = Max(0.f, cfg.GetFloat("biaspath.light.lowthreshold", .001f));
+	// Light settings
+	lowLightThreashold = Max(0.f, cfg.GetFloat("biaspath.lights.lowthreshold", .001f));
+	nearStartLight = Max(0.f, cfg.GetFloat("biaspath.lights.nearstart", .001f));
 
 	CPUTileRenderEngine::StartLockLess();
 }

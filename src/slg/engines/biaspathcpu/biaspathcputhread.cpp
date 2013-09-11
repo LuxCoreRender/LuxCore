@@ -62,7 +62,7 @@ void BiasPathCPURenderThread::DirectLightSampling(
 	Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
 			u0, u1, u2, &lightRayDir, &distance, &directPdfW);
 
-	if (!lightRadiance.Black()) {
+	if (!lightRadiance.Black() && (distance > engine->nearStartLight)) {
 		BSDFEvent event;
 		float bsdfPdfW;
 		Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
@@ -143,7 +143,7 @@ void BiasPathCPURenderThread::DirectHitFiniteLight(
 	float directPdfA;
 	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(&directPdfA);
 
-	if (!emittedRadiance.Black()) {
+	if (emittedRadiance.Y() > engine->lowLightThreashold) {
 		float weight;
 		if (!lastSpecular) {
 			// This PDF used for MIS is correct because lastSpecular is always
@@ -171,7 +171,7 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 	float directPdfW;
 	if (scene->envLight) {
 		const Spectrum envRadiance = scene->envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!envRadiance.Black()) {
+		if (envRadiance.Y() > engine->lowLightThreashold) {
 			if(!lastSpecular) {
 				// This PDF used for MIS is correct because lastSpecular is always
 				// true when using DirectLightSamplingALL()
@@ -186,7 +186,7 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 	// Sun light
 	if (scene->sunLight) {
 		const Spectrum sunRadiance = scene->sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!sunRadiance.Black()) {
+		if (sunRadiance.Y() > engine->lowLightThreashold) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
 				*radiance += pathThrouput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
@@ -219,7 +219,7 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Something was hit
 
 		// Check if it is a light source
-		if (bsdf.IsLightSource()) {
+		if (bsdf.IsLightSource() && (rayHit.t > engine->nearStartLight)) {
 			DirectHitFiniteLight(lastSpecular, pathThrouput,
 					rayHit.t, bsdf, lastPdfW, radiance);
 		}
@@ -244,7 +244,7 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 				rndGen->floatValue(),
 				rndGen->floatValue(),
 				&lastPdfW, &cosSampledDir, &event);
-		if (bsdfSample.Black())
+		if (bsdfSample.Y() <= engine->lowLightThreashold)
 			break;
 
 		// Check if I have to stop because of path depth
@@ -277,11 +277,9 @@ luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenera
 			Vector sampledDir;
 			BSDFEvent event;
 			float pdfW, cosSampledDir;
-			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-					rndGen->floatValue(),
-					rndGen->floatValue(),
+			const Spectrum bsdfSample = bsdf.Sample(&sampledDir, u0, u1,
 					&pdfW, &cosSampledDir, &event, requestedEventTypes);
-			if (bsdfSample.Black())
+			if (bsdfSample.Y() <= engine->lowLightThreashold)
 				continue;
 
 			// Check if I have to stop because of path depth
@@ -335,7 +333,7 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		// Something was hit
 
 		// Check if it is a light source
-		if (bsdf.IsLightSource()) {
+		if (bsdf.IsLightSource() && (eyeRayHit.t > engine->nearStartLight)) {
 			DirectHitFiniteLight(lastSpecular, pathThrouput,
 					eyeRayHit.t, bsdf, lastPdfW, radiance);
 		}
@@ -363,7 +361,7 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 					rndGen->floatValue(),
 					rndGen->floatValue(),
 					&lastPdfW, &cosSampledDir, &event);
-			if (bsdfSample.Black())
+			if (bsdfSample.Y() <= engine->lowLightThreashold)
 				break;
 
 			// Check if I have to stop because of path depth
