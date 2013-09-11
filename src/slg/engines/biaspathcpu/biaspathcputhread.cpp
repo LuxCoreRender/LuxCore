@@ -118,13 +118,13 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	Spectrum lightRadiance;
-	u_int sampleCount = 0;
 	const u_int lightsSize = scene->GetLightCount();
 	for (u_int i = 0; i < lightsSize; ++i) {
 		const LightSource *light = scene->GetLightByIndex(i);
 		const u_int samples = light->GetSamples();
 
+		Spectrum lightRadiance;
+		u_int sampleCount = 0;
 		for (u_int sampleY = 0; sampleY < samples; ++sampleY) {
 			for (u_int sampleX = 0; sampleX < samples; ++sampleX) {
 				float u0, u1;
@@ -136,10 +136,10 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 					++sampleCount;
 			}
 		}
-	}
 
-	if (sampleCount > 0)
-		*radiance += lightRadiance / sampleCount;
+		if (sampleCount > 0)
+			*radiance += lightRadiance / sampleCount;
+	}
 }
 
 void BiasPathCPURenderThread::DirectHitFiniteLight(
