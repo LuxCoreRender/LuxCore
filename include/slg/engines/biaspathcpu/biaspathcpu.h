@@ -115,6 +115,9 @@ public:
 	bool clampValueEnabled;
 	float clampMaxValue;
 
+	// Light settings
+	float lowLightThreashold;
+
 	friend class BiasPathCPURenderThread;
 
 protected:

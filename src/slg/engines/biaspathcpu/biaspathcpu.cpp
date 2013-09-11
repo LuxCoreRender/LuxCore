@@ -62,7 +62,9 @@ void BiasPathCPURenderEngine::StartLockLess() {
 
 	// Clamping settings
 	clampValueEnabled = cfg.GetBoolean("biaspath.clamping.enable", true);
-	clampMaxValue = cfg.GetFloat("biaspath.clamping.maxvalue", 10.f);
+	clampMaxValue = Max(0.f, cfg.GetFloat("biaspath.clamping.maxvalue", 10.f));
+
+	lowLightThreashold = Max(0.f, cfg.GetFloat("biaspath.light.lowthreshold", .001f));
 
 	CPUTileRenderEngine::StartLockLess();
 }

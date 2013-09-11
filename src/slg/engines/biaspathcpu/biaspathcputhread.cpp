@@ -67,7 +67,16 @@ void BiasPathCPURenderThread::DirectLightSampling(
 		float bsdfPdfW;
 		Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
-		if (!bsdfEval.Black()) {
+		const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
+		const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+		const float factor = cosThetaToLight / directLightSamplingPdfW;
+
+		// MIS between direct light sampling and BSDF sampling
+		const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+
+		const Spectrum illumRadiance = (weight * factor) * pathThrouput * lightRadiance * bsdfEval;
+
+		if (illumRadiance.Y() > engine->lowLightThreashold) {
 			const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 			Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 					epsilon,
@@ -77,16 +86,8 @@ void BiasPathCPURenderThread::DirectLightSampling(
 			Spectrum connectionThroughput;
 			// Check if the light source is visible
 			if (!scene->Intersect(device, false, u3, &shadowRay,
-					&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-				const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
-				const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-				const float factor = cosThetaToLight / directLightSamplingPdfW;
-
-				// MIS between direct light sampling and BSDF sampling
-				const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
-
-				*radiance += (weight * factor) * pathThrouput * connectionThroughput * lightRadiance * bsdfEval;
-			}
+					&shadowRayHit, &shadowBsdf, &connectionThroughput))
+				*radiance += connectionThroughput * illumRadiance;
 		}
 	}
 }
