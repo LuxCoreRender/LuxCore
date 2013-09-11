@@ -116,7 +116,7 @@ public:
 	float clampMaxValue;
 
 	// Light settings
-	float lowLightThreashold;
+	float lowLightThreashold, nearStartLight;
 
 	friend class BiasPathCPURenderThread;
 
