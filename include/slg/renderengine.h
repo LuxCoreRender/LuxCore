@@ -240,7 +240,7 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-// CPU render engines with no tile rendering
+// CPU render engines with tile rendering
 //------------------------------------------------------------------------------
 
 class CPUTileRenderEngine;
@@ -263,6 +263,8 @@ class CPUTileRenderEngine : public CPURenderEngine {
 public:
 	typedef struct {
 		u_int xStart, yStart;
+		// -1 means: tile has to be rendered with all samples
+		int sampleIndex;
 	} Tile;
 
 	CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
@@ -274,8 +276,9 @@ public:
 	friend class CPUTileRenderThread;
 
 protected:
-	void LinearTiles();
-	void HilberCurveTiles(const u_int n, const int xo, const int yo,
+	void LinearTiles(const int sampleIndex);
+	void HilberCurveTiles(const int sampleIndex,
+		const u_int n, const int xo, const int yo,
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd);
 
@@ -294,6 +297,9 @@ protected:
 	boost::mutex tileMutex;
 	std::deque<Tile *> todoTiles;
 	std::vector<Tile *> pendingTiles;
+
+	u_int totalSamplesPerPixel;
+	bool enableProgressiveRefinement;
 };
 
 //------------------------------------------------------------------------------
