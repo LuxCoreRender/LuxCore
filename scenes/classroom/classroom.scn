@@ -30,6 +30,7 @@ scene.materials.walls.kd = 0.85 0.85 0.85
 scene.materials.white_paint.kd = 0.85 0.85 0.85
 scene.materials.white_plastic.kd = 0.85 0.85 0.85
 scene.materials.portal.emission = 3.8 3.8 3.8
+scene.materials.portal.emission.samples = 7
 ################################################################################
 scene.objects.chair.material = chair
 scene.objects.chair.ply = scenes/classroom/chair.ply

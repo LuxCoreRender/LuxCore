@@ -603,6 +603,7 @@ void Scene::AddInfiniteLight(const Properties &props) {
 		vf = GetFloatParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
 		il->GetUVMapping()->uDelta = vf.at(0);
 		il->GetUVMapping()->vDelta = vf.at(1);
+		il->SetSamples(Max(0, props.GetInt("scene.infinitelight.samples", 1)));
 		il->Preprocess();
 
 		envLight = il;
@@ -638,6 +639,7 @@ void Scene::AddSkyLight(const Properties &props) {
 
 		SkyLight *sl = new SkyLight(light2World, turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		sl->SetSamples(Max(0, props.GetInt("scene.skylight.samples", 1)));
 		sl->Preprocess();
 
 		envLight = sl;
@@ -669,6 +671,7 @@ void Scene::AddSunLight(const Properties &props) {
 
 		SunLight *sl = new SunLight(light2World, turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
+		sl->SetSamples(Max(0, props.GetInt("scene.sunlight.samples", 1)));
 		sl->Preprocess();
 
 		sunLight = sl;
@@ -946,10 +949,11 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 	Texture *normalTex = props.IsDefined(propName + ".normaltex") ? 
 		GetTexture(props.GetString(propName + ".normaltex", "1.0")) : NULL;
 
+	Material *mat;
 	if (matType == "matte") {
 		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.75 0.75 0.75"));
 
-		return new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
+		mat = new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
 	} else if (matType == "mirror") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		
@@ -993,7 +997,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "0.5 0.5 0.5"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "0.5 0.5 0.5"));
 
-		return new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
+		mat = new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
 	} else if (matType == "glossy2") {
 		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.5 0.5 0.5"));
 		Texture *ks = GetTexture(props.GetString(propName + ".ks", "0.5 0.5 0.5"));
@@ -1004,7 +1008,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *index = GetTexture(props.GetString(propName + ".index", "0.0"));
 		const bool multibounce = props.GetBoolean(propName + ".multibounce", false);
 
-		return new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
+		mat = new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
 	} else if (matType == "metal2") {
 		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
 		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
@@ -1035,7 +1039,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 			k = GetTexture(props.GetString(propName + ".k", "0.5 0.5 0.5"));
 		}
 
-		return new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
+		mat = new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
 	} else if (matType == "roughglass") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
@@ -1044,9 +1048,13 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
 		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
 
-		return new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
+		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
+
+	mat->SetEmittedSamples(Max(0, props.GetInt(propName + ".emission.samples", 1)));
+
+	return mat;
 }
 
 //------------------------------------------------------------------------------
@@ -1066,16 +1074,18 @@ LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
 	return NULL;
 }
 
-LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
+const u_int Scene::GetLightCount() const {
 	u_int lightsSize = static_cast<u_int>(triLightDefs.size());
 	if (envLight)
 		++lightsSize;
 	if (sunLight)
 		++lightsSize;
 
-	// One Uniform light strategy
-	const u_int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
-	*pdf = 1.f / lightsSize;
+	return lightsSize;
+}
+
+LightSource *Scene::GetLightByIndex(const u_int lightIndex) const {
+	const u_int lightsSize = GetLightCount();
 
 	if (envLight) {
 		if (sunLight) {
@@ -1102,12 +1112,18 @@ LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
 	}
 }
 
+LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
+	const u_int lightsSize = GetLightCount();
+
+	// One Uniform light strategy
+	const u_int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
+	*pdf = 1.f / lightsSize;
+
+	return GetLightByIndex(lightIndex);
+}
+
 float Scene::PickLightPdf() const {
-	u_int lightsSize = static_cast<u_int>(triLightDefs.size());
-	if (envLight)
-		++lightsSize;
-	if (sunLight)
-		++lightsSize;
+	const u_int lightsSize = GetLightCount();
 
 	return 1.f / lightsSize;
 }
