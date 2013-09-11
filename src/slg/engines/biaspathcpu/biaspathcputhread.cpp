@@ -376,6 +376,39 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 	assert (!isnan(*alpha) && !isinf(*alpha));
 }
 
+void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen,
+		const FilterDistribution &filterDistribution,
+		const u_int x, const u_int y,
+		const u_int xOffset, const u_int yOffset,
+		const u_int sampleX, const u_int sampleY) {
+	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
+
+	float u0, u1;
+	SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
+
+	// Sample according the pixel filter distribution
+	filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
+
+	const float screenX = xOffset + x + .5f + u0;
+	const float screenY = yOffset + y + .5f + u1;
+	Ray eyeRay;
+	engine->renderConfig->scene->camera->GenerateRay(screenX, screenY, &eyeRay,
+		rndGen->floatValue(), rndGen->floatValue());
+
+	// Trace the path
+	Spectrum radiance;
+	float alpha;
+	TraceEyePath(rndGen, eyeRay, &radiance, &alpha);
+
+	// Clamping
+	if (engine->clampValueEnabled)
+		radiance = radiance.Clamp(0.f, engine->clampMaxValue);
+
+	tileFilm->AddSampleCount(1.0);
+	tileFilm->AddSample(PER_PIXEL_NORMALIZED, x, y, u0, u1,
+			radiance, alpha);
+}
+
 void BiasPathCPURenderThread::RenderFunc() {
 	//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
@@ -385,8 +418,6 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
-	Scene *scene = engine->renderConfig->scene;
-	PerspectiveCamera *camera = scene->camera;
 	Film *film = engine->film;
 	const Filter *filter = film->GetFilter();
 	const u_int filmWidth = film->GetWidth();
@@ -410,41 +441,25 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 		for (u_int y = 0; y < tileHeight && !interruptionRequested; ++y) {
 			for (u_int x = 0; x < tileWidth && !interruptionRequested; ++x) {
-				for (u_int sampleY = 0; sampleY < engine->aaSamples && !interruptionRequested; ++sampleY) {
-					for (u_int sampleX = 0; sampleX < engine->aaSamples && !interruptionRequested; ++sampleX) {
-						float u0, u1;
-						SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
-
-						// Sample according the pixel filter distribution
-						filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
-
-						const float screenX = tile->xStart + x + .5f + u0;
-						const float screenY = tile->yStart + y + .5f + u1;
-						Ray eyeRay;
-						camera->GenerateRay(screenX, screenY, &eyeRay,
-							rndGen->floatValue(), rndGen->floatValue());
-
-						// Trace the path
-						Spectrum radiance;
-						float alpha;
-						TraceEyePath(rndGen, eyeRay, &radiance, &alpha);
-
-						// Clamping
-						if (engine->clampValueEnabled)
-							radiance = radiance.Clamp(0.f, engine->clampMaxValue);
-
-						tileFilm->AddSampleCount(1.0);
-						tileFilm->AddSample(PER_PIXEL_NORMALIZED, x, y, u0, u1,
-								radiance, alpha);
-
-						interruptionRequested = boost::this_thread::interruption_requested();
-
-#ifdef WIN32
-						// Work around Windows bad scheduling
-						renderThread->yield();
-#endif
+				if (tile->sampleIndex >= 0) {
+					const u_int sampleX = tile->sampleIndex % engine->aaSamples;
+					const u_int sampleY = tile->sampleIndex / engine->aaSamples;
+					RenderPixelSample(rndGen, filterDistribution, x, y,
+							tile->xStart, tile->yStart, sampleX, sampleY);
+				} else {
+					for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
+						for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
+							RenderPixelSample(rndGen, filterDistribution, x, y,
+									tile->xStart, tile->yStart, sampleX, sampleY);
+						}
 					}
 				}
+
+				interruptionRequested = boost::this_thread::interruption_requested();
+#ifdef WIN32
+				// Work around Windows bad scheduling
+				renderThread->yield();
+#endif
 			}
 		}
 	}

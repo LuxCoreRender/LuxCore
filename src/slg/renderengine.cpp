@@ -554,6 +554,7 @@ void CPUTileRenderThread::StartRenderThread() {
 
 CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	CPURenderEngine(cfg, flm, flmMutex) {
+	enableProgressiveRefinement = false;
 	tileSize =  Max(cfg->cfg.GetInt("tile.size", 32), 8);
 }
 
@@ -568,7 +569,7 @@ void CPUTileRenderEngine::GetPendingTiles(vector<Tile> &tiles) {
 		tiles[i] = *(pendingTiles[i]);
 }
 
-void CPUTileRenderEngine::LinearTiles() {
+void CPUTileRenderEngine::LinearTiles(const int sampleIndex) {
 	u_int x = 0;
 	u_int y = 0;
 
@@ -577,6 +578,7 @@ void CPUTileRenderEngine::LinearTiles() {
 		Tile *tile = new Tile;
 		tile->xStart = x;
 		tile->yStart = y;
+		tile->sampleIndex = sampleIndex;
 		todoTiles.push_back(tile);
 
 		x += tileSize;
@@ -590,7 +592,8 @@ void CPUTileRenderEngine::LinearTiles() {
 	}
 }
 
-void CPUTileRenderEngine::HilberCurveTiles(const u_int n, const int xo, const int yo,
+void CPUTileRenderEngine::HilberCurveTiles(const int sampleIndex,
+		const u_int n, const int xo, const int yo,
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd) {
 	if (n <= 1) {
@@ -598,24 +601,25 @@ void CPUTileRenderEngine::HilberCurveTiles(const u_int n, const int xo, const in
 			Tile *tile = new Tile;
 			tile->xStart = xo;
 			tile->yStart = yo;
+			tile->sampleIndex = sampleIndex;
 			todoTiles.push_back(tile);
 		}
 	} else {
 		const u_int n2 = n >> 1;
 
-		HilberCurveTiles(n2,
+		HilberCurveTiles(sampleIndex, n2,
 			xo,
 			yo,
 			xp, yp, xd, yd, xEnd, yEnd);
-		HilberCurveTiles(n2,
+		HilberCurveTiles(sampleIndex, n2,
 			xo + xd * static_cast<int>(n2),
 			yo + yd * static_cast<int>(n2),
 			xd, yd, xp, yp, xEnd, yEnd);
-		HilberCurveTiles(n2,
+		HilberCurveTiles(sampleIndex, n2,
 			xo + (xp + xd) * static_cast<int>(n2),
 			yo + (yp + yd) * static_cast<int>(n2),
 			xd, yd, xp, yp, xEnd, yEnd);
-		HilberCurveTiles(n2,
+		HilberCurveTiles(sampleIndex, n2,
 			xo + xd * static_cast<int>(n2 - 1) + xp * static_cast<int>(n - 1),
 			yo + yd * static_cast<int>(n2 - 1) + yp * static_cast<int>(n - 1),
 			-xp, -yp, -xd, -yd, xEnd, yEnd);
@@ -634,12 +638,14 @@ void CPUTileRenderEngine::InitTiles() {
 	}
 	pendingTiles.clear();
 
-	//LinearTiles();
-	
 	u_int n = RoundUp(Max(film->GetWidth(), film->GetHeight()), tileSize) / tileSize;
 	if (!IsPowerOf2(n))
 		n = RoundUpPow2(n);
-	HilberCurveTiles(n, 0, 0, 0, tileSize, tileSize, 0, film->GetWidth(), film->GetHeight());
+	if (enableProgressiveRefinement) {
+		for (u_int i = 0; i < totalSamplesPerPixel; ++i)
+			HilberCurveTiles(i, n, 0, 0, 0, tileSize, tileSize, 0, film->GetWidth(), film->GetHeight());
+	} else
+		HilberCurveTiles(-1, n, 0, 0, 0, tileSize, tileSize, 0, film->GetWidth(), film->GetHeight());
 }
 
 const CPUTileRenderEngine::Tile *CPUTileRenderEngine::NextTile(const Tile *tile, const Film *tileFilm) {
