@@ -101,16 +101,6 @@ public:
 		return gain;
 	}
 
-	virtual luxrays::Spectrum Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		luxrays::Point *pos, luxrays::Vector *dir,
-		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
-
-    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        luxrays::Vector *dir, float *distance, float *directPdfW,
-		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
-
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
@@ -129,13 +119,23 @@ protected:
 class InfiniteLight : public InfiniteLightBase {
 public:
 	InfiniteLight(const luxrays::Transform &l2w, const ImageMap *imgMap);
-	virtual ~InfiniteLight() { }
+	virtual ~InfiniteLight();
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
 	virtual const float GetPower(const Scene &scene) const;
 
 	const ImageMap *GetImageMap() const { return imageMap; }
 	UVMapping2D *GetUVMapping() { return &mapping; }
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
@@ -145,6 +145,8 @@ public:
 private:
 	const ImageMap *imageMap;
 	UVMapping2D mapping;
+
+	Distribution2D *imageMapDistribution;
 };
 
 //------------------------------------------------------------------------------
@@ -181,6 +183,16 @@ public:
 			perez_yData[i] = perez_y[i];
 		}
 	}
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;

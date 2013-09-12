@@ -35,18 +35,77 @@ using namespace slg;
 const float slg::lightWorldRadiusScale = 10.f;
 
 //------------------------------------------------------------------------------
-// InfiniteLightBase
+// InfiniteLight
 //------------------------------------------------------------------------------
 
-Spectrum InfiniteLightBase::Emit(const Scene &scene,
+InfiniteLight::InfiniteLight(const Transform &l2w, const ImageMap *imgMap) :
+	InfiniteLightBase(l2w), imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
+	if (imageMap->GetChannelCount() == 1)
+		imageMapDistribution = new Distribution2D(imageMap->GetPixels(), imageMap->GetWidth(), imageMap->GetHeight());
+	else {
+		const float *pixels = imageMap->GetPixels();
+		float *data = new float[imageMap->GetWidth() * imageMap->GetHeight()];
+		for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
+			for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
+				const u_int index = x + y * imageMap->GetWidth();
+				const float *pixel = &pixels[index * imageMap->GetChannelCount()];
+				
+				data[index] = Spectrum(pixel).Y();
+			}
+		}
+
+		imageMapDistribution = new Distribution2D(data, imageMap->GetWidth(), imageMap->GetHeight());
+		delete data;
+	}
+}
+
+InfiniteLight::~InfiniteLight() {
+	delete imageMapDistribution;
+}
+
+const float InfiniteLight::GetPower(const Scene &scene) const {
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return gain.Y() * (4.f * M_PI * M_PI * worldRadius * worldRadius) *
+		imageMap->GetSpectrumMeanY();
+}
+
+Spectrum InfiniteLight::GetRadiance(const Scene &scene,
+		const Vector &dir,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
+	const UV uv(SphericalPhi(localDir) * INV_TWOPI, SphericalTheta(localDir) * INV_PI);
+
+	const float distPdf = imageMapDistribution->Pdf(uv.u, uv.v);
+	if (directPdfA)
+		*directPdfA = distPdf / (4.f * M_PI);
+
+	if (emissionPdfW) {
+		const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	}
+
+	return gain * imageMap->GetSpectrum(mapping.Map(uv));
+}
+
+Spectrum InfiniteLight::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	// Choose two points p1 and p2 on scene bounding sphere
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 
-	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
+	// Choose p2 on scene bounding sphere according importance sampling
+	float uv[2];
+	float distPdf;
+	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+
+	const float phi = uv[0] * 2.f * M_PI;
+	const float theta = uv[1] * M_PI;
+	Point p1 = worldCenter + worldRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
+
+	// Choose p2 on scene bounding sphere
 	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
 
 	// Construct ray between p1 and p2
@@ -54,10 +113,10 @@ Spectrum InfiniteLightBase::Emit(const Scene &scene,
 	*dir = Normalize(lightToWorld * (p2 - p1));
 
 	// Compute InfiniteAreaLight ray weight
-	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	*emissionPdfW = distPdf / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
-		*directPdfA = 1.f / (4.f * M_PI);
+		*directPdfA = distPdf / (4.f * M_PI);
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
@@ -65,14 +124,20 @@ Spectrum InfiniteLightBase::Emit(const Scene &scene,
 	return GetRadiance(scene, *dir);
 }
 
-Spectrum InfiniteLightBase::Illuminate(const Scene &scene, const Point &p,
+Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
+	float uv[2];
+	float distPdf;
+	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+
+	const float phi = uv[0] * 2.f * M_PI;
+	const float theta = uv[1] * M_PI;
+	*dir = Normalize(lightToWorld * SphericalDirection(sinf(theta), cosf(theta), phi));
+
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
-
-	*dir = Normalize(lightToWorld * UniformSampleSphere(u0, u1));
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
@@ -89,44 +154,12 @@ Spectrum InfiniteLightBase::Illuminate(const Scene &scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	*directPdfW = 1.f / (4.f * M_PI);
+	*directPdfW = distPdf / (4.f * M_PI);
 
 	if (emissionPdfW)
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
-	return GetRadiance(scene, -(*dir));
-}
-
-//------------------------------------------------------------------------------
-// InfiniteLight
-//------------------------------------------------------------------------------
-
-InfiniteLight::InfiniteLight(const Transform &l2w, const ImageMap *imgMap) :
-	InfiniteLightBase(l2w), imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
-}
-
-const float InfiniteLight::GetPower(const Scene &scene) const {
-	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
-
-	return gain.Y() * (4.f * M_PI * M_PI * worldRadius * worldRadius) *
-		imageMap->GetSpectrumMeanY();
-}
-
-Spectrum InfiniteLight::GetRadiance(const Scene &scene,
-		const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
-	if (directPdfA)
-		*directPdfA = 1.f / (4.f * M_PI);
-
-	if (emissionPdfW) {
-		const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
-	}
-
-	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
-	const UV uv(SphericalPhi(localDir) * INV_TWOPI, SphericalTheta(localDir) * INV_PI);
-	return gain * imageMap->GetSpectrum(mapping.Map(uv));
+	return gain * imageMap->GetSpectrum(mapping.Map(UV(uv[0], uv[1])));
 }
 
 Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -278,6 +311,65 @@ void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectr
 	const float Y = zenith_Y * PerezBase(perez_Y, theta_fin, gamma);
 
 	ChromaticityToSpectrum(Y, x, y, spect);
+}
+
+Spectrum SkyLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	// Choose two points p1 and p2 on scene bounding sphere
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
+	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+
+	// Construct ray between p1 and p2
+	*orig = p1;
+	*dir = Normalize(lightToWorld * (p2 - p1));
+
+	// Compute InfiniteAreaLight ray weight
+	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = 1.f / (4.f * M_PI);
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+
+	return GetRadiance(scene, *dir);
+}
+
+Spectrum SkyLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	*dir = Normalize(lightToWorld * UniformSampleSphere(u0, u1));
+
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const Point emisPoint(p + (*distance) * (*dir));
+	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+
+	const float cosAtLight = Dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+	if (cosThetaAtLight)
+		*cosThetaAtLight = cosAtLight;
+
+	*directPdfW = 1.f / (4.f * M_PI);
+
+	if (emissionPdfW)
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	return GetRadiance(scene, -(*dir));
 }
 
 Spectrum SkyLight::GetRadiance(const Scene &scene,

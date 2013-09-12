@@ -631,7 +631,7 @@ void Scene::AddInfiniteLight(const Properties &props) {
 		vf = GetFloatParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
 		il->GetUVMapping()->uDelta = vf.at(0);
 		il->GetUVMapping()->vDelta = vf.at(1);
-		il->SetSamples(Max(0, props.GetInt("scene.infinitelight.samples", 1)));
+		il->SetSamples(Max(1, props.GetInt("scene.infinitelight.samples", 1)));
 		il->Preprocess();
 
 		envLight = il;
@@ -667,7 +667,7 @@ void Scene::AddSkyLight(const Properties &props) {
 
 		SkyLight *sl = new SkyLight(light2World, turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sl->SetSamples(Max(0, props.GetInt("scene.skylight.samples", 1)));
+		sl->SetSamples(Max(1, props.GetInt("scene.skylight.samples", 1)));
 		sl->Preprocess();
 
 		envLight = sl;
@@ -699,7 +699,7 @@ void Scene::AddSunLight(const Properties &props) {
 
 		SunLight *sl = new SunLight(light2World, turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sl->SetSamples(Max(0, props.GetInt("scene.sunlight.samples", 1)));
+		sl->SetSamples(Max(1, props.GetInt("scene.sunlight.samples", 1)));
 		sl->Preprocess();
 
 		sunLight = sl;
@@ -1143,9 +1143,6 @@ LightSource *Scene::GetLightByIndex(const u_int lightIndex) const {
 LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
 	// Power based light strategy
 	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-//std::cout<<"=="<<u<<"="<<*pdf<<"====="<<lightIndex<<"/"<<GetLightCount()<<"\n";
-if(!((lightIndex >= 0) && (lightIndex < GetLightCount())))
-	throw std::runtime_error("#################");
 	assert ((lightIndex >= 0) && (lightIndex < GetLightCount()));
 
 	return GetLightByIndex(lightIndex);
