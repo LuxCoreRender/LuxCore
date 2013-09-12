@@ -553,8 +553,10 @@ void CPUTileRenderThread::StartRenderThread() {
 
 CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	CPURenderEngine(cfg, flm, flmMutex) {
-	enableProgressiveRefinement = false;
 	tileSize =  Max(cfg->cfg.GetInt("tile.size", 32), 8);
+
+	enableProgressiveRefinement = false;
+	enableMultipassRendering = false;
 }
 
 CPUTileRenderEngine::~CPUTileRenderEngine() {
@@ -626,17 +628,6 @@ void CPUTileRenderEngine::HilberCurveTiles(const int sampleIndex,
 }
 
 void CPUTileRenderEngine::InitTiles() {
-	// Free all left tiles
-	BOOST_FOREACH(Tile *tile, todoTiles) {
-		delete tile;
-	}
-	todoTiles.clear();
-
-	BOOST_FOREACH(Tile *tile, pendingTiles) {
-		delete tile;
-	}
-	pendingTiles.clear();
-
 	u_int n = RoundUp(Max(film->GetWidth(), film->GetHeight()), tileSize) / tileSize;
 	if (!IsPowerOf2(n))
 		n = RoundUpPow2(n);
@@ -670,15 +661,20 @@ const CPUTileRenderEngine::Tile *CPUTileRenderEngine::NextTile(const Tile *tile,
 	}
 
 	if (todoTiles.size() == 0) {
-		if (pendingTiles.size() == 0) {
-			// Rendering done
+		// Check if multi-pass is enabled
+		if (enableMultipassRendering)
+			InitTiles();
+		else {
+			if (pendingTiles.size() == 0) {
+				// Rendering done
 
-			elapsedTime = WallClockTime() - startTime;
-			
-			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+				elapsedTime = WallClockTime() - startTime;
+
+				SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+			}
+
+			return NULL;
 		}
-
-		return NULL;
 	}
 
 	Tile *newTile = todoTiles.front();
@@ -709,6 +705,17 @@ void CPUTileRenderEngine::StopLockLess() {
 }
 
 void CPUTileRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	// Free all left tiles
+	BOOST_FOREACH(Tile *tile, todoTiles) {
+		delete tile;
+	}
+	todoTiles.clear();
+
+	BOOST_FOREACH(Tile *tile, pendingTiles) {
+		delete tile;
+	}
+	pendingTiles.clear();
+
 	InitTiles();
 
 	CPURenderEngine::EndEditLockLess(editActions);

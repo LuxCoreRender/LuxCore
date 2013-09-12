@@ -45,6 +45,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	enableProgressiveRefinement = cfg.GetBoolean("biaspath.progressiverefinement.enable", false);
+	enableMultipassRendering = cfg.GetBoolean("biaspath.multipass.enable", false);
 
 	// Path depth settings
 	maxPathDepth.depth = Max(1, cfg.GetInt("biaspath.pathdepth.total", 10));
