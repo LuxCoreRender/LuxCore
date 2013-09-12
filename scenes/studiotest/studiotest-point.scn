@@ -13,3 +13,4 @@ scene.objects.white.ply = scenes/studiotest/white.ply
 ################################################################################
 scene.infinitelight.file = scenes/studiotest/test-light2.png
 scene.infinitelight.gain = 15 15 15
+#scene.infinitelight.shift = 0.4 0.0
