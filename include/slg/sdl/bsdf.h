@@ -57,6 +57,9 @@ public:
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
+	bool IsVisibleIndirectDiffuse() const { return material->IsVisibleIndirectDiffuse(); }
+	bool IsVisibleIndirectGlossy() const { return material->IsVisibleIndirectGlossy(); }
+
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 
 	luxrays::Spectrum GetPassThroughTransparency() const;

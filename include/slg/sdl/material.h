@@ -62,7 +62,8 @@ typedef enum {
 class Material {
 public:
 	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
-		emittedSamples(1), emittedTex(emitted), bumpTex(bump), normalTex(normal) { }
+		emittedSamples(1), emittedTex(emitted), bumpTex(bump), normalTex(normal),
+		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true) { }
 	virtual ~Material() { }
 
 	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
@@ -79,6 +80,11 @@ public:
 	virtual bool HasNormalTex() const { 
 		return (normalTex != NULL);
 	}
+
+	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
+	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
+	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
+	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
 
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
@@ -176,26 +182,15 @@ public:
 			normalTex->AddReferencedTextures(referencedTexs);
 	}
 
-	virtual luxrays::Properties ToProperties() const {
-		luxrays::Properties props;
-
-		const std::string name = GetName();
-		props.SetString("scene.materials." + name + ".emission.samples", luxrays::ToString(emittedSamples));
-		if (emittedTex)
-			props.SetString("scene.materials." + name + ".emission", emittedTex->GetName());
-		if (bumpTex)
-			props.SetString("scene.materials." + name + ".bumptex", bumpTex->GetName());
-		if (normalTex)
-			props.SetString("scene.materials." + name + ".normaltex", normalTex->GetName());
-
-		return props;
-	}
+	virtual luxrays::Properties ToProperties() const;
 
 protected:
 	u_int emittedSamples;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
 	const Texture *normalTex;
+
+	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy;
 };
 
 //------------------------------------------------------------------------------

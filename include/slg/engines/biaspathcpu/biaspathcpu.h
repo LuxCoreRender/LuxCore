@@ -85,6 +85,7 @@ private:
 			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
 
 	void ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
+		bool isDiffuseRay , bool isGlossyRay,
 		luxrays::Spectrum pathThrouput, float lastPdfW, bool lastSpecular,
 		luxrays::Spectrum *radiance);
 	luxrays::Spectrum SampleComponent(luxrays::RandomGenerator *rndGen,

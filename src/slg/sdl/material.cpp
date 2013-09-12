@@ -29,6 +29,28 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// Material
+//------------------------------------------------------------------------------
+
+Properties Material::ToProperties() const {
+	luxrays::Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".emission.samples", luxrays::ToString(emittedSamples));
+	if (emittedTex)
+		props.SetString("scene.materials." + name + ".emission", emittedTex->GetName());
+	if (bumpTex)
+		props.SetString("scene.materials." + name + ".bumptex", bumpTex->GetName());
+	if (normalTex)
+		props.SetString("scene.materials." + name + ".normaltex", normalTex->GetName());
+
+	props.SetString("scene.materials." + name + ".visibility.indirect.diffuse.enable", ToString(isVisibleIndirectDiffuse));
+	props.SetString("scene.materials." + name + ".visibility.indirect.glossy.enable", ToString(isVisibleIndirectGlossy));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // MaterialDefinitions
 //------------------------------------------------------------------------------
 
@@ -1274,6 +1296,7 @@ Properties Glossy2Material::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".ka", Ka->GetName());
 	props.SetString("scene.materials." + name + ".d", depth->GetName());
 	props.SetString("scene.materials." + name + ".index", index->GetName());
+	props.SetString("scene.materials." + name + ".multibounce", ToString(multibounce));
 	props.Load(Material::ToProperties());
 
 	return props;
