@@ -32,7 +32,7 @@ using namespace slg;
 
 // This is used to scale the world radius in sun/sky/infinite lights in order to
 // avoid problems with objects that are near the borderline of the world bounding sphere
-static const float worldRadiusScale = 10.f;
+const float slg::lightWorldRadiusScale = 10.f;
 
 //------------------------------------------------------------------------------
 // InfiniteLightBase
@@ -44,7 +44,7 @@ Spectrum InfiniteLightBase::Emit(const Scene &scene,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Choose two points p1 and p2 on scene bounding sphere
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 
 	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
 	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
@@ -70,7 +70,7 @@ Spectrum InfiniteLightBase::Illuminate(const Scene &scene, const Point &p,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 
 	*dir = Normalize(lightToWorld * UniformSampleSphere(u0, u1));
 
@@ -105,6 +105,13 @@ InfiniteLight::InfiniteLight(const Transform &l2w, const ImageMap *imgMap) :
 	InfiniteLightBase(l2w), imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
 }
 
+const float InfiniteLight::GetPower(const Scene &scene) const {
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return gain.Y() * (4.f * M_PI * M_PI * worldRadius * worldRadius) *
+		imageMap->GetSpectrumMeanY();
+}
+
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
@@ -113,7 +120,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		*directPdfA = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW) {
-		const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+		const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
@@ -183,6 +190,29 @@ SkyLight::SkyLight(const luxrays::Transform &l2w, float turb,
 		const Vector &sd) : InfiniteLightBase(l2w) {
 	turbidity = turb;
 	sunDir = Normalize(lightToWorld * sd);
+}
+
+const float SkyLight::GetPower(const Scene &scene) const {
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+	
+	const u_int steps = 100;
+	const float deltaStep = 2.f / steps;
+	float phi = 0.f, power = 0.f;
+	for (u_int i = 0; i < steps; ++i) {
+		float cosTheta = -1.f;
+		for (u_int j = 0; j < steps; ++j) {
+			float theta = acosf(cosTheta);
+			float gamma = RiAngleBetween(theta, phi, thetaS, phiS);
+			theta = Min<float>(theta, M_PI * .5f - .001f);
+			power += zenith_Y * PerezBase(perez_Y, theta, gamma);
+			cosTheta += deltaStep;
+		}
+
+		phi += deltaStep * M_PI;
+	}
+	power /= steps * steps;
+
+	return power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
 }
 
 void SkyLight::Preprocess() {
@@ -264,7 +294,7 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 		*directPdfA = INV_PI * .25f;
 
 	if (emissionPdfW) {
-		const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+		const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
@@ -301,6 +331,12 @@ SunLight::SunLight(const luxrays::Transform &l2w,
 	sunDir = Normalize(lightToWorld * sd);
 	gain = Spectrum(1.0f, 1.0f, 1.0f);
 	relSize = size;
+}
+
+const float SunLight::GetPower(const Scene &scene) const {
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return sunColor.Y() * (M_PI * worldRadius * worldRadius) * 2.f * M_PI * sin2ThetaMax / (relSize * relSize);
 }
 
 void SunLight::Preprocess() {
@@ -367,7 +403,7 @@ void SunLight::Preprocess() {
 			tauR * tauA * tauO * tauG * tauWA);
 	}
 
-	RegularSPD LSPD(Ldata, 350,800,91);
+	RegularSPD LSPD(Ldata, 350, 800, 91);
 	// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is for compatibility with past scene
 	sunColor = gain * LSPD.ToRGB() / (1000000000.0f / (M_PI * 100.f * 100.f));
 }
@@ -381,7 +417,7 @@ Spectrum SunLight::Emit(const Scene &scene,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad;
+	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad;
 
 	// Set ray origin and direction for infinite light ray
 	float d1, d2;
@@ -417,7 +453,7 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 		*cosThetaAtLight = cosAtLight;
 
 	if (emissionPdfW) {
-		const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad;
+		const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad;
 		*emissionPdfW =  UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 	}
 	
@@ -436,7 +472,7 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 				*directPdfA = UniformConePdf(cosThetaMax);
 
 			if (emissionPdfW) {
-				const float worldRadius = worldRadiusScale * scene.dataSet->GetBSphere().rad;
+				const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad;
 				*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 			}
 
@@ -480,6 +516,10 @@ TriangleLight::TriangleLight(const Material *mat, const ExtMesh *m,
 	triangleIndex = tIndex;
 
 	Init();
+}
+
+const float TriangleLight::GetPower(const Scene &scene) const {
+	return area * M_PI * lightMaterial->GetEmittedRadianceY();
 }
 
 void TriangleLight::Init() {

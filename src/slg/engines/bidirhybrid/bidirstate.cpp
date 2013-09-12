@@ -243,7 +243,8 @@ void BiDirState::DirectLightSampling(HybridRenderThread *renderThread,
 }
 
 void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
-		const Spectrum &lightRadiance, const float directPdfA, const float emissionPdfW,
+		const LightSource *light, const Spectrum &lightRadiance,
+		const float directPdfA, const float emissionPdfW,
 		const PathVertex &eyeVertex, Spectrum *radiance) const {
 	if (lightRadiance.Black())
 		return;
@@ -256,7 +257,7 @@ void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
 	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
 	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
-	const float lightPickPdf = scene->PickLightPdf();
+	const float lightPickPdf = scene->SampleAllLightPdf(light);
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -275,15 +276,15 @@ void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
-		DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+		DirectHitLight(renderThread, eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
 		if (scene->envLight) {
 			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+			DirectHitLight(renderThread, scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 		if (scene->sunLight) {
 			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+			DirectHitLight(renderThread, scene->sunLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
 }

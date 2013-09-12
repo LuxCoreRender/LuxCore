@@ -37,6 +37,7 @@
 #include "slg/sdl/texture.h"
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/mapping.h"
+#include "slg/core/mc.h"
 
 namespace slg {
 
@@ -52,7 +53,7 @@ public:
 	LightSource *GetLightByType(const LightSourceType lightType) const;
 	LightSource *GetLightByIndex(const u_int index) const;
 	LightSource *SampleAllLights(const float u, float *pdf) const;
-	float PickLightPdf() const;
+	float SampleAllLightPdf(const LightSource *light) const;
 
 	bool Intersect(luxrays::IntersectionDevice *device, const bool fromLight,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
@@ -149,6 +150,9 @@ protected:
 		const std::string &defaultValue);
 
 	Texture *GetTexture(const std::string &name);
+
+	std::map<const LightSource *, u_int> light2Index;
+	Distribution1D *lightsDistribution;
 };
 
 }

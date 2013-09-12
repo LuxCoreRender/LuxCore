@@ -225,7 +225,8 @@ void BiDirCPURenderThread::DirectLightSampling(
 	}
 }
 
-void BiDirCPURenderThread::DirectHitLight(const Spectrum &lightRadiance,
+void BiDirCPURenderThread::DirectHitLight(
+		const LightSource *light, const Spectrum &lightRadiance,
 		const float directPdfA, const float emissionPdfW,
 		const PathVertexVM &eyeVertex, Spectrum *radiance) const {
 	if (lightRadiance.Black())
@@ -238,7 +239,7 @@ void BiDirCPURenderThread::DirectHitLight(const Spectrum &lightRadiance,
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	const float lightPickPdf = scene->PickLightPdf();
+	const float lightPickPdf = scene->SampleAllLightPdf(light);
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -256,15 +257,15 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
-		DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+		DirectHitLight(eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
 		if (scene->envLight) {
 			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+			DirectHitLight(scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 		if (scene->sunLight) {
 			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+			DirectHitLight(scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
 }

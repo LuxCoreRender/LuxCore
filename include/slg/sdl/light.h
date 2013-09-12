@@ -23,6 +23,7 @@
 #define	_SLG_LIGHT_H
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/randomgen.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/spectrum.h"
@@ -43,6 +44,8 @@ typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
 } LightSourceType;
 
+extern const float lightWorldRadiusScale;
+
 //------------------------------------------------------------------------------
 // LightSource implementation
 //------------------------------------------------------------------------------
@@ -56,6 +59,7 @@ public:
 
 	virtual bool IsEnvironmental() const { return false; }
 
+	virtual const float GetPower(const Scene &scene) const = 0;
 	virtual const u_int GetSamples() const = 0;
 
 	// Emits particle from the light
@@ -128,6 +132,7 @@ public:
 	virtual ~InfiniteLight() { }
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
+	virtual const float GetPower(const Scene &scene) const;
 
 	const ImageMap *GetImageMap() const { return imageMap; }
 	UVMapping2D *GetUVMapping() { return &mapping; }
@@ -154,6 +159,7 @@ public:
 	virtual void Preprocess();
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY; }
+	virtual const float GetPower(const Scene &scene) const;
 
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }
@@ -200,6 +206,7 @@ public:
 	virtual void Preprocess();
 
 	virtual LightSourceType GetType() const { return TYPE_SUN; }
+	virtual const float GetPower(const Scene &scene) const;
 
 	void SetSamples(const u_int sampleCount) { samples = sampleCount; }
 	virtual const u_int GetSamples() const { return samples; }
@@ -274,6 +281,7 @@ public:
 	virtual ~TriangleLight() { }
 
 	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
+	virtual const float GetPower(const Scene &scene) const;
 
 	virtual const u_int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
 

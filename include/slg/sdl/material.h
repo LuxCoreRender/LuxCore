@@ -93,6 +93,12 @@ public:
 		else
 			return luxrays::Spectrum();
 	}
+	virtual float GetEmittedRadianceY() const {
+		if (emittedTex)
+			return emittedTex->Y();
+		else
+			return 0.f;
+	}
 	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const {
 		if (bumpTex) {
 			const luxrays::UV &dudv = bumpTex->GetDuDv();

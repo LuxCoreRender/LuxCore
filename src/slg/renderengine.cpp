@@ -375,7 +375,6 @@ void CPURenderThread::EndEdit(const EditActionList &editActions) {
 
 CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
-
 	const size_t renderThreadCount =  cfg->cfg.GetInt("native.threads.count",
 			boost::thread::hardware_concurrency());
 
