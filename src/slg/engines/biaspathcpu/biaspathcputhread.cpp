@@ -207,11 +207,11 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 
 void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		PathDepthInfo depthInfo, Ray ray,
+		bool isDiffuseRay , bool isGlossyRay,
 		Spectrum pathThrouput, float lastPdfW, bool lastSpecular,
 		luxrays::Spectrum *radiance) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-
 	BSDF bsdf;
 	for (;;) {
 		RayHit rayHit;
@@ -226,6 +226,12 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		pathThrouput *= connectionThroughput;
 
 		// Something was hit
+
+		// Check if it is visible in indirect paths
+		if (isDiffuseRay && !bsdf.IsVisibleIndirectDiffuse())
+			break;
+		if (isGlossyRay && !bsdf.IsVisibleIndirectGlossy())
+			break;
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource() && (rayHit.t > engine->nearStartLight)) {
@@ -261,7 +267,9 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		if (!depthInfo.CheckDepths(engine->maxPathDepth))
 			break;
 
-		lastSpecular = ((event & SPECULAR) != 0);
+		lastSpecular = (event & SPECULAR);
+		isDiffuseRay = (event & DIFFUSE);
+		isGlossyRay = !isDiffuseRay;
 
 		pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
 		assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
@@ -297,13 +305,13 @@ luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenera
 			if (!depthInfo.CheckDepths(engine->maxPathDepth))
 				continue;
 
-			const bool continueLastSpecular = ((event & SPECULAR) != 0);
+			const bool continueLastSpecular = (event & SPECULAR);
 			const Spectrum continuePathThrouput = bsdfSample * (cosSampledDir / pdfW);
 			assert (!continuePathThrouput.IsNaN() && !continuePathThrouput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);
-			ContinueTracePath(rndGen, depthInfo, continueRay, continuePathThrouput,
-					pdfW, continueLastSpecular, &radiance);
+			ContinueTracePath(rndGen, depthInfo, continueRay, (event & DIFFUSE), !(event & DIFFUSE),
+					continuePathThrouput, pdfW, continueLastSpecular,	&radiance);
 		}
 	}
 
@@ -382,7 +390,7 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			if (!depthInfo.CheckDepths(engine->maxPathDepth))
 				break;
 
-			lastSpecular = ((event & SPECULAR) != 0);
+			lastSpecular = (event & SPECULAR);
 
 			pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
 			assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
