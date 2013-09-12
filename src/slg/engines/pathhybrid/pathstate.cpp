@@ -111,7 +111,7 @@ void PathHybridState::DirectHitFiniteLight(const Scene *scene, const float dista
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!lastSpecular) {
-			const float lightPickProb = scene->PickLightPdf();
+			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 

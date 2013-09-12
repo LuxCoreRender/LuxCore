@@ -520,6 +520,44 @@ void ImageMap::WriteImage(const std::string &fileName) const {
 	FreeImage_Unload(dib);
 }
 
+float ImageMap::GetSpectrumMean() const {
+	float mean = 0.f;	
+	for (u_int y = 0; y < height; ++y) {
+		for (u_int x = 0; x < width; ++x) {
+			const u_int index = x + y * width;
+			
+			if (channelCount == 1) 
+				mean += pixels[index];
+			else {
+				// channelCount = (3 or 4)
+				const float *pixel = &pixels[index * channelCount];
+				mean += (pixel[0] + pixel[1] + pixel[2]) * (1.f / 3.f);
+			}
+		}
+	}
+
+	return mean / (width * height);
+}
+
+float ImageMap::GetSpectrumMeanY() const {
+	float mean = 0.f;	
+	for (u_int y = 0; y < height; ++y) {
+		for (u_int x = 0; x < width; ++x) {
+			const u_int index = x + y * width;
+			
+			if (channelCount == 1) 
+				mean += pixels[index];
+			else {
+				// channelCount = (3 or 4)
+				const float *pixel = &pixels[index * channelCount];
+				mean += Spectrum(pixel[0], pixel[1], pixel[2]).Y();
+			}
+		}
+	}
+
+	return mean / (width * height);
+}
+
 //------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------
@@ -726,6 +764,10 @@ Spectrum FresnelApproxNTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 	return FresnelApproxN(tex->GetSpectrumValue(hitPoint));
 }
 
+float FresnelApproxNTexture::Y() const {
+	return FresnelApproxN(tex->Y());
+}
+
 UV FresnelApproxNTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
@@ -736,6 +778,10 @@ float FresnelApproxKTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
 Spectrum FresnelApproxKTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return FresnelApproxK(tex->GetSpectrumValue(hitPoint));
+}
+
+float FresnelApproxKTexture::Y() const {
+	return FresnelApproxK(tex->Y());
 }
 
 UV FresnelApproxKTexture::GetDuDv() const {
@@ -944,6 +990,18 @@ Spectrum MarbleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	s1 = Lerp(t, s1, s2);
 	// Extra scale of 1.5 to increase variation among colors
 	return 1.5f * Lerp(t, s0, s1);
+}
+
+float MarbleTexture::Y() const {
+	static float c[][3] = { { .58f, .58f, .6f }, { .58f, .58f, .6f }, { .58f, .58f, .6f },
+		{ .5f, .5f, .5f }, { .6f, .59f, .58f }, { .58f, .58f, .6f },
+		{ .58f, .58f, .6f }, {.2f, .2f, .33f }, { .58f, .58f, .6f }, };
+	luxrays::Spectrum cs;
+#define NC  sizeof(c) / sizeof(c[0])
+	for (u_int i = 0; i < NC; ++i)
+		cs += luxrays::Spectrum(c[i]);
+	return cs.Y() / NC;
+#undef NC
 }
 
 float MarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {

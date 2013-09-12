@@ -73,7 +73,7 @@ protected:
 			const float u3, const float u4,
 			const PathVertex &eyeVertex);
 	void DirectHitLight(HybridRenderThread *renderThread,
-			const luxrays::Spectrum &lightRadiance,
+			const LightSource *light, const luxrays::Spectrum &lightRadiance,
 			const float directPdfA, const float emissionPdfW,
 			const PathVertex &eyeVertex, luxrays::Spectrum *radiance) const;
 	void DirectHitLight(HybridRenderThread *renderThread,

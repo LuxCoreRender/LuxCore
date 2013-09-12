@@ -68,7 +68,10 @@ public:
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent = ALL) const;
 	void Pdf(const luxrays::Vector &sampledDir, float *directPdfW, float *reversePdfW) const;
+
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
+
+	const LightSource *GetLightSource() const { return triangleLightSource; }
 
 	HitPoint hitPoint;
 

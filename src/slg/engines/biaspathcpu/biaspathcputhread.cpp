@@ -157,7 +157,7 @@ void BiasPathCPURenderThread::DirectHitFiniteLight(
 		if (!lastSpecular) {
 			// This PDF used for MIS is correct because lastSpecular is always
 			// true when using DirectLightSamplingALL()
-			const float lightPickProb = scene->PickLightPdf();
+			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 

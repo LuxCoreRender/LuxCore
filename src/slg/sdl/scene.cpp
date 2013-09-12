@@ -50,6 +50,7 @@ Scene::Scene() {
 	dataSet = NULL;
 	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
+	lightsDistribution = NULL;
 }
 
 Scene::Scene(const std::string &fileName, const float imageScale) {
@@ -58,6 +59,7 @@ Scene::Scene(const std::string &fileName, const float imageScale) {
 	envLight = NULL;
 	sunLight = NULL;
 	dataSet = NULL;
+	lightsDistribution = NULL;
 
 	imgMapCache.SetImageResize(imageScale);
 
@@ -126,9 +128,11 @@ Scene::~Scene() {
 		delete *l;
 
 	delete dataSet;
+	delete lightsDistribution;
 }
 
 void Scene::Preprocess(Context *ctx) {
+	// Rebuild the data set
 	delete dataSet;
 	dataSet = new DataSet(ctx);
 	dataSet->SetInstanceSupport(enableInstanceSupport);
@@ -140,6 +144,30 @@ void Scene::Preprocess(Context *ctx) {
 		dataSet->Add(*obj);
 
 	dataSet->Preprocess();
+
+	// Rebuild the data to power based light sampling
+	const float worldRadius = lightWorldRadiusScale * dataSet->GetBSphere().rad * 1.01f;
+	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
+	const u_int lightCount = GetLightCount();
+	float *lightPower = new float[lightCount];
+	for (u_int i = 0; i < lightCount; ++i) {
+		const LightSource *l = GetLightByIndex(i);
+		lightPower[i] = l->GetPower(*this);
+
+		// In order to avoid over-sampling of distant lights
+		if ((l->GetType() == TYPE_IL) ||
+				(l->GetType() == TYPE_IL_SKY) ||
+				(l->GetType() == TYPE_SUN))
+			lightPower[i] *= iWorldRadius2;
+	}
+
+	lightsDistribution = new Distribution1D(lightPower, lightCount);
+	delete lightPower;
+
+	// Initialize the table to look light indices
+	light2Index.clear();
+	for (u_int i = 0; i < lightCount; ++i)
+		light2Index[GetLightByIndex(i)] = i;
 }
 
 Properties Scene::ToProperties(const std::string &directoryName) {
@@ -1113,19 +1141,17 @@ LightSource *Scene::GetLightByIndex(const u_int lightIndex) const {
 }
 
 LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
-	const u_int lightsSize = GetLightCount();
-
-	// One Uniform light strategy
-	const u_int lightIndex = Min(Floor2UInt(lightsSize * u), lightsSize - 1);
-	*pdf = 1.f / lightsSize;
-
-	return GetLightByIndex(lightIndex);
+	// Power based light strategy
+	return GetLightByIndex(lightsDistribution->SampleDiscrete(u, pdf));
 }
 
-float Scene::PickLightPdf() const {
-	const u_int lightsSize = GetLightCount();
+float Scene::SampleAllLightPdf(const LightSource *light) const {
+	// Power based light strategy
 
-	return 1.f / lightsSize;
+	// Find the light index
+	std::map<const LightSource *, u_int>::const_iterator it = light2Index.find(light);
+
+	return lightsDistribution->Pdf(it->second);
 }
 
 bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,
