@@ -886,6 +886,9 @@ Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache)
 // Mix texture
 //------------------------------------------------------------------------------
 
+float MixTexture::Y() const {
+	return luxrays::Lerp(amount->Y(), tex1->Y(), tex2->Y());
+}
 float MixTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float value1 = tex1->GetFloatValue(hitPoint);

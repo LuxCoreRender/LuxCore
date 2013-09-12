@@ -68,6 +68,14 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	lowLightThreashold = Max(0.f, cfg.GetFloat("biaspath.lights.lowthreshold", .001f));
 	nearStartLight = Max(0.f, cfg.GetFloat("biaspath.lights.nearstart", .001f));
 
+	string lightStratType = cfg.GetString("biaspath.lights.samplingstrategy.type", "ALL");
+	if (lightStratType == "ALL")
+		lightSamplingStrategyONE = false;
+	else if (lightStratType == "ONE")
+		lightSamplingStrategyONE = true;
+	else
+		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
+
 	CPUTileRenderEngine::StartLockLess();
 }
 

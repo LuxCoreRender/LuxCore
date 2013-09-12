@@ -587,6 +587,10 @@ Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		return matB->GetPassThroughTransparency(hitPoint, localFixedDir, (passThroughEvent - weight2) / weight2);
 }
 
+float MixMaterial::GetEmittedRadianceY() const {
+	return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(), matB->GetEmittedRadianceY());
+}
+
 Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint) const {
 	Spectrum result;
 

@@ -541,8 +541,7 @@ public:
 	virtual TextureType GetType() const { return MIX_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { return luxrays::Lerp(amount->Y(),
-			tex1->Y(), tex2->Y()); }
+	virtual float Y() const;
 
 	virtual luxrays::UV GetDuDv() const;
 

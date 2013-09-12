@@ -485,6 +485,7 @@ public:
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
 
+	virtual float GetEmittedRadianceY() const;
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const;
 	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetNormalTexValue(const HitPoint &hitPoint) const;
