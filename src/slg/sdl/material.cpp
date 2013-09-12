@@ -1087,7 +1087,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 		if (reversePdfW)
 			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
 
-		*event = DIFFUSE | REFLECT;
+		*event = GLOSSY | REFLECT;
 		return baseF;
 	}
 
@@ -1189,7 +1189,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, localFixedDir, *localSampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, *localSampledDir);
 
-		*event = DIFFUSE | REFLECT;
+		*event = GLOSSY | REFLECT;
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(hitPoint.fromLight, ks, roughness, anisotropy,

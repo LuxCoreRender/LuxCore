@@ -404,21 +404,24 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			// Sample the diffuse component
 			//------------------------------------------------------------------
 
-			if ((engine->diffuseSamples > 0) && ((materialEventTypes & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT)))
+			if ((engine->maxPathDepth.diffuseDepth > 0) && (engine->diffuseSamples > 0) &&
+					((materialEventTypes & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT)))
 				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE | REFLECT, engine->diffuseSamples, depthInfo, bsdf);
 
 			//------------------------------------------------------------------
 			// Sample the glossy component
 			//------------------------------------------------------------------
 
-			if ((engine->glossySamples > 0) && ((materialEventTypes & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT)))
+			if ((engine->maxPathDepth.glossyDepth > 0) && (engine->glossySamples > 0) &&
+					((materialEventTypes & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT)))
 				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY | REFLECT, engine->glossySamples, depthInfo, bsdf);
 
 			//------------------------------------------------------------------
 			// Sample the refraction component
 			//------------------------------------------------------------------
 
-			if ((engine->refractionSamples > 0) && (materialEventTypes & TRANSMIT))
+			if ((engine->maxPathDepth.refractionDepth > 0) && (engine->refractionSamples > 0) &&
+					(materialEventTypes & TRANSMIT))
 				*radiance += pathThrouput * SampleComponent(rndGen, TRANSMIT, engine->refractionSamples, depthInfo, bsdf);
 
 			break;
