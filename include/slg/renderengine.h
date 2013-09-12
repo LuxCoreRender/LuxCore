@@ -299,7 +299,7 @@ protected:
 	std::vector<Tile *> pendingTiles;
 
 	u_int totalSamplesPerPixel;
-	bool enableProgressiveRefinement;
+	bool enableProgressiveRefinement, enableMultipassRendering;
 };
 
 //------------------------------------------------------------------------------
