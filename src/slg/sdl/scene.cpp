@@ -1142,7 +1142,13 @@ LightSource *Scene::GetLightByIndex(const u_int lightIndex) const {
 
 LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
 	// Power based light strategy
-	return GetLightByIndex(lightsDistribution->SampleDiscrete(u, pdf));
+	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
+//std::cout<<"=="<<u<<"="<<*pdf<<"====="<<lightIndex<<"/"<<GetLightCount()<<"\n";
+if(!((lightIndex >= 0) && (lightIndex < GetLightCount())))
+	throw std::runtime_error("#################");
+	assert ((lightIndex >= 0) && (lightIndex < GetLightCount()));
+
+	return GetLightByIndex(lightIndex);
 }
 
 float Scene::SampleAllLightPdf(const LightSource *light) const {

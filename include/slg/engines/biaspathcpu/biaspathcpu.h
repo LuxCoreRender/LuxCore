@@ -117,6 +117,7 @@ public:
 
 	// Light settings
 	float lowLightThreashold, nearStartLight;
+	bool lightSamplingStrategyONE;
 
 	friend class BiasPathCPURenderThread;
 

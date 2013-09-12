@@ -353,8 +353,12 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		// Direct light sampling
 		//----------------------------------------------------------------------
 
-		if (!bsdf.IsDelta())
-			DirectLightSamplingALL(rndGen, pathThrouput, bsdf, radiance);
+		if (!bsdf.IsDelta()) {
+			if (engine->lightSamplingStrategyONE)
+				DirectLightSamplingONE(rndGen, pathThrouput, bsdf, radiance);
+			else
+				DirectLightSamplingALL(rndGen, pathThrouput, bsdf, radiance);
+		}
 
 		//----------------------------------------------------------------------
 		// Split the path
