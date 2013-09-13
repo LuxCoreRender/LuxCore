@@ -44,8 +44,7 @@ public:
 
 	bool CheckDepths(const PathDepthInfo &maxPathDepth) const;
 
-	u_int depth, diffuseDepth, glossyDepth,
-			reflectionDepth, refractionDepth;
+	u_int depth, diffuseDepth, glossyDepth, specularDepth;
 };
 
 class BiasPathCPURenderEngine;
@@ -85,12 +84,12 @@ private:
 			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
 
 	void ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
-		bool isDiffuseRay , bool isGlossyRay,
-		luxrays::Spectrum pathThrouput, float lastPdfW, bool lastSpecular,
+		luxrays::Spectrum pathThrouput, BSDFEvent lastBSDFEvent, float lastPdfW,
 		luxrays::Spectrum *radiance);
+	// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
 	luxrays::Spectrum SampleComponent(luxrays::RandomGenerator *rndGen,
 		const BSDFEvent requestedEventTypes,
-		const u_int size, const PathDepthInfo &depthInfo, const BSDF &bsdf);
+		const u_int size, const PathDepthInfo &depthInfo, BSDF &bsdf);
 	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
 		luxrays::Spectrum *radiance, float *alpha);
 	void RenderPixelSample(luxrays::RandomGenerator *rndGen,
@@ -110,7 +109,7 @@ public:
 	PathDepthInfo maxPathDepth;
 
 	// Samples settings
-	u_int aaSamples, diffuseSamples, glossySamples, refractionSamples;
+	u_int aaSamples, diffuseSamples, glossySamples, specularSamples;
 
 	// Clamping settings
 	bool clampValueEnabled;

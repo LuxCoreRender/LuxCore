@@ -59,6 +59,7 @@ public:
 	bool IsDelta() const { return material->IsDelta(); }
 	bool IsVisibleIndirectDiffuse() const { return material->IsVisibleIndirectDiffuse(); }
 	bool IsVisibleIndirectGlossy() const { return material->IsVisibleIndirectGlossy(); }
+	bool IsVisibleIndirectSpecular() const { return material->IsVisibleIndirectSpecular(); }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 

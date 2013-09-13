@@ -207,8 +207,7 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 
 void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		PathDepthInfo depthInfo, Ray ray,
-		bool isDiffuseRay , bool isGlossyRay,
-		Spectrum pathThrouput, float lastPdfW, bool lastSpecular,
+		Spectrum pathThrouput, BSDFEvent lastBSDFEvent, float lastPdfW,
 		luxrays::Spectrum *radiance) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -219,7 +218,7 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		if (!scene->Intersect(device, false, rndGen->floatValue(),
 				&ray, &rayHit, &bsdf, &connectionThroughput)) {
 			// Nothing was hit, look for infinitelight
-			DirectHitInfiniteLight(lastSpecular, pathThrouput * connectionThroughput, ray.d,
+			DirectHitInfiniteLight(lastBSDFEvent & SPECULAR, pathThrouput * connectionThroughput, ray.d,
 					lastPdfW, radiance);
 			break;
 		}
@@ -228,14 +227,14 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Something was hit
 
 		// Check if it is visible in indirect paths
-		if (isDiffuseRay && !bsdf.IsVisibleIndirectDiffuse())
-			break;
-		if (isGlossyRay && !bsdf.IsVisibleIndirectGlossy())
+		if (((lastBSDFEvent & DIFFUSE) && !bsdf.IsVisibleIndirectDiffuse()) ||
+				((lastBSDFEvent & GLOSSY) && !bsdf.IsVisibleIndirectGlossy()) ||
+				((lastBSDFEvent & SPECULAR) && !bsdf.IsVisibleIndirectSpecular()))
 			break;
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource() && (rayHit.t > engine->nearStartLight)) {
-			DirectHitFiniteLight(lastSpecular, pathThrouput,
+			DirectHitFiniteLight(lastBSDFEvent & SPECULAR, pathThrouput,
 					rayHit.t, bsdf, lastPdfW, radiance);
 		}
 
@@ -253,23 +252,18 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		//----------------------------------------------------------------------
 
 		Vector sampledDir;
-		BSDFEvent event;
 		float cosSampledDir;
 		const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 				rndGen->floatValue(),
 				rndGen->floatValue(),
-				&lastPdfW, &cosSampledDir, &event);
+				&lastPdfW, &cosSampledDir, &lastBSDFEvent);
 		if (bsdfSample.Y() <= engine->lowLightThreashold)
 			break;
 
 		// Check if I have to stop because of path depth
-		depthInfo.IncDepths(event);
+		depthInfo.IncDepths(lastBSDFEvent);
 		if (!depthInfo.CheckDepths(engine->maxPathDepth))
 			break;
-
-		lastSpecular = (event & SPECULAR);
-		isDiffuseRay = (event & DIFFUSE);
-		isGlossyRay = !isDiffuseRay;
 
 		pathThrouput *= bsdfSample * (cosSampledDir / lastPdfW);
 		assert (!pathThrouput.IsNaN() && !pathThrouput.IsInf());
@@ -280,9 +274,10 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 	assert (!radiance->IsNaN() && !radiance->IsInf());
 }
 
+// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
 luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenerator *rndGen,
 		 const BSDFEvent requestedEventTypes, const u_int size,
-		const PathDepthInfo &baseDepthInfo, const BSDF &bsdf) {
+		const PathDepthInfo &baseDepthInfo, BSDF &bsdf) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 
 	Spectrum radiance;
@@ -290,6 +285,7 @@ luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenera
 		for (u_int sampleX = 0; sampleX < size; ++sampleX) {
 			float u0, u1;
 			SampleGrid(rndGen, size, sampleX, sampleY, &u0, &u1);
+			bsdf.hitPoint.passThroughEvent = rndGen->floatValue();
 
 			Vector sampledDir;
 			BSDFEvent event;
@@ -305,13 +301,12 @@ luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenera
 			if (!depthInfo.CheckDepths(engine->maxPathDepth))
 				continue;
 
-			const bool continueLastSpecular = (event & SPECULAR);
 			const Spectrum continuePathThrouput = bsdfSample * (cosSampledDir / pdfW);
 			assert (!continuePathThrouput.IsNaN() && !continuePathThrouput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);
-			ContinueTracePath(rndGen, depthInfo, continueRay, (event & DIFFUSE), !(event & DIFFUSE),
-					continuePathThrouput, pdfW, continueLastSpecular,	&radiance);
+			ContinueTracePath(rndGen, depthInfo, continueRay,
+					continuePathThrouput, event, pdfW, &radiance);
 		}
 	}
 
@@ -372,7 +367,8 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		// Split the path
 		//----------------------------------------------------------------------
 
-		if (bsdf.IsDelta()) {
+		const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
+		if (bsdf.IsDelta() && ((materialEventTypes & (REFLECT | TRANSMIT)) != (REFLECT | TRANSMIT))) {
 			// Continue to trace the initial path
 
 			Vector sampledDir;
@@ -398,31 +394,39 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
 		} else {
 			// Split the initial path
-			const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
 
 			//------------------------------------------------------------------
 			// Sample the diffuse component
+			//
+			// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
 			//------------------------------------------------------------------
 
-			if ((engine->maxPathDepth.diffuseDepth > 0) && (engine->diffuseSamples > 0) &&
-					((materialEventTypes & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT)))
-				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE | REFLECT, engine->diffuseSamples, depthInfo, bsdf);
+			if ((engine->maxPathDepth.diffuseDepth > 0) &&
+					(engine->diffuseSamples > 0) &&
+					(materialEventTypes & DIFFUSE))
+				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE, engine->diffuseSamples, depthInfo, bsdf);
 
 			//------------------------------------------------------------------
 			// Sample the glossy component
+			//
+			// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
 			//------------------------------------------------------------------
 
-			if ((engine->maxPathDepth.glossyDepth > 0) && (engine->glossySamples > 0) &&
-					((materialEventTypes & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT)))
-				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY | REFLECT, engine->glossySamples, depthInfo, bsdf);
+			if ((engine->maxPathDepth.glossyDepth > 0) &&
+					(engine->glossySamples > 0) &&
+					(materialEventTypes & GLOSSY))
+				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY, engine->glossySamples, depthInfo, bsdf);
 
 			//------------------------------------------------------------------
 			// Sample the refraction component
+			//
+			// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
 			//------------------------------------------------------------------
 
-			if ((engine->maxPathDepth.refractionDepth > 0) && (engine->refractionSamples > 0) &&
-					(materialEventTypes & TRANSMIT))
-				*radiance += pathThrouput * SampleComponent(rndGen, TRANSMIT, engine->refractionSamples, depthInfo, bsdf);
+			if ((engine->maxPathDepth.specularDepth > 0) &&
+					(engine->specularSamples > 0) &&
+					((materialEventTypes & (SPECULAR | REFLECT | TRANSMIT)) == (SPECULAR | REFLECT | TRANSMIT)))
+				*radiance += pathThrouput * SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT, engine->specularSamples, depthInfo, bsdf);
 
 			break;
 		}

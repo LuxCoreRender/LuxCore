@@ -63,7 +63,7 @@ class Material {
 public:
 	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
 		emittedSamples(1), emittedTex(emitted), bumpTex(bump), normalTex(normal),
-		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true) { }
+		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
 	virtual ~Material() { }
 
 	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
@@ -85,6 +85,8 @@ public:
 	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
 	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
 	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
+	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
+	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
 
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
@@ -190,7 +192,7 @@ protected:
 	const Texture *bumpTex;
 	const Texture *normalTex;
 
-	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy;
+	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
 };
 
 //------------------------------------------------------------------------------
@@ -523,7 +525,7 @@ public:
 	NullMaterial() : Material(NULL, NULL, NULL) { }
 
 	virtual MaterialType GetType() const { return NULLMAT; }
-	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
+	virtual BSDFEvent GetEventTypes() const { return SPECULAR | TRANSMIT; };
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsPassThrough() const { return true; }
