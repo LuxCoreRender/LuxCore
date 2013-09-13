@@ -60,6 +60,7 @@ public:
 	bool IsVisibleIndirectDiffuse() const { return material->IsVisibleIndirectDiffuse(); }
 	bool IsVisibleIndirectGlossy() const { return material->IsVisibleIndirectGlossy(); }
 	bool IsVisibleIndirectSpecular() const { return material->IsVisibleIndirectSpecular(); }
+	int GetSamples() const { return material->GetSamples(); }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 

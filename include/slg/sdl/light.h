@@ -60,7 +60,7 @@ public:
 	virtual bool IsEnvironmental() const { return false; }
 
 	virtual const float GetPower(const Scene &scene) const = 0;
-	virtual const u_int GetSamples() const = 0;
+	virtual const int GetSamples() const = 0;
 
 	// Emits particle from the light
 	virtual luxrays::Spectrum Emit(const Scene &scene,
@@ -82,15 +82,15 @@ public:
 class InfiniteLightBase : public LightSource {
 public:
 	InfiniteLightBase(const luxrays::Transform &l2w) :
-		lightToWorld(l2w), gain(1.f, 1.f, 1.f), samples(1) { }
+		lightToWorld(l2w), gain(1.f, 1.f, 1.f), samples(-1) { }
 	virtual ~InfiniteLightBase() { }
 
 	virtual void Preprocess() { }
 
 	virtual bool IsEnvironmental() const { return true; }
 
-	void SetSamples(const u_int sampleCount) { samples = sampleCount; }
-	virtual const u_int GetSamples() const { return samples; }
+	void SetSamples(const int sampleCount) { samples = sampleCount; }
+	virtual const int GetSamples() const { return samples; }
 
 	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
@@ -109,7 +109,7 @@ public:
 protected:
 	const luxrays::Transform lightToWorld;
 	luxrays::Spectrum gain;
-	u_int samples;
+	int samples;
 };
 
 //------------------------------------------------------------------------------
@@ -220,8 +220,8 @@ public:
 	virtual LightSourceType GetType() const { return TYPE_SUN; }
 	virtual const float GetPower(const Scene &scene) const;
 
-	void SetSamples(const u_int sampleCount) { samples = sampleCount; }
-	virtual const u_int GetSamples() const { return samples; }
+	void SetSamples(const int sampleCount) { samples = sampleCount; }
+	virtual const int GetSamples() const { return samples; }
 
 	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
@@ -279,7 +279,7 @@ private:
 	float cosThetaMax, sin2ThetaMax;
 	luxrays::Spectrum sunColor;
 
-	u_int samples;
+	int samples;
 };
 
 //------------------------------------------------------------------------------
@@ -295,7 +295,7 @@ public:
 	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
 	virtual const float GetPower(const Scene &scene) const;
 
-	virtual const u_int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
+	virtual const int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
 
 	void SetMaterial(const Material *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }

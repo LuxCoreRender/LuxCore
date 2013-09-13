@@ -418,7 +418,7 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 //------------------------------------------------------------------------------
 
 SunLight::SunLight(const luxrays::Transform &l2w,
-		float turb, float size,	const Vector &sd) : lightToWorld(l2w), samples(1) {
+		float turb, float size,	const Vector &sd) : lightToWorld(l2w), samples(-1) {
 	turbidity = turb;
 	sunDir = Normalize(lightToWorld * sd);
 	gain = Spectrum(1.0f, 1.0f, 1.0f);

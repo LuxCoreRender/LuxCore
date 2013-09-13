@@ -1080,7 +1080,9 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 
-	mat->SetEmittedSamples(Max(0, props.GetInt(propName + ".emission.samples", 1)));
+	mat->SetSamples(Max(-1, props.GetInt(propName + ".samples", -1)));
+	mat->SetEmittedSamples(Max(-1, props.GetInt(propName + ".emission.samples", -1)));
+
 	mat->SetIndirectDiffuseVisibility(props.GetBoolean(propName + ".visibility.indirect.diffuse.enable", true));
 	mat->SetIndirectGlossyVisibility(props.GetBoolean(propName + ".visibility.indirect.glossy.enable", true));
 	mat->SetIndirectSpecularVisibility(props.GetBoolean(propName + ".visibility.indirect.specular.enable", true));
