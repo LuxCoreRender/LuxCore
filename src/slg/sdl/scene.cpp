@@ -1083,6 +1083,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 	mat->SetEmittedSamples(Max(0, props.GetInt(propName + ".emission.samples", 1)));
 	mat->SetIndirectDiffuseVisibility(props.GetBoolean(propName + ".visibility.indirect.diffuse.enable", true));
 	mat->SetIndirectGlossyVisibility(props.GetBoolean(propName + ".visibility.indirect.glossy.enable", true));
+	mat->SetIndirectSpecularVisibility(props.GetBoolean(propName + ".visibility.indirect.specular.enable", true));
 
 	return mat;
 }
