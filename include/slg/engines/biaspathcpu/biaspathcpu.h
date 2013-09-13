@@ -109,7 +109,7 @@ public:
 	PathDepthInfo maxPathDepth;
 
 	// Samples settings
-	u_int aaSamples, diffuseSamples, glossySamples, specularSamples;
+	u_int aaSamples, diffuseSamples, glossySamples, specularSamples, directLightSamples;
 
 	// Clamping settings
 	bool clampValueEnabled;

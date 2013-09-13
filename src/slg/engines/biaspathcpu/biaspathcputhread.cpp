@@ -121,14 +121,15 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 	const u_int lightsSize = scene->GetLightCount();
 	for (u_int i = 0; i < lightsSize; ++i) {
 		const LightSource *light = scene->GetLightByIndex(i);
-		const u_int samples = light->GetSamples();
+		const int samples = light->GetSamples();
+		const u_int samplesToDo = (samples < 0) ? engine->directLightSamples : ((u_int)samples);
 
 		Spectrum lightRadiance;
 		u_int sampleCount = 0;
-		for (u_int sampleY = 0; sampleY < samples; ++sampleY) {
-			for (u_int sampleX = 0; sampleX < samples; ++sampleX) {
+		for (u_int sampleY = 0; sampleY < samplesToDo; ++sampleY) {
+			for (u_int sampleX = 0; sampleX < samplesToDo; ++sampleX) {
 				float u0, u1;
-				SampleGrid(rndGen, samples, sampleX, sampleY, &u0, &u1);
+				SampleGrid(rndGen, samplesToDo, sampleX, sampleY, &u0, &u1);
 
 				if (DirectLightSampling(light, 1.f, u0, u1,
 						rndGen->floatValue(), rndGen->floatValue(),
@@ -395,16 +396,20 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		} else {
 			// Split the initial path
 
+			int materialSamples = bsdf.GetSamples();
+
 			//------------------------------------------------------------------
 			// Sample the diffuse component
 			//
 			// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
 			//------------------------------------------------------------------
 
-			if ((engine->maxPathDepth.diffuseDepth > 0) &&
-					(engine->diffuseSamples > 0) &&
-					(materialEventTypes & DIFFUSE))
-				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE, engine->diffuseSamples, depthInfo, bsdf);
+			if ((engine->maxPathDepth.diffuseDepth > 0) && (materialEventTypes & DIFFUSE)) {
+				const u_int diffuseSamples = (materialSamples < 0) ? engine->diffuseSamples : ((u_int)materialSamples);
+
+				if (diffuseSamples > 0)
+					*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE, diffuseSamples, depthInfo, bsdf);
+			}
 
 			//------------------------------------------------------------------
 			// Sample the glossy component
@@ -412,10 +417,12 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
 			//------------------------------------------------------------------
 
-			if ((engine->maxPathDepth.glossyDepth > 0) &&
-					(engine->glossySamples > 0) &&
-					(materialEventTypes & GLOSSY))
-				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY, engine->glossySamples, depthInfo, bsdf);
+			if ((engine->maxPathDepth.glossyDepth > 0) && (materialEventTypes & GLOSSY)) {
+				const u_int glossySamples = (materialSamples < 0) ? engine->glossySamples : ((u_int)materialSamples);
+
+				if (glossySamples > 0)
+					*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY, glossySamples, depthInfo, bsdf);
+			}
 
 			//------------------------------------------------------------------
 			// Sample the refraction component
@@ -424,9 +431,12 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			//------------------------------------------------------------------
 
 			if ((engine->maxPathDepth.specularDepth > 0) &&
-					(engine->specularSamples > 0) &&
-					((materialEventTypes & (SPECULAR | REFLECT | TRANSMIT)) == (SPECULAR | REFLECT | TRANSMIT)))
-				*radiance += pathThrouput * SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT, engine->specularSamples, depthInfo, bsdf);
+					((materialEventTypes & (SPECULAR | REFLECT | TRANSMIT)) == (SPECULAR | REFLECT | TRANSMIT))) {
+				const u_int speculaSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
+
+				if (speculaSamples > 0)
+					*radiance += pathThrouput * SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT, speculaSamples, depthInfo, bsdf);
+			}
 
 			break;
 		}

@@ -62,7 +62,7 @@ typedef enum {
 class Material {
 public:
 	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
-		emittedSamples(1), emittedTex(emitted), bumpTex(bump), normalTex(normal),
+		samples(-1), emittedSamples(-1), emittedTex(emitted), bumpTex(bump), normalTex(normal),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
 	virtual ~Material() { }
 
@@ -148,8 +148,10 @@ public:
 			return luxrays::Spectrum();
 	}
 
-	const void SetEmittedSamples(const u_int samples) { emittedSamples = samples; }
-	const u_int GetEmittedSamples() const { return emittedSamples; }
+	const void SetSamples(const int sampleCount) { samples = sampleCount; }
+	const int GetSamples() const { return samples; }
+	const void SetEmittedSamples(const int sampleCount) { emittedSamples = sampleCount; }
+	const int GetEmittedSamples() const { return emittedSamples; }
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	const Texture *GetNormalTexture() const { return normalTex; }
@@ -187,7 +189,7 @@ public:
 	virtual luxrays::Properties ToProperties() const;
 
 protected:
-	u_int emittedSamples;
+	int samples, emittedSamples;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
 	const Texture *normalTex;

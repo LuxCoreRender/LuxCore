@@ -59,6 +59,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	diffuseSamples = Max(0, cfg.GetInt("biaspath.sampling.diffuse.size", 2));
 	glossySamples = Max(0, cfg.GetInt("biaspath.sampling.glossy.size", 2));
 	specularSamples = Max(0, cfg.GetInt("biaspath.sampling.specular.size", 1));
+	directLightSamples = Max(1, cfg.GetInt("biaspath.sampling.directlight.size", 1));
 
 	// Clamping settings
 	clampValueEnabled = cfg.GetBoolean("biaspath.clamping.enable", true);
