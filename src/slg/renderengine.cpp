@@ -626,7 +626,7 @@ const bool TileRepository::NextTile(Tile **tile, const u_int width, const u_int 
 				return false;
 			}
 
-			return NULL;
+			return false;
 		}
 	}
 
@@ -693,7 +693,7 @@ const bool CPUTileRenderEngine::NextTile(TileRepository::Tile **tile, const Film
 	if (!tileRepository->NextTile(tile, film->GetWidth(), film->GetHeight())) {
 		boost::unique_lock<boost::mutex> lock(engineMutex);
 
-		if (!printedRenderingTime) {
+		if (!printedRenderingTime && tileRepository->done) {
 			elapsedTime = WallClockTime() - startTime;
 			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
 			printedRenderingTime = true;
