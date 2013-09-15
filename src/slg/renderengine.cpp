@@ -520,49 +520,35 @@ void CPUNoTileRenderEngine::UpdateCounters() {
 }
 
 //------------------------------------------------------------------------------
-// CPUTileRenderThread
+// TileRepository
 //------------------------------------------------------------------------------
 
-CPUTileRenderThread::CPUTileRenderThread(CPUTileRenderEngine *engine,
-		const u_int index, IntersectionDevice *dev) :
-		CPURenderThread(engine, index, dev) {
-	tileFilm = NULL;
-}
-
-CPUTileRenderThread::~CPUTileRenderThread() {
-	delete tileFilm;
-}
-
-void CPUTileRenderThread::StartRenderThread() {
-	delete tileFilm;
-
-	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
-	tileFilm = new Film(cpuTileEngine->tileSize, cpuTileEngine->tileSize);
-	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
-	tileFilm->SetPerPixelNormalizedBufferFlag(true);
-	tileFilm->SetPerScreenNormalizedBufferFlag(false);
-	tileFilm->SetFrameBufferFlag(false);
-	tileFilm->Init();
-
-	CPURenderThread::StartRenderThread();
-}
-
-//------------------------------------------------------------------------------
-// CPUTileRenderEngine
-//------------------------------------------------------------------------------
-
-CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
-	CPURenderEngine(cfg, flm, flmMutex) {
-	tileSize =  Max(cfg->cfg.GetInt("tile.size", 32), 8);
+TileRepository::TileRepository(const u_int size) {
+	tileSize = size;
 
 	enableProgressiveRefinement = false;
 	enableMultipassRendering = false;
+	done = false;
 }
 
-CPUTileRenderEngine::~CPUTileRenderEngine() {
+TileRepository::~TileRepository() {
+	Clear();
 }
 
-void CPUTileRenderEngine::GetPendingTiles(vector<Tile> &tiles) {
+void TileRepository::Clear() {
+	// Free all left tiles
+	BOOST_FOREACH(Tile *tile, todoTiles) {
+		delete tile;
+	}
+	todoTiles.clear();
+
+	BOOST_FOREACH(Tile *tile, pendingTiles) {
+		delete tile;
+	}
+	pendingTiles.clear();
+}
+
+void TileRepository::GetPendingTiles(vector<Tile> &tiles) {
 	boost::unique_lock<boost::mutex> lock(tileMutex);
 
 	tiles.resize(pendingTiles.size());
@@ -570,30 +556,7 @@ void CPUTileRenderEngine::GetPendingTiles(vector<Tile> &tiles) {
 		tiles[i] = *(pendingTiles[i]);
 }
 
-void CPUTileRenderEngine::LinearTiles(const int sampleIndex) {
-	u_int x = 0;
-	u_int y = 0;
-
-	// Linear tile order
-	for (;;) {
-		Tile *tile = new Tile;
-		tile->xStart = x;
-		tile->yStart = y;
-		tile->sampleIndex = sampleIndex;
-		todoTiles.push_back(tile);
-
-		x += tileSize;
-		if (x >= film->GetWidth()) {
-			x = 0;
-
-			y += tileSize;
-			if (y >= film->GetHeight())
-				break;
-		}
-	}
-}
-
-void CPUTileRenderEngine::HilberCurveTiles(const int sampleIndex,
+void TileRepository::HilberCurveTiles(const int sampleIndex,
 		const u_int n, const int xo, const int yo,
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd) {
@@ -627,96 +590,135 @@ void CPUTileRenderEngine::HilberCurveTiles(const int sampleIndex,
 	}	
 }
 
-void CPUTileRenderEngine::InitTiles() {
-	u_int n = RoundUp(Max(film->GetWidth(), film->GetHeight()), tileSize) / tileSize;
+void TileRepository::InitTiles(const u_int width, const u_int height) {
+	u_int n = RoundUp(Max(width, height), tileSize) / tileSize;
 	if (!IsPowerOf2(n))
 		n = RoundUpPow2(n);
 	if (enableProgressiveRefinement) {
 		for (u_int i = 0; i < totalSamplesPerPixel; ++i)
-			HilberCurveTiles(i, n, 0, 0, 0, tileSize, tileSize, 0, film->GetWidth(), film->GetHeight());
+			HilberCurveTiles(i, n, 0, 0, 0, tileSize, tileSize, 0, width, height);
 	} else
-		HilberCurveTiles(-1, n, 0, 0, 0, tileSize, tileSize, 0, film->GetWidth(), film->GetHeight());
+		HilberCurveTiles(-1, n, 0, 0, 0, tileSize, tileSize, 0, width, height);
+
+	done = false;
 }
 
-const CPUTileRenderEngine::Tile *CPUTileRenderEngine::NextTile(const Tile *tile, const Film *tileFilm) {
-	// Check if I have to add the tile to the film
-	if (tile) {
-		boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-		film->AddFilm(*tileFilm,
-				0, 0,
-				Min(tileSize, film->GetWidth() - tile->xStart),
-				Min(tileSize, film->GetHeight() - tile->yStart),
-				tile->xStart, tile->yStart);
-	}
-
+const bool TileRepository::NextTile(Tile **tile, const u_int width, const u_int height) {
 	boost::unique_lock<boost::mutex> lock(tileMutex);
 
-	if (tile) {
+	if (*tile) {
 		// Remove the tile from pending list
-		pendingTiles.erase(std::remove(pendingTiles.begin(), pendingTiles.end(), tile), pendingTiles.end());
+		pendingTiles.erase(std::remove(pendingTiles.begin(), pendingTiles.end(), *tile), pendingTiles.end());
 
 		// Now I can free the memory
-		delete tile;
+		delete *tile;
 	}
 
 	if (todoTiles.size() == 0) {
 		// Check if multi-pass is enabled
 		if (enableMultipassRendering)
-			InitTiles();
+			InitTiles(width, height);
 		else {
 			if (pendingTiles.size() == 0) {
 				// Rendering done
+				done = true;
 
-				elapsedTime = WallClockTime() - startTime;
-
-				SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+				return false;
 			}
 
 			return NULL;
 		}
 	}
 
-	Tile *newTile = todoTiles.front();
+	*tile = todoTiles.front();
 	todoTiles.pop_front();
-	pendingTiles.push_back(newTile);
-	return newTile;
+	pendingTiles.push_back(*tile);
+
+	return true;
+}
+
+//------------------------------------------------------------------------------
+// CPUTileRenderThread
+//------------------------------------------------------------------------------
+
+CPUTileRenderThread::CPUTileRenderThread(CPUTileRenderEngine *engine,
+		const u_int index, IntersectionDevice *dev) :
+		CPURenderThread(engine, index, dev) {
+	tileFilm = NULL;
+}
+
+CPUTileRenderThread::~CPUTileRenderThread() {
+	delete tileFilm;
+}
+
+void CPUTileRenderThread::StartRenderThread() {
+	delete tileFilm;
+
+	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
+	tileFilm = new Film(cpuTileEngine->tileRepository->tileSize, cpuTileEngine->tileRepository->tileSize);
+	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
+	tileFilm->SetPerPixelNormalizedBufferFlag(true);
+	tileFilm->SetPerScreenNormalizedBufferFlag(false);
+	tileFilm->SetFrameBufferFlag(false);
+	tileFilm->Init();
+
+	CPURenderThread::StartRenderThread();
+}
+
+//------------------------------------------------------------------------------
+// CPUTileRenderEngine
+//------------------------------------------------------------------------------
+
+CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+	CPURenderEngine(cfg, flm, flmMutex) {
+	tileRepository = new TileRepository(Max(cfg->cfg.GetInt("tile.size", 32), 8));
+}
+
+CPUTileRenderEngine::~CPUTileRenderEngine() {
+	delete tileRepository;
+}
+
+const bool CPUTileRenderEngine::NextTile(TileRepository::Tile **tile, const Film *tileFilm) {
+	// Check if I have to add the tile to the film
+	if (*tile) {
+		boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+		film->AddFilm(*tileFilm,
+				0, 0,
+				Min(tileRepository->tileSize, film->GetWidth() - (*tile)->xStart),
+				Min(tileRepository->tileSize, film->GetHeight() - (*tile)->yStart),
+				(*tile)->xStart, (*tile)->yStart);
+	}
+
+	if (!tileRepository->NextTile(tile, film->GetWidth(), film->GetHeight())) {
+		boost::unique_lock<boost::mutex> lock(engineMutex);
+
+		if (!printedRenderingTime) {
+			elapsedTime = WallClockTime() - startTime;
+			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+			printedRenderingTime = true;
+		}
+
+		return false;
+	} else
+		return true;
 }
 
 void CPUTileRenderEngine::StartLockLess() {
-	InitTiles();
+	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	printedRenderingTime = false;
 
 	CPURenderEngine::StartLockLess();
 }
 
 void CPUTileRenderEngine::StopLockLess() {
 	CPURenderEngine::StopLockLess();
-
-	// Free all left tiles
-	BOOST_FOREACH(Tile *tile, todoTiles) {
-		delete tile;
-	}
-	todoTiles.clear();
-
-	BOOST_FOREACH(Tile *tile, pendingTiles) {
-		delete tile;
-	}
-	pendingTiles.clear();
 }
 
 void CPUTileRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	// Free all left tiles
-	BOOST_FOREACH(Tile *tile, todoTiles) {
-		delete tile;
-	}
-	todoTiles.clear();
-
-	BOOST_FOREACH(Tile *tile, pendingTiles) {
-		delete tile;
-	}
-	pendingTiles.clear();
-
-	InitTiles();
+	tileRepository->Clear();
+	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	printedRenderingTime = false;
 
 	CPURenderEngine::EndEditLockLess(editActions);
 }
@@ -734,9 +736,8 @@ void CPUTileRenderEngine::UpdateCounters() {
 	raysCount = totalCount;
 
 	// Update the time only until when the rendering is not finished
-	if ((todoTiles.size() > 0) || (pendingTiles.size() > 0)) {
+	if (!tileRepository->done)
 		elapsedTime = WallClockTime() - startTime;
-	}
 }
 
 //------------------------------------------------------------------------------

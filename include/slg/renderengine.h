@@ -240,6 +240,43 @@ protected:
 };
 
 //------------------------------------------------------------------------------
+// TileRepository 
+//------------------------------------------------------------------------------
+
+class TileRepository {
+public:
+	typedef struct {
+		u_int xStart, yStart;
+		// -1 means: tile has to be rendered with all samples
+		int sampleIndex;
+	} Tile;
+
+	TileRepository(const u_int size);
+	~TileRepository();
+
+	void HilberCurveTiles(const int sampleIndex,
+		const u_int n, const int xo, const int yo,
+		const int xd, const int yd, const int xp, const int yp,
+		const int xEnd, const int yEnd);
+
+	void Clear();
+	void GetPendingTiles(vector<Tile> &tiles);
+
+	void InitTiles(const u_int width, const u_int height);
+	const bool NextTile(Tile **tile, const u_int width, const u_int height);
+
+	u_int tileSize;
+	u_int totalSamplesPerPixel;
+	bool enableProgressiveRefinement, enableMultipassRendering;
+	bool done;
+
+private:
+	boost::mutex tileMutex;
+	std::deque<Tile *> todoTiles;
+	std::vector<Tile *> pendingTiles;
+};
+
+//------------------------------------------------------------------------------
 // CPU render engines with tile rendering
 //------------------------------------------------------------------------------
 
@@ -261,29 +298,16 @@ protected:
 
 class CPUTileRenderEngine : public CPURenderEngine {
 public:
-	typedef struct {
-		u_int xStart, yStart;
-		// -1 means: tile has to be rendered with all samples
-		int sampleIndex;
-	} Tile;
-
 	CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPUTileRenderEngine();
 
-	void GetPendingTiles(vector<Tile> &tiles);
-	u_int GetTileSize() const { return tileSize; }
+	void GetPendingTiles(vector<TileRepository::Tile> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	u_int GetTileSize() const { return tileRepository->tileSize; }
 
 	friend class CPUTileRenderThread;
 
 protected:
-	void LinearTiles(const int sampleIndex);
-	void HilberCurveTiles(const int sampleIndex,
-		const u_int n, const int xo, const int yo,
-		const int xd, const int yd, const int xp, const int yp,
-		const int xEnd, const int yEnd);
-
-	void InitTiles();
-	const Tile *NextTile(const Tile *tile, const Film *tileFilm);
+	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
@@ -293,13 +317,8 @@ protected:
 	virtual void UpdateFilmLockLess() { }
 	virtual void UpdateCounters();
 
-	u_int tileSize;
-	boost::mutex tileMutex;
-	std::deque<Tile *> todoTiles;
-	std::vector<Tile *> pendingTiles;
-
-	u_int totalSamplesPerPixel;
-	bool enableProgressiveRefinement, enableMultipassRendering;
+	TileRepository *tileRepository;
+	bool printedRenderingTime;
 };
 
 //------------------------------------------------------------------------------
