@@ -187,7 +187,7 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 				// true when using DirectLightSamplingALL()
 
 				// MIS between BSDF sampling and direct light sampling
-				*radiance += pathThrouput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
+				*radiance += PowerHeuristic(lastPdfW, directPdfW) * pathThrouput * envRadiance;
 			} else
 				*radiance += pathThrouput * envRadiance;
 		}
@@ -199,7 +199,7 @@ void BiasPathCPURenderThread::DirectHitInfiniteLight(
 		if (sunRadiance.Y() > engine->lowLightThreashold) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
-				*radiance += pathThrouput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
+				*radiance += PowerHeuristic(lastPdfW, directPdfW) * pathThrouput * sunRadiance;
 			} else
 				*radiance += pathThrouput * sunRadiance;
 		}
