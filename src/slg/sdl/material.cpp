@@ -46,6 +46,7 @@ Properties Material::ToProperties() const {
 
 	props.SetString("scene.materials." + name + ".visibility.indirect.diffuse.enable", ToString(isVisibleIndirectDiffuse));
 	props.SetString("scene.materials." + name + ".visibility.indirect.glossy.enable", ToString(isVisibleIndirectGlossy));
+	props.SetString("scene.materials." + name + ".visibility.indirect.specular.enable", ToString(isVisibleIndirectSpecular));
 
 	return props;
 }
