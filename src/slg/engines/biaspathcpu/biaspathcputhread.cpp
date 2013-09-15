@@ -498,13 +498,13 @@ void BiasPathCPURenderThread::RenderFunc() {
 	// Extract the tile to render
 	//--------------------------------------------------------------------------
 
-	const BiasPathCPURenderEngine::Tile *tile = NULL;
+	TileRepository::Tile *tile = NULL;
 	bool interruptionRequested = boost::this_thread::interruption_requested();
-	while ((tile = engine->NextTile(tile, tileFilm)) && !interruptionRequested) {
+	while (engine->NextTile(&tile, tileFilm) && !interruptionRequested) {
 		// Render the tile
 		tileFilm->Reset();
-		const u_int tileWidth = Min(engine->tileSize, filmWidth - tile->xStart);
-		const u_int tileHeight = Min(engine->tileSize, filmHeight - tile->yStart);
+		const u_int tileWidth = Min(engine->tileRepository->tileSize, filmWidth - tile->xStart);
+		const u_int tileHeight = Min(engine->tileRepository->tileSize, filmHeight - tile->yStart);
 		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "
 		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 		//		"(" << tileWidth << ", " << tileHeight << ")");

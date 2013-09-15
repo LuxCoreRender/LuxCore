@@ -212,14 +212,14 @@ static void PrintCaptions() {
 	// Draw the pending tiles for BIASPATHCPU
 	if (session->renderEngine->GetEngineType() == BIASPATHCPU) {
 		CPUTileRenderEngine *engine = (CPUTileRenderEngine *)session->renderEngine;
-		vector<CPUTileRenderEngine::Tile> tiles;
+		vector<TileRepository::Tile> tiles;
 		engine->GetPendingTiles(tiles);
 
 		if (tiles.size() > 0) {
 			// Draw tiles borders
 			glColor3f(1.f, 1.f, 0.f);
 			const u_int tileSize = engine->GetTileSize();
-			BOOST_FOREACH(CPUTileRenderEngine::Tile &tile, tiles) {
+			BOOST_FOREACH(TileRepository::Tile &tile, tiles) {
 				glBegin(GL_LINE_LOOP);
 				glVertex2i(tile.xStart, tile.yStart);
 				glVertex2i(tile.xStart + tileSize, tile.yStart);

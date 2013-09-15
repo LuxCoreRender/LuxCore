@@ -44,11 +44,6 @@ namespace ocl {
 
 class Scene;
 
-enum BxDFType {
-	BSDF_REFLECTION   = 1<<0,
-	BSDF_TRANSMISSION = 1<<1
-};
-
 typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS,

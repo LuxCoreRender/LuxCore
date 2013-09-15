@@ -44,8 +44,8 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	enableProgressiveRefinement = cfg.GetBoolean("biaspath.progressiverefinement.enable", false);
-	enableMultipassRendering = cfg.GetBoolean("biaspath.multipass.enable", false);
+	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("biaspath.progressiverefinement.enable", false);
+	tileRepository->enableMultipassRendering = cfg.GetBoolean("biaspath.multipass.enable", false);
 
 	// Path depth settings
 	maxPathDepth.depth = Max(1, cfg.GetInt("biaspath.pathdepth.total", 10));
@@ -55,7 +55,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 
 	// Samples settings
 	aaSamples = Max(1, cfg.GetInt("biaspath.sampling.aa.size", 3));
-	totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
+	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
 	diffuseSamples = Max(0, cfg.GetInt("biaspath.sampling.diffuse.size", 2));
 	glossySamples = Max(0, cfg.GetInt("biaspath.sampling.glossy.size", 2));
 	specularSamples = Max(0, cfg.GetInt("biaspath.sampling.specular.size", 1));
