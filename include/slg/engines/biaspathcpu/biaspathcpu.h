@@ -88,8 +88,7 @@ private:
 		luxrays::Spectrum *radiance);
 	// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
 	luxrays::Spectrum SampleComponent(luxrays::RandomGenerator *rndGen,
-		const BSDFEvent requestedEventTypes,
-		const u_int size, const PathDepthInfo &depthInfo, BSDF &bsdf);
+		const BSDFEvent requestedEventTypes, const u_int size, BSDF &bsdf);
 	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
 		luxrays::Spectrum *radiance, float *alpha);
 	void RenderPixelSample(luxrays::RandomGenerator *rndGen,
