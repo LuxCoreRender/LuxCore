@@ -26,15 +26,13 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-// TODO: use only brute force to sample infinitelight
-
 //------------------------------------------------------------------------------
 // PathCPU RenderThread
 //------------------------------------------------------------------------------
 
 PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPUNoTileRenderThread(engine, index, device, true, false) {
+		CPUNoTileRenderThread(engine, index, device) {
 }
 
 void PathCPURenderThread::DirectLightSampling(
@@ -179,14 +177,13 @@ void PathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults(1);
-	sampleResults[0].type = PER_PIXEL_NORMALIZED;
 	while (!boost::this_thread::interruption_requested()) {
 		float alpha = 1.f;
 
 		Ray eyeRay;
-		const float screenX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-		const float screenY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-		camera->GenerateRay(screenX, screenY, &eyeRay,
+		const float filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+		const float filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+		camera->GenerateRay(filmX, filmY, &eyeRay,
 			sampler->GetSample(2), sampler->GetSample(3));
 
 		int depth = 1;
@@ -268,10 +265,7 @@ void PathCPURenderThread::RenderFunc() {
 		assert (!radiance.IsNaN() && !radiance.IsInf());
 		assert (!isnan(alpha) && !isinf(alpha));
 
-		sampleResults[0].screenX = screenX;
-		sampleResults[0].screenY = screenY;
-		sampleResults[0].radiance = radiance;
-		sampleResults[0].alpha = alpha;
+		sampleResults[0].Init(filmX, filmY, &radiance, NULL, alpha);
 		sampler->NextSample(sampleResults);
 
 #ifdef WIN32

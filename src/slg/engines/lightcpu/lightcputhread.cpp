@@ -31,7 +31,7 @@ using namespace slg;
 
 LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPUNoTileRenderThread(engine, index, device, true, true) {
+		CPUNoTileRenderThread(engine, index, device) {
 }
 
 void LightCPURenderThread::ConnectToEye(const float u0,
@@ -70,9 +70,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 				const float fluxToRadianceFactor = cameraPdfA;
 
 				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
-
-				AddSampleResult(sampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
-						radiance, 1.f);
+				AddSampleResult(sampleResults, scrX, scrY, NULL, &radiance, 1.f);
 			}
 		}
 	}
@@ -147,8 +145,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 
 	// Add a sample even if it is black in order to avoid aliasing problems
 	// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
-	AddSampleResult(*sampleResults, PER_PIXEL_NORMALIZED,
-			screenX, screenY, radiance, (depth == 1) ? 1.f : 0.f);
+	AddSampleResult(*sampleResults, screenX, screenY, &radiance, NULL, (depth == 1) ? 1.f : 0.f);
 }
 
 void LightCPURenderThread::RenderFunc() {

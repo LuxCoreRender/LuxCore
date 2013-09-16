@@ -125,13 +125,14 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 			PathVertexVM eyeVertex;
 			SampleResult eyeSampleResult;
-			eyeSampleResult.type = PER_PIXEL_NORMALIZED;
+			eyeSampleResult.hasPerPixelNormalizedRadiance = true;
+			eyeSampleResult.hasPerScreenNormalizedRadiance = false;
 			eyeSampleResult.alpha = 1.f;
 
 			Ray eyeRay;
-			eyeSampleResult.screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-			eyeSampleResult.screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-			camera->GenerateRay(eyeSampleResult.screenX, eyeSampleResult.screenY, &eyeRay,
+			eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+			eyeSampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 				sampler->GetSample(9), sampler->GetSample(10));
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
@@ -159,7 +160,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 					eyeVertex.throughput *= connectionThroughput;
 
-					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance);
+					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
 
 					if (eyeVertex.depth == 1)
 						eyeSampleResult.alpha = 0.f;
@@ -177,7 +178,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 				// Check if it is a light source
 				if (eyeVertex.bsdf.IsLightSource())
-					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiance);
+					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
 
 				// Note: pass-through check is done inside SceneIntersect()
 
@@ -190,7 +191,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						sampler->GetSample(sampleOffset + 3),
 						sampler->GetSample(sampleOffset + 4),
 						sampler->GetSample(sampleOffset + 5),
-						eyeVertex, &eyeSampleResult.radiance);
+						eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
 
 				if (!eyeVertex.bsdf.IsDelta()) {
 					//----------------------------------------------------------
@@ -206,7 +207,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					// Vertex Merging step
 					//----------------------------------------------------------
 
-					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiance);
+					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
 				}
 
 				//--------------------------------------------------------------

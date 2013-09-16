@@ -29,6 +29,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <set>
 
 #if defined (WIN32)
 #include <windows.h>
@@ -46,14 +47,61 @@
 
 namespace slg {
 
-typedef enum {
-	PER_PIXEL_NORMALIZED = 0,
-	PER_SCREEN_NORMALIZED = 1
-} FilmBufferType;
+class SampleResult {
+public:
+	SampleResult() { }
+	SampleResult(const float x, const float y,
+		const luxrays::Spectrum *radiancePPN,
+		const luxrays::Spectrum *radiancePSN,
+		const float a) {
+		Init(x, y, radiancePPN, radiancePSN, a);
+	}
+	~SampleResult() { }
+
+	void Init(const float x, const float y,
+		const luxrays::Spectrum *radiancePPN,
+		const luxrays::Spectrum *radiancePSN,
+		const float a) {
+		filmX = x;
+		filmY = y;
+
+		hasPerPixelNormalizedRadiance = (radiancePPN != NULL);
+		if (hasPerPixelNormalizedRadiance)
+			radiancePerPixelNormalized = *radiancePPN;
+
+		hasPerScreenNormalizedRadiance = (radiancePSN != NULL);
+		if (hasPerScreenNormalizedRadiance)
+			radiancePerScreenNormalized = *radiancePSN;
+
+		alpha = a;
+	}
+
+	float filmX, filmY;
+	luxrays::Spectrum radiancePerPixelNormalized, radiancePerScreenNormalized;
+	float alpha;
+	bool hasPerPixelNormalizedRadiance, hasPerScreenNormalizedRadiance;
+};
+
+inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
+	const float filmX, const float filmY,
+	const luxrays::Spectrum *radiancePPN,
+	const luxrays::Spectrum *radiancePSN,
+	const float alpha) {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+	sampleResults[size].Init(filmX, filmY, radiancePPN, radiancePSN, alpha);
+}
 
 //------------------------------------------------------------------------------
-// Base class for all Film implementation
+// Film
 //------------------------------------------------------------------------------
+
+typedef enum {
+	RGB_PER_PIXEL_NORMALIZED = 0,
+	RGB_PER_SCREEN_NORMALIZED = 1,
+	ALPHA = 2,
+	TONEMAPPED_FRAMEBUFFER = 3
+} FilmChannelType;
 
 #define GAMMA_TABLE_SIZE 1024
 
@@ -62,36 +110,20 @@ public:
 	Film(const u_int w, const u_int h);
 	~Film();
 
+	// This one must be called before Init()
+	void AddChannel(const FilmChannelType type);
+	// This one must be called before Init()
+	void RemoveChannel(const FilmChannelType type);
+	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
+
 	void Init() { Init(width, height); }
 	void Init(const u_int w, const u_int h);
-	void InitGammaTable(const float gamma = 2.2f);
+	void SetGamma(const float gamma = 2.2f);
 	void Reset();
 
 	//--------------------------------------------------------------------------
 	// Dynamic settings
 	//--------------------------------------------------------------------------
-
-	void SetPerPixelNormalizedBufferFlag(const bool enablePerPixelNormBuffer) {
-		enablePerPixelNormalizedBuffer = enablePerPixelNormBuffer;
-	}
-	void SetPerScreenNormalizedBufferFlag(const bool enablePerScreenNormBuffer) {
-		enablePerScreenNormalizedBuffer = enablePerScreenNormBuffer;
-	}
-	void SetFrameBufferFlag(const bool enableFrmBuffer) {
-		enableFrameBuffer = enableFrmBuffer;
-	}
-
-	bool HasPerPixelNormalizedBuffer() const { return enablePerPixelNormalizedBuffer; }
-	bool HasPerScreenNormalizedBuffer() const { return enablePerScreenNormalizedBuffer; }
-	bool HasFrameBuffer() const { return enableFrameBuffer; }
-
-	void SetAlphaChannelFlag(const bool alphaChannel) {
-		// Alpha buffer uses the weights in PER_PIXEL_NORMALIZED buffer
-		assert (!alphaChannel || (alphaChannel && enablePerPixelNormalizedBuffer));
-
-		enableAlphaChannel = alphaChannel;
-	}
-	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
 
 	void SetOverlappedScreenBufferUpdateFlag(const bool overlappedScreenBufferUpdate) {
 		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
@@ -109,10 +141,7 @@ public:
 	}
 
 	void CopyDynamicSettings(const Film &film) {
-		SetPerPixelNormalizedBufferFlag(film.HasPerPixelNormalizedBuffer());
-		SetPerScreenNormalizedBufferFlag(film.HasPerScreenNormalizedBuffer());
-		SetFrameBufferFlag(film.HasFrameBuffer());
-		SetAlphaChannelFlag(film.IsAlphaChannelEnabled());
+		channels = film.channels;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetToneMapParams(*(film.GetToneMapParams()));
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
@@ -131,7 +160,7 @@ public:
 	void SaveScreenBuffer(const std::string &filmFile);
 	void UpdateScreenBuffer();
 	float *GetScreenBuffer() const {
-		return (float *)frameBuffer->GetPixels();
+		return channel_RGB_TONEMAPPED->GetPixels();
 	}
 
 	//--------------------------------------------------------------------------
@@ -149,15 +178,6 @@ public:
 		return GetTotalSampleCount() / GetTotalTime();
 	}
 
-	const SamplePixel *GetSamplePixel(const FilmBufferType type,
-		const u_int x, const u_int y) const {
-		return sampleFrameBuffer[type]->GetPixel(x, y);
-	}
-
-	const AlphaPixel *GetAlphaPixel(const u_int x, const u_int y) const {
-		return alphaFrameBuffer->GetPixel(x, y);
-	}
-
 	//--------------------------------------------------------------------------
 
 	void ResetConvergenceTest();
@@ -169,24 +189,13 @@ public:
 		statsTotalSampleCount += count;
 	}
 
-	void SetPixel(const FilmBufferType type,
-		const u_int x, const u_int y,
-		const luxrays::Spectrum &radiance, const float alpha,
-		const float weight = 1.f);
-
-	void AddSample(const FilmBufferType type,
-		const u_int x, const u_int y,
-		const float u0, const float u1,
-		const luxrays::Spectrum &radiance, const float alpha,
-		const float weight = 1.f);
-
-	void SplatSample(const FilmBufferType type, const float filmX,
-		const float filmY, const luxrays::Spectrum &radiance, const float alpha,
-		const float weight = 1.f);
+	void AddSample(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight = 1.f);
+	void SplatSample(const SampleResult &sampleResult, const float weight = 1.f);
 
 private:
 	void UpdateScreenBufferImpl(const ToneMapType type);
-	void MergeSampleBuffers(Pixel *p, std::vector<bool> &frameBufferMask) const;
+	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
 
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
@@ -196,41 +205,22 @@ private:
 		return gammaTable[index];
 	}
 
-	Pixel Radiance2Pixel(const luxrays::Spectrum& c) const {
+	luxrays::Spectrum Radiance2Pixel(const luxrays::Spectrum &c) const {
 		return luxrays::Spectrum(
 				Radiance2PixelFloat(c.r),
 				Radiance2PixelFloat(c.g),
 				Radiance2PixelFloat(c.b));
 	}
 
-	void SetRadiance(const FilmBufferType type, const u_int x, const u_int y,
-		const luxrays::Spectrum &radiance, const float weight) {
-		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
+	void AddSampleResult(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight);
 
-		sp->radiance = weight * radiance;
-		sp->weight = weight;
-	}
-
-	void AddRadiance(const FilmBufferType type, const u_int x, const u_int y,
-		const luxrays::Spectrum &radiance, const float weight) {
-		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
-
-		sp->radiance += weight * radiance;
-		sp->weight += weight;
-	}
-
-	void SetAlpha(const u_int x, const u_int y, const float alpha) {
-		alphaFrameBuffer->SetPixel(x, y, alpha);
-	}
-
-	void AddAlpha(const u_int x, const u_int y, const float alpha,
-		const float weight) {
-		AlphaPixel *ap = alphaFrameBuffer->GetPixel(x, y);
-
-		ap->alpha += weight * alpha;
-	}
-
+	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount;
+	GenericFrameBuffer<4, float> *channel_RGB_PER_PIXEL_NORMALIZED;
+	GenericFrameBuffer<4, float> *channel_RGB_PER_SCREEN_NORMALIZED;
+	GenericFrameBuffer<1, float> *channel_ALPHA;
+	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
@@ -239,19 +229,12 @@ private:
 
 	ToneMapParams *toneMapParams;
 
-	// Two sample buffers, one PER_PIXEL_NORMALIZED and the other PER_SCREEN_NORMALIZED
-	SampleFrameBuffer *sampleFrameBuffer[2];
-	AlphaFrameBuffer *alphaFrameBuffer;
-	FrameBuffer *frameBuffer;
-
 	ConvergenceTest *convTest;
 
 	Filter *filter;
 	FilterLUTs *filterLUTs;
 
-	bool enableAlphaChannel, enabledOverlappedScreenBufferUpdate,
-		enablePerPixelNormalizedBuffer, enablePerScreenNormalizedBuffer,
-		enableFrameBuffer;
+	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
 
 }

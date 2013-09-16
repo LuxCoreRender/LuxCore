@@ -31,8 +31,8 @@ using namespace slg;
 
 LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
-	film->SetPerPixelNormalizedBufferFlag(true);
-	film->SetPerScreenNormalizedBufferFlag(true);
+	film->AddChannel(RGB_PER_PIXEL_NORMALIZED);
+	film->AddChannel(RGB_PER_SCREEN_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->Init();
 

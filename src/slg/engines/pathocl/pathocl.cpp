@@ -55,8 +55,7 @@ using namespace slg;
 
 PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		OCLRenderEngine(rcfg, flm, flmMutex) {
-	film->SetPerPixelNormalizedBufferFlag(true);
-	film->SetPerScreenNormalizedBufferFlag(false);
+	film->AddChannel(RGB_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->Init();
 
@@ -283,30 +282,37 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
+	SampleResult sampleResult;
+	sampleResult.hasPerPixelNormalizedRadiance = true;
+	sampleResult.hasPerScreenNormalizedRadiance = false;
 	for (u_int y = 0; y < imgHeight; ++y) {
 		u_int pGPU = 1 + (y + 1) * (imgWidth + 2);
+		sampleResult.filmY = y - .5f;
 
 		for (u_int x = 0; x < imgWidth; ++x) {
-			Spectrum radiance;
-			float alpha = 0.0f;
+			sampleResult.filmX = x - .5f;
+			sampleResult.radiancePerPixelNormalized = Spectrum();
+			sampleResult.alpha = 0.0f;
 			float count = 0.f;
 			for (size_t i = 0; i < renderThreads.size(); ++i) {
 				if (renderThreads[i]->frameBuffer) {
-					radiance.r += renderThreads[i]->frameBuffer[pGPU].c.r;
-					radiance.g += renderThreads[i]->frameBuffer[pGPU].c.g;
-					radiance.b += renderThreads[i]->frameBuffer[pGPU].c.b;
+					sampleResult.radiancePerPixelNormalized.r += renderThreads[i]->frameBuffer[pGPU].c.r;
+					sampleResult.radiancePerPixelNormalized.g += renderThreads[i]->frameBuffer[pGPU].c.g;
+					sampleResult.radiancePerPixelNormalized.b += renderThreads[i]->frameBuffer[pGPU].c.b;
 					count += renderThreads[i]->frameBuffer[pGPU].count;
 				}
 
 				if (renderThreads[i]->alphaFrameBuffer)
-					alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
+					sampleResult.alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
 			}
 
-			if ((count > 0) && !radiance.IsNaN()) {
+			if ((count > 0) && !sampleResult.radiancePerPixelNormalized.IsNaN()) {
+				sampleResult.radiancePerPixelNormalized /= count;
+				sampleResult.alpha = isnan(sampleResult.alpha) ? 0.f : sampleResult.alpha / count;
+
 				film->AddSampleCount(1.f);
 				// -.5f is to align correctly the pixel after the splat
-				film->SplatSample(PER_PIXEL_NORMALIZED, x - .5f, y - .5f,
-						radiance / count, isnan(alpha) ? 0.f : alpha / count, count);
+				film->SplatSample(sampleResult, count);
 			}
 
 			++pGPU;

@@ -43,25 +43,6 @@ namespace ocl {
 // Sampler
 //------------------------------------------------------------------------------
 
-typedef struct {
-	FilmBufferType type;
-	float screenX, screenY;
-	luxrays::Spectrum radiance;
-	float alpha;
-} SampleResult;
-
-inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const FilmBufferType type,
-	const float screenX, const float screenY, const luxrays::Spectrum &radiance, const float alpha) {
-	SampleResult sr;
-	sr.type = type;
-	sr.screenX = screenX;
-	sr.screenY = screenY;
-	sr.radiance = radiance;
-	sr.alpha = alpha;
-
-	sampleResults.push_back(sr);
-}
-
 typedef enum {
 	RANDOM = 0,
 	METROPOLIS = 1,
@@ -86,7 +67,7 @@ public:
 protected:
 	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const {
 		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-			film->SplatSample(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha, weight);
+			film->SplatSample(*sr, weight);
 	}
 
 	luxrays::RandomGenerator *rndGen;

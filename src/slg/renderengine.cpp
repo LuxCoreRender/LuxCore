@@ -57,6 +57,8 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	editMode = false;
 	GenerateNewSeed();
 
+	film->AddChannel(TONEMAPPED_FRAMEBUFFER);
+
 	// Create LuxRays context
 	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
@@ -447,12 +449,8 @@ void CPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
 //------------------------------------------------------------------------------
 
 CPUNoTileRenderThread::CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
-		const u_int index, IntersectionDevice *dev,
-		const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) :
-		CPURenderThread(engine, index, dev) {
+		const u_int index, IntersectionDevice *dev) : CPURenderThread(engine, index, dev) {
 	threadFilm = NULL;
-	enablePerPixelNormBuffer = enablePerPixelNormBuf;
-	enablePerScreenNormBuffer = enablePerScreenNormBuf;
 }
 
 CPUNoTileRenderThread::~CPUNoTileRenderThread() {
@@ -469,9 +467,7 @@ void CPUNoTileRenderThread::StartRenderThread() {
 
 	threadFilm = new Film(filmWidth, filmHeight);
 	threadFilm->CopyDynamicSettings(*(cpuNoTileEngine->film));
-	threadFilm->SetPerPixelNormalizedBufferFlag(enablePerPixelNormBuffer);
-	threadFilm->SetPerScreenNormalizedBufferFlag(enablePerScreenNormBuffer);
-	threadFilm->SetFrameBufferFlag(false);
+	threadFilm->RemoveChannel(TONEMAPPED_FRAMEBUFFER);
 	threadFilm->Init();
 
 	CPURenderThread::StartRenderThread();
@@ -657,9 +653,6 @@ void CPUTileRenderThread::StartRenderThread() {
 	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
 	tileFilm = new Film(cpuTileEngine->tileRepository->tileSize, cpuTileEngine->tileRepository->tileSize);
 	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
-	tileFilm->SetPerPixelNormalizedBufferFlag(true);
-	tileFilm->SetPerScreenNormalizedBufferFlag(false);
-	tileFilm->SetFrameBufferFlag(false);
 	tileFilm->Init();
 
 	CPURenderThread::StartRenderThread();
@@ -885,9 +878,6 @@ void HybridRenderThread::StartRenderThread() {
 	delete threadFilm;
 	threadFilm = new Film(filmWidth, filmHeight);
 	threadFilm->CopyDynamicSettings(*(renderEngine->film));
-	threadFilm->SetPerPixelNormalizedBufferFlag(true);
-	threadFilm->SetPerScreenNormalizedBufferFlag(true);
-	threadFilm->SetFrameBufferFlag(false);
 	threadFilm->Init();
 
 	samplesCount = 0.0;

@@ -212,9 +212,7 @@ class CPUNoTileRenderEngine;
 class CPUNoTileRenderThread : public CPURenderThread {
 public:
 	CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
-			const u_int index, luxrays::IntersectionDevice *dev,
-			const bool enablePerPixelNormBuffer,
-			const bool enablePerScreenNormBuffer);
+			const u_int index, luxrays::IntersectionDevice *dev);
 	virtual ~CPUNoTileRenderThread();
 
 	friend class CPUNoTileRenderEngine;
@@ -223,8 +221,6 @@ protected:
 	virtual void StartRenderThread();
 
 	Film *threadFilm;
-
-	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
 };
 
 class CPUNoTileRenderEngine : public CPURenderEngine {

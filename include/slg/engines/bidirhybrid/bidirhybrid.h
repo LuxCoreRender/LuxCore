@@ -51,7 +51,7 @@ class BiDirHybridRenderEngine;
 
 typedef struct {
 	u_int lightPathVertexConnections;
-	float screenX, screenY;
+	float filmX, filmY;
 	float alpha;
 	luxrays::Spectrum radiance;
 	vector<float> sampleValue; // Used for pass-through sampling

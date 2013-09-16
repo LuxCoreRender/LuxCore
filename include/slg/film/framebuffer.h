@@ -22,246 +22,72 @@
 #ifndef _SLG_FRAMEBUFFER_H
 #define	_SLG_FRAMEBUFFER_H
 
-#include "luxrays/core/spectrum.h"
-
 namespace slg {
 
-typedef struct {
-	luxrays::Spectrum radiance;
-	float weight;
-} SamplePixel;
-
-class SampleFrameBuffer {
+template<u_int CHANNELS, class T> class GenericFrameBuffer {
 public:
-	SampleFrameBuffer(const unsigned int w, const unsigned int h)
+	GenericFrameBuffer(const u_int w, const u_int h)
 		: width(w), height(h) {
-		pixels = new SamplePixel[width * height];
+		pixels = new T[width * height * CHANNELS];
 
 		Clear();
 	}
-	~SampleFrameBuffer() {
+	~GenericFrameBuffer() {
 		delete[] pixels;
 	}
 
 	void Clear() {
-		for (unsigned int i = 0; i < width * height; ++i) {
-			pixels[i].radiance.r = 0.f;
-			pixels[i].radiance.g = 0.f;
-			pixels[i].radiance.b = 0.f;
-			pixels[i].weight = 0.f;
-		}
+		std::fill(pixels, pixels + width * height * CHANNELS, 0);
 	};
 
-	SamplePixel *GetPixels() const { return pixels; }
+	T *GetPixels() const { return pixels; }
 
-	void AddPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum &r, const float w) {
+	void AddPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
 		assert (y < height);
 
-		SamplePixel *pixel = &pixels[x + y * width];
-		pixel->radiance += r;
-		pixel->weight += w;
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		for (u_int i = 0; i < CHANNELS; ++i)
+			pixel[i] += v[i];
 	}
 
-	void AddPixel(const unsigned int index, const luxrays::Spectrum &r, const float w) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index].radiance += r;
-		pixels[index].weight += w;
-	}
-
-	void SetPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum &r, const float w) {
+	void SetPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
 		assert (y < height);
 
-		SamplePixel *pixel = &pixels[x + y * width];
-		pixel->radiance = r;
-		pixel->weight = w;
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		for (u_int i = 0; i < CHANNELS; ++i)
+			pixel[i] = v[i];
 	}
 
-	void SetPixel(const unsigned int index, const luxrays::Spectrum &r, const float w) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index].radiance = r;
-		pixels[index].weight = w;
-	}
-
-	SamplePixel *GetPixel(const unsigned int x, const unsigned int y) const {
+	T *GetPixel(const u_int x, const u_int y) const {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
 		assert (y < height);
 
-		return &pixels[x + y * width];
+		return &pixels[(x + y * width) * CHANNELS];
 	}
 
-	SamplePixel *GetPixel(const unsigned int index) const {
+	T *GetPixel(const u_int index) const {
 		assert (index >= 0);
 		assert (index < width * height);
 
-		return &pixels[index];
+		return &pixels[index * CHANNELS];
 	}
 
-	unsigned int GetWidth() const { return width; }
-	unsigned int GetHeight() const { return height; }
+	u_int GetWidth() const { return width; }
+	u_int GetHeight() const { return height; }
+	u_int GetChannels() const { return CHANNELS; }
 
 private:
-	const unsigned int width, height;
+	const u_int width, height;
 
-	SamplePixel *pixels;
-};
-
-typedef luxrays::Spectrum Pixel;
-
-class FrameBuffer {
-public:
-	FrameBuffer(const unsigned int w, const unsigned int h)
-			: width(w), height(h) {
-		pixels = new Pixel[width * height];
-
-		Clear();
-	}
-	~FrameBuffer() {
-		delete[] pixels;
-	}
-
-	void Clear() {
-		for (unsigned int i = 0; i < width * height; ++i) {
-			pixels[i].r = 0.f;
-			pixels[i].g = 0.f;
-			pixels[i].b = 0.f;
-		}
-	};
-
-	Pixel *GetPixels() const { return pixels; }
-
-	void SetPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum& r) {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		pixels[x + y * width] = r;
-	}
-
-	void SetPixel(const unsigned int index, const luxrays::Spectrum& r) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index] = r;
-	}
-
-	Pixel *GetPixel(const unsigned int x, const unsigned int y) const {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		return &pixels[x + y * width];
-	}
-
-	Pixel *GetPixel(const unsigned int index) const {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		return &pixels[index];
-	}
-
-	unsigned int GetWidth() const { return width; }
-	unsigned int GetHeight() const { return height; }
-
-private:
-	const unsigned int width, height;
-
-	Pixel *pixels;
-};
-
-typedef struct {
-	float alpha;
-} AlphaPixel;
-
-class AlphaFrameBuffer {
-public:
-	AlphaFrameBuffer(const unsigned int w, const unsigned int h)
-		: width(w), height(h) {
-		pixels = new AlphaPixel[width * height];
-
-		Clear();
-	}
-	~AlphaFrameBuffer() {
-		delete[] pixels;
-	}
-
-	void Clear() {
-		for (unsigned int i = 0; i < width * height; ++i)
-			pixels[i].alpha = 0.f;
-	};
-
-	AlphaPixel *GetPixels() const { return pixels; }
-
-	void AddPixel(const unsigned int x, const unsigned int y, const float a) {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		AlphaPixel *pixel = &pixels[x + y * width];
-		pixel->alpha += a;
-	}
-
-	void AddPixel(const unsigned int index, const float a) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index].alpha += a;
-	}
-
-	void SetPixel(const unsigned int x, const unsigned int y, const float a) {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		AlphaPixel *pixel = &pixels[x + y * width];
-		pixel->alpha = a;
-	}
-
-	void SetPixel(const unsigned int index, const float a) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index].alpha = a;
-	}
-
-	AlphaPixel *GetPixel(const unsigned int x, const unsigned int y) const {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		return &pixels[x + y * width];
-	}
-
-	AlphaPixel *GetPixel(const unsigned int index) const {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		return &pixels[index];
-	}
-
-	unsigned int GetWidth() const { return width; }
-	unsigned int GetHeight() const { return height; }
-
-private:
-	const unsigned int width, height;
-
-	AlphaPixel *pixels;
+	T *pixels;
 };
 
 }

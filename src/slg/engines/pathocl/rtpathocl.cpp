@@ -34,12 +34,6 @@ using namespace slg;
 
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		PathOCLRenderEngine(rcfg, flm, flmMutex) {
-	// Re-initialize the file in order to not have any sample buffer
-	film->SetPerPixelNormalizedBufferFlag(false);
-	film->SetPerScreenNormalizedBufferFlag(false);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->Init();
-
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
 	frameTime = 0.f;
 }
