@@ -41,7 +41,8 @@ PathHybridState::PathHybridState(PathHybridRenderThread *renderThread,
 		Film *film, luxrays::RandomGenerator *rndGen) : HybridRenderState(renderThread, film, rndGen), sampleResults(1) {
 	PathHybridRenderEngine *renderEngine = (PathHybridRenderEngine *)renderThread->renderEngine;
 
-	sampleResults[0].type = PER_PIXEL_NORMALIZED;
+	sampleResults[0].hasPerPixelNormalizedRadiance = true;
+	sampleResults[0].hasPerScreenNormalizedRadiance = false;
 
 	// Setup the sampler
 	const u_int sampleSize = sampleBootSize + renderEngine->maxPathDepth * sampleStepSize;
@@ -66,13 +67,13 @@ void PathHybridState::Init(const PathHybridRenderThread *thread) {
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();
 
-	sampleResults[0].screenX = std::min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-	sampleResults[0].screenY = std::min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-	camera->GenerateRay(sampleResults[0].screenX, sampleResults[0].screenY, &nextPathVertexRay,
+	sampleResults[0].filmX = std::min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+	sampleResults[0].filmY = std::min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+	camera->GenerateRay(sampleResults[0].filmX, sampleResults[0].filmY, &nextPathVertexRay,
 		sampler->GetSample(2), sampler->GetSample(3));
 
 	sampleResults[0].alpha = 1.f;
-	sampleResults[0].radiance = Spectrum(0.f);
+	sampleResults[0].radiancePerPixelNormalized = Spectrum(0.f);
 	lastSpecular = true;
 }
 
@@ -85,9 +86,9 @@ void PathHybridState::DirectHitInfiniteLight(const Scene *scene, const Vector &e
 		if (!envRadiance.Black()) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
-				sampleResults[0].radiance += throuput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
+				sampleResults[0].radiancePerPixelNormalized += throuput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
 			} else
-				sampleResults[0].radiance += throuput * envRadiance;
+				sampleResults[0].radiancePerPixelNormalized += throuput * envRadiance;
 		}
 	}
 
@@ -97,9 +98,9 @@ void PathHybridState::DirectHitInfiniteLight(const Scene *scene, const Vector &e
 		if (!sunRadiance.Black()) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
-				sampleResults[0].radiance += throuput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
+				sampleResults[0].radiancePerPixelNormalized += throuput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
 			} else
-				sampleResults[0].radiance += throuput * sunRadiance;
+				sampleResults[0].radiancePerPixelNormalized += throuput * sunRadiance;
 		}
 	}
 }
@@ -120,7 +121,7 @@ void PathHybridState::DirectHitFiniteLight(const Scene *scene, const float dista
 		} else
 			weight = 1.f;
 
-		sampleResults[0].radiance +=  throuput * weight * emittedRadiance;
+		sampleResults[0].radiancePerPixelNormalized +=  throuput * weight * emittedRadiance;
 	}
 }
 
@@ -240,7 +241,7 @@ double PathHybridState::CollectResults(HybridRenderThread *renderThread) {
 				sampler->GetSample(sampleOffset + 5), &directLightRadiance);
 		if (miss) {
 			// The light source is visible, add the direct light sampling component
-			sampleResults[0].radiance += directLightRadiance;
+			sampleResults[0].radiancePerPixelNormalized += directLightRadiance;
 		}
 	}
 

@@ -240,7 +240,7 @@ void PathOCLRenderThread::InitFrameBuffer() {
 	alphaFrameBuffer = NULL;
 
 	// Check if the film has an alpha channel
-	if (renderEngine->film->IsAlphaChannelEnabled()) {
+	if (renderEngine->film->HasChannel(ALPHA)) {
 		alphaFrameBuffer = new slg::ocl::AlphaPixel[frameBufferPixelCount];
 
 		for (u_int i = 0; i < frameBufferPixelCount; ++i)
@@ -636,7 +636,7 @@ void PathOCLRenderThread::InitKernels() {
 			assert (false);
 	}
 
-	if (renderEngine->film->IsAlphaChannelEnabled())
+	if (renderEngine->film->HasChannel(ALPHA))
 		ss << " -D PARAM_ENABLE_ALPHA_CHANNEL";
 
 	// Some information about our place in the universe...

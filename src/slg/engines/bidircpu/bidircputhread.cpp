@@ -34,7 +34,7 @@ using namespace slg;
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPUNoTileRenderThread(engine, index, device, true, true) {
+		CPUNoTileRenderThread(engine, index, device) {
 }
 
 void BiDirCPURenderThread::ConnectVertices(
@@ -104,7 +104,7 @@ void BiDirCPURenderThread::ConnectVertices(
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
-				eyeSampleResult->radiance += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
+				eyeSampleResult->radiancePerPixelNormalized += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
 						connectionThroughput * lightBsdfEval * lightVertex.throughput;
 			}
 		}
@@ -158,9 +158,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
 					connectionThroughput * lightVertex.throughput * bsdfEval;
-
-				AddSampleResult(sampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
-						radiance, 1.f);
+				AddSampleResult(sampleResults, scrX, scrY, NULL, &radiance, 1.f);
 			}
 		}
 	}
@@ -461,13 +459,14 @@ void BiDirCPURenderThread::RenderFunc() {
 
 		PathVertexVM eyeVertex;
 		SampleResult eyeSampleResult;
-		eyeSampleResult.type = PER_PIXEL_NORMALIZED;
+		eyeSampleResult.hasPerPixelNormalizedRadiance = true;
+		eyeSampleResult.hasPerScreenNormalizedRadiance = false;
 		eyeSampleResult.alpha = 1.f;
 
 		Ray eyeRay;
-		eyeSampleResult.screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-		eyeSampleResult.screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-		camera->GenerateRay(eyeSampleResult.screenX, eyeSampleResult.screenY, &eyeRay,
+		eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+		eyeSampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+		camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 			sampler->GetSample(10), sampler->GetSample(11));
 
 		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
@@ -495,7 +494,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 				eyeVertex.throughput *= connectionThroughput;
 
-				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance);
+				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
 
 				if (eyeVertex.depth == 1)
 					eyeSampleResult.alpha = 0.f;
@@ -513,7 +512,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			// Check if it is a light source
 			if (eyeVertex.bsdf.IsLightSource()) {
-				DirectHitLight(true, eyeVertex, &eyeSampleResult.radiance);
+				DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
 
 				// SLG light sources are like black bodies
 				break;
@@ -530,7 +529,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					eyeVertex, &eyeSampleResult.radiance);
+					eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
 
 			//------------------------------------------------------------------
 			// Connect vertex path ray with all light path vertices

@@ -26,20 +26,19 @@
 using namespace luxrays;
 using namespace slg;
 
-Film::Film(const unsigned int w, const unsigned int h) {
+Film::Film(const u_int w, const u_int h) {
+	initialized = false;
+
 	width = w;
 	height = h;
 
-	sampleFrameBuffer[PER_PIXEL_NORMALIZED] = NULL;
-	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
-	alphaFrameBuffer = NULL;
-	frameBuffer = NULL;
+	channel_RGB_PER_PIXEL_NORMALIZED = NULL;
+	channel_RGB_PER_SCREEN_NORMALIZED = NULL;
+	channel_ALPHA = NULL;
+	channel_RGB_TONEMAPPED = NULL;
+
 	convTest = NULL;
 
-	enablePerPixelNormalizedBuffer = true;
-	enablePerScreenNormalizedBuffer = false;
-	enableAlphaChannel = false;
-	enableFrameBuffer = true;
 	enabledOverlappedScreenBufferUpdate = true;
 
 	filter = NULL;
@@ -48,8 +47,7 @@ Film::Film(const unsigned int w, const unsigned int h) {
 
 	toneMapParams = new LinearToneMapParams();
 
-	InitGammaTable();
-	Init();
+	SetGamma();
 }
 
 Film::~Film() {
@@ -57,51 +55,63 @@ Film::~Film() {
 
 	delete convTest;
 
-	delete sampleFrameBuffer[PER_PIXEL_NORMALIZED];
-	delete sampleFrameBuffer[PER_SCREEN_NORMALIZED];
-	delete alphaFrameBuffer;
-	delete frameBuffer;
+	delete channel_RGB_PER_PIXEL_NORMALIZED;
+	delete channel_RGB_PER_SCREEN_NORMALIZED;
+	delete channel_ALPHA;
+	delete channel_RGB_TONEMAPPED;
 
 	delete filterLUTs;
 	delete filter;
 }
 
-void Film::Init(const unsigned int w, const unsigned int h) {
+void Film::AddChannel(const FilmChannelType type) {
+	if (initialized)
+		throw std::runtime_error("it is possible to add a channel to a Film only before the initialization");
+
+	channels.insert(type);
+}
+
+void Film::RemoveChannel(const FilmChannelType type) {
+	if (initialized)
+		throw std::runtime_error("it is possible to remove a channel of a Film only before the initialization");
+
+	channels.erase(type);
+}
+
+void Film::Init(const u_int w, const u_int h) {
+	if (initialized)
+		throw std::runtime_error("A Film can not be initialized multiple times");
+
+	initialized = true;
 	width = w;
 	height = h;
 	pixelCount = w * h;
 
-	// Delete all already allocated buffers
-	delete sampleFrameBuffer[PER_PIXEL_NORMALIZED];
-	delete sampleFrameBuffer[PER_SCREEN_NORMALIZED];
-	delete alphaFrameBuffer;
-	delete frameBuffer;
 	delete convTest;
-	sampleFrameBuffer[PER_PIXEL_NORMALIZED]  = NULL;
-	sampleFrameBuffer[PER_SCREEN_NORMALIZED] = NULL;
-	alphaFrameBuffer = NULL;
-	frameBuffer = NULL;
 	convTest = NULL;
 
-	// Allocate all required buffers
-	if (enablePerPixelNormalizedBuffer) {
-		sampleFrameBuffer[PER_PIXEL_NORMALIZED] = new SampleFrameBuffer(width, height);
-		sampleFrameBuffer[PER_PIXEL_NORMALIZED]->Clear();
+	// Delete all already allocated channels
+	delete channel_RGB_PER_PIXEL_NORMALIZED;
+	delete channel_RGB_PER_SCREEN_NORMALIZED;
+	delete channel_ALPHA;
+	delete channel_RGB_TONEMAPPED;
+	
+	// Allocate all required channels
+	if (channels.count(RGB_PER_PIXEL_NORMALIZED) > 0) {
+		channel_RGB_PER_PIXEL_NORMALIZED = new GenericFrameBuffer<4, float>(width, height);
+		channel_RGB_PER_PIXEL_NORMALIZED->Clear();
 	}
-
-	if (enablePerScreenNormalizedBuffer) {
-		sampleFrameBuffer[PER_SCREEN_NORMALIZED] = new SampleFrameBuffer(width, height);
-		sampleFrameBuffer[PER_SCREEN_NORMALIZED]->Clear();
+	if (channels.count(RGB_PER_SCREEN_NORMALIZED) > 0) {
+		channel_RGB_PER_SCREEN_NORMALIZED = new GenericFrameBuffer<4, float>(width, height);
+		channel_RGB_PER_SCREEN_NORMALIZED->Clear();
 	}
-
-	if (enableAlphaChannel) {
-		alphaFrameBuffer = new AlphaFrameBuffer(width, height);
-		alphaFrameBuffer->Clear();
+	if (channels.count(ALPHA) > 0) {
+		channel_ALPHA = new GenericFrameBuffer<1, float>(width, height);
+		channel_ALPHA->Clear();
 	}
-
-	if (enableFrameBuffer) {
-		frameBuffer = new FrameBuffer(width, height);
-		frameBuffer->Clear();
+	if (channels.count(TONEMAPPED_FRAMEBUFFER) > 0) {
+		channel_RGB_TONEMAPPED = new GenericFrameBuffer<3, float>(width, height);
+		channel_RGB_TONEMAPPED->Clear();
 
 		convTest = new ConvergenceTest(width, height);
 	}
@@ -112,12 +122,12 @@ void Film::Init(const unsigned int w, const unsigned int h) {
 	statsStartSampleTime = WallClockTime();
 }
 
-void Film::InitGammaTable(const float g) {
+void Film::SetGamma(const float g) {
 	gamma = g;
 
 	float x = 0.f;
 	const float dx = 1.f / GAMMA_TABLE_SIZE;
-	for (unsigned int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
+	for (u_int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
 		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / g);
 }
 
@@ -134,12 +144,12 @@ void Film::SetFilter(Filter *flt) {
 }
 
 void Film::Reset() {
-	if (enablePerPixelNormalizedBuffer)
-		sampleFrameBuffer[PER_PIXEL_NORMALIZED]->Clear();
-	if (enablePerScreenNormalizedBuffer)
-		sampleFrameBuffer[PER_SCREEN_NORMALIZED]->Clear();
-	if (enableAlphaChannel)
-		alphaFrameBuffer->Clear();
+	if (channels.count(RGB_PER_PIXEL_NORMALIZED) > 0)
+		channel_RGB_PER_PIXEL_NORMALIZED->Clear();
+	if (channels.count(RGB_PER_SCREEN_NORMALIZED) > 0)
+		channel_RGB_PER_SCREEN_NORMALIZED->Clear();
+	if (channels.count(ALPHA) > 0)
+		channel_ALPHA->Clear();
 
 	// convTest has to be reseted explicitely
 
@@ -154,46 +164,37 @@ void Film::AddFilm(const Film &film,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
 	statsTotalSampleCount += film.statsTotalSampleCount;
 
-	if (enablePerPixelNormalizedBuffer && film.enablePerPixelNormalizedBuffer) {
-		SampleFrameBuffer *fbDst = sampleFrameBuffer[PER_PIXEL_NORMALIZED];
-		const SampleFrameBuffer *fbSrc = film.sampleFrameBuffer[PER_PIXEL_NORMALIZED];
-
+	if (HasChannel(RGB_PER_PIXEL_NORMALIZED) && film.HasChannel(RGB_PER_PIXEL_NORMALIZED)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
-				const SamplePixel *srcPixel = fbSrc->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				fbDst->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel->radiance, srcPixel->weight);
+				const float *srcPixel = film.channel_RGB_PER_PIXEL_NORMALIZED->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_RGB_PER_PIXEL_NORMALIZED->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 
-	if (enablePerScreenNormalizedBuffer && film.enablePerScreenNormalizedBuffer) {
-		SampleFrameBuffer *fbDst = sampleFrameBuffer[PER_SCREEN_NORMALIZED];
-		const SampleFrameBuffer *fbSrc = film.sampleFrameBuffer[PER_SCREEN_NORMALIZED];
-
+	if (HasChannel(RGB_PER_SCREEN_NORMALIZED) && film.HasChannel(RGB_PER_SCREEN_NORMALIZED)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
-				const SamplePixel *srcPixel = fbSrc->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				fbDst->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel->radiance, srcPixel->weight);
+				const float *srcPixel = film.channel_RGB_PER_SCREEN_NORMALIZED->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_RGB_PER_SCREEN_NORMALIZED->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 
-	if (enableAlphaChannel && film.enableAlphaChannel) {
-		AlphaFrameBuffer *fbDst = alphaFrameBuffer;
-		const AlphaFrameBuffer *fbSrc = film.alphaFrameBuffer;
-
+	if (HasChannel(ALPHA) && film.HasChannel(ALPHA)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
-				const AlphaPixel *srcPixel = fbSrc->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				fbDst->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel->alpha);
+				const float *srcPixel = film.channel_ALPHA->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_ALPHA->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 }
 
 void Film::SaveScreenBuffer(const std::string &fileName) {
-	if ((!enablePerPixelNormalizedBuffer && !enablePerScreenNormalizedBuffer) ||
-			!enableFrameBuffer) {
+	if ((!HasChannel(RGB_PER_PIXEL_NORMALIZED) && !HasChannel(RGB_PER_SCREEN_NORMALIZED)) ||
+			!HasChannel(TONEMAPPED_FRAMEBUFFER)) {
 		// I can not save the image in this case
 		return;
 	}
@@ -204,31 +205,30 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 			// In order to merge the 2 sample buffers
 			UpdateScreenBufferImpl(TONEMAP_NONE);
 
-			if (alphaFrameBuffer) {
+			if (HasChannel(ALPHA)) {
 				// Save the alpha channel too
 				FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBAF, width, height, 128);
 
 				if (dib) {
-					unsigned int pitch = FreeImage_GetPitch(dib);
+					u_int pitch = FreeImage_GetPitch(dib);
 					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 
-					for (unsigned int y = 0; y < height; ++y) {
+					for (u_int y = 0; y < height; ++y) {
 						FIRGBAF *pixel = (FIRGBAF *)bits;
-						for (unsigned int x = 0; x < width; ++x) {
-							const unsigned int ridx = y * width + x;
+						for (u_int x = 0; x < width; ++x) {
+							const u_int ridx = y * width + x;
 
-							pixel[x].red = frameBuffer->GetPixel(ridx)->r;
-							pixel[x].green = frameBuffer->GetPixel(ridx)->g;
-							pixel[x].blue = frameBuffer->GetPixel(ridx)->b;
+							pixel[x].red = channel_RGB_TONEMAPPED->GetPixel(ridx)[0];
+							pixel[x].green = channel_RGB_TONEMAPPED->GetPixel(ridx)[1];
+							pixel[x].blue = channel_RGB_TONEMAPPED->GetPixel(ridx)[2];
 
-							const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixel(ridx);
-							const float weight = sp->weight;
+							const float weight = channel_RGB_PER_PIXEL_NORMALIZED->GetPixel(ridx)[3];
 							if (weight == 0.f) {
 								pixel[x].alpha = 0.f;
 							} else {
 								const float iw = 1.f / weight;
-								const AlphaPixel *ap = alphaFrameBuffer->GetPixel(ridx);
-								pixel[x].alpha = ap->alpha * iw;
+								const float *ap = channel_ALPHA->GetPixel(ridx);
+								pixel[x].alpha = ap[0] * iw;
 							}
 						}
 
@@ -247,17 +247,17 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 				FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
 
 				if (dib) {
-					unsigned int pitch = FreeImage_GetPitch(dib);
+					u_int pitch = FreeImage_GetPitch(dib);
 					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 
-					for (unsigned int y = 0; y < height; ++y) {
+					for (u_int y = 0; y < height; ++y) {
 						FIRGBF *pixel = (FIRGBF *)bits;
-						for (unsigned int x = 0; x < width; ++x) {
-							const unsigned int ridx = y * width + x;
+						for (u_int x = 0; x < width; ++x) {
+							const u_int ridx = y * width + x;
 
-							pixel[x].red = frameBuffer->GetPixel(ridx)->r;
-							pixel[x].green = frameBuffer->GetPixel(ridx)->g;
-							pixel[x].blue = frameBuffer->GetPixel(ridx)->b;
+							pixel[x].red = channel_RGB_TONEMAPPED->GetPixel(ridx)[0];
+							pixel[x].green = channel_RGB_TONEMAPPED->GetPixel(ridx)[1];
+							pixel[x].blue = channel_RGB_TONEMAPPED->GetPixel(ridx)[2];
 						}
 
 						// Next line
@@ -277,33 +277,31 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 		} else {
 			UpdateScreenBuffer();
 
-			if (alphaFrameBuffer) {
+			if (HasChannel(ALPHA)) {
 				// Save the alpha channel too
 				FIBITMAP *dib = FreeImage_Allocate(width, height, 32);
 
 				if (dib) {
-					unsigned int pitch = FreeImage_GetPitch(dib);
+					u_int pitch = FreeImage_GetPitch(dib);
 					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 					const float *pixels = GetScreenBuffer();
-					const AlphaPixel *alphaPixels = alphaFrameBuffer->GetPixels();
+					const float *alphaPixels = channel_ALPHA->GetPixels();
 
-					for (unsigned int y = 0; y < height; ++y) {
+					for (u_int y = 0; y < height; ++y) {
 						BYTE *pixel = (BYTE *)bits;
-						for (unsigned int x = 0; x < width; ++x) {
+						for (u_int x = 0; x < width; ++x) {
 							const int offset = 3 * (x + y * width);
 							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
 							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
 							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);
 
-							const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixel(x, y);
-							const float weight = sp->weight;
-
+							const float weight = channel_RGB_PER_PIXEL_NORMALIZED->GetPixel(x, y)[3];
 							if (weight == 0.f)
 								pixel[FI_RGBA_ALPHA] = (BYTE)0;
 							else {
 								const int alphaOffset = (x + y * width);
 								const float alpha = Clamp(
-									alphaPixels[alphaOffset].alpha / weight,
+									alphaPixels[alphaOffset] / weight,
 									0.f, 1.f);
 								pixel[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
 							}
@@ -326,13 +324,13 @@ void Film::SaveScreenBuffer(const std::string &fileName) {
 				FIBITMAP *dib = FreeImage_Allocate(width, height, 24);
 
 				if (dib) {
-					unsigned int pitch = FreeImage_GetPitch(dib);
+					u_int pitch = FreeImage_GetPitch(dib);
 					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
 					const float *pixels = GetScreenBuffer();
 
-					for (unsigned int y = 0; y < height; ++y) {
+					for (u_int y = 0; y < height; ++y) {
 						BYTE *pixel = (BYTE *)bits;
-						for (unsigned int x = 0; x < width; ++x) {
+						for (u_int x = 0; x < width; ++x) {
 							const int offset = 3 * (x + y * width);
 
 							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
@@ -361,42 +359,42 @@ void Film::UpdateScreenBuffer() {
 	UpdateScreenBufferImpl(toneMapParams->GetType());
 }
 
-void Film::MergeSampleBuffers(Pixel *p, std::vector<bool> &frameBufferMask) const {
-	const unsigned int pixelCount = width * height;
+void Film::MergeSampleBuffers(Spectrum *p, std::vector<bool> &frameBufferMask) const {
+	const u_int pixelCount = width * height;
 
-	// Merge PER_PIXEL_NORMALIZED and PER_SCREEN_NORMALIZED buffers
+	// Merge RGB_PER_PIXEL_NORMALIZED and RGB_PER_SCREEN_NORMALIZED buffers
 
-	if (enablePerPixelNormalizedBuffer) {
-		const SamplePixel *sp = sampleFrameBuffer[PER_PIXEL_NORMALIZED]->GetPixels();
-		for (unsigned int i = 0; i < pixelCount; ++i) {
-			const float weight = sp[i].weight;
+	if (HasChannel(RGB_PER_PIXEL_NORMALIZED)) {
+		for (u_int i = 0; i < pixelCount; ++i) {
+			const float *sp = channel_RGB_PER_PIXEL_NORMALIZED->GetPixel(i);
 
+			const float weight = sp[3];
 			if (weight > 0.f) {
-				p[i] = sp[i].radiance / weight;
+				p[i] = Spectrum(sp) / weight;
 				frameBufferMask[i] = true;
 			}
 		}
 	}
 
-	if (enablePerScreenNormalizedBuffer) {
-		const SamplePixel *sp = sampleFrameBuffer[PER_SCREEN_NORMALIZED]->GetPixels();
+	if (HasChannel(RGB_PER_SCREEN_NORMALIZED)) {
 		const float factor = pixelCount / statsTotalSampleCount;
 
-		for (unsigned int i = 0; i < pixelCount; ++i) {
-			const float weight = sp[i].weight;
+		for (u_int i = 0; i < pixelCount; ++i) {
+			const float *sp = channel_RGB_PER_SCREEN_NORMALIZED->GetPixel(i);
+			const Spectrum pixel(sp);
 
-			if (weight > 0.f) {
+			if (sp[3] > 0.f) {
 				if (frameBufferMask[i])
-					p[i] += sp[i].radiance * factor;
+					p[i] += Spectrum(sp) * factor;
 				else
-					p[i] = sp[i].radiance * factor;
+					p[i] = Spectrum(sp) * factor;
 				frameBufferMask[i] = true;
 			}
 		}
 	}
 
 	if (!enabledOverlappedScreenBufferUpdate) {
-		for (unsigned int i = 0; i < pixelCount; ++i) {
+		for (u_int i = 0; i < pixelCount; ++i) {
 			if (!frameBufferMask[i]) {
 				p[i].r = 0.f;
 				p[i].g = 0.f;
@@ -407,15 +405,15 @@ void Film::MergeSampleBuffers(Pixel *p, std::vector<bool> &frameBufferMask) cons
 }
 
 void Film::UpdateScreenBufferImpl(const ToneMapType type) {
-	if ((!enablePerPixelNormalizedBuffer && !enablePerScreenNormalizedBuffer) ||
-			!enableFrameBuffer) {
+	if ((!HasChannel(RGB_PER_PIXEL_NORMALIZED) && !HasChannel(RGB_PER_SCREEN_NORMALIZED)) ||
+			!HasChannel(TONEMAPPED_FRAMEBUFFER)) {
 		// Nothing to do
 		return;
 	}
 
 	switch (type) {
 		case TONEMAP_NONE: {
-			Pixel *p = frameBuffer->GetPixels();
+			Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
 			std::vector<bool> frameBufferMask(pixelCount, false);
 
 			MergeSampleBuffers(p, frameBufferMask);
@@ -423,14 +421,14 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 		}
 		case TONEMAP_LINEAR: {
 			const LinearToneMapParams &tm = (LinearToneMapParams &)(*toneMapParams);
-			Pixel *p = frameBuffer->GetPixels();
-			const unsigned int pixelCount = width * height;
+			Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
+			const u_int pixelCount = width * height;
 			std::vector<bool> frameBufferMask(pixelCount, false);
 
 			MergeSampleBuffers(p, frameBufferMask);
 
 			// Gamma correction
-			for (unsigned int i = 0; i < pixelCount; ++i) {
+			for (u_int i = 0; i < pixelCount; ++i) {
 				if (frameBufferMask[i])
 					p[i] = Radiance2Pixel(tm.scale * p[i]);
 			}
@@ -444,8 +442,8 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 			const float postScale = tm.postScale;
 			const float burn = tm.burn;
 
-			Pixel *p = frameBuffer->GetPixels();
-			const unsigned int pixelCount = width * height;
+			Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
+			const u_int pixelCount = width * height;
 
 			std::vector<bool> frameBufferMask(pixelCount, false);
 			MergeSampleBuffers(p, frameBufferMask);
@@ -453,7 +451,7 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 			// Use the frame buffer as temporary storage and calculate the average luminance
 			float Ywa = 0.f;
 
-			for (unsigned int i = 0; i < pixelCount; ++i) {
+			for (u_int i = 0; i < pixelCount; ++i) {
 				if (frameBufferMask[i]) {
 					// Convert to XYZ color space
 					Spectrum xyz;
@@ -475,7 +473,7 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 			const float invY2 = 1.f / (Yw * Yw);
 			const float pScale = postScale * preScale * alpha / Ywa;
 
-			for (unsigned int i = 0; i < pixelCount; ++i) {
+			for (u_int i = 0; i < pixelCount; ++i) {
 				if (frameBufferMask[i]) {
 					Spectrum xyz = p[i];
 
@@ -501,62 +499,73 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 	}
 }
 
-void Film::SetPixel(const FilmBufferType type,
-		const u_int x, const u_int y,
-		const luxrays::Spectrum &radiance, const float alpha,
-		const float weight) {
-	assert (!radiance.IsNaN() && !radiance.IsInf());
+void Film::AddSampleResult(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight)  {
+	if (sampleResult.hasPerPixelNormalizedRadiance) {
+		float pixel[4];
+		pixel[0] = sampleResult.radiancePerPixelNormalized.r * weight;
+		pixel[1] = sampleResult.radiancePerPixelNormalized.g * weight;
+		pixel[2] = sampleResult.radiancePerPixelNormalized.b * weight;
+		pixel[3] = weight;
+		channel_RGB_PER_PIXEL_NORMALIZED->AddPixel(x, y, pixel);
+	}
 
-	if (radiance.IsNaN() || radiance.IsInf() ||
-			(x < 0) || (x >= width) || (y < 0) || (y >= height))
-		return;
+	if (sampleResult.hasPerScreenNormalizedRadiance) {
+		float pixel[4];
+		pixel[0] = sampleResult.radiancePerScreenNormalized.r * weight;
+		pixel[1] = sampleResult.radiancePerScreenNormalized.g * weight;
+		pixel[2] = sampleResult.radiancePerScreenNormalized.b * weight;
+		pixel[3] = weight;
+		channel_RGB_PER_PIXEL_NORMALIZED->AddPixel(x, y, pixel);
+	}
 
-	SetRadiance(type, x, y, radiance, weight);
-
-	if (enableAlphaChannel)
-		SetAlpha(x, y, alpha);
+	// Faster than HasChannel(ALPHA)
+	if (channel_ALPHA) {
+		const float alphaPixel = weight * sampleResult.alpha;
+		channel_ALPHA->AddPixel(x, y, &alphaPixel);
+	}
 }
 
-void Film::AddSample(const FilmBufferType type,
-		const u_int x, const u_int y,
-		const float u0, const float u1,
-		const luxrays::Spectrum &radiance, const float alpha,
-		const float weight) {
-	assert (!radiance.IsNaN() && !radiance.IsInf());
+void Film::AddSample(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight) {
+	assert (sampleResult.hasPerPixelNormalizedRadiance &&
+		(!sampleResult.radiancePerPixelNormalized.IsNaN() && !sampleResult.radiancePerPixelNormalized.IsInf()));
+	assert (sampleResult.hasPerScreenNormalizedRadiance &&
+			(!sampleResult.radiancePerScreenNormalized.IsNaN() && !sampleResult.radiancePerScreenNormalized.IsInf()));
 
-	if (radiance.IsNaN() || radiance.IsInf() ||
-			(x < 0) || (x >= width) || (y < 0) || (y >= height))
+	if ((sampleResult.hasPerPixelNormalizedRadiance &&
+			(sampleResult.radiancePerPixelNormalized.IsNaN() || sampleResult.radiancePerPixelNormalized.IsInf())) ||
+		(sampleResult.hasPerScreenNormalizedRadiance &&
+			(sampleResult.radiancePerScreenNormalized.IsNaN() || sampleResult.radiancePerScreenNormalized.IsInf())) ||
+			((x < 0) || (x >= width) || (y < 0) || (y >= height)))
 		return;
 
-	AddRadiance(type, x, y, radiance, weight);
-
-	if (enableAlphaChannel)
-		AddAlpha(x, y, alpha, weight);
+	AddSampleResult(x, y, sampleResult, weight);
 }
 
-void Film::SplatSample(const FilmBufferType type, const float screenX,
-		const float screenY, const Spectrum &radiance, const float alpha,
-		const float weight) {
-	assert (!radiance.IsNaN() && !radiance.IsInf());
+void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
+	assert (sampleResult.hasPerPixelNormalizedRadiance &&
+		(!sampleResult.radiancePerPixelNormalized.IsNaN() && !sampleResult.radiancePerPixelNormalized.IsInf()));
+	assert (sampleResult.hasPerScreenNormalizedRadiance &&
+			(!sampleResult.radiancePerScreenNormalized.IsNaN() && !sampleResult.radiancePerScreenNormalized.IsInf()));
 
-	if (radiance.IsNaN() || radiance.IsInf())
+	if ((sampleResult.hasPerPixelNormalizedRadiance &&
+			(sampleResult.radiancePerPixelNormalized.IsNaN() || sampleResult.radiancePerPixelNormalized.IsInf())) ||
+		(sampleResult.hasPerScreenNormalizedRadiance &&
+			(sampleResult.radiancePerScreenNormalized.IsNaN() || sampleResult.radiancePerScreenNormalized.IsInf())))
 		return;
 
 	if (!filter) {
-		const int x = Ceil2Int(screenX - 0.5f);
-		const int y = Ceil2Int(screenY - 0.5f);
+		const int x = Ceil2Int(sampleResult.filmX - 0.5f);
+		const int y = Ceil2Int(sampleResult.filmY - 0.5f);
 
-		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height)) {
-			AddRadiance(type, x, y, radiance, weight);
-
-			if (enableAlphaChannel)
-				AddAlpha(x, y, alpha, weight);
-		}
+		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
+			AddSampleResult(x, y, sampleResult, weight);
 	} else {
 		// Compute sample's raster extent
-		const float dImageX = screenX - 0.5f;
-		const float dImageY = screenY - 0.5f;
-		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(screenX), dImageY - floorf(screenY));
+		const float dImageX = sampleResult.filmX - .5f;
+		const float dImageY = sampleResult.filmY - .5f;
+		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleResult.filmX), dImageY - floorf(sampleResult.filmY));
 		const float *lut = filterLUT->GetLUT();
 
 		const int x0 = Ceil2Int(dImageX - filter->xWidth);
@@ -578,19 +587,17 @@ void Film::SplatSample(const FilmBufferType type, const float screenX,
 					continue;
 
 				const float filteredWeight = weight * filterWeight;
-				AddRadiance(type, ix, iy, radiance, filteredWeight);
-
-				if (enableAlphaChannel)
-					AddAlpha(ix, iy, alpha, filteredWeight);
+				AddSampleResult(ix, iy, sampleResult, filteredWeight);
 			}
 		}
 	}
 }
 
 void Film::ResetConvergenceTest() {
-	convTest->Reset();
+	if (convTest)
+		convTest->Reset();
 }
 
-unsigned int Film::RunConvergenceTest() {
-	return convTest->Test((const float *)frameBuffer->GetPixels());
+u_int Film::RunConvergenceTest() {
+	return convTest->Test((const float *)channel_RGB_TONEMAPPED->GetPixels());
 }

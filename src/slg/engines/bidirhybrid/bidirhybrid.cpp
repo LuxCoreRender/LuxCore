@@ -35,8 +35,8 @@ BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, 
 	eyePathCount = 1;
 	lightPathCount = 1;
 
-	film->SetPerPixelNormalizedBufferFlag(true);
-	film->SetPerScreenNormalizedBufferFlag(true);
+	film->AddChannel(RGB_PER_PIXEL_NORMALIZED);
+	film->AddChannel(RGB_PER_SCREEN_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->Init();
 }

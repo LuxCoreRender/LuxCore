@@ -173,7 +173,9 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	const unsigned int pixelCount = film->GetWidth() * film->GetHeight();
 	float newLuminance = 0.f;
 	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
-		const float luminance = sr->radiance.Y();
+		const float luminance =
+			(sr->hasPerPixelNormalizedRadiance ? sr->radiancePerPixelNormalized.Y() : 0.f) +
+			(sr->hasPerScreenNormalizedRadiance ? sr->radiancePerScreenNormalized.Y() : 0.f);
 		assert (!isnan(luminance) && !isinf(luminance));
 
 		if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))

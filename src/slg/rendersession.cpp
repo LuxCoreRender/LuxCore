@@ -113,10 +113,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 	const float gamma = cfg.GetFloat("film.gamma", 2.2f);
 	if (gamma != 2.2f)
-		film->InitGammaTable(gamma);
+		film->SetGamma(gamma);
 
 	// Check if I have to enable the alpha channel
-	film->SetAlphaChannelFlag(cfg.GetInt("film.alphachannel.enable", 0) != 0);
+	if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
+		film->AddChannel(ALPHA);
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
@@ -179,6 +180,15 @@ void RenderSession::SetRenderingEngineType(const RenderEngineType engineType) {
 	if (engineType != renderEngine->GetEngineType()) {
 		Stop();
 
+		// I need to allocate an uninitialized Film
+		Film *newFilm = new Film(film->GetWidth(), film->GetHeight());
+		newFilm->CopyDynamicSettings(*film);
+		newFilm->RemoveChannel(RGB_PER_PIXEL_NORMALIZED);
+		newFilm->RemoveChannel(RGB_PER_SCREEN_NORMALIZED);
+		delete film;
+		film = newFilm;
+
+		// Allocate the new rendering engine
 		delete renderEngine;
 		renderEngine = RenderEngine::AllocRenderEngine(engineType,
 				renderConfig, film, &filmMutex);

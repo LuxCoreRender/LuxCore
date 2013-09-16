@@ -173,8 +173,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 			// Add the ray to trace and the result
 			lightSampleValue.push_back(u0);
 			thread->PushRay(eyeRay);
-			AddSampleResult(lightSampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
-					radiance, 1.f);
+			AddSampleResult(lightSampleResults, scrX, scrY, NULL, &radiance, 1.f);
 			return true;
 		}
 	}
@@ -501,9 +500,9 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 		eyeSampleResults[eyePathIndex].alpha = 1.f;
 
 		Ray eyeRay;
-		eyeSampleResults[eyePathIndex].screenX = luxrays::Min(sampler->GetSample(eyePathSampleOffset) * filmWidth, (float)(filmWidth - 1));
-		eyeSampleResults[eyePathIndex].screenY = luxrays::Min(sampler->GetSample(eyePathSampleOffset + 1) * filmHeight, (float)(filmHeight - 1));
-		camera->GenerateRay(eyeSampleResults[eyePathIndex].screenX, eyeSampleResults[eyePathIndex].screenY, &eyeRay,
+		eyeSampleResults[eyePathIndex].filmX = luxrays::Min(sampler->GetSample(eyePathSampleOffset) * filmWidth, (float)(filmWidth - 1));
+		eyeSampleResults[eyePathIndex].filmY = luxrays::Min(sampler->GetSample(eyePathSampleOffset + 1) * filmHeight, (float)(filmHeight - 1));
+		camera->GenerateRay(eyeSampleResults[eyePathIndex].filmX, eyeSampleResults[eyePathIndex].filmY, &eyeRay,
 			sampler->GetSample(eyePathSampleOffset + 4), sampler->GetSample(eyePathSampleOffset + 5));
 
 		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
@@ -637,7 +636,8 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 
 	// Elaborate the RayHit results for each eye paths
 	SampleResult eyeSampleResult;
-	eyeSampleResult.type = PER_PIXEL_NORMALIZED;
+	eyeSampleResult.hasPerPixelNormalizedRadiance = true;
+	eyeSampleResult.hasPerScreenNormalizedRadiance = false;
 	u_int currentLightSampleResultsIndex = 0;
 	for (u_int eyePathIndex = 0; eyePathIndex < renderEngine->eyePathCount; ++eyePathIndex) {
 		// For each eye path, elaborate the RayHit results for eye to light path vertex connections
@@ -647,16 +647,16 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 			thread->PopRay(&ray, &rayHit);
 
 			if (ValidResult(thread, ray, rayHit, lightSampleValue[currentLightSampleResultsIndex],
-					&lightSampleResults[currentLightSampleResultsIndex].radiance))
+					&lightSampleResults[currentLightSampleResultsIndex].radiancePerScreenNormalized))
 				validSampleResults.push_back(lightSampleResults[currentLightSampleResultsIndex]);
 
 			++currentLightSampleResultsIndex;
 		}
 
+		eyeSampleResult.filmX = eyeSampleResults[eyePathIndex].filmX;
+		eyeSampleResult.filmY = eyeSampleResults[eyePathIndex].filmY;
+		eyeSampleResult.radiancePerPixelNormalized = eyeSampleResults[eyePathIndex].radiance;
 		eyeSampleResult.alpha = eyeSampleResults[eyePathIndex].alpha;
-		eyeSampleResult.screenX = eyeSampleResults[eyePathIndex].screenX;
-		eyeSampleResult.screenY = eyeSampleResults[eyePathIndex].screenY;
-		eyeSampleResult.radiance = eyeSampleResults[eyePathIndex].radiance;
 		for (u_int i = 0; i < eyeSampleResults[eyePathIndex].sampleRadiance.size(); ++i) {
 			const Ray *ray;
 			const RayHit *rayHit;
@@ -664,7 +664,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 
 			if (ValidResult(thread, ray, rayHit, eyeSampleResults[eyePathIndex].sampleValue[i],
 					&eyeSampleResults[eyePathIndex].sampleRadiance[i]))
-				eyeSampleResult.radiance += eyeSampleResults[eyePathIndex].sampleRadiance[i];
+				eyeSampleResult.radiancePerPixelNormalized += eyeSampleResults[eyePathIndex].sampleRadiance[i];
 		}
 		validSampleResults.push_back(eyeSampleResult);
 	}

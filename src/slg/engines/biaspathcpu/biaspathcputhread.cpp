@@ -416,10 +416,10 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 	// Sample according the pixel filter distribution
 	filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
 
-	const float screenX = xOffset + x + .5f + u0;
-	const float screenY = yOffset + y + .5f + u1;
+	const float filmX = xOffset + x + .5f + u0;
+	const float filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;
-	engine->renderConfig->scene->camera->GenerateRay(screenX, screenY, &eyeRay,
+	engine->renderConfig->scene->camera->GenerateRay(filmX, filmY, &eyeRay,
 		rndGen->floatValue(), rndGen->floatValue());
 
 	// Trace the path
@@ -432,8 +432,7 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 		radiance = radiance.Clamp(0.f, engine->clampMaxValue);
 
 	tileFilm->AddSampleCount(1.0);
-	tileFilm->AddSample(PER_PIXEL_NORMALIZED, x, y, u0, u1,
-			radiance, alpha);
+	tileFilm->AddSample(x, y, SampleResult(filmX, filmY, &radiance, NULL, alpha));
 }
 
 void BiasPathCPURenderThread::RenderFunc() {
