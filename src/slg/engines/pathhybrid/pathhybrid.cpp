@@ -31,7 +31,7 @@ using namespace slg;
 
 PathHybridRenderEngine::PathHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		HybridRenderEngine(rcfg, flm, flmMutex) {
-	film->AddChannel(RGB_PER_PIXEL_NORMALIZED);
+	film->AddChannel(RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->Init();
 }

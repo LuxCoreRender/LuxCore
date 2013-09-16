@@ -55,7 +55,7 @@ using namespace slg;
 
 PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		OCLRenderEngine(rcfg, flm, flmMutex) {
-	film->AddChannel(RGB_PER_PIXEL_NORMALIZED);
+	film->AddChannel(RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->Init();
 
@@ -282,9 +282,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
-	SampleResult sampleResult;
-	sampleResult.hasPerPixelNormalizedRadiance = true;
-	sampleResult.hasPerScreenNormalizedRadiance = false;
+	SampleResult sampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
 	for (u_int y = 0; y < imgHeight; ++y) {
 		u_int pGPU = 1 + (y + 1) * (imgWidth + 2);
 		sampleResult.filmY = y - .5f;

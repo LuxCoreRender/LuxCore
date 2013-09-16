@@ -41,8 +41,7 @@ PathHybridState::PathHybridState(PathHybridRenderThread *renderThread,
 		Film *film, luxrays::RandomGenerator *rndGen) : HybridRenderState(renderThread, film, rndGen), sampleResults(1) {
 	PathHybridRenderEngine *renderEngine = (PathHybridRenderEngine *)renderThread->renderEngine;
 
-	sampleResults[0].hasPerPixelNormalizedRadiance = true;
-	sampleResults[0].hasPerScreenNormalizedRadiance = false;
+	sampleResults[0].Init(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
 
 	// Setup the sampler
 	const u_int sampleSize = sampleBootSize + renderEngine->maxPathDepth * sampleStepSize;
