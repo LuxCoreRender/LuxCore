@@ -124,9 +124,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			const vector<PathVertexVM> &lightPathVertices = lightPathsVertices[samplerIndex];
 
 			PathVertexVM eyeVertex;
-			SampleResult eyeSampleResult;
-			eyeSampleResult.hasPerPixelNormalizedRadiance = true;
-			eyeSampleResult.hasPerScreenNormalizedRadiance = false;
+			SampleResult eyeSampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
 			eyeSampleResult.alpha = 1.f;
 
 			Ray eyeRay;

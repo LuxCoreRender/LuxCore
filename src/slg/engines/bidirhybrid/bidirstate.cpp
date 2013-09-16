@@ -173,7 +173,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 			// Add the ray to trace and the result
 			lightSampleValue.push_back(u0);
 			thread->PushRay(eyeRay);
-			AddSampleResult(lightSampleResults, scrX, scrY, NULL, &radiance, 1.f);
+			AddSampleResult(lightSampleResults, scrX, scrY, radiance);
 			return true;
 		}
 	}
@@ -635,9 +635,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 	vector<SampleResult> validSampleResults;
 
 	// Elaborate the RayHit results for each eye paths
-	SampleResult eyeSampleResult;
-	eyeSampleResult.hasPerPixelNormalizedRadiance = true;
-	eyeSampleResult.hasPerScreenNormalizedRadiance = false;
+	SampleResult eyeSampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
 	u_int currentLightSampleResultsIndex = 0;
 	for (u_int eyePathIndex = 0; eyePathIndex < renderEngine->eyePathCount; ++eyePathIndex) {
 		// For each eye path, elaborate the RayHit results for eye to light path vertex connections

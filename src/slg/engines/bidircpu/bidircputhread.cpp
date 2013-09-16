@@ -158,7 +158,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
 					connectionThroughput * lightVertex.throughput * bsdfEval;
-				AddSampleResult(sampleResults, scrX, scrY, NULL, &radiance, 1.f);
+				AddSampleResult(sampleResults, scrX, scrY, radiance);
 			}
 		}
 	}
@@ -458,9 +458,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		PathVertexVM eyeVertex;
-		SampleResult eyeSampleResult;
-		eyeSampleResult.hasPerPixelNormalizedRadiance = true;
-		eyeSampleResult.hasPerScreenNormalizedRadiance = false;
+		SampleResult eyeSampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
 		eyeSampleResult.alpha = 1.f;
 
 		Ray eyeRay;

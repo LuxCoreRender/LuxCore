@@ -47,61 +47,63 @@
 
 namespace slg {
 
+typedef enum {
+	RADIANCE_PER_PIXEL_NORMALIZED = 1<<0,
+	RADIANCE_PER_SCREEN_NORMALIZED = 1<<1,
+	ALPHA = 1<<2,
+	TONEMAPPED_FRAMEBUFFER = 1<<3
+} FilmChannelType;
+
+//------------------------------------------------------------------------------
+// SampleResult
+//------------------------------------------------------------------------------
+
 class SampleResult {
 public:
 	SampleResult() { }
-	SampleResult(const float x, const float y,
-		const luxrays::Spectrum *radiancePPN,
-		const luxrays::Spectrum *radiancePSN,
-		const float a) {
-		Init(x, y, radiancePPN, radiancePSN, a);
-	}
+	SampleResult(const u_int channelTypes) { channels = channelTypes; }
 	~SampleResult() { }
 
-	void Init(const float x, const float y,
-		const luxrays::Spectrum *radiancePPN,
-		const luxrays::Spectrum *radiancePSN,
-		const float a) {
-		filmX = x;
-		filmY = y;
-
-		hasPerPixelNormalizedRadiance = (radiancePPN != NULL);
-		if (hasPerPixelNormalizedRadiance)
-			radiancePerPixelNormalized = *radiancePPN;
-
-		hasPerScreenNormalizedRadiance = (radiancePSN != NULL);
-		if (hasPerScreenNormalizedRadiance)
-			radiancePerScreenNormalized = *radiancePSN;
-
-		alpha = a;
-	}
+	void Init(const u_int channelTypes) { channels = channelTypes; };
+	bool HasChannel(const FilmChannelType type) const { return (channels & type); }
 
 	float filmX, filmY;
 	luxrays::Spectrum radiancePerPixelNormalized, radiancePerScreenNormalized;
 	float alpha;
-	bool hasPerPixelNormalizedRadiance, hasPerScreenNormalizedRadiance;
+
+private:
+	u_int channels;
 };
 
 inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
 	const float filmX, const float filmY,
-	const luxrays::Spectrum *radiancePPN,
-	const luxrays::Spectrum *radiancePSN,
+	const luxrays::Spectrum &radiancePPN,
 	const float alpha) {
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
-	sampleResults[size].Init(filmX, filmY, radiancePPN, radiancePSN, alpha);
+
+	sampleResults[size].Init(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
+	sampleResults[size].filmX = filmX;
+	sampleResults[size].filmY = filmY;
+	sampleResults[size].radiancePerPixelNormalized = radiancePPN;
+	sampleResults[size].alpha = alpha;
+}
+
+inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
+	const float filmX, const float filmY,
+	const luxrays::Spectrum &radiancePSN) {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	sampleResults[size].Init(RADIANCE_PER_SCREEN_NORMALIZED);
+	sampleResults[size].filmX = filmX;
+	sampleResults[size].filmY = filmY;
+	sampleResults[size].radiancePerScreenNormalized = radiancePSN;
 }
 
 //------------------------------------------------------------------------------
 // Film
 //------------------------------------------------------------------------------
-
-typedef enum {
-	RGB_PER_PIXEL_NORMALIZED = 0,
-	RGB_PER_SCREEN_NORMALIZED = 1,
-	ALPHA = 2,
-	TONEMAPPED_FRAMEBUFFER = 3
-} FilmChannelType;
 
 #define GAMMA_TABLE_SIZE 1024
 
@@ -217,9 +219,9 @@ private:
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount;
-	GenericFrameBuffer<4, float> *channel_RGB_PER_PIXEL_NORMALIZED;
-	GenericFrameBuffer<4, float> *channel_RGB_PER_SCREEN_NORMALIZED;
-	GenericFrameBuffer<1, float> *channel_ALPHA;
+	GenericFrameBuffer<4, float> *channel_RADIANCE_PER_PIXEL_NORMALIZED;
+	GenericFrameBuffer<4, float> *channel_RADIANCE_PER_SCREEN_NORMALIZED;
+	GenericFrameBuffer<2, float> *channel_ALPHA;
 	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;

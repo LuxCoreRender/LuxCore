@@ -31,7 +31,7 @@ using namespace slg;
 
 PathCPURenderEngine::PathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
-	film->AddChannel(RGB_PER_PIXEL_NORMALIZED);
+	film->AddChannel(RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->Init();
 }

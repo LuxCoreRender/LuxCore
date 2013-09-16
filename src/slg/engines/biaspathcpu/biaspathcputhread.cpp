@@ -416,23 +416,22 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 	// Sample according the pixel filter distribution
 	filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
 
-	const float filmX = xOffset + x + .5f + u0;
-	const float filmY = yOffset + y + .5f + u1;
+	SampleResult sampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
+	sampleResult.filmX = xOffset + x + .5f + u0;
+	sampleResult.filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;
-	engine->renderConfig->scene->camera->GenerateRay(filmX, filmY, &eyeRay,
-		rndGen->floatValue(), rndGen->floatValue());
+	engine->renderConfig->scene->camera->GenerateRay(sampleResult.filmX, sampleResult.filmY,
+			&eyeRay, rndGen->floatValue(), rndGen->floatValue());
 
 	// Trace the path
-	Spectrum radiance;
-	float alpha;
-	TraceEyePath(rndGen, eyeRay, &radiance, &alpha);
+	TraceEyePath(rndGen, eyeRay, &sampleResult.radiancePerPixelNormalized, &sampleResult.alpha);
 
 	// Clamping
 	if (engine->clampValueEnabled)
-		radiance = radiance.Clamp(0.f, engine->clampMaxValue);
+		sampleResult.radiancePerPixelNormalized = sampleResult.radiancePerPixelNormalized.Clamp(0.f, engine->clampMaxValue);
 
 	tileFilm->AddSampleCount(1.0);
-	tileFilm->AddSample(x, y, SampleResult(filmX, filmY, &radiance, NULL, alpha));
+	tileFilm->AddSample(x, y, sampleResult);
 }
 
 void BiasPathCPURenderThread::RenderFunc() {

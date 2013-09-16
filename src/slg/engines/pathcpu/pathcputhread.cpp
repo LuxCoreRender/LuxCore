@@ -177,13 +177,16 @@ void PathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults(1);
+	SampleResult &sampleResult = sampleResults[0];
+	sampleResult.Init(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
+
 	while (!boost::this_thread::interruption_requested()) {
 		float alpha = 1.f;
 
 		Ray eyeRay;
-		const float filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-		const float filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-		camera->GenerateRay(filmX, filmY, &eyeRay,
+		sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+		sampleResult.filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+		camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
 			sampler->GetSample(2), sampler->GetSample(3));
 
 		int depth = 1;
@@ -265,7 +268,8 @@ void PathCPURenderThread::RenderFunc() {
 		assert (!radiance.IsNaN() && !radiance.IsInf());
 		assert (!isnan(alpha) && !isinf(alpha));
 
-		sampleResults[0].Init(filmX, filmY, &radiance, NULL, alpha);
+		sampleResult.radiancePerPixelNormalized = radiance;
+		sampleResult.alpha = alpha;
 		sampler->NextSample(sampleResults);
 
 #ifdef WIN32
