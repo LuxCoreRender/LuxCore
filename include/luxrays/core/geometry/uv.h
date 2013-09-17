@@ -93,6 +93,14 @@ public:
 		return (&u)[i];
 	}
 
+	bool IsNaN() const {
+		return isnan(u) || isnan(v);
+	}
+
+	bool IsInf() const {
+		return isinf(u) || isinf(v);
+	}
+
 	// UV Public Data
 	float u, v;
 };

@@ -39,6 +39,7 @@
 
 #include <boost/thread/mutex.hpp>
 
+#include "luxrays/core/geometry/point.h"
 #include "slg/slg.h"
 #include "slg/film/filter.h"
 #include "slg/film/tonemapping.h"
@@ -52,7 +53,8 @@ typedef enum {
 	RADIANCE_PER_SCREEN_NORMALIZED = 1<<1,
 	ALPHA = 1<<2,
 	TONEMAPPED_FRAMEBUFFER = 1<<3,
-	DEPTH = 1<<4
+	DEPTH = 1<<4,
+	POSITION = 1<<5
 } FilmChannelType;
 
 //------------------------------------------------------------------------------
@@ -62,7 +64,7 @@ typedef enum {
 class FilmOutputs {
 public:
 	typedef enum {
-		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH
+		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -94,8 +96,8 @@ public:
 
 	float filmX, filmY;
 	luxrays::Spectrum radiancePerPixelNormalized, radiancePerScreenNormalized;
-	float alpha;
-	float depth;
+	float alpha, depth;
+	luxrays::Point position;
 
 private:
 	u_int channels;
@@ -256,6 +258,7 @@ private:
 	GenericFrameBuffer<2, float> *channel_ALPHA;
 	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
 	GenericFrameBuffer<1, float> *channel_DEPTH;
+	GenericFrameBuffer<3, float> *channel_POSITION;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 

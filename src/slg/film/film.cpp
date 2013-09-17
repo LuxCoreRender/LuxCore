@@ -25,6 +25,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "luxrays/core/geometry/point.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -53,6 +54,7 @@ Film::Film(const u_int w, const u_int h) {
 	channel_ALPHA = NULL;
 	channel_RGB_TONEMAPPED = NULL;
 	channel_DEPTH = NULL;
+	channel_POSITION = NULL;
 
 	convTest = NULL;
 
@@ -77,6 +79,7 @@ Film::~Film() {
 	delete channel_ALPHA;
 	delete channel_RGB_TONEMAPPED;
 	delete channel_DEPTH;
+	delete channel_POSITION;
 
 	delete filterLUTs;
 	delete filter;
@@ -114,6 +117,7 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_ALPHA;
 	delete channel_RGB_TONEMAPPED;
 	delete channel_DEPTH;
+	delete channel_POSITION;
 	
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -137,6 +141,10 @@ void Film::Init(const u_int w, const u_int h) {
 	if (HasChannel(DEPTH)) {
 		channel_DEPTH = new GenericFrameBuffer<1, float>(width, height);
 		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
+	}
+	if (HasChannel(POSITION)) {
+		channel_POSITION = new GenericFrameBuffer<3, float>(width, height);
+		channel_POSITION->Clear();
 	}
 
 	// Initialize the stats
@@ -177,6 +185,8 @@ void Film::Reset() {
 		channel_DEPTH = new GenericFrameBuffer<1, float>(width, height);
 		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
 	}
+	if (HasChannel(POSITION))
+		channel_POSITION->Clear();
 
 	// convTest has to be reseted explicitely
 
@@ -223,6 +233,15 @@ void Film::AddFilm(const Film &film,
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y);
 				channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(POSITION) && film.HasChannel(POSITION)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_POSITION->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_POSITION->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -277,6 +296,13 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			if (HasChannel(DEPTH) && hdrImage) {
 				imageType = FIT_FLOAT;
 				bitCount = 32;
+			} else
+				return;
+			break;
+		case FilmOutputs::POSITION:
+			if (HasChannel(POSITION) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
 			} else
 				return;
 			break;
@@ -396,6 +422,14 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					float *dst = (float *)bits;
 
 					dst[x] = channel_DEPTH->GetPixel(x, y)[0];
+					break;
+				}
+				case FilmOutputs::POSITION: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_POSITION->GetPixel(x, y);
+					dst[x].red = src[0];
+					dst[x].green = src[1];
+					dst[x].blue = src[2];
 					break;
 				}
 				default:
@@ -597,6 +631,11 @@ void Film::AddSampleResultNoColor(const u_int x, const u_int y,
 	// Faster than HasChannel(DEPTH)
 	if (channel_DEPTH && sampleResult.HasChannel(DEPTH) && !isnan(sampleResult.depth))
 		channel_DEPTH->MinPixel(x, y, &sampleResult.depth);
+
+	// Faster than HasChannel(POSITION)
+	if (channel_POSITION && sampleResult.HasChannel(POSITION) &&
+			!sampleResult.position.IsNaN() && !sampleResult.position.IsInf())
+		channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
 }
 
 void Film::AddSampleResult(const u_int x, const u_int y,

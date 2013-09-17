@@ -111,6 +111,15 @@ public:
 	float &operator[](int i) {
 		return (&x)[i];
 	}
+
+	bool IsNaN() const {
+		return isnan(x) || isnan(y) || isnan(z);
+	}
+
+	bool IsInf() const {
+		return isinf(x) || isinf(y) || isinf(z);
+	}
+
 	// Normal Public Data
 	float x, y, z;
 

@@ -22,7 +22,7 @@
 #ifndef _SLG_FRAMEBUFFER_H
 #define	_SLG_FRAMEBUFFER_H
 
-#include <luxrays/core/utils.h>
+#include "luxrays/core/utils.h"
 
 namespace slg {
 

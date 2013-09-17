@@ -145,6 +145,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				film->AddChannel(DEPTH);
 			else
 				film->RemoveChannel(DEPTH);
+		} else if (channelType == "POSITION") {
+			if (enable)
+				film->AddChannel(POSITION);
+			else
+				film->RemoveChannel(POSITION);
 		} else
 			throw std::runtime_error("Unknown type in film channel: " + channelType);
 	}
@@ -213,6 +218,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				filmOutputs.Add(FilmOutputs::DEPTH, fileName);
 			else
 				throw std::runtime_error("Depth image can be saved only in HDR formats: " + outputName);
+		} else if (type == "POSITION") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::POSITION, fileName);
+			else
+				throw std::runtime_error("Position image can be saved only in HDR formats: " + outputName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}
