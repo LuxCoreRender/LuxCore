@@ -35,8 +35,8 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost:
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
 
-	film->AddChannel(RADIANCE_PER_PIXEL_NORMALIZED);
-	film->AddChannel(RADIANCE_PER_SCREEN_NORMALIZED);
+	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->Init();
 }

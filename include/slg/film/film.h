@@ -49,17 +49,6 @@
 
 namespace slg {
 
-typedef enum {
-	RADIANCE_PER_PIXEL_NORMALIZED = 1<<0,
-	RADIANCE_PER_SCREEN_NORMALIZED = 1<<1,
-	ALPHA = 1<<2,
-	TONEMAPPED_FRAMEBUFFER = 1<<3,
-	DEPTH = 1<<4,
-	POSITION = 1<<5,
-	GEOMETRY_NORMAL = 1<<6,
-	SHADING_NORMAL = 1<<7
-} FilmChannelType;
-
 //------------------------------------------------------------------------------
 // FilmOutput
 //------------------------------------------------------------------------------
@@ -68,7 +57,7 @@ class FilmOutputs {
 public:
 	typedef enum {
 		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
-		GEOMETRY_NORMAL, SHADING_NORMAL
+		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -86,62 +75,27 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// SampleResult
-//------------------------------------------------------------------------------
-
-class SampleResult {
-public:
-	SampleResult() { }
-	SampleResult(const u_int channelTypes) { channels = channelTypes; }
-	~SampleResult() { }
-
-	void Init(const u_int channelTypes) { channels = channelTypes; };
-	bool HasChannel(const FilmChannelType type) const { return (channels & type); }
-
-	float filmX, filmY;
-	luxrays::Spectrum radiancePerPixelNormalized, radiancePerScreenNormalized;
-	float alpha, depth;
-	luxrays::Point position;
-	luxrays::Normal geometryNormal, shadingNormal;
-
-private:
-	u_int channels;
-};
-
-inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
-	const float filmX, const float filmY,
-	const luxrays::Spectrum &radiancePPN,
-	const float alpha) {
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	sampleResults[size].Init(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
-	sampleResults[size].filmX = filmX;
-	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiancePerPixelNormalized = radiancePPN;
-	sampleResults[size].alpha = alpha;
-}
-
-inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
-	const float filmX, const float filmY,
-	const luxrays::Spectrum &radiancePSN) {
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	sampleResults[size].Init(RADIANCE_PER_SCREEN_NORMALIZED);
-	sampleResults[size].filmX = filmX;
-	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiancePerScreenNormalized = radiancePSN;
-}
-
-//------------------------------------------------------------------------------
 // Film
 //------------------------------------------------------------------------------
+
+class SampleResult;
 
 #define GAMMA_TABLE_SIZE 1024
 
 class Film {
 public:
+	typedef enum {
+		RADIANCE_PER_PIXEL_NORMALIZED = 1<<0,
+		RADIANCE_PER_SCREEN_NORMALIZED = 1<<1,
+		ALPHA = 1<<2,
+		TONEMAPPED_FRAMEBUFFER = 1<<3,
+		DEPTH = 1<<4,
+		POSITION = 1<<5,
+		GEOMETRY_NORMAL = 1<<6,
+		SHADING_NORMAL = 1<<7,
+		MATERIAL_ID = 1<<8
+	} FilmChannelType;
+
 	Film(const u_int w, const u_int h);
 	~Film();
 
@@ -266,6 +220,7 @@ private:
 	GenericFrameBuffer<3, float> *channel_POSITION;
 	GenericFrameBuffer<3, float> *channel_GEOMETRY_NORMAL;
 	GenericFrameBuffer<3, float> *channel_SHADING_NORMAL;
+	GenericFrameBuffer<1, u_int> *channel_MATERIAL_ID;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
@@ -281,6 +236,56 @@ private:
 
 	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
+
+//------------------------------------------------------------------------------
+// SampleResult
+//------------------------------------------------------------------------------
+
+class SampleResult {
+public:
+	SampleResult() { }
+	SampleResult(const u_int channelTypes) { channels = channelTypes; }
+	~SampleResult() { }
+
+	void Init(const u_int channelTypes) { channels = channelTypes; };
+	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type); }
+
+	float filmX, filmY;
+	luxrays::Spectrum radiancePerPixelNormalized, radiancePerScreenNormalized;
+	float alpha, depth;
+	luxrays::Point position;
+	luxrays::Normal geometryNormal, shadingNormal;
+	u_int materialID;
+
+private:
+	u_int channels;
+};
+
+inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
+	const float filmX, const float filmY,
+	const luxrays::Spectrum &radiancePPN,
+	const float alpha) {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	sampleResults[size].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
+	sampleResults[size].filmX = filmX;
+	sampleResults[size].filmY = filmY;
+	sampleResults[size].radiancePerPixelNormalized = radiancePPN;
+	sampleResults[size].alpha = alpha;
+}
+
+inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
+	const float filmX, const float filmY,
+	const luxrays::Spectrum &radiancePSN) {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	sampleResults[size].Init(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	sampleResults[size].filmX = filmX;
+	sampleResults[size].filmY = filmY;
+	sampleResults[size].radiancePerScreenNormalized = radiancePSN;
+}
 
 }
 

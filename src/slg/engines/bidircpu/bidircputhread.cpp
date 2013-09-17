@@ -458,7 +458,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		PathVertexVM eyeVertex;
-		SampleResult eyeSampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
+		SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
 		eyeSampleResult.alpha = 1.f;
 
 		Ray eyeRay;

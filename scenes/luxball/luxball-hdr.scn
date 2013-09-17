@@ -4,6 +4,7 @@ scene.camera.focaldistance = 2.0
 ################################################################################
 scene.materials.shell.type = mirror
 scene.materials.shell.kr = 0.75 0.75 0.75
+scene.materials.shell.id = 255
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte

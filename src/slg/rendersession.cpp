@@ -137,29 +137,38 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 		if (channelType == "ALPHA") {
 			if (enable)
-				film->AddChannel(ALPHA);
+				film->AddChannel(Film::ALPHA);
 			else
-				film->RemoveChannel(ALPHA);
+				film->RemoveChannel(Film::ALPHA);
 		} else if (channelType == "DEPTH") {
 			if (enable)
-				film->AddChannel(DEPTH);
+				film->AddChannel(Film::DEPTH);
 			else
-				film->RemoveChannel(DEPTH);
+				film->RemoveChannel(Film::DEPTH);
 		} else if (channelType == "POSITION") {
-			if (enable)
-				film->AddChannel(POSITION);
-			else
-				film->RemoveChannel(POSITION);
+			if (enable) {
+				film->AddChannel(Film::POSITION);
+				film->AddChannel(Film::DEPTH); // Used to merge samples
+			} else
+				film->RemoveChannel(Film::POSITION);
 		} else if (channelType == "GEOMETRY_NORMAL") {
-			if (enable)
-				film->AddChannel(GEOMETRY_NORMAL);
-			else
-				film->RemoveChannel(GEOMETRY_NORMAL);
+			if (enable) {
+				film->AddChannel(Film::GEOMETRY_NORMAL);
+				film->AddChannel(Film::DEPTH); // Used to merge samples
+			} else
+				film->RemoveChannel(Film::GEOMETRY_NORMAL);
 		} else if (channelType == "SHADING_NORMAL") {
-			if (enable)
-				film->AddChannel(SHADING_NORMAL);
-			else
-				film->RemoveChannel(SHADING_NORMAL);
+			if (enable) {
+				film->AddChannel(Film::SHADING_NORMAL);
+				film->AddChannel(Film::DEPTH); // Used to merge samples
+			} else
+				film->RemoveChannel(Film::SHADING_NORMAL);
+		} else if (channelType == "MATERIAL_ID") {
+			if (enable) {
+				film->AddChannel(Film::MATERIAL_ID);
+				film->AddChannel(Film::DEPTH); // Used to merge samples
+			} else
+				film->RemoveChannel(Film::MATERIAL_ID);
 		} else
 			throw std::runtime_error("Unknown type in film channel: " + channelType);
 	}
@@ -167,9 +176,9 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// For compatibility with the past
 	if (cfg.IsDefined("film.alphachannel.enable")) {
 		if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
-			film->AddChannel(ALPHA);
+			film->AddChannel(Film::ALPHA);
 		else
-			film->RemoveChannel(ALPHA);
+			film->RemoveChannel(Film::ALPHA);
 	}
 		
 
@@ -229,30 +238,32 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			else
 				throw std::runtime_error("Depth image can be saved only in HDR formats: " + outputName);
 		} else if (type == "POSITION") {
-			if (hdrImage) {
+			if (hdrImage)
 				filmOutputs.Add(FilmOutputs::POSITION, fileName);
-				filmOutputs.Add(FilmOutputs::DEPTH, fileName); // Used to merge samples
-			} else
+			else
 				throw std::runtime_error("Position image can be saved only in HDR formats: " + outputName);
 		} else if (type == "GEOMETRY_NORMAL") {
-			if (hdrImage) {
+			if (hdrImage)
 				filmOutputs.Add(FilmOutputs::GEOMETRY_NORMAL, fileName);
-				filmOutputs.Add(FilmOutputs::DEPTH, fileName); // Used to merge samples
-			} else
+			else
 				throw std::runtime_error("Geometry normal image can be saved only in HDR formats: " + outputName);
 		} else if (type == "SHADING_NORMAL") {
-			if (hdrImage) {
+			if (hdrImage)
 				filmOutputs.Add(FilmOutputs::SHADING_NORMAL, fileName);
-				filmOutputs.Add(FilmOutputs::DEPTH, fileName); // Used to merge samples
-			} else
+			else
 				throw std::runtime_error("Shading normal image can be saved only in HDR formats: " + outputName);
+		} else if (type == "MATERIAL_ID") {
+			if (!hdrImage)
+				filmOutputs.Add(FilmOutputs::MATERIAL_ID, fileName);
+			else
+				throw std::runtime_error("Material ID image can be saved only in no HDR formats: " + outputName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}
 
 	// For compatibility with the past
 	if (cfg.IsDefined("image.filename")) {
-		filmOutputs.Add(film->HasChannel(ALPHA) ? FilmOutputs::RGBA_TONEMAPPED : FilmOutputs::RGB_TONEMAPPED,
+		filmOutputs.Add(film->HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_TONEMAPPED : FilmOutputs::RGB_TONEMAPPED,
 				cfg.GetString("image.filename", "image.png"));
 	}
 
@@ -321,8 +332,8 @@ void RenderSession::SetRenderingEngineType(const RenderEngineType engineType) {
 		Film *newFilm = new Film(film->GetWidth(), film->GetHeight());
 		newFilm->CopyDynamicSettings(*film);
 		// Otherwise, switching from BIDIR to PATH will leave an unused channel.
-		newFilm->RemoveChannel(RADIANCE_PER_PIXEL_NORMALIZED);
-		newFilm->RemoveChannel(RADIANCE_PER_SCREEN_NORMALIZED);
+		newFilm->RemoveChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+		newFilm->RemoveChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 		delete film;
 		film = newFilm;
 

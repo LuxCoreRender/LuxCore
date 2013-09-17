@@ -178,7 +178,7 @@ void PathCPURenderThread::RenderFunc() {
 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	sampleResult.Init(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
+	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
 
 	while (!boost::this_thread::interruption_requested()) {
 		float alpha = 1.f;
