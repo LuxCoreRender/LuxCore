@@ -116,7 +116,7 @@ public:
 	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
 	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
 	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
-	Material *CreateMaterial(const std::string &matName, const luxrays::Properties &props);
+	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 
 	PerspectiveCamera *camera;
 

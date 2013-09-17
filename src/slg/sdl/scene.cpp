@@ -418,7 +418,9 @@ void Scene::DefineMaterials(const Properties &props) {
 
 		SDL_LOG("Material definition: " << matName);
 
-		Material *mat = CreateMaterial(matName, props);
+		// Automatic material ID starts from 0xff0000 so they are easy to detect when
+		// exporting the MATERIAL_ID Film channel
+		Material *mat = CreateMaterial(matDefs.GetSize() + 0xff0000, matName, props);
 		matDefs.DefineMaterial(matName, mat);
 	}
 }
@@ -438,7 +440,7 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 	const bool wasLightSource = oldMat->IsLightSource();
 
 	// Create new material
-	Material *newMat = CreateMaterial(name, props);
+	Material *newMat = CreateMaterial(oldMat->GetID(), name, props);
 
 	// UpdateMaterial() deletes oldMat
 	matDefs.UpdateMaterial(name, newMat);
@@ -960,9 +962,11 @@ Texture *Scene::GetTexture(const std::string &name) {
 	}
 }
 
-Material *Scene::CreateMaterial(const std::string &matName, const Properties &props) {
+Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &matName, const Properties &props) {
 	const std::string propName = "scene.materials." + matName;
 	const std::string matType = GetStringParameters(props, propName + ".type", 1, "matte").at(0);
+
+	const u_int matID = props.GetInt(propName + ".id", defaultMatID);
 
 	Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
 		GetTexture(props.GetString(propName + ".emission", "0.0 0.0 0.0")) : NULL;
@@ -981,36 +985,36 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 	if (matType == "matte") {
 		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.75 0.75 0.75"));
 
-		mat = new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
+		mat = new MatteMaterial(matID, emissionTex, bumpTex, normalTex, kd);
 	} else if (matType == "mirror") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		
-		mat = new MirrorMaterial(emissionTex, bumpTex, normalTex, kr);
+		mat = new MirrorMaterial(matID, emissionTex, bumpTex, normalTex, kr);
 	} else if (matType == "glass") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
 		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
 		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
 
-		mat = new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
+		mat = new GlassMaterial(matID, emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "metal") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *exp = GetTexture(props.GetString(propName + ".exp", "10.0"));
 
-		mat = new MetalMaterial(emissionTex, bumpTex, normalTex, kr, exp);
+		mat = new MetalMaterial(matID, emissionTex, bumpTex, normalTex, kr, exp);
 	} else if (matType == "archglass") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
 		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
 		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
 
-		mat = new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
+		mat = new ArchGlassMaterial(matID, emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "mix") {
 		Material *matA = matDefs.GetMaterial(props.GetString(propName + ".material1", "mat1"));
 		Material *matB = matDefs.GetMaterial(props.GetString(propName + ".material2", "mat2"));
 		Texture *mix = GetTexture(props.GetString(propName + ".amount", "0.5"));
 
-		MixMaterial *mixMat = new MixMaterial(bumpTex, normalTex, matA, matB, mix);
+		MixMaterial *mixMat = new MixMaterial(matID, bumpTex, normalTex, matA, matB, mix);
 
 		// Check if there is a loop in Mix material definition
 		// (Note: this can not really happen at the moment because forward
@@ -1020,12 +1024,12 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 
 		mat = mixMat;
 	} else if (matType == "null") {
-		mat = new NullMaterial();
+		mat = new NullMaterial(matID);
 	} else if (matType == "mattetranslucent") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "0.5 0.5 0.5"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "0.5 0.5 0.5"));
 
-		mat = new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
+		mat = new MatteTranslucentMaterial(matID, emissionTex, bumpTex, normalTex, kr, kt);
 	} else if (matType == "glossy2") {
 		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.5 0.5 0.5"));
 		Texture *ks = GetTexture(props.GetString(propName + ".ks", "0.5 0.5 0.5"));
@@ -1036,7 +1040,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *index = GetTexture(props.GetString(propName + ".index", "0.0"));
 		const bool multibounce = props.GetBoolean(propName + ".multibounce", false);
 
-		mat = new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
+		mat = new Glossy2Material(matID, emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
 	} else if (matType == "metal2") {
 		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
 		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
@@ -1067,7 +1071,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 			k = GetTexture(props.GetString(propName + ".k", "0.5 0.5 0.5"));
 		}
 
-		mat = new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
+		mat = new Metal2Material(matID, emissionTex, bumpTex, normalTex, eta, k, nu, nv);
 	} else if (matType == "roughglass") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
@@ -1076,7 +1080,7 @@ Material *Scene::CreateMaterial(const std::string &matName, const Properties &pr
 		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
 		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
 
-		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
+		mat = new RoughGlassMaterial(matID, emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
 

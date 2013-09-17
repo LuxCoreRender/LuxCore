@@ -342,6 +342,7 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 				std::numeric_limits<float>::infinity(),
 				std::numeric_limits<float>::infinity(),
 				std::numeric_limits<float>::infinity());
+		sampleResult->materialID = std::numeric_limits<u_int>::max();
 	} else {
 		// Something was hit
 		sampleResult->alpha = 1.f;
@@ -349,6 +350,7 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		sampleResult->position = bsdf.hitPoint.p;
 		sampleResult->geometryNormal = bsdf.hitPoint.geometryN;
 		sampleResult->shadingNormal = bsdf.hitPoint.shadeN;
+		sampleResult->materialID = bsdf.GetMaterialID();
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource() && (eyeRayHit.t > engine->nearStartLight)) {
@@ -439,8 +441,8 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 	// Sample according the pixel filter distribution
 	filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
 
-	SampleResult sampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA | DEPTH |
-		POSITION | GEOMETRY_NORMAL | SHADING_NORMAL);
+	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
+		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID);
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;

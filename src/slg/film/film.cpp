@@ -58,6 +58,7 @@ Film::Film(const u_int w, const u_int h) {
 	channel_POSITION = NULL;
 	channel_GEOMETRY_NORMAL = NULL;
 	channel_SHADING_NORMAL = NULL;
+	channel_MATERIAL_ID = NULL;
 
 	convTest = NULL;
 
@@ -85,6 +86,7 @@ Film::~Film() {
 	delete channel_POSITION;
 	delete channel_GEOMETRY_NORMAL;
 	delete channel_SHADING_NORMAL;
+	delete channel_MATERIAL_ID;
 
 	delete filterLUTs;
 	delete filter;
@@ -125,6 +127,7 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_POSITION;
 	delete channel_GEOMETRY_NORMAL;
 	delete channel_SHADING_NORMAL;
+	delete channel_MATERIAL_ID;
 	
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -161,7 +164,11 @@ void Film::Init(const u_int w, const u_int h) {
 		channel_SHADING_NORMAL = new GenericFrameBuffer<3, float>(width, height);
 		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
 	}
-
+	if (HasChannel(MATERIAL_ID)) {
+		channel_MATERIAL_ID = new GenericFrameBuffer<1, u_int>(width, height);
+		channel_MATERIAL_ID->Clear(std::numeric_limits<u_int>::max());
+	}
+		
 	// Initialize the stats
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
@@ -204,6 +211,8 @@ void Film::Reset() {
 		channel_GEOMETRY_NORMAL->Clear(std::numeric_limits<float>::infinity());
 	if (HasChannel(SHADING_NORMAL))
 		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
+	if (HasChannel(MATERIAL_ID))
+		channel_MATERIAL_ID->Clear(std::numeric_limits<float>::max());
 
 	// convTest has to be reseted explicitely
 
@@ -245,21 +254,12 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
-	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
-		for (u_int y = 0; y < srcHeight; ++y) {
-			for (u_int x = 0; x < srcWidth; ++x) {
-				const float *srcPixel = film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
-			}
-		}
-	}
-
 	if (HasChannel(POSITION) && film.HasChannel(POSITION)) {
 		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
-					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y) < channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)[0] < channel_DEPTH->GetPixel(dstOffsetX + x, dstOffsetY + y)[0]) {
 						const float *srcPixel = film.channel_POSITION->GetPixel(srcOffsetX + x, srcOffsetY + y);
 						channel_POSITION->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 					}
@@ -280,7 +280,7 @@ void Film::AddFilm(const Film &film,
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
-					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y) < channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)[0] < channel_DEPTH->GetPixel(dstOffsetX + x, dstOffsetY + y)[0]) {
 						const float *srcPixel = film.channel_GEOMETRY_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
 						channel_GEOMETRY_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 					}
@@ -301,7 +301,7 @@ void Film::AddFilm(const Film &film,
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
-					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y) < channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)[0] < channel_DEPTH->GetPixel(dstOffsetX + x, dstOffsetY + y)[0]) {
 						const float *srcPixel = film.channel_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
 						channel_SHADING_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 					}
@@ -313,6 +313,37 @@ void Film::AddFilm(const Film &film,
 					const float *srcPixel = film.channel_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
 					channel_SHADING_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 				}
+			}
+		}
+	}
+
+	if (HasChannel(MATERIAL_ID) && film.HasChannel(MATERIAL_ID)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+			// Used DEPTH information to merge Films
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)[0] < channel_DEPTH->GetPixel(dstOffsetX + x, dstOffsetY + y)[0]) {
+						const u_int *srcPixel = film.channel_MATERIAL_ID->GetPixel(srcOffsetX + x, srcOffsetY + y);
+						channel_MATERIAL_ID->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					}
+				}
+			}
+		} else {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const u_int *srcPixel = film.channel_MATERIAL_ID->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_MATERIAL_ID->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
+			}
+		}
+	}
+
+	// NOTE: update DEPTH channel as last because it is used to merge other channels
+	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -385,9 +416,16 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				return;
 			break;
 		case FilmOutputs::SHADING_NORMAL:
-			if (HasChannel(GEOMETRY_NORMAL) && hdrImage) {
+			if (HasChannel(SHADING_NORMAL) && hdrImage) {
 				imageType = FIT_RGBF;
 				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::MATERIAL_ID:
+			if (HasChannel(MATERIAL_ID) && !hdrImage) {
+				imageType = FIT_BITMAP;
+				bitCount = 24;
 			} else
 				return;
 			break;
@@ -531,6 +569,14 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					dst[x].red = src[0];
 					dst[x].green = src[1];
 					dst[x].blue = src[2];
+					break;
+				}
+				case FilmOutputs::MATERIAL_ID: {
+					BYTE *dst = &bits[x * 3];
+					const u_int *src = channel_MATERIAL_ID->GetPixel(x, y);
+					dst[FI_RGBA_RED] = (BYTE)(src[0] & 0xff);
+					dst[FI_RGBA_GREEN] = (BYTE)((src[0] & 0xff00) >> 8);
+					dst[FI_RGBA_BLUE] = (BYTE)((src[0] & 0xff0000) >> 16);
 					break;
 				}
 				default:
@@ -740,12 +786,16 @@ void Film::AddSampleResultNoColor(const u_int x, const u_int y,
 		channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
 
 	// Faster than HasChannel(GEOMETRY_NORMAL)
-	if (channel_GEOMETRY_NORMAL && depthWrite && sampleResult.HasChannel(GEOMETRY_NORMAL) && !sampleResult.position.IsNaN())
+	if (channel_GEOMETRY_NORMAL && depthWrite && sampleResult.HasChannel(GEOMETRY_NORMAL) && !sampleResult.geometryNormal.IsNaN())
 		channel_GEOMETRY_NORMAL->SetPixel(x, y, &sampleResult.geometryNormal.x);
 
 	// Faster than HasChannel(SHADING_NORMAL)
-	if (channel_SHADING_NORMAL && depthWrite && sampleResult.HasChannel(SHADING_NORMAL) && !sampleResult.position.IsNaN())
+	if (channel_SHADING_NORMAL && depthWrite && sampleResult.HasChannel(SHADING_NORMAL) && !sampleResult.shadingNormal.IsNaN())
 		channel_SHADING_NORMAL->SetPixel(x, y, &sampleResult.shadingNormal.x);
+
+	// Faster than HasChannel(MATERIAL_ID)
+	if (channel_MATERIAL_ID && depthWrite && sampleResult.HasChannel(MATERIAL_ID))
+		channel_MATERIAL_ID->SetPixel(x, y, &sampleResult.materialID);
 }
 
 void Film::AddSampleResult(const u_int x, const u_int y,
