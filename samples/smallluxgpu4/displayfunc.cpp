@@ -304,7 +304,7 @@ void timerFunc(int value) {
 	// Check if periodic save is enabled
 	if (session->NeedPeriodicSave()) {
 		// Time to save the image and film
-		session->SaveFilmImage();
+		session->FilmSave();
 	}
 
 	glutPostRedisplay();
@@ -315,7 +315,7 @@ void timerFunc(int value) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-			session->SaveFilmImage();
+			session->FilmSave();
 			break;
 		}
 		case 27: { // Escape key

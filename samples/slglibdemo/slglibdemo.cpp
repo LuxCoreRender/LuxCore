@@ -260,7 +260,9 @@ int main(int argc, char *argv[]) {
 				"opencl.platform.index = -1\n"
 				"opencl.cpu.use = 0\n"
 				"opencl.gpu.use = 1\n"
-				"batch.halttime = 10\n",
+				"batch.halttime = 10\n"
+				"film.outputs.1.type = RGB_TONEMAPPED\n"
+				"film.outputs.1.filename = image.png\n",
 				*scene);
 		RenderSession *session = new RenderSession(config);
 		RenderEngine *engine = session->renderEngine;
@@ -311,7 +313,7 @@ int main(int argc, char *argv[]) {
 		session->Stop();
 
 		// Save the rendered image
-		session->SaveFilmImage();
+		session->FilmSave();
 
 		delete session;
 		SLG_LOG("Done.");

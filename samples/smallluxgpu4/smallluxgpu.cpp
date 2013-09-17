@@ -265,10 +265,9 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 			}
 
 			// Save the merge film
-			const string fileName = config->cfg.GetString("image.filename", "image.png");
-			SLG_LOG("Saving merged tiles to: " << fileName);
+			SLG_LOG("Saving merged tiles");
 			mergeTileFilm.UpdateScreenBuffer();
-			mergeTileFilm.SaveScreenBuffer(fileName);
+			mergeTileFilm.Output(session->filmOutputs);
 
 			// Advance to the next tile
 			tileX += tileSize[0];
@@ -316,7 +315,7 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 		// Check if periodic save is enabled
 		if (session->NeedPeriodicSave()) {
 			// Time to save the image and film
-			session->SaveFilmImage();
+			session->FilmSave();
 			lastFilmUpdate =  WallClockTime();
 		} else {
 			// Film update may be required by some render engine to
@@ -353,7 +352,7 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 	session->Stop();
 
 	// Save the rendered image
-	session->SaveFilmImage();
+	session->FilmSave();
 
 	delete session;
 	SLG_LOG("Done.");

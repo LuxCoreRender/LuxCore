@@ -20,11 +20,25 @@
  ***************************************************************************/
 
 #include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
 
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// FilmOutput
+//------------------------------------------------------------------------------
+
+void FilmOutputs::Add(const FilmOutputType type, const std::string &fileName) {
+	types.push_back(type);
+	fileNames.push_back(fileName);
+}
+
+//------------------------------------------------------------------------------
+// Film
+//------------------------------------------------------------------------------
 
 Film::Film(const u_int w, const u_int h) {
 	initialized = false;
@@ -192,164 +206,181 @@ void Film::AddFilm(const Film &film,
 	}
 }
 
-void Film::SaveScreenBuffer(const std::string &fileName) {
-	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
-			!HasChannel(TONEMAPPED_FRAMEBUFFER)) {
-		// I can not save the image in this case
-		return;
+void Film::Output(const FilmOutputs &filmOutputs) {
+	for (u_int i = 0; i < filmOutputs.GetCount(); ++i)
+		Output(filmOutputs.GetType(i), filmOutputs.GetFileName(i));
+}
+
+void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fileName) {
+	// Image format
+	FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
+	if (fif == FIF_UNKNOWN)
+		throw std::runtime_error("Image type unknown");
+
+	// HDR image or not
+	const bool hdrImage = ((fif == FIF_HDR) || (fif == FIF_EXR));
+
+	// Image type and bit count
+	FREE_IMAGE_TYPE imageType;
+	u_int bitCount;
+	switch (type) {
+		case FilmOutputs::RGB:
+			if (!hdrImage)
+				return;
+			imageType = FIT_RGBF;
+			bitCount = 96;
+			break;
+		case FilmOutputs::RGB_TONEMAPPED:
+			imageType = hdrImage ? FIT_RGBF : FIT_BITMAP;
+			bitCount = hdrImage ? 96 : 24;
+			break;
+		case FilmOutputs::RGBA:
+			if (!hdrImage)
+				return;
+			imageType = FIT_RGBAF;
+			bitCount = 128;
+			break;
+		case FilmOutputs::RGBA_TONEMAPPED:
+			imageType = hdrImage ? FIT_RGBAF : FIT_BITMAP;
+			bitCount = hdrImage ? 128 : 32;
+			break;
+		case FilmOutputs::ALPHA:
+			if (HasChannel(ALPHA)) {
+				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
+				bitCount = hdrImage ? 32 : 8;
+			} else
+				return;
+			break;
+		default:
+			throw std::runtime_error("Unknown film output type");
 	}
 
-	FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
-	if (fif != FIF_UNKNOWN) {
-		if ((fif == FIF_HDR) || (fif == FIF_EXR)) {
-			// In order to merge the 2 sample buffers
-			UpdateScreenBufferImpl(TONEMAP_NONE);
+	if ((type == FilmOutputs::RGB) || (type == FilmOutputs::RGBA)) {
+		// In order to merge the 2 sample buffers
+		UpdateScreenBufferImpl(TONEMAP_NONE);
+	}
 
-			if (HasChannel(ALPHA)) {
-				// Save the alpha channel too
-				FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBAF, width, height, 128);
+	// Allocate the image
+	FIBITMAP *dib = FreeImage_AllocateT(imageType, width, height, bitCount);
+	if (!dib)
+		throw std::runtime_error("Unable to allocate FreeImage image");
 
-				if (dib) {
-					u_int pitch = FreeImage_GetPitch(dib);
-					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-
-					for (u_int y = 0; y < height; ++y) {
-						FIRGBAF *pixel = (FIRGBAF *)bits;
-						for (u_int x = 0; x < width; ++x) {
-							const u_int ridx = y * width + x;
-
-							pixel[x].red = channel_RGB_TONEMAPPED->GetPixel(ridx)[0];
-							pixel[x].green = channel_RGB_TONEMAPPED->GetPixel(ridx)[1];
-							pixel[x].blue = channel_RGB_TONEMAPPED->GetPixel(ridx)[2];
-
-							const float *alphaData = channel_ALPHA->GetPixel(ridx);
-							if (alphaData[1] == 0.f)
-								pixel[x].alpha = 0.f;
-							else {
-								const float iw = 1.f / alphaData[1];
-								pixel[x].alpha = alphaData[0] * iw;
-							}
-						}
-
-						// Next line
-						bits += pitch;
+	// Build the image
+	u_int pitch = FreeImage_GetPitch(dib);
+	BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
+	for (u_int y = 0; y < height; ++y) {
+		for (u_int x = 0; x < width; ++x) {
+			switch (type) {
+				case FilmOutputs::RGB: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					// channel_RGB_TONEMAPPED has the _untonemapped_ version of
+					// the image in the case of an HDR because of the call
+					// to UpdateScreenBufferImpl(TONEMAP_NONE)
+					const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
+					dst[x].red = src[0];
+					dst[x].green = src[1];
+					dst[x].blue = src[2];
+					break;
+				}
+				case FilmOutputs::RGB_TONEMAPPED: {
+					if (hdrImage) {
+						FIRGBF *dst = (FIRGBF *)bits;
+						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
+						dst[x].red = src[0];
+						dst[x].green = src[1];
+						dst[x].blue = src[2];
+					} else {
+						BYTE *dst = &bits[x * 3];
+						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
+						dst[FI_RGBA_RED] = (BYTE)(src[0] * 255.f + .5f);
+						dst[FI_RGBA_GREEN] = (BYTE)(src[1] * 255.f + .5f);
+						dst[FI_RGBA_BLUE] = (BYTE)(src[2] * 255.f + .5f);
 					}
+					break;
+				}
+				case FilmOutputs::RGBA: {
+					FIRGBAF *dst = (FIRGBAF *)bits;
+					// channel_RGB_TONEMAPPED has the _untonemapped_ version of
+					// the image in the case of an HDR because of the call
+					// to UpdateScreenBufferImpl(TONEMAP_NONE)
+					const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
+					dst[x].red = src[0];
+					dst[x].green = src[1];
+					dst[x].blue = src[2];
 
-					if (!FREEIMAGE_SAVE(fif, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
-						throw std::runtime_error("Failed image save");
+					const float *alphaData = channel_ALPHA->GetPixel(x, y);
+					if (alphaData[1] == 0.f)
+						dst[x].alpha = 0.f;
+					else
+						dst[x].alpha = alphaData[0] / alphaData[1];
+					break;
+				}
+				case FilmOutputs::RGBA_TONEMAPPED: {
+					if (hdrImage) {
+						FIRGBAF *dst = (FIRGBAF *)bits;
+						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
+						dst[x].red = src[0];
+						dst[x].green = src[1];
+						dst[x].blue = src[2];
 
-					FreeImage_Unload(dib);
-				} else
-					throw std::runtime_error("Unable to allocate FreeImage HDR image");
-			} else {
-				// No alpha channel available
-				FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
+						const float *alphaData = channel_ALPHA->GetPixel(x, y);
+						if (alphaData[1] == 0.f)
+							dst[x].alpha = 0.f;
+						else
+							dst[x].alpha = alphaData[0] / alphaData[1];
+					} else {
+						BYTE *dst = &bits[x * 3];
+						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
+						dst[FI_RGBA_RED] = (BYTE)(src[0] * 255.f + .5f);
+						dst[FI_RGBA_GREEN] = (BYTE)(src[1] * 255.f + .5f);
+						dst[FI_RGBA_BLUE] = (BYTE)(src[2] * 255.f + .5f);
 
-				if (dib) {
-					u_int pitch = FreeImage_GetPitch(dib);
-					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-
-					for (u_int y = 0; y < height; ++y) {
-						FIRGBF *pixel = (FIRGBF *)bits;
-						for (u_int x = 0; x < width; ++x) {
-							const u_int ridx = y * width + x;
-
-							pixel[x].red = channel_RGB_TONEMAPPED->GetPixel(ridx)[0];
-							pixel[x].green = channel_RGB_TONEMAPPED->GetPixel(ridx)[1];
-							pixel[x].blue = channel_RGB_TONEMAPPED->GetPixel(ridx)[2];
-						}
-
-						// Next line
-						bits += pitch;
+						const float *alphaData = channel_ALPHA->GetPixel(x, y);
+						if (alphaData[1] == 0.f)
+							dst[FI_RGBA_ALPHA] = 0;
+						else
+							dst[FI_RGBA_ALPHA] = (BYTE)((alphaData[0] / alphaData[1]) * 255.f + .5f);
 					}
+					break;
+				}
+				case FilmOutputs::ALPHA: {
+					if (hdrImage) {
+						float *dst = (float *)bits;
 
-					if (!FREEIMAGE_SAVE(fif, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
-						throw std::runtime_error("Failed image save");
+						const float *alphaData = channel_ALPHA->GetPixel(x, y);
+						if (alphaData[1] == 0.f)
+							dst[x] = 0.f;
+						else
+							dst[x] = alphaData[0] / alphaData[1];
+					} else {
+						BYTE *dst = &bits[x];
 
-					FreeImage_Unload(dib);
-				} else
-					throw std::runtime_error("Unable to allocate FreeImage HDR image");
-			}
-
-			// To restore the used tonemapping instead of NONE
-			UpdateScreenBuffer();
-		} else {
-			UpdateScreenBuffer();
-
-			if (HasChannel(ALPHA)) {
-				// Save the alpha channel too
-				FIBITMAP *dib = FreeImage_Allocate(width, height, 32);
-
-				if (dib) {
-					u_int pitch = FreeImage_GetPitch(dib);
-					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-					const float *pixels = GetScreenBuffer();
-
-					for (u_int y = 0; y < height; ++y) {
-						BYTE *pixel = (BYTE *)bits;
-						for (u_int x = 0; x < width; ++x) {
-							const int offset = 3 * (x + y * width);
-							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
-							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
-							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);
-
-							const float *alphaData = channel_ALPHA->GetPixel(x, y);
-							if (alphaData[1] == 0.f)
-								pixel[FI_RGBA_ALPHA] = (BYTE)0;
-							else {
-								const float alpha = Clamp(
-									alphaData[0] / alphaData[1],
-									0.f, 1.f);
-								pixel[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
-							}
-
-							pixel += 4;
-						}
-
-						// Next line
-						bits += pitch;
+						const float *alphaData = channel_ALPHA->GetPixel(x, y);
+						if (alphaData[1] == 0.f)
+							*dst = 0;
+						else
+							*dst = (BYTE)((alphaData[0] / alphaData[1]) * 255.f + .5f);
 					}
-
-					if (!FREEIMAGE_SAVE(fif, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
-						throw std::runtime_error("Failed image save");
-
-					FreeImage_Unload(dib);
-				} else
-					throw std::runtime_error("Unable to allocate FreeImage image");
-			} else {
-				// No alpha channel available
-				FIBITMAP *dib = FreeImage_Allocate(width, height, 24);
-
-				if (dib) {
-					u_int pitch = FreeImage_GetPitch(dib);
-					BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-					const float *pixels = GetScreenBuffer();
-
-					for (u_int y = 0; y < height; ++y) {
-						BYTE *pixel = (BYTE *)bits;
-						for (u_int x = 0; x < width; ++x) {
-							const int offset = 3 * (x + y * width);
-
-							pixel[FI_RGBA_RED] = (BYTE)(pixels[offset] * 255.f + .5f);
-							pixel[FI_RGBA_GREEN] = (BYTE)(pixels[offset + 1] * 255.f + .5f);
-							pixel[FI_RGBA_BLUE] = (BYTE)(pixels[offset + 2] * 255.f + .5f);
-							pixel += 3;
-						}
-
-						// Next line
-						bits += pitch;
-					}
-
-					if (!FREEIMAGE_SAVE(fif, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
-						throw std::runtime_error("Failed image save");
-
-					FreeImage_Unload(dib);
-				} else
-					throw std::runtime_error("Unable to allocate FreeImage image");
+					break;
+				}
+				default:
+					throw std::runtime_error("Unknown film output type");
 			}
 		}
-	} else
-		throw std::runtime_error("Image type unknown");
+
+		// Next line
+		bits += pitch;
+	}
+
+	if (!FREEIMAGE_SAVE(fif, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
+		throw std::runtime_error("Failed image save");
+
+	FreeImage_Unload(dib);
+
+	if ((type == FilmOutputs::RGB) || (type == FilmOutputs::RGBA)) {
+		// To restore the used tonemapping instead of NONE
+		UpdateScreenBuffer();
+	}
 }
 
 void Film::UpdateScreenBuffer() {

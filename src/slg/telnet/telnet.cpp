@@ -104,7 +104,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "help.get - print the list of get supported properties\n";
 						respStream << "help.set - print the list of set supported properties\n";
 						respStream << "image.reset - reset the rendering image (requires edit.start)\n";
-						respStream << "image.save - save the rendering image\n";
+						respStream << "film.save - save the rendering image\n";
 						respStream << "material.list - print the list of materials\n";
 						respStream << "object.list - print the list of objects\n";
 						respStream << "set <property name> = <values> - set the value of a (supported) property\n";
@@ -416,8 +416,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
-					} else if (command == "image.save") {
-						session->SaveFilmImage();
+					} else if (command == "film.save") {
+						session->FilmSave();
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if ((command == "edit.stop") || (command == "render.start")) {
 						if (state == EDIT) {
