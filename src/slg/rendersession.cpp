@@ -140,6 +140,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				film->AddChannel(ALPHA);
 			else
 				film->RemoveChannel(ALPHA);
+		} else if (channelType == "DEPTH") {
+			if (enable)
+				film->AddChannel(DEPTH);
+			else
+				film->RemoveChannel(DEPTH);
 		} else
 			throw std::runtime_error("Unknown type in film channel: " + channelType);
 	}
@@ -203,7 +208,12 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			filmOutputs.Add(FilmOutputs::RGBA_TONEMAPPED, fileName);
 		else if (type == "ALPHA")
 			filmOutputs.Add(FilmOutputs::ALPHA, fileName);
-		else
+		else if (type == "DEPTH") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::DEPTH, fileName);
+			else
+				throw std::runtime_error("Depth image can be saved only in HDR formats: " + outputName);
+		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}
 

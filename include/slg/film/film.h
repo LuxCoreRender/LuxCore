@@ -51,7 +51,8 @@ typedef enum {
 	RADIANCE_PER_PIXEL_NORMALIZED = 1<<0,
 	RADIANCE_PER_SCREEN_NORMALIZED = 1<<1,
 	ALPHA = 1<<2,
-	TONEMAPPED_FRAMEBUFFER = 1<<3
+	TONEMAPPED_FRAMEBUFFER = 1<<3,
+	DEPTH = 1<<4
 } FilmChannelType;
 
 //------------------------------------------------------------------------------
@@ -61,7 +62,7 @@ typedef enum {
 class FilmOutputs {
 public:
 	typedef enum {
-		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA
+		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -94,6 +95,7 @@ public:
 	float filmX, filmY;
 	luxrays::Spectrum radiancePerPixelNormalized, radiancePerScreenNormalized;
 	float alpha;
+	float depth;
 
 private:
 	u_int channels;
@@ -240,6 +242,10 @@ private:
 				Radiance2PixelFloat(c.b));
 	}
 
+	void AddSampleResultColor(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight);
+	void AddSampleResultNoColor(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight);
 	void AddSampleResult(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight);
 
@@ -249,6 +255,7 @@ private:
 	GenericFrameBuffer<4, float> *channel_RADIANCE_PER_SCREEN_NORMALIZED;
 	GenericFrameBuffer<2, float> *channel_ALPHA;
 	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
+	GenericFrameBuffer<1, float> *channel_DEPTH;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 

@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <limits>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 
@@ -50,6 +52,7 @@ Film::Film(const u_int w, const u_int h) {
 	channel_RADIANCE_PER_SCREEN_NORMALIZED = NULL;
 	channel_ALPHA = NULL;
 	channel_RGB_TONEMAPPED = NULL;
+	channel_DEPTH = NULL;
 
 	convTest = NULL;
 
@@ -73,6 +76,7 @@ Film::~Film() {
 	delete channel_RADIANCE_PER_SCREEN_NORMALIZED;
 	delete channel_ALPHA;
 	delete channel_RGB_TONEMAPPED;
+	delete channel_DEPTH;
 
 	delete filterLUTs;
 	delete filter;
@@ -109,25 +113,30 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_RADIANCE_PER_SCREEN_NORMALIZED;
 	delete channel_ALPHA;
 	delete channel_RGB_TONEMAPPED;
+	delete channel_DEPTH;
 	
 	// Allocate all required channels
-	if (channels.count(RADIANCE_PER_PIXEL_NORMALIZED) > 0) {
+	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		channel_RADIANCE_PER_PIXEL_NORMALIZED = new GenericFrameBuffer<4, float>(width, height);
 		channel_RADIANCE_PER_PIXEL_NORMALIZED->Clear();
 	}
-	if (channels.count(RADIANCE_PER_SCREEN_NORMALIZED) > 0) {
+	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
 		channel_RADIANCE_PER_SCREEN_NORMALIZED = new GenericFrameBuffer<4, float>(width, height);
 		channel_RADIANCE_PER_SCREEN_NORMALIZED->Clear();
 	}
-	if (channels.count(ALPHA) > 0) {
+	if (HasChannel(ALPHA)) {
 		channel_ALPHA = new GenericFrameBuffer<2, float>(width, height);
 		channel_ALPHA->Clear();
 	}
-	if (channels.count(TONEMAPPED_FRAMEBUFFER) > 0) {
+	if (HasChannel(TONEMAPPED_FRAMEBUFFER)) {
 		channel_RGB_TONEMAPPED = new GenericFrameBuffer<3, float>(width, height);
 		channel_RGB_TONEMAPPED->Clear();
 
 		convTest = new ConvergenceTest(width, height);
+	}
+	if (HasChannel(DEPTH)) {
+		channel_DEPTH = new GenericFrameBuffer<1, float>(width, height);
+		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
 	}
 
 	// Initialize the stats
@@ -164,6 +173,10 @@ void Film::Reset() {
 		channel_RADIANCE_PER_SCREEN_NORMALIZED->Clear();
 	if (HasChannel(ALPHA))
 		channel_ALPHA->Clear();
+	if (HasChannel(DEPTH)) {
+		channel_DEPTH = new GenericFrameBuffer<1, float>(width, height);
+		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
+	}
 
 	// convTest has to be reseted explicitely
 
@@ -201,6 +214,15 @@ void Film::AddFilm(const Film &film,
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_ALPHA->GetPixel(srcOffsetX + x, srcOffsetY + y);
 				channel_ALPHA->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -248,6 +270,13 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			if (HasChannel(ALPHA)) {
 				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
 				bitCount = hdrImage ? 32 : 8;
+			} else
+				return;
+			break;
+		case FilmOutputs::DEPTH:
+			if (HasChannel(DEPTH) && hdrImage) {
+				imageType = FIT_FLOAT;
+				bitCount = 32;
 			} else
 				return;
 			break;
@@ -361,6 +390,12 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 						else
 							*dst = (BYTE)((alphaData[0] / alphaData[1]) * 255.f + .5f);
 					}
+					break;
+				}
+				case FilmOutputs::DEPTH: {
+					float *dst = (float *)bits;
+
+					dst[x] = channel_DEPTH->GetPixel(x, y)[0];
 					break;
 				}
 				default:
@@ -526,7 +561,7 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 	}
 }
 
-void Film::AddSampleResult(const u_int x, const u_int y,
+void Film::AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight)  {
 	if (channel_RADIANCE_PER_PIXEL_NORMALIZED && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) &&
 			!sampleResult.radiancePerPixelNormalized.IsNaN() && !sampleResult.radiancePerPixelNormalized.IsInf()) {
@@ -557,6 +592,19 @@ void Film::AddSampleResult(const u_int x, const u_int y,
 	}
 }
 
+void Film::AddSampleResultNoColor(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight)  {
+	// Faster than HasChannel(DEPTH)
+	if (channel_DEPTH && sampleResult.HasChannel(DEPTH) && !isnan(sampleResult.depth))
+		channel_DEPTH->MinPixel(x, y, &sampleResult.depth);
+}
+
+void Film::AddSampleResult(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight)  {
+	AddSampleResultColor(x, y, sampleResult, weight);
+	AddSampleResultNoColor(x, y, sampleResult, weight);
+}
+
 void Film::AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight) {
 	if ((x < 0) || (x >= width) || (y < 0) || (y >= height))
@@ -567,12 +615,26 @@ void Film::AddSample(const u_int x, const u_int y,
 
 void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
 	if (!filter) {
-		const int x = Ceil2Int(sampleResult.filmX - 0.5f);
-		const int y = Ceil2Int(sampleResult.filmY - 0.5f);
+		const int x = Ceil2Int(sampleResult.filmX - .5f);
+		const int y = Ceil2Int(sampleResult.filmY - .5f);
 
 		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
 			AddSampleResult(x, y, sampleResult, weight);
 	} else {
+		//----------------------------------------------------------------------
+		// Add all no color related information (not filtered)
+		//----------------------------------------------------------------------
+
+		const int x = Ceil2Int(sampleResult.filmX - .5f);
+		const int y = Ceil2Int(sampleResult.filmY - .5f);
+
+		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
+			AddSampleResultNoColor(x, y, sampleResult, weight);
+
+		//----------------------------------------------------------------------
+		// Add all color related information (filtered)
+		//----------------------------------------------------------------------
+
 		// Compute sample's raster extent
 		const float dImageX = sampleResult.filmX - .5f;
 		const float dImageY = sampleResult.filmY - .5f;
@@ -598,7 +660,7 @@ void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
 					continue;
 
 				const float filteredWeight = weight * filterWeight;
-				AddSampleResult(ix, iy, sampleResult, filteredWeight);
+				AddSampleResultColor(ix, iy, sampleResult, filteredWeight);
 			}
 		}
 	}
