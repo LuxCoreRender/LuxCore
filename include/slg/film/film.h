@@ -40,6 +40,7 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/core/geometry/point.h"
+#include "luxrays/core/geometry/normal.h"
 #include "slg/slg.h"
 #include "slg/film/filter.h"
 #include "slg/film/tonemapping.h"
@@ -54,7 +55,9 @@ typedef enum {
 	ALPHA = 1<<2,
 	TONEMAPPED_FRAMEBUFFER = 1<<3,
 	DEPTH = 1<<4,
-	POSITION = 1<<5
+	POSITION = 1<<5,
+	GEOMETRY_NORMAL = 1<<6,
+	SHADING_NORMAL = 1<<7
 } FilmChannelType;
 
 //------------------------------------------------------------------------------
@@ -64,7 +67,8 @@ typedef enum {
 class FilmOutputs {
 public:
 	typedef enum {
-		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION
+		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
+		GEOMETRY_NORMAL, SHADING_NORMAL
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -98,6 +102,7 @@ public:
 	luxrays::Spectrum radiancePerPixelNormalized, radiancePerScreenNormalized;
 	float alpha, depth;
 	luxrays::Point position;
+	luxrays::Normal geometryNormal, shadingNormal;
 
 private:
 	u_int channels;
@@ -259,6 +264,8 @@ private:
 	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
 	GenericFrameBuffer<1, float> *channel_DEPTH;
 	GenericFrameBuffer<3, float> *channel_POSITION;
+	GenericFrameBuffer<3, float> *channel_GEOMETRY_NORMAL;
+	GenericFrameBuffer<3, float> *channel_SHADING_NORMAL;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 

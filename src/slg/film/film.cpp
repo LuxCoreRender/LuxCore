@@ -26,6 +26,7 @@
 
 #include "slg/film/film.h"
 #include "luxrays/core/geometry/point.h"
+#include "slg/editaction.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -55,6 +56,8 @@ Film::Film(const u_int w, const u_int h) {
 	channel_RGB_TONEMAPPED = NULL;
 	channel_DEPTH = NULL;
 	channel_POSITION = NULL;
+	channel_GEOMETRY_NORMAL = NULL;
+	channel_SHADING_NORMAL = NULL;
 
 	convTest = NULL;
 
@@ -80,6 +83,8 @@ Film::~Film() {
 	delete channel_RGB_TONEMAPPED;
 	delete channel_DEPTH;
 	delete channel_POSITION;
+	delete channel_GEOMETRY_NORMAL;
+	delete channel_SHADING_NORMAL;
 
 	delete filterLUTs;
 	delete filter;
@@ -118,6 +123,8 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_RGB_TONEMAPPED;
 	delete channel_DEPTH;
 	delete channel_POSITION;
+	delete channel_GEOMETRY_NORMAL;
+	delete channel_SHADING_NORMAL;
 	
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -144,7 +151,15 @@ void Film::Init(const u_int w, const u_int h) {
 	}
 	if (HasChannel(POSITION)) {
 		channel_POSITION = new GenericFrameBuffer<3, float>(width, height);
-		channel_POSITION->Clear();
+		channel_POSITION->Clear(std::numeric_limits<float>::infinity());
+	}
+	if (HasChannel(GEOMETRY_NORMAL)) {
+		channel_GEOMETRY_NORMAL = new GenericFrameBuffer<3, float>(width, height);
+		channel_GEOMETRY_NORMAL->Clear(std::numeric_limits<float>::infinity());
+	}
+	if (HasChannel(SHADING_NORMAL)) {
+		channel_SHADING_NORMAL = new GenericFrameBuffer<3, float>(width, height);
+		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
 	}
 
 	// Initialize the stats
@@ -181,12 +196,14 @@ void Film::Reset() {
 		channel_RADIANCE_PER_SCREEN_NORMALIZED->Clear();
 	if (HasChannel(ALPHA))
 		channel_ALPHA->Clear();
-	if (HasChannel(DEPTH)) {
-		channel_DEPTH = new GenericFrameBuffer<1, float>(width, height);
+	if (HasChannel(DEPTH))
 		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
-	}
 	if (HasChannel(POSITION))
-		channel_POSITION->Clear();
+		channel_POSITION->Clear(std::numeric_limits<float>::infinity());
+	if (HasChannel(GEOMETRY_NORMAL))
+		channel_GEOMETRY_NORMAL->Clear(std::numeric_limits<float>::infinity());
+	if (HasChannel(SHADING_NORMAL))
+		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
 
 	// convTest has to be reseted explicitely
 
@@ -242,6 +259,24 @@ void Film::AddFilm(const Film &film,
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_POSITION->GetPixel(srcOffsetX + x, srcOffsetY + y);
 				channel_POSITION->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(GEOMETRY_NORMAL) && film.HasChannel(GEOMETRY_NORMAL)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_GEOMETRY_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_GEOMETRY_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(SHADING_NORMAL) && film.HasChannel(SHADING_NORMAL)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_SHADING_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -301,6 +336,20 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			break;
 		case FilmOutputs::POSITION:
 			if (HasChannel(POSITION) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::GEOMETRY_NORMAL:
+			if (HasChannel(GEOMETRY_NORMAL) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::SHADING_NORMAL:
+			if (HasChannel(GEOMETRY_NORMAL) && hdrImage) {
 				imageType = FIT_RGBF;
 				bitCount = 96;
 			} else
@@ -427,6 +476,22 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				case FilmOutputs::POSITION: {
 					FIRGBF *dst = (FIRGBF *)bits;
 					const float *src = channel_POSITION->GetPixel(x, y);
+					dst[x].red = src[0];
+					dst[x].green = src[1];
+					dst[x].blue = src[2];
+					break;
+				}
+				case FilmOutputs::GEOMETRY_NORMAL: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_GEOMETRY_NORMAL->GetPixel(x, y);
+					dst[x].red = src[0];
+					dst[x].green = src[1];
+					dst[x].blue = src[2];
+					break;
+				}
+				case FilmOutputs::SHADING_NORMAL: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_SHADING_NORMAL->GetPixel(x, y);
 					dst[x].red = src[0];
 					dst[x].green = src[1];
 					dst[x].blue = src[2];
@@ -633,9 +698,16 @@ void Film::AddSampleResultNoColor(const u_int x, const u_int y,
 		channel_DEPTH->MinPixel(x, y, &sampleResult.depth);
 
 	// Faster than HasChannel(POSITION)
-	if (channel_POSITION && sampleResult.HasChannel(POSITION) &&
-			!sampleResult.position.IsNaN() && !sampleResult.position.IsInf())
+	if (channel_POSITION && sampleResult.HasChannel(POSITION) && !sampleResult.position.IsNaN())
 		channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
+
+	// Faster than HasChannel(GEOMETRY_NORMAL)
+	if (channel_GEOMETRY_NORMAL && sampleResult.HasChannel(GEOMETRY_NORMAL) && !sampleResult.position.IsNaN())
+		channel_GEOMETRY_NORMAL->SetPixel(x, y, &sampleResult.geometryNormal.x);
+
+	// Faster than HasChannel(SHADING_NORMAL)
+	if (channel_SHADING_NORMAL && sampleResult.HasChannel(SHADING_NORMAL) && !sampleResult.position.IsNaN())
+		channel_SHADING_NORMAL->SetPixel(x, y, &sampleResult.shadingNormal.x);
 }
 
 void Film::AddSampleResult(const u_int x, const u_int y,
