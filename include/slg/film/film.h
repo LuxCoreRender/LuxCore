@@ -55,6 +55,30 @@ typedef enum {
 } FilmChannelType;
 
 //------------------------------------------------------------------------------
+// FilmOutput
+//------------------------------------------------------------------------------
+
+class FilmOutputs {
+public:
+	typedef enum {
+		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA
+	} FilmOutputType;
+
+	FilmOutputs() { }
+	~FilmOutputs() { }
+
+	u_int GetCount() const { return types.size(); }
+	FilmOutputType GetType(const u_int index) const { return types[index]; }
+	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
+
+	void Add(const FilmOutputType type, const std::string &fileName);
+
+private:
+	std::vector<FilmOutputType> types;
+	std::vector<std::string> fileNames;
+};
+
+//------------------------------------------------------------------------------
 // SampleResult
 //------------------------------------------------------------------------------
 
@@ -159,7 +183,9 @@ public:
 		AddFilm(film, 0, 0, width, height, 0, 0);
 	}
 
-	void SaveScreenBuffer(const std::string &filmFile);
+	void Output(const FilmOutputs &filmOutputs);
+	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName);
+
 	void UpdateScreenBuffer();
 	float *GetScreenBuffer() const {
 		return channel_RGB_TONEMAPPED->GetPixels();

@@ -44,13 +44,14 @@ public:
 	void SetRenderingEngineType(const RenderEngineType engineType);
 
 	bool NeedPeriodicSave();
-	void SaveFilmImage();
+	void FilmSave();
 
 	RenderConfig *renderConfig;
 	RenderEngine *renderEngine;
 
 	boost::mutex filmMutex;
 	Film *film;
+	FilmOutputs filmOutputs;
 
 	EditActionList editActions;
 

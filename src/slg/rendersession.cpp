@@ -120,6 +120,66 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 		film->AddChannel(ALPHA);
 
 	//--------------------------------------------------------------------------
+	// Initialize the FilmOutputs
+	//--------------------------------------------------------------------------
+
+	set<string> outputNames;
+	vector<string> outputKeys = cfg.GetAllKeys("film.outputs.");
+	for (vector<string>::const_iterator matKey = outputKeys.begin(); matKey != outputKeys.end(); ++matKey) {
+		const string &key = *matKey;
+		const size_t dot1 = key.find(".", string("film.outputs.").length());
+		if (dot1 == string::npos)
+			continue;
+
+		// Extract the output type name
+		const string outputName = Properties::ExtractField(key, 2);
+		if (outputName == "")
+			throw runtime_error("Syntax error in film output definition: " + outputName);
+
+		if (outputNames.count(outputName) > 0)
+			continue;
+
+		SDL_LOG("Film output definition: " << outputName);
+
+		outputNames.insert(outputName);
+		const string type = cfg.GetString("film.outputs." + outputName + ".type", "RGB_TONEMAPPED");
+		const string fileName = cfg.GetString("film.outputs." + outputName + ".filename", "image.png");
+
+		// Check if it is a supported file format
+		FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
+		if (fif == FIF_UNKNOWN)
+			throw std::runtime_error("Unknown image format in film output: " + outputName);
+
+		// HDR image or not
+		const bool hdrImage = ((fif == FIF_HDR) || (fif == FIF_EXR));
+
+		if (type == "RGB") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::RGB, fileName);
+			else
+				throw std::runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
+		} else if (type == "RGBA") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::RGBA, fileName);
+			else
+				throw std::runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
+		} else if (type == "RGB_TONEMAPPED")
+			filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, fileName);
+		else if (type == "RGBA_TONEMAPPED")
+			filmOutputs.Add(FilmOutputs::RGBA_TONEMAPPED, fileName);
+		else if (type == "ALPHA")
+			filmOutputs.Add(FilmOutputs::ALPHA, fileName);
+		else
+			throw std::runtime_error("Unknown type in film output: " + type);
+	}
+
+	// For compatibility with the past
+	if (cfg.IsDefined("image.filename")) {
+		filmOutputs.Add(film->HasChannel(ALPHA) ? FilmOutputs::RGBA_TONEMAPPED : FilmOutputs::RGB_TONEMAPPED,
+				cfg.GetString("image.filename", "image.png"));
+	}
+
+	//--------------------------------------------------------------------------
 	// Create the RenderEngine
 	//--------------------------------------------------------------------------
 
@@ -210,7 +270,7 @@ bool RenderSession::NeedPeriodicSave() {
 		return false;
 }
 
-void RenderSession::SaveFilmImage() {
+void RenderSession::FilmSave() {
 	// Ask to the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 
@@ -218,8 +278,6 @@ void RenderSession::SaveFilmImage() {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	// Save the film
-	const string fileName = renderConfig->cfg.GetString("image.filename", "image.png");
 	film->UpdateScreenBuffer();
-	film->SaveScreenBuffer(fileName);
+	film->Output(filmOutputs);
 }
-
