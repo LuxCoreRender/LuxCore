@@ -90,7 +90,7 @@ private:
 	luxrays::Spectrum SampleComponent(luxrays::RandomGenerator *rndGen,
 		const BSDFEvent requestedEventTypes, const u_int size, BSDF &bsdf);
 	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
-		luxrays::Spectrum *radiance, float *alpha);
+		SampleResult *sampleResult);
 	void RenderPixelSample(luxrays::RandomGenerator *rndGen,
 		const FilterDistribution &filterDistribution,
 		const u_int x, const u_int y,

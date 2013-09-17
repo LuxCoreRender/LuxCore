@@ -22,6 +22,8 @@
 #ifndef _SLG_FRAMEBUFFER_H
 #define	_SLG_FRAMEBUFFER_H
 
+#include <luxrays/core/utils.h>
+
 namespace slg {
 
 template<u_int CHANNELS, class T> class GenericFrameBuffer {
@@ -36,11 +38,22 @@ public:
 		delete[] pixels;
 	}
 
-	void Clear() {
-		std::fill(pixels, pixels + width * height * CHANNELS, 0);
+	void Clear(const T value = 0) {
+		std::fill(pixels, pixels + width * height * CHANNELS, value);
 	};
 
 	T *GetPixels() const { return pixels; }
+
+	void MinPixel(const u_int x, const u_int y, const T *v) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		for (u_int i = 0; i < CHANNELS; ++i)
+			pixel[i] = luxrays::Min(pixel[i], v[i]);
+	}
 
 	void AddPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);

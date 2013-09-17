@@ -314,7 +314,7 @@ luxrays::Spectrum BiasPathCPURenderThread::SampleComponent(luxrays::RandomGenera
 }
 
 void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, const Ray &ray,
-		luxrays::Spectrum *radiance, float *alpha) {
+		SampleResult *sampleResult) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -326,17 +326,19 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			&eyeRay, &eyeRayHit, &bsdf, &pathThrouput)) {
 		// Nothing was hit, look for infinitelight
 		DirectHitInfiniteLight(true, pathThrouput, eyeRay.d,
-				1.f, radiance);
+				1.f, &sampleResult->radiancePerPixelNormalized);
 
-		*alpha = 0.f;
+		sampleResult->alpha = 0.f;
+		sampleResult->depth = std::numeric_limits<float>::infinity();
 	} else {
 		// Something was hit
-		*alpha = 1.f;
+		sampleResult->alpha = 1.f;
+		sampleResult->depth = eyeRayHit.t;
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource() && (eyeRayHit.t > engine->nearStartLight)) {
 			DirectHitFiniteLight(true, pathThrouput,
-					eyeRayHit.t, bsdf, 1.f, radiance);
+					eyeRayHit.t, bsdf, 1.f, &sampleResult->radiancePerPixelNormalized);
 		}
 
 		// Note: pass-through check is done inside SceneIntersect()
@@ -347,9 +349,9 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 
 		if (!bsdf.IsDelta()) {
 			if (engine->lightSamplingStrategyONE)
-				DirectLightSamplingONE(rndGen, pathThrouput, bsdf, radiance);
+				DirectLightSamplingONE(rndGen, pathThrouput, bsdf, &sampleResult->radiancePerPixelNormalized);
 			else
-				DirectLightSamplingALL(rndGen, pathThrouput, bsdf, radiance);
+				DirectLightSamplingALL(rndGen, pathThrouput, bsdf, &sampleResult->radiancePerPixelNormalized);
 		}
 
 		//----------------------------------------------------------------------
@@ -368,8 +370,10 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		if ((engine->maxPathDepth.diffuseDepth > 0) && (materialEventTypes & DIFFUSE)) {
 			const u_int diffuseSamples = (materialSamples < 0) ? engine->diffuseSamples : ((u_int)materialSamples);
 
-			if (diffuseSamples > 0)
-				*radiance += pathThrouput * SampleComponent(rndGen, DIFFUSE | REFLECT | TRANSMIT, diffuseSamples, bsdf);
+			if (diffuseSamples > 0) {
+				sampleResult->radiancePerPixelNormalized += pathThrouput * SampleComponent(
+						rndGen, DIFFUSE | REFLECT | TRANSMIT, diffuseSamples, bsdf);
+			}
 		}
 
 		//----------------------------------------------------------------------
@@ -381,8 +385,10 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		if ((engine->maxPathDepth.glossyDepth > 0) && (materialEventTypes & GLOSSY)) {
 			const u_int glossySamples = (materialSamples < 0) ? engine->glossySamples : ((u_int)materialSamples);
 
-			if (glossySamples > 0)
-				*radiance += pathThrouput * SampleComponent(rndGen, GLOSSY | REFLECT | TRANSMIT, glossySamples, bsdf);
+			if (glossySamples > 0) {
+				sampleResult->radiancePerPixelNormalized += pathThrouput * SampleComponent(
+						rndGen, GLOSSY | REFLECT | TRANSMIT, glossySamples, bsdf);
+			}
 		}
 
 		//----------------------------------------------------------------------
@@ -394,8 +400,10 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		if ((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)) {
 			const u_int speculaSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
 
-			if (speculaSamples > 0)
-				*radiance += pathThrouput * SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT, speculaSamples, bsdf);
+			if (speculaSamples > 0) {
+				sampleResult->radiancePerPixelNormalized += pathThrouput * SampleComponent(
+						rndGen, SPECULAR | REFLECT | TRANSMIT, speculaSamples, bsdf);
+			}
 		}
 	}
 
@@ -416,7 +424,7 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 	// Sample according the pixel filter distribution
 	filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
 
-	SampleResult sampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA);
+	SampleResult sampleResult(RADIANCE_PER_PIXEL_NORMALIZED | ALPHA | DEPTH);
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;
@@ -424,7 +432,7 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 			&eyeRay, rndGen->floatValue(), rndGen->floatValue());
 
 	// Trace the path
-	TraceEyePath(rndGen, eyeRay, &sampleResult.radiancePerPixelNormalized, &sampleResult.alpha);
+	TraceEyePath(rndGen, eyeRay, &sampleResult);
 
 	// Clamping
 	if (engine->clampValueEnabled)
