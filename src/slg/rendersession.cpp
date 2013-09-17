@@ -150,6 +150,16 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				film->AddChannel(POSITION);
 			else
 				film->RemoveChannel(POSITION);
+		} else if (channelType == "GEOMETRY_NORMAL") {
+			if (enable)
+				film->AddChannel(GEOMETRY_NORMAL);
+			else
+				film->RemoveChannel(GEOMETRY_NORMAL);
+		} else if (channelType == "SHADING_NORMAL") {
+			if (enable)
+				film->AddChannel(SHADING_NORMAL);
+			else
+				film->RemoveChannel(SHADING_NORMAL);
 		} else
 			throw std::runtime_error("Unknown type in film channel: " + channelType);
 	}
@@ -223,6 +233,16 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				filmOutputs.Add(FilmOutputs::POSITION, fileName);
 			else
 				throw std::runtime_error("Position image can be saved only in HDR formats: " + outputName);
+		} else if (type == "GEOMETRY_NORMAL") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::GEOMETRY_NORMAL, fileName);
+			else
+				throw std::runtime_error("Geometry normal image can be saved only in HDR formats: " + outputName);
+		} else if (type == "SHADING_NORMAL") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::SHADING_NORMAL, fileName);
+			else
+				throw std::runtime_error("Shading normal image can be saved only in HDR formats: " + outputName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}
