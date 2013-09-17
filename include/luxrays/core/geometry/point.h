@@ -125,6 +125,14 @@ public:
 		return (&x)[i];
 	}
 
+	bool IsNaN() const {
+		return isnan(x) || isnan(y) || isnan(z);
+	}
+
+	bool IsInf() const {
+		return isinf(x) || isinf(y) || isinf(z);
+	}
+
 	// Point Public Data
 	float x, y, z;
 #define _LUXRAYS_POINT_OCLDEFINE "typedef struct { float x, y, z; } Point;\n"
