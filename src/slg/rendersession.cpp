@@ -115,9 +115,43 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	if (gamma != 2.2f)
 		film->SetGamma(gamma);
 
-	// Check if I have to enable the alpha channel
-	if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
-		film->AddChannel(ALPHA);
+	//--------------------------------------------------------------------------
+	// Initialize the Film channels
+	//--------------------------------------------------------------------------
+
+	vector<string> channelsKeys = cfg.GetAllKeys("film.channels.");
+	for (vector<string>::const_iterator channelKey = channelsKeys.begin(); channelKey != channelsKeys.end(); ++channelKey) {
+		const string &key = *channelKey;
+		const size_t dot1 = key.find(".", string("film.channels.").length());
+		if (dot1 == string::npos)
+			continue;
+
+		// Extract the output type name
+		const string channelType = Properties::ExtractField(key, 2);
+		if (channelType == "")
+			throw runtime_error("Syntax error in film channel definition: " + channelType);
+
+		SDL_LOG("Film channel: " << channelType);
+
+		const bool enable = cfg.GetBoolean("film.channels." + channelType + ".enable", false);
+
+		if (channelType == "ALPHA") {
+			if (enable)
+				film->AddChannel(ALPHA);
+			else
+				film->RemoveChannel(ALPHA);
+		} else
+			throw std::runtime_error("Unknown type in film channel: " + channelType);
+	}
+
+	// For compatibility with the past
+	if (cfg.IsDefined("film.alphachannel.enable")) {
+		if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
+			film->AddChannel(ALPHA);
+		else
+			film->RemoveChannel(ALPHA);
+	}
+		
 
 	//--------------------------------------------------------------------------
 	// Initialize the FilmOutputs
@@ -125,8 +159,8 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 	set<string> outputNames;
 	vector<string> outputKeys = cfg.GetAllKeys("film.outputs.");
-	for (vector<string>::const_iterator matKey = outputKeys.begin(); matKey != outputKeys.end(); ++matKey) {
-		const string &key = *matKey;
+	for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {
+		const string &key = *outputKey;
 		const size_t dot1 = key.find(".", string("film.outputs.").length());
 		if (dot1 == string::npos)
 			continue;
@@ -139,11 +173,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 		if (outputNames.count(outputName) > 0)
 			continue;
 
-		SDL_LOG("Film output definition: " << outputName);
-
 		outputNames.insert(outputName);
 		const string type = cfg.GetString("film.outputs." + outputName + ".type", "RGB_TONEMAPPED");
 		const string fileName = cfg.GetString("film.outputs." + outputName + ".filename", "image.png");
+
+		SDL_LOG("Film output definition: " << type << " [" << fileName << "]");
 
 		// Check if it is a supported file format
 		FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
