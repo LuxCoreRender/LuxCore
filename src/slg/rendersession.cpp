@@ -229,19 +229,22 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			else
 				throw std::runtime_error("Depth image can be saved only in HDR formats: " + outputName);
 		} else if (type == "POSITION") {
-			if (hdrImage)
+			if (hdrImage) {
 				filmOutputs.Add(FilmOutputs::POSITION, fileName);
-			else
+				filmOutputs.Add(FilmOutputs::DEPTH, fileName); // Used to merge samples
+			} else
 				throw std::runtime_error("Position image can be saved only in HDR formats: " + outputName);
 		} else if (type == "GEOMETRY_NORMAL") {
-			if (hdrImage)
+			if (hdrImage) {
 				filmOutputs.Add(FilmOutputs::GEOMETRY_NORMAL, fileName);
-			else
+				filmOutputs.Add(FilmOutputs::DEPTH, fileName); // Used to merge samples
+			} else
 				throw std::runtime_error("Geometry normal image can be saved only in HDR formats: " + outputName);
 		} else if (type == "SHADING_NORMAL") {
-			if (hdrImage)
+			if (hdrImage) {
 				filmOutputs.Add(FilmOutputs::SHADING_NORMAL, fileName);
-			else
+				filmOutputs.Add(FilmOutputs::DEPTH, fileName); // Used to merge samples
+			} else
 				throw std::runtime_error("Shading normal image can be saved only in HDR formats: " + outputName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);

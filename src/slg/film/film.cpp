@@ -255,28 +255,64 @@ void Film::AddFilm(const Film &film,
 	}
 
 	if (HasChannel(POSITION) && film.HasChannel(POSITION)) {
-		for (u_int y = 0; y < srcHeight; ++y) {
-			for (u_int x = 0; x < srcWidth; ++x) {
-				const float *srcPixel = film.channel_POSITION->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_POSITION->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+			// Used DEPTH information to merge Films
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y) < channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)) {
+						const float *srcPixel = film.channel_POSITION->GetPixel(srcOffsetX + x, srcOffsetY + y);
+						channel_POSITION->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					}
+				}
+			}
+		} else {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_POSITION->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_POSITION->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
 			}
 		}
 	}
 
 	if (HasChannel(GEOMETRY_NORMAL) && film.HasChannel(GEOMETRY_NORMAL)) {
-		for (u_int y = 0; y < srcHeight; ++y) {
-			for (u_int x = 0; x < srcWidth; ++x) {
-				const float *srcPixel = film.channel_GEOMETRY_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_GEOMETRY_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+			// Used DEPTH information to merge Films
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y) < channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)) {
+						const float *srcPixel = film.channel_GEOMETRY_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
+						channel_GEOMETRY_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					}
+				}
+			}
+		} else {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_GEOMETRY_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_GEOMETRY_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
 			}
 		}
 	}
 
 	if (HasChannel(SHADING_NORMAL) && film.HasChannel(SHADING_NORMAL)) {
-		for (u_int y = 0; y < srcHeight; ++y) {
-			for (u_int x = 0; x < srcWidth; ++x) {
-				const float *srcPixel = film.channel_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_SHADING_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+			// Used DEPTH information to merge Films
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y) < channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)) {
+						const float *srcPixel = film.channel_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
+						channel_SHADING_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					}
+				}
+			}
+		} else {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_SHADING_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
 			}
 		}
 	}
@@ -693,20 +729,22 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 void Film::AddSampleResultNoColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight)  {
+	bool depthWrite = true;
+
 	// Faster than HasChannel(DEPTH)
 	if (channel_DEPTH && sampleResult.HasChannel(DEPTH) && !isnan(sampleResult.depth))
-		channel_DEPTH->MinPixel(x, y, &sampleResult.depth);
+		depthWrite = channel_DEPTH->MinPixel(x, y, &sampleResult.depth);
 
 	// Faster than HasChannel(POSITION)
-	if (channel_POSITION && sampleResult.HasChannel(POSITION) && !sampleResult.position.IsNaN())
+	if (channel_POSITION && depthWrite && sampleResult.HasChannel(POSITION) && !sampleResult.position.IsNaN())
 		channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
 
 	// Faster than HasChannel(GEOMETRY_NORMAL)
-	if (channel_GEOMETRY_NORMAL && sampleResult.HasChannel(GEOMETRY_NORMAL) && !sampleResult.position.IsNaN())
+	if (channel_GEOMETRY_NORMAL && depthWrite && sampleResult.HasChannel(GEOMETRY_NORMAL) && !sampleResult.position.IsNaN())
 		channel_GEOMETRY_NORMAL->SetPixel(x, y, &sampleResult.geometryNormal.x);
 
 	// Faster than HasChannel(SHADING_NORMAL)
-	if (channel_SHADING_NORMAL && sampleResult.HasChannel(SHADING_NORMAL) && !sampleResult.position.IsNaN())
+	if (channel_SHADING_NORMAL && depthWrite && sampleResult.HasChannel(SHADING_NORMAL) && !sampleResult.position.IsNaN())
 		channel_SHADING_NORMAL->SetPixel(x, y, &sampleResult.shadingNormal.x);
 }
 
