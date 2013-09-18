@@ -61,6 +61,7 @@ Film::Film(const u_int w, const u_int h) {
 	channel_MATERIAL_ID = NULL;
 	channel_DIRECT_DIFFUSE = NULL;
 	channel_DIRECT_GLOSSY = NULL;
+	channel_EMISSION = NULL;
 
 	convTest = NULL;
 
@@ -91,6 +92,7 @@ Film::~Film() {
 	delete channel_MATERIAL_ID;
 	delete channel_DIRECT_DIFFUSE;
 	delete channel_DIRECT_GLOSSY;
+	delete channel_EMISSION;
 
 	delete filterLUTs;
 	delete filter;
@@ -134,6 +136,7 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_MATERIAL_ID;
 	delete channel_DIRECT_DIFFUSE;
 	delete channel_DIRECT_GLOSSY;
+	delete channel_EMISSION;
 	
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -181,6 +184,10 @@ void Film::Init(const u_int w, const u_int h) {
 	if (HasChannel(DIRECT_GLOSSY)) {
 		channel_DIRECT_GLOSSY = new GenericFrameBuffer<4, float>(width, height);
 		channel_DIRECT_GLOSSY->Clear();
+	}
+	if (HasChannel(EMISSION)) {
+		channel_EMISSION = new GenericFrameBuffer<4, float>(width, height);
+		channel_EMISSION->Clear();
 	}
 		
 	// Initialize the stats
@@ -231,6 +238,8 @@ void Film::Reset() {
 		channel_DIRECT_DIFFUSE->Clear();
 	if (HasChannel(DIRECT_GLOSSY))
 		channel_DIRECT_GLOSSY->Clear();
+	if (HasChannel(EMISSION))
+		channel_EMISSION->Clear();
 
 	// convTest has to be reseted explicitely
 
@@ -374,6 +383,15 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(EMISSION) && film.HasChannel(EMISSION)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_EMISSION->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_EMISSION->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel as last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -474,6 +492,13 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			break;
 		case FilmOutputs::DIRECT_GLOSSY:
 			if (HasChannel(DIRECT_GLOSSY) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::EMISSION:
+			if (HasChannel(EMISSION) && hdrImage) {
 				imageType = FIT_RGBF;
 				bitCount = 96;
 			} else
@@ -647,6 +672,21 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				case FilmOutputs::DIRECT_GLOSSY: {
 					FIRGBF *dst = (FIRGBF *)bits;
 					const float *src = channel_DIRECT_GLOSSY->GetPixel(x, y);
+					if (src[3] == 0.f) {
+						dst[x].red = 0.f;
+						dst[x].green = 0.f;
+						dst[x].blue = 0.f;
+					} else {
+						const float iweight = 1.f / src[3];
+						dst[x].red = src[0] * iweight;
+						dst[x].green = src[1] * iweight;
+						dst[x].blue = src[2] * iweight;
+					}
+					break;
+				}
+				case FilmOutputs::EMISSION: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_EMISSION->GetPixel(x, y);
 					if (src[3] == 0.f) {
 						dst[x].red = 0.f;
 						dst[x].green = 0.f;
@@ -874,6 +914,17 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		pixel[2] = sampleResult.directGlossy.b * weight;
 		pixel[3] = weight;
 		channel_DIRECT_GLOSSY->AddPixel(x, y, pixel);
+	}
+
+	// Faster than HasChannel(EMISSION)
+	if (channel_EMISSION && sampleResult.HasChannel(EMISSION) &&
+			!sampleResult.emission.IsNaN() && !sampleResult.emission.IsInf()) {
+		float pixel[4];
+		pixel[0] = sampleResult.emission.r * weight;
+		pixel[1] = sampleResult.emission.g * weight;
+		pixel[2] = sampleResult.emission.b * weight;
+		pixel[3] = weight;
+		channel_EMISSION->AddPixel(x, y, pixel);
 	}
 }
 

@@ -179,6 +179,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				film->AddChannel(Film::DIRECT_GLOSSY);
 			else
 				film->RemoveChannel(Film::DIRECT_GLOSSY);
+		} else if (channelType == "EMISSION") {
+			if (enable)
+				film->AddChannel(Film::EMISSION);
+			else
+				film->RemoveChannel(Film::EMISSION);
 		} else
 			throw std::runtime_error("Unknown type in film channel: " + channelType);
 	}
@@ -277,6 +282,11 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY, fileName);
 			else
 				throw std::runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
+		} else if (type == "EMISSION") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::EMISSION, fileName);
+			else
+				throw std::runtime_error("Emission image can be saved only in HDR formats: " + outputName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}
