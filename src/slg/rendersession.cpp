@@ -115,79 +115,6 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	if (gamma != 2.2f)
 		film->SetGamma(gamma);
 
-	//--------------------------------------------------------------------------
-	// Initialize the Film channels
-	//--------------------------------------------------------------------------
-
-	vector<string> channelsKeys = cfg.GetAllKeys("film.channels.");
-	for (vector<string>::const_iterator channelKey = channelsKeys.begin(); channelKey != channelsKeys.end(); ++channelKey) {
-		const string &key = *channelKey;
-		const size_t dot1 = key.find(".", string("film.channels.").length());
-		if (dot1 == string::npos)
-			continue;
-
-		// Extract the output type name
-		const string channelType = Properties::ExtractField(key, 2);
-		if (channelType == "")
-			throw runtime_error("Syntax error in film channel definition: " + channelType);
-
-		SDL_LOG("Film channel: " << channelType);
-
-		const bool enable = cfg.GetBoolean("film.channels." + channelType + ".enable", false);
-
-		if (channelType == "ALPHA") {
-			if (enable)
-				film->AddChannel(Film::ALPHA);
-			else
-				film->RemoveChannel(Film::ALPHA);
-		} else if (channelType == "DEPTH") {
-			if (enable)
-				film->AddChannel(Film::DEPTH);
-			else
-				film->RemoveChannel(Film::DEPTH);
-		} else if (channelType == "POSITION") {
-			if (enable) {
-				film->AddChannel(Film::POSITION);
-				film->AddChannel(Film::DEPTH); // Used to merge samples
-			} else
-				film->RemoveChannel(Film::POSITION);
-		} else if (channelType == "GEOMETRY_NORMAL") {
-			if (enable) {
-				film->AddChannel(Film::GEOMETRY_NORMAL);
-				film->AddChannel(Film::DEPTH); // Used to merge samples
-			} else
-				film->RemoveChannel(Film::GEOMETRY_NORMAL);
-		} else if (channelType == "SHADING_NORMAL") {
-			if (enable) {
-				film->AddChannel(Film::SHADING_NORMAL);
-				film->AddChannel(Film::DEPTH); // Used to merge samples
-			} else
-				film->RemoveChannel(Film::SHADING_NORMAL);
-		} else if (channelType == "MATERIAL_ID") {
-			if (enable) {
-				film->AddChannel(Film::MATERIAL_ID);
-				film->AddChannel(Film::DEPTH); // Used to merge samples
-			} else
-				film->RemoveChannel(Film::MATERIAL_ID);
-		} else if (channelType == "DIRECT_DIFFUSE") {
-			if (enable)
-				film->AddChannel(Film::DIRECT_DIFFUSE);
-			else
-				film->RemoveChannel(Film::DIRECT_DIFFUSE);
-		} else if (channelType == "DIRECT_GLOSSY") {
-			if (enable)
-				film->AddChannel(Film::DIRECT_GLOSSY);
-			else
-				film->RemoveChannel(Film::DIRECT_GLOSSY);
-		} else if (channelType == "EMISSION") {
-			if (enable)
-				film->AddChannel(Film::EMISSION);
-			else
-				film->RemoveChannel(Film::EMISSION);
-		} else
-			throw std::runtime_error("Unknown type in film channel: " + channelType);
-	}
-
 	// For compatibility with the past
 	if (cfg.IsDefined("film.alphachannel.enable")) {
 		if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
@@ -237,55 +164,70 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			else
 				throw std::runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
 		} else if (type == "RGBA") {
-			if (hdrImage)
+			if (hdrImage) {
+				film->AddChannel(Film::ALPHA);
 				filmOutputs.Add(FilmOutputs::RGBA, fileName);
-			else
+			} else
 				throw std::runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
 		} else if (type == "RGB_TONEMAPPED")
 			filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, fileName);
-		else if (type == "RGBA_TONEMAPPED")
+		else if (type == "RGBA_TONEMAPPED") {
+			film->AddChannel(Film::ALPHA);
 			filmOutputs.Add(FilmOutputs::RGBA_TONEMAPPED, fileName);
-		else if (type == "ALPHA")
+		} else if (type == "ALPHA") {
+			film->AddChannel(Film::ALPHA);
 			filmOutputs.Add(FilmOutputs::ALPHA, fileName);
-		else if (type == "DEPTH") {
-			if (hdrImage)
+		} else if (type == "DEPTH") {
+			if (hdrImage) {
+				film->AddChannel(Film::DEPTH);
 				filmOutputs.Add(FilmOutputs::DEPTH, fileName);
-			else
+			} else
 				throw std::runtime_error("Depth image can be saved only in HDR formats: " + outputName);
 		} else if (type == "POSITION") {
-			if (hdrImage)
+			if (hdrImage) {
+				film->AddChannel(Film::DEPTH);
+				film->AddChannel(Film::POSITION);
 				filmOutputs.Add(FilmOutputs::POSITION, fileName);
-			else
+			} else
 				throw std::runtime_error("Position image can be saved only in HDR formats: " + outputName);
 		} else if (type == "GEOMETRY_NORMAL") {
-			if (hdrImage)
+			if (hdrImage) {
+				film->AddChannel(Film::DEPTH);
+				film->AddChannel(Film::GEOMETRY_NORMAL);
 				filmOutputs.Add(FilmOutputs::GEOMETRY_NORMAL, fileName);
-			else
+			} else
 				throw std::runtime_error("Geometry normal image can be saved only in HDR formats: " + outputName);
 		} else if (type == "SHADING_NORMAL") {
-			if (hdrImage)
+			if (hdrImage) {
+				film->AddChannel(Film::DEPTH);
+				film->AddChannel(Film::SHADING_NORMAL);
 				filmOutputs.Add(FilmOutputs::SHADING_NORMAL, fileName);
-			else
+			} else
 				throw std::runtime_error("Shading normal image can be saved only in HDR formats: " + outputName);
 		} else if (type == "MATERIAL_ID") {
-			if (!hdrImage)
+			if (!hdrImage) {
+				film->AddChannel(Film::DEPTH);
+				film->AddChannel(Film::MATERIAL_ID);
 				filmOutputs.Add(FilmOutputs::MATERIAL_ID, fileName);
-			else
+			} else
 				throw std::runtime_error("Material ID image can be saved only in no HDR formats: " + outputName);
 		} else if (type == "DIRECT_DIFFUSE") {
-			if (hdrImage)
+			if (hdrImage) {
+				film->AddChannel(Film::DIRECT_DIFFUSE);
 				filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE, fileName);
-			else
+			} else
 				throw std::runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
 		} else if (type == "DIRECT_GLOSSY") {
-			if (hdrImage)
+			if (hdrImage) {
+				film->AddChannel(Film::DIRECT_GLOSSY);
 				filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY, fileName);
-			else
+			} else
 				throw std::runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
 		} else if (type == "EMISSION") {
-			if (hdrImage)
+			if (hdrImage) {
+				film->AddChannel(Film::EMISSION);
 				filmOutputs.Add(FilmOutputs::EMISSION, fileName);
-			else
+			} else
 				throw std::runtime_error("Emission image can be saved only in HDR formats: " + outputName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
