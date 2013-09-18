@@ -1082,7 +1082,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 }
 
 void Film::AddSampleResultNoColor(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight)  {
+		const SampleResult &sampleResult)  {
 	bool depthWrite = true;
 
 	// Faster than HasChannel(DEPTH)
@@ -1109,7 +1109,7 @@ void Film::AddSampleResultNoColor(const u_int x, const u_int y,
 void Film::AddSampleResult(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight)  {
 	AddSampleResultColor(x, y, sampleResult, weight);
-	AddSampleResultNoColor(x, y, sampleResult, weight);
+	AddSampleResultNoColor(x, y, sampleResult);
 }
 
 void Film::AddSample(const u_int x, const u_int y,
@@ -1136,7 +1136,7 @@ void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
 		const int y = Ceil2Int(sampleResult.filmY - .5f);
 
 		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
-			AddSampleResultNoColor(x, y, sampleResult, weight);
+			AddSampleResultNoColor(x, y, sampleResult);
 
 		//----------------------------------------------------------------------
 		// Add all color related information (filtered)
