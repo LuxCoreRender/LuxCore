@@ -229,6 +229,24 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				filmOutputs.Add(FilmOutputs::EMISSION, fileName);
 			} else
 				throw std::runtime_error("Emission image can be saved only in HDR formats: " + outputName);
+		} else if (type == "INDIRECT_DIFFUSE") {
+			if (hdrImage) {
+				film->AddChannel(Film::INDIRECT_DIFFUSE);
+				filmOutputs.Add(FilmOutputs::INDIRECT_DIFFUSE, fileName);
+			} else
+				throw std::runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
+		} else if (type == "INDIRECT_GLOSSY") {
+			if (hdrImage) {
+				film->AddChannel(Film::INDIRECT_GLOSSY);
+				filmOutputs.Add(FilmOutputs::INDIRECT_GLOSSY, fileName);
+			} else
+				throw std::runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
+		} else if (type == "INDIRECT_SPECULAR") {
+			if (hdrImage) {
+				film->AddChannel(Film::INDIRECT_SPECULAR);
+				filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR, fileName);
+			} else
+				throw std::runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}
