@@ -59,6 +59,8 @@ Film::Film(const u_int w, const u_int h) {
 	channel_GEOMETRY_NORMAL = NULL;
 	channel_SHADING_NORMAL = NULL;
 	channel_MATERIAL_ID = NULL;
+	channel_DIRECT_DIFFUSE = NULL;
+	channel_DIRECT_GLOSSY = NULL;
 
 	convTest = NULL;
 
@@ -87,6 +89,8 @@ Film::~Film() {
 	delete channel_GEOMETRY_NORMAL;
 	delete channel_SHADING_NORMAL;
 	delete channel_MATERIAL_ID;
+	delete channel_DIRECT_DIFFUSE;
+	delete channel_DIRECT_GLOSSY;
 
 	delete filterLUTs;
 	delete filter;
@@ -128,6 +132,8 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_GEOMETRY_NORMAL;
 	delete channel_SHADING_NORMAL;
 	delete channel_MATERIAL_ID;
+	delete channel_DIRECT_DIFFUSE;
+	delete channel_DIRECT_GLOSSY;
 	
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -167,6 +173,14 @@ void Film::Init(const u_int w, const u_int h) {
 	if (HasChannel(MATERIAL_ID)) {
 		channel_MATERIAL_ID = new GenericFrameBuffer<1, u_int>(width, height);
 		channel_MATERIAL_ID->Clear(std::numeric_limits<u_int>::max());
+	}
+	if (HasChannel(DIRECT_DIFFUSE)) {
+		channel_DIRECT_DIFFUSE = new GenericFrameBuffer<4, float>(width, height);
+		channel_DIRECT_DIFFUSE->Clear();
+	}
+	if (HasChannel(DIRECT_GLOSSY)) {
+		channel_DIRECT_GLOSSY = new GenericFrameBuffer<4, float>(width, height);
+		channel_DIRECT_GLOSSY->Clear();
 	}
 		
 	// Initialize the stats
@@ -213,6 +227,10 @@ void Film::Reset() {
 		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
 	if (HasChannel(MATERIAL_ID))
 		channel_MATERIAL_ID->Clear(std::numeric_limits<float>::max());
+	if (HasChannel(DIRECT_DIFFUSE))
+		channel_DIRECT_DIFFUSE->Clear();
+	if (HasChannel(DIRECT_GLOSSY))
+		channel_DIRECT_GLOSSY->Clear();
 
 	// convTest has to be reseted explicitely
 
@@ -338,6 +356,24 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(DIRECT_DIFFUSE) && film.HasChannel(DIRECT_DIFFUSE)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_DIRECT_DIFFUSE->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_DIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(DIRECT_GLOSSY) && film.HasChannel(DIRECT_GLOSSY)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_DIRECT_GLOSSY->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_DIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel as last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -426,6 +462,20 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			if (HasChannel(MATERIAL_ID) && !hdrImage) {
 				imageType = FIT_BITMAP;
 				bitCount = 24;
+			} else
+				return;
+			break;
+		case FilmOutputs::DIRECT_DIFFUSE:
+			if (HasChannel(DIRECT_DIFFUSE) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::DIRECT_GLOSSY:
+			if (HasChannel(DIRECT_GLOSSY) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
 			} else
 				return;
 			break;
@@ -577,6 +627,36 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					dst[FI_RGBA_RED] = (BYTE)(src[0] & 0xff);
 					dst[FI_RGBA_GREEN] = (BYTE)((src[0] & 0xff00) >> 8);
 					dst[FI_RGBA_BLUE] = (BYTE)((src[0] & 0xff0000) >> 16);
+					break;
+				}
+				case FilmOutputs::DIRECT_DIFFUSE: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_DIRECT_DIFFUSE->GetPixel(x, y);
+					if (src[3] == 0.f) {
+						dst[x].red = 0.f;
+						dst[x].green = 0.f;
+						dst[x].blue = 0.f;
+					} else {
+						const float iweight = 1.f / src[3];
+						dst[x].red = src[0] * iweight;
+						dst[x].green = src[1] * iweight;
+						dst[x].blue = src[2] * iweight;
+					}
+					break;
+				}
+				case FilmOutputs::DIRECT_GLOSSY: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_DIRECT_GLOSSY->GetPixel(x, y);
+					if (src[3] == 0.f) {
+						dst[x].red = 0.f;
+						dst[x].green = 0.f;
+						dst[x].blue = 0.f;
+					} else {
+						const float iweight = 1.f / src[3];
+						dst[x].red = src[0] * iweight;
+						dst[x].green = src[1] * iweight;
+						dst[x].blue = src[2] * iweight;
+					}
 					break;
 				}
 				default:
@@ -744,6 +824,7 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 
 void Film::AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight)  {
+	// Faster than HasChannel(channel_RADIANCE_PER_PIXEL_NORMALIZED)
 	if (channel_RADIANCE_PER_PIXEL_NORMALIZED && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) &&
 			!sampleResult.radiancePerPixelNormalized.IsNaN() && !sampleResult.radiancePerPixelNormalized.IsInf()) {
 		float pixel[4];
@@ -754,6 +835,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		channel_RADIANCE_PER_PIXEL_NORMALIZED->AddPixel(x, y, pixel);
 	}
 
+	// Faster than HasChannel(channel_RADIANCE_PER_SCREEN_NORMALIZED)
 	if (channel_RADIANCE_PER_SCREEN_NORMALIZED && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) &&
 			!sampleResult.radiancePerScreenNormalized.IsNaN() && !sampleResult.radiancePerScreenNormalized.IsInf()) {
 		float pixel[4];
@@ -770,6 +852,28 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		pixel[0] = weight * sampleResult.alpha;
 		pixel[1] = weight;
 		channel_ALPHA->AddPixel(x, y, pixel);
+	}
+
+	// Faster than HasChannel(DIRECT_DIFFUSE)
+	if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE) &&
+			!sampleResult.directDiffuse.IsNaN() && !sampleResult.directDiffuse.IsInf()) {
+		float pixel[4];
+		pixel[0] = sampleResult.directDiffuse.r * weight;
+		pixel[1] = sampleResult.directDiffuse.g * weight;
+		pixel[2] = sampleResult.directDiffuse.b * weight;
+		pixel[3] = weight;
+		channel_DIRECT_DIFFUSE->AddPixel(x, y, pixel);
+	}
+
+	// Faster than HasChannel(DIRECT_GLOSSY)
+	if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY) &&
+			!sampleResult.directGlossy.IsNaN() && !sampleResult.directGlossy.IsInf()) {
+		float pixel[4];
+		pixel[0] = sampleResult.directGlossy.r * weight;
+		pixel[1] = sampleResult.directGlossy.g * weight;
+		pixel[2] = sampleResult.directGlossy.b * weight;
+		pixel[3] = weight;
+		channel_DIRECT_GLOSSY->AddPixel(x, y, pixel);
 	}
 }
 

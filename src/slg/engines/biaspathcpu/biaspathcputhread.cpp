@@ -343,6 +343,8 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 				std::numeric_limits<float>::infinity(),
 				std::numeric_limits<float>::infinity());
 		sampleResult->materialID = std::numeric_limits<u_int>::max();
+		sampleResult->directDiffuse = Spectrum();
+		sampleResult->directGlossy = Spectrum();
 	} else {
 		// Something was hit
 		sampleResult->alpha = 1.f;
@@ -365,10 +367,23 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		//----------------------------------------------------------------------
 
 		if (!bsdf.IsDelta()) {
+			Spectrum radiance;
 			if (engine->lightSamplingStrategyONE)
-				DirectLightSamplingONE(rndGen, pathThrouput, bsdf, &sampleResult->radiancePerPixelNormalized);
+				DirectLightSamplingONE(rndGen, pathThrouput, bsdf, &radiance);
 			else
-				DirectLightSamplingALL(rndGen, pathThrouput, bsdf, &sampleResult->radiancePerPixelNormalized);
+				DirectLightSamplingALL(rndGen, pathThrouput, bsdf, &radiance);
+
+			if (bsdf.GetEventTypes() & DIFFUSE) {
+				sampleResult->directDiffuse = radiance;
+				sampleResult->directGlossy = Spectrum();
+			} else {
+				sampleResult->directDiffuse = Spectrum();
+				sampleResult->directGlossy = radiance;
+			}
+			sampleResult->radiancePerPixelNormalized += radiance;
+		} else {
+			sampleResult->directDiffuse = Spectrum();
+			sampleResult->directGlossy = Spectrum();
 		}
 
 		//----------------------------------------------------------------------
@@ -442,7 +457,8 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 	filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
 
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
-		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID);
+		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
+		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY);
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;

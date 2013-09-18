@@ -57,7 +57,8 @@ class FilmOutputs {
 public:
 	typedef enum {
 		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
-		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID
+		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
+		DIRECT_GLOSSY
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -93,7 +94,9 @@ public:
 		POSITION = 1<<5,
 		GEOMETRY_NORMAL = 1<<6,
 		SHADING_NORMAL = 1<<7,
-		MATERIAL_ID = 1<<8
+		MATERIAL_ID = 1<<8,
+		DIRECT_DIFFUSE = 1<<9,
+		DIRECT_GLOSSY = 1<<10
 	} FilmChannelType;
 
 	Film(const u_int w, const u_int h);
@@ -221,6 +224,8 @@ private:
 	GenericFrameBuffer<3, float> *channel_GEOMETRY_NORMAL;
 	GenericFrameBuffer<3, float> *channel_SHADING_NORMAL;
 	GenericFrameBuffer<1, u_int> *channel_MATERIAL_ID;
+	GenericFrameBuffer<4, float> *channel_DIRECT_DIFFUSE;
+	GenericFrameBuffer<4, float> *channel_DIRECT_GLOSSY;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
@@ -256,6 +261,7 @@ public:
 	luxrays::Point position;
 	luxrays::Normal geometryNormal, shadingNormal;
 	u_int materialID;
+	luxrays::Spectrum directDiffuse, directGlossy;
 
 private:
 	u_int channels;
