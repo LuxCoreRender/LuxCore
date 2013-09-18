@@ -602,7 +602,7 @@ public:
 			Ka(ka), depth(d), index(i), multibounce(mbounce) { }
 
 	virtual MaterialType GetType() const { return GLOSSY2; }
-	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,

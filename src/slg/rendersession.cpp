@@ -169,6 +169,16 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				film->AddChannel(Film::DEPTH); // Used to merge samples
 			} else
 				film->RemoveChannel(Film::MATERIAL_ID);
+		} else if (channelType == "DIRECT_DIFFUSE") {
+			if (enable)
+				film->AddChannel(Film::DIRECT_DIFFUSE);
+			else
+				film->RemoveChannel(Film::DIRECT_DIFFUSE);
+		} else if (channelType == "DIRECT_GLOSSY") {
+			if (enable)
+				film->AddChannel(Film::DIRECT_GLOSSY);
+			else
+				film->RemoveChannel(Film::DIRECT_GLOSSY);
 		} else
 			throw std::runtime_error("Unknown type in film channel: " + channelType);
 	}
@@ -257,6 +267,16 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				filmOutputs.Add(FilmOutputs::MATERIAL_ID, fileName);
 			else
 				throw std::runtime_error("Material ID image can be saved only in no HDR formats: " + outputName);
+		} else if (type == "DIRECT_DIFFUSE") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE, fileName);
+			else
+				throw std::runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
+		} else if (type == "DIRECT_GLOSSY") {
+			if (hdrImage)
+				filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY, fileName);
+			else
+				throw std::runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}
