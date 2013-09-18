@@ -325,8 +325,11 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 	if (!scene->Intersect(device, false, rndGen->floatValue(),
 			&eyeRay, &eyeRayHit, &bsdf, &pathThrouput)) {
 		// Nothing was hit, look for infinitelight
+		Spectrum radiance;
 		DirectHitInfiniteLight(true, pathThrouput, eyeRay.d,
-				1.f, &sampleResult->radiancePerPixelNormalized);
+				1.f, &radiance);
+		sampleResult->emission = radiance;
+		sampleResult->radiancePerPixelNormalized += radiance;
 
 		sampleResult->alpha = 0.f;
 		sampleResult->depth = std::numeric_limits<float>::infinity();
@@ -356,9 +359,13 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource() && (eyeRayHit.t > engine->nearStartLight)) {
+			Spectrum radiance;
 			DirectHitFiniteLight(true, pathThrouput,
-					eyeRayHit.t, bsdf, 1.f, &sampleResult->radiancePerPixelNormalized);
-		}
+					eyeRayHit.t, bsdf, 1.f, &radiance);
+			sampleResult->emission = radiance;
+			sampleResult->radiancePerPixelNormalized += radiance;
+		} else
+			sampleResult->emission = Spectrum();
 
 		// Note: pass-through check is done inside SceneIntersect()
 
@@ -458,7 +465,7 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
-		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY);
+		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION);
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;
