@@ -214,7 +214,7 @@ private:
 	void AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight);
 	void AddSampleResultNoColor(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight);
+		const SampleResult &sampleResult);
 	void AddSampleResult(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight);
 
