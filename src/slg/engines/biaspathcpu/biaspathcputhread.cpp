@@ -348,6 +348,9 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		sampleResult->materialID = std::numeric_limits<u_int>::max();
 		sampleResult->directDiffuse = Spectrum();
 		sampleResult->directGlossy = Spectrum();
+		sampleResult->indirectDiffuse = Spectrum();
+		sampleResult->indirectGlossy = Spectrum();
+		sampleResult->indirectSpecular = Spectrum();
 	} else {
 		// Something was hit
 		sampleResult->alpha = 1.f;
@@ -410,10 +413,14 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			const u_int diffuseSamples = (materialSamples < 0) ? engine->diffuseSamples : ((u_int)materialSamples);
 
 			if (diffuseSamples > 0) {
-				sampleResult->radiancePerPixelNormalized += pathThrouput * SampleComponent(
+				Spectrum radiance = pathThrouput * SampleComponent(
 						rndGen, DIFFUSE | REFLECT | TRANSMIT, diffuseSamples, bsdf);
-			}
-		}
+				sampleResult->indirectDiffuse = radiance;
+				sampleResult->radiancePerPixelNormalized += radiance;
+			} else
+				sampleResult->indirectDiffuse = Spectrum();
+		} else
+			sampleResult->indirectDiffuse = Spectrum();
 
 		//----------------------------------------------------------------------
 		// Sample the glossy component
@@ -425,10 +432,14 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			const u_int glossySamples = (materialSamples < 0) ? engine->glossySamples : ((u_int)materialSamples);
 
 			if (glossySamples > 0) {
-				sampleResult->radiancePerPixelNormalized += pathThrouput * SampleComponent(
+				Spectrum radiance = pathThrouput * SampleComponent(
 						rndGen, GLOSSY | REFLECT | TRANSMIT, glossySamples, bsdf);
-			}
-		}
+				sampleResult->indirectGlossy = radiance;
+				sampleResult->radiancePerPixelNormalized += radiance;
+			} else
+				sampleResult->indirectGlossy = Spectrum();
+		} else
+			sampleResult->indirectGlossy = Spectrum();
 
 		//----------------------------------------------------------------------
 		// Sample the refraction component
@@ -440,10 +451,14 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 			const u_int speculaSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
 
 			if (speculaSamples > 0) {
-				sampleResult->radiancePerPixelNormalized += pathThrouput * SampleComponent(
+				Spectrum radiance = pathThrouput * SampleComponent(
 						rndGen, SPECULAR | REFLECT | TRANSMIT, speculaSamples, bsdf);
-			}
-		}
+				sampleResult->indirectSpecular = radiance;
+				sampleResult->radiancePerPixelNormalized += radiance;
+			} else
+				sampleResult->indirectSpecular = Spectrum();
+		} else
+			sampleResult->indirectSpecular = Spectrum();
 	}
 
 	assert (!radiance->IsNaN() && !radiance->IsInf());
@@ -465,7 +480,8 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
-		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION);
+		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
+		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR);
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;

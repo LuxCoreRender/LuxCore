@@ -62,6 +62,9 @@ Film::Film(const u_int w, const u_int h) {
 	channel_DIRECT_DIFFUSE = NULL;
 	channel_DIRECT_GLOSSY = NULL;
 	channel_EMISSION = NULL;
+	channel_INDIRECT_DIFFUSE = NULL;
+	channel_INDIRECT_GLOSSY = NULL;
+	channel_INDIRECT_SPECULAR = NULL;
 
 	convTest = NULL;
 
@@ -93,6 +96,9 @@ Film::~Film() {
 	delete channel_DIRECT_DIFFUSE;
 	delete channel_DIRECT_GLOSSY;
 	delete channel_EMISSION;
+	delete channel_INDIRECT_DIFFUSE;
+	delete channel_INDIRECT_GLOSSY;
+	delete channel_INDIRECT_SPECULAR;
 
 	delete filterLUTs;
 	delete filter;
@@ -137,7 +143,10 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_DIRECT_DIFFUSE;
 	delete channel_DIRECT_GLOSSY;
 	delete channel_EMISSION;
-	
+	delete channel_INDIRECT_DIFFUSE;
+	delete channel_INDIRECT_GLOSSY;
+	delete channel_INDIRECT_SPECULAR;
+
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		channel_RADIANCE_PER_PIXEL_NORMALIZED = new GenericFrameBuffer<4, float>(width, height);
@@ -188,6 +197,18 @@ void Film::Init(const u_int w, const u_int h) {
 	if (HasChannel(EMISSION)) {
 		channel_EMISSION = new GenericFrameBuffer<4, float>(width, height);
 		channel_EMISSION->Clear();
+	}
+	if (HasChannel(INDIRECT_DIFFUSE)) {
+		channel_INDIRECT_DIFFUSE = new GenericFrameBuffer<4, float>(width, height);
+		channel_INDIRECT_DIFFUSE->Clear();
+	}
+	if (HasChannel(INDIRECT_GLOSSY)) {
+		channel_INDIRECT_GLOSSY = new GenericFrameBuffer<4, float>(width, height);
+		channel_INDIRECT_GLOSSY->Clear();
+	}
+	if (HasChannel(INDIRECT_SPECULAR)) {
+		channel_INDIRECT_SPECULAR = new GenericFrameBuffer<4, float>(width, height);
+		channel_INDIRECT_SPECULAR->Clear();
 	}
 		
 	// Initialize the stats
@@ -240,6 +261,12 @@ void Film::Reset() {
 		channel_DIRECT_GLOSSY->Clear();
 	if (HasChannel(EMISSION))
 		channel_EMISSION->Clear();
+	if (HasChannel(INDIRECT_DIFFUSE))
+		channel_INDIRECT_DIFFUSE->Clear();
+	if (HasChannel(INDIRECT_GLOSSY))
+		channel_INDIRECT_GLOSSY->Clear();
+	if (HasChannel(INDIRECT_SPECULAR))
+		channel_INDIRECT_SPECULAR->Clear();
 
 	// convTest has to be reseted explicitely
 
@@ -392,6 +419,33 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(INDIRECT_DIFFUSE) && film.HasChannel(INDIRECT_DIFFUSE)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_DIFFUSE->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_INDIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_GLOSSY) && film.HasChannel(INDIRECT_GLOSSY)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_GLOSSY->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_INDIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_SPECULAR) && film.HasChannel(INDIRECT_SPECULAR)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_SPECULAR->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_INDIRECT_SPECULAR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel as last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -499,6 +553,27 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			break;
 		case FilmOutputs::EMISSION:
 			if (HasChannel(EMISSION) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::INDIRECT_DIFFUSE:
+			if (HasChannel(INDIRECT_DIFFUSE) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::INDIRECT_GLOSSY:
+			if (HasChannel(INDIRECT_GLOSSY) && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::INDIRECT_SPECULAR:
+			if (HasChannel(INDIRECT_SPECULAR) && hdrImage) {
 				imageType = FIT_RGBF;
 				bitCount = 96;
 			} else
@@ -687,6 +762,51 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				case FilmOutputs::EMISSION: {
 					FIRGBF *dst = (FIRGBF *)bits;
 					const float *src = channel_EMISSION->GetPixel(x, y);
+					if (src[3] == 0.f) {
+						dst[x].red = 0.f;
+						dst[x].green = 0.f;
+						dst[x].blue = 0.f;
+					} else {
+						const float iweight = 1.f / src[3];
+						dst[x].red = src[0] * iweight;
+						dst[x].green = src[1] * iweight;
+						dst[x].blue = src[2] * iweight;
+					}
+					break;
+				}
+				case FilmOutputs::INDIRECT_DIFFUSE: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_INDIRECT_DIFFUSE->GetPixel(x, y);
+					if (src[3] == 0.f) {
+						dst[x].red = 0.f;
+						dst[x].green = 0.f;
+						dst[x].blue = 0.f;
+					} else {
+						const float iweight = 1.f / src[3];
+						dst[x].red = src[0] * iweight;
+						dst[x].green = src[1] * iweight;
+						dst[x].blue = src[2] * iweight;
+					}
+					break;
+				}
+				case FilmOutputs::INDIRECT_GLOSSY: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_INDIRECT_GLOSSY->GetPixel(x, y);
+					if (src[3] == 0.f) {
+						dst[x].red = 0.f;
+						dst[x].green = 0.f;
+						dst[x].blue = 0.f;
+					} else {
+						const float iweight = 1.f / src[3];
+						dst[x].red = src[0] * iweight;
+						dst[x].green = src[1] * iweight;
+						dst[x].blue = src[2] * iweight;
+					}
+					break;
+				}
+				case FilmOutputs::INDIRECT_SPECULAR: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_INDIRECT_SPECULAR->GetPixel(x, y);
 					if (src[3] == 0.f) {
 						dst[x].red = 0.f;
 						dst[x].green = 0.f;
@@ -925,6 +1045,39 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		pixel[2] = sampleResult.emission.b * weight;
 		pixel[3] = weight;
 		channel_EMISSION->AddPixel(x, y, pixel);
+	}
+
+	// Faster than HasChannel(INDIRECT_DIFFUSE)
+	if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE) &&
+			!sampleResult.indirectDiffuse.IsNaN() && !sampleResult.indirectDiffuse.IsInf()) {
+		float pixel[4];
+		pixel[0] = sampleResult.indirectDiffuse.r * weight;
+		pixel[1] = sampleResult.indirectDiffuse.g * weight;
+		pixel[2] = sampleResult.indirectDiffuse.b * weight;
+		pixel[3] = weight;
+		channel_INDIRECT_DIFFUSE->AddPixel(x, y, pixel);
+	}
+
+	// Faster than HasChannel(INDIRECT_GLOSSY)
+	if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY) &&
+			!sampleResult.indirectGlossy.IsNaN() && !sampleResult.indirectGlossy.IsInf()) {
+		float pixel[4];
+		pixel[0] = sampleResult.indirectGlossy.r * weight;
+		pixel[1] = sampleResult.indirectGlossy.g * weight;
+		pixel[2] = sampleResult.indirectGlossy.b * weight;
+		pixel[3] = weight;
+		channel_INDIRECT_GLOSSY->AddPixel(x, y, pixel);
+	}
+
+	// Faster than HasChannel(INDIRECT_SPECULAR)
+	if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR) &&
+			!sampleResult.indirectSpecular.IsNaN() && !sampleResult.indirectSpecular.IsInf()) {
+		float pixel[4];
+		pixel[0] = sampleResult.indirectSpecular.r * weight;
+		pixel[1] = sampleResult.indirectSpecular.g * weight;
+		pixel[2] = sampleResult.indirectSpecular.b * weight;
+		pixel[3] = weight;
+		channel_INDIRECT_SPECULAR->AddPixel(x, y, pixel);
 	}
 }
 
