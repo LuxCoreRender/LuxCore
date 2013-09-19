@@ -41,6 +41,7 @@
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
+#include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/film/filter.h"
 #include "slg/film/tonemapping.h"
@@ -59,7 +60,7 @@ public:
 		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
 		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
 		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
-		INDIRECT_SPECULAR
+		INDIRECT_SPECULAR, MATERIAL_ID_MASK
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -68,12 +69,15 @@ public:
 	u_int GetCount() const { return types.size(); }
 	FilmOutputType GetType(const u_int index) const { return types[index]; }
 	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
+	const luxrays::Properties &GetProperties(const u_int index) const { return props[index]; }
 
-	void Add(const FilmOutputType type, const std::string &fileName);
+	void Add(const FilmOutputType type, const std::string &fileName,
+		const luxrays::Properties *prop = NULL);
 
 private:
 	std::vector<FilmOutputType> types;
 	std::vector<std::string> fileNames;
+	std::vector<luxrays::Properties> props;
 };
 
 //------------------------------------------------------------------------------
@@ -101,14 +105,16 @@ public:
 		EMISSION = 1<<11,
 		INDIRECT_DIFFUSE = 1<<12,
 		INDIRECT_GLOSSY = 1<<13,
-		INDIRECT_SPECULAR = 1<<14
+		INDIRECT_SPECULAR = 1<<14,
+		MATERIAL_ID_MASK = 1<<15
 	} FilmChannelType;
 
 	Film(const u_int w, const u_int h);
 	~Film();
 
 	// This one must be called before Init()
-	void AddChannel(const FilmChannelType type);
+	void AddChannel(const FilmChannelType type,
+		const luxrays::Properties *prop = NULL);
 	// This one must be called before Init()
 	void RemoveChannel(const FilmChannelType type);
 	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
@@ -139,6 +145,7 @@ public:
 
 	void CopyDynamicSettings(const Film &film) {
 		channels = film.channels;
+		maskMaterialIDs = film.maskMaterialIDs;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetToneMapParams(*(film.GetToneMapParams()));
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
@@ -155,7 +162,8 @@ public:
 	}
 
 	void Output(const FilmOutputs &filmOutputs);
-	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName);
+	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
+		const luxrays::Properties *props = NULL);
 
 	void UpdateScreenBuffer();
 	float *GetScreenBuffer() const {
@@ -235,6 +243,8 @@ private:
 	GenericFrameBuffer<4, float> *channel_INDIRECT_DIFFUSE;
 	GenericFrameBuffer<4, float> *channel_INDIRECT_GLOSSY;
 	GenericFrameBuffer<4, float> *channel_INDIRECT_SPECULAR;
+	std::vector<GenericFrameBuffer<2, float> *> channel_MATERIAL_ID_MASKs;
+	std::vector<u_int> maskMaterialIDs;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
@@ -269,6 +279,7 @@ public:
 	float alpha, depth;
 	luxrays::Point position;
 	luxrays::Normal geometryNormal, shadingNormal;
+	// Note: MATERIAL_ID_MASK is calculated starting from materialID field
 	u_int materialID;
 	luxrays::Spectrum directDiffuse, directGlossy;
 	luxrays::Spectrum emission;
