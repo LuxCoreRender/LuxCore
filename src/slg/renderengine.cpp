@@ -706,6 +706,8 @@ void CPUTileRenderEngine::StartLockLess() {
 
 void CPUTileRenderEngine::StopLockLess() {
 	CPURenderEngine::StopLockLess();
+
+	tileRepository->Clear();
 }
 
 void CPUTileRenderEngine::EndEditLockLess(const EditActionList &editActions) {
