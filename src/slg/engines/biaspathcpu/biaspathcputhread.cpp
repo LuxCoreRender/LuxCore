@@ -351,6 +351,7 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		sampleResult->indirectDiffuse = Spectrum();
 		sampleResult->indirectGlossy = Spectrum();
 		sampleResult->indirectSpecular = Spectrum();
+		sampleResult->directShadow = 0.f;
 	} else {
 		// Something was hit
 		sampleResult->alpha = 1.f;
@@ -391,9 +392,12 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 				sampleResult->directGlossy = radiance;
 			}
 			sampleResult->radiancePerPixelNormalized += radiance;
+
+			sampleResult->directShadow = radiance.Black() ? 1.f : 0.f;
 		} else {
 			sampleResult->directDiffuse = Spectrum();
 			sampleResult->directGlossy = Spectrum();
+			sampleResult->directShadow = 0.f;
 		}
 
 		//----------------------------------------------------------------------
@@ -460,9 +464,6 @@ void BiasPathCPURenderThread::TraceEyePath(luxrays::RandomGenerator *rndGen, con
 		} else
 			sampleResult->indirectSpecular = Spectrum();
 	}
-
-	assert (!radiance->IsNaN() && !radiance->IsInf());
-	assert (!isnan(*alpha) && !isinf(*alpha));
 }
 
 void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen,
@@ -481,7 +482,7 @@ void BiasPathCPURenderThread::RenderPixelSample(luxrays::RandomGenerator *rndGen
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
-		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR);
+		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW);
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;
