@@ -36,6 +36,7 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
 #include "slg/sdl/sdl.h"
+#include "slg/sampler/sampler.h"
 #include "slg/sdl/scene.h"
 
 using namespace luxrays;
@@ -418,9 +419,11 @@ void Scene::DefineMaterials(const Properties &props) {
 
 		SDL_LOG("Material definition: " << matName);
 
-		// Automatic material ID starts from 0xff0000 so they are easy to detect when
-		// exporting the MATERIAL_ID Film channel
-		Material *mat = CreateMaterial(matDefs.GetSize() + 0xff0000, matName, props);
+		// In order to have harlequin colors with MATERIAL_ID output
+		const u_int matID = ((u_int)(RadicalInverse(matDefs.GetSize() + 1, 2) * 255.f + .5f)) |
+				(((u_int)(RadicalInverse(matDefs.GetSize() + 1, 3) * 255.f + .5f)) << 8) |
+				(((u_int)(RadicalInverse(matDefs.GetSize() + 1, 5) * 255.f + .5f)) << 16);
+		Material *mat = CreateMaterial(matID, matName, props);
 		matDefs.DefineMaterial(matName, mat);
 	}
 }
