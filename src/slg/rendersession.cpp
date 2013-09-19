@@ -255,9 +255,12 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			film->AddChannel(Film::MATERIAL_ID);
 			film->AddChannel(Film::MATERIAL_ID_MASK, &prop);
 			filmOutputs.Add(FilmOutputs::MATERIAL_ID_MASK, fileName, &prop);
-		} else if (type == "DIRECT_SHADOW") {
-			film->AddChannel(Film::DIRECT_SHADOW);
-			filmOutputs.Add(FilmOutputs::DIRECT_SHADOW, fileName);
+		} else if (type == "DIRECT_SHADOW_MASK") {
+			film->AddChannel(Film::DIRECT_SHADOW_MASK);
+			filmOutputs.Add(FilmOutputs::DIRECT_SHADOW_MASK, fileName);
+		} else if (type == "INDIRECT_SHADOW_MASK") {
+			film->AddChannel(Film::INDIRECT_SHADOW_MASK);
+			filmOutputs.Add(FilmOutputs::INDIRECT_SHADOW_MASK, fileName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}

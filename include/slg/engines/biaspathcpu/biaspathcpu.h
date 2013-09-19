@@ -69,26 +69,27 @@ private:
 		const float u2, const float u3,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		luxrays::Spectrum *radiance);
-	void DirectLightSamplingONE(luxrays::RandomGenerator *rndGen,
+	bool DirectLightSamplingONE(luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		luxrays::Spectrum *radiance);
-	void DirectLightSamplingALL(luxrays::RandomGenerator *rndGen,
+	bool DirectLightSamplingALL(luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		luxrays::Spectrum *radiance);
 
-	void DirectHitFiniteLight(const bool lastSpecular,
+	bool DirectHitFiniteLight(const bool lastSpecular,
 			const luxrays::Spectrum &pathThrouput, const float distance, const BSDF &bsdf,
 			const float lastPdfW, luxrays::Spectrum *radiance);
+	bool DirectHitInfiniteLight(const bool lastSpecular,
+			const luxrays::Spectrum &pathThrouput, const luxrays::Vector &eyeDir,
+			const float lastPdfW, luxrays::Spectrum *radiance);
 
-	void DirectHitInfiniteLight(const bool lastSpecular, const luxrays::Spectrum &pathThrouput,
-			const luxrays::Vector &eyeDir, const float lastPdfW, luxrays::Spectrum *radiance);
-
-	void ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
+	bool ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
 		luxrays::Spectrum pathThrouput, BSDFEvent lastBSDFEvent, float lastPdfW,
 		luxrays::Spectrum *radiance);
 	// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
-	luxrays::Spectrum SampleComponent(luxrays::RandomGenerator *rndGen,
-		const BSDFEvent requestedEventTypes, const u_int size, BSDF &bsdf);
+	bool SampleComponent(luxrays::RandomGenerator *rndGen,
+		const BSDFEvent requestedEventTypes, const u_int size, BSDF &bsdf,
+		luxrays::Spectrum *radiance);
 	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
 		SampleResult *sampleResult);
 	void RenderPixelSample(luxrays::RandomGenerator *rndGen,

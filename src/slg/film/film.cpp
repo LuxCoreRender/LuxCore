@@ -72,7 +72,8 @@ Film::Film(const u_int w, const u_int h) {
 	channel_INDIRECT_DIFFUSE = NULL;
 	channel_INDIRECT_GLOSSY = NULL;
 	channel_INDIRECT_SPECULAR = NULL;
-	channel_DIRECT_SHADOW = NULL;
+	channel_DIRECT_SHADOW_MASK = NULL;
+	channel_INDIRECT_SHADOW_MASK = NULL;
 
 	convTest = NULL;
 
@@ -109,7 +110,8 @@ Film::~Film() {
 	delete channel_INDIRECT_SPECULAR;
 	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
 		delete channel_MATERIAL_ID_MASKs[i];
-	delete channel_DIRECT_SHADOW;
+	delete channel_DIRECT_SHADOW_MASK;
+	delete channel_INDIRECT_SHADOW_MASK;
 
 	delete filterLUTs;
 	delete filter;
@@ -165,7 +167,8 @@ void Film::Init(const u_int w, const u_int h) {
 	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
 		delete channel_MATERIAL_ID_MASKs[i];
 	channel_MATERIAL_ID_MASKs.clear();
-	delete channel_DIRECT_SHADOW;
+	delete channel_DIRECT_SHADOW_MASK;
+	delete channel_INDIRECT_SHADOW_MASK;
 
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -237,9 +240,13 @@ void Film::Init(const u_int w, const u_int h) {
 			channel_MATERIAL_ID_MASKs.push_back(buf);
 		}
 	}
-	if (HasChannel(DIRECT_SHADOW)) {
-		channel_DIRECT_SHADOW = new GenericFrameBuffer<2, float>(width, height);
-		channel_DIRECT_SHADOW->Clear();
+	if (HasChannel(DIRECT_SHADOW_MASK)) {
+		channel_DIRECT_SHADOW_MASK = new GenericFrameBuffer<2, float>(width, height);
+		channel_DIRECT_SHADOW_MASK->Clear();
+	}
+	if (HasChannel(INDIRECT_SHADOW_MASK)) {
+		channel_INDIRECT_SHADOW_MASK = new GenericFrameBuffer<2, float>(width, height);
+		channel_INDIRECT_SHADOW_MASK->Clear();
 	}
 
 	// Initialize the stats
@@ -302,8 +309,10 @@ void Film::Reset() {
 		for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
 			channel_MATERIAL_ID_MASKs[i]->Clear();
 	}
-	if (HasChannel(DIRECT_SHADOW))
-		channel_DIRECT_SHADOW->Clear();
+	if (HasChannel(DIRECT_SHADOW_MASK))
+		channel_DIRECT_SHADOW_MASK->Clear();
+	if (HasChannel(INDIRECT_SHADOW_MASK))
+		channel_INDIRECT_SHADOW_MASK->Clear();
 
 	// convTest has to be reseted explicitely
 
@@ -498,11 +507,20 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
-	if (HasChannel(DIRECT_SHADOW) && film.HasChannel(DIRECT_SHADOW)) {
+	if (HasChannel(DIRECT_SHADOW_MASK) && film.HasChannel(DIRECT_SHADOW_MASK)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
-				const float *srcPixel = film.channel_DIRECT_SHADOW->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DIRECT_SHADOW->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				const float *srcPixel = film.channel_DIRECT_SHADOW_MASK->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_DIRECT_SHADOW_MASK->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_SHADOW_MASK) && film.HasChannel(INDIRECT_SHADOW_MASK)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_SHADOW_MASK->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_INDIRECT_SHADOW_MASK->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -662,8 +680,15 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			} else
 				return;
 			break;
-		case FilmOutputs::DIRECT_SHADOW:
-			if (HasChannel(DIRECT_SHADOW)) {
+		case FilmOutputs::DIRECT_SHADOW_MASK:
+			if (HasChannel(DIRECT_SHADOW_MASK)) {
+				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
+				bitCount = hdrImage ? 32 : 8;
+			} else
+				return;
+			break;
+		case FilmOutputs::INDIRECT_SHADOW_MASK:
+			if (HasChannel(INDIRECT_SHADOW_MASK)) {
 				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
 				bitCount = hdrImage ? 32 : 8;
 			} else
@@ -929,11 +954,11 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					}
 					break;
 				}
-				case FilmOutputs::DIRECT_SHADOW: {
+				case FilmOutputs::DIRECT_SHADOW_MASK: {
 					if (hdrImage) {
 						float *dst = (float *)bits;
 
-						const float *shadowData = channel_DIRECT_SHADOW->GetPixel(x, y);
+						const float *shadowData = channel_DIRECT_SHADOW_MASK->GetPixel(x, y);
 						if (shadowData[1] == 0.f)
 							dst[x] = 0.f;
 						else
@@ -941,7 +966,27 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					} else {
 						BYTE *dst = &bits[x];
 
-						const float *shadowData = channel_DIRECT_SHADOW->GetPixel(x, y);
+						const float *shadowData = channel_DIRECT_SHADOW_MASK->GetPixel(x, y);
+						if (shadowData[1] == 0.f)
+							*dst = 0;
+						else
+							*dst = (BYTE)((shadowData[0] / shadowData[1]) * 255.f + .5f);
+					}
+					break;
+				}
+				case FilmOutputs::INDIRECT_SHADOW_MASK: {
+					if (hdrImage) {
+						float *dst = (float *)bits;
+
+						const float *shadowData = channel_INDIRECT_SHADOW_MASK->GetPixel(x, y);
+						if (shadowData[1] == 0.f)
+							dst[x] = 0.f;
+						else
+							dst[x] = shadowData[0] / shadowData[1];
+					} else {
+						BYTE *dst = &bits[x];
+
+						const float *shadowData = channel_INDIRECT_SHADOW_MASK->GetPixel(x, y);
 						if (shadowData[1] == 0.f)
 							*dst = 0;
 						else
@@ -1221,11 +1266,19 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 	}
 
 	// Faster than HasChannel(DIRECT_SHADOW)
-	if (channel_DIRECT_SHADOW && sampleResult.HasChannel(DIRECT_SHADOW) && !isnan(sampleResult.directShadow) && !isinf(sampleResult.directShadow)) {
+	if (channel_DIRECT_SHADOW_MASK && sampleResult.HasChannel(DIRECT_SHADOW_MASK) && !isnan(sampleResult.directShadowMask) && !isinf(sampleResult.directShadowMask)) {
 		float pixel[2];
-		pixel[0] = weight * sampleResult.directShadow;
+		pixel[0] = weight * sampleResult.directShadowMask;
 		pixel[1] = weight;
-		channel_DIRECT_SHADOW->AddPixel(x, y, pixel);
+		channel_DIRECT_SHADOW_MASK->AddPixel(x, y, pixel);
+	}
+
+	// Faster than HasChannel(INDIRECT_SHADOW_MASK)
+	if (channel_INDIRECT_SHADOW_MASK && sampleResult.HasChannel(INDIRECT_SHADOW_MASK) && !isnan(sampleResult.indirectShadowMask) && !isinf(sampleResult.indirectShadowMask)) {
+		float pixel[2];
+		pixel[0] = weight * sampleResult.indirectShadowMask;
+		pixel[1] = weight;
+		channel_INDIRECT_SHADOW_MASK->AddPixel(x, y, pixel);
 	}
 }
 
