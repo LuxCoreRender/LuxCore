@@ -698,6 +698,7 @@ const bool CPUTileRenderEngine::NextTile(TileRepository::Tile **tile, const Film
 }
 
 void CPUTileRenderEngine::StartLockLess() {
+	film->Reset();
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 	printedRenderingTime = false;
 
