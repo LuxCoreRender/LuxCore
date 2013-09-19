@@ -31,13 +31,26 @@
 
 namespace slg {
 
+inline double RadicalInverse(u_int n, u_int base) {
+	double val = 0.;
+	double invBase = 1. / base, invBi = invBase;
+	while (n > 0) {
+		// Compute next digit of radical inverse
+		u_int d_i = (n % base);
+		val += d_i * invBi;
+		n /= base;
+		invBi *= invBase;
+	}
+	return val;
+}
+
 //------------------------------------------------------------------------------
 // OpenCL data types
 //------------------------------------------------------------------------------
 
 namespace ocl {
 #include "slg/sampler/sampler_types.cl"
-} 
+}
 
 //------------------------------------------------------------------------------
 // Sampler
