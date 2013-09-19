@@ -38,13 +38,13 @@ BiasPathCPURenderThread::BiasPathCPURenderThread(BiasPathCPURenderEngine *engine
 
 void BiasPathCPURenderThread::SampleGrid(RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const {
-	if (size == 1) {
-		*u0 = rndGen->floatValue();
-		*u1 = rndGen->floatValue();
-	} else {
+	*u0 = rndGen->floatValue();
+	*u1 = rndGen->floatValue();
+
+	if (size > 1) {
 		const float idim = 1.f / size;
-		*u0 = (ix + rndGen->floatValue()) * idim;
-		*u1 = (iy + rndGen->floatValue()) * idim;
+		*u0 = (ix + *u0) * idim;
+		*u1 = (iy + *u1) * idim;
 	}
 }
 
@@ -579,6 +579,10 @@ void BiasPathCPURenderThread::RenderFunc() {
 		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "
 		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 		//		"(" << tileWidth << ", " << tileHeight << ")");
+
+		//----------------------------------------------------------------------
+		// Render the tile
+		//----------------------------------------------------------------------
 
 		for (u_int y = 0; y < tileHeight && !interruptionRequested; ++y) {
 			for (u_int x = 0; x < tileWidth && !interruptionRequested; ++x) {
