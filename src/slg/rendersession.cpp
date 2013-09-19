@@ -247,6 +247,14 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR, fileName);
 			} else
 				throw std::runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
+		} else if (type == "MATERIAL_ID_MASK") {
+			const u_int materialID = cfg.GetInt("film.outputs." + outputName + ".id", 255);
+			Properties prop;
+			prop.SetString("id", ToString(materialID));
+
+			film->AddChannel(Film::MATERIAL_ID);
+			film->AddChannel(Film::MATERIAL_ID_MASK, &prop);
+			filmOutputs.Add(FilmOutputs::MATERIAL_ID_MASK, fileName, &prop);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}

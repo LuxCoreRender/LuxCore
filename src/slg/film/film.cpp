@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include <limits>
+#include <algorithm>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
@@ -27,6 +28,7 @@
 #include "slg/film/film.h"
 #include "luxrays/core/geometry/point.h"
 #include "slg/editaction.h"
+#include "luxrays/utils/properties.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -35,9 +37,14 @@ using namespace slg;
 // FilmOutput
 //------------------------------------------------------------------------------
 
-void FilmOutputs::Add(const FilmOutputType type, const std::string &fileName) {
+void FilmOutputs::Add(const FilmOutputType type, const std::string &fileName,
+		const luxrays::Properties *p) {
 	types.push_back(type);
 	fileNames.push_back(fileName);
+	if (p)
+		props.push_back(*p);
+	else
+		props.push_back(Properties());
 }
 
 //------------------------------------------------------------------------------
@@ -99,16 +106,23 @@ Film::~Film() {
 	delete channel_INDIRECT_DIFFUSE;
 	delete channel_INDIRECT_GLOSSY;
 	delete channel_INDIRECT_SPECULAR;
+	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
+		delete channel_MATERIAL_ID_MASKs[i];
 
 	delete filterLUTs;
 	delete filter;
 }
 
-void Film::AddChannel(const FilmChannelType type) {
+void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 	if (initialized)
 		throw std::runtime_error("it is possible to add a channel to a Film only before the initialization");
 
 	channels.insert(type);
+	if (type == MATERIAL_ID_MASK) {
+		const u_int id = prop->GetInt("id", 255);
+		if (std::count(maskMaterialIDs.begin(), maskMaterialIDs.end(), id) == 0)
+			maskMaterialIDs.push_back(id);
+	}
 }
 
 void Film::RemoveChannel(const FilmChannelType type) {
@@ -146,6 +160,9 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_INDIRECT_DIFFUSE;
 	delete channel_INDIRECT_GLOSSY;
 	delete channel_INDIRECT_SPECULAR;
+	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
+		delete channel_MATERIAL_ID_MASKs[i];
+	channel_MATERIAL_ID_MASKs.clear();
 
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -210,6 +227,13 @@ void Film::Init(const u_int w, const u_int h) {
 		channel_INDIRECT_SPECULAR = new GenericFrameBuffer<4, float>(width, height);
 		channel_INDIRECT_SPECULAR->Clear();
 	}
+	if (HasChannel(MATERIAL_ID_MASK)) {
+		for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
+			GenericFrameBuffer<2, float> *buf = new GenericFrameBuffer<2, float>(width, height);
+			buf->Clear();
+			channel_MATERIAL_ID_MASKs.push_back(buf);
+		}
+	}
 		
 	// Initialize the stats
 	statsTotalSampleCount = 0.0;
@@ -267,6 +291,10 @@ void Film::Reset() {
 		channel_INDIRECT_GLOSSY->Clear();
 	if (HasChannel(INDIRECT_SPECULAR))
 		channel_INDIRECT_SPECULAR->Clear();
+	if (HasChannel(MATERIAL_ID_MASK)) {
+		for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
+			channel_MATERIAL_ID_MASKs[i]->Clear();
+	}
 
 	// convTest has to be reseted explicitely
 
@@ -446,6 +474,21 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(MATERIAL_ID_MASK) && film.HasChannel(MATERIAL_ID_MASK)) {
+		for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i) {
+			for (u_int j = 0; j < film.maskMaterialIDs.size(); ++j) {
+				if (maskMaterialIDs[i] == film.maskMaterialIDs[j]) {
+					for (u_int y = 0; y < srcHeight; ++y) {
+						for (u_int x = 0; x < srcWidth; ++x) {
+							const float *srcPixel = film.channel_MATERIAL_ID_MASKs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+							channel_MATERIAL_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel as last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -459,10 +502,11 @@ void Film::AddFilm(const Film &film,
 
 void Film::Output(const FilmOutputs &filmOutputs) {
 	for (u_int i = 0; i < filmOutputs.GetCount(); ++i)
-		Output(filmOutputs.GetType(i), filmOutputs.GetFileName(i));
+		Output(filmOutputs.GetType(i), filmOutputs.GetFileName(i), &filmOutputs.GetProperties(i));
 }
 
-void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fileName) {
+void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
+		const Properties *props) {
 	// Image format
 	FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
 	if (fif == FIF_UNKNOWN)
@@ -474,6 +518,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 	// Image type and bit count
 	FREE_IMAGE_TYPE imageType;
 	u_int bitCount;
+	u_int maskMaterialIDsIndex = 0;
 	switch (type) {
 		case FilmOutputs::RGB:
 			if (!hdrImage)
@@ -576,6 +621,26 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			if (HasChannel(INDIRECT_SPECULAR) && hdrImage) {
 				imageType = FIT_RGBF;
 				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::MATERIAL_ID_MASK:
+			if (HasChannel(MATERIAL_ID_MASK) && props) {
+				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
+				bitCount = hdrImage ? 32 : 8;
+
+				// Look for the material mask ID index
+				const u_int id = props->GetInt("id", 255);
+				bool found = false;
+				for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
+					if (maskMaterialIDs[i] == id) {
+						maskMaterialIDsIndex = i;
+						found = true;
+						break;
+					}
+				}
+				if (!found)
+					return;
 			} else
 				return;
 			break;
@@ -816,6 +881,26 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 						dst[x].red = src[0] * iweight;
 						dst[x].green = src[1] * iweight;
 						dst[x].blue = src[2] * iweight;
+					}
+					break;
+				}
+				case FilmOutputs::MATERIAL_ID_MASK: {
+					if (hdrImage) {
+						float *dst = (float *)bits;
+
+						const float *maskData = channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetPixel(x, y);
+						if (maskData[1] == 0.f)
+							dst[x] = 0.f;
+						else
+							dst[x] = maskData[0] / maskData[1];
+					} else {
+						BYTE *dst = &bits[x];
+
+						const float *maskData = channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetPixel(x, y);
+						if (maskData[1] == 0.f)
+							*dst = 0;
+						else
+							*dst = (BYTE)((maskData[0] / maskData[1]) * 255.f + .5f);
 					}
 					break;
 				}
@@ -1078,6 +1163,15 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		pixel[2] = sampleResult.indirectSpecular.b * weight;
 		pixel[3] = weight;
 		channel_INDIRECT_SPECULAR->AddPixel(x, y, pixel);
+	}
+
+	if (sampleResult.HasChannel(MATERIAL_ID)) {
+		for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
+			float pixel[2];
+			pixel[0] = (sampleResult.materialID == maskMaterialIDs[i]) ? weight : 0.f;
+			pixel[1] = weight;
+			channel_MATERIAL_ID_MASKs[i]->AddPixel(x, y, pixel);
+		}
 	}
 }
 
