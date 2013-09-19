@@ -60,7 +60,7 @@ public:
 		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
 		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
 		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
-		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW
+		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -107,7 +107,8 @@ public:
 		INDIRECT_GLOSSY = 1<<13,
 		INDIRECT_SPECULAR = 1<<14,
 		MATERIAL_ID_MASK = 1<<15,
-		DIRECT_SHADOW = 1<<16
+		DIRECT_SHADOW_MASK = 1<<16,
+		INDIRECT_SHADOW_MASK = 1<<17
 	} FilmChannelType;
 
 	Film(const u_int w, const u_int h);
@@ -246,7 +247,8 @@ private:
 	GenericFrameBuffer<4, float> *channel_INDIRECT_SPECULAR;
 	std::vector<GenericFrameBuffer<2, float> *> channel_MATERIAL_ID_MASKs;
 	std::vector<u_int> maskMaterialIDs;
-	GenericFrameBuffer<2, float> *channel_DIRECT_SHADOW;
+	GenericFrameBuffer<2, float> *channel_DIRECT_SHADOW_MASK;
+	GenericFrameBuffer<2, float> *channel_INDIRECT_SHADOW_MASK;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
@@ -286,7 +288,7 @@ public:
 	luxrays::Spectrum directDiffuse, directGlossy;
 	luxrays::Spectrum emission;
 	luxrays::Spectrum indirectDiffuse, indirectGlossy, indirectSpecular;
-	float directShadow;
+	float directShadowMask, indirectShadowMask;
 
 private:
 	u_int channels;
