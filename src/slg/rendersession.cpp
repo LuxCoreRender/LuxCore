@@ -261,6 +261,12 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 		} else if (type == "INDIRECT_SHADOW_MASK") {
 			film->AddChannel(Film::INDIRECT_SHADOW_MASK);
 			filmOutputs.Add(FilmOutputs::INDIRECT_SHADOW_MASK, fileName);
+		} else if (type == "RADIANCE_GROUP") {
+			const u_int lightID = cfg.GetInt("film.outputs." + outputName + ".id", 0);
+			Properties prop;
+			prop.SetString("id", ToString(lightID));
+
+			filmOutputs.Add(FilmOutputs::RADIANCE_GROUP, fileName, &prop);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}

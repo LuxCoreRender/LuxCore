@@ -62,6 +62,7 @@ public:
 	bool IsVisibleIndirectSpecular() const { return material->IsVisibleIndirectSpecular(); }
 	int GetSamples() const { return material->GetSamples(); }
 	u_int GetMaterialID() const { return material->GetID(); }
+	u_int GetLightID() const { return material->GetLightID(); }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 

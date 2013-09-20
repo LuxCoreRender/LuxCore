@@ -173,13 +173,25 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	const unsigned int pixelCount = film->GetWidth() * film->GetHeight();
 	float newLuminance = 0.f;
 	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
-		const float luminance =
-			(sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED) ? sr->radiancePerPixelNormalized.Y() : 0.f) +
-			(sr->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED) ? sr->radiancePerScreenNormalized.Y() : 0.f);
-		assert (!isnan(luminance) && !isinf(luminance));
+		if (sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
+			for (u_int i = 0; i < sr->radiancePerPixelNormalized.size(); ++i) {
+				const float luminance = sr->radiancePerPixelNormalized[i].Y();
+				assert (!isnan(luminance) && !isinf(luminance));
 
-		if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
-			newLuminance += luminance;
+				if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
+					newLuminance += luminance;
+			}
+		}
+
+		if (sr->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
+			for (u_int i = 0; i < sr->radiancePerScreenNormalized.size(); ++i) {
+				const float luminance = sr->radiancePerScreenNormalized[i].Y();
+				assert (!isnan(luminance) && !isinf(luminance));
+
+				if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
+					newLuminance += luminance;
+			}
+		}
 	}
 
 	if (isLargeMutation) {

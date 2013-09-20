@@ -52,6 +52,8 @@ Scene::Scene() {
 	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
 	lightsDistribution = NULL;
+
+	lightGroupCount = 1;
 }
 
 Scene::Scene(const std::string &fileName, const float imageScale) {
@@ -61,6 +63,8 @@ Scene::Scene(const std::string &fileName, const float imageScale) {
 	sunLight = NULL;
 	dataSet = NULL;
 	lightsDistribution = NULL;
+
+	lightGroupCount = 1;
 
 	imgMapCache.SetImageResize(imageScale);
 
@@ -115,6 +119,8 @@ Scene::Scene(const std::string &fileName, const float imageScale) {
 	if (!envLight && !sunLight && (triLightDefs.size() == 0))
 		throw std::runtime_error("The scene doesn't include any light source");
 
+	UpdateLightGroupCount();
+
 	dataSet = NULL;
 	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
@@ -132,6 +138,17 @@ Scene::~Scene() {
 	delete lightsDistribution;
 }
 
+void  Scene::UpdateLightGroupCount() {
+	// Update the count of light groups
+	if (envLight)
+		lightGroupCount = Max(lightGroupCount, envLight->GetID() + 1);
+	if (sunLight)
+		lightGroupCount = Max(lightGroupCount, sunLight->GetID() + 1);
+	BOOST_FOREACH(TriangleLight *tl, triLightDefs) {
+		lightGroupCount = Max(lightGroupCount, tl->GetID() + 1);
+	}
+}
+
 void Scene::Preprocess(Context *ctx) {
 	// Rebuild the data set
 	delete dataSet;
@@ -145,6 +162,9 @@ void Scene::Preprocess(Context *ctx) {
 		dataSet->Add(*obj);
 
 	dataSet->Preprocess();
+
+	// Update the count of light groups
+	UpdateLightGroupCount();
 
 	// Rebuild the data to power based light sampling
 	const float worldRadius = lightWorldRadiusScale * dataSet->GetBSphere().rad * 1.01f;
@@ -637,6 +657,7 @@ void Scene::AddInfiniteLight(const Properties &props) {
 		il->GetUVMapping()->uDelta = vf.at(0);
 		il->GetUVMapping()->vDelta = vf.at(1);
 		il->SetSamples(props.GetInt("scene.infinitelight.samples", -1));
+		il->SetID(props.GetInt("scene.infinitelight.id", 0));
 		il->Preprocess();
 
 		envLight = il;
@@ -673,6 +694,7 @@ void Scene::AddSkyLight(const Properties &props) {
 		SkyLight *sl = new SkyLight(light2World, turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->SetSamples(props.GetInt("scene.skylight.samples", -1));
+		sl->SetID(props.GetInt("scene.skylight.id", 0));
 		sl->Preprocess();
 
 		envLight = sl;
@@ -705,6 +727,7 @@ void Scene::AddSunLight(const Properties &props) {
 		SunLight *sl = new SunLight(light2World, turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->SetSamples(props.GetInt("scene.sunlight.samples", -1));
+		sl->SetID(props.GetInt("scene.sunlight.id", 0));
 		sl->Preprocess();
 
 		sunLight = sl;
@@ -969,8 +992,6 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 	const std::string propName = "scene.materials." + matName;
 	const std::string matType = GetStringParameters(props, propName + ".type", 1, "matte").at(0);
 
-	const u_int matID = props.GetInt(propName + ".id", defaultMatID);
-
 	Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
 		GetTexture(props.GetString(propName + ".emission", "0.0 0.0 0.0")) : NULL;
 	// Required to remove light source while editing the scene
@@ -988,36 +1009,36 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 	if (matType == "matte") {
 		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.75 0.75 0.75"));
 
-		mat = new MatteMaterial(matID, emissionTex, bumpTex, normalTex, kd);
+		mat = new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
 	} else if (matType == "mirror") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		
-		mat = new MirrorMaterial(matID, emissionTex, bumpTex, normalTex, kr);
+		mat = new MirrorMaterial(emissionTex, bumpTex, normalTex, kr);
 	} else if (matType == "glass") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
 		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
 		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
 
-		mat = new GlassMaterial(matID, emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
+		mat = new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "metal") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *exp = GetTexture(props.GetString(propName + ".exp", "10.0"));
 
-		mat = new MetalMaterial(matID, emissionTex, bumpTex, normalTex, kr, exp);
+		mat = new MetalMaterial(emissionTex, bumpTex, normalTex, kr, exp);
 	} else if (matType == "archglass") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
 		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
 		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
 
-		mat = new ArchGlassMaterial(matID, emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
+		mat = new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "mix") {
 		Material *matA = matDefs.GetMaterial(props.GetString(propName + ".material1", "mat1"));
 		Material *matB = matDefs.GetMaterial(props.GetString(propName + ".material2", "mat2"));
 		Texture *mix = GetTexture(props.GetString(propName + ".amount", "0.5"));
 
-		MixMaterial *mixMat = new MixMaterial(matID, bumpTex, normalTex, matA, matB, mix);
+		MixMaterial *mixMat = new MixMaterial(bumpTex, normalTex, matA, matB, mix);
 
 		// Check if there is a loop in Mix material definition
 		// (Note: this can not really happen at the moment because forward
@@ -1027,12 +1048,12 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 
 		mat = mixMat;
 	} else if (matType == "null") {
-		mat = new NullMaterial(matID);
+		mat = new NullMaterial();
 	} else if (matType == "mattetranslucent") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "0.5 0.5 0.5"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "0.5 0.5 0.5"));
 
-		mat = new MatteTranslucentMaterial(matID, emissionTex, bumpTex, normalTex, kr, kt);
+		mat = new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
 	} else if (matType == "glossy2") {
 		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.5 0.5 0.5"));
 		Texture *ks = GetTexture(props.GetString(propName + ".ks", "0.5 0.5 0.5"));
@@ -1043,7 +1064,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 		Texture *index = GetTexture(props.GetString(propName + ".index", "0.0"));
 		const bool multibounce = props.GetBoolean(propName + ".multibounce", false);
 
-		mat = new Glossy2Material(matID, emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
+		mat = new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
 	} else if (matType == "metal2") {
 		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
 		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
@@ -1074,7 +1095,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 			k = GetTexture(props.GetString(propName + ".k", "0.5 0.5 0.5"));
 		}
 
-		mat = new Metal2Material(matID, emissionTex, bumpTex, normalTex, eta, k, nu, nv);
+		mat = new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
 	} else if (matType == "roughglass") {
 		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
 		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
@@ -1083,9 +1104,12 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
 		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
 
-		mat = new RoughGlassMaterial(matID, emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
+		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
 	} else
 		throw std::runtime_error("Unknown material type: " + matType);
+
+	mat->SetID(props.GetInt(propName + ".id", defaultMatID));
+	mat->SetLightID(props.GetInt(propName + ".emission.id", 0));
 
 	mat->SetSamples(Max(-1, props.GetInt(propName + ".samples", -1)));
 	mat->SetEmittedSamples(Max(-1, props.GetInt(propName + ".emission.samples", -1)));

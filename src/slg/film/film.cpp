@@ -56,9 +56,8 @@ Film::Film(const u_int w, const u_int h) {
 
 	width = w;
 	height = h;
+	radianceGroupCount = 1;
 
-	channel_RADIANCE_PER_PIXEL_NORMALIZED = NULL;
-	channel_RADIANCE_PER_SCREEN_NORMALIZED = NULL;
 	channel_ALPHA = NULL;
 	channel_RGB_TONEMAPPED = NULL;
 	channel_DEPTH = NULL;
@@ -93,8 +92,10 @@ Film::~Film() {
 
 	delete convTest;
 
-	delete channel_RADIANCE_PER_PIXEL_NORMALIZED;
-	delete channel_RADIANCE_PER_SCREEN_NORMALIZED;
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
+		delete channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i];
+	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
+		delete channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i];
 	delete channel_ALPHA;
 	delete channel_RGB_TONEMAPPED;
 	delete channel_DEPTH;
@@ -122,10 +123,15 @@ void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 		throw std::runtime_error("it is possible to add a channel to a Film only before the initialization");
 
 	channels.insert(type);
-	if (type == MATERIAL_ID_MASK) {
-		const u_int id = prop->GetInt("id", 255);
-		if (std::count(maskMaterialIDs.begin(), maskMaterialIDs.end(), id) == 0)
-			maskMaterialIDs.push_back(id);
+	switch (type) {
+		case MATERIAL_ID_MASK: {
+			const u_int id = prop->GetInt("id", 255);
+			if (std::count(maskMaterialIDs.begin(), maskMaterialIDs.end(), id) == 0)
+				maskMaterialIDs.push_back(id);
+			break;
+		}
+		default:
+			break;
 	}
 }
 
@@ -149,8 +155,10 @@ void Film::Init(const u_int w, const u_int h) {
 	convTest = NULL;
 
 	// Delete all already allocated channels
-	delete channel_RADIANCE_PER_PIXEL_NORMALIZED;
-	delete channel_RADIANCE_PER_SCREEN_NORMALIZED;
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
+		delete channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i];
+	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
+		delete channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i];
 	delete channel_ALPHA;
 	delete channel_RGB_TONEMAPPED;
 	delete channel_DEPTH;
@@ -172,12 +180,18 @@ void Film::Init(const u_int w, const u_int h) {
 
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		channel_RADIANCE_PER_PIXEL_NORMALIZED = new GenericFrameBuffer<4, float>(width, height);
-		channel_RADIANCE_PER_PIXEL_NORMALIZED->Clear();
+		channel_RADIANCE_PER_PIXEL_NORMALIZEDs.resize(radianceGroupCount, NULL);
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = new GenericFrameBuffer<4, float>(width, height);
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
+		}
 	}
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		channel_RADIANCE_PER_SCREEN_NORMALIZED = new GenericFrameBuffer<4, float>(width, height);
-		channel_RADIANCE_PER_SCREEN_NORMALIZED->Clear();
+		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount, NULL);
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i] = new GenericFrameBuffer<4, float>(width, height);
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
+		}
 	}
 	if (HasChannel(ALPHA)) {
 		channel_ALPHA = new GenericFrameBuffer<2, float>(width, height);
@@ -277,10 +291,14 @@ void Film::SetFilter(Filter *flt) {
 }
 
 void Film::Reset() {
-	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED))
-		channel_RADIANCE_PER_PIXEL_NORMALIZED->Clear();
-	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED))
-		channel_RADIANCE_PER_SCREEN_NORMALIZED->Clear();
+	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+		for (u_int i = 0; i < radianceGroupCount; ++i)
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
+	}
+	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
+		for (u_int i = 0; i < radianceGroupCount; ++i)
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
+	}
 	if (HasChannel(ALPHA))
 		channel_ALPHA->Clear();
 	if (HasChannel(DEPTH))
@@ -328,19 +346,23 @@ void Film::AddFilm(const Film &film,
 	statsTotalSampleCount += film.statsTotalSampleCount;
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && film.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int y = 0; y < srcHeight; ++y) {
-			for (u_int x = 0; x < srcWidth; ++x) {
-				const float *srcPixel = film.channel_RADIANCE_PER_PIXEL_NORMALIZED->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_RADIANCE_PER_PIXEL_NORMALIZED->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+		for (u_int i = 0; i < Min(radianceGroupCount, film.radianceGroupCount); ++i) {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
 			}
 		}
 	}
 
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) && film.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		for (u_int y = 0; y < srcHeight; ++y) {
-			for (u_int x = 0; x < srcWidth; ++x) {
-				const float *srcPixel = film.channel_RADIANCE_PER_SCREEN_NORMALIZED->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_RADIANCE_PER_SCREEN_NORMALIZED->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+		for (u_int i = 0; i < Min(radianceGroupCount, film.radianceGroupCount); ++i) {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
 			}
 		}
 	}
@@ -555,6 +577,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 	FREE_IMAGE_TYPE imageType;
 	u_int bitCount;
 	u_int maskMaterialIDsIndex = 0;
+	u_int radianceGroupIndex = 0;
 	switch (type) {
 		case FilmOutputs::RGB:
 			if (!hdrImage)
@@ -694,12 +717,23 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			} else
 				return;
 			break;
+		case FilmOutputs::RADIANCE_GROUP:
+			if (props && hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+
+				radianceGroupIndex = props->GetInt("id", 0);
+				if (radianceGroupIndex >= radianceGroupCount)
+					return;
+			} else
+				return;
+			break;
 		default:
 			throw std::runtime_error("Unknown film output type");
 	}
 
 	if ((type == FilmOutputs::RGB) || (type == FilmOutputs::RGBA)) {
-		// In order to merge the 2 sample buffers
+		// In order to merge the all radiance buffers
 		UpdateScreenBufferImpl(TONEMAP_NONE);
 	}
 
@@ -772,7 +806,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 						else
 							dst[x].alpha = alphaData[0] / alphaData[1];
 					} else {
-						BYTE *dst = &bits[x * 3];
+						BYTE *dst = &bits[x * 4];
 						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
 						dst[FI_RGBA_RED] = (BYTE)(src[0] * 255.f + .5f);
 						dst[FI_RGBA_GREEN] = (BYTE)(src[1] * 255.f + .5f);
@@ -994,6 +1028,29 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					}
 					break;
 				}
+				case FilmOutputs::RADIANCE_GROUP: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					Spectrum c;
+					if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
+						const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
+
+						const float weight = src[3];
+						if (weight > 0.f)
+							c += Spectrum(src) / weight;
+					}
+					if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+						const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
+						
+						const float weight = src[3];
+						if (weight > 0.f)
+							c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
+					}
+
+					dst[x].red = c.r;
+					dst[x].green = c.g;
+					dst[x].blue = c.b;
+					break;
+				}
 				default:
 					throw std::runtime_error("Unknown film output type");
 			}
@@ -1024,13 +1081,17 @@ void Film::MergeSampleBuffers(Spectrum *p, std::vector<bool> &frameBufferMask) c
 	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < pixelCount; ++i) {
-			const float *sp = channel_RADIANCE_PER_PIXEL_NORMALIZED->GetPixel(i);
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			for (u_int j = 0; j < pixelCount; ++j) {
+				const float *sp = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(j);
 
-			const float weight = sp[3];
-			if (weight > 0.f) {
-				p[i] = Spectrum(sp) / weight;
-				frameBufferMask[i] = true;
+				if (sp[3] > 0.f) {
+					if (frameBufferMask[j])
+						p[j] += Spectrum(sp) / sp[3];
+					else
+						p[j] = Spectrum(sp) / sp[3];
+					frameBufferMask[j] = true;
+				}
 			}
 		}
 	}
@@ -1038,15 +1099,17 @@ void Film::MergeSampleBuffers(Spectrum *p, std::vector<bool> &frameBufferMask) c
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
 		const float factor = pixelCount / statsTotalSampleCount;
 
-		for (u_int i = 0; i < pixelCount; ++i) {
-			const float *sp = channel_RADIANCE_PER_SCREEN_NORMALIZED->GetPixel(i);
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			for (u_int j = 0; j < pixelCount; ++j) {
+				const float *sp = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j);
 
-			if (sp[3] > 0.f) {
-				if (frameBufferMask[i])
-					p[i] += Spectrum(sp) * factor;
-				else
-					p[i] = Spectrum(sp) * factor;
-				frameBufferMask[i] = true;
+				if (sp[3] > 0.f) {
+					if (frameBufferMask[j])
+						p[j] += Spectrum(sp) * factor;
+					else
+						p[j] = Spectrum(sp) * factor;
+					frameBufferMask[j] = true;
+				}
 			}
 		}
 	}
@@ -1159,26 +1222,33 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 
 void Film::AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight)  {
-	// Faster than HasChannel(channel_RADIANCE_PER_PIXEL_NORMALIZED)
-	if (channel_RADIANCE_PER_PIXEL_NORMALIZED && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) &&
-			!sampleResult.radiancePerPixelNormalized.IsNaN() && !sampleResult.radiancePerPixelNormalized.IsInf()) {
-		float pixel[4];
-		pixel[0] = sampleResult.radiancePerPixelNormalized.r * weight;
-		pixel[1] = sampleResult.radiancePerPixelNormalized.g * weight;
-		pixel[2] = sampleResult.radiancePerPixelNormalized.b * weight;
-		pixel[3] = weight;
-		channel_RADIANCE_PER_PIXEL_NORMALIZED->AddPixel(x, y, pixel);
+	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+		for (u_int i = 0; i < Min(sampleResult.radiancePerPixelNormalized.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+			if (sampleResult.radiancePerPixelNormalized[i].IsNaN() || sampleResult.radiancePerPixelNormalized[i].IsInf())
+				continue;
+
+			float pixel[4];
+			pixel[0] = sampleResult.radiancePerPixelNormalized[i].r * weight;
+			pixel[1] = sampleResult.radiancePerPixelNormalized[i].g * weight;
+			pixel[2] = sampleResult.radiancePerPixelNormalized[i].b * weight;
+			pixel[3] = weight;
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddPixel(x, y, pixel);
+		}
 	}
 
 	// Faster than HasChannel(channel_RADIANCE_PER_SCREEN_NORMALIZED)
-	if (channel_RADIANCE_PER_SCREEN_NORMALIZED && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) &&
-			!sampleResult.radiancePerScreenNormalized.IsNaN() && !sampleResult.radiancePerScreenNormalized.IsInf()) {
-		float pixel[4];
-		pixel[0] = sampleResult.radiancePerScreenNormalized.r * weight;
-		pixel[1] = sampleResult.radiancePerScreenNormalized.g * weight;
-		pixel[2] = sampleResult.radiancePerScreenNormalized.b * weight;
-		pixel[3] = weight;
-		channel_RADIANCE_PER_SCREEN_NORMALIZED->AddPixel(x, y, pixel);
+	if ((channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
+		for (u_int i = 0; i < Min(sampleResult.radiancePerScreenNormalized.size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
+			if (sampleResult.radiancePerScreenNormalized[i].IsNaN() || sampleResult.radiancePerScreenNormalized[i].IsInf())
+				continue;
+
+			float pixel[4];
+			pixel[0] = sampleResult.radiancePerScreenNormalized[i].r * weight;
+			pixel[1] = sampleResult.radiancePerScreenNormalized[i].g * weight;
+			pixel[2] = sampleResult.radiancePerScreenNormalized[i].b * weight;
+			pixel[3] = weight;
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddPixel(x, y, pixel);
+		}
 	}
 
 	// Faster than HasChannel(ALPHA)

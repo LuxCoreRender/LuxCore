@@ -635,7 +635,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 	vector<SampleResult> validSampleResults;
 
 	// Elaborate the RayHit results for each eye paths
-	SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
+	SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 	u_int currentLightSampleResultsIndex = 0;
 	for (u_int eyePathIndex = 0; eyePathIndex < renderEngine->eyePathCount; ++eyePathIndex) {
 		// For each eye path, elaborate the RayHit results for eye to light path vertex connections
@@ -645,7 +645,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 			thread->PopRay(&ray, &rayHit);
 
 			if (ValidResult(thread, ray, rayHit, lightSampleValue[currentLightSampleResultsIndex],
-					&lightSampleResults[currentLightSampleResultsIndex].radiancePerScreenNormalized))
+					&lightSampleResults[currentLightSampleResultsIndex].radiancePerScreenNormalized[0]))
 				validSampleResults.push_back(lightSampleResults[currentLightSampleResultsIndex]);
 
 			++currentLightSampleResultsIndex;
@@ -653,7 +653,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 
 		eyeSampleResult.filmX = eyeSampleResults[eyePathIndex].filmX;
 		eyeSampleResult.filmY = eyeSampleResults[eyePathIndex].filmY;
-		eyeSampleResult.radiancePerPixelNormalized = eyeSampleResults[eyePathIndex].radiance;
+		eyeSampleResult.radiancePerPixelNormalized[0] = eyeSampleResults[eyePathIndex].radiance;
 		eyeSampleResult.alpha = eyeSampleResults[eyePathIndex].alpha;
 		for (u_int i = 0; i < eyeSampleResults[eyePathIndex].sampleRadiance.size(); ++i) {
 			const Ray *ray;
@@ -662,7 +662,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 
 			if (ValidResult(thread, ray, rayHit, eyeSampleResults[eyePathIndex].sampleValue[i],
 					&eyeSampleResults[eyePathIndex].sampleRadiance[i]))
-				eyeSampleResult.radiancePerPixelNormalized += eyeSampleResults[eyePathIndex].sampleRadiance[i];
+				eyeSampleResult.radiancePerPixelNormalized[0] += eyeSampleResults[eyePathIndex].sampleRadiance[i];
 		}
 		validSampleResults.push_back(eyeSampleResult);
 	}

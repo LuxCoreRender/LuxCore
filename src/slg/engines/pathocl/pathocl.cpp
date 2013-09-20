@@ -282,21 +282,21 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
-	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
+	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 	for (u_int y = 0; y < imgHeight; ++y) {
 		u_int pGPU = 1 + (y + 1) * (imgWidth + 2);
 		sampleResult.filmY = y - .5f;
 
 		for (u_int x = 0; x < imgWidth; ++x) {
 			sampleResult.filmX = x - .5f;
-			sampleResult.radiancePerPixelNormalized = Spectrum();
+			sampleResult.radiancePerPixelNormalized[0] = Spectrum();
 			sampleResult.alpha = 0.0f;
 			float count = 0.f;
 			for (size_t i = 0; i < renderThreads.size(); ++i) {
 				if (renderThreads[i]->frameBuffer) {
-					sampleResult.radiancePerPixelNormalized.r += renderThreads[i]->frameBuffer[pGPU].c.r;
-					sampleResult.radiancePerPixelNormalized.g += renderThreads[i]->frameBuffer[pGPU].c.g;
-					sampleResult.radiancePerPixelNormalized.b += renderThreads[i]->frameBuffer[pGPU].c.b;
+					sampleResult.radiancePerPixelNormalized[0].r += renderThreads[i]->frameBuffer[pGPU].c.r;
+					sampleResult.radiancePerPixelNormalized[0].g += renderThreads[i]->frameBuffer[pGPU].c.g;
+					sampleResult.radiancePerPixelNormalized[0].b += renderThreads[i]->frameBuffer[pGPU].c.b;
 					count += renderThreads[i]->frameBuffer[pGPU].count;
 				}
 
@@ -304,8 +304,8 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 					sampleResult.alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
 			}
 
-			if ((count > 0) && !sampleResult.radiancePerPixelNormalized.IsNaN()) {
-				sampleResult.radiancePerPixelNormalized /= count;
+			if ((count > 0) && !sampleResult.radiancePerPixelNormalized[0].IsNaN()) {
+				sampleResult.radiancePerPixelNormalized[0] /= count;
 				sampleResult.alpha = isnan(sampleResult.alpha) ? 0.f : sampleResult.alpha / count;
 
 				film->AddSampleCount(1.f);
