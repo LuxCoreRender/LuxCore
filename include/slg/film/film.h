@@ -60,7 +60,8 @@ public:
 		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
 		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
 		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
-		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK
+		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
+		RADIANCE_GROUP
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -119,6 +120,9 @@ public:
 		const luxrays::Properties *prop = NULL);
 	// This one must be called before Init()
 	void RemoveChannel(const FilmChannelType type);
+	// This one must be called before Init()
+	void SetRadianceGroupCount(const u_int count) { radianceGroupCount = count; }
+	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
 	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
 
 	void Init() { Init(width, height); }
@@ -148,6 +152,7 @@ public:
 	void CopyDynamicSettings(const Film &film) {
 		channels = film.channels;
 		maskMaterialIDs = film.maskMaterialIDs;
+		radianceGroupCount = film.radianceGroupCount;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetToneMapParams(*(film.GetToneMapParams()));
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
@@ -229,9 +234,9 @@ private:
 		const SampleResult &sampleResult, const float weight);
 
 	std::set<FilmChannelType> channels;
-	u_int width, height, pixelCount;
-	GenericFrameBuffer<4, float> *channel_RADIANCE_PER_PIXEL_NORMALIZED;
-	GenericFrameBuffer<4, float> *channel_RADIANCE_PER_SCREEN_NORMALIZED;
+	u_int width, height, pixelCount, radianceGroupCount;
+	std::vector<GenericFrameBuffer<4, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
+	std::vector<GenericFrameBuffer<4, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
 	GenericFrameBuffer<2, float> *channel_ALPHA;
 	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
 	GenericFrameBuffer<1, float> *channel_DEPTH;
@@ -272,14 +277,22 @@ private:
 class SampleResult {
 public:
 	SampleResult() { }
-	SampleResult(const u_int channelTypes) { channels = channelTypes; }
+	SampleResult(const u_int channelTypes, const u_int radianceGroupCount) {
+		Init(channelTypes, radianceGroupCount);
+	}
 	~SampleResult() { }
 
-	void Init(const u_int channelTypes) { channels = channelTypes; };
+	void Init(const u_int channelTypes, const u_int radianceGroupCount) {
+		channels = channelTypes;
+		if (channels | Film::RADIANCE_PER_PIXEL_NORMALIZED)
+			radiancePerPixelNormalized.resize(radianceGroupCount);
+		if (channels | Film::RADIANCE_PER_SCREEN_NORMALIZED)
+			radiancePerScreenNormalized.resize(radianceGroupCount);
+	}
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type); }
 
 	float filmX, filmY;
-	luxrays::Spectrum radiancePerPixelNormalized, radiancePerScreenNormalized;
+	std::vector<luxrays::Spectrum> radiancePerPixelNormalized, radiancePerScreenNormalized;
 	float alpha, depth;
 	luxrays::Point position;
 	luxrays::Normal geometryNormal, shadingNormal;
@@ -301,10 +314,10 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
 
-	sampleResults[size].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
+	sampleResults[size].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 	sampleResults[size].filmX = filmX;
 	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiancePerPixelNormalized = radiancePPN;
+	sampleResults[size].radiancePerPixelNormalized[0] = radiancePPN;
 	sampleResults[size].alpha = alpha;
 }
 
@@ -314,10 +327,10 @@ inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
 
-	sampleResults[size].Init(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+	sampleResults[size].Init(Film::RADIANCE_PER_SCREEN_NORMALIZED, 1);
 	sampleResults[size].filmX = filmX;
 	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiancePerScreenNormalized = radiancePSN;
+	sampleResults[size].radiancePerScreenNormalized[0] = radiancePSN;
 }
 
 }

@@ -104,7 +104,7 @@ void BiDirCPURenderThread::ConnectVertices(
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
-				eyeSampleResult->radiancePerPixelNormalized += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
+				eyeSampleResult->radiancePerPixelNormalized[0] += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
 						connectionThroughput * lightBsdfEval * lightVertex.throughput;
 			}
 		}
@@ -458,7 +458,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		PathVertexVM eyeVertex;
-		SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
+		SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 		eyeSampleResult.alpha = 1.f;
 
 		Ray eyeRay;
@@ -492,7 +492,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 				eyeVertex.throughput *= connectionThroughput;
 
-				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
+				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 				if (eyeVertex.depth == 1)
 					eyeSampleResult.alpha = 0.f;
@@ -510,7 +510,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			// Check if it is a light source
 			if (eyeVertex.bsdf.IsLightSource()) {
-				DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
+				DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 				// SLG light sources are like black bodies
 				break;
@@ -527,7 +527,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
+					eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 			//------------------------------------------------------------------
 			// Connect vertex path ray with all light path vertices

@@ -63,7 +63,7 @@ InfiniteLight::~InfiniteLight() {
 	delete imageMapDistribution;
 }
 
-const float InfiniteLight::GetPower(const Scene &scene) const {
+float InfiniteLight::GetPower(const Scene &scene) const {
 	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 
 	return gain.Y() * (4.f * M_PI * M_PI * worldRadius * worldRadius) *
@@ -225,7 +225,7 @@ SkyLight::SkyLight(const luxrays::Transform &l2w, float turb,
 	sunDir = Normalize(lightToWorld * sd);
 }
 
-const float SkyLight::GetPower(const Scene &scene) const {
+float SkyLight::GetPower(const Scene &scene) const {
 	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 	
 	const u_int steps = 100;
@@ -418,14 +418,15 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 //------------------------------------------------------------------------------
 
 SunLight::SunLight(const luxrays::Transform &l2w,
-		float turb, float size,	const Vector &sd) : lightToWorld(l2w), samples(-1) {
+		float turb, float size,	const Vector &sd) :
+		id(0), lightToWorld(l2w), samples(-1) {
 	turbidity = turb;
 	sunDir = Normalize(lightToWorld * sd);
 	gain = Spectrum(1.0f, 1.0f, 1.0f);
 	relSize = size;
 }
 
-const float SunLight::GetPower(const Scene &scene) const {
+float SunLight::GetPower(const Scene &scene) const {
 	const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad * 1.01f;
 
 	return sunColor.Y() * (M_PI * worldRadius * worldRadius) * 2.f * M_PI * sin2ThetaMax / (relSize * relSize);
@@ -610,7 +611,7 @@ TriangleLight::TriangleLight(const Material *mat, const ExtMesh *m,
 	Init();
 }
 
-const float TriangleLight::GetPower(const Scene &scene) const {
+float TriangleLight::GetPower(const Scene &scene) const {
 	return area * M_PI * lightMaterial->GetEmittedRadianceY();
 }
 

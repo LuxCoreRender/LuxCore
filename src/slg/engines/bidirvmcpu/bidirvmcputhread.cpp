@@ -124,7 +124,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			const vector<PathVertexVM> &lightPathVertices = lightPathsVertices[samplerIndex];
 
 			PathVertexVM eyeVertex;
-			SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
+			SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 			eyeSampleResult.alpha = 1.f;
 
 			Ray eyeRay;
@@ -158,7 +158,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 					eyeVertex.throughput *= connectionThroughput;
 
-					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
+					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 					if (eyeVertex.depth == 1)
 						eyeSampleResult.alpha = 0.f;
@@ -176,7 +176,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 				// Check if it is a light source
 				if (eyeVertex.bsdf.IsLightSource())
-					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
+					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 				// Note: pass-through check is done inside SceneIntersect()
 
@@ -189,7 +189,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						sampler->GetSample(sampleOffset + 3),
 						sampler->GetSample(sampleOffset + 4),
 						sampler->GetSample(sampleOffset + 5),
-						eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
+						eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 				if (!eyeVertex.bsdf.IsDelta()) {
 					//----------------------------------------------------------
@@ -205,7 +205,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					// Vertex Merging step
 					//----------------------------------------------------------
 
-					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized);
+					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 				}
 
 				//--------------------------------------------------------------

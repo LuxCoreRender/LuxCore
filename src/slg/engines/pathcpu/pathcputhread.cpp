@@ -178,7 +178,7 @@ void PathCPURenderThread::RenderFunc() {
 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA);
+	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 
 	while (!boost::this_thread::interruption_requested()) {
 		float alpha = 1.f;
@@ -268,7 +268,7 @@ void PathCPURenderThread::RenderFunc() {
 		assert (!radiance.IsNaN() && !radiance.IsInf());
 		assert (!isnan(alpha) && !isinf(alpha));
 
-		sampleResult.radiancePerPixelNormalized = radiance;
+		sampleResult.radiancePerPixelNormalized[0] = radiance;
 		sampleResult.alpha = alpha;
 		sampler->NextSample(sampleResults);
 

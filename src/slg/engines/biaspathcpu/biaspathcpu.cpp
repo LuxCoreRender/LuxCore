@@ -33,6 +33,7 @@ BiasPathCPURenderEngine::BiasPathCPURenderEngine(RenderConfig *rcfg, Film *flm, 
 		CPUTileRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
 	film->Init();
 }
 

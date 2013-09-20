@@ -56,13 +56,16 @@ typedef enum {
 
 class Material {
 public:
-	Material(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal) :
-		id(matID), samples(-1), emittedSamples(-1), emittedTex(emitted), bumpTex(bump), normalTex(normal),
+	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
+		matID(0), lightID(0), samples(-1), emittedSamples(-1), emittedTex(emitted), bumpTex(bump), normalTex(normal),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
 	virtual ~Material() { }
 
-	u_int GetID() const { return id; }
 	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
+	void SetLightID(const u_int id) { lightID = id; }
+	u_int GetLightID() const { return lightID; }
+	void SetID(const u_int id) { matID = id; }
+	u_int GetID() const { return matID; }
 
 	virtual MaterialType GetType() const = 0;
 	virtual BSDFEvent GetEventTypes() const = 0;
@@ -185,7 +188,7 @@ public:
 	virtual luxrays::Properties ToProperties() const;
 
 protected:
-	u_int id;
+	u_int matID, lightID;
 
 	int samples, emittedSamples;
 	const Texture *emittedTex;
@@ -233,8 +236,8 @@ private:
 
 class MatteMaterial : public Material {
 public:
-	MatteMaterial(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *col) : Material(matID, emitted, bump, normal), Kd(col) { }
+	MatteMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *col) : Material(emitted, bump, normal), Kd(col) { }
 
 	virtual MaterialType GetType() const { return MATTE; }
 	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
@@ -267,8 +270,8 @@ private:
 
 class MirrorMaterial : public Material {
 public:
-	MirrorMaterial(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
-		const Texture *refl) : Material(matID, emitted, bump, normal), Kr(refl) { }
+	MirrorMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+		const Texture *refl) : Material(emitted, bump, normal), Kr(refl) { }
 
 	virtual MaterialType GetType() const { return MIRROR; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT; };
@@ -308,10 +311,10 @@ private:
 
 class GlassMaterial : public Material {
 public:
-	GlassMaterial(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
+	GlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
 			const Texture *refl, const Texture *trans,
 			const Texture *outsideIorFact, const Texture *iorFact) :
-			Material(matID, emitted, bump, normal),
+			Material(emitted, bump, normal),
 			Kr(refl), Kt(trans), ousideIor(outsideIorFact), ior(iorFact) { }
 
 	virtual MaterialType GetType() const { return GLASS; }
@@ -358,10 +361,10 @@ private:
 
 class ArchGlassMaterial : public Material {
 public:
-	ArchGlassMaterial(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
+	ArchGlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
 			const Texture *refl, const Texture *trans,
 			const Texture *outsideIorFact, const Texture *iorFact) :
-			Material(matID, emitted, bump, normal),
+			Material(emitted, bump, normal),
 			Kr(refl), Kt(trans), ousideIor(outsideIorFact), ior(iorFact) { }
 
 	virtual MaterialType GetType() const { return ARCHGLASS; }
@@ -411,8 +414,8 @@ private:
 
 class MetalMaterial : public Material {
 public:
-	MetalMaterial(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *refl, const Texture *exp) : Material(matID, emitted, bump, normal),
+	MetalMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *refl, const Texture *exp) : Material(emitted, bump, normal),
 			Kr(refl), exponent(exp) { }
 
 	virtual MaterialType GetType() const { return METAL; }
@@ -456,9 +459,9 @@ private:
 
 class MixMaterial : public Material {
 public:
-	MixMaterial(const u_int matID, const Texture *bump, const Texture *normal,
+	MixMaterial(const Texture *bump, const Texture *normal,
 			const Material *mA, const Material *mB, const Texture *mix) :
-			Material(matID, NULL, bump, normal), matA(mA), matB(mB), mixFactor(mix) { }
+			Material(NULL, bump, normal), matA(mA), matB(mB), mixFactor(mix) { }
 
 	virtual MaterialType GetType() const { return MIX; }
 	virtual BSDFEvent GetEventTypes() const { return (matA->GetEventTypes() | matB->GetEventTypes()); };
@@ -522,7 +525,7 @@ private:
 
 class NullMaterial : public Material {
 public:
-	NullMaterial(const u_int matID) : Material(matID, NULL, NULL, NULL) { }
+	NullMaterial() : Material(NULL, NULL, NULL) { }
 
 	virtual MaterialType GetType() const { return NULLMAT; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | TRANSMIT; };
@@ -558,8 +561,8 @@ public:
 
 class MatteTranslucentMaterial : public Material {
 public:
-	MatteTranslucentMaterial(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *refl, const Texture *trans) : Material(matID, emitted, bump, normal),
+	MatteTranslucentMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *refl, const Texture *trans) : Material(emitted, bump, normal),
 			Kr(refl), Kt(trans) { }
 
 	virtual MaterialType GetType() const { return MATTETRANSLUCENT; }
@@ -595,10 +598,10 @@ private:
 
 class Glossy2Material : public Material {
 public:
-	Glossy2Material(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
+	Glossy2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
 			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
 			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
-			Material(matID, emitted, bump, normal), Kd(kd), Ks(ks), nu(u), nv(v),
+			Material(emitted, bump, normal), Kd(kd), Ks(ks), nu(u), nv(v),
 			Ka(ka), depth(d), index(i), multibounce(mbounce) { }
 
 	virtual MaterialType GetType() const { return GLOSSY2; }
@@ -657,9 +660,9 @@ private:
 
 class Metal2Material : public Material {
 public:
-	Metal2Material(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
+	Metal2Material(const Texture *emitted, const Texture *bump, const Texture *normal,
 			const Texture *nn, const Texture *kk, const Texture *u, const Texture *v) :
-			Material(matID, emitted, bump, normal), n(nn), k(kk), nu(u), nv(v) { }
+			Material(emitted, bump, normal), n(nn), k(kk), nu(u), nv(v) { }
 
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -698,11 +701,11 @@ private:
 
 class RoughGlassMaterial : public Material {
 public:
-	RoughGlassMaterial(const u_int matID, const Texture *emitted, const Texture *bump, const Texture *normal,
+	RoughGlassMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
 			const Texture *refl, const Texture *trans,
 			const Texture *outsideIorFact, const Texture *iorFact,
 			const Texture *u, const Texture *v) :
-			Material(matID, emitted, bump, normal), Kr(refl), Kt(trans),
+			Material(emitted, bump, normal), Kr(refl), Kt(trans),
 			ousideIor(outsideIorFact), ior(iorFact), nu(u), nv(v) { }
 
 	virtual MaterialType GetType() const { return ROUGHGLASS; }

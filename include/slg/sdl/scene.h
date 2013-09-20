@@ -59,6 +59,7 @@ public:
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
 
+	void UpdateLightGroupCount();
 	void Preprocess(luxrays::Context *ctx);
 
 	luxrays::Properties ToProperties(const std::string &directoryName);
@@ -124,6 +125,7 @@ public:
 	MaterialDefinitions matDefs; // Material definitions
 	luxrays::ExtMeshDefinitions meshDefs; // ExtMesh definitions
 
+	u_int lightGroupCount;
 	InfiniteLightBase *envLight; // A SLG scene can have only one infinite light
 	SunLight *sunLight;
 	std::vector<TriangleLight *> triLightDefs; // One for each light source (doesn't include sun/infinite light)

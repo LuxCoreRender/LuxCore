@@ -59,8 +59,9 @@ public:
 
 	virtual bool IsEnvironmental() const { return false; }
 
-	virtual const float GetPower(const Scene &scene) const = 0;
-	virtual const int GetSamples() const = 0;
+	virtual u_int GetID() const = 0;
+	virtual float GetPower(const Scene &scene) const = 0;
+	virtual int GetSamples() const = 0;
 
 	// Emits particle from the light
 	virtual luxrays::Spectrum Emit(const Scene &scene,
@@ -82,15 +83,17 @@ public:
 class InfiniteLightBase : public LightSource {
 public:
 	InfiniteLightBase(const luxrays::Transform &l2w) :
-		lightToWorld(l2w), gain(1.f, 1.f, 1.f), samples(-1) { }
+		id(0), lightToWorld(l2w), gain(1.f, 1.f, 1.f), samples(-1) { }
 	virtual ~InfiniteLightBase() { }
 
 	virtual void Preprocess() { }
 
 	virtual bool IsEnvironmental() const { return true; }
 
+	virtual void SetID(const u_int lightID) { id = lightID; }
+	virtual u_int GetID() const { return id; }
 	void SetSamples(const int sampleCount) { samples = sampleCount; }
-	virtual const int GetSamples() const { return samples; }
+	virtual int GetSamples() const { return samples; }
 
 	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
@@ -107,6 +110,8 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 
 protected:
+	u_int id;
+
 	const luxrays::Transform lightToWorld;
 	luxrays::Spectrum gain;
 	int samples;
@@ -122,7 +127,7 @@ public:
 	virtual ~InfiniteLight();
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
-	virtual const float GetPower(const Scene &scene) const;
+	virtual float GetPower(const Scene &scene) const;
 
 	const ImageMap *GetImageMap() const { return imageMap; }
 	UVMapping2D *GetUVMapping() { return &mapping; }
@@ -161,7 +166,7 @@ public:
 	virtual void Preprocess();
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY; }
-	virtual const float GetPower(const Scene &scene) const;
+	virtual float GetPower(const Scene &scene) const;
 
 	void SetTurbidity(const float t) { turbidity = t; }
 	float GetTubidity() const { return turbidity; }
@@ -218,10 +223,12 @@ public:
 	virtual void Preprocess();
 
 	virtual LightSourceType GetType() const { return TYPE_SUN; }
-	virtual const float GetPower(const Scene &scene) const;
+	virtual float GetPower(const Scene &scene) const;
 
+	virtual void SetID(const u_int lightID) { id = lightID; }
+	virtual u_int GetID() const { return id; }
 	void SetSamples(const int sampleCount) { samples = sampleCount; }
-	virtual const int GetSamples() const { return samples; }
+	virtual int GetSamples() const { return samples; }
 
 	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
@@ -267,6 +274,7 @@ public:
 	luxrays::Properties ToProperties() const;
 
 private:
+	u_int id;
 	const luxrays::Transform lightToWorld;
 
 	luxrays::Vector sunDir;
@@ -293,9 +301,10 @@ public:
 	virtual ~TriangleLight() { }
 
 	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
-	virtual const float GetPower(const Scene &scene) const;
 
-	virtual const int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
+	virtual float GetPower(const Scene &scene) const;
+	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
+	virtual int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
 
 	void SetMaterial(const Material *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }
