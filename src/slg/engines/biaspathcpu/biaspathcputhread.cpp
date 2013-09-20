@@ -461,9 +461,6 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 
 		const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
 		int materialSamples = bsdf.GetSamples();
-		sampleResult->indirectDiffuse = Spectrum();
-		sampleResult->indirectGlossy = Spectrum();
-		sampleResult->indirectSpecular = Spectrum();
 
 		//----------------------------------------------------------------------
 		// Sample the diffuse component
@@ -477,11 +474,6 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 			if (diffuseSamples > 0) {
 				SampleComponent(rndGen, DIFFUSE | REFLECT | TRANSMIT,
 						diffuseSamples, pathThrouput, bsdf, sampleResult);
-
-//				if (illuminated) {
-//					sampleResult->indirectDiffuse = radiance;
-//					sampleResult->radiancePerPixelNormalized[0] += radiance;
-//				}
 			}
 		}
 
@@ -497,11 +489,6 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 			if (glossySamples > 0) {
 				SampleComponent(rndGen, GLOSSY | REFLECT | TRANSMIT, 
 						glossySamples, pathThrouput, bsdf, sampleResult);
-
-//				if (illuminated) {
-//					sampleResult->indirectGlossy = radiance;
-//					sampleResult->radiancePerPixelNormalized[0] += radiance;
-//				}
 			}
 		}
 
@@ -517,11 +504,6 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 			if (speculaSamples > 0) {
 				SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT,
 						speculaSamples, pathThrouput, bsdf, sampleResult);
-
-//				if (illuminated) {
-//					sampleResult->indirectSpecular = radiance;
-//					sampleResult->radiancePerPixelNormalized[0] += radiance;
-//				}
 			}
 		}
 	}
