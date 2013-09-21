@@ -427,6 +427,8 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				std::numeric_limits<float>::infinity(),
 				std::numeric_limits<float>::infinity());
 		sampleResult->materialID = std::numeric_limits<u_int>::max();
+		sampleResult->uv = UV(std::numeric_limits<float>::infinity(),
+				std::numeric_limits<float>::infinity());
 	} else {
 		// Something was hit
 		sampleResult->alpha = 1.f;
@@ -435,6 +437,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		sampleResult->geometryNormal = bsdf.hitPoint.geometryN;
 		sampleResult->shadingNormal = bsdf.hitPoint.shadeN;
 		sampleResult->materialID = bsdf.GetMaterialID();
+		sampleResult->uv = bsdf.hitPoint.uv;
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource() && (eyeRayHit.t > engine->nearStartLight)) {
@@ -526,7 +529,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK, engine->film->GetRadianceGroupCount());
+		Film::INDIRECT_SHADOW_MASK | Film::UV, engine->film->GetRadianceGroupCount());
 
 	// Set to 0.0 all colors
 	sampleResult.emission = Spectrum();

@@ -41,6 +41,7 @@
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
+#include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/film/filter.h"
@@ -61,7 +62,7 @@ public:
 		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
 		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
 		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
-		RADIANCE_GROUP
+		RADIANCE_GROUP, UV
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -109,7 +110,8 @@ public:
 		INDIRECT_SPECULAR = 1<<14,
 		MATERIAL_ID_MASK = 1<<15,
 		DIRECT_SHADOW_MASK = 1<<16,
-		INDIRECT_SHADOW_MASK = 1<<17
+		INDIRECT_SHADOW_MASK = 1<<17,
+		UV = 1<<18
 	} FilmChannelType;
 
 	Film(const u_int w, const u_int h);
@@ -254,6 +256,7 @@ private:
 	std::vector<u_int> maskMaterialIDs;
 	GenericFrameBuffer<2, float> *channel_DIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, float> *channel_INDIRECT_SHADOW_MASK;
+	GenericFrameBuffer<2, float> *channel_UV;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
@@ -302,6 +305,7 @@ public:
 	luxrays::Spectrum emission;
 	luxrays::Spectrum indirectDiffuse, indirectGlossy, indirectSpecular;
 	float directShadowMask, indirectShadowMask;
+	luxrays::UV uv;
 
 private:
 	u_int channels;
