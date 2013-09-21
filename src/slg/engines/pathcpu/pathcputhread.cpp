@@ -277,7 +277,7 @@ void PathCPURenderThread::RenderFunc() {
 
 		int depth = 1;
 		BSDFEvent pathBSDFEvent = NONE;
-		BSDFEvent lastBSDFEvent = NONE;
+		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 		float lastPdfW = 1.f;
 		Spectrum pathThrouput(1.f, 1.f, 1.f);
 		BSDF bsdf;

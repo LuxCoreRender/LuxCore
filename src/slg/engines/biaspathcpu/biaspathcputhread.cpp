@@ -409,8 +409,10 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 	BSDF bsdf;
 	if (!scene->Intersect(device, false, rndGen->floatValue(),
 			&eyeRay, &eyeRayHit, &bsdf, &pathThrouput)) {
-		// Nothing was hit, look for infinitelight
-		DirectHitInfiniteLight(true, NONE, NONE, pathThrouput, eyeRay.d,
+		// Nothing was hit, look for env. lights
+
+		// SPECULAR is required to avoid MIS
+		DirectHitInfiniteLight(true, SPECULAR, NONE, pathThrouput, eyeRay.d,
 				1.f, sampleResult);
 
 		sampleResult->alpha = 0.f;
@@ -442,7 +444,8 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 
 		// Check if it is a light source
 		if (bsdf.IsLightSource() && (eyeRayHit.t > engine->nearStartLight)) {
-			DirectHitFiniteLight(true, NONE, NONE, pathThrouput,
+			// SPECULAR is required to avoid MIS
+			DirectHitFiniteLight(true, SPECULAR, NONE, pathThrouput,
 					eyeRayHit.t, bsdf, 1.f, sampleResult);
 		}
 
