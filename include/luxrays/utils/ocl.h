@@ -98,6 +98,7 @@ public:
 
 private:
 	static std::string HashString(const std::string &ss);
+	static u_int HashBin(const char *s, const size_t size);
 
 	std::string appName;
 };
