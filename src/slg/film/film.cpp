@@ -73,6 +73,7 @@ Film::Film(const u_int w, const u_int h) {
 	channel_INDIRECT_SPECULAR = NULL;
 	channel_DIRECT_SHADOW_MASK = NULL;
 	channel_INDIRECT_SHADOW_MASK = NULL;
+	channel_UV = NULL;
 
 	convTest = NULL;
 
@@ -113,6 +114,7 @@ Film::~Film() {
 		delete channel_MATERIAL_ID_MASKs[i];
 	delete channel_DIRECT_SHADOW_MASK;
 	delete channel_INDIRECT_SHADOW_MASK;
+	delete channel_UV;
 
 	delete filterLUTs;
 	delete filter;
@@ -177,6 +179,7 @@ void Film::Init(const u_int w, const u_int h) {
 	channel_MATERIAL_ID_MASKs.clear();
 	delete channel_DIRECT_SHADOW_MASK;
 	delete channel_INDIRECT_SHADOW_MASK;
+	delete channel_UV;
 
 	// Allocate all required channels
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -262,6 +265,10 @@ void Film::Init(const u_int w, const u_int h) {
 		channel_INDIRECT_SHADOW_MASK = new GenericFrameBuffer<2, float>(width, height);
 		channel_INDIRECT_SHADOW_MASK->Clear();
 	}
+	if (HasChannel(UV)) {
+		channel_UV = new GenericFrameBuffer<2, float>(width, height);
+		channel_UV->Clear(std::numeric_limits<float>::infinity());
+	}
 
 	// Initialize the stats
 	statsTotalSampleCount = 0.0;
@@ -331,6 +338,8 @@ void Film::Reset() {
 		channel_DIRECT_SHADOW_MASK->Clear();
 	if (HasChannel(INDIRECT_SHADOW_MASK))
 		channel_INDIRECT_SHADOW_MASK->Clear();
+	if (HasChannel(UV))
+		channel_UV->Clear();
 
 	// convTest has to be reseted explicitely
 
@@ -547,6 +556,27 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(UV) && film.HasChannel(UV)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+			// Used DEPTH information to merge Films
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)[0] < channel_DEPTH->GetPixel(dstOffsetX + x, dstOffsetY + y)[0]) {
+						const float *srcPixel = film.channel_UV->GetPixel(srcOffsetX + x, srcOffsetY + y);
+						channel_UV->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					}
+				}
+			}
+		} else {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_UV->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_UV->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel as last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -725,6 +755,13 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				radianceGroupIndex = props->GetInt("id", 0);
 				if (radianceGroupIndex >= radianceGroupCount)
 					return;
+			} else
+				return;
+			break;
+		case FilmOutputs::UV:
+			if (hdrImage) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
 			} else
 				return;
 			break;
@@ -1051,8 +1088,16 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					dst[x].blue = c.b;
 					break;
 				}
+				case FilmOutputs::UV: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					const float *src = channel_UV->GetPixel(x, y);
+					dst[x].red = src[0];
+					dst[x].green = src[1];
+					dst[x].blue = 0.f;
+					break;
+				}
 				default:
-					throw std::runtime_error("Unknown film output type");
+					throw std::runtime_error("Unknown film output type: " + ToString(type));
 			}
 		}
 
@@ -1375,6 +1420,10 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 	// Faster than HasChannel(MATERIAL_ID)
 	if (channel_MATERIAL_ID && depthWrite && sampleResult.HasChannel(MATERIAL_ID))
 		channel_MATERIAL_ID->SetPixel(x, y, &sampleResult.materialID);
+
+	// Faster than HasChannel(UV)
+	if (channel_UV && depthWrite && sampleResult.HasChannel(UV))
+		channel_UV->SetPixel(x, y, &sampleResult.uv.u);
 }
 
 void Film::AddSampleResult(const u_int x, const u_int y,

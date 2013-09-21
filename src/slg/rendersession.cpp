@@ -122,7 +122,6 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 		else
 			film->RemoveChannel(Film::ALPHA);
 	}
-		
 
 	//--------------------------------------------------------------------------
 	// Initialize the FilmOutputs
@@ -267,6 +266,10 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			prop.SetString("id", ToString(lightID));
 
 			filmOutputs.Add(FilmOutputs::RADIANCE_GROUP, fileName, &prop);
+		} else if (type == "UV") {
+			film->AddChannel(Film::DEPTH);
+			film->AddChannel(Film::UV);
+			filmOutputs.Add(FilmOutputs::UV, fileName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}
