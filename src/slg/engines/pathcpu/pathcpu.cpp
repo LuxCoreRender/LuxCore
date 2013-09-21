@@ -33,6 +33,7 @@ PathCPURenderEngine::PathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
 	film->Init();
 }
 
