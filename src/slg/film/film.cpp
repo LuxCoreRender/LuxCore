@@ -144,11 +144,16 @@ void Film::RemoveChannel(const FilmChannelType type) {
 	channels.erase(type);
 }
 
-void Film::Init(const u_int w, const u_int h) {
+void Film::Init() {
 	if (initialized)
 		throw std::runtime_error("A Film can not be initialized multiple times");
 
 	initialized = true;
+
+	Resize(width, height);
+}
+
+void Film::Resize(const u_int w, const u_int h) {
 	width = w;
 	height = h;
 	pixelCount = w * h;
@@ -159,8 +164,10 @@ void Film::Init(const u_int w, const u_int h) {
 	// Delete all already allocated channels
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
 		delete channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i];
+	channel_RADIANCE_PER_PIXEL_NORMALIZEDs.clear();
 	for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
 		delete channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i];
+	channel_RADIANCE_PER_SCREEN_NORMALIZEDs.clear();
 	delete channel_ALPHA;
 	delete channel_RGB_TONEMAPPED;
 	delete channel_DEPTH;

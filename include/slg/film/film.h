@@ -127,8 +127,8 @@ public:
 	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
 	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
 
-	void Init() { Init(width, height); }
-	void Init(const u_int w, const u_int h);
+	void Init();
+	void Resize(const u_int w, const u_int h);
 	void SetGamma(const float gamma = 2.2f);
 	void Reset();
 
