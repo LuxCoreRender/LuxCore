@@ -83,6 +83,7 @@ void PathCPURenderThread::DirectLightSampling(
 					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
 					const Spectrum radiance = (weight * factor) * pathThrouput * connectionThroughput * lightRadiance * bsdfEval;
+					sampleResult->radiancePerPixelNormalized[light->GetID()] += radiance;
 
 					if (firstPathVertex) {
 						sampleResult->directShadowMask = 0.f;
