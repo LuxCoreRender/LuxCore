@@ -557,20 +557,16 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	// Make the sun visible only if relsize has been changed (in order
-	// to avoid fireflies).
-	if (relSize > 5.f) {
-		if ((cosThetaMax < 1.f) && (Dot(-dir, sunDir) > cosThetaMax)) {
-			if (directPdfA)
-				*directPdfA = UniformConePdf(cosThetaMax);
+	if ((cosThetaMax < 1.f) && (Dot(-dir, sunDir) > cosThetaMax)) {
+		if (directPdfA)
+			*directPdfA = UniformConePdf(cosThetaMax);
 
-			if (emissionPdfW) {
-				const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad;
-				*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
-			}
-
-			return sunColor;
+		if (emissionPdfW) {
+			const float worldRadius = lightWorldRadiusScale * scene.dataSet->GetBSphere().rad;
+			*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 		}
+
+		return sunColor;
 	}
 
 	return Spectrum();
