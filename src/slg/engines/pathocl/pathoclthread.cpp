@@ -98,7 +98,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	imageMapDescsBuff = NULL;
 
 	// Check the kind of kernel cache to use
-	std::string type = re->renderConfig->cfg.GetString("opencl.kernelcache", "NONE");
+	std::string type = re->renderConfig->cfg.GetString("opencl.kernelcache", "PERSISTENT");
 	if (type == "PERSISTENT")
 		kernelCache = new oclKernelPersistentCache("SLG_" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR);
 	else if (type == "VOLATILE")
