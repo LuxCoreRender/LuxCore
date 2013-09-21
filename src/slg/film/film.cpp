@@ -182,6 +182,8 @@ void Film::Init(const u_int w, const u_int h) {
 	delete channel_UV;
 
 	// Allocate all required channels
+	hasDataChannel = false;
+	hasComposingChannel = false;
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		channel_RADIANCE_PER_PIXEL_NORMALIZEDs.resize(radianceGroupCount, NULL);
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
@@ -209,46 +211,57 @@ void Film::Init(const u_int w, const u_int h) {
 	if (HasChannel(DEPTH)) {
 		channel_DEPTH = new GenericFrameBuffer<1, float>(width, height);
 		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
+		hasDataChannel = true;
 	}
 	if (HasChannel(POSITION)) {
 		channel_POSITION = new GenericFrameBuffer<3, float>(width, height);
 		channel_POSITION->Clear(std::numeric_limits<float>::infinity());
+		hasDataChannel = true;
 	}
 	if (HasChannel(GEOMETRY_NORMAL)) {
 		channel_GEOMETRY_NORMAL = new GenericFrameBuffer<3, float>(width, height);
 		channel_GEOMETRY_NORMAL->Clear(std::numeric_limits<float>::infinity());
+		hasDataChannel = true;
 	}
 	if (HasChannel(SHADING_NORMAL)) {
 		channel_SHADING_NORMAL = new GenericFrameBuffer<3, float>(width, height);
 		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
+		hasDataChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID)) {
 		channel_MATERIAL_ID = new GenericFrameBuffer<1, u_int>(width, height);
 		channel_MATERIAL_ID->Clear(std::numeric_limits<u_int>::max());
+		hasDataChannel = true;
 	}
 	if (HasChannel(DIRECT_DIFFUSE)) {
 		channel_DIRECT_DIFFUSE = new GenericFrameBuffer<4, float>(width, height);
 		channel_DIRECT_DIFFUSE->Clear();
+		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_GLOSSY)) {
 		channel_DIRECT_GLOSSY = new GenericFrameBuffer<4, float>(width, height);
 		channel_DIRECT_GLOSSY->Clear();
+		hasComposingChannel = true;
 	}
 	if (HasChannel(EMISSION)) {
 		channel_EMISSION = new GenericFrameBuffer<4, float>(width, height);
 		channel_EMISSION->Clear();
+		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_DIFFUSE)) {
 		channel_INDIRECT_DIFFUSE = new GenericFrameBuffer<4, float>(width, height);
 		channel_INDIRECT_DIFFUSE->Clear();
+		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_GLOSSY)) {
 		channel_INDIRECT_GLOSSY = new GenericFrameBuffer<4, float>(width, height);
 		channel_INDIRECT_GLOSSY->Clear();
+		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_SPECULAR)) {
 		channel_INDIRECT_SPECULAR = new GenericFrameBuffer<4, float>(width, height);
 		channel_INDIRECT_SPECULAR->Clear();
+		hasComposingChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID_MASK)) {
 		for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
@@ -256,18 +269,22 @@ void Film::Init(const u_int w, const u_int h) {
 			buf->Clear();
 			channel_MATERIAL_ID_MASKs.push_back(buf);
 		}
+		hasDataChannel = true;
 	}
 	if (HasChannel(DIRECT_SHADOW_MASK)) {
 		channel_DIRECT_SHADOW_MASK = new GenericFrameBuffer<2, float>(width, height);
 		channel_DIRECT_SHADOW_MASK->Clear();
+		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_SHADOW_MASK)) {
 		channel_INDIRECT_SHADOW_MASK = new GenericFrameBuffer<2, float>(width, height);
 		channel_INDIRECT_SHADOW_MASK->Clear();
+		hasComposingChannel = true;
 	}
 	if (HasChannel(UV)) {
 		channel_UV = new GenericFrameBuffer<2, float>(width, height);
 		channel_UV->Clear(std::numeric_limits<float>::infinity());
+		hasDataChannel = true;
 	}
 
 	// Initialize the stats
@@ -1297,103 +1314,99 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 	}
 
 	// Faster than HasChannel(ALPHA)
-	if (channel_ALPHA && sampleResult.HasChannel(ALPHA) && !isnan(sampleResult.alpha) && !isinf(sampleResult.alpha)) {
+	if (channel_ALPHA && sampleResult.HasChannel(ALPHA)) {
 		float pixel[2];
 		pixel[0] = weight * sampleResult.alpha;
 		pixel[1] = weight;
 		channel_ALPHA->AddPixel(x, y, pixel);
 	}
 
-	// Faster than HasChannel(DIRECT_DIFFUSE)
-	if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE) &&
-			!sampleResult.directDiffuse.IsNaN() && !sampleResult.directDiffuse.IsInf()) {
-		float pixel[4];
-		pixel[0] = sampleResult.directDiffuse.r * weight;
-		pixel[1] = sampleResult.directDiffuse.g * weight;
-		pixel[2] = sampleResult.directDiffuse.b * weight;
-		pixel[3] = weight;
-		channel_DIRECT_DIFFUSE->AddPixel(x, y, pixel);
-	}
-
-	// Faster than HasChannel(DIRECT_GLOSSY)
-	if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY) &&
-			!sampleResult.directGlossy.IsNaN() && !sampleResult.directGlossy.IsInf()) {
-		float pixel[4];
-		pixel[0] = sampleResult.directGlossy.r * weight;
-		pixel[1] = sampleResult.directGlossy.g * weight;
-		pixel[2] = sampleResult.directGlossy.b * weight;
-		pixel[3] = weight;
-		channel_DIRECT_GLOSSY->AddPixel(x, y, pixel);
-	}
-
-	// Faster than HasChannel(EMISSION)
-	if (channel_EMISSION && sampleResult.HasChannel(EMISSION) &&
-			!sampleResult.emission.IsNaN() && !sampleResult.emission.IsInf()) {
-		float pixel[4];
-		pixel[0] = sampleResult.emission.r * weight;
-		pixel[1] = sampleResult.emission.g * weight;
-		pixel[2] = sampleResult.emission.b * weight;
-		pixel[3] = weight;
-		channel_EMISSION->AddPixel(x, y, pixel);
-	}
-
-	// Faster than HasChannel(INDIRECT_DIFFUSE)
-	if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE) &&
-			!sampleResult.indirectDiffuse.IsNaN() && !sampleResult.indirectDiffuse.IsInf()) {
-		float pixel[4];
-		pixel[0] = sampleResult.indirectDiffuse.r * weight;
-		pixel[1] = sampleResult.indirectDiffuse.g * weight;
-		pixel[2] = sampleResult.indirectDiffuse.b * weight;
-		pixel[3] = weight;
-		channel_INDIRECT_DIFFUSE->AddPixel(x, y, pixel);
-	}
-
-	// Faster than HasChannel(INDIRECT_GLOSSY)
-	if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY) &&
-			!sampleResult.indirectGlossy.IsNaN() && !sampleResult.indirectGlossy.IsInf()) {
-		float pixel[4];
-		pixel[0] = sampleResult.indirectGlossy.r * weight;
-		pixel[1] = sampleResult.indirectGlossy.g * weight;
-		pixel[2] = sampleResult.indirectGlossy.b * weight;
-		pixel[3] = weight;
-		channel_INDIRECT_GLOSSY->AddPixel(x, y, pixel);
-	}
-
-	// Faster than HasChannel(INDIRECT_SPECULAR)
-	if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR) &&
-			!sampleResult.indirectSpecular.IsNaN() && !sampleResult.indirectSpecular.IsInf()) {
-		float pixel[4];
-		pixel[0] = sampleResult.indirectSpecular.r * weight;
-		pixel[1] = sampleResult.indirectSpecular.g * weight;
-		pixel[2] = sampleResult.indirectSpecular.b * weight;
-		pixel[3] = weight;
-		channel_INDIRECT_SPECULAR->AddPixel(x, y, pixel);
-	}
-
-	// This is MATERIAL_ID_MASK
-	if (sampleResult.HasChannel(MATERIAL_ID)) {
-		for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
-			float pixel[2];
-			pixel[0] = (sampleResult.materialID == maskMaterialIDs[i]) ? weight : 0.f;
-			pixel[1] = weight;
-			channel_MATERIAL_ID_MASKs[i]->AddPixel(x, y, pixel);
+	if (hasComposingChannel) {
+		// Faster than HasChannel(DIRECT_DIFFUSE)
+		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE)) {
+			float pixel[4];
+			pixel[0] = sampleResult.directDiffuse.r * weight;
+			pixel[1] = sampleResult.directDiffuse.g * weight;
+			pixel[2] = sampleResult.directDiffuse.b * weight;
+			pixel[3] = weight;
+			channel_DIRECT_DIFFUSE->AddPixel(x, y, pixel);
 		}
-	}
 
-	// Faster than HasChannel(DIRECT_SHADOW)
-	if (channel_DIRECT_SHADOW_MASK && sampleResult.HasChannel(DIRECT_SHADOW_MASK) && !isnan(sampleResult.directShadowMask) && !isinf(sampleResult.directShadowMask)) {
-		float pixel[2];
-		pixel[0] = weight * sampleResult.directShadowMask;
-		pixel[1] = weight;
-		channel_DIRECT_SHADOW_MASK->AddPixel(x, y, pixel);
-	}
+		// Faster than HasChannel(DIRECT_GLOSSY)
+		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY)) {
+			float pixel[4];
+			pixel[0] = sampleResult.directGlossy.r * weight;
+			pixel[1] = sampleResult.directGlossy.g * weight;
+			pixel[2] = sampleResult.directGlossy.b * weight;
+			pixel[3] = weight;
+			channel_DIRECT_GLOSSY->AddPixel(x, y, pixel);
+		}
 
-	// Faster than HasChannel(INDIRECT_SHADOW_MASK)
-	if (channel_INDIRECT_SHADOW_MASK && sampleResult.HasChannel(INDIRECT_SHADOW_MASK) && !isnan(sampleResult.indirectShadowMask) && !isinf(sampleResult.indirectShadowMask)) {
-		float pixel[2];
-		pixel[0] = weight * sampleResult.indirectShadowMask;
-		pixel[1] = weight;
-		channel_INDIRECT_SHADOW_MASK->AddPixel(x, y, pixel);
+		// Faster than HasChannel(EMISSION)
+		if (channel_EMISSION && sampleResult.HasChannel(EMISSION)) {
+			float pixel[4];
+			pixel[0] = sampleResult.emission.r * weight;
+			pixel[1] = sampleResult.emission.g * weight;
+			pixel[2] = sampleResult.emission.b * weight;
+			pixel[3] = weight;
+			channel_EMISSION->AddPixel(x, y, pixel);
+		}
+
+		// Faster than HasChannel(INDIRECT_DIFFUSE)
+		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE)) {
+			float pixel[4];
+			pixel[0] = sampleResult.indirectDiffuse.r * weight;
+			pixel[1] = sampleResult.indirectDiffuse.g * weight;
+			pixel[2] = sampleResult.indirectDiffuse.b * weight;
+			pixel[3] = weight;
+			channel_INDIRECT_DIFFUSE->AddPixel(x, y, pixel);
+		}
+
+		// Faster than HasChannel(INDIRECT_GLOSSY)
+		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY)) {
+			float pixel[4];
+			pixel[0] = sampleResult.indirectGlossy.r * weight;
+			pixel[1] = sampleResult.indirectGlossy.g * weight;
+			pixel[2] = sampleResult.indirectGlossy.b * weight;
+			pixel[3] = weight;
+			channel_INDIRECT_GLOSSY->AddPixel(x, y, pixel);
+		}
+
+		// Faster than HasChannel(INDIRECT_SPECULAR)
+		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR)) {
+			float pixel[4];
+			pixel[0] = sampleResult.indirectSpecular.r * weight;
+			pixel[1] = sampleResult.indirectSpecular.g * weight;
+			pixel[2] = sampleResult.indirectSpecular.b * weight;
+			pixel[3] = weight;
+			channel_INDIRECT_SPECULAR->AddPixel(x, y, pixel);
+		}
+
+		// This is MATERIAL_ID_MASK
+		if (sampleResult.HasChannel(MATERIAL_ID)) {
+			for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
+				float pixel[2];
+				pixel[0] = (sampleResult.materialID == maskMaterialIDs[i]) ? weight : 0.f;
+				pixel[1] = weight;
+				channel_MATERIAL_ID_MASKs[i]->AddPixel(x, y, pixel);
+			}
+		}
+
+		// Faster than HasChannel(DIRECT_SHADOW)
+		if (channel_DIRECT_SHADOW_MASK && sampleResult.HasChannel(DIRECT_SHADOW_MASK)) {
+			float pixel[2];
+			pixel[0] = weight * sampleResult.directShadowMask;
+			pixel[1] = weight;
+			channel_DIRECT_SHADOW_MASK->AddPixel(x, y, pixel);
+		}
+
+		// Faster than HasChannel(INDIRECT_SHADOW_MASK)
+		if (channel_INDIRECT_SHADOW_MASK && sampleResult.HasChannel(INDIRECT_SHADOW_MASK)) {
+			float pixel[2];
+			pixel[0] = weight * sampleResult.indirectShadowMask;
+			pixel[1] = weight;
+			channel_INDIRECT_SHADOW_MASK->AddPixel(x, y, pixel);
+		}
 	}
 }
 
@@ -1402,34 +1415,30 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 	bool depthWrite = true;
 
 	// Faster than HasChannel(DEPTH)
-	if (channel_DEPTH && sampleResult.HasChannel(DEPTH) && !isnan(sampleResult.depth))
+	if (channel_DEPTH && sampleResult.HasChannel(DEPTH))
 		depthWrite = channel_DEPTH->MinPixel(x, y, &sampleResult.depth);
 
-	// Faster than HasChannel(POSITION)
-	if (channel_POSITION && depthWrite && sampleResult.HasChannel(POSITION) && !sampleResult.position.IsNaN())
-		channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
+	if (depthWrite) {
+		// Faster than HasChannel(POSITION)
+		if (channel_POSITION && sampleResult.HasChannel(POSITION))
+			channel_POSITION->SetPixel(x, y, &sampleResult.position.x);
 
-	// Faster than HasChannel(GEOMETRY_NORMAL)
-	if (channel_GEOMETRY_NORMAL && depthWrite && sampleResult.HasChannel(GEOMETRY_NORMAL) && !sampleResult.geometryNormal.IsNaN())
-		channel_GEOMETRY_NORMAL->SetPixel(x, y, &sampleResult.geometryNormal.x);
+		// Faster than HasChannel(GEOMETRY_NORMAL)
+		if (channel_GEOMETRY_NORMAL && sampleResult.HasChannel(GEOMETRY_NORMAL))
+			channel_GEOMETRY_NORMAL->SetPixel(x, y, &sampleResult.geometryNormal.x);
 
-	// Faster than HasChannel(SHADING_NORMAL)
-	if (channel_SHADING_NORMAL && depthWrite && sampleResult.HasChannel(SHADING_NORMAL) && !sampleResult.shadingNormal.IsNaN())
-		channel_SHADING_NORMAL->SetPixel(x, y, &sampleResult.shadingNormal.x);
+		// Faster than HasChannel(SHADING_NORMAL)
+		if (channel_SHADING_NORMAL && sampleResult.HasChannel(SHADING_NORMAL))
+			channel_SHADING_NORMAL->SetPixel(x, y, &sampleResult.shadingNormal.x);
 
-	// Faster than HasChannel(MATERIAL_ID)
-	if (channel_MATERIAL_ID && depthWrite && sampleResult.HasChannel(MATERIAL_ID))
-		channel_MATERIAL_ID->SetPixel(x, y, &sampleResult.materialID);
+		// Faster than HasChannel(MATERIAL_ID)
+		if (channel_MATERIAL_ID && sampleResult.HasChannel(MATERIAL_ID))
+			channel_MATERIAL_ID->SetPixel(x, y, &sampleResult.materialID);
 
-	// Faster than HasChannel(UV)
-	if (channel_UV && depthWrite && sampleResult.HasChannel(UV))
-		channel_UV->SetPixel(x, y, &sampleResult.uv.u);
-}
-
-void Film::AddSampleResult(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight)  {
-	AddSampleResultColor(x, y, sampleResult, weight);
-	AddSampleResultData(x, y, sampleResult);
+		// Faster than HasChannel(UV)
+		if (channel_UV && sampleResult.HasChannel(UV))
+			channel_UV->SetPixel(x, y, &sampleResult.uv.u);
+	}
 }
 
 void Film::AddSample(const u_int x, const u_int y,
@@ -1437,7 +1446,9 @@ void Film::AddSample(const u_int x, const u_int y,
 	if ((x < 0) || (x >= width) || (y < 0) || (y >= height))
 		return;
 
-	AddSampleResult(x, y, sampleResult, weight);
+	AddSampleResultColor(x, y, sampleResult, weight);
+	if (hasDataChannel)
+		AddSampleResultData(x, y, sampleResult);
 }
 
 void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
@@ -1445,18 +1456,23 @@ void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
 		const int x = Ceil2Int(sampleResult.filmX - .5f);
 		const int y = Ceil2Int(sampleResult.filmY - .5f);
 
-		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
-			AddSampleResult(x, y, sampleResult, weight);
+		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height)) {
+			AddSampleResultColor(x, y, sampleResult, weight);
+			if (hasDataChannel)
+				AddSampleResultData(x, y, sampleResult);
+		}
 	} else {
 		//----------------------------------------------------------------------
 		// Add all no color related information (not filtered)
 		//----------------------------------------------------------------------
 
-		const int x = Ceil2Int(sampleResult.filmX - .5f);
-		const int y = Ceil2Int(sampleResult.filmY - .5f);
+		if (hasDataChannel) {
+			const int x = Ceil2Int(sampleResult.filmX - .5f);
+			const int y = Ceil2Int(sampleResult.filmY - .5f);
 
-		if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
-			AddSampleResultData(x, y, sampleResult);
+			if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
+				AddSampleResultData(x, y, sampleResult);
+		}
 
 		//----------------------------------------------------------------------
 		// Add all color related information (filtered)

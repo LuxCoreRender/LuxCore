@@ -232,8 +232,6 @@ private:
 		const SampleResult &sampleResult, const float weight);
 	void AddSampleResultData(const u_int x, const u_int y,
 		const SampleResult &sampleResult);
-	void AddSampleResult(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight);
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
@@ -257,6 +255,8 @@ private:
 	GenericFrameBuffer<2, float> *channel_DIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, float> *channel_INDIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, float> *channel_UV;
+	// Used to speedup sample splatting, initialized inside Init()
+	bool hasDataChannel, hasComposingChannel;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
