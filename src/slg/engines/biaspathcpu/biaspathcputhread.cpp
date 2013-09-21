@@ -161,7 +161,7 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 						light, 1.f, u0, u1,
 						rndGen->floatValue(), rndGen->floatValue(),
 						lightPathTrough, bsdf, sampleResult);
-				if (illuminated)
+				if (!illuminated)
 					sampleResult->directShadowMask += scaleFactor;
 			}
 		}
@@ -193,10 +193,11 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 			weight = 1.f;
 
 		const Spectrum radiance = weight * pathThrouput * emittedRadiance;
-		sampleResult->emission += radiance;
 		sampleResult->radiancePerPixelNormalized[bsdf.GetLightID()] += radiance;
 
-		if (!firstPathVertex) {
+		if (firstPathVertex)
+			sampleResult->emission += radiance;
+		else {
 			if (pathBSDFEvent & DIFFUSE)
 				sampleResult->indirectDiffuse += radiance;
 			else if (pathBSDFEvent & GLOSSY)
@@ -235,10 +236,11 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 
 			const Spectrum radiance = weight * pathThrouput * envRadiance;
-			sampleResult->emission += radiance;
 			sampleResult->radiancePerPixelNormalized[scene->envLight->GetID()] += radiance;
 
-			if (!firstPathVertex) {
+			if (firstPathVertex)
+				sampleResult->emission += radiance;
+			else {
 				if (pathBSDFEvent & DIFFUSE)
 					sampleResult->indirectDiffuse += radiance;
 				else if (pathBSDFEvent & GLOSSY)
@@ -246,9 +248,9 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				else if (pathBSDFEvent & SPECULAR)
 					sampleResult->indirectSpecular += radiance;
 			}
+			
+			illuminated = true;
 		}
-
-		illuminated = true;
 	}
 
 	// Sun light
@@ -263,10 +265,11 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 				
 			const Spectrum radiance = weight * pathThrouput * sunRadiance;
-			sampleResult->emission += radiance;
 			sampleResult->radiancePerPixelNormalized[scene->sunLight->GetID()] += radiance;
 
-			if (!firstPathVertex) {
+			if (firstPathVertex)
+				sampleResult->emission += radiance;
+			else {
 				if (pathBSDFEvent & DIFFUSE)
 					sampleResult->indirectDiffuse += radiance;
 				else if (pathBSDFEvent & GLOSSY)
@@ -274,9 +277,9 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				if (pathBSDFEvent & SPECULAR)
 					sampleResult->indirectSpecular += radiance;
 			}
-		}
 
-		illuminated = true;
+			illuminated = true;
+		}
 	}
 
 	return illuminated;
@@ -350,8 +353,6 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 
 		ray = Ray(bsdf.hitPoint.p, sampledDir);
 	}
-
-	assert (!radiance->IsNaN() && !radiance->IsInf());
 
 	return illuminated;
 }
@@ -531,7 +532,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
 		Film::INDIRECT_SHADOW_MASK | Film::UV, engine->film->GetRadianceGroupCount());
 
-	// Set to 0.0 all colors
+	// Set to 0.0 all result colors
 	sampleResult.emission = Spectrum();
 	for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
 		sampleResult.radiancePerPixelNormalized[i] = Spectrum();
