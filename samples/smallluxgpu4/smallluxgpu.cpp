@@ -210,7 +210,7 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 			session->renderConfig->scene->camera->Update(filmWidth, filmHeight,
 					filmSubRegion);
 			
-			session->film->Init(filmWidth, filmHeight);
+			session->film->Resize(filmWidth, filmHeight);
 
 			if (sessionStarted) {
 				session->editActions.AddAction(CAMERA_EDIT);

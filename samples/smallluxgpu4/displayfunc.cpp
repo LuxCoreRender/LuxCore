@@ -289,7 +289,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 		session->Stop();
 
 		session->renderConfig->scene->camera->Update(newWidth, newHeight);
-		session->film->Init(newWidth, newHeight);
+		session->film->Resize(newWidth, newHeight);
 
 		session->Start();
 
