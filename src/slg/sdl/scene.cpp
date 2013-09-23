@@ -185,10 +185,9 @@ void Scene::Preprocess(Context *ctx) {
 	lightsDistribution = new Distribution1D(lightPower, lightCount);
 	delete lightPower;
 
-	// Initialize the table to look light indices
-	light2Index.clear();
+	// Initialize the light source indices
 	for (u_int i = 0; i < lightCount; ++i)
-		light2Index[GetLightByIndex(i)] = i;
+		GetLightByIndex(i)->SetSceneIndex(i);
 }
 
 Properties Scene::ToProperties(const std::string &directoryName) {
@@ -1195,11 +1194,7 @@ LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
 
 float Scene::SampleAllLightPdf(const LightSource *light) const {
 	// Power based light strategy
-
-	// Find the light index
-	std::map<const LightSource *, u_int>::const_iterator it = light2Index.find(light);
-
-	return lightsDistribution->Pdf(it->second);
+	return lightsDistribution->Pdf(light->GetSceneIndex());
 }
 
 bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,

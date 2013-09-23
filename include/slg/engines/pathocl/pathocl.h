@@ -83,6 +83,7 @@ protected:
 	void InitInfiniteLight();
 	void InitSunLight();
 	void InitSkyLight();
+	void InitLightsDistribution();
 	void InitKernels();
 	void InitGPUTaskBuffer();
 	void InitSampleBuffer();
@@ -136,6 +137,7 @@ protected:
 	cl::Buffer *infiniteLightBuff;
 	cl::Buffer *sunLightBuff;
 	cl::Buffer *skyLightBuff;
+	cl::Buffer *lightsDistributionBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *uvsBuff;

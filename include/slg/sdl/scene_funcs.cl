@@ -21,13 +21,11 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-float Scene_PickLightPdf() {
-	return 1.f / (
-#if defined(PARAM_HAS_SUNLIGHT)
-			+ 1
-#endif 
-#if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT)
-			+ 1
-#endif 
-			+ PARAM_DL_LIGHT_COUNT);
+float Scene_SampleAllLightPdf(__global float *distribution1D, const uint lightIndex) {
+	return Distribution1D_Pdf(distribution1D, lightIndex);
+}
+
+uint Scene_SampleAllLights(__global float *distribution1D, const float u, float *pdf) {
+	// Power based light strategy
+	return Distribution1D_SampleDiscrete(distribution1D, u, pdf);
 }

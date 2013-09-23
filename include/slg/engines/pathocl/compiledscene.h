@@ -86,6 +86,7 @@ public:
 
 	// Compiled power based light sampling strategy
 	float *lightsDistribution;
+	u_int lightsDistributionSize;
 
 	// Compiled Materials
 	std::set<MaterialType> usedMaterialTypes;

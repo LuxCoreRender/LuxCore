@@ -196,8 +196,8 @@ public:
 				*off = count - 1;
 			return 1.f;
 		}
-		float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
-		u_int offset = ptr - cdf - 1;
+		const float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
+		const u_int offset = ptr - cdf - 1;
 
 		// Compute offset along CDF segment
 		const float du = (u - cdf[offset]) /
