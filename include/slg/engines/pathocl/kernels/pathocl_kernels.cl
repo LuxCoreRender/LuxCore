@@ -231,6 +231,97 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFrameBuffer(
 // AdvancePaths Kernel
 //------------------------------------------------------------------------------
 
+#if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
+void DirectHitInfiniteLight(
+#if defined(PARAM_HAS_INFINITELIGHT)
+		__global InfiniteLight *infiniteLight,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		__global SunLight *sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		__global SkyLight *skyLight,
+#endif
+		const bool lastSpecular, __global const float *pathTroughput,
+		const float3 eyeDir, const float lastPdfW,
+		__global float *sampleRadiance
+		IMAGEMAPS_PARAM_DECL) {
+	float3 radiance = VLOAD3F(sampleRadiance);
+	const float3 pathThroughput = VLOAD3F(pathTroughput);
+	float3 lightRadiance = BLACK;
+
+#if defined(PARAM_HAS_INFINITELIGHT)
+	{
+		float directPdfW;
+		const float3 radiance = InfiniteLight_GetRadiance(infiniteLight, eyeDir, &directPdfW
+				IMAGEMAPS_PARAM);
+		if (!Spectrum_IsBlack(radiance)) {
+			// MIS between BSDF sampling and direct light sampling
+			const float weight = (lastSpecular ? 1.f : PowerHeuristic(lastPdfW, directPdfW));
+			lightRadiance += weight * radiance;
+		}
+	}
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+	{
+		float directPdfW;
+		const float3 radiance = SkyLight_GetRadiance(skyLight, eyeDir, &directPdfW);
+		if (!Spectrum_IsBlack(radiance)) {
+			// MIS between BSDF sampling and direct light sampling
+			const float weight = (lastSpecular ? 1.f : PowerHeuristic(lastPdfW, directPdfW));
+			lightRadiance += weight * radiance;
+		}
+	}
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+	{
+		float directPdfW;
+		const float3 radiance = SunLight_GetRadiance(sunLight, eyeDir, &directPdfW);
+		if (!Spectrum_IsBlack(radiance)) {
+			// MIS between BSDF sampling and direct light sampling
+			const float weight = (lastSpecular ? 1.f : PowerHeuristic(lastPdfW, directPdfW));
+			lightRadiance += weight * radiance;
+		}
+	}
+#endif
+
+	radiance += pathThroughput * lightRadiance;
+	VSTORE3F(radiance, sampleRadiance);
+}
+#endif
+
+#if (PARAM_DL_LIGHT_COUNT > 0)
+void DirectHitFiniteLight(
+		__global TriangleLight *triLightDefs, const bool lastSpecular,
+		__global const float *pathTroughput, const float distance, __global BSDF *bsdf,
+		const float lastPdfW, __global float *sampleRadiance
+		MATERIALS_PARAM_DECL) {
+	float directPdfA;
+	const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf,
+			triLightDefs, &directPdfA
+			MATERIALS_PARAM);
+
+	if (!Spectrum_IsBlack(emittedRadiance)) {
+		// Add emitted radiance
+		float weight = 1.f;
+		if (!lastSpecular) {
+			const float lightPickProb = Scene_PickLightPdf();
+			const float directPdfW = PdfAtoW(directPdfA, distance,
+				fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
+
+			// MIS between BSDF sampling and direct light sampling
+			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+		}
+
+		float3 radiance = VLOAD3F(sampleRadiance);
+		const float3 pathThroughput = VLOAD3F(pathTroughput);
+		const float3 le = pathThroughput * weight * emittedRadiance;
+		radiance += le;
+		VSTORE3F(radiance, sampleRadiance);
+	}
+}
+#endif
+
 float RussianRouletteProb(const float3 color) {
 	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
 }
@@ -425,87 +516,38 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			{
 #if (PARAM_DL_LIGHT_COUNT > 0)
 				// Check if it is a light source (note: I can hit only triangle area light sources)
-				if (bsdf->triangleLightSourceIndex != NULL_INDEX) {
-					float directPdfA;
-					const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf,
-							triLightDefs, &directPdfA
+				if (BSDF_IsLightSource(bsdf)) {
+					DirectHitFiniteLight(triLightDefs, task->directLightState.lastSpecular,
+							&task->pathStateBase.throughput.r,
+							rayHit->t, bsdf, task->directLightState.lastPdfW,
+							&sample->radiance.r
 							MATERIALS_PARAM);
-					if (!Spectrum_IsBlack(emittedRadiance)) {
-						// Add emitted radiance
-						float weight = 1.f;
-						if (!task->directLightState.lastSpecular) {
-							const float lightPickProb = Scene_PickLightPdf();
-							const float directPdfW = PdfAtoW(directPdfA, rayHit->t,
-								fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
-
-							// MIS between BSDF sampling and direct light sampling
-							weight = PowerHeuristic(task->directLightState.lastPdfW, directPdfW * lightPickProb);
-						}
-
-						float3 radiance = VLOAD3F(&sample->radiance.r);
-						const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r);
-						const float3 le = pathThroughput * weight * emittedRadiance;
-						radiance += le;
-						VSTORE3F(radiance, &sample->radiance.r);
-					}
 				}
 #endif
 
-#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
 				// Direct light sampling
 				pathState = GENERATE_DL_RAY;
-#else
-				// Sample next path vertex
-				pathState = GENERATE_NEXT_VERTEX_RAY;
-#endif
 			}
 		} else {
 			//------------------------------------------------------------------
-			// Nothing was hit, get environmental lights radiance
+			// Nothing was hit, add environmental lights radiance
 			//------------------------------------------------------------------
+			
 #if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
-			float3 radiance = VLOAD3F(&sample->radiance.r);
-			const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r);
-			const float3 dir = -VLOAD3F(&ray->d.x);
-			float3 lightRadiance = BLACK;
-
+			DirectHitInfiniteLight(
 #if defined(PARAM_HAS_INFINITELIGHT)
-			{
-				float directPdfW;
-				const float3 radiance = InfiniteLight_GetRadiance(infiniteLight, dir, &directPdfW
-						IMAGEMAPS_PARAM);
-				if (!Spectrum_IsBlack(radiance)) {
-					// MIS between BSDF sampling and direct light sampling
-					const float weight = (task->directLightState.lastSpecular ? 1.f : PowerHeuristic(task->directLightState.lastPdfW, directPdfW));
-					lightRadiance += weight * radiance;
-				}
-			}
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-			{
-				float directPdfW;
-				const float3 radiance = SkyLight_GetRadiance(skyLight, dir, &directPdfW);
-				if (!Spectrum_IsBlack(radiance)) {
-					// MIS between BSDF sampling and direct light sampling
-					const float weight = (task->directLightState.lastSpecular ? 1.f : PowerHeuristic(task->directLightState.lastPdfW, directPdfW));
-					lightRadiance += weight * radiance;
-				}
-			}
+				infiniteLight,
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
-			{
-				float directPdfW;
-				const float3 radiance = SunLight_GetRadiance(sunLight, dir, &directPdfW);
-				if (!Spectrum_IsBlack(radiance)) {
-					// MIS between BSDF sampling and direct light sampling
-					const float weight = (task->directLightState.lastSpecular ? 1.f : PowerHeuristic(task->directLightState.lastPdfW, directPdfW));
-					lightRadiance += weight * radiance;
-				}
-			}
+				sunLight,
 #endif
-
-			radiance += pathThroughput * lightRadiance;
-			VSTORE3F(radiance, &sample->radiance.r);
+#if defined(PARAM_HAS_SKYLIGHT)
+				skyLight,
+#endif
+				task->directLightState.lastSpecular, &task->pathStateBase.throughput.r,
+				-VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
+				&sample->radiance.r
+				IMAGEMAPS_PARAM);
 #endif
 
 #if defined(PARAM_ENABLE_ALPHA_CHANNEL)

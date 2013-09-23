@@ -281,6 +281,10 @@ bool BSDF_IsDelta(__global BSDF *bsdf
 }
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
+bool BSDF_IsLightSource(__global BSDF *bsdf) {
+	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
+}
+
 float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 		__global TriangleLight *triLightDefs, float *directPdfA
 		MATERIALS_PARAM_DECL) {
