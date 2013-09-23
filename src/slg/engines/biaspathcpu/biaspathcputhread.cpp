@@ -176,9 +176,9 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 	Scene *scene = engine->renderConfig->scene;
 
 	if (!firstPathVertex &&
-			(((pathBSDFEvent & DIFFUSE) && scene->envLight->IsVisibleIndirectDiffuse()) ||
-			((pathBSDFEvent & GLOSSY) && scene->envLight->IsVisibleIndirectGlossy()) ||
-			((pathBSDFEvent & SPECULAR) && scene->envLight->IsVisibleIndirectSpecular())))
+			(((pathBSDFEvent & DIFFUSE) && bsdf.IsVisibleIndirectDiffuse()) ||
+			((pathBSDFEvent & GLOSSY) && bsdf.IsVisibleIndirectGlossy()) ||
+			((pathBSDFEvent & SPECULAR) && bsdf.IsVisibleIndirectSpecular())))
 			return false;
 
 	float directPdfA;
