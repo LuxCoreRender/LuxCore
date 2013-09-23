@@ -63,6 +63,10 @@ public:
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual int GetSamples() const = 0;
 
+	virtual bool IsVisibleIndirectDiffuse() const = 0;
+	virtual bool IsVisibleIndirectGlossy() const = 0;
+	virtual bool IsVisibleIndirectSpecular() const = 0;
+
 	// Emits particle from the light
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -95,6 +99,13 @@ public:
 	void SetSamples(const int sampleCount) { samples = sampleCount; }
 	virtual int GetSamples() const { return samples; }
 
+	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
+	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
+	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
+	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
+	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
+	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
+
 	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
 	void SetGain(const luxrays::Spectrum &g) {
@@ -115,6 +126,8 @@ protected:
 	const luxrays::Transform lightToWorld;
 	luxrays::Spectrum gain;
 	int samples;
+
+	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
 };
 
 //------------------------------------------------------------------------------
@@ -230,6 +243,13 @@ public:
 	void SetSamples(const int sampleCount) { samples = sampleCount; }
 	virtual int GetSamples() const { return samples; }
 
+	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
+	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
+	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
+	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
+	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
+	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
+
 	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
 	void SetTurbidity(const float t) { turbidity = t; }
@@ -288,6 +308,7 @@ private:
 	luxrays::Spectrum sunColor;
 
 	int samples;
+	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
 };
 
 //------------------------------------------------------------------------------
@@ -305,6 +326,10 @@ public:
 	virtual float GetPower(const Scene &scene) const;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
 	virtual int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
+
+	bool IsVisibleIndirectDiffuse() const { return lightMaterial->IsVisibleIndirectDiffuse(); }
+	bool IsVisibleIndirectGlossy() const { return lightMaterial->IsVisibleIndirectGlossy(); }
+	bool IsVisibleIndirectSpecular() const { return lightMaterial->IsVisibleIndirectSpecular(); }
 
 	void SetMaterial(const Material *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }

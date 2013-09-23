@@ -175,6 +175,12 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
+	if (!firstPathVertex &&
+			(((pathBSDFEvent & DIFFUSE) && scene->envLight->IsVisibleIndirectDiffuse()) ||
+			((pathBSDFEvent & GLOSSY) && scene->envLight->IsVisibleIndirectGlossy()) ||
+			((pathBSDFEvent & SPECULAR) && scene->envLight->IsVisibleIndirectSpecular())))
+			return false;
+
 	float directPdfA;
 	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(&directPdfA);
 
@@ -222,8 +228,12 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 	// Infinite light
 	bool illuminated = false;
 	float directPdfW;
-	if (scene->envLight) {
-		const Spectrum envRadiance = scene->envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
+	const InfiniteLightBase *envLight = scene->envLight;
+	if (envLight && (firstPathVertex ||
+			(((pathBSDFEvent & DIFFUSE) && envLight->IsVisibleIndirectDiffuse()) ||
+			((pathBSDFEvent & GLOSSY) && envLight->IsVisibleIndirectGlossy()) ||
+			((pathBSDFEvent & SPECULAR) && envLight->IsVisibleIndirectSpecular())))) {
+		const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (envRadiance.Y() > engine->lowLightThreashold) {
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {
@@ -236,7 +246,7 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 
 			const Spectrum radiance = weight * pathThrouput * envRadiance;
-			sampleResult->radiancePerPixelNormalized[scene->envLight->GetID()] += radiance;
+			sampleResult->radiancePerPixelNormalized[envLight->GetID()] += radiance;
 
 			if (firstPathVertex)
 				sampleResult->emission += radiance;
@@ -254,8 +264,12 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 	}
 
 	// Sun light
-	if (scene->sunLight) {
-		const Spectrum sunRadiance = scene->sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
+	const SunLight *sunLight = scene->sunLight;
+	if (sunLight && (firstPathVertex ||
+			(((pathBSDFEvent & DIFFUSE) && sunLight->IsVisibleIndirectDiffuse()) ||
+			((pathBSDFEvent & GLOSSY) && sunLight->IsVisibleIndirectGlossy()) ||
+			((pathBSDFEvent & SPECULAR) && sunLight->IsVisibleIndirectSpecular())))) {
+		const Spectrum sunRadiance = sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (sunRadiance.Y() > engine->lowLightThreashold) {
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {
@@ -265,7 +279,7 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 				
 			const Spectrum radiance = weight * pathThrouput * sunRadiance;
-			sampleResult->radiancePerPixelNormalized[scene->sunLight->GetID()] += radiance;
+			sampleResult->radiancePerPixelNormalized[sunLight->GetID()] += radiance;
 
 			if (firstPathVertex)
 				sampleResult->emission += radiance;
@@ -310,9 +324,9 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Something was hit
 
 		// Check if it is visible in indirect paths
-		if (((lastBSDFEvent & DIFFUSE) && !bsdf.IsVisibleIndirectDiffuse()) ||
-				((lastBSDFEvent & GLOSSY) && !bsdf.IsVisibleIndirectGlossy()) ||
-				((lastBSDFEvent & SPECULAR) && !bsdf.IsVisibleIndirectSpecular()))
+		if (((pathBSDFEvent & DIFFUSE) && !bsdf.IsVisibleIndirectDiffuse()) ||
+				((pathBSDFEvent & GLOSSY) && !bsdf.IsVisibleIndirectGlossy()) ||
+				((pathBSDFEvent & SPECULAR) && !bsdf.IsVisibleIndirectSpecular()))
 			break;
 
 		// Check if it is a light source

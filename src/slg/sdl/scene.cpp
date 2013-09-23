@@ -658,6 +658,9 @@ void Scene::AddInfiniteLight(const Properties &props) {
 		il->GetUVMapping()->vDelta = vf.at(1);
 		il->SetSamples(props.GetInt("scene.infinitelight.samples", -1));
 		il->SetID(props.GetInt("scene.infinitelight.id", 0));
+		il->SetIndirectDiffuseVisibility(props.GetBoolean("scene.infinitelight.visibility.indirect.diffuse.enable", true));
+		il->SetIndirectGlossyVisibility(props.GetBoolean("scene.infinitelight.visibility.indirect.glossy.enable", true));
+		il->SetIndirectSpecularVisibility(props.GetBoolean("scene.infinitelight.visibility.indirect.specular.enable", true));
 		il->Preprocess();
 
 		envLight = il;
@@ -695,6 +698,9 @@ void Scene::AddSkyLight(const Properties &props) {
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->SetSamples(props.GetInt("scene.skylight.samples", -1));
 		sl->SetID(props.GetInt("scene.skylight.id", 0));
+		sl->SetIndirectDiffuseVisibility(props.GetBoolean("scene.skylight.visibility.indirect.diffuse.enable", true));
+		sl->SetIndirectGlossyVisibility(props.GetBoolean("scene.skylight.visibility.indirect.glossy.enable", true));
+		sl->SetIndirectSpecularVisibility(props.GetBoolean("scene.skylight.visibility.indirect.specular.enable", true));
 		sl->Preprocess();
 
 		envLight = sl;
@@ -728,6 +734,9 @@ void Scene::AddSunLight(const Properties &props) {
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
 		sl->SetSamples(props.GetInt("scene.sunlight.samples", -1));
 		sl->SetID(props.GetInt("scene.sunlight.id", 0));
+		sl->SetIndirectDiffuseVisibility(props.GetBoolean("scene.sunlight.visibility.indirect.diffuse.enable", true));
+		sl->SetIndirectGlossyVisibility(props.GetBoolean("scene.sunlight.visibility.indirect.glossy.enable", true));
+		sl->SetIndirectSpecularVisibility(props.GetBoolean("scene.sunlight.visibility.indirect.specular.enable", true));
 		sl->Preprocess();
 
 		sunLight = sl;
