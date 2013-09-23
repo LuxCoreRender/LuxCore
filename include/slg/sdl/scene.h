@@ -140,6 +140,9 @@ public:
 	luxrays::ExtMeshCache extMeshCache; // Mesh objects
 	ImageMapCache imgMapCache; // Image maps
 
+	// Used for power based light sampling strategy
+	Distribution1D *lightsDistribution;
+
 protected:
 	static std::vector<std::string> GetStringParameters(const luxrays::Properties &prop,
 		const std::string &paramName, const u_int paramCount,
@@ -154,7 +157,6 @@ protected:
 	Texture *GetTexture(const std::string &name);
 
 	std::map<const LightSource *, u_int> light2Index;
-	Distribution1D *lightsDistribution;
 };
 
 }

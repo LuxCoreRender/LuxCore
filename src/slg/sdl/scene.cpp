@@ -167,7 +167,7 @@ void Scene::Preprocess(Context *ctx) {
 	UpdateLightGroupCount();
 
 	// Rebuild the data to power based light sampling
-	const float worldRadius = lightWorldRadiusScale * dataSet->GetBSphere().rad * 1.01f;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * dataSet->GetBSphere().rad * 1.01f;
 	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
 	const u_int lightCount = GetLightCount();
 	float *lightPower = new float[lightCount];

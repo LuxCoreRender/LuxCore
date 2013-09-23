@@ -283,6 +283,10 @@ public:
 		return luxrays::Min(count - 1, luxrays::Floor2UInt(u * count));
 	}
 
+	const u_int GetCount() const { return count; }
+	const float *GetFuncs() const { return func; }
+	const float *GetCDFs() const { return cdf; }
+
 private:
 	// Distribution1D Private Data
 	/*

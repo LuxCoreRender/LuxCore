@@ -31,10 +31,6 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #endif
 
-#if defined(PARAM_HAS_SUNLIGHT) & !defined(PARAM_DIRECT_LIGHT_SAMPLING)
-Error: PARAM_HAS_SUNLIGHT requires PARAM_DIRECT_LIGHT_SAMPLING !
-#endif
-
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -96,11 +92,9 @@ typedef struct {
 
 	// The state used to keep track of the rendered path
 	PathStateBase pathStateBase;
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING)
 	PathStateDirectLight directLightState;
 #if defined(PARAM_HAS_PASSTHROUGH)
 	PathStateDirectLightPassThrough passThroughState;
-#endif
 #endif
 } GPUTask;
 

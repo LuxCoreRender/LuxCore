@@ -28,8 +28,10 @@
 #if defined(PARAM_HAS_INFINITELIGHT)
 
 float3 InfiniteLight_GetRadiance(
-	__global InfiniteLight *infiniteLight, const float3 dir
+	__global InfiniteLight *infiniteLight, const float3 dir, float *directPdfA
 	IMAGEMAPS_PARAM_DECL) {
+	*directPdfA = 1.f / (4.f * M_PI);
+
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
@@ -39,7 +41,54 @@ float3 InfiniteLight_GetRadiance(
 		SphericalPhi(localDir) * (1.f / (2.f * M_PI_F)),
 		SphericalTheta(localDir) * M_1_PI_F);
 
-	// TextureMapping2D_Map() is expendaded here
+	// TextureMapping2D_Map() is expended here
+	const float2 scale = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uScale);
+	const float2 delta = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uDelta);
+	const float2 mapUV = uv * scale + delta;
+	
+	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetSpectrum(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			mapUV.s0, mapUV.s1);
+}
+
+float3 InfiniteLight_Illuminate(__global InfiniteLight *infiniteLight,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		const float u0, const float u1, const float3 p,
+		float3 *dir, float *distance, float *directPdfW
+		IMAGEMAPS_PARAM_DECL) {
+	const float phi = u0 * 2.f * M_PI_F;
+	const float theta = u1 * M_PI_F;
+	*dir = normalize(Transform_ApplyVector(&infiniteLight->light2World,
+			SphericalDirection(sin(theta), cos(theta), phi)));
+
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	*directPdfW = 1.f / (4.f * M_PI);
+
+	// InfiniteLight_GetRadiance  is expended here
+	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
+	__global float *pixels = ImageMap_GetPixelsAddress(
+			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+
+	const float2 uv = (float2)(phi, theta);
+
+	// TextureMapping2D_Map() is expended here
 	const float2 scale = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uScale);
 	const float2 delta = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uDelta);
 	const float2 mapUV = uv * scale + delta;
@@ -105,13 +154,43 @@ float3 SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,
 	return SkyLight_ChromaticityToSpectrum(Y, x, y);
 }
 
-float3 SkyLight_GetRadiance(__global SkyLight *skyLight, const float3 dir) {
+float3 SkyLight_GetRadiance(__global SkyLight *skyLight, const float3 dir,
+		float *directPdfA) {
+	*directPdfA = 1.f / (4.f * M_PI);
+
 	const float3 localDir = normalize(Transform_InvApplyVector(&skyLight->light2World, -dir));
 	const float theta = SphericalTheta(localDir);
 	const float phi = SphericalPhi(localDir);
 	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
 
 	return VLOAD3F(&skyLight->gain.r) * s;
+}
+
+float3 SkyLight_Illuminate(__global SkyLight *skyLight,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		const float u0, const float u1, const float3 p,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+
+	const float3 localDir = normalize(Transform_ApplyVector(&skyLight->light2World, -(*dir)));
+	*dir = normalize(Transform_ApplyVector(&skyLight->light2World,  UniformSampleSphere(u0, u1)));
+
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	return SkyLight_GetRadiance(skyLight, -(*dir), directPdfW);
 }
 
 #endif

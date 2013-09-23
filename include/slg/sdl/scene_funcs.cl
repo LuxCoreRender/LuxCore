@@ -22,13 +22,12 @@
  ***************************************************************************/
 
 float Scene_PickLightPdf() {
-#if defined(PARAM_HAS_SUNLIGHT) && (PARAM_DL_LIGHT_COUNT > 0)
-	return 1.f / (1.f + PARAM_DL_LIGHT_COUNT);
-#elif defined(PARAM_HAS_SUNLIGHT)
-	return 1.f;
-#elif (PARAM_DL_LIGHT_COUNT > 0)
-	return 1.f / PARAM_DL_LIGHT_COUNT;
-#else
-	return 0;
-#endif
+	return 1.f / (
+#if defined(PARAM_HAS_SUNLIGHT)
+			+ 1
+#endif 
+#if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT)
+			+ 1
+#endif 
+			+ PARAM_DL_LIGHT_COUNT);
 }

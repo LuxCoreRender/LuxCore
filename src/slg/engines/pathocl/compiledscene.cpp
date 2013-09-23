@@ -39,6 +39,7 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	infiniteLight = NULL;
 	sunLight = NULL;
 	skyLight = NULL;
+	lightsDistribution = NULL;
 
 	EditActionList editActions;
 	editActions.AddAllAction();
@@ -49,6 +50,7 @@ CompiledScene::~CompiledScene() {
 	delete infiniteLight;
 	delete sunLight;
 	delete skyLight;
+	delete lightsDistribution;
 }
 
 void CompiledScene::CompileCamera() {
@@ -236,6 +238,8 @@ void CompiledScene::CompileGeometry() {
 
 		meshDescs.push_back(currentMeshDesc);
 	}
+
+	worldBSphere = scene->dataSet->GetBSphere();
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -638,6 +642,20 @@ void CompiledScene::CompileSkyLight() {
 		skyLight = NULL;
 }
 
+void CompiledScene::CompileLightDistribution() {
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightDistribution");
+
+	delete lightsDistribution;
+
+	const u_int count = scene->lightsDistribution->GetCount();
+	lightsDistribution = new float[sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float)];
+	*((u_int *)&lightsDistribution[0]) = count;
+	std::copy(scene->lightsDistribution->GetFuncs(), scene->lightsDistribution->GetFuncs() + count,
+			lightsDistribution + 1);
+	std::copy(scene->lightsDistribution->GetCDFs(), scene->lightsDistribution->GetCDFs() + count + 1,
+			lightsDistribution + 1 + count);
+}
+
 void CompiledScene::CompileTextures() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Textures");
 	//SLG_LOG("[PathOCLRenderThread::CompiledScene]   Texture size: " << sizeof(slg::ocl::Texture));
@@ -997,6 +1015,11 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileSunLight();
 	if (editActions.Has(SKYLIGHT_EDIT))
 		CompileSkyLight();
+	if (editActions.Has(AREALIGHTS_EDIT) ||
+			editActions.Has(INFINITELIGHT_EDIT) ||
+			editActions.Has(SUNLIGHT_EDIT) ||
+			editActions.Has(SKYLIGHT_EDIT))
+		CompileLightDistribution();
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
 }

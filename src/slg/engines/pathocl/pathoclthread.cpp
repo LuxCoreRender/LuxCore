@@ -426,6 +426,7 @@ void PathOCLRenderThread::InitKernels() {
 			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << renderEngine->rrDepth <<
 			" -D PARAM_RR_CAP=" << renderEngine->rrImportanceCap << "f"
+			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << slg::LIGHT_WORLD_RADIUS_SCALE << "f"
 			;
 
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
@@ -554,23 +555,13 @@ void PathOCLRenderThread::InitKernels() {
 	if (skyLightBuff)
 		ss << " -D PARAM_HAS_SKYLIGHT";
 
-	if (sunLightBuff) {
+	if (sunLightBuff)
 		ss << " -D PARAM_HAS_SUNLIGHT";
 
-		if (!triLightDefsBuff) {
-			ss <<
-				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
-				" -D PARAM_DL_LIGHT_COUNT=0"
-				;
-		}
-	}
-
-	if (triLightDefsBuff) {
-		ss <<
-				" -D PARAM_DIRECT_LIGHT_SAMPLING" <<
-				" -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->triLightDefs.size()
-				;
-	}
+	if (triLightDefsBuff)
+		ss << " -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->triLightDefs.size();
+	else
+		ss << " -D PARAM_DL_LIGHT_COUNT=0";
 
 	if (imageMapDescsBuff) {
 		ss << " -D PARAM_HAS_IMAGEMAPS";
@@ -910,17 +901,15 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	gpuTaksSize += bsdfSize;
 
 	// Add PathStateDirectLight memory size
-	if ((triAreaLightCount > 0) || sunLightBuff) {
-		gpuTaksSize += sizeof(Spectrum) + sizeof(float) + sizeof(int);
+	gpuTaksSize += sizeof(Spectrum) + sizeof(float) + sizeof(int);
 
-		// Add PathStateDirectLight.tmpHitPoint memory size
-		if (triAreaLightCount > 0)
-			gpuTaksSize += hitPointSize;
+	// Add PathStateDirectLight.tmpHitPoint memory size
+	if (triAreaLightCount > 0)
+		gpuTaksSize += hitPointSize;
 
-		// Add PathStateDirectLightPassThrough memory size
-		if (hasPassThrough)
-			gpuTaksSize += sizeof(float) + bsdfSize;
-	}
+	// Add PathStateDirectLightPassThrough memory size
+	if (hasPassThrough)
+		gpuTaksSize += sizeof(float) + bsdfSize;
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
 	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
@@ -929,7 +918,6 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 void PathOCLRenderThread::InitSampleBuffer() {
 	Scene *scene = renderEngine->renderConfig->scene;
 	const u_int taskCount = renderEngine->taskCount;
-	const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
 	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
 
 	const size_t eyePathVertexDimension =
@@ -945,7 +933,7 @@ void PathOCLRenderThread::InitSampleBuffer() {
 		// IDX_BSDF_X, IDX_BSDF_Y
 		2 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		(((triAreaLightCount > 0) || sunLightBuff) ? (4 + (hasPassThrough ? 1 : 0)) : 0) +
+		4 + (hasPassThrough ? 1 : 0) +
 		// IDX_RR
 		1;
 	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * renderEngine->maxPathDepth;
@@ -1099,6 +1087,8 @@ void PathOCLRenderThread::SetKernelArgs() {
 	// advancePathsKernel
 	//--------------------------------------------------------------------------
 
+	CompiledScene *cscene = renderEngine->compiledScene;
+
 	u_int argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
@@ -1106,6 +1096,10 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
 	advancePathsKernel->setArg(argIndex++, *frameBufferBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
+	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	advancePathsKernel->setArg(argIndex++, *materialsBuff);
 	advancePathsKernel->setArg(argIndex++, *texturesBuff);
 	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
