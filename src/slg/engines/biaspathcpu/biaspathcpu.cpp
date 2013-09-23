@@ -98,11 +98,8 @@ void PathDepthInfo::IncDepths(const BSDFEvent event) {
 }
 
 bool PathDepthInfo::CheckDepths(const PathDepthInfo &maxPathDepth) const {
-	if ((depth > maxPathDepth.depth) ||
-			(diffuseDepth > maxPathDepth.diffuseDepth) ||
-			(glossyDepth > maxPathDepth.glossyDepth) ||
-			(specularDepth > maxPathDepth.specularDepth))
-		return false;
-	else
-		return true;
+	return ((depth <= maxPathDepth.depth) &&
+			(diffuseDepth <= maxPathDepth.diffuseDepth) &&
+			(glossyDepth <= maxPathDepth.glossyDepth) &&
+			(specularDepth <= maxPathDepth.specularDepth));
 }
