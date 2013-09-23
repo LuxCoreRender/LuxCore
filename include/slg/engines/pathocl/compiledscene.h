@@ -70,6 +70,7 @@ public:
 	vector<float> alphas;
 	vector<luxrays::Triangle> tris;
 	vector<luxrays::ocl::Mesh> meshDescs;
+	luxrays::BSphere worldBSphere;
 
 	// Compiled AreaLights
 	vector<slg::ocl::TriangleLight> triLightDefs;
@@ -82,6 +83,9 @@ public:
 	slg::ocl::SunLight *sunLight;
 	// Compiled SkyLight
 	slg::ocl::SkyLight *skyLight;
+
+	// Compiled power based light sampling strategy
+	float *lightsDistribution;
 
 	// Compiled Materials
 	std::set<MaterialType> usedMaterialTypes;
@@ -109,6 +113,7 @@ private:
 	void CompileInfiniteLight();
 	void CompileSunLight();
 	void CompileSkyLight();
+	void CompileLightDistribution();
 };
 
 }

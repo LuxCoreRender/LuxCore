@@ -59,4 +59,8 @@ std::string KernelSource_utils_funcs =
 "float SinTheta2(const float3 w) {\n"
 "	return fmax(0.f, 1.f - CosTheta(w) * CosTheta(w));\n"
 "}\n"
+"\n"
+"float3 SphericalDirection(float sintheta, float costheta, float phi) {\n"
+"	return (float3)(sintheta * cos(phi), sintheta * sin(phi), costheta);\n"
+"}\n"
 ; } }

@@ -56,3 +56,7 @@ float CosTheta(const float3 v) {
 float SinTheta2(const float3 w) {
 	return fmax(0.f, 1.f - CosTheta(w) * CosTheta(w));
 }
+
+float3 SphericalDirection(float sintheta, float costheta, float phi) {
+	return (float3)(sintheta * cos(phi), sintheta * sin(phi), costheta);
+}

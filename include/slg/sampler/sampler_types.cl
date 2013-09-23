@@ -46,7 +46,7 @@
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * VERTEX_SAMPLE_SIZE
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING) && defined(PARAM_HAS_PASSTHROUGH)
+#if defined(PARAM_HAS_PASSTHROUGH)
 
 #define IDX_PASSTHROUGH 0
 #define IDX_BSDF_X 1
@@ -60,7 +60,7 @@
 
 #define VERTEX_SAMPLE_SIZE 9
 
-#elif defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#else
 
 #define IDX_BSDF_X 0
 #define IDX_BSDF_Y 1
@@ -71,24 +71,6 @@
 #define IDX_RR 6
 
 #define VERTEX_SAMPLE_SIZE 7
-
-#elif defined(PARAM_HAS_PASSTHROUGH)
-
-#define IDX_PASSTHROUGH 0
-#define IDX_BSDF_X 1
-#define IDX_BSDF_Y 2
-#define IDX_RR 3
-
-#define VERTEX_SAMPLE_SIZE 4
-
-#else
-
-#define IDX_BSDF_X 0
-#define IDX_BSDF_Y 1
-#define IDX_RR 2
-
-#define VERTEX_SAMPLE_SIZE 3
-
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2)

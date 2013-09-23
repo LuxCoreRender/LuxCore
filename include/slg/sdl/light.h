@@ -44,7 +44,7 @@ typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
 } LightSourceType;
 
-extern const float lightWorldRadiusScale;
+extern const float LIGHT_WORLD_RADIUS_SCALE;
 
 //------------------------------------------------------------------------------
 // LightSource implementation
