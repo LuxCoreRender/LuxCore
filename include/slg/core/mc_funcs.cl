@@ -125,3 +125,82 @@ float PdfWtoA(const float pdfW, const float dist, const float cosThere) {
 float PdfAtoW(const float pdfA, const float dist, const float cosThere) {
     return pdfA * dist * dist / fabs(cosThere);
 }
+
+// Implementation of std::upper_bound()
+__global float *std_upper_bound(__global float *first, __global float *last, const float val) {
+	__global float *it;
+	uint count = last - first;
+	uint step;
+
+	while (count > 0) {
+		it = first;
+		step = count / 2;
+		it += step;
+
+		if (!(val < *it)) {
+			first = ++it;
+			count -= step + 1;
+		} else
+			count = step;
+	}
+	return first;
+}
+
+float Distribution1D_SampleContinuous(__global float *distribution1D, const float u, float *pdf) {
+	const uint count = as_uint(distribution1D[0]);
+	__global float *func = &distribution1D[1];
+	__global float *cdf = &distribution1D[1 + count];
+
+	// Find surrounding CDF segments and _offset_
+	if (u <= cdf[0]) {
+		*pdf = func[0];
+		return 0.f;
+	}
+	if (u >= cdf[count]) {
+		*pdf = func[count - 1];
+		return 1.f;
+	}
+
+	__global float *ptr = std_upper_bound(cdf, cdf + count + 1, u);
+	const uint offset = ptr - cdf - 1;
+
+	// Compute offset along CDF segment
+	const float du = (u - cdf[offset]) /
+			(cdf[offset + 1] - cdf[offset]);
+
+	// Compute PDF for sampled offset
+	*pdf = func[offset];
+
+	return (offset + du) / count;
+}
+
+uint Distribution1D_SampleDiscrete(__global float *distribution1D, const float u, float *pdf) {
+	const uint count = as_uint(distribution1D[0]);
+	__global float *func = &distribution1D[1];
+	__global float *cdf = &distribution1D[1 + count];
+
+	// Find surrounding CDF segments and _offset_
+	if (u <= cdf[0]) {
+		*pdf = func[0] / count;
+		return 0;
+	}
+	if (u >= cdf[count]) {
+		*pdf = func[count - 1] / count;
+		return count - 1;
+	}
+
+	__global float *ptr = std_upper_bound(cdf, cdf + count + 1, u);
+	const uint offset = ptr - cdf - 1;
+
+	// Compute PDF for sampled offset
+	*pdf = func[offset] / count;
+
+	return offset;
+}
+
+float Distribution1D_Pdf(__global float *distribution1D, const uint offset) {
+	const uint count = as_uint(distribution1D[0]);
+	__global float *func = &distribution1D[1];
+
+	return func[offset] / count;
+}

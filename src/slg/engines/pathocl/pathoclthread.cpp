@@ -86,6 +86,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	infiniteLightBuff = NULL;
 	sunLightBuff = NULL;
 	skyLightBuff = NULL;
+	lightsDistributionBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
 	uvsBuff = NULL;
@@ -350,6 +351,13 @@ void PathOCLRenderThread::InitSkyLight() {
 			sizeof(slg::ocl::SkyLight), "SkyLight");
 	else
 		FreeOCLBuffer(&skyLightBuff);
+}
+
+void PathOCLRenderThread::InitLightsDistribution() {
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	AllocOCLBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
+		cscene->lightsDistributionSize, "LightsDistribution");
 }
 
 void PathOCLRenderThread::InitImageMaps() {
@@ -1028,6 +1036,8 @@ void PathOCLRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	InitSkyLight();
+	
+	InitLightsDistribution();
 
 	const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
 	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (triAreaLightCount == 0))
@@ -1115,6 +1125,7 @@ void PathOCLRenderThread::SetKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *alphasBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, *cameraBuff);
+	advancePathsKernel->setArg(argIndex++, *lightsDistributionBuff);
 	if (infiniteLightBuff)
 		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
 	if (sunLightBuff)
@@ -1292,6 +1303,15 @@ void PathOCLRenderThread::EndEdit(const EditActionList &editActions) {
 	if  (editActions.Has(SKYLIGHT_EDIT)) {
 		// Update Scene Sun Light
 		InitSkyLight();
+	}
+
+	if (editActions.Has(GEOMETRY_EDIT) ||
+			editActions.Has(AREALIGHTS_EDIT) ||
+			editActions.Has(INFINITELIGHT_EDIT) ||
+			editActions.Has(INFINITELIGHT_EDIT) ||
+			editActions.Has(INFINITELIGHT_EDIT)) {
+		// Update Scene light power distribution for direct light sampling
+		InitLightsDistribution();
 	}
 
 	//--------------------------------------------------------------------------

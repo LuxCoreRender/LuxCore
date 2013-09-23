@@ -56,6 +56,8 @@ public:
 	virtual ~LightSource() { }
 
 	virtual LightSourceType GetType() const = 0;
+	virtual void SetSceneIndex(const u_int index) { lightSceneIndex = index; }
+	virtual u_int GetSceneIndex() const { return lightSceneIndex; }
 
 	virtual bool IsEnvironmental() const { return false; }
 
@@ -78,6 +80,9 @@ public:
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
+
+private:
+	u_int lightSceneIndex;
 };
 
 //------------------------------------------------------------------------------

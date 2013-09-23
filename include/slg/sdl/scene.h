@@ -155,8 +155,6 @@ protected:
 		const std::string &defaultValue);
 
 	Texture *GetTexture(const std::string &name);
-
-	std::map<const LightSource *, u_int> light2Index;
 };
 
 }

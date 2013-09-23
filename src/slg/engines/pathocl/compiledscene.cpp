@@ -517,6 +517,7 @@ void CompiledScene::CompileAreaLights() {
 			triLight->invArea = 1.f / tl->GetArea();
 
 			triLight->materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
+			triLight->lightSceneIndex = tl->GetSceneIndex();
 		}
 
 		meshTriLightDefsOffset = scene->meshTriLightDefsOffset;
@@ -585,6 +586,8 @@ void CompiledScene::CompileInfiniteLight() {
 
 		memcpy(&infiniteLight->light2World.m, &il->GetTransformation().m, sizeof(float[4][4]));
 		memcpy(&infiniteLight->light2World.mInv, &il->GetTransformation().mInv, sizeof(float[4][4]));
+
+		infiniteLight->lightSceneIndex = il->GetSceneIndex();
 	} else
 		infiniteLight = NULL;
 
@@ -614,6 +617,8 @@ void CompiledScene::CompileSunLight() {
 		sl->GetInitData(reinterpret_cast<Vector *>(&sunLight->x),
 				reinterpret_cast<Vector *>(&sunLight->y), &tmp, &tmp, &tmp,
 				&sunLight->cosThetaMax, &tmp, reinterpret_cast<Spectrum *>(&sunLight->sunColor));
+		
+		sunLight->lightSceneIndex = sl->GetSceneIndex();
 	} else
 		sunLight = NULL;
 }
@@ -638,6 +643,8 @@ void CompiledScene::CompileSkyLight() {
 
 		memcpy(&skyLight->light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
 		memcpy(&skyLight->light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
+
+		skyLight->lightSceneIndex = sl->GetSceneIndex();
 	} else
 		skyLight = NULL;
 }
@@ -648,7 +655,9 @@ void CompiledScene::CompileLightDistribution() {
 	delete lightsDistribution;
 
 	const u_int count = scene->lightsDistribution->GetCount();
-	lightsDistribution = new float[sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float)];
+	lightsDistributionSize = sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float);
+	lightsDistribution = new float[lightsDistributionSize];
+
 	*((u_int *)&lightsDistribution[0]) = count;
 	std::copy(scene->lightsDistribution->GetFuncs(), scene->lightsDistribution->GetFuncs() + count,
 			lightsDistribution + 1);
