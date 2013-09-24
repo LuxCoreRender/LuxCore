@@ -126,6 +126,10 @@ float PdfAtoW(const float pdfA, const float dist, const float cosThere) {
     return pdfA * dist * dist / fabs(cosThere);
 }
 
+//------------------------------------------------------------------------------
+// Distribution1D
+//------------------------------------------------------------------------------
+
 // Implementation of std::upper_bound()
 __global float *std_upper_bound(__global float *first, __global float *last, const float val) {
 	__global float *it;
@@ -146,7 +150,8 @@ __global float *std_upper_bound(__global float *first, __global float *last, con
 	return first;
 }
 
-float Distribution1D_SampleContinuous(__global float *distribution1D, const float u, float *pdf) {
+float Distribution1D_SampleContinuous(__global float *distribution1D, const float u,
+		float *pdf, uint *off) {
 	const uint count = as_uint(distribution1D[0]);
 	__global float *func = &distribution1D[1];
 	__global float *cdf = &distribution1D[1 + count];
@@ -154,10 +159,16 @@ float Distribution1D_SampleContinuous(__global float *distribution1D, const floa
 	// Find surrounding CDF segments and _offset_
 	if (u <= cdf[0]) {
 		*pdf = func[0];
+		if (off)
+			*off = 0;
+
 		return 0.f;
 	}
 	if (u >= cdf[count]) {
 		*pdf = func[count - 1];
+		if (off)
+			*off = count - 1;
+
 		return 1.f;
 	}
 
@@ -170,6 +181,10 @@ float Distribution1D_SampleContinuous(__global float *distribution1D, const floa
 
 	// Compute PDF for sampled offset
 	*pdf = func[offset];
+
+	// Save offset
+	if (off)
+		*off = offset;
 
 	return (offset + du) / count;
 }
@@ -198,9 +213,62 @@ uint Distribution1D_SampleDiscrete(__global float *distribution1D, const float u
 	return offset;
 }
 
-float Distribution1D_Pdf(__global float *distribution1D, const uint offset) {
+uint Distribution1D_Offset(__global float *distribution1D, const float u) {
+	const uint count = as_uint(distribution1D[0]);
+
+	return min(count - 1, Floor2UInt(u * count));
+}
+
+float Distribution1D_Pdf_UINT(__global float *distribution1D, const uint offset) {
 	const uint count = as_uint(distribution1D[0]);
 	__global float *func = &distribution1D[1];
 
 	return func[offset] / count;
+}
+
+float Distribution1D_Pdf_FLOAT(__global float *distribution1D, const float u) {
+	const uint count = as_uint(distribution1D[0]);
+	__global float *func = &distribution1D[1];
+
+	return func[Distribution1D_Offset(distribution1D, u)] / count;
+}
+
+//------------------------------------------------------------------------------
+// Distribution2D
+//------------------------------------------------------------------------------
+
+void Distribution2D_SampleContinuous(__global float *distribution2D,
+		const float u0, const float u1, float2 *uv, float *pdf) {
+	const uint width = as_uint(distribution2D[0]);
+	const uint height = as_uint(distribution2D[1]);
+	__global float *marginal = &distribution2D[2];
+	// size of Distribution1Dsize of count + size of func + size of cdf
+	const uint marginalSize = 1 + height + height + 1;
+	// size of Distribution1Dsize of count + size of func + size of cdf
+	const uint conditionalSize = 1 + width + width + 1;
+
+	float pdf1;
+	uint index;
+	(*uv).s1 = Distribution1D_SampleContinuous(marginal, u1, &pdf1, &index);
+
+	float pdf0;
+	__global float *conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
+	(*uv).s0 = Distribution1D_SampleContinuous(conditional, u0, &pdf0, NULL);
+
+	*pdf = pdf0 * pdf1;
+}
+
+float Distribution2D_Pdf(__global float *distribution2D, const float u0, const float u1) {
+	const uint width = as_uint(distribution2D[0]);
+	const uint height = as_uint(distribution2D[1]);
+	__global float *marginal = &distribution2D[2];
+	// size of Distribution1Dsize of count + size of func + size of cdf
+	const uint marginalSize = 1 + height + height + 1;
+	// size of Distribution1Dsize of count + size of func + size of cdf
+	const uint conditionalSize = 1 + width + width + 1;
+
+	const uint index = Distribution1D_Offset(marginal, u1);
+	__global float *conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
+
+	return Distribution1D_Pdf_FLOAT(conditional, u0) * Distribution1D_Pdf_FLOAT(marginal, u1);
 }

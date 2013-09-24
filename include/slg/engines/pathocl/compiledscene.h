@@ -78,6 +78,8 @@ public:
 
 	// Compiled InfiniteLights
 	slg::ocl::InfiniteLight *infiniteLight;
+	float *infiniteLightDistribution;
+	u_int infiniteLightDistributionSize;
 
 	// Compiled SunLight
 	slg::ocl::SunLight *sunLight;
@@ -114,7 +116,9 @@ private:
 	void CompileInfiniteLight();
 	void CompileSunLight();
 	void CompileSkyLight();
-	void CompileLightDistribution();
+	void CompileLightsDistribution();
+
+	float *CompileDistribution(const Distribution1D *dist, u_int *size) const;
 };
 
 }

@@ -352,6 +352,13 @@ public:
 		return pMarginal->Average();
 	}
 
+	const u_int GetWidth() const { return pConditionalV[0]->GetCount(); }
+	const u_int GetHeight() const { return pMarginal->GetCount(); }
+	const Distribution1D *GetMarginalDistribution() const { return pMarginal; }
+	const Distribution1D *GetConditionalDistribution(const u_int i) const {
+		return pConditionalV[i];
+	}
+
 private:
 	// Distribution2D Private Data
 	std::vector<Distribution1D *> pConditionalV;

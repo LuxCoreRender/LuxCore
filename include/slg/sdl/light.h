@@ -165,6 +165,8 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
+	const Distribution2D *GetDistribution2D() const { return imageMapDistribution; }
+
 private:
 	const ImageMap *imageMap;
 	UVMapping2D mapping;

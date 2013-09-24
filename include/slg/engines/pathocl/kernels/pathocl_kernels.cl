@@ -244,6 +244,7 @@ bool DirectLightSampling(
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT)
 		__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistribution,
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		__global SunLight *sunLight,
@@ -284,6 +285,7 @@ bool DirectLightSampling(
 		if (lightIndex == infiniteLightIndex) {
 			lightRadiance = InfiniteLight_Illuminate(
 				infiniteLight,
+				infiniteLightDistribution,
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				u1, u2,
 				VLOAD3F(&bsdf->hitPoint.p.x),
@@ -374,6 +376,7 @@ void DirectHitInfiniteLight(
 	__global float *lightsDistribution,
 #if defined(PARAM_HAS_INFINITELIGHT)
 		__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistribution,
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		__global SunLight *sunLight,
@@ -391,7 +394,8 @@ void DirectHitInfiniteLight(
 #if defined(PARAM_HAS_INFINITELIGHT)
 	{
 		float directPdfW;
-		const float3 radiance = InfiniteLight_GetRadiance(infiniteLight, eyeDir, &directPdfW
+		const float3 radiance = InfiniteLight_GetRadiance(infiniteLight,
+				infiniteLightDistribution, eyeDir, &directPdfW
 				IMAGEMAPS_PARAM);
 		if (!Spectrum_IsBlack(radiance)) {
 			// MIS between BSDF sampling and direct light sampling
@@ -497,6 +501,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global float *lightsDistribution
 #if defined(PARAM_HAS_INFINITELIGHT)
 		, __global InfiniteLight *infiniteLight
+		, __global float *infiniteLightDistribution
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		, __global SunLight *sunLight
@@ -672,12 +677,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			//------------------------------------------------------------------
 			// Nothing was hit, add environmental lights radiance
 			//------------------------------------------------------------------
-			
+
 #if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
 			DirectHitInfiniteLight(
 					lightsDistribution,
 #if defined(PARAM_HAS_INFINITELIGHT)
 					infiniteLight,
+					infiniteLightDistribution,
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 					sunLight,
@@ -776,6 +782,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT)
 				infiniteLight,
+				infiniteLightDistribution,
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 				sunLight,

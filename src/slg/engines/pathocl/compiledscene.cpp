@@ -37,6 +37,7 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	maxMemPageSize = (u_int)Min<size_t>(maxMemPageS, 0xffffffffu);
 
 	infiniteLight = NULL;
+	infiniteLightDistribution = NULL;
 	sunLight = NULL;
 	skyLight = NULL;
 	lightsDistribution = NULL;
@@ -48,9 +49,10 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 
 CompiledScene::~CompiledScene() {
 	delete infiniteLight;
+	delete[] infiniteLightDistribution;
 	delete sunLight;
 	delete skyLight;
-	delete lightsDistribution;
+	delete[] lightsDistribution;
 }
 
 void CompiledScene::CompileCamera() {
@@ -569,6 +571,7 @@ void CompiledScene::CompileInfiniteLight() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile InfiniteLight");
 
 	delete infiniteLight;
+	delete infiniteLightDistribution;
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinite light source
@@ -588,11 +591,42 @@ void CompiledScene::CompileInfiniteLight() {
 		memcpy(&infiniteLight->light2World.mInv, &il->GetTransformation().mInv, sizeof(float[4][4]));
 
 		infiniteLight->lightSceneIndex = il->GetSceneIndex();
+
+		// Compile the image map Distribution2D
+		const Distribution2D *imageMapDistribution = il->GetDistribution2D();
+		u_int marginalSize;
+		float *marginalDist = CompileDistribution(imageMapDistribution->GetMarginalDistribution(),
+				&marginalSize);
+
+		u_int condSize;
+		vector<float *> condDists;
+		for (u_int i = 0; i < imageMapDistribution->GetHeight(); ++i) {
+			condDists.push_back(CompileDistribution(imageMapDistribution->GetConditionalDistribution(i),
+				&condSize));
+		}
+
+		infiniteLightDistributionSize = 2 * sizeof(u_int) + marginalSize + condDists.size() * condSize;
+		infiniteLightDistribution = new float[infiniteLightDistributionSize];
+
+		*((u_int *)&infiniteLightDistribution[0]) = imageMapDistribution->GetWidth();
+		*((u_int *)&infiniteLightDistribution[1]) = imageMapDistribution->GetHeight();
+
+		float *ptr = &infiniteLightDistribution[2];
+		std::copy(marginalDist, marginalDist + marginalSize, ptr);
+		ptr += marginalSize / 4;
+		delete[] marginalDist;
+
+		const u_int condSize4 = condSize / sizeof(float);
+		for (u_int i = 0; i < imageMapDistribution->GetHeight(); ++i) {
+			std::copy(condDists[i], condDists[i] + condSize4, ptr);
+			ptr += condSize4;
+			delete[] condDists[i];
+		}
 	} else
 		infiniteLight = NULL;
 
 	const double tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Infinitelight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] InfiniteLight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileSunLight() {
@@ -649,20 +683,26 @@ void CompiledScene::CompileSkyLight() {
 		skyLight = NULL;
 }
 
-void CompiledScene::CompileLightDistribution() {
+float *CompiledScene::CompileDistribution(const Distribution1D *dist, u_int *size) const {
+	const u_int count = dist->GetCount();
+	*size = sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float);
+	float *compDist = new float[*size];
+
+	*((u_int *)&compDist[0]) = count;
+	std::copy(dist->GetFuncs(), dist->GetFuncs() + count,
+			compDist + 1);
+	std::copy(dist->GetCDFs(), dist->GetCDFs() + count + 1,
+			compDist + 1 + count);
+
+	return compDist;
+}
+
+void CompiledScene::CompileLightsDistribution() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightDistribution");
 
-	delete lightsDistribution;
+	delete[] lightsDistribution;
 
-	const u_int count = scene->lightsDistribution->GetCount();
-	lightsDistributionSize = sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float);
-	lightsDistribution = new float[lightsDistributionSize];
-
-	*((u_int *)&lightsDistribution[0]) = count;
-	std::copy(scene->lightsDistribution->GetFuncs(), scene->lightsDistribution->GetFuncs() + count,
-			lightsDistribution + 1);
-	std::copy(scene->lightsDistribution->GetCDFs(), scene->lightsDistribution->GetCDFs() + count + 1,
-			lightsDistribution + 1 + count);
+	lightsDistribution = CompileDistribution(scene->lightsDistribution, &lightsDistributionSize);
 }
 
 void CompiledScene::CompileTextures() {
@@ -1028,7 +1068,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 			editActions.Has(INFINITELIGHT_EDIT) ||
 			editActions.Has(SUNLIGHT_EDIT) ||
 			editActions.Has(SKYLIGHT_EDIT))
-		CompileLightDistribution();
+		CompileLightsDistribution();
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
 }

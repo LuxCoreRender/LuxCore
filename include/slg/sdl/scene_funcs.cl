@@ -22,7 +22,7 @@
  ***************************************************************************/
 
 float Scene_SampleAllLightPdf(__global float *distribution1D, const uint lightIndex) {
-	return Distribution1D_Pdf(distribution1D, lightIndex);
+	return Distribution1D_Pdf_UINT(distribution1D, lightIndex);
 }
 
 uint Scene_SampleAllLights(__global float *distribution1D, const float u, float *pdf) {

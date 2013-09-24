@@ -11,6 +11,7 @@ scene.objects.chrome.ply = scenes/studiotest/chrome.ply
 scene.objects.white.material = white
 scene.objects.white.ply = scenes/studiotest/white.ply
 ################################################################################
-scene.infinitelight.file = scenes/studiotest/test-light2.png
-scene.infinitelight.gain = 15 15 15
-#scene.infinitelight.shift = 0.4 0.0
+scene.infinitelight.file = scenes/studiotest/test-light.png
+scene.infinitelight.gain = 2000 2000 2000
+#scene.infinitelight.file = scenes/studiotest/test-light2.png
+#scene.infinitelight.gain = 15 15 15

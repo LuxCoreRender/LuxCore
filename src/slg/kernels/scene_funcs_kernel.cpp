@@ -25,7 +25,7 @@ std::string KernelSource_scene_funcs =
 " ***************************************************************************/\n"
 "\n"
 "float Scene_SampleAllLightPdf(__global float *distribution1D, const uint lightIndex) {\n"
-"	return Distribution1D_Pdf(distribution1D, lightIndex);\n"
+"	return Distribution1D_Pdf_UINT(distribution1D, lightIndex);\n"
 "}\n"
 "\n"
 "uint Scene_SampleAllLights(__global float *distribution1D, const float u, float *pdf) {\n"

@@ -84,6 +84,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	meshDescsBuff = NULL;
 	meshMatsBuff = NULL;
 	infiniteLightBuff = NULL;
+	infiniteLightDistributionBuff = NULL;
 	sunLightBuff = NULL;
 	skyLightBuff = NULL;
 	lightsDistributionBuff = NULL;
@@ -326,11 +327,15 @@ void PathOCLRenderThread::InitTriangleAreaLights() {
 void PathOCLRenderThread::InitInfiniteLight() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	if (cscene->infiniteLight)
+	if (cscene->infiniteLight) {
 		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
 			sizeof(slg::ocl::InfiniteLight), "InfiniteLight");
-	else
+		AllocOCLBufferRO(&infiniteLightDistributionBuff, cscene->infiniteLightDistribution,
+			cscene->infiniteLightDistributionSize, "InfiniteLight Distribution");
+	} else {
 		FreeOCLBuffer(&infiniteLightBuff);
+		FreeOCLBuffer(&infiniteLightDistributionBuff);
+	}
 }
 
 void PathOCLRenderThread::InitSunLight() {
@@ -1126,8 +1131,10 @@ void PathOCLRenderThread::SetKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, *cameraBuff);
 	advancePathsKernel->setArg(argIndex++, *lightsDistributionBuff);
-	if (infiniteLightBuff)
+	if (infiniteLightBuff) {
 		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
+		advancePathsKernel->setArg(argIndex++, *infiniteLightDistributionBuff);
+	}
 	if (sunLightBuff)
 		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
 	if (skyLightBuff)
@@ -1220,6 +1227,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&vertsBuff);
 	FreeOCLBuffer(&infiniteLightBuff);
+	FreeOCLBuffer(&infiniteLightDistributionBuff);
 	FreeOCLBuffer(&sunLightBuff);
 	FreeOCLBuffer(&skyLightBuff);
 	FreeOCLBuffer(&cameraBuff);
