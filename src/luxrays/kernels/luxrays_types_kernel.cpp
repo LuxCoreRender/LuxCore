@@ -28,6 +28,8 @@ std::string KernelSource_luxrays_types =
 "\n"
 "#if defined(LUXRAYS_OPENCL_KERNEL)\n"
 "\n"
+"#define NULL 0\n"
+"\n"
 "#if defined(__APPLE_CL__)\n"
 "float3 __OVERLOAD__ mix(float3 a, float3 b, float t)\n"
 "{\n"

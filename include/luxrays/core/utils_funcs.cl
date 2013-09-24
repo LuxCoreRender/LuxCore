@@ -36,6 +36,10 @@ int Floor2Int(const float val) {
 	return (int)floor(val);
 }
 
+unsigned int Floor2UInt(const float val) {
+	return (val > 0.f) ? ((unsigned int)floor(val)) : 0;
+}
+
 float Lerp(const float t, const float v1, const float v2) {
 	return mix(v1, v2, t);
 }

@@ -135,6 +135,7 @@ protected:
 	cl::Buffer *meshDescsBuff;
 	cl::Buffer *meshMatsBuff;
 	cl::Buffer *infiniteLightBuff;
+	cl::Buffer *infiniteLightDistributionBuff;
 	cl::Buffer *sunLightBuff;
 	cl::Buffer *skyLightBuff;
 	cl::Buffer *lightsDistributionBuff;

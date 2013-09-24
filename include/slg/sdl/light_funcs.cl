@@ -27,11 +27,10 @@
 
 #if defined(PARAM_HAS_INFINITELIGHT)
 
-float3 InfiniteLight_GetRadiance(
-	__global InfiniteLight *infiniteLight, const float3 dir, float *directPdfA
+float3 InfiniteLight_GetRadiance(__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistirbution,
+		const float3 dir, float *directPdfA
 	IMAGEMAPS_PARAM_DECL) {
-	*directPdfA = 1.f / (4.f * M_PI);
-
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
@@ -45,7 +44,10 @@ float3 InfiniteLight_GetRadiance(
 	const float2 scale = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uScale);
 	const float2 delta = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uDelta);
 	const float2 mapUV = uv * scale + delta;
-	
+
+	const float distPdf = Distribution2D_Pdf(infiniteLightDistirbution, mapUV.s0, mapUV.s1);
+	*directPdfA = distPdf / (4.f * M_PI);
+
 	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
@@ -53,13 +55,18 @@ float3 InfiniteLight_GetRadiance(
 }
 
 float3 InfiniteLight_Illuminate(__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistirbution,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		const float u0, const float u1, const float3 p,
 		float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
-	const float phi = u0 * 2.f * M_PI_F;
-	const float theta = u1 * M_PI_F;
+	float2 sampleUV;
+	float distPdf;
+	Distribution2D_SampleContinuous(infiniteLightDistirbution, u0, u1, &sampleUV, &distPdf);
+
+	const float phi = sampleUV.s0 * 2.f * M_PI_F;
+	const float theta = sampleUV.s1 * M_PI_F;
 	*dir = normalize(Transform_ApplyVector(&infiniteLight->light2World,
 			SphericalDirection(sin(theta), cos(theta), phi)));
 
@@ -79,14 +86,14 @@ float3 InfiniteLight_Illuminate(__global InfiniteLight *infiniteLight,
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	*directPdfW = 1.f / (4.f * M_PI);
+	*directPdfW = distPdf / (4.f * M_PI);
 
 	// InfiniteLight_GetRadiance  is expended here
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
-	const float2 uv = (float2)(phi, theta);
+	const float2 uv = (float2)(sampleUV.s0, sampleUV.s1);
 
 	// TextureMapping2D_Map() is expended here
 	const float2 scale = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uScale);

@@ -25,6 +25,8 @@
 
 #if defined(LUXRAYS_OPENCL_KERNEL)
 
+#define NULL 0
+
 #if defined(__APPLE_CL__)
 float3 __OVERLOAD__ mix(float3 a, float3 b, float t)
 {
