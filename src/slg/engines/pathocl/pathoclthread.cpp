@@ -320,7 +320,7 @@ void PathOCLRenderThread::InitFilm() {
 	else
 		FreeOCLBuffer(&channel_INDIRECT_SPECULAR_Buff);
 	//--------------------------------------------------------------------------
-	if (film->GetMaskMaterialIDCount() > 0) {
+	if (film->HasChannel(Film::MATERIAL_ID_MASK)) {
 		if (film->GetMaskMaterialIDCount() > 1)
 			throw runtime_error("PathOCL supports only 1 MATERIAL_ID_MASK");
 		else

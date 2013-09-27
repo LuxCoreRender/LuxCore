@@ -33,7 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		PathOCLRenderEngine(rcfg, flm, flmMutex) {
+		PathOCLRenderEngine(rcfg, flm, flmMutex, true) {
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
 	frameTime = 0.f;
 }
