@@ -92,6 +92,7 @@ std::string KernelSource_material_types =
 "\n"
 "typedef struct {\n"
 "	MaterialType type;\n"
+"	unsigned int matID, lightID;\n"
 "	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;\n"
 "	union {\n"
 "		MatteParam matte;\n"
@@ -112,6 +113,10 @@ std::string KernelSource_material_types =
 "// Some macro trick in order to have more readable code\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
+"#if defined(SLG_OPENCL_KERNEL)\n"
+"\n"
 "#define MATERIALS_PARAM_DECL , __global Material *mats TEXTURES_PARAM_DECL\n"
 "#define MATERIALS_PARAM , mats TEXTURES_PARAM\n"
+"\n"
+"#endif\n"
 ; } }

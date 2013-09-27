@@ -173,6 +173,8 @@ typedef struct {
 // Some macro trick in order to have more readable code
 //------------------------------------------------------------------------------
 
+#if defined(SLG_OPENCL_KERNEL)
+
 #if defined(PARAM_HAS_IMAGEMAPS)
 
 #define IMAGEMAPS_PARAM_DECL , __global ImageMap *imageMapDescs, __global float **imageMapBuff
@@ -187,3 +189,5 @@ typedef struct {
 
 #define TEXTURES_PARAM_DECL , __global Texture *texs IMAGEMAPS_PARAM_DECL
 #define TEXTURES_PARAM , texs IMAGEMAPS_PARAM
+
+#endif

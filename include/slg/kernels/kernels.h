@@ -31,6 +31,8 @@ extern std::string KernelSource_pathocl_kernels;
 extern std::string KernelSource_rtpathocl_kernels;
 extern std::string KernelSource_sampler_types;
 extern std::string KernelSource_sampler_funcs;
+extern std::string KernelSource_film_types;
+extern std::string KernelSource_film_funcs;
 extern std::string KernelSource_filter_types;
 extern std::string KernelSource_filter_funcs;
 extern std::string KernelSource_camera_types;

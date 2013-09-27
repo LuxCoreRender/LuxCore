@@ -117,6 +117,7 @@ public:
 	Film(const u_int w, const u_int h);
 	~Film();
 
+	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
 	// This one must be called before Init()
 	void AddChannel(const FilmChannelType type,
 		const luxrays::Properties *prop = NULL);
@@ -125,7 +126,9 @@ public:
 	// This one must be called before Init()
 	void SetRadianceGroupCount(const u_int count) { radianceGroupCount = count; }
 	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
-	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
+	u_int GetMaskMaterialIDCount() const { return maskMaterialIDs.size(); }
+	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }
+	
 
 	void Init();
 	void Resize(const u_int w, const u_int h);
@@ -209,6 +212,26 @@ public:
 		const SampleResult &sampleResult, const float weight = 1.f);
 	void SplatSample(const SampleResult &sampleResult, const float weight = 1.f);
 
+	std::vector<GenericFrameBuffer<4, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
+	std::vector<GenericFrameBuffer<4, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
+	GenericFrameBuffer<2, float> *channel_ALPHA;
+	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
+	GenericFrameBuffer<1, float> *channel_DEPTH;
+	GenericFrameBuffer<3, float> *channel_POSITION;
+	GenericFrameBuffer<3, float> *channel_GEOMETRY_NORMAL;
+	GenericFrameBuffer<3, float> *channel_SHADING_NORMAL;
+	GenericFrameBuffer<1, u_int> *channel_MATERIAL_ID;
+	GenericFrameBuffer<4, float> *channel_DIRECT_DIFFUSE;
+	GenericFrameBuffer<4, float> *channel_DIRECT_GLOSSY;
+	GenericFrameBuffer<4, float> *channel_EMISSION;
+	GenericFrameBuffer<4, float> *channel_INDIRECT_DIFFUSE;
+	GenericFrameBuffer<4, float> *channel_INDIRECT_GLOSSY;
+	GenericFrameBuffer<4, float> *channel_INDIRECT_SPECULAR;
+	std::vector<GenericFrameBuffer<2, float> *> channel_MATERIAL_ID_MASKs;
+	GenericFrameBuffer<2, float> *channel_DIRECT_SHADOW_MASK;
+	GenericFrameBuffer<2, float> *channel_INDIRECT_SHADOW_MASK;
+	GenericFrameBuffer<2, float> *channel_UV;
+
 private:
 	void UpdateScreenBufferImpl(const ToneMapType type);
 	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
@@ -235,26 +258,8 @@ private:
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
-	std::vector<GenericFrameBuffer<4, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	std::vector<GenericFrameBuffer<4, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	GenericFrameBuffer<2, float> *channel_ALPHA;
-	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
-	GenericFrameBuffer<1, float> *channel_DEPTH;
-	GenericFrameBuffer<3, float> *channel_POSITION;
-	GenericFrameBuffer<3, float> *channel_GEOMETRY_NORMAL;
-	GenericFrameBuffer<3, float> *channel_SHADING_NORMAL;
-	GenericFrameBuffer<1, u_int> *channel_MATERIAL_ID;
-	GenericFrameBuffer<4, float> *channel_DIRECT_DIFFUSE;
-	GenericFrameBuffer<4, float> *channel_DIRECT_GLOSSY;
-	GenericFrameBuffer<4, float> *channel_EMISSION;
-	GenericFrameBuffer<4, float> *channel_INDIRECT_DIFFUSE;
-	GenericFrameBuffer<4, float> *channel_INDIRECT_GLOSSY;
-	GenericFrameBuffer<4, float> *channel_INDIRECT_SPECULAR;
-	std::vector<GenericFrameBuffer<2, float> *> channel_MATERIAL_ID_MASKs;
 	std::vector<u_int> maskMaterialIDs;
-	GenericFrameBuffer<2, float> *channel_DIRECT_SHADOW_MASK;
-	GenericFrameBuffer<2, float> *channel_INDIRECT_SHADOW_MASK;
-	GenericFrameBuffer<2, float> *channel_UV;
+
 	// Used to speedup sample splatting, initialized inside Init()
 	bool hasDataChannel, hasComposingChannel;
 

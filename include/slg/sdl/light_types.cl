@@ -30,7 +30,7 @@ typedef struct {
 	Spectrum gain;
 	TextureMapping2D mapping;
 	unsigned int imageMapIndex;
-	unsigned int lightSceneIndex;
+	unsigned int lightSceneIndex, lightID;
 } InfiniteLight;
 
 typedef struct {
@@ -40,7 +40,7 @@ typedef struct {
 	float phiS;
 	float zenith_Y, zenith_x, zenith_y;
 	float perez_Y[6], perez_x[6], perez_y[6];
-	unsigned int lightSceneIndex;
+	unsigned int lightSceneIndex, lightID;
 } SkyLight;
 
 typedef struct {
@@ -52,7 +52,7 @@ typedef struct {
 	Vector x, y;
 	float cosThetaMax;
 	Spectrum sunColor;
-	unsigned int lightSceneIndex;
+	unsigned int lightSceneIndex, lightID;
 } SunLight;
 
 typedef struct {

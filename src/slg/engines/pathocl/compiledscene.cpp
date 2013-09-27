@@ -264,18 +264,6 @@ static float GetTexConstantFloatValue(const Texture *tex) {
 	return std::numeric_limits<float>::infinity();
 }
 
-//static Spectrum GetTexConstantFloat3Value(const Texture *tex) {
-//	// Check if a texture is constant and return the value
-//	const ConstFloatTexture *cft = dynamic_cast<const ConstFloatTexture *>(tex);
-//	if (cft)
-//		return Spectrum(cft->GetValue());
-//	const ConstFloat3Texture *cf3t = dynamic_cast<const ConstFloat3Texture *>(tex);
-//	if (cf3t)
-//		return cf3t->GetColor();
-//
-//	return std::numeric_limits<float>::infinity();
-//}
-
 void CompiledScene::CompileMaterials() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Materials");
 
@@ -298,6 +286,9 @@ void CompiledScene::CompileMaterials() {
 		Material *m = scene->matDefs.GetMaterial(i);
 		slg::ocl::Material *mat = &mats[i];
 		//SLG_LOG("[PathOCLRenderThread::CompiledScene]  Type: " << m->GetType());
+
+		mat->matID = m->GetID();
+		mat->lightID = m->GetLightID();
 
 		// Material emission
 		const Texture *emitTex = m->GetEmitTexture();
@@ -591,6 +582,7 @@ void CompiledScene::CompileInfiniteLight() {
 		memcpy(&infiniteLight->light2World.mInv, &il->GetTransformation().mInv, sizeof(float[4][4]));
 
 		infiniteLight->lightSceneIndex = il->GetSceneIndex();
+		infiniteLight->lightID = il->GetID();
 
 		// Compile the image map Distribution2D
 		const Distribution2D *imageMapDistribution = il->GetDistribution2D();
@@ -653,6 +645,7 @@ void CompiledScene::CompileSunLight() {
 				&sunLight->cosThetaMax, &tmp, reinterpret_cast<Spectrum *>(&sunLight->sunColor));
 		
 		sunLight->lightSceneIndex = sl->GetSceneIndex();
+		sunLight->lightID = sl->GetID();
 	} else
 		sunLight = NULL;
 }
@@ -679,6 +672,7 @@ void CompiledScene::CompileSkyLight() {
 		memcpy(&skyLight->light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
 
 		skyLight->lightSceneIndex = sl->GetSceneIndex();
+		skyLight->lightID = sl->GetID();
 	} else
 		skyLight = NULL;
 }

@@ -98,6 +98,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_kernels.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/rtpathocl_kernels.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filter_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sampler/sampler_types.cl
@@ -176,6 +178,8 @@ SOURCE_GROUP("Source Files\\SLG Library" FILES ${SLG_LIB_SRCS})
 set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/camera_types_kernel.cpp

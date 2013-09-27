@@ -274,10 +274,26 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 		return result;
 }
 
+BSDFEvent BSDF_GetEventTypes(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetEventTypes(&mats[bsdf->materialIndex]
+			MATERIALS_PARAM);
+}
+
 bool BSDF_IsDelta(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_IsDelta(&mats[bsdf->materialIndex]
 			MATERIALS_PARAM);
+}
+
+uint BSDF_GetMaterialID(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return mats[bsdf->materialIndex].matID;
+}
+
+uint BSDF_GetLightID(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return mats[bsdf->materialIndex].lightID;
 }
 
 #if (PARAM_DL_LIGHT_COUNT > 0)

@@ -67,9 +67,10 @@ typedef struct {
 typedef struct {
 	// Radiance to add to the result if light source is visible
 	Spectrum lightRadiance;
+	uint lightID;
 
+	BSDFEvent pathBSDFEvent, lastBSDFEvent;
 	float lastPdfW;
-	int lastSpecular;
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 	// This is used by TriangleLight_Illuminate() to temporary store the
@@ -86,9 +87,6 @@ typedef struct {
 typedef struct {
 	// The task seed
 	Seed seed;
-
-	// The set of Samples assigned to this task
-	Sample sample;
 
 	// The state used to keep track of the rendered path
 	PathStateBase pathStateBase;
