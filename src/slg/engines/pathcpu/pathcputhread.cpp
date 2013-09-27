@@ -111,6 +111,22 @@ void PathCPURenderThread::DirectLightSampling(
 	}
 }
 
+void PathCPURenderThread::AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
+		SampleResult *sampleResult, const Spectrum &emission) const {
+	if (firstPathVertex)
+		sampleResult->emission += emission;
+	else {
+		sampleResult->indirectShadowMask = 0.f;
+
+		if (pathBSDFEvent & DIFFUSE)
+			sampleResult->indirectDiffuse += emission;
+		else if (pathBSDFEvent & GLOSSY)
+			sampleResult->indirectGlossy += emission;
+		else if (pathBSDFEvent & SPECULAR)
+			sampleResult->indirectSpecular += emission;
+	}
+}
+
 void PathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent, const BSDFEvent pathBSDFEvent,
 		const Spectrum &pathThroughput, const float distance, const BSDF &bsdf,
@@ -136,18 +152,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 		const Spectrum radiance = weight * pathThroughput * emittedRadiance;
 		sampleResult->radiancePerPixelNormalized[bsdf.GetLightID()] += radiance;
 
-		if (firstPathVertex)
-			sampleResult->emission += radiance;
-		else {
-			sampleResult->indirectShadowMask = 1.f;
-
-			if (pathBSDFEvent & DIFFUSE)
-				sampleResult->indirectDiffuse += radiance;
-			else if (pathBSDFEvent & GLOSSY)
-				sampleResult->indirectGlossy += radiance;
-			else if (pathBSDFEvent & SPECULAR)
-				sampleResult->indirectSpecular += radiance;
-		}
+		AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, radiance);
 	}
 }
 
@@ -158,7 +163,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	// Infinite light
+	// Infinite light or Sky light
 	float directPdfW;
 	if (scene->envLight) {
 		const Spectrum envRadiance = scene->envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
@@ -173,18 +178,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 			const Spectrum radiance = weight * pathThroughput * envRadiance;
 			sampleResult->radiancePerPixelNormalized[scene->envLight->GetID()] += radiance;
 
-			if (firstPathVertex)
-				sampleResult->emission += radiance;
-			else {
-				sampleResult->indirectShadowMask = 1.f;
-
-				if (pathBSDFEvent & DIFFUSE)
-					sampleResult->indirectDiffuse += radiance;
-				else if (pathBSDFEvent & GLOSSY)
-					sampleResult->indirectGlossy += radiance;
-				else if (pathBSDFEvent & SPECULAR)
-					sampleResult->indirectSpecular += radiance;
-			}
+			AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, radiance);
 		}
 	}
 
@@ -202,18 +196,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 			const Spectrum radiance = weight * pathThroughput * sunRadiance;
 			sampleResult->radiancePerPixelNormalized[scene->sunLight->GetID()] += radiance;
 
-			if (firstPathVertex)
-				sampleResult->emission += radiance;
-			else {
-				sampleResult->indirectShadowMask = 1.f;
-
-				if (pathBSDFEvent & DIFFUSE)
-					sampleResult->indirectDiffuse += radiance;
-				else if (pathBSDFEvent & GLOSSY)
-					sampleResult->indirectGlossy += radiance;
-				if (pathBSDFEvent & SPECULAR)
-					sampleResult->indirectSpecular += radiance;
-			}
+			AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, radiance);
 		}
 	}
 }
@@ -310,10 +293,10 @@ void PathCPURenderThread::RenderFunc() {
 							std::numeric_limits<float>::infinity(),
 							std::numeric_limits<float>::infinity());
 					sampleResult.materialID = std::numeric_limits<u_int>::max();
-					sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
-							std::numeric_limits<float>::infinity());
 					sampleResult.directShadowMask = 0.f;
 					sampleResult.indirectShadowMask = 0.f;
+					sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
+							std::numeric_limits<float>::infinity());
 				}
 				break;
 			}
@@ -382,8 +365,6 @@ void PathCPURenderThread::RenderFunc() {
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
 			++depth;
 		}
-
-		sampleResult.indirectShadowMask = 0.f;
 
 		sampler->NextSample(sampleResults);
 

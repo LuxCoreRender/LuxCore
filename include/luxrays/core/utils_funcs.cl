@@ -32,6 +32,10 @@ int Mod(int a, int b) {
 	return a;
 }
 
+int Ceil2Int(float val) {
+	return (int)ceil(val);
+}
+
 int Floor2Int(const float val) {
 	return (int)floor(val);
 }

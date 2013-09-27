@@ -89,6 +89,7 @@ typedef struct {
 
 typedef struct {
 	MaterialType type;
+	unsigned int matID, lightID;
 	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;
 	union {
 		MatteParam matte;
@@ -109,5 +110,9 @@ typedef struct {
 // Some macro trick in order to have more readable code
 //------------------------------------------------------------------------------
 
+#if defined(SLG_OPENCL_KERNEL)
+
 #define MATERIALS_PARAM_DECL , __global Material *mats TEXTURES_PARAM_DECL
 #define MATERIALS_PARAM , mats TEXTURES_PARAM
+
+#endif

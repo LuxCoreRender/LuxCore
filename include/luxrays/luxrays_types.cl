@@ -93,4 +93,9 @@ void VSTORE4F(const float4 v, __global float *p) {
 }
 
 #endif
+
+void VADD3F(__global float *p, const float3 v) {
+	VSTORE3F(VLOAD3F(p) + v, p);
+}
+
 #endif

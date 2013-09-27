@@ -176,6 +176,8 @@ std::string KernelSource_texture_types =
 "// Some macro trick in order to have more readable code\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
+"#if defined(SLG_OPENCL_KERNEL)\n"
+"\n"
 "#if defined(PARAM_HAS_IMAGEMAPS)\n"
 "\n"
 "#define IMAGEMAPS_PARAM_DECL , __global ImageMap *imageMapDescs, __global float **imageMapBuff\n"
@@ -190,4 +192,6 @@ std::string KernelSource_texture_types =
 "\n"
 "#define TEXTURES_PARAM_DECL , __global Texture *texs IMAGEMAPS_PARAM_DECL\n"
 "#define TEXTURES_PARAM , texs IMAGEMAPS_PARAM\n"
+"\n"
+"#endif\n"
 ; } }

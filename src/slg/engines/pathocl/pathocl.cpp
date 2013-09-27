@@ -57,6 +57,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		OCLRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
 	film->Init();
 
 	const Properties &cfg = renderConfig->cfg;
@@ -192,36 +193,34 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Filter
 	//--------------------------------------------------------------------------
 
-	const string filterType = cfg.GetString("path.filter.type", "NONE");
-	const float filterWidthX = cfg.GetFloat("path.filter.width.x", 1.5f);
-	const float filterWidthY = cfg.GetFloat("path.filter.width.y", 1.5f);
-	if ((filterWidthX <= 0.f) || (filterWidthX > 1.5f))
-		throw std::runtime_error("path.filter.width.x must be between 0.0 and 1.5");
-	if ((filterWidthY <= 0.f) || (filterWidthY > 1.5f))
-		throw std::runtime_error("path.filter.width.y must be between 0.0 and 1.5");
+	const Filter *filmFilter = film->GetFilter();
+	const FilterType filterType = filmFilter ? filmFilter->GetType() : FILTER_NONE;
 
 	filter = new slg::ocl::Filter();
 	// Force pixel filter to NONE if I'm RTOPENCL
-	if ((filterType.compare("NONE") == 0) || (dynamic_cast<RTPathOCLRenderEngine *>(this)))
+	if ((filterType == FILTER_NONE) || (dynamic_cast<RTPathOCLRenderEngine *>(this)))
 		filter->type = slg::ocl::FILTER_NONE;
-	else if (filterType.compare("BOX") == 0) {
+	else if (filterType == FILTER_BOX) {
 		filter->type = slg::ocl::FILTER_BOX;
-		filter->box.widthX = filterWidthX;
-		filter->box.widthY = filterWidthY;
-	} else if (filterType.compare("GAUSSIAN") == 0) {
-		const float alpha = cfg.GetFloat("path.filter.alpha", 2.f);
+		filter->box.widthX = Min(filmFilter->xWidth, 1.5f);
+		filter->box.widthY = Min(filmFilter->yWidth, 1.5f);
+	} else if (filterType == FILTER_GAUSSIAN) {
 		filter->type = slg::ocl::FILTER_GAUSSIAN;
-		filter->gaussian.widthX = filterWidthX;
-		filter->gaussian.widthY = filterWidthY;
-		filter->gaussian.alpha = alpha;
-	} else if (filterType.compare("MITCHELL") == 0) {
-		const float B = cfg.GetFloat("path.filter.B", 1.f / 3.f);
-		const float C = cfg.GetFloat("path.filter.C", 1.f / 3.f);
+		filter->gaussian.widthX = Min(filmFilter->xWidth, 1.5f);
+		filter->gaussian.widthY = Min(filmFilter->yWidth, 1.5f);
+		filter->gaussian.alpha = ((GaussianFilter *)filmFilter)->alpha;
+	} else if (filterType == FILTER_MITCHELL) {
 		filter->type = slg::ocl::FILTER_MITCHELL;
-		filter->mitchell.widthX = filterWidthX;
-		filter->mitchell.widthY = filterWidthY;
-		filter->mitchell.B = B;
-		filter->mitchell.C = C;
+		filter->mitchell.widthX = Min(filmFilter->xWidth, 1.5f);
+		filter->mitchell.widthY = Min(filmFilter->yWidth, 1.5f);
+		filter->mitchell.B = ((MitchellFilter *)filmFilter)->B;
+		filter->mitchell.C = ((MitchellFilter *)filmFilter)->C;
+	} else if (filterType == FILTER_MITCHELL_SS) {
+		filter->type = slg::ocl::FILTER_MITCHELL;
+		filter->mitchell.widthX = Min(filmFilter->xWidth, 1.5f);
+		filter->mitchell.widthY = Min(filmFilter->yWidth, 1.5f);
+		filter->mitchell.B = ((MitchellFilterSS *)filmFilter)->B;
+		filter->mitchell.C = ((MitchellFilterSS *)filmFilter)->C;
 	} else
 		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
 
@@ -277,45 +276,9 @@ void PathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
 void PathOCLRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-	const u_int imgWidth = film->GetWidth();
-	const u_int imgHeight = film->GetHeight();
-
 	film->Reset();
-
-	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
-	for (u_int y = 0; y < imgHeight; ++y) {
-		u_int pGPU = 1 + (y + 1) * (imgWidth + 2);
-		sampleResult.filmY = y - .5f;
-
-		for (u_int x = 0; x < imgWidth; ++x) {
-			sampleResult.filmX = x - .5f;
-			sampleResult.radiancePerPixelNormalized[0] = Spectrum();
-			sampleResult.alpha = 0.0f;
-			float count = 0.f;
-			for (size_t i = 0; i < renderThreads.size(); ++i) {
-				if (renderThreads[i]->frameBuffer) {
-					sampleResult.radiancePerPixelNormalized[0].r += renderThreads[i]->frameBuffer[pGPU].c.r;
-					sampleResult.radiancePerPixelNormalized[0].g += renderThreads[i]->frameBuffer[pGPU].c.g;
-					sampleResult.radiancePerPixelNormalized[0].b += renderThreads[i]->frameBuffer[pGPU].c.b;
-					count += renderThreads[i]->frameBuffer[pGPU].count;
-				}
-
-				if (renderThreads[i]->alphaFrameBuffer)
-					sampleResult.alpha += renderThreads[i]->alphaFrameBuffer[pGPU].alpha;
-			}
-
-			if ((count > 0) && !sampleResult.radiancePerPixelNormalized[0].IsNaN()) {
-				sampleResult.radiancePerPixelNormalized[0] /= count;
-				sampleResult.alpha = isnan(sampleResult.alpha) ? 0.f : sampleResult.alpha / count;
-
-				film->AddSampleCount(1.f);
-				// -.5f is to align correctly the pixel after the splat
-				film->SplatSample(sampleResult, count);
-			}
-
-			++pGPU;
-		}
-	}
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		film->AddFilm(*(renderThreads[i]->film));
 }
 
 void PathOCLRenderEngine::UpdateCounters() {

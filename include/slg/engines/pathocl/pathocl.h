@@ -73,7 +73,7 @@ protected:
 
 	virtual void InitRender();
 
-	void InitFrameBuffer();
+	void InitFilm();
 	void InitCamera();
 	void InitGeometry();
 	void InitImageMaps();
@@ -86,10 +86,13 @@ protected:
 	void InitLightsDistribution();
 	void InitKernels();
 	void InitGPUTaskBuffer();
-	void InitSampleBuffer();
+	void InitSamplesBuffer();
+	void InitSampleDataBuffer();
 
 	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
 	virtual void SetKernelArgs();
+
+	void TransferFilm(cl::CommandQueue &oclQueue);
 
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
 
@@ -97,8 +100,8 @@ protected:
 	std::string kernelsParameters;
 	cl::Kernel *initKernel;
 	size_t initWorkGroupSize;
-	cl::Kernel *initFBKernel;
-	size_t initFBWorkGroupSize;
+	cl::Kernel *initFilmKernel;
+	size_t initFilmWorkGroupSize;
 	cl::Kernel *samplerKernel;
 	size_t samplerWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
@@ -125,10 +128,28 @@ protected:
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 	cl::Buffer *tasksBuff;
+	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;
-	cl::Buffer *frameBufferBuff;
-	cl::Buffer *alphaFrameBufferBuff;
+	// Film buffers
+	std::vector<cl::Buffer *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff;
+	cl::Buffer *channel_ALPHA_Buff;
+	cl::Buffer *channel_DEPTH_Buff;
+	cl::Buffer *channel_POSITION_Buff;
+	cl::Buffer *channel_GEOMETRY_NORMAL_Buff;
+	cl::Buffer *channel_SHADING_NORMAL_Buff;
+	cl::Buffer *channel_MATERIAL_ID_Buff;
+	cl::Buffer *channel_DIRECT_DIFFUSE_Buff;
+	cl::Buffer *channel_DIRECT_GLOSSY_Buff;
+	cl::Buffer *channel_EMISSION_Buff;
+	cl::Buffer *channel_INDIRECT_DIFFUSE_Buff;
+	cl::Buffer *channel_INDIRECT_GLOSSY_Buff;
+	cl::Buffer *channel_INDIRECT_SPECULAR_Buff;
+	cl::Buffer *channel_MATERIAL_ID_MASK_Buff;
+	cl::Buffer *channel_DIRECT_SHADOW_MASK_Buff;
+	cl::Buffer *channel_INDIRECT_SHADOW_MASK_Buff;
+	cl::Buffer *channel_UV_Buff;
+	// Scene buffers
 	cl::Buffer *materialsBuff;
 	cl::Buffer *texturesBuff;
 	cl::Buffer *meshIDBuff;
@@ -159,9 +180,7 @@ protected:
 
 	u_int threadIndex;
 	PathOCLRenderEngine *renderEngine;
-	slg::ocl::Pixel *frameBuffer;
-	slg::ocl::AlphaPixel *alphaFrameBuffer;
-	u_int frameBufferPixelCount;
+	Film *film;
 
 	bool started, editMode;
 

@@ -96,5 +96,10 @@ std::string KernelSource_luxrays_types =
 "}\n"
 "\n"
 "#endif\n"
+"\n"
+"void VADD3F(__global float *p, const float3 v) {\n"
+"	VSTORE3F(VLOAD3F(p) + v, p);\n"
+"}\n"
+"\n"
 "#endif\n"
 ; } }

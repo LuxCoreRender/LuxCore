@@ -307,7 +307,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		// Obtain the binaries of the sources
 		VECTOR_CLASS<char *> bins = program->getInfo<CL_PROGRAM_BINARIES>();
 		assert (bins.size() == 1);
-		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES >();
+		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES>();
 		assert (sizes.size() == 1);
 
 		// Create the file only if the binaries include something

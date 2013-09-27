@@ -114,9 +114,10 @@ public:
 
 	virtual Filter *Clone() const { return new GaussianFilter(xWidth, yWidth, alpha); }
 
+	float alpha;
+
 private:
 	// GaussianFilter Private Data
-	float alpha;
 	float expX, expY;
 
 	// GaussianFilter Utility Functions
@@ -145,6 +146,8 @@ public:
 
 	virtual Filter *Clone() const { return new MitchellFilter(xWidth, yWidth, B, C); }
 
+	const float B, C;
+
 private:
 	float Mitchell1D(float x) const {
 		if (x >= 1.f)
@@ -158,8 +161,6 @@ private:
 				(-3.f + 2.f * B + C)) * x * x +
 				(1.f - B / 3.f);
 	}
-
-	const float B, C;
 };
 
 class MitchellFilterSS : public Filter {
@@ -185,6 +186,8 @@ public:
 
 	virtual Filter *Clone() const { return new MitchellFilterSS(xWidth, yWidth, B, C); }
 
+	const float B, C;
+
 private:
 	float Mitchell1D(float x) const {
 		if (x >= 1.f)
@@ -199,7 +202,7 @@ private:
 				(1.f - B / 3.f);
 	}
 
-	const float B, C, a0, a1;
+	const float a0, a1;
 };
 
 //------------------------------------------------------------------------------

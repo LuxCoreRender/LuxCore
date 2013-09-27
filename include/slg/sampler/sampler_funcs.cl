@@ -21,6 +21,47 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+void SampleResult_Init(__global SampleResult *sampleResult) {
+	// Initialize only Spectrum fields
+
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[0].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[1].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[2].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[3].r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+	VSTORE3F(BLACK, &sampleResult->directDiffuse.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+	VSTORE3F(BLACK, &sampleResult->directGlossy.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+	VSTORE3F(BLACK, &sampleResult->emission.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+	VSTORE3F(BLACK, &sampleResult->indirectDiffuse.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+	VSTORE3F(BLACK, &sampleResult->indirectGlossy.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+	VSTORE3F(BLACK, &sampleResult->indirectSpecular.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+	sampleResult->directShadowMask = 1.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+	sampleResult->indirectShadowMask = 1.f;
+#endif
+}
+
 //------------------------------------------------------------------------------
 // Random Sampler Kernel
 //------------------------------------------------------------------------------
@@ -44,41 +85,40 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
-	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
-	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight) {
+	const float u0 = Rnd_FloatValue(seed);
+	const float u1 = Rnd_FloatValue(seed);
 
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
+	// TODO: remove sampleData[]
+	sampleData[IDX_SCREEN_X] = u0;
+	sampleData[IDX_SCREEN_Y] = u1;
+
+	SampleResult_Init(&sample->result);
+	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
+	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
 }
 
 void Sampler_NextSample(
-		__global Sample *sample,
-		__global float *sampleData,
 		Seed *seed,
-		__global Pixel *frameBuffer
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		, __global AlphaPixel *alphaFrameBuffer
-#endif
+		__global Sample *sample,
+		__global float *sampleData
+		FILM_PARAM_DECL
 		) {
-	SplatSample(frameBuffer,
-			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-			alphaFrameBuffer,
-			sample->alpha,
-#endif
-			1.f);
+	Film_SplatSample(&sample->result, 1.f
+			FILM_PARAM);
 
 	// Move to the next assigned pixel
-	sampleData[IDX_SCREEN_X] = Rnd_FloatValue(seed);
-	sampleData[IDX_SCREEN_Y] = Rnd_FloatValue(seed);
+	const float u0 = Rnd_FloatValue(seed);
+	const float u1 = Rnd_FloatValue(seed);
 
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
+	// TODO: remove sampleData[]
+	sampleData[IDX_SCREEN_X] = u0;
+	sampleData[IDX_SCREEN_Y] = u1;
+
+	SampleResult_Init(&sample->result);
+	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
+	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
 }
 
 #endif
@@ -106,7 +146,7 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void LargeStep(Seed *seed, const uint largeStepCount, __global float *proposedU) {
+void LargeStep(Seed *seed, __global float *proposedU) {
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = Rnd_FloatValue(seed);
 }
@@ -162,7 +202,8 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(seed, currentU[i]);
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight) {
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
 
@@ -173,30 +214,20 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	sample->consecutiveRejects = 0;
 
 	sample->weight = 0.f;
-	VSTORE3F(BLACK, &sample->currentRadiance.r);
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->currentAlpha = 1.f;
-	sample->alpha = 1.f;
-#endif
 
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	LargeStep(seed, 0, sampleDataPathBase);
+	LargeStep(seed, sampleDataPathBase);
 
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
+	SampleResult_Init(&sample->result);
+	sample->result.filmX = min(sampleDataPathBase[IDX_SCREEN_X] * filmWidth, (float)(filmWidth - 1));
+	sample->result.filmY = min(sampleDataPathBase[IDX_SCREEN_Y] * filmHeight, (float)(filmHeight - 1));
 }
 
 void Sampler_NextSample(
-		__global Sample *sample,
-		__global float *sampleData,
 		Seed *seed,
-		__global Pixel *frameBuffer
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		, __global AlphaPixel *alphaFrameBuffer
-#endif
+		__global Sample *sample,
+		__global float *sampleData
+		FILM_PARAM_DECL
 		) {
 	//--------------------------------------------------------------------------
 	// Accept/Reject the sample
@@ -205,40 +236,30 @@ void Sampler_NextSample(
 	uint current = sample->current;
 	uint proposed = sample->proposed;
 
-	const float3 radiance = VLOAD3F(&sample->radiance.r);
-
 	if (current == NULL_INDEX) {
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
-		VSTORE3F(radiance, &sample->currentRadiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		sample->currentAlpha = sample->alpha;
-#endif
-		sample->totalI = Spectrum_Y(radiance);
+		Film_SplatSample(&sample->result, 1.f
+					FILM_PARAM);
+
+		sample->currentResult = sample->result;
+		sample->totalI = SampleResult_Radiance_Y(&sample->result);
 
 		current = proposed;
 		proposed ^= 1;
 	} else {
-		const float3 currentL = VLOAD3F(&sample->currentRadiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		const float currentAlpha = sample->currentAlpha;
-#endif
-		const float currentI = Spectrum_Y(currentL);
+		const float currentI = SampleResult_Radiance_Y(&sample->currentResult);
 
-		const float3 proposedL = radiance;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		const float proposedAlpha = sample->alpha;
-#endif
-		float proposedI = Spectrum_Y(proposedL);
-		proposedI = isinf(proposedI) ? 0.f : proposedI;
+		float proposedI = SampleResult_Radiance_Y(&sample->result);
+		proposedI = (isnan(proposedI) || isinf(proposedI)) ? 0.f : proposedI;
 
 		float totalI = sample->totalI;
 		uint largeMutationCount = sample->largeMutationCount;
 		uint smallMutationCount = sample->smallMutationCount;
 		if (smallMutationCount == 0) {
 			// It is a large mutation
-			totalI += Spectrum_Y(proposedL);
+			totalI += proposedI;
 			largeMutationCount += 1;
 
 			sample->totalI = totalI;
@@ -269,12 +290,8 @@ void Sampler_NextSample(
 					proposedL.r, proposedL.g, proposedL.b, newWeight,
 					accProb, rndVal);*/
 
-		float3 contrib;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		float contribAlpha;
-#endif
+		__global SampleResult *contrib;
 		float norm;
-		float scrX, scrY;
 
 		if ((accProb == 1.f) || (rndVal < accProb)) {
 			/*if (get_global_id(0) == 0)
@@ -282,36 +299,20 @@ void Sampler_NextSample(
 
 			// Add accumulated contribution of previous reference sample
 			norm = weight / (currentI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-			contrib = currentL;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-			contribAlpha = currentAlpha;
-#endif
-			scrX = sampleData[current * TOTAL_U_SIZE + IDX_SCREEN_X];
-			scrY = sampleData[current * TOTAL_U_SIZE + IDX_SCREEN_Y];
+			contrib = &sample->currentResult;
 
 			current ^= 1;
 			proposed ^= 1;
 			consecutiveRejects = 0;
 
 			weight = newWeight;
-
-			VSTORE3F(proposedL, &sample->currentRadiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-			sample->currentAlpha = proposedAlpha;
-#endif
 		} else {
 			/*if (get_global_id(0) == 0)
 				printf(\"\\t\\tREJECTED !\\n\");*/
 
 			// Add contribution of new sample before rejecting it
 			norm = newWeight / (proposedI / meanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-			contrib = proposedL;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-			contribAlpha = proposedAlpha;
-#endif
-
-			scrX = sampleData[proposed * TOTAL_U_SIZE + IDX_SCREEN_X];
-			scrY = sampleData[proposed * TOTAL_U_SIZE + IDX_SCREEN_Y];
+			contrib = &sample->result;
 
 			++consecutiveRejects;
 		}
@@ -321,13 +322,14 @@ void Sampler_NextSample(
 				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
 						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
-			SplatSample(frameBuffer,
-				scrX, scrY, contrib,
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-				alphaFrameBuffer,
-				contribAlpha,
-#endif
-				norm);
+			Film_SplatSample(contrib, norm
+					FILM_PARAM);
+		}
+
+		// Check if it is an accepted mutation
+		if (consecutiveRejects == 0) {
+			// I can now (after Film_SplatSample()) overwrite sample->currentResult and sample->result
+			sample->currentResult = sample->result;
 		}
 
 		sample->weight = weight;
@@ -343,7 +345,7 @@ void Sampler_NextSample(
 
 	__global float *proposedU = &sampleData[proposed * TOTAL_U_SIZE];
 	if (Rnd_FloatValue(seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
-		LargeStep(seed, sample->largeMutationCount, proposedU);
+		LargeStep(seed, proposedU);
 		sample->smallMutationCount = 0;
 	} else {
 		__global float *currentU = &sampleData[current * TOTAL_U_SIZE];
@@ -352,10 +354,9 @@ void Sampler_NextSample(
 		sample->smallMutationCount += 1;
 	}
 
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
+	SampleResult_Init(&sample->result);
+	sample->result.filmX = min(proposedU[IDX_SCREEN_X] * filmWidth, (float)(filmWidth - 1));
+	sample->result.filmY = min(proposedU[IDX_SCREEN_Y] * filmHeight, (float)(filmHeight - 1));
 }
 
 #endif
@@ -410,12 +411,8 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
-
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight) {
 	sample->rng0 = Rnd_FloatValue(seed);
 	sample->rng1 = Rnd_FloatValue(seed);
 	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET;
@@ -423,51 +420,47 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	const uint pixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
 	sample->pixelIndex = pixelIndex;
 	uint x, y;
-	PixelIndex2XY(pixelIndex, &x, &y);
+	PixelIndex2XY(filmWidth, pixelIndex, &x, &y);
 
-	sampleData[IDX_SCREEN_X] = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
-	sampleData[IDX_SCREEN_Y] = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
+	const float u0 = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / filmWidth);
+	const float u1 = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / filmHeight);
 
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
+	sampleData[IDX_SCREEN_X] = u0;
+	sampleData[IDX_SCREEN_Y] = u1;
+
+	SampleResult_Init(&sample->result);
+	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
+	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
 }
 
 void Sampler_NextSample(
-		__global Sample *sample,
-		__global float *sampleData,
 		Seed *seed,
-		__global Pixel *frameBuffer
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-		, __global AlphaPixel *alphaFrameBuffer
-#endif
+		__global Sample *sample,
+		__global float *sampleData
+		FILM_PARAM_DECL
 		) {
-	SplatSample(frameBuffer,
-			sampleData[IDX_SCREEN_X], sampleData[IDX_SCREEN_Y], VLOAD3F(&sample->radiance.r),
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-			alphaFrameBuffer,
-			sample->alpha,
-#endif
-			1.f);
+	Film_SplatSample(&sample->result, 1.f
+			FILM_PARAM);
 
 	// Move to the next assigned pixel
 	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
-	if (nextPixelIndex > PARAM_IMAGE_WIDTH * PARAM_IMAGE_HEIGHT) {
-		nextPixelIndex = get_global_id(0);
+	if (nextPixelIndex > filmWidth * filmHeight) {
+		nextPixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
 		sample->pass += 1;
 	}
 	sample->pixelIndex = nextPixelIndex;
 	uint x, y;
-	PixelIndex2XY(nextPixelIndex, &x, &y);
+	PixelIndex2XY(filmWidth, nextPixelIndex, &x, &y);
 
-	sampleData[IDX_SCREEN_X] = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / PARAM_IMAGE_WIDTH);
-	sampleData[IDX_SCREEN_Y] = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / PARAM_IMAGE_HEIGHT);
+	const float u0 = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / filmWidth);
+	const float u1 = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / filmHeight);
 
-	VSTORE3F(BLACK, &sample->radiance.r);
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	sample->alpha = 1.f;
-#endif
+	sampleData[IDX_SCREEN_X] = u0;
+	sampleData[IDX_SCREEN_Y] = u1;
+
+	SampleResult_Init(&sample->result);
+	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
+	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
 }
 
 #endif

@@ -74,6 +74,7 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 
 void Camera_GenerateRay(
 		__global Camera *camera,
+		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
 		const float scrSampleX, const float scrSampleY
 #if defined(PARAM_CAMERA_HAS_DOF)
@@ -95,8 +96,8 @@ void Camera_GenerateRay(
 	ssy = scrSampleY;
 #endif
 
-	const float screenX = min(ssx * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
-	const float screenY = min((1.f - ssy) * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
+	const float screenX = min(ssx * filmWidth, (float)(filmWidth - 1));
+	const float screenY = min((1.f - ssy) * filmHeight, (float)(filmHeight - 1));
 	float3 Pras = (float3)(screenX, screenY, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera[transIndex], Pras);

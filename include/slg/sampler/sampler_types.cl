@@ -91,15 +91,11 @@
 #if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
-	Spectrum radiance;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	float alpha;
-#endif
+	SampleResult result;
 } RandomSample;
 
 typedef struct {
-	Spectrum radiance;
-	float alpha;
+	SampleResult result;
 
 	float totalI;
 
@@ -108,20 +104,14 @@ typedef struct {
 	unsigned int current, proposed, consecutiveRejects;
 
 	float weight;
-	Spectrum currentRadiance;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	float currentAlpha;
-#endif
+	SampleResult currentResult;
 } MetropolisSample;
 
 typedef struct {
 	float rng0, rng1;
 	unsigned int pixelIndex, pass;
 
-	Spectrum radiance;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	float alpha;
-#endif
+	SampleResult result;
 } SobolSample;
 
 #if (PARAM_SAMPLER_TYPE == 0)
