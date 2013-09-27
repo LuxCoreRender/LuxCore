@@ -668,7 +668,7 @@ void DirectHitFiniteLight(
 	if (!Spectrum_IsBlack(emittedRadiance)) {
 		// Add emitted radiance
 		float weight = 1.f;
-		if (!(lastBSDFEvent * SPECULAR)) {
+		if (!(lastBSDFEvent & SPECULAR)) {
 			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,
 					triLightDefs[bsdf->triangleLightSourceIndex].lightSceneIndex);
 			const float directPdfW = PdfAtoW(directPdfA, distance,

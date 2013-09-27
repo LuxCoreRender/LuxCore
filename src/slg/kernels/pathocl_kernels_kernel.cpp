@@ -671,7 +671,7 @@ std::string KernelSource_pathocl_kernels =
 "	if (!Spectrum_IsBlack(emittedRadiance)) {\n"
 "		// Add emitted radiance\n"
 "		float weight = 1.f;\n"
-"		if (!(lastBSDFEvent * SPECULAR)) {\n"
+"		if (!(lastBSDFEvent & SPECULAR)) {\n"
 "			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,\n"
 "					triLightDefs[bsdf->triangleLightSourceIndex].lightSceneIndex);\n"
 "			const float directPdfW = PdfAtoW(directPdfA, distance,\n"
