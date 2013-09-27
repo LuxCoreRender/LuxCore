@@ -57,7 +57,28 @@ PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::m
 		OCLRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
+	if (dynamic_cast<RTPathOCLRenderEngine *>(this)) {
+		film->SetRadianceGroupCount(1);
+
+		// Remove all Film channels
+		film->RemoveChannel(Film::ALPHA);
+		film->RemoveChannel(Film::DEPTH);
+		film->RemoveChannel(Film::POSITION);
+		film->RemoveChannel(Film::GEOMETRY_NORMAL);
+		film->RemoveChannel(Film::SHADING_NORMAL);
+		film->RemoveChannel(Film::MATERIAL_ID);
+		film->RemoveChannel(Film::DIRECT_DIFFUSE);
+		film->RemoveChannel(Film::DIRECT_GLOSSY);
+		film->RemoveChannel(Film::EMISSION);
+		film->RemoveChannel(Film::INDIRECT_DIFFUSE);
+		film->RemoveChannel(Film::INDIRECT_GLOSSY);
+		film->RemoveChannel(Film::INDIRECT_SPECULAR);
+		film->RemoveChannel(Film::MATERIAL_ID_MASK);
+		film->RemoveChannel(Film::DIRECT_SHADOW_MASK);
+		film->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
+		film->RemoveChannel(Film::UV);
+	} else
+		film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
 	film->Init();
 
 	const Properties &cfg = renderConfig->cfg;
@@ -133,10 +154,7 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	if (!cfg.IsDefined("opencl.task.count") && dynamic_cast<RTPathOCLRenderEngine *>(this)) {
 		// In this case, I will tune task count for RTPATHOCL
-
-		// The task count is set in order to have one task per pixel
-		// +2 because the frame buffer on the dice is 2 pixels larger
-		taskCount = (film->GetWidth() + 2) * (film->GetHeight() + 2) / intersectionDevices.size();
+		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
 	} else 
 		taskCount = cfg.GetInt("opencl.task.count", 65536);
 	// I don't know yet the workgroup size of each device so I can not
