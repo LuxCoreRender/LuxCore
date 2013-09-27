@@ -53,11 +53,11 @@ using namespace slg;
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		OCLRenderEngine(rcfg, flm, flmMutex) {
+PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
+		const bool realTime) : OCLRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
-	if (dynamic_cast<RTPathOCLRenderEngine *>(this)) {
+	if (realTime) {
 		film->SetRadianceGroupCount(1);
 
 		// Remove all Film channels

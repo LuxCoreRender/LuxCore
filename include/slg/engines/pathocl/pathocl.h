@@ -193,7 +193,8 @@ protected:
 
 class PathOCLRenderEngine : public OCLRenderEngine {
 public:
-	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+		const bool realTime = false);
 	virtual ~PathOCLRenderEngine();
 
 	virtual RenderEngineType GetEngineType() const { return PATHOCL; }
