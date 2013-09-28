@@ -36,6 +36,18 @@ void SampleResult_Init(__global SampleResult *sampleResult) {
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
 	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[3].r);
 #endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[4].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[5].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[6].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[7].r);
+#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
 	VSTORE3F(BLACK, &sampleResult->directDiffuse.r);
 #endif

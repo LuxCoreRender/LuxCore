@@ -251,8 +251,8 @@ void PathOCLRenderThread::InitFilm() {
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		FreeOCLBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
 
-	if (film->GetRadianceGroupCount() > 4)
-			throw runtime_error("PathOCL supports only up to 4 Radiance Groups");
+	if (film->GetRadianceGroupCount() > 8)
+			throw runtime_error("PathOCL supports only up to 8 Radiance Groups");
 
 	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.resize(film->GetRadianceGroupCount());
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
