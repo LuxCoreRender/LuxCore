@@ -243,6 +243,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFilm(
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
 		, __global float *filmRadianceGroup3
 #endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+		, __global float *filmRadianceGroup4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+		, __global float *filmRadianceGroup5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+		, __global float *filmRadianceGroup6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+		, __global float *filmRadianceGroup7
+#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		, __global float *filmAlpha
 #endif
@@ -319,6 +331,30 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitFilm(
 	filmRadianceGroup3[gid * 4 + 1] = 0.f;
 	filmRadianceGroup3[gid * 4 + 2] = 0.f;
 	filmRadianceGroup3[gid * 4 + 3] = 0.f;
+#endif
+#if defined (PARAM_FILM_RADIANCE_GROUP_4)
+	filmRadianceGroup4[gid * 4] = 0.f;
+	filmRadianceGroup4[gid * 4 + 1] = 0.f;
+	filmRadianceGroup4[gid * 4 + 2] = 0.f;
+	filmRadianceGroup4[gid * 4 + 3] = 0.f;
+#endif
+#if defined (PARAM_FILM_RADIANCE_GROUP_5)
+	filmRadianceGroup5[gid * 4] = 0.f;
+	filmRadianceGroup5[gid * 4 + 1] = 0.f;
+	filmRadianceGroup5[gid * 4 + 2] = 0.f;
+	filmRadianceGroup5[gid * 4 + 3] = 0.f;
+#endif
+#if defined (PARAM_FILM_RADIANCE_GROUP_6)
+	filmRadianceGroup6[gid * 4] = 0.f;
+	filmRadianceGroup6[gid * 4 + 1] = 0.f;
+	filmRadianceGroup6[gid * 4 + 2] = 0.f;
+	filmRadianceGroup6[gid * 4 + 3] = 0.f;
+#endif
+#if defined (PARAM_FILM_RADIANCE_GROUP_7)
+	filmRadianceGroup7[gid * 4] = 0.f;
+	filmRadianceGroup7[gid * 4 + 1] = 0.f;
+	filmRadianceGroup7[gid * 4 + 2] = 0.f;
+	filmRadianceGroup7[gid * 4 + 3] = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 	filmAlpha[gid * 2] = 0.f;
@@ -708,6 +744,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
 		, __global float *filmRadianceGroup3
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+		, __global float *filmRadianceGroup4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+		, __global float *filmRadianceGroup5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+		, __global float *filmRadianceGroup6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+		, __global float *filmRadianceGroup7
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		, __global float *filmAlpha
@@ -1285,6 +1333,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
 		filmRadianceGroup[3] = filmRadianceGroup3;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+		filmRadianceGroup[3] = filmRadianceGroup4;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+		filmRadianceGroup[3] = filmRadianceGroup5;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+		filmRadianceGroup[3] = filmRadianceGroup6;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+		filmRadianceGroup[3] = filmRadianceGroup7;
 #endif
 
 		Sampler_NextSample(seed, sample, sampleData
