@@ -96,6 +96,18 @@ public:
 			pixel[i] = v[i];
 	}
 
+	void SetWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		for (u_int i = 0; i < CHANNELS - 1; ++i)
+			pixel[i] = v[i];
+		pixel[CHANNELS - 1] = weight;
+	}
+
 	T *GetPixel(const u_int x, const u_int y) const {
 		assert (x >= 0);
 		assert (x < width);
