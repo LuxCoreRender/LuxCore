@@ -837,19 +837,31 @@ void PathOCLRenderThread::InitKernels() {
 		// Compile sources
 		stringstream ssKernel;
 		ssKernel <<
-			slg::ocl::KernelSource_luxrays_types <<
-			slg::ocl::KernelSource_uv_types <<
-			slg::ocl::KernelSource_point_types <<
-			slg::ocl::KernelSource_vector_types <<
-			slg::ocl::KernelSource_normal_types <<
-			slg::ocl::KernelSource_triangle_types <<
-			slg::ocl::KernelSource_ray_types <<
-			// OpenCL Types
-			slg::ocl::KernelSource_epsilon_types <<
-			slg::ocl::KernelSource_spectrum_types <<
-			slg::ocl::KernelSource_frame_types <<
-			slg::ocl::KernelSource_matrix4x4_types <<
-			slg::ocl::KernelSource_transform_types <<
+			// OpenCL LuxRays Types
+			luxrays::ocl::KernelSource_luxrays_types <<
+			luxrays::ocl::KernelSource_uv_types <<
+			luxrays::ocl::KernelSource_point_types <<
+			luxrays::ocl::KernelSource_vector_types <<
+			luxrays::ocl::KernelSource_normal_types <<
+			luxrays::ocl::KernelSource_triangle_types <<
+			luxrays::ocl::KernelSource_ray_types <<
+			luxrays::ocl::KernelSource_bbox_types <<
+			luxrays::ocl::KernelSource_epsilon_types <<
+			luxrays::ocl::KernelSource_spectrum_types <<
+			luxrays::ocl::KernelSource_frame_types <<
+			luxrays::ocl::KernelSource_matrix4x4_types <<
+			luxrays::ocl::KernelSource_transform_types <<
+			// OpenCL LuxRays Funcs
+			luxrays::ocl::KernelSource_epsilon_funcs <<
+			luxrays::ocl::KernelSource_utils_funcs <<
+			luxrays::ocl::KernelSource_vector_funcs <<
+			luxrays::ocl::KernelSource_ray_funcs <<
+			luxrays::ocl::KernelSource_bbox_funcs <<
+			luxrays::ocl::KernelSource_spectrum_funcs <<
+			luxrays::ocl::KernelSource_frame_funcs <<
+			luxrays::ocl::KernelSource_matrix4x4_funcs <<
+			luxrays::ocl::KernelSource_transform_funcs <<
+			// OpenCL SLG Types
 			slg::ocl::KernelSource_randomgen_types <<
 			slg::ocl::KernelSource_trianglemesh_types <<
 			slg::ocl::KernelSource_hitpoint_types <<
@@ -862,16 +874,8 @@ void PathOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_types <<
 			slg::ocl::KernelSource_camera_types <<
 			slg::ocl::KernelSource_light_types <<
-			// OpenCL Funcs
-			slg::ocl::KernelSource_epsilon_funcs <<
-			slg::ocl::KernelSource_utils_funcs <<
-			slg::ocl::KernelSource_vector_funcs <<
-			slg::ocl::KernelSource_ray_funcs <<
-			slg::ocl::KernelSource_spectrum_funcs <<
-			slg::ocl::KernelSource_matrix4x4_funcs <<
+			// OpenCL SLG Types
 			slg::ocl::KernelSource_mc_funcs <<
-			slg::ocl::KernelSource_frame_funcs <<
-			slg::ocl::KernelSource_transform_funcs <<
 			slg::ocl::KernelSource_randomgen_funcs <<
 			slg::ocl::KernelSource_triangle_funcs <<
 			slg::ocl::KernelSource_trianglemesh_funcs <<
@@ -887,6 +891,8 @@ void PathOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
 			slg::ocl::KernelSource_scene_funcs <<
+			// Intersection Kernel
+//			intersectionDevice->GetIntersectionKernelSource() <<
 			// SLG Kernels
 			slg::ocl::KernelSource_datatypes <<
 			slg::ocl::KernelSource_pathocl_kernels <<
@@ -1372,6 +1378,7 @@ void PathOCLRenderThread::SetKernelArgs() {
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			advancePathsKernel->setArg(argIndex++, *(imageMapsBuff[i]));
 	}
+//	argIndex = intersectionDevice->SetIntersectionKernelArgs(*advancePathsKernel, argIndex);
 
 	//--------------------------------------------------------------------------
 	// initFilmKernel
@@ -1813,17 +1820,20 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				const double t1 = WallClockTime();
 				for (int i = 0; i < iterations; ++i) {
 					// Trace rays
-					if (i == 0)
-						intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-								*(hitsBuff), taskCount, NULL, &event);
-					else
-						intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-								*(hitsBuff), taskCount, NULL, NULL);
+					intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
+							*(hitsBuff), taskCount, NULL, (i == 0) ? &event : NULL);
 
 					// Advance to next path state
 					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
 							cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 							cl::NDRange(advancePathsWorkGroupSize));
+
+//					// Trace rays and advance to next path state
+//					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
+//							cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+//							cl::NDRange(256),//cl::NDRange(advancePathsWorkGroupSize),
+//							NULL, (i == 0) ? &event : NULL);
+//					intersectionDevice->IntersectionKernelExecuted(taskCount);
 				}
 				oclQueue.flush();
 
