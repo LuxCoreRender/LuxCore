@@ -53,9 +53,14 @@ public:
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
 
+	const std::string &GetIntersectionKernelSource() { return intersectionKernelSource; }
+	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex) { return 0; }
+
 	void SetMaxStackSize(const size_t s) { stackSize = s; }
 
 protected:
+	std::string intersectionKernelSource;
+
 	OpenCLIntersectionDevice *device;
 	std::vector<cl::Kernel *> kernels;
 	size_t workGroupSize;
@@ -103,6 +108,15 @@ public:
 		const u_int queueIndex = 0) {
 		// Enqueue the intersection kernel
 		oclQueues[queueIndex]->EnqueueTraceRayBuffer(rBuff, hBuff, rayCount, events, event);
+	}
+
+	// To compile the this device intersection kernel inside application kernel
+	const std::string &GetIntersectionKernelSource() { return kernels->GetIntersectionKernelSource(); }
+	u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex) {
+		return kernels->SetIntersectionKernelArgs(kernel, argIndex);
+	}
+	void IntersectionKernelExecuted(const u_int rayCount, const u_int queueIndex = 0) {
+		oclQueues[queueIndex]->statsTotalDataParallelRayCount += rayCount;
 	}
 
 	//--------------------------------------------------------------------------

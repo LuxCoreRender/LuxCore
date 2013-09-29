@@ -160,41 +160,31 @@ void QuadTriangle_Intersect(
 	rayHit->triangleIndex = tIndex;
 }
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
-		__global Ray *rays,
-		__global RayHit *rayHits,
 #ifdef USE_IMAGE_STORAGE
-        __read_only image2d_t nodes,
-        __read_only image2d_t quadTris,
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __read_only image2d_t nodes, __read_only image2d_t quadTris, __local int *nodeStacks
+#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris, nodeStacks
 #else
-		__global QBVHNode *nodes,
-		__global QuadTiangle *quadTris,
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global QuadTiangle *quadTris, __local int *nodeStacks
+#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris, nodeStacks
 #endif
-		const uint rayCount,
-		__local int *nodeStacks) {
-	// Select the ray to check
-	const int gid = get_global_id(0);
-	if (gid >= rayCount)
-		return;
-
+				
+void Accelerator_Intersect(
+		Ray *ray,
+		RayHit *rayHit
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
 	// Prepare the ray for intersection
 	QuadRay ray4;
-	{
-        __global float4 *basePtr =(__global float4 *)&rays[gid];
-        float4 data0 = (*basePtr++);
-        float4 data1 = (*basePtr);
+	ray4.ox = (float4)ray->o.x;
+	ray4.oy = (float4)ray->o.y;
+	ray4.oz = (float4)ray->o.z;
 
-        ray4.ox = (float4)data0.x;
-        ray4.oy = (float4)data0.y;
-        ray4.oz = (float4)data0.z;
+	ray4.dx = (float4)ray->d.x;
+	ray4.dy = (float4)ray->d.y;
+	ray4.dz = (float4)ray->d.z;
 
-        ray4.dx = (float4)data0.w;
-        ray4.dy = (float4)data1.x;
-        ray4.dz = (float4)data1.y;
-
-        ray4.mint = (float4)data1.z;
-        ray4.maxt = (float4)data1.w;
-	}
+	ray4.mint = (float4)ray->mint;
+	ray4.maxt = (float4)ray->maxt;
 
 	const float4 invDir0 = (float4)(1.f / ray4.dx.s0);
 	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
@@ -208,15 +198,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	const int isigns1 = 1 - signs1;
 	const int isigns2 = 1 - signs2;
 
-	RayHit rayHit;
-	rayHit.meshIndex = NULL_INDEX;
-	rayHit.triangleIndex = NULL_INDEX;
+	rayHit->meshIndex = NULL_INDEX;
+	rayHit->triangleIndex = NULL_INDEX;
 
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
 	// nodeStack leads to a lot of local memory banks conflicts however it has not real
-	// impact on performances (I guess access latency is hiden by other stuff).
+	// impact on performances (I guess access latency is hidden by other stuff).
 	// Avoiding conflicts is easy to do but it requires to know the work group
 	// size (not worth doing if there are not performance benefits).
 	__local int *nodeStack = &nodeStacks[QBVH_STACK_SIZE * get_local_id(0)];
@@ -333,18 +322,40 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
                     edge1x, edge1y, edge1z,
                     edge2x, edge2y, edge2z,
                     meshIndex, triangleIndex,
-                    &ray4, &rayHit);
+                    &ray4, rayHit);
             }
 		}
 	}
 
 	//printf("MaxDepth=%02d\n", maxDepth);
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(
+		__global Ray *rays,
+		__global RayHit *rayHits,
+		const uint rayCount
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
+	// Select the ray to check
+	const int gid = get_global_id(0);
+	if (gid >= rayCount)
+		return;
+
+	Ray ray;
+	Ray_ReadAligned4Ray(&rays[gid], &ray);
+
+	RayHit rayHit;
+	Accelerator_Intersect(
+		&ray,
+		&rayHit
+		ACCELERATOR_INTERSECT_PARAM
+		);
 
 	// Write result
-	__global RayHit *rh = &rayHits[gid];
-	rh->t = rayHit.t;
-	rh->b1 = rayHit.b1;
-	rh->b2 = rayHit.b2;
-	rh->meshIndex = rayHit.meshIndex;
-	rh->triangleIndex = rayHit.triangleIndex;
+	__global RayHit *memRayHit = &rayHits[gid];
+	memRayHit->t = rayHit.t;
+	memRayHit->b1 = rayHit.b1;
+	memRayHit->b2 = rayHit.b2;
+	memRayHit->meshIndex = rayHit.meshIndex;
+	memRayHit->triangleIndex = rayHit.triangleIndex;
 }

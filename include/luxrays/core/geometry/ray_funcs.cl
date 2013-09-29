@@ -54,3 +54,19 @@ void Ray_ReadAligned4(__global Ray *ray, float3 *rayOrig, float3 *rayDir, float 
 	*mint = data1.z;
 	*maxt = data1.w;
 }
+
+void Ray_ReadAligned4Ray(__global Ray *ray, Ray *dstRay) {
+	__global float4 *basePtr =(__global float4 *)ray;
+	const float4 data0 = (*basePtr++);
+	const float4 data1 = (*basePtr);
+
+	dstRay->o.x = data0.x;
+	dstRay->o.y = data0.y;
+	dstRay->o.z = data0.z;
+	dstRay->d.x = data0.w;
+	dstRay->d.y = data1.x;
+	dstRay->d.z = data1.y;
+
+	dstRay->mint = data1.z;
+	dstRay->maxt = data1.w;
+}
