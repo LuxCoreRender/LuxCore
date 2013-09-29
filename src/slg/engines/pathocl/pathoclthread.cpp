@@ -891,8 +891,6 @@ void PathOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
 			slg::ocl::KernelSource_scene_funcs <<
-			// Intersection Kernel
-//			intersectionDevice->GetIntersectionKernelSource() <<
 			// SLG Kernels
 			slg::ocl::KernelSource_datatypes <<
 			slg::ocl::KernelSource_pathocl_kernels <<
@@ -1378,7 +1376,6 @@ void PathOCLRenderThread::SetKernelArgs() {
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			advancePathsKernel->setArg(argIndex++, *(imageMapsBuff[i]));
 	}
-//	argIndex = intersectionDevice->SetIntersectionKernelArgs(*advancePathsKernel, argIndex);
 
 	//--------------------------------------------------------------------------
 	// initFilmKernel
@@ -1827,13 +1824,6 @@ void PathOCLRenderThread::RenderThreadImpl() {
 					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
 							cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 							cl::NDRange(advancePathsWorkGroupSize));
-
-//					// Trace rays and advance to next path state
-//					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
-//							cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-//							cl::NDRange(256),//cl::NDRange(advancePathsWorkGroupSize),
-//							NULL, (i == 0) ? &event : NULL);
-//					intersectionDevice->IntersectionKernelExecuted(taskCount);
 				}
 				oclQueue.flush();
 

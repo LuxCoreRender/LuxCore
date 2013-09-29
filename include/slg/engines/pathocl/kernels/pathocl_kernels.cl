@@ -869,23 +869,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_IMAGEMAPS_PAGE_7)
 		, __global float *imageMapBuff7
 #endif
-//		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
-
-	//--------------------------------------------------------------------------
-	// Ray intersection step
-	//--------------------------------------------------------------------------
-
-//	{
-//		Ray ray = rays[gid];
-//		RayHit rayHit;
-//		Accelerator_Intersect(&ray, &rayHit
-//			ACCELERATOR_INTERSECT_PARAM);
-//		rayHits[gid] = rayHit;
-//	}
 
 	//--------------------------------------------------------------------------
 	// Advance the finite state machine step
