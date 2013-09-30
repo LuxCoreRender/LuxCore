@@ -78,6 +78,9 @@ public:
 
 	virtual RenderEngineType GetEngineType() const { return BIASPATHOCL; }
 
+	void GetPendingTiles(vector<TileRepository::Tile> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	u_int GetTileSize() const { return tileRepository->tileSize; }
+
 	friend class BiasPathOCLRenderThread;
 
 	// Path depth settings

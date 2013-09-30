@@ -329,6 +329,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	// Render a sample
 	//--------------------------------------------------------------------------
 
+	uint tracedRaysCount = 0;
 	do {
 		//----------------------------------------------------------------------
 		// Ray trace step
@@ -336,7 +337,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 		Accelerator_Intersect(&ray, &rayHit
 			ACCELERATOR_INTERSECT_PARAM);
-		taskStats[gid].raysCount += 1;
+		++tracedRaysCount;
 
 		//----------------------------------------------------------------------
 		// Advance the finite state machine step
@@ -384,6 +385,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	} while (pathState != DONE);
 
 	//--------------------------------------------------------------------------
+
+	taskStats[gid].raysCount = tracedRaysCount;
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
