@@ -143,10 +143,9 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 	return ss.str();
 }
 
-string PathOCLRenderThread::AdditionalKernelSources() {
+string PathOCLRenderThread::AdditionalKernelDefinitions() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 
-	string sobolLookupTable;
 	if (engine->sampler->type == slg::ocl::SOBOL) {
 		// Generate the Sobol vectors
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
@@ -164,14 +163,16 @@ string PathOCLRenderThread::AdditionalKernelSources() {
 		}
 		sobolTableSS << "};\n";
 
-		sobolLookupTable = sobolTableSS.str();
-
 		delete directions;
-	}
 
+		return sobolTableSS.str();
+	} else
+		return "";
+}
+
+string PathOCLRenderThread::AdditionalKernelSources() {
 	stringstream ssKernel;
 	ssKernel <<
-		sobolLookupTable <<
 		slg::ocl::KernelSource_pathocl_datatypes <<
 		slg::ocl::KernelSource_pathocl_kernels;
 

@@ -694,6 +694,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		// Compile sources
 		stringstream ssKernel;
 		ssKernel <<
+			AdditionalKernelDefinitions() <<
 			// OpenCL LuxRays Types
 			luxrays::ocl::KernelSource_luxrays_types <<
 			luxrays::ocl::KernelSource_uv_types <<
