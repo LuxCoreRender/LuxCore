@@ -38,7 +38,8 @@ using namespace slg;
 BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	OpenCLIntersectionDevice *device, BiasPathOCLRenderEngine *re) : 
 	PathOCLBaseRenderThread(index, device, re) {
-	initKernel = NULL;
+	initSeedKernel = NULL;
+	initStatKernel = NULL;
 	renderSampleKernel = NULL;
 
 	tasksBuff = NULL;
@@ -53,7 +54,8 @@ BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
 	if (started)
 		Stop();
 
-	delete initKernel;
+	delete initSeedKernel;
+	delete initStatKernel;
 	delete renderSampleKernel;
 
 	delete tasksBuff;
@@ -74,8 +76,7 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss << scientific <<
 			" -D PARAM_TASK_COUNT=" <<  engine->taskCount <<
 			" -D PARAM_TILE_SIZE=" << engine->tileRepository->tileSize <<
-			" -D PARAM_AA_SAMPLES=" << engine->aaSamples;/* <<
-			" -D PARAM_USE_PIXEL_ATOMICS";*/
+			" -D PARAM_AA_SAMPLES=" << engine->aaSamples;
 
 	return ss.str();
 }
@@ -92,10 +93,16 @@ string BiasPathOCLRenderThread::AdditionalKernelSources() {
 
 void BiasPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 	//----------------------------------------------------------------------
-	// Init kernel
+	// InitSeed kernel
 	//----------------------------------------------------------------------
 
-	CompileKernel(program, &initKernel, &initWorkGroupSize, "Init");
+	CompileKernel(program, &initSeedKernel, &initSeedWorkGroupSize, "InitSeed");
+
+	//----------------------------------------------------------------------
+	// InitSeed kernel
+	//----------------------------------------------------------------------
+
+	CompileKernel(program, &initStatKernel, &initStatWorkGroupSize, "InitStat");
 
 	//----------------------------------------------------------------------
 	// AdvancePaths kernel
@@ -229,13 +236,19 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	argIndex = intersectionDevice->SetIntersectionKernelArgs(*renderSampleKernel, argIndex);
 
 	//--------------------------------------------------------------------------
-	// initKernel
+	// initSeedKernel
 	//--------------------------------------------------------------------------
 
 	argIndex = 0;
-	initKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
-	initKernel->setArg(argIndex++, *tasksBuff);
-	initKernel->setArg(argIndex++, *taskStatsBuff);
+	initSeedKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
+	initSeedKernel->setArg(argIndex++, *tasksBuff);
+
+	//--------------------------------------------------------------------------
+	// initSeedKernel
+	//--------------------------------------------------------------------------
+
+	argIndex = 0;
+	initStatKernel->setArg(argIndex++, *taskStatsBuff);
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {
@@ -250,11 +263,12 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 	const u_int tileSize = engine->tileRepository->tileSize;
 	const u_int filmPixelCount = tileSize * tileSize;
 	const u_int taskCount = engine->taskCount;
+	const u_int totalSamplesPerPixel = engine->tileRepository->totalSamplesPerPixel;
 
 	// Initialize OpenCL structures
-	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, initWorkGroupSize)),
-			cl::NDRange(initWorkGroupSize));
+	oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
+			cl::NDRange(RoundUp<u_int>(taskCount, initSeedWorkGroupSize)),
+			cl::NDRange(initSeedWorkGroupSize));
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -275,20 +289,40 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 			cl::NDRange(filmClearWorkGroupSize));
 
+		// Initialize the statistics
+		oclQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
+			cl::NDRange(RoundUp<u_int>(taskCount, initStatWorkGroupSize)),
+			cl::NDRange(initStatWorkGroupSize));
+
 		// Render the tile
 		{
 			boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 			renderSampleKernel->setArg(0, tile->xStart);
 			renderSampleKernel->setArg(1, tile->yStart);
-			renderSampleKernel->setArg(2, tile->sampleIndex);
 		}
-		oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-				cl::NDRange(renderSampleWorkGroupSize));
+		if (tile->sampleIndex < 0) {
+			for (u_int sampleIndex = 0; sampleIndex < totalSamplesPerPixel; ++sampleIndex) {
+				{
+					boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+					renderSampleKernel->setArg(2, sampleIndex);
+				}
+				oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(filmPixelCount, renderSampleWorkGroupSize)),
+						cl::NDRange(renderSampleWorkGroupSize));
+			}
+		} else {
+			{
+				boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+				renderSampleKernel->setArg(2, tile->sampleIndex);
+			}
+			oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
+					cl::NDRange(RoundUp<u_int>(filmPixelCount, renderSampleWorkGroupSize)),
+					cl::NDRange(renderSampleWorkGroupSize));
+		}
 
 		// Async. transfer of the Film buffers
 		TransferFilm(oclQueue);
-		threadFilm->AddSampleCount(taskCount);
+		threadFilm->AddSampleCount((tile->sampleIndex < 0) ? taskCount * totalSamplesPerPixel : taskCount);
 
 		// Async. transfer of GPU task statistics
 		oclQueue.enqueueReadBuffer(
@@ -304,7 +338,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 		u_int tracedRaysCount = 0;
 		for (uint i = 0; i < taskCount; ++i)
 			tracedRaysCount += gpuTaskStats[i].raysCount;
-		intersectionDevice->IntersectionKernelExecuted(taskCount);
+		intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 	}
 
 	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");

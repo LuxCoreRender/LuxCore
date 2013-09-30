@@ -22,13 +22,12 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// Init Kernel
+// InitSeed Kernel
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(
 		uint seedBase,
-		__global GPUTask *tasks,
-		__global GPUTaskStats *taskStats) {
+		__global GPUTask *tasks) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
@@ -44,6 +43,17 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;
 	task->seed.s3 = seed.s3;
+}
+
+//------------------------------------------------------------------------------
+// InitStats Kernel
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
+		__global GPUTaskStats *taskStats) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
 
 	__global GPUTaskStats *taskStat = &taskStats[gid];
 	taskStat->raysCount = 0;
@@ -245,6 +255,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		return;
 
 	__global GPUTask *task = &tasks[gid];
+	__global GPUTaskStats *taskStat = &taskStats[gid];
 
 	//--------------------------------------------------------------------------
 	// Initialize image maps page pointer table
@@ -329,7 +340,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	// Render a sample
 	//--------------------------------------------------------------------------
 
-	uint tracedRaysCount = 0;
+	uint tracedRaysCount = taskStat->raysCount;
 	do {
 		//----------------------------------------------------------------------
 		// Ray trace step
@@ -386,7 +397,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 	//--------------------------------------------------------------------------
 
-	taskStats[gid].raysCount = tracedRaysCount;
+	taskStat->raysCount = tracedRaysCount;
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
