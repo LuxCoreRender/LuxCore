@@ -75,30 +75,26 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 void Camera_GenerateRay(
 		__global Camera *camera,
 		const uint filmWidth, const uint filmHeight,
-		__global Ray *ray,
-		const float scrSampleX, const float scrSampleY
+		Ray *ray,
+		const float filmX, const float filmY
 #if defined(PARAM_CAMERA_HAS_DOF)
 		, const float dofSampleX, const float dofSampleY
 #endif
 		) {
 #if defined(PARAM_CAMERA_ENABLE_HORIZ_STEREO)
 	// Left eye or right eye
-	const uint transIndex = (scrSampleX < .5f) ? 0 : 1;
+	const uint transIndex = (filmX < filmWidth * .5f) ? 0 : 1;
 #else
 	const uint transIndex = 0;
 #endif
 
-	float ssx, ssy;
 #if defined(PARAM_CAMERA_ENABLE_HORIZ_STEREO) && defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
-	Camera_OculusRiftBarrelPostprocess(scrSampleX, scrSampleY, &ssx, &ssy);
+	float ssx, ssy;
+	Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
+	float3 Pras = (float3)(min(ssx * filmWidth, (float)(filmWidth - 1)), min(ssy * filmHeight, (float)(filmHeight - 1)), 0.f);
 #else
-	ssx = scrSampleX;
-	ssy = scrSampleY;
+	float3 Pras = (float3)(filmX, filmHeight - filmY - 1.f, 0.f);
 #endif
-
-	const float screenX = min(ssx * filmWidth, (float)(filmWidth - 1));
-	const float screenY = min((1.f - ssy) * filmHeight, (float)(filmHeight - 1));
-	float3 Pras = (float3)(screenX, screenY, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera[transIndex], Pras);
 	float3 rayDir = rayOrig;
@@ -135,7 +131,7 @@ void Camera_GenerateRay(
 	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld[transIndex], rayOrig);
 	rayDir = Transform_ApplyVector(&camera->cameraToWorld[transIndex], rayDir);
 
-	Ray_Init3(ray, rayOrig, rayDir, maxt);
+	Ray_Init3_Private(ray, rayOrig, rayDir, maxt);
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,

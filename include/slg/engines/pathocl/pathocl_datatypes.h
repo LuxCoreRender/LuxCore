@@ -19,8 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_OCLDATATYPES_H
-#define	_SLG_OCLDATATYPES_H
+#ifndef _SLG_PATHOCL_DATATYPES_H
+#define	_SLG_PATHOCL_DATATYPES_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -28,10 +28,6 @@
 
 namespace slg { namespace ocl { namespace pathocl {
 #include "slg/engines/pathocl/kernels/pathocl_datatypes.cl"
-} } }
-
-namespace slg { namespace ocl { namespace biaspathocl {
-#include "slg/engines/biaspathocl/kernels/biaspathocl_datatypes.cl"
 } } }
 
 #endif

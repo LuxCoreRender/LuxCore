@@ -1392,9 +1392,6 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 
 void Film::AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight) {
-	if ((x < 0) || (x >= width) || (y < 0) || (y >= height))
-		return;
-
 	AddSampleResultColor(x, y, sampleResult, weight);
 	if (hasDataChannel)
 		AddSampleResultData(x, y, sampleResult);

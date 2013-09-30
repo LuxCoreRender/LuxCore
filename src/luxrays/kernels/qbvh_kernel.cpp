@@ -345,7 +345,7 @@ std::string KernelSource_qbvh =
 "		return;\n"
 "\n"
 "	Ray ray;\n"
-"	Ray_ReadAligned4Ray(&rays[gid], &ray);\n"
+"	Ray_ReadAligned4_Private(&rays[gid], &ray);\n"
 "\n"
 "	RayHit rayHit;\n"
 "	Accelerator_Intersect(\n"

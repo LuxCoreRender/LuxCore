@@ -25,86 +25,10 @@
 // Init Kernel
 //------------------------------------------------------------------------------
 
-void GenerateCameraPath(
-		__global GPUTask *task,
-		__global Sample *sample,
-		__global float *sampleData,
-		__global Camera *camera,
-		const uint filmWidth,
-		const uint filmHeight,
-		__global Ray *ray,
-		Seed *seed) {
-#if (PARAM_SAMPLER_TYPE == 0)
-
-	const float scrSampleX = sampleData[IDX_SCREEN_X];
-	const float scrSampleY = sampleData[IDX_SCREEN_Y];
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Rnd_FloatValue(seed);
-	const float dofSampleY = Rnd_FloatValue(seed);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Rnd_FloatValue(seed);
-#endif
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 1)
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
-	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
-#endif
-
-#if (PARAM_SAMPLER_TYPE == 2)
-	const float scrSampleX = sampleData[IDX_SCREEN_X];
-	const float scrSampleY = sampleData[IDX_SCREEN_Y];
-#if defined(PARAM_CAMERA_HAS_DOF)
-	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
-#endif
-#endif
-
-	Camera_GenerateRay(camera, filmWidth, filmHeight, ray, scrSampleX, scrSampleY
-#if defined(PARAM_CAMERA_HAS_DOF)
-			, dofSampleX, dofSampleY
-#endif
-			);
-
-	// Initialize the path state
-	task->pathStateBase.state = RT_NEXT_VERTEX;
-	task->pathStateBase.depth = 1;
-	VSTORE3F(WHITE, &task->pathStateBase.throughput.r);
-	task->directLightState.pathBSDFEvent = NONE;
-	task->directLightState.lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
-	task->directLightState.lastPdfW = 1.f;
-#if defined(PARAM_HAS_PASSTHROUGH)
-	// This is a bit tricky. I store the passThroughEvent in the BSDF
-	// before of the initialization because it can be use during the
-	// tracing of next path vertex ray.
-
-	task->pathStateBase.bsdf.hitPoint.passThroughEvent = eyePassthrough;
-#endif
-}
-
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		uint seedBase,
 		__global GPUTask *tasks,
-		__global GPUTaskStats *taskStats,
-		__global Sample *samples,
-		__global float *samplesData,
-		__global Ray *rays,
-		__global Camera *camera,
-		const uint filmWidth,
-		const uint filmHeight
-		) {
+		__global GPUTaskStats *taskStats) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
 		return;
@@ -116,32 +40,51 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	Seed seed;
 	Rnd_Init(seedBase + gid, &seed);
 
-	// Initialize the sample and path
-	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, sample, sampleData, filmWidth, filmHeight);
-	GenerateCameraPath(task, sample, sampleData, camera, filmWidth, filmHeight, &rays[gid], &seed);
-
 	// Save the seed
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;
 	task->seed.s3 = seed.s3;
 
 	__global GPUTaskStats *taskStat = &taskStats[gid];
-	taskStat->sampleCount = 0;
+	taskStat->raysCount = 0;
 }
 
 //------------------------------------------------------------------------------
 // BiasAdvancePaths Kernel
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
+void GenerateCameraPath(
+		Seed *seed,
+		__global GPUTask *task,
+		__global Camera *camera,
+		const uint pixelX, const uint pixelY,
+		const uint tile_xStart, const uint tile_yStart,
+		const uint engineFilmWidth, const uint engineFilmHeight,
+		Ray *ray) {
+	const float filmX = pixelX + Rnd_FloatValue(seed);
+	const float filmY = pixelY + Rnd_FloatValue(seed);
+	task->result.filmX = filmX;
+	task->result.filmY = filmY;
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Rnd_FloatValue(seed);
+	const float dofSampleY = Rnd_FloatValue(seed);
+#endif
+
+	Camera_GenerateRay(camera, engineFilmWidth, engineFilmHeight, ray, tile_xStart + filmX, tile_yStart + filmY
+#if defined(PARAM_CAMERA_HAS_DOF)
+			, dofSampleX, dofSampleY
+#endif
+			);	
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
+		const uint tile_xStart,
+		const uint tile_yStart,
+		const int tile_sampleIndex,
+		const uint engineFilmWidth, const uint engineFilmHeight,
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
-		__global Sample *samples,
-		__global float *samplesData,
-		__global Ray *rays,
-		__global RayHit *rayHits,
 		// Film parameters
 		const uint filmWidth, const uint filmHeight
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -283,32 +226,25 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
+
+	uint sampleX, sampleY, sampleIndex;
+	if (tile_sampleIndex >= 0) {
+		sampleIndex = tile_sampleIndex;
+		sampleX = gid % PARAM_TILE_SIZE;
+		sampleY = gid / PARAM_TILE_SIZE;
+	} else {
+		sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
+		const uint pixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
+		sampleX = pixelIndex % PARAM_TILE_SIZE;
+		sampleY = pixelIndex / PARAM_TILE_SIZE;
+	}
+
+	if ((gid >= PARAM_TASK_COUNT) ||
+			(tile_xStart + sampleX >= engineFilmWidth) ||
+			(tile_yStart + sampleY >= engineFilmHeight))
 		return;
 
 	__global GPUTask *task = &tasks[gid];
-
-	// Read the path state
-	PathState pathState = task->pathStateBase.state;
-	const uint depth = task->pathStateBase.depth;
-	__global BSDF *bsdf = &task->pathStateBase.bsdf;
-
-	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
-	// Used by Sampler_GetSamplePathVertex() macro
-	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, depth);
-#endif
-
-	// Read the seed
-	Seed seedValue;
-	seedValue.s1 = task->seed.s1;
-	seedValue.s2 = task->seed.s2;
-	seedValue.s3 = task->seed.s3;
-	// This trick is required by Sampler_GetSample() macro
-	Seed *seed = &seedValue;
 
 	//--------------------------------------------------------------------------
 	// Initialize image maps page pointer table
@@ -343,67 +279,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 
 	//--------------------------------------------------------------------------
-	// Render a sample
+	// Initialize Film radiance group pointer table
 	//--------------------------------------------------------------------------
 
-	__global Ray *ray = &rays[gid];
-	__global RayHit *rayHit = &rayHits[gid];
-
-	do {
-		//----------------------------------------------------------------------
-		// Ray trace step
-		//----------------------------------------------------------------------
-
-		{
-			Ray r = *ray;
-			RayHit rh = *rayHit;
-			Accelerator_Intersect(&r, &rh
-				ACCELERATOR_INTERSECT_PARAM);
-			*rayHit = rh;
-			*ray = r;
-		}
-
-		//----------------------------------------------------------------------
-		// Advance the finite state machine step
-		//----------------------------------------------------------------------
-
-		const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
-
-		//--------------------------------------------------------------------------
-		// Evaluation of the Path finite state machine.
-		//
-		// From: RT_NEXT_VERTEX
-		// To: SPLAT_SAMPLE or GENERATE_DL_RAY
-		//--------------------------------------------------------------------------
-
-		if (pathState == RT_NEXT_VERTEX) {
-			if (!rayMiss) {
-				//------------------------------------------------------------------
-				// Something was hit
-				//------------------------------------------------------------------
-
-				VADD3F(&sample->result.radiancePerPixelNormalized[0].r, BLACK);
-				pathState = SPLAT_SAMPLE;
-			} else {
-				//------------------------------------------------------------------
-				// Nothing was hit, add environmental lights radiance
-				//------------------------------------------------------------------
-
-				VADD3F(&sample->result.radiancePerPixelNormalized[0].r, WHITE);
-				pathState = SPLAT_SAMPLE;
-			}
-		}
-
-		//--------------------------------------------------------------------------
-		// Evaluation of the Path finite state machine.
-		//
-		// From: SPLAT_SAMPLE
-		// To: RT_NEXT_VERTEX
-		//--------------------------------------------------------------------------
-
-		if (pathState == SPLAT_SAMPLE) {	
-			// Initialize Film radiance group pointer table
-			__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
+	__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
 	#if defined(PARAM_FILM_RADIANCE_GROUP_0)
 			filmRadianceGroup[0] = filmRadianceGroup0;
 	#endif
@@ -429,22 +308,85 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			filmRadianceGroup[3] = filmRadianceGroup7;
 	#endif
 
-			Sampler_NextSample(seed, sample, sampleData
-					FILM_PARAM);
-			taskStats[gid].sampleCount += 1;
+	//--------------------------------------------------------------------------
+	// Initialize the first ray
+	//--------------------------------------------------------------------------
 
-			pathState = DONE;
-		} else {
-			// Save the state
-			task->pathStateBase.state = pathState;
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+
+	SampleResult_Init(&task->result);
+
+	Ray ray;
+	RayHit rayHit;
+	GenerateCameraPath(&seed, task, camera, sampleX, sampleY, tile_xStart, tile_yStart, engineFilmWidth, engineFilmHeight, &ray);
+	PathState pathState = RT_NEXT_VERTEX;
+
+	//--------------------------------------------------------------------------
+	// Render a sample
+	//--------------------------------------------------------------------------
+
+	do {
+		//----------------------------------------------------------------------
+		// Ray trace step
+		//----------------------------------------------------------------------
+
+		Accelerator_Intersect(&ray, &rayHit
+			ACCELERATOR_INTERSECT_PARAM);
+		taskStats[gid].raysCount += 1;
+
+		//----------------------------------------------------------------------
+		// Advance the finite state machine step
+		//----------------------------------------------------------------------
+
+		//----------------------------------------------------------------------
+		// Evaluation of the Path finite state machine.
+		//
+		// From: RT_NEXT_VERTEX
+		// To: SPLAT_SAMPLE or GENERATE_DL_RAY
+		//----------------------------------------------------------------------
+
+		if (pathState == RT_NEXT_VERTEX) {
+			if (rayHit.meshIndex != NULL_INDEX) {
+				//--------------------------------------------------------------
+				// Something was hit
+				//--------------------------------------------------------------
+
+				VADD3F(&task->result.radiancePerPixelNormalized[0].r, BLACK);
+				pathState = SPLAT_SAMPLE;
+			} else {
+				//--------------------------------------------------------------
+				// Nothing was hit, add environmental lights radiance
+				//--------------------------------------------------------------
+
+				VADD3F(&task->result.radiancePerPixelNormalized[0].r, WHITE);
+				pathState = SPLAT_SAMPLE;
+			}
 		}
+
+		//----------------------------------------------------------------------
+		// Evaluation of the Path finite state machine.
+		//
+		// From: SPLAT_SAMPLE
+		// To: RT_NEXT_VERTEX
+		//----------------------------------------------------------------------
+
+		if (pathState == SPLAT_SAMPLE) {
+			Film_AddSample(sampleX, sampleY, &task->result, 1.f
+					FILM_PARAM);
+			pathState = DONE;
+		}
+
+		pathState = DONE;
 	} while (pathState != DONE);
-		
 
 	//--------------------------------------------------------------------------
 
 	// Save the seed
-	task->seed.s1 = seed->s1;
-	task->seed.s2 = seed->s2;
-	task->seed.s3 = seed->s3;
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
 }

@@ -46,7 +46,7 @@
 #include "slg/film/film.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
-//#include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/engines/biaspathocl/biaspathocl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -570,10 +570,10 @@ void keyFunc(unsigned char key, int x, int y) {
 			optRealTimeMode = false;
 			break;
 		case '-':
-//			session->SetRenderingEngineType(BIASPATHOCL);
-//			glutIdleFunc(NULL);
-//			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
-//			optRealTimeMode = false;
+			session->SetRenderingEngineType(BIASPATHOCL);
+			glutIdleFunc(NULL);
+			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			optRealTimeMode = false;
 			break;
 		case 'o': {
 #if defined(WIN32)

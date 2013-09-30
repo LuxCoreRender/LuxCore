@@ -27,7 +27,6 @@
 #include <set>
 
 #include "slg/slg.h"
-#include "slg/engines/pathocl/ocldatatypes.h"
 #include "slg/editaction.h"
 
 #include "slg/film/film.h"

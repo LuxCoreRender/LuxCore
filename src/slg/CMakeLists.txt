@@ -97,7 +97,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_kernels.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/rtpathocl_kernels.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/rtpathocl/kernels/rtpathocl_kernels.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
@@ -156,8 +156,8 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcputhread.cpp
-#	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathocl.cpp
-#	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathocl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp

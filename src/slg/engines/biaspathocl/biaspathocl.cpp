@@ -37,7 +37,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		PathOCLRenderEngine(rcfg, flm, flmMutex, false) {
+		PathOCLBaseRenderEngine(rcfg, flm, flmMutex, false) {
 	tileRepository = NULL;
 }
 
@@ -45,7 +45,7 @@ BiasPathOCLRenderEngine::~BiasPathOCLRenderEngine() {
 	delete tileRepository;
 }
 
-PathOCLRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
+PathOCLBaseRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new BiasPathOCLRenderThread(index, device, this);
 }
@@ -95,11 +95,13 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	else
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
-	PathOCLRenderEngine::StartLockLess();
+	taskCount = tileRepository->tileSize * tileRepository->tileSize * (tileRepository->enableProgressiveRefinement ? 1 :  aaSamples * aaSamples);
+
+	PathOCLBaseRenderEngine::StartLockLess();
 }
 
 void BiasPathOCLRenderEngine::StopLockLess() {
-	PathOCLRenderEngine::StopLockLess();
+	PathOCLBaseRenderEngine::StopLockLess();
 
 	delete tileRepository;
 	tileRepository = NULL;
@@ -110,7 +112,7 @@ void BiasPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions)
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 	printedRenderingTime = false;
 
-	PathOCLRenderEngine::EndEditLockLess(editActions);
+	PathOCLBaseRenderEngine::EndEditLockLess(editActions);
 }
 
 const bool BiasPathOCLRenderEngine::NextTile(TileRepository::Tile **tile, const Film *tileFilm) {

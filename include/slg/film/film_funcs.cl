@@ -21,6 +21,59 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+void SampleResult_Init(__global SampleResult *sampleResult) {
+	// Initialize only Spectrum fields
+
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[0].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[1].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[2].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[3].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[4].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[5].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[6].r);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+	VSTORE3F(BLACK, &sampleResult->radiancePerPixelNormalized[7].r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+	VSTORE3F(BLACK, &sampleResult->directDiffuse.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+	VSTORE3F(BLACK, &sampleResult->directGlossy.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+	VSTORE3F(BLACK, &sampleResult->emission.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+	VSTORE3F(BLACK, &sampleResult->indirectDiffuse.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+	VSTORE3F(BLACK, &sampleResult->indirectGlossy.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+	VSTORE3F(BLACK, &sampleResult->indirectSpecular.r);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+	sampleResult->directShadowMask = 1.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+	sampleResult->indirectShadowMask = 1.f;
+#endif
+}
+
 float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {
 	float y = 0.f;
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -68,7 +121,7 @@ void AtomicAdd(__global float *val, const float delta) {
 	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
 }
 
-void AtomicMin(__global float *val, const float val2) {
+bool AtomicMin(__global float *val, const float val2) {
 	union {
 		float f;
 		unsigned int i;
@@ -255,6 +308,15 @@ void Film_AddSampleResultData(const uint x, const uint y,
 		Film_SetPixel2(&filmUV[index2], &sampleResult->UV.u);
 #endif
 	}
+}
+
+void Film_AddSample(const uint x, const uint y,
+		__global SampleResult *sampleResult, const float weight
+		FILM_PARAM_DECL) {
+	Film_AddSampleResultColor(x, y, sampleResult, weight
+			FILM_PARAM);
+	Film_AddSampleResultData(x, y, sampleResult
+			FILM_PARAM);
 }
 
 #if (PARAM_IMAGE_FILTER_TYPE == 0)
