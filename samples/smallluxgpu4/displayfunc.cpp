@@ -210,24 +210,36 @@ static void PrintCaptions() {
 	glRecti(0, 0, session->film->GetWidth() - 1, 18);
 	glDisable(GL_BLEND);
 
-	// Draw the pending tiles for BIASPATHCPU
-	if (session->renderEngine->GetEngineType() == BIASPATHCPU) {
-		CPUTileRenderEngine *engine = (CPUTileRenderEngine *)session->renderEngine;
-		vector<TileRepository::Tile> tiles;
-		engine->GetPendingTiles(tiles);
+	// Draw the pending tiles for BIASPATHCPU or BIASPATHOCL
+	vector<TileRepository::Tile> tiles;
+	u_int tileSize = 0;
+	switch (session->renderEngine->GetEngineType()) {
+		case BIASPATHCPU: {
+			CPUTileRenderEngine *engine = (CPUTileRenderEngine *)session->renderEngine;
+			engine->GetPendingTiles(tiles);
+			tileSize = engine->GetTileSize();
+			break;
+		}
+		case BIASPATHOCL: {
+			BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)session->renderEngine;
+			engine->GetPendingTiles(tiles);
+			tileSize = engine->GetTileSize();
+			break;
+		}
+		default:
+			break;
+	}
 
-		if (tiles.size() > 0) {
-			// Draw tiles borders
-			glColor3f(1.f, 1.f, 0.f);
-			const u_int tileSize = engine->GetTileSize();
-			BOOST_FOREACH(TileRepository::Tile &tile, tiles) {
-				glBegin(GL_LINE_LOOP);
-				glVertex2i(tile.xStart, tile.yStart);
-				glVertex2i(tile.xStart + tileSize, tile.yStart);
-				glVertex2i(tile.xStart + tileSize, tile.yStart + tileSize);
-				glVertex2i(tile.xStart, tile.yStart + tileSize);
-				glEnd();
-			}
+	if (tiles.size() > 0) {
+		// Draw tiles borders
+		glColor3f(1.f, 1.f, 0.f);
+		BOOST_FOREACH(TileRepository::Tile &tile, tiles) {
+			glBegin(GL_LINE_LOOP);
+			glVertex2i(tile.xStart, tile.yStart);
+			glVertex2i(tile.xStart + tileSize, tile.yStart);
+			glVertex2i(tile.xStart + tileSize, tile.yStart + tileSize);
+			glVertex2i(tile.xStart, tile.yStart + tileSize);
+			glEnd();
 		}
 	}
 	

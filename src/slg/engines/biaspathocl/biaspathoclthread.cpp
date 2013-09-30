@@ -74,8 +74,8 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss << scientific <<
 			" -D PARAM_TASK_COUNT=" <<  engine->taskCount <<
 			" -D PARAM_TILE_SIZE=" << engine->tileRepository->tileSize <<
-			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<
-			" -D PARAM_USE_PIXEL_ATOMICS";
+			" -D PARAM_AA_SAMPLES=" << engine->aaSamples;/* <<
+			" -D PARAM_USE_PIXEL_ATOMICS";*/
 
 	return ss.str();
 }
@@ -288,6 +288,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 		// Async. transfer of the Film buffers
 		TransferFilm(oclQueue);
+		threadFilm->AddSampleCount(taskCount);
 
 		// Async. transfer of GPU task statistics
 		oclQueue.enqueueReadBuffer(
@@ -300,7 +301,10 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 		oclQueue.finish();
 
 		// In order to update the statistics
-//		intersectionDevice->IntersectionKernelExecuted(taskCount);
+		u_int tracedRaysCount = 0;
+		for (uint i = 0; i < taskCount; ++i)
+			tracedRaysCount += gpuTaskStats[i].raysCount;
+		intersectionDevice->IntersectionKernelExecuted(taskCount);
 	}
 
 	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
