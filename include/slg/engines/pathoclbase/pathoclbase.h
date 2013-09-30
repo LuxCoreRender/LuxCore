@@ -62,6 +62,7 @@ protected:
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) = 0;
 	virtual void AdditionalInit() = 0;
 	virtual std::string AdditionalKernelOptions() = 0;
+	virtual std::string AdditionalKernelDefinitions() { return ""; }
 	virtual std::string AdditionalKernelSources() = 0;
 	virtual void SetAdditionalKernelArgs() = 0;
 	virtual void CompileAdditionalKernels(cl::Program *program) = 0;
