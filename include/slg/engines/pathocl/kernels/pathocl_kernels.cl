@@ -353,7 +353,7 @@ bool DirectLightSampling(
 			const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
 			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput) * bsdfEval * lightRadiance, radiance);
-			*ID = lightID;
+			*ID = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 #if defined(PARAM_HAS_PASSTHROUGH)
 			*shadowPassThrought = u4;
 #endif
@@ -432,7 +432,7 @@ void DirectHitInfiniteLight(
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
 			const float3 lightRadiance = weight * throughput * infiniteLightRadiance;
 
-			const uint lightID = infiniteLight->lightID;
+			const uint lightID = min(infiniteLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 			VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
 
 			AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, lightRadiance);
@@ -449,7 +449,7 @@ void DirectHitInfiniteLight(
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
 			const float3 = lightRadiance = weight * throughput * skyRadiance;
 
-			const uint lightID = skyLight->lightID;
+			const uint lightID = min(skyLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 			VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
 
 			AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, lightRadiance);
@@ -466,7 +466,7 @@ void DirectHitInfiniteLight(
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
 			const float3 lightRadiance = weight * throughput * sunRadiance;
 
-			const uint lightID = sunLight->lightID;
+			const uint lightID = min(sunLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 			VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
 
 			AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, lightRadiance);
@@ -505,8 +505,8 @@ void DirectHitFiniteLight(
 		}
 		const float3 lightRadiance = weight * VLOAD3F(pathThroughput) * emittedRadiance;
 
-		const uint lightID = BSDF_GetLightID(bsdf
-				MATERIALS_PARAM);
+		const uint lightID =  min(BSDF_GetLightID(bsdf
+				MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 		VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
 
 		AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, lightRadiance);
