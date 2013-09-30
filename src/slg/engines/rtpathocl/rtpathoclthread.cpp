@@ -24,8 +24,9 @@
 #include "luxrays/core/oclintersectiondevice.h"
 
 #include "slg/slg.h"
-#include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/kernels/kernels.h"
+#include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/pathocl/pathocl_datatypes.h"
 
 using namespace std;
 using namespace luxrays;

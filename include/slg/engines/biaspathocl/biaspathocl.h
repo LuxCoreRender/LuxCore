@@ -24,8 +24,9 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
-#include "slg/engines/pathocl/pathocl.h"
+#include "slg/engines/biaspathocl/biaspathocl_datatypes.h"
 
 namespace slg {
 
@@ -35,23 +36,42 @@ class BiasPathOCLRenderEngine;
 // Biased path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class BiasPathOCLRenderThread : public PathOCLRenderThread {
+class BiasPathOCLRenderThread : public PathOCLBaseRenderThread {
 public:
 	BiasPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
-			PathOCLRenderEngine *re);
+			BiasPathOCLRenderEngine *re);
 	virtual ~BiasPathOCLRenderThread();
 
 	friend class BiasPathOCLRenderEngine;
 
 protected:
 	virtual void RenderThreadImpl();
+	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight);
+	virtual void AdditionalInit();
+	virtual std::string AdditionalKernelOptions();
+	virtual std::string AdditionalKernelSources();
+	virtual void SetAdditionalKernelArgs();
+	virtual void CompileAdditionalKernels(cl::Program *program);
+
+	// OpenCL variables
+	cl::Kernel *initKernel;
+	size_t initWorkGroupSize;
+	cl::Kernel *renderSampleKernel;
+	size_t renderSampleWorkGroupSize;
+
+	cl::Buffer *tasksBuff;
+	cl::Buffer *taskStatsBuff;
+
+	u_int sampleDimensions;
+
+	slg::ocl::biaspathocl::GPUTaskStats *gpuTaskStats;
 };
 
 //------------------------------------------------------------------------------
 // Biased path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class BiasPathOCLRenderEngine : public PathOCLRenderEngine {
+class BiasPathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
 	BiasPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~BiasPathOCLRenderEngine();
@@ -75,15 +95,18 @@ public:
 	bool lightSamplingStrategyONE;
 
 protected:
-	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
+	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 	virtual void EndEditLockLess(const EditActionList &editActions);
+	virtual void UpdateFilmLockLess() { }
 	virtual void UpdateCounters();
 
 	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
+
+	u_int taskCount;
 
 	TileRepository *tileRepository;
 	bool printedRenderingTime;

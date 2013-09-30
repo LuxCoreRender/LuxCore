@@ -92,6 +92,7 @@ protected:
 	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
 	void SetKernelArgs();
 
+	size_t GetSampleResultSize() const;
 	void TransferFilm(cl::CommandQueue &oclQueue);
 
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;

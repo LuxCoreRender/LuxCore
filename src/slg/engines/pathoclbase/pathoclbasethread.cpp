@@ -117,6 +117,51 @@ PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
 	delete kernelCache;
 }
 
+size_t PathOCLBaseRenderThread::GetSampleResultSize() const {
+	//--------------------------------------------------------------------------
+	// SampleResult size
+	//--------------------------------------------------------------------------
+
+	// SampleResult.filmX and SampleResult.filmY
+	size_t sampleResultSize = 2 * sizeof(float);
+	// SampleResult.radiancePerPixelNormalized[PARAM_FILM_RADIANCE_GROUP_COUNT]
+	sampleResultSize += sizeof(slg::ocl::Spectrum) * threadFilm->GetRadianceGroupCount();
+	if (threadFilm->HasChannel(Film::ALPHA))
+		sampleResultSize += sizeof(float);
+	if (threadFilm->HasChannel(Film::DEPTH))
+		sampleResultSize += sizeof(float);
+	if (threadFilm->HasChannel(Film::POSITION))
+		sampleResultSize += sizeof(Point);
+	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
+		sampleResultSize += sizeof(Normal);
+	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
+		sampleResultSize += sizeof(Normal);
+	if (threadFilm->HasChannel(Film::MATERIAL_ID))
+		sampleResultSize += sizeof(u_int);
+	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
+		sampleResultSize += sizeof(Spectrum);
+	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
+		sampleResultSize += sizeof(Spectrum);
+	if (threadFilm->HasChannel(Film::EMISSION))
+		sampleResultSize += sizeof(Spectrum);
+	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
+		sampleResultSize += sizeof(Spectrum);
+	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
+		sampleResultSize += sizeof(Spectrum);
+	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
+		sampleResultSize += sizeof(Spectrum);
+	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
+		sampleResultSize += sizeof(float);
+	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
+		sampleResultSize += sizeof(float);
+	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
+		sampleResultSize += sizeof(float);
+	if (threadFilm->HasChannel(Film::UV))
+		sampleResultSize += sizeof(UV);
+
+	return sampleResultSize;
+}
+
 void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
 	// Check if the buffer is too big
 	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {

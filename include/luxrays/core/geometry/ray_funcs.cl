@@ -20,6 +20,45 @@
  *                                                                         *
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
+void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
+		const float mint, const float maxt) {
+	ray->o.x = orig.x;
+	ray->o.y = orig.y;
+	ray->o.z = orig.z;
+
+	ray->d.x = dir.x;
+	ray->d.y = dir.y;
+	ray->d.z = dir.z;
+
+	ray->mint = mint;
+	ray->maxt = maxt;
+}
+
+void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir, const float maxt) {
+	ray->o.x = orig.x;
+	ray->o.y = orig.y;
+	ray->o.z = orig.z;
+
+	ray->d.x = dir.x;
+	ray->d.y = dir.y;
+	ray->d.z = dir.z;
+
+	ray->mint = MachineEpsilon_E_Float3(orig);
+	ray->maxt = maxt;
+}
+
+void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir) {
+	ray->o.x = orig.x;
+	ray->o.y = orig.y;
+	ray->o.z = orig.z;
+
+	ray->d.x = dir.x;
+	ray->d.y = dir.y;
+	ray->d.z = dir.z;
+
+	ray->mint = MachineEpsilon_E_Float3(orig);
+	ray->maxt = INFINITY;
+}
 
 void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
 		const float mint, const float maxt) {
@@ -55,7 +94,7 @@ void Ray_ReadAligned4(__global Ray *ray, float3 *rayOrig, float3 *rayDir, float 
 	*maxt = data1.w;
 }
 
-void Ray_ReadAligned4Ray(__global Ray *ray, Ray *dstRay) {
+void Ray_ReadAligned4_Private(__global Ray *ray, Ray *dstRay) {
 	__global float4 *basePtr =(__global float4 *)ray;
 	const float4 data0 = (*basePtr++);
 	const float4 data1 = (*basePtr);

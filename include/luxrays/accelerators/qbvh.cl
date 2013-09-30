@@ -342,7 +342,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Inters
 		return;
 
 	Ray ray;
-	Ray_ReadAligned4Ray(&rays[gid], &ray);
+	Ray_ReadAligned4_Private(&rays[gid], &ray);
 
 	RayHit rayHit;
 	Accelerator_Intersect(

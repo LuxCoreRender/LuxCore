@@ -29,9 +29,10 @@
 #include "luxrays/kernels/kernels.h"
 
 #include "slg/slg.h"
-#include "slg/engines/pathocl/pathocl.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
+#include "slg/engines/pathocl/pathocl.h"
+#include "slg/engines/pathocl/pathocl_datatypes.h"
 
 using namespace std;
 using namespace luxrays;
@@ -248,42 +249,7 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	// SampleResult size
 	//--------------------------------------------------------------------------
 
-	// SampleResult.filmX and SampleResult.filmY
-	size_t sampleResultSize = 2 * sizeof(float);
-	// SampleResult.radiancePerPixelNormalized[PARAM_FILM_RADIANCE_GROUP_COUNT]
-	sampleResultSize += sizeof(slg::ocl::Spectrum) * threadFilm->GetRadianceGroupCount();
-	if (threadFilm->HasChannel(Film::ALPHA))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::DEPTH))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::POSITION))
-		sampleResultSize += sizeof(Point);
-	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		sampleResultSize += sizeof(Normal);
-	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-		sampleResultSize += sizeof(Normal);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID))
-		sampleResultSize += sizeof(u_int);
-	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::EMISSION))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::UV))
-		sampleResultSize += sizeof(UV);
+	size_t sampleResultSize = GetSampleResultSize();
 	
 	//--------------------------------------------------------------------------
 	// Sample size
@@ -368,16 +334,16 @@ void PathOCLRenderThread::AdditionalInit() {
 	AllocOCLBufferRW(&hitsBuff, sizeof(RayHit) * taskCount, "RayHit");
 
 	//--------------------------------------------------------------------------
-	// Allocate GPU task statistic buffers
-	//--------------------------------------------------------------------------
-
-	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::pathocl::GPUTaskStats) * taskCount, "GPUTask Stats");
-
-	//--------------------------------------------------------------------------
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
 	InitGPUTaskBuffer();
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU task statistic buffers
+	//--------------------------------------------------------------------------
+
+	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::pathocl::GPUTaskStats) * taskCount, "GPUTask Stats");
 
 	//--------------------------------------------------------------------------
 	// Allocate sample buffers
@@ -433,7 +399,6 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *channel_MATERIAL_ID_Buff);
 	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
 		advancePathsKernel->setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
-
 	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
 		advancePathsKernel->setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
 	if (threadFilm->HasChannel(Film::EMISSION))

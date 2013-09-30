@@ -24,15 +24,16 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/engines/pathoclbase/pathoclbase.h"
-#include "slg/engines/pathoclbase/compiledscene.h"
+#include <boost/thread/thread.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/ocl.h"
 
-#include <boost/thread/thread.hpp>
+#include "slg/slg.h"
+#include "slg/renderengine.h"
+#include "slg/engines/pathoclbase/pathoclbase.h"
+#include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/engines/pathocl/pathocl_datatypes.h"
 
 namespace slg {
 

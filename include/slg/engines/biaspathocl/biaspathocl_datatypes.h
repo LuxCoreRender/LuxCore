@@ -1,5 +1,3 @@
-#line 2 "biaspathocl_datatypes.cl"
-
 /***************************************************************************
  *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
@@ -21,51 +19,17 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// Some OpenCL specific definition
-//------------------------------------------------------------------------------
+#ifndef _SLG_BIASPATHOCL_DATATYPES_H
+#define	_SLG_BIASPATHOCL_DATATYPES_H
 
-#if defined(SLG_OPENCL_KERNEL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#endif
+#include "slg/slg.h"
 
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#endif
+namespace slg { namespace ocl { namespace biaspathocl {
+#include "slg/engines/biaspathocl/kernels/biaspathocl_datatypes.cl"
+} } }
 
 #endif
 
-//------------------------------------------------------------------------------
-// GPUTask data types
-//------------------------------------------------------------------------------
-
-typedef enum {
-	RT_NEXT_VERTEX,
-	GENERATE_DL_RAY,
-	RT_DL,
-	GENERATE_NEXT_VERTEX_RAY,
-	SPLAT_SAMPLE,
-	DONE
-} PathState;
-
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
-
-typedef struct {
-	// The task seed
-	Seed seed;
-
-	SampleResult result;
-} GPUTask;
-
-#endif
-
-typedef struct {
-	unsigned int raysCount;
-} GPUTaskStats;
+#endif	/* _SLG_BIASPATHOCL_DATATYPES_H */

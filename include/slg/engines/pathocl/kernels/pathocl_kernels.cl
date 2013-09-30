@@ -130,8 +130,6 @@ void GenerateCameraPath(
 		Seed *seed) {
 #if (PARAM_SAMPLER_TYPE == 0)
 
-	const float scrSampleX = sampleData[IDX_SCREEN_X];
-	const float scrSampleY = sampleData[IDX_SCREEN_Y];
 #if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Rnd_FloatValue(seed);
 	const float dofSampleY = Rnd_FloatValue(seed);
@@ -143,8 +141,6 @@ void GenerateCameraPath(
 
 #if (PARAM_SAMPLER_TYPE == 1)
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-	const float scrSampleX = Sampler_GetSamplePath(IDX_SCREEN_X);
-	const float scrSampleY = Sampler_GetSamplePath(IDX_SCREEN_Y);
 #if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
@@ -155,8 +151,6 @@ void GenerateCameraPath(
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 2)
-	const float scrSampleX = sampleData[IDX_SCREEN_X];
-	const float scrSampleY = sampleData[IDX_SCREEN_Y];
 #if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
@@ -166,11 +160,14 @@ void GenerateCameraPath(
 #endif
 #endif
 
-	Camera_GenerateRay(camera, filmWidth, filmHeight, ray, scrSampleX, scrSampleY
+	Ray tmpRay;
+	Camera_GenerateRay(camera, filmWidth, filmHeight, &tmpRay,
+			sample->result.filmX, sample->result.filmY
 #if defined(PARAM_CAMERA_HAS_DOF)
 			, dofSampleX, dofSampleY
 #endif
 			);
+	*ray = tmpRay;
 
 	// Initialize the path state
 	task->pathStateBase.state = RT_NEXT_VERTEX;
