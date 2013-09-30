@@ -23,7 +23,7 @@
 
 #include "slg/renderengine.h"
 #include "slg/renderconfig.h"
-#include "slg/engines/pathocl/rtpathocl.h"
+#include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/lightcpu/lightcpu.h"
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/engines/bidircpu/bidircpu.h"
@@ -33,6 +33,7 @@
 #include "slg/engines/filesaver/filesaver.h"
 #include "slg/engines/pathhybrid/pathhybrid.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
+//#include "slg/engines/biaspathocl/biaspathocl.h"
 #include "slg/sdl/bsdf.h"
 
 #include "luxrays/core/intersectiondevice.h"
@@ -240,6 +241,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return PATHHYBRID;
 	if ((type.compare("14") == 0) || (type.compare("BIASPATHCPU") == 0))
 		return BIASPATHCPU;
+//	if ((type.compare("15") == 0) || (type.compare("BIASPATHOCL") == 0))
+//		return BIASPATHOCL;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -267,6 +270,8 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "PATHHYBRID";
 		case BIASPATHCPU:
 			return "BIASPATHCPU";
+//		case BIASPATHOCL:
+//			return "BIASPATHOCL";
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
 	}
@@ -306,6 +311,13 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 			return new PathHybridRenderEngine(renderConfig, film, filmMutex);
 		case BIASPATHCPU:
 			return new BiasPathCPURenderEngine(renderConfig, film, filmMutex);
+//		case BIASPATHOCL:
+//#ifndef LUXRAYS_DISABLE_OPENCL
+//			return new BiasPathOCLRenderEngine(renderConfig, film, filmMutex);
+//#else
+//			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
+//			return new BiasPathCPURenderEngine(renderConfig, film, filmMutex);
+//#endif
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
 	}
@@ -664,7 +676,7 @@ void CPUTileRenderThread::StartRenderThread() {
 
 CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	CPURenderEngine(cfg, flm, flmMutex) {
-	tileRepository = new TileRepository(Max(cfg->cfg.GetInt("tile.size", 32), 8));
+	tileRepository = NULL;
 }
 
 CPUTileRenderEngine::~CPUTileRenderEngine() {
@@ -699,6 +711,7 @@ const bool CPUTileRenderEngine::NextTile(TileRepository::Tile **tile, const Film
 
 void CPUTileRenderEngine::StartLockLess() {
 	film->Reset();
+	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 32), 8));
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 	printedRenderingTime = false;
 
@@ -708,7 +721,8 @@ void CPUTileRenderEngine::StartLockLess() {
 void CPUTileRenderEngine::StopLockLess() {
 	CPURenderEngine::StopLockLess();
 
-	tileRepository->Clear();
+	delete tileRepository;
+	tileRepository = NULL;
 }
 
 void CPUTileRenderEngine::EndEditLockLess(const EditActionList &editActions) {

@@ -22,7 +22,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/slg.h"
-#include "slg/engines/pathocl/rtpathocl.h"
+#include "slg/engines/rtpathocl/rtpathocl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -67,7 +67,7 @@ void RTPathOCLRenderEngine::StopLockLess() {
 	frameBarrier->wait();
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->renderThread->interrupt();
+		((RTPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
 	frameBarrier->wait();
 	// Render threads will now detect the interruption
 
@@ -94,6 +94,7 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
 		if (t->GetFrameTime() > 0.0) {
 			//SLG_LOG("[RTPathOCLRenderEngine] Device " << i << ":");
+			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " assigned iterations");
 			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() / t->GetFrameTime() << " iterations/sec");
 			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetFrameTime() * 1000.0 << " msec");
 

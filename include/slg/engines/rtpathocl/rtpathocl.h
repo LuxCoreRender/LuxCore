@@ -19,107 +19,112 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_PATHOCL_H
-#define	_SLG_PATHOCL_H
+#ifndef _SLG_RTPATHOCL_H
+#define	_SLG_RTPATHOCL_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/engines/pathoclbase/pathoclbase.h"
-#include "slg/engines/pathoclbase/compiledscene.h"
-
-#include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/ocl.h"
-
-#include <boost/thread/thread.hpp>
+#include "slg/engines/pathocl/pathocl.h"
 
 namespace slg {
 
-class PathOCLRenderEngine;
+class RTPathOCLRenderEngine;
 
 //------------------------------------------------------------------------------
-// Path Tracing GPU-only render threads
+// Real-Time path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class PathOCLRenderThread : public PathOCLBaseRenderThread {
+class RTPathOCLRenderThread : public PathOCLRenderThread {
 public:
-	PathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	RTPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
-	virtual ~PathOCLRenderThread();
+	virtual ~RTPathOCLRenderThread();
 
+	virtual void Interrupt();
 	virtual void Stop();
 
-	friend class PathOCLRenderEngine;
+	virtual void BeginEdit();
+	virtual void EndEdit(const EditActionList &editActions);
+
+	void SetAssignedIterations(const u_int iters) { assignedIters = iters; }
+	u_int GetAssignedIterations() const { return assignedIters; }
+	double GetFrameTime() const { return frameTime; }
+	u_int GetMinIterationsToShow() const;
+
+	friend class RTPathOCLRenderEngine;
 
 protected:
 	virtual void RenderThreadImpl();
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight);
 	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
 	virtual std::string AdditionalKernelSources();
 	virtual void SetAdditionalKernelArgs();
 	virtual void CompileAdditionalKernels(cl::Program *program);
 
-	void InitGPUTaskBuffer();
-	void InitSamplesBuffer();
-	void InitSampleDataBuffer();
+	void InitDisplayThread();
+	void UpdateOCLBuffers();
+
+	cl::Kernel *clearFBKernel;
+	size_t clearFBWorkGroupSize;
+	cl::Kernel *clearSBKernel;
+	size_t clearSBWorkGroupSize;
+	cl::Kernel *mergeFBKernel;
+	size_t mergeFBWorkGroupSize;
+	cl::Kernel *normalizeFBKernel;
+	size_t normalizeFBWorkGroupSize;
+	cl::Kernel *applyBlurFilterXR1Kernel;
+	size_t applyBlurFilterXR1WorkGroupSize;
+	cl::Kernel *applyBlurFilterYR1Kernel;
+	size_t applyBlurFilterYR1WorkGroupSize;
+	cl::Kernel *toneMapLinearKernel;
+	size_t toneMapLinearWorkGroupSize;
+	cl::Kernel *updateScreenBufferKernel;
+	size_t updateScreenBufferWorkGroupSize;
+
+	boost::mutex editMutex;
+	EditActionList updateActions;
+	volatile double frameTime;
+	volatile u_int assignedIters;
 
 	// OpenCL variables
-	cl::Kernel *initKernel;
-	size_t initWorkGroupSize;
-	cl::Kernel *advancePathsKernel;
-	size_t advancePathsWorkGroupSize;
-
-	cl::Buffer *raysBuff;
-	cl::Buffer *hitsBuff;
-	cl::Buffer *tasksBuff;
-	cl::Buffer *samplesBuff;
-	cl::Buffer *sampleDataBuff;
-	cl::Buffer *taskStatsBuff;
-
-	u_int sampleDimensions;
-
-	slg::ocl::pathocl::GPUTaskStats *gpuTaskStats;
+	cl::Buffer *tmpFrameBufferBuff;
+	cl::Buffer *mergedFrameBufferBuff;
+	cl::Buffer *screenBufferBuff;
 };
 
 //------------------------------------------------------------------------------
-// Path Tracing 100% OpenCL render engine
+// Real-Time path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
+class RTPathOCLRenderEngine : public PathOCLRenderEngine {
 public:
-	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-			const bool realTime = false);
-	virtual ~PathOCLRenderEngine();
+	RTPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	virtual ~RTPathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return PATHOCL; }
+	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
+	double GetFrameTime() const { return frameTime; }
 
-	friend class PathOCLRenderThread;
+	bool WaitNewFrame();
 
-	// Signed because of the delta parameter
-	int maxPathDepth;
-
-	int rrDepth;
-	float rrImportanceCap;
-
-	u_int taskCount;
-	bool usePixelAtomics;
+	friend class RTPathOCLRenderThread;
 
 protected:
-	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);
+	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
+		luxrays::OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
-
+	virtual void StopLockLess();
 	virtual void UpdateFilmLockLess();
-	virtual void UpdateCounters();
 
-	slg::ocl::Sampler *sampler;
-	slg::ocl::Filter *filter;
+	u_int minIterations;
+	u_int displayDeviceIndex;
+ 
+	boost::barrier *frameBarrier;
+	double frameTime;
 };
 
 }
 
 #endif
 
-#endif	/* _SLG_PATHOCL_H */
+#endif	/* _SLG_RTPATHOCL_H */

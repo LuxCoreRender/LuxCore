@@ -26,9 +26,11 @@
 
 namespace slg { namespace ocl {
 
-extern std::string KernelSource_datatypes;
+extern std::string KernelSource_pathocl_datatypes;
 extern std::string KernelSource_pathocl_kernels;
 extern std::string KernelSource_rtpathocl_kernels;
+extern std::string KernelSource_biaspathocl_datatypes;
+extern std::string KernelSource_biaspathocl_kernels;
 extern std::string KernelSource_sampler_types;
 extern std::string KernelSource_sampler_funcs;
 extern std::string KernelSource_film_types;

@@ -95,9 +95,11 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/core/mc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/datatypes.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_kernels.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/rtpathocl_kernels.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_datatypes.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filter_types.cl
@@ -137,11 +139,13 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/hashgrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/cbidirhybrid/cbidirhybrid.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/compiledscene.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledscene.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclthread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/rtpathocl.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/rtpathoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathocl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcpu.cpp
@@ -152,6 +156,8 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcputhread.cpp
+#	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathocl.cpp
+#	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
@@ -198,9 +204,11 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/hitpoint_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/datatypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_datatypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_kernels_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/rtpathocl_kernels_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_kernels_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_datatypes_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Kernels" FILES ${SLG_SRCS_KERNELS})
 

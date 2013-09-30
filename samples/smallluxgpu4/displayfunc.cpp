@@ -39,13 +39,14 @@
 #include "displayfunc.h"
 
 #include "luxrays/core/intersectiondevice.h"
+#include "luxrays/core/virtualdevice.h"
 
 #include "slg/renderconfig.h"
 #include "slg/rendersession.h"
 #include "slg/film/film.h"
-#include "slg/engines/pathocl/rtpathocl.h"
-#include "luxrays/core/virtualdevice.h"
+#include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
+//#include "slg/engines/biaspathocl/biaspathocl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -128,7 +129,7 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (dynamic_cast<RTPathOCLRenderEngine *>(session->renderEngine)) {
+	if (session->renderEngine->GetEngineType() == RTPATHOCL) {
 		static float fps = 0.f;
 		// This is a simple trick to smooth the fps counter
 		const double frameTime = ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
@@ -567,6 +568,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
+			break;
+		case '-':
+//			session->SetRenderingEngineType(BIASPATHOCL);
+//			glutIdleFunc(NULL);
+//			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+//			optRealTimeMode = false;
 			break;
 		case 'o': {
 #if defined(WIN32)

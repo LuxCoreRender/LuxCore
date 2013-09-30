@@ -19,75 +19,60 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_RT_PATHOCL_H
-#define	_SLG_RT_PATHOCL_H
+#ifndef _SLG_BIASPATHOCL_H
+#define	_SLG_BIASPATHOCL_H
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include "slg/engines/biaspathcpu/biaspathcpu.h"
 #include "slg/engines/pathocl/pathocl.h"
 
 namespace slg {
 
-class RTPathOCLRenderEngine;
+class BiasPathOCLRenderEngine;
 
 //------------------------------------------------------------------------------
-// Real-Time Path Tracing GPU-only render threads
+// Biased path tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class RTPathOCLRenderThread : public PathOCLRenderThread {
+class BiasPathOCLRenderThread : public PathOCLRenderThread {
 public:
-	RTPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	BiasPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
-	virtual ~RTPathOCLRenderThread();
+	virtual ~BiasPathOCLRenderThread();
 
-	virtual void Interrupt();
-	virtual void Stop();
-
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
-
-	void SetAssignedIterations(const u_int iters) { assignedIters = iters; }
-	u_int GetAssignedIterations() const { return assignedIters; }
-	double GetFrameTime() const { return frameTime; }
-	u_int GetMinIterationsToShow() const;
-
-	friend class RTPathOCLRenderEngine;
+	friend class BiasPathOCLRenderEngine;
 
 protected:
-	void InitDisplayThread();
-	void UpdateOCLBuffers();
-
 	virtual void RenderThreadImpl();
-
-	virtual void InitRender();
-	virtual void SetKernelArgs();
-	
-	boost::mutex editMutex;
-	EditActionList updateActions;
-	volatile double frameTime;
-	volatile u_int assignedIters;
-
-	// OpenCL variables
-	cl::Buffer *tmpFrameBufferBuff;
-	cl::Buffer *mergedFrameBufferBuff;
-	cl::Buffer *screenBufferBuff;
 };
 
 //------------------------------------------------------------------------------
-// Real-Time Path Tracing 100% OpenCL render engine
+// Biased path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class RTPathOCLRenderEngine : public PathOCLRenderEngine {
+class BiasPathOCLRenderEngine : public PathOCLRenderEngine {
 public:
-	RTPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~RTPathOCLRenderEngine();
+	BiasPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	virtual ~BiasPathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
-	double GetFrameTime() const { return frameTime; }
+	virtual RenderEngineType GetEngineType() const { return BIASPATHOCL; }
 
-	bool WaitNewFrame();
+	friend class BiasPathOCLRenderThread;
 
-	friend class RTPathOCLRenderThread;
+	// Path depth settings
+	PathDepthInfo maxPathDepth;
+
+	// Samples settings
+	u_int aaSamples, diffuseSamples, glossySamples, specularSamples, directLightSamples;
+
+	// Clamping settings
+	bool clampValueEnabled;
+	float clampMaxValue;
+
+	// Light settings
+	float lowLightThreashold, nearStartLight;
+	bool lightSamplingStrategyONE;
 
 protected:
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
@@ -95,17 +80,17 @@ protected:
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();
-	virtual void UpdateFilmLockLess();
+	virtual void EndEditLockLess(const EditActionList &editActions);
+	virtual void UpdateCounters();
 
-	u_int minIterations;
-	u_int displayDeviceIndex;
- 
-	boost::barrier *frameBarrier;
-	double frameTime;
+	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
+
+	TileRepository *tileRepository;
+	bool printedRenderingTime;
 };
 
 }
 
 #endif
 
-#endif	/* _SLG_RT_PATHOCL_H */
+#endif	/* _SLG_BIASPATHOCL_H */

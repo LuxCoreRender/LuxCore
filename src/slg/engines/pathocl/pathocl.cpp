@@ -39,7 +39,6 @@
 
 #include "slg/slg.h"
 #include "slg/engines/pathocl/pathocl.h"
-#include "slg/engines/pathocl/rtpathocl.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
 #include "slg/film/filter.h"
@@ -54,76 +53,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
-		const bool realTime) : OCLRenderEngine(rcfg, flm, flmMutex) {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	if (realTime) {
-		film->SetRadianceGroupCount(1);
-
-		// Remove all Film channels
-		film->RemoveChannel(Film::ALPHA);
-		film->RemoveChannel(Film::DEPTH);
-		film->RemoveChannel(Film::POSITION);
-		film->RemoveChannel(Film::GEOMETRY_NORMAL);
-		film->RemoveChannel(Film::SHADING_NORMAL);
-		film->RemoveChannel(Film::MATERIAL_ID);
-		film->RemoveChannel(Film::DIRECT_DIFFUSE);
-		film->RemoveChannel(Film::DIRECT_GLOSSY);
-		film->RemoveChannel(Film::EMISSION);
-		film->RemoveChannel(Film::INDIRECT_DIFFUSE);
-		film->RemoveChannel(Film::INDIRECT_GLOSSY);
-		film->RemoveChannel(Film::INDIRECT_SPECULAR);
-		film->RemoveChannel(Film::MATERIAL_ID_MASK);
-		film->RemoveChannel(Film::DIRECT_SHADOW_MASK);
-		film->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
-		film->RemoveChannel(Film::UV);
-	} else
-		film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
-	film->Init();
-
-	const Properties &cfg = renderConfig->cfg;
-	compiledScene = NULL;
-
-	//--------------------------------------------------------------------------
-	// Allocate devices
-	//--------------------------------------------------------------------------
-
-	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
-
-	// Check if I have to disable image storage and set max. QBVH stack size
-	const bool enableImageStorage = cfg.GetBoolean("accelerator.imagestorage.enable", true);
-	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max",
-			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)));
-	SLG_LOG("OpenCL Devices used:");
-	for (size_t i = 0; i < devs.size(); ++i) {
-		SLG_LOG("[" << devs[i]->GetName() << "]");
-		devs[i]->SetMaxStackSize(qbvhStackSize);
-		intersectionDevices.push_back(devs[i]);
-
-		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-		oclIntersectionDevice->SetEnableImageStorage(enableImageStorage);
-		// Disable the support for hybrid rendering
-		oclIntersectionDevice->SetDataParallelSupport(false);
-
-		// Check if OpenCL 1.1 is available
-		SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
-		if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1()) {
-			// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
-			// print a warning instead of throwing an exception
-			SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + devs[i]->GetName() + " may not work.");
-		}
-	}
-
-	// Set the LuxRays SataSet
-	ctx->SetDataSet(renderConfig->scene->dataSet);
-
-	//--------------------------------------------------------------------------
-	// Setup render threads array
-	//--------------------------------------------------------------------------
-
-	const size_t renderThreadCount = intersectionDevices.size();
-	SLG_LOG("Configuring "<< renderThreadCount << " CPU render threads");
-	renderThreads.resize(renderThreadCount, NULL);
+		const bool realTime) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime) {
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
@@ -132,10 +62,6 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 	if (started)
 		Stop();
 
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		delete renderThreads[i];
-
-	delete compiledScene;
 	delete sampler;
 	delete filter;
 }
@@ -152,11 +78,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	if (!cfg.IsDefined("opencl.task.count") && dynamic_cast<RTPathOCLRenderEngine *>(this)) {
-		// In this case, I will tune task count for RTPATHOCL
-		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
-	} else 
-		taskCount = cfg.GetInt("opencl.task.count", 65536);
+	taskCount = cfg.GetInt("opencl.task.count", 65536);
 	// I don't know yet the workgroup size of each device so I can not
 	// round up task count to be a multiply of workgroups size of all devices
 	// used. rounding to 2048 is a simple trick base don the assumption that
@@ -164,16 +86,10 @@ void PathOCLRenderEngine::StartLockLess() {
 	taskCount = RoundUp<u_int>(taskCount, 2048);
 	SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
 
-	if (cfg.IsDefined("opencl.memory.maxpagesize"))
-		maxMemPageSize = cfg.GetSize("opencl.memory.maxpagesize", 512 * 1024 * 1024);
-	else {
-		// Look for the max. page size allowed
-		maxMemPageSize = ((OpenCLIntersectionDevice *)(intersectionDevices[0]))->GetDeviceDesc()->GetMaxMemoryAllocSize();
-		for (u_int i = 1; i < intersectionDevices.size(); ++i)
-			maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
-	}
-	SLG_LOG("[PathOCLRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
-
+	//--------------------------------------------------------------------------
+	// General path tracing settings
+	//--------------------------------------------------------------------------	
+	
 	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
 	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
 	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
@@ -206,7 +122,6 @@ void PathOCLRenderEngine::StartLockLess() {
 			throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(samplerType));
 	}
 
-
 	//--------------------------------------------------------------------------
 	// Filter
 	//--------------------------------------------------------------------------
@@ -216,7 +131,7 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	filter = new slg::ocl::Filter();
 	// Force pixel filter to NONE if I'm RTOPENCL
-	if ((filterType == FILTER_NONE) || (dynamic_cast<RTPathOCLRenderEngine *>(this)))
+	if ((filterType == FILTER_NONE) || (GetEngineType() == RTPATHOCL))
 		filter->type = slg::ocl::FILTER_NONE;
 	else if (filterType == FILTER_BOX) {
 		filter->type = slg::ocl::FILTER_BOX;
@@ -244,51 +159,7 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);	
 
-	//--------------------------------------------------------------------------
-	// Compile the scene
-	//--------------------------------------------------------------------------
-
-	compiledScene = new CompiledScene(renderConfig->scene, film, maxMemPageSize);
-
-	//--------------------------------------------------------------------------
-	// Start render threads
-	//--------------------------------------------------------------------------
-
-	const size_t renderThreadCount = intersectionDevices.size();
-	SLG_LOG("Starting "<< renderThreadCount << " PathOCL render threads");
-	for (size_t i = 0; i < renderThreadCount; ++i) {
-		if (!renderThreads[i]) {
-			renderThreads[i] = CreateOCLThread(i,
-					(OpenCLIntersectionDevice *)(intersectionDevices[i]));
-		}
-	}
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Start();
-}
-
-void PathOCLRenderEngine::StopLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
-
-	delete compiledScene;
-	compiledScene = NULL;
-}
-
-void PathOCLRenderEngine::BeginEditLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
-}
-
-void PathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	compiledScene->Recompile(editActions);
-
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
+	PathOCLBaseRenderEngine::StartLockLess();
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {
@@ -296,7 +167,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		film->AddFilm(*(renderThreads[i]->film));
+		film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilm));
 }
 
 void PathOCLRenderEngine::UpdateCounters() {
@@ -305,7 +176,7 @@ void PathOCLRenderEngine::UpdateCounters() {
 	// Update the sample count statistic
 	unsigned long long totalCount = 0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		slg::ocl::GPUTaskStats *stats = renderThreads[i]->gpuTaskStats;
+		slg::ocl::pathocl::GPUTaskStats *stats = ((PathOCLRenderThread *)(renderThreads[i]))->gpuTaskStats;
 
 		for (size_t i = 0; i < taskCount; ++i)
 			totalCount += stats[i].sampleCount;
