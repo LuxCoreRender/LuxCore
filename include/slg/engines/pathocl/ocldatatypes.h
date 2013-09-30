@@ -26,9 +26,13 @@
 
 #include "slg/slg.h"
 
-namespace slg { namespace ocl {
-#include "kernels/datatypes.cl"
-} }
+namespace slg { namespace ocl { namespace pathocl {
+#include "slg/engines/pathocl/kernels/pathocl_datatypes.cl"
+} } }
+
+namespace slg { namespace ocl { namespace biaspathocl {
+#include "slg/engines/biaspathocl/kernels/biaspathocl_datatypes.cl"
+} } }
 
 #endif
 

@@ -46,7 +46,8 @@ typedef enum {
 	FILESAVER = 11,
 	RTPATHOCL = 12,
 	PATHHYBRID = 13,
-	BIASPATHCPU = 14
+	BIASPATHCPU = 14,
+	BIASPATHOCL = 15
 } RenderEngineType;
 
 //------------------------------------------------------------------------------

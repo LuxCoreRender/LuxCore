@@ -19,30 +19,51 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include "slg/engines/biaspathcpu/biaspathcpu.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+
+#include <boost/format.hpp>
+
+#include "luxrays/core/oclintersectiondevice.h"
+
+#include "slg/slg.h"
+#include "slg/engines/biaspathocl/biaspathocl.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// PathCPURenderEngine
+// BiasPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-BiasPathCPURenderEngine::BiasPathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUTileRenderEngine(rcfg, flm, flmMutex) {
-	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
-	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
-	film->Init();
+BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		PathOCLRenderEngine(rcfg, flm, flmMutex, false) {
+	tileRepository = NULL;
 }
 
-void BiasPathCPURenderEngine::StartLockLess() {
+BiasPathOCLRenderEngine::~BiasPathOCLRenderEngine() {
+	delete tileRepository;
+}
+
+PathOCLRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
+	OpenCLIntersectionDevice *device) {
+	return new BiasPathOCLRenderThread(index, device, this);
+}
+
+void BiasPathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
+
+	printedRenderingTime = false;
+	film->Reset();
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
+
+	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 32), 8));
+	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("biaspath.progressiverefinement.enable", false);
+	tileRepository->enableMultipassRendering = cfg.GetBoolean("biaspath.multipass.enable", false);
 
 	// Path depth settings
 	maxPathDepth.depth = Max(1, cfg.GetInt("biaspath.pathdepth.total", 10));
@@ -52,6 +73,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 
 	// Samples settings
 	aaSamples = Max(1, cfg.GetInt("biaspath.sampling.aa.size", 3));
+	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
 	diffuseSamples = Max(0, cfg.GetInt("biaspath.sampling.diffuse.size", 2));
 	glossySamples = Max(0, cfg.GetInt("biaspath.sampling.glossy.size", 2));
 	specularSamples = Max(0, cfg.GetInt("biaspath.sampling.specular.size", 1));
@@ -73,34 +95,65 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	else
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
-	CPUTileRenderEngine::StartLockLess();
-
-	// tileRepository is allocate inside PUTileRenderEngine::StartLockLess()
-	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("biaspath.progressiverefinement.enable", false);
-	tileRepository->enableMultipassRendering = cfg.GetBoolean("biaspath.multipass.enable", false);
-	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
+	PathOCLRenderEngine::StartLockLess();
 }
 
-PathDepthInfo::PathDepthInfo() {
-	depth = 0;
-	diffuseDepth = 0;
-	glossyDepth = 0;
-	specularDepth = 0;
+void BiasPathOCLRenderEngine::StopLockLess() {
+	PathOCLRenderEngine::StopLockLess();
+
+	delete tileRepository;
+	tileRepository = NULL;
 }
 
-void PathDepthInfo::IncDepths(const BSDFEvent event) {
-	++depth;
-	if (event & DIFFUSE)
-		++diffuseDepth;
-	if (event & GLOSSY)
-		++glossyDepth;
-	if (event & SPECULAR)
-		++specularDepth;
+void BiasPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	tileRepository->Clear();
+	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	printedRenderingTime = false;
+
+	PathOCLRenderEngine::EndEditLockLess(editActions);
 }
 
-bool PathDepthInfo::CheckDepths(const PathDepthInfo &maxPathDepth) const {
-	return ((depth <= maxPathDepth.depth) &&
-			(diffuseDepth <= maxPathDepth.diffuseDepth) &&
-			(glossyDepth <= maxPathDepth.glossyDepth) &&
-			(specularDepth <= maxPathDepth.specularDepth));
+const bool BiasPathOCLRenderEngine::NextTile(TileRepository::Tile **tile, const Film *tileFilm) {
+	// Check if I have to add the tile to the film
+	if (*tile) {
+		boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+		film->AddFilm(*tileFilm,
+				0, 0,
+				Min(tileRepository->tileSize, film->GetWidth() - (*tile)->xStart),
+				Min(tileRepository->tileSize, film->GetHeight() - (*tile)->yStart),
+				(*tile)->xStart, (*tile)->yStart);
+	}
+
+	if (!tileRepository->NextTile(tile, film->GetWidth(), film->GetHeight())) {
+		boost::unique_lock<boost::mutex> lock(engineMutex);
+
+		if (!printedRenderingTime && tileRepository->done) {
+			elapsedTime = WallClockTime() - startTime;
+			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+			printedRenderingTime = true;
+		}
+
+		return false;
+	} else
+		return true;
 }
+
+void BiasPathOCLRenderEngine::UpdateCounters() {
+	// Update the sample count statistic
+	samplesCount = film->GetTotalSampleCount();
+
+	// Update the ray count statistic
+	double totalCount = 0.0;
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		const BiasPathOCLRenderThread *thread = (BiasPathOCLRenderThread *)renderThreads[i];
+		totalCount += thread->intersectionDevice->GetTotalRaysCount();
+	}
+	raysCount = totalCount;
+
+	// Update the time only until when the rendering is not finished
+	if (!tileRepository->done)
+		elapsedTime = WallClockTime() - startTime;
+}
+
+#endif
