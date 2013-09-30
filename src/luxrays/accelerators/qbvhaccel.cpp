@@ -60,6 +60,9 @@ public:
 
 		std::stringstream kernelDefs;
 		kernelDefs << "#define QBVH_STACK_SIZE " << stackSize << "\n";
+		// Use local memory only if not running on a CPU
+		if (device->GetType() != DEVICE_TYPE_OPENCL_CPU)
+			kernelDefs << "#define QBVH_USE_LOCAL_MEMORY\n";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel definitions: \n" << kernelDefs.str());
 
 		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_qbvh;
@@ -100,7 +103,7 @@ public:
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				//	"] QBVH kernel work group size: " << workGroupSize);
 
-				if (workGroupSize > 256) {
+				if ((device->GetType() != DEVICE_TYPE_OPENCL_CPU) && (workGroupSize > 256)) {
 					// Otherwise I will probably run out of local memory
 					workGroupSize = 256;
 					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -159,13 +162,16 @@ u_int OpenCLQBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_i
 	kernel.setArg(argIndex++, *qbvhBuff);
 	kernel.setArg(argIndex++, *trisBuff);
 
-	// Check if we have enough local memory
-	if (stackSize * workGroupSize * sizeof(cl_int) >
-		device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
-		throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
-			" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
-
-	kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
+	// I use local memory only if I'm not running on a CPU
+	if (device->GetType() != DEVICE_TYPE_OPENCL_CPU) {
+		// Check if we have enough local memory
+		if (stackSize * workGroupSize * sizeof(cl_int) >
+			device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+			throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+				" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
+	
+		kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
+	}
 
 	return argIndex;
 }
@@ -198,6 +204,9 @@ public:
 		std::stringstream kernelDefs;
 		kernelDefs << "#define QBVH_STACK_SIZE " << stackSize << "\n"
 				"#define USE_IMAGE_STORAGE\n";
+		// Use local memory only if not running on a CPU
+		if (device->GetType() != DEVICE_TYPE_OPENCL_CPU)
+			kernelDefs << "#define QBVH_USE_LOCAL_MEMORY\n";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel definitions: \n" << kernelDefs.str());
 
 		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_qbvh;
@@ -239,7 +248,7 @@ public:
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				//	"] QBVH kernel work group size: " << workGroupSize);
 
-				if (workGroupSize > 256) {
+				if ((device->GetType() != DEVICE_TYPE_OPENCL_CPU) && (workGroupSize > 256)) {
 					// Otherwise I will probably run out of local memory
 					workGroupSize = 256;
 					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -298,13 +307,16 @@ u_int OpenCLQBVHImageKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, cons
 	kernel.setArg(argIndex++, *qbvhBuff);
 	kernel.setArg(argIndex++, *trisBuff);
 
-	// Check if we have enough local memory
-	if (stackSize * workGroupSize * sizeof(cl_int) >
-		device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
-		throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
-			" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
+	// I use local memory only if I'm not running on a CPU
+	if (device->GetType() != DEVICE_TYPE_OPENCL_CPU) {
+		// Check if we have enough local memory
+		if (stackSize * workGroupSize * sizeof(cl_int) >
+			device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+			throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+				" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
 
-	kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
+		kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
+	}
 
 	return argIndex;
 }

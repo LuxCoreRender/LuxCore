@@ -160,12 +160,20 @@ void QuadTriangle_Intersect(
 	rayHit->triangleIndex = tIndex;
 }
 
-#ifdef USE_IMAGE_STORAGE
-#define ACCELERATOR_INTERSECT_PARAM_DECL , __read_only image2d_t nodes, __read_only image2d_t quadTris, __local int *nodeStacks
-#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris, nodeStacks
+#if defined(QBVH_USE_LOCAL_MEMORY)
+#define QBVH_LOCAL_MEMORY_PARAM_DECL , __local int *nodeStacks
+#define QBVH_LOCAL_MEMORY_PARAM , nodeStacks
 #else
-#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global QuadTiangle *quadTris, __local int *nodeStacks
-#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris, nodeStacks
+#define QBVH_LOCAL_MEMORY_PARAM_DECL
+#define QBVH_LOCAL_MEMORY_PARAM
+#endif
+
+#ifdef USE_IMAGE_STORAGE
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __read_only image2d_t nodes, __read_only image2d_t quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris QBVH_LOCAL_MEMORY_PARAM
+#else
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global QuadTiangle *quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris QBVH_LOCAL_MEMORY_PARAM
 #endif
 				
 void Accelerator_Intersect(
@@ -208,7 +216,11 @@ void Accelerator_Intersect(
 	// impact on performances (I guess access latency is hidden by other stuff).
 	// Avoiding conflicts is easy to do but it requires to know the work group
 	// size (not worth doing if there are not performance benefits).
+#if defined(QBVH_USE_LOCAL_MEMORY)
 	__local int *nodeStack = &nodeStacks[QBVH_STACK_SIZE * get_local_id(0)];
+#else
+	int nodeStack[QBVH_STACK_SIZE];
+#endif
 	nodeStack[0] = 0; // first node to handle: root node
 
 #ifdef USE_IMAGE_STORAGE
