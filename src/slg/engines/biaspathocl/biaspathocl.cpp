@@ -60,7 +60,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 32), 8));
+	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 64), 8));
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("biaspath.progressiverefinement.enable", false);
 	tileRepository->enableMultipassRendering = cfg.GetBoolean("biaspath.multipass.enable", false);
@@ -95,7 +95,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	else
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
-	taskCount = tileRepository->tileSize * tileRepository->tileSize * (tileRepository->enableProgressiveRefinement ? 1 :  aaSamples * aaSamples);
+	taskCount = tileRepository->tileSize * tileRepository->tileSize;
 
 	PathOCLBaseRenderEngine::StartLockLess();
 }

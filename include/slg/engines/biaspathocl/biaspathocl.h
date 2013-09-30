@@ -54,8 +54,10 @@ protected:
 	virtual void CompileAdditionalKernels(cl::Program *program);
 
 	// OpenCL variables
-	cl::Kernel *initKernel;
-	size_t initWorkGroupSize;
+	cl::Kernel *initSeedKernel;
+	size_t initSeedWorkGroupSize;
+	cl::Kernel *initStatKernel;
+	size_t initStatWorkGroupSize;
 	cl::Kernel *renderSampleKernel;
 	size_t renderSampleWorkGroupSize;
 
