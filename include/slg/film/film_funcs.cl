@@ -72,6 +72,9 @@ void SampleResult_Init(__global SampleResult *sampleResult) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	sampleResult->indirectShadowMask = 1.f;
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+	sampleResult->rayCount = 0.f;
+#endif
 }
 
 float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {
@@ -164,6 +167,14 @@ bool Film_MinPixel(__global float *dst, const float val) {
 		return true;
 	} else
 		return false;
+#endif
+}
+
+void Film_AddPixelVal(__global float *dst, const float val) {
+#if defined(PARAM_USE_PIXEL_ATOMICS)
+	AtomicAdd(&dst, val);
+#else
+	dst[0] += val;
 #endif
 }
 
@@ -304,10 +315,14 @@ void Film_AddSampleResultData(const uint x, const uint y,
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 		filmMaterialID[index1] = sampleResult->materialID;
 #endif
-#if defined(PARAM_FILM_CHANNELS_UV)
-		Film_SetPixel2(&filmUV[index2], &sampleResult->UV.u);
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+		Film_SetPixel2(&filmUV[index2], &sampleResult->uv.u);
 #endif
 	}
+
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+	Film_AddPixelVal(&filmRayCount[index1], sampleResult->rayCount);
+#endif
 }
 
 void Film_AddSample(const uint x, const uint y,
@@ -357,7 +372,7 @@ void Film_SplatSample(__global SampleResult *sampleResult, const float weight
 	// Add all data related information (not filtered)
 	//----------------------------------------------------------------------
 
-#if defined (PARAM_FILM_CHANNELS_HAS_DEPTH) || defined (PARAM_FILM_CHANNELS_HAS_POSITION) || defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_UV)
+#if defined (PARAM_FILM_CHANNELS_HAS_DEPTH) || defined (PARAM_FILM_CHANNELS_HAS_POSITION) || defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_UV) || defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	{
 		const int x = Ceil2Int(px - .5f);
 		const int y = Ceil2Int(py - .5f);
@@ -493,6 +508,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		, __global float *filmUV
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+		, __global float *filmRayCount
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
@@ -622,5 +640,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 	filmUV[gid * 2] = INFINITY;
 	filmUV[gid * 2 + 1] = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+	filmRayCount[gid] = 0;
 #endif
 }

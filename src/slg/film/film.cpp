@@ -74,6 +74,7 @@ Film::Film(const u_int w, const u_int h) {
 	channel_DIRECT_SHADOW_MASK = NULL;
 	channel_INDIRECT_SHADOW_MASK = NULL;
 	channel_UV = NULL;
+	channel_RAYCOUNT = NULL;
 
 	convTest = NULL;
 
@@ -115,6 +116,7 @@ Film::~Film() {
 	delete channel_DIRECT_SHADOW_MASK;
 	delete channel_INDIRECT_SHADOW_MASK;
 	delete channel_UV;
+	delete channel_RAYCOUNT;
 
 	delete filterLUTs;
 	delete filter;
@@ -187,6 +189,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	delete channel_DIRECT_SHADOW_MASK;
 	delete channel_INDIRECT_SHADOW_MASK;
 	delete channel_UV;
+	delete channel_RAYCOUNT;
 
 	// Allocate all required channels
 	hasDataChannel = false;
@@ -293,6 +296,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_UV->Clear(std::numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
+	if (HasChannel(RAYCOUNT)) {
+		channel_RAYCOUNT = new GenericFrameBuffer<1, float>(width, height);
+		channel_RAYCOUNT->Clear();
+		hasDataChannel = true;
+	}
 
 	// Initialize the stats
 	statsTotalSampleCount = 0.0;
@@ -364,6 +372,8 @@ void Film::Reset() {
 		channel_INDIRECT_SHADOW_MASK->Clear();
 	if (HasChannel(UV))
 		channel_UV->Clear();
+	if (HasChannel(RAYCOUNT))
+		channel_RAYCOUNT->Clear();
 
 	// convTest has to be reseted explicitely
 
@@ -601,6 +611,15 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(RAYCOUNT) && film.HasChannel(RAYCOUNT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_RAYCOUNT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_RAYCOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel as last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -786,6 +805,13 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			if (hdrImage) {
 				imageType = FIT_RGBF;
 				bitCount = 96;
+			} else
+				return;
+			break;
+		case FilmOutputs::RAYCOUNT:
+			if (hdrImage) {
+				imageType = FIT_FLOAT;
+				bitCount = 32;
 			} else
 				return;
 			break;
@@ -1120,6 +1146,13 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					dst[x].blue = 0.f;
 					break;
 				}
+				case FilmOutputs::RAYCOUNT: {
+					float *dst = (float *)bits;
+
+					const float *rayCountData = channel_RAYCOUNT->GetPixel(x, y);
+					dst[x] = rayCountData[0];
+					break;
+				}
 				default:
 					throw std::runtime_error("Unknown film output type: " + ToString(type));
 			}
@@ -1388,6 +1421,9 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 		if (channel_UV && sampleResult.HasChannel(UV))
 			channel_UV->SetPixel(x, y, &sampleResult.uv.u);
 	}
+
+	if (channel_RAYCOUNT && sampleResult.HasChannel(RAYCOUNT))
+		channel_RAYCOUNT->AddPixel(x, y, &sampleResult.rayCount);
 }
 
 void Film::AddSample(const u_int x, const u_int y,

@@ -270,6 +270,9 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			film->AddChannel(Film::DEPTH);
 			film->AddChannel(Film::UV);
 			filmOutputs.Add(FilmOutputs::UV, fileName);
+		} else if (type == "RAYCOUNT") {
+			film->AddChannel(Film::RAYCOUNT);
+			filmOutputs.Add(FilmOutputs::RAYCOUNT, fileName);
 		} else
 			throw std::runtime_error("Unknown type in film output: " + type);
 	}

@@ -75,6 +75,7 @@
 //  PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK
 //  PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
 //  PARAM_FILM_CHANNELS_HAS_UV
+//  PARAM_FILM_CHANNELS_HAS_RAYCOUNT
 
 // (optional)
 //  PARAM_CAMERA_HAS_DOF
@@ -592,6 +593,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		, __global float *filmUV
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+		, __global float *filmRayCount
+#endif
 		,
 		// Scene parameters
 		const float worldCenterX,
@@ -726,6 +730,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
 	const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+	sample->result.rayCount += 1;
+#endif
 
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
