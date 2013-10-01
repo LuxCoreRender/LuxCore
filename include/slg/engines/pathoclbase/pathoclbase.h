@@ -92,6 +92,7 @@ protected:
 	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
 	void SetKernelArgs();
 
+	u_int SetFilmKernelArgs(cl::Kernel &kernel, u_int argIndex);
 	size_t GetSampleResultSize() const;
 	void TransferFilm(cl::CommandQueue &oclQueue);
 

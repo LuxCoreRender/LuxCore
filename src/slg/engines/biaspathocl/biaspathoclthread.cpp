@@ -41,6 +41,7 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	initSeedKernel = NULL;
 	initStatKernel = NULL;
 	renderSampleKernel = NULL;
+	mergePixelSamplesKernel = NULL;
 
 	tasksBuff = NULL;
 	taskStatsBuff = NULL;
@@ -57,6 +58,7 @@ BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
 	delete initSeedKernel;
 	delete initStatKernel;
 	delete renderSampleKernel;
+	delete mergePixelSamplesKernel;
 
 	delete tasksBuff;
 	delete[] gpuTaskStats;
@@ -105,10 +107,16 @@ void BiasPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 	CompileKernel(program, &initStatKernel, &initStatWorkGroupSize, "InitStat");
 
 	//----------------------------------------------------------------------
-	// AdvancePaths kernel
+	// RenderSample kernel
 	//----------------------------------------------------------------------
 
 	CompileKernel(program, &renderSampleKernel, &renderSampleWorkGroupSize, "RenderSample");
+
+	//----------------------------------------------------------------------
+	// MergePixelSamples kernel
+	//----------------------------------------------------------------------
+
+	CompileKernel(program, &mergePixelSamplesKernel, &mergePixelSamplesWorkGroupSize, "MergePixelSamples");
 }
 
 void BiasPathOCLRenderThread::AdditionalInit() {
@@ -141,12 +149,27 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
 	//--------------------------------------------------------------------------
+	// initSeedKernel
+	//--------------------------------------------------------------------------
+
+	u_int argIndex = 0;
+	initSeedKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
+	initSeedKernel->setArg(argIndex++, *tasksBuff);
+
+	//--------------------------------------------------------------------------
+	// initStatKernel
+	//--------------------------------------------------------------------------
+
+	argIndex = 0;
+	initStatKernel->setArg(argIndex++, *taskStatsBuff);
+
+	//--------------------------------------------------------------------------
 	// renderSampleKernel
 	//--------------------------------------------------------------------------
 
 	CompiledScene *cscene = engine->compiledScene;
 
-	u_int argIndex = 0;
+	argIndex = 0;
 	renderSampleKernel->setArg(argIndex++, 0);
 	renderSampleKernel->setArg(argIndex++, 0);
 	renderSampleKernel->setArg(argIndex++, 0);
@@ -156,42 +179,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, *taskStatsBuff);
 
 	// Film parameters
-	renderSampleKernel->setArg(argIndex++, threadFilm->GetWidth());
-	renderSampleKernel->setArg(argIndex++, threadFilm->GetHeight());
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		renderSampleKernel->setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
-	if (threadFilm->HasChannel(Film::ALPHA))
-		renderSampleKernel->setArg(argIndex++, *channel_ALPHA_Buff);
-	if (threadFilm->HasChannel(Film::DEPTH))
-		renderSampleKernel->setArg(argIndex++, *channel_DEPTH_Buff);
-	if (threadFilm->HasChannel(Film::POSITION))
-		renderSampleKernel->setArg(argIndex++, *channel_POSITION_Buff);
-	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		renderSampleKernel->setArg(argIndex++, *channel_GEOMETRY_NORMAL_Buff);
-	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-		renderSampleKernel->setArg(argIndex++, *channel_SHADING_NORMAL_Buff);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID))
-		renderSampleKernel->setArg(argIndex++, *channel_MATERIAL_ID_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		renderSampleKernel->setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		renderSampleKernel->setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
-	if (threadFilm->HasChannel(Film::EMISSION))
-		renderSampleKernel->setArg(argIndex++, *channel_EMISSION_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		renderSampleKernel->setArg(argIndex++, *channel_INDIRECT_DIFFUSE_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		renderSampleKernel->setArg(argIndex++, *channel_INDIRECT_GLOSSY_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		renderSampleKernel->setArg(argIndex++, *channel_INDIRECT_SPECULAR_Buff);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
-		renderSampleKernel->setArg(argIndex++, *channel_MATERIAL_ID_MASK_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		renderSampleKernel->setArg(argIndex++, *channel_DIRECT_SHADOW_MASK_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		renderSampleKernel->setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
-	if (threadFilm->HasChannel(Film::UV))
-		renderSampleKernel->setArg(argIndex++, *channel_UV_Buff);
+	argIndex = SetFilmKernelArgs(*renderSampleKernel, argIndex);
 
 	// Scene parameters
 	renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
@@ -240,108 +228,116 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	//--------------------------------------------------------------------------
 
 	argIndex = 0;
-	initSeedKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
-	initSeedKernel->setArg(argIndex++, *tasksBuff);
-
-	//--------------------------------------------------------------------------
-	// initSeedKernel
-	//--------------------------------------------------------------------------
-
-	argIndex = 0;
-	initStatKernel->setArg(argIndex++, *taskStatsBuff);
+	mergePixelSamplesKernel->setArg(argIndex++, 0);
+	mergePixelSamplesKernel->setArg(argIndex++, 0);
+	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
+	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetHeight());
+	mergePixelSamplesKernel->setArg(argIndex++, *tasksBuff);
+	argIndex = SetFilmKernelArgs(*mergePixelSamplesKernel, argIndex);
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
-	//--------------------------------------------------------------------------
-	// Initialization
-	//--------------------------------------------------------------------------
+	try {
+		//----------------------------------------------------------------------
+		// Initialization
+		//----------------------------------------------------------------------
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-	const u_int tileSize = engine->tileRepository->tileSize;
-	const u_int filmPixelCount = tileSize * tileSize;
-	const u_int taskCount = engine->taskCount;
-	const u_int totalSamplesPerPixel = engine->tileRepository->totalSamplesPerPixel;
+		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+		BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
+		const u_int tileSize = engine->tileRepository->tileSize;
+		const u_int filmPixelCount = tileSize * tileSize;
+		const u_int taskCount = engine->taskCount;
 
-	// Initialize OpenCL structures
-	oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, initSeedWorkGroupSize)),
-			cl::NDRange(initSeedWorkGroupSize));
+		// Initialize OpenCL structures
+		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, initSeedWorkGroupSize)),
+				cl::NDRange(initSeedWorkGroupSize));
 
-	//--------------------------------------------------------------------------
-	// Extract the tile to render
-	//--------------------------------------------------------------------------
+		//----------------------------------------------------------------------
+		// Extract the tile to render
+		//----------------------------------------------------------------------
 
-	TileRepository::Tile *tile = NULL;
-	while (engine->NextTile(&tile, threadFilm) && !boost::this_thread::interruption_requested()) {
-		// Render the tile
-		threadFilm->Reset();
-		//const u_int tileWidth = Min(engine->tileRepository->tileSize, threadFilm->GetWidth() - tile->xStart);
-		//const u_int tileHeight = Min(engine->tileRepository->tileSize, threadFilm->GetHeight() - tile->yStart);
-		//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
-		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-		//		"(" << tileWidth << ", " << tileHeight << ") [" << tile->sampleIndex << "]");
+		TileRepository::Tile *tile = NULL;
+		while (engine->NextTile(&tile, threadFilm) && !boost::this_thread::interruption_requested()) {
+			//const double t0 = WallClockTime();
+			threadFilm->Reset();
+			//const u_int tileWidth = Min(engine->tileRepository->tileSize, threadFilm->GetWidth() - tile->xStart);
+			//const u_int tileHeight = Min(engine->tileRepository->tileSize, threadFilm->GetHeight() - tile->yStart);
+			//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
+			//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
+			//		"(" << tileWidth << ", " << tileHeight << ") [" << tile->sampleIndex << "]");
 
-		// Clear the frame buffer
-		oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-			cl::NDRange(filmClearWorkGroupSize));
+			u_int tileTaskCount =  (tile->sampleIndex < 0) ? taskCount : filmPixelCount;
+				
+			// Clear the frame buffer
+			oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+				cl::NDRange(filmClearWorkGroupSize));
 
-		// Initialize the statistics
-		oclQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(taskCount, initStatWorkGroupSize)),
-			cl::NDRange(initStatWorkGroupSize));
+			// Initialize the statistics
+			oclQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(tileTaskCount, initStatWorkGroupSize)),
+				cl::NDRange(initStatWorkGroupSize));
 
-		// Render the tile
-		{
-			boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
-			renderSampleKernel->setArg(0, tile->xStart);
-			renderSampleKernel->setArg(1, tile->yStart);
-		}
-		if (tile->sampleIndex < 0) {
-			for (u_int sampleIndex = 0; sampleIndex < totalSamplesPerPixel; ++sampleIndex) {
-				{
-					boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
-					renderSampleKernel->setArg(2, sampleIndex);
-				}
-				oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(filmPixelCount, renderSampleWorkGroupSize)),
-						cl::NDRange(renderSampleWorkGroupSize));
-			}
-		} else {
+			// Render the tile
 			{
 				boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+				renderSampleKernel->setArg(0, tile->xStart);
+				renderSampleKernel->setArg(1, tile->yStart);
 				renderSampleKernel->setArg(2, tile->sampleIndex);
+				if (tile->sampleIndex < 0) {
+					mergePixelSamplesKernel->setArg(0, tile->xStart);
+					mergePixelSamplesKernel->setArg(1, tile->yStart);
+				}
 			}
-			oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
-					cl::NDRange(RoundUp<u_int>(filmPixelCount, renderSampleWorkGroupSize)),
-					cl::NDRange(renderSampleWorkGroupSize));
+
+			if (tile->sampleIndex < 0) {
+				// Render all pixel samples
+				oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(tileTaskCount, renderSampleWorkGroupSize)),
+						cl::NDRange(renderSampleWorkGroupSize));
+				// Merge all pixel samples
+				oclQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(filmPixelCount, mergePixelSamplesWorkGroupSize)),
+						cl::NDRange(mergePixelSamplesWorkGroupSize));
+			} else {
+				oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(tileTaskCount, renderSampleWorkGroupSize)),
+						cl::NDRange(renderSampleWorkGroupSize));
+			}
+
+			// Async. transfer of the Film buffers
+			TransferFilm(oclQueue);
+			threadFilm->AddSampleCount(tileTaskCount);
+
+			// Async. transfer of GPU task statistics
+			oclQueue.enqueueReadBuffer(
+				*(taskStatsBuff),
+				CL_FALSE,
+				0,
+				sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount,
+				gpuTaskStats);
+
+			oclQueue.finish();
+
+			// In order to update the statistics
+			u_int tracedRaysCount = 0;
+			for (uint i = 0; i < tileTaskCount; ++i)
+				tracedRaysCount += gpuTaskStats[i].raysCount;
+			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
+
+			//const double t1 = WallClockTime();
+			//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
 		}
-
-		// Async. transfer of the Film buffers
-		TransferFilm(oclQueue);
-		threadFilm->AddSampleCount((tile->sampleIndex < 0) ? taskCount * totalSamplesPerPixel : taskCount);
-
-		// Async. transfer of GPU task statistics
-		oclQueue.enqueueReadBuffer(
-			*(taskStatsBuff),
-			CL_FALSE,
-			0,
-			sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount,
-			gpuTaskStats);
-
-		oclQueue.finish();
-
-		// In order to update the statistics
-		u_int tracedRaysCount = 0;
-		for (uint i = 0; i < taskCount; ++i)
-			tracedRaysCount += gpuTaskStats[i].raysCount;
-		intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
+		//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
+	} catch (boost::thread_interrupted) {
+		SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
+	} catch (cl::Error err) {
+		SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
+				"(" << oclErrorString(err.err()) << ")");
 	}
-
-	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 }
 
 #endif

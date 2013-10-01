@@ -60,6 +60,8 @@ protected:
 	size_t initStatWorkGroupSize;
 	cl::Kernel *renderSampleKernel;
 	size_t renderSampleWorkGroupSize;
+	cl::Kernel *mergePixelSamplesKernel;
+	size_t mergePixelSamplesWorkGroupSize;
 
 	cl::Buffer *tasksBuff;
 	cl::Buffer *taskStatsBuff;

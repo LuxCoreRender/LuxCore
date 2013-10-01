@@ -381,42 +381,7 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
 
 	// Film parameters
-	advancePathsKernel->setArg(argIndex++, threadFilm->GetWidth());
-	advancePathsKernel->setArg(argIndex++, threadFilm->GetHeight());
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		advancePathsKernel->setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
-	if (threadFilm->HasChannel(Film::ALPHA))
-		advancePathsKernel->setArg(argIndex++, *channel_ALPHA_Buff);
-	if (threadFilm->HasChannel(Film::DEPTH))
-		advancePathsKernel->setArg(argIndex++, *channel_DEPTH_Buff);
-	if (threadFilm->HasChannel(Film::POSITION))
-		advancePathsKernel->setArg(argIndex++, *channel_POSITION_Buff);
-	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		advancePathsKernel->setArg(argIndex++, *channel_GEOMETRY_NORMAL_Buff);
-	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-		advancePathsKernel->setArg(argIndex++, *channel_SHADING_NORMAL_Buff);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID))
-		advancePathsKernel->setArg(argIndex++, *channel_MATERIAL_ID_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		advancePathsKernel->setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		advancePathsKernel->setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
-	if (threadFilm->HasChannel(Film::EMISSION))
-		advancePathsKernel->setArg(argIndex++, *channel_EMISSION_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		advancePathsKernel->setArg(argIndex++, *channel_INDIRECT_DIFFUSE_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		advancePathsKernel->setArg(argIndex++, *channel_INDIRECT_GLOSSY_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		advancePathsKernel->setArg(argIndex++, *channel_INDIRECT_SPECULAR_Buff);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
-		advancePathsKernel->setArg(argIndex++, *channel_MATERIAL_ID_MASK_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		advancePathsKernel->setArg(argIndex++, *channel_DIRECT_SHADOW_MASK_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		advancePathsKernel->setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
-	if (threadFilm->HasChannel(Film::UV))
-		advancePathsKernel->setArg(argIndex++, *channel_UV_Buff);
+	argIndex = SetFilmKernelArgs(*advancePathsKernel, argIndex);
 
 	// Scene parameters
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);

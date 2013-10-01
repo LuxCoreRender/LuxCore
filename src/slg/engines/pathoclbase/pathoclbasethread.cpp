@@ -117,6 +117,48 @@ PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
 	delete kernelCache;
 }
 
+u_int PathOCLBaseRenderThread::SetFilmKernelArgs(cl::Kernel &kernel, u_int argIndex) {
+	// Film parameters
+	kernel.setArg(argIndex++, threadFilm->GetWidth());
+	kernel.setArg(argIndex++, threadFilm->GetHeight());
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
+		kernel.setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
+	if (threadFilm->HasChannel(Film::ALPHA))
+		kernel.setArg(argIndex++, *channel_ALPHA_Buff);
+	if (threadFilm->HasChannel(Film::DEPTH))
+		kernel.setArg(argIndex++, *channel_DEPTH_Buff);
+	if (threadFilm->HasChannel(Film::POSITION))
+		kernel.setArg(argIndex++, *channel_POSITION_Buff);
+	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
+		kernel.setArg(argIndex++, *channel_GEOMETRY_NORMAL_Buff);
+	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
+		kernel.setArg(argIndex++, *channel_SHADING_NORMAL_Buff);
+	if (threadFilm->HasChannel(Film::MATERIAL_ID))
+		kernel.setArg(argIndex++, *channel_MATERIAL_ID_Buff);
+	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
+		kernel.setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
+	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
+		kernel.setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
+	if (threadFilm->HasChannel(Film::EMISSION))
+		kernel.setArg(argIndex++, *channel_EMISSION_Buff);
+	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
+		kernel.setArg(argIndex++, *channel_INDIRECT_DIFFUSE_Buff);
+	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
+		kernel.setArg(argIndex++, *channel_INDIRECT_GLOSSY_Buff);
+	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
+		kernel.setArg(argIndex++, *channel_INDIRECT_SPECULAR_Buff);
+	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
+		kernel.setArg(argIndex++, *channel_MATERIAL_ID_MASK_Buff);
+	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
+		kernel.setArg(argIndex++, *channel_DIRECT_SHADOW_MASK_Buff);
+	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
+		kernel.setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
+	if (threadFilm->HasChannel(Film::UV))
+		kernel.setArg(argIndex++, *channel_UV_Buff);
+
+	return argIndex;
+}
+
 size_t PathOCLBaseRenderThread::GetSampleResultSize() const {
 	//--------------------------------------------------------------------------
 	// SampleResult size
@@ -950,44 +992,7 @@ void PathOCLBaseRenderThread::SetKernelArgs() {
 		// initFilmKernel
 		//--------------------------------------------------------------------------
 
-		u_int argIndex = 0;
-		filmClearKernel->setArg(argIndex++, threadFilm->GetWidth());
-		filmClearKernel->setArg(argIndex++, threadFilm->GetHeight());
-		for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-			filmClearKernel->setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
-
-		if (threadFilm->HasChannel(Film::ALPHA))
-			filmClearKernel->setArg(argIndex++, *channel_ALPHA_Buff);
-		if (threadFilm->HasChannel(Film::DEPTH))
-			filmClearKernel->setArg(argIndex++, *channel_DEPTH_Buff);
-		if (threadFilm->HasChannel(Film::POSITION))
-			filmClearKernel->setArg(argIndex++, *channel_POSITION_Buff);
-		if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-			filmClearKernel->setArg(argIndex++, *channel_GEOMETRY_NORMAL_Buff);
-		if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-			filmClearKernel->setArg(argIndex++, *channel_SHADING_NORMAL_Buff);
-		if (threadFilm->HasChannel(Film::MATERIAL_ID))
-			filmClearKernel->setArg(argIndex++, *channel_MATERIAL_ID_Buff);
-		if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-			filmClearKernel->setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
-		if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-			filmClearKernel->setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
-		if (threadFilm->HasChannel(Film::EMISSION))
-			filmClearKernel->setArg(argIndex++, *channel_EMISSION_Buff);
-		if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-			filmClearKernel->setArg(argIndex++, *channel_INDIRECT_DIFFUSE_Buff);
-		if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-			filmClearKernel->setArg(argIndex++, *channel_INDIRECT_GLOSSY_Buff);
-		if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-			filmClearKernel->setArg(argIndex++, *channel_INDIRECT_SPECULAR_Buff);
-		if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
-			filmClearKernel->setArg(argIndex++, *channel_MATERIAL_ID_MASK_Buff);
-		if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-			filmClearKernel->setArg(argIndex++, *channel_DIRECT_SHADOW_MASK_Buff);
-		if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-			filmClearKernel->setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
-		if (threadFilm->HasChannel(Film::UV))
-			filmClearKernel->setArg(argIndex++, *channel_UV_Buff);
+		SetFilmKernelArgs(*filmClearKernel, 0);
 	}
 
 	SetAdditionalKernelArgs();
