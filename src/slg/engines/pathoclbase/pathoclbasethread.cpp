@@ -72,6 +72,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	channel_DIRECT_SHADOW_MASK_Buff = NULL;
 	channel_INDIRECT_SHADOW_MASK_Buff = NULL;
 	channel_UV_Buff = NULL;
+	channel_RAYCOUNT_Buff = NULL;
 
 	// Scene buffers
 	materialsBuff = NULL;
@@ -155,6 +156,8 @@ u_int PathOCLBaseRenderThread::SetFilmKernelArgs(cl::Kernel &kernel, u_int argIn
 		kernel.setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
 	if (threadFilm->HasChannel(Film::UV))
 		kernel.setArg(argIndex++, *channel_UV_Buff);
+	if (threadFilm->HasChannel(Film::RAYCOUNT))
+		kernel.setArg(argIndex++, *channel_RAYCOUNT_Buff);
 
 	return argIndex;
 }
@@ -396,6 +399,10 @@ void PathOCLBaseRenderThread::InitFilm() {
 		AllocOCLBufferRW(&channel_UV_Buff, sizeof(float[2]) * filmPixelCount, "UV");
 	else
 		FreeOCLBuffer(&channel_UV_Buff);
+	if (threadFilm->HasChannel(Film::RAYCOUNT))
+		AllocOCLBufferRW(&channel_RAYCOUNT_Buff, sizeof(float) * filmPixelCount, "RAYCOUNT");
+	else
+		FreeOCLBuffer(&channel_RAYCOUNT_Buff);
 }
 
 void PathOCLBaseRenderThread::InitCamera() {
@@ -625,6 +632,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK";
 	if (threadFilm->HasChannel(Film::UV))
 		ss << " -D PARAM_FILM_CHANNELS_HAS_UV";
+	if (threadFilm->HasChannel(Film::RAYCOUNT))
+		ss << " -D PARAM_FILM_CHANNELS_HAS_RAYCOUNT";
 
 	if (normalsBuff)
 		ss << " -D PARAM_HAS_NORMALS_BUFFER";
@@ -1035,6 +1044,7 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&channel_DIRECT_SHADOW_MASK_Buff);
 	FreeOCLBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
 	FreeOCLBuffer(&channel_UV_Buff);
+	FreeOCLBuffer(&channel_RAYCOUNT_Buff);
 
 	// Scene buffers
 	FreeOCLBuffer(&materialsBuff);
@@ -1321,6 +1331,14 @@ void PathOCLBaseRenderThread::TransferFilm(cl::CommandQueue &oclQueue) {
 			0,
 			channel_UV_Buff->getInfo<CL_MEM_SIZE>(),
 			threadFilm->channel_UV->GetPixels());
+	}
+	if (channel_RAYCOUNT_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_RAYCOUNT_Buff,
+			CL_FALSE,
+			0,
+			channel_RAYCOUNT_Buff->getInfo<CL_MEM_SIZE>(),
+			threadFilm->channel_RAYCOUNT->GetPixels());
 	}
 }
 

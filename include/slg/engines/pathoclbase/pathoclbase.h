@@ -120,6 +120,8 @@ protected:
 	cl::Buffer *channel_DIRECT_SHADOW_MASK_Buff;
 	cl::Buffer *channel_INDIRECT_SHADOW_MASK_Buff;
 	cl::Buffer *channel_UV_Buff;
+	cl::Buffer *channel_RAYCOUNT_Buff;
+
 	// Scene buffers
 	cl::Buffer *materialsBuff;
 	cl::Buffer *texturesBuff;

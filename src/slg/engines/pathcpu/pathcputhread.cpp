@@ -237,7 +237,8 @@ void PathCPURenderThread::RenderFunc() {
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV, engine->film->GetRadianceGroupCount());
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT,
+		engine->film->GetRadianceGroupCount());
 
 	while (!boost::this_thread::interruption_requested()) {
 		// Set to 0.0 all result colors
@@ -251,6 +252,9 @@ void PathCPURenderThread::RenderFunc() {
 		sampleResult.indirectSpecular = Spectrum();
 		sampleResult.directShadowMask = 1.f;
 		sampleResult.indirectShadowMask = 1.f;
+
+		// To keep track of the number of rays traced
+		const double deviceRayCount = device->GetTotalRaysCount();
 
 		Ray eyeRay;
 		sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
@@ -365,6 +369,8 @@ void PathCPURenderThread::RenderFunc() {
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
 			++depth;
 		}
+
+		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
 		sampler->NextSample(sampleResults);
 

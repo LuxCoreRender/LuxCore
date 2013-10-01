@@ -62,7 +62,7 @@ public:
 		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
 		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
 		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
-		RADIANCE_GROUP, UV
+		RADIANCE_GROUP, UV, RAYCOUNT
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -111,7 +111,8 @@ public:
 		MATERIAL_ID_MASK = 1<<15,
 		DIRECT_SHADOW_MASK = 1<<16,
 		INDIRECT_SHADOW_MASK = 1<<17,
-		UV = 1<<18
+		UV = 1<<18,
+		RAYCOUNT = 1<<19
 	} FilmChannelType;
 
 	Film(const u_int w, const u_int h);
@@ -231,6 +232,7 @@ public:
 	GenericFrameBuffer<2, float> *channel_DIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, float> *channel_INDIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, float> *channel_UV;
+	GenericFrameBuffer<1, float> *channel_RAYCOUNT;
 
 private:
 	void UpdateScreenBufferImpl(const ToneMapType type);
@@ -311,6 +313,7 @@ public:
 	luxrays::Spectrum indirectDiffuse, indirectGlossy, indirectSpecular;
 	float directShadowMask, indirectShadowMask;
 	luxrays::UV uv;
+	float rayCount;
 
 private:
 	u_int channels;

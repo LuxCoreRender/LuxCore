@@ -169,6 +169,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		, __global float *filmUV
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+		, __global float *filmRayCount
+#endif
 		,
 		// Scene parameters
 		const float worldCenterX,
@@ -386,8 +389,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 
 		if (pathState == SPLAT_SAMPLE) {
-			Film_AddSample(sampleX, sampleY, &task->result, 1.f
-					FILM_PARAM);
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+			task->result.rayCount = tracedRaysCount;
+#endif
 			pathState = DONE;
 		}
 
@@ -454,35 +458,38 @@ void SR_Init(SampleResult *sampleResult) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
 	sampleResult->directDiffuse.r = 0.f;
 	sampleResult->directDiffuse.g = 0.f;
-	sampleResult->directDiffuse.b = 0.f
+	sampleResult->directDiffuse.b = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
 	sampleResult->directGlossy.r = 0.f;
 	sampleResult->directGlossy.g = 0.f;
-	sampleResult->directGlossy.b = 0.f
+	sampleResult->directGlossy.b = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
 	sampleResult->emission.r = 0.f;
 	sampleResult->emission.g = 0.f;
-	sampleResult->emission.b = 0.f
+	sampleResult->emission.b = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
 	sampleResult->indirectDiffuse.r = 0.f;
 	sampleResult->indirectDiffuse.g = 0.f;
-	sampleResult->indirectDiffuse.b = 0.f
+	sampleResult->indirectDiffuse.b = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
 	sampleResult->indirectGlossy.r = 0.f;
 	sampleResult->indirectGlossy.g = 0.f;
-	sampleResult->indirectGlossy.b = 0.f
+	sampleResult->indirectGlossy.b = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
 	sampleResult->indirectSpecular.r = 0.f;
 	sampleResult->indirectSpecular.g = 0.f;
-	sampleResult->indirectSpecular.b = 0.f
+	sampleResult->indirectSpecular.b = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
 	sampleResult->depth = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+	sampleResult->rayCount = 0.f;
 #endif
 }
 
@@ -594,7 +601,12 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 		dst->uv = src->uv;
 #endif
 	}
+
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+	dst->rayCount += src->rayCount;
+#endif
 }
+
 void SR_Normalize(SampleResult *dst, const float k) {
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 	dst->radiancePerPixelNormalized[0].r *= k;
@@ -757,6 +769,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		, __global float *filmUV
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+		, __global float *filmRayCount
+#endif
 		) {
 	const size_t gid = get_global_id(0);
 
@@ -776,29 +791,29 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 
 	__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
-		filmRadianceGroup[0] = filmRadianceGroup0;
+	filmRadianceGroup[0] = filmRadianceGroup0;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_1)
-		filmRadianceGroup[1] = filmRadianceGroup1;
+	filmRadianceGroup[1] = filmRadianceGroup1;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_2)
-		filmRadianceGroup[2] = filmRadianceGroup2;
+	filmRadianceGroup[2] = filmRadianceGroup2;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
-		filmRadianceGroup[3] = filmRadianceGroup3;
+	filmRadianceGroup[3] = filmRadianceGroup3;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_4)
-		filmRadianceGroup[3] = filmRadianceGroup4;
+	filmRadianceGroup[3] = filmRadianceGroup4;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_5)
-		filmRadianceGroup[3] = filmRadianceGroup5;
+	filmRadianceGroup[3] = filmRadianceGroup5;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_6)
-		filmRadianceGroup[3] = filmRadianceGroup6;
+	filmRadianceGroup[3] = filmRadianceGroup6;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
-		filmRadianceGroup[3] = filmRadianceGroup7;
-	#endif
+	filmRadianceGroup[3] = filmRadianceGroup7;
+#endif
 
 	//--------------------------------------------------------------------------
 	// Merge all samples
