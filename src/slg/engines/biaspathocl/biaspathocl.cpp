@@ -95,7 +95,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	else
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
-	taskCount = tileRepository->tileSize * tileRepository->tileSize;
+	taskCount = tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel;
 
 	PathOCLBaseRenderEngine::StartLockLess();
 }
