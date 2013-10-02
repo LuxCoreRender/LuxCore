@@ -95,6 +95,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/core/mc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/pathoclbase_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_kernels.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/rtpathocl/kernels/rtpathocl_kernels.cl
@@ -204,6 +205,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/hitpoint_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_datatypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_kernels_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/rtpathocl_kernels_kernel.cpp

@@ -49,6 +49,7 @@ protected:
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight);
 	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
+	virtual std::string AdditionalKernelDefinitions();
 	virtual std::string AdditionalKernelSources();
 	virtual void SetAdditionalKernelArgs();
 	virtual void CompileAdditionalKernels(cl::Program *program);

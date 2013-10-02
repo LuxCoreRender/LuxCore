@@ -89,6 +89,11 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	return ss.str();
 }
 
+std::string BiasPathOCLRenderThread::AdditionalKernelDefinitions() {
+	return "#define CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE\n"
+			"#define BSDF_INIT_PARAM_MEM_SPACE_PRIVATE\n";
+}
+
 string BiasPathOCLRenderThread::AdditionalKernelSources() {
 	stringstream ssKernel;
 	ssKernel <<
@@ -136,7 +141,15 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 	// Allocate GPU task buffers
 	//--------------------------------------------------------------------------
 
-	const size_t GPUTaskSize = sizeof(slg::ocl::Seed) + GetSampleResultSize();
+	const size_t GPUTaskSize =
+		// Add Seed memory size
+		sizeof(slg::ocl::Seed) +
+		// Spectrum (throughputPathVertex1) BSDF size
+		sizeof(Spectrum) +
+		// BSDF (bsdfPathVertex1) size
+		GetOpenCLBSDFSize() +
+		// Add SampleResult size
+		GetOpenCLSampleResultSize();
 	AllocOCLBufferRW(&tasksBuff, GPUTaskSize * engine->taskCount, "GPUTask");
 
 	//--------------------------------------------------------------------------
