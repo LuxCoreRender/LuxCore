@@ -709,15 +709,6 @@ const bool CPUTileRenderEngine::NextTile(TileRepository::Tile **tile, const Film
 		return true;
 }
 
-void CPUTileRenderEngine::StartLockLess() {
-	film->Reset();
-	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 32), 8));
-	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
-	printedRenderingTime = false;
-
-	CPURenderEngine::StartLockLess();
-}
-
 void CPUTileRenderEngine::StopLockLess() {
 	CPURenderEngine::StopLockLess();
 
@@ -1148,6 +1139,8 @@ void HybridRenderEngine::UpdateFilmLockLess() {
 }
 
 void HybridRenderEngine::UpdateCounters() {
+	elapsedTime = WallClockTime() - startTime;
+
 	// Update the sample count statistic
 	double totalCount = 0.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i)

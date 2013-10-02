@@ -31,10 +31,22 @@ using namespace slg;
 
 BiasPathCPURenderEngine::BiasPathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUTileRenderEngine(rcfg, flm, flmMutex) {
+	pixelFilterDistribution = NULL;
+
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
 	film->Init();
+}
+
+BiasPathCPURenderEngine::~BiasPathCPURenderEngine() {
+	delete pixelFilterDistribution;
+}
+
+void BiasPathCPURenderEngine::InitPixelFilterDistribution() {
+	// Compile sample distribution
+	delete pixelFilterDistribution;
+	pixelFilterDistribution = new FilterDistribution(film->GetFilter(), 64);
 }
 
 void BiasPathCPURenderEngine::StartLockLess() {
@@ -73,12 +85,29 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	else
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
-	CPUTileRenderEngine::StartLockLess();
+	InitPixelFilterDistribution();
 
-	// tileRepository is allocate inside PUTileRenderEngine::StartLockLess()
-	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("biaspath.progressiverefinement.enable", false);
-	tileRepository->enableMultipassRendering = cfg.GetBoolean("biaspath.multipass.enable", false);
+	//--------------------------------------------------------------------------
+	// CPUTileRenderEngine initialization
+	//--------------------------------------------------------------------------
+
+	film->Reset();
+	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 32), 8));
+	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("tile.progressiverefinement.enable", false);
+	tileRepository->enableMultipassRendering = cfg.GetBoolean("tile.multipass.enable", false);
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
+
+	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	printedRenderingTime = false;
+
+	CPURenderEngine::StartLockLess();
+}
+
+void BiasPathCPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	if (editActions.Has(FILM_EDIT))
+		InitPixelFilterDistribution();
+
+	CPUTileRenderEngine::EndEditLockLess(editActions);
 }
 
 PathDepthInfo::PathDepthInfo() {

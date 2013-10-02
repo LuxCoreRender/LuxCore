@@ -38,16 +38,27 @@ using namespace slg;
 
 BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		PathOCLBaseRenderEngine(rcfg, flm, flmMutex, false) {
+	pixelFilterDistribution = NULL;
 	tileRepository = NULL;
 }
 
 BiasPathOCLRenderEngine::~BiasPathOCLRenderEngine() {
+	delete[] pixelFilterDistribution;
 	delete tileRepository;
 }
 
 PathOCLBaseRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new BiasPathOCLRenderThread(index, device, this);
+}
+
+void BiasPathOCLRenderEngine::InitPixelFilterDistribution() {
+	// Compile sample distribution
+	delete[] pixelFilterDistribution;
+	const Filter *filter = film->GetFilter();
+	const FilterDistribution filterDistribution(filter, 64);
+	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
+			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }
 
 void BiasPathOCLRenderEngine::StartLockLess() {
@@ -60,11 +71,6 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 64), 8));
-	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
-	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("biaspath.progressiverefinement.enable", false);
-	tileRepository->enableMultipassRendering = cfg.GetBoolean("biaspath.multipass.enable", false);
-
 	// Path depth settings
 	maxPathDepth.depth = Max(1, cfg.GetInt("biaspath.pathdepth.total", 10));
 	maxPathDepth.diffuseDepth = Max(0, cfg.GetInt("biaspath.pathdepth.diffuse", 1));
@@ -73,7 +79,6 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	// Samples settings
 	aaSamples = Max(1, cfg.GetInt("biaspath.sampling.aa.size", 3));
-	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
 	diffuseSamples = Max(0, cfg.GetInt("biaspath.sampling.diffuse.size", 2));
 	glossySamples = Max(0, cfg.GetInt("biaspath.sampling.glossy.size", 2));
 	specularSamples = Max(0, cfg.GetInt("biaspath.sampling.specular.size", 1));
@@ -95,19 +100,34 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	else
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
-	taskCount = tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel;
+	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 64), 8));
+	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("tile.progressiverefinement.enable", false);
+	tileRepository->enableMultipassRendering = cfg.GetBoolean("tile.multipass.enable", false);
+	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
+	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 
+	taskCount = (tileRepository->enableProgressiveRefinement) ?
+		(tileRepository->tileSize * tileRepository->tileSize) :
+		(tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel);
+
+	InitPixelFilterDistribution();
+	
 	PathOCLBaseRenderEngine::StartLockLess();
 }
 
 void BiasPathOCLRenderEngine::StopLockLess() {
 	PathOCLBaseRenderEngine::StopLockLess();
 
+	delete[] pixelFilterDistribution;
+	pixelFilterDistribution = NULL;
 	delete tileRepository;
 	tileRepository = NULL;
 }
 
 void BiasPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+	if (editActions.Has(FILM_EDIT))
+		InitPixelFilterDistribution();
+
 	tileRepository->Clear();
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 	printedRenderingTime = false;

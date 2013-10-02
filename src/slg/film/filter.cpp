@@ -47,17 +47,15 @@ FilterDistribution::FilterDistribution(const Filter *f, const u_int s) {
 	size = s;
 	distrib = NULL;
 
-	if (!filter)
-		return;
-
 	float *data = new float[size * size];
 
 	const float isize = 1.f / (float)size;
 	for (u_int y = 0; y < size; ++y) {
 		for (u_int x = 0; x < size; ++x) {
-			data[x + y * size] = filter->Evaluate(
+			// Use an uniform distribution if the Filter is missing
+			data[x + y * size] = (filter) ? filter->Evaluate(
 					filter->xWidth *((x + .5f) * isize - .5),
-					filter->yWidth *((y + .5f) * isize - .5));
+					filter->yWidth *((y + .5f) * isize - .5)) : 1.f;
 		}
 	}
 

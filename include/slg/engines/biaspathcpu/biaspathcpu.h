@@ -107,6 +107,7 @@ private:
 class BiasPathCPURenderEngine : public CPUTileRenderEngine {
 public:
 	BiasPathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~BiasPathCPURenderEngine();
 
 	RenderEngineType GetEngineType() const { return BIASPATHCPU; }
 
@@ -128,12 +129,17 @@ public:
 
 protected:
 	virtual void StartLockLess();
+	virtual void EndEditLockLess(const EditActionList &editActions);
+
+	FilterDistribution *pixelFilterDistribution;
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new BiasPathCPURenderThread(this, index, device);
 	}
+
+	void InitPixelFilterDistribution();
 };
 
 }

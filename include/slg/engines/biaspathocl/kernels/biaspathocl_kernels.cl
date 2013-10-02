@@ -21,6 +21,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// List of symbols defined at compile time:
+//  PARAM_TASK_COUNT
+//  PARAM_TILE_SIZE
+//  PARAM_TILE_PROGRESSIVE_REFINEMENT
+//  PARAM_AA_SAMPLES
+
 //------------------------------------------------------------------------------
 // InitSeed Kernel
 //------------------------------------------------------------------------------
@@ -63,16 +69,38 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
 // BiasAdvancePaths Kernel
 //------------------------------------------------------------------------------
 
-void GenerateCameraPath(
+void SampleGrid(Seed *seed, const uint size,
+		const uint ix, const uint iy, float *u0, float *u1) {
+	*u0 = Rnd_FloatValue(seed);
+	*u1 = Rnd_FloatValue(seed);
+
+	if (size > 1) {
+		const float idim = 1.f / size;
+		*u0 = (ix + *u0) * idim;
+		*u1 = (iy + *u1) * idim;
+	}
+}
+
+void GenerateCameraRay(
 		Seed *seed,
 		__global GPUTask *task,
 		__global Camera *camera,
+		__global float *pixelFilterDistribution,
 		const uint pixelX, const uint pixelY,
-		const uint tile_xStart, const uint tile_yStart,
+		const uint tileStartX, const uint tileStartY, const int tileSampleIndex,
 		const uint engineFilmWidth, const uint engineFilmHeight,
 		Ray *ray) {
-	const float filmX = pixelX + Rnd_FloatValue(seed);
-	const float filmY = pixelY + Rnd_FloatValue(seed);
+	float u0, u1;
+	SampleGrid(seed, PARAM_AA_SAMPLES,
+			tileSampleIndex % PARAM_AA_SAMPLES, tileSampleIndex / PARAM_AA_SAMPLES,
+			&u0, &u1);
+
+	float2 xy;
+	float distPdf;
+	Distribution2D_SampleContinuous(pixelFilterDistribution, u0, u1, &xy, &distPdf);
+
+	const float filmX = pixelX + .5f + xy.x;
+	const float filmY = pixelY + .5f + xy.y;
 	task->result.filmX = filmX;
 	task->result.filmY = filmY;
 
@@ -81,7 +109,7 @@ void GenerateCameraPath(
 	const float dofSampleY = Rnd_FloatValue(seed);
 #endif
 
-	Camera_GenerateRay(camera, engineFilmWidth, engineFilmHeight, ray, tile_xStart + filmX, tile_yStart + filmY
+	Camera_GenerateRay(camera, engineFilmWidth, engineFilmHeight, ray, tileStartX + filmX, tileStartY + filmY
 #if defined(PARAM_CAMERA_HAS_DOF)
 			, dofSampleX, dofSampleY
 #endif
@@ -89,12 +117,13 @@ void GenerateCameraPath(
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
-		const uint tile_xStart,
-		const uint tile_yStart,
-		const int tile_sampleIndex,
+		const uint tileStartX,
+		const uint tileStartY,
+		const int tileSampleIndex,
 		const uint engineFilmWidth, const uint engineFilmHeight,
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
+		__global float *pixelFilterDistribution,
 		// Film parameters
 		const uint filmWidth, const uint filmHeight
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -240,20 +269,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		) {
 	const size_t gid = get_global_id(0);
 
-	uint sampleX, sampleY, sampleIndex;
-	if (tile_sampleIndex >= 0) {
-		sampleIndex = tile_sampleIndex;
-		sampleX = gid % PARAM_TILE_SIZE;
-		sampleY = gid / PARAM_TILE_SIZE;
-	} else {
-		sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
-		const uint pixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
-		sampleX = pixelIndex % PARAM_TILE_SIZE;
-		sampleY = pixelIndex / PARAM_TILE_SIZE;
-	}
+#if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
+	const uint sampleIndex = tileSampleIndex;
+	const uint samplePixelX = gid % PARAM_TILE_SIZE;
+	const uint samplePixelY = gid / PARAM_TILE_SIZE;
+#else
+	const uint sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
+	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
+	const uint samplePixelX = samplePixelIndex % PARAM_TILE_SIZE;
+	const uint samplePixelY = samplePixelIndex / PARAM_TILE_SIZE;
+#endif
 
-	if ((tile_xStart + sampleX >= engineFilmWidth) ||
-			(tile_yStart + sampleY >= engineFilmHeight))
+	if ((tileStartX + samplePixelX >= engineFilmWidth) ||
+			(tileStartY + samplePixelY >= engineFilmHeight))
 		return;
 
 	__global GPUTask *task = &tasks[gid];
@@ -335,7 +363,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 	Ray ray;
 	RayHit rayHit;
-	GenerateCameraPath(&seed, task, camera, sampleX, sampleY, tile_xStart, tile_yStart, engineFilmWidth, engineFilmHeight, &ray);
+	GenerateCameraRay(&seed, task, camera, pixelFilterDistribution,
+			samplePixelX, samplePixelY,
+			tileStartX, tileStartY, tileSampleIndex,
+			engineFilmWidth, engineFilmHeight, &ray);
 	PathState pathState = RT_NEXT_VERTEX;
 
 	//--------------------------------------------------------------------------
@@ -392,6 +423,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 			task->result.rayCount = tracedRaysCount;
 #endif
+#if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
+			Film_AddSample(samplePixelX, samplePixelY, &task->result, 1.f
+					FILM_PARAM);
+#endif
+
 			pathState = DONE;
 		}
 
@@ -691,8 +727,8 @@ void SR_Normalize(SampleResult *dst, const float k) {
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
-		const uint tile_xStart,
-		const uint tile_yStart,
+		const uint tileStartX,
+		const uint tileStartY,
 		const uint engineFilmWidth, const uint engineFilmHeight,
 		__global GPUTask *tasks,
 		// Film parameters
@@ -779,8 +815,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	sampleX = gid % PARAM_TILE_SIZE;
 	sampleY = gid / PARAM_TILE_SIZE;
 
-	if ((tile_xStart + sampleX >= engineFilmWidth) ||
-			(tile_yStart + sampleY >= engineFilmHeight))
+	if ((tileStartX + sampleX >= engineFilmWidth) ||
+			(tileStartY + sampleY >= engineFilmHeight))
 		return;
 
 	__global GPUTask *sampleTasks = &tasks[gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES];
