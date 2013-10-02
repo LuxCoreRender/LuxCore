@@ -238,8 +238,7 @@ public:
 			}
 
 			// Set arguments
-			for (u_int j = 0; j < vertsBuffs.size(); ++j)
-				SetIntersectionKernelArgs(*(kernels[j]), 3);
+			SetIntersectionKernelArgs(*(kernels[i]), 3);
 		}
 	}
 	virtual ~OpenCLBVHKernels() {

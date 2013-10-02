@@ -585,35 +585,8 @@ void CompiledScene::CompileInfiniteLight() {
 		infiniteLight->lightID = il->GetID();
 
 		// Compile the image map Distribution2D
-		const Distribution2D *imageMapDistribution = il->GetDistribution2D();
-		u_int marginalSize;
-		float *marginalDist = CompileDistribution(imageMapDistribution->GetMarginalDistribution(),
-				&marginalSize);
-
-		u_int condSize;
-		vector<float *> condDists;
-		for (u_int i = 0; i < imageMapDistribution->GetHeight(); ++i) {
-			condDists.push_back(CompileDistribution(imageMapDistribution->GetConditionalDistribution(i),
-				&condSize));
-		}
-
-		infiniteLightDistributionSize = 2 * sizeof(u_int) + marginalSize + condDists.size() * condSize;
-		infiniteLightDistribution = new float[infiniteLightDistributionSize];
-
-		*((u_int *)&infiniteLightDistribution[0]) = imageMapDistribution->GetWidth();
-		*((u_int *)&infiniteLightDistribution[1]) = imageMapDistribution->GetHeight();
-
-		float *ptr = &infiniteLightDistribution[2];
-		std::copy(marginalDist, marginalDist + marginalSize, ptr);
-		ptr += marginalSize / 4;
-		delete[] marginalDist;
-
-		const u_int condSize4 = condSize / sizeof(float);
-		for (u_int i = 0; i < imageMapDistribution->GetHeight(); ++i) {
-			std::copy(condDists[i], condDists[i] + condSize4, ptr);
-			ptr += condSize4;
-			delete[] condDists[i];
-		}
+		infiniteLightDistribution = CompileDistribution2D(il->GetDistribution2D(),
+				&infiniteLightDistributionSize);
 	} else
 		infiniteLight = NULL;
 
@@ -677,7 +650,7 @@ void CompiledScene::CompileSkyLight() {
 		skyLight = NULL;
 }
 
-float *CompiledScene::CompileDistribution(const Distribution1D *dist, u_int *size) const {
+float *CompiledScene::CompileDistribution1D(const Distribution1D *dist, u_int *size) {
 	const u_int count = dist->GetCount();
 	*size = sizeof(u_int) + count * sizeof(float) + (count + 1) * sizeof(float);
 	float *compDist = new float[*size];
@@ -691,12 +664,45 @@ float *CompiledScene::CompileDistribution(const Distribution1D *dist, u_int *siz
 	return compDist;
 }
 
+float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *size) {
+	u_int marginalSize;
+	float *marginalDist = CompileDistribution1D(dist->GetMarginalDistribution(),
+			&marginalSize);
+
+	u_int condSize;
+	vector<float *> condDists;
+	for (u_int i = 0; i < dist->GetHeight(); ++i) {
+		condDists.push_back(CompileDistribution1D(dist->GetConditionalDistribution(i),
+			&condSize));
+	}
+
+	*size = 2 * sizeof(u_int) + marginalSize + condDists.size() * condSize;
+	float *compDist = new float[*size];
+
+	*((u_int *)&compDist[0]) = dist->GetWidth();
+	*((u_int *)&compDist[1]) = dist->GetHeight();
+
+	float *ptr = &compDist[2];
+	std::copy(marginalDist, marginalDist + marginalSize, ptr);
+	ptr += marginalSize / 4;
+	delete[] marginalDist;
+
+	const u_int condSize4 = condSize / sizeof(float);
+	for (u_int i = 0; i < dist->GetHeight(); ++i) {
+		std::copy(condDists[i], condDists[i] + condSize4, ptr);
+		ptr += condSize4;
+		delete[] condDists[i];
+	}
+
+	return compDist;
+}
+
 void CompiledScene::CompileLightsDistribution() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightDistribution");
 
 	delete[] lightsDistribution;
 
-	lightsDistribution = CompileDistribution(scene->lightsDistribution, &lightsDistributionSize);
+	lightsDistribution = CompileDistribution1D(scene->lightsDistribution, &lightsDistributionSize);
 }
 
 void CompiledScene::CompileTextures() {

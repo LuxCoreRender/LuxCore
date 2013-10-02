@@ -306,7 +306,10 @@ public:
 protected:
 	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
 
-	virtual void StartLockLess();
+	// I don't implement StartLockLess() here because the step of initializing
+	// the tile repository is left to the sub-class (so some TileRepository
+	// can be set before to start all rendering threads).
+	// virtual void StartLockLess();
 	virtual void StopLockLess();
 
 	virtual void EndEditLockLess(const EditActionList &editActions);

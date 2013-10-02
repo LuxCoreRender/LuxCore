@@ -53,6 +53,9 @@ public:
 				IsMaterialCompiled(ROUGHGLASS));
 	}
 
+	static float *CompileDistribution1D(const Distribution1D *dist, u_int *size);
+	static float *CompileDistribution2D(const Distribution2D *dist, u_int *size);
+
 	Scene *scene;
 	Film *film;
 	u_int maxMemPageSize;
@@ -116,8 +119,6 @@ private:
 	void CompileSunLight();
 	void CompileSkyLight();
 	void CompileLightsDistribution();
-
-	float *CompileDistribution(const Distribution1D *dist, u_int *size) const;
 };
 
 }

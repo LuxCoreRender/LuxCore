@@ -596,10 +596,8 @@ void BiasPathCPURenderThread::RenderFunc() {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 	Film *film = engine->film;
-	const Filter *filter = film->GetFilter();
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();
-	const FilterDistribution filterDistribution(filter, 64);
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -625,12 +623,12 @@ void BiasPathCPURenderThread::RenderFunc() {
 				if (tile->sampleIndex >= 0) {
 					const u_int sampleX = tile->sampleIndex % engine->aaSamples;
 					const u_int sampleY = tile->sampleIndex / engine->aaSamples;
-					RenderPixelSample(rndGen, filterDistribution, x, y,
+					RenderPixelSample(rndGen, *(engine->pixelFilterDistribution), x, y,
 							tile->xStart, tile->yStart, sampleX, sampleY);
 				} else {
 					for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 						for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-							RenderPixelSample(rndGen, filterDistribution, x, y,
+							RenderPixelSample(rndGen, *(engine->pixelFilterDistribution), x, y,
 									tile->xStart, tile->yStart, sampleX, sampleY);
 						}
 					}

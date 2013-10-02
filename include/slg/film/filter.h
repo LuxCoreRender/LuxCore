@@ -71,6 +71,8 @@ public:
 
 	void SampleContinuous(const float u0, const float u1, float *su0, float *su1) const;
 
+	const Distribution2D *GetDistribution2D() const { return distrib; }
+
 private:
 	const Filter *filter;
 	u_int size;

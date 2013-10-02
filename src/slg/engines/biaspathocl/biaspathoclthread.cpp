@@ -45,6 +45,7 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 
 	tasksBuff = NULL;
 	taskStatsBuff = NULL;
+	pixelFilterBuff = NULL;
 	
 	gpuTaskStats = NULL;
 }
@@ -61,6 +62,9 @@ BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
 	delete mergePixelSamplesKernel;
 
 	delete tasksBuff;
+	delete taskStatsBuff;
+	delete pixelFilterBuff;
+
 	delete[] gpuTaskStats;
 }
 
@@ -78,6 +82,8 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss << scientific <<
 			" -D PARAM_TASK_COUNT=" <<  engine->taskCount <<
 			" -D PARAM_TILE_SIZE=" << engine->tileRepository->tileSize <<
+			(engine->tileRepository->enableProgressiveRefinement ?
+				" -D PARAM_TILE_PROGRESSIVE_REFINEMENT" : "") <<
 			" -D PARAM_AA_SAMPLES=" << engine->aaSamples;
 
 	return ss.str();
@@ -138,6 +144,13 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 	//--------------------------------------------------------------------------
 
 	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount, "GPUTask Stats");
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU pixel filter distribution
+	//--------------------------------------------------------------------------
+
+	AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
+			sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 }
 
 void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
@@ -177,6 +190,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, engine->film->GetHeight());
 	renderSampleKernel->setArg(argIndex++, *tasksBuff);
 	renderSampleKernel->setArg(argIndex++, *taskStatsBuff);
+	renderSampleKernel->setArg(argIndex++, *pixelFilterBuff);
 
 	// Film parameters
 	argIndex = SetFilmKernelArgs(*renderSampleKernel, argIndex);
@@ -268,8 +282,6 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 			//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 			//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 			//		"(" << tileWidth << ", " << tileHeight << ") [" << tile->sampleIndex << "]");
-
-			u_int tileTaskCount =  (tile->sampleIndex < 0) ? taskCount : filmPixelCount;
 				
 			// Clear the frame buffer
 			oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
@@ -278,7 +290,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			// Initialize the statistics
 			oclQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(tileTaskCount, initStatWorkGroupSize)),
+				cl::NDRange(RoundUp<u_int>(taskCount, initStatWorkGroupSize)),
 				cl::NDRange(initStatWorkGroupSize));
 
 			// Render the tile
@@ -293,24 +305,20 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 				}
 			}
 
-			if (tile->sampleIndex < 0) {
-				// Render all pixel samples
-				oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(tileTaskCount, renderSampleWorkGroupSize)),
-						cl::NDRange(renderSampleWorkGroupSize));
+			// Render all pixel samples
+			oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
+					cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
+					cl::NDRange(renderSampleWorkGroupSize));
+			if (!engine->tileRepository->enableProgressiveRefinement) {
 				// Merge all pixel samples
 				oclQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(filmPixelCount, mergePixelSamplesWorkGroupSize)),
 						cl::NDRange(mergePixelSamplesWorkGroupSize));
-			} else {
-				oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(tileTaskCount, renderSampleWorkGroupSize)),
-						cl::NDRange(renderSampleWorkGroupSize));
 			}
 
 			// Async. transfer of the Film buffers
 			TransferFilm(oclQueue);
-			threadFilm->AddSampleCount(tileTaskCount);
+			threadFilm->AddSampleCount(taskCount);
 
 			// Async. transfer of GPU task statistics
 			oclQueue.enqueueReadBuffer(
@@ -324,7 +332,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			// In order to update the statistics
 			u_int tracedRaysCount = 0;
-			for (uint i = 0; i < tileTaskCount; ++i)
+			for (uint i = 0; i < taskCount; ++i)
 				tracedRaysCount += gpuTaskStats[i].raysCount;
 			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 

@@ -65,6 +65,7 @@ protected:
 
 	cl::Buffer *tasksBuff;
 	cl::Buffer *taskStatsBuff;
+	cl::Buffer *pixelFilterBuff;
 
 	u_int sampleDimensions;
 
@@ -113,7 +114,12 @@ protected:
 
 	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
 
+	void InitPixelFilterDistribution();
+
 	u_int taskCount;
+	float *pixelFilterDistribution;
+	u_int pixelFilterDistributionSize;
+
 
 	TileRepository *tileRepository;
 	bool printedRenderingTime;
