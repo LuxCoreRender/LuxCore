@@ -367,14 +367,28 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			samplePixelX, samplePixelY,
 			tileStartX, tileStartY, tileSampleIndex,
 			engineFilmWidth, engineFilmHeight, &ray);
-	PathState pathState = RT_NEXT_VERTEX;
+
+	__global BSDF *bsdfPathVertex1 = &task->bsdfPathVertex1;
+	VSTORE3F(WHITE, &task->throughputPathVertex1.r);
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	// This is a bit tricky. I store the passThroughEvent in the BSDF
+	// before of the initialization because it can be used during the
+	// tracing of next path vertex ray.
+
+	bsdfPathVertex1->hitPoint.passThroughEvent = Rnd_FloatValue(seed);
+#endif
 
 	//--------------------------------------------------------------------------
 	// Render a sample
 	//--------------------------------------------------------------------------
 
 	uint tracedRaysCount = taskStat->raysCount;
-	do {
+	PathState pathState = PATH_VERTEX_1;
+	float lastPdfW = 1.f;
+	BSDFEvent pathBSDFEvent = NONE;
+	BSDFEvent lastBSDFEvent = SPECULAR;
+	for (;;) {
 		//----------------------------------------------------------------------
 		// Ray trace step
 		//----------------------------------------------------------------------
@@ -383,6 +397,51 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			ACCELERATOR_INTERSECT_PARAM);
 		++tracedRaysCount;
 
+		if (rayHit.meshIndex != NULL_INDEX) {
+			// Something was hit, initialize the BSDF
+			BSDF_Init(bsdfPathVertex1,
+					meshDescs,
+					meshMats,
+#if (PARAM_DL_LIGHT_COUNT > 0)
+					meshTriLightDefsOffset,
+#endif
+					vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+					vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+					vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+					vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+					vertAlphas,
+#endif
+					triangles, &ray, &rayHit
+#if defined(PARAM_HAS_PASSTHROUGH)
+					, bsdfPathVertex1->hitPoint.passThroughEvent
+#endif
+#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+					MATERIALS_PARAM
+#endif
+					);
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
+					MATERIALS_PARAM);
+			if (!Spectrum_IsBlack(passThroughTrans)) {
+				const float3 pathThroughput = VLOAD3F(&task->throughputPathVertex1.r) * passThroughTrans;
+				VSTORE3F(pathThroughput, &task->throughputPathVertex1.r);
+
+				// It is a pass through point, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+
+				continue;
+			}
+#endif
+		}
+
 		//----------------------------------------------------------------------
 		// Advance the finite state machine step
 		//----------------------------------------------------------------------
@@ -390,36 +449,116 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 		// Evaluation of the Path finite state machine.
 		//
-		// From: RT_NEXT_VERTEX
-		// To: SPLAT_SAMPLE or GENERATE_DL_RAY
+		// From: PATH_VERTEX_1
+		// To:
 		//----------------------------------------------------------------------
 
-		if (pathState == RT_NEXT_VERTEX) {
+		if (pathState == PATH_VERTEX_1) {
 			if (rayHit.meshIndex != NULL_INDEX) {
 				//--------------------------------------------------------------
 				// Something was hit
 				//--------------------------------------------------------------
+			
+				// Save the path first vertex information
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+				sample->result.alpha = 1.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+				sample->result.depth = rayHit->t;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+				sample->result.position = bsdf->hitPoint.p;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+				sample->result.geometryNormal = bsdf->hitPoint.geometryN;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+				sample->result.shadingNormal = bsdf->hitPoint.shadeN;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+				sample->result.materialID = BSDF_GetMaterialID(bsdf
+					MATERIALS_PARAM);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+				sample->result.uv = bsdf->hitPoint.uv;
+#endif
 
 				VADD3F(&task->result.radiancePerPixelNormalized[0].r, WHITE);
-				pathState = SPLAT_SAMPLE;
 			} else {
 				//--------------------------------------------------------------
 				// Nothing was hit, add environmental lights radiance
 				//--------------------------------------------------------------
 
-				VADD3F(&task->result.radiancePerPixelNormalized[0].r, BLACK);
-				pathState = SPLAT_SAMPLE;
+#if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
+				const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
+				DirectHitInfiniteLight(
+						true,
+						lastBSDFEvent,
+						pathBSDFEvent,
+						lightsDistribution,
+#if defined(PARAM_HAS_INFINITELIGHT)
+						infiniteLight,
+						infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+						sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+						skyLight,
+#endif
+						&task->throughputPathVertex1.r,
+						-rayDir, lastPdfW,
+						&task->result
+						IMAGEMAPS_PARAM);
+#endif
+
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+				sample->result.alpha = 0.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+				sample->result.depth = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+				sample->result.position.x = INFINITY;
+				sample->result.position.y = INFINITY;
+				sample->result.position.z = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+				sample->result.geometryNormal.x = INFINITY;
+				sample->result.geometryNormal.y = INFINITY;
+				sample->result.geometryNormal.z = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+				sample->result.shadingNormal.x = INFINITY;
+				sample->result.shadingNormal.y = INFINITY;
+				sample->result.shadingNormal.z = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+				sample->result.materialID = NULL_INDEX;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+				sample->result.directShadowMask = 0.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+				sample->result.indirectShadowMask = 0.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+				sample->result.uv.u = INFINITY;
+				sample->result.uv.v = INFINITY;
+#endif
 			}
 		}
+
+		pathState = ADD_SAMPLE;
 
 		//----------------------------------------------------------------------
 		// Evaluation of the Path finite state machine.
 		//
 		// From: SPLAT_SAMPLE
-		// To: RT_NEXT_VERTEX
+		// To: DONE
 		//----------------------------------------------------------------------
 
-		if (pathState == SPLAT_SAMPLE) {
+		if (pathState == ADD_SAMPLE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 			task->result.rayCount = tracedRaysCount;
 #endif
@@ -428,11 +567,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					FILM_PARAM);
 #endif
 
-			pathState = DONE;
+			break;
 		}
-
-		pathState = DONE;
-	} while (pathState != DONE);
+	}
 
 	//--------------------------------------------------------------------------
 

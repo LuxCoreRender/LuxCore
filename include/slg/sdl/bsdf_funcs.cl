@@ -21,6 +21,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#if !defined(BSDF_INIT_PARAM_RAY_MEM_SPACE)
+#define BSDF_INIT_PARAM_RAY_MEM_SPACE __global
+#endif
+#if !defined(BSDF_INIT_PARAM_RAYHIT_MEM_SPACE)
+#define BSDF_INIT_PARAM_RAYHIT_MEM_SPACE __global
+#endif
 void BSDF_Init(
 		__global BSDF *bsdf,
 		//const bool fromL,
@@ -43,8 +49,14 @@ void BSDF_Init(
 		__global float *vertAlphas,
 #endif
 		__global Triangle *triangles,
-		__global Ray *ray,
-		__global RayHit *rayHit
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray,
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		RayHit *rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float u0
 #endif
@@ -57,8 +69,13 @@ void BSDF_Init(
 	bsdf->hitPoint.passThroughEvent = u0;
 #endif
 
+#if defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+#else
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
+#endif
 	const float3 hitPointP = rayOrig + rayHit->t * rayDir;
 	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
 	VSTORE3F(-rayDir, &bsdf->hitPoint.fixedDir.x);

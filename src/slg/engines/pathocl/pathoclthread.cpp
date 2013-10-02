@@ -206,36 +206,18 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	// Add PathStateBase memory size
 	gpuTaksSize += sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
 
-	// Add PathStateBase.BSDF.HitPoint memory size
-	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
-	if (engine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
-			engine->compiledScene->IsTextureCompiled(HITPOINTGREY))
-		hitPointSize += sizeof(Spectrum);
-	if (engine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
-		hitPointSize += sizeof(float);
-	if (hasPassThrough)
-		hitPointSize += sizeof(float);
-
 	// Add PathStateBase.BSDF memory size
-	size_t bsdfSize = hitPointSize;
-	// Add PathStateBase.BSDF.materialIndex memory size
-	bsdfSize += sizeof(u_int);
-	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
-	if (triAreaLightCount > 0)
-		bsdfSize += sizeof(u_int);
-	// Add PathStateBase.BSDF.Frame memory size
-	bsdfSize += sizeof(slg::ocl::Frame);
-	gpuTaksSize += bsdfSize;
+	gpuTaksSize += GetOpenCLBSDFSize();
 
 	// Add PathStateDirectLight memory size
 	gpuTaksSize += sizeof(Spectrum) + sizeof(u_int) + 2 * sizeof(BSDFEvent) + sizeof(float);
 	// Add PathStateDirectLight.tmpHitPoint memory size
 	if (triAreaLightCount > 0)
-		gpuTaksSize += hitPointSize;
+		gpuTaksSize += GetOpenCLHitPointSize();
 
 	// Add PathStateDirectLightPassThrough memory size
 	if (hasPassThrough)
-		gpuTaksSize += sizeof(float) + bsdfSize;
+		gpuTaksSize += sizeof(float) + GetOpenCLBSDFSize();
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
 	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
@@ -249,7 +231,7 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	// SampleResult size
 	//--------------------------------------------------------------------------
 
-	size_t sampleResultSize = GetSampleResultSize();
+	size_t sampleResultSize = GetOpenCLSampleResultSize();
 	
 	//--------------------------------------------------------------------------
 	// Sample size

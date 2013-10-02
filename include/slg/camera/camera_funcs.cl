@@ -75,6 +75,9 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 void Camera_GenerateRay(
 		__global Camera *camera,
 		const uint filmWidth, const uint filmHeight,
+#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
 		Ray *ray,
 		const float filmX, const float filmY
 #if defined(PARAM_CAMERA_HAS_DOF)
@@ -131,7 +134,11 @@ void Camera_GenerateRay(
 	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld[transIndex], rayOrig);
 	rayDir = Transform_ApplyVector(&camera->cameraToWorld[transIndex], rayDir);
 
+#if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
 	Ray_Init3_Private(ray, rayOrig, rayDir, maxt);
+#else
+	Ray_Init3(ray, rayOrig, rayDir, maxt);
+#endif
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,

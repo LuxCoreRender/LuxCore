@@ -162,7 +162,35 @@ u_int PathOCLBaseRenderThread::SetFilmKernelArgs(cl::Kernel &kernel, u_int argIn
 	return argIndex;
 }
 
-size_t PathOCLBaseRenderThread::GetSampleResultSize() const {
+size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
+	// HitPoint memory size
+	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
+			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY))
+		hitPointSize += sizeof(Spectrum);
+	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
+		hitPointSize += sizeof(float);
+	if (renderEngine->compiledScene->RequiresPassThrough())
+		hitPointSize += sizeof(float);
+
+	return hitPointSize;	
+}
+
+size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
+	// Add BSDF memory size
+	size_t bsdfSize = GetOpenCLHitPointSize();
+	// Add PathStateBase.BSDF.materialIndex memory size
+	bsdfSize += sizeof(u_int);
+	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
+	if (renderEngine->compiledScene->triLightDefs.size() > 0)
+		bsdfSize += sizeof(u_int);
+	// Add PathStateBase.BSDF.Frame memory size
+	bsdfSize += sizeof(slg::ocl::Frame);
+
+	return bsdfSize;	
+}
+
+size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 	//--------------------------------------------------------------------------
 	// SampleResult size
 	//--------------------------------------------------------------------------
@@ -828,7 +856,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_types <<
 			slg::ocl::KernelSource_camera_types <<
 			slg::ocl::KernelSource_light_types <<
-			// OpenCL SLG Types
+			// OpenCL SLG Funcs
 			slg::ocl::KernelSource_mc_funcs <<
 			slg::ocl::KernelSource_randomgen_funcs <<
 			slg::ocl::KernelSource_triangle_funcs <<
@@ -843,7 +871,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_film_funcs <<
 			slg::ocl::KernelSource_sampler_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
-			slg::ocl::KernelSource_scene_funcs;
+			slg::ocl::KernelSource_scene_funcs <<
+			// PathOCL Funcs
+			slg::ocl::KernelSource_pathoclbase_funcs;
 
 		ssKernel << AdditionalKernelSources();
 

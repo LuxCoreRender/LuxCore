@@ -46,12 +46,8 @@
 //------------------------------------------------------------------------------
 
 typedef enum {
-	RT_NEXT_VERTEX,
-	GENERATE_DL_RAY,
-	RT_DL,
-	GENERATE_NEXT_VERTEX_RAY,
-	SPLAT_SAMPLE,
-	DONE
+	PATH_VERTEX_1,
+	ADD_SAMPLE
 } PathState;
 
 // This is defined only under OpenCL because of variable size structures
@@ -60,6 +56,9 @@ typedef enum {
 typedef struct {
 	// The task seed
 	Seed seed;
+
+	Spectrum throughputPathVertex1;
+	BSDF bsdfPathVertex1;
 
 	SampleResult result;
 } GPUTask;

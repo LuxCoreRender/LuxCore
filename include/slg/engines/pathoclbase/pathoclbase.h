@@ -62,7 +62,7 @@ protected:
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) = 0;
 	virtual void AdditionalInit() = 0;
 	virtual std::string AdditionalKernelOptions() = 0;
-	virtual std::string AdditionalKernelDefinitions() { return ""; }
+	virtual std::string AdditionalKernelDefinitions() = 0;
 	virtual std::string AdditionalKernelSources() = 0;
 	virtual void SetAdditionalKernelArgs() = 0;
 	virtual void CompileAdditionalKernels(cl::Program *program) = 0;
@@ -93,9 +93,14 @@ protected:
 	void SetKernelArgs();
 
 	u_int SetFilmKernelArgs(cl::Kernel &kernel, u_int argIndex);
-	size_t GetSampleResultSize() const;
 	void TransferFilm(cl::CommandQueue &oclQueue);
 
+	// OpenCL structure size
+	size_t GetOpenCLHitPointSize() const;
+	size_t GetOpenCLBSDFSize() const;
+	size_t GetOpenCLSampleResultSize() const;
+
+	
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
 
 	// OpenCL variables
