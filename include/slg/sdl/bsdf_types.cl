@@ -39,7 +39,7 @@ typedef struct {
 	HitPoint hitPoint;
 
 	unsigned int materialIndex;
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	unsigned int triangleLightSourceIndex;
 #endif
 

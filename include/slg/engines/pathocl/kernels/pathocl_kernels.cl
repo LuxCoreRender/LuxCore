@@ -277,7 +277,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_SKYLIGHT)
 		, __global SkyLight *skyLight
 #endif
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		, __global TriangleLight *triLightDefs
 		, __global uint *meshTriLightDefsOffset
 #endif
@@ -395,7 +395,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			BSDF_Init(bsdf,
 					meshDescs,
 					meshMats,
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 					meshTriLightDefsOffset,
 #endif
 					vertices,
@@ -459,7 +459,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 				}
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				// Check if it is a light source (note: I can hit only triangle area light sources)
 				if (BSDF_IsLightSource(bsdf)) {
 					DirectHitFiniteLight((depth == 1), task->directLightState.lastBSDFEvent,
@@ -549,7 +549,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	// To: GENERATE_NEXT_VERTEX_RAY
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || (PARAM_HAS_INFINITELIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || (PARAM_HAS_INFINITELIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	if (pathState == RT_DL) {
 		pathState = GENERATE_NEXT_VERTEX_RAY;
 
@@ -600,7 +600,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			BSDF_Init(&task->passThroughState.passThroughBsdf,
 					meshDescs,
 					meshMats,
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 					meshTriLightDefsOffset,
 #endif
 					vertices,
@@ -645,7 +645,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	// To: GENERATE_NEXT_VERTEX_RAY or RT_DL
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || (PARAM_DL_LIGHT_COUNT > 0)
+#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	if (pathState == GENERATE_DL_RAY) {
 		// No shadow ray to trace, move to the next vertex ray
 		pathState = GENERATE_NEXT_VERTEX_RAY;
@@ -671,7 +671,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_SKYLIGHT)
 					skyLight,
 #endif
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 					triLightDefs,
 					&task->directLightState.tmpHitPoint,
 #endif

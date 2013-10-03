@@ -75,7 +75,7 @@ std::string KernelSource_pathocl_datatypes =
 "	BSDFEvent pathBSDFEvent, lastBSDFEvent;\n"
 "	float lastPdfW;\n"
 "\n"
-"#if (PARAM_DL_LIGHT_COUNT > 0)\n"
+"#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)\n"
 "	// This is used by TriangleLight_Illuminate() to temporary store the\n"
 "	// point on the light sources\n"
 "	HitPoint tmpHitPoint;\n"

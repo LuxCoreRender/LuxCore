@@ -42,7 +42,7 @@ std::string KernelSource_bsdf_types =
 "	HitPoint hitPoint;\n"
 "\n"
 "	unsigned int materialIndex;\n"
-"#if (PARAM_DL_LIGHT_COUNT > 0)\n"
+"#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)\n"
 "	unsigned int triangleLightSourceIndex;\n"
 "#endif\n"
 "\n"

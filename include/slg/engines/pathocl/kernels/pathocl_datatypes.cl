@@ -72,7 +72,7 @@ typedef struct {
 	BSDFEvent pathBSDFEvent, lastBSDFEvent;
 	float lastPdfW;
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// This is used by TriangleLight_Illuminate() to temporary store the
 	// point on the light sources
 	HitPoint tmpHitPoint;

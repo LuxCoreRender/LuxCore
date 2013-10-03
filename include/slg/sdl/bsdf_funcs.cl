@@ -32,7 +32,7 @@ void BSDF_Init(
 		//const bool fromL,
 		__global Mesh *meshDescs,
 		__global uint *meshMats,
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global uint *meshTriLightDefsOffset,
 #endif
 		__global Point *vertices,
@@ -167,7 +167,7 @@ void BSDF_Init(
 
 	//--------------------------------------------------------------------------
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// Check if it is a light source
 	bsdf->triangleLightSourceIndex = meshTriLightDefsOffset[meshIndex];
 #endif
@@ -313,7 +313,7 @@ uint BSDF_GetLightID(__global BSDF *bsdf
 	return mats[bsdf->materialIndex].lightID;
 }
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 bool BSDF_IsLightSource(__global BSDF *bsdf) {
 	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
 }
