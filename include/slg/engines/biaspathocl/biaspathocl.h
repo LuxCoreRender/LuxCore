@@ -54,6 +54,8 @@ protected:
 	virtual void SetAdditionalKernelArgs();
 	virtual void CompileAdditionalKernels(cl::Program *program);
 
+	virtual void Stop();
+
 	// OpenCL variables
 	cl::Kernel *initSeedKernel;
 	size_t initSeedWorkGroupSize;
@@ -68,6 +70,7 @@ protected:
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *taskResultsBuff;
 	cl::Buffer *pixelFilterBuff;
+	cl::Buffer *lightSamplesBuff;
 
 	u_int sampleDimensions;
 

@@ -495,7 +495,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_SKYLIGHT)
 					skyLight,
 #endif
-					&task->pathStateBase.throughput.r,
+					&task->pathStateBase.throughput,
 					-VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
 					&sample->result
 					IMAGEMAPS_PARAM);

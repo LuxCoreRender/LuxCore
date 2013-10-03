@@ -705,6 +705,19 @@ void CompiledScene::CompileLightsDistribution() {
 	lightsDistribution = CompileDistribution1D(scene->lightsDistribution, &lightsDistributionSize);
 }
 
+void CompiledScene::CompileLightSamples() {
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightSamples");
+
+	lightSamples.resize(scene->triLightDefs.size() + (scene->envLight ? 1 : 0) + (scene->sunLight ? 1 : 0));
+
+	for (u_int i = 0; i < scene->triLightDefs.size(); ++i)
+		lightSamples[i] =  scene->triLightDefs[i]->GetSamples();
+	if (scene->envLight)
+		lightSamples[scene->triLightDefs.size()] = scene->envLight->GetSamples();
+	if (scene->sunLight)
+		lightSamples[scene->triLightDefs.size() + 1] = scene->sunLight->GetSamples();
+}
+
 void CompiledScene::CompileTextures() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Textures");
 	//SLG_LOG("[PathOCLRenderThread::CompiledScene]   Texture size: " << sizeof(slg::ocl::Texture));
@@ -1067,8 +1080,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(AREALIGHTS_EDIT) ||
 			editActions.Has(INFINITELIGHT_EDIT) ||
 			editActions.Has(SUNLIGHT_EDIT) ||
-			editActions.Has(SKYLIGHT_EDIT))
+			editActions.Has(SKYLIGHT_EDIT)) {
 		CompileLightsDistribution();
+		CompileLightSamples();
+	}
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
 }

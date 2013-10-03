@@ -277,7 +277,7 @@ bool DirectLightSampling(
 #if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
 		__global
 #endif
-		Ray *shadowRay, __global float *radiance, __global uint *ID
+		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
 		MATERIALS_PARAM_DECL) {
 	float3 lightRayDir;
 	float distance, directPdfW;
@@ -366,7 +366,7 @@ bool DirectLightSampling(
 			// MIS between direct light sampling and BSDF sampling
 			const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
 
-			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, radiance);
+			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, &radiance->r);
 			*ID = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 #if defined(PARAM_HAS_PASSTHROUGH)
 			*shadowPassThrought = u3;
@@ -426,7 +426,7 @@ bool DirectLightSampling_ONE(
 #if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
 		__global
 #endif
-		Ray *shadowRay, __global float *radiance, __global uint *ID
+		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
 		MATERIALS_PARAM_DECL) {
 	// Pick a light source to sample
 	float lightPickPdf;
@@ -467,84 +467,4 @@ bool DirectLightSampling_ONE(
 		pathThroughput, bsdf,
 		shadowRay, radiance, ID
 		MATERIALS_PARAM);
-}
-
-bool DirectLightSampling_ALL(
-		__global uint *currentLightIndex,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
-		const float worldCenterX,
-		const float worldCenterY,
-		const float worldCenterZ,
-		const float worldRadius,
-#endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-		__global InfiniteLight *infiniteLight,
-		__global float *infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-		__global SunLight *sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		__global SkyLight *skyLight,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		__global TriangleLight *triLightDefs,
-		__global HitPoint *tmpHitPoint,
-#endif
-		__global float *lightsDistribution,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float u4,
-		__global float *shadowPassThrought,
-#endif
-		const float u0, const float u1, const float u2, const float u3,
-#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
-		const uint depth,
-#endif
-		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
-#if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
-		__global
-#endif
-		Ray *shadowRay, __global float *radiance, __global uint *ID
-		MATERIALS_PARAM_DECL) {
-	for (; *currentLightIndex < PARAM_LIGHT_COUNT; ++(*currentLightIndex)) {
-		if (DirectLightSampling(
-			*currentLightIndex,
-			1.f,
-	#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
-			worldCenterX,
-			worldCenterY,
-			worldCenterZ,
-			worldRadius,
-	#endif
-	#if defined(PARAM_HAS_INFINITELIGHT)
-			infiniteLight,
-			infiniteLightDistribution,
-	#endif
-	#if defined(PARAM_HAS_SUNLIGHT)
-			sunLight,
-	#endif
-	#if defined(PARAM_HAS_SKYLIGHT)
-			skyLight,
-	#endif
-	#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-			triLightDefs,
-			tmpHitPoint,
-	#endif
-			lightsDistribution,
-	#if defined(PARAM_HAS_PASSTHROUGH)
-			u4,
-			shadowPassThrought,
-	#endif
-			u1, u2, u3,
-	#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
-			depth,
-	#endif
-			pathThroughput, bsdf,
-			shadowRay, radiance, ID
-			MATERIALS_PARAM)) {
-			return true;
-		}
-	}
-
-	return false;
 }

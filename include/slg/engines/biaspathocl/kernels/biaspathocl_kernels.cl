@@ -25,7 +25,9 @@
 //  PARAM_TASK_COUNT
 //  PARAM_TILE_SIZE
 //  PARAM_TILE_PROGRESSIVE_REFINEMENT
+// PARAM_DIRECT_LIGHT_ONE_STRATEGY or PARAM_DIRECT_LIGHT_ALL_STRATEGY
 //  PARAM_AA_SAMPLES
+//  PARAM_DIRECT_LIGHT_SAMPLES
 
 //------------------------------------------------------------------------------
 // InitSeed Kernel
@@ -125,6 +127,98 @@ void GenerateCameraRay(
 			);	
 }
 
+#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
+bool DirectLightSampling_ALL(
+		Seed *seed,
+		__global uint *currentLightIndex,
+		__global uint *currentLightSampleIndex,
+		__global int *lightSamples,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+		__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		__global SunLight *sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		__global SkyLight *skyLight,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global TriangleLight *triLightDefs,
+		__global HitPoint *tmpHitPoint,
+#endif
+		__global float *lightsDistribution,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		__global float *shadowPassThrought,
+#endif
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+#if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		MATERIALS_PARAM_DECL) {
+	for (; *currentLightIndex < PARAM_LIGHT_COUNT; ++(*currentLightIndex)) {
+		const int samplesCount = lightSamples[*currentLightIndex];
+		const uint count = (samplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)samplesCount;
+		const uint count2 = count * count;
+
+		for (; *currentLightSampleIndex < count2; ++(*currentLightSampleIndex)) {
+			float u0, u1;
+			SampleGrid(seed, count,
+					(*currentLightSampleIndex) % count, (*currentLightSampleIndex) / count,
+					&u0, &u1);
+
+			if (DirectLightSampling(
+				*currentLightIndex,
+				1.f,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+				worldCenterX,
+				worldCenterY,
+				worldCenterZ,
+				worldRadius,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+				infiniteLight,
+				infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+				sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+				skyLight,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+				triLightDefs,
+				tmpHitPoint,
+#endif
+				lightsDistribution,
+#if defined(PARAM_HAS_PASSTHROUGH)
+				Rnd_FloatValue(seed),
+				shadowPassThrought,
+#endif
+				u0, u1, Rnd_FloatValue(seed),
+				pathThroughput, bsdf,
+				shadowRay, radiance, ID
+				MATERIALS_PARAM)) {
+				const float scaleFactor = 1.f / count2;
+				VSTORE3F(scaleFactor * VLOAD3F(&radiance->r), &radiance->r);
+				return true;
+			}
+		}
+
+		*currentLightSampleIndex = 0;
+	}
+
+	return false;
+}
+#endif
+
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		const uint tileStartX,
 		const uint tileStartY,
@@ -134,6 +228,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		__global GPUTaskStats *taskStats,
 		__global SampleResult *taskResults,
 		__global float *pixelFilterDistribution,
+		__global int *lightSamples,
 		// Film parameters
 		const uint filmWidth, const uint filmHeight
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -477,7 +572,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 
 		//----------------------------------------------------------------------
-		// Evaluation of the Path finite state machine.
+		// Evaluation of the finite state machine.
 		//
 		// From: PATH_VERTEX_1|NEXT_VERTEX_TRACE_RAY
 		// To: ADD_SAMPLE PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
@@ -527,6 +622,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 				task->lightIndex = 0;
+				task->lightSampleIndex = 0;
 #endif
 				pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
 			} else {
@@ -597,7 +693,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		}
 
 		//----------------------------------------------------------------------
-		// Evaluation of the Path finite state machine.
+		// Evaluation of the finite state machine.
 		//
 		// From: PATH_VERTEX_1|DIRECT_LIGHT_TRACE_RAY
 		// To: ADD_SAMPLE or PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
@@ -635,7 +731,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 			const uint lightIndex = task->lightIndex;
 			if (lightIndex <= PARAM_LIGHT_COUNT) {
-				task->lightIndex = lightIndex + 1;
+				++task->lightSampleIndex;
 				pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
 			} else
 #endif
@@ -643,7 +739,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		}
 
 		//----------------------------------------------------------------------
-		// Evaluation of the Path finite state machine.
+		// Evaluation of the finite state machine.
 		//
 		// From: PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
 		// To: ADD_SAMPLE PATH_VERTEX_1|DIRECT_LIGHT_TRACE_RAY[continue]
@@ -659,7 +755,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 				if (DirectLightSampling_ALL(
+						&seed,
 						&task->lightIndex,
+						&task->lightSampleIndex,
+						lightSamples,
 #endif
 	#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
@@ -680,15 +779,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	#endif
 						lightsDistribution,
 	#if defined(PARAM_HAS_PASSTHROUGH)
-						Rnd_FloatValue(&seed),
 						&task->tmpPassThroughEvent,
 	#endif
-						Rnd_FloatValue(&seed),
-						Rnd_FloatValue(&seed),
-						Rnd_FloatValue(&seed),
-						Rnd_FloatValue(&seed),
 						&task->throughputPathVertex1, &task->bsdfPathVertex1,
-						&ray, &task->lightRadiance.r, &task->lightID
+						&ray, &task->lightRadiance, &task->lightID
 						MATERIALS_PARAM)) {
 
 //					if (get_global_id(0) == 0)
@@ -709,7 +803,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		}
 
 		//----------------------------------------------------------------------
-		// Evaluation of the Path finite state machine.
+		// Evaluation of the finite state machine.
 		//
 		// From: ADD_SAMPLE
 		// To: end of kernel execution
