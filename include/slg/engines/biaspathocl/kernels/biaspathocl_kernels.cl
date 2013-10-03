@@ -513,7 +513,17 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
 #endif
 
-				// TODO Emission
+#if (PARAM_DL_LIGHT_COUNT > 0)
+				// Check if it is a light source (note: I can hit only triangle area light sources)
+				if (BSDF_IsLightSource(&task->bsdfPathVertex1)) {
+					DirectHitFiniteLight(true, lastBSDFEvent,
+							pathBSDFEvent, lightsDistribution,
+							triLightDefs, &task->throughputPathVertex1,
+							rayHit.t, &task->bsdfPathVertex1, lastPdfW,
+							sampleResult
+							MATERIALS_PARAM);
+				}
+#endif
 
 				pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
 			} else {
