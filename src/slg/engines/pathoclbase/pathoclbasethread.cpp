@@ -766,19 +766,29 @@ void PathOCLBaseRenderThread::InitKernels() {
 			ss << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
 	}
 
-	if (infiniteLightBuff)
+	u_int totalLightCount = 0;
+	if (infiniteLightBuff) {
 		ss << " -D PARAM_HAS_INFINITELIGHT";
+		++totalLightCount;
+	}
 
-	if (skyLightBuff)
+	if (skyLightBuff) {
 		ss << " -D PARAM_HAS_SKYLIGHT";
+		++totalLightCount;
+	}
 
-	if (sunLightBuff)
+	if (sunLightBuff) {
 		ss << " -D PARAM_HAS_SUNLIGHT";
+		++totalLightCount;
+	}
 
-	if (triLightDefsBuff)
-		ss << " -D PARAM_DL_LIGHT_COUNT=" << renderEngine->compiledScene->triLightDefs.size();
-	else
-		ss << " -D PARAM_DL_LIGHT_COUNT=0";
+	if (triLightDefsBuff) {
+		ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->triLightDefs.size();
+		totalLightCount += renderEngine->compiledScene->triLightDefs.size();
+	} else
+		ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=0";
+
+	ss << " -D PARAM_LIGHT_COUNT=" << totalLightCount;
 
 	if (imageMapDescsBuff) {
 		ss << " -D PARAM_HAS_IMAGEMAPS";

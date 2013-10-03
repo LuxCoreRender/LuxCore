@@ -86,6 +86,7 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_TILE_SIZE=" << engine->tileRepository->tileSize <<
 			(engine->tileRepository->enableProgressiveRefinement ?
 				" -D PARAM_TILE_PROGRESSIVE_REFINEMENT" : "") <<
+			((engine->lightSamplingStrategyONE) ? " -D PARAM_DIRECT_LIGHT_ONE_STRATEGY" : " -D PARAM_DIRECT_LIGHT_ALL_STRATEGY") <<
 			" -D PARAM_AA_SAMPLES=" << engine->aaSamples;
 
 	return ss.str();
@@ -154,6 +155,8 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		// BSDF (bsdfPathVertex1) size
 		GetOpenCLBSDFSize() +
 
+		// u_int (lightIndex) size
+		((engine->lightSamplingStrategyONE) ? 0 : sizeof(u_int)) +
 		// Spectrum (lightRadiance) size
 		sizeof(Spectrum) +
 		// Spectrum (lightID) size

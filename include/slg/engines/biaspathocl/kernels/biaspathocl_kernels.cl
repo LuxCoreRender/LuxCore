@@ -247,7 +247,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_SKYLIGHT)
 		, __global SkyLight *skyLight
 #endif
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		, __global TriangleLight *triLightDefs
 		, __global uint *meshTriLightDefsOffset
 #endif
@@ -432,7 +432,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			BSDF_Init(currentBSDF,
 					meshDescs,
 					meshMats,
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 					meshTriLightDefsOffset,
 #endif
 					vertices,
@@ -513,7 +513,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
 #endif
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				// Check if it is a light source (note: I can hit only triangle area light sources)
 				if (BSDF_IsLightSource(&task->bsdfPathVertex1)) {
 					DirectHitFiniteLight(true, lastBSDFEvent,
@@ -525,6 +525,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				}
 #endif
 
+#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
+				task->lightIndex = 0;
+#endif
 				pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
 			} else {
 				//--------------------------------------------------------------
@@ -596,68 +599,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 		// Evaluation of the Path finite state machine.
 		//
-		// From: PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
-		// To: ADD_SAMPLE PATH_VERTEX_1|DIRECT_LIGHT_TRACE_RAY
-		//----------------------------------------------------------------------
-
-		if (pathState == (PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY)) {
-			if (BSDF_IsDelta(&task->bsdfPathVertex1
-				MATERIALS_PARAM)) {
-				pathState = ADD_SAMPLE;
-			} else {
-				if (DirectLightSampling_ONE(
-	#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
-						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-	#endif
-	#if defined(PARAM_HAS_INFINITELIGHT)
-						infiniteLight,
-						infiniteLightDistribution,
-	#endif
-	#if defined(PARAM_HAS_SUNLIGHT)
-						sunLight,
-	#endif
-	#if defined(PARAM_HAS_SKYLIGHT)
-						skyLight,
-	#endif
-	#if (PARAM_DL_LIGHT_COUNT > 0)
-						triLightDefs,
-						&task->tmpHitPoint,
-	#endif
-						lightsDistribution,
-	#if defined(PARAM_HAS_PASSTHROUGH)
-						Rnd_FloatValue(&seed),
-						&task->tmpPassThroughEvent,
-	#endif
-						Rnd_FloatValue(&seed),
-						Rnd_FloatValue(&seed),
-						Rnd_FloatValue(&seed),
-						Rnd_FloatValue(&seed),
-						&task->throughputPathVertex1, &task->bsdfPathVertex1,
-						&ray, &task->lightRadiance.r, &task->lightID
-						MATERIALS_PARAM)) {
-
-//					if (get_global_id(0) == 0)
-//						printf("DIRECT_LIGHT_GENERATE_RAY => lightRadiance: %f %f %f [%d]\n", task->lightRadiance.r, task->lightRadiance.g, task->lightRadiance.b, task->lightID);
-
-					// Trace the shadow ray
-					currentBSDF = &task->tmpBSDF;
-					currentTroughtput = &task->tmpThroughput;
-					VSTORE3F(WHITE, &currentTroughtput->r);
-#if defined(PARAM_HAS_PASSTHROUGH)
-					currentPassThroughEvent = &task->tmpPassThroughEvent;
-#endif
-					pathState = PATH_VERTEX_1 | DIRECT_LIGHT_TRACE_RAY;
-					continue;
-				} else
-					pathState = ADD_SAMPLE;
-			}
-		}
-
-		//----------------------------------------------------------------------
-		// Evaluation of the Path finite state machine.
-		//
 		// From: PATH_VERTEX_1|DIRECT_LIGHT_TRACE_RAY
-		// To: ADD_SAMPLE
+		// To: ADD_SAMPLE or PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
 		//----------------------------------------------------------------------
 
 		if (pathState == (PATH_VERTEX_1 | DIRECT_LIGHT_TRACE_RAY)) {
@@ -689,7 +632,80 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				}
 			}
 
+#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
+			const uint lightIndex = task->lightIndex;
+			if (lightIndex <= PARAM_LIGHT_COUNT) {
+				task->lightIndex = lightIndex + 1;
+				pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
+			} else
+#endif
 			pathState = ADD_SAMPLE;
+		}
+
+		//----------------------------------------------------------------------
+		// Evaluation of the Path finite state machine.
+		//
+		// From: PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
+		// To: ADD_SAMPLE PATH_VERTEX_1|DIRECT_LIGHT_TRACE_RAY[continue]
+		//----------------------------------------------------------------------
+
+		if (pathState == (PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY)) {
+			if (BSDF_IsDelta(&task->bsdfPathVertex1
+				MATERIALS_PARAM)) {
+				pathState = ADD_SAMPLE;
+			} else {
+#if defined(PARAM_DIRECT_LIGHT_ONE_STRATEGY)
+				if (DirectLightSampling_ONE(
+#endif
+#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
+				if (DirectLightSampling_ALL(
+						&task->lightIndex,
+#endif
+	#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+	#endif
+	#if defined(PARAM_HAS_INFINITELIGHT)
+						infiniteLight,
+						infiniteLightDistribution,
+	#endif
+	#if defined(PARAM_HAS_SUNLIGHT)
+						sunLight,
+	#endif
+	#if defined(PARAM_HAS_SKYLIGHT)
+						skyLight,
+	#endif
+	#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+						triLightDefs,
+						&task->tmpHitPoint,
+	#endif
+						lightsDistribution,
+	#if defined(PARAM_HAS_PASSTHROUGH)
+						Rnd_FloatValue(&seed),
+						&task->tmpPassThroughEvent,
+	#endif
+						Rnd_FloatValue(&seed),
+						Rnd_FloatValue(&seed),
+						Rnd_FloatValue(&seed),
+						Rnd_FloatValue(&seed),
+						&task->throughputPathVertex1, &task->bsdfPathVertex1,
+						&ray, &task->lightRadiance.r, &task->lightID
+						MATERIALS_PARAM)) {
+
+//					if (get_global_id(0) == 0)
+//						printf("DIRECT_LIGHT_GENERATE_RAY => lightRadiance: %f %f %f [%d]\n", task->lightRadiance.r, task->lightRadiance.g, task->lightRadiance.b, task->lightID);
+
+					// Trace the shadow ray
+					currentBSDF = &task->tmpBSDF;
+					currentTroughtput = &task->tmpThroughput;
+					VSTORE3F(WHITE, &currentTroughtput->r);
+#if defined(PARAM_HAS_PASSTHROUGH)
+					currentPassThroughEvent = &task->tmpPassThroughEvent;
+#endif
+					pathState = PATH_VERTEX_1 | DIRECT_LIGHT_TRACE_RAY;
+					continue;
+				} else
+					pathState = ADD_SAMPLE;
+			}
 		}
 
 		//----------------------------------------------------------------------

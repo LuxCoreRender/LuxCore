@@ -63,10 +63,13 @@ typedef struct {
 	Spectrum throughputPathVertex1;
 	BSDF bsdfPathVertex1;
 
+#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
+	unsigned int lightIndex;
+#endif
 	// Direct light sampling. Radiance to add to the result
 	// if light source is visible.
 	Spectrum lightRadiance;
-	uint lightID;
+	unsigned int lightID;
 
 	BSDF tmpBSDF;
 	Spectrum tmpThroughput;
@@ -74,7 +77,7 @@ typedef struct {
 	float tmpPassThroughEvent;
 #endif
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// This is used by TriangleLight_Illuminate() to temporary store the
 	// point on the light sources
 	HitPoint tmpHitPoint;

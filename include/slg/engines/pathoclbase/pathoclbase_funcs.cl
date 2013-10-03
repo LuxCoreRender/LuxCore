@@ -34,7 +34,8 @@
 //  PARAM_DEVICE_INDEX
 //  PARAM_DEVICE_COUNT
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
-//  PARAM_DL_LIGHT_COUNT
+//  PARAM_TRIANGLE_LIGHT_COUNT
+//  PARAM_LIGHT_COUNT
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -196,7 +197,7 @@ void DirectHitInfiniteLight(
 }
 #endif
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
 		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
@@ -259,7 +260,7 @@ bool DirectLightSampling(
 #if defined(PARAM_HAS_SKYLIGHT)
 		__global SkyLight *skyLight,
 #endif
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global TriangleLight *triLightDefs,
 		__global HitPoint *tmpHitPoint,
 #endif
@@ -284,7 +285,7 @@ bool DirectLightSampling(
 	uint lightID;
 
 #if defined(PARAM_HAS_INFINITELIGHT)
-	const uint infiniteLightIndex = PARAM_DL_LIGHT_COUNT
+	const uint infiniteLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
 #if defined(PARAM_HAS_SUNLIGHT)
 		+ 1
 #endif
@@ -304,7 +305,7 @@ bool DirectLightSampling(
 #endif
 
 #if defined(PARAM_HAS_SKYLIGHT)
-	const uint skyLightIndex = PARAM_DL_LIGHT_COUNT
+	const uint skyLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
 #if defined(PARAM_HAS_SUNLIGHT)
 		+ 1
 #endif
@@ -322,7 +323,7 @@ bool DirectLightSampling(
 #endif
 
 #if defined(PARAM_HAS_SUNLIGHT)
-	const uint sunLightIndex = PARAM_DL_LIGHT_COUNT;
+	const uint sunLightIndex = PARAM_TRIANGLE_LIGHT_COUNT;
 	if (lightIndex == sunLightIndex) {
 		lightRadiance = SunLight_Illuminate(
 			sunLight,
@@ -332,8 +333,8 @@ bool DirectLightSampling(
 	}
 #endif
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
-	if (lightIndex < PARAM_DL_LIGHT_COUNT) {
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+	if (lightIndex < PARAM_TRIANGLE_LIGHT_COUNT) {
 		lightRadiance = TriangleLight_Illuminate(
 			&triLightDefs[lightIndex], tmpHitPoint,
 			VLOAD3F(&bsdf->hitPoint.p.x),
@@ -408,7 +409,7 @@ bool DirectLightSampling_ONE(
 #if defined(PARAM_HAS_SKYLIGHT)
 		__global SkyLight *skyLight,
 #endif
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global TriangleLight *triLightDefs,
 		__global HitPoint *tmpHitPoint,
 #endif
@@ -450,7 +451,7 @@ bool DirectLightSampling_ONE(
 #if defined(PARAM_HAS_SKYLIGHT)
 		skyLight,
 #endif
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		triLightDefs,
 		tmpHitPoint,
 #endif
@@ -466,4 +467,84 @@ bool DirectLightSampling_ONE(
 		pathThroughput, bsdf,
 		shadowRay, radiance, ID
 		MATERIALS_PARAM);
+}
+
+bool DirectLightSampling_ALL(
+		__global uint *currentLightIndex,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+		__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		__global SunLight *sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		__global SkyLight *skyLight,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global TriangleLight *triLightDefs,
+		__global HitPoint *tmpHitPoint,
+#endif
+		__global float *lightsDistribution,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float u4,
+		__global float *shadowPassThrought,
+#endif
+		const float u0, const float u1, const float u2, const float u3,
+#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
+		const uint depth,
+#endif
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+#if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *shadowRay, __global float *radiance, __global uint *ID
+		MATERIALS_PARAM_DECL) {
+	for (; *currentLightIndex < PARAM_LIGHT_COUNT; ++(*currentLightIndex)) {
+		if (DirectLightSampling(
+			*currentLightIndex,
+			1.f,
+	#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+			worldCenterX,
+			worldCenterY,
+			worldCenterZ,
+			worldRadius,
+	#endif
+	#if defined(PARAM_HAS_INFINITELIGHT)
+			infiniteLight,
+			infiniteLightDistribution,
+	#endif
+	#if defined(PARAM_HAS_SUNLIGHT)
+			sunLight,
+	#endif
+	#if defined(PARAM_HAS_SKYLIGHT)
+			skyLight,
+	#endif
+	#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+			triLightDefs,
+			tmpHitPoint,
+	#endif
+			lightsDistribution,
+	#if defined(PARAM_HAS_PASSTHROUGH)
+			u4,
+			shadowPassThrought,
+	#endif
+			u1, u2, u3,
+	#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
+			depth,
+	#endif
+			pathThroughput, bsdf,
+			shadowRay, radiance, ID
+			MATERIALS_PARAM)) {
+			return true;
+		}
+	}
+
+	return false;
 }
