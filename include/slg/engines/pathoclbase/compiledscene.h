@@ -92,6 +92,9 @@ public:
 	float *lightsDistribution;
 	u_int lightsDistributionSize;
 
+	// Number of samples to take for each light (optional)
+	vector<int> lightSamples;
+
 	// Compiled Materials
 	std::set<MaterialType> usedMaterialTypes;
 	vector<slg::ocl::Material> mats;
@@ -119,6 +122,7 @@ private:
 	void CompileSunLight();
 	void CompileSkyLight();
 	void CompileLightsDistribution();
+	void CompileLightSamples();
 };
 
 }

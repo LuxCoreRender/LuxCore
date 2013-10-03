@@ -498,7 +498,7 @@ std::string KernelSource_pathocl_kernels =
 "#if defined(PARAM_HAS_SKYLIGHT)\n"
 "					skyLight,\n"
 "#endif\n"
-"					&task->pathStateBase.throughput.r,\n"
+"					&task->pathStateBase.throughput,\n"
 "					-VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,\n"
 "					&sample->result\n"
 "					IMAGEMAPS_PARAM);\n"

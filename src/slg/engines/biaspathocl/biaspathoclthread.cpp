@@ -47,6 +47,7 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	taskStatsBuff = NULL;
 	taskResultsBuff = NULL;
 	pixelFilterBuff = NULL;
+	lightSamplesBuff = NULL;
 	
 	gpuTaskStats = NULL;
 }
@@ -62,12 +63,17 @@ BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
 	delete renderSampleKernel;
 	delete mergePixelSamplesKernel;
 
-	delete tasksBuff;
-	delete taskStatsBuff;
-	delete taskResultsBuff;
-	delete pixelFilterBuff;
-
 	delete[] gpuTaskStats;
+}
+
+void BiasPathOCLRenderThread::Stop() {
+	PathOCLBaseRenderThread::Stop();
+
+	FreeOCLBuffer(&tasksBuff);
+	FreeOCLBuffer(&taskStatsBuff);
+	FreeOCLBuffer(&taskResultsBuff);
+	FreeOCLBuffer(&pixelFilterBuff);
+	FreeOCLBuffer(&lightSamplesBuff);
 }
 
 void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
@@ -87,7 +93,8 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 			(engine->tileRepository->enableProgressiveRefinement ?
 				" -D PARAM_TILE_PROGRESSIVE_REFINEMENT" : "") <<
 			((engine->lightSamplingStrategyONE) ? " -D PARAM_DIRECT_LIGHT_ONE_STRATEGY" : " -D PARAM_DIRECT_LIGHT_ALL_STRATEGY") <<
-			" -D PARAM_AA_SAMPLES=" << engine->aaSamples;
+			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<
+			" -D PARAM_DIRECT_LIGHT_SAMPLES=" << engine->directLightSamples;
 
 	return ss.str();
 }
@@ -156,7 +163,7 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		GetOpenCLBSDFSize() +
 
 		// u_int (lightIndex) size
-		((engine->lightSamplingStrategyONE) ? 0 : sizeof(u_int)) +
+		((engine->lightSamplingStrategyONE) ? 0 : 2 * sizeof(u_int)) +
 		// Spectrum (lightRadiance) size
 		sizeof(Spectrum) +
 		// Spectrum (lightID) size
@@ -196,6 +203,13 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 
 	AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
 			sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU light samples count
+	//--------------------------------------------------------------------------
+
+	AllocOCLBufferRO(&lightSamplesBuff, &engine->compiledScene->lightSamples[0],
+			sizeof(int) * engine->compiledScene->lightSamples.size(), "Light Samples");
 }
 
 void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
@@ -237,6 +251,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, *taskStatsBuff);
 	renderSampleKernel->setArg(argIndex++, *taskResultsBuff);
 	renderSampleKernel->setArg(argIndex++, *pixelFilterBuff);
+	renderSampleKernel->setArg(argIndex++, *lightSamplesBuff);
 
 	// Film parameters
 	argIndex = SetFilmKernelArgs(*renderSampleKernel, argIndex);

@@ -64,7 +64,7 @@ typedef struct {
 	BSDF bsdfPathVertex1;
 
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-	unsigned int lightIndex;
+	unsigned int lightIndex, lightSampleIndex;
 #endif
 	// Direct light sampling. Radiance to add to the result
 	// if light source is visible.

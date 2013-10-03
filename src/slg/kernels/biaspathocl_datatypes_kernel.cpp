@@ -67,7 +67,7 @@ std::string KernelSource_biaspathocl_datatypes =
 "	BSDF bsdfPathVertex1;\n"
 "\n"
 "#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)\n"
-"	unsigned int lightIndex;\n"
+"	unsigned int lightIndex, lightSampleIndex;\n"
 "#endif\n"
 "	// Direct light sampling. Radiance to add to the result\n"
 "	// if light source is visible.\n"
