@@ -45,10 +45,13 @@
 // GPUTask data types
 //------------------------------------------------------------------------------
 
-typedef enum {
-	PATH_VERTEX_1,
-	ADD_SAMPLE
-} PathState;
+#define NEXT_VERTEX_TRACE_RAY (1<<0)
+#define NEXT_VERTEX_GENERATE_RAY (1<<1)
+#define DIRECT_LIGHT_TRACE_RAY (1<<2)
+#define DIRECT_LIGHT_GENERATE_RAY (1<<3)
+
+#define PATH_VERTEX_1 (1<<16)
+#define ADD_SAMPLE (1<<17)
 
 // This is defined only under OpenCL because of variable size structures
 #if defined(SLG_OPENCL_KERNEL)
@@ -60,7 +63,20 @@ typedef struct {
 	Spectrum throughputPathVertex1;
 	BSDF bsdfPathVertex1;
 
-	SampleResult result;
+	// Direct light sampling. Radiance to add to the result
+	// if light source is visible.
+	Spectrum lightRadiance;
+	uint lightID;
+
+	BSDF tmpBSDF;
+	Spectrum tmpThroughput;
+	float tmpPassThroughEvent;
+
+#if (PARAM_DL_LIGHT_COUNT > 0)
+	// This is used by TriangleLight_Illuminate() to temporary store the
+	// point on the light sources
+	HitPoint tmpHitPoint;
+#endif
 } GPUTask;
 
 #endif
