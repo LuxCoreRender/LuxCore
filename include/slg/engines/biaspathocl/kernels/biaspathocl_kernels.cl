@@ -405,13 +405,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	// before of the initialization because it can be used during the
 	// tracing of next path vertex ray.
 
-	task->bsdfPathVertex1->hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
-	__global float *currentPassThroughEvent = &task->bsdfPathVertex1->hitPoint.passThroughEvent;
+	task->bsdfPathVertex1.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+	__global float *currentPassThroughEvent = &task->bsdfPathVertex1.hitPoint.passThroughEvent;
 #endif
 
+//	if (get_global_id(0) == 0) {
+//		printf("============================================================\n");
+//		printf("== Begin loop\n");
+//		printf("============================================================\n");
+//	}
+
 	for (;;) {
-		//if (get_global_id(0) == 0)
-		//	printf("pathState: %d|%d\n", pathState >> 16, pathState & 0xffff);
+//		if (get_global_id(0) == 0)
+//			printf("pathState: %d|%d\n", pathState >> 16, pathState & 0xffff);
 
 		//----------------------------------------------------------------------
 		// Ray trace step
@@ -459,7 +465,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				VSTORE3F(pathThroughput, &currentTroughtput->r);
 
 				// It is a pass through point, continue to trace the ray
-				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+				ray.mint = rayHit.t + MachineEpsilon_E(rayHit.t);
 
 				continue;
 			}
@@ -532,7 +538,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_SKYLIGHT)
 						skyLight,
 #endif
-						&task->throughputPathVertex1.r,
+						&task->throughputPathVertex1,
 						-rayDir, lastPdfW,
 						sampleResult
 						IMAGEMAPS_PARAM);
@@ -616,9 +622,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 						Rnd_FloatValue(&seed),
 						Rnd_FloatValue(&seed),
 						Rnd_FloatValue(&seed),
-						&task->throughputPathVertex1.r, &task->bsdfPathVertex1,
+						&task->throughputPathVertex1, &task->bsdfPathVertex1,
 						&ray, &task->lightRadiance.r, &task->lightID
 						MATERIALS_PARAM)) {
+
+//					if (get_global_id(0) == 0)
+//						printf("DIRECT_LIGHT_GENERATE_RAY => lightRadiance: %f %f %f [%d]\n", task->lightRadiance.r, task->lightRadiance.g, task->lightRadiance.b, task->lightID);
 
 					// Trace the shadow ray
 					currentBSDF = &task->tmpBSDF;
@@ -652,8 +661,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				const uint lightID = task->lightID;
 				VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
 
-				//if (get_global_id(0) == 0)
-				//	printf("lightRadiance: %f %f %f [%d]\n", lightRadiance.s0, lightRadiance.s1, lightRadiance.s2, lightID);
+//				if (get_global_id(0) == 0)
+//					printf("DIRECT_LIGHT_TRACE_RAY => lightRadiance: %f %f %f [%d]\n", lightRadiance.s0, lightRadiance.s1, lightRadiance.s2, lightID);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 				sampleResult->directShadowMask = 0.f;
@@ -692,6 +701,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			break;
 		}
 	}
+
+//	if (get_global_id(0) == 0) {
+//		printf("============================================================\n");
+//		printf("== End loop\n");
+//		printf("============================================================\n");
+//	}
 
 	//--------------------------------------------------------------------------
 

@@ -70,7 +70,9 @@ typedef struct {
 
 	BSDF tmpBSDF;
 	Spectrum tmpThroughput;
+#if defined(PARAM_HAS_PASSTHROUGH)
 	float tmpPassThroughEvent;
+#endif
 
 #if (PARAM_DL_LIGHT_COUNT > 0)
 	// This is used by TriangleLight_Illuminate() to temporary store the

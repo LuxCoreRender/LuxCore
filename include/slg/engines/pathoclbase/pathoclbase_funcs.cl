@@ -134,11 +134,11 @@ void DirectHitInfiniteLight(
 #if defined(PARAM_HAS_SKYLIGHT)
 		__global SkyLight *skyLight,
 #endif
-		__global const float *pathThroughput,
+		__global const Spectrum *pathThroughput,
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 throughput = VLOAD3F(pathThroughput);
+	const float3 throughput = VLOAD3F(&pathThroughput->r);
 
 #if defined(PARAM_HAS_INFINITELIGHT)
 	{
@@ -167,7 +167,7 @@ void DirectHitInfiniteLight(
 			// MIS between BSDF sampling and direct light sampling
 			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, skyLight->lightSceneIndex);
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-			const float3 = lightRadiance = weight * throughput * skyRadiance;
+			const float3 lightRadiance = weight * throughput * skyRadiance;
 
 			const uint lightID = min(skyLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 			VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
@@ -202,6 +202,157 @@ float RussianRouletteProb(const float3 color) {
 }
 #endif
 
+bool DirectLightSampling(
+		const uint lightIndex,
+		const float lightPickPdf,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+		__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		__global SunLight *sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		__global SkyLight *skyLight,
+#endif
+#if (PARAM_DL_LIGHT_COUNT > 0)
+		__global TriangleLight *triLightDefs,
+		__global HitPoint *tmpHitPoint,
+#endif
+		__global float *lightsDistribution,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float u3,
+		__global float *shadowPassThrought,
+#endif
+		const float u0, const float u1, const float u2,
+#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
+		const uint depth,
+#endif
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+#if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *shadowRay, __global float *radiance, __global uint *ID
+		MATERIALS_PARAM_DECL) {
+	float3 lightRayDir;
+	float distance, directPdfW;
+	float3 lightRadiance;
+	uint lightID;
+
+#if defined(PARAM_HAS_INFINITELIGHT)
+	const uint infiniteLightIndex = PARAM_DL_LIGHT_COUNT
+#if defined(PARAM_HAS_SUNLIGHT)
+		+ 1
+#endif
+	;
+
+	if (lightIndex == infiniteLightIndex) {
+		lightRadiance = InfiniteLight_Illuminate(
+			infiniteLight,
+			infiniteLightDistribution,
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+			u0, u1,
+			VLOAD3F(&bsdf->hitPoint.p.x),
+			&lightRayDir, &distance, &directPdfW
+			IMAGEMAPS_PARAM);
+		lightID = infiniteLight->lightID;
+	}
+#endif
+
+#if defined(PARAM_HAS_SKYLIGHT)
+	const uint skyLightIndex = PARAM_DL_LIGHT_COUNT
+#if defined(PARAM_HAS_SUNLIGHT)
+		+ 1
+#endif
+	;
+
+	if (lightIndex == skyLightIndex) {
+		lightRadiance = SkyLight_Illuminate(
+			skyLight,
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+			u0, u1,
+			VLOAD3F(&bsdf->hitPoint.p.x),
+			&lightRayDir, &distance, &directPdfW);
+		lightID = skyLight->lightID;
+	}
+#endif
+
+#if defined(PARAM_HAS_SUNLIGHT)
+	const uint sunLightIndex = PARAM_DL_LIGHT_COUNT;
+	if (lightIndex == sunLightIndex) {
+		lightRadiance = SunLight_Illuminate(
+			sunLight,
+			u0, u1,
+			&lightRayDir, &distance, &directPdfW);
+		lightID = sunLight->lightID;
+	}
+#endif
+
+#if (PARAM_DL_LIGHT_COUNT > 0)
+	if (lightIndex < PARAM_DL_LIGHT_COUNT) {
+		lightRadiance = TriangleLight_Illuminate(
+			&triLightDefs[lightIndex], tmpHitPoint,
+			VLOAD3F(&bsdf->hitPoint.p.x),
+			u0, u1, u2,
+			&lightRayDir, &distance, &directPdfW
+			MATERIALS_PARAM);
+		lightID = mats[triLightDefs[lightIndex].materialIndex].lightID;
+	}
+#endif
+
+	// Setup the shadow ray
+	if (!Spectrum_IsBlack(lightRadiance)) {
+		BSDFEvent event;
+		float bsdfPdfW;
+		const float3 bsdfEval = BSDF_Evaluate(bsdf,
+				lightRayDir, &event, &bsdfPdfW
+				MATERIALS_PARAM);
+
+		if (!Spectrum_IsBlack(bsdfEval)) {
+			const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
+			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+			const float factor = cosThetaToLight / directLightSamplingPdfW;
+
+#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
+			// Russian Roulette
+			bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+#endif
+
+			// MIS between direct light sampling and BSDF sampling
+			const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+
+			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, radiance);
+			*ID = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+#if defined(PARAM_HAS_PASSTHROUGH)
+			*shadowPassThrought = u3;
+#endif
+
+			// Setup the shadow ray
+			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
+			const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
+#if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
+			Ray_Init4(shadowRay, hitPoint, lightRayDir,
+				epsilon,
+				distance - epsilon);
+#else
+			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir,
+				epsilon,
+				distance - epsilon);
+#endif
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool DirectLightSampling_ONE(
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
 		const float worldCenterX,
@@ -232,125 +383,49 @@ bool DirectLightSampling_ONE(
 #if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
 		const uint depth,
 #endif
-		__global const float *pathThroughput, __global BSDF *bsdf,
-#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_MEM_SPACE_PRIVATE)
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+#if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
 		__global
 #endif
 		Ray *shadowRay, __global float *radiance, __global uint *ID
 		MATERIALS_PARAM_DECL) {
-	float3 lightRayDir;
-	float distance, directPdfW;
-	float3 lightRadiance;
-	uint lightID;
-
 	// Pick a light source to sample
 	float lightPickPdf;
 	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
 
+	return DirectLightSampling(
+		lightIndex,
+		lightPickPdf,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+		worldCenterX,
+		worldCenterY,
+		worldCenterZ,
+		worldRadius,
+#endif
 #if defined(PARAM_HAS_INFINITELIGHT)
-	const uint infiniteLightIndex = PARAM_DL_LIGHT_COUNT
+		infiniteLight,
+		infiniteLightDistribution,
+#endif
 #if defined(PARAM_HAS_SUNLIGHT)
-		+ 1
+		sunLight,
 #endif
-	;
-
-	if (lightIndex == infiniteLightIndex) {
-		lightRadiance = InfiniteLight_Illuminate(
-			infiniteLight,
-			infiniteLightDistribution,
-			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-			u1, u2,
-			VLOAD3F(&bsdf->hitPoint.p.x),
-			&lightRayDir, &distance, &directPdfW
-			IMAGEMAPS_PARAM);
-		lightID = infiniteLight->lightID;
-	}
-#endif
-
 #if defined(PARAM_HAS_SKYLIGHT)
-	const uint skyLightIndex = PARAM_DL_LIGHT_COUNT
-#if defined(PARAM_HAS_SUNLIGHT)
-		+ 1
+		skyLight,
 #endif
-	;
-
-	if (lightIndex == skyLightIndex) {
-		lightRadiance = SkyLight_Illuminate(
-			skyLight,
-			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-			u1, u2,
-			VLOAD3F(&bsdf->hitPoint.p.x),
-			&lightRayDir, &distance, &directPdfW);
-		lightID = skyLight->lightID;
-	}
-#endif
-
-#if defined(PARAM_HAS_SUNLIGHT)
-	const uint sunLightIndex = PARAM_DL_LIGHT_COUNT;
-	if (lightIndex == sunLightIndex) {
-		lightRadiance = SunLight_Illuminate(
-			sunLight,
-			u1, u2,
-			&lightRayDir, &distance, &directPdfW);
-		lightID = sunLight->lightID;
-	}
-#endif
-
 #if (PARAM_DL_LIGHT_COUNT > 0)
-	if (lightIndex < PARAM_DL_LIGHT_COUNT) {
-		lightRadiance = TriangleLight_Illuminate(
-			&triLightDefs[lightIndex], tmpHitPoint,
-			VLOAD3F(&bsdf->hitPoint.p.x),
-			u1, u2, u3,
-			&lightRayDir, &distance, &directPdfW
-			MATERIALS_PARAM);
-		lightID = mats[triLightDefs[lightIndex].materialIndex].lightID;
-	}
+		triLightDefs,
+		tmpHitPoint,
 #endif
-
-	// Setup the shadow ray
-	if (!Spectrum_IsBlack(lightRadiance)) {
-		BSDFEvent event;
-		float bsdfPdfW;
-		const float3 bsdfEval = BSDF_Evaluate(bsdf,
-				lightRayDir, &event, &bsdfPdfW
-				MATERIALS_PARAM);
-
-		if (!Spectrum_IsBlack(bsdfEval)) {
-			const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
-			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-			const float factor = cosThetaToLight / directLightSamplingPdfW;
-
-#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
-			// Russian Roulette
-			bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
-#endif
-
-			// MIS between direct light sampling and BSDF sampling
-			const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
-
-			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput) * bsdfEval * lightRadiance, radiance);
-			*ID = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+		lightsDistribution,
 #if defined(PARAM_HAS_PASSTHROUGH)
-			*shadowPassThrought = u4;
+		u4,
+		shadowPassThrought,
 #endif
-
-			// Setup the shadow ray
-			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
-			const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
-#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_MEM_SPACE_PRIVATE)
-			Ray_Init4(shadowRay, hitPoint, lightRayDir,
-				epsilon,
-				distance - epsilon);
-#else
-			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir,
-				epsilon,
-				distance - epsilon);
+		u1, u2, u3,
+#if !defined(DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR)
+		depth,
 #endif
-
-			return true;
-		}
-	}
-
-	return false;
+		pathThroughput, bsdf,
+		shadowRay, radiance, ID
+		MATERIALS_PARAM);
 }

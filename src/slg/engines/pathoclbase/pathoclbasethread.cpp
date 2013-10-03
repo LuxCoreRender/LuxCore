@@ -575,7 +575,7 @@ void PathOCLBaseRenderThread::CompileKernel(cl::Program *program, cl::Kernel **k
 	delete *kernel;
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling " << name << " Kernel");
 	*kernel = new cl::Kernel(*program, name.c_str());
-	
+
 	if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 		*workgroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
 	else {
@@ -1176,8 +1176,8 @@ void PathOCLBaseRenderThread::EndEdit(const EditActionList &editActions) {
 
 	if (editActions.Has(GEOMETRY_EDIT) ||
 			editActions.Has(AREALIGHTS_EDIT) ||
-			editActions.Has(INFINITELIGHT_EDIT) ||
-			editActions.Has(INFINITELIGHT_EDIT) ||
+			editActions.Has(SUNLIGHT_EDIT) ||
+			editActions.Has(SKYLIGHT_EDIT) ||
 			editActions.Has(INFINITELIGHT_EDIT)) {
 		// Update Scene light power distribution for direct light sampling
 		InitLightsDistribution();

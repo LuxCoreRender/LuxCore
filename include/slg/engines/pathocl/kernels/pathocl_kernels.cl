@@ -722,8 +722,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
-					depth, &task->pathStateBase.throughput.r, bsdf,
-					ray, &task->directLightState.lightRadiance.r, &task->directLightState.lightID
+					depth, &task->pathStateBase.throughput, bsdf,
+					ray, &task->directLightState.lightRadiance, &task->directLightState.lightID
 					MATERIALS_PARAM)) {
 				// I have to trace the shadow ray
 				pathState = RT_DL;

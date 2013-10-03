@@ -147,8 +147,19 @@ __global float *std_upper_bound(__global float *first, __global float *last, con
 		} else
 			count = step;
 	}
+
 	return first;
 }
+
+//__global float *std_upper_bound(__global float *first, __global float *last, const float val) {
+//	__global float *it = first;
+//
+//	while ((it <= last) && (*it <= val)) {
+//		it++;
+//	}
+//
+//	return it;
+//}
 
 float Distribution1D_SampleContinuous(__global float *distribution1D, const float u,
 		float *pdf, uint *off) {
@@ -161,14 +172,12 @@ float Distribution1D_SampleContinuous(__global float *distribution1D, const floa
 		*pdf = func[0];
 		if (off)
 			*off = 0;
-
 		return 0.f;
 	}
 	if (u >= cdf[count]) {
 		*pdf = func[count - 1];
 		if (off)
 			*off = count - 1;
-
 		return 1.f;
 	}
 

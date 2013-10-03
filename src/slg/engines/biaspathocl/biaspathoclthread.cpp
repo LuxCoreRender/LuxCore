@@ -95,7 +95,7 @@ std::string BiasPathOCLRenderThread::AdditionalKernelDefinitions() {
 	return "#define CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE\n"
 			"#define BSDF_INIT_PARAM_MEM_SPACE_PRIVATE\n"
 			"#define DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR\n"
-			"#define DIRECTLIGHTSAMPLING_ONE_PARAM_MEM_SPACE_PRIVATE\n";
+			"#define DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE\n";
 }
 
 string BiasPathOCLRenderThread::AdditionalKernelSources() {
@@ -164,7 +164,7 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		// Spectrum (tmpThroughput) size
 		sizeof(Spectrum) +
 		// Spectrum (tmpPassThroughEvent) size
-		sizeof(float) +
+		(engine->compiledScene->RequiresPassThrough() ? sizeof(float) : 0) +
 
 		// BSDF (tmpHitPoint) size
 		((engine->compiledScene->triLightDefs.size() > 0) ? GetOpenCLHitPointSize() : 0) +
