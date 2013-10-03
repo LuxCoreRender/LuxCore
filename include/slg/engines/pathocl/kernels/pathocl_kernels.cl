@@ -157,44 +157,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 // AdvancePaths Kernel
 //------------------------------------------------------------------------------
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
-void DirectHitFiniteLight(
-		const bool firstPathVertex,
-		const BSDFEvent lastBSDFEvent,
-		const BSDFEvent pathBSDFEvent,
-		__global float *lightsDistribution,
-		__global TriangleLight *triLightDefs,
-		__global const float *pathThroughput, const float distance, __global BSDF *bsdf,
-		const float lastPdfW, __global SampleResult *sampleResult
-		MATERIALS_PARAM_DECL) {
-	float directPdfA;
-	const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf,
-			triLightDefs, &directPdfA
-			MATERIALS_PARAM);
-
-	if (!Spectrum_IsBlack(emittedRadiance)) {
-		// Add emitted radiance
-		float weight = 1.f;
-		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,
-					triLightDefs[bsdf->triangleLightSourceIndex].lightSceneIndex);
-			const float directPdfW = PdfAtoW(directPdfA, distance,
-				fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
-
-			// MIS between BSDF sampling and direct light sampling
-			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
-		}
-		const float3 lightRadiance = weight * VLOAD3F(pathThroughput) * emittedRadiance;
-
-		const uint lightID =  min(BSDF_GetLightID(bsdf
-				MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-		VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
-
-		AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, lightRadiance);
-	}
-}
-#endif
-
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
@@ -502,7 +464,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				if (BSDF_IsLightSource(bsdf)) {
 					DirectHitFiniteLight((depth == 1), task->directLightState.lastBSDFEvent,
 							task->directLightState.pathBSDFEvent, lightsDistribution,
-							triLightDefs, &task->pathStateBase.throughput.r,
+							triLightDefs, &task->pathStateBase.throughput,
 							rayHit->t, bsdf, task->directLightState.lastPdfW,
 							&sample->result
 							MATERIALS_PARAM);
