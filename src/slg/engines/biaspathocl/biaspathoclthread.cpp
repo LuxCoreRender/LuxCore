@@ -45,6 +45,7 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 
 	tasksBuff = NULL;
 	taskStatsBuff = NULL;
+	taskResultsBuff = NULL;
 	pixelFilterBuff = NULL;
 	
 	gpuTaskStats = NULL;
@@ -63,6 +64,7 @@ BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
 
 	delete tasksBuff;
 	delete taskStatsBuff;
+	delete taskResultsBuff;
 	delete pixelFilterBuff;
 
 	delete[] gpuTaskStats;
@@ -91,7 +93,9 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 
 std::string BiasPathOCLRenderThread::AdditionalKernelDefinitions() {
 	return "#define CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE\n"
-			"#define BSDF_INIT_PARAM_MEM_SPACE_PRIVATE\n";
+			"#define BSDF_INIT_PARAM_MEM_SPACE_PRIVATE\n"
+			"#define DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR\n"
+			"#define DIRECTLIGHTSAMPLING_ONE_PARAM_MEM_SPACE_PRIVATE\n";
 }
 
 string BiasPathOCLRenderThread::AdditionalKernelSources() {
@@ -144,12 +148,31 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 	const size_t GPUTaskSize =
 		// Add Seed memory size
 		sizeof(slg::ocl::Seed) +
-		// Spectrum (throughputPathVertex1) BSDF size
+	
+		// Spectrum (throughputPathVertex1) size
 		sizeof(Spectrum) +
 		// BSDF (bsdfPathVertex1) size
 		GetOpenCLBSDFSize() +
+
+		// Spectrum (lightRadiance) size
+		sizeof(Spectrum) +
+		// Spectrum (lightID) size
+		sizeof(float) +
+	
+		// BSDF (tmpBSDF) size
+		GetOpenCLBSDFSize() +
+		// Spectrum (tmpThroughput) size
+		sizeof(Spectrum) +
+		// Spectrum (tmpPassThroughEvent) size
+		sizeof(float) +
+
+		// BSDF (tmpHitPoint) size
+		((engine->compiledScene->triLightDefs.size() > 0) ? GetOpenCLHitPointSize() : 0) +
+
 		// Add SampleResult size
 		GetOpenCLSampleResultSize();
+	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask size: " << GPUTaskSize << "bytes");
+
 	AllocOCLBufferRW(&tasksBuff, GPUTaskSize * engine->taskCount, "GPUTask");
 
 	//--------------------------------------------------------------------------
@@ -157,6 +180,12 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 	//--------------------------------------------------------------------------
 
 	AllocOCLBufferRW(&taskStatsBuff, sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount, "GPUTask Stats");
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU task SampleResult
+	//--------------------------------------------------------------------------
+
+	AllocOCLBufferRW(&taskResultsBuff, GetOpenCLSampleResultSize() * engine->taskCount, "GPUTask SampleResult");
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU pixel filter distribution
@@ -203,6 +232,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, engine->film->GetHeight());
 	renderSampleKernel->setArg(argIndex++, *tasksBuff);
 	renderSampleKernel->setArg(argIndex++, *taskStatsBuff);
+	renderSampleKernel->setArg(argIndex++, *taskResultsBuff);
 	renderSampleKernel->setArg(argIndex++, *pixelFilterBuff);
 
 	// Film parameters
@@ -251,7 +281,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	argIndex = intersectionDevice->SetIntersectionKernelArgs(*renderSampleKernel, argIndex);
 
 	//--------------------------------------------------------------------------
-	// initSeedKernel
+	// mergePixelSamplesKernel
 	//--------------------------------------------------------------------------
 
 	argIndex = 0;
@@ -259,7 +289,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetHeight());
-	mergePixelSamplesKernel->setArg(argIndex++, *tasksBuff);
+	mergePixelSamplesKernel->setArg(argIndex++, *taskResultsBuff);
 	argIndex = SetFilmKernelArgs(*mergePixelSamplesKernel, argIndex);
 }
 
@@ -312,7 +342,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 				renderSampleKernel->setArg(0, tile->xStart);
 				renderSampleKernel->setArg(1, tile->yStart);
 				renderSampleKernel->setArg(2, tile->sampleIndex);
-				if (tile->sampleIndex < 0) {
+				if (!engine->tileRepository->enableProgressiveRefinement) {
 					mergePixelSamplesKernel->setArg(0, tile->xStart);
 					mergePixelSamplesKernel->setArg(1, tile->yStart);
 				}

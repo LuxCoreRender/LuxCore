@@ -100,7 +100,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	else
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
-	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 64), 8));
+	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 32), 8));
 	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("tile.progressiverefinement.enable", false);
 	tileRepository->enableMultipassRendering = cfg.GetBoolean("tile.multipass.enable", false);
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering

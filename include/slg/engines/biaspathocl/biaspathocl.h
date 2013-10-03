@@ -66,6 +66,7 @@ protected:
 
 	cl::Buffer *tasksBuff;
 	cl::Buffer *taskStatsBuff;
+	cl::Buffer *taskResultsBuff;
 	cl::Buffer *pixelFilterBuff;
 
 	u_int sampleDimensions;
