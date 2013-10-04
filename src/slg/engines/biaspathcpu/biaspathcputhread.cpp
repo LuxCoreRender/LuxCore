@@ -170,6 +170,24 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 	}
 }
 
+void BiasPathCPURenderThread::AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
+		const u_int lightID, SampleResult *sampleResult, const Spectrum &emission) const {
+	sampleResult->radiancePerPixelNormalized[lightID] += emission;
+
+	if (firstPathVertex)
+		sampleResult->emission += emission;
+	else {
+		sampleResult->indirectShadowMask = 0.f;
+
+		if (pathBSDFEvent & DIFFUSE)
+			sampleResult->indirectDiffuse += emission;
+		else if (pathBSDFEvent & GLOSSY)
+			sampleResult->indirectGlossy += emission;
+		else if (pathBSDFEvent & SPECULAR)
+			sampleResult->indirectSpecular += emission;
+	}
+}
+
 bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent, const BSDFEvent pathBSDFEvent,
 		const Spectrum &pathThroughput, const float distance, const BSDF &bsdf,
@@ -201,18 +219,7 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 			weight = 1.f;
 
 		const Spectrum radiance = weight * pathThroughput * emittedRadiance;
-		sampleResult->radiancePerPixelNormalized[bsdf.GetLightID()] += radiance;
-
-		if (firstPathVertex)
-			sampleResult->emission += radiance;
-		else {
-			if (pathBSDFEvent & DIFFUSE)
-				sampleResult->indirectDiffuse += radiance;
-			else if (pathBSDFEvent & GLOSSY)
-				sampleResult->indirectGlossy += radiance;
-			else if (pathBSDFEvent & SPECULAR)
-				sampleResult->indirectSpecular += radiance;
-		}
+		AddEmission(firstPathVertex, pathBSDFEvent, bsdf.GetLightID(), sampleResult, radiance);
 
 		return true;
 	}
@@ -248,18 +255,7 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 
 			const Spectrum radiance = weight * pathThroughput * envRadiance;
-			sampleResult->radiancePerPixelNormalized[envLight->GetID()] += radiance;
-
-			if (firstPathVertex)
-				sampleResult->emission += radiance;
-			else {
-				if (pathBSDFEvent & DIFFUSE)
-					sampleResult->indirectDiffuse += radiance;
-				else if (pathBSDFEvent & GLOSSY)
-					sampleResult->indirectGlossy += radiance;
-				else if (pathBSDFEvent & SPECULAR)
-					sampleResult->indirectSpecular += radiance;
-			}
+			AddEmission(firstPathVertex, pathBSDFEvent, envLight->GetID(), sampleResult, radiance);
 			
 			illuminated = true;
 		}
@@ -281,18 +277,7 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 				
 			const Spectrum radiance = weight * pathThroughput * sunRadiance;
-			sampleResult->radiancePerPixelNormalized[sunLight->GetID()] += radiance;
-
-			if (firstPathVertex)
-				sampleResult->emission += radiance;
-			else {
-				if (pathBSDFEvent & DIFFUSE)
-					sampleResult->indirectDiffuse += radiance;
-				else if (pathBSDFEvent & GLOSSY)
-					sampleResult->indirectGlossy += radiance;
-				if (pathBSDFEvent & SPECULAR)
-					sampleResult->indirectSpecular += radiance;
-			}
+			AddEmission(firstPathVertex, pathBSDFEvent, sunLight->GetID(), sampleResult, radiance);
 
 			illuminated = true;
 		}

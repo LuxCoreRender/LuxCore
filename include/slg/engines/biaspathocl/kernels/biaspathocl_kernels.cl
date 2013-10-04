@@ -173,12 +173,252 @@ void GenerateCameraRay(
 			);	
 }
 
-#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-bool DirectLightSampling_ALL(
+#if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
+void DirectHitInfiniteLight(
+		const bool firstPathVertex,
+		const BSDFEvent lastBSDFEvent,
+		const BSDFEvent pathBSDFEvent,
+		__global float *lightsDistribution,
+#if defined(PARAM_HAS_INFINITELIGHT)
+		__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		__global SunLight *sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		__global SkyLight *skyLight,
+#endif
+		__global const Spectrum *pathThroughput,
+		const float3 eyeDir, const float lastPdfW,
+		__global SampleResult *sampleResult
+		IMAGEMAPS_PARAM_DECL) {
+	const float3 throughput = VLOAD3F(&pathThroughput->r);
+
+#if defined(PARAM_HAS_INFINITELIGHT)
+	{
+		float directPdfW;
+		const float3 infiniteLightRadiance = InfiniteLight_GetRadiance(infiniteLight,
+				infiniteLightDistribution, eyeDir, &directPdfW
+				IMAGEMAPS_PARAM);
+		if (!Spectrum_IsBlack(infiniteLightRadiance)) {
+			// MIS between BSDF sampling and direct light sampling
+			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, infiniteLight->lightSceneIndex);
+			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+			const float3 lightRadiance = weight * throughput * infiniteLightRadiance;
+
+			const uint lightID = min(infiniteLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+		}
+	}
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+	{
+		float directPdfW;
+		const float3 skyRadiance = SkyLight_GetRadiance(skyLight, eyeDir, &directPdfW);
+		if (!Spectrum_IsBlack(skyRadiance)) {
+			// MIS between BSDF sampling and direct light sampling
+			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, skyLight->lightSceneIndex);
+			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+			const float3 lightRadiance = weight * throughput * skyRadiance;
+
+			const uint lightID = min(skyLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+		}
+	}
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+	{
+		float directPdfW;
+		const float3 sunRadiance = SunLight_GetRadiance(sunLight, eyeDir, &directPdfW);
+		if (!Spectrum_IsBlack(sunRadiance)) {
+			// MIS between BSDF sampling and direct light sampling
+			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, sunLight->lightSceneIndex);
+			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+			const float3 lightRadiance = weight * throughput * sunRadiance;
+
+			const uint lightID = min(sunLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+		}
+	}
+#endif
+}
+#endif
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+void DirectHitFiniteLight(
+		const bool firstPathVertex,
+		const BSDFEvent lastBSDFEvent,
+		const BSDFEvent pathBSDFEvent,
+		__global float *lightsDistribution,
+		__global TriangleLight *triLightDefs,
+		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
+		const float lastPdfW, __global SampleResult *sampleResult
+		MATERIALS_PARAM_DECL) {
+	float directPdfA;
+	const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf,
+			triLightDefs, &directPdfA
+			MATERIALS_PARAM);
+
+	if (!Spectrum_IsBlack(emittedRadiance)) {
+		// Add emitted radiance
+		float weight = 1.f;
+		if (!(lastBSDFEvent & SPECULAR)) {
+			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,
+					triLightDefs[bsdf->triangleLightSourceIndex].lightSceneIndex);
+			const float directPdfW = PdfAtoW(directPdfA, distance,
+				fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
+
+			// MIS between BSDF sampling and direct light sampling
+			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+		}
+		const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->r) * emittedRadiance;
+
+		const uint lightID =  min(BSDF_GetLightID(bsdf
+				MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+		AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+	}
+}
+#endif
+
+bool DirectLightSampling(
+		const uint lightIndex,
+		const float lightPickPdf,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+		__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		__global SunLight *sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		__global SkyLight *skyLight,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global TriangleLight *triLightDefs,
+		__global HitPoint *tmpHitPoint,
+#endif
+		__global float *lightsDistribution,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float u3,
+		__global float *shadowPassThrought,
+#endif
+		const float u0, const float u1, const float u2,
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		MATERIALS_PARAM_DECL) {
+	float3 lightRayDir;
+	float distance, directPdfW;
+	float3 lightRadiance;
+	uint lightID;
+
+#if defined(PARAM_HAS_INFINITELIGHT)
+	const uint infiniteLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
+#if defined(PARAM_HAS_SUNLIGHT)
+		+ 1
+#endif
+	;
+
+	if (lightIndex == infiniteLightIndex) {
+		lightRadiance = InfiniteLight_Illuminate(
+			infiniteLight,
+			infiniteLightDistribution,
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+			u0, u1,
+			VLOAD3F(&bsdf->hitPoint.p.x),
+			&lightRayDir, &distance, &directPdfW
+			IMAGEMAPS_PARAM);
+		lightID = infiniteLight->lightID;
+	}
+#endif
+
+#if defined(PARAM_HAS_SKYLIGHT)
+	const uint skyLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
+#if defined(PARAM_HAS_SUNLIGHT)
+		+ 1
+#endif
+	;
+
+	if (lightIndex == skyLightIndex) {
+		lightRadiance = SkyLight_Illuminate(
+			skyLight,
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+			u0, u1,
+			VLOAD3F(&bsdf->hitPoint.p.x),
+			&lightRayDir, &distance, &directPdfW);
+		lightID = skyLight->lightID;
+	}
+#endif
+
+#if defined(PARAM_HAS_SUNLIGHT)
+	const uint sunLightIndex = PARAM_TRIANGLE_LIGHT_COUNT;
+	if (lightIndex == sunLightIndex) {
+		lightRadiance = SunLight_Illuminate(
+			sunLight,
+			u0, u1,
+			&lightRayDir, &distance, &directPdfW);
+		lightID = sunLight->lightID;
+	}
+#endif
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+	if (lightIndex < PARAM_TRIANGLE_LIGHT_COUNT) {
+		lightRadiance = TriangleLight_Illuminate(
+			&triLightDefs[lightIndex], tmpHitPoint,
+			VLOAD3F(&bsdf->hitPoint.p.x),
+			u0, u1, u2,
+			&lightRayDir, &distance, &directPdfW
+			MATERIALS_PARAM);
+		lightID = mats[triLightDefs[lightIndex].materialIndex].lightID;
+	}
+#endif
+
+	// Setup the shadow ray
+	if (!Spectrum_IsBlack(lightRadiance)) {
+		BSDFEvent event;
+		float bsdfPdfW;
+		const float3 bsdfEval = BSDF_Evaluate(bsdf,
+				lightRayDir, &event, &bsdfPdfW
+				MATERIALS_PARAM);
+
+		if (!Spectrum_IsBlack(bsdfEval)) {
+			const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
+			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+			const float factor = cosThetaToLight / directLightSamplingPdfW;
+
+			// MIS between direct light sampling and BSDF sampling
+			const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+
+			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, &radiance->r);
+			*ID = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+#if defined(PARAM_HAS_PASSTHROUGH)
+			*shadowPassThrought = u3;
+#endif
+
+			// Setup the shadow ray
+			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
+			const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
+
+			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir,
+				epsilon,
+				distance - epsilon);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DirectLightSampling_ONE(
+		const bool firstPathVertex,
 		Seed *seed,
-		__global uint *currentLightIndex,
-		__global uint *currentLightSampleIndex,
-		__global int *lightSamples,
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -204,9 +444,86 @@ bool DirectLightSampling_ALL(
 		__global float *shadowPassThrought,
 #endif
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
-#if !defined(DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE)
-		__global
+		__global SampleResult *sampleResult,
+		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		MATERIALS_PARAM_DECL) {
+	// Pick a light source to sample
+	float lightPickPdf;
+	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
+
+	const bool illuminated = DirectLightSampling(
+		lightIndex,
+		lightPickPdf,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+		worldCenterX,
+		worldCenterY,
+		worldCenterZ,
+		worldRadius,
 #endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+		infiniteLight,
+		infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		skyLight,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		triLightDefs,
+		tmpHitPoint,
+#endif
+		lightsDistribution,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		Rnd_FloatValue(seed),
+		shadowPassThrought,
+#endif
+		Rnd_FloatValue(seed), Rnd_FloatValue(seed), Rnd_FloatValue(seed),
+		pathThroughput, bsdf,
+		shadowRay, radiance, ID
+		MATERIALS_PARAM);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+	if (firstPathVertex && !illuminated)
+		sampleResult->directShadowMask += 1.f;
+#endif
+
+	return illuminated;
+}
+
+#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
+bool DirectLightSampling_ALL(
+		__global uint *currentLightIndex,
+		__global uint *currentLightSampleIndex,
+		__global int *lightSamples,
+		Seed *seed,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+		__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		__global SunLight *sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		__global SkyLight *skyLight,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global TriangleLight *triLightDefs,
+		__global HitPoint *tmpHitPoint,
+#endif
+		__global float *lightsDistribution,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		__global float *shadowPassThrought,
+#endif
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+		__global SampleResult *sampleResult,
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
 		MATERIALS_PARAM_DECL) {
 	for (; *currentLightIndex < PARAM_LIGHT_COUNT; ++(*currentLightIndex)) {
@@ -220,7 +537,8 @@ bool DirectLightSampling_ALL(
 					(*currentLightSampleIndex) % count, (*currentLightSampleIndex) / count,
 					&u0, &u1);
 
-			if (DirectLightSampling(
+			const float scaleFactor = 1.f / count2;
+			const bool illuminated = DirectLightSampling(
 				*currentLightIndex,
 				1.f,
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
@@ -251,11 +569,17 @@ bool DirectLightSampling_ALL(
 				u0, u1, Rnd_FloatValue(seed),
 				pathThroughput, bsdf,
 				shadowRay, radiance, ID
-				MATERIALS_PARAM)) {
-				const float scaleFactor = 1.f / count2;
+				MATERIALS_PARAM);
+
+			if (illuminated) {
 				VSTORE3F(scaleFactor * VLOAD3F(&radiance->r), &radiance->r);
 				return true;
 			}
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+			else {
+				sampleResult->directShadowMask += scaleFactor;
+			}
+#endif
 		}
 
 		*currentLightSampleIndex = 0;
@@ -421,14 +745,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	const size_t gid = get_global_id(0);
 
 #if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
+	const uint sampleIndex = tileSampleIndex;
+	const uint samplePixelX = gid % PARAM_TILE_SIZE;
+	const uint samplePixelY = gid / PARAM_TILE_SIZE;
+
 	if ((gid >= PARAM_TILE_SIZE * PARAM_TILE_SIZE) ||
 			(tileStartX + samplePixelX >= engineFilmWidth) ||
 			(tileStartY + samplePixelY >= engineFilmHeight))
 		return;
-
-	const uint sampleIndex = tileSampleIndex;
-	const uint samplePixelX = gid % PARAM_TILE_SIZE;
-	const uint samplePixelY = gid / PARAM_TILE_SIZE;
 #else
 	const uint sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
 	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
@@ -518,6 +842,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 	__global SampleResult *sampleResult = &taskResults[gid];
 	SampleResult_Init(sampleResult);
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+	sampleResult->directShadowMask = 0.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+	sampleResult->indirectShadowMask = 0.f;
+#endif
 
 	Ray ray;
 	RayHit rayHit;
@@ -723,12 +1053,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 				sampleResult->materialID = NULL_INDEX;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-				sampleResult->directShadowMask = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-				sampleResult->indirectShadowMask = 0.f;
-#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 				sampleResult->uv.u = INFINITY;
 				sampleResult->uv.v = INFINITY;
@@ -759,9 +1083,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 //				if (get_global_id(0) == 0)
 //					printf("DIRECT_LIGHT_TRACE_RAY => lightRadiance: %f %f %f [%d]\n", lightRadiance.s0, lightRadiance.s1, lightRadiance.s2, lightID);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-				sampleResult->directShadowMask = 0.f;
-#endif
 				if (BSDF_GetEventTypes(&task->bsdfPathVertex1
 						MATERIALS_PARAM) & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
@@ -773,6 +1094,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 				}
 			}
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+			else {
+				const int samplesCount = lightSamples[task->lightIndex];
+				const uint count = (samplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)samplesCount;
+				const float scaleFactor = 1.f / (count * count);
+
+				sampleResult->directShadowMask += scaleFactor;
+			}
+#endif
+
 
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 			const uint lightIndex = task->lightIndex;
@@ -798,36 +1129,38 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			} else {
 #if defined(PARAM_DIRECT_LIGHT_ONE_STRATEGY)
 				if (DirectLightSampling_ONE(
+						true,
 #endif
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 				if (DirectLightSampling_ALL(
-						&seed,
 						&task->lightIndex,
 						&task->lightSampleIndex,
 						lightSamples,
 #endif
-	#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+						&seed,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-	#endif
-	#if defined(PARAM_HAS_INFINITELIGHT)
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
 						infiniteLight,
 						infiniteLightDistribution,
-	#endif
-	#if defined(PARAM_HAS_SUNLIGHT)
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
 						sunLight,
-	#endif
-	#if defined(PARAM_HAS_SKYLIGHT)
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
 						skyLight,
-	#endif
-	#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 						triLightDefs,
 						&task->tmpHitPoint,
-	#endif
+#endif
 						lightsDistribution,
-	#if defined(PARAM_HAS_PASSTHROUGH)
+#if defined(PARAM_HAS_PASSTHROUGH)
 						&task->tmpPassThroughEvent,
-	#endif
+#endif
 						&task->throughputPathVertex1, &task->bsdfPathVertex1,
+						sampleResult,
 						&ray, &task->lightRadiance, &task->lightID
 						MATERIALS_PARAM)) {
 
@@ -864,7 +1197,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			SR_RadianceClamp(sampleResult);
 
 #if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
-			Film_AddSample(samplePixelX, samplePixelY, &task->result, 1.f
+			Film_AddSample(samplePixelX, samplePixelY, sampleResult, 1.f
 					FILM_PARAM);
 #endif
 
@@ -891,87 +1224,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 //------------------------------------------------------------------------------
 // MergePixelSamples
 //------------------------------------------------------------------------------
-
-void SR_Init(SampleResult *sampleResult) {
-	// Initialize only Spectrum fields
-
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	sampleResult->radiancePerPixelNormalized[0].r = 0.f;
-	sampleResult->radiancePerPixelNormalized[0].g = 0.f;
-	sampleResult->radiancePerPixelNormalized[0].b = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	sampleResult->radiancePerPixelNormalized[1].r = 0.f;
-	sampleResult->radiancePerPixelNormalized[1].g = 0.f;
-	sampleResult->radiancePerPixelNormalized[1].b = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	sampleResult->radiancePerPixelNormalized[2].r = 0.f;
-	sampleResult->radiancePerPixelNormalized[2].g = 0.f;
-	sampleResult->radiancePerPixelNormalized[2].b = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	sampleResult->radiancePerPixelNormalized[3].r = 0.f;
-	sampleResult->radiancePerPixelNormalized[3].g = 0.f;
-	sampleResult->radiancePerPixelNormalized[3].b = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	sampleResult->radiancePerPixelNormalized[4].r = 0.f;
-	sampleResult->radiancePerPixelNormalized[4].g = 0.f;
-	sampleResult->radiancePerPixelNormalized[4].b = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	sampleResult->radiancePerPixelNormalized[5].r = 0.f;
-	sampleResult->radiancePerPixelNormalized[5].g = 0.f;
-	sampleResult->radiancePerPixelNormalized[5].b = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	sampleResult->radiancePerPixelNormalized[6].r = 0.f;
-	sampleResult->radiancePerPixelNormalized[6].g = 0.f;
-	sampleResult->radiancePerPixelNormalized[6].b = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	sampleResult->radiancePerPixelNormalized[7].r = 0.f;
-	sampleResult->radiancePerPixelNormalized[7].g = 0.f;
-	sampleResult->radiancePerPixelNormalized[7].b = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-	sampleResult->directDiffuse.r = 0.f;
-	sampleResult->directDiffuse.g = 0.f;
-	sampleResult->directDiffuse.b = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-	sampleResult->directGlossy.r = 0.f;
-	sampleResult->directGlossy.g = 0.f;
-	sampleResult->directGlossy.b = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-	sampleResult->emission.r = 0.f;
-	sampleResult->emission.g = 0.f;
-	sampleResult->emission.b = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-	sampleResult->indirectDiffuse.r = 0.f;
-	sampleResult->indirectDiffuse.g = 0.f;
-	sampleResult->indirectDiffuse.b = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-	sampleResult->indirectGlossy.r = 0.f;
-	sampleResult->indirectGlossy.g = 0.f;
-	sampleResult->indirectGlossy.b = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-	sampleResult->indirectSpecular.r = 0.f;
-	sampleResult->indirectSpecular.g = 0.f;
-	sampleResult->indirectSpecular.b = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-	sampleResult->depth = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-	sampleResult->rayCount = 0.f;
-#endif
-}
 
 void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -1300,10 +1552,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	// Merge all samples
 	//--------------------------------------------------------------------------
 
-	SampleResult result;
-	SR_Init(&result);
-
-	for (uint i = 0; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
+	SampleResult result = sampleResult[0];
+	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
 		SR_Accumulate(&sampleResult[i], &result);
 	SR_Normalize(&result, 1.f / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES));
 

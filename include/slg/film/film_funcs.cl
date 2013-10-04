@@ -66,12 +66,6 @@ void SampleResult_Init(__global SampleResult *sampleResult) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
 	VSTORE3F(BLACK, &sampleResult->indirectSpecular.r);
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	sampleResult->directShadowMask = 1.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-	sampleResult->indirectShadowMask = 1.f;
-#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	sampleResult->rayCount = 0.f;
 #endif

@@ -49,7 +49,7 @@ private:
 
 	void RenderFunc();
 
-	void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
+	void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent, const u_int lightID,
 		SampleResult *sampleResult, const luxrays::Spectrum &emission) const;
 
 	void DirectLightSampling(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,

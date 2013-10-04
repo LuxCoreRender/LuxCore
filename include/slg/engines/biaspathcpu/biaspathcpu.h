@@ -79,14 +79,16 @@ private:
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		SampleResult *sampleResult);
 
+	void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent, const u_int lightID,
+		SampleResult *sampleResult, const luxrays::Spectrum &emission) const;
 	bool DirectHitFiniteLight(const bool firstPathVertex, const BSDFEvent lastBSDFEvent,
-			const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,
-			const float distance, const BSDF &bsdf, const float lastPdfW,
-			SampleResult *sampleResult);
+		const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,
+		const float distance, const BSDF &bsdf, const float lastPdfW,
+		SampleResult *sampleResult);
 	bool DirectHitInfiniteLight(const bool firstPathVertex, const BSDFEvent lastBSDFEvent,
-			const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,
-			const luxrays::Vector &eyeDir, const float lastPdfW,
-			SampleResult *sampleResult);
+		const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,
+		const luxrays::Vector &eyeDir, const float lastPdfW,
+		SampleResult *sampleResult);
 
 	bool ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
 		luxrays::Spectrum pathThrouput, BSDFEvent lastBSDFEvent, float lastPdfW,

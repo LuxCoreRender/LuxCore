@@ -102,9 +102,7 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 
 std::string BiasPathOCLRenderThread::AdditionalKernelDefinitions() {
 	return "#define CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE\n"
-			"#define BSDF_INIT_PARAM_MEM_SPACE_PRIVATE\n"
-			"#define DIRECTLIGHTSAMPLING_ONE_PARAM_DISABLE_RR\n"
-			"#define DIRECTLIGHTSAMPLING_PARAM_MEM_SPACE_PRIVATE\n";
+			"#define BSDF_INIT_PARAM_MEM_SPACE_PRIVATE\n";
 }
 
 string BiasPathOCLRenderThread::AdditionalKernelSources() {
