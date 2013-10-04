@@ -26,9 +26,16 @@
 //  PARAM_TILE_SIZE
 //  PARAM_TILE_PROGRESSIVE_REFINEMENT
 //  PARAM_DIRECT_LIGHT_ONE_STRATEGY or PARAM_DIRECT_LIGHT_ALL_STRATEGY
+//  PARAM_RADIANCE_CLAMP_MAXVALUE
 //  PARAM_AA_SAMPLES
 //  PARAM_DIRECT_LIGHT_SAMPLES
-//  PARAM_RADIANCE_CLAMP_MAXVALUE
+//  PARAM_DIFFUSE_SAMPLES
+//  PARAM_GLOSSY_SAMPLES
+//  PARAM_SPECULAR_SAMPLES
+//  PARAM_DEPTH_MAX
+//  PARAM_DEPTH_DIFFUSE_MAX
+//  PARAM_DEPTH_GLOSSY_MAX
+//  PARAM_DEPTH_SPECULAR_MAX
 
 //------------------------------------------------------------------------------
 // InitSeed Kernel
@@ -76,6 +83,34 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
 //------------------------------------------------------------------------------
 // BiasAdvancePaths Kernel
 //------------------------------------------------------------------------------
+
+typedef struct {
+	uint depth, diffuseDepth, glossyDepth, specularDepth;
+} PathDepthInfo;
+
+void PathDepthInfo_Init(PathDepthInfo *depthInfo, const uint val) {
+	depthInfo->depth = val;
+	depthInfo->diffuseDepth = val;
+	depthInfo->glossyDepth = val;
+	depthInfo->specularDepth = val;
+}
+
+void PathDepthInfo_IncDepths(PathDepthInfo *depthInfo, const BSDFEvent event) {
+	++(depthInfo->depth);
+	if (event & DIFFUSE)
+		++(depthInfo->diffuseDepth);
+	if (event & GLOSSY)
+		++(depthInfo->glossyDepth);
+	if (event & SPECULAR)
+		++(depthInfo->specularDepth);
+}
+
+bool PathDepthInfo_CheckDepths(PathDepthInfo *depthInfo) {
+	return ((depthInfo->depth <= PARAM_DEPTH_MAX) &&
+			(depthInfo->diffuseDepth <= PARAM_DEPTH_DIFFUSE_MAX) &&
+			(depthInfo->glossyDepth <= PARAM_DEPTH_GLOSSY_MAX) &&
+			(depthInfo->specularDepth <= PARAM_DEPTH_SPECULAR_MAX));
+}
 
 void SR_RadianceClamp(__global SampleResult *sampleResult) {
 	// Initialize only Spectrum fields
@@ -302,13 +337,9 @@ bool DirectLightSampling(
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global TriangleLight *triLightDefs,
-		__global HitPoint *tmpHitPoint,
+		__global HitPoint *directLightHitPoint,
 #endif
 		__global float *lightsDistribution,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float u3,
-		__global float *shadowPassThrought,
-#endif
 		const float u0, const float u1, const float u2,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
@@ -370,7 +401,7 @@ bool DirectLightSampling(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	if (lightIndex < PARAM_TRIANGLE_LIGHT_COUNT) {
 		lightRadiance = TriangleLight_Illuminate(
-			&triLightDefs[lightIndex], tmpHitPoint,
+			&triLightDefs[lightIndex], directLightHitPoint,
 			VLOAD3F(&bsdf->hitPoint.p.x),
 			u0, u1, u2,
 			&lightRayDir, &distance, &directPdfW
@@ -397,9 +428,6 @@ bool DirectLightSampling(
 
 			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, &radiance->r);
 			*ID = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-#if defined(PARAM_HAS_PASSTHROUGH)
-			*shadowPassThrought = u3;
-#endif
 
 			// Setup the shadow ray
 			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
@@ -437,12 +465,9 @@ bool DirectLightSampling_ONE(
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global TriangleLight *triLightDefs,
-		__global HitPoint *tmpHitPoint,
+		__global HitPoint *directLightHitPoint,
 #endif
 		__global float *lightsDistribution,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		__global float *shadowPassThrought,
-#endif
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global SampleResult *sampleResult,
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
@@ -472,13 +497,9 @@ bool DirectLightSampling_ONE(
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		triLightDefs,
-		tmpHitPoint,
+		directLightHitPoint,
 #endif
 		lightsDistribution,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		Rnd_FloatValue(seed),
-		shadowPassThrought,
-#endif
 		Rnd_FloatValue(seed), Rnd_FloatValue(seed), Rnd_FloatValue(seed),
 		pathThroughput, bsdf,
 		shadowRay, radiance, ID
@@ -516,12 +537,9 @@ bool DirectLightSampling_ALL(
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global TriangleLight *triLightDefs,
-		__global HitPoint *tmpHitPoint,
+		__global HitPoint *directLightHitPoint,
 #endif
 		__global float *lightsDistribution,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		__global float *shadowPassThrought,
-#endif
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global SampleResult *sampleResult,
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
@@ -559,13 +577,9 @@ bool DirectLightSampling_ALL(
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				triLightDefs,
-				tmpHitPoint,
+				directLightHitPoint,
 #endif
 				lightsDistribution,
-#if defined(PARAM_HAS_PASSTHROUGH)
-				Rnd_FloatValue(seed),
-				shadowPassThrought,
-#endif
 				u0, u1, Rnd_FloatValue(seed),
 				pathThroughput, bsdf,
 				shadowRay, radiance, ID
@@ -801,36 +815,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 
 	//--------------------------------------------------------------------------
-	// Initialize Film radiance group pointer table
-	//--------------------------------------------------------------------------
-
-	__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-		filmRadianceGroup[0] = filmRadianceGroup0;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-		filmRadianceGroup[1] = filmRadianceGroup1;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-		filmRadianceGroup[2] = filmRadianceGroup2;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-		filmRadianceGroup[3] = filmRadianceGroup3;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-		filmRadianceGroup[3] = filmRadianceGroup4;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-		filmRadianceGroup[3] = filmRadianceGroup5;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-		filmRadianceGroup[3] = filmRadianceGroup6;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-		filmRadianceGroup[3] = filmRadianceGroup7;
-#endif
-
-	//--------------------------------------------------------------------------
 	// Initialize the first ray
 	//--------------------------------------------------------------------------
 
@@ -857,38 +841,46 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			tileStartX, tileStartY, 
 			engineFilmWidth, engineFilmHeight, &ray);
 
-	VSTORE3F(WHITE, &task->throughputPathVertex1.r);
-
 	//--------------------------------------------------------------------------
 	// Render a sample
 	//--------------------------------------------------------------------------
 
+	task->vertex1SampleComponent = NONE;
+	task->vertex1SampleIndex = 0;
+
 	uint tracedRaysCount = taskStat->raysCount;
 	uint pathState = PATH_VERTEX_1 | NEXT_VERTEX_TRACE_RAY;
+	PathDepthInfo depthInfo;
+	PathDepthInfo_Init(&depthInfo, 0);
 	float lastPdfW = 1.f;
 	BSDFEvent pathBSDFEvent = NONE;
 	BSDFEvent lastBSDFEvent = SPECULAR;
 
 	__global BSDF *currentBSDF = &task->bsdfPathVertex1;
-	__global Spectrum *currentTroughtput = &task->throughputPathVertex1;
+	__global Spectrum *currentThroughput = &task->throughputPathVertex1;
+	VSTORE3F(WHITE, &task->throughputPathVertex1.r);
 #if defined(PARAM_HAS_PASSTHROUGH)
 	// This is a bit tricky. I store the passThroughEvent in the BSDF
 	// before of the initialization because it can be used during the
 	// tracing of next path vertex ray.
 
 	task->bsdfPathVertex1.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
-	__global float *currentPassThroughEvent = &task->bsdfPathVertex1.hitPoint.passThroughEvent;
 #endif
 
-//	if (get_global_id(0) == 0) {
-//		printf("============================================================\n");
-//		printf("== Begin loop\n");
-//		printf("============================================================\n");
-//	}
+	//if (get_global_id(0) == 0) {
+	//	printf("============================================================\n");
+	//	printf("== Begin loop\n");
+	//	printf("==\n");
+	//	printf("== task->bsdfPathVertex1: %x\n", &task->bsdfPathVertex1);
+	//	printf("== task->directLightBSDF: %x\n", &task->directLightBSDF);
+	//	printf("== task->bsdfPathVertexN: %x\n", &task->bsdfPathVertexN);
+	//	printf("============================================================\n");
+	//}
 
 	for (;;) {
-//		if (get_global_id(0) == 0)
-//			printf("pathState: %d|%d\n", pathState >> 16, pathState & 0xffff);
+		//if (get_global_id(0) == 0)
+		//	printf("Depth: %d  [pathState: %d|%d][currentBSDF: %x][currentThroughput: %x]\n",
+		//			depthInfo.depth, pathState >> 16, pathState & LOW_STATE_MASK, currentBSDF, currentThroughput);
 
 		//----------------------------------------------------------------------
 		// Ray trace step
@@ -921,7 +913,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 					triangles, &ray, &rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
-					, *currentPassThroughEvent
+					, currentBSDF->hitPoint.passThroughEvent
 #endif
 #if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
 					MATERIALS_PARAM
@@ -932,8 +924,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(currentBSDF
 					MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
-				const float3 pathThroughput = VLOAD3F(&currentTroughtput->r) * passThroughTrans;
-				VSTORE3F(pathThroughput, &currentTroughtput->r);
+				const float3 pathThroughput = VLOAD3F(&currentThroughput->r) * passThroughTrans;
+				VSTORE3F(pathThroughput, &currentThroughput->r);
 
 				// It is a pass through point, continue to trace the ray
 				ray.mint = rayHit.t + MachineEpsilon_E(rayHit.t);
@@ -950,47 +942,50 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 		// Evaluation of the finite state machine.
 		//
-		// From: PATH_VERTEX_1|NEXT_VERTEX_TRACE_RAY
-		// To: ADD_SAMPLE PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
+		// From: * | NEXT_VERTEX_TRACE_RAY
+		// To: BREAK or
+		//     (* | DIRECT_LIGHT_GENERATE_RAY)
 		//----------------------------------------------------------------------
 
-		if (pathState == (PATH_VERTEX_1 | NEXT_VERTEX_TRACE_RAY)) {
+		if (pathState & NEXT_VERTEX_TRACE_RAY) {
 			if (rayHit.meshIndex != NULL_INDEX) {
 				//--------------------------------------------------------------
 				// Something was hit
 				//--------------------------------------------------------------
-			
-				// Save the path first vertex information
+
+				if (pathState & PATH_VERTEX_1) {
+					// Save the path first vertex information
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-				sampleResult->alpha = 1.f;
+					sampleResult->alpha = 1.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-				sampleResult->depth = rayHit.t;
+					sampleResult->depth = rayHit.t;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-				sampleResult->position = task->bsdfPathVertex1.hitPoint.p;
+					sampleResult->position = task->bsdfPathVertex1.hitPoint.p;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-				sampleResult->geometryNormal = task->bsdfPathVertex1.hitPoint.geometryN;
+					sampleResult->geometryNormal = task->bsdfPathVertex1.hitPoint.geometryN;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-				sampleResult->shadingNormal = task->bsdfPathVertex1.hitPoint.shadeN;
+					sampleResult->shadingNormal = task->bsdfPathVertex1.hitPoint.shadeN;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-				sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1
-					MATERIALS_PARAM);
+					sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1
+						MATERIALS_PARAM);
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
-				sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
+					sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
 #endif
+				}
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				// Check if it is a light source (note: I can hit only triangle area light sources)
 				if (BSDF_IsLightSource(&task->bsdfPathVertex1)) {
 					DirectHitFiniteLight(true, lastBSDFEvent,
 							pathBSDFEvent, lightsDistribution,
-							triLightDefs, &task->throughputPathVertex1,
-							rayHit.t, &task->bsdfPathVertex1, lastPdfW,
+							triLightDefs, currentThroughput,
+							rayHit.t, currentBSDF, lastPdfW,
 							sampleResult
 							MATERIALS_PARAM);
 				}
@@ -1000,7 +995,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				task->lightIndex = 0;
 				task->lightSampleIndex = 0;
 #endif
-				pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
+				pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
 			} else {
 				//--------------------------------------------------------------
 				// Nothing was hit, add environmental lights radiance
@@ -1023,120 +1018,154 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_SKYLIGHT)
 						skyLight,
 #endif
-						&task->throughputPathVertex1,
+						currentThroughput,
 						-rayDir, lastPdfW,
 						sampleResult
 						IMAGEMAPS_PARAM);
 #endif
 
+				if (pathState & PATH_VERTEX_1) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-				sampleResult->alpha = 0.f;
+					sampleResult->alpha = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-				sampleResult->depth = INFINITY;
+					sampleResult->depth = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-				sampleResult->position.x = INFINITY;
-				sampleResult->position.y = INFINITY;
-				sampleResult->position.z = INFINITY;
+					sampleResult->position.x = INFINITY;
+					sampleResult->position.y = INFINITY;
+					sampleResult->position.z = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-				sampleResult->geometryNormal.x = INFINITY;
-				sampleResult->geometryNormal.y = INFINITY;
-				sampleResult->geometryNormal.z = INFINITY;
+					sampleResult->geometryNormal.x = INFINITY;
+					sampleResult->geometryNormal.y = INFINITY;
+					sampleResult->geometryNormal.z = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-				sampleResult->shadingNormal.x = INFINITY;
-				sampleResult->shadingNormal.y = INFINITY;
-				sampleResult->shadingNormal.z = INFINITY;
+					sampleResult->shadingNormal.x = INFINITY;
+					sampleResult->shadingNormal.y = INFINITY;
+					sampleResult->shadingNormal.z = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-				sampleResult->materialID = NULL_INDEX;
+					sampleResult->materialID = NULL_INDEX;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
-				sampleResult->uv.u = INFINITY;
-				sampleResult->uv.v = INFINITY;
+					sampleResult->uv.u = INFINITY;
+					sampleResult->uv.v = INFINITY;
 #endif
+				}
 
-				pathState = ADD_SAMPLE;
+				// Done
+				break;
 			}
 		}
 
 		//----------------------------------------------------------------------
 		// Evaluation of the finite state machine.
 		//
-		// From: PATH_VERTEX_1|DIRECT_LIGHT_TRACE_RAY
-		// To: ADD_SAMPLE or PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
+		// From: * | DIRECT_LIGHT_TRACE_RAY
+		// To: (* | NEXT_VERTEX_GENERATE_RAY) or
+		//     (* | DIRECT_LIGHT_GENERATE_RAY)
 		//----------------------------------------------------------------------
 
-		if (pathState == (PATH_VERTEX_1 | DIRECT_LIGHT_TRACE_RAY)) {
+		if (pathState & DIRECT_LIGHT_TRACE_RAY) {
 			if (rayHit.meshIndex == NULL_INDEX) {
 				//--------------------------------------------------------------
 				// Nothing was hit, the light source is visible
 				//--------------------------------------------------------------
 
-				// tmpThroughput contains the shadow ray throughput
-				const float3 lightRadiance = VLOAD3F(&task->tmpThroughput.r) * VLOAD3F(&task->lightRadiance.r);
+				// currentThroughput contains the shadow ray throughput
+				const float3 lightRadiance = VLOAD3F(&currentThroughput->r) * VLOAD3F(&task->lightRadiance.r);
 				const uint lightID = task->lightID;
 				VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
 
-//				if (get_global_id(0) == 0)
-//					printf("DIRECT_LIGHT_TRACE_RAY => lightRadiance: %f %f %f [%d]\n", lightRadiance.s0, lightRadiance.s1, lightRadiance.s2, lightID);
+				//if (get_global_id(0) == 0)
+				//	printf("DIRECT_LIGHT_TRACE_RAY => lightRadiance: %f %f %f [%d]\n", lightRadiance.s0, lightRadiance.s1, lightRadiance.s2, lightID);
 
-				if (BSDF_GetEventTypes(&task->bsdfPathVertex1
-						MATERIALS_PARAM) & DIFFUSE) {
+				if (pathState & PATH_VERTEX_1) {
+					if (BSDF_GetEventTypes(&task->bsdfPathVertex1
+							MATERIALS_PARAM) & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-					VADD3F(&sampleResult->directDiffuse.r, lightRadiance);
+						VADD3F(&sampleResult->directDiffuse.r, lightRadiance);
 #endif
-				} else {
+					} else {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-					VADD3F(&sampleResult->directGlossy.r, lightRadiance);
+						VADD3F(&sampleResult->directGlossy.r, lightRadiance);
 #endif
+					}
+				} else {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+					sample->result.indirectShadowMask = 0.f;
+#endif
+
+					if (pathBSDFEvent & DIFFUSE) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+						VADD3F(&sample->result.indirectDiffuse.r, lightRadiance);
+#endif
+					} else if (pathBSDFEvent & GLOSSY) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+						VADD3F(&sample->result.indirectGlossy.r, lightRadiance);
+#endif
+					} else if (pathBSDFEvent & SPECULAR) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+						VADD3F(&sample->result.indirectSpecular.r, lightRadiance);
+#endif
+					}
 				}
 			}
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 			else {
-				const int samplesCount = lightSamples[task->lightIndex];
-				const uint count = (samplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)samplesCount;
-				const float scaleFactor = 1.f / (count * count);
+				if (pathState & PATH_VERTEX_1) {
+					const int samplesCount = lightSamples[task->lightIndex];
+					const uint count = (samplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)samplesCount;
+					const float scaleFactor = 1.f / (count * count);
 
-				sampleResult->directShadowMask += scaleFactor;
+					sampleResult->directShadowMask += scaleFactor;
+				}
 			}
 #endif
 
-
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-			const uint lightIndex = task->lightIndex;
-			if (lightIndex <= PARAM_LIGHT_COUNT) {
-				++task->lightSampleIndex;
-				pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
-			} else
+			if (pathState & PATH_VERTEX_1) {
+				const uint lightIndex = task->lightIndex;
+				if (lightIndex <= PARAM_LIGHT_COUNT) {
+					++task->lightSampleIndex;
+					pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
+				} else {
+					// Move to the next path vertex
+					pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
+				}
+			} else	
 #endif
-			pathState = ADD_SAMPLE;
+			{
+				// Move to the next path vertex
+				pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
+			}
 		}
 
 		//----------------------------------------------------------------------
 		// Evaluation of the finite state machine.
 		//
-		// From: PATH_VERTEX_1|DIRECT_LIGHT_GENERATE_RAY
-		// To: ADD_SAMPLE PATH_VERTEX_1|DIRECT_LIGHT_TRACE_RAY[continue]
+		// From: * | DIRECT_LIGHT_GENERATE_RAY
+		// To: BREAK or
+		//     (* | NEXT_VERTEX_GENERATE_RAY) or 
+		//     (* | DIRECT_LIGHT_TRACE_RAY[continue])
 		//----------------------------------------------------------------------
 
-		if (pathState == (PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY)) {
+		if (pathState & DIRECT_LIGHT_GENERATE_RAY) {
 			if (BSDF_IsDelta(&task->bsdfPathVertex1
 				MATERIALS_PARAM)) {
-				pathState = ADD_SAMPLE;
+				// Move to the next path vertex
+				pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
 			} else {
-#if defined(PARAM_DIRECT_LIGHT_ONE_STRATEGY)
-				if (DirectLightSampling_ONE(
-						true,
-#endif
+				const bool firstPathVertex = (pathState & PATH_VERTEX_1);
+
+				const bool illuminated =
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-				if (DirectLightSampling_ALL(
-						&task->lightIndex,
-						&task->lightSampleIndex,
-						lightSamples,
+				(!firstPathVertex) ?
 #endif
+					DirectLightSampling_ONE(
+						firstPathVertex,
 						&seed,
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
@@ -1153,65 +1182,171 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 						triLightDefs,
-						&task->tmpHitPoint,
+						&task->directLightHitPoint,
 #endif
 						lightsDistribution,
-#if defined(PARAM_HAS_PASSTHROUGH)
-						&task->tmpPassThroughEvent,
+						firstPathVertex ? &task->throughputPathVertex1 : &task->throughputPathVertexN,
+						firstPathVertex ? &task->bsdfPathVertex1 : &task->bsdfPathVertexN,
+						sampleResult,
+						&ray, &task->lightRadiance, &task->lightID
+						MATERIALS_PARAM)
+#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
+				: DirectLightSampling_ALL(
+						&task->lightIndex,
+						&task->lightSampleIndex,
+						lightSamples,
+						&seed,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+						infiniteLight,
+						infiniteLightDistribution,
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+						sunLight,
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+						skyLight,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+						triLightDefs,
+						&task->directLightHitPoint,
+#endif
+						lightsDistribution,
 						&task->throughputPathVertex1, &task->bsdfPathVertex1,
 						sampleResult,
 						&ray, &task->lightRadiance, &task->lightID
-						MATERIALS_PARAM)) {
-
-//					if (get_global_id(0) == 0)
-//						printf("DIRECT_LIGHT_GENERATE_RAY => lightRadiance: %f %f %f [%d]\n", task->lightRadiance.r, task->lightRadiance.g, task->lightRadiance.b, task->lightID);
-
-					// Trace the shadow ray
-					currentBSDF = &task->tmpBSDF;
-					currentTroughtput = &task->tmpThroughput;
-					VSTORE3F(WHITE, &currentTroughtput->r);
-#if defined(PARAM_HAS_PASSTHROUGH)
-					currentPassThroughEvent = &task->tmpPassThroughEvent;
+						MATERIALS_PARAM)
 #endif
-					pathState = PATH_VERTEX_1 | DIRECT_LIGHT_TRACE_RAY;
+				;
+				
+				if (illuminated) {
+					// Trace the shadow ray
+					currentBSDF = &task->directLightBSDF;
+					currentThroughput = &task->directLightThroughput;
+					VSTORE3F(WHITE, &currentThroughput->r);
+#if defined(PARAM_HAS_PASSTHROUGH)
+					// This is a bit tricky. I store the passThroughEvent in the BSDF
+					// before of the initialization because it can be use during the
+					// tracing of next path vertex ray.
+					task->directLightBSDF.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+#endif
+
+					pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_TRACE_RAY;
 					continue;
-				} else
-					pathState = ADD_SAMPLE;
+				} else {
+					// Move to the next path vertex
+					pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
+				}
 			}
 		}
 
 		//----------------------------------------------------------------------
 		// Evaluation of the finite state machine.
 		//
-		// From: ADD_SAMPLE
-		// To: end of kernel execution
+		// From: * | NEXT_VERTEX_GENERATE_RAY
+		// To: BREAK or (PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY[continue])
 		//----------------------------------------------------------------------
 
-		if (pathState == ADD_SAMPLE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-			sampleResult->rayCount = tracedRaysCount;
+		if (pathState & NEXT_VERTEX_GENERATE_RAY) {
+			//const int samplesCount = materialSamples[task->lightIndex];
+			//const uint count = (samplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)samplesCount;
+			//const float scaleFactor = 1.f / (count * count);
+
+			currentBSDF = (pathState & PATH_VERTEX_1) ? &task->bsdfPathVertex1 : &task->bsdfPathVertexN;
+			currentThroughput = (pathState & PATH_VERTEX_1) ? &task->throughputPathVertex1 : &task->throughputPathVertexN;
+
+			//if (get_global_id(0) == 0)
+			//	printf("(* | NEXT_VERTEX_GENERATE_RAY)) ==> Depth: %d  [pathState: %d|%d][currentThroughput: %f %f %f]\n",
+			//			depthInfo.depth, pathState >> 16, pathState & LOW_STATE_MASK, currentThroughput->r, currentThroughput->g, currentThroughput->b);
+
+			// Sample the BSDF
+			float3 sampledDir;
+			float cosSampledDir;
+			BSDFEvent event;
+
+			const float3 bsdfSample = BSDF_Sample(currentBSDF,
+					Rnd_FloatValue(&seed),
+					Rnd_FloatValue(&seed),
+					&sampledDir, &lastPdfW, &cosSampledDir, &event
+					MATERIALS_PARAM);
+
+			PathDepthInfo_IncDepths(&depthInfo, event);
+
+			if (!Spectrum_IsBlack(bsdfSample) && PathDepthInfo_CheckDepths(&depthInfo)) {
+				// currentThroughput can be throughputPathVertex1 or throughputPathVertexN 
+				float3 throughput = VLOAD3F(&currentThroughput->r);
+				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
+				// Always storing the result in throughputPathVertexN
+				VSTORE3F(throughput, &task->throughputPathVertexN.r);
+
+				Ray_Init2_Private(&ray, VLOAD3F(&currentBSDF->hitPoint.p.x), sampledDir);
+
+				if (pathState & PATH_VERTEX_1)
+					pathBSDFEvent = event;
+				lastBSDFEvent = event;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+				// This is a bit tricky. I store the passThroughEvent in the BSDF
+				// before of the initialization because it can be use during the
+				// tracing of next path vertex ray.
+				task->bsdfPathVertexN.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
 #endif
+				currentBSDF = &task->bsdfPathVertexN;
+				currentThroughput = &task->throughputPathVertexN;
 
-			// Radiance clamping
-			SR_RadianceClamp(sampleResult);
-
-#if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
-			Film_AddSample(samplePixelX, samplePixelY, sampleResult, 1.f
-					FILM_PARAM);
-#endif
-
-			break;
+				pathState = PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY;
+				continue;
+			} else
+				break;
 		}
 	}
 
-//	if (get_global_id(0) == 0) {
-//		printf("============================================================\n");
-//		printf("== End loop\n");
-//		printf("============================================================\n");
-//	}
+	//if (get_global_id(0) == 0) {
+	//	printf("============================================================\n");
+	//	printf("== End loop\n");
+	//	printf("============================================================\n");
+	//}
 
-	//--------------------------------------------------------------------------
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+	sampleResult->rayCount = tracedRaysCount;
+#endif
+
+	// Radiance clamping
+	SR_RadianceClamp(sampleResult);
+
+#if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
+	// Initialize Film radiance group pointer table
+	__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+		filmRadianceGroup[0] = filmRadianceGroup0;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+		filmRadianceGroup[1] = filmRadianceGroup1;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+		filmRadianceGroup[2] = filmRadianceGroup2;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+		filmRadianceGroup[3] = filmRadianceGroup3;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+		filmRadianceGroup[3] = filmRadianceGroup4;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+		filmRadianceGroup[3] = filmRadianceGroup5;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+		filmRadianceGroup[3] = filmRadianceGroup6;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+		filmRadianceGroup[3] = filmRadianceGroup7;
+#endif
+
+	Film_AddSample(samplePixelX, samplePixelY, sampleResult, 1.f
+			FILM_PARAM);
+#endif
 
 	taskStat->raysCount = tracedRaysCount;
 

@@ -49,9 +49,11 @@
 #define NEXT_VERTEX_GENERATE_RAY (1<<1)
 #define DIRECT_LIGHT_TRACE_RAY (1<<2)
 #define DIRECT_LIGHT_GENERATE_RAY (1<<3)
+#define LOW_STATE_MASK 0xffff
 
 #define PATH_VERTEX_1 (1<<16)
-#define ADD_SAMPLE (1<<17)
+#define PATH_VERTEX_N (1<<17)
+#define HIGH_STATE_MASK 0xffff0000
 
 // This is defined only under OpenCL because of variable size structures
 #if defined(SLG_OPENCL_KERNEL)
@@ -66,22 +68,26 @@ typedef struct {
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 	unsigned int lightIndex, lightSampleIndex;
 #endif
+
+	Spectrum directLightThroughput;
+	BSDF directLightBSDF;
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+	// This is used by TriangleLight_Illuminate() to temporary store the
+	// point on the light sources
+	HitPoint directLightHitPoint;
+#endif
+
 	// Direct light sampling. Radiance to add to the result
 	// if light source is visible.
 	Spectrum lightRadiance;
 	unsigned int lightID;
 
-	BSDF tmpBSDF;
-	Spectrum tmpThroughput;
-#if defined(PARAM_HAS_PASSTHROUGH)
-	float tmpPassThroughEvent;
-#endif
+	// DIFFUSE, GLOSSY and SPECULAR BSDF sampling
+	BSDFEvent vertex1SampleComponent;
+	unsigned int vertex1SampleIndex;
 
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-	// This is used by TriangleLight_Illuminate() to temporary store the
-	// point on the light sources
-	HitPoint tmpHitPoint;
-#endif
+	Spectrum throughputPathVertexN;
+	BSDF bsdfPathVertexN;
 } GPUTask;
 
 #endif

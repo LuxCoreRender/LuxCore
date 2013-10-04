@@ -93,9 +93,16 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 			(engine->tileRepository->enableProgressiveRefinement ?
 				" -D PARAM_TILE_PROGRESSIVE_REFINEMENT" : "") <<
 			((engine->lightSamplingStrategyONE) ? " -D PARAM_DIRECT_LIGHT_ONE_STRATEGY" : " -D PARAM_DIRECT_LIGHT_ALL_STRATEGY") <<
+			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f" <<
 			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<
 			" -D PARAM_DIRECT_LIGHT_SAMPLES=" << engine->directLightSamples <<
-			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f";
+			" -D PARAM_DIFFUSE_SAMPLES=" << engine->diffuseSamples <<
+			" -D PARAM_GLOSSY_SAMPLES=" << engine->glossySamples <<
+			" -D PARAM_SPECULAR_SAMPLES=" << engine->specularSamples <<
+			" -D PARAM_DEPTH_MAX=" << engine->maxPathDepth.depth <<
+			" -D PARAM_DEPTH_DIFFUSE_MAX=" << engine->maxPathDepth.diffuseDepth <<
+			" -D PARAM_DEPTH_GLOSSY_MAX=" << engine->maxPathDepth.glossyDepth <<
+			" -D PARAM_DEPTH_SPECULAR_MAX=" << engine->maxPathDepth.specularDepth;
 
 	return ss.str();
 }
@@ -161,25 +168,35 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		// BSDF (bsdfPathVertex1) size
 		GetOpenCLBSDFSize() +
 
-		// u_int (lightIndex) size
+		// u_int (lightIndex and lightSampleIndex) size
 		((engine->lightSamplingStrategyONE) ? 0 : 2 * sizeof(u_int)) +
+
+		// Spectrum (directLightThroughput) size
+		sizeof(Spectrum) +
+		// BSDF (directLightBSDF) size
+		GetOpenCLBSDFSize() +
+		// HitPoint (directLightHitPoint) size
+		((engine->compiledScene->triLightDefs.size() > 0) ? GetOpenCLHitPointSize() : 0) +
+
 		// Spectrum (lightRadiance) size
 		sizeof(Spectrum) +
-		// Spectrum (lightID) size
-		sizeof(float) +
+		// u_int (lightID) size
+		sizeof(u_int) +
 	
 		// BSDF (tmpBSDF) size
 		GetOpenCLBSDFSize() +
 		// Spectrum (tmpThroughput) size
 		sizeof(Spectrum) +
-		// Spectrum (tmpPassThroughEvent) size
-		(engine->compiledScene->RequiresPassThrough() ? sizeof(float) : 0) +
 
-		// BSDF (tmpHitPoint) size
-		((engine->compiledScene->triLightDefs.size() > 0) ? GetOpenCLHitPointSize() : 0) +
+		// BSDFEvent (vertex1SampleComponent) size
+		sizeof(BSDFEvent) +
+		// u_int (vertex1SampleIndex) size
+		sizeof(u_int) +
 
-		// Add SampleResult size
-		GetOpenCLSampleResultSize();
+		// Spectrum (throughputPathVertexN) size
+		sizeof(Spectrum) +
+		// BSDF (bsdfPathVertexN) size
+		GetOpenCLBSDFSize();
 	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask size: " << GPUTaskSize << "bytes");
 
 	AllocOCLBufferRW(&tasksBuff, GPUTaskSize * engine->taskCount, "GPUTask");
