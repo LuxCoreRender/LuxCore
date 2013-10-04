@@ -112,7 +112,9 @@ void PathCPURenderThread::DirectLightSampling(
 }
 
 void PathCPURenderThread::AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
-		SampleResult *sampleResult, const Spectrum &emission) const {
+		const u_int lightID, SampleResult *sampleResult, const Spectrum &emission) const {
+	sampleResult->radiancePerPixelNormalized[lightID] += emission;
+
 	if (firstPathVertex)
 		sampleResult->emission += emission;
 	else {
@@ -150,9 +152,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 			weight = 1.f;
 
 		const Spectrum radiance = weight * pathThroughput * emittedRadiance;
-		sampleResult->radiancePerPixelNormalized[bsdf.GetLightID()] += radiance;
-
-		AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, radiance);
+		AddEmission(firstPathVertex, pathBSDFEvent, bsdf.GetLightID(),sampleResult, radiance);
 	}
 }
 
@@ -176,9 +176,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 
 			const Spectrum radiance = weight * pathThroughput * envRadiance;
-			sampleResult->radiancePerPixelNormalized[scene->envLight->GetID()] += radiance;
-
-			AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, radiance);
+			AddEmission(firstPathVertex, pathBSDFEvent, scene->envLight->GetID(), sampleResult, radiance);
 		}
 	}
 
@@ -194,9 +192,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 				
 			const Spectrum radiance = weight * pathThroughput * sunRadiance;
-			sampleResult->radiancePerPixelNormalized[scene->sunLight->GetID()] += radiance;
-
-			AddEmission(firstPathVertex, pathBSDFEvent, sampleResult, radiance);
+			AddEmission(firstPathVertex, pathBSDFEvent, scene->sunLight->GetID(), sampleResult, radiance);
 		}
 	}
 }
