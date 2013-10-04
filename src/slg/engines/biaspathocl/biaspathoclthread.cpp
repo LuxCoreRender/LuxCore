@@ -85,6 +85,10 @@ void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 
+	const Filter *filter = engine->film->GetFilter();
+	const float filterWidthX = filter ? filter->xWidth : 1.f;
+	const float filterWidthY = filter ? filter->yWidth : 1.f;
+
 	stringstream ss;
 	ss.precision(6);
 	ss << scientific <<
@@ -102,7 +106,9 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_DEPTH_MAX=" << engine->maxPathDepth.depth <<
 			" -D PARAM_DEPTH_DIFFUSE_MAX=" << engine->maxPathDepth.diffuseDepth <<
 			" -D PARAM_DEPTH_GLOSSY_MAX=" << engine->maxPathDepth.glossyDepth <<
-			" -D PARAM_DEPTH_SPECULAR_MAX=" << engine->maxPathDepth.specularDepth;
+			" -D PARAM_DEPTH_SPECULAR_MAX=" << engine->maxPathDepth.specularDepth <<
+			" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filterWidthX << "f" <<
+			" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filterWidthY << "f";
 
 	return ss.str();
 }

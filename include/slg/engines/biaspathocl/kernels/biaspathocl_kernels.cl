@@ -36,6 +36,7 @@
 //  PARAM_DEPTH_DIFFUSE_MAX
 //  PARAM_DEPTH_GLOSSY_MAX
 //  PARAM_DEPTH_SPECULAR_MAX
+//  PARAM_IMAGE_FILTER_WIDTH
 
 //------------------------------------------------------------------------------
 // InitSeed Kernel
@@ -191,8 +192,8 @@ void GenerateCameraRay(
 	float distPdf;
 	Distribution2D_SampleContinuous(pixelFilterDistribution, u0, u1, &xy, &distPdf);
 
-	const float filmX = sampleX + .5f + xy.x;
-	const float filmY = sampleY + .5f + xy.y;
+	const float filmX = sampleX + .5f + (xy.x - .5f) * PARAM_IMAGE_FILTER_WIDTH_X;
+	const float filmY = sampleY + .5f + (xy.y - .5f) * PARAM_IMAGE_FILTER_WIDTH_Y;
 	sampleResult->filmX = filmX;
 	sampleResult->filmY = filmY;
 
@@ -1129,7 +1130,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			if (pathState & PATH_VERTEX_1) {
 				const uint lightIndex = task->lightIndex;
 				if (lightIndex <= PARAM_LIGHT_COUNT) {
-					++task->lightSampleIndex;
+					++(task->lightSampleIndex);
 					pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
 				} else {
 					// Move to the next path vertex

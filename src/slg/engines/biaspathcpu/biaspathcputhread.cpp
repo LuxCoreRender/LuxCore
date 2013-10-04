@@ -518,7 +518,6 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 }
 
 void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
-		const FilterDistribution &filterDistribution,
 		const u_int x, const u_int y,
 		const u_int xOffset, const u_int yOffset,
 		const u_int sampleX, const u_int sampleY) {
@@ -528,7 +527,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
 
 	// Sample according the pixel filter distribution
-	filterDistribution.SampleContinuous(u0, u1, &u0, &u1);
+	engine->pixelFilterDistribution->SampleContinuous(u0, u1, &u0, &u1);
 
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
@@ -608,13 +607,11 @@ void BiasPathCPURenderThread::RenderFunc() {
 				if (tile->sampleIndex >= 0) {
 					const u_int sampleX = tile->sampleIndex % engine->aaSamples;
 					const u_int sampleY = tile->sampleIndex / engine->aaSamples;
-					RenderPixelSample(rndGen, *(engine->pixelFilterDistribution), x, y,
-							tile->xStart, tile->yStart, sampleX, sampleY);
+					RenderPixelSample(rndGen, x, y, tile->xStart, tile->yStart, sampleX, sampleY);
 				} else {
 					for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 						for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-							RenderPixelSample(rndGen, *(engine->pixelFilterDistribution), x, y,
-									tile->xStart, tile->yStart, sampleX, sampleY);
+							RenderPixelSample(rndGen, x, y, tile->xStart, tile->yStart, sampleX, sampleY);
 						}
 					}
 				}

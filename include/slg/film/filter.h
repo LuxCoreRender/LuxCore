@@ -94,7 +94,7 @@ public:
 		return 1.f;
 	}
 
-	virtual Filter *Clone() const { return new BoxFilter(); }
+	virtual Filter *Clone() const { return new BoxFilter(xWidth, yWidth); }
 };
 
 class GaussianFilter : public Filter {
