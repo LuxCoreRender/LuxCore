@@ -74,6 +74,8 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 
 		// MIS between direct light sampling and BSDF sampling
 		const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+		//const float weight = (bsdfPdfW > engine->pdfRejectValue) ?
+		//	PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 		const Spectrum illumRadiance = (weight * factor) * pathThroughput * lightRadiance * bsdfEval;
 
@@ -354,7 +356,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 				rndGen->floatValue(),
 				rndGen->floatValue(),
 				&lastPdfW, &cosSampledDir, &lastBSDFEvent);
-		if (bsdfSample.Black())
+		if (bsdfSample.Black())// || (lastPdfW < engine->pdfRejectValue))
 			break;
 
 		// Check if I have to stop because of path depth
@@ -390,7 +392,7 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			float pdfW, cosSampledDir;
 			const Spectrum bsdfSample = bsdf.Sample(&sampledDir, u0, u1,
 					&pdfW, &cosSampledDir, &event, requestedEventTypes);
-			if (bsdfSample.Black())
+			if (bsdfSample.Black())// || (pdfW < engine->pdfRejectValue))
 				continue;
 
 			// Check if I have to stop because of path depth
@@ -575,10 +577,8 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	TraceEyePath(rndGen, eyeRay, &sampleResult);
 
 	// Clamping
-	if (engine->clampValueEnabled) {
-		for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
-			sampleResult.radiancePerPixelNormalized[i] = sampleResult.radiancePerPixelNormalized[i].Clamp(0.f, engine->clampMaxValue);
-	}
+	for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
+		sampleResult.radiancePerPixelNormalized[i] = sampleResult.radiancePerPixelNormalized[i].Clamp(0.f, engine->radianceClampMaxValue);
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
