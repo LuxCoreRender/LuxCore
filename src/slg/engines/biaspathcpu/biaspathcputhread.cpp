@@ -74,8 +74,6 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 
 		// MIS between direct light sampling and BSDF sampling
 		const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
-		//const float weight = (bsdfPdfW > engine->pdfRejectValue) ?
-		//	PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 		const Spectrum illumRadiance = (weight * factor) * pathThroughput * lightRadiance * bsdfEval;
 
@@ -341,7 +339,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 				rndGen->floatValue(),
 				rndGen->floatValue(),
 				&lastPdfW, &cosSampledDir, &lastBSDFEvent);
-		if (bsdfSample.Black())// || (lastPdfW < engine->pdfRejectValue))
+		if (bsdfSample.Black())
 			break;
 
 		// Check if I have to stop because of path depth
@@ -349,7 +347,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		if (!depthInfo.CheckDepths(engine->maxPathDepth))
 			break;
 
-		pathThroughput *= bsdfSample * (cosSampledDir / lastPdfW);
+		pathThroughput *= bsdfSample * (cosSampledDir / max(engine->pdfRejectValue, lastPdfW));
 		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 		ray = Ray(bsdf.hitPoint.p, sampledDir);
@@ -377,7 +375,7 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			float pdfW, cosSampledDir;
 			const Spectrum bsdfSample = bsdf.Sample(&sampledDir, u0, u1,
 					&pdfW, &cosSampledDir, &event, requestedEventTypes);
-			if (bsdfSample.Black())// || (pdfW < engine->pdfRejectValue))
+			if (bsdfSample.Black())
 				continue;
 
 			// Check if I have to stop because of path depth
@@ -386,7 +384,7 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			if (!depthInfo.CheckDepths(engine->maxPathDepth))
 				continue;
 
-			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / pdfW);
+			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / max(engine->pdfRejectValue, pdfW));
 			assert (!continuepathThroughput.IsNaN() && !continuepathThroughput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);

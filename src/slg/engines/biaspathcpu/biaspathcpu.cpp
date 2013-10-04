@@ -73,7 +73,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 
 	// Clamping settings
 	radianceClampMaxValue = Max(0.f, cfg.GetFloat("biaspath.clamping.radiance.maxvalue", 10.f));
-	//pdfRejectValue = Max(0.f, cfg.GetFloat("biaspath.rejecting.pdf.maxvalue", 0.f));
+	pdfRejectValue = Max(0.f, cfg.GetFloat("biaspath.rejecting.pdf.maxvalue", 0.f));
 
 	// Light settings
 	lowLightThreashold = Max(0.f, cfg.GetFloat("biaspath.lights.lowthreshold", .001f));
