@@ -100,8 +100,7 @@ public:
 	u_int aaSamples, diffuseSamples, glossySamples, specularSamples, directLightSamples;
 
 	// Clamping settings
-	bool clampValueEnabled;
-	float clampMaxValue;
+	float radianceClampMaxValue;
 
 	// Light settings
 	float lowLightThreashold, nearStartLight;

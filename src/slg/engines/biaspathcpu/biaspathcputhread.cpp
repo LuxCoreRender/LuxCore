@@ -576,7 +576,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	// Trace the path
 	TraceEyePath(rndGen, eyeRay, &sampleResult);
 
-	// Clamping
+	// Radiance clamping
 	for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
 		sampleResult.radiancePerPixelNormalized[i] = sampleResult.radiancePerPixelNormalized[i].Clamp(0.f, engine->radianceClampMaxValue);
 

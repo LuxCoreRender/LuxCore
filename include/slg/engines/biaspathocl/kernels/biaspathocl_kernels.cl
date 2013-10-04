@@ -25,9 +25,10 @@
 //  PARAM_TASK_COUNT
 //  PARAM_TILE_SIZE
 //  PARAM_TILE_PROGRESSIVE_REFINEMENT
-// PARAM_DIRECT_LIGHT_ONE_STRATEGY or PARAM_DIRECT_LIGHT_ALL_STRATEGY
+//  PARAM_DIRECT_LIGHT_ONE_STRATEGY or PARAM_DIRECT_LIGHT_ALL_STRATEGY
 //  PARAM_AA_SAMPLES
 //  PARAM_DIRECT_LIGHT_SAMPLES
+//  PARAM_RADIANCE_CLAMP_MAXVALUE
 
 //------------------------------------------------------------------------------
 // InitSeed Kernel
@@ -75,6 +76,51 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
 //------------------------------------------------------------------------------
 // BiasAdvancePaths Kernel
 //------------------------------------------------------------------------------
+
+void SR_RadianceClamp(__global SampleResult *sampleResult) {
+	// Initialize only Spectrum fields
+
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+	sampleResult->radiancePerPixelNormalized[0].r = clamp(sampleResult->radiancePerPixelNormalized[0].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[0].g = clamp(sampleResult->radiancePerPixelNormalized[0].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[0].b = clamp(sampleResult->radiancePerPixelNormalized[0].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+	sampleResult->radiancePerPixelNormalized[1].r = clamp(sampleResult->radiancePerPixelNormalized[1].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[1].g = clamp(sampleResult->radiancePerPixelNormalized[1].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[1].b = clamp(sampleResult->radiancePerPixelNormalized[1].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+	sampleResult->radiancePerPixelNormalized[2].r = clamp(sampleResult->radiancePerPixelNormalized[2].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[2].g = clamp(sampleResult->radiancePerPixelNormalized[2].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[2].b = clamp(sampleResult->radiancePerPixelNormalized[2].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+	sampleResult->radiancePerPixelNormalized[3].r = clamp(sampleResult->radiancePerPixelNormalized[3].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[3].g = clamp(sampleResult->radiancePerPixelNormalized[3].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[3].b = clamp(sampleResult->radiancePerPixelNormalized[3].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+	sampleResult->radiancePerPixelNormalized[4].r = clamp(sampleResult->radiancePerPixelNormalized[4].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[4].g = clamp(sampleResult->radiancePerPixelNormalized[4].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[4].b = clamp(sampleResult->radiancePerPixelNormalized[4].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+	sampleResult->radiancePerPixelNormalized[5].r = clamp(sampleResult->radiancePerPixelNormalized[5].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[5].g = clamp(sampleResult->radiancePerPixelNormalized[5].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[5].b = clamp(sampleResult->radiancePerPixelNormalized[5].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+	sampleResult->radiancePerPixelNormalized[6].r = clamp(sampleResult->radiancePerPixelNormalized[6].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[6].g = clamp(sampleResult->radiancePerPixelNormalized[6].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[6].b = clamp(sampleResult->radiancePerPixelNormalized[6].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+	sampleResult->radiancePerPixelNormalized[7].r = clamp(sampleResult->radiancePerPixelNormalized[7].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[7].g = clamp(sampleResult->radiancePerPixelNormalized[7].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[7].b = clamp(sampleResult->radiancePerPixelNormalized[7].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+#endif
+}
 
 void SampleGrid(Seed *seed, const uint size,
 		const uint ix, const uint iy, float *u0, float *u1) {
@@ -813,6 +859,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 			sampleResult->rayCount = tracedRaysCount;
 #endif
+
+			// Radiance clamping
+			SR_RadianceClamp(sampleResult);
+
 #if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
 			Film_AddSample(samplePixelX, samplePixelY, &task->result, 1.f
 					FILM_PARAM);

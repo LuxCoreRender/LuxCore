@@ -94,7 +94,8 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 				" -D PARAM_TILE_PROGRESSIVE_REFINEMENT" : "") <<
 			((engine->lightSamplingStrategyONE) ? " -D PARAM_DIRECT_LIGHT_ONE_STRATEGY" : " -D PARAM_DIRECT_LIGHT_ALL_STRATEGY") <<
 			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<
-			" -D PARAM_DIRECT_LIGHT_SAMPLES=" << engine->directLightSamples;
+			" -D PARAM_DIRECT_LIGHT_SAMPLES=" << engine->directLightSamples <<
+			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f";
 
 	return ss.str();
 }
