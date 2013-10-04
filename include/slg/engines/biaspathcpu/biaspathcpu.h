@@ -100,7 +100,6 @@ private:
 	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
 		SampleResult *sampleResult);
 	void RenderPixelSample(luxrays::RandomGenerator *rndGen,
-		const FilterDistribution &filterDistribution,
 		const u_int x, const u_int y,
 		const u_int xOffset, const u_int yOffset,
 		const u_int sampleX, const u_int sampleY);

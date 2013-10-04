@@ -347,7 +347,8 @@ void RenderSession::SetRenderingEngineType(const RenderEngineType engineType) {
 		// I need to allocate an uninitialized Film
 		Film *newFilm = new Film(film->GetWidth(), film->GetHeight());
 		newFilm->CopyDynamicSettings(*film);
-		// Otherwise, switching from BIDIR to PATH will leave an unused channel.
+
+		// Otherwise, switching from BIDIR to PATH will leave an unused channel
 		newFilm->RemoveChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 		newFilm->RemoveChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 		delete film;
