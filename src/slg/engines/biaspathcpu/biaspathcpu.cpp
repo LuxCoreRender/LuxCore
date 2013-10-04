@@ -19,6 +19,8 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <limits>
+
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
 
 using namespace std;
@@ -70,8 +72,8 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	directLightSamples = Max(1, cfg.GetInt("biaspath.sampling.directlight.size", 1));
 
 	// Clamping settings
-	clampValueEnabled = cfg.GetBoolean("biaspath.clamping.enable", true);
-	clampMaxValue = Max(0.f, cfg.GetFloat("biaspath.clamping.maxvalue", 10.f));
+	radianceClampMaxValue = Max(0.f, cfg.GetFloat("biaspath.clamping.radiance.maxvalue", 10.f));
+	//pdfRejectValue = Max(0.f, cfg.GetFloat("biaspath.rejecting.pdf.maxvalue", 0.f));
 
 	// Light settings
 	lowLightThreashold = Max(0.f, cfg.GetFloat("biaspath.lights.lowthreshold", .001f));

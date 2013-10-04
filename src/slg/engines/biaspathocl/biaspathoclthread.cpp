@@ -393,7 +393,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			// In order to update the statistics
 			u_int tracedRaysCount = 0;
-			for (uint i = 0; i < taskCount; ++i)
+			for (u_int i = 0; i < taskCount; ++i)
 				tracedRaysCount += gpuTaskStats[i].raysCount;
 			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 
