@@ -970,57 +970,59 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	// Evaluation of the Path finite state machine.
 	//
 	// From: GENERATE_DL_RAY
-	// To: GENERATE_NEXT_VERTEX_RAY or RT_DL
+	// To: GENERATE_NEXT_VERTEX_RAY or RT_DL or SPLAT_SAMPLE
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	if (pathState == GENERATE_DL_RAY) {
-		// No shadow ray to trace, move to the next vertex ray
-		pathState = GENERATE_NEXT_VERTEX_RAY;
-
-		if (BSDF_IsDelta(bsdf
-			MATERIALS_PARAM)) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-			if (depth == 1)
-				sample->result.directShadowMask = 0.f;
-#endif
+		if (depth > PARAM_MAX_PATH_DEPTH) {
+			pathState = SPLAT_SAMPLE;
 		} else {
-			if (DirectLightSampling_ONE(
+			// No shadow ray to trace, move to the next vertex ray
+			pathState = GENERATE_NEXT_VERTEX_RAY;
+
+			if (BSDF_IsDelta(bsdf
+				MATERIALS_PARAM)) {
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+				if (depth == 1)
+					sample->result.directShadowMask = 0.f;
+#endif
+			} else {
+				if (DirectLightSampling_ONE(
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
-					worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT)
-					infiniteLight,
-					infiniteLightDistribution,
+						infiniteLight,
+						infiniteLightDistribution,
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
-					sunLight,
+						sunLight,
 #endif
 #if defined(PARAM_HAS_SKYLIGHT)
-					skyLight,
+						skyLight,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-					triLightDefs,
-					&task->directLightState.tmpHitPoint,
+						triLightDefs,
+						&task->directLightState.tmpHitPoint,
 #endif
-					lightsDistribution,
+						lightsDistribution,
 #if defined(PARAM_HAS_PASSTHROUGH)
-					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A),
-					&task->passThroughState.passThroughEvent,
+						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A),
+						&task->passThroughState.passThroughEvent,
 #endif
-					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X),
-					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
-					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
-					Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
-					depth, &task->pathStateBase.throughput, bsdf,
-					ray, &task->directLightState.lightRadiance, &task->directLightState.lightID
-					MATERIALS_PARAM)) {
-				// I have to trace the shadow ray
-				pathState = RT_DL;
+						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X),
+						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
+						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
+						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
+						depth, &task->pathStateBase.throughput, bsdf,
+						ray, &task->directLightState.lightRadiance, &task->directLightState.lightID
+						MATERIALS_PARAM)) {
+					// I have to trace the shadow ray
+					pathState = RT_DL;
+				}
 			}
 		}
 	}
-#endif
 
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.
@@ -1030,54 +1032,51 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == GENERATE_NEXT_VERTEX_RAY) {
-		if (depth < PARAM_MAX_PATH_DEPTH) {
-			// Sample the BSDF
-			__global BSDF *bsdf = &task->pathStateBase.bsdf;
-			float3 sampledDir;
-			float lastPdfW;
-			float cosSampledDir;
-			BSDFEvent event;
+		// Sample the BSDF
+		__global BSDF *bsdf = &task->pathStateBase.bsdf;
+		float3 sampledDir;
+		float lastPdfW;
+		float cosSampledDir;
+		BSDFEvent event;
 
-			const float3 bsdfSample = BSDF_Sample(bsdf,
-					Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),
-					Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),
-					&sampledDir, &lastPdfW, &cosSampledDir, &event
-					MATERIALS_PARAM);
+		const float3 bsdfSample = BSDF_Sample(bsdf,
+				Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),
+				Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),
+				&sampledDir, &lastPdfW, &cosSampledDir, &event
+				MATERIALS_PARAM);
 
-			// Russian Roulette
-			const float rrProb = RussianRouletteProb(bsdfSample);
-			const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !(event & SPECULAR);
-			const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(depth, IDX_RR) < rrProb);
+		// Russian Roulette
+		const float rrProb = RussianRouletteProb(bsdfSample);
+		const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !(event & SPECULAR);
+		const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(depth, IDX_RR) < rrProb);
 
-			const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath;
-			if (continuePath) {
-				if (rrEnabled)
-					lastPdfW *= rrProb; // Russian Roulette
+		const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath;
+		if (continuePath) {
+			if (rrEnabled)
+				lastPdfW *= rrProb; // Russian Roulette
 
-				float3 throughput = VLOAD3F(&task->pathStateBase.throughput.r);
-				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
-				VSTORE3F(throughput, &task->pathStateBase.throughput.r);
+			float3 throughput = VLOAD3F(&task->pathStateBase.throughput.r);
+			throughput *= bsdfSample * (cosSampledDir / lastPdfW);
+			VSTORE3F(throughput, &task->pathStateBase.throughput.r);
 
-				Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir);
+			Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir);
 
-				task->pathStateBase.depth = depth + 1;
-				if (depth == 1)
-					task->directLightState.pathBSDFEvent = event;
-				task->directLightState.lastBSDFEvent = event;
-				task->directLightState.lastPdfW = lastPdfW;
+			task->pathStateBase.depth = depth + 1;
+			if (depth == 1)
+				task->directLightState.pathBSDFEvent = event;
+			task->directLightState.lastBSDFEvent = event;
+			task->directLightState.lastPdfW = lastPdfW;
 #if defined(PARAM_HAS_PASSTHROUGH)
-				// This is a bit tricky. I store the passThroughEvent in the BSDF
-				// before of the initialization because it can be use during the
-				// tracing of next path vertex ray.
+			// This is a bit tricky. I store the passThroughEvent in the BSDF
+			// before of the initialization because it can be use during the
+			// tracing of next path vertex ray.
 
-				// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
-				__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-					sample, sampleDataPathBase, depth + 1);
-				task->pathStateBase.bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
+			// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
+			__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
+				sample, sampleDataPathBase, depth + 1);
+			task->pathStateBase.bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
 #endif
-				pathState = RT_NEXT_VERTEX;
-			} else
-				pathState = SPLAT_SAMPLE;
+			pathState = RT_NEXT_VERTEX;
 		} else
 			pathState = SPLAT_SAMPLE;
 	}
