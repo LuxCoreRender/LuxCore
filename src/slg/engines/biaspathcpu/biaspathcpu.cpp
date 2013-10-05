@@ -59,7 +59,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	// Path depth settings
-	maxPathDepth.depth = Max(1, cfg.GetInt("biaspath.pathdepth.total", 10));
+	maxPathDepth.depth = Max(0, cfg.GetInt("biaspath.pathdepth.total", 10));
 	maxPathDepth.diffuseDepth = Max(0, cfg.GetInt("biaspath.pathdepth.diffuse", 1));
 	maxPathDepth.glossyDepth = Max(0, cfg.GetInt("biaspath.pathdepth.glossy", 1));
 	maxPathDepth.specularDepth = Max(0, cfg.GetInt("biaspath.pathdepth.specular", 2));

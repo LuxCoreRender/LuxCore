@@ -223,12 +223,14 @@ static void PrintCaptions() {
 			tileSize = engine->GetTileSize();
 			break;
 		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case BIASPATHOCL: {
 			BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)session->renderEngine;
 			engine->GetPendingTiles(tiles);
 			tileSize = engine->GetTileSize();
 			break;
-		}
+        }
+#endif
 		default:
 			break;
 	}
