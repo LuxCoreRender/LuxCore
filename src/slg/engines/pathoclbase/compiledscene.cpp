@@ -710,12 +710,15 @@ void CompiledScene::CompileLightSamples() {
 
 	lightSamples.resize(scene->triLightDefs.size() + (scene->envLight ? 1 : 0) + (scene->sunLight ? 1 : 0));
 
-	for (u_int i = 0; i < scene->triLightDefs.size(); ++i)
-		lightSamples[i] =  scene->triLightDefs[i]->GetSamples();
+	u_int index = 0;
+	while (index < scene->triLightDefs.size()) {
+		lightSamples[index] =  scene->triLightDefs[index]->GetSamples();
+		++index;
+	}
 	if (scene->envLight)
-		lightSamples[scene->triLightDefs.size()] = scene->envLight->GetSamples();
+		lightSamples[index++] = scene->envLight->GetSamples();
 	if (scene->sunLight)
-		lightSamples[scene->triLightDefs.size() + 1] = scene->sunLight->GetSamples();
+		lightSamples[index] = scene->sunLight->GetSamples();
 }
 
 void CompiledScene::CompileMaterialSamples() {
