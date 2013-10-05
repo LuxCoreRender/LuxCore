@@ -96,9 +96,9 @@ void PathOCLRenderEngine::StartLockLess() {
 	// General path tracing settings
 	//--------------------------------------------------------------------------	
 	
-	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
-	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
-	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
+	maxPathDepth = Max(1, cfg.GetInt("path.maxdepth", 5));
+	rrDepth = Max(1, cfg.GetInt("path.russianroulette.depth", 3));
+	rrImportanceCap = Clamp(cfg.GetFloat("path.russianroulette.cap", .5f), 0.f, 1.f);
 
 	//--------------------------------------------------------------------------
 	// Sampler

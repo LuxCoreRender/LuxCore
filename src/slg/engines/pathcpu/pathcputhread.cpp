@@ -264,7 +264,7 @@ void PathCPURenderThread::RenderFunc() {
 		float lastPdfW = 1.f;
 		Spectrum pathThroughput(1.f, 1.f, 1.f);
 		BSDF bsdf;
-		while (depth <= engine->maxPathDepth) {
+		for (;;) {
 			const bool firstPathVertex = (depth == 1);
 			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
@@ -313,6 +313,10 @@ void PathCPURenderThread::RenderFunc() {
 				sampleResult.materialID = bsdf.GetMaterialID();
 				sampleResult.uv = bsdf.hitPoint.uv;
 			}
+
+			// Before Direct Lighting in order to have a correct MIS
+			if (depth > engine->maxPathDepth)
+				break;
 
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
