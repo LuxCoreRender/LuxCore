@@ -949,12 +949,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 
 		if (pathState & NEXT_VERTEX_TRACE_RAY) {
+			const bool firstPathVertex = (pathState & PATH_VERTEX_1);
+
 			if (rayHit.meshIndex != NULL_INDEX) {
 				//--------------------------------------------------------------
 				// Something was hit
 				//--------------------------------------------------------------
 
-				if (pathState & PATH_VERTEX_1) {
+				if (firstPathVertex) {
 					// Save the path first vertex information
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 					sampleResult->alpha = 1.f;
@@ -982,7 +984,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				// Check if it is a light source (note: I can hit only triangle area light sources)
-				if (BSDF_IsLightSource(&task->bsdfPathVertex1)) {
+				if (BSDF_IsLightSource(currentThroughput)) {
 					DirectHitFiniteLight(true, lastBSDFEvent,
 							pathBSDFEvent, lightsDistribution,
 							triLightDefs, currentThroughput,
@@ -1005,7 +1007,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
 				const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
 				DirectHitInfiniteLight(
-						true,
+						firstPathVertex,
 						lastBSDFEvent,
 						pathBSDFEvent,
 						lightsDistribution,
@@ -1025,7 +1027,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 						IMAGEMAPS_PARAM);
 #endif
 
-				if (pathState & PATH_VERTEX_1) {
+				if (firstPathVertex) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 					sampleResult->alpha = 0.f;
 #endif
