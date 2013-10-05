@@ -1154,13 +1154,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 
 		if (pathState & DIRECT_LIGHT_GENERATE_RAY) {
-			if (BSDF_IsDelta(&task->bsdfPathVertex1
+			const bool firstPathVertex = (pathState & PATH_VERTEX_1);
+
+			if (BSDF_IsDelta(firstPathVertex ? &task->bsdfPathVertex1 : &task->bsdfPathVertexN
 				MATERIALS_PARAM)) {
 				// Move to the next path vertex
 				pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
 			} else {
-				const bool firstPathVertex = (pathState & PATH_VERTEX_1);
-
 				const bool illuminated =
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 				(!firstPathVertex) ?
