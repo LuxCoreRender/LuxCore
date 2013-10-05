@@ -718,6 +718,15 @@ void CompiledScene::CompileLightSamples() {
 		lightSamples[scene->triLightDefs.size() + 1] = scene->sunLight->GetSamples();
 }
 
+void CompiledScene::CompileMaterialSamples() {
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile MaterialSamples");
+
+	materialSamples.resize(scene->matDefs.GetSize());
+
+	for (u_int i = 0; i < materialSamples.size(); ++i)
+		materialSamples[i] =  scene->matDefs.GetMaterial(i)->GetSamples();
+}
+
 void CompiledScene::CompileTextures() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Textures");
 	//SLG_LOG("[PathOCLRenderThread::CompiledScene]   Texture size: " << sizeof(slg::ocl::Texture));
@@ -1067,8 +1076,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileCamera();
 	if (editActions.Has(GEOMETRY_EDIT))
 		CompileGeometry();
-	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
+	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
 		CompileMaterials();
+		CompileMaterialSamples();
+	}
 	if (editActions.Has(AREALIGHTS_EDIT))
 		CompileAreaLights();
 	if (editActions.Has(INFINITELIGHT_EDIT))

@@ -71,6 +71,7 @@ protected:
 	cl::Buffer *taskResultsBuff;
 	cl::Buffer *pixelFilterBuff;
 	cl::Buffer *lightSamplesBuff;
+	cl::Buffer *materialSamplesBuff;
 
 	u_int sampleDimensions;
 

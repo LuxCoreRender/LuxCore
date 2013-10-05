@@ -94,6 +94,8 @@ public:
 
 	// Number of samples to take for each light (optional)
 	vector<int> lightSamples;
+	// Number of samples to take for each material (optional)
+	vector<int> materialSamples;
 
 	// Compiled Materials
 	std::set<MaterialType> usedMaterialTypes;
@@ -123,6 +125,7 @@ private:
 	void CompileSkyLight();
 	void CompileLightsDistribution();
 	void CompileLightSamples();
+	void CompileMaterialSamples();
 };
 
 }

@@ -48,6 +48,7 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	taskResultsBuff = NULL;
 	pixelFilterBuff = NULL;
 	lightSamplesBuff = NULL;
+	materialSamplesBuff = NULL;
 	
 	gpuTaskStats = NULL;
 }
@@ -74,6 +75,7 @@ void BiasPathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&taskResultsBuff);
 	FreeOCLBuffer(&pixelFilterBuff);
 	FreeOCLBuffer(&lightSamplesBuff);
+	FreeOCLBuffer(&materialSamplesBuff);
 }
 
 void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
@@ -170,7 +172,7 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		sizeof(slg::ocl::Seed) +
 	
 		// Spectrum (throughputPathVertex1) size
-		sizeof(Spectrum) +
+		sizeof(slg::ocl::Spectrum) +
 		// BSDF (bsdfPathVertex1) size
 		GetOpenCLBSDFSize() +
 
@@ -178,21 +180,16 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		((engine->lightSamplingStrategyONE) ? 0 : 2 * sizeof(u_int)) +
 
 		// Spectrum (directLightThroughput) size
-		sizeof(Spectrum) +
+		sizeof(slg::ocl::Spectrum) +
 		// BSDF (directLightBSDF) size
 		GetOpenCLBSDFSize() +
 		// HitPoint (directLightHitPoint) size
 		((engine->compiledScene->triLightDefs.size() > 0) ? GetOpenCLHitPointSize() : 0) +
 
 		// Spectrum (lightRadiance) size
-		sizeof(Spectrum) +
+		sizeof(slg::ocl::Spectrum) +
 		// u_int (lightID) size
 		sizeof(u_int) +
-	
-		// BSDF (tmpBSDF) size
-		GetOpenCLBSDFSize() +
-		// Spectrum (tmpThroughput) size
-		sizeof(Spectrum) +
 
 		// BSDFEvent (vertex1SampleComponent) size
 		sizeof(BSDFEvent) +
@@ -200,9 +197,11 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		sizeof(u_int) +
 
 		// Spectrum (throughputPathVertexN) size
-		sizeof(Spectrum) +
+		sizeof(slg::ocl::Spectrum) +
 		// BSDF (bsdfPathVertexN) size
 		GetOpenCLBSDFSize();
+	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] BSDF size: " << GetOpenCLBSDFSize() << "bytes");
+	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] HitPoint size: " << GetOpenCLHitPointSize() << "bytes");
 	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask size: " << GPUTaskSize << "bytes");
 
 	AllocOCLBufferRW(&tasksBuff, GPUTaskSize * engine->taskCount, "GPUTask");
@@ -232,6 +231,13 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 
 	AllocOCLBufferRO(&lightSamplesBuff, &engine->compiledScene->lightSamples[0],
 			sizeof(int) * engine->compiledScene->lightSamples.size(), "Light Samples");
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU material samples count
+	//--------------------------------------------------------------------------
+
+	AllocOCLBufferRO(&materialSamplesBuff, &engine->compiledScene->materialSamples[0],
+			sizeof(int) * engine->compiledScene->materialSamples.size(), "Material Samples");
 }
 
 void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
@@ -274,6 +280,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, *taskResultsBuff);
 	renderSampleKernel->setArg(argIndex++, *pixelFilterBuff);
 	renderSampleKernel->setArg(argIndex++, *lightSamplesBuff);
+	renderSampleKernel->setArg(argIndex++, *materialSamplesBuff);
 
 	// Film parameters
 	argIndex = SetFilmKernelArgs(*renderSampleKernel, argIndex);

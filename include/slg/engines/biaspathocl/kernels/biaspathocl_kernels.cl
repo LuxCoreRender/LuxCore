@@ -46,9 +46,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(
 		uint seedBase,
 		__global GPUTask *tasks) {
 	//if (get_global_id(0) == 0)
-	//	printf("sizeof(GPUTask) = %d\n", sizeof(GPUTask));
+	//	printf("sizeof(BSDF) = %dbytes\n", sizeof(BSDF));
 	//if (get_global_id(0) == 0)
-	//	printf("sizeof(SampleResult) = %d\n", sizeof(SampleResult));
+	//	printf("sizeof(HitPoint) = %dbytes\n", sizeof(HitPoint));
+	//if (get_global_id(0) == 0)
+	//	printf("sizeof(GPUTask) = %dbytes\n", sizeof(GPUTask));
+	//if (get_global_id(0) == 0)
+	//	printf("sizeof(SampleResult) = %dbytes\n", sizeof(SampleResult));
 
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -169,6 +173,8 @@ void SampleGrid(Seed *seed, const uint size,
 		*u1 = (iy + *u1) * idim;
 	}
 }
+
+//------------------------------------------------------------------------------
 
 void GenerateCameraRay(
 		Seed *seed,
@@ -546,17 +552,20 @@ bool DirectLightSampling_ALL(
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
 		MATERIALS_PARAM_DECL) {
 	for (; *currentLightIndex < PARAM_LIGHT_COUNT; ++(*currentLightIndex)) {
-		const int samplesCount = lightSamples[*currentLightIndex];
-		const uint count = (samplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)samplesCount;
-		const uint count2 = count * count;
+		const int lightSamplesCount = lightSamples[*currentLightIndex];
+		const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
+		const uint sampleCount2 = sampleCount * sampleCount;
 
-		for (; *currentLightSampleIndex < count2; ++(*currentLightSampleIndex)) {
+		for (; *currentLightSampleIndex < sampleCount2; ++(*currentLightSampleIndex)) {
+			//if (get_global_id(0) == 0)
+			//	printf("DirectLightSampling_ALL() ==> currentLightIndex: %d  currentLightSampleIndex: %d\n", *currentLightIndex, *currentLightSampleIndex);
+
 			float u0, u1;
-			SampleGrid(seed, count,
-					(*currentLightSampleIndex) % count, (*currentLightSampleIndex) / count,
+			SampleGrid(seed, sampleCount,
+					(*currentLightSampleIndex) % sampleCount, (*currentLightSampleIndex) / sampleCount,
 					&u0, &u1);
 
-			const float scaleFactor = 1.f / count2;
+			const float scaleFactor = 1.f / sampleCount2;
 			const bool illuminated = DirectLightSampling(
 				*currentLightIndex,
 				1.f,
@@ -614,6 +623,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		__global SampleResult *taskResults,
 		__global float *pixelFilterDistribution,
 		__global int *lightSamples,
+		__global int *materialSamples,
 		// Film parameters
 		const uint filmWidth, const uint filmHeight
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -846,7 +856,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	// Render a sample
 	//--------------------------------------------------------------------------
 
-	task->vertex1SampleComponent = NONE;
+	task->vertex1SampleComponent = DIFFUSE;
 	task->vertex1SampleIndex = 0;
 
 	uint tracedRaysCount = taskStat->raysCount;
@@ -946,6 +956,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		// From: * | NEXT_VERTEX_TRACE_RAY
 		// To: BREAK or
 		//     (* | DIRECT_LIGHT_GENERATE_RAY)
+		//     (PATH_VERTEX_N | NEXT_GENERATE_TRACE_RAY)
 		//----------------------------------------------------------------------
 
 		if (pathState & NEXT_VERTEX_TRACE_RAY) {
@@ -984,8 +995,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				// Check if it is a light source (note: I can hit only triangle area light sources)
-				if (BSDF_IsLightSource(currentThroughput)) {
-					DirectHitFiniteLight(true, lastBSDFEvent,
+				if (BSDF_IsLightSource(currentBSDF)) {
+					DirectHitFiniteLight(firstPathVertex, lastBSDFEvent,
 							pathBSDFEvent, lightsDistribution,
 							triLightDefs, currentThroughput,
 							rayHit.t, currentBSDF, lastPdfW,
@@ -1058,8 +1069,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 				}
 
-				// Done
-				break;
+				if (firstPathVertex) {
+					// Done
+					break;
+				} else {
+					// Move to the next path
+					pathState = PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY;
+				}
 			}
 		}
 
@@ -1072,6 +1088,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 
 		if (pathState & DIRECT_LIGHT_TRACE_RAY) {
+			const bool firstPathVertex = (pathState & PATH_VERTEX_1);
+
 			if (rayHit.meshIndex == NULL_INDEX) {
 				//--------------------------------------------------------------
 				// Nothing was hit, the light source is visible
@@ -1085,7 +1103,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				//if (get_global_id(0) == 0)
 				//	printf("DIRECT_LIGHT_TRACE_RAY => lightRadiance: %f %f %f [%d]\n", lightRadiance.s0, lightRadiance.s1, lightRadiance.s2, lightID);
 
-				if (pathState & PATH_VERTEX_1) {
+				if (firstPathVertex) {
 					if (BSDF_GetEventTypes(&task->bsdfPathVertex1
 							MATERIALS_PARAM) & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
@@ -1118,31 +1136,30 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			}
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 			else {
-				if (pathState & PATH_VERTEX_1) {
-					const int samplesCount = lightSamples[task->lightIndex];
-					const uint count = (samplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)samplesCount;
-					const float scaleFactor = 1.f / (count * count);
+				if (firstPathVertex) {
+					const int lightSamplesCount = lightSamples[*currentLightIndex];
+					const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
 
-					sampleResult->directShadowMask += scaleFactor;
+					sampleResult->directShadowMask += 1.f / (sampleCount * sampleCount);
 				}
 			}
 #endif
 
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-			if (pathState & PATH_VERTEX_1) {
+			if (firstPathVertex) {
 				const uint lightIndex = task->lightIndex;
 				if (lightIndex <= PARAM_LIGHT_COUNT) {
 					++(task->lightSampleIndex);
-					pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
+					pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
 				} else {
 					// Move to the next path vertex
-					pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
+					pathState = PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY;
 				}
 			} else	
 #endif
 			{
 				// Move to the next path vertex
-				pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
+				pathState = PATH_VERTEX_N | NEXT_VERTEX_GENERATE_RAY;
 			}
 		}
 
@@ -1150,9 +1167,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		// Evaluation of the finite state machine.
 		//
 		// From: * | DIRECT_LIGHT_GENERATE_RAY
-		// To: BREAK or
-		//     (* | NEXT_VERTEX_GENERATE_RAY) or 
+		// To: (* | NEXT_VERTEX_GENERATE_RAY) or 
 		//     (* | DIRECT_LIGHT_TRACE_RAY[continue])
+		//     (* | NEXT_VERTEX_GENERATE_RAY)
 		//----------------------------------------------------------------------
 
 		if (pathState & DIRECT_LIGHT_GENERATE_RAY) {
@@ -1248,46 +1265,34 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 		// Evaluation of the finite state machine.
 		//
-		// From: * | NEXT_VERTEX_GENERATE_RAY
-		// To: BREAK or (PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY[continue])
+		// From: PATH_VERTEX_N | NEXT_VERTEX_GENERATE_RAY
+		// To: PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY or (PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY[continue])
 		//----------------------------------------------------------------------
 
-		if (pathState & NEXT_VERTEX_GENERATE_RAY) {
-			//const int samplesCount = materialSamples[task->lightIndex];
-			//const uint count = (samplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)samplesCount;
-			//const float scaleFactor = 1.f / (count * count);
-
-			currentBSDF = (pathState & PATH_VERTEX_1) ? &task->bsdfPathVertex1 : &task->bsdfPathVertexN;
-			currentThroughput = (pathState & PATH_VERTEX_1) ? &task->throughputPathVertex1 : &task->throughputPathVertexN;
-
+		if (pathState == (PATH_VERTEX_N | NEXT_VERTEX_GENERATE_RAY)) {
 			//if (get_global_id(0) == 0)
-			//	printf("(* | NEXT_VERTEX_GENERATE_RAY)) ==> Depth: %d  [pathState: %d|%d][currentThroughput: %f %f %f]\n",
+			//	printf("(PATH_VERTEX_N | NEXT_VERTEX_GENERATE_RAY)) ==> Depth: %d  [pathState: %d|%d][currentThroughput: %f %f %f]\n",
 			//			depthInfo.depth, pathState >> 16, pathState & LOW_STATE_MASK, currentThroughput->r, currentThroughput->g, currentThroughput->b);
 
 			// Sample the BSDF
 			float3 sampledDir;
 			float cosSampledDir;
 			BSDFEvent event;
-
-			const float3 bsdfSample = BSDF_Sample(currentBSDF,
-					Rnd_FloatValue(&seed),
-					Rnd_FloatValue(&seed),
-					&sampledDir, &lastPdfW, &cosSampledDir, &event
-					MATERIALS_PARAM);
+			const float3 bsdfSample = BSDF_Sample(&task->bsdfPathVertexN,
+				Rnd_FloatValue(&seed),
+				Rnd_FloatValue(&seed),
+				&sampledDir, &lastPdfW, &cosSampledDir, &event
+				MATERIALS_PARAM);
 
 			PathDepthInfo_IncDepths(&depthInfo, event);
 
 			if (!Spectrum_IsBlack(bsdfSample) && PathDepthInfo_CheckDepths(&depthInfo)) {
-				// currentThroughput can be throughputPathVertex1 or throughputPathVertexN 
-				float3 throughput = VLOAD3F(&currentThroughput->r);
+				float3 throughput = VLOAD3F(&task->throughputPathVertexN.r);
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
-				// Always storing the result in throughputPathVertexN
 				VSTORE3F(throughput, &task->throughputPathVertexN.r);
 
 				Ray_Init2_Private(&ray, VLOAD3F(&currentBSDF->hitPoint.p.x), sampledDir);
 
-				if (pathState & PATH_VERTEX_1)
-					pathBSDFEvent = event;
 				lastBSDFEvent = event;
 
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -1302,6 +1307,109 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				pathState = PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY;
 				continue;
 			} else
+				pathState = PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY;
+		}
+
+		//----------------------------------------------------------------------
+		// Evaluation of the finite state machine.
+		//
+		// From: PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY
+		// To: BREAK or (PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY[continue])
+		//----------------------------------------------------------------------
+
+		if (pathState == (PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY)) {
+			//if (get_global_id(0) == 0)
+			//	printf("(PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY)) ==> Depth: %d  [pathState: %d|%d][currentThroughput: %f %f %f]\n",
+			//			depthInfo.depth, pathState >> 16, pathState & LOW_STATE_MASK, currentThroughput->r, currentThroughput->g, currentThroughput->b);
+
+			BSDFEvent vertex1SampleComponent = task->vertex1SampleComponent;
+			uint vertex1SampleIndex = task->vertex1SampleIndex;
+			bool done = false;
+			const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
+				MATERIALS_PARAM);
+
+			for (;;) {
+				const int matSamplesCount = materialSamples[task->bsdfPathVertex1.materialIndex];
+				const uint globalMatSamplesCount = ((vertex1SampleComponent == DIFFUSE) ? PARAM_DIFFUSE_SAMPLES :
+					((vertex1SampleComponent == GLOSSY) ? PARAM_GLOSSY_SAMPLES :
+						PARAM_SPECULAR_SAMPLES));
+				const uint sampleCount = (matSamplesCount < 0) ? globalMatSamplesCount : (uint)matSamplesCount;
+				const uint sampleCount2 = sampleCount * sampleCount;
+
+				if (!(materialEventTypes & vertex1SampleComponent) || (vertex1SampleIndex >= sampleCount2)) {
+					// Move to next component
+					if (vertex1SampleComponent == DIFFUSE)
+						vertex1SampleComponent = GLOSSY;
+					else if (vertex1SampleComponent == GLOSSY)
+						vertex1SampleComponent = SPECULAR;
+					else {
+						// We have sampled all 3 components. Done.
+						done = true;
+						break;
+					}
+
+					vertex1SampleIndex = 0;
+					continue;
+				}
+
+				// Sample the BSDF
+				float3 sampledDir;
+				float cosSampledDir;
+				BSDFEvent event;
+
+				float u0, u1;
+				SampleGrid(&seed, sampleCount,
+					vertex1SampleIndex % sampleCount, vertex1SampleIndex / sampleCount,
+					&u0, &u1);
+
+				// Now, I can increment vertex1SampleIndex
+				++vertex1SampleIndex;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+				// This is a bit tricky. I store the passThroughEvent in the BSDF
+				// before of the initialization because it can be use during the
+				// tracing of next path vertex ray.
+				task->bsdfPathVertex1.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+#endif
+				const float3 bsdfSample = BSDF_Sample(&task->bsdfPathVertex1,
+						u0,
+						u1,
+						&sampledDir, &lastPdfW, &cosSampledDir, &event
+						MATERIALS_PARAM);
+
+				PathDepthInfo_Init(&depthInfo, 0);
+				PathDepthInfo_IncDepths(&depthInfo, event);
+
+				if (!Spectrum_IsBlack(bsdfSample) && PathDepthInfo_CheckDepths(&depthInfo)) {
+					const float scaleFactor = 1.f / sampleCount2;
+					float3 throughput = VLOAD3F(&task->throughputPathVertex1.r);
+					throughput *= bsdfSample * (scaleFactor * cosSampledDir / lastPdfW);
+					VSTORE3F(throughput, &task->throughputPathVertexN.r);
+
+					Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertex1.hitPoint.p.x), sampledDir);
+
+					pathBSDFEvent = event;
+					lastBSDFEvent = event;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+					// This is a bit tricky. I store the passThroughEvent in the BSDF
+					// before of the initialization because it can be use during the
+					// tracing of next path vertex ray.
+					task->bsdfPathVertexN.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+#endif
+					currentBSDF = &task->bsdfPathVertexN;
+					currentThroughput = &task->throughputPathVertexN;
+
+					pathState = PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY;
+
+					// Save vertex1SampleComponent and vertex1SampleIndex
+					task->vertex1SampleComponent = vertex1SampleComponent;
+					task->vertex1SampleIndex = vertex1SampleIndex;
+					break;
+				}
+			}
+
+			if (done)
 				break;
 		}
 	}
