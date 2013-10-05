@@ -1005,11 +1005,22 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				}
 #endif
 
+				// Before Direct Lighting in order to have a correct MIS
+				if (PathDepthInfo_CheckDepths(&depthInfo)) {
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-				task->lightIndex = 0;
-				task->lightSampleIndex = 0;
+					task->lightIndex = 0;
+					task->lightSampleIndex = 0;
 #endif
-				pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
+					pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
+				} else {
+					if (firstPathVertex) {
+						// Done
+						break;
+					} else {
+						// Move to the next path
+						pathState = PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY;
+					}
+				}
 			} else {
 				//--------------------------------------------------------------
 				// Nothing was hit, add environmental lights radiance
@@ -1286,7 +1297,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 			PathDepthInfo_IncDepths(&depthInfo, event);
 
-			if (!Spectrum_IsBlack(bsdfSample) && PathDepthInfo_CheckDepths(&depthInfo)) {
+			if (!Spectrum_IsBlack(bsdfSample)) {
 				float3 throughput = VLOAD3F(&task->throughputPathVertexN.r);
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
 				VSTORE3F(throughput, &task->throughputPathVertexN.r);
@@ -1380,7 +1391,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				PathDepthInfo_Init(&depthInfo, 0);
 				PathDepthInfo_IncDepths(&depthInfo, event);
 
-				if (!Spectrum_IsBlack(bsdfSample) && PathDepthInfo_CheckDepths(&depthInfo)) {
+				if (!Spectrum_IsBlack(bsdfSample)) {
 					const float scaleFactor = 1.f / sampleCount2;
 					float3 throughput = VLOAD3F(&task->throughputPathVertex1.r);
 					throughput *= bsdfSample * (scaleFactor * cosSampledDir / lastPdfW);
