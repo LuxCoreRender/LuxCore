@@ -322,6 +322,10 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 
 		// Note: pass-through check is done inside SceneIntersect()
 
+		// Before Direct Lighting in order to have a correct MIS
+		if (!depthInfo.CheckDepths(engine->maxPathDepth))
+			break;
+
 		//----------------------------------------------------------------------
 		// Direct light sampling
 		//----------------------------------------------------------------------
@@ -344,8 +348,6 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 
 		// Check if I have to stop because of path depth
 		depthInfo.IncDepths(lastBSDFEvent);
-		if (!depthInfo.CheckDepths(engine->maxPathDepth))
-			break;
 
 		pathThroughput *= bsdfSample * (cosSampledDir / max(engine->pdfRejectValue, lastPdfW));
 		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
@@ -378,11 +380,8 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			if (bsdfSample.Black())
 				continue;
 
-			// Check if I have to stop because of path depth
 			PathDepthInfo depthInfo;
 			depthInfo.IncDepths(event);
-			if (!depthInfo.CheckDepths(engine->maxPathDepth))
-				continue;
 
 			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / max(engine->pdfRejectValue, pdfW));
 			assert (!continuepathThroughput.IsNaN() && !continuepathThroughput.IsInf());
