@@ -1,4 +1,4 @@
-#line 2 "material_funcs.cl"
+#line 2 "materialdefs_funcs.cl"
 
 /***************************************************************************
  *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
@@ -177,9 +177,11 @@ float3 MatteMaterial_Evaluate(__global Material *material,
 float3 MatteMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
+			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
 	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
@@ -206,8 +208,12 @@ float3 MatteMaterial_Sample(__global Material *material,
 float3 MirrorMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
+	if (!(requestedEvent & (SPECULAR | REFLECT)))
+		return BLACK;
+
 	*event = SPECULAR | REFLECT;
 
 	*sampledDir = (float3)(-fixedDir.x, -fixedDir.y, fixedDir.z);
@@ -231,8 +237,12 @@ float3 MirrorMaterial_Sample(__global Material *material,
 float3 GlassMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
+	if (!(requestedEvent & SPECULAR))
+		return BLACK;
+
 	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.ktTexIndex], hitPoint
 		TEXTURES_PARAM));
 	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.krTexIndex], hitPoint
@@ -253,7 +263,19 @@ float3 GlassMaterial_Sample(__global Material *material,
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return BLACK;
+	}
+
 	float3 result;
 	if (passThroughEvent < threshold) {
 		// Transmit
@@ -298,61 +320,6 @@ float3 GlassMaterial_Sample(__global Material *material,
 #endif
 
 //------------------------------------------------------------------------------
-// Metal material
-//------------------------------------------------------------------------------
-
-#if defined (PARAM_ENABLE_MAT_METAL)
-
-float3 GlossyReflection(const float3 fixedDir, const float exponent,
-		const float u0, const float u1) {
-	// Ray from outside going in ?
-	const bool into = (fixedDir.z > 0.f);
-	const float3 shadeN = (float3)(0.f, 0.f, into ? 1.f : -1.f);
-
-	const float phi = 2.f * M_PI_F * u0;
-	const float cosTheta = pow(1.f - u1, exponent);
-	const float sinTheta = sqrt(fmax(0.f, 1.f - cosTheta * cosTheta));
-	const float x = cos(phi) * sinTheta;
-	const float y = sin(phi) * sinTheta;
-	const float z = cosTheta;
-
-	const float3 dir = -fixedDir;
-	const float dp = dot(shadeN, dir);
-	const float3 w = dir - (2.f * dp) * shadeN;
-
-	const float3 u = normalize(cross(
-			(fabs(shadeN.x) > .1f) ? ((float3)(0.f, 1.f, 0.f)) : ((float3)(1.f, 0.f, 0.f)),
-			w));
-	const float3 v = cross(w, u);
-
-	return x * u + y * v + z * w;
-}
-
-float3 MetalMaterial_Sample(__global Material *material,
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
-		TEXTURES_PARAM_DECL) {
-	const float e = 1.f / (Texture_GetFloatValue(&texs[material->metal.expTexIndex], hitPoint
-				TEXTURES_PARAM) + 1.f);
-	*sampledDir = GlossyReflection(fixedDir, e, u0, u1);
-
-	if ((*sampledDir).z * fixedDir.z > 0.f) {
-		*event = SPECULAR | REFLECT;
-		*pdfW = 1.f;
-		*cosSampledDir = fabs((*sampledDir).z);
-
-		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->metal.krTexIndex], hitPoint
-				TEXTURES_PARAM));
-		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return kt / (*cosSampledDir);
-	} else
-		return BLACK;
-}
-
-#endif
-
-//------------------------------------------------------------------------------
 // ArchGlass material
 //------------------------------------------------------------------------------
 
@@ -361,8 +328,12 @@ float3 MetalMaterial_Sample(__global Material *material,
 float3 ArchGlassMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
+	if (!(requestedEvent & SPECULAR))
+		return BLACK;
+
 	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.ktTexIndex], hitPoint
 		TEXTURES_PARAM));
 	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.krTexIndex], hitPoint
@@ -383,7 +354,19 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return BLACK;
+	}
+
 	float3 result;
 	if (passThroughEvent < threshold) {
 		// Transmit
@@ -482,12 +465,71 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 		//	if (entering)
 		//		result = FresnelCauchy_Evaluate(ntc, costheta);
 		//	else
-		//		result = Spectrum();
+		//		result = BLACK;
 		//}
 		result *= 1.f + (1.f - result) * (1.f - result);
 		result = 1.f - result;
 
 		return kt * result;
+	} else
+		return BLACK;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Metal material
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_METAL)
+
+float3 GlossyReflection(const float3 fixedDir, const float exponent,
+		const float u0, const float u1) {
+	// Ray from outside going in ?
+	const bool into = (fixedDir.z > 0.f);
+	const float3 shadeN = (float3)(0.f, 0.f, into ? 1.f : -1.f);
+
+	const float phi = 2.f * M_PI_F * u0;
+	const float cosTheta = pow(1.f - u1, exponent);
+	const float sinTheta = sqrt(fmax(0.f, 1.f - cosTheta * cosTheta));
+	const float x = cos(phi) * sinTheta;
+	const float y = sin(phi) * sinTheta;
+	const float z = cosTheta;
+
+	const float3 dir = -fixedDir;
+	const float dp = dot(shadeN, dir);
+	const float3 w = dir - (2.f * dp) * shadeN;
+
+	const float3 u = normalize(cross(
+			(fabs(shadeN.x) > .1f) ? ((float3)(0.f, 1.f, 0.f)) : ((float3)(1.f, 0.f, 0.f)),
+			w));
+	const float3 v = cross(w, u);
+
+	return x * u + y * v + z * w;
+}
+
+float3 MetalMaterial_Sample(__global Material *material,
+		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1,
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
+		TEXTURES_PARAM_DECL) {
+	if (!(requestedEvent & (GLOSSY | REFLECT)))
+		return BLACK;
+
+	const float e = 1.f / (Texture_GetFloatValue(&texs[material->metal.expTexIndex], hitPoint
+				TEXTURES_PARAM) + 1.f);
+	*sampledDir = GlossyReflection(fixedDir, e, u0, u1);
+
+	if ((*sampledDir).z * fixedDir.z > 0.f) {
+		*event = GLOSSY | REFLECT;
+		*pdfW = 1.f;
+		*cosSampledDir = fabs((*sampledDir).z);
+
+		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->metal.krTexIndex], hitPoint
+				TEXTURES_PARAM));
+		// The cosSampledDir is used to compensate the other one used inside the integrator
+		return kt / (*cosSampledDir);
 	} else
 		return BLACK;
 }
@@ -503,8 +545,12 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 float3 NullMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
+	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
+		return BLACK;
+
 	*sampledDir = -fixedDir;
 	*cosSampledDir = 1.f;
 
@@ -550,9 +596,11 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 		const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	if (!(requestedEvent & (DIFFUSE | REFLECT | TRANSMIT)) ||
+			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
 	*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
@@ -560,7 +608,21 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	*pdfW *= .5f;
+	// Decide to transmit or reflect
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return BLACK;
+	}
+
+	*pdfW *= threshold;
 
 	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
 			TEXTURES_PARAM));
@@ -569,7 +631,7 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 		// Energy conservation
 		(1.f - r);
 
-	if (passThroughEvent < .5f) {
+	if (passThroughEvent < threshold) {
 		*sampledDir *= (signbit(fixedDir.z) ? -1.f : 1.f);
 		*event = DIFFUSE | REFLECT;
 		return r * M_1_PI_F;
@@ -781,9 +843,11 @@ float3 Glossy2Material_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 		const float passThroughEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
+			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
 	float3 ks = Texture_GetSpectrumValue(&texs[material->glossy2.ksTexIndex], hitPoint
@@ -955,9 +1019,11 @@ float3 Metal2Material_Evaluate(__global Material *material,
 float3 Metal2Material_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
+			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
 	const float u = clamp(Texture_GetFloatValue(&texs[material->metal2.nuTexIndex], hitPoint
@@ -1134,9 +1200,11 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 float3 RoughGlassMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
-	if (fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	if (!(requestedEvent & (GLOSSY | REFLECT | TRANSMIT)) ||
+			(fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
 	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.ktTexIndex], hitPoint
@@ -1179,7 +1247,20 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 	const float coso = fabs(localFixedDir.z);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	// Decide to transmit or reflect
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return BLACK;
+	}
+
 	float3 result;
 	if (passThroughEvent < threshold) {
 		// Transmit

@@ -22,12 +22,17 @@
  ***************************************************************************/
 
 typedef enum {
-	NONE     = 0,
-	DIFFUSE  = 1,
-	GLOSSY   = 2,
+	NONE = 0,
+	DIFFUSE = 1,
+	GLOSSY = 2,
 	SPECULAR = 4,
-	REFLECT  = 8,
-	TRANSMIT = 16
+	REFLECT = 8,
+	TRANSMIT = 16,
+
+	ALL_TYPES = DIFFUSE | GLOSSY | SPECULAR,
+	ALL_REFLECT = REFLECT | ALL_TYPES,
+	ALL_TRANSMIT = TRANSMIT | ALL_TYPES,
+	ALL = ALL_REFLECT | ALL_TRANSMIT
 } BSDFEventType;
 
 typedef int BSDFEvent;
