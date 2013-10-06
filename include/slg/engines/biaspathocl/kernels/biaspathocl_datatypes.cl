@@ -53,6 +53,7 @@
 
 #define PATH_VERTEX_1 (1<<16)
 #define PATH_VERTEX_N (1<<17)
+#define DONE (1<<18)
 #define HIGH_STATE_MASK 0xffff0000
 
 // This is defined only under OpenCL because of variable size structures
