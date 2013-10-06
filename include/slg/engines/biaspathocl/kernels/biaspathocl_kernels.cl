@@ -1280,7 +1280,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			const float3 bsdfSample = BSDF_Sample(&task->bsdfPathVertexN,
 				Rnd_FloatValue(&seed),
 				Rnd_FloatValue(&seed),
-				&sampledDir, &lastPdfW, &cosSampledDir, &event
+				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
 				MATERIALS_PARAM);
 
 			PathDepthInfo_IncDepths(&depthInfo, event);
@@ -1330,17 +1330,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				const uint globalMatSamplesCount = ((vertex1SampleComponent == DIFFUSE) ? PARAM_DIFFUSE_SAMPLES :
 					((vertex1SampleComponent == GLOSSY) ? PARAM_GLOSSY_SAMPLES :
 						PARAM_SPECULAR_SAMPLES));
-				const uint sampleCount = 1; //(matSamplesCount < 0) ? globalMatSamplesCount : (uint)matSamplesCount;
+				const uint sampleCount = (matSamplesCount < 0) ? globalMatSamplesCount : (uint)matSamplesCount;
 				const uint sampleCount2 = sampleCount * sampleCount;
 
-				//if (!(materialEventTypes & vertex1SampleComponent) || (vertex1SampleIndex >= sampleCount2)) {
-				if (vertex1SampleIndex >= sampleCount2) {
+				if (!(materialEventTypes & vertex1SampleComponent) || (vertex1SampleIndex >= sampleCount2)) {
 					// Move to next component
-					/*if (vertex1SampleComponent == DIFFUSE)
+					if (vertex1SampleComponent == DIFFUSE)
 						vertex1SampleComponent = GLOSSY;
 					else if (vertex1SampleComponent == GLOSSY)
 						vertex1SampleComponent = SPECULAR;
-					else*/ {
+					else {
 						// We have sampled all 3 components. Done.
 						pathState = DONE;
 						break;
@@ -1372,7 +1371,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				const float3 bsdfSample = BSDF_Sample(&task->bsdfPathVertex1,
 						u0,
 						u1,
-						&sampledDir, &lastPdfW, &cosSampledDir, &event
+						&sampledDir, &lastPdfW, &cosSampledDir, &event,
+						vertex1SampleComponent | REFLECT | TRANSMIT
 						MATERIALS_PARAM);
 
 				PathDepthInfo_Init(&depthInfo, 0);

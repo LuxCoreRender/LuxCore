@@ -1042,7 +1042,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		const float3 bsdfSample = BSDF_Sample(bsdf,
 				Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),
 				Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),
-				&sampledDir, &lastPdfW, &cosSampledDir, &event
+				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
 				MATERIALS_PARAM);
 
 		// Russian Roulette

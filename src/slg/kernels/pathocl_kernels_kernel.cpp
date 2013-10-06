@@ -1045,7 +1045,7 @@ std::string KernelSource_pathocl_kernels =
 "		const float3 bsdfSample = BSDF_Sample(bsdf,\n"
 "				Sampler_GetSamplePathVertex(depth, IDX_BSDF_X),\n"
 "				Sampler_GetSamplePathVertex(depth, IDX_BSDF_Y),\n"
-"				&sampledDir, &lastPdfW, &cosSampledDir, &event\n"
+"				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL\n"
 "				MATERIALS_PARAM);\n"
 "\n"
 "		// Russian Roulette\n"
