@@ -56,6 +56,7 @@ std::string KernelSource_biaspathocl_datatypes =
 "\n"
 "#define PATH_VERTEX_1 (1<<16)\n"
 "#define PATH_VERTEX_N (1<<17)\n"
+"#define DONE (1<<18)\n"
 "#define HIGH_STATE_MASK 0xffff0000\n"
 "\n"
 "// This is defined only under OpenCL because of variable size structures\n"
