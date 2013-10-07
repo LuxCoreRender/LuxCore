@@ -721,7 +721,6 @@ void CompiledScene::CompileLightSamples() {
 		lightSamples[index] = scene->sunLight->GetSamples();
 }
 
-
 void CompiledScene::CompileLightVisibility() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightVisbility");
 
@@ -756,6 +755,19 @@ void CompiledScene::CompileMaterialSamples() {
 
 	for (u_int i = 0; i < materialSamples.size(); ++i)
 		materialSamples[i] =  scene->matDefs.GetMaterial(i)->GetSamples();
+}
+
+void CompiledScene::CompileMaterialVisibility() {
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile MaterialVisibility");
+
+	materialVisibility.resize(scene->matDefs.GetSize());
+
+	for (u_int i = 0; i < materialSamples.size(); ++i) {
+		materialVisibility[i] = 
+				(scene->matDefs.GetMaterial(i)->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(scene->matDefs.GetMaterial(i)->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(scene->matDefs.GetMaterial(i)->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+	}
 }
 
 void CompiledScene::CompileTextures() {
@@ -1110,6 +1122,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
 		CompileMaterials();
 		CompileMaterialSamples();
+		CompileMaterialVisibility();
 	}
 	if (editActions.Has(AREALIGHTS_EDIT))
 		CompileAreaLights();

@@ -75,6 +75,7 @@ protected:
 	cl::Buffer *lightSamplesBuff;
 	cl::Buffer *lightVisibilityBuff;
 	cl::Buffer *materialSamplesBuff;
+	cl::Buffer *materialVisibilityBuff;
 
 	u_int sampleDimensions;
 

@@ -657,6 +657,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		__global int *lightSamples,
 		__global BSDFEvent *lightVisibility,
 		__global int *materialSamples,
+		__global BSDFEvent *materialVisibility,
 		// Film parameters
 		const uint filmWidth, const uint filmHeight
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -1028,29 +1029,31 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 				}
 
+				if (firstPathVertex || (materialVisibility[currentBSDF->materialIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-				// Check if it is a light source (note: I can hit only triangle area light sources)
-				if (BSDF_IsLightSource(currentBSDF) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
-					DirectHitFiniteLight(firstPathVertex, lastBSDFEvent,
-							pathBSDFEvent, lightVisibility, lightsDistribution,
-							triLightDefs, currentThroughput,
-							rayHit.t, currentBSDF, lastPdfW,
-							sampleResult
-							MATERIALS_PARAM);
-				}
+					// Check if it is a light source (note: I can hit only triangle area light sources)
+					if (BSDF_IsLightSource(currentBSDF) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
+						DirectHitFiniteLight(firstPathVertex, lastBSDFEvent,
+								pathBSDFEvent, lightVisibility, lightsDistribution,
+								triLightDefs, currentThroughput,
+								rayHit.t, currentBSDF, lastPdfW,
+								sampleResult
+								MATERIALS_PARAM);
+					}
 #endif
-
-				// Before Direct Lighting in order to have a correct MIS
-				if (PathDepthInfo_CheckDepths(&depthInfo)) {
+					// Before Direct Lighting in order to have a correct MIS
+					if (PathDepthInfo_CheckDepths(&depthInfo)) {
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-					taskDirectLight->lightIndex = 0;
-					taskDirectLight->lightSampleIndex = 0;
+						taskDirectLight->lightIndex = 0;
+						taskDirectLight->lightSampleIndex = 0;
 #endif
-					pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
-				} else {
-					pathState = firstPathVertex ? DONE :
-						(PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY);
-				}
+						pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
+					} else {
+						pathState = firstPathVertex ? DONE :
+							(PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY);
+					}
+				} else
+					pathState = PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY;
 			} else {
 				//--------------------------------------------------------------
 				// Nothing was hit, add environmental lights radiance
