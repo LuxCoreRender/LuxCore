@@ -120,3 +120,11 @@ void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent, cons
 		}
 	}
 }
+
+void MangleMemory(__global unsigned char *ptr, const size_t size) {
+	Seed seed;
+	Rnd_Init(7 + get_global_id(0), &seed);
+
+	for (uint i = 0; i < size; ++i)
+		*ptr++ = (unsigned char)(Rnd_UintValue(&seed) & 0xff);
+}

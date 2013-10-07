@@ -61,6 +61,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
 
+	// For testing/debugging
+	//MangleMemory((__global unsigned char *)task, sizeof(GPUTask));
+
 	// Initialize random number generator
 	Seed seed;
 	Rnd_Init(seedBase + gid, &seed);
@@ -1155,12 +1158,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					// Move to the next path vertex
 					pathState = PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY;
 				}
-			} else	
-#endif
-			{
+			} else {
 				// Move to the next path vertex
 				pathState = PATH_VERTEX_N | NEXT_VERTEX_GENERATE_RAY;
 			}
+#else
+			// Move to the next path vertex
+			pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
+#endif
 		}
 
 		//----------------------------------------------------------------------
@@ -1290,7 +1295,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
 				VSTORE3F(throughput, &task->throughputPathVertexN.r);
 
-				Ray_Init2_Private(&ray, VLOAD3F(&currentBSDF->hitPoint.p.x), sampledDir);
+				Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertexN.hitPoint.p.x), sampledDir);
 
 				lastBSDFEvent = event;
 
