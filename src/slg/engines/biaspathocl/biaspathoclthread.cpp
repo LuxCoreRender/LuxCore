@@ -44,6 +44,8 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	mergePixelSamplesKernel = NULL;
 
 	tasksBuff = NULL;
+	tasksDirectLightBuff = NULL;
+	tasksPathVertexNBuff = NULL;
 	taskStatsBuff = NULL;
 	taskResultsBuff = NULL;
 	pixelFilterBuff = NULL;
@@ -71,6 +73,8 @@ void BiasPathOCLRenderThread::Stop() {
 	PathOCLBaseRenderThread::Stop();
 
 	FreeOCLBuffer(&tasksBuff);
+	FreeOCLBuffer(&tasksDirectLightBuff);
+	FreeOCLBuffer(&tasksPathVertexNBuff);
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&taskResultsBuff);
 	FreeOCLBuffer(&pixelFilterBuff);
@@ -174,8 +178,14 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		// Spectrum (throughputPathVertex1) size
 		sizeof(slg::ocl::Spectrum) +
 		// BSDF (bsdfPathVertex1) size
-		GetOpenCLBSDFSize() +
+		GetOpenCLBSDFSize();
+	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] BSDF size: " << GetOpenCLBSDFSize() << "bytes");
+	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] HitPoint size: " << GetOpenCLHitPointSize() << "bytes");
+	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask size: " << GPUTaskSize << "bytes");
 
+	AllocOCLBufferRW(&tasksBuff, GPUTaskSize * engine->taskCount, "GPUTask");
+
+	const size_t GPUTaskDirectLightSize =
 		// u_int (lightIndex and lightSampleIndex) size
 		((engine->lightSamplingStrategyONE) ? 0 : 2 * sizeof(u_int)) +
 
@@ -189,8 +199,12 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		// Spectrum (lightRadiance) size
 		sizeof(slg::ocl::Spectrum) +
 		// u_int (lightID) size
-		sizeof(u_int) +
+		sizeof(u_int);
+	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask DirectLight size: " << GPUTaskSize << "bytes");
 
+	AllocOCLBufferRW(&tasksDirectLightBuff, GPUTaskDirectLightSize * engine->taskCount, "GPUTask DirectLight");
+
+	const size_t GPUTaskPathVertexNSize =
 		// BSDFEvent (vertex1SampleComponent) size
 		sizeof(BSDFEvent) +
 		// u_int (vertex1SampleIndex) size
@@ -200,11 +214,9 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		sizeof(slg::ocl::Spectrum) +
 		// BSDF (bsdfPathVertexN) size
 		GetOpenCLBSDFSize();
-	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] BSDF size: " << GetOpenCLBSDFSize() << "bytes");
-	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] HitPoint size: " << GetOpenCLHitPointSize() << "bytes");
-	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask size: " << GPUTaskSize << "bytes");
+	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask PathVertexN size: " << GPUTaskSize << "bytes");
 
-	AllocOCLBufferRW(&tasksBuff, GPUTaskSize * engine->taskCount, "GPUTask");
+	AllocOCLBufferRW(&tasksPathVertexNBuff, GPUTaskPathVertexNSize * engine->taskCount, "GPUTask PathVertexN");
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU task statistic buffers
@@ -277,6 +289,8 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, engine->film->GetWidth());
 	renderSampleKernel->setArg(argIndex++, engine->film->GetHeight());
 	renderSampleKernel->setArg(argIndex++, *tasksBuff);
+	renderSampleKernel->setArg(argIndex++, *tasksDirectLightBuff);
+	renderSampleKernel->setArg(argIndex++, *tasksPathVertexNBuff);
 	renderSampleKernel->setArg(argIndex++, *taskStatsBuff);
 	renderSampleKernel->setArg(argIndex++, *taskResultsBuff);
 	renderSampleKernel->setArg(argIndex++, *pixelFilterBuff);

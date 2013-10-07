@@ -65,7 +65,9 @@ typedef struct {
 
 	Spectrum throughputPathVertex1;
 	BSDF bsdfPathVertex1;
+} GPUTask;
 
+typedef struct {
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 	unsigned int lightIndex, lightSampleIndex;
 #endif
@@ -82,14 +84,16 @@ typedef struct {
 	// if light source is visible.
 	Spectrum lightRadiance;
 	unsigned int lightID;
+} GPUTaskDirectLight;
 
+typedef struct {
 	// DIFFUSE, GLOSSY and SPECULAR BSDF sampling
 	BSDFEvent vertex1SampleComponent;
 	unsigned int vertex1SampleIndex;
 
 	Spectrum throughputPathVertexN;
 	BSDF bsdfPathVertexN;
-} GPUTask;
+} GPUTaskPathVertexN;
 
 #endif
 

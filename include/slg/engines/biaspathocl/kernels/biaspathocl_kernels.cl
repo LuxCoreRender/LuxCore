@@ -622,6 +622,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		const int tileSampleIndex,
 		const uint engineFilmWidth, const uint engineFilmHeight,
 		__global GPUTask *tasks,
+		__global GPUTaskDirectLight *tasksDirectLight,
+		__global GPUTaskPathVertexN *tasksPathVertexN,
 		__global GPUTaskStats *taskStats,
 		__global SampleResult *taskResults,
 		__global float *pixelFilterDistribution,
@@ -794,6 +796,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 
 	__global GPUTask *task = &tasks[gid];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global GPUTaskPathVertexN *taskPathVertexN = &tasksPathVertexN[gid];
 	__global GPUTaskStats *taskStat = &taskStats[gid];
 
 	//--------------------------------------------------------------------------
@@ -859,8 +863,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	// Render a sample
 	//--------------------------------------------------------------------------
 
-	task->vertex1SampleComponent = DIFFUSE;
-	task->vertex1SampleIndex = 0;
+	taskPathVertexN->vertex1SampleComponent = DIFFUSE;
+	taskPathVertexN->vertex1SampleIndex = 0;
 
 	uint tracedRaysCount = taskStat->raysCount;
 	uint pathState = PATH_VERTEX_1 | NEXT_VERTEX_TRACE_RAY;
@@ -886,8 +890,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	//	printf("== Begin loop\n");
 	//	printf("==\n");
 	//	printf("== task->bsdfPathVertex1: %x\n", &task->bsdfPathVertex1);
-	//	printf("== task->directLightBSDF: %x\n", &task->directLightBSDF);
-	//	printf("== task->bsdfPathVertexN: %x\n", &task->bsdfPathVertexN);
+	//	printf("== taskDirectLight->directLightBSDF: %x\n", &taskDirectLight->directLightBSDF);
+	//	printf("== taskPathVertexN->bsdfPathVertexN: %x\n", &taskPathVertexN->bsdfPathVertexN);
 	//	printf("============================================================\n");
 	//}
 
@@ -1011,8 +1015,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				// Before Direct Lighting in order to have a correct MIS
 				if (PathDepthInfo_CheckDepths(&depthInfo)) {
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-					task->lightIndex = 0;
-					task->lightSampleIndex = 0;
+					taskDirectLight->lightIndex = 0;
+					taskDirectLight->lightSampleIndex = 0;
 #endif
 					pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_GENERATE_RAY;
 				} else {
@@ -1099,8 +1103,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				//--------------------------------------------------------------
 
 				// currentThroughput contains the shadow ray throughput
-				const float3 lightRadiance = VLOAD3F(&currentThroughput->r) * VLOAD3F(&task->lightRadiance.r);
-				const uint lightID = task->lightID;
+				const float3 lightRadiance = VLOAD3F(&currentThroughput->r) * VLOAD3F(&taskDirectLight->lightRadiance.r);
+				const uint lightID = taskDirectLight->lightID;
 				VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
 
 				//if (get_global_id(0) == 0)
@@ -1150,9 +1154,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 			if (firstPathVertex) {
-				const uint lightIndex = task->lightIndex;
+				const uint lightIndex = taskDirectLight->lightIndex;
 				if (lightIndex <= PARAM_LIGHT_COUNT) {
-					++(task->lightSampleIndex);
+					++(taskDirectLight->lightSampleIndex);
 					pathState = PATH_VERTEX_1 | DIRECT_LIGHT_GENERATE_RAY;
 				} else {
 					// Move to the next path vertex
@@ -1180,7 +1184,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		if (pathState & DIRECT_LIGHT_GENERATE_RAY) {
 			const bool firstPathVertex = (pathState & PATH_VERTEX_1);
 
-			if (BSDF_IsDelta(firstPathVertex ? &task->bsdfPathVertex1 : &task->bsdfPathVertexN
+			if (BSDF_IsDelta(firstPathVertex ? &task->bsdfPathVertex1 : &taskPathVertexN->bsdfPathVertexN
 				MATERIALS_PARAM)) {
 				// Move to the next path vertex
 				pathState = (pathState & HIGH_STATE_MASK) | NEXT_VERTEX_GENERATE_RAY;
@@ -1207,18 +1211,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 						triLightDefs,
-						&task->directLightHitPoint,
+						&taskDirectLight->directLightHitPoint,
 #endif
 						lightsDistribution,
-						firstPathVertex ? &task->throughputPathVertex1 : &task->throughputPathVertexN,
-						firstPathVertex ? &task->bsdfPathVertex1 : &task->bsdfPathVertexN,
+						firstPathVertex ? &task->throughputPathVertex1 : &taskPathVertexN->throughputPathVertexN,
+						firstPathVertex ? &task->bsdfPathVertex1 : &taskPathVertexN->bsdfPathVertexN,
 						sampleResult,
-						&ray, &task->lightRadiance, &task->lightID
+						&ray, &taskDirectLight->lightRadiance, &taskDirectLight->lightID
 						MATERIALS_PARAM)
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 				: DirectLightSampling_ALL(
-						&task->lightIndex,
-						&task->lightSampleIndex,
+						&taskDirectLight->lightIndex,
+						&taskDirectLight->lightSampleIndex,
 						lightSamples,
 						&seed,
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
@@ -1236,26 +1240,26 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 						triLightDefs,
-						&task->directLightHitPoint,
+						&taskDirectLight->directLightHitPoint,
 #endif
 						lightsDistribution,
 						&task->throughputPathVertex1, &task->bsdfPathVertex1,
 						sampleResult,
-						&ray, &task->lightRadiance, &task->lightID
+						&ray, &taskDirectLight->lightRadiance, &taskDirectLight->lightID
 						MATERIALS_PARAM)
 #endif
 				;
 				
 				if (illuminated) {
 					// Trace the shadow ray
-					currentBSDF = &task->directLightBSDF;
-					currentThroughput = &task->directLightThroughput;
+					currentBSDF = &taskDirectLight->directLightBSDF;
+					currentThroughput = &taskDirectLight->directLightThroughput;
 					VSTORE3F(WHITE, &currentThroughput->r);
 #if defined(PARAM_HAS_PASSTHROUGH)
 					// This is a bit tricky. I store the passThroughEvent in the BSDF
 					// before of the initialization because it can be use during the
 					// tracing of next path vertex ray.
-					task->directLightBSDF.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+					taskDirectLight->directLightBSDF.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
 #endif
 
 					pathState = (pathState & HIGH_STATE_MASK) | DIRECT_LIGHT_TRACE_RAY;
@@ -1282,7 +1286,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			float3 sampledDir;
 			float cosSampledDir;
 			BSDFEvent event;
-			const float3 bsdfSample = BSDF_Sample(&task->bsdfPathVertexN,
+			const float3 bsdfSample = BSDF_Sample(&taskPathVertexN->bsdfPathVertexN,
 				Rnd_FloatValue(&seed),
 				Rnd_FloatValue(&seed),
 				&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
@@ -1291,11 +1295,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			PathDepthInfo_IncDepths(&depthInfo, event);
 
 			if (!Spectrum_IsBlack(bsdfSample)) {
-				float3 throughput = VLOAD3F(&task->throughputPathVertexN.r);
+				float3 throughput = VLOAD3F(&taskPathVertexN->throughputPathVertexN.r);
 				throughput *= bsdfSample * (cosSampledDir / lastPdfW);
-				VSTORE3F(throughput, &task->throughputPathVertexN.r);
+				VSTORE3F(throughput, &taskPathVertexN->throughputPathVertexN.r);
 
-				Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertexN.hitPoint.p.x), sampledDir);
+				Ray_Init2_Private(&ray, VLOAD3F(&taskPathVertexN->bsdfPathVertexN.hitPoint.p.x), sampledDir);
 
 				lastBSDFEvent = event;
 
@@ -1303,10 +1307,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				// This is a bit tricky. I store the passThroughEvent in the BSDF
 				// before of the initialization because it can be use during the
 				// tracing of next path vertex ray.
-				task->bsdfPathVertexN.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+				taskPathVertexN->bsdfPathVertexN.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
 #endif
-				currentBSDF = &task->bsdfPathVertexN;
-				currentThroughput = &task->throughputPathVertexN;
+				currentBSDF = &taskPathVertexN->bsdfPathVertexN;
+				currentThroughput = &taskPathVertexN->throughputPathVertexN;
 
 				pathState = PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY;
 			} else
@@ -1325,8 +1329,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			//	printf("(PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY)) ==> Depth: %d  [pathState: %d|%d][currentThroughput: %f %f %f]\n",
 			//			depthInfo.depth, pathState >> 16, pathState & LOW_STATE_MASK, currentThroughput->r, currentThroughput->g, currentThroughput->b);
 
-			BSDFEvent vertex1SampleComponent = task->vertex1SampleComponent;
-			uint vertex1SampleIndex = task->vertex1SampleIndex;
+			BSDFEvent vertex1SampleComponent = taskPathVertexN->vertex1SampleComponent;
+			uint vertex1SampleIndex = taskPathVertexN->vertex1SampleIndex;
 			const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
 				MATERIALS_PARAM);
 
@@ -1387,7 +1391,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					const float scaleFactor = 1.f / sampleCount2;
 					float3 throughput = VLOAD3F(&task->throughputPathVertex1.r);
 					throughput *= bsdfSample * (scaleFactor * cosSampledDir / lastPdfW);
-					VSTORE3F(throughput, &task->throughputPathVertexN.r);
+					VSTORE3F(throughput, &taskPathVertexN->throughputPathVertexN.r);
 
 					Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertex1.hitPoint.p.x), sampledDir);
 
@@ -1398,16 +1402,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					// This is a bit tricky. I store the passThroughEvent in the BSDF
 					// before of the initialization because it can be use during the
 					// tracing of next path vertex ray.
-					task->bsdfPathVertexN.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+					taskPathVertexN->bsdfPathVertexN.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
 #endif
-					currentBSDF = &task->bsdfPathVertexN;
-					currentThroughput = &task->throughputPathVertexN;
+					currentBSDF = &taskPathVertexN->bsdfPathVertexN;
+					currentThroughput = &taskPathVertexN->throughputPathVertexN;
 
 					pathState = PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY;
 
 					// Save vertex1SampleComponent and vertex1SampleIndex
-					task->vertex1SampleComponent = vertex1SampleComponent;
-					task->vertex1SampleIndex = vertex1SampleIndex;
+					taskPathVertexN->vertex1SampleComponent = vertex1SampleComponent;
+					taskPathVertexN->vertex1SampleIndex = vertex1SampleIndex;
 					break;
 				}
 			}
