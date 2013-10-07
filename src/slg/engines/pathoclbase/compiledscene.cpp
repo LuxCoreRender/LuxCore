@@ -721,6 +721,34 @@ void CompiledScene::CompileLightSamples() {
 		lightSamples[index] = scene->sunLight->GetSamples();
 }
 
+
+void CompiledScene::CompileLightVisibility() {
+	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightVisbility");
+
+	lightVisibility.resize(scene->triLightDefs.size() + (scene->envLight ? 1 : 0) + (scene->sunLight ? 1 : 0));
+
+	u_int index = 0;
+	while (index < scene->triLightDefs.size()) {
+		lightVisibility[index] = 
+				(scene->triLightDefs[index]->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(scene->triLightDefs[index]->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(scene->triLightDefs[index]->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+		++index;
+	}
+	if (scene->envLight) {
+		lightVisibility[index++] =
+				(scene->envLight->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(scene->envLight->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(scene->envLight->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+	}
+	if (scene->sunLight) {
+		lightVisibility[index] =
+				(scene->sunLight->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(scene->sunLight->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(scene->sunLight->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+	}
+}
+
 void CompiledScene::CompileMaterialSamples() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile MaterialSamples");
 
@@ -1097,6 +1125,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 			editActions.Has(SKYLIGHT_EDIT)) {
 		CompileLightsDistribution();
 		CompileLightSamples();
+		CompileLightVisibility();
 	}
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
