@@ -457,9 +457,6 @@ int main(int argc, char *argv[]) {
 		}
 
 		if (configFileName.compare("") == 0)
-#ifdef __APPLE__
-			boost::filesystem::current_path(argv[0]); // for OSX 10.9 we must have a reference dir here for luxmark, cwd was moved in between
-#endif
 			configFileName = "scenes/luxball/luxball.cfg";
 
 		RenderConfig *config = new RenderConfig(&configFileName, &cmdLineProp);
