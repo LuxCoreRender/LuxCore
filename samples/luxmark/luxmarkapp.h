@@ -26,6 +26,7 @@
 #include <QTimer>
 
 #include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
 
 #include "slgdefs.h"
 #include "mainwindow.h"
@@ -85,6 +86,8 @@ private:
 	qreal mouseGrabLastX;
 	qreal mouseGrabLastY;
 	double lastMouseUpdate;
+	
+	boost::filesystem::path exePath;
 
 private slots:
 	void RenderRefreshTimeout();

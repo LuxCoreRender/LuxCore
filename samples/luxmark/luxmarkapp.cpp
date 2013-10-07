@@ -25,6 +25,8 @@
 #include "slg/renderengine.h"
 #include "slg/engines/pathocl/pathocl.h"
 
+#include <boost/filesystem.hpp>
+
 #include "luxmarkcfg.h"
 #include "luxmarkapp.h"
 #include "resultdialog.h"
@@ -48,7 +50,9 @@ LuxMarkApp::LuxMarkApp(int &argc, char **argv) : QApplication(argc, argv) {
 	// order to avoid a crash
 	FreeImage_Initialise(TRUE);
 	FreeImage_SetOutputMessage(FreeImageErrorHandler);
-
+	
+	exePath = argv[0];
+	
 	singleRun = false;
 
 	mainWin = NULL;
@@ -78,7 +82,10 @@ void LuxMarkApp::Init(LuxMarkAppMode mode, const char *scnName, const bool singl
 	mainWin->SetLuxApp(this);
 	LogWindow = mainWin;
 	singleRun = single;
-
+#ifdef __APPLE__
+	boost::filesystem::path exeDir = exePath.parent_path().parent_path(); // LuxMark.app/Contents
+	boost::filesystem::current_path( exeDir);
+#endif
 	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark v" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
 	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
 
