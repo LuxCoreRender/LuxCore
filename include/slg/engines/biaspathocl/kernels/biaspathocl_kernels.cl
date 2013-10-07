@@ -37,6 +37,8 @@
 //  PARAM_DEPTH_GLOSSY_MAX
 //  PARAM_DEPTH_SPECULAR_MAX
 //  PARAM_IMAGE_FILTER_WIDTH
+//  PARAM_LOW_LIGHT_THREASHOLD
+//  PARAM_NEAR_START_LIGHT
 
 //------------------------------------------------------------------------------
 // InitSeed Kernel
@@ -246,7 +248,7 @@ void DirectHitInfiniteLight(
 		const float3 infiniteLightRadiance = InfiniteLight_GetRadiance(infiniteLight,
 				infiniteLightDistribution, eyeDir, &directPdfW
 				IMAGEMAPS_PARAM);
-		if (!Spectrum_IsBlack(infiniteLightRadiance)) {
+		if (Spectrum_Y(infiniteLightRadiance) > PARAM_LOW_LIGHT_THREASHOLD) {
 			// MIS between BSDF sampling and direct light sampling
 			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, infiniteLight->lightSceneIndex);
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
@@ -261,7 +263,7 @@ void DirectHitInfiniteLight(
 	{
 		float directPdfW;
 		const float3 skyRadiance = SkyLight_GetRadiance(skyLight, eyeDir, &directPdfW);
-		if (!Spectrum_IsBlack(skyRadiance)) {
+		if (Spectrum_Y(skyRadiance) > PARAM_LOW_LIGHT_THREASHOLD) {
 			// MIS between BSDF sampling and direct light sampling
 			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, skyLight->lightSceneIndex);
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
@@ -276,7 +278,7 @@ void DirectHitInfiniteLight(
 	{
 		float directPdfW;
 		const float3 sunRadiance = SunLight_GetRadiance(sunLight, eyeDir, &directPdfW);
-		if (!Spectrum_IsBlack(sunRadiance)) {
+		if (Spectrum_Y(sunRadiance) > PARAM_LOW_LIGHT_THREASHOLD) {
 			// MIS between BSDF sampling and direct light sampling
 			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, sunLight->lightSceneIndex);
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
@@ -305,7 +307,7 @@ void DirectHitFiniteLight(
 			triLightDefs, &directPdfA
 			MATERIALS_PARAM);
 
-	if (!Spectrum_IsBlack(emittedRadiance)) {
+	if (Spectrum_Y(emittedRadiance) > PARAM_LOW_LIGHT_THREASHOLD) {
 		// Add emitted radiance
 		float weight = 1.f;
 		if (!(lastBSDFEvent & SPECULAR)) {
@@ -421,7 +423,7 @@ bool DirectLightSampling(
 #endif
 
 	// Setup the shadow ray
-	if (!Spectrum_IsBlack(lightRadiance)) {
+	if ((Spectrum_Y(lightRadiance) > PARAM_LOW_LIGHT_THREASHOLD) && (distance > PARAM_NEAR_START_LIGHT)) {
 		BSDFEvent event;
 		float bsdfPdfW;
 		const float3 bsdfEval = BSDF_Evaluate(bsdf,
@@ -1002,7 +1004,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				// Check if it is a light source (note: I can hit only triangle area light sources)
-				if (BSDF_IsLightSource(currentBSDF)) {
+				if (BSDF_IsLightSource(currentBSDF) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
 					DirectHitFiniteLight(firstPathVertex, lastBSDFEvent,
 							pathBSDFEvent, lightsDistribution,
 							triLightDefs, currentThroughput,

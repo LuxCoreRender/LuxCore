@@ -114,7 +114,9 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_DEPTH_GLOSSY_MAX=" << engine->maxPathDepth.glossyDepth <<
 			" -D PARAM_DEPTH_SPECULAR_MAX=" << engine->maxPathDepth.specularDepth <<
 			" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filterWidthX << "f" <<
-			" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filterWidthY << "f";
+			" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filterWidthY << "f" <<
+			" -D PARAM_LOW_LIGHT_THREASHOLD=" << engine->lowLightThreashold << "f" <<
+			" -D PARAM_NEAR_START_LIGHT=" << engine->nearStartLight << "f";
 
 	return ss.str();
 }
