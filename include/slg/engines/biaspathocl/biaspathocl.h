@@ -67,6 +67,8 @@ protected:
 	size_t mergePixelSamplesWorkGroupSize;
 
 	cl::Buffer *tasksBuff;
+	cl::Buffer *tasksDirectLightBuff;
+	cl::Buffer *tasksPathVertexNBuff;
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *taskResultsBuff;
 	cl::Buffer *pixelFilterBuff;
