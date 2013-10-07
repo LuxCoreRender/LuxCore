@@ -248,7 +248,7 @@ void DirectHitInfiniteLight(
 		const float3 infiniteLightRadiance = InfiniteLight_GetRadiance(infiniteLight,
 				infiniteLightDistribution, eyeDir, &directPdfW
 				IMAGEMAPS_PARAM);
-		if (Spectrum_Y(infiniteLightRadiance) > PARAM_LOW_LIGHT_THREASHOLD) {
+		if (!Spectrum_IsBlack(infiniteLightRadiance)) {
 			// MIS between BSDF sampling and direct light sampling
 			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, infiniteLight->lightSceneIndex);
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
@@ -263,7 +263,7 @@ void DirectHitInfiniteLight(
 	{
 		float directPdfW;
 		const float3 skyRadiance = SkyLight_GetRadiance(skyLight, eyeDir, &directPdfW);
-		if (Spectrum_Y(skyRadiance) > PARAM_LOW_LIGHT_THREASHOLD) {
+		if (!Spectrum_IsBlack(skyRadiance)) {
 			// MIS between BSDF sampling and direct light sampling
 			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, skyLight->lightSceneIndex);
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
@@ -278,7 +278,7 @@ void DirectHitInfiniteLight(
 	{
 		float directPdfW;
 		const float3 sunRadiance = SunLight_GetRadiance(sunLight, eyeDir, &directPdfW);
-		if (Spectrum_Y(sunRadiance) > PARAM_LOW_LIGHT_THREASHOLD) {
+		if (!Spectrum_IsBlack(sunRadiance)) {
 			// MIS between BSDF sampling and direct light sampling
 			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, sunLight->lightSceneIndex);
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
@@ -307,7 +307,7 @@ void DirectHitFiniteLight(
 			triLightDefs, &directPdfA
 			MATERIALS_PARAM);
 
-	if (Spectrum_Y(emittedRadiance) > PARAM_LOW_LIGHT_THREASHOLD) {
+	if (!Spectrum_IsBlack(emittedRadiance)) {
 		// Add emitted radiance
 		float weight = 1.f;
 		if (!(lastBSDFEvent & SPECULAR)) {
@@ -423,7 +423,9 @@ bool DirectLightSampling(
 #endif
 
 	// Setup the shadow ray
-	if ((Spectrum_Y(lightRadiance) > PARAM_LOW_LIGHT_THREASHOLD) && (distance > PARAM_NEAR_START_LIGHT)) {
+	const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
+	if (((Spectrum_Y(lightRadiance) * cosThetaToLight / directPdfW) > PARAM_LOW_LIGHT_THREASHOLD) &&
+			(distance > PARAM_NEAR_START_LIGHT)) {
 		BSDFEvent event;
 		float bsdfPdfW;
 		const float3 bsdfEval = BSDF_Evaluate(bsdf,
@@ -431,7 +433,6 @@ bool DirectLightSampling(
 				MATERIALS_PARAM);
 
 		if (!Spectrum_IsBlack(bsdfEval)) {
-			const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
 			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 			const float factor = cosThetaToLight / directLightSamplingPdfW;
 

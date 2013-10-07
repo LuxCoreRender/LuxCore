@@ -62,13 +62,14 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 	float distance, directPdfW;
 	Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
 			u0, u1, u2, &lightRayDir, &distance, &directPdfW);
+	const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
 
-	if ((lightRadiance.Y() > engine->lowLightThreashold) && (distance > engine->nearStartLight)) {
+	if ((lightRadiance.Y() * cosThetaToLight / directPdfW > engine->lowLightThreashold) &&
+			(distance > engine->nearStartLight)) {
 		BSDFEvent event;
 		float bsdfPdfW;
 		Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
-		const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
 		const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 		const float factor = cosThetaToLight / directLightSamplingPdfW;
 
@@ -202,7 +203,7 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 	float directPdfA;
 	const Spectrum emittedRadiance = bsdf.GetEmittedRadiance(&directPdfA);
 
-	if (emittedRadiance.Y() > engine->lowLightThreashold) {
+	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(lastBSDFEvent & SPECULAR)) {
 			// This PDF used for MIS is correct because lastSpecular is always
@@ -241,7 +242,7 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 			((pathBSDFEvent & GLOSSY) && envLight->IsVisibleIndirectGlossy()) ||
 			((pathBSDFEvent & SPECULAR) && envLight->IsVisibleIndirectSpecular())))) {
 		const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (envRadiance.Y() > engine->lowLightThreashold) {
+		if (!envRadiance.Black()) {
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {
 				// This PDF used for MIS is correct because lastSpecular is always
@@ -266,7 +267,7 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 			((pathBSDFEvent & GLOSSY) && sunLight->IsVisibleIndirectGlossy()) ||
 			((pathBSDFEvent & SPECULAR) && sunLight->IsVisibleIndirectSpecular())))) {
 		const Spectrum sunRadiance = sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (sunRadiance.Y() > engine->lowLightThreashold) {
+		if (!sunRadiance.Black()) {
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {
 				// MIS between BSDF sampling and direct light sampling
