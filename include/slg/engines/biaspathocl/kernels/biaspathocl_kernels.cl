@@ -225,6 +225,7 @@ void DirectHitInfiniteLight(
 		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
 		const BSDFEvent pathBSDFEvent,
+		__global BSDFEvent *lightVisibility,
 		__global float *lightsDistribution,
 #if defined(PARAM_HAS_INFINITELIGHT)
 		__global InfiniteLight *infiniteLight,
@@ -244,48 +245,68 @@ void DirectHitInfiniteLight(
 
 #if defined(PARAM_HAS_INFINITELIGHT)
 	{
-		float directPdfW;
-		const float3 infiniteLightRadiance = InfiniteLight_GetRadiance(infiniteLight,
-				infiniteLightDistribution, eyeDir, &directPdfW
-				IMAGEMAPS_PARAM);
-		if (!Spectrum_IsBlack(infiniteLightRadiance)) {
-			// MIS between BSDF sampling and direct light sampling
-			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, infiniteLight->lightSceneIndex);
-			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-			const float3 lightRadiance = weight * throughput * infiniteLightRadiance;
+		const uint infiniteLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
+#if defined(PARAM_HAS_SUNLIGHT)
+			+ 1
+#endif
+		;
 
-			const uint lightID = min(infiniteLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+		if (firstPathVertex || (lightVisibility[infiniteLightIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+			float directPdfW;
+			const float3 infiniteLightRadiance = InfiniteLight_GetRadiance(infiniteLight,
+					infiniteLightDistribution, eyeDir, &directPdfW
+					IMAGEMAPS_PARAM);
+			if (!Spectrum_IsBlack(infiniteLightRadiance)) {
+				// MIS between BSDF sampling and direct light sampling
+				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, infiniteLight->lightSceneIndex);
+				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+				const float3 lightRadiance = weight * throughput * infiniteLightRadiance;
+
+				const uint lightID = min(infiniteLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+				AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+			}
 		}
 	}
 #endif
 #if defined(PARAM_HAS_SKYLIGHT)
 	{
-		float directPdfW;
-		const float3 skyRadiance = SkyLight_GetRadiance(skyLight, eyeDir, &directPdfW);
-		if (!Spectrum_IsBlack(skyRadiance)) {
-			// MIS between BSDF sampling and direct light sampling
-			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, skyLight->lightSceneIndex);
-			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-			const float3 lightRadiance = weight * throughput * skyRadiance;
+		const uint skyLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
+#if defined(PARAM_HAS_SUNLIGHT)
+			+ 1
+#endif
+		;
 
-			const uint lightID = min(skyLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+		if (firstPathVertex || (lightVisibility[skyLightIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+			float directPdfW;
+			const float3 skyRadiance = SkyLight_GetRadiance(skyLight, eyeDir, &directPdfW);
+			if (!Spectrum_IsBlack(skyRadiance)) {
+				// MIS between BSDF sampling and direct light sampling
+				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, skyLight->lightSceneIndex);
+				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+				const float3 lightRadiance = weight * throughput * skyRadiance;
+
+				const uint lightID = min(skyLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+				AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+			}
 		}
 	}
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
 	{
-		float directPdfW;
-		const float3 sunRadiance = SunLight_GetRadiance(sunLight, eyeDir, &directPdfW);
-		if (!Spectrum_IsBlack(sunRadiance)) {
-			// MIS between BSDF sampling and direct light sampling
-			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, sunLight->lightSceneIndex);
-			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-			const float3 lightRadiance = weight * throughput * sunRadiance;
+		const uint sunLightIndex = PARAM_TRIANGLE_LIGHT_COUNT;
 
-			const uint lightID = min(sunLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+		if (firstPathVertex || (lightVisibility[sunLightIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+			float directPdfW;
+			const float3 sunRadiance = SunLight_GetRadiance(sunLight, eyeDir, &directPdfW);
+			if (!Spectrum_IsBlack(sunRadiance)) {
+				// MIS between BSDF sampling and direct light sampling
+				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, sunLight->lightSceneIndex);
+				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+				const float3 lightRadiance = weight * throughput * sunRadiance;
+
+				const uint lightID = min(sunLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+				AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+			}
 		}
 	}
 #endif
@@ -297,33 +318,36 @@ void DirectHitFiniteLight(
 		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
 		const BSDFEvent pathBSDFEvent,
+		__global BSDFEvent *lightVisibility,
 		__global float *lightsDistribution,
 		__global TriangleLight *triLightDefs,
 		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		MATERIALS_PARAM_DECL) {
-	float directPdfA;
-	const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf,
-			triLightDefs, &directPdfA
-			MATERIALS_PARAM);
+	if (firstPathVertex || (lightVisibility[bsdf->triangleLightSourceIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+		float directPdfA;
+		const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf,
+				triLightDefs, &directPdfA
+				MATERIALS_PARAM);
 
-	if (!Spectrum_IsBlack(emittedRadiance)) {
-		// Add emitted radiance
-		float weight = 1.f;
-		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,
-					triLightDefs[bsdf->triangleLightSourceIndex].lightSceneIndex);
-			const float directPdfW = PdfAtoW(directPdfA, distance,
-				fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
+		if (!Spectrum_IsBlack(emittedRadiance)) {
+			// Add emitted radiance
+			float weight = 1.f;
+			if (!(lastBSDFEvent & SPECULAR)) {
+				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,
+						triLightDefs[bsdf->triangleLightSourceIndex].lightSceneIndex);
+				const float directPdfW = PdfAtoW(directPdfA, distance,
+					fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
 
-			// MIS between BSDF sampling and direct light sampling
-			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+				// MIS between BSDF sampling and direct light sampling
+				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+			}
+			const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->r) * emittedRadiance;
+
+			const uint lightID =  min(BSDF_GetLightID(bsdf
+					MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
 		}
-		const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->r) * emittedRadiance;
-
-		const uint lightID =  min(BSDF_GetLightID(bsdf
-				MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-		AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
 	}
 }
 #endif
@@ -631,6 +655,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		__global SampleResult *taskResults,
 		__global float *pixelFilterDistribution,
 		__global int *lightSamples,
+		__global BSDFEvent *lightVisibility,
 		__global int *materialSamples,
 		// Film parameters
 		const uint filmWidth, const uint filmHeight
@@ -1007,7 +1032,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				// Check if it is a light source (note: I can hit only triangle area light sources)
 				if (BSDF_IsLightSource(currentBSDF) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
 					DirectHitFiniteLight(firstPathVertex, lastBSDFEvent,
-							pathBSDFEvent, lightsDistribution,
+							pathBSDFEvent, lightVisibility, lightsDistribution,
 							triLightDefs, currentThroughput,
 							rayHit.t, currentBSDF, lastPdfW,
 							sampleResult
@@ -1037,6 +1062,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 						firstPathVertex,
 						lastBSDFEvent,
 						pathBSDFEvent,
+						lightVisibility, 
 						lightsDistribution,
 #if defined(PARAM_HAS_INFINITELIGHT)
 						infiniteLight,
