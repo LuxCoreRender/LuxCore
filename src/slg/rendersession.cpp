@@ -283,6 +283,10 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 				cfg.GetString("image.filename", "image.png"));
 	}
 
+	// For compatibility with the past, old default
+	if (filmOutputs.GetCount() == 0)
+		filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, "image.png");
+
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
 	//--------------------------------------------------------------------------
