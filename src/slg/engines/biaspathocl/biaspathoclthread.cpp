@@ -52,6 +52,7 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	lightSamplesBuff = NULL;
 	lightVisibilityBuff = NULL;
 	materialSamplesBuff = NULL;
+	materialVisibilityBuff = NULL;
 	
 	gpuTaskStats = NULL;
 }
@@ -82,6 +83,7 @@ void BiasPathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&lightSamplesBuff);
 	FreeOCLBuffer(&lightVisibilityBuff);
 	FreeOCLBuffer(&materialSamplesBuff);
+	FreeOCLBuffer(&materialVisibilityBuff);
 }
 
 void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
@@ -263,6 +265,13 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 
 	AllocOCLBufferRO(&materialSamplesBuff, &engine->compiledScene->materialSamples[0],
 			sizeof(int) * engine->compiledScene->materialSamples.size(), "Material Samples");
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU material visibility with indirect paths
+	//--------------------------------------------------------------------------
+
+	AllocOCLBufferRO(&materialVisibilityBuff, &engine->compiledScene->materialVisibility[0],
+			sizeof(BSDFEvent) * engine->compiledScene->materialVisibility.size(), "Material Visibility");
 }
 
 void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
@@ -309,6 +318,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, *lightSamplesBuff);
 	renderSampleKernel->setArg(argIndex++, *lightVisibilityBuff);
 	renderSampleKernel->setArg(argIndex++, *materialSamplesBuff);
+	renderSampleKernel->setArg(argIndex++, *materialVisibilityBuff);
 
 	// Film parameters
 	argIndex = SetFilmKernelArgs(*renderSampleKernel, argIndex);

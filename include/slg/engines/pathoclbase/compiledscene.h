@@ -96,9 +96,12 @@ public:
 	vector<int> lightSamples;
 	// Number of samples to take for each material (optional)
 	vector<int> materialSamples;
-	// If type of path where a light source is visible with a direct hit. It is
+	// Type of indirect paths where a light source is visible with a direct hit. It is
 	// and OR of DIFFUSE, GLOSSY and SPECULAR.
 	vector<BSDFEvent> lightVisibility;
+	// Type of indirect paths where a material is visible. It is
+	// and OR of DIFFUSE, GLOSSY and SPECULAR.
+	vector<BSDFEvent> materialVisibility;
 
 	// Compiled Materials
 	std::set<MaterialType> usedMaterialTypes;
@@ -130,6 +133,7 @@ private:
 	void CompileLightSamples();
 	void CompileLightVisibility();
 	void CompileMaterialSamples();
+	void CompileMaterialVisibility();
 };
 
 }
