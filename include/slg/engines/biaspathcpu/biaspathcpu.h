@@ -120,7 +120,7 @@ public:
 
 	// Clamping settings
 	float radianceClampMaxValue;
-	float pdfRejectValue;
+	float pdfClampValue;
 
 	// Light settings
 	float lowLightThreashold, nearStartLight;

@@ -86,6 +86,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	// Clamping settings
 	radianceClampMaxValue = Max(0.f, cfg.GetFloat("biaspath.clamping.radiance.maxvalue", 10.f));
+	pdfClampValue = Max(0.f, cfg.GetFloat("biaspath.clamping.pdf.value", 0.f));
 
 	// Light settings
 	lowLightThreashold = Max(0.f, cfg.GetFloat("biaspath.lights.lowthreshold", .001f));

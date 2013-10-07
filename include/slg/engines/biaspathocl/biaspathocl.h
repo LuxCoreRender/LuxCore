@@ -104,6 +104,7 @@ public:
 
 	// Clamping settings
 	float radianceClampMaxValue;
+	float pdfClampValue;
 
 	// Light settings
 	float lowLightThreashold, nearStartLight;
