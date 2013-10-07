@@ -123,4 +123,12 @@ std::string KernelSource_pathoclbase_funcs =
 "		}\n"
 "	}\n"
 "}\n"
+"\n"
+"void MangleMemory(__global unsigned char *ptr, const size_t size) {\n"
+"	Seed seed;\n"
+"	Rnd_Init(7 + get_global_id(0), &seed);\n"
+"\n"
+"	for (uint i = 0; i < size; ++i)\n"
+"		*ptr++ = (unsigned char)(Rnd_UintValue(&seed) & 0xff);\n"
+"}\n"
 ; } }
