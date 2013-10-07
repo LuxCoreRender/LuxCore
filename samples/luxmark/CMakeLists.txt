@@ -118,9 +118,11 @@ IF(APPLE)
 	set_target_properties(LuxMark PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/osx-bundle/Info.plist)
 	ADD_CUSTOM_COMMAND(
 			TARGET LuxMark POST_BUILD
+				COMMAND rm -rf ${CMAKE_BINARY_DIR}/bin/$(CONFIGURATION)/LuxMark.app/Contents/scenes
 				COMMAND rm -rf ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources
 				COMMAND mkdir ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources
 				COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/osx-bundle/LuxMark.icns ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app/Contents/Resources/
+				COMMAND cp -R ${CMAKE_SOURCE_DIR}/samples/luxmark/scenes ${CMAKE_BINARY_DIR}/bin/$(CONFIGURATION)/LuxMark.app/Contents # change to copy for deploying  !!!
 #				COMMAND macdeployqt ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/LuxMark.app ### bundling Qt frameworks ###
 				)
 ELSE(APPLE)
