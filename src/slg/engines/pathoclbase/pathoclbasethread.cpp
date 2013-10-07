@@ -231,6 +231,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(float);
 	if (threadFilm->HasChannel(Film::UV))
 		sampleResultSize += sizeof(UV);
+	if (threadFilm->HasChannel(Film::RAYCOUNT))
+		sampleResultSize += sizeof(Film::RAYCOUNT);
 
 	return sampleResultSize;
 }

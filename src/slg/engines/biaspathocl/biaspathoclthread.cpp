@@ -216,6 +216,7 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 	// Allocate GPU task SampleResult
 	//--------------------------------------------------------------------------
 
+	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] SampleResult size: " << GetOpenCLSampleResultSize() << "bytes");
 	AllocOCLBufferRW(&taskResultsBuff, GetOpenCLSampleResultSize() * engine->taskCount, "GPUTask SampleResult");
 
 	//--------------------------------------------------------------------------
