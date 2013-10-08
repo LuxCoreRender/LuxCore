@@ -1709,6 +1709,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 		const uint tileStartY,
 		const uint engineFilmWidth, const uint engineFilmHeight,
 		__global SampleResult *taskResults,
+		__global GPUTaskStats *taskStats,
 		// Film parameters
 		const uint filmWidth, const uint filmHeight
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -1798,7 +1799,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 			(tileStartY + sampleY >= engineFilmHeight))
 		return;
 
-	__global SampleResult *sampleResult = &taskResults[gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES];
+	const uint index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
+	__global SampleResult *sampleResult = &taskResults[index];
+	__global GPUTaskStats *taskStat = &taskStats[index];
 
 	//--------------------------------------------------------------------------
 	// Initialize Film radiance group pointer table
@@ -1831,12 +1834,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 #endif
 
 	//--------------------------------------------------------------------------
-	// Merge all samples
+	// Merge all samples and accumulate statistics
 	//--------------------------------------------------------------------------
 
 	SampleResult result = sampleResult[0];
-	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
+	uint totalRaysCount = 0;
+	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i) {
 		SR_Accumulate(&sampleResult[i], &result);
+		totalRaysCount += taskStat[i].raysCount;
+	}
 	SR_Normalize(&result, 1.f / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES));
 
 	// I have to save result in __global space in order to be able
@@ -1844,4 +1850,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	sampleResult[0] = result;
 	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
 			FILM_PARAM);
+
+	taskStat[0].raysCount = totalRaysCount;
 }

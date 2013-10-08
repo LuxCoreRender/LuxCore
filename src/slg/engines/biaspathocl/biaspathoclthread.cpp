@@ -375,6 +375,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetHeight());
 	mergePixelSamplesKernel->setArg(argIndex++, *taskResultsBuff);
+	mergePixelSamplesKernel->setArg(argIndex++, *taskStatsBuff);
 	argIndex = SetFilmKernelArgs(*mergePixelSamplesKernel, argIndex);
 }
 
@@ -438,7 +439,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
 					cl::NDRange(renderSampleWorkGroupSize));
 			if (!engine->tileRepository->enableProgressiveRefinement) {
-				// Merge all pixel samples
+				// Merge all pixel samples and accumulate statistics
 				oclQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(filmPixelCount, mergePixelSamplesWorkGroupSize)),
 						cl::NDRange(mergePixelSamplesWorkGroupSize));
@@ -460,7 +461,9 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			// In order to update the statistics
 			u_int tracedRaysCount = 0;
-			for (u_int i = 0; i < taskCount; ++i)
+			// Statistics are accumulated by MergePixelSample kernel if not enableProgressiveRefinement
+			const u_int step = (engine->tileRepository->enableProgressiveRefinement) ? 1 : engine->tileRepository->totalSamplesPerPixel;
+			for (u_int i = 0; i < taskCount; i += step)
 				tracedRaysCount += gpuTaskStats[i].raysCount;
 			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 
