@@ -46,7 +46,7 @@ float3 InfiniteLight_GetRadiance(__global InfiniteLight *infiniteLight,
 	const float2 mapUV = uv * scale + delta;
 
 	const float distPdf = Distribution2D_Pdf(infiniteLightDistirbution, mapUV.s0, mapUV.s1);
-	*directPdfA = distPdf / (4.f * M_PI);
+	*directPdfA = distPdf / (4.f * M_PI_F);
 
 	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetSpectrum(
 			pixels,
@@ -86,7 +86,7 @@ float3 InfiniteLight_Illuminate(__global InfiniteLight *infiniteLight,
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	*directPdfW = distPdf / (4.f * M_PI);
+	*directPdfW = distPdf / (4.f * M_PI_F);
 
 	// InfiniteLight_GetRadiance  is expended here
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
@@ -163,7 +163,7 @@ float3 SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,
 
 float3 SkyLight_GetRadiance(__global SkyLight *skyLight, const float3 dir,
 		float *directPdfA) {
-	*directPdfA = 1.f / (4.f * M_PI);
+	*directPdfA = 1.f / (4.f * M_PI_F);
 
 	const float3 localDir = normalize(Transform_InvApplyVector(&skyLight->light2World, -dir));
 	const float theta = SphericalTheta(localDir);
