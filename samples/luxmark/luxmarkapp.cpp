@@ -25,12 +25,14 @@
 #include "slg/renderengine.h"
 #include "slg/engines/pathocl/pathocl.h"
 
-#include <boost/filesystem.hpp>
-
 #include "luxmarkcfg.h"
 #include "luxmarkapp.h"
 #include "resultdialog.h"
 #include "slgdefs.h"
+#ifdef __APPLE__
+#include <boost/filesystem.hpp>
+#include <mach-o/dyld.h>
+#endif
 
 static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf("\n*** ");
@@ -50,8 +52,6 @@ LuxMarkApp::LuxMarkApp(int &argc, char **argv) : QApplication(argc, argv) {
 	// order to avoid a crash
 	FreeImage_Initialise(TRUE);
 	FreeImage_SetOutputMessage(FreeImageErrorHandler);
-	
-	exePath = argv[0];
 	
 	singleRun = false;
 
@@ -82,10 +82,17 @@ void LuxMarkApp::Init(LuxMarkAppMode mode, const char *scnName, const bool singl
 	mainWin->SetLuxApp(this);
 	LogWindow = mainWin;
 	singleRun = single;
+	
 #ifdef __APPLE__
-	boost::filesystem::path exeDir = exePath.parent_path().parent_path(); // LuxMark.app/Contents
-	boost::filesystem::current_path( exeDir);
+	boost::filesystem::path exePath;
+	char result[ 1024 ]; // too short perhaps ?
+	uint32_t size=1023;
+	if (!_NSGetExecutablePath(result, &size)) {
+		exePath=string(result);
+	boost::filesystem::current_path(exePath.parent_path().parent_path()); // LuxMark.app/Contents, where we now have the scens dir
+	}
 #endif
+	
 	LM_LOG("<FONT COLOR=\"#0000ff\">LuxMark v" << LUXMARK_VERSION_MAJOR << "." << LUXMARK_VERSION_MINOR << "</FONT>");
 	LM_LOG("Based on <FONT COLOR=\"#0000ff\">" << SLG_LABEL << "</FONT>");
 
