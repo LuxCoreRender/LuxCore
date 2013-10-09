@@ -505,11 +505,11 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		//----------------------------------------------------------------------
 
 		if ((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)) {
-			const u_int speculaSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
+			const u_int specularSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
 
-			if (speculaSamples > 0) {
+			if (specularSamples > 0) {
 				SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT,
-						speculaSamples, pathThroughput, bsdf, sampleResult);
+						specularSamples, pathThroughput, bsdf, sampleResult);
 			}
 		}
 	}

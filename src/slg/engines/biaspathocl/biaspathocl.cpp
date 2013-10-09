@@ -101,7 +101,20 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	else
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
-	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 32), 8));
+	// Tile related parameters
+	u_int defaultTileSize;
+	if (GetEngineType() == RTBIASPATHOCL) {
+		// Check if I'm going to use a single device
+		if (intersectionDevices.size() == 1) {
+			// The best configuration, with a single device, is to use a tile
+			// as large as the complete image
+			defaultTileSize = Max(film->GetWidth(), film->GetHeight());
+		} else
+			defaultTileSize = Max(film->GetWidth(), film->GetHeight()) / 4;
+	} else
+		defaultTileSize = 32;
+	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", defaultTileSize), 8));
+
 	if (GetEngineType() == RTBIASPATHOCL) {
 		tileRepository->enableProgressiveRefinement = false;
 		tileRepository->enableMultipassRendering = false;
