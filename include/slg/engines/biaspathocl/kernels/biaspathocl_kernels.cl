@@ -990,7 +990,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		// Evaluation of the finite state machine.
 		//
 		// From: * | NEXT_VERTEX_TRACE_RAY
-		// To: BREAK or
+		// To: DONE or
 		//     (* | DIRECT_LIGHT_GENERATE_RAY)
 		//     (PATH_VERTEX_N | NEXT_GENERATE_TRACE_RAY)
 		//----------------------------------------------------------------------
@@ -1353,7 +1353,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		// Evaluation of the finite state machine.
 		//
 		// From: PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY
-		// To: BREAK or (PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY[continue])
+		// To: DONE or (PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY[continue])
 		//----------------------------------------------------------------------
 
 		if (pathState == (PATH_VERTEX_1 | NEXT_VERTEX_GENERATE_RAY)) {
@@ -1376,75 +1376,72 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 				if (!(materialEventTypes & vertex1SampleComponent) || (vertex1SampleIndex >= sampleCount2)) {
 					// Move to next component
-					if (vertex1SampleComponent == DIFFUSE)
-						vertex1SampleComponent = GLOSSY;
-					else if (vertex1SampleComponent == GLOSSY)
-						vertex1SampleComponent = SPECULAR;
-					else {
-						// We have sampled all 3 components. Done.
+					vertex1SampleComponent = (vertex1SampleComponent == DIFFUSE) ? GLOSSY :
+						((vertex1SampleComponent == GLOSSY) ? SPECULAR : NONE);
+
+					if (vertex1SampleComponent == NONE) {
 						pathState = DONE;
 						break;
 					}
 
 					vertex1SampleIndex = 0;
-					continue;
-				}
+				} else {
+					// Sample the BSDF
+					float3 sampledDir;
+					float cosSampledDir;
+					BSDFEvent event;
 
-				// Sample the BSDF
-				float3 sampledDir;
-				float cosSampledDir;
-				BSDFEvent event;
+					float u0, u1;
+					SampleGrid(&seed, sampleCount,
+						vertex1SampleIndex % sampleCount, vertex1SampleIndex / sampleCount,
+						&u0, &u1);
 
-				float u0, u1;
-				SampleGrid(&seed, sampleCount,
-					vertex1SampleIndex % sampleCount, vertex1SampleIndex / sampleCount,
-					&u0, &u1);
-
-				// Now, I can increment vertex1SampleIndex
-				++vertex1SampleIndex;
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-				// This is a bit tricky. I store the passThroughEvent in the BSDF
-				// before of the initialization because it can be use during the
-				// tracing of next path vertex ray.
-				task->bsdfPathVertex1.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
-#endif
-				const float3 bsdfSample = BSDF_Sample(&task->bsdfPathVertex1,
-						u0,
-						u1,
-						&sampledDir, &lastPdfW, &cosSampledDir, &event,
-						vertex1SampleComponent | REFLECT | TRANSMIT
-						MATERIALS_PARAM);
-
-				PathDepthInfo_Init(&depthInfo, 0);
-				PathDepthInfo_IncDepths(&depthInfo, event);
-
-				if (!Spectrum_IsBlack(bsdfSample)) {
-					const float scaleFactor = 1.f / sampleCount2;
-					float3 throughput = VLOAD3F(&task->throughputPathVertex1.r);
-					throughput *= bsdfSample * (scaleFactor * cosSampledDir / max(PARAM_PDF_CLAMP_VALUE, lastPdfW));
-					VSTORE3F(throughput, &taskPathVertexN->throughputPathVertexN.r);
-
-					Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertex1.hitPoint.p.x), sampledDir);
-
-					pathBSDFEvent = event;
-					lastBSDFEvent = event;
+					// Now, I can increment vertex1SampleIndex
+					++vertex1SampleIndex;
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 					// This is a bit tricky. I store the passThroughEvent in the BSDF
 					// before of the initialization because it can be use during the
 					// tracing of next path vertex ray.
-					taskPathVertexN->bsdfPathVertexN.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+					task->bsdfPathVertex1.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
 #endif
-					currentBSDF = &taskPathVertexN->bsdfPathVertexN;
-					currentThroughput = &taskPathVertexN->throughputPathVertexN;
+					const float3 bsdfSample = BSDF_Sample(&task->bsdfPathVertex1,
+							u0,
+							u1,
+							&sampledDir, &lastPdfW, &cosSampledDir, &event,
+							vertex1SampleComponent | REFLECT | TRANSMIT
+							MATERIALS_PARAM);
 
-					pathState = PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY;
+					PathDepthInfo_Init(&depthInfo, 0);
+					PathDepthInfo_IncDepths(&depthInfo, event);
 
-					// Save vertex1SampleComponent and vertex1SampleIndex
-					taskPathVertexN->vertex1SampleComponent = vertex1SampleComponent;
-					taskPathVertexN->vertex1SampleIndex = vertex1SampleIndex;
-					break;
+					if (!Spectrum_IsBlack(bsdfSample)) {
+						const float scaleFactor = 1.f / sampleCount2;
+						float3 throughput = VLOAD3F(&task->throughputPathVertex1.r);
+						throughput *= bsdfSample * (scaleFactor * cosSampledDir / max(PARAM_PDF_CLAMP_VALUE, lastPdfW));
+						VSTORE3F(throughput, &taskPathVertexN->throughputPathVertexN.r);
+
+						Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertex1.hitPoint.p.x), sampledDir);
+
+						pathBSDFEvent = event;
+						lastBSDFEvent = event;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+						// This is a bit tricky. I store the passThroughEvent in the BSDF
+						// before of the initialization because it can be use during the
+						// tracing of next path vertex ray.
+						taskPathVertexN->bsdfPathVertexN.hitPoint.passThroughEvent = Rnd_FloatValue(&seed);
+#endif
+						currentBSDF = &taskPathVertexN->bsdfPathVertexN;
+						currentThroughput = &taskPathVertexN->throughputPathVertexN;
+
+						pathState = PATH_VERTEX_N | NEXT_VERTEX_TRACE_RAY;
+
+						// Save vertex1SampleComponent and vertex1SampleIndex
+						taskPathVertexN->vertex1SampleComponent = vertex1SampleComponent;
+						taskPathVertexN->vertex1SampleIndex = vertex1SampleIndex;
+						break;
+					}
 				}
 			}
 		}
