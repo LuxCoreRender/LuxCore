@@ -150,18 +150,9 @@ void RTBiasPathOCLRenderThread::Stop() {
 }
 
 void RTBiasPathOCLRenderThread::BeginEdit() {
-	// NOTE: this is a huge trick, the LuxRays context is stopped by RenderEngine
-	// but the threads are still using the intersection devices in RTPATHOCL.
-	// The result is that stuff like geometry edit will not work.
-	editMutex.lock();
 }
 
 void RTBiasPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
-	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
-		throw std::runtime_error("RTBIASPATHOCL doesn't support FILM_EDIT or MATERIAL_TYPES_EDIT actions");
-
-	updateActions.AddActions(editActions.GetActions());
-	editMutex.unlock();
 }
 
 void RTBiasPathOCLRenderThread::InitDisplayThread() {
@@ -219,9 +210,7 @@ void RTBiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	}
 }
 
-void RTBiasPathOCLRenderThread::UpdateOCLBuffers() {
-	editMutex.lock();
-
+void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions) {
 	RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
 	const bool amiDisplayThread = (engine->displayDeviceIndex == threadIndex);
 
@@ -253,22 +242,22 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers() {
 		InitMaterials();
 	}
 
-	if  (updateActions.Has(AREALIGHTS_EDIT)) {
+	if (updateActions.Has(AREALIGHTS_EDIT)) {
 		// Update Scene Area Lights
 		InitTriangleAreaLights();
 	}
 
-	if  (updateActions.Has(INFINITELIGHT_EDIT)) {
+	if (updateActions.Has(INFINITELIGHT_EDIT)) {
 		// Update Scene Infinite Light
 		InitInfiniteLight();
 	}
 
-	if  (updateActions.Has(SUNLIGHT_EDIT)) {
+	if (updateActions.Has(SUNLIGHT_EDIT)) {
 		// Update Scene Sun Light
 		InitSunLight();
 	}
 
-	if  (updateActions.Has(SKYLIGHT_EDIT)) {
+	if (updateActions.Has(SKYLIGHT_EDIT)) {
 		// Update Scene Sun Light
 		InitSkyLight();
 	}
@@ -280,13 +269,11 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers() {
 	if (updateActions.Has(FILM_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
-	updateActions.Reset();
-	editMutex.unlock();
-
 	SetKernelArgs();
 
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();
+	lastEditTime = WallClockTime();
 }
 
 void RTBiasPathOCLRenderThread::RenderThreadImpl() {
@@ -329,13 +316,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(clearSBWorkGroupSize));
 		}
 
-		double lastEditTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
-			if (updateActions.HasAnyAction()) {
-				UpdateOCLBuffers();
-				lastEditTime = WallClockTime();
-			}
-
 			//------------------------------------------------------------------
 			// Render the tiles
 			//------------------------------------------------------------------
@@ -472,6 +453,28 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				oclQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
 						screenBufferBuff->getInfo<CL_MEM_SIZE>(), engine->film->GetScreenBuffer());
 				oclQueue.finish();
+			}
+
+			//--------------------------------------------------------------
+			// Update OpenCL buffers if there is any edit action
+			//--------------------------------------------------------------
+
+			if ((amiDisplayThread) && (engine->updateActions.HasAnyAction())) {
+				engine->editMutex.lock();
+
+				// Update all threads
+				for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
+					RTBiasPathOCLRenderThread *thread = (RTBiasPathOCLRenderThread *)(engine->renderThreads[i]);
+					thread->UpdateOCLBuffers(engine->updateActions);
+				}
+
+				// Reset updateActions
+				engine->updateActions.Reset();
+
+				// Clear the only film channel used
+				engine->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->Clear();
+
+				engine->editMutex.unlock();
 			}
 
 			//------------------------------------------------------------------

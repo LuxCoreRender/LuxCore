@@ -262,22 +262,22 @@ void RTPathOCLRenderThread::UpdateOCLBuffers() {
 		InitMaterials();
 	}
 
-	if  (updateActions.Has(AREALIGHTS_EDIT)) {
+	if (updateActions.Has(AREALIGHTS_EDIT)) {
 		// Update Scene Area Lights
 		InitTriangleAreaLights();
 	}
 
-	if  (updateActions.Has(INFINITELIGHT_EDIT)) {
+	if (updateActions.Has(INFINITELIGHT_EDIT)) {
 		// Update Scene Infinite Light
 		InitInfiniteLight();
 	}
 
-	if  (updateActions.Has(SUNLIGHT_EDIT)) {
+	if (updateActions.Has(SUNLIGHT_EDIT)) {
 		// Update Scene Sun Light
 		InitSunLight();
 	}
 
-	if  (updateActions.Has(SKYLIGHT_EDIT)) {
+	if (updateActions.Has(SKYLIGHT_EDIT)) {
 		// Update Scene Sun Light
 		InitSkyLight();
 	}

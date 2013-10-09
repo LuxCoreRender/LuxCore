@@ -60,10 +60,10 @@ public:
 	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RenderEngine();
 
-	void Start();
-	void Stop();
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
+	virtual void Start();
+	virtual void Stop();
+	virtual void BeginEdit();
+	virtual void EndEdit(const EditActionList &editActions);
 
 	void UpdateFilm();
 	virtual bool WaitNewFrame() { return false; };
