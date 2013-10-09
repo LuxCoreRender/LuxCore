@@ -210,7 +210,6 @@ void RTBiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 		toneMapLinearKernel->setArg(argIndex++, engine->film->GetWidth());
 		toneMapLinearKernel->setArg(argIndex++, engine->film->GetHeight());
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
 		updateScreenBufferKernel->setArg(argIndex++, engine->film->GetWidth());

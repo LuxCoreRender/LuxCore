@@ -227,16 +227,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyGaussianBlurF
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ToneMapLinear(
 		const uint filmWidth, const uint filmHeight,
-		__global Pixel *src,
-		__global Pixel *dst) {
+		__global Pixel *pixels) {
 	const int gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
 		return;
 
 	const float4 k = (float4)(PARAM_TONEMAP_LINEAR_SCALE, PARAM_TONEMAP_LINEAR_SCALE, PARAM_TONEMAP_LINEAR_SCALE, 1.f);
-	const float4 sp = VLOAD4F(&src[gid].c.r);
+	const float4 sp = VLOAD4F(&pixels[gid].c.r);
 
-	VSTORE4F(k * sp, &dst[gid].c.r);
+	VSTORE4F(k * sp, &pixels[gid].c.r);
 }
 
 //------------------------------------------------------------------------------

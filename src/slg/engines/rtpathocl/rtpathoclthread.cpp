@@ -219,7 +219,6 @@ void RTPathOCLRenderThread::SetAdditionalKernelArgs() {
 		toneMapLinearKernel->setArg(argIndex++, threadFilm->GetWidth());
 		toneMapLinearKernel->setArg(argIndex++, threadFilm->GetHeight());
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
 		updateScreenBufferKernel->setArg(argIndex++, threadFilm->GetWidth());
