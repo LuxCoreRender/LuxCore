@@ -880,7 +880,7 @@ std::string KernelSource_pathocl_kernels =
 "	// To: GENERATE_NEXT_VERTEX_RAY\n"
 "	//--------------------------------------------------------------------------\n"
 "\n"
-"#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || (PARAM_HAS_INFINITELIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)\n"
+"#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)\n"
 "	if (pathState == RT_DL) {\n"
 "		pathState = GENERATE_NEXT_VERTEX_RAY;\n"
 "\n"
