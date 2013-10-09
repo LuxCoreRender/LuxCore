@@ -337,7 +337,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			}
 
 			//------------------------------------------------------------------
-			// Render a frame (i.e. taskCount * assignedIters samples)
+			// Render the tiles
 			//------------------------------------------------------------------
 
 			TileRepository::Tile *tile = NULL;
@@ -365,6 +365,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					renderSampleKernel->setArg(0, tile->xStart);
 					renderSampleKernel->setArg(1, tile->yStart);
 					renderSampleKernel->setArg(2, tile->sampleIndex);
+
+					mergePixelSamplesKernel->setArg(0, tile->xStart);
+					mergePixelSamplesKernel->setArg(1, tile->yStart);
 				}
 
 				// Render all pixel samples
@@ -396,6 +399,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				const u_int step = engine->tileRepository->totalSamplesPerPixel;
 				for (u_int i = 0; i < taskCount; i += step)
 					tracedRaysCount += gpuTaskStats[i].raysCount;
+
 				intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 			}
 

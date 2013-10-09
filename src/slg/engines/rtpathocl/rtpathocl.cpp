@@ -114,7 +114,6 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 	frameBarrier->wait();
 
 	// Update the statistics
-	elapsedTime = WallClockTime() - startTime;
 	UpdateCounters();
 
 	frameTime = WallClockTime() - t0;

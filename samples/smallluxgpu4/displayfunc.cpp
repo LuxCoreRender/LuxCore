@@ -130,19 +130,28 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if ((session->renderEngine->GetEngineType() == RTPATHOCL) ||
-			(session->renderEngine->GetEngineType() == RTBIASPATHOCL)) {
+	if (session->renderEngine->GetEngineType() == RTPATHOCL) {
 		static float fps = 0.f;
 		// This is a simple trick to smooth the fps counter
-		const double frameTime = (session->renderEngine->GetEngineType() == RTPATHOCL) ?
-			((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime() :
-			((RTBiasPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
-		fps = Lerp<float>(.025f, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
+		const double frameTime = ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
+		const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
+		fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
 		sprintf(buf, "[Rendering time %dsecs][Screen refresh %d/%dms %.1ffps]",
 				int(session->renderEngine->GetRenderingTime()),
 				int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 				session->renderConfig->GetScreenRefreshInterval(),
+				fps);
+	} else if (session->renderEngine->GetEngineType() == RTBIASPATHOCL) {
+		static float fps = 0.f;
+		// This is a simple trick to smooth the fps counter
+		const double frameTime = ((RTBiasPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
+		const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
+		fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
+
+		sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms %.1ffps]",
+				int(session->renderEngine->GetRenderingTime()),
+				int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 				fps);
 	} else
 #endif

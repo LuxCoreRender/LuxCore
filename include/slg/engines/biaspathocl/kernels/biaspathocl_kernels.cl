@@ -1798,7 +1798,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 
 	const uint index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
 	__global SampleResult *sampleResult = &taskResults[index];
-	__global GPUTaskStats *taskStat = &taskStats[index];
 
 	//--------------------------------------------------------------------------
 	// Initialize Film radiance group pointer table
@@ -1834,6 +1833,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	// Merge all samples and accumulate statistics
 	//--------------------------------------------------------------------------
 
+#if (PARAM_AA_SAMPLES == 1)
+	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
+			FILM_PARAM);
+#else
+	__global GPUTaskStats *taskStat = &taskStats[index];
+
 	SampleResult result = sampleResult[0];
 	uint totalRaysCount = 0;
 	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i) {
@@ -1849,4 +1854,5 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 			FILM_PARAM);
 
 	taskStat[0].raysCount = totalRaysCount;
+#endif
 }
