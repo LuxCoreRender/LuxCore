@@ -89,7 +89,7 @@ void LuxMarkApp::Init(LuxMarkAppMode mode, const char *scnName, const bool singl
 	uint32_t size=1023;
 	if (!_NSGetExecutablePath(result, &size)) {
 		exePath=string(result);
-	boost::filesystem::current_path(exePath.parent_path().parent_path()); // LuxMark.app/Contents, where we now have the scens dir
+		boost::filesystem::current_path(exePath.parent_path().parent_path()); // LuxMark.app/Contents, where we now have the scenes dir
 	}
 #endif
 	
