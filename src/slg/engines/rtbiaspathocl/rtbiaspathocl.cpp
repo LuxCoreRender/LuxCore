@@ -22,94 +22,73 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/slg.h"
-#include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// RTPathOCLRenderEngine
+// RTBiasPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-RTPathOCLRenderEngine::RTPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		PathOCLRenderEngine(rcfg, flm, flmMutex, true) {
+RTBiasPathOCLRenderEngine::RTBiasPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+		BiasPathOCLRenderEngine(rcfg, flm, flmMutex, true) {
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
 	frameTime = 0.f;
 }
 
-RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {
+RTBiasPathOCLRenderEngine::~RTBiasPathOCLRenderEngine() {
 }
 
-PathOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
+BiasPathOCLRenderThread *RTBiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
-	return new RTPathOCLRenderThread(index, device, this);
+	return new RTBiasPathOCLRenderThread(index, device, this);
 }
 
-void RTPathOCLRenderEngine::StartLockLess() {
+void RTBiasPathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	minIterations = cfg.GetInt("rtpath.miniterations", 2);
 	displayDeviceIndex = cfg.GetInt("rtpath.displaydevice.index", 0);
 	if (displayDeviceIndex >= intersectionDevices.size())
 		throw std::runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<std::string>(displayDeviceIndex) +
 				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
 
-	PathOCLRenderEngine::StartLockLess();
+	BiasPathOCLRenderEngine::StartLockLess();
 }
 
-void RTPathOCLRenderEngine::StopLockLess() {
+void RTBiasPathOCLRenderEngine::StopLockLess() {
 	frameBarrier->wait();
-	frameBarrier->wait();
+
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		((RTPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
+		((RTBiasPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
+
 	frameBarrier->wait();
+
 	// Render threads will now detect the interruption
 
-	PathOCLRenderEngine::StopLockLess();
+	BiasPathOCLRenderEngine::StopLockLess();
 }
 
-void RTPathOCLRenderEngine::UpdateFilmLockLess() {
+void RTBiasPathOCLRenderEngine::UpdateFilmLockLess() {
 	// Nothing to do: the display thread is in charge to update the film
 }
 
-bool RTPathOCLRenderEngine::WaitNewFrame() {
+bool RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	// Threads do the rendering
 	const double t0 = WallClockTime();
-	frameBarrier->wait();
-
-	// Display thread merges all frame buffers and does all frame post-processing steps 
 
 	frameBarrier->wait();
 
-	// Re-balance threads
-	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
-	const double targetFrameTime = renderConfig->GetScreenRefreshInterval() / 1000.0;
-	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
-		if (t->GetFrameTime() > 0.0) {
-			//SLG_LOG("[RTPathOCLRenderEngine] Device " << i << ":");
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " assigned iterations");
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() / t->GetFrameTime() << " iterations/sec");
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetFrameTime() * 1000.0 << " msec");
+	// Display thread does all frame post-processing steps 
 
-			// Check how far I'm from target frame rate
-			if (t->GetFrameTime() < targetFrameTime) {
-				// Too fast, increase the number of iterations
-				t->SetAssignedIterations(Max(t->GetAssignedIterations() + 1, minIterations));
-			} else {
-				// Too slow, decrease the number of iterations
-				t->SetAssignedIterations(Max(t->GetAssignedIterations() - 1, minIterations));
-			}
-
-			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() << " iterations");
-		}
-	}
+	// Re-initialize the tile queue for the next frame
+	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 
 	frameBarrier->wait();
 

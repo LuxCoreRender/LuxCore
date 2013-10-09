@@ -36,8 +36,9 @@ using namespace slg;
 // BiasPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		PathOCLBaseRenderEngine(rcfg, flm, flmMutex, false) {
+BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
+			const bool realTime) :
+		PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime) {
 	pixelFilterDistribution = NULL;
 	tileRepository = NULL;
 }
@@ -101,8 +102,13 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
 
 	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", 32), 8));
-	tileRepository->enableProgressiveRefinement = cfg.GetBoolean("tile.progressiverefinement.enable", false);
-	tileRepository->enableMultipassRendering = cfg.GetBoolean("tile.multipass.enable", false);
+	if (GetEngineType() == RTBIASPATHOCL) {
+		tileRepository->enableProgressiveRefinement = false;
+		tileRepository->enableMultipassRendering = false;
+	} else {
+		tileRepository->enableProgressiveRefinement = cfg.GetBoolean("tile.progressiverefinement.enable", false);
+		tileRepository->enableMultipassRendering = cfg.GetBoolean("tile.multipass.enable", false);
+	}
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 
@@ -128,9 +134,12 @@ void BiasPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions)
 	if (editActions.Has(FILM_EDIT))
 		InitPixelFilterDistribution();
 
-	tileRepository->Clear();
-	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
-	printedRenderingTime = false;
+	if (GetEngineType() != RTBIASPATHOCL) {
+		// RTBIASPATHOCL will InitTiles() on next frame
+		tileRepository->Clear();
+		tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+		printedRenderingTime = false;
+	}
 
 	PathOCLBaseRenderEngine::EndEditLockLess(editActions);
 }
@@ -148,12 +157,15 @@ const bool BiasPathOCLRenderEngine::NextTile(TileRepository::Tile **tile, const 
 	}
 
 	if (!tileRepository->NextTile(tile, film->GetWidth(), film->GetHeight())) {
-		boost::unique_lock<boost::mutex> lock(engineMutex);
+		// RTBIASPATHOCL would end in dead-lock on engineMutex
+		if (GetEngineType() != RTBIASPATHOCL) {
+			boost::unique_lock<boost::mutex> lock(engineMutex);
 
-		if (!printedRenderingTime && tileRepository->done) {
-			elapsedTime = WallClockTime() - startTime;
-			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
-			printedRenderingTime = true;
+			if (!printedRenderingTime && tileRepository->done) {
+				elapsedTime = WallClockTime() - startTime;
+				SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+				printedRenderingTime = true;
+			}
 		}
 
 		return false;

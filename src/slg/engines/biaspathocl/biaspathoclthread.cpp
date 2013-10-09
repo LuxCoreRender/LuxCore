@@ -406,8 +406,8 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 		while (engine->NextTile(&tile, threadFilm) && !boost::this_thread::interruption_requested()) {
 			//const double t0 = WallClockTime();
 			threadFilm->Reset();
-			//const u_int tileWidth = Min(engine->tileRepository->tileSize, threadFilm->GetWidth() - tile->xStart);
-			//const u_int tileHeight = Min(engine->tileRepository->tileSize, threadFilm->GetHeight() - tile->yStart);
+			//const u_int tileWidth = Min(engine->tileRepository->tileSize, engine->film->GetWidth() - tile->xStart);
+			//const u_int tileHeight = Min(engine->tileRepository->tileSize, engine->film->GetHeight() - tile->yStart);
 			//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 			//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 			//		"(" << tileWidth << ", " << tileHeight << ") [" << tile->sampleIndex << "]");
