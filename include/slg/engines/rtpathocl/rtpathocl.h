@@ -104,6 +104,8 @@ public:
 	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
 	double GetFrameTime() const { return frameTime; }
 
+	virtual void EndEdit(const EditActionList &editActions);
+
 	bool WaitNewFrame();
 
 	friend class RTPathOCLRenderThread;

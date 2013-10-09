@@ -57,7 +57,9 @@ protected:
 	virtual void CompileAdditionalKernels(cl::Program *program);
 
 	void InitDisplayThread();
-	void UpdateOCLBuffers();
+	void UpdateOCLBuffers(const EditActionList &updateActions);
+
+	double lastEditTime;
 
 	cl::Kernel *clearFBKernel;
 	size_t clearFBWorkGroupSize;
@@ -74,9 +76,6 @@ protected:
 	size_t toneMapLinearWorkGroupSize;
 	cl::Kernel *updateScreenBufferKernel;
 	size_t updateScreenBufferWorkGroupSize;
-
-	boost::mutex editMutex;
-	EditActionList updateActions;
 
 	// OpenCL variables
 	cl::Buffer *tmpFrameBufferBuff;
@@ -96,6 +95,9 @@ public:
 	virtual RenderEngineType GetEngineType() const { return RTBIASPATHOCL; }
 	double GetFrameTime() const { return frameTime; }
 
+	virtual void BeginEdit();
+	virtual void EndEdit(const EditActionList &editActions);
+
 	bool WaitNewFrame();
 
 	friend class RTBiasPathOCLRenderThread;
@@ -109,7 +111,10 @@ protected:
 	virtual void UpdateFilmLockLess();
 
 	u_int displayDeviceIndex;
- 
+
+ 	boost::mutex editMutex;
+	EditActionList updateActions;
+
 	boost::barrier *frameBarrier;
 	double frameTime;
 };

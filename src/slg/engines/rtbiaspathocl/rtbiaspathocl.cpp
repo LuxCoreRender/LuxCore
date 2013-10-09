@@ -76,6 +76,25 @@ void RTBiasPathOCLRenderEngine::StopLockLess() {
 	BiasPathOCLRenderEngine::StopLockLess();
 }
 
+void RTBiasPathOCLRenderEngine::BeginEdit() {
+	// NOTE: this is a huge trick, the LuxRays context is stopped by RenderEngine
+	// but the threads are still using the intersection devices in RTPATHOCL.
+	// The result is that stuff like geometry edit will not work.
+	editMutex.lock();
+
+	BiasPathOCLRenderEngine::BeginEdit();
+}
+
+void RTBiasPathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
+	BiasPathOCLRenderEngine::EndEdit(editActions);
+
+	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
+		throw std::runtime_error("RTBIASPATHOCL doesn't support FILM_EDIT or MATERIAL_TYPES_EDIT actions");
+
+	updateActions.AddActions(editActions.GetActions());
+	editMutex.unlock();
+}
+
 void RTBiasPathOCLRenderEngine::UpdateFilmLockLess() {
 	// Nothing to do: the display thread is in charge to update the film
 }

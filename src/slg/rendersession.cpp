@@ -335,12 +335,15 @@ void RenderSession::EndEdit() {
 	assert (started);
 	assert (editMode);
 
-	if (editActions.HasAnyAction())
-		film->Reset();
-
 	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
-			(renderEngine->GetEngineType() != RTBIASPATHOCL))
+			(renderEngine->GetEngineType() != RTBIASPATHOCL)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
+
+		// RTPATHOCL and RTBIASPATHOCL handle film Reset on their own
+		if (editActions.HasAnyAction())
+			film->Reset();
+	}
+
 	renderEngine->EndEdit(editActions);
 	editMode = false;
 }

@@ -75,6 +75,13 @@ void RTPathOCLRenderEngine::StopLockLess() {
 	PathOCLRenderEngine::StopLockLess();
 }
 
+void RTPathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
+	if (editActions.HasAnyAction())
+			film->Reset();
+
+	PathOCLRenderEngine::EndEdit(editActions);
+}
+
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {
 	// Nothing to do: the display thread is in charge to update the film
 }
