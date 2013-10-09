@@ -39,6 +39,7 @@ RTPathOCLRenderEngine::RTPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boos
 }
 
 RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {
+	delete frameBarrier;
 }
 
 PathOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,

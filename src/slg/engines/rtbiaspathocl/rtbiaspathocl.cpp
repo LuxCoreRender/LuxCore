@@ -39,6 +39,7 @@ RTBiasPathOCLRenderEngine::RTBiasPathOCLRenderEngine(RenderConfig *rcfg, Film *f
 }
 
 RTBiasPathOCLRenderEngine::~RTBiasPathOCLRenderEngine() {
+	delete frameBarrier;
 }
 
 BiasPathOCLRenderThread *RTBiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
