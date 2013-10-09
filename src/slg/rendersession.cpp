@@ -338,7 +338,8 @@ void RenderSession::EndEdit() {
 	if (editActions.HasAnyAction())
 		film->Reset();
 
-	if (renderEngine->GetEngineType() != RTPATHOCL)
+	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
+			(renderEngine->GetEngineType() != RTBIASPATHOCL))
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 	renderEngine->EndEdit(editActions);
 	editMode = false;

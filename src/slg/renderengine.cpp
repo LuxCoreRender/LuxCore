@@ -24,6 +24,7 @@
 #include "slg/renderengine.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/engines/lightcpu/lightcpu.h"
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/engines/bidircpu/bidircpu.h"
@@ -243,6 +244,8 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return BIASPATHCPU;
 	if ((type.compare("15") == 0) || (type.compare("BIASPATHOCL") == 0))
 		return BIASPATHOCL;
+	if ((type.compare("16") == 0) || (type.compare("RTBIASPATHOCL") == 0))
+		return RTBIASPATHOCL;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -272,6 +275,8 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "BIASPATHCPU";
 		case BIASPATHOCL:
 			return "BIASPATHOCL";
+		case RTBIASPATHOCL:
+			return "RTBIASPATHOCL";
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
 	}
@@ -314,6 +319,13 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 		case BIASPATHOCL:
 #ifndef LUXRAYS_DISABLE_OPENCL
 			return new BiasPathOCLRenderEngine(renderConfig, film, filmMutex);
+#else
+			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
+			return new BiasPathCPURenderEngine(renderConfig, film, filmMutex);
+#endif
+		case RTBIASPATHOCL:
+#ifndef LUXRAYS_DISABLE_OPENCL
+			return new RTBiasPathOCLRenderEngine(renderConfig, film, filmMutex);
 #else
 			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
 			return new BiasPathCPURenderEngine(renderConfig, film, filmMutex);
@@ -569,7 +581,7 @@ void TileRepository::HilberCurveTiles(const int sampleIndex,
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd) {
 	if (n <= 1) {
-		if((xo <= xEnd) && (yo <= yEnd)) {
+		if((xo < xEnd) && (yo < yEnd)) {
 			Tile *tile = new Tile;
 			tile->xStart = xo;
 			tile->yStart = yo;
@@ -630,8 +642,6 @@ const bool TileRepository::NextTile(Tile **tile, const u_int width, const u_int 
 			if (pendingTiles.size() == 0) {
 				// Rendering done
 				done = true;
-
-				return false;
 			}
 
 			return false;

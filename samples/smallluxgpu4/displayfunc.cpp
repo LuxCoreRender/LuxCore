@@ -45,6 +45,7 @@
 #include "slg/rendersession.h"
 #include "slg/film/film.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
 #include "slg/engines/biaspathocl/biaspathocl.h"
 
@@ -129,10 +130,13 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (session->renderEngine->GetEngineType() == RTPATHOCL) {
+	if ((session->renderEngine->GetEngineType() == RTPATHOCL) ||
+			(session->renderEngine->GetEngineType() == RTBIASPATHOCL)) {
 		static float fps = 0.f;
 		// This is a simple trick to smooth the fps counter
-		const double frameTime = ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
+		const double frameTime = (session->renderEngine->GetEngineType() == RTPATHOCL) ?
+			((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime() :
+			((RTBiasPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
 		fps = Lerp<float>(.025f, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
 		sprintf(buf, "[Rendering time %dsecs][Screen refresh %d/%dms %.1ffps]",
@@ -149,7 +153,7 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 	const string samplerName = ((session->renderEngine->GetEngineType() == BIASPATHCPU) ||
-		(session->renderEngine->GetEngineType() == BIASPATHOCL)) ?
+		(session->renderEngine->GetEngineType() == RTBIASPATHOCL)) ?
 			"N/A" : session->renderConfig->cfg.GetString("sampler.type", "RANDOM");
 	sprintf(buf, "[Render engine %s][Sampler %s][Tone mapping %s]",
 			RenderEngine::RenderEngineType2String(session->renderEngine->GetEngineType()).c_str(),
@@ -268,7 +272,8 @@ void displayFunc(void) {
 		int(session->renderEngine->GetTotalRaysSec() / 1000.0),
 		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
-	session->film->UpdateScreenBuffer();
+	if (!optRealTimeMode)
+		session->film->UpdateScreenBuffer();
 	const float *pixels = session->film->GetScreenBuffer();
 
 	glRasterPos2i(0, 0);
@@ -303,7 +308,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 		glLoadIdentity();
 		glOrtho(0.f, newWidth - 1.f, 0.f, newHeight - 1.f, -1.f, 1.f);
 
-		// RTPATHOCL doesn't support FILM_EDIT so I use a stop/start here
+		// RTPATHOCL and RTBIASPATHOCL don't support FILM_EDIT so I use a stop/start here
 		session->Stop();
 
 		session->renderConfig->scene->camera->Update(newWidth, newHeight);
@@ -592,6 +597,13 @@ void keyFunc(unsigned char key, int x, int y) {
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case '=':
+			session->SetRenderingEngineType(RTBIASPATHOCL);
+			glutIdleFunc(idleFunc);
+			optRealTimeMode = true;
+			break;
+#endif
 		case 'o': {
 #if defined(WIN32)
 			std::wstring ws;
@@ -782,7 +794,8 @@ void RunGlut() {
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (session->renderEngine->GetEngineType() == RTPATHOCL) {
+	if ((session->renderEngine->GetEngineType() == RTPATHOCL) ||
+		(session->renderEngine->GetEngineType() == RTBIASPATHOCL)) {
 		glutIdleFunc(idleFunc);
 		optRealTimeMode = true;
 	} else

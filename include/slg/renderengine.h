@@ -47,7 +47,8 @@ typedef enum {
 	RTPATHOCL = 12,
 	PATHHYBRID = 13,
 	BIASPATHCPU = 14,
-	BIASPATHOCL = 15
+	BIASPATHOCL = 15,
+	RTBIASPATHOCL = 16
 } RenderEngineType;
 
 //------------------------------------------------------------------------------

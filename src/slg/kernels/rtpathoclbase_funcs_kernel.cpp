@@ -1,6 +1,6 @@
 #include <string>
 namespace slg { namespace ocl {
-std::string KernelSource_rtpathocl_kernels = 
+std::string KernelSource_rtpathoclbase_funcs = 
 "#line 2 \"rtpatchocl_kernels.cl\"\n"
 "\n"
 "/***************************************************************************\n"
