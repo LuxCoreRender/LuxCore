@@ -475,8 +475,8 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// Reset updateActions
 				engine->updateActions.Reset();
 
-				// Clear the only film channel used
-				engine->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->Clear();
+				// Clear the film
+				engine->film->Reset();
 
 				engine->editMutex.unlock();
 			}
