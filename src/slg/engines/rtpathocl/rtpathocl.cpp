@@ -65,7 +65,6 @@ void RTPathOCLRenderEngine::StartLockLess() {
 
 void RTPathOCLRenderEngine::StopLockLess() {
 	frameBarrier->wait();
-	frameBarrier->wait();
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		((RTPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
@@ -75,11 +74,27 @@ void RTPathOCLRenderEngine::StopLockLess() {
 	PathOCLRenderEngine::StopLockLess();
 }
 
+void RTPathOCLRenderEngine::BeginEdit() {
+	// NOTE: this is a huge trick, the LuxRays context is stopped by RenderEngine
+	// but the threads are still using the intersection devices in RTPATHOCL.
+	// The result is that stuff like geometry edit will not work.
+	editMutex.lock();
+
+	PathOCLRenderEngine::BeginEdit();
+}
+
 void RTPathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 	if (editActions.HasAnyAction())
-			film->Reset();
+		film->Reset();
 
 	PathOCLRenderEngine::EndEdit(editActions);
+
+	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
+		throw std::runtime_error("RTPATHOCL doesn't support FILM_EDIT or MATERIAL_TYPES_EDIT actions");
+
+	updateActions.AddActions(editActions.GetActions());
+	
+	editMutex.unlock();
 }
 
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {
@@ -92,8 +107,6 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 	frameBarrier->wait();
 
 	// Display thread merges all frame buffers and does all frame post-processing steps 
-
-	frameBarrier->wait();
 
 	// Re-balance threads
 	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");

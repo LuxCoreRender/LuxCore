@@ -62,7 +62,7 @@ protected:
 	virtual void CompileAdditionalKernels(cl::Program *program);
 
 	void InitDisplayThread();
-	void UpdateOCLBuffers();
+	void UpdateOCLBuffers(const EditActionList &updateActions);
 
 	cl::Kernel *clearFBKernel;
 	size_t clearFBWorkGroupSize;
@@ -81,8 +81,7 @@ protected:
 	cl::Kernel *updateScreenBufferKernel;
 	size_t updateScreenBufferWorkGroupSize;
 
-	boost::mutex editMutex;
-	EditActionList updateActions;
+	double lastEditTime;
 	volatile double frameTime;
 	volatile u_int assignedIters;
 
@@ -104,6 +103,7 @@ public:
 	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
 	double GetFrameTime() const { return frameTime; }
 
+	virtual void BeginEdit();
 	virtual void EndEdit(const EditActionList &editActions);
 
 	bool WaitNewFrame();
@@ -120,7 +120,10 @@ protected:
 
 	u_int minIterations;
 	u_int displayDeviceIndex;
- 
+
+  	boost::mutex editMutex;
+	EditActionList updateActions;
+
 	boost::barrier *frameBarrier;
 	double frameTime;
 };
