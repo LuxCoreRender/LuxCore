@@ -160,18 +160,10 @@ void RTPathOCLRenderThread::Stop() {
 }
 
 void RTPathOCLRenderThread::BeginEdit() {
-	// NOTE: this is a huge trick, the LuxRays context is stopped by RenderEngine
-	// but the threads are still using the intersection devices in RTPATHOCL.
-	// The result is that stuff like geometry edit will not work.
-	editMutex.lock();
 }
 
 void RTPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
-	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
-		throw std::runtime_error("RTPATHOCL doesn't support FILM_EDIT or MATERIAL_TYPES_EDIT actions");
 
-	updateActions.AddActions(editActions.GetActions());
-	editMutex.unlock();
 }
 
 void RTPathOCLRenderThread::InitDisplayThread() {
@@ -228,9 +220,7 @@ void RTPathOCLRenderThread::SetAdditionalKernelArgs() {
 	}
 }
 
-void RTPathOCLRenderThread::UpdateOCLBuffers() {
-	editMutex.lock();
-
+void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions) {
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 	const bool amiDisplayThread = (engine->displayDeviceIndex == threadIndex);
 
@@ -289,9 +279,6 @@ void RTPathOCLRenderThread::UpdateOCLBuffers() {
 	if (updateActions.Has(FILM_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
-	updateActions.Reset();
-	editMutex.unlock();
-
 	SetKernelArgs();
 
 	//--------------------------------------------------------------------------
@@ -314,6 +301,7 @@ void RTPathOCLRenderThread::UpdateOCLBuffers() {
 
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();
+	lastEditTime = WallClockTime();
 }
 
 void RTPathOCLRenderThread::RenderThreadImpl() {
@@ -361,11 +349,6 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 		double lastEditTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
-			if (updateActions.HasAnyAction()) {
-				UpdateOCLBuffers();
-				lastEditTime = WallClockTime();
-			}
-
 			//------------------------------------------------------------------
 			// Render a frame (i.e. taskCount * assignedIters samples)
 			//------------------------------------------------------------------
@@ -491,7 +474,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 							cl::NDRange(RoundUp<unsigned int>(filmBufferPixelCount, applyBlurFilterYR1WorkGroupSize)),
 							cl::NDRange(applyBlurFilterYR1WorkGroupSize));
 				}
-				
+
 				//--------------------------------------------------------------
 				// Transfer the screen frame buffer
 				//--------------------------------------------------------------
@@ -500,6 +483,25 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				oclQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
 						screenBufferBuff->getInfo<CL_MEM_SIZE>(), engine->film->GetScreenBuffer());
 				oclQueue.finish();
+			}
+
+			//------------------------------------------------------------------
+			// Update OpenCL buffers if there is any edit action
+			//------------------------------------------------------------------
+
+			if ((amiDisplayThread) && (engine->updateActions.HasAnyAction())) {
+				engine->editMutex.lock();
+
+				// Update all threads
+				for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
+					RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderThreads[i]);
+					thread->UpdateOCLBuffers(engine->updateActions);
+				}
+
+				// Reset updateActions
+				engine->updateActions.Reset();
+
+				engine->editMutex.unlock();
 			}
 
 			//------------------------------------------------------------------
