@@ -90,9 +90,6 @@ void RTPathOCLRenderEngine::BeginEdit() {
 }
 
 void RTPathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
-	if (editActions.HasAnyAction())
-		film->Reset();
-
 	PathOCLRenderEngine::EndEdit(editActions);
 
 	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))

@@ -504,6 +504,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Reset updateActions
 				engine->updateActions.Reset();
 
+				// Clear the film
+				engine->film->Reset();
+
 				engine->editMutex.unlock();
 			}
 
