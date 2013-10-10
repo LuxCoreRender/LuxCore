@@ -24,6 +24,9 @@ std::string KernelSource_rtpathoclbase_funcs =
 " *   LuxRays website: http://www.luxrender.net                             *\n"
 " ***************************************************************************/\n"
 "\n"
+"// List of symbols defined at compile time:\n"
+"//  PARAM_GHOSTEFFECT_INTENSITY\n"
+"\n"
 "//------------------------------------------------------------------------------\n"
 "// ClearFrameBuffer Kernel\n"
 "//------------------------------------------------------------------------------\n"
@@ -271,7 +274,7 @@ std::string KernelSource_rtpathoclbase_funcs =
 "		const float3 oldRgb = VLOAD3F(&screenBuffer[(x + y * filmWidth)].r);\n"
 "\n"
 "		// Blend old and new RGB value in for ghost effect\n"
-"		VSTORE3F(mix(oldRgb, newRgb, .85f), &screenBuffer[(x + y * filmWidth)].r);\n"
+"		VSTORE3F(mix(oldRgb, newRgb, PARAM_GHOSTEFFECT_INTENSITY), &screenBuffer[(x + y * filmWidth)].r);\n"
 "	}\n"
 "}\n"
 ; } }

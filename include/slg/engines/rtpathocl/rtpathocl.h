@@ -120,6 +120,8 @@ protected:
 
 	u_int minIterations;
 	u_int displayDeviceIndex;
+	float blurTimeWindow, blurMinCap, blurMaxCap;
+	float ghostEffect;
 
   	boost::mutex editMutex;
 	EditActionList updateActions;

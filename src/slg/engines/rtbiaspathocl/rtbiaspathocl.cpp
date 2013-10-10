@@ -59,6 +59,12 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 		throw std::runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<std::string>(displayDeviceIndex) +
 				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
 
+	blurTimeWindow = Max(0.f, cfg.GetFloat("rtpath.blur.timewindow", 3.f));
+	blurMinCap =  Max(0.f, cfg.GetFloat("rtpath.blur.mincap", 0.01f));
+	blurMaxCap =  Max(0.f, cfg.GetFloat("rtpath.blur.maxcap", 0.2f));
+
+	ghostEffect = 1.f - Clamp(cfg.GetFloat("rtpath.ghosteffect.intensity", 0.05f), 0.f, 1.f);
+
 	BiasPathOCLRenderEngine::StartLockLess();
 }
 

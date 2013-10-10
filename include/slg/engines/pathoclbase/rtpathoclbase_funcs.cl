@@ -21,6 +21,9 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+// List of symbols defined at compile time:
+//  PARAM_GHOSTEFFECT_INTENSITY
+
 //------------------------------------------------------------------------------
 // ClearFrameBuffer Kernel
 //------------------------------------------------------------------------------
@@ -268,6 +271,6 @@ __kernel void UpdateScreenBuffer(
 		const float3 oldRgb = VLOAD3F(&screenBuffer[(x + y * filmWidth)].r);
 
 		// Blend old and new RGB value in for ghost effect
-		VSTORE3F(mix(oldRgb, newRgb, .85f), &screenBuffer[(x + y * filmWidth)].r);
+		VSTORE3F(mix(oldRgb, newRgb, PARAM_GHOSTEFFECT_INTENSITY), &screenBuffer[(x + y * filmWidth)].r);
 	}
 }
