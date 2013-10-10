@@ -111,6 +111,8 @@ protected:
 	virtual void UpdateFilmLockLess();
 
 	u_int displayDeviceIndex;
+	float blurTimeWindow, blurMinCap, blurMaxCap;
+	float ghostEffect;
 
  	boost::mutex editMutex;
 	EditActionList updateActions;

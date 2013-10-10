@@ -84,7 +84,8 @@ string RTBiasPathOCLRenderThread::AdditionalKernelOptions() {
 	} else
 		ss << " -D PARAM_TONEMAP_LINEAR_SCALE=1.f";
 
-	ss << " -D PARAM_GAMMA=" << engine->film->GetGamma() << "f";
+	ss << " -D PARAM_GAMMA=" << engine->film->GetGamma() << "f" <<
+			" -D PARAM_GHOSTEFFECT_INTENSITY=" << engine->ghostEffect << "f";
 
 	return ss.str();
 }
@@ -107,7 +108,7 @@ void RTBiasPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 	CompileKernel(program, &clearFBKernel, &clearFBWorkGroupSize, "ClearFrameBuffer");
 
 	//--------------------------------------------------------------------------
-	// InitRTFrameBuffer kernel
+	// ClearScreenBuffer kernel
 	//--------------------------------------------------------------------------
 
 	CompileKernel(program, &clearSBKernel, &clearSBWorkGroupSize, "ClearScreenBuffer");
@@ -429,20 +430,23 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// Apply Gaussian filter to the screen buffer
 				//--------------------------------------------------------------
 
-				// Base the amount of blur on the time since the last update (using a 3secs window)
+				// Base the amount of blur on the time since the last update
 				const double timeSinceLastUpdate = WallClockTime() - lastEditTime;
-				const float weight = Lerp(Clamp<float>(timeSinceLastUpdate, 0.f, 3.f) / 5.f, 0.25f, 0.025f);
+				const float weight = Lerp(Clamp<float>(timeSinceLastUpdate, 0.f, engine->blurTimeWindow) / 5.f,
+						engine->blurMaxCap, engine->blurMinCap);
 
-				applyBlurFilterXR1Kernel->setArg(4, weight);
-				applyBlurFilterYR1Kernel->setArg(4, weight);
-				for (u_int i = 0; i < 3; ++i) {
-					oclQueue.enqueueNDRangeKernel(*applyBlurFilterXR1Kernel, cl::NullRange,
-							cl::NDRange(RoundUp<unsigned int>(engineFilmPixelCount, applyBlurFilterXR1WorkGroupSize)),
-							cl::NDRange(applyBlurFilterXR1WorkGroupSize));
+				if (weight > 0.f) {
+					applyBlurFilterXR1Kernel->setArg(4, weight);
+					applyBlurFilterYR1Kernel->setArg(4, weight);
+					for (u_int i = 0; i < 3; ++i) {
+						oclQueue.enqueueNDRangeKernel(*applyBlurFilterXR1Kernel, cl::NullRange,
+								cl::NDRange(RoundUp<unsigned int>(engineFilmPixelCount, applyBlurFilterXR1WorkGroupSize)),
+								cl::NDRange(applyBlurFilterXR1WorkGroupSize));
 
-					oclQueue.enqueueNDRangeKernel(*applyBlurFilterYR1Kernel, cl::NullRange,
-							cl::NDRange(RoundUp<unsigned int>(engineFilmPixelCount, applyBlurFilterYR1WorkGroupSize)),
-							cl::NDRange(applyBlurFilterYR1WorkGroupSize));
+						oclQueue.enqueueNDRangeKernel(*applyBlurFilterYR1Kernel, cl::NullRange,
+								cl::NDRange(RoundUp<unsigned int>(engineFilmPixelCount, applyBlurFilterYR1WorkGroupSize)),
+								cl::NDRange(applyBlurFilterYR1WorkGroupSize));
+					}
 				}
 
 				//--------------------------------------------------------------
