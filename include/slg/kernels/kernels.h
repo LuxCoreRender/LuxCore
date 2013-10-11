@@ -31,6 +31,7 @@ extern std::string KernelSource_rtpathoclbase_funcs;
 extern std::string KernelSource_pathocl_datatypes;
 extern std::string KernelSource_pathocl_kernels;
 extern std::string KernelSource_biaspathocl_datatypes;
+extern std::string KernelSource_biaspathocl_funcs;
 extern std::string KernelSource_biaspathocl_kernels;
 extern std::string KernelSource_sampler_types;
 extern std::string KernelSource_sampler_funcs;

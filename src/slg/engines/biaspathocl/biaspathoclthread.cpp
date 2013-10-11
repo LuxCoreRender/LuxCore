@@ -136,6 +136,7 @@ string BiasPathOCLRenderThread::AdditionalKernelSources() {
 	ssKernel <<
 		intersectionDevice->GetIntersectionKernelSource() <<
 		slg::ocl::KernelSource_biaspathocl_datatypes <<
+		slg::ocl::KernelSource_biaspathocl_funcs <<
 		slg::ocl::KernelSource_biaspathocl_kernels;
 
 	return ssKernel.str();
