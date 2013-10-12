@@ -36,7 +36,7 @@
 namespace slg {
 
 typedef enum {
-	PATHOCL  = 4,
+	PATHOCL = 4,
 	LIGHTCPU = 5,
 	PATHCPU = 6,
 	BIDIRCPU = 7,

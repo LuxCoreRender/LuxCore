@@ -79,7 +79,8 @@ typedef unsigned int u_int;
 typedef unsigned long u_long;
 typedef unsigned long u_longlong;
 
-/*! \namespace luxrays
+/*!
+ * \namespace luxrays
  *
  * \brief The LuxRays core classes are defined within this namespace.
  */
