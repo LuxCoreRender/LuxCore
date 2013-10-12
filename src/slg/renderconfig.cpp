@@ -79,7 +79,7 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 
 	scene->enableInstanceSupport = cfg.GetBoolean("accelerator.instances.enable", true);
 	const string accelType = cfg.GetString("accelerator.type", "AUTO");
-	// "-1" is for compatibility with the past. however all other old values are
+	// "-1" is for compatibility with the past. However all other old values are
 	// not emulated (i.e. the "AUTO" behavior is preferred in that case)
 	if ((accelType == "AUTO") || (accelType == "-1"))
 		scene->accelType = ACCEL_AUTO;

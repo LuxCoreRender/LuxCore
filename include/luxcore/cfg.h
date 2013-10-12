@@ -19,40 +19,12 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_H
-#define	_SLG_H
+#ifndef _LUXCORE_CFG_H
+#define	_LUXCORE_CFG_H
 
-#include <sstream>
+// The configured options and settings for SmallLuxGPU
 
-#include "luxrays/luxrays.h"
-#include "slg/cfg.h"
+#define LUXCORE_VERSION_MAJOR "1"
+#define LUXCORE_VERSION_MINOR "4devel1"
 
-/*!
- * \namespace slg
- *
- * \brief The SLG classes are defined within this namespace.
- */
-
-namespace slg {
-
-class RenderSession;
-class RenderConfig;
-class RenderEngine;
-class EditActionList;
-
-extern std::string SLG_LABEL;
-extern std::string LUXVR_LABEL;
-
-// The next two functions pointers (plus the one in sdl.h) have to be
-// set by the application using SLG library
-extern void (*LuxRays_DebugHandler)(const char *msg); // LuxRays handler
-extern void (*SLG_DebugHandler)(const char *msg); // SLG handler
-
-// Empty debug handler
-extern void NullDebugHandler(const char *msg);
-
-#define SLG_LOG(a) { if (slg::SLG_DebugHandler) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; slg::SLG_DebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); } }
-
-}
-
-#endif	/* _LUXRAYS_H */
+#endif	/* _LUXCORE_CFG_H */

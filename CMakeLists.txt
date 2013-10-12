@@ -106,14 +106,16 @@ if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
 endif()
 
+
 ###########################################################################
 #
-# LuxRays and SLG libraries
+# LuxRays, SLG and LuxCore libraries
 #
 ###########################################################################
 
 add_subdirectory(src/luxrays)
 add_subdirectory(src/slg)
+add_subdirectory(src/luxcore)
 
 
 ###########################################################################
@@ -124,6 +126,7 @@ add_subdirectory(src/slg)
 
 add_subdirectory(samples/benchsimple)
 add_subdirectory(samples/slglibdemo)
+add_subdirectory(samples/luxcoredemo)
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	if(NOT LUXRAYS_DISABLE_OPENCL)
 		if(BUILD_LUXMARK)

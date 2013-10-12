@@ -19,40 +19,44 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#ifndef _SLG_H
-#define	_SLG_H
+#include <iostream>
 
-#include <sstream>
+#include "luxcore/luxcore.h"
 
-#include "luxrays/luxrays.h"
-#include "slg/cfg.h"
+using namespace std;
+using namespace luxcore;
 
-/*!
- * \namespace slg
- *
- * \brief The SLG classes are defined within this namespace.
- */
+//static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
+//	printf("\n*** ");
+//	if(fif != FIF_UNKNOWN)
+//		printf("%s Format\n", FreeImage_GetFormatFromFIF(fif));
+//
+//	printf("%s", message);
+//	printf(" ***\n");
+//}
 
-namespace slg {
+int main(int argc, char *argv[]) {
+	try {
+//		// Initialize FreeImage Library
+//		FreeImage_Initialise(TRUE);
+//		FreeImage_SetOutputMessage(FreeImageErrorHandler);
 
-class RenderSession;
-class RenderConfig;
-class RenderEngine;
-class EditActionList;
+		//----------------------------------------------------------------------
+		// Properties example
+		//----------------------------------------------------------------------
 
-extern std::string SLG_LABEL;
-extern std::string LUXVR_LABEL;
+		cout << "Properties example...\n";
+		Properties props(
+				(Property("test1.prop1") = 1, 2, 3) %
+				(Property("test2.prop2") = "test"));
+		cout << props;
+	} catch (runtime_error err) {
+		cerr << "RUNTIME ERROR: " << err.what() << "\n";
+		return EXIT_FAILURE;
+	} catch (exception err) {
+		cerr << "ERROR: " << err.what() << "\n";
+		return EXIT_FAILURE;
+	}
 
-// The next two functions pointers (plus the one in sdl.h) have to be
-// set by the application using SLG library
-extern void (*LuxRays_DebugHandler)(const char *msg); // LuxRays handler
-extern void (*SLG_DebugHandler)(const char *msg); // SLG handler
-
-// Empty debug handler
-extern void NullDebugHandler(const char *msg);
-
-#define SLG_LOG(a) { if (slg::SLG_DebugHandler) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; slg::SLG_DebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); } }
-
+	return EXIT_SUCCESS;
 }
-
-#endif	/* _LUXRAYS_H */
