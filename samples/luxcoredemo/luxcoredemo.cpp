@@ -24,6 +24,7 @@
 #include "luxcore/luxcore.h"
 
 using namespace std;
+using namespace luxrays;
 using namespace luxcore;
 
 //static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
@@ -41,15 +42,27 @@ int main(int argc, char *argv[]) {
 //		FreeImage_Initialise(TRUE);
 //		FreeImage_SetOutputMessage(FreeImageErrorHandler);
 
+		cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n\n" ;
+
 		//----------------------------------------------------------------------
 		// Properties example
 		//----------------------------------------------------------------------
 
-		cout << "Properties example...\n";
-		Properties props(
-				(Property("test1.prop1") = 1, 2, 3) %
-				(Property("test2.prop2") = "test"));
-		cout << props;
+		{
+			cout << "Properties examples...\n";
+
+			Property prop("test1.prop1", "aa");
+			cout << "test1.prop1[0] => " << prop.Get<string>(0) << "\n\n";
+
+			Properties props(
+					(Property("test1.prop1") = 1, "aa", 3.f) %
+					(Property("test2.prop2") = "test"));
+			cout << props << "\n";
+
+			cout << "test1.prop1[0] => " << props.Get("test1.prop1").Get<int>(0) << "\n";
+			cout << "test1.prop1[1] => " << props.Get("test1.prop1").Get<string>(1) << "\n";
+			cout << "test1.prop1[2] => " << props.Get("test1.prop1").Get<float>(2) << "\n";
+		}
 	} catch (runtime_error err) {
 		cerr << "RUNTIME ERROR: " << err.what() << "\n";
 		return EXIT_FAILURE;

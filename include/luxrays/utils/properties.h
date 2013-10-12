@@ -39,12 +39,55 @@ namespace luxrays {
 // Property class
 //------------------------------------------------------------------------------
 
+/*!
+ * \brief Values that can be stored in a Property
+ *
+ * The current list of allowed data types is:
+ * - bool
+ * - int
+ * - unsigned int
+ * - float
+ * - double
+ * - size_t
+ * - string
+ */
 typedef boost::variant<bool, int, u_int, float, double, size_t, std::string> PropertyValue;
 
+/*!
+ * \brief A generic container for values
+ *
+ * A Property is a container associating a vector of values to a string name. The
+ * vector of values can include items with different data types. Check
+ * \ref PropertyValue for a list of allowed types.
+ */
 class Property {
 public:
-	Property() { }
+	/*!
+	 * \brief Constructs a new empty property.
+	 *
+	 * Constructs a new empty property where the property name is initialized to
+	 * the empty string (i.e. "") and the vector of values is empty too.
+	 */
+	Property();
+	/*!
+	 * \brief Constructs a new empty property with a given name.
+	 *
+	 * Constructs a new empty property where the property name is initialized
+	 * to \p propName and the vector of values is empty too.
+	 *
+	 * \param propName is the name of the new property.
+	 */
 	Property(const std::string &propName);
+	/*!
+	 * \brief Constructs a new property with a given name and value.
+	 *
+	 * Constructs a new empty property where the property name is initialized to
+	 * \p propName and the vector of values has one single element with the value
+	 * of \p val.
+	 *
+	 * \param propName is the name of the new property.
+	 * \param val is the value of the new property.
+	 */
 	Property(const std::string &propName, const PropertyValue &val);
 	~Property();
 
@@ -53,7 +96,12 @@ public:
 
 	void Clear();
 
-	template<class T> T Get(const u_int index) const;
+	template<class T> T Get(const u_int index) const {
+		if (index >= values.size())
+			throw std::runtime_error("Out of bound error for property: " + name);
+
+		return boost::apply_visitor(GetVistor<T>(), values[index]);
+	}
 	std::string GetString() const;
 
 	std::string ToString() const;
@@ -144,6 +192,7 @@ public:
 	std::vector<std::string> GetAllKeys(const std::string prefix) const;
 
 	bool IsDefined(const std::string &propName) const;
+	const Property &Get(const std::string &propName) const;
 	void Delete(const std::string &propName);
 
 	// The following methods perform the same action

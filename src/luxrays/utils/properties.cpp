@@ -57,13 +57,6 @@ void Property::Clear() {
 	values.clear();
 }
 
-template<class T> T Property::Get(const u_int index) const {
-	if (index >= values.size())
-		throw runtime_error("Out of bound error for property: " + name);
-
-	return boost::apply_visitor(GetVistor<T>(), values[index]);
-}
-
 std::string Property::GetString() const {
 	stringstream ss;
 
@@ -164,6 +157,14 @@ vector<string> Properties::GetAllKeys(const string prefix) const {
 
 bool Properties::IsDefined(const string &propName) const {
 	return (props.count(propName) != 0);
+}
+
+const Property &Properties::Get(const std::string &propName) const {
+	boost::unordered_map<std::string, Property>::const_iterator it = props.find(propName);
+	if (it == props.end())
+		throw runtime_error("Undefined property in Properties::Get(): " + propName);
+
+	return it->second;
 }
 
 void Properties::Delete(const string &propName) {

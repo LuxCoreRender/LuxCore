@@ -36,8 +36,12 @@ if (FreeImage_FOUND)
 	include_directories(SYSTEM ${FreeImage_INCLUDE_DIRS})
 endif ()
 
+# Find Python Libraries
+find_package(PythonLibs)
+include_directories (${PYTHON_INCLUDE_DIRS})
+
 # Find Boost
-set(Boost_USE_STATIC_LIBS       ON)
+set(Boost_USE_STATIC_LIBS       OFF)
 set(Boost_USE_MULTITHREADED     ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(BOOST_ROOT                  "${BOOST_SEARCH_PATH}")
@@ -46,7 +50,7 @@ set(Boost_MINIMUM_VERSION       "1.44.0")
 
 set(Boost_ADDITIONAL_VERSIONS "1.47.0" "1.46.1" "1.46" "1.46.0" "1.45" "1.45.0" "1.44" "1.44.0")
 
-set(LUXRAYS_BOOST_COMPONENTS thread filesystem system)
+set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system python)
 find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 if (NOT Boost_FOUND)
         # Try again with the other type of libs
@@ -66,6 +70,7 @@ if (Boost_FOUND)
 endif ()
 
 
+# OpenGL
 find_package(OpenGL)
 
 if (OPENGL_FOUND)
@@ -91,9 +96,10 @@ if (GLUT_FOUND)
 	include_directories(SYSTEM ${GLUT_INCLUDE_PATH})
 endif ()
 
-set(OPENCL_ROOT                  "${OPENCL_SEARCH_PATH}")
-find_package(OpenCL)
 # OpenCL
+set(OPENCL_ROOT                "${OPENCL_SEARCH_PATH}")
+find_package(OpenCL)
+
 if (OPENCL_FOUND)
 	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
 endif ()
