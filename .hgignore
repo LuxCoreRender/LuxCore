@@ -1,6 +1,7 @@
 ^lib/libluxrays.a
 ^lib/libsmallluxgpu.a
 ^lib/libluxcore.a
+^lib/pyluxcore.so
 ^doxygen-luxrays.conf
 ^doxygen/luxrays.template
 ^doxygen-slg.conf

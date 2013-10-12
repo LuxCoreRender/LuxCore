@@ -113,6 +113,23 @@ IF(OSX_UPDATE_LUXRAYS_REPO)
 	)
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
 
+#############################################################################
+#
+# PyLuxCore (Python bindings)
+#
+#############################################################################
+
+set(PYLUXCORE_SRCS
+	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
+)
+
+add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
+target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+set_target_properties(pyluxcore PROPERTIES PREFIX "")
+if(MSVC)
+	set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
+endif(MSVC)
+
 ###########################################################################
 #
 # Predefines
