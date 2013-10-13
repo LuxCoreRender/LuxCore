@@ -91,14 +91,23 @@ void Properties::Load(istream &stream) {
 	char buf[512];
 
 	for (int lineNumber = 1;; ++lineNumber) {
-		stream.getline(buf, 512);
 		if (stream.eof())
 			break;
+
+		buf[0] = 0;
+		stream.getline(buf, 512);
+
 		// Ignore comments
 		if (buf[0] == '#')
 			continue;
 
-		string line = buf;
+		string line(buf);
+		boost::trim(line);
+
+		// Ignore empty lines
+		if (line.length() == 0)
+			continue;
+
 		size_t idx = line.find('=');
 		if (idx == string::npos) {
 			sprintf(buf, "Syntax error in a Properties at line %d", lineNumber);
