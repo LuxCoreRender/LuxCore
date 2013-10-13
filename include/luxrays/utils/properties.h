@@ -40,7 +40,7 @@ namespace luxrays {
 //------------------------------------------------------------------------------
 
 /*!
- * \brief Values that can be stored in a Property
+ * \brief Values that can be stored in a Property.
  *
  * The current list of allowed data types is:
  * - bool
@@ -54,7 +54,7 @@ namespace luxrays {
 typedef boost::variant<bool, int, u_int, float, double, size_t, std::string> PropertyValue;
 
 /*!
- * \brief A generic container for values
+ * \brief A generic container for values.
  *
  * A Property is a container associating a vector of values to a string name. The
  * vector of values can include items with different data types. Check
@@ -251,15 +251,46 @@ inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 // Properties class
 //------------------------------------------------------------------------------
 
+/*!
+ * \brief A container for multiple Property.
+ *
+ * Properties is a container for instances of Property class. It keeps also
+ * track of the insertion order.
+ */
 class Properties {
 public:
 	Properties() { }
+	/*!
+	 * \brief Load from a text file the list of Property.
+	 * 
+	 * \param fileName is the name of the file to read.
+	 */
 	Properties(const std::string &fileName);
 	~Properties() { }
 
-	void Load(const Properties &prop);
+	/*!
+	 * \brief Add the list of Property to the current one.
+	 * 
+	 * \param prop is the list of Property to add.
+	 */
+	void Load(Properties prop);
+	/*!
+	 * \brief Add the list of Property to the current one.
+	 * 
+	 * \param stream is the input stream to read.
+	 */
 	void Load(std::istream &stream);
+	/*!
+	 * \brief Add the list of Property to the current one.
+	 * 
+	 * \param fileName is the name of the file to read.
+	 */
 	void LoadFromFile(const std::string &fileName);
+	/*!
+	 * \brief Add the list of Property to the current one.
+	 * 
+	 * \param propDefinitions is the list of Property to add in text format.
+	 */
 	void LoadFromString(const std::string &propDefinitions);
 
 	void Clear();

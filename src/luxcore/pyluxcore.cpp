@@ -34,6 +34,8 @@ static const char *LuxCoreVersion() {
 	return luxCoreVersion;
 }
 
+typedef void (luxrays::Properties::*Properties_Load_Ptr)(luxrays::Properties);
+
 BOOST_PYTHON_MODULE(pyluxcore) {
 	using namespace boost::python;
 
@@ -83,6 +85,22 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Set", &luxrays::Property::Set<int>, return_internal_reference<1>())
 		.def("Set", &luxrays::Property::Set<double>, return_internal_reference<1>())
 		.def("Set", &luxrays::Property::Set<string>, return_internal_reference<1>())
+
+		.def(self_ns::str(self))
+    ;
+
+	//--------------------------------------------------------------------------
+	// Properties class
+	//--------------------------------------------------------------------------
+
+    class_<luxrays::Properties>("Properties", init<>())
+		.def(init<string>())
+
+		// Don't ask me why the hell the compiler can deduce the template
+		// argument and I have to declare Properties_Load_Ptr
+		.def<Properties_Load_Ptr>("Load", &luxrays::Properties::Load)
+		.def("LoadFromFile", &luxrays::Properties::LoadFromFile)
+		.def("LoadFromString", &luxrays::Properties::LoadFromString)
 
 		.def(self_ns::str(self))
     ;
