@@ -91,43 +91,118 @@ public:
 	Property(const std::string &propName, const PropertyValue &val);
 	~Property();
 
+	/*!
+	 * \brief Returns the name of a property.
+	 *
+	 * \return the name of the property
+	 */
 	const std::string &GetName() const { return name; }
+	/*!
+	 * \brief Returns the number of values associated to this property.
+	 *
+	 * \return the number of values in this property.
+	 */
 	u_int GetSize() const { return values.size(); }
-
-	void Clear();
-
+	/*!
+	 * \brief Removes any values associated to the property.
+	 *
+	 * \return a reference to the modified property.
+	 */
+	Property &Clear();
+	/*!
+	 * \brief Returns the value at the specified position.
+	 * 
+	 * \param index is the position of the value to return.
+	 * 
+	 * \return the value at specified position (casted or translated to the type
+	 * required).
+	 * 
+	 * \throws std::runtime_error if the index is out of bound.
+	 */
 	template<class T> T Get(const u_int index) const {
 		if (index >= values.size())
 			throw std::runtime_error("Out of bound error for property: " + name);
 
 		return boost::apply_visitor(GetVistor<T>(), values[index]);
 	}
-	std::string GetString() const;
+	/*!
+	 * \brief Sets the value at the specified position.
+	 * 
+	 * \param index is the position of the value to set.
+	 * \param val is the new value to set.
+	 *
+	 * \return a reference to the modified property.
+	 *
+	 * \throws std::runtime_error if the index is out of bound.
+	 */
+	template<class T> Property &Set(const u_int index, T val) {
+		if (index >= values.size())
+			throw std::runtime_error("Out of bound error for property: " + name);
 
-	std::string ToString() const;
+		values[index] = val;
 
-	template<class T> Property &operator,(T val) {
+		return *this;
+	}
+	/*!
+	 * \brief Adds an item at the end of the list of values associated with the
+	 * property.
+	 * 
+	 * \param val is the value to append.
+	 *
+	 * \return a reference to the modified property.
+	 */
+	template<class T> Property &Add(T val) {
 		values.push_back(val);
 		return *this;
 	}
-
+	/*!
+	 * \brief Returns a string with all values associated to the property.
+	 * 
+	 * \return a string with all values.
+	 */
+	std::string GetValuesString() const;
+	/*!
+	 * \brief Returns a string with the name of the property followed by " = "
+	 * and by all values associated to the property.
+	 * 
+	 * \return a string with the name and all values.
+	 */
+	std::string ToString() const;
+	/*!
+	 * \brief Adds a value to a property.
+	 *
+	 * It can be used to write expressions like:
+	 * 
+	 * > Property("test1.prop1") = 1, 2, 3
+	 * 
+	 * \return a reference to the modified property.
+	 */
+	template<class T> Property &operator,(T val) {
+		return Add(val);
+	}
+	/*!
+	 * \brief Initializes a property with (only) the given value.
+	 * 
+	 * \return a reference to the modified property.
+	 */
 	template<class T> Property &operator=(T val) {
 		values.clear();
-		values.push_back(val);
-		return *this;
+		return Add(val);
 	}
-
-	// Required to work around the problem of char* to bool conversion
-	// (instead of char* to string)
+	/*!
+	 * \brief Required to work around the problem of char* to bool conversion
+	 * (instead of char* to string).
+	 */
 	Property &operator,(const char *val) {
-		values.push_back(std::string(val));
-		return *this;
+		return Add(std::string(val));
 	}
-
+	/*!
+	 * \brief Required to work around the problem of char* to bool conversion
+	 * (instead of char* to string).
+	 */
 	Property &operator=(const char *val) {
 		values.clear();
-		values.push_back(std::string(val));
-		return *this;
+		return Add(std::string(val));
 	}
 
 private:

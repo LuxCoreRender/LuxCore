@@ -53,11 +53,12 @@ Property::Property(const std::string &propName, const PropertyValue &val) :
 Property::~Property() {
 }
 
-void Property::Clear() {
+Property &Property::Clear() {
 	values.clear();
+	return *this;
 }
 
-std::string Property::GetString() const {
+std::string Property::GetValuesString() const {
 	stringstream ss;
 
 	for (uint i = 0; i < values.size(); ++i) {
@@ -65,12 +66,11 @@ std::string Property::GetString() const {
 			ss << " ";
 		ss << Get<string>(i);
 	}
-
 	return ss.str();
 }
 
 std::string Property::ToString() const {
-	return name + " = " + GetString();
+	return name + " = " + GetValuesString();
 }
 
 //------------------------------------------------------------------------------
@@ -232,7 +232,7 @@ Properties luxrays::operator%(const Property &prop0, const Property &prop1) {
 
 string Properties::GetString(const string &propName, const string defaultValue) const {
 	if (IsDefined(propName))
-		return props.find(propName)->second.GetString();
+		return props.find(propName)->second.GetValuesString();
 	else
 		return defaultValue;
 }

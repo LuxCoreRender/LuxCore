@@ -25,7 +25,6 @@
 #include <luxcore/luxcore.h>
 
 using namespace std;
-using namespace luxrays;
 using namespace luxcore;
 
 namespace luxcore {
@@ -57,20 +56,35 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// Property class
 	//--------------------------------------------------------------------------
 
-    class_<Property>("Property", init<string>())
+    class_<luxrays::Property>("Property", init<string>())
 		.def(init<string, bool>())
 		.def(init<string, int>())
 		.def(init<string, double>())
 		.def(init<string, string>())
 
-		.def("GetName", &Property::GetName, return_value_policy<copy_const_reference>())
-		.def("GetSize", &Property::GetSize)
-		.def("Clear", &Property::Clear)
+		.def("GetName", &luxrays::Property::GetName, return_value_policy<copy_const_reference>())
+		.def("GetSize", &luxrays::Property::GetSize)
+		.def("Clear", &luxrays::Property::Clear, return_internal_reference<1>())
 
-		.def("Get", &Property::Get<bool>)
-		.def("Get", &Property::Get<int>)
-		.def("Get", &Property::Get<double>)
-		.def("Get", &Property::Get<string>)
+		.def("Get", &luxrays::Property::Get<bool>)
+		.def("Get", &luxrays::Property::Get<int>)
+		.def("Get", &luxrays::Property::Get<double>)
+		.def("Get", &luxrays::Property::Get<string>)
+	
+		.def("GetValuesString", &luxrays::Property::GetValuesString)
+		.def("ToString", &luxrays::Property::ToString)
+
+		.def("Add", &luxrays::Property::Add<bool>, return_internal_reference<1>())
+		.def("Add", &luxrays::Property::Add<int>, return_internal_reference<1>())
+		.def("Add", &luxrays::Property::Add<double>, return_internal_reference<1>())
+		.def("Add", &luxrays::Property::Add<string>, return_internal_reference<1>())
+
+		.def("Set", &luxrays::Property::Set<bool>, return_internal_reference<1>())
+		.def("Set", &luxrays::Property::Set<int>, return_internal_reference<1>())
+		.def("Set", &luxrays::Property::Set<double>, return_internal_reference<1>())
+		.def("Set", &luxrays::Property::Set<string>, return_internal_reference<1>())
+
+//		.def(str(self))
     ;
 }
 
