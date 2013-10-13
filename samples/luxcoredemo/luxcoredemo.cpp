@@ -54,6 +54,10 @@ int main(int argc, char *argv[]) {
 			Property prop("test1.prop1", "aa");
 			cout << "test1.prop1[0] => " << prop.Get<string>(0) << "\n\n";
 
+			prop.Clear().Add(0).Add(2).Add(3);
+			prop.Set(0, 1);
+			cout << prop.ToString() << "\n\n";
+
 			Properties props(
 					(Property("test1.prop1") = 1, "aa", 3.f) %
 					(Property("test2.prop2") = "test"));
