@@ -84,7 +84,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Set", &luxrays::Property::Set<double>, return_internal_reference<1>())
 		.def("Set", &luxrays::Property::Set<string>, return_internal_reference<1>())
 
-//		.def(str(self))
+		.def(self_ns::str(self))
     ;
 }
 
