@@ -61,7 +61,7 @@ Property &Property::Clear() {
 std::string Property::GetValuesString() const {
 	stringstream ss;
 
-	for (uint i = 0; i < values.size(); ++i) {
+	for (u_int i = 0; i < values.size(); ++i) {
 		if (i != 0)
 			ss << " ";
 		ss << Get<string>(i);
