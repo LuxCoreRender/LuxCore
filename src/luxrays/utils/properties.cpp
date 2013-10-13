@@ -81,7 +81,7 @@ Properties::Properties(const string &fileName) {
 	LoadFromFile(fileName);
 }
 
-void Properties::Load(const Properties &p) {
+void Properties::Load(Properties p) {
 	const std::vector<std::string> &keys = p.GetAllKeys();
 	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it)
 		SetString(*it, p.GetString(*it, ""));

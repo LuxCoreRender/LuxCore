@@ -19,4 +19,8 @@ print(prop.ToString())
 
 print(pyluxcore.Property("test1.prop1").Add(1).Add(2).Add(3))
 
+props = pyluxcore.Properties()
+props.LoadFromString("test1.prop1 = aa bb\n")
+print(props)
+
 ################################################################################
