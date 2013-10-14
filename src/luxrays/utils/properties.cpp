@@ -81,13 +81,15 @@ Properties::Properties(const string &fileName) {
 	LoadFromFile(fileName);
 }
 
-void Properties::Load(Properties p) {
+Properties &Properties::Load(Properties p) {
 	const std::vector<std::string> &keys = p.GetAllKeys();
 	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it)
 		SetString(*it, p.GetString(*it, ""));
+
+	return *this;
 }
 
-void Properties::Load(istream &stream) {
+Properties &Properties::Load(istream &stream) {
 	char buf[512];
 
 	for (int lineNumber = 1;; ++lineNumber) {
@@ -109,14 +111,14 @@ void Properties::Load(istream &stream) {
 			continue;
 
 		size_t idx = line.find('=');
-		if (idx == string::npos) {
-			sprintf(buf, "Syntax error in a Properties at line %d", lineNumber);
-			throw runtime_error(buf);
-		}
+		if (idx == string::npos)
+			throw runtime_error("Syntax error in a Properties at line " + luxrays::ToString(lineNumber));
 
 		// Check if it is a valid key
 		string key(line.substr(0, idx));
 		boost::trim(key);
+		Property prop(key);
+
 		string value(line.substr(idx + 1));
 		// Check if the last char is a LF or a CR and remove that (in case of
 		// a DOS file read under Linux/MacOS)
@@ -124,11 +126,61 @@ void Properties::Load(istream &stream) {
 			value.resize(value.size() - 1);
 		boost::trim(value);
 
-		SetString(key, value);
+		// Iterate over value and extract all field (handling quotes)
+		u_int first = 0;
+		u_int last = 0;
+		const u_int len = value.length();
+		while (first < len) {
+			// Check if it is a quoted field
+			if ((value[first] == '"') || (value[first] == '\'')) {
+				++first;
+				last = first;
+				bool found = false;
+				while (last < len) {
+					if ((value[last] == '"') || (value[last] == '\'')) {
+						prop.Add(value.substr(first, last - first - 1));
+						found = true;
+						++last;
+						break;
+					}
+
+					++last;
+				}
+
+				if (!found) 
+					throw runtime_error("Unterminated quote in property: " + key);
+			} else {
+				last = first;
+				while (last < len) {
+					if ((value[last] == ' ') || (value[last] == '\t') || (last == len - 1)) {
+						string field;
+						if (last == len - 1) {
+							field = value.substr(first, last - first + 1);
+							++last;
+						} else
+							field = value.substr(first, last - first);
+						prop.Add(field);
+
+						// Eat all additional spaces
+						while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
+							++last;
+						break;
+					}
+
+					++last;
+				}
+			}
+
+			first = last;
+		}
+
+		Set(prop);
 	}
+
+	return *this;
 }
 
-void Properties::LoadFromFile(const string &fileName) {
+Properties &Properties::LoadFromFile(const string &fileName) {
 	BOOST_IFSTREAM file(fileName.c_str(), ios::in);
 	char buf[512];
 	if (file.fail()) {
@@ -136,18 +188,20 @@ void Properties::LoadFromFile(const string &fileName) {
 		throw runtime_error(buf);
 	}
 
-	Load(file);
+	return Load(file);
 }
 
-void Properties::LoadFromString(const string &propDefinitions) {
+Properties &Properties::LoadFromString(const string &propDefinitions) {
 	istringstream stream(propDefinitions);
 
-	Load(stream);
+	return Load(stream);
 }
 
-void Properties::Clear() {
+Properties &Properties::Clear() {
 	keys.clear();
 	props.clear();
+
+	return *this;
 }
 
 const vector<string> &Properties::GetAllKeys() const {

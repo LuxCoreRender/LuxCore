@@ -65,7 +65,12 @@ int main(int argc, char *argv[]) {
 
 			cout << "test1.prop1[0] => " << props.Get("test1.prop1").Get<int>(0) << "\n";
 			cout << "test1.prop1[1] => " << props.Get("test1.prop1").Get<string>(1) << "\n";
-			cout << "test1.prop1[2] => " << props.Get("test1.prop1").Get<float>(2) << "\n";
+			cout << "test1.prop1[2] => " << props.Get("test1.prop1").Get<float>(2) << "\n\n";
+			
+			props.Clear().LoadFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb");
+			cout << props;
+			cout << "Size: " << props.Get("test1.prop1").GetSize() << "\n";
+			cout << "Size: " << props.Get("test2.prop2").GetSize() << "\n";
 		}
 	} catch (runtime_error err) {
 		cerr << "RUNTIME ERROR: " << err.what() << "\n";

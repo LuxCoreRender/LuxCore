@@ -62,7 +62,7 @@ static luxrays::Property *Property_InitWithTuple(const str &name, tuple &t) {
 	return prop;
 }
 
-typedef void (luxrays::Properties::*Properties_Load_Ptr)(luxrays::Properties);
+typedef luxrays::Properties &(luxrays::Properties::*Properties_Load_Ptr)(luxrays::Properties);
 
 BOOST_PYTHON_MODULE(pyluxcore) {
 	docstring_options doc_options(
@@ -125,9 +125,9 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 		// Don't ask me why the hell the compiler can deduce the template
 		// argument and I have to declare Properties_Load_Ptr
-		.def<Properties_Load_Ptr>("Load", &luxrays::Properties::Load)
-		.def("LoadFromFile", &luxrays::Properties::LoadFromFile)
-		.def("LoadFromString", &luxrays::Properties::LoadFromString)
+		.def<Properties_Load_Ptr>("Load", &luxrays::Properties::Load, return_internal_reference<>())
+		.def("LoadFromFile", &luxrays::Properties::LoadFromFile, return_internal_reference<>())
+		.def("LoadFromString", &luxrays::Properties::LoadFromString, return_internal_reference<>())
 
 		.def(self_ns::str(self))
     ;
