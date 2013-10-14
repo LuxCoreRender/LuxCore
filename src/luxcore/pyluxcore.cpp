@@ -19,13 +19,16 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
-#include <Python.h>
 #include <boost/python.hpp>
 
 #include <luxcore/luxcore.h>
+#include <python2.6/boolobject.h>
+#include <python2.6/intobject.h>
+#include <python2.6/floatobject.h>
 
 using namespace std;
 using namespace luxcore;
+using namespace boost::python;
 
 namespace luxcore {
 
@@ -34,11 +37,34 @@ static const char *LuxCoreVersion() {
 	return luxCoreVersion;
 }
 
+static luxrays::Property *Property_InitWithTuple(const str &name, tuple &t) {
+	luxrays::Property *prop = new luxrays::Property(extract<string>(name));
+
+	for (u_int i = 0; i < len(t); ++i) {
+		const string objType = extract<string>((t[i].attr("__class__")).attr("__name__"));
+
+		if (objType == "bool") {
+			const bool v = extract<bool>(t[i]);
+			prop->Add(v);
+		} else if (objType == "int") {
+			const int v = extract<int>(t[i]);
+			prop->Add(v);
+		} else if (objType == "float") {
+			const double v = extract<double>(t[i]);
+			prop->Add(v);
+		} else if (objType == "str") {
+			const string v = extract<string>(t[i]);
+			prop->Add(v);
+		} else
+			throw std::runtime_error("Unsupported data type included in Property constructor tuple: " + objType);
+	}
+
+	return prop;
+}
+
 typedef void (luxrays::Properties::*Properties_Load_Ptr)(luxrays::Properties);
 
 BOOST_PYTHON_MODULE(pyluxcore) {
-	using namespace boost::python;
-
 	docstring_options doc_options(
 		true,	// Show user defined docstrings
 		true,	// Show python signatures
@@ -63,10 +89,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def(init<string, int>())
 		.def(init<string, double>())
 		.def(init<string, string>())
+		.def("__init__", make_constructor(Property_InitWithTuple))
 
-		.def("GetName", &luxrays::Property::GetName, return_value_policy<copy_const_reference>())
+		.def("GetName", &luxrays::Property::GetName, return_internal_reference<>())
 		.def("GetSize", &luxrays::Property::GetSize)
-		.def("Clear", &luxrays::Property::Clear, return_internal_reference<1>())
+		.def("Clear", &luxrays::Property::Clear, return_internal_reference<>())
 
 		.def("Get", &luxrays::Property::Get<bool>)
 		.def("Get", &luxrays::Property::Get<int>)
@@ -76,15 +103,15 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetValuesString", &luxrays::Property::GetValuesString)
 		.def("ToString", &luxrays::Property::ToString)
 
-		.def("Add", &luxrays::Property::Add<bool>, return_internal_reference<1>())
-		.def("Add", &luxrays::Property::Add<int>, return_internal_reference<1>())
-		.def("Add", &luxrays::Property::Add<double>, return_internal_reference<1>())
-		.def("Add", &luxrays::Property::Add<string>, return_internal_reference<1>())
+		.def("Add", &luxrays::Property::Add<bool>, return_internal_reference<>())
+		.def("Add", &luxrays::Property::Add<int>, return_internal_reference<>())
+		.def("Add", &luxrays::Property::Add<double>, return_internal_reference<>())
+		.def("Add", &luxrays::Property::Add<string>, return_internal_reference<>())
 
-		.def("Set", &luxrays::Property::Set<bool>, return_internal_reference<1>())
-		.def("Set", &luxrays::Property::Set<int>, return_internal_reference<1>())
-		.def("Set", &luxrays::Property::Set<double>, return_internal_reference<1>())
-		.def("Set", &luxrays::Property::Set<string>, return_internal_reference<1>())
+		.def("Set", &luxrays::Property::Set<bool>, return_internal_reference<>())
+		.def("Set", &luxrays::Property::Set<int>, return_internal_reference<>())
+		.def("Set", &luxrays::Property::Set<double>, return_internal_reference<>())
+		.def("Set", &luxrays::Property::Set<string>, return_internal_reference<>())
 
 		.def(self_ns::str(self))
     ;
