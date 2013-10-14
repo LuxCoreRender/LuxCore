@@ -272,28 +272,36 @@ public:
 	 * \brief Add the list of Property to the current one.
 	 * 
 	 * \param prop is the list of Property to add.
+	 * 
+	 * \return a reference to the modified properties.
 	 */
-	void Load(Properties prop);
+	Properties &Load(Properties prop);
 	/*!
 	 * \brief Add the list of Property to the current one.
 	 * 
 	 * \param stream is the input stream to read.
+	 * 
+	 * \return a reference to the modified properties.
 	 */
-	void Load(std::istream &stream);
+	Properties &Load(std::istream &stream);
 	/*!
 	 * \brief Add the list of Property to the current one.
 	 * 
 	 * \param fileName is the name of the file to read.
+	 * 
+	 * \return a reference to the modified properties.
 	 */
-	void LoadFromFile(const std::string &fileName);
+	Properties &LoadFromFile(const std::string &fileName);
 	/*!
 	 * \brief Add the list of Property to the current one.
 	 * 
 	 * \param propDefinitions is the list of Property to add in text format.
+	 * 
+	 * \return a reference to the modified properties.
 	 */
-	void LoadFromString(const std::string &propDefinitions);
+	Properties &LoadFromString(const std::string &propDefinitions);
 
-	void Clear();
+	Properties &Clear();
 	const std::vector<std::string> &GetAllKeys() const;
 	std::vector<std::string> GetAllKeys(const std::string prefix) const;
 
