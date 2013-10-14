@@ -15,12 +15,16 @@ print("test1.prop1 => %s\n" % prop.Get(0))
 
 prop.Clear().Add(0).Add(2).Add(3)
 prop.Set(0, 1)
-print(prop.ToString())
+print("[%s]\n" % prop.ToString())
 
-print(pyluxcore.Property("test1.prop1").Add(1).Add(2).Add(3))
+print("[%s]\n" % pyluxcore.Property("test1.prop1").Add(1).Add(2).Add(3))
+
+prop = pyluxcore.Property("test1.prop1", (True, 1, 2.0, "aa"))
+print("[%s]" % prop)
+print("Size: %d\n" % prop.GetSize())
 
 props = pyluxcore.Properties()
-props.LoadFromString("test1.prop1 = aa bb")
-print(props)
+props.LoadFromString("test1.prop1 = 1 2.0 aa\ntest2.prop2 = 1 2.0 bb")
+print("[\n%s]\n" % props)
 
 ################################################################################
