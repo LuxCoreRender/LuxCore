@@ -38,6 +38,10 @@ static const char *LuxCoreVersion() {
 	return luxCoreVersion;
 }
 
+//------------------------------------------------------------------------------
+// Glue for Properties class
+//------------------------------------------------------------------------------
+
 static luxrays::Property *Property_InitWithTuple(const str &name, tuple &t) {
 	luxrays::Property *prop = new luxrays::Property(extract<string>(name));
 
@@ -90,7 +94,30 @@ static luxrays::Property *Property_InitWithList(const str &name, boost::python::
 	return prop;
 }
 
-typedef luxrays::Properties &(luxrays::Properties::*Properties_Load_Ptr)(luxrays::Properties);
+static boost::python::list Property_GetAllKeys1(luxrays::Properties *props) {
+	boost::python::list l;
+	const vector<string> &keys = props->GetAllKeys();
+	BOOST_FOREACH(const string &key, keys) {
+		l.append(key);
+	}
+
+	return l;
+}
+
+static boost::python::list Property_GetAllKeys2(luxrays::Properties *props, const string &prefix) {
+	boost::python::list l;
+	const vector<string> keys = props->GetAllKeys(prefix);
+	BOOST_FOREACH(const string &key, keys) {
+		l.append(key);
+	}
+
+	return l;
+}
+
+// Required because methods are overloaded
+typedef luxrays::Properties &(luxrays::Properties::*Properties_Load_Ptr)(const luxrays::Properties &);
+
+//------------------------------------------------------------------------------
 
 BOOST_PYTHON_MODULE(pyluxcore) {
 	docstring_options doc_options(
@@ -152,11 +179,14 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<luxrays::Properties>("Properties", init<>())
 		.def(init<string>())
 
-		// Don't ask me why the hell the compiler can deduce the template
-		// argument and I have to declare Properties_Load_Ptr
+		// Required because Properties::Load is overloaded
 		.def<Properties_Load_Ptr>("Load", &luxrays::Properties::Load, return_internal_reference<>())
 		.def("LoadFromFile", &luxrays::Properties::LoadFromFile, return_internal_reference<>())
 		.def("LoadFromString", &luxrays::Properties::LoadFromString, return_internal_reference<>())
+
+		.def("Clear", &luxrays::Properties::Clear, return_internal_reference<>())
+		.def("GetAllKeys", &Property_GetAllKeys1)
+		.def("GetAllKeys", &Property_GetAllKeys2)
 
 		.def(self_ns::str(self))
     ;

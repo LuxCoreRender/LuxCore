@@ -261,7 +261,7 @@ class Properties {
 public:
 	Properties() { }
 	/*!
-	 * \brief Load from a text file the list of Property.
+	 * \brief Loads from a text file the list of Property.
 	 * 
 	 * \param fileName is the name of the file to read.
 	 */
@@ -269,15 +269,15 @@ public:
 	~Properties() { }
 
 	/*!
-	 * \brief Add the list of Property to the current one.
+	 * \brief Adds the list of Property to the current one.
 	 * 
 	 * \param prop is the list of Property to add.
 	 * 
 	 * \return a reference to the modified properties.
 	 */
-	Properties &Load(Properties prop);
+	Properties &Load(const Properties &prop);
 	/*!
-	 * \brief Add the list of Property to the current one.
+	 * \brief Adds the list of Property to the current one.
 	 * 
 	 * \param stream is the input stream to read.
 	 * 
@@ -285,7 +285,7 @@ public:
 	 */
 	Properties &Load(std::istream &stream);
 	/*!
-	 * \brief Add the list of Property to the current one.
+	 * \brief Adds the list of Property to the current one.
 	 * 
 	 * \param fileName is the name of the file to read.
 	 * 
@@ -293,7 +293,7 @@ public:
 	 */
 	Properties &LoadFromFile(const std::string &fileName);
 	/*!
-	 * \brief Add the list of Property to the current one.
+	 * \brief Adds the list of Property to the current one.
 	 * 
 	 * \param propDefinitions is the list of Property to add in text format.
 	 * 
@@ -301,9 +301,28 @@ public:
 	 */
 	Properties &LoadFromString(const std::string &propDefinitions);
 
+	/*!
+	 * \brief Removes all Property from the container.
+	 * 
+	 * \return a reference to the modified properties.
+	 */
 	Properties &Clear();
+
+	/*!
+	 * \brief Returns all Property keys defined.
+	 * 
+	 * \return a reference to all Property keys defined.
+	 */
 	const std::vector<std::string> &GetAllKeys() const;
-	std::vector<std::string> GetAllKeys(const std::string prefix) const;
+	/*!
+	 * \brief Returns all Property keys that start with a specific prefix.
+	 *
+	 * \param prefix is the prefix Property keys must have to be included in
+	 * in the result.
+	 *
+	 * \return a vector of Property keys.
+	 */
+	std::vector<std::string> GetAllKeys(const std::string &prefix) const;
 
 	bool IsDefined(const std::string &propName) const;
 	const Property &Get(const std::string &propName) const;
