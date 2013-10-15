@@ -31,4 +31,7 @@ props = pyluxcore.Properties()
 props.LoadFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb")
 print("[\n%s]\n" % props)
 
+print("%s" % props.GetAllKeys())
+print("%s\n" % props.GetAllKeys("test2"))
+
 ################################################################################

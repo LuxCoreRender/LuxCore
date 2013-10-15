@@ -81,7 +81,7 @@ Properties::Properties(const string &fileName) {
 	LoadFromFile(fileName);
 }
 
-Properties &Properties::Load(Properties p) {
+Properties &Properties::Load(const Properties &p) {
 	const std::vector<std::string> &keys = p.GetAllKeys();
 	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it)
 		SetString(*it, p.GetString(*it, ""));
@@ -208,7 +208,7 @@ const vector<string> &Properties::GetAllKeys() const {
 	return keys;
 }
 
-vector<string> Properties::GetAllKeys(const string prefix) const {
+vector<string> Properties::GetAllKeys(const string &prefix) const {
 	vector<string> keysSubset;
 	for (vector<string>::const_iterator it = keys.begin(); it != keys.end(); ++it) {
 		if (it->find(prefix) == 0)
