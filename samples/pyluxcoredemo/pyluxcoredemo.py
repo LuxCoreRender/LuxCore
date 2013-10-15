@@ -23,6 +23,10 @@ prop = pyluxcore.Property("test1.prop1", (True, 1, 2.0, "aa"))
 print("[%s]" % prop)
 print("Size: %d\n" % prop.GetSize())
 
+prop = pyluxcore.Property("test1.prop1", [True, 1, 2.0, "aa"])
+print("[%s]" % prop)
+print("Size: %d\n" % prop.GetSize())
+
 props = pyluxcore.Properties()
 props.LoadFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb")
 print("[\n%s]\n" % props)
