@@ -45,12 +45,10 @@ int main(int argc, char *argv[]) {
 
 		cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n\n" ;
 
-		//----------------------------------------------------------------------
-		// Properties example
-		//----------------------------------------------------------------------
-
 		{
-			cout << "Properties examples...\n";
+			//------------------------------------------------------------------
+			cout << "Property examples...\n";
+			//------------------------------------------------------------------
 
 			Property prop("test1.prop1", "aa");
 			cout << "test1.prop1[0] => " << prop.GetValue<string>(0) << "\n\n";
@@ -65,6 +63,10 @@ int main(int argc, char *argv[]) {
 			cout << prop.AddedNamePrefix("prefix.test.") << "\n\n";
 			
 			cout << prop.Renamed("rename.test") << "\n\n";
+
+			//------------------------------------------------------------------
+			cout << "Properties examples...\n";
+			//------------------------------------------------------------------
 
 			Properties props(
 					Property("test1.prop1")(1.f, 2.f, 3.f) <<
@@ -95,6 +97,7 @@ int main(int argc, char *argv[]) {
 				cout << "[" << n << "]";
 			cout << "\n\n";
 
+			cout << props0.Get("doesnt.exist.test", Property("default.property.test")("aaa")) << "\n";
 		}
 	} catch (runtime_error err) {
 		cerr << "RUNTIME ERROR: " << err.what() << "\n";
