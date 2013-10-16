@@ -501,7 +501,7 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 	// Check if it is a light sources
 	objectMaterials.push_back(mat);
 	if (mat->IsLightSource()) {
-		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
+		SDL_LOG("The " << objName << " object is a light source with " << meshObject->GetTotalTriangleCount() << " triangles");
 
 		meshTriLightDefsOffset.push_back(triLightDefs.size());
 		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
