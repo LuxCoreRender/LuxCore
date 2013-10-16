@@ -59,15 +59,15 @@ int main(int argc, char *argv[]) {
 			cout << prop.ToString() << "\n\n";
 
 			Properties props(
-					(Property("test1.prop1") = 1, "aa", 3.f) %
-					(Property("test2.prop2") = "test"));
+					Property("test1.prop1")(1.f, 2.f, 3.f) <<
+					Property("test2.prop2")("test"));
 			cout << props << "\n";
 
 			cout << "test1.prop1[0] => " << props.Get("test1.prop1").Get<int>(0) << "\n";
 			cout << "test1.prop1[1] => " << props.Get("test1.prop1").Get<string>(1) << "\n";
 			cout << "test1.prop1[2] => " << props.Get("test1.prop1").Get<float>(2) << "\n\n";
 			
-			props.Clear().LoadFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb");
+			props.Clear().LoadFromString("test1.prop1 = 1.f, 2.f, 3.f \"quoted\"\ntest2.prop2 = aa 'quoted' bb");
 			cout << props;
 			cout << "Size: " << props.Get("test1.prop1").GetSize() << "\n";
 			cout << "Size: " << props.Get("test2.prop2").GetSize() << "\n";

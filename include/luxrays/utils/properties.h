@@ -174,12 +174,64 @@ public:
 	 *
 	 * It can be used to write expressions like:
 	 * 
-	 * > Property("test1.prop1") = 1, 2, 3
+	 * > Property("test1.prop1")("aa")
+	 * 
+	 * \param val0 is the value to assign.
 	 * 
 	 * \return a reference to the modified property.
 	 */
-	template<class T> Property &operator,(const T &val) {
-		return Add(val);
+	template<class T0> Property &operator()(const T0 &val0) {
+		return Add(val0);
+	}
+	/*!
+	 * \brief Adds a value to a property.
+	 *
+	 * It can be used to write expressions like:
+	 * 
+	 * > Property("test1.prop1")(1.f, 2.f)
+	 * 
+	 * \param val0 is the value to assign as first item.
+	 * \param val1 is the value to assign as second item.
+	 * 
+	 * \return a reference to the modified property.
+	 */
+	template<class T0, class T1> Property &operator()(const T0 &val0, const T1 &val1) {
+		return Add(val0).Add(val1);
+	}
+	/*!
+	 * \brief Adds a value to a property.
+	 *
+	 * It can be used to write expressions like:
+	 * 
+	 * > Property("test1.prop1")(1.f, 2.f, 3.f)
+	 * 
+	 * \param val0 is the value to assign as first item.
+	 * \param val1 is the value to assign as second item.
+	 * \param val2 is the value to assign as third item.
+	 * 
+	 * \return a reference to the modified property.
+	 */
+	template<class T0, class T1, class T2> Property &operator()(const T0 &val0, const T1 &val1, const T2 &val2) {
+		return Add(val0).Add(val1).Add(val2);
+	}
+	/*!
+	 * \brief Adds a value to a property.
+	 *
+	 * It can be used to write expressions like:
+	 * 
+	 * > Property("test1.prop1")(1.f, 2.f, 3.f, 4.f, 5.f, 6.f)
+	 * 
+	 * \param val0 is the value to assign as first item.
+	 * \param val1 is the value to assign as second item.
+	 * \param val2 is the value to assign as third item.
+	 * \param val3 is the value to assign as third item.
+	 * \param val4 is the value to assign as third item.
+	 * \param val5 is the value to assign as third item.
+	 * 
+	 * \return a reference to the modified property.
+	 */
+	template<class T0, class T1, class T2, class T3, class T4, class T5> Property &operator()(const T0 &val0, const T1 &val1, const T2 &val2, const T3 &val3, const T4 &val4, const T5 &val5) {
+		return Add(val0).Add(val1).Add(val2).Add(val3).Add(val4).Add(val5);
 	}
 	/*!
 	 * \brief Initializes a property with (only) the given value.
@@ -194,7 +246,7 @@ public:
 	 * \brief Required to work around the problem of char* to bool conversion
 	 * (instead of char* to string).
 	 */
-	Property &operator,(const char *val) {
+	Property &operator()(const char *val) {
 		return Add(std::string(val));
 	}
 	/*!
@@ -331,9 +383,7 @@ public:
 
 	// The following methods perform the same action
 	Properties &Set(const Property &prop);
-	Properties &operator%=(const Property &prop);
-
-	Properties &operator%(const Property &prop);
+	Properties &operator<<(const Property &prop);
 
 	std::string ToString() const;
 
@@ -366,7 +416,7 @@ private:
 	boost::unordered_map<std::string, Property> props;
 };
 
-Properties operator%(const Property &prop0, const Property &prop1);
+Properties operator<<(const Property &prop0, const Property &prop1);
 
 inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 	os << p.ToString();
