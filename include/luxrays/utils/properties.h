@@ -471,12 +471,19 @@ public:
 	/*!
 	 * \brief Returns all Property names that start with a specific prefix.
 	 *
-	 * \param prefix is the prefix Property names must have to be included in
-	 * in the result.
+	 * \param prefix of the Property names to return.
 	 *
 	 * \return a vector of Property names.
 	 */
 	std::vector<std::string> GetAllNames(const std::string &prefix) const;
+	/*!
+	 * \brief Returns all Property unique names that start with a specific prefix.
+	 *
+	 * \param prefix of the Property names to return.
+	 *
+	 * \return a vector of Property names.
+	 */
+	std::vector<std::string> GetAllUniqueNames(const std::string &prefix) const;
 
 	bool IsDefined(const std::string &propName) const;
 	const Property &Get(const std::string &propName) const;

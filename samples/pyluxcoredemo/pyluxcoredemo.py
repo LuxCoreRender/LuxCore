@@ -25,10 +25,11 @@ print("Size: %d" % prop.GetSize())
 print("List: %s\n" % str(prop.Get()))
 
 props = pyluxcore.Properties()
-props.SetFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb")
+props.SetFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb\ntest2.prop3 = 1")
 print("[\n%s]\n" % props)
 
-print("%s" % props.GetAllKeys())
-print("%s\n" % props.GetAllKeys("test2"))
+print("%s" % props.GetAllNames())
+print("%s" % props.GetAllNames("test1."))
+print("%s\n" % props.GetAllUniqueNames("test2."))
 
 ################################################################################
