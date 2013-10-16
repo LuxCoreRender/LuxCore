@@ -195,18 +195,18 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 
 		// Write the camera information
 		SDL_LOG("Saving camera information");
-		props.Load(camera->ToProperties());
+		props.Set(camera->ToProperties());
 
 		if (envLight) {
 			// Write the infinitelight/skylight information
 			SDL_LOG("Saving infinitelight/skylight information");
-			props.Load(envLight->ToProperties(imgMapCache));
+			props.Set(envLight->ToProperties(imgMapCache));
 		}
 		
 		if (sunLight) {
 			// Write the sunlight information
 			SDL_LOG("Saving sunlight information");
-			props.Load(sunLight->ToProperties());
+			props.Set(sunLight->ToProperties());
 		}
 
 		// Write the image map information
@@ -224,7 +224,7 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		for (u_int i = 0; i < texDefs.GetSize(); ++i) {
 			const Texture *tex = texDefs.GetTexture(i);
 			SDL_LOG("  " + tex->GetName());
-			props.Load(tex->ToProperties(imgMapCache));
+			props.Set(tex->ToProperties(imgMapCache));
 		}
 
 		// Write the material information
@@ -232,7 +232,7 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		for (u_int i = 0; i < matDefs.GetSize(); ++i) {
 			const Material *mat = matDefs.GetMaterial(i);
 			SDL_LOG("  " + mat->GetName());
-			props.Load(mat->ToProperties());
+			props.Set(mat->ToProperties());
 		}
 
 		// Write the mesh information
@@ -272,7 +272,7 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 
 			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
 			//SDL_LOG("  " + mesh->GetName());
-			props.Load(mesh->ToProperties(objectMaterials[i]->GetName(), extMeshCache));
+			props.Set(mesh->ToProperties(objectMaterials[i]->GetName(), extMeshCache));
 		}
 
 		return props;
@@ -320,7 +320,7 @@ std::vector<float> Scene::GetFloatParameters(const Properties &prop, const std::
 
 void Scene::CreateCamera(const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString(propsString);
+	prop.SetFromString(propsString);
 
 	CreateCamera(prop);
 }
@@ -377,7 +377,7 @@ void Scene::CreateCamera(const Properties &props) {
 
 void Scene::DefineTextures(const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString(propsString);
+	prop.SetFromString(propsString);
 
 	DefineTextures(prop);
 }
@@ -411,7 +411,7 @@ void Scene::DefineTextures(const Properties &props) {
 
 void Scene::DefineMaterials(const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString(propsString);
+	prop.SetFromString(propsString);
 
 	DefineMaterials(prop);
 }
@@ -449,7 +449,7 @@ void Scene::DefineMaterials(const Properties &props) {
 
 void Scene::UpdateMaterial(const std::string &name, const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString(propsString);
+	prop.SetFromString(propsString);
 
 	UpdateMaterial(name, prop);
 }
@@ -506,8 +506,8 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 void Scene::AddObject(const std::string &objName, const std::string &meshName,
 		const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString("scene.objects." + objName + ".ply = " + meshName + "\n");
-	prop.LoadFromString(propsString);
+	prop.SetFromString("scene.objects." + objName + ".ply = " + meshName + "\n");
+	prop.SetFromString(propsString);
 
 	AddObject(objName, prop);
 }
@@ -584,7 +584,7 @@ void Scene::UpdateObjectTransformation(const std::string &objName, const Transfo
 
 void Scene::AddObjects(const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString(propsString);
+	prop.SetFromString(propsString);
 
 	AddObjects(prop);
 }
@@ -625,7 +625,7 @@ void Scene::AddObjects(const Properties &props) {
 
 void Scene::AddInfiniteLight(const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString(propsString);
+	prop.SetFromString(propsString);
 
 	AddInfiniteLight(prop);
 }
@@ -669,7 +669,7 @@ void Scene::AddInfiniteLight(const Properties &props) {
 
 void Scene::AddSkyLight(const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString(propsString);
+	prop.SetFromString(propsString);
 
 	AddSkyLight(prop);
 }
@@ -708,7 +708,7 @@ void Scene::AddSkyLight(const Properties &props) {
 
 void Scene::AddSunLight(const std::string &propsString) {
 	Properties prop;
-	prop.LoadFromString(propsString);
+	prop.SetFromString(propsString);
 
 	AddSunLight(prop);
 }

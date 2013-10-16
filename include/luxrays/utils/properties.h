@@ -381,7 +381,7 @@ class Properties {
 public:
 	Properties() { }
 	/*!
-	 * \brief Loads from a text file the list of Property.
+	 * \brief Sets the list of Property from a text file .
 	 * 
 	 * \param fileName is the name of the file to read.
 	 */
@@ -389,37 +389,37 @@ public:
 	~Properties() { }
 
 	/*!
-	 * \brief Adds the list of Property to the current one.
+	 * \brief Sets the list of Property to the current one.
 	 * 
 	 * \param prop is the list of Property to add.
 	 * 
 	 * \return a reference to the modified properties.
 	 */
-	Properties &Load(const Properties &prop);
+	Properties &Set(const Properties &prop);
 	/*!
-	 * \brief Adds the list of Property to the current one.
+	 * \brief Sets the list of Property to the current one.
 	 * 
 	 * \param stream is the input stream to read.
 	 * 
 	 * \return a reference to the modified properties.
 	 */
-	Properties &Load(std::istream &stream);
+	Properties &Set(std::istream &stream);
 	/*!
-	 * \brief Adds the list of Property to the current one.
+	 * \brief Sets the list of Property to the current one.
 	 * 
 	 * \param fileName is the name of the file to read.
 	 * 
 	 * \return a reference to the modified properties.
 	 */
-	Properties &LoadFromFile(const std::string &fileName);
+	Properties &SetFromFile(const std::string &fileName);
 	/*!
-	 * \brief Adds the list of Property to the current one.
+	 * \brief Sets the list of Property to the current one.
 	 * 
 	 * \param propDefinitions is the list of Property to add in text format.
 	 * 
 	 * \return a reference to the modified properties.
 	 */
-	Properties &LoadFromString(const std::string &propDefinitions);
+	Properties &SetFromString(const std::string &propDefinitions);
 
 	/*!
 	 * \brief Removes all Property from the container.
@@ -451,6 +451,8 @@ public:
 	// The following 2 methods perform the same action
 	Properties &Set(const Property &prop);
 	Properties &operator<<(const Property &prop);
+	
+	Properties &operator<<(const Properties &props);
 
 	std::string ToString() const;
 

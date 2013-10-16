@@ -58,6 +58,9 @@ int main(int argc, char *argv[]) {
 			prop.Set(0, 1);
 			cout << prop.ToString() << "\n\n";
 
+			prop.Clear()(1.f, 2.f, 3.f);
+			cout << prop.Get<luxrays::Vector>() << "\n\n";
+
 			Properties props(
 					Property("test1.prop1")(1.f, 2.f, 3.f) <<
 					Property("test2.prop2")("test"));
@@ -67,13 +70,19 @@ int main(int argc, char *argv[]) {
 			cout << "test1.prop1[1] => " << props.Get("test1.prop1").GetValue<string>(1) << "\n";
 			cout << "test1.prop1[2] => " << props.Get("test1.prop1").GetValue<float>(2) << "\n\n";
 			
-			props.Clear().LoadFromString("test1.prop1 = 1.0, 2.0, 3.0 \"quoted\"\ntest2.prop2 = aa 'quoted' bb");
+			props.Clear().SetFromString("test1.prop1 = 1.0, 2.0, 3.0 \"quoted\"\ntest2.prop2 = aa 'quoted' bb");
 			cout << props;
 			cout << "Size: " << props.Get("test1.prop1").GetSize() << "\n";
 			cout << "Size: " << props.Get("test2.prop2").GetSize() << "\n\n";
 
-			prop.Clear()(1.f, 2.f, 3.f);
-			cout << prop.Get<luxrays::Vector>() << "\n\n";
+			Properties props0(
+					Property("test1.prop1")(1.f, 2.f, 3.f) <<
+					Property("test1.prop2")("test"));
+			Properties props1(
+					Property("test2.prop1")(1.f, 2.f, 3.f) <<
+					Property("test2.prop2")("test"));
+			cout << (props0 << props1);
+
 		}
 	} catch (runtime_error err) {
 		cerr << "RUNTIME ERROR: " << err.what() << "\n";
