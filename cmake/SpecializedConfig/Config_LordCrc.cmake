@@ -7,8 +7,6 @@
 
 MESSAGE(STATUS "Using LordCrc's Configuration settings")
 
-set(BUILD_LUXMARK FALSE) # This will require QT
-
 set(ENV{QTDIR} "E:/Dev/Lux2010/deps_2010/x64/qt-everywhere-opensource-src-4.7.2")
 
 set(FREEIMAGE_SEARCH_PATH     "E:/Dev/Lux2010/deps_2010/x64/FreeImage3150/FreeImage")

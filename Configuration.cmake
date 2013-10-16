@@ -43,8 +43,6 @@ IF (NOT LUXRAYS_NO_DEFAULT_CONFIG)
 
     MESSAGE(STATUS "Using default WIN32 Configuration settings")
 
-    SET(BUILD_LUXMARK TRUE) # This will require QT
-
     IF(MSVC)
 
       STRING(REGEX MATCH "(Win64)" _carch_x64 ${CMAKE_GENERATOR})

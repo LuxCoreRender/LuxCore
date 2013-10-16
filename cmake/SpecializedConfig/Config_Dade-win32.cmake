@@ -17,8 +17,6 @@ MESSAGE(STATUS "Using Dade's Win32 Configuration settings")
 
 set(CMAKE_BUILD_TYPE "Release")
 
-set(BUILD_LUXMARK FALSE) # This will require QT
-
 set(ENV{QTDIR} "C:/Qt/4.7.1")
 
 set(FREEIMAGE_SEARCH_PATH "E:/projects/luxrays-32bit/FreeImage")
