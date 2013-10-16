@@ -179,6 +179,14 @@ Properties &Properties::Set(const Properties &props) {
 	return *this;
 }
 
+Properties &Properties::Set(const Properties &props, const std::string prefix) {
+	BOOST_FOREACH(const string &key, props.GetAllKeys()) {
+		Set(props.Get(key).AddedNamePrefix(prefix));
+	}
+
+	return *this;	
+}
+
 Properties &Properties::Set(istream &stream) {
 	char buf[512];
 

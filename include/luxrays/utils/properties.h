@@ -107,6 +107,32 @@ public:
 	 */
 	const std::string &GetName() const { return name; }
 	/*!
+	 * \brief Return a new property with a prefix added to the key.
+	 * 
+	 * \param prefix is the string to add to the key.
+	 *
+	 * \return a new property.
+	 */
+	Property AddedNamePrefix(const std::string &prefix) const {
+		Property newProp(prefix + name);
+		newProp.values.insert(newProp.values.begin(), values.begin(), values.end());
+
+		return newProp;
+	}
+	/*!
+	 * \brief Return a new property with a prefix added to the key.
+	 * 
+	 * \param prefix is the string to add to the key.
+	 *
+	 * \return a new property.
+	 */
+	Property Renamed(const std::string &newName) const {
+		Property newProp(newName);
+		newProp.values.insert(newProp.values.begin(), values.begin(), values.end());
+
+		return newProp;
+	}
+	/*!
 	 * \brief Returns the number of values associated to this property.
 	 *
 	 * \return the number of values in this property.
@@ -389,15 +415,23 @@ public:
 	~Properties() { }
 
 	/*!
-	 * \brief Sets the list of Property to the current one.
+	 * \brief Sets the list of Property.
 	 * 
-	 * \param prop is the list of Property to add.
+	 * \param prop is the list of Property to set.
 	 * 
 	 * \return a reference to the modified properties.
 	 */
 	Properties &Set(const Properties &prop);
 	/*!
-	 * \brief Sets the list of Property to the current one.
+	 * \brief Sets the list of Property while adding a prefix to all keys .
+	 * 
+	 * \param prop is the list of Property to set.
+	 * 
+	 * \return a reference to the modified properties.
+	 */
+	Properties &Set(const Properties &prop, const std::string prefix);
+	/*!
+	 * \brief Sets the list of Property coming from a stream.
 	 * 
 	 * \param stream is the input stream to read.
 	 * 
@@ -405,7 +439,7 @@ public:
 	 */
 	Properties &Set(std::istream &stream);
 	/*!
-	 * \brief Sets the list of Property to the current one.
+	 * \brief Sets the list of Property coming from a file.
 	 * 
 	 * \param fileName is the name of the file to read.
 	 * 
@@ -413,7 +447,7 @@ public:
 	 */
 	Properties &SetFromFile(const std::string &fileName);
 	/*!
-	 * \brief Sets the list of Property to the current one.
+	 * \brief Sets the list of Property coming from a std::string.
 	 * 
 	 * \param propDefinitions is the list of Property to add in text format.
 	 * 
