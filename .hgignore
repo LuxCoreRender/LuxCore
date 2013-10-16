@@ -10,9 +10,8 @@
 ^doxygen/luxcore.template
 ^bin/*
 ^doc/*
-^samples/luxmark/scenes/room/*
-^samples/(benchsimple|luxmark|smallluxgpu)/(Debug|Release)/
-(luxmark|smallluxgpu|slg|LUXRAYS|benchsimple)\.dir
+^samples/(benchsimple|smallluxgpu)/(Debug|Release)/
+(smallluxgpu|slg|LUXRAYS|benchsimple)\.dir
 ^src/(Debug|Release)/
 ^(Debug|Release|x64)/
 ^nbproject/*

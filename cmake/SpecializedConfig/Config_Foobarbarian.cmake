@@ -7,8 +7,6 @@
 
 MESSAGE(STATUS "Using Foobarbarian Configuration settings")
 
-set(BUILD_LUXMARK TRUE) # This will require QT
-
 set(ENV{QTDIR} "c:/qt/4.7.2")
 
 set(FREEIMAGE_SEARCH_PATH     "${LuxRays_SOURCE_DIR}/../FreeImage")

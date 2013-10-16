@@ -12,11 +12,6 @@ SLG (SmallLuxGPU)
 SmallLuxGPU is a LuxRays demo and LuxRender v0.8 "proof of concept". You can find
 more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
 
-LuxMark
-=======
-
-LuxMark is OpenCL benchmark based on SLG.
-
 Authors
 =======
 
