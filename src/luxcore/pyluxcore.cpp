@@ -85,9 +85,9 @@ static boost::python::list Property_GetValuesList(luxrays::Property *prop) {
 	return l;
 }
 
-static boost::python::list Properties_GetAllKeys1(luxrays::Properties *props) {
+static boost::python::list Properties_GetAllNames1(luxrays::Properties *props) {
 	boost::python::list l;
-	const vector<string> &keys = props->GetAllKeys();
+	const vector<string> &keys = props->GetAllNames();
 	BOOST_FOREACH(const string &key, keys) {
 		l.append(key);
 	}
@@ -95,9 +95,9 @@ static boost::python::list Properties_GetAllKeys1(luxrays::Properties *props) {
 	return l;
 }
 
-static boost::python::list Properties_GetAllKeys2(luxrays::Properties *props, const string &prefix) {
+static boost::python::list Properties_GetAllNames2(luxrays::Properties *props, const string &prefix) {
 	boost::python::list l;
-	const vector<string> keys = props->GetAllKeys(prefix);
+	const vector<string> keys = props->GetAllNames(prefix);
 	BOOST_FOREACH(const string &key, keys) {
 		l.append(key);
 	}
@@ -175,8 +175,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("SetFromString", &luxrays::Properties::SetFromString, return_internal_reference<>())
 
 		.def("Clear", &luxrays::Properties::Clear, return_internal_reference<>())
-		.def("GetAllKeys", &Properties_GetAllKeys1)
-		.def("GetAllKeys", &Properties_GetAllKeys2)
+		.def("GetAllNames", &Properties_GetAllNames1)
+		.def("GetAllNames", &Properties_GetAllNames2)
 
 		.def(self_ns::str(self))
     ;

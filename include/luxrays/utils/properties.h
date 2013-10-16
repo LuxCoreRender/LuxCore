@@ -107,9 +107,9 @@ public:
 	 */
 	const std::string &GetName() const { return name; }
 	/*!
-	 * \brief Return a new property with a prefix added to the key.
+	 * \brief Return a new property with a prefix added to the name.
 	 * 
-	 * \param prefix is the string to add to the key.
+	 * \param prefix is the string to add to the name.
 	 *
 	 * \return a new property.
 	 */
@@ -120,9 +120,9 @@ public:
 		return newProp;
 	}
 	/*!
-	 * \brief Return a new property with a prefix added to the key.
+	 * \brief Return a new property with a prefix added to the name.
 	 * 
-	 * \param prefix is the string to add to the key.
+	 * \param prefix is the string to add to the name.
 	 *
 	 * \return a new property.
 	 */
@@ -423,7 +423,7 @@ public:
 	 */
 	Properties &Set(const Properties &prop);
 	/*!
-	 * \brief Sets the list of Property while adding a prefix to all keys .
+	 * \brief Sets the list of Property while adding a prefix to all names .
 	 * 
 	 * \param prop is the list of Property to set.
 	 * 
@@ -463,20 +463,20 @@ public:
 	Properties &Clear();
 
 	/*!
-	 * \brief Returns all Property keys defined.
+	 * \brief Returns all Property names defined.
 	 * 
-	 * \return a reference to all Property keys defined.
+	 * \return a reference to all Property names defined.
 	 */
-	const std::vector<std::string> &GetAllKeys() const;
+	const std::vector<std::string> &GetAllNames() const;
 	/*!
-	 * \brief Returns all Property keys that start with a specific prefix.
+	 * \brief Returns all Property names that start with a specific prefix.
 	 *
-	 * \param prefix is the prefix Property keys must have to be included in
+	 * \param prefix is the prefix Property names must have to be included in
 	 * in the result.
 	 *
-	 * \return a vector of Property keys.
+	 * \return a vector of Property names.
 	 */
-	std::vector<std::string> GetAllKeys(const std::string &prefix) const;
+	std::vector<std::string> GetAllNames(const std::string &prefix) const;
 
 	bool IsDefined(const std::string &propName) const;
 	const Property &Get(const std::string &propName) const;
@@ -515,7 +515,7 @@ public:
 
 private:
 	// This vector used, among other things, to keep track of the insertion order
-	std::vector<std::string> keys;
+	std::vector<std::string> names;
 	boost::unordered_map<std::string, Property> props;
 };
 

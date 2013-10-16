@@ -172,16 +172,16 @@ Properties::Properties(const string &fileName) {
 }
 
 Properties &Properties::Set(const Properties &props) {
-	BOOST_FOREACH(const string &key, props.GetAllKeys()) {
-		this->Set(props.Get(key));
+	BOOST_FOREACH(const string &name, props.GetAllNames()) {
+		this->Set(props.Get(name));
 	}
 
 	return *this;
 }
 
 Properties &Properties::Set(const Properties &props, const std::string prefix) {
-	BOOST_FOREACH(const string &key, props.GetAllKeys()) {
-		Set(props.Get(key).AddedNamePrefix(prefix));
+	BOOST_FOREACH(const string &name, props.GetAllNames()) {
+		Set(props.Get(name).AddedNamePrefix(prefix));
 	}
 
 	return *this;	
@@ -212,10 +212,10 @@ Properties &Properties::Set(istream &stream) {
 		if (idx == string::npos)
 			throw runtime_error("Syntax error in a Properties at line " + luxrays::ToString(lineNumber));
 
-		// Check if it is a valid key
-		string key(line.substr(0, idx));
-		boost::trim(key);
-		Property prop(key);
+		// Check if it is a valid name
+		string name(line.substr(0, idx));
+		boost::trim(name);
+		Property prop(name);
 
 		string value(line.substr(idx + 1));
 		// Check if the last char is a LF or a CR and remove that (in case of
@@ -250,7 +250,7 @@ Properties &Properties::Set(istream &stream) {
 				}
 
 				if (!found) 
-					throw runtime_error("Unterminated quote in property: " + key);
+					throw runtime_error("Unterminated quote in property: " + name);
 			} else {
 				last = first;
 				while (last < len) {
@@ -300,24 +300,24 @@ Properties &Properties::SetFromString(const string &propDefinitions) {
 }
 
 Properties &Properties::Clear() {
-	keys.clear();
+	names.clear();
 	props.clear();
 
 	return *this;
 }
 
-const vector<string> &Properties::GetAllKeys() const {
-	return keys;
+const vector<string> &Properties::GetAllNames() const {
+	return names;
 }
 
-vector<string> Properties::GetAllKeys(const string &prefix) const {
-	vector<string> keysSubset;
-	for (vector<string>::const_iterator it = keys.begin(); it != keys.end(); ++it) {
+vector<string> Properties::GetAllNames(const string &prefix) const {
+	vector<string> namesSubset;
+	for (vector<string>::const_iterator it = names.begin(); it != names.end(); ++it) {
 		if (it->find(prefix) == 0)
-			keysSubset.push_back(*it);
+			namesSubset.push_back(*it);
 	}
 
-	return keysSubset;
+	return namesSubset;
 }
 
 bool Properties::IsDefined(const string &propName) const {
@@ -333,9 +333,9 @@ const Property &Properties::Get(const std::string &propName) const {
 }
 
 void Properties::Delete(const string &propName) {
-	vector<string>::iterator it = find(keys.begin(), keys.end(), propName);
-	if (it != keys.end())
-		keys.erase(it);
+	vector<string>::iterator it = find(names.begin(), names.end(), propName);
+	if (it != names.end())
+		names.erase(it);
 
 	props.erase(propName);
 }
@@ -343,7 +343,7 @@ void Properties::Delete(const string &propName) {
 string Properties::ToString() const {
 	stringstream ss;
 
-	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
+	for (vector<string>::const_iterator i = names.begin(); i != names.end(); ++i)
 		ss << props.at(*i).ToString() << "\n";
 
 	return ss.str();
@@ -353,8 +353,8 @@ Properties &Properties::Set(const Property &prop) {
 	const string &propName = prop.GetName();
 
 	if (!IsDefined(propName)) {
-		// It is a new key
-		keys.push_back(propName);
+		// It is a new name
+		names.push_back(propName);
 	}
 
 	props.insert(std::pair<string, Property>(propName, prop));
@@ -467,8 +467,8 @@ vector<float> Properties::GetFloatVector(const string &propName, const string &d
 
 void Properties::SetString(const string &propName, const string &value) {
 	if (props.find(propName) == props.end()) {
-		// It is a new key
-		keys.push_back(propName);
+		// It is a new name
+		names.push_back(propName);
 	}
 
 	props.insert(std::make_pair(propName, Property(propName, value)));

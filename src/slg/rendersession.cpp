@@ -128,7 +128,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	//--------------------------------------------------------------------------
 
 	set<string> outputNames;
-	vector<string> outputKeys = cfg.GetAllKeys("film.outputs.");
+	vector<string> outputKeys = cfg.GetAllNames("film.outputs.");
 	for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {
 		const string &key = *outputKey;
 		const size_t dot1 = key.find(".", string("film.outputs.").length());

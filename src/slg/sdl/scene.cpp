@@ -383,7 +383,7 @@ void Scene::DefineTextures(const std::string &propsString) {
 }
 
 void Scene::DefineTextures(const Properties &props) {
-	std::vector<std::string> texKeys = props.GetAllKeys("scene.textures.");
+	std::vector<std::string> texKeys = props.GetAllNames("scene.textures.");
 	if (texKeys.size() == 0)
 		return;
 
@@ -417,7 +417,7 @@ void Scene::DefineMaterials(const std::string &propsString) {
 }
 
 void Scene::DefineMaterials(const Properties &props) {
-	std::vector<std::string> matKeys = props.GetAllKeys("scene.materials.");
+	std::vector<std::string> matKeys = props.GetAllNames("scene.materials.");
 	if (matKeys.size() == 0)
 		throw std::runtime_error("No material definition found");
 
@@ -590,7 +590,7 @@ void Scene::AddObjects(const std::string &propsString) {
 }
 
 void Scene::AddObjects(const Properties &props) {
-	std::vector<std::string> objKeys = props.GetAllKeys("scene.objects.");
+	std::vector<std::string> objKeys = props.GetAllNames("scene.objects.");
 	if (objKeys.size() == 0)
 		throw std::runtime_error("Unable to find object definitions");
 
