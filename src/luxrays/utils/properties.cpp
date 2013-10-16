@@ -64,9 +64,99 @@ std::string Property::GetValuesString() const {
 	for (u_int i = 0; i < values.size(); ++i) {
 		if (i != 0)
 			ss << " ";
-		ss << Get<string>(i);
+		ss << GetValue<string>(i);
 	}
 	return ss.str();
+}
+
+//------------------------------------------------------------------------------
+// Basic types
+//------------------------------------------------------------------------------
+
+template<> bool Property::Get<bool>() const {
+	if (values.size() != 1)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return GetValue<bool>(0);
+}
+
+template<> int Property::Get<int>() const {
+	if (values.size() != 1)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return GetValue<int>(0);
+}
+
+template<> u_int Property::Get<u_int>() const {
+	if (values.size() != 1)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return GetValue<u_int>(0);
+}
+
+template<> float Property::Get<float>() const {
+	if (values.size() != 1)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return GetValue<float>(0);
+}
+
+template<> double Property::Get<double>() const {
+	if (values.size() != 1)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return GetValue<double>(0);
+}
+
+template<> size_t Property::Get<size_t>() const {
+	if (values.size() != 1)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return GetValue<size_t>(0);
+}
+
+template<> string Property::Get<string>() const {
+	if (values.size() != 1)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return GetValue<string>(0);
+}
+
+//------------------------------------------------------------------------------
+// LuxRays types
+//------------------------------------------------------------------------------
+
+template<> luxrays::UV Property::Get<luxrays::UV>() const {
+	if (values.size() != 2)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return luxrays::UV(GetValue<float>(0), GetValue<float>(1));
+}
+
+template<> luxrays::Vector Property::Get<luxrays::Vector>() const {
+	if (values.size() != 3)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return luxrays::Vector(GetValue<float>(0), GetValue<float>(1), GetValue<float>(2));
+}
+
+template<> luxrays::Normal Property::Get<luxrays::Normal>() const {
+	if (values.size() != 3)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return luxrays::Normal(GetValue<float>(0), GetValue<float>(1), GetValue<float>(2));
+}
+
+template<> luxrays::Point Property::Get<luxrays::Point>() const {
+	if (values.size() != 3)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return luxrays::Point(GetValue<float>(0), GetValue<float>(1), GetValue<float>(2));
+}
+
+template<> luxrays::Spectrum Property::Get<luxrays::Spectrum>() const {
+	if (values.size() != 3)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return luxrays::Spectrum(GetValue<float>(0), GetValue<float>(1), GetValue<float>(2));
+}
+
+template<> luxrays::Matrix4x4 Property::Get<luxrays::Matrix4x4>() const {
+	if (values.size() != 16)
+		throw std::runtime_error("Wrong number of values in property: " + name);
+	return luxrays::Matrix4x4(
+			GetValue<float>(0), GetValue<float>(1), GetValue<float>(2), GetValue<float>(3),
+			GetValue<float>(4), GetValue<float>(5), GetValue<float>(6), GetValue<float>(7),
+			GetValue<float>(8), GetValue<float>(9), GetValue<float>(10), GetValue<float>(11),
+			GetValue<float>(12), GetValue<float>(13), GetValue<float>(14), GetValue<float>(15));
 }
 
 std::string Property::ToString() const {

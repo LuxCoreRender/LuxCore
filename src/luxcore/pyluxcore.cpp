@@ -114,9 +114,6 @@ static boost::python::list Property_GetAllKeys2(luxrays::Properties *props, cons
 	return l;
 }
 
-// Required because methods are overloaded
-typedef luxrays::Properties &(luxrays::Properties::*Properties_Load_Ptr)(const luxrays::Properties &);
-
 //------------------------------------------------------------------------------
 
 BOOST_PYTHON_MODULE(pyluxcore) {
@@ -151,10 +148,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetSize", &luxrays::Property::GetSize)
 		.def("Clear", &luxrays::Property::Clear, return_internal_reference<>())
 
-		.def("Get", &luxrays::Property::Get<bool>)
-		.def("Get", &luxrays::Property::Get<int>)
-		.def("Get", &luxrays::Property::Get<double>)
-		.def("Get", &luxrays::Property::Get<string>)
+		// Required because Properties::Get is overloaded
+		.def("GetValue", &luxrays::Property::GetValue<bool>)
+		.def("GetValue", &luxrays::Property::GetValue<int>)
+		.def("GetValue", &luxrays::Property::GetValue<double>)
+		.def("GetValue", &luxrays::Property::GetValue<string>)
 	
 		.def("GetValuesString", &luxrays::Property::GetValuesString)
 		.def("ToString", &luxrays::Property::ToString)
@@ -180,7 +178,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def(init<string>())
 
 		// Required because Properties::Load is overloaded
-		.def<Properties_Load_Ptr>("Load", &luxrays::Properties::Load, return_internal_reference<>())
+		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &)>
+			("Load", &luxrays::Properties::Load, return_internal_reference<>())
 		.def("LoadFromFile", &luxrays::Properties::LoadFromFile, return_internal_reference<>())
 		.def("LoadFromString", &luxrays::Properties::LoadFromString, return_internal_reference<>())
 
