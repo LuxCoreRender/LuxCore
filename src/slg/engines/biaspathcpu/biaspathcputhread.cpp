@@ -384,7 +384,7 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			PathDepthInfo depthInfo;
 			depthInfo.IncDepths(event);
 
-			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / max(engine->pdfClampValue, pdfW));
+			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / (event & SPECULAR ? pdfW : max(engine->pdfClampValue, pdfW)));
 			assert (!continuepathThroughput.IsNaN() && !continuepathThroughput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);
