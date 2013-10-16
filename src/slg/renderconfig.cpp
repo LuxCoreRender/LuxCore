@@ -58,7 +58,7 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 		cfg.Set(*additionalProperties);
 
 	SLG_LOG("Configuration: ");
-	const vector<string> &keys = cfg.GetAllKeys();
+	const vector<string> &keys = cfg.GetAllNames();
 	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
 		SLG_LOG("  " << *i << " = " << cfg.GetString(*i, ""));
 
