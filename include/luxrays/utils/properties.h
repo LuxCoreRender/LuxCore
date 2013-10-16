@@ -135,6 +135,21 @@ public:
 		return boost::apply_visitor(GetValueVistor<T>(), values[index]);
 	}
 	/*!
+	 * \brief Returns the type of the value at the specified position.
+	 * 
+	 * \param index is the position of the value.
+	 * 
+	 * \return the type information of the value at specified position.
+	 * 
+	 * \throws std::runtime_error if the index is out of bound.
+	 */
+	const std::type_info &GetValueType(const u_int index) const {
+		if (index >= values.size())
+			throw std::runtime_error("Out of bound error for property: " + name);
+
+		return values[index].type();
+	}
+	/*!
 	 * \brief Parses all values as a representation of the specified type.
 	 *
 	 * For instance, The values "0.5, 0.5, 0.5" can be parsed as a luxrays::Vector,

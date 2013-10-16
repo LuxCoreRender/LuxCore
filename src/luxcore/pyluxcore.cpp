@@ -20,12 +20,9 @@
  ***************************************************************************/
 
 #include <boost/python.hpp>
+#include <boost/foreach.hpp>
 
 #include <luxcore/luxcore.h>
-#include <python2.6/boolobject.h>
-#include <python2.6/intobject.h>
-#include <python2.6/floatobject.h>
-#include <boost/foreach.hpp>
 
 using namespace std;
 using namespace luxcore;
@@ -94,7 +91,27 @@ static luxrays::Property *Property_InitWithList(const str &name, boost::python::
 	return prop;
 }
 
-static boost::python::list Property_GetAllKeys1(luxrays::Properties *props) {
+static boost::python::list Property_GetValuesList(luxrays::Property *prop) {
+	boost::python::list l;
+	for (u_int i = 0; i < prop->GetSize(); ++i) {
+		const std::type_info &tinfo = prop->GetValueType(i);
+
+		if (tinfo == typeid(bool))
+			l.append(prop->GetValue<bool>(i));
+		else if (tinfo == typeid(int))
+			l.append(prop->GetValue<int>(i));
+		else if (tinfo == typeid(double))
+			l.append(prop->GetValue<double>(i));
+		else if (tinfo == typeid(string))
+			l.append(prop->GetValue<string>(i));
+		else
+			throw std::runtime_error("Unsupported data type in list extraction of Property: " + prop->GetName());
+	}
+
+	return l;
+}
+
+static boost::python::list Properties_GetAllKeys1(luxrays::Properties *props) {
 	boost::python::list l;
 	const vector<string> &keys = props->GetAllKeys();
 	BOOST_FOREACH(const string &key, keys) {
@@ -104,7 +121,7 @@ static boost::python::list Property_GetAllKeys1(luxrays::Properties *props) {
 	return l;
 }
 
-static boost::python::list Property_GetAllKeys2(luxrays::Properties *props, const string &prefix) {
+static boost::python::list Properties_GetAllKeys2(luxrays::Properties *props, const string &prefix) {
 	boost::python::list l;
 	const vector<string> keys = props->GetAllKeys(prefix);
 	BOOST_FOREACH(const string &key, keys) {
@@ -148,11 +165,12 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetSize", &luxrays::Property::GetSize)
 		.def("Clear", &luxrays::Property::Clear, return_internal_reference<>())
 
-		// Required because Properties::Get is overloaded
 		.def("GetValue", &luxrays::Property::GetValue<bool>)
 		.def("GetValue", &luxrays::Property::GetValue<int>)
 		.def("GetValue", &luxrays::Property::GetValue<double>)
 		.def("GetValue", &luxrays::Property::GetValue<string>)
+
+		.def("Get", &Property_GetValuesList)
 	
 		.def("GetValuesString", &luxrays::Property::GetValuesString)
 		.def("ToString", &luxrays::Property::ToString)
@@ -184,8 +202,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("LoadFromString", &luxrays::Properties::LoadFromString, return_internal_reference<>())
 
 		.def("Clear", &luxrays::Properties::Clear, return_internal_reference<>())
-		.def("GetAllKeys", &Property_GetAllKeys1)
-		.def("GetAllKeys", &Property_GetAllKeys2)
+		.def("GetAllKeys", &Properties_GetAllKeys1)
+		.def("GetAllKeys", &Properties_GetAllKeys2)
 
 		.def(self_ns::str(self))
     ;
