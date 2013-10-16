@@ -22,6 +22,7 @@
 #include <iostream>
 
 #include <luxcore/luxcore.h>
+#include <boost/foreach.hpp>
 
 using namespace std;
 using namespace luxrays;
@@ -81,11 +82,18 @@ int main(int argc, char *argv[]) {
 
 			Properties props0(
 					Property("test1.prop1")(1.f, 2.f, 3.f) <<
-					Property("test1.prop2")("test"));
+					Property("test1.prop2")("test1") <<
+					Property("test1.prop3")("test2"));
 			Properties props1(
 					Property("test2.prop1")(1.f, 2.f, 3.f) <<
 					Property("test2.prop2")("test"));
-			cout << (props0 << props1);
+			props0.Set(props1);
+			cout << props0 << "\n";
+
+			vector<string> names = props0.GetAllUniqueNames("test1.");
+			BOOST_FOREACH(const string &n, names)
+				cout << "[" << n << "]";
+			cout << "\n\n";
 
 		}
 	} catch (runtime_error err) {

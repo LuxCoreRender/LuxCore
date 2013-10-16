@@ -19,12 +19,13 @@
  *   LuxRays website: http://www.luxrender.net                             *
  ***************************************************************************/
 
+#include <set>
+#include <vector>
+#include <algorithm>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
-#include <vector>
-#include <algorithm>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -312,9 +313,22 @@ const vector<string> &Properties::GetAllNames() const {
 
 vector<string> Properties::GetAllNames(const string &prefix) const {
 	vector<string> namesSubset;
-	for (vector<string>::const_iterator it = names.begin(); it != names.end(); ++it) {
-		if (it->find(prefix) == 0)
-			namesSubset.push_back(*it);
+	BOOST_FOREACH(const string &name, names) {
+		if (name.find(prefix) == 0)
+			namesSubset.push_back(name);
+	}
+
+	return namesSubset;
+}
+
+vector<string> Properties::GetAllUniqueNames(const string &prefix) const {
+	set<string> definedNames;
+	vector<string> namesSubset;
+	BOOST_FOREACH(const string &name, names) {
+		if ((name.find(prefix) == 0) && (definedNames.count(name) == 0)) {
+			namesSubset.push_back(name);
+			definedNames.insert(name);
+		}
 	}
 
 	return namesSubset;
