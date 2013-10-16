@@ -26,6 +26,7 @@
 #include <vector>
 #include <string>
 #include <istream>
+#include <cstdarg>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
@@ -135,7 +136,7 @@ public:
 	 *
 	 * \throws std::runtime_error if the index is out of bound.
 	 */
-	template<class T> Property &Set(const u_int index, T val) {
+	template<class T> Property &Set(const u_int index, const T &val) {
 		if (index >= values.size())
 			throw std::runtime_error("Out of bound error for property: " + name);
 
@@ -151,7 +152,7 @@ public:
 	 *
 	 * \return a reference to the modified property.
 	 */
-	template<class T> Property &Add(T val) {
+	template<class T> Property &Add(const T &val) {
 		values.push_back(val);
 		return *this;
 	}
@@ -177,7 +178,7 @@ public:
 	 * 
 	 * \return a reference to the modified property.
 	 */
-	template<class T> Property &operator,(T val) {
+	template<class T> Property &operator,(const T &val) {
 		return Add(val);
 	}
 	/*!
@@ -185,7 +186,7 @@ public:
 	 * 
 	 * \return a reference to the modified property.
 	 */
-	template<class T> Property &operator=(T val) {
+	template<class T> Property &operator=(const T &val) {
 		values.clear();
 		return Add(val);
 	}
