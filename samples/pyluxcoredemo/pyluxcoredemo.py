@@ -19,14 +19,10 @@ print("[%s]\n" % prop.ToString())
 
 print("[%s]\n" % pyluxcore.Property("test1.prop1").Add(1).Add(2).Add(3))
 
-prop = pyluxcore.Property("test1.prop1", (True, 1, 2.0, "aa"))
+prop = pyluxcore.Property("test1.prop1", [True, 1, 2.0, "aa"])
 print("[%s]" % prop)
 print("Size: %d" % prop.GetSize())
 print("List: %s\n" % str(prop.Get()))
-
-prop = pyluxcore.Property("test1.prop1", [True, 1, 2.0, "aa"])
-print("[%s]" % prop)
-print("Size: %d\n" % prop.GetSize())
 
 props = pyluxcore.Properties()
 props.LoadFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb")

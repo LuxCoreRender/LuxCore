@@ -39,32 +39,6 @@ static const char *LuxCoreVersion() {
 // Glue for Properties class
 //------------------------------------------------------------------------------
 
-static luxrays::Property *Property_InitWithTuple(const str &name, tuple &t) {
-	luxrays::Property *prop = new luxrays::Property(extract<string>(name));
-
-	const boost::python::ssize_t size = len(t);
-	for (boost::python::ssize_t i = 0; i < size; ++i) {
-		const string objType = extract<string>((t[i].attr("__class__")).attr("__name__"));
-
-		if (objType == "bool") {
-			const bool v = extract<bool>(t[i]);
-			prop->Add(v);
-		} else if (objType == "int") {
-			const int v = extract<int>(t[i]);
-			prop->Add(v);
-		} else if (objType == "float") {
-			const double v = extract<double>(t[i]);
-			prop->Add(v);
-		} else if (objType == "str") {
-			const string v = extract<string>(t[i]);
-			prop->Add(v);
-		} else
-			throw std::runtime_error("Unsupported data type included in Property constructor tuple: " + objType);
-	}
-
-	return prop;
-}
-
 static luxrays::Property *Property_InitWithList(const str &name, boost::python::list &l) {
 	luxrays::Property *prop = new luxrays::Property(extract<string>(name));
 
@@ -158,7 +132,6 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def(init<string, int>())
 		.def(init<string, double>())
 		.def(init<string, string>())
-		.def("__init__", make_constructor(Property_InitWithTuple))
 		.def("__init__", make_constructor(Property_InitWithList))
 
 		.def("GetName", &luxrays::Property::GetName, return_internal_reference<>())
