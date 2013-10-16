@@ -414,6 +414,24 @@ public:
 	Properties(const std::string &fileName);
 	~Properties() { }
 
+	// The following 2 methods perform the same action
+
+	/*!
+	 * \brief Sets a single Property.
+	 * 
+	 * \param prop is the Property to set.
+	 * 
+	 * \return a reference to the modified properties.
+	 */
+	Properties &Set(const Property &prop);
+	/*!
+	 * \brief Sets a single Property.
+	 * 
+	 * \param prop is the Property to set.
+	 * 
+	 * \return a reference to the modified properties.
+	 */
+	Properties &operator<<(const Property &prop);
 	/*!
 	 * \brief Sets the list of Property.
 	 * 
@@ -423,13 +441,21 @@ public:
 	 */
 	Properties &Set(const Properties &prop);
 	/*!
-	 * \brief Sets the list of Property while adding a prefix to all names .
+	 * \brief Sets the list of Property.
 	 * 
-	 * \param prop is the list of Property to set.
+	 * \param props is the list of Property to set.
 	 * 
 	 * \return a reference to the modified properties.
 	 */
-	Properties &Set(const Properties &prop, const std::string prefix);
+	Properties &operator<<(const Properties &props);
+	/*!
+	 * \brief Sets the list of Property while adding a prefix to all names .
+	 * 
+	 * \param props is the list of Property to set.
+	 * 
+	 * \return a reference to the modified properties.
+	 */
+	Properties &Set(const Properties &props, const std::string &prefix);
 	/*!
 	 * \brief Sets the list of Property coming from a stream.
 	 * 
@@ -484,16 +510,28 @@ public:
 	 * \return a vector of Property names.
 	 */
 	std::vector<std::string> GetAllUniqueNames(const std::string &prefix) const;
+	/*!
+	 * \brief Returns a property.
+	 *
+	 * \param propName is the name of the Property to return.
+	 *
+	 * \return a Property.
+	 *
+	 * \throws std::runtime_error if the Property doesn't exist.
+	 */
+	const Property &Get(const std::string &propName) const;
+	/*!
+	 * \brief Returns a property if it has been defined or the default value.
+	 *
+	 * \param propName is the name of the Property to return.
+	 * \param defaultProp the Property to return if it has not been defined.
+	 *
+	 * \return a Property.
+	 */
+	const Property Get(const std::string &propName, const Property &defaultProp) const;
 
 	bool IsDefined(const std::string &propName) const;
-	const Property &Get(const std::string &propName) const;
 	void Delete(const std::string &propName);
-
-	// The following 2 methods perform the same action
-	Properties &Set(const Property &prop);
-	Properties &operator<<(const Property &prop);
-	
-	Properties &operator<<(const Properties &props);
 
 	std::string ToString() const;
 

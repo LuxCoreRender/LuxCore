@@ -180,7 +180,7 @@ Properties &Properties::Set(const Properties &props) {
 	return *this;
 }
 
-Properties &Properties::Set(const Properties &props, const std::string prefix) {
+Properties &Properties::Set(const Properties &props, const std::string &prefix) {
 	BOOST_FOREACH(const string &name, props.GetAllNames()) {
 		Set(props.Get(name).AddedNamePrefix(prefix));
 	}
@@ -342,6 +342,14 @@ const Property &Properties::Get(const std::string &propName) const {
 	boost::unordered_map<std::string, Property>::const_iterator it = props.find(propName);
 	if (it == props.end())
 		throw runtime_error("Undefined property in Properties::Get(): " + propName);
+
+	return it->second;
+}
+
+const Property Properties::Get(const std::string &propName, const Property &defaultProp) const {
+	boost::unordered_map<std::string, Property>::const_iterator it = props.find(propName);
+	if (it == props.end())
+		return defaultProp;
 
 	return it->second;
 }

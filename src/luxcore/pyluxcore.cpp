@@ -179,7 +179,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def(init<string>())
 
 		// Required because Properties::Set is overloaded
+		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Property &)>
+			("Set", &luxrays::Properties::Set, return_internal_reference<>())
 		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &)>
+			("Set", &luxrays::Properties::Set, return_internal_reference<>())
+		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &, const std::string &)>
 			("Set", &luxrays::Properties::Set, return_internal_reference<>())
 		.def("SetFromFile", &luxrays::Properties::SetFromFile, return_internal_reference<>())
 		.def("SetFromString", &luxrays::Properties::SetFromString, return_internal_reference<>())
@@ -189,6 +193,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetAllNames", &Properties_GetAllNames2)
 		.def("GetAllUniqueNames", &Properties_GetAllUniqueNames)
 
+		.def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
+			("Get", &luxrays::Properties::Get, return_internal_reference<>())
+		.def<const luxrays::Property (luxrays::Properties::*)(const std::string &, const luxrays::Property &) const>
+			("Get", &luxrays::Properties::Get)
+	
 		.def(self_ns::str(self))
     ;
 }
