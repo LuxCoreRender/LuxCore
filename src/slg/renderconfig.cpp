@@ -30,7 +30,7 @@ using namespace slg;
 
 RenderConfig::RenderConfig(const std::string &propsString, Scene &scn) {
 	Properties props;
-	props.LoadFromString(propsString);
+	props.SetFromString(propsString);
 
 	Init(NULL, &props, &scn);
 }
@@ -51,11 +51,11 @@ void RenderConfig::Init(const string *fileName, const Properties *additionalProp
 		Scene *scn) {
 	if (fileName) {
 		SLG_LOG("Reading configuration file: " << (*fileName));
-		cfg.LoadFromFile(*fileName);
+		cfg.SetFromFile(*fileName);
 	}
 
 	if (additionalProperties)
-		cfg.Load(*additionalProperties);
+		cfg.Set(*additionalProperties);
 
 	SLG_LOG("Configuration: ");
 	const vector<string> &keys = cfg.GetAllKeys();

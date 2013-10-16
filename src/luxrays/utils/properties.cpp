@@ -168,18 +168,18 @@ std::string Property::ToString() const {
 //------------------------------------------------------------------------------
 
 Properties::Properties(const string &fileName) {
-	LoadFromFile(fileName);
+	SetFromFile(fileName);
 }
 
-Properties &Properties::Load(const Properties &p) {
-	const std::vector<std::string> &keys = p.GetAllKeys();
-	for (std::vector<std::string>::const_iterator it = keys.begin(); it != keys.end(); ++it)
-		SetString(*it, p.GetString(*it, ""));
+Properties &Properties::Set(const Properties &props) {
+	BOOST_FOREACH(const string &key, props.GetAllKeys()) {
+		this->Set(props.Get(key));
+	}
 
 	return *this;
 }
 
-Properties &Properties::Load(istream &stream) {
+Properties &Properties::Set(istream &stream) {
 	char buf[512];
 
 	for (int lineNumber = 1;; ++lineNumber) {
@@ -274,7 +274,7 @@ Properties &Properties::Load(istream &stream) {
 	return *this;
 }
 
-Properties &Properties::LoadFromFile(const string &fileName) {
+Properties &Properties::SetFromFile(const string &fileName) {
 	BOOST_IFSTREAM file(fileName.c_str(), ios::in);
 	char buf[512];
 	if (file.fail()) {
@@ -282,13 +282,13 @@ Properties &Properties::LoadFromFile(const string &fileName) {
 		throw runtime_error(buf);
 	}
 
-	return Load(file);
+	return Set(file);
 }
 
-Properties &Properties::LoadFromString(const string &propDefinitions) {
+Properties &Properties::SetFromString(const string &propDefinitions) {
 	istringstream stream(propDefinitions);
 
-	return Load(stream);
+	return Set(stream);
 }
 
 Properties &Properties::Clear() {
@@ -356,6 +356,10 @@ Properties &Properties::Set(const Property &prop) {
 
 Properties &Properties::operator<<(const Property &prop) {
 	return Set(prop);
+}
+
+Properties &Properties::operator<<(const Properties &props) {
+	return Set(props);
 }
 
 string Properties::ExtractField(const string &value, const size_t index) {

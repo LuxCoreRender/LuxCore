@@ -168,11 +168,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<luxrays::Properties>("Properties", init<>())
 		.def(init<string>())
 
-		// Required because Properties::Load is overloaded
+		// Required because Properties::Set is overloaded
 		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &)>
-			("Load", &luxrays::Properties::Load, return_internal_reference<>())
-		.def("LoadFromFile", &luxrays::Properties::LoadFromFile, return_internal_reference<>())
-		.def("LoadFromString", &luxrays::Properties::LoadFromString, return_internal_reference<>())
+			("Set", &luxrays::Properties::Set, return_internal_reference<>())
+		.def("SetFromFile", &luxrays::Properties::SetFromFile, return_internal_reference<>())
+		.def("SetFromString", &luxrays::Properties::SetFromString, return_internal_reference<>())
 
 		.def("Clear", &luxrays::Properties::Clear, return_internal_reference<>())
 		.def("GetAllKeys", &Properties_GetAllKeys1)

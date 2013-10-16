@@ -186,7 +186,7 @@ Properties MatteMaterial::ToProperties() const  {
 	const std::string name = GetName();
 	props.SetString("scene.materials." + name + ".type", "matte");
 	props.SetString("scene.materials." + name + ".kd", Kd->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -231,7 +231,7 @@ Properties MirrorMaterial::ToProperties() const  {
 	const std::string name = GetName();
 	props.SetString("scene.materials." + name + ".type", "mirror");
 	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -342,7 +342,7 @@ Properties GlassMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
 	props.SetString("scene.materials." + name + ".ioroutside", ousideIor->GetName());
 	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -515,7 +515,7 @@ Properties ArchGlassMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
 	props.SetString("scene.materials." + name + ".ioroutside", ousideIor->GetName());
 	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -590,7 +590,7 @@ Properties MetalMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".type", "metal");
 	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
 	props.SetString("scene.materials." + name + ".exp", exponent->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -815,7 +815,7 @@ Properties MixMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".material1", matA->GetName());
 	props.SetString("scene.materials." + name + ".material2", matB->GetName());
 	props.SetString("scene.materials." + name + ".amount", mixFactor->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -853,7 +853,7 @@ Properties NullMaterial::ToProperties() const  {
 
 	const std::string name = GetName();
 	props.SetString("scene.materials." + name + ".type", "null");
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -960,7 +960,7 @@ Properties MatteTranslucentMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".type", "mattetranslucent");
 	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
 	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -1298,7 +1298,7 @@ Properties Glossy2Material::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".d", depth->GetName());
 	props.SetString("scene.materials." + name + ".index", index->GetName());
 	props.SetString("scene.materials." + name + ".multibounce", ToString(multibounce));
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -1443,7 +1443,7 @@ Properties Metal2Material::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".k", k->GetName());
 	props.SetString("scene.materials." + name + ".uroughness", nu->GetName());
 	props.SetString("scene.materials." + name + ".vroughness", nv->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -1777,7 +1777,7 @@ Properties RoughGlassMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
 	props.SetString("scene.materials." + name + ".uroughness", nu->GetName());
 	props.SetString("scene.materials." + name + ".vroughness", nv->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
