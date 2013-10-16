@@ -31,8 +31,16 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/variant.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/type_traits.hpp>
 
 #include "luxrays/luxrays.h"
+#include <luxrays/utils/properties.h>
+#include <luxrays/core/geometry/uv.h>
+#include <luxrays/core/geometry/vector.h>
+#include <luxrays/core/geometry/normal.h>
+#include <luxrays/core/geometry/point.h>
+#include <luxrays/core/geometry/matrix4x4.h>
+#include <luxrays/core/spectrum.h>
 
 namespace luxrays {
 
@@ -120,12 +128,40 @@ public:
 	 * 
 	 * \throws std::runtime_error if the index is out of bound.
 	 */
-	template<class T> T Get(const u_int index) const {
+	template<class T> T GetValue(const u_int index) const {
 		if (index >= values.size())
 			throw std::runtime_error("Out of bound error for property: " + name);
 
-		return boost::apply_visitor(GetVistor<T>(), values[index]);
+		return boost::apply_visitor(GetValueVistor<T>(), values[index]);
 	}
+	/*!
+	 * \brief Parses all values as a representation of the specified type.
+	 *
+	 * For instance, The values "0.5, 0.5, 0.5" can be parsed as a luxrays::Vector,
+	 * luxrays::Normal, etc. The current list of supported data types is:
+	 * - bool
+	 * - int
+	 * - unsigned int
+	 * - float
+	 * - double
+	 * - size_t
+	 * - string
+	 * - luxrays::UV
+	 * - luxrays::Vector
+	 * - luxrays::Normal
+	 * - luxrays::Point
+	 * - luxrays::Matrix4x4
+	 * 
+	 * \return the value at specified position (casted or translated to the type
+	 * required).
+	 * 
+	 * \throws std::runtime_error if the property has the wrong number of values
+	 * for the specified data type.
+	 */
+	template<class T> T Get() const {
+		throw std::runtime_error("Unsupported data type in property: " + name);
+	}
+
 	/*!
 	 * \brief Sets the value at the specified position.
 	 * 
@@ -259,40 +295,56 @@ public:
 	}
 
 private:
-	template<class T> class GetVistor : public boost::static_visitor<T> {
+	template<class T> class GetValueVistor : public boost::static_visitor<T> {
 	public:
-		T operator()(const bool i) const {
-			return boost::lexical_cast<T>(i);
+		T operator()(const bool v) const {
+			return boost::lexical_cast<T>(v);
 		}
 
-		T operator()(const int i) const {
-			return boost::lexical_cast<T>(i);
+		T operator()(const int v) const {
+			return boost::lexical_cast<T>(v);
 		}
 
-		T operator()(const u_int i) const {
-			return boost::lexical_cast<T>(i);
+		T operator()(const u_int v) const {
+			return boost::lexical_cast<T>(v);
 		}
 
-		T operator()(const float i) const {
-			return boost::lexical_cast<T>(i);
+		T operator()(const float v) const {
+			return boost::lexical_cast<T>(v);
 		}
 
-		T operator()(const double i) const {
-			return boost::lexical_cast<T>(i);
+		T operator()(const double v) const {
+			return boost::lexical_cast<T>(v);
 		}
 
-		T operator()(const size_t i) const {
-			return boost::lexical_cast<T>(i);
+		T operator()(const size_t v) const {
+			return boost::lexical_cast<T>(v);
 		}
 
-		T operator()(const std::string &i) const {
-			return boost::lexical_cast<T>(i);
+		T operator()(const std::string &v) const {
+			return boost::lexical_cast<T>(v);
 		}
 	};
-	
+
 	const std::string name;
 	std::vector<PropertyValue> values;
 };	
+
+// Basic types
+template<> bool Property::Get<bool>() const;
+template<> int Property::Get<int>() const;
+template<> u_int Property::Get<u_int>() const;
+template<> float Property::Get<float>() const;
+template<> double Property::Get<double>() const;
+template<> size_t Property::Get<size_t>() const;
+template<> std::string Property::Get<std::string>() const;
+// LuxRays types
+template<> luxrays::UV Property::Get<luxrays::UV>() const;
+template<> luxrays::Vector Property::Get<luxrays::Vector>() const;
+template<> luxrays::Normal Property::Get<luxrays::Normal>() const;
+template<> luxrays::Point Property::Get<luxrays::Point>() const;
+template<> luxrays::Spectrum Property::Get<luxrays::Spectrum>() const;
+template<> luxrays::Matrix4x4 Property::Get<luxrays::Matrix4x4>() const;
 
 inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 	os << p.ToString();
