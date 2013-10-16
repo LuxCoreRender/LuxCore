@@ -61,6 +61,10 @@ int main(int argc, char *argv[]) {
 			prop.Clear()(1.f, 2.f, 3.f);
 			cout << prop.Get<luxrays::Vector>() << "\n\n";
 
+			cout << prop.AddedNamePrefix("prefix.test.") << "\n\n";
+			
+			cout << prop.Renamed("rename.test") << "\n\n";
+
 			Properties props(
 					Property("test1.prop1")(1.f, 2.f, 3.f) <<
 					Property("test2.prop2")("test"));
