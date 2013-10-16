@@ -260,11 +260,7 @@ Properties &Properties::Set(const Property &prop) {
 	return *this;
 }
 
-Properties &Properties::operator%=(const Property &prop) {
-	return Set(prop);
-}
-
-Properties &Properties::operator%(const Property &prop) {
+Properties &Properties::operator<<(const Property &prop) {
 	return Set(prop);
 }
 
@@ -285,8 +281,8 @@ string Properties::ExtractField(const string &value, const size_t index) {
 	return "";
 }
 
-Properties luxrays::operator%(const Property &prop0, const Property &prop1) {
-	return Properties() % prop0 % prop1;
+Properties luxrays::operator<<(const Property &prop0, const Property &prop1) {
+	return Properties() << prop0 << prop1;
 }
 
 //------------------------------------------------------------------------------

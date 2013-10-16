@@ -186,8 +186,8 @@ int main(int argc, char *argv[]) {
 		//
 		// New syntax
 		scene->CreateCamera(
-				(Property("scene.camera.lookat") = 1.f , 6.f , 3.f , 0.f , 0.f , 0.5) %
-				(Property("scene.camera.fieldofview") = 60.f));
+				Property("scene.camera.lookat")(1.f , 6.f , 3.f , 0.f , 0.f , .5f) <<
+				Property("scene.camera.fieldofview")(60.f));
 
 		// Define texture maps
 		const u_int size = 500;
@@ -209,24 +209,24 @@ int main(int argc, char *argv[]) {
 
 		scene->DefineImageMap("check_texmap", new ImageMap(img, 1.f, 3, size, size));
 		scene->DefineTextures(
-			(Property("scene.textures.map.type") = "imagemap") %
-			(Property("scene.textures.map.file") = "check_texmap") %
-			(Property("scene.textures.map.gamma") = 1.f)
+			Property("scene.textures.map.type")("imagemap") <<
+			Property("scene.textures.map.file")("check_texmap") <<
+			Property("scene.textures.map.gamma")(1.f)
 			);
 
 		// Setup materials
 		scene->DefineMaterials(
-			(Property("scene.materials.whitelight.type") = "matte") %
-			(Property("scene.materials.whitelight.emission") = 200.f, 200.f, 200.f) %
-			(Property("scene.materials.mat_white.type") = "matte") %
-			(Property("scene.materials.mat_white.kd") = "map") %
-			(Property("scene.materials.mat_red.type") = "matte") %
-			(Property("scene.materials.mat_red.kd") = 0.75f, 0.f, 0.f) %
-			(Property("scene.materials.mat_glass.type") = "glass") %
-			(Property("scene.materials.mat_glass.kr") = 0.9f, 0.9f, 0.9f) %
-			(Property("scene.materials.mat_glass.kt") = 0.9f, 0.9f, 0.9f) %
-			(Property("scene.materials.mat_glass.ioroutside") = 1.f) %
-			(Property("scene.materials.mat_glass.iorinside") = 1.4f)
+			Property("scene.materials.whitelight.type")("matte") <<
+			Property("scene.materials.whitelight.emission")(200.f, 200.f, 200.f) <<
+			Property("scene.materials.mat_white.type")("matte") <<
+			Property("scene.materials.mat_white.kd")("map") <<
+			Property("scene.materials.mat_red.type")("matte") <<
+			Property("scene.materials.mat_red.kd")(0.75f, 0.f, 0.f) <<
+			Property("scene.materials.mat_glass.type")("glass") <<
+			Property("scene.materials.mat_glass.kr")(0.9f, 0.9f, 0.9f) <<
+			Property("scene.materials.mat_glass.kt")(0.9f, 0.9f, 0.9f) <<
+			Property("scene.materials.mat_glass.ioroutside")(1.f) <<
+			Property("scene.materials.mat_glass.iorinside")(1.4f)
 			);
 
 		// Create the ground
@@ -247,14 +247,14 @@ int main(int argc, char *argv[]) {
 
 		// Create a SkyLight & SunLight
 		scene->AddSkyLight(
-				(Property("scene.skylight.dir ") = 0.166974f, 0.59908f, 0.783085f) %
-				(Property("scene.skylight.turbidity ") = 2.2f) %
-				(Property("scene.skylight.gain ") = 0.8f, 0.8f, 0.8f)
+				Property("scene.skylight.dir ")(0.166974f, 0.59908f, 0.783085f) <<
+				Property("scene.skylight.turbidity ")(2.2f) <<
+				Property("scene.skylight.gain ")(0.8f, 0.8f, 0.8f)
 				);
 		scene->AddSunLight(
-				(Property("scene.sunlight.dir ") = 0.166974f, 0.59908f, 0.783085f) %
-				(Property("scene.sunlight.turbidity ") = 2.2f) %
-				(Property("scene.sunlight.gain ") = 0.8f, 0.8f, 0.8f)
+				Property("scene.sunlight.dir ")(0.166974f, 0.59908f, 0.783085f) <<
+				Property("scene.sunlight.turbidity ")(2.2f) <<
+				Property("scene.sunlight.gain ")(0.8f, 0.8f, 0.8f)
 				);
 
 		//----------------------------------------------------------------------
@@ -262,14 +262,14 @@ int main(int argc, char *argv[]) {
 		//----------------------------------------------------------------------
 
 		RenderConfig *config = new RenderConfig(
-				(Property("renderengine.type") = "PATHCPU") %
-				(Property("sampler.type") = "INLINED_RANDOM") %
-				(Property("opencl.platform.index") = -1) %
-				(Property("opencl.cpu.use") = false) %
-				(Property("opencl.gpu.use") = true) %
-				(Property("batch.halttime") = 10) %
-				(Property("film.outputs.1.type") = "RGB_TONEMAPPED") %
-				(Property("film.outputs.1.filename") = "image.png"),
+				Property("renderengine.type")("PATHCPU") <<
+				Property("sampler.type")("INLINED_RANDOM") <<
+				Property("opencl.platform.index")(-1) <<
+				Property("opencl.cpu.use")(false) <<
+				Property("opencl.gpu.use")(true) <<
+				Property("batch.halttime")(10) <<
+				Property("film.outputs.1.type")("RGB_TONEMAPPED") <<
+				Property("film.outputs.1.filename")("image.png"),
 				*scene);
 		RenderSession *session = new RenderSession(config);
 		RenderEngine *engine = session->renderEngine;
