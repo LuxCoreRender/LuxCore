@@ -43,8 +43,6 @@
 #include <cstddef>
 #include <string>
 
-#include <boost/variant.hpp>
-
 #include <luxrays/utils/properties.h>
 #include <luxcore/cfg.h>
 
