@@ -141,6 +141,10 @@ Properties &Properties::Load(istream &stream) {
 						prop.Add(value.substr(first, last - first - 1));
 						found = true;
 						++last;
+
+						// Eat all additional spaces
+						while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
+							++last;
 						break;
 					}
 

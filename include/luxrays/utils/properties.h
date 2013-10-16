@@ -381,7 +381,7 @@ public:
 	const Property &Get(const std::string &propName) const;
 	void Delete(const std::string &propName);
 
-	// The following methods perform the same action
+	// The following 2 methods perform the same action
 	Properties &Set(const Property &prop);
 	Properties &operator<<(const Property &prop);
 
