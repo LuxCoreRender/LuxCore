@@ -287,7 +287,7 @@ Properties &Properties::SetFromFile(const string &fileName) {
 	BOOST_IFSTREAM file(fileName.c_str(), ios::in);
 	char buf[512];
 	if (file.fail()) {
-		sprintf(buf, "Unable to open file %s", fileName.c_str());
+		sprintf(buf, "Unable to open properties file: %s", fileName.c_str());
 		throw runtime_error(buf);
 	}
 
@@ -491,7 +491,7 @@ vector<float> Properties::GetFloatVector(const string &propName, const string &d
 }
 
 void Properties::SetString(const string &propName, const string &value) {
-	Set(propName, value);
+	Set(Property(propName)(value));
 }
 
 string Properties::SetString(const string &property) {
