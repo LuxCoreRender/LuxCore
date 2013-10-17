@@ -394,7 +394,7 @@ void Scene::DefineTextures(const Properties &props) {
 			continue;
 
 		// Extract the material name
-		const std::string texName = Properties::ExtractField(key, 2);
+		const std::string texName = Property::ExtractField(key, 2);
 		if (texName == "")
 			throw std::runtime_error("Syntax error in texture definition: " + texName);
 
@@ -428,7 +428,7 @@ void Scene::DefineMaterials(const Properties &props) {
 			continue;
 
 		// Extract the material name
-		const std::string matName = Properties::ExtractField(key, 2);
+		const std::string matName = Property::ExtractField(key, 2);
 		if (matName == "")
 			throw std::runtime_error("Syntax error in material definition: " + matName);
 
@@ -603,7 +603,7 @@ void Scene::AddObjects(const Properties &props) {
 			continue;
 
 		// Extract the object name
-		const std::string objName = Properties::ExtractField(key, 2);
+		const std::string objName = Property::ExtractField(key, 2);
 		if (objName == "")
 			throw std::runtime_error("Syntax error in " + key);
 

@@ -29,14 +29,13 @@ props.SetFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quo
 print("[\n%s]\n" % props)
 
 print("%s" % props.GetAllNames())
-print("%s" % props.GetAllNames("test1."))
-print("%s\n" % props.GetAllUniqueNames("test2."))
+print("%s" % props.GetAllNames("test1"))
+print("%s\n" % props.GetAllUniqueSubNames("test2"))
 
 props0 = pyluxcore.Properties()
 props1 = pyluxcore.Properties() \
 	.Set(pyluxcore.Property("test1.prop1", [True, 1, 2.0, "aa"])) \
 	.Set(pyluxcore.Property("test2.prop1", ["bb"]));
-
 
 props0.Set(props1, "prefix.")
 print("[\n%s]\n" % props0)

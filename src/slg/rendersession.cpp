@@ -136,7 +136,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 			continue;
 
 		// Extract the output type name
-		const string outputName = Properties::ExtractField(key, 2);
+		const string outputName = Property::ExtractField(key, 2);
 		if (outputName == "")
 			throw runtime_error("Syntax error in film output definition: " + outputName);
 

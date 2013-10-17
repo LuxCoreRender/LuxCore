@@ -64,6 +64,14 @@ int main(int argc, char *argv[]) {
 			
 			cout << prop.Renamed("rename.test") << "\n\n";
 
+			prop = prop.Renamed("field0.field1.field2.field3")(0, 1, 2);
+			cout << Property::ExtractField(prop.GetName(), 1) << "\n";
+			cout << Property::ExtractPrefix(prop.GetName(), 1) << "\n";
+			cout << Property::ExtractPrefix(prop.GetName(), 2) << "\n";
+			cout << Property::ExtractPrefix(prop.GetName(), 3) << "\n";
+			cout << Property::ExtractPrefix(prop.GetName(), 4) << "\n";
+			cout << Property::ExtractPrefix(prop.GetName(), 5) << "\n";
+
 			//------------------------------------------------------------------
 			cout << "Properties examples...\n";
 			//------------------------------------------------------------------
@@ -86,17 +94,21 @@ int main(int argc, char *argv[]) {
 			cout << "Size: " << props.Get("test2.prop2").GetSize() << "\n\n";
 
 			Properties props0(
-					Property("test1.prop1")(1.f, 2.f, 3.f) <<
-					Property("test1.prop2")("test1") <<
-					Property("test1.prop3")("test2"));
+					Property("test1.prop1.sub0.a")(1.f, 2.f, 3.f) <<
+					Property("test1.prop1.sub0.b")("test1") <<
+					Property("test1.prop2.sub1")("test2"));
 			Properties props1(
 					Property("test2.prop1")(1.f, 2.f, 3.f) <<
 					Property("test2.prop2")("test"));
 			props0.Set(props1);
 			cout << props0 << "\n";
 
-			vector<string> names = props0.GetAllUniqueNames("test1.");
-			BOOST_FOREACH(const string &n, names)
+			vector<string> names0 = props0.GetAllUniqueSubNames("test1");
+			BOOST_FOREACH(const string &n, names0)
+				cout << "[" << n << "]";
+			cout << "\n";
+			vector<string> names1 = props0.GetAllUniqueSubNames("test1.prop1");
+			BOOST_FOREACH(const string &n, names1)
 				cout << "[" << n << "]";
 			cout << "\n\n";
 

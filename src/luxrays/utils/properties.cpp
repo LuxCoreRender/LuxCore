@@ -27,10 +27,11 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string/trim.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -162,6 +163,36 @@ template<> luxrays::Matrix4x4 Property::Get<luxrays::Matrix4x4>() const {
 
 std::string Property::ToString() const {
 	return name + " = " + GetValuesString();
+}
+
+string Property::ExtractField(const string &name, const u_int index) {
+	vector<string> strs;
+	boost::split(strs, name, boost::is_any_of("."));
+
+	if (index >= strs.size())
+		return "";
+
+	return strs[index];
+}
+
+string Property::ExtractPrefix(const string &name, const u_int count) {
+	if (count <= 0)
+		return "";
+
+	size_t index = 0;
+	for (u_int i = 0; i < count; ++i) {
+		if (index >= name.length())
+			return "";
+
+		index = name.find('.', index);
+
+		if (index == string::npos)
+			return "";
+
+		++index;
+	}
+
+	return name.substr(0, index - 1);
 }
 
 //------------------------------------------------------------------------------
@@ -321,13 +352,20 @@ vector<string> Properties::GetAllNames(const string &prefix) const {
 	return namesSubset;
 }
 
-vector<string> Properties::GetAllUniqueNames(const string &prefix) const {
+vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
+	size_t fieldsCount = std::count(prefix.begin(), prefix.end(), '.') + 2;
+
 	set<string> definedNames;
 	vector<string> namesSubset;
 	BOOST_FOREACH(const string &name, names) {
-		if ((name.find(prefix) == 0) && (definedNames.count(name) == 0)) {
-			namesSubset.push_back(name);
-			definedNames.insert(name);
+		if (name.find(prefix) == 0) {
+			// Check if it has been already defined
+
+			const string s = Property::ExtractPrefix(name, fieldsCount);
+			if (definedNames.count(s) == 0) {
+				namesSubset.push_back(s);
+				definedNames.insert(s);
+			}
 		}
 	}
 
@@ -393,23 +431,6 @@ Properties &Properties::operator<<(const Property &prop) {
 
 Properties &Properties::operator<<(const Properties &props) {
 	return Set(props);
-}
-
-string Properties::ExtractField(const string &value, const size_t index) {
-	char buf[512];
-	memcpy(buf, value.c_str(), value.length() + 1);
-	char *t = strtok(buf, ".");
-	if ((index == 0) && (t == NULL))
-		return value;
-
-	size_t i = index;
-	while (t != NULL) {
-		if (i-- == 0)
-			return string(t);
-		t = strtok(NULL, ".");
-	}
-
-	return "";
 }
 
 Properties luxrays::operator<<(const Property &prop0, const Property &prop1) {

@@ -335,6 +335,9 @@ public:
 		return Add(std::string(val));
 	}
 
+	static std::string ExtractField(const std::string &name, const u_int index);
+	static std::string ExtractPrefix(const std::string &name, const u_int count);
+
 private:
 	template<class T> class GetValueVistor : public boost::static_visitor<T> {
 	public:
@@ -367,7 +370,7 @@ private:
 		}
 	};
 
-	const std::string name;
+	std::string name;
 	std::vector<PropertyValue> values;
 };	
 
@@ -497,6 +500,8 @@ public:
 	/*!
 	 * \brief Returns all Property names that start with a specific prefix.
 	 *
+	 * This method is used to iterate over all properties.
+	 * 
 	 * \param prefix of the Property names to return.
 	 *
 	 * \return a vector of Property names.
@@ -505,11 +510,20 @@ public:
 	/*!
 	 * \brief Returns all Property unique names that start with a specific prefix.
 	 *
+	 * For instance, given the the following names:
+	 * - test.prop1.subprop1
+	 * - test.prop1.subprop2
+	 * - test.prop2.subprop1
+	 * 
+	 * GetAllUniqueSubNames("test") will return:
+	 * - test.prop1
+	 * - test.prop2
+	 *
 	 * \param prefix of the Property names to return.
 	 *
 	 * \return a vector of Property names.
 	 */
-	std::vector<std::string> GetAllUniqueNames(const std::string &prefix) const;
+	std::vector<std::string> GetAllUniqueSubNames(const std::string &prefix) const;
 	/*!
 	 * \brief Returns a property.
 	 *
@@ -534,8 +548,6 @@ public:
 	void Delete(const std::string &propName);
 
 	std::string ToString() const;
-
-	static std::string ExtractField(const std::string &value, const size_t index);
 
 	//--------------------------------------------------------------------------
 	// Old deprecated interface
