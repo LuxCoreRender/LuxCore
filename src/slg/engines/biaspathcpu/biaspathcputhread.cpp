@@ -350,7 +350,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Check if I have to stop because of path depth
 		depthInfo.IncDepths(lastBSDFEvent);
 
-		pathThroughput *= bsdfSample * (cosSampledDir / max(engine->pdfClampValue, lastPdfW));
+		pathThroughput *= bsdfSample * (cosSampledDir / ((lastBSDFEvent & SPECULAR) ? lastPdfW : max(engine->pdfClampValue, lastPdfW)));
 		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 		ray = Ray(bsdf.hitPoint.p, sampledDir);
@@ -384,7 +384,7 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			PathDepthInfo depthInfo;
 			depthInfo.IncDepths(event);
 
-			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / (event & SPECULAR ? pdfW : max(engine->pdfClampValue, pdfW)));
+			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / ((event & SPECULAR) ? pdfW : max(engine->pdfClampValue, pdfW)));
 			assert (!continuepathThroughput.IsNaN() && !continuepathThroughput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);

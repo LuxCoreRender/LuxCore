@@ -27,6 +27,7 @@
 //  PARAM_TILE_PROGRESSIVE_REFINEMENT
 //  PARAM_DIRECT_LIGHT_ONE_STRATEGY or PARAM_DIRECT_LIGHT_ALL_STRATEGY
 //  PARAM_RADIANCE_CLAMP_MAXVALUE
+//  PARAM_PDF_CLAMP_VALUE
 //  PARAM_AA_SAMPLES
 //  PARAM_DIRECT_LIGHT_SAMPLES
 //  PARAM_DIFFUSE_SAMPLES
@@ -779,7 +780,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 			if (!Spectrum_IsBlack(bsdfSample)) {
 				float3 throughput = VLOAD3F(&taskPathVertexN->throughputPathVertexN.r);
-				throughput *= bsdfSample * (cosSampledDir / max(PARAM_PDF_CLAMP_VALUE, lastPdfW));
+				throughput *= bsdfSample * (cosSampledDir / ((event & SPECULAR) ? lastPdfW : max(PARAM_PDF_CLAMP_VALUE, lastPdfW)));
 				VSTORE3F(throughput, &taskPathVertexN->throughputPathVertexN.r);
 
 				Ray_Init2_Private(&ray, VLOAD3F(&taskPathVertexN->bsdfPathVertexN.hitPoint.p.x), sampledDir);
@@ -869,7 +870,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					if (!Spectrum_IsBlack(bsdfSample)) {
 						const float scaleFactor = 1.f / sampleCount2;
 						float3 throughput = VLOAD3F(&task->throughputPathVertex1.r);
-						throughput *= bsdfSample * (scaleFactor * cosSampledDir / max(PARAM_PDF_CLAMP_VALUE, lastPdfW));
+						throughput *= bsdfSample * (scaleFactor * cosSampledDir / ((event & SPECULAR) ? lastPdfW : max(PARAM_PDF_CLAMP_VALUE, lastPdfW)));
 						VSTORE3F(throughput, &taskPathVertexN->throughputPathVertexN.r);
 
 						Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertex1.hitPoint.p.x), sampledDir);

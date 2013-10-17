@@ -20,9 +20,9 @@
  ***************************************************************************/
 
 #include <iostream>
+#include <boost/foreach.hpp>
 
 #include <luxcore/luxcore.h>
-#include <boost/foreach.hpp>
 
 using namespace std;
 using namespace luxrays;
