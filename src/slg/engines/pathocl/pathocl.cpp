@@ -189,6 +189,8 @@ void PathOCLRenderEngine::UpdateCounters() {
 	}
 
 	samplesCount = totalCount;
+	// This is a bit tricky because film is reseted in UpdateFilmLockLess()
+	film->SetSampleCount(samplesCount);
 
 	// Update the ray count statistic
 	totalCount = 0.0;

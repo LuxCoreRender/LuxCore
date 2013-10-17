@@ -205,6 +205,9 @@ public:
 
 	//--------------------------------------------------------------------------
 
+	void SetSampleCount(const double count) {
+		statsTotalSampleCount = count;
+	}
 	void AddSampleCount(const double count) {
 		statsTotalSampleCount += count;
 	}
