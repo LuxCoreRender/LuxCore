@@ -377,6 +377,9 @@ Properties &Properties::Set(const Property &prop) {
 	if (!IsDefined(propName)) {
 		// It is a new name
 		names.push_back(propName);
+	} else {
+		// boost::unordered_set::insert() doesn't overwrite an existing entry
+		props.erase(propName);
 	}
 
 	props.insert(std::pair<string, Property>(propName, prop));
@@ -488,12 +491,7 @@ vector<float> Properties::GetFloatVector(const string &propName, const string &d
 }
 
 void Properties::SetString(const string &propName, const string &value) {
-	if (props.find(propName) == props.end()) {
-		// It is a new name
-		names.push_back(propName);
-	}
-
-	props.insert(std::make_pair(propName, Property(propName, value)));
+	Set(propName, value);
 }
 
 string Properties::SetString(const string &property) {
