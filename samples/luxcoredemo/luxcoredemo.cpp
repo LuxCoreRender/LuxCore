@@ -76,6 +76,9 @@ int main(int argc, char *argv[]) {
 			cout << "test1.prop1[0] => " << props.Get("test1.prop1").GetValue<int>(0) << "\n";
 			cout << "test1.prop1[1] => " << props.Get("test1.prop1").GetValue<string>(1) << "\n";
 			cout << "test1.prop1[2] => " << props.Get("test1.prop1").GetValue<float>(2) << "\n\n";
+
+			props.Set(Property("test2.prop2")("overwrite"));
+			cout << props.Get("test2.prop2") << "\n\n";
 			
 			props.Clear().SetFromString("test1.prop1 = 1.0, 2.0, 3.0 \"quoted\"\ntest2.prop2 = aa 'quoted' bb");
 			cout << props;
