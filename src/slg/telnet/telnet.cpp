@@ -718,7 +718,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName.find("scene.materials.") == 0) {
 								if (state == EDIT) {
 									// Check if it is the name of a known material
-									const std::string matName = Properties::ExtractField(propertyName, 2);
+									const std::string matName = Property::ExtractField(propertyName, 2);
 									if (matName == "")
 										throw std::runtime_error("Syntax error in " + propertyName);
 
@@ -746,7 +746,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transformation") == propertyName.size() - 15)) {
 								if (state == EDIT) {
 									// Check if it is the name of a known objects
-									const std::string objName = Properties::ExtractField(propertyName, 2);
+									const std::string objName = Property::ExtractField(propertyName, 2);
 									if (objName == "")
 										throw std::runtime_error("Syntax error in " + propertyName);
 

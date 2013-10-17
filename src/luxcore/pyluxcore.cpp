@@ -105,9 +105,9 @@ static boost::python::list Properties_GetAllNames2(luxrays::Properties *props, c
 	return l;
 }
 
-static boost::python::list Properties_GetAllUniqueNames(luxrays::Properties *props, const string &prefix) {
+static boost::python::list Properties_GetAllUniqueSubNames(luxrays::Properties *props, const string &prefix) {
 	boost::python::list l;
-	const vector<string> keys = props->GetAllUniqueNames(prefix);
+	const vector<string> keys = props->GetAllUniqueSubNames(prefix);
 	BOOST_FOREACH(const string &key, keys) {
 		l.append(key);
 	}
@@ -191,7 +191,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Clear", &luxrays::Properties::Clear, return_internal_reference<>())
 		.def("GetAllNames", &Properties_GetAllNames1)
 		.def("GetAllNames", &Properties_GetAllNames2)
-		.def("GetAllUniqueNames", &Properties_GetAllUniqueNames)
+		.def("GetAllUniqueSubNames", &Properties_GetAllUniqueSubNames)
 
 		.def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
 			("Get", &luxrays::Properties::Get, return_internal_reference<>())
