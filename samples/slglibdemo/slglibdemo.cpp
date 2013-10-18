@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
 			);
 
 		// Setup materials
-		scene->DefineMaterials(
+		scene->ParseMaterials(
 			Property("scene.materials.whitelight.type")("matte") <<
 			Property("scene.materials.whitelight.emission")(200.f, 200.f, 200.f) <<
 			Property("scene.materials.mat_white.type")("matte") <<
