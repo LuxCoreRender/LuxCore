@@ -91,7 +91,7 @@ Scene::Scene(const string &fileName, const float imageScale) {
 	// Read all materials
 	//--------------------------------------------------------------------------
 
-	DefineMaterials(scnProp);
+	ParseMaterials(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Read all objects .ply file
@@ -423,32 +423,18 @@ void Scene::ParseTextures(const Properties &props) {
 	editActions.AddAction(MATERIAL_TYPES_EDIT);
 }
 
-void Scene::DefineMaterials(const string &propsString) {
-	Properties prop;
-	prop.SetFromString(propsString);
+void Scene::ParseMaterials(const Properties &props) {
+	vector<string> matKeys = props.GetAllUniqueSubNames("scene.materials");
+	if (matKeys.size() == 0) {
+		// There are not texture definitions
+		return;
+	}
 
-	DefineMaterials(prop);
-}
-
-void Scene::DefineMaterials(const Properties &props) {
-	vector<string> matKeys = props.GetAllNames("scene.materials.");
-	if (matKeys.size() == 0)
-		throw runtime_error("No material definition found");
-
-	for (vector<string>::const_iterator matKey = matKeys.begin(); matKey != matKeys.end(); ++matKey) {
-		const string &key = *matKey;
-		const size_t dot1 = key.find(".", string("scene.materials.").length());
-		if (dot1 == string::npos)
-			continue;
-
+	BOOST_FOREACH(const string &key, matKeys) {
 		// Extract the material name
 		const string matName = Property::ExtractField(key, 2);
 		if (matName == "")
 			throw runtime_error("Syntax error in material definition: " + matName);
-
-		// Check if it is a new material root otherwise skip
-		if (matDefs.IsMaterialDefined(matName))
-			continue;
 
 		SDL_LOG("Material definition: " << matName);
 
@@ -459,6 +445,9 @@ void Scene::DefineMaterials(const Properties &props) {
 		Material *mat = CreateMaterial(matID, matName, props);
 		matDefs.DefineMaterial(matName, mat);
 	}
+
+	editActions.AddAction(MATERIALS_EDIT);
+	editActions.AddAction(MATERIAL_TYPES_EDIT);
 }
 
 void Scene::UpdateMaterial(const string &name, const string &propsString) {
@@ -856,40 +845,29 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Spectrum v = props.Get(propName + ".value", MakePropertyValues(1.f)).Get<Spectrum>();
 		return new ConstFloat3Texture(v);
 	} else if (texType == "scale") {
-		const string tex1Name = props.Get(propName + ".texture1", MakePropertyValues("1.0")).Get<string>();
-		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = props.Get(propName + ".texture2", MakePropertyValues("1.0")).Get<string>();
-		const Texture *tex2 = GetTexture(tex2Name);
+		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(1.f)));
 		return new ScaleTexture(tex1, tex2);
 	} else if (texType == "fresnelapproxn") {
-		const string texName = props.Get(propName + ".texture", MakePropertyValues("0.5 0.5 0.5")).Get<string>();
-		const Texture *tex = GetTexture(texName);
+		const Texture *tex = GetTexture(props.Get(propName + ".texture", MakePropertyValues(.5f, .5f, .5f)));
 		return new FresnelApproxNTexture(tex);
 	} else if (texType == "fresnelapproxk") {
-		const string texName = props.Get(propName + ".texture", MakePropertyValues("0.5 0.5 0.5")).Get<string>();
-		const Texture *tex = GetTexture(texName);
+		const Texture *tex = GetTexture(props.Get(propName + ".texture", MakePropertyValues(.5f, .5f, .5f)));
 		return new FresnelApproxKTexture(tex);
 	} else if (texType == "checkerboard2d") {
-		const string tex1Name = props.Get(propName + ".texture1", MakePropertyValues("1.0")).Get<string>();
-		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = props.Get(propName + ".texture2", MakePropertyValues("0.0")).Get<string>();
-		const Texture *tex2 = GetTexture(tex2Name);
+		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(0.f)));
 
 		return new CheckerBoard2DTexture(CreateTextureMapping2D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "checkerboard3d") {
-		const string tex1Name = props.Get(propName + ".texture1", MakePropertyValues("1.0")).Get<string>();
-		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = props.Get(propName + ".texture2", MakePropertyValues("0.0")).Get<string>();
-		const Texture *tex2 = GetTexture(tex2Name);
+		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(0.f)));
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "mix") {
-		const string amtName = props.Get(propName + ".amount", MakePropertyValues("0.5")).Get<string>();
-		const Texture *amtTex = GetTexture(amtName);
-		const string tex1Name = props.Get(propName + ".texture1", MakePropertyValues("0.0")).Get<string>();
-		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = props.Get(propName + ".texture2", MakePropertyValues("1.0")).Get<string>();
-		const Texture *tex2 = GetTexture(tex2Name);
+		const Texture *amtTex = GetTexture(props.Get(propName + ".amount", MakePropertyValues(.5f)));
+		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(0.f)));
+		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(1.f)));
 
 		return new MixTexture(amtTex, tex1, tex2);
 	} else if (texType == "fbm") {
@@ -905,19 +883,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else if (texType == "dots") {
-		const string insideTexName = props.Get(propName + ".inside", MakePropertyValues("1.0")).Get<string>();
-		const Texture *insideTex = GetTexture(insideTexName);
-		const string outsideTexName = props.Get(propName + ".outside", MakePropertyValues("0.0")).Get<string>();
-		const Texture *outsideTex = GetTexture(outsideTexName);
+		const Texture *insideTex = GetTexture(props.Get(propName + ".inside", MakePropertyValues(1.f)));
+		const Texture *outsideTex = GetTexture(props.Get(propName + ".outside", MakePropertyValues(0.f)));
 
 		return new DotsTexture(CreateTextureMapping2D(propName + ".mapping", props), insideTex, outsideTex);
 	} else if (texType == "brick") {
-		const string tex1Name = props.Get(propName + ".bricktex", MakePropertyValues("1.0 1.0 1.0")).Get<string>();
-		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = props.Get(propName + ".mortartex", MakePropertyValues("0.2 0.2 0.2")).Get<string>();
-		const Texture *tex2 = GetTexture(tex2Name);
-		const string tex3Name = props.Get(propName + ".brickmodtex", MakePropertyValues("1.0 1.0 1.0")).Get<string>();
-		const Texture *tex3 = GetTexture(tex3Name);
+		const Texture *tex1 = GetTexture(props.Get(propName + ".bricktex", MakePropertyValues(1.f, 1.f, 1.f)));
+		const Texture *tex2 = GetTexture(props.Get(propName + ".mortartex", MakePropertyValues(.2f, .2f, .2f)));
+		const Texture *tex3 = GetTexture(props.Get(propName + ".brickmodtex", MakePropertyValues(1.f, 1.f, 1.f)));
 
 		const string brickbond = props.Get(propName + ".brickbond", MakePropertyValues("running")).Get<string>();
 		const float brickwidth = props.Get(propName + ".brickwidth", MakePropertyValues(.3f)).Get<float>();
@@ -930,10 +903,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
 				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
 	} else if (texType == "add") {
-		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
-		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
-		const Texture *tex2 = GetTexture(tex2Name);
+		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(1.f)));
 		return new AddTexture(tex1, tex2);
 	} else if (texType == "windy") {
 		return new WindyTexture(CreateTextureMapping3D(propName + ".mapping", props));
@@ -945,8 +916,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "uv") {
 		return new UVTexture(CreateTextureMapping2D(propName + ".mapping", props));
 	} else if (texType == "band") {
-		const string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
-		const Texture *amtTex = GetTexture(amtName);
+		const Texture *amtTex = GetTexture(props.Get(propName + ".amount", MakePropertyValues(.5f)));
 
 		vector<float> offsets;
 		vector<Spectrum> values;
@@ -974,7 +944,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		throw runtime_error("Unknown texture type: " + texType);
 }
 
-Texture *Scene::GetTexture(const string &name) {
+Texture *Scene::GetTexture(const luxrays::Property &prop) {
+	const string &name = prop.GetValuesString();
+
 	if (texDefs.IsTextureDefined(name))
 		return texDefs.GetTexture(name);
 	else {
@@ -1012,10 +984,10 @@ Texture *Scene::GetTexture(const string &name) {
 
 Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName, const Properties &props) {
 	const string propName = "scene.materials." + matName;
-	const string matType = GetStringParameters(props, propName + ".type", 1, "matte").at(0);
+	const string matType = props.Get(propName + ".type", MakePropertyValues("matte")).Get<string>();
 
 	Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
-		GetTexture(props.GetString(propName + ".emission", "0.0 0.0 0.0")) : NULL;
+		GetTexture(props.Get(propName + ".emission", MakePropertyValues(0.f, 0.f, 0.f))) : NULL;
 	// Required to remove light source while editing the scene
 	if (emissionTex && (
 			((emissionTex->GetType() == CONST_FLOAT) && (((ConstFloatTexture *)emissionTex)->GetValue() == 0.f)) ||
@@ -1023,42 +995,42 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		emissionTex = NULL;
 
 	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
-		GetTexture(props.GetString(propName + ".bumptex", "1.0")) : NULL;
-	Texture *normalTex = props.IsDefined(propName + ".normaltex") ? 
-		GetTexture(props.GetString(propName + ".normaltex", "1.0")) : NULL;
+		GetTexture(props.Get(propName + ".bumptex", MakePropertyValues(1.f))) : NULL;
+	Texture *normalTex =props.IsDefined(propName + ".normaltex") ? 
+		GetTexture(props.Get(propName + ".normaltex", MakePropertyValues(1.f))) : NULL;
 
 	Material *mat;
 	if (matType == "matte") {
-		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.75 0.75 0.75"));
+		Texture *kd = GetTexture(props.Get(propName + ".kd", MakePropertyValues(.75f, .75f, .75f)));
 
 		mat = new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
 	} else if (matType == "mirror") {
-		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
+		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
 		
 		mat = new MirrorMaterial(emissionTex, bumpTex, normalTex, kr);
 	} else if (matType == "glass") {
-		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
-		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
-		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
-		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
+		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
+		Texture *kt = GetTexture(props.Get(propName + ".kt", MakePropertyValues(1.f, 1.f, 1.f)));
+		Texture *ioroutside = GetTexture(props.Get(propName + ".ioroutside", MakePropertyValues(1.f)));
+		Texture *iorinside = GetTexture(props.Get(propName + ".iorinside", MakePropertyValues(1.5f)));
 
 		mat = new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "metal") {
-		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
-		Texture *exp = GetTexture(props.GetString(propName + ".exp", "10.0"));
+		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
+		Texture *exp = GetTexture(props.Get(propName + ".exp", MakePropertyValues(10.f)));
 
 		mat = new MetalMaterial(emissionTex, bumpTex, normalTex, kr, exp);
 	} else if (matType == "archglass") {
-		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
-		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
-		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
-		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
+		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
+		Texture *kt = GetTexture(props.Get(propName + ".kt", MakePropertyValues(1.f, 1.f, 1.f)));
+		Texture *ioroutside = GetTexture(props.Get(propName + ".ioroutside", MakePropertyValues(1.f)));
+		Texture *iorinside = GetTexture(props.Get(propName + ".iorinside", MakePropertyValues(1.f)));
 
 		mat = new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "mix") {
-		Material *matA = matDefs.GetMaterial(props.GetString(propName + ".material1", "mat1"));
-		Material *matB = matDefs.GetMaterial(props.GetString(propName + ".material2", "mat2"));
-		Texture *mix = GetTexture(props.GetString(propName + ".amount", "0.5"));
+		Material *matA = matDefs.GetMaterial(props.Get(propName + ".material1", MakePropertyValues("mat1")).Get<string>());
+		Material *matB = matDefs.GetMaterial(props.Get(propName + ".material2", MakePropertyValues("mat2")).Get<string>());
+		Texture *mix = GetTexture(props.Get(propName + ".amount", MakePropertyValues(.5f)));
 
 		MixMaterial *mixMat = new MixMaterial(bumpTex, normalTex, matA, matB, mix);
 
@@ -1072,73 +1044,73 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	} else if (matType == "null") {
 		mat = new NullMaterial();
 	} else if (matType == "mattetranslucent") {
-		Texture *kr = GetTexture(props.GetString(propName + ".kr", "0.5 0.5 0.5"));
-		Texture *kt = GetTexture(props.GetString(propName + ".kt", "0.5 0.5 0.5"));
+		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(.5f, .5f, .5f)));
+		Texture *kt = GetTexture(props.Get(propName + ".kt", MakePropertyValues(.5f, .5f, .5f)));
 
 		mat = new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
 	} else if (matType == "glossy2") {
-		Texture *kd = GetTexture(props.GetString(propName + ".kd", "0.5 0.5 0.5"));
-		Texture *ks = GetTexture(props.GetString(propName + ".ks", "0.5 0.5 0.5"));
-		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
-		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
-		Texture *ka = GetTexture(props.GetString(propName + ".ka", "0.0"));
-		Texture *d = GetTexture(props.GetString(propName + ".d", "0.0"));
-		Texture *index = GetTexture(props.GetString(propName + ".index", "0.0"));
-		const bool multibounce = props.GetBoolean(propName + ".multibounce", false);
+		Texture *kd = GetTexture(props.Get(propName + ".kd", MakePropertyValues(.5f, .5f, .5f)));
+		Texture *ks = GetTexture(props.Get(propName + ".ks", MakePropertyValues(.5f, .5f, .5f)));
+		Texture *nu = GetTexture(props.Get(propName + ".uroughness", MakePropertyValues(.1f)));
+		Texture *nv = GetTexture(props.Get(propName + ".vroughness", MakePropertyValues(.1f)));
+		Texture *ka = GetTexture(props.Get(propName + ".ka", MakePropertyValues(0.f)));
+		Texture *d = GetTexture(props.Get(propName + ".d", MakePropertyValues(0.f)));
+		Texture *index = GetTexture(props.Get(propName + ".index", MakePropertyValues(0.f)));
+		const bool multibounce = props.Get(propName + ".multibounce", MakePropertyValues(false)).Get<bool>();
 
 		mat = new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
 	} else if (matType == "metal2") {
-		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
-		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
+		Texture *nu = GetTexture(props.Get(propName + ".uroughness", MakePropertyValues(.1f)));
+		Texture *nv = GetTexture(props.Get(propName + ".vroughness", MakePropertyValues(.1f)));
 
 		Texture *eta, *k;
 		if (props.IsDefined(propName + ".preset")) {
-			const string type = props.GetString(propName + ".preset", "aluminium");
+			const string type = props.Get(propName + ".preset", MakePropertyValues("aluminium")).Get<string>();
 
 			if (type == "aluminium") {
-				eta = GetTexture("1.697 0.879833 0.530174");
-				k = GetTexture("9.30201 6.27604 4.89434");
+				eta = GetTexture(Property("Implicit-Aluminium-eta")("1.697 0.879833 0.530174"));
+				k = GetTexture(Property("Implicit-Aluminium-k")("9.30201 6.27604 4.89434"));
 			} else if (type == "silver") {
-				eta = GetTexture("0.155706 0.115925 0.138897");
-				k = GetTexture("4.88648 3.12787 2.17797");
+				eta = GetTexture(Property("Implicit-Silver-eta")("0.155706 0.115925 0.138897"));
+				k = GetTexture(Property("Implicit-Silver-k")("4.88648 3.12787 2.17797"));
 			} else if (type == "gold") {
-				eta = GetTexture("0.117959 0.354153 1.43897");
-				k = GetTexture("4.03165 2.39416 1.61967");
+				eta = GetTexture(Property("Implicit-Gold-eta")("0.117959 0.354153 1.43897"));
+				k = GetTexture(Property("Implicit-gold-k")("4.03165 2.39416 1.61967"));
 			} else if (type == "copper") {
-				eta = GetTexture("0.134794 0.928983 1.10888");
-				k = GetTexture("3.98126 2.44098 2.16474");
+				eta = GetTexture(Property("Implicit-Copper-eta")("0.134794 0.928983 1.10888"));
+				k = GetTexture(Property("Implicit-Copper-k")("3.98126 2.44098 2.16474"));
 			} else if (type == "amorphous carbon") {
-				eta = GetTexture("2.94553 2.22816 1.98665");
-				k = GetTexture("0.876641 0.799505 0.821194");
+				eta = GetTexture(Property("Implicit-Amorphous-Carbon-eta")("2.94553 2.22816 1.98665"));
+				k = GetTexture(Property("Implicit-Amorphous-Carbon-k")("0.876641 0.799505 0.821194"));
 			} else
 				throw runtime_error("Unknown Metal2 preset: " + type);
 		} else {
-			eta = GetTexture(props.GetString(propName + ".n", "0.5 0.5 0.5"));
-			k = GetTexture(props.GetString(propName + ".k", "0.5 0.5 0.5"));
+			eta = GetTexture(props.Get(propName + ".n", MakePropertyValues(.5f, .5f, .5f)));
+			k = GetTexture(props.Get(propName + ".k", MakePropertyValues(.5f, .5f, .5f)));
 		}
 
 		mat = new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
 	} else if (matType == "roughglass") {
-		Texture *kr = GetTexture(props.GetString(propName + ".kr", "1.0 1.0 1.0"));
-		Texture *kt = GetTexture(props.GetString(propName + ".kt", "1.0 1.0 1.0"));
-		Texture *ioroutside = GetTexture(props.GetString(propName + ".ioroutside", "1.0"));
-		Texture *iorinside = GetTexture(props.GetString(propName + ".iorinside", "1.5"));
-		Texture *nu = GetTexture(props.GetString(propName + ".uroughness", "0.1"));
-		Texture *nv = GetTexture(props.GetString(propName + ".vroughness", "0.1"));
+		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
+		Texture *kt = GetTexture(props.Get(propName + ".kt", MakePropertyValues(1.f, 1.f, 1.f)));
+		Texture *ioroutside = GetTexture(props.Get(propName + ".ioroutside", MakePropertyValues(1.f)));
+		Texture *iorinside = GetTexture(props.Get(propName + ".iorinside", MakePropertyValues(1.5f)));
+		Texture *nu = GetTexture(props.Get(propName + ".uroughness", MakePropertyValues(.1f)));
+		Texture *nv = GetTexture(props.Get(propName + ".vroughness", MakePropertyValues(.1f)));
 
 		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
-	mat->SetID(props.GetInt(propName + ".id", defaultMatID));
-	mat->SetLightID(props.GetInt(propName + ".emission.id", 0));
+	mat->SetID(props.Get(propName + ".id", MakePropertyValues(defaultMatID)).Get<u_int>());
+	mat->SetLightID(props.Get(propName + ".emission.id", MakePropertyValues(0u)).Get<u_int>());
 
-	mat->SetSamples(Max(-1, props.GetInt(propName + ".samples", -1)));
-	mat->SetEmittedSamples(Max(-1, props.GetInt(propName + ".emission.samples", -1)));
+	mat->SetSamples(Max(-1, props.Get(propName + ".samples", MakePropertyValues(-1)).Get<int>()));
+	mat->SetEmittedSamples(Max(-1, props.Get(propName + ".emission.samples", MakePropertyValues(-1)).Get<int>()));
 
-	mat->SetIndirectDiffuseVisibility(props.GetBoolean(propName + ".visibility.indirect.diffuse.enable", true));
-	mat->SetIndirectGlossyVisibility(props.GetBoolean(propName + ".visibility.indirect.glossy.enable", true));
-	mat->SetIndirectSpecularVisibility(props.GetBoolean(propName + ".visibility.indirect.specular.enable", true));
+	mat->SetIndirectDiffuseVisibility(props.Get(propName + ".visibility.indirect.diffuse.enable", MakePropertyValues(true)).Get<bool>());
+	mat->SetIndirectGlossyVisibility(props.Get(propName + ".visibility.indirect.glossy.enable", MakePropertyValues(true)).Get<bool>());
+	mat->SetIndirectSpecularVisibility(props.Get(propName + ".visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
 
 	return mat;
 }

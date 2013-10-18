@@ -75,9 +75,8 @@ public:
 
 	void ParseCamera(const luxrays::Properties &props);
 	void ParseTextures(const luxrays::Properties &props);
+	void ParseMaterials(const luxrays::Properties &props);
 
-	void DefineMaterials(const std::string &propsString);
-	void DefineMaterials(const luxrays::Properties &props);
 	void UpdateMaterial(const std::string &name, const std::string &propsString);
 	void UpdateMaterial(const std::string &name, const luxrays::Properties &props);
 
@@ -154,7 +153,7 @@ protected:
 		const std::string &paramName, const u_int paramCount,
 		const std::string &defaultValue);
 
-	Texture *GetTexture(const std::string &name);
+	Texture *GetTexture(const luxrays::Property &name);
 };
 
 }
