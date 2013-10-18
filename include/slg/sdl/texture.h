@@ -34,6 +34,7 @@
 #include <set>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/unordered_map.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -116,7 +117,7 @@ public:
 private:
 
 	std::vector<Texture *> texs;
-	std::map<std::string, Texture *> texsByName;
+	boost::unordered_map<std::string, Texture *> texsByName;
 };
 
 //------------------------------------------------------------------------------
@@ -313,7 +314,7 @@ public:
 
 	// Get a path from imageMap object
 	const std::string &GetPath(const slg::ImageMap *im)const {
-		for (std::map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
+		for (boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im)
 				return it->first;
 		}
@@ -321,7 +322,7 @@ public:
 	}
 
 	void DeleteImageMap(const slg::ImageMap *im) {
-		for (std::map<std::string, ImageMap *>::iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
+		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im) {
 				delete it->second;
 
@@ -339,7 +340,7 @@ public:
 	bool IsImageMapDefined(const std::string &name) const { return mapByName.find(name) != mapByName.end(); }
 
 private:
-	std::map<std::string, ImageMap *> mapByName;
+	boost::unordered_map<std::string, ImageMap *> mapByName;
 	// Used to preserve insertion order and to retrieve insertion index
 	std::vector<ImageMap *> maps;
 

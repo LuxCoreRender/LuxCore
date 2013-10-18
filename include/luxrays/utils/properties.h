@@ -80,6 +80,15 @@ template<class T0> PropertyValues MakePropertyValues(const T0 &val0) {
    return values;
 }
 /*!
+ * \brief Required to work around the problem of char* to bool conversion
+ * (instead of char* to string).
+ */
+inline PropertyValues MakePropertyValues(const char *s) {
+	PropertyValues values;
+	values.push_back(std::string(s));
+   return values;
+}
+/*!
  * \brief Create a list of values to be used by a Property.
  *
  * \param val0 is the value to use.

@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		scene->DefineImageMap("check_texmap", new ImageMap(img, 1.f, 3, size, size));
-		scene->DefineTextures(
+		scene->ParseTextures(
 			Property("scene.textures.map.type")("imagemap") <<
 			Property("scene.textures.map.file")("check_texmap") <<
 			Property("scene.textures.map.gamma")(1.f)

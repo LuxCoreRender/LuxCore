@@ -85,7 +85,7 @@ Scene::Scene(const string &fileName, const float imageScale) {
 	// Read all textures
 	//--------------------------------------------------------------------------
 
-	DefineTextures(scnProp);
+	ParseTextures(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Read all materials
@@ -400,38 +400,27 @@ void Scene::ParseCamera(const Properties &props) {
 	editActions.AddAction(CAMERA_EDIT);
 }
 
-void Scene::DefineTextures(const string &propsString) {
-	Properties prop;
-	prop.SetFromString(propsString);
-
-	DefineTextures(prop);
-}
-
-void Scene::DefineTextures(const Properties &props) {
-	vector<string> texKeys = props.GetAllNames("scene.textures.");
-	if (texKeys.size() == 0)
+void Scene::ParseTextures(const Properties &props) {
+	vector<string> texKeys = props.GetAllUniqueSubNames("scene.textures");
+	if (texKeys.size() == 0) {
+		// There are not texture definitions
 		return;
+	}
 
-	for (vector<string>::const_iterator matKey = texKeys.begin(); matKey != texKeys.end(); ++matKey) {
-		const string &key = *matKey;
-		const size_t dot1 = key.find(".", string("scene.textures.").length());
-		if (dot1 == string::npos)
-			continue;
-
-		// Extract the material name
+	BOOST_FOREACH(const string &key, texKeys) {
+		// Extract the texture name
 		const string texName = Property::ExtractField(key, 2);
 		if (texName == "")
 			throw runtime_error("Syntax error in texture definition: " + texName);
-
-		// Check if it is a new material root otherwise skip
-		if (texDefs.IsTextureDefined(texName))
-			continue;
 
 		SDL_LOG("Texture definition: " << texName);
 
 		Texture *tex = CreateTexture(texName, props);
 		texDefs.DefineTexture(texName, tex);
 	}
+
+	editActions.AddAction(MATERIALS_EDIT);
+	editActions.AddAction(MATERIAL_TYPES_EDIT);
 }
 
 void Scene::DefineMaterials(const string &propsString) {
@@ -807,37 +796,41 @@ void Scene::RemoveUnusedTextures() {
 //------------------------------------------------------------------------------
 
 TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const Properties &props) {
-	const string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping2d").at(0);
+	const string mapType = props.Get(prefixName + ".type", MakePropertyValues("uvmapping2d")).Get<string>();
 
 	if (mapType == "uvmapping2d") {
-		const vector<float> uvScale = GetFloatParameters(props, prefixName + ".uvscale", 2, "1.0 1.0");
-		const vector<float> uvDelta = GetFloatParameters(props, prefixName + ".uvdelta", 2, "0.0 0.0");
+		const UV uvScale = props.Get(prefixName + ".uvscale", MakePropertyValues(1.f, 1.f)).Get<UV>();
+		const UV uvDelta = props.Get(prefixName + ".uvdelta", MakePropertyValues(0.f, 0.f)).Get<UV>();
 
-		return new UVMapping2D(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1));
+		return new UVMapping2D(uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
 	} else
 		throw runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
 }
 
 TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const Properties &props) {
-	const string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping3d").at(0);
+	const string mapType = props.Get(prefixName + ".type", MakePropertyValues("uvmapping3d")).Get<string>();
 
 	if (mapType == "uvmapping3d") {
-		const vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-		const Matrix4x4 mat(
-				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		PropertyValues matIdentity(16);
+		for (u_int i = 0; i < 4; ++i) {
+			for (u_int j = 0; j < 4; ++j) {
+				matIdentity[i * 4 + j] = (i == j) ? 1.f : 0.f;
+			}
+		}
+
+		const Matrix4x4 mat = props.Get(prefixName + ".transformation", matIdentity).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new UVMapping3D(trans);
 	} else if (mapType == "globalmapping3d") {
-		const vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-		const Matrix4x4 mat(
-				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
+		PropertyValues matIdentity(16);
+		for (u_int i = 0; i < 4; ++i) {
+			for (u_int j = 0; j < 4; ++j) {
+				matIdentity[i * 4 + j] = (i == j) ? 1.f : 0.f;
+			}
+		}
+
+		const Matrix4x4 mat = props.Get(prefixName + ".transformation", matIdentity).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new GlobalMapping3D(trans);
@@ -847,95 +840,92 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 
 Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	const string propName = "scene.textures." + texName;
-	const string texType = GetStringParameters(props, propName + ".type", 1, "imagemap").at(0);
+	const string texType = props.Get(propName + ".type", MakePropertyValues("imagemap")).Get<string>();
 
 	if (texType == "imagemap") {
-		const vector<string> vname = GetStringParameters(props, propName + ".file", 1, "");
-		if (vname.at(0) == "")
-			throw runtime_error("Missing image map file name for texture: " + texName);
+		const string name = props.Get(propName + ".file", MakePropertyValues("image.png")).Get<string>();
+		const float gamma = props.Get(propName + ".gamma", MakePropertyValues(2.2f)).Get<float>();
+		const float gain = props.Get(propName + ".gain", MakePropertyValues(1.0f)).Get<float>();
 
-		const vector<float> gamma = GetFloatParameters(props, propName + ".gamma", 1, "2.2");
-		const vector<float> gain = GetFloatParameters(props, propName + ".gain", 1, "1.0");
-
-		ImageMap *im = imgMapCache.GetImageMap(vname.at(0), gamma.at(0));
-		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain.at(0));
+		ImageMap *im = imgMapCache.GetImageMap(name, gamma);
+		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
 	} else if (texType == "constfloat1") {
-		const vector<float> v = GetFloatParameters(props, propName + ".value", 1, "1.0");
-		return new ConstFloatTexture(v.at(0));
+		const float v = props.Get(propName + ".value", MakePropertyValues(1.f)).Get<float>();
+		return new ConstFloatTexture(v);
 	} else if (texType == "constfloat3") {
-		const vector<float> v = GetFloatParameters(props, propName + ".value", 3, "1.0 1.0 1.0");
-		return new ConstFloat3Texture(Spectrum(v.at(0), v.at(1), v.at(2)));
+		const Spectrum v = props.Get(propName + ".value", MakePropertyValues(1.f)).Get<Spectrum>();
+		return new ConstFloat3Texture(v);
 	} else if (texType == "scale") {
-		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
+		const string tex1Name = props.Get(propName + ".texture1", MakePropertyValues("1.0")).Get<string>();
 		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
+		const string tex2Name = props.Get(propName + ".texture2", MakePropertyValues("1.0")).Get<string>();
 		const Texture *tex2 = GetTexture(tex2Name);
 		return new ScaleTexture(tex1, tex2);
 	} else if (texType == "fresnelapproxn") {
-		const string texName = GetStringParameters(props, propName + ".texture", 1, "0.5 0.5 0.5").at(0);
+		const string texName = props.Get(propName + ".texture", MakePropertyValues("0.5 0.5 0.5")).Get<string>();
 		const Texture *tex = GetTexture(texName);
 		return new FresnelApproxNTexture(tex);
 	} else if (texType == "fresnelapproxk") {
-		const string texName = GetStringParameters(props, propName + ".texture", 1, "0.5 0.5 0.5").at(0);
+		const string texName = props.Get(propName + ".texture", MakePropertyValues("0.5 0.5 0.5")).Get<string>();
 		const Texture *tex = GetTexture(texName);
 		return new FresnelApproxKTexture(tex);
 	} else if (texType == "checkerboard2d") {
-		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
+		const string tex1Name = props.Get(propName + ".texture1", MakePropertyValues("1.0")).Get<string>();
 		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
+		const string tex2Name = props.Get(propName + ".texture2", MakePropertyValues("0.0")).Get<string>();
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new CheckerBoard2DTexture(CreateTextureMapping2D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "checkerboard3d") {
-		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
+		const string tex1Name = props.Get(propName + ".texture1", MakePropertyValues("1.0")).Get<string>();
 		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
+		const string tex2Name = props.Get(propName + ".texture2", MakePropertyValues("0.0")).Get<string>();
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "mix") {
-		const string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
+		const string amtName = props.Get(propName + ".amount", MakePropertyValues("0.5")).Get<string>();
 		const Texture *amtTex = GetTexture(amtName);
-		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "0.0").at(0);
+		const string tex1Name = props.Get(propName + ".texture1", MakePropertyValues("0.0")).Get<string>();
 		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
+		const string tex2Name = props.Get(propName + ".texture2", MakePropertyValues("1.0")).Get<string>();
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new MixTexture(amtTex, tex1, tex2);
 	} else if (texType == "fbm") {
-		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
-		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
+		const int octaves = props.Get(propName + ".octaves", MakePropertyValues(8)).Get<int>();
+		const float omega = props.Get(propName + ".roughness", MakePropertyValues(.5f)).Get<float>();
 
 		return new FBMTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else if (texType == "marble") {
-		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
-		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
-		const float scale = GetFloatParameters(props, propName + ".scale", 1, "1.0").at(0);
-		const float variation = GetFloatParameters(props, propName + ".variation", 1, "0.2").at(0);
+		const int octaves = props.Get(propName + ".octaves", MakePropertyValues(8)).Get<int>();
+		const float omega = props.Get(propName + ".roughness", MakePropertyValues(.5f)).Get<float>();
+		const float scale = props.Get(propName + ".scale", MakePropertyValues(1.f)).Get<float>();
+		const float variation = props.Get(propName + ".variation", MakePropertyValues(.2f)).Get<float>();
 
 		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else if (texType == "dots") {
-		const string insideTexName = GetStringParameters(props, propName + ".inside", 1, "1.0").at(0);
+		const string insideTexName = props.Get(propName + ".inside", MakePropertyValues("1.0")).Get<string>();
 		const Texture *insideTex = GetTexture(insideTexName);
-		const string outsideTexName = GetStringParameters(props, propName + ".outside", 1, "0.0").at(0);
+		const string outsideTexName = props.Get(propName + ".outside", MakePropertyValues("0.0")).Get<string>();
 		const Texture *outsideTex = GetTexture(outsideTexName);
 
 		return new DotsTexture(CreateTextureMapping2D(propName + ".mapping", props), insideTex, outsideTex);
 	} else if (texType == "brick") {
-		const string tex1Name = GetStringParameters(props, propName + ".bricktex", 1, "1.0 1.0 1.0").at(0);
+		const string tex1Name = props.Get(propName + ".bricktex", MakePropertyValues("1.0 1.0 1.0")).Get<string>();
 		const Texture *tex1 = GetTexture(tex1Name);
-		const string tex2Name = GetStringParameters(props, propName + ".mortartex", 1, "0.2 0.2 0.2").at(0);
+		const string tex2Name = props.Get(propName + ".mortartex", MakePropertyValues("0.2 0.2 0.2")).Get<string>();
 		const Texture *tex2 = GetTexture(tex2Name);
-		const string tex3Name = GetStringParameters(props, propName + ".brickmodtex", 1, "1.0 1.0 1.0").at(0);
+		const string tex3Name = props.Get(propName + ".brickmodtex", MakePropertyValues("1.0 1.0 1.0")).Get<string>();
 		const Texture *tex3 = GetTexture(tex3Name);
 
-		const string brickbond = GetStringParameters(props, propName + ".brickbond", 1, "running").at(0);
-		const float brickwidth = GetFloatParameters(props, propName + ".brickwidth", 1, "0.3").at(0);
-		const float brickheight = GetFloatParameters(props, propName + ".brickheight", 1, "0.1").at(0);
-		const float brickdepth = GetFloatParameters(props, propName + ".brickdepth", 1, "0.15").at(0);
-		const float mortarsize = GetFloatParameters(props, propName + ".mortarsize", 1, "0.01").at(0);
-		const float brickrun = GetFloatParameters(props, propName + ".brickrun", 1, "0.75").at(0);
-		const float brickbevel = GetFloatParameters(props, propName + ".brickbevel", 1, "0.0").at(0);
+		const string brickbond = props.Get(propName + ".brickbond", MakePropertyValues("running")).Get<string>();
+		const float brickwidth = props.Get(propName + ".brickwidth", MakePropertyValues(.3f)).Get<float>();
+		const float brickheight = props.Get(propName + ".brickheight", MakePropertyValues(.1f)).Get<float>();
+		const float brickdepth = props.Get(propName + ".brickdepth", MakePropertyValues(.15f)).Get<float>();
+		const float mortarsize = props.Get(propName + ".mortarsize", MakePropertyValues(.01f)).Get<float>();
+		const float brickrun = props.Get(propName + ".brickrun", MakePropertyValues(.75f)).Get<float>();
+		const float brickbevel = props.Get(propName + ".brickbevel", MakePropertyValues(0.f)).Get<float>();
 
 		return new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
 				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
@@ -948,8 +938,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "windy") {
 		return new WindyTexture(CreateTextureMapping3D(propName + ".mapping", props));
 	} else if (texType == "wrinkled") {
-		const int octaves = GetIntParameters(props, propName + ".octaves", 1, "8").at(0);
-		const float omega = GetFloatParameters(props, propName + ".roughness", 1, "0.5").at(0);
+		const int octaves = props.Get(propName + ".octaves", MakePropertyValues(8)).Get<int>();
+		const float omega = props.Get(propName + ".roughness", MakePropertyValues(.5f)).Get<float>();
 
 		return new WrinkledTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else if (texType == "uv") {
@@ -961,9 +951,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		vector<float> offsets;
 		vector<Spectrum> values;
 		for (u_int i = 0; props.IsDefined(propName + ".offset" + ToString(i)); ++i) {
-			const float offset = GetFloatParameters(props, propName + ".offset" + ToString(i), 1, "0.0").at(0);
-			const vector<float> v = GetFloatParameters(props, propName + ".value" + ToString(i), 3, "1.0 1.0 1.0");
-			const Spectrum value(v.at(0), v.at(1), v.at(2));
+			const float offset = props.Get(propName + ".offset" + ToString(i), MakePropertyValues(0.f)).Get<float>();
+			const Spectrum value = props.Get(propName + ".value" + ToString(i), MakePropertyValues(1.f, 1.f, 1.f)).Get<Spectrum>();
 
 			offsets.push_back(offset);
 			values.push_back(value);
@@ -977,7 +966,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "hitpointalpha") {
 		return new HitPointAlphaTexture();
 	} else if (texType == "hitpointgrey") {
-		const int channel = GetIntParameters(props, propName + ".channel", 1, "-1").at(0);
+		const int channel = props.Get(propName + ".channel", MakePropertyValues(-1)).Get<int>();
 
 		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ? 
 			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
@@ -995,9 +984,9 @@ Texture *Scene::GetTexture(const string &name) {
 			boost::split(strs, name, boost::is_any_of("\t "));
 
 			vector<float> floats;
-			for (vector<string>::iterator it = strs.begin(); it != strs.end(); ++it) {
-				if (it->length() != 0) {
-					const double f = boost::lexical_cast<double>(*it);
+			BOOST_FOREACH(const string &s, strs) {
+				if (s.length() != 0) {
+					const double f = boost::lexical_cast<double>(s);
 					floats.push_back(static_cast<float>(f));
 				}
 			}
