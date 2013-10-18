@@ -138,6 +138,24 @@ template<class T0, class T1, class T2, class T3> PropertyValues MakePropertyValu
 }
 
 /*!
+ * \brief Create a list of values representing an identity 4x4 matrix to
+ * be used by a Property.
+ *
+ * \return a PropertyValues.
+ */
+inline PropertyValues MakeMatrix4x4Identity() {
+	PropertyValues values(16);
+
+	for (u_int i = 0; i < 4; ++i) {
+		for (u_int j = 0; j < 4; ++j) {
+			values[i * 4 + j] = (i == j) ? 1.f : 0.f;
+		}
+	}
+
+	return values;
+}
+
+/*!
  * \brief A generic container for values.
  *
  * A Property is a container associating a vector of values to a string name. The

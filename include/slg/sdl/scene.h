@@ -66,25 +66,17 @@ public:
 	luxrays::Properties ToProperties(const std::string &directoryName);
 
 	//--------------------------------------------------------------------------
-	// Methods to build a scene from scratch
+	// Methods to build and edit scene
 	//--------------------------------------------------------------------------
 
 	void DefineImageMap(const std::string &name, ImageMap *im) {
 		imgMapCache.DefineImgMap(name, im);
 	}
-
-	void ParseCamera(const luxrays::Properties &props);
-	void ParseTextures(const luxrays::Properties &props);
-	void ParseMaterials(const luxrays::Properties &props);
-
-	void UpdateMaterial(const std::string &name, const std::string &propsString);
-	void UpdateMaterial(const std::string &name, const luxrays::Properties &props);
-
-	void DefineObject(const std::string &meshName, luxrays::ExtTriangleMesh *mesh,
+	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh,
 		const bool usePlyNormals = true) {
 		extMeshCache.DefineExtMesh(meshName, mesh, usePlyNormals);
 	}
-	void DefineObject(const std::string &meshName,
+	void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas,
@@ -92,12 +84,14 @@ public:
 		extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
 	}
 
-	void AddObject(const std::string &objName, const std::string &meshName, const std::string &propsString);
-	void AddObject(const std::string &objName, const luxrays::Properties &props);
-	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
+	void ParseCamera(const luxrays::Properties &props);
+	void ParseTextures(const luxrays::Properties &props);
+	void ParseMaterials(const luxrays::Properties &props);
+	void ParseObjects(const luxrays::Properties &props);
 
-	void AddObjects(const std::string &propsString);
-	void AddObjects(const luxrays::Properties &props);
+	void UpdateMaterial(const std::string &name, const std::string &propsString);
+	void UpdateMaterial(const std::string &name, const luxrays::Properties &props);
+	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 
 	void AddInfiniteLight(const std::string &propsString);
 	void AddInfiniteLight(const luxrays::Properties &props);
@@ -108,13 +102,9 @@ public:
 
 	void RemoveUnusedMaterials();
 	void RemoveUnusedTextures();
+	// TODO: void RemoveUnusedMesh();
 
 	//--------------------------------------------------------------------------
-
-	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
-	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
-	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
-	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 
 	PerspectiveCamera *camera;
 
@@ -153,7 +143,12 @@ protected:
 		const std::string &paramName, const u_int paramCount,
 		const std::string &defaultValue);
 
+	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
+	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
+	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
 	Texture *GetTexture(const luxrays::Property &name);
+	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
+	void CreateObject(const std::string &objName, const luxrays::Properties &props);
 };
 
 }
