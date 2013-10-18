@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
 		//
 		// New syntax
 		scene->CreateCamera(
-				Property("scene.camera.lookat")(1.f , 6.f , 3.f , 0.f , 0.f , .5f) <<
+				Property("scene.camera.lookat")(1.f , 6.f , 3.f)(0.f , 0.f , .5f) <<
 				Property("scene.camera.fieldofview")(60.f));
 
 		// Define texture maps
