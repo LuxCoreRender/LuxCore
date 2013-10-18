@@ -25,6 +25,7 @@
 #include <sstream>
 #include <set>
 #include <vector>
+#include <memory>
 
 #include <boost/detail/container_fwd.hpp>
 #include <boost/lexical_cast.hpp>
@@ -39,6 +40,7 @@
 #include "slg/sampler/sampler.h"
 #include "slg/sdl/scene.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -56,7 +58,7 @@ Scene::Scene() {
 	lightGroupCount = 1;
 }
 
-Scene::Scene(const std::string &fileName, const float imageScale) {
+Scene::Scene(const string &fileName, const float imageScale) {
 	// Just in case there is an unexpected exception during the scene loading
     camera = NULL;
 	envLight = NULL;
@@ -76,7 +78,7 @@ Scene::Scene(const std::string &fileName, const float imageScale) {
 	// Read camera position and target
 	//--------------------------------------------------------------------------
 
-	CreateCamera(scnProp);
+	ParseCamera(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Read all textures
@@ -117,7 +119,7 @@ Scene::Scene(const std::string &fileName, const float imageScale) {
 	//--------------------------------------------------------------------------
 
 	if (!envLight && !sunLight && (triLightDefs.size() == 0))
-		throw std::runtime_error("The scene doesn't include any light source");
+		throw runtime_error("The scene doesn't include any light source");
 
 	UpdateLightGroupCount();
 
@@ -131,7 +133,7 @@ Scene::~Scene() {
 	delete envLight;
 	delete sunLight;
 
-	for (std::vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
+	for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
 		delete *l;
 
 	delete dataSet;
@@ -157,8 +159,8 @@ void Scene::Preprocess(Context *ctx) {
 	dataSet->SetAcceleratorType(accelType);
 
 	// Add all objects
-	const std::vector<ExtMesh *> &objects = meshDefs.GetAllMesh();
-	for (std::vector<ExtMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
+	const vector<ExtMesh *> &objects = meshDefs.GetAllMesh();
+	for (vector<ExtMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
 		dataSet->Add(*obj);
 
 	dataSet->Preprocess();
@@ -190,7 +192,7 @@ void Scene::Preprocess(Context *ctx) {
 		GetLightByIndex(i)->SetSceneIndex(i);
 }
 
-Properties Scene::ToProperties(const std::string &directoryName) {
+Properties Scene::ToProperties(const string &directoryName) {
 		Properties props;
 
 		// Write the camera information
@@ -211,10 +213,10 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 
 		// Write the image map information
 		SDL_LOG("Saving image map information:");
-		std::vector<ImageMap *> ims;
+		vector<ImageMap *> ims;
 		imgMapCache.GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
-			const std::string fileName = directoryName + "/imagemap-" + (boost::format("%05d") % i).str() + ".exr";
+			const string fileName = directoryName + "/imagemap-" + (boost::format("%05d") % i).str() + ".exr";
 			SDL_LOG("  " + fileName);
 			ims[i]->WriteImage(fileName);
 		}
@@ -237,8 +239,8 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 
 		// Write the mesh information
 		SDL_LOG("Saving mesh information:");
-		const std::vector<ExtMesh *> &meshes =  extMeshCache.GetMeshes();
-		std::set<std::string> savedMeshes;
+		const vector<ExtMesh *> &meshes =  extMeshCache.GetMeshes();
+		set<string> savedMeshes;
 		double lastPrint = WallClockTime();
 		for (u_int i = 0; i < meshes.size(); ++i) {
 			if (WallClockTime() - lastPrint > 2.0) {
@@ -252,7 +254,7 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 				meshIndex = extMeshCache.GetExtMeshIndex(m->GetExtTriangleMesh());
 			} else
 				meshIndex = extMeshCache.GetExtMeshIndex(meshes[i]);
-			const std::string fileName = directoryName + "/mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply";
+			const string fileName = directoryName + "/mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply";
 
 			// Check if I have already saved this mesh (mostly useful for instances)
 			if (savedMeshes.find(fileName) == savedMeshes.end()) {
@@ -278,37 +280,37 @@ Properties Scene::ToProperties(const std::string &directoryName) {
 		return props;
 }
 
-std::vector<std::string> Scene::GetStringParameters(const Properties &prop, const std::string &paramName,
-		const u_int paramCount, const std::string &defaultValue) {
-	const std::vector<std::string> vs = prop.GetStringVector(paramName, defaultValue);
+vector<string> Scene::GetStringParameters(const Properties &prop, const string &paramName,
+		const u_int paramCount, const string &defaultValue) {
+	const vector<string> vs = prop.GetStringVector(paramName, defaultValue);
 	if (vs.size() != paramCount) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	return vs;
 }
 
-std::vector<int> Scene::GetIntParameters(const Properties &prop, const std::string &paramName,
-		const u_int paramCount, const std::string &defaultValue) {
-	const std::vector<int> vi = prop.GetIntVector(paramName, defaultValue);
+vector<int> Scene::GetIntParameters(const Properties &prop, const string &paramName,
+		const u_int paramCount, const string &defaultValue) {
+	const vector<int> vi = prop.GetIntVector(paramName, defaultValue);
 	if (vi.size() != paramCount) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	return vi;
 }
 
-std::vector<float> Scene::GetFloatParameters(const Properties &prop, const std::string &paramName,
-		const u_int paramCount, const std::string &defaultValue) {
-	const std::vector<float> vf = prop.GetFloatVector(paramName, defaultValue);
+vector<float> Scene::GetFloatParameters(const Properties &prop, const string &paramName,
+		const u_int paramCount, const string &defaultValue) {
+	const vector<float> vf = prop.GetFloatVector(paramName, defaultValue);
 	if (vf.size() != paramCount) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	return vf;
@@ -318,64 +320,84 @@ std::vector<float> Scene::GetFloatParameters(const Properties &prop, const std::
 // Methods to build a scene from scratch
 //--------------------------------------------------------------------------
 
-void Scene::CreateCamera(const std::string &propsString) {
-	Properties prop;
-	prop.SetFromString(propsString);
+void Scene::ParseCamera(const Properties &props) {
+	if (!props.HaveNames("scene.camera.lookat")) {
+		// There is no camera definition
+		return;
+	}
 
-	CreateCamera(prop);
-}
+	Point orig, target;
+	if (props.IsDefined("scene.camera.lookat")) {
+		SDL_LOG("WARNING: deprecated syntax used in property scene.camera.lookat");
 
-void Scene::CreateCamera(const Properties &props) {
-	std::vector<float> vf = GetFloatParameters(props, "scene.camera.lookat", 6, "10.0 0.0 0.0  0.0 0.0 0.0");
-	Point orig(vf.at(0), vf.at(1), vf.at(2));
-	Point target(vf.at(3), vf.at(4), vf.at(5));
+		const Property &prop = props.Get("scene.camera.lookat");
+		orig.x = prop.GetValue<float>(0);
+		orig.y = prop.GetValue<float>(1);
+		orig.z = prop.GetValue<float>(2);
+		target.x = prop.GetValue<float>(3);
+		target.y = prop.GetValue<float>(4);
+		target.z = prop.GetValue<float>(5);
+	} else {
+		orig = props.Get("scene.camera.lookat.orig").Get<Point>();
+		target = props.Get("scene.camera.lookat.target").Get<Point>();
+	}
 
 	SDL_LOG("Camera position: " << orig);
 	SDL_LOG("Camera target: " << target);
 
-	vf = GetFloatParameters(props, "scene.camera.up", 3, "0.0 0.0 0.1");
-	const Vector up(vf.at(0), vf.at(1), vf.at(2));
+	const Vector up = props.Get("scene.camera.up", MakePropertyValues(0.f, 0.f, .1f)).Get<Vector>();
 
+	auto_ptr<PerspectiveCamera> newCamera;
 	if (props.IsDefined("scene.camera.screenwindow")) {
-		vf = GetFloatParameters(props, "scene.camera.screenwindow", 4, "0.0 1.0 0.0 1.0");
+		float screenWindow[4];
 
-		camera = new PerspectiveCamera(orig, target, up, &vf[0]);
+		const Property &prop = props.Get("scene.camera.screenwindow", MakePropertyValues(0.f, 1.f, 0.f, 1.f));
+		screenWindow[0] = prop.GetValue<float>(0);
+		screenWindow[1] = prop.GetValue<float>(1);
+		screenWindow[2] = prop.GetValue<float>(2);
+		screenWindow[3] = prop.GetValue<float>(3);
+
+		newCamera.reset(new PerspectiveCamera(orig, target, up, &screenWindow[0]));
 	} else
-		camera = new PerspectiveCamera(orig, target, up);
+		newCamera.reset(new PerspectiveCamera(orig, target, up));
 
-	camera->clipHither = props.GetFloat("scene.camera.cliphither", 1e-3f);
-	camera->clipYon = props.GetFloat("scene.camera.clipyon", 1e30f);
-	camera->lensRadius = props.GetFloat("scene.camera.lensradius", 0.f);
-	camera->focalDistance = props.GetFloat("scene.camera.focaldistance", 10.f);
-	camera->fieldOfView = props.GetFloat("scene.camera.fieldofview", 45.f);
+	newCamera->clipHither = props.Get("scene.camera.cliphither", MakePropertyValues(1e-3f)).Get<float>();
+	newCamera->clipYon = props.Get("scene.camera.clipyon", MakePropertyValues(1e30f)).Get<float>();
+	newCamera->lensRadius = props.Get("scene.camera.lensradius", MakePropertyValues(0.f)).Get<float>();
+	newCamera->focalDistance = props.Get("scene.camera.focaldistance", MakePropertyValues(10.f)).Get<float>();
+	newCamera->fieldOfView = props.Get("scene.camera.fieldofview", MakePropertyValues(45.f)).Get<float>();
 
-	if (props.GetBoolean("scene.camera.horizontalstereo.enable", false)) {
+	if (props.Get("scene.camera.horizontalstereo.enable", MakePropertyValues(false)).Get<bool>()) {
 		SDL_LOG("Camera horizontal stereo enabled");
-		camera->SetHorizontalStereo(true);
+		newCamera->SetHorizontalStereo(true);
 
-		const float eyesDistance = props.GetFloat("scene.camera.horizontalstereo.eyesdistance", .0626f);
+		const float eyesDistance = props.Get("scene.camera.horizontalstereo.eyesdistance", MakePropertyValues(.0626f)).Get<float>();
 		SDL_LOG("Camera horizontal stereo eyes distance: " << eyesDistance);
-		camera->SetHorizontalStereoEyesDistance(eyesDistance);
-		const float lesnDistance = props.GetFloat("scene.camera.horizontalstereo.lensdistance", .1f);
+		newCamera->SetHorizontalStereoEyesDistance(eyesDistance);
+		const float lesnDistance = props.Get("scene.camera.horizontalstereo.lensdistance", MakePropertyValues(.1f)).Get<float>();
 		SDL_LOG("Camera horizontal stereo lens distance: " << lesnDistance);
-		camera->SetHorizontalStereoLensDistance(lesnDistance);
-
+		newCamera->SetHorizontalStereoLensDistance(lesnDistance);
 
 		// Check if I have to enable Oculus Rift Barrel post-processing
-		if (props.GetBoolean("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable", false)) {
+		if (props.Get("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable", MakePropertyValues(false)).Get<bool>()) {
 			SDL_LOG("Camera Oculus Rift Barrel post-processing enabled");
-			camera->SetOculusRiftBarrel(true);
+			newCamera->SetOculusRiftBarrel(true);
 		} else {
 			SDL_LOG("Camera Oculus Rift Barrel post-processing disabled");
-			camera->SetOculusRiftBarrel(false);
+			newCamera->SetOculusRiftBarrel(false);
 		}
 	} else {
 		SDL_LOG("Camera horizontal stereo disabled");
-		camera->SetHorizontalStereo(false);
+		newCamera->SetHorizontalStereo(false);
 	}
+
+	// Use the new camera
+	delete camera;
+	camera = newCamera.get();
+	newCamera.release();
 }
 
-void Scene::DefineTextures(const std::string &propsString) {
+void Scene::DefineTextures(const string &propsString) {
 	Properties prop;
 	prop.SetFromString(propsString);
 
@@ -383,20 +405,20 @@ void Scene::DefineTextures(const std::string &propsString) {
 }
 
 void Scene::DefineTextures(const Properties &props) {
-	std::vector<std::string> texKeys = props.GetAllNames("scene.textures.");
+	vector<string> texKeys = props.GetAllNames("scene.textures.");
 	if (texKeys.size() == 0)
 		return;
 
-	for (std::vector<std::string>::const_iterator matKey = texKeys.begin(); matKey != texKeys.end(); ++matKey) {
-		const std::string &key = *matKey;
-		const size_t dot1 = key.find(".", std::string("scene.textures.").length());
-		if (dot1 == std::string::npos)
+	for (vector<string>::const_iterator matKey = texKeys.begin(); matKey != texKeys.end(); ++matKey) {
+		const string &key = *matKey;
+		const size_t dot1 = key.find(".", string("scene.textures.").length());
+		if (dot1 == string::npos)
 			continue;
 
 		// Extract the material name
-		const std::string texName = Property::ExtractField(key, 2);
+		const string texName = Property::ExtractField(key, 2);
 		if (texName == "")
-			throw std::runtime_error("Syntax error in texture definition: " + texName);
+			throw runtime_error("Syntax error in texture definition: " + texName);
 
 		// Check if it is a new material root otherwise skip
 		if (texDefs.IsTextureDefined(texName))
@@ -409,7 +431,7 @@ void Scene::DefineTextures(const Properties &props) {
 	}
 }
 
-void Scene::DefineMaterials(const std::string &propsString) {
+void Scene::DefineMaterials(const string &propsString) {
 	Properties prop;
 	prop.SetFromString(propsString);
 
@@ -417,20 +439,20 @@ void Scene::DefineMaterials(const std::string &propsString) {
 }
 
 void Scene::DefineMaterials(const Properties &props) {
-	std::vector<std::string> matKeys = props.GetAllNames("scene.materials.");
+	vector<string> matKeys = props.GetAllNames("scene.materials.");
 	if (matKeys.size() == 0)
-		throw std::runtime_error("No material definition found");
+		throw runtime_error("No material definition found");
 
-	for (std::vector<std::string>::const_iterator matKey = matKeys.begin(); matKey != matKeys.end(); ++matKey) {
-		const std::string &key = *matKey;
-		const size_t dot1 = key.find(".", std::string("scene.materials.").length());
-		if (dot1 == std::string::npos)
+	for (vector<string>::const_iterator matKey = matKeys.begin(); matKey != matKeys.end(); ++matKey) {
+		const string &key = *matKey;
+		const size_t dot1 = key.find(".", string("scene.materials.").length());
+		if (dot1 == string::npos)
 			continue;
 
 		// Extract the material name
-		const std::string matName = Property::ExtractField(key, 2);
+		const string matName = Property::ExtractField(key, 2);
 		if (matName == "")
-			throw std::runtime_error("Syntax error in material definition: " + matName);
+			throw runtime_error("Syntax error in material definition: " + matName);
 
 		// Check if it is a new material root otherwise skip
 		if (matDefs.IsMaterialDefined(matName))
@@ -447,14 +469,14 @@ void Scene::DefineMaterials(const Properties &props) {
 	}
 }
 
-void Scene::UpdateMaterial(const std::string &name, const std::string &propsString) {
+void Scene::UpdateMaterial(const string &name, const string &propsString) {
 	Properties prop;
 	prop.SetFromString(propsString);
 
 	UpdateMaterial(name, prop);
 }
 
-void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
+void Scene::UpdateMaterial(const string &name, const Properties &props) {
 	//SDL_LOG("Updating material " << name << " with:\n" << props.ToString());
 
 	// Look for old material
@@ -476,8 +498,8 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 	// Check if old and/or the new material were/is light sources
 	if (wasLightSource || newMat->IsLightSource()) {
 		// I have to build a new version of lights and triangleLightSource
-		std::vector<TriangleLight *> newTriLights;
-		std::vector<u_int> newMeshTriLightOffset;
+		vector<TriangleLight *> newTriLights;
+		vector<u_int> newMeshTriLightOffset;
 
 		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
 			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
@@ -494,7 +516,7 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 		}
 
 		// Delete all old TriangleLight
-		for (std::vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
+		for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
 			delete *l;
 
 		// Use the new versions
@@ -503,8 +525,8 @@ void Scene::UpdateMaterial(const std::string &name, const Properties &props) {
 	}
 }
 
-void Scene::AddObject(const std::string &objName, const std::string &meshName,
-		const std::string &propsString) {
+void Scene::AddObject(const string &objName, const string &meshName,
+		const string &propsString) {
 	Properties prop;
 	prop.SetFromString("scene.objects." + objName + ".ply = " + meshName + "\n");
 	prop.SetFromString(propsString);
@@ -512,18 +534,18 @@ void Scene::AddObject(const std::string &objName, const std::string &meshName,
 	AddObject(objName, prop);
 }
 
-void Scene::AddObject(const std::string &objName, const Properties &props) {
-	const std::string key = "scene.objects." + objName;
+void Scene::AddObject(const string &objName, const Properties &props) {
+	const string key = "scene.objects." + objName;
 
 	// Extract the material name
-	const std::string matName = GetStringParameters(props, key + ".material", 1, "").at(0);
+	const string matName = GetStringParameters(props, key + ".material", 1, "").at(0);
 	if (matName == "")
-		throw std::runtime_error("Syntax error in object material reference: " + objName);
+		throw runtime_error("Syntax error in object material reference: " + objName);
 
 	// Build the object
-	const std::string plyFileName = GetStringParameters(props, key + ".ply", 1, "").at(0);
+	const string plyFileName = GetStringParameters(props, key + ".ply", 1, "").at(0);
 	if (plyFileName == "")
-		throw std::runtime_error("Syntax error in object .ply file name: " + objName);
+		throw runtime_error("Syntax error in object .ply file name: " + objName);
 
 	// Check if I have to calculate normal or not
 	const bool usePlyNormals = props.GetBoolean(key + ".useplynormals", false);
@@ -531,7 +553,7 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 	// Check if I have to use an instance mesh or not
 	ExtMesh *meshObject;
 	if (props.IsDefined(key + ".transformation")) {
-		const std::vector<float> vf = GetFloatParameters(props, key + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const vector<float> vf = GetFloatParameters(props, key + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
 				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
 				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
@@ -547,7 +569,7 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 
 	// Get the material
 	if (!matDefs.IsMaterialDefined(matName))
-		throw std::runtime_error("Unknown material: " + matName);
+		throw runtime_error("Unknown material: " + matName);
 	Material *mat = matDefs.GetMaterial(matName);
 
 	// Check if it is a light sources
@@ -564,7 +586,7 @@ void Scene::AddObject(const std::string &objName, const Properties &props) {
 		meshTriLightDefsOffset.push_back(NULL_INDEX);
 }
 
-void Scene::UpdateObjectTransformation(const std::string &objName, const Transform &trans) {
+void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
 	ExtMesh *mesh = meshDefs.GetExtMesh(objName);
 
 	ExtInstanceTriangleMesh *instanceMesh = dynamic_cast<ExtInstanceTriangleMesh *>(mesh);
@@ -582,7 +604,7 @@ void Scene::UpdateObjectTransformation(const std::string &objName, const Transfo
 	}
 }
 
-void Scene::AddObjects(const std::string &propsString) {
+void Scene::AddObjects(const string &propsString) {
 	Properties prop;
 	prop.SetFromString(propsString);
 
@@ -590,22 +612,22 @@ void Scene::AddObjects(const std::string &propsString) {
 }
 
 void Scene::AddObjects(const Properties &props) {
-	std::vector<std::string> objKeys = props.GetAllNames("scene.objects.");
+	vector<string> objKeys = props.GetAllNames("scene.objects.");
 	if (objKeys.size() == 0)
-		throw std::runtime_error("Unable to find object definitions");
+		throw runtime_error("Unable to find object definitions");
 
 	double lastPrint = WallClockTime();
 	u_int objCount = 0;
-	for (std::vector<std::string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
-		const std::string &key = *objKey;
-		const size_t dot1 = key.find(".", std::string("scene.objects.").length());
-		if (dot1 == std::string::npos)
+	for (vector<string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
+		const string &key = *objKey;
+		const size_t dot1 = key.find(".", string("scene.objects.").length());
+		if (dot1 == string::npos)
 			continue;
 
 		// Extract the object name
-		const std::string objName = Property::ExtractField(key, 2);
+		const string objName = Property::ExtractField(key, 2);
 		if (objName == "")
-			throw std::runtime_error("Syntax error in " + key);
+			throw runtime_error("Syntax error in " + key);
 
 		// Check if it is a new object root otherwise skip
 		if (meshDefs.IsExtMeshDefined(objName))
@@ -623,7 +645,7 @@ void Scene::AddObjects(const Properties &props) {
 	SDL_LOG("PLY object count: " << objCount);
 }
 
-void Scene::AddInfiniteLight(const std::string &propsString) {
+void Scene::AddInfiniteLight(const string &propsString) {
 	Properties prop;
 	prop.SetFromString(propsString);
 
@@ -631,13 +653,13 @@ void Scene::AddInfiniteLight(const std::string &propsString) {
 }
 
 void Scene::AddInfiniteLight(const Properties &props) {
-	const std::vector<std::string> ilParams = props.GetStringVector("scene.infinitelight.file", "");
+	const vector<string> ilParams = props.GetStringVector("scene.infinitelight.file", "");
 
 	if (ilParams.size() > 0) {
 		if (envLight)
-			throw std::runtime_error("Can not define an infinitelight when there is already an skylight defined");
+			throw runtime_error("Can not define an infinitelight when there is already an skylight defined");
 
-		std::vector<float> vf = GetFloatParameters(props, "scene.infinitelight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		vector<float> vf = GetFloatParameters(props, "scene.infinitelight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
 				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
 				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
@@ -667,7 +689,7 @@ void Scene::AddInfiniteLight(const Properties &props) {
 		envLight = NULL;
 }
 
-void Scene::AddSkyLight(const std::string &propsString) {
+void Scene::AddSkyLight(const string &propsString) {
 	Properties prop;
 	prop.SetFromString(propsString);
 
@@ -675,13 +697,13 @@ void Scene::AddSkyLight(const std::string &propsString) {
 }
 
 void Scene::AddSkyLight(const Properties &props) {
-	const std::vector<std::string> silParams = props.GetStringVector("scene.skylight.dir", "");
+	const vector<string> silParams = props.GetStringVector("scene.skylight.dir", "");
 
 	if (silParams.size() > 0) {
 		if (envLight)
-			throw std::runtime_error("Can not define a skylight when there is already an infinitelight defined");
+			throw runtime_error("Can not define a skylight when there is already an infinitelight defined");
 
-		std::vector<float> vf = GetFloatParameters(props, "scene.skylight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		vector<float> vf = GetFloatParameters(props, "scene.skylight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
 				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
 				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
@@ -689,9 +711,9 @@ void Scene::AddSkyLight(const Properties &props) {
 				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
 		const Transform light2World(mat);
 
-		std::vector<float> sdir = GetFloatParameters(props, "scene.skylight.dir", 3, "0.0 0.0 1.0");
+		vector<float> sdir = GetFloatParameters(props, "scene.skylight.dir", 3, "0.0 0.0 1.0");
 		const float turb = props.GetFloat("scene.skylight.turbidity", 2.2f);
-		std::vector<float> gain = GetFloatParameters(props, "scene.skylight.gain", 3, "1.0 1.0 1.0");
+		vector<float> gain = GetFloatParameters(props, "scene.skylight.gain", 3, "1.0 1.0 1.0");
 
 		SkyLight *sl = new SkyLight(light2World, turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
@@ -706,7 +728,7 @@ void Scene::AddSkyLight(const Properties &props) {
 	}
 }
 
-void Scene::AddSunLight(const std::string &propsString) {
+void Scene::AddSunLight(const string &propsString) {
 	Properties prop;
 	prop.SetFromString(propsString);
 
@@ -714,9 +736,9 @@ void Scene::AddSunLight(const std::string &propsString) {
 }
 
 void Scene::AddSunLight(const Properties &props) {
-	const std::vector<std::string> sulParams = props.GetStringVector("scene.sunlight.dir", "");
+	const vector<string> sulParams = props.GetStringVector("scene.sunlight.dir", "");
 	if (sulParams.size() > 0) {
-		std::vector<float> vf = GetFloatParameters(props, "scene.sunlight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		vector<float> vf = GetFloatParameters(props, "scene.sunlight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
 				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
 				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
@@ -724,10 +746,10 @@ void Scene::AddSunLight(const Properties &props) {
 				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
 		const Transform light2World(mat);
 
-		std::vector<float> sdir = GetFloatParameters(props, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
+		vector<float> sdir = GetFloatParameters(props, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
 		const float turb = props.GetFloat("scene.sunlight.turbidity", 2.2f);
 		const float relSize = props.GetFloat("scene.sunlight.relsize", 1.0f);
-		std::vector<float> gain = GetFloatParameters(props, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
+		vector<float> gain = GetFloatParameters(props, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
 
 		SunLight *sl = new SunLight(light2World, turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
 		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
@@ -745,13 +767,13 @@ void Scene::AddSunLight(const Properties &props) {
 
 void Scene::RemoveUnusedMaterials() {
 	// Build a list of all referenced material names
-	std::set<const Material *> referencedMats;
-	for (std::vector<Material *>::const_iterator it = objectMaterials.begin(); it < objectMaterials.end(); ++it)
+	set<const Material *> referencedMats;
+	for (vector<Material *>::const_iterator it = objectMaterials.begin(); it < objectMaterials.end(); ++it)
 		(*it)->AddReferencedMaterials(referencedMats);
 
 	// Get the list of all defined material
-	std::vector<std::string> definedMats = matDefs.GetMaterialNames();
-	for (std::vector<std::string>::const_iterator it = definedMats.begin(); it < definedMats.end(); ++it) {
+	vector<string> definedMats = matDefs.GetMaterialNames();
+	for (vector<string>::const_iterator it = definedMats.begin(); it < definedMats.end(); ++it) {
 		Material *m = matDefs.GetMaterial(*it);
 
 		if (referencedMats.count(m) == 0) {
@@ -763,13 +785,13 @@ void Scene::RemoveUnusedMaterials() {
 
 void Scene::RemoveUnusedTextures() {
 	// Build a list of all referenced textures names
-	std::set<const Texture *> referencedTexs;
-	for (std::vector<Material *>::const_iterator it = objectMaterials.begin(); it < objectMaterials.end(); ++it)
+	set<const Texture *> referencedTexs;
+	for (vector<Material *>::const_iterator it = objectMaterials.begin(); it < objectMaterials.end(); ++it)
 		(*it)->AddReferencedTextures(referencedTexs);
 
 	// Get the list of all defined material
-	std::vector<std::string> definedTexs = texDefs.GetTextureNames();
-	for (std::vector<std::string>::const_iterator it = definedTexs.begin(); it < definedTexs.end(); ++it) {
+	vector<string> definedTexs = texDefs.GetTextureNames();
+	for (vector<string>::const_iterator it = definedTexs.begin(); it < definedTexs.end(); ++it) {
 		Texture *t = texDefs.GetTexture(*it);
 
 		if (referencedTexs.count(t) == 0) {
@@ -781,23 +803,23 @@ void Scene::RemoveUnusedTextures() {
 
 //------------------------------------------------------------------------------
 
-TextureMapping2D *Scene::CreateTextureMapping2D(const std::string &prefixName, const Properties &props) {
-	const std::string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping2d").at(0);
+TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const Properties &props) {
+	const string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping2d").at(0);
 
 	if (mapType == "uvmapping2d") {
-		const std::vector<float> uvScale = GetFloatParameters(props, prefixName + ".uvscale", 2, "1.0 1.0");
-		const std::vector<float> uvDelta = GetFloatParameters(props, prefixName + ".uvdelta", 2, "0.0 0.0");
+		const vector<float> uvScale = GetFloatParameters(props, prefixName + ".uvscale", 2, "1.0 1.0");
+		const vector<float> uvDelta = GetFloatParameters(props, prefixName + ".uvdelta", 2, "0.0 0.0");
 
 		return new UVMapping2D(uvScale.at(0), uvScale.at(1), uvDelta.at(0), uvDelta.at(1));
 	} else
-		throw std::runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
+		throw runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
 }
 
-TextureMapping3D *Scene::CreateTextureMapping3D(const std::string &prefixName, const Properties &props) {
-	const std::string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping3d").at(0);
+TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const Properties &props) {
+	const string mapType = GetStringParameters(props, prefixName + ".type", 1, "uvmapping3d").at(0);
 
 	if (mapType == "uvmapping3d") {
-		const std::vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
 				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
 				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
@@ -807,7 +829,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const std::string &prefixName, c
 
 		return new UVMapping3D(trans);
 	} else if (mapType == "globalmapping3d") {
-		const std::vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
+		const vector<float> vf = GetFloatParameters(props, prefixName + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
 		const Matrix4x4 mat(
 				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
 				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
@@ -817,63 +839,63 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const std::string &prefixName, c
 
 		return new GlobalMapping3D(trans);
 	} else
-		throw std::runtime_error("Unknown 3D texture coordinate mapping type: " + mapType);
+		throw runtime_error("Unknown 3D texture coordinate mapping type: " + mapType);
 }
 
-Texture *Scene::CreateTexture(const std::string &texName, const Properties &props) {
-	const std::string propName = "scene.textures." + texName;
-	const std::string texType = GetStringParameters(props, propName + ".type", 1, "imagemap").at(0);
+Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
+	const string propName = "scene.textures." + texName;
+	const string texType = GetStringParameters(props, propName + ".type", 1, "imagemap").at(0);
 
 	if (texType == "imagemap") {
-		const std::vector<std::string> vname = GetStringParameters(props, propName + ".file", 1, "");
+		const vector<string> vname = GetStringParameters(props, propName + ".file", 1, "");
 		if (vname.at(0) == "")
-			throw std::runtime_error("Missing image map file name for texture: " + texName);
+			throw runtime_error("Missing image map file name for texture: " + texName);
 
-		const std::vector<float> gamma = GetFloatParameters(props, propName + ".gamma", 1, "2.2");
-		const std::vector<float> gain = GetFloatParameters(props, propName + ".gain", 1, "1.0");
+		const vector<float> gamma = GetFloatParameters(props, propName + ".gamma", 1, "2.2");
+		const vector<float> gain = GetFloatParameters(props, propName + ".gain", 1, "1.0");
 
 		ImageMap *im = imgMapCache.GetImageMap(vname.at(0), gamma.at(0));
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain.at(0));
 	} else if (texType == "constfloat1") {
-		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 1, "1.0");
+		const vector<float> v = GetFloatParameters(props, propName + ".value", 1, "1.0");
 		return new ConstFloatTexture(v.at(0));
 	} else if (texType == "constfloat3") {
-		const std::vector<float> v = GetFloatParameters(props, propName + ".value", 3, "1.0 1.0 1.0");
+		const vector<float> v = GetFloatParameters(props, propName + ".value", 3, "1.0 1.0 1.0");
 		return new ConstFloat3Texture(Spectrum(v.at(0), v.at(1), v.at(2)));
 	} else if (texType == "scale") {
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
+		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
+		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 		return new ScaleTexture(tex1, tex2);
 	} else if (texType == "fresnelapproxn") {
-		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "0.5 0.5 0.5").at(0);
+		const string texName = GetStringParameters(props, propName + ".texture", 1, "0.5 0.5 0.5").at(0);
 		const Texture *tex = GetTexture(texName);
 		return new FresnelApproxNTexture(tex);
 	} else if (texType == "fresnelapproxk") {
-		const std::string texName = GetStringParameters(props, propName + ".texture", 1, "0.5 0.5 0.5").at(0);
+		const string texName = GetStringParameters(props, propName + ".texture", 1, "0.5 0.5 0.5").at(0);
 		const Texture *tex = GetTexture(texName);
 		return new FresnelApproxKTexture(tex);
 	} else if (texType == "checkerboard2d") {
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
+		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
+		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new CheckerBoard2DTexture(CreateTextureMapping2D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "checkerboard3d") {
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
+		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
+		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "0.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "mix") {
-		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
+		const string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
 		const Texture *amtTex = GetTexture(amtName);
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "0.0").at(0);
+		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "0.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
+		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 
 		return new MixTexture(amtTex, tex1, tex2);
@@ -890,21 +912,21 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 
 		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else if (texType == "dots") {
-		const std::string insideTexName = GetStringParameters(props, propName + ".inside", 1, "1.0").at(0);
+		const string insideTexName = GetStringParameters(props, propName + ".inside", 1, "1.0").at(0);
 		const Texture *insideTex = GetTexture(insideTexName);
-		const std::string outsideTexName = GetStringParameters(props, propName + ".outside", 1, "0.0").at(0);
+		const string outsideTexName = GetStringParameters(props, propName + ".outside", 1, "0.0").at(0);
 		const Texture *outsideTex = GetTexture(outsideTexName);
 
 		return new DotsTexture(CreateTextureMapping2D(propName + ".mapping", props), insideTex, outsideTex);
 	} else if (texType == "brick") {
-		const std::string tex1Name = GetStringParameters(props, propName + ".bricktex", 1, "1.0 1.0 1.0").at(0);
+		const string tex1Name = GetStringParameters(props, propName + ".bricktex", 1, "1.0 1.0 1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".mortartex", 1, "0.2 0.2 0.2").at(0);
+		const string tex2Name = GetStringParameters(props, propName + ".mortartex", 1, "0.2 0.2 0.2").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
-		const std::string tex3Name = GetStringParameters(props, propName + ".brickmodtex", 1, "1.0 1.0 1.0").at(0);
+		const string tex3Name = GetStringParameters(props, propName + ".brickmodtex", 1, "1.0 1.0 1.0").at(0);
 		const Texture *tex3 = GetTexture(tex3Name);
 
-		const std::string brickbond = GetStringParameters(props, propName + ".brickbond", 1, "running").at(0);
+		const string brickbond = GetStringParameters(props, propName + ".brickbond", 1, "running").at(0);
 		const float brickwidth = GetFloatParameters(props, propName + ".brickwidth", 1, "0.3").at(0);
 		const float brickheight = GetFloatParameters(props, propName + ".brickheight", 1, "0.1").at(0);
 		const float brickdepth = GetFloatParameters(props, propName + ".brickdepth", 1, "0.15").at(0);
@@ -915,9 +937,9 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		return new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
 				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
 	} else if (texType == "add") {
-		const std::string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
+		const string tex1Name = GetStringParameters(props, propName + ".texture1", 1, "1.0").at(0);
 		const Texture *tex1 = GetTexture(tex1Name);
-		const std::string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
+		const string tex2Name = GetStringParameters(props, propName + ".texture2", 1, "1.0").at(0);
 		const Texture *tex2 = GetTexture(tex2Name);
 		return new AddTexture(tex1, tex2);
 	} else if (texType == "windy") {
@@ -930,21 +952,21 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 	} else if (texType == "uv") {
 		return new UVTexture(CreateTextureMapping2D(propName + ".mapping", props));
 	} else if (texType == "band") {
-		const std::string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
+		const string amtName = GetStringParameters(props, propName + ".amount", 1, "0.5").at(0);
 		const Texture *amtTex = GetTexture(amtName);
 
 		vector<float> offsets;
 		vector<Spectrum> values;
 		for (u_int i = 0; props.IsDefined(propName + ".offset" + ToString(i)); ++i) {
 			const float offset = GetFloatParameters(props, propName + ".offset" + ToString(i), 1, "0.0").at(0);
-			const std::vector<float> v = GetFloatParameters(props, propName + ".value" + ToString(i), 3, "1.0 1.0 1.0");
+			const vector<float> v = GetFloatParameters(props, propName + ".value" + ToString(i), 3, "1.0 1.0 1.0");
 			const Spectrum value(v.at(0), v.at(1), v.at(2));
 
 			offsets.push_back(offset);
 			values.push_back(value);
 		}
 		if (offsets.size() == 0)
-			throw std::runtime_error("Empty Band texture: " + texName);
+			throw runtime_error("Empty Band texture: " + texName);
 
 		return new BandTexture(amtTex, offsets, values);
 	} else if (texType == "hitpointcolor") {
@@ -955,22 +977,22 @@ Texture *Scene::CreateTexture(const std::string &texName, const Properties &prop
 		const int channel = GetIntParameters(props, propName + ".channel", 1, "-1").at(0);
 
 		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ? 
-			std::numeric_limits<u_int>::max() : static_cast<u_int>(channel));
+			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
 	} else
-		throw std::runtime_error("Unknown texture type: " + texType);
+		throw runtime_error("Unknown texture type: " + texType);
 }
 
-Texture *Scene::GetTexture(const std::string &name) {
+Texture *Scene::GetTexture(const string &name) {
 	if (texDefs.IsTextureDefined(name))
 		return texDefs.GetTexture(name);
 	else {
 		// Check if it is an implicit declaration of a constant texture
 		try {
-			std::vector<std::string> strs;
+			vector<string> strs;
 			boost::split(strs, name, boost::is_any_of("\t "));
 
-			std::vector<float> floats;
-			for (std::vector<std::string>::iterator it = strs.begin(); it != strs.end(); ++it) {
+			vector<float> floats;
+			for (vector<string>::iterator it = strs.begin(); it != strs.end(); ++it) {
 				if (it->length() != 0) {
 					const double f = boost::lexical_cast<double>(*it);
 					floats.push_back(static_cast<float>(f));
@@ -979,26 +1001,26 @@ Texture *Scene::GetTexture(const std::string &name) {
 
 			if (floats.size() == 1) {
 				ConstFloatTexture *tex = new ConstFloatTexture(floats.at(0));
-				texDefs.DefineTexture("Implicit-ConstFloatTexture-" + boost::lexical_cast<std::string>(tex), tex);
+				texDefs.DefineTexture("Implicit-ConstFloatTexture-" + boost::lexical_cast<string>(tex), tex);
 
 				return tex;
 			} else if (floats.size() == 3) {
 				ConstFloat3Texture *tex = new ConstFloat3Texture(Spectrum(floats.at(0), floats.at(1), floats.at(2)));
-				texDefs.DefineTexture("Implicit-ConstFloatTexture3-" + boost::lexical_cast<std::string>(tex), tex);
+				texDefs.DefineTexture("Implicit-ConstFloatTexture3-" + boost::lexical_cast<string>(tex), tex);
 
 				return tex;
 			} else
-				throw std::runtime_error("Wrong number of arguments in the implicit definition of a constant texture: " +
-						boost::lexical_cast<std::string>(floats.size()));
+				throw runtime_error("Wrong number of arguments in the implicit definition of a constant texture: " +
+						boost::lexical_cast<string>(floats.size()));
 		} catch (boost::bad_lexical_cast) {
-			throw std::runtime_error("Syntax error in texture name: " + name);
+			throw runtime_error("Syntax error in texture name: " + name);
 		}
 	}
 }
 
-Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &matName, const Properties &props) {
-	const std::string propName = "scene.materials." + matName;
-	const std::string matType = GetStringParameters(props, propName + ".type", 1, "matte").at(0);
+Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName, const Properties &props) {
+	const string propName = "scene.materials." + matName;
+	const string matType = GetStringParameters(props, propName + ".type", 1, "matte").at(0);
 
 	Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
 		GetTexture(props.GetString(propName + ".emission", "0.0 0.0 0.0")) : NULL;
@@ -1052,7 +1074,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 		// (Note: this can not really happen at the moment because forward
 		// declarations are not supported)
 		if (mixMat->IsReferencing(mixMat))
-			throw std::runtime_error("There is a loop in Mix material definition: " + matName);
+			throw runtime_error("There is a loop in Mix material definition: " + matName);
 
 		mat = mixMat;
 	} else if (matType == "null") {
@@ -1079,7 +1101,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 
 		Texture *eta, *k;
 		if (props.IsDefined(propName + ".preset")) {
-			const std::string type = props.GetString(propName + ".preset", "aluminium");
+			const string type = props.GetString(propName + ".preset", "aluminium");
 
 			if (type == "aluminium") {
 				eta = GetTexture("1.697 0.879833 0.530174");
@@ -1097,7 +1119,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 				eta = GetTexture("2.94553 2.22816 1.98665");
 				k = GetTexture("0.876641 0.799505 0.821194");
 			} else
-				throw std::runtime_error("Unknown Metal2 preset: " + type);
+				throw runtime_error("Unknown Metal2 preset: " + type);
 		} else {
 			eta = GetTexture(props.GetString(propName + ".n", "0.5 0.5 0.5"));
 			k = GetTexture(props.GetString(propName + ".k", "0.5 0.5 0.5"));
@@ -1114,7 +1136,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const std::string &mat
 
 		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
 	} else
-		throw std::runtime_error("Unknown material type: " + matType);
+		throw runtime_error("Unknown material type: " + matType);
 
 	mat->SetID(props.GetInt(propName + ".id", defaultMatID));
 	mat->SetLightID(props.GetInt(propName + ".emission.id", 0));

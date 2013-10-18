@@ -109,6 +109,24 @@ template<class T0, class T1, class T2> PropertyValues MakePropertyValues(const T
 	values.push_back(val2);
    return values;
 }
+/*!
+ * \brief Create a list of values to be used by a Property.
+ *
+ * \param val0 is the value to use.
+ * \param val1 is the value to use.
+ * \param val2 is the value to use.
+ * \param val3 is the value to use.
+ * 
+ * \return a PropertyValues.
+ */
+template<class T0, class T1, class T2, class T3> PropertyValues MakePropertyValues(const T0 &val0, const T1 &val1, const T2 &val2, const T3 &val3) {
+	PropertyValues values;
+	values.push_back(val0);
+	values.push_back(val1);
+	values.push_back(val2);
+	values.push_back(val3);
+   return values;
+}
 
 /*!
  * \brief A generic container for values.
@@ -351,6 +369,23 @@ public:
 		return Add(val0).Add(val1).Add(val2);
 	}
 	/*!
+	 * \brief Adds a value to a property.
+	 *
+	 * It can be used to write expressions like:
+	 * 
+	 * > Property("test1.prop1")(1.f, 2.f, 3.f, 4.f)
+	 * 
+	 * \param val0 is the value to assign as first item.
+	 * \param val1 is the value to assign as second item.
+	 * \param val2 is the value to assign as third item.
+	 * \param val3 is the value to assign as forth item.
+	 * 
+	 * \return a reference to the modified property.
+	 */
+	template<class T0, class T1, class T2, class T3> Property &operator()(const T0 &val0, const T1 &val1, const T2 &val2, const T3 &val3) {
+		return Add(val0).Add(val1).Add(val2).Add(val3);
+	}
+	/*!
 	 * \brief Initializes a property with (only) the given value.
 	 * 
 	 * \return a reference to the modified property.
@@ -564,6 +599,14 @@ public:
 	 * \return a vector of Property names.
 	 */
 	std::vector<std::string> GetAllUniqueSubNames(const std::string &prefix) const;
+	/*!
+	 * \brief Returns if there are Property starting for specific prefix.
+	 *
+	 * \param prefix of the Property to look for.
+	 *
+	 * \return true if there is at least on Property starting for the prefix.
+	 */
+	bool HaveNames(const std::string &prefix) const;
 	/*!
 	 * \brief Returns a property.
 	 *

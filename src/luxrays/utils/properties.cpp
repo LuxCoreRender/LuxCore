@@ -377,6 +377,15 @@ vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
 	return namesSubset;
 }
 
+bool Properties::HaveNames(const std::string &prefix) const {
+	BOOST_FOREACH(const string &name, names) {
+		if (name.find(prefix) == 0)
+			return true;
+	}
+
+	return false;
+}
+
 bool Properties::IsDefined(const string &propName) const {
 	return (props.count(propName) != 0);
 }

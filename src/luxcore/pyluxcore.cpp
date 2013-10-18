@@ -219,6 +219,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetAllNames", &Properties_GetAllNames1)
 		.def("GetAllNames", &Properties_GetAllNames2)
 		.def("GetAllUniqueSubNames", &Properties_GetAllUniqueSubNames)
+		.def("HaveNames", &luxrays::Properties::HaveNames)
 
 		.def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
 			("Get", &luxrays::Properties::Get, return_internal_reference<>())
