@@ -49,7 +49,7 @@ namespace luxrays {
 //------------------------------------------------------------------------------
 
 /*!
- * \brief Values that can be stored in a Property.
+ * \brief Value that can be stored in a Property.
  *
  * The current list of allowed data types is:
  * - bool
@@ -61,6 +61,54 @@ namespace luxrays {
  * - string
  */
 typedef boost::variant<bool, int, u_int, float, double, size_t, std::string> PropertyValue;
+
+/*!
+ * \brief A vector of values that can be stored in a Property.
+ */
+typedef std::vector<PropertyValue> PropertyValues;
+
+/*!
+ * \brief Create a list of values to be used by a Property.
+ *
+ * \param val0 is the value to use.
+ * 
+ * \return a PropertyValues.
+ */
+template<class T0> PropertyValues MakePropertyValues(const T0 &val0) {
+	PropertyValues values;
+	values.push_back(val0);
+   return values;
+}
+/*!
+ * \brief Create a list of values to be used by a Property.
+ *
+ * \param val0 is the value to use.
+ * \param val1 is the value to use.
+ * 
+ * \return a PropertyValues.
+ */
+template<class T0, class T1> PropertyValues MakePropertyValues(const T0 &val0, const T1 &val1) {
+	PropertyValues values;
+	values.push_back(val0);
+	values.push_back(val1);
+   return values;
+}
+/*!
+ * \brief Create a list of values to be used by a Property.
+ *
+ * \param val0 is the value to use.
+ * \param val1 is the value to use.
+ * \param val2 is the value to use.
+ * 
+ * \return a PropertyValues.
+ */
+template<class T0, class T1, class T2> PropertyValues MakePropertyValues(const T0 &val0, const T1 &val1, const T2 &val2) {
+	PropertyValues values;
+	values.push_back(val0);
+	values.push_back(val1);
+	values.push_back(val2);
+   return values;
+}
 
 /*!
  * \brief A generic container for values.
@@ -98,6 +146,17 @@ public:
 	 * \param val is the value of the new property.
 	 */
 	Property(const std::string &propName, const PropertyValue &val);
+	/*!
+	 * \brief Constructs a new property with a given name and values.
+	 *
+	 * Constructs a new empty property where the property name is initialized to
+	 * \p propName and the vector of values is initialize with the values
+	 * of \p vals.
+	 *
+	 * \param propName is the name of the new property.
+	 * \param vals is the value of the new property.
+	 */
+	Property(const std::string &propName, const PropertyValues &vals);
 	~Property();
 
 	/*!
@@ -292,25 +351,6 @@ public:
 		return Add(val0).Add(val1).Add(val2);
 	}
 	/*!
-	 * \brief Adds a value to a property.
-	 *
-	 * It can be used to write expressions like:
-	 * 
-	 * > Property("test1.prop1")(1.f, 2.f, 3.f, 4.f, 5.f, 6.f)
-	 * 
-	 * \param val0 is the value to assign as first item.
-	 * \param val1 is the value to assign as second item.
-	 * \param val2 is the value to assign as third item.
-	 * \param val3 is the value to assign as third item.
-	 * \param val4 is the value to assign as third item.
-	 * \param val5 is the value to assign as third item.
-	 * 
-	 * \return a reference to the modified property.
-	 */
-	template<class T0, class T1, class T2, class T3, class T4, class T5> Property &operator()(const T0 &val0, const T1 &val1, const T2 &val2, const T3 &val3, const T4 &val4, const T5 &val5) {
-		return Add(val0).Add(val1).Add(val2).Add(val3).Add(val4).Add(val5);
-	}
-	/*!
 	 * \brief Initializes a property with (only) the given value.
 	 * 
 	 * \return a reference to the modified property.
@@ -371,7 +411,7 @@ private:
 	};
 
 	std::string name;
-	std::vector<PropertyValue> values;
+	PropertyValues values;
 };	
 
 // Basic types
@@ -538,11 +578,11 @@ public:
 	 * \brief Returns a property if it has been defined or the default value.
 	 *
 	 * \param propName is the name of the Property to return.
-	 * \param defaultProp the Property to return if it has not been defined.
+	 * \param defaultValues the Property to return if it has not been defined.
 	 *
 	 * \return a Property.
 	 */
-	const Property Get(const std::string &propName, const Property &defaultProp) const;
+	const Property Get(const std::string &propName, const PropertyValues &defaultValues) const;
 
 	bool IsDefined(const std::string &propName) const;
 	void Delete(const std::string &propName);

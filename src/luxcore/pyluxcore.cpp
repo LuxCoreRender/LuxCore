@@ -115,6 +115,33 @@ static boost::python::list Properties_GetAllUniqueSubNames(luxrays::Properties *
 	return l;
 }
 
+static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *props,
+		const string &name, boost::python::list &l) {
+	luxrays::PropertyValues values;
+	
+	const boost::python::ssize_t size = len(l);
+	for (boost::python::ssize_t i = 0; i < size; ++i) {
+		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+
+		if (objType == "bool") {
+			const bool v = extract<bool>(l[i]);
+			values.push_back(v);
+		} else if (objType == "int") {
+			const int v = extract<int>(l[i]);
+			values.push_back(v);
+		} else if (objType == "float") {
+			const double v = extract<double>(l[i]);
+			values.push_back(v);
+		} else if (objType == "str") {
+			const string v = extract<string>(l[i]);
+			values.push_back(v);
+		} else
+			throw std::runtime_error("Unsupported data type included in Properties Get with default method: " + objType);
+	}
+
+	return luxrays::Property(name, values);
+}
+
 //------------------------------------------------------------------------------
 
 BOOST_PYTHON_MODULE(pyluxcore) {
@@ -195,8 +222,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 		.def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
 			("Get", &luxrays::Properties::Get, return_internal_reference<>())
-		.def<const luxrays::Property (luxrays::Properties::*)(const std::string &, const luxrays::Property &) const>
-			("Get", &luxrays::Properties::Get)
+		.def("Get", &Properties_GetWithDefaultValues)
 	
 		.def(self_ns::str(self))
     ;

@@ -41,6 +41,6 @@ props0.Set(props1, "prefix.")
 print("[\n%s]\n" % props0)
 
 print("Get: %s" % props0.Get("prefix.test1.prop1"))
-print("Get default: %s\n" % props0.Get("doesnt.exist", pyluxcore.Property("doesnt.exist", ["default_value"])))
+print("Get default: %s\n" % props0.Get("doesnt.exist", ["default_value0", "default_value1"]))
 
 ################################################################################

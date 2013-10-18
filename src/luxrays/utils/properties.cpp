@@ -52,6 +52,11 @@ Property::Property(const std::string &propName, const PropertyValue &val) :
 	values.push_back(val);
 }
 
+Property::Property(const std::string &propName, const PropertyValues &vals) :
+	name(propName) {
+	values = vals;
+}
+
 Property::~Property() {
 }
 
@@ -384,10 +389,10 @@ const Property &Properties::Get(const std::string &propName) const {
 	return it->second;
 }
 
-const Property Properties::Get(const std::string &propName, const Property &defaultProp) const {
+const Property Properties::Get(const std::string &propName, const PropertyValues &defaultValues) const {
 	boost::unordered_map<std::string, Property>::const_iterator it = props.find(propName);
 	if (it == props.end())
-		return defaultProp;
+		return Property(propName, defaultValues);
 
 	return it->second;
 }

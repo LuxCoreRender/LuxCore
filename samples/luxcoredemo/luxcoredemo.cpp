@@ -20,7 +20,9 @@
  ***************************************************************************/
 
 #include <iostream>
+
 #include <boost/foreach.hpp>
+#include <boost/assign.hpp>
 
 #include <luxcore/luxcore.h>
 
@@ -112,7 +114,7 @@ int main(int argc, char *argv[]) {
 				cout << "[" << n << "]";
 			cout << "\n\n";
 
-			cout << props0.Get("doesnt.exist.test", Property("default.property.test")("aaa")) << "\n";
+			cout << props0.Get("doesnt.exist.test", MakePropertyValues(0, 1, 2)) << "\n";
 		}
 	} catch (runtime_error err) {
 		cerr << "RUNTIME ERROR: " << err.what() << "\n";
