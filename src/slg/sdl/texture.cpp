@@ -27,6 +27,7 @@
 #include "slg/sdl/texture.h"
 #include "slg/sdl/bsdf.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -161,35 +162,47 @@ static float Turbulence(const Point &P, const float omega, const int maxOctaves)
 TextureDefinitions::TextureDefinitions() { }
 
 TextureDefinitions::~TextureDefinitions() {
-	for (std::vector<Texture *>::const_iterator it = texs.begin(); it != texs.end(); ++it)
-		delete (*it);
+	BOOST_FOREACH(Texture *t, texs)
+		delete t;
 }
 
-void TextureDefinitions::DefineTexture(const std::string &name, Texture *t) {
-	texs.push_back(t);
-	texsByName.insert(std::make_pair(name, t));
+void TextureDefinitions::DefineTexture(const string &name, Texture *t) {
+	if (IsTextureDefined(name)) {
+		// Overwrite the previous definition
+		const u_int index = GetTextureIndex(name);
+		delete texs[index];
+		texs[index] = t;
+
+		texsByName.erase(name);
+		texsByName.insert(make_pair(name, t));
+	} else {
+		// Add a new texture
+		texs.push_back(t);
+		texsByName.insert(make_pair(name, t));
+	}
 }
 
-Texture *TextureDefinitions::GetTexture(const std::string &name) {
+Texture *TextureDefinitions::GetTexture(const string &name) {
 	// Check if the texture has been already defined
-	std::map<std::string, Texture *>::const_iterator it = texsByName.find(name);
+	boost::unordered_map<string, Texture *>::const_iterator it = texsByName.find(name);
 
 	if (it == texsByName.end())
-		throw std::runtime_error("Reference to an undefined texture: " + name);
+		throw runtime_error("Reference to an undefined texture: " + name);
 	else
 		return it->second;
 }
 
-std::vector<std::string> TextureDefinitions::GetTextureNames() const {
-	std::vector<std::string> names;
+vector<string> TextureDefinitions::GetTextureNames() const {
+	vector<string> names;
 	names.reserve(texs.size());
-	for (std::map<std::string, Texture *>::const_iterator it = texsByName.begin(); it != texsByName.end(); ++it)
+
+	for (boost::unordered_map<string, Texture *>::const_iterator it = texsByName.begin(); it != texsByName.end(); ++it)
 		names.push_back(it->first);
 
 	return names;
 }
 
-void TextureDefinitions::DeleteTexture(const std::string &name) {
+void TextureDefinitions::DeleteTexture(const string &name) {
 	const u_int index = GetTextureIndex(name);
 	texs.erase(texs.begin() + index);
 	texsByName.erase(name);
@@ -201,10 +214,10 @@ u_int TextureDefinitions::GetTextureIndex(const Texture *t) const {
 			return i;
 	}
 
-	throw std::runtime_error("Reference to an undefined texture: " + boost::lexical_cast<std::string>(t));
+	throw runtime_error("Reference to an undefined texture: " + boost::lexical_cast<string>(t));
 }
 
-u_int TextureDefinitions::GetTextureIndex(const std::string &name) {
+u_int TextureDefinitions::GetTextureIndex(const string &name) {
 	return GetTextureIndex(GetTexture(name));
 }
 
@@ -212,7 +225,7 @@ u_int TextureDefinitions::GetTextureIndex(const std::string &name) {
 // ImageMap
 //------------------------------------------------------------------------------
 
-ImageMap::ImageMap(const std::string &fileName, const float g) {
+ImageMap::ImageMap(const string &fileName, const float g) {
 	gamma = g;
 
 	SDL_LOG("Reading texture map: " << fileName);
@@ -225,13 +238,13 @@ ImageMap::ImageMap(const std::string &fileName, const float g) {
 		FIBITMAP *dib = FREEIMAGE_LOAD(fif, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0);
 
 		if (!dib)
-			throw std::runtime_error("Unable to read texture map: " + fileName);
+			throw runtime_error("Unable to read texture map: " + fileName);
 
 		Init(dib);
 
 		FreeImage_Unload(dib);
 	} else
-		throw std::runtime_error("Unknown image file format: " + fileName);
+		throw runtime_error("Unknown image file format: " + fileName);
 }
 
 ImageMap::ImageMap(float *p, const float g, const u_int count,
@@ -407,9 +420,9 @@ void ImageMap::Init(FIBITMAP *dib) {
 			bits += pitch;
 		}
 	} else {
-		std::stringstream msg;
+		stringstream msg;
 		msg << "Unsupported bitmap depth (" << bpp << ") in a texture map";
-		throw std::runtime_error(msg.str());
+		throw runtime_error(msg.str());
 	}
 }
 
@@ -458,7 +471,7 @@ FIBITMAP *ImageMap::GetFreeImageBitMap() const {
 
 			return dib;
 		} else
-			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+			throw runtime_error("Unable to allocate FreeImage HDR image");
 	} else if (channelCount == 3) {
 		// RGB image
 		FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
@@ -483,7 +496,7 @@ FIBITMAP *ImageMap::GetFreeImageBitMap() const {
 
 			return dib;
 		} else
-			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+			throw runtime_error("Unable to allocate FreeImage HDR image");
 	} else if (channelCount == 1) {
 		// Grey image
 		FIBITMAP *dib = FreeImage_AllocateT(FIT_FLOAT, width, height, 32);
@@ -506,16 +519,16 @@ FIBITMAP *ImageMap::GetFreeImageBitMap() const {
 
 			return dib;
 		} else
-			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+			throw runtime_error("Unable to allocate FreeImage HDR image");
 	} else
-		throw std::runtime_error("Unknown channel count in ImageMap::GetFreeImageBitMap(): " + boost::lexical_cast<std::string>(channelCount));
+		throw runtime_error("Unknown channel count in ImageMap::GetFreeImageBitMap(): " + boost::lexical_cast<string>(channelCount));
 }
 
-void ImageMap::WriteImage(const std::string &fileName) const {
+void ImageMap::WriteImage(const string &fileName) const {
 	FIBITMAP *dib = GetFreeImageBitMap();
 
 	if (!FREEIMAGE_SAVE(FIF_EXR, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
-		throw std::runtime_error("Failed image save");
+		throw runtime_error("Failed image save");
 
 	FreeImage_Unload(dib);
 }
@@ -571,9 +584,9 @@ ImageMapCache::~ImageMapCache() {
 		delete m;
 }
 
-ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float gamma) {
+ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma) {
 	// Check if the texture map has been already loaded
-	std::map<std::string, ImageMap *>::const_iterator it = mapByName.find(fileName);
+	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(fileName);
 
 	if (it == mapByName.end()) {
 		// I have yet to load the file
@@ -594,7 +607,7 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 			im->Resize(newWidth, newHeight);
 		}
 
-		mapByName.insert(std::make_pair(fileName, im));
+		mapByName.insert(make_pair(fileName, im));
 		maps.push_back(im);
 
 		return im;
@@ -602,15 +615,28 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 		//SDL_LOG("Cached image map: " << fileName);
 		ImageMap *im = (it->second);
 		if (im->GetGamma() != gamma)
-			throw std::runtime_error("Image map: " + fileName + " can not be used with 2 different gamma");
+			throw runtime_error("Image map: " + fileName + " can not be used with 2 different gamma");
 		return im;
 	}
 }
 
-void ImageMapCache::DefineImgMap(const std::string &name, ImageMap *im) {
+void ImageMapCache::DefineImgMap(const string &name, ImageMap *im) {
 	SDL_LOG("Define ImageMap: " << name);
-	mapByName.insert(std::make_pair(name, im));
-	maps.push_back(im);
+
+	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(name);
+	if (it == mapByName.end()) {
+		// Add the new image definition
+		mapByName.insert(make_pair(name, im));
+		maps.push_back(im);
+	} else {
+		// Overwrite the existing image definition
+		mapByName.erase(name);
+		mapByName.insert(make_pair(name, im));
+
+		const u_int index = GetImageMapIndex(it->second);
+		delete maps[index];
+		maps[index] = im;
+	}
 }
 
 u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
@@ -619,10 +645,10 @@ u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
 			return i;
 	}
 
-	throw std::runtime_error("Unknown image map: " + boost::lexical_cast<std::string>(im));
+	throw runtime_error("Unknown image map: " + boost::lexical_cast<string>(im));
 }
 
-void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
+void ImageMapCache::GetImageMaps(vector<ImageMap *> &ims) {
 	ims.reserve(maps.size());
 	
 	BOOST_FOREACH(ImageMap *im, maps)
@@ -636,7 +662,7 @@ void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
 Properties ConstFloatTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "constfloat1");
 	props.SetString("scene.textures." + name + ".value", ToString(value));
 
@@ -650,7 +676,7 @@ Properties ConstFloatTexture::ToProperties(const ImageMapCache &imgMapCache) con
 Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "constfloat3");
 	props.SetString("scene.textures." + name + ".value",
 			ToString(color.r) + " " + ToString(color.g) + " " + ToString(color.b));
@@ -683,7 +709,7 @@ Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "imagemap");
 	props.SetString("scene.textures." + name + ".file", "imagemap-" + 
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr");
@@ -716,7 +742,7 @@ UV ScaleTexture::GetDuDv() const {
 Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "scale");
 	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
 	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
@@ -791,7 +817,7 @@ UV FresnelApproxKTexture::GetDuDv() const {
 Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "fresnelapproxn");
 	props.SetString("scene.textures." + name + ".texture", tex->GetName());
 
@@ -801,7 +827,7 @@ Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache)
 Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "fresnelapproxk");
 	props.SetString("scene.textures." + name + ".texture", tex->GetName());
 
@@ -838,7 +864,7 @@ UV CheckerBoard2DTexture::GetDuDv() const {
 Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "checkerboard2d");
 	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
 	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
@@ -873,7 +899,7 @@ UV CheckerBoard3DTexture::GetDuDv() const {
 Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "checkerboard3d");
 	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
 	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
@@ -916,7 +942,7 @@ UV MixTexture::GetDuDv() const {
 Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "mix");
 	props.SetString("scene.textures." + name + ".amount", amount->GetName());
 	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
@@ -947,7 +973,7 @@ UV FBMTexture::GetDuDv() const {
 Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "fbm");
 	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
 	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
@@ -1018,7 +1044,7 @@ UV MarbleTexture::GetDuDv() const {
 Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "marble");
 	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
 	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
@@ -1085,7 +1111,7 @@ UV DotsTexture::GetDuDv() const {
 Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "dots");
 	props.SetString("scene.textures." + name + ".inside", insideTex->GetName());
 	props.SetString("scene.textures." + name + ".outside", outsideTex->GetName());
@@ -1101,7 +1127,7 @@ Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 BrickTexture::BrickTexture(const TextureMapping3D *mp, const Texture *t1,
 		const Texture *t2, const Texture *t3,
 		float brickw, float brickh, float brickd, float mortar,
-		float r, float bev, const std::string &b) :
+		float r, float bev, const string &b) :
 		mapping(mp), tex1(t1), tex2(t2), tex3(t3),
 		brickwidth(brickw), brickheight(brickh), brickdepth(brickd), mortarsize(mortar),
 		run(r), initialbrickwidth(brickw), initialbrickheight(brickh), initialbrickdepth(brickd) {
@@ -1293,7 +1319,7 @@ UV BrickTexture::GetDuDv() const {
 Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "brick");
 	props.SetString("scene.textures." + name + ".bricktex", tex1->GetName());
 	props.SetString("scene.textures." + name + ".mortartex", tex2->GetName());
@@ -1305,7 +1331,7 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.SetString("scene.textures." + name + ".brickrun", ToString(run));
 	props.SetString("scene.textures." + name + ".brickbevel", ToString(bevelwidth * brickwidth));
 
-	std::string brickBondValue;
+	string brickBondValue;
 	switch (bond) {
 		case FLEMISH:
 			brickBondValue = "flemish";
@@ -1356,7 +1382,7 @@ UV AddTexture::GetDuDv() const {
 Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "add");
 	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
 	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
@@ -1387,7 +1413,7 @@ UV WindyTexture::GetDuDv() const {
 Properties WindyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "windy");
 
 	return props;
@@ -1413,7 +1439,7 @@ UV WrinkledTexture::GetDuDv() const {
 Properties WrinkledTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "wrinkled");
 	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
 	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
@@ -1443,7 +1469,7 @@ UV UVTexture::GetDuDv() const {
 Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "uv");
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
@@ -1465,8 +1491,8 @@ Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		return values.front();
 	if (a >= offsets.back())
 		return values.back();
-	// std::upper_bound is not available on OpenCL
-	//const u_int p = std::upper_bound(offsets.begin(), offsets.end(), a) - offsets.begin();
+	// upper_bound is not available on OpenCL
+	//const u_int p = upper_bound(offsets.begin(), offsets.end(), a) - offsets.begin();
 	u_int p = 0;
 	for (; p < offsets.size(); ++p) {
 		if (a < offsets[p])
@@ -1484,7 +1510,7 @@ UV BandTexture::GetDuDv() const {
 Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "band");
 	props.SetString("scene.textures." + name + ".amount", amount->GetName());
 
@@ -1512,7 +1538,7 @@ Spectrum HitPointColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "hitpointcolor");
 
 	return props;
@@ -1533,7 +1559,7 @@ Spectrum HitPointAlphaTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "hitpointalpha");
 
 	return props;
@@ -1555,7 +1581,7 @@ Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.SetString("scene.textures." + name + ".type", "hitpointgrey");
 	props.SetString("scene.textures." + name + ".channel", ToString(
 		((channel != 0) && (channel != 1) && (channel != 2)) ? -1 : ((int)channel)));
