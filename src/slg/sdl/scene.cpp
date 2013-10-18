@@ -97,7 +97,7 @@ Scene::Scene(const string &fileName, const float imageScale) {
 	// Read all objects .ply file
 	//--------------------------------------------------------------------------
 
-	AddObjects(scnProp);
+	ParseObjects(scnProp);
 
 	//--------------------------------------------------------------------------
 	// Check if there is an infinitelight source defined
@@ -419,14 +419,13 @@ void Scene::ParseTextures(const Properties &props) {
 		texDefs.DefineTexture(texName, tex);
 	}
 
-	editActions.AddAction(MATERIALS_EDIT);
-	editActions.AddAction(MATERIAL_TYPES_EDIT);
+	editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
 }
 
 void Scene::ParseMaterials(const Properties &props) {
 	vector<string> matKeys = props.GetAllUniqueSubNames("scene.materials");
 	if (matKeys.size() == 0) {
-		// There are not texture definitions
+		// There are not material definitions
 		return;
 	}
 
@@ -446,8 +445,36 @@ void Scene::ParseMaterials(const Properties &props) {
 		matDefs.DefineMaterial(matName, mat);
 	}
 
-	editActions.AddAction(MATERIALS_EDIT);
-	editActions.AddAction(MATERIAL_TYPES_EDIT);
+	editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
+}
+
+void Scene::ParseObjects(const Properties &props) {
+	vector<string> objKeys = props.GetAllUniqueSubNames("scene.objects");
+	if (objKeys.size() == 0) {
+		// There are not object definitions
+		return;
+	}
+
+	double lastPrint = WallClockTime();
+	u_int objCount = 0;
+	BOOST_FOREACH(const string &key, objKeys) {
+		// Extract the object name
+		const string objName = Property::ExtractField(key, 2);
+		if (objName == "")
+			throw runtime_error("Syntax error in " + key);
+
+		CreateObject(objName, props);
+		++objCount;
+
+		const double now = WallClockTime();
+		if (now - lastPrint > 2.0) {
+			SDL_LOG("PLY object count: " << objCount);
+			lastPrint = now;
+		}
+	}
+	SDL_LOG("PLY object count: " << objCount);
+
+	editActions.AddActions(GEOMETRY_EDIT);
 }
 
 void Scene::UpdateMaterial(const string &name, const string &propsString) {
@@ -506,67 +533,6 @@ void Scene::UpdateMaterial(const string &name, const Properties &props) {
 	}
 }
 
-void Scene::AddObject(const string &objName, const string &meshName,
-		const string &propsString) {
-	Properties prop;
-	prop.SetFromString("scene.objects." + objName + ".ply = " + meshName + "\n");
-	prop.SetFromString(propsString);
-
-	AddObject(objName, prop);
-}
-
-void Scene::AddObject(const string &objName, const Properties &props) {
-	const string key = "scene.objects." + objName;
-
-	// Extract the material name
-	const string matName = GetStringParameters(props, key + ".material", 1, "").at(0);
-	if (matName == "")
-		throw runtime_error("Syntax error in object material reference: " + objName);
-
-	// Build the object
-	const string plyFileName = GetStringParameters(props, key + ".ply", 1, "").at(0);
-	if (plyFileName == "")
-		throw runtime_error("Syntax error in object .ply file name: " + objName);
-
-	// Check if I have to calculate normal or not
-	const bool usePlyNormals = props.GetBoolean(key + ".useplynormals", false);
-
-	// Check if I have to use an instance mesh or not
-	ExtMesh *meshObject;
-	if (props.IsDefined(key + ".transformation")) {
-		const vector<float> vf = GetFloatParameters(props, key + ".transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-		const Matrix4x4 mat(
-				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
-		const Transform trans(mat);
-
-		meshObject = extMeshCache.GetExtMesh(plyFileName, usePlyNormals, trans);
-	} else
-		meshObject = extMeshCache.GetExtMesh(plyFileName, usePlyNormals);
-
-	meshDefs.DefineExtMesh(objName, meshObject);
-
-	// Get the material
-	if (!matDefs.IsMaterialDefined(matName))
-		throw runtime_error("Unknown material: " + matName);
-	Material *mat = matDefs.GetMaterial(matName);
-
-	// Check if it is a light sources
-	objectMaterials.push_back(mat);
-	if (mat->IsLightSource()) {
-		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
-
-		meshTriLightDefsOffset.push_back(triLightDefs.size());
-		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-			TriangleLight *tl = new TriangleLight(mat, meshObject, meshDefs.GetSize() - 1, i);
-			triLightDefs.push_back(tl);
-		}
-	} else
-		meshTriLightDefsOffset.push_back(NULL_INDEX);
-}
-
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
 	ExtMesh *mesh = meshDefs.GetExtMesh(objName);
 
@@ -583,47 +549,6 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 		for (u_int i = meshTriLightDefsOffset[meshIndex]; i < mesh->GetTotalTriangleCount(); ++i)
 			triLightDefs[i]->Init();
 	}
-}
-
-void Scene::AddObjects(const string &propsString) {
-	Properties prop;
-	prop.SetFromString(propsString);
-
-	AddObjects(prop);
-}
-
-void Scene::AddObjects(const Properties &props) {
-	vector<string> objKeys = props.GetAllNames("scene.objects.");
-	if (objKeys.size() == 0)
-		throw runtime_error("Unable to find object definitions");
-
-	double lastPrint = WallClockTime();
-	u_int objCount = 0;
-	for (vector<string>::const_iterator objKey = objKeys.begin(); objKey != objKeys.end(); ++objKey) {
-		const string &key = *objKey;
-		const size_t dot1 = key.find(".", string("scene.objects.").length());
-		if (dot1 == string::npos)
-			continue;
-
-		// Extract the object name
-		const string objName = Property::ExtractField(key, 2);
-		if (objName == "")
-			throw runtime_error("Syntax error in " + key);
-
-		// Check if it is a new object root otherwise skip
-		if (meshDefs.IsExtMeshDefined(objName))
-			continue;
-
-		AddObject(objName, props);
-		++objCount;
-
-		const double now = WallClockTime();
-		if (now - lastPrint > 2.0) {
-			SDL_LOG("PLY object count: " << objCount);
-			lastPrint = now;
-		}
-	}
-	SDL_LOG("PLY object count: " << objCount);
 }
 
 void Scene::AddInfiniteLight(const string &propsString) {
@@ -807,7 +732,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 			}
 		}
 
-		const Matrix4x4 mat = props.Get(prefixName + ".transformation", matIdentity).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(prefixName + ".transformation", MakeMatrix4x4Identity()).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new UVMapping3D(trans);
@@ -819,7 +744,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 			}
 		}
 
-		const Matrix4x4 mat = props.Get(prefixName + ".transformation", matIdentity).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(prefixName + ".transformation", MakeMatrix4x4Identity()).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new GlobalMapping3D(trans);
@@ -1113,6 +1038,53 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetIndirectSpecularVisibility(props.Get(propName + ".visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
 
 	return mat;
+}
+
+void Scene::CreateObject(const string &objName, const Properties &props) {
+	const string key = "scene.objects." + objName;
+
+	// Extract the material name
+	const string matName = props.Get(key + ".material", MakePropertyValues("")).Get<string>();
+	if (matName == "")
+		throw runtime_error("Syntax error in object material reference: " + objName);
+
+	// Build the object
+	const string plyFileName = props.Get(key + ".ply", MakePropertyValues("")).Get<string>();
+	if (plyFileName == "")
+		throw runtime_error("Syntax error in object .ply file name: " + objName);
+
+	// Check if I have to calculate normal or not
+	const bool usePlyNormals = props.Get(key + ".useplynormals", MakePropertyValues(false)).Get<bool>();
+
+	// Check if I have to use an instance mesh or not
+	ExtMesh *meshObject;
+	if (props.IsDefined(key + ".transformation")) {
+		const Matrix4x4 mat = props.Get(key + ".transformation", MakeMatrix4x4Identity()).Get<Matrix4x4>();
+		const Transform trans(mat);
+
+		meshObject = extMeshCache.GetExtMesh(plyFileName, usePlyNormals, trans);
+	} else
+		meshObject = extMeshCache.GetExtMesh(plyFileName, usePlyNormals);
+
+	meshDefs.DefineExtMesh(objName, meshObject);
+
+	// Get the material
+	if (!matDefs.IsMaterialDefined(matName))
+		throw runtime_error("Unknown material: " + matName);
+	Material *mat = matDefs.GetMaterial(matName);
+
+	// Check if it is a light sources
+	objectMaterials.push_back(mat);
+	if (mat->IsLightSource()) {
+		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
+
+		meshTriLightDefsOffset.push_back(triLightDefs.size());
+		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
+			TriangleLight *tl = new TriangleLight(mat, meshObject, meshDefs.GetSize() - 1, i);
+			triLightDefs.push_back(tl);
+		}
+	} else
+		meshTriLightDefsOffset.push_back(NULL_INDEX);
 }
 
 //------------------------------------------------------------------------------

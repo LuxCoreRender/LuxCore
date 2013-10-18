@@ -107,15 +107,11 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	vi[10] = Triangle(20, 21, 22);
 	vi[11] = Triangle(22, 23, 20);
 
+	// Define the Mesh
+	const string &meshName = "Mesh-" + objName;
 	if (!enableUV) {
 		// Define the object
-		scene->DefineObject("Mesh-" + objName, 24, 12, p, vi, NULL, NULL, NULL, NULL, false);
-
-		// Add the object to the scene
-		scene->AddObject(objName, "Mesh-" + objName,
-				"scene.objects." + objName + ".material = " + matName + "\n"
-				"scene.objects." + objName + ".useplynormals = 0\n"
-			);
+		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, NULL, NULL, NULL, false);
 	} else {
 		UV *uv = new UV[24];
 		// Bottom face
@@ -150,14 +146,17 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene->DefineObject("Mesh-" + objName, 24, 12, p, vi, NULL, uv, NULL, NULL, false);
-
-		// Add the object to the scene
-		scene->AddObject(objName, "Mesh-" + objName,
-				"scene.objects." + objName + ".material = " + matName + "\n"
-				"scene.objects." + objName + ".useplynormals = 0\n"
-			);
+		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, uv, NULL, NULL, false);
 	}
+
+	// Add the object to the scene
+	Properties prop;
+	prop.SetFromString(
+		"scene.objects." + meshName + ".ply = " + meshName + "\n"
+		"scene.objects." + meshName + ".material = " + matName + "\n"
+		"scene.objects." + meshName + ".useplynormals = 0\n"
+		);
+	scene->ParseObjects(prop);
 }
 
 int main(int argc, char *argv[]) {
@@ -247,14 +246,14 @@ int main(int argc, char *argv[]) {
 
 		// Create a SkyLight & SunLight
 		scene->AddSkyLight(
-				Property("scene.skylight.dir ")(0.166974f, 0.59908f, 0.783085f) <<
-				Property("scene.skylight.turbidity ")(2.2f) <<
-				Property("scene.skylight.gain ")(0.8f, 0.8f, 0.8f)
+				Property("scene.skylight.dir")(0.166974f, 0.59908f, 0.783085f) <<
+				Property("scene.skylight.turbidity")(2.2f) <<
+				Property("scene.skylight.gain")(0.8f, 0.8f, 0.8f)
 				);
 		scene->AddSunLight(
-				Property("scene.sunlight.dir ")(0.166974f, 0.59908f, 0.783085f) <<
-				Property("scene.sunlight.turbidity ")(2.2f) <<
-				Property("scene.sunlight.gain ")(0.8f, 0.8f, 0.8f)
+				Property("scene.sunlight.dir")(0.166974f, 0.59908f, 0.783085f) <<
+				Property("scene.sunlight.turbidity")(2.2f) <<
+				Property("scene.sunlight.gain")(0.8f, 0.8f, 0.8f)
 				);
 
 		//----------------------------------------------------------------------
