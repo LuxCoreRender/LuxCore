@@ -68,8 +68,7 @@ public:
 	// Methods to build a scene from scratch
 	//--------------------------------------------------------------------------
 
-	void CreateCamera(const std::string &propsString);
-	void CreateCamera(const luxrays::Properties &props);
+	void ParseCamera(const luxrays::Properties &props);
 
 	void DefineImageMap(const std::string &name, ImageMap *im) {
 		imgMapCache.DefineImgMap(name, im);
