@@ -39,6 +39,7 @@
 #include "slg/sdl/sdl.h"
 #include "slg/sampler/sampler.h"
 #include "slg/sdl/scene.h"
+#include "slg/editaction.h"
 
 using namespace std;
 using namespace luxrays;
@@ -395,6 +396,8 @@ void Scene::ParseCamera(const Properties &props) {
 	delete camera;
 	camera = newCamera.get();
 	newCamera.release();
+
+	editActions.AddAction(CAMERA_EDIT);
 }
 
 void Scene::DefineTextures(const string &propsString) {
