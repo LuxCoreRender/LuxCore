@@ -31,6 +31,7 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
 #include "slg/camera/camera.h"
+#include "slg/editaction.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/light.h"
 #include "slg/sdl/material.h"
@@ -141,6 +142,8 @@ public:
 
 	// Used for power based light sampling strategy
 	Distribution1D *lightsDistribution;
+
+	EditActionList editActions;
 
 protected:
 	static std::vector<std::string> GetStringParameters(const luxrays::Properties &prop,
