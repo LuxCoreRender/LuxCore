@@ -723,7 +723,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										throw std::runtime_error("Syntax error in " + propertyName);
 
 									// Update material definition
-									scene->ParseMaterials(props);
+									scene->Parse(props);
 									const Material *newMat = scene->matDefs.GetMaterial(matName);
 
 									// To enable this optimization, I should check not only all

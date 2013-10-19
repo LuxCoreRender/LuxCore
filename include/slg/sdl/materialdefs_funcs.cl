@@ -608,6 +608,18 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
+			TEXTURES_PARAM));
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
+			TEXTURES_PARAM)) * 
+		// Energy conservation
+		(1.f - kr);
+
+	const bool isKtBlack = Spectrum_IsBlack(kt);
+	const bool isKrBlack = Spectrum_IsBlack(kr);
+	if (isKtBlack && isKrBlack)
+		return BLACK;
+
 	// Decide to transmit or reflect
 	float threshold;
 	if ((requestedEvent & REFLECT) && !isKrBlack) {
@@ -624,21 +636,14 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 
 	*pdfW *= threshold;
 
-	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
-			TEXTURES_PARAM));
-	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
-			TEXTURES_PARAM)) * 
-		// Energy conservation
-		(1.f - r);
-
 	if (passThroughEvent < threshold) {
 		*sampledDir *= (signbit(fixedDir.z) ? -1.f : 1.f);
 		*event = DIFFUSE | REFLECT;
-		return r * M_1_PI_F;
+		return kr * M_1_PI_F;
 	} else {
 		*sampledDir *= -(signbit(fixedDir.z) ? -1.f : 1.f);
 		*event = DIFFUSE | TRANSMIT;
-		return t * M_1_PI_F;
+		return kt * M_1_PI_F;
 	}
 }
 
