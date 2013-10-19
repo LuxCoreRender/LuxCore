@@ -26,6 +26,8 @@
 #include <vector>
 #include <map>
 
+#include <boost/unordered_map.hpp>
+
 #include "luxrays/core/spectrum.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/context.h"
@@ -48,23 +50,20 @@ public:
 	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals);
 
+	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals,
+		const Transform *trans = NULL);
+
 	// Note: before call to DeleteExtMesh, be sore to not have any instance referencing
 	// the geometry
 	void DeleteExtMesh(const std::string &fileName, const bool usePlyNormals);
-    void DeleteExtMesh(luxrays::ExtTriangleMesh *mesh);
 
-	ExtMesh *FindExtMesh(const std::string &fileName, const bool usePlyNormals);
-
-	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals);
-	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals,
-		const Transform &trans);
-
+	u_int GetExtMeshIndex(const std::string &fileName, const bool usePlyNormals) const;
 	u_int GetExtMeshIndex(const ExtMesh *m) const;
 
 	const std::vector<ExtMesh *> &GetMeshes() const { return meshes; }
 
 public:
-	std::map<std::string, ExtTriangleMesh *> meshByName;
+	boost::unordered_map<std::string, ExtTriangleMesh *> meshByName;
 	// Used to preserve insertion order and to retrieve insertion index
 	std::vector<ExtMesh *> meshes;
 

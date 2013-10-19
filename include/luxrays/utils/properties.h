@@ -89,6 +89,13 @@ inline PropertyValues MakePropertyValues(const char *s) {
    return values;
 }
 /*!
+ * \brief Create a list of values representing an identity 4x4 matrix to
+ * be used by a Property.
+ *
+ * \return a PropertyValues.
+ */
+template<> PropertyValues MakePropertyValues<Matrix4x4>(const Matrix4x4 &m);
+/*!
  * \brief Create a list of values to be used by a Property.
  *
  * \param val0 is the value to use.
@@ -135,24 +142,6 @@ template<class T0, class T1, class T2, class T3> PropertyValues MakePropertyValu
 	values.push_back(val2);
 	values.push_back(val3);
    return values;
-}
-
-/*!
- * \brief Create a list of values representing an identity 4x4 matrix to
- * be used by a Property.
- *
- * \return a PropertyValues.
- */
-inline PropertyValues MakeMatrix4x4Identity() {
-	PropertyValues values(16);
-
-	for (u_int i = 0; i < 4; ++i) {
-		for (u_int j = 0; j < 4; ++j) {
-			values[i * 4 + j] = (i == j) ? 1.f : 0.f;
-		}
-	}
-
-	return values;
 }
 
 /*!

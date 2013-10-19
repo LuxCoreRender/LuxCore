@@ -26,6 +26,7 @@
 #include <set>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/properties.h"
@@ -173,10 +174,10 @@ public:
 	virtual void UpdateMaterialReferences(const Material *oldMat, const Material *newMat) { }
 	// Return true if the material is referencing the specified material
 	virtual bool IsReferencing(const Material *mat) const { return (this == mat); }
-	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const {
+	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 		referencedMats.insert(this);
 	}
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		if (emittedTex)
 			emittedTex->AddReferencedTextures(referencedTexs);
 		if (bumpTex)
@@ -264,7 +265,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -306,7 +307,7 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -351,7 +352,7 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -405,7 +406,7 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -452,7 +453,7 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -519,8 +520,8 @@ public:
 
 	virtual void UpdateMaterialReferences(Material *oldMat, Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
-	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const;
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -596,7 +597,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -636,7 +637,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -697,7 +698,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
@@ -742,7 +743,7 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;

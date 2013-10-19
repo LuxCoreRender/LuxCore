@@ -34,8 +34,9 @@
 #include "slg/editaction.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/light.h"
-#include "slg/sdl/material.h"
 #include "slg/sdl/texture.h"
+#include "slg/sdl/material.h"
+#include "slg/sdl/sceneobject.h"
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/mapping.h"
 #include "slg/core/mc.h"
@@ -84,31 +85,26 @@ public:
 		extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
 	}
 
-	void ParseCamera(const luxrays::Properties &props);
-	void ParseTextures(const luxrays::Properties &props);
-	void ParseMaterials(const luxrays::Properties &props);
-	void ParseObjects(const luxrays::Properties &props);
+	void Parse(const luxrays::Properties &props);
 
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 
-	void AddInfiniteLight(const std::string &propsString);
-	void AddInfiniteLight(const luxrays::Properties &props);
-	void AddSkyLight(const std::string &propsString);
-	void AddSkyLight(const luxrays::Properties &props);
-	void AddSunLight(const std::string &propsString);
-	void AddSunLight(const luxrays::Properties &props);
-
 	void RemoveUnusedMaterials();
 	void RemoveUnusedTextures();
-	// TODO: void RemoveUnusedMesh();
+
+	// TODO: a method to remove unused image maps from cache
+	// TODO: a method to remove unused meshes from cache
 
 	//--------------------------------------------------------------------------
 
 	PerspectiveCamera *camera;
 
+	luxrays::ExtMeshCache extMeshCache; // Mesh objects cache
+	ImageMapCache imgMapCache; // Image maps cache
+
 	TextureDefinitions texDefs; // Texture definitions
 	MaterialDefinitions matDefs; // Material definitions
-	luxrays::ExtMeshDefinitions meshDefs; // ExtMesh definitions
+	SceneObjectDefinitions objDefs; // SceneObject definitions
 
 	u_int lightGroupCount;
 	InfiniteLightBase *envLight; // A SLG scene can have only one infinite light
@@ -116,14 +112,9 @@ public:
 	std::vector<TriangleLight *> triLightDefs; // One for each light source (doesn't include sun/infinite light)
 	std::vector<u_int> meshTriLightDefsOffset; // One for each mesh
 
-	std::vector<Material *> objectMaterials; // One for each object
-
 	luxrays::DataSet *dataSet;
 	luxrays::AcceleratorType accelType;
 	bool enableInstanceSupport;
-
-	luxrays::ExtMeshCache extMeshCache; // Mesh objects
-	ImageMapCache imgMapCache; // Image maps
 
 	// Used for power based light sampling strategy
 	Distribution1D *lightsDistribution;
@@ -131,22 +122,30 @@ public:
 	EditActionList editActions;
 
 protected:
-	static std::vector<std::string> GetStringParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
-	static std::vector<int> GetIntParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
-	static std::vector<float> GetFloatParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
+//	static std::vector<std::string> GetStringParameters(const luxrays::Properties &prop,
+//		const std::string &paramName, const u_int paramCount,
+//		const std::string &defaultValue);
+//	static std::vector<int> GetIntParameters(const luxrays::Properties &prop,
+//		const std::string &paramName, const u_int paramCount,
+//		const std::string &defaultValue);
+//	static std::vector<float> GetFloatParameters(const luxrays::Properties &prop,
+//		const std::string &paramName, const u_int paramCount,
+//		const std::string &defaultValue);
+
+	void ParseCamera(const luxrays::Properties &props);
+	void ParseTextures(const luxrays::Properties &props);
+	void ParseMaterials(const luxrays::Properties &props);
+	void ParseObjects(const luxrays::Properties &props);
+	void ParseEnvLights(const luxrays::Properties &props);
 
 	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
 	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
 	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
 	Texture *GetTexture(const luxrays::Property &name);
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
-	void CreateObject(const std::string &objName, const luxrays::Properties &props);
+	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
+
+	void RebuildTriangleLightDefs();
 };
 
 }

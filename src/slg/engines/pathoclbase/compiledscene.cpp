@@ -88,8 +88,7 @@ static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
 void CompiledScene::CompileGeometry() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Geometry");
 
-	const u_int objCount = scene->meshDefs.GetSize();
-	std::vector<ExtMesh *> &objs = scene->meshDefs.GetAllMesh();
+	const u_int objCount = scene->objDefs.GetSize();
 
 	const double tStart = WallClockTime();
 
@@ -120,7 +119,7 @@ void CompiledScene::CompileGeometry() {
 
 	slg::ocl::Mesh currentMeshDesc;
 	for (u_int i = 0; i < objCount; ++i) {
-		ExtMesh *mesh = objs[i];
+		const ExtMesh *mesh = scene->objDefs.GetSceneObject(i)->GetExtMesh();
 
 		bool isExistingInstance;
 		if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
@@ -460,10 +459,10 @@ void CompiledScene::CompileMaterials() {
 	// Translate mesh material indices
 	//--------------------------------------------------------------------------
 
-	const u_int meshCount = scene->meshDefs.GetSize();
-	meshMats.resize(meshCount);
-	for (u_int i = 0; i < meshCount; ++i) {
-		Material *m = scene->objectMaterials[i];
+	const u_int objCount = scene->objDefs.GetSize();
+	meshMats.resize(objCount);
+	for (u_int i = 0; i < objCount; ++i) {
+		const Material *m = scene->objDefs.GetSceneObject(i)->GetMaterial();
 		meshMats[i] = scene->matDefs.GetMaterialIndex(m);
 	}
 
