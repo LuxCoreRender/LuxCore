@@ -409,22 +409,6 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 		vertices[i] *= trans;
 }
 
-Properties ExtTriangleMesh::ToProperties(const std::string &matName,
-		const luxrays::ExtMeshCache &extMeshCache) const {
-	Properties props;
-
-	const std::string name = GetName();
-	props.SetString("scene.objects." + name + ".material", matName);
-	props.SetString("scene.objects." + name + ".ply",
-			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(this)).str() + ".ply");
-	if (HasNormals())
-		props.SetString("scene.objects." + name + ".useplynormals", "1");
-	else
-		props.SetString("scene.objects." + name + ".useplynormals", "0");
-
-	return props;
-}
-
 void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 	BOOST_OFSTREAM plyFile(fileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 	if(!plyFile.is_open())
@@ -488,27 +472,4 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 		throw std::runtime_error("Unable to write PLY face data to: " + fileName);
 
 	plyFile.close();
-}
-
-Properties ExtInstanceTriangleMesh::ToProperties(const std::string &matName,
-		const luxrays::ExtMeshCache &extMeshCache) const {
-	Properties props;
-
-	const std::string name = GetName();
-	props.SetString("scene.objects." + name + ".material", matName);
-	props.SetString("scene.objects." + name + ".ply",
-			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(mesh)).str() + ".ply");
-	if (HasNormals())
-		props.SetString("scene.objects." + name + ".useplynormals", "1");
-	else
-		props.SetString("scene.objects." + name + ".useplynormals", "0");
-
-	props.SetString("scene.objects." + name + ".transformation",
-			ToString(trans.m.m[0][0]) + " " + ToString(trans.m.m[1][0]) + " " + ToString(trans.m.m[2][0]) + " " + ToString(trans.m.m[3][0]) + " " +
-			ToString(trans.m.m[0][1]) + " " + ToString(trans.m.m[1][1]) + " " + ToString(trans.m.m[2][1]) + " " + ToString(trans.m.m[3][1]) + " " +
-			ToString(trans.m.m[0][2]) + " " + ToString(trans.m.m[1][2]) + " " + ToString(trans.m.m[2][2]) + " " + ToString(trans.m.m[3][2]) + " " +
-			ToString(trans.m.m[0][3]) + " " + ToString(trans.m.m[1][3]) + " " + ToString(trans.m.m[2][3]) + " " + ToString(trans.m.m[3][3])
-		);
-
-	return props;
 }

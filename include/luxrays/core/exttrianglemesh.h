@@ -68,7 +68,6 @@ public:
 	virtual void Sample(const unsigned int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const = 0;
 
 	virtual void Delete() = 0;
-	virtual Properties ToProperties(const std::string &matName, const luxrays::ExtMeshCache &extMeshCache) const = 0;
 	virtual void WritePly(const std::string &fileName) const = 0;
 };
 
@@ -162,7 +161,6 @@ public:
 
 	virtual void ApplyTransform(const Transform &trans);
 
-	virtual Properties ToProperties(const std::string &matName, const luxrays::ExtMeshCache &extMeshCache) const;
 	virtual void WritePly(const std::string &fileName) const;
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals = false);
@@ -266,112 +264,11 @@ public:
 	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
 
-	virtual Properties ToProperties(const std::string &matName, const luxrays::ExtMeshCache &extMeshCache) const;
 	virtual void WritePly(const std::string &fileName) const { mesh->WritePly(fileName); }
 
 private:
 	Transform trans;
 	ExtTriangleMesh *mesh;
-};
-
-class ExtMeshDefinitions {
-public:
-	ExtMeshDefinitions() { }
-	~ExtMeshDefinitions() {
-		// I don't delete the ExtMesh here because they are usually stored
-		// in a ExtMeshCache
-	}
-
-	bool IsExtMeshDefined(const std::string &name) const {
-		return (meshsByName.count(name) > 0);
-	}
-	void DefineExtMesh(const std::string &name, ExtMesh *t) {
-		meshes.push_back(t);
-		meshsByName.insert(std::make_pair(name, t));
-	}
-	void DeleteExtMesh(const std::string &name) {
-		// Look for the mesh
-		std::map<std::string, ExtMesh *>::iterator it = meshsByName.find(name);
-
-		if (it != meshsByName.end()) {
-			// I don't delete the ExtMesh here because they are usually stored
-			// in a ExtMeshCache
-			meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
-			meshsByName.erase(it);
-		}
-	}
-    
-	// Helper function for GetReferenceCount().
-	inline static luxrays::ExtTriangleMesh *GetReferMesh(ExtMesh *object) {
-		luxrays::ExtTriangleMesh *pGeometry = NULL;
-		luxrays::ExtInstanceTriangleMesh *pInstance = dynamic_cast<luxrays::ExtInstanceTriangleMesh*>(object);
-
-		if (pInstance)
-			pGeometry = pInstance->GetExtTriangleMesh();
-		else
-			pGeometry = dynamic_cast<luxrays::ExtTriangleMesh*>(object);
-
-		return pGeometry;
-	}
-
-    // Get the number of objects (i.e. instances) that refer pGeometry.  Used
-	// to safely delete a mesh: remove a mesh from ExtMeshCache when it's refcount less 1.
-	u_int GetReferenceCount(luxrays::ExtTriangleMesh *pGeometry) {
-		u_int ref = 0;
-
-		BOOST_FOREACH(ExtMesh *object, meshes) {
-			if (GetReferMesh(object) == pGeometry)
-				ref++;
-		}
-
-		return ref;
-	}
-
-	ExtMesh *GetExtMesh(const std::string &name) {
-		// Check if the mesh has been already defined
-		std::map<std::string, ExtMesh *>::const_iterator it = meshsByName.find(name);
-
-		if (it == meshsByName.end())
-			throw std::runtime_error("Reference to an undefined mesh: " + name);
-		else
-			return it->second;
-	}
-
-	ExtMesh *GetExtMesh(const u_int index) {
-		return meshes[index];
-	}
-
-	const ExtMesh *GetExtMesh(const u_int index) const {
-		return meshes[index];
-	}
-
-	u_int GetExtMeshIndex(const std::string &name) {
-		return GetExtMeshIndex(GetExtMesh(name));
-	}
-	u_int GetExtMeshIndex(const ExtMesh *m) const {
-		for (u_int i = 0; i < meshes.size(); ++i) {
-			if (m == meshes[i])
-				return i;
-		}
-
-		throw std::runtime_error("Reference to an undefined mesh: " + boost::lexical_cast<std::string>(m));
-	}
-
-	vector<std::string> GetExtMeshNames() const {
-		vector<std::string> names;
-		names.reserve(meshes.size());
-		for (std::map<std::string, ExtMesh *>::const_iterator it = meshsByName.begin(); it != meshsByName.end(); ++it)
-			names.push_back(it->first);
-
-		return names;
-	}
-
-	std::vector<ExtMesh *> &GetAllMesh() { return meshes; }
-	u_int GetSize() const { return static_cast<u_int>(meshes.size()); }
-  
-private:
-	std::vector<ExtMesh *> meshes;
-	std::map<std::string, ExtMesh *> meshsByName;
 };
 
 }

@@ -34,10 +34,10 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	hitPoint.fixedDir = -ray.d;
 
 	// Get the triangle
-	mesh = scene.meshDefs.GetExtMesh(rayHit.meshIndex);
+	mesh = scene.objDefs.GetSceneObject(rayHit.meshIndex)->GetExtMesh();
 
 	// Get the material
-	material = scene.objectMaterials[rayHit.meshIndex];
+	material = scene.objDefs.GetSceneObject(rayHit.meshIndex)->GetMaterial();
 
 	// Interpolate face normal
 	hitPoint.geometryN = mesh->GetGeometryNormal(rayHit.triangleIndex);

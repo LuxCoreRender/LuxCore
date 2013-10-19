@@ -174,6 +174,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/light.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/material.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/sdl/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/spd.cpp

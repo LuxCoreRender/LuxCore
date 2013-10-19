@@ -21,6 +21,7 @@
 
 #include "luxrays/core/extmeshcache.h"
 
+using namespace std;
 using namespace luxrays;
 
 ExtMeshCache::ExtMeshCache() {
@@ -35,14 +36,30 @@ ExtMeshCache::~ExtMeshCache() {
 	}
 }
 
-void ExtMeshCache::DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
+void ExtMeshCache::DefineExtMesh(const string &fileName, ExtTriangleMesh *mesh,
 		const bool usePlyNormals) {
-	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-	meshByName.insert(std::make_pair(key, mesh));
-	meshes.push_back(mesh);
+	const string key = (usePlyNormals ? "1-" : "0-") + fileName;
+
+	if (meshByName.count(key) == 0) {
+		// It is a new mesh
+		meshByName.insert(make_pair(key, mesh));
+		meshes.push_back(mesh);
+	} else {
+		// Replace an old mesh
+		const u_int index = GetExtMeshIndex(fileName, usePlyNormals);
+		ExtMesh *oldMesh = meshes[index];
+
+		meshes[index] = mesh;
+		meshByName.erase(key);
+		meshByName.insert(make_pair(key, mesh));
+
+		if (deleteMeshData)
+			oldMesh->Delete();
+		delete oldMesh;
+	}
 }
 
-void ExtMeshCache::DefineExtMesh(const std::string &fileName,
+void ExtMeshCache::DefineExtMesh(const string &fileName,
 		const u_int plyNbVerts, const u_int plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas,
 		const bool usePlyNormals) {
@@ -53,85 +70,64 @@ void ExtMeshCache::DefineExtMesh(const std::string &fileName,
 	DefineExtMesh(fileName, mesh, usePlyNormals);
 }
 
-void ExtMeshCache::DeleteExtMesh(const std::string &fileName, const bool usePlyNormals) {
-	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
+void ExtMeshCache::DeleteExtMesh(const string &fileName, const bool usePlyNormals) {
+	const u_int index = GetExtMeshIndex(fileName, usePlyNormals);
 
-	// Check if the mesh has been loaded
-	std::map<std::string, ExtTriangleMesh *>::iterator it = meshByName.find(key);
+	if (deleteMeshData)
+		meshes[index]->Delete();
+	delete meshes[index];
 
-	if (it != meshByName.end()) {
-		if (deleteMeshData)
-			it->second->Delete();
-		meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
-		meshByName.erase(it);
-	}
+	meshes.erase(meshes.begin() + index);
+	const string key = (usePlyNormals ? "1-" : "0-") + fileName;
+	meshByName.erase(key);
 }
 
-void ExtMeshCache::DeleteExtMesh(luxrays::ExtTriangleMesh *mesh) {
-	std::map<std::string, ExtTriangleMesh *>::iterator it = meshByName.begin();
+ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName, const bool usePlyNormals,
+		const Transform *trans) {
+	if (trans) {
+		ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName, usePlyNormals);
 
-	while (it != meshByName.end()) {
-		if (it->second == mesh) {
-			if (deleteMeshData)
-				it->second->Delete();
+		ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(mesh, *trans);
+		meshes.push_back(imesh);
 
-			meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
-			meshByName.erase(it);
-			return;
-		}
-		it++;
-	}
-}
-
-ExtMesh *ExtMeshCache::FindExtMesh(const std::string &fileName, const bool usePlyNormals) {
-	// Check if the mesh has been already loaded
-	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-	std::map<std::string, ExtTriangleMesh *>::const_iterator it = meshByName.find(key);
-	if (it == meshByName.end())
-		return NULL;
-	else
-		return it->second;
-}
-
-ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePlyNormals) {
-	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-
-	// Check if the mesh has been already loaded
-	std::map<std::string, ExtTriangleMesh *>::const_iterator it = meshByName.find(key);
-
-	if (it == meshByName.end()) {
-		// I have yet to load the file
-		ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName, usePlyNormals);
-
-		meshByName.insert(std::make_pair(key, mesh));
-		meshes.push_back(mesh);
-
-		return mesh;
+		return imesh;
 	} else {
-		//SDL_LOG("Cached mesh object: " << fileName << " (use PLY normals: " << usePlyNormals << ")");
-		return it->second;
+		const string key = (usePlyNormals ? "1-" : "0-") + fileName;
+
+		// Check if the mesh has been already loaded
+		boost::unordered_map<string, ExtTriangleMesh *>::const_iterator it = meshByName.find(key);
+
+		if (it == meshByName.end()) {
+			// I have yet to load the file
+			ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName, usePlyNormals);
+
+			meshByName.insert(make_pair(key, mesh));
+			meshes.push_back(mesh);
+
+			return mesh;
+		} else {
+			//SDL_LOG("Cached mesh object: " << fileName << " (use PLY normals: " << usePlyNormals << ")");
+			return it->second;
+		}
 	}
 }
 
-ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePlyNormals,
-		const Transform &trans) {
-	ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName, usePlyNormals);
+u_int ExtMeshCache::GetExtMeshIndex(const string &fileName, const bool usePlyNormals) const {
+	const string key = (usePlyNormals ? "1-" : "0-") + fileName;
+	boost::unordered_map<string, ExtTriangleMesh *>::const_iterator it = meshByName.find(key);
 
-	ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(mesh, trans);
-	meshes.push_back(imesh);
-
-	return imesh;
+	return GetExtMeshIndex(it->second);
 }
 
 u_int ExtMeshCache::GetExtMeshIndex(const ExtMesh *m) const {
-	// TODO: use a std::map
+	// TODO: use a boost::unordered_map
 	u_int i = 0;
-	for (std::vector<ExtMesh *>::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
+	for (vector<ExtMesh *>::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
 		if (*it == m)
 			return i;
 		else
 			++i;
 	}
 
-	throw std::runtime_error("Unknown mesh: " + boost::lexical_cast<std::string>(m));
+	throw runtime_error("Unknown mesh: " + boost::lexical_cast<string>(m));
 }
