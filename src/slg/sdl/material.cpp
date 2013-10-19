@@ -62,32 +62,27 @@ MaterialDefinitions::~MaterialDefinitions() {
 		delete (*it);
 }
 
-void MaterialDefinitions::DefineMaterial(const std::string &name, Material *m) {
-	if (IsMaterialDefined(name))
-		throw std::runtime_error("Already defined material: " + name);
+void MaterialDefinitions::DefineMaterial(const std::string &name, Material *newMat) {
+	if (IsMaterialDefined(name)) {
+		const Material *oldMat = GetMaterial(name);
 
-	mats.push_back(m);
-	matsByName.insert(std::make_pair(name, m));
-}
+		// Update name/material definition
+		const u_int index = GetMaterialIndex(name);
+		mats[index] = newMat;
+		matsByName.erase(name);
+		matsByName.insert(std::make_pair(name, newMat));
 
-void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *newMat) {
-	if (!IsMaterialDefined(name))
-		throw std::runtime_error("Can not update an undefined material: " + name);
+		// Update all possible reference to old material with the new one
+		BOOST_FOREACH(Material *mat, mats)
+			mat->UpdateMaterialReferences(oldMat, newMat);
 
-	Material *oldMat = GetMaterial(name);
-
-	// Update name/material definition
-	const u_int index = GetMaterialIndex(name);
-	mats[index] = newMat;
-	matsByName.erase(name);
-	matsByName.insert(std::make_pair(name, newMat));
-
-	// Delete old material
-	delete oldMat;
-
-	// Update all possible reference to old material with the new one
-	BOOST_FOREACH(Material *mat, mats)
-		mat->UpdateMaterialReferences(oldMat, newMat);
+		// Delete old material
+		delete oldMat;
+	} else {
+		// Add the new material
+		mats.push_back(newMat);
+		matsByName.insert(std::make_pair(name, newMat));
+	}
 }
 
 void MaterialDefinitions::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {

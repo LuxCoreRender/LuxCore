@@ -334,9 +334,19 @@ int main(int argc, char *argv[]) {
 			Property("scene.textures.map.type")("constfloat3") <<
 			Property("scene.textures.map.value")(0.f, 0.f, 1.f));
 
-		// Redo the rendering
+		// And redo the rendering
 		DoRendering(session);
 		boost::filesystem::rename("image.png", "image1.png");
+
+		// Edit a material
+		SLG_LOG("Editing a material...");
+		scene->ParseMaterials(
+			Property("scene.materials.mat_white.type")("mirror") <<
+			Property("scene.materials.mat_white.kr")(.9f, .9f, .9f));
+
+		// And redo the rendering
+		DoRendering(session);
+		boost::filesystem::rename("image.png", "image2.png");
 
 		delete session;
 		SLG_LOG("Done.");

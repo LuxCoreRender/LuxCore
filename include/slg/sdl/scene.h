@@ -89,8 +89,6 @@ public:
 	void ParseMaterials(const luxrays::Properties &props);
 	void ParseObjects(const luxrays::Properties &props);
 
-	void UpdateMaterial(const std::string &name, const std::string &propsString);
-	void UpdateMaterial(const std::string &name, const luxrays::Properties &props);
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 
 	void AddInfiniteLight(const std::string &propsString);

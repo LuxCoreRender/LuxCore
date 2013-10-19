@@ -220,7 +220,6 @@ public:
 		return (matsByName.count(name) > 0);
 	}
 	void DefineMaterial(const std::string &name, Material *m);
-	void UpdateMaterial(const std::string &name, Material *m);
 
 	void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 

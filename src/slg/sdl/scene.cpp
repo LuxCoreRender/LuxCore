@@ -418,6 +418,7 @@ void Scene::ParseTextures(const Properties &props) {
 		Texture *tex = CreateTexture(texName, props);
 
 		if (texDefs.IsTextureDefined(texName)) {
+			// A replacement for an existing texture
 			const Texture *oldTex = texDefs.GetTexture(texName);
 
 			texDefs.DefineTexture(texName, tex);
@@ -450,8 +451,55 @@ void Scene::ParseMaterials(const Properties &props) {
 		const u_int matID = ((u_int)(RadicalInverse(matDefs.GetSize() + 1, 2) * 255.f + .5f)) |
 				(((u_int)(RadicalInverse(matDefs.GetSize() + 1, 3) * 255.f + .5f)) << 8) |
 				(((u_int)(RadicalInverse(matDefs.GetSize() + 1, 5) * 255.f + .5f)) << 16);
-		Material *mat = CreateMaterial(matID, matName, props);
-		matDefs.DefineMaterial(matName, mat);
+		Material *newMat = CreateMaterial(matID, matName, props);
+
+		if (matDefs.IsMaterialDefined(matName)) {
+			// A replacement for an existing material
+			const Material *oldMat = matDefs.GetMaterial(matName);
+			const bool wasLightSource = oldMat->IsLightSource();
+
+			matDefs.DefineMaterial(matName, newMat);
+
+			// Replace old material direct references with new one
+			for (u_int i = 0; i < objectMaterials.size(); ++i) {
+				if (objectMaterials[i] == oldMat)
+					objectMaterials[i] = newMat;
+			}
+
+			// Check if old and/or the new material were/is light sources
+			if (wasLightSource || newMat->IsLightSource()) {
+				// I have to build a new version of lights and triangleLightSource
+				vector<TriangleLight *> newTriLights;
+				vector<u_int> newMeshTriLightOffset;
+
+				for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
+					const ExtMesh *mesh = meshDefs.GetExtMesh(i);
+
+					if (objectMaterials[i]->IsLightSource()) {
+						newMeshTriLightOffset.push_back(newTriLights.size());
+
+						for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
+							TriangleLight *tl = new TriangleLight(objectMaterials[i], mesh, i, j);
+							newTriLights.push_back(tl);
+						}
+					} else
+						newMeshTriLightOffset.push_back(NULL_INDEX);
+				}
+
+				// Delete all old TriangleLight
+				for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
+					delete *l;
+
+				// Use the new versions
+				triLightDefs = newTriLights;
+				meshTriLightDefsOffset = newMeshTriLightOffset;
+
+				editActions.AddAction(AREALIGHTS_EDIT);
+			}
+		} else {
+			// Only a new Material
+			matDefs.DefineMaterial(matName, newMat);
+		}
 	}
 
 	editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
@@ -484,62 +532,6 @@ void Scene::ParseObjects(const Properties &props) {
 	SDL_LOG("PLY object count: " << objCount);
 
 	editActions.AddActions(GEOMETRY_EDIT);
-}
-
-void Scene::UpdateMaterial(const string &name, const string &propsString) {
-	Properties prop;
-	prop.SetFromString(propsString);
-
-	UpdateMaterial(name, prop);
-}
-
-void Scene::UpdateMaterial(const string &name, const Properties &props) {
-	//SDL_LOG("Updating material " << name << " with:\n" << props.ToString());
-
-	// Look for old material
-	Material *oldMat = matDefs.GetMaterial(name);
-	const bool wasLightSource = oldMat->IsLightSource();
-
-	// Create new material
-	Material *newMat = CreateMaterial(oldMat->GetID(), name, props);
-
-	// UpdateMaterial() deletes oldMat
-	matDefs.UpdateMaterial(name, newMat);
-
-	// Replace old material direct references with new one
-	for (u_int i = 0; i < objectMaterials.size(); ++i) {
-		if (objectMaterials[i] == oldMat)
-			objectMaterials[i] = newMat;
-	}
-
-	// Check if old and/or the new material were/is light sources
-	if (wasLightSource || newMat->IsLightSource()) {
-		// I have to build a new version of lights and triangleLightSource
-		vector<TriangleLight *> newTriLights;
-		vector<u_int> newMeshTriLightOffset;
-
-		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
-			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
-
-			if (objectMaterials[i]->IsLightSource()) {
-				newMeshTriLightOffset.push_back(newTriLights.size());
-
-				for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
-					TriangleLight *tl = new TriangleLight(objectMaterials[i], mesh, i, j);
-					newTriLights.push_back(tl);
-				}
-			} else
-				newMeshTriLightOffset.push_back(NULL_INDEX);
-		}
-
-		// Delete all old TriangleLight
-		for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
-			delete *l;
-
-		// Use the new versions
-		triLightDefs = newTriLights;
-		meshTriLightDefsOffset = newMeshTriLightOffset;
-	}
 }
 
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
