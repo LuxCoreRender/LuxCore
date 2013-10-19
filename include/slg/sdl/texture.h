@@ -34,6 +34,7 @@
 #include <set>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/unordered_set.hpp>
 #include <boost/unordered_map.hpp>
 
 #include "luxrays/luxrays.h"
@@ -81,7 +82,7 @@ public:
 	// Used for bump mapping support
 	virtual luxrays::UV GetDuDv() const = 0;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);
 	}
 
@@ -392,7 +393,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
@@ -434,7 +435,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex->AddReferencedTextures(referencedTexs);
@@ -465,7 +466,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex->AddReferencedTextures(referencedTexs);
@@ -500,7 +501,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
@@ -538,7 +539,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
@@ -581,7 +582,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		amount->AddReferencedTextures(referencedTexs);
@@ -690,7 +691,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		insideTex->AddReferencedTextures(referencedTexs);
@@ -742,7 +743,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
@@ -823,7 +824,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
@@ -949,7 +950,7 @@ public:
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		amount->AddReferencedTextures(referencedTexs);

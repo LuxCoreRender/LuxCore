@@ -40,6 +40,18 @@
 using namespace luxrays;
 using namespace std;
 
+template<> PropertyValues MakePropertyValues<Matrix4x4>(const Matrix4x4 &m) {
+	PropertyValues values(16);
+
+	for (u_int i = 0; i < 4; ++i) {
+		for (u_int j = 0; j < 4; ++j) {
+			values[i * 4 + j] = m.m[j][i];
+		}
+	}
+
+	return values;
+}
+
 //------------------------------------------------------------------------------
 // Property class
 //------------------------------------------------------------------------------
