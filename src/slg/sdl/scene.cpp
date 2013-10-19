@@ -605,6 +605,9 @@ void Scene::ParseEnvLights(const Properties &props) {
 		sl->SetIndirectSpecularVisibility(props.Get("scene.sunlight.visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
 		sl->Preprocess();
 
+		// Delete the old sun light
+		if (sunLight)
+			delete sunLight;
 		sunLight = sl;
 	}
 }
