@@ -104,9 +104,7 @@ public:
 		return (texsByName.count(name) > 0);
 	}
 
-	// Returns true if is a new texture, false if an existing texture with the
-	// same name has been overwritten.
-	bool DefineTexture(const std::string &name, Texture *t);
+	void DefineTexture(const std::string &name, Texture *t);
 
 	Texture *GetTexture(const std::string &name);
 	Texture *GetTexture(const u_int index) {

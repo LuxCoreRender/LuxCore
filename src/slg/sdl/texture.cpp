@@ -166,27 +166,26 @@ TextureDefinitions::~TextureDefinitions() {
 		delete t;
 }
 
-bool TextureDefinitions::DefineTexture(const string &name, Texture *newTex) {
+void TextureDefinitions::DefineTexture(const string &name, Texture *newTex) {
 	if (IsTextureDefined(name)) {
-		// Delete the old texture definition
 		const Texture *oldTex = GetTexture(name);
-		DeleteTexture(name);
 
-		// Add the new texture definition
+		// Update name/texture definition
+		const u_int index = GetTextureIndex(name);
+		texs[index] = newTex;
 		texsByName.erase(name);
-		texsByName.insert(make_pair(name, newTex));
+		texsByName.insert(std::make_pair(name, newTex));
 
 		// Update all references
 		BOOST_FOREACH(Texture *tex, texs)
 			tex->UpdateTextureReferences(oldTex, newTex);
 
-		return false;
+		// Delete the old texture definition
+		delete oldTex;
 	} else {
-		// Add a new texture
+		// Add the new texture
 		texs.push_back(newTex);
 		texsByName.insert(make_pair(name, newTex));
-
-		return true;
 	}
 }
 
