@@ -242,42 +242,6 @@ Properties Scene::ToProperties(const string &directoryName) {
 		return props;
 }
 
-//vector<string> Scene::GetStringParameters(const Properties &prop, const string &paramName,
-//		const u_int paramCount, const string &defaultValue) {
-//	const vector<string> vs = prop.GetStringVector(paramName, defaultValue);
-//	if (vs.size() != paramCount) {
-//		stringstream ss;
-//		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-//		throw runtime_error(ss.str());
-//	}
-//
-//	return vs;
-//}
-//
-//vector<int> Scene::GetIntParameters(const Properties &prop, const string &paramName,
-//		const u_int paramCount, const string &defaultValue) {
-//	const vector<int> vi = prop.GetIntVector(paramName, defaultValue);
-//	if (vi.size() != paramCount) {
-//		stringstream ss;
-//		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-//		throw runtime_error(ss.str());
-//	}
-//
-//	return vi;
-//}
-//
-//vector<float> Scene::GetFloatParameters(const Properties &prop, const string &paramName,
-//		const u_int paramCount, const string &defaultValue) {
-//	const vector<float> vf = prop.GetFloatVector(paramName, defaultValue);
-//	if (vf.size() != paramCount) {
-//		stringstream ss;
-//		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-//		throw runtime_error(ss.str());
-//	}
-//
-//	return vf;
-//}
-
 //--------------------------------------------------------------------------
 // Methods to build a scene from scratch
 //--------------------------------------------------------------------------
