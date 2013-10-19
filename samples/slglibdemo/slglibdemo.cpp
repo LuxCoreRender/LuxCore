@@ -20,6 +20,7 @@
  ***************************************************************************/
 
 #include <iostream>
+#include <boost/filesystem/operations.hpp>
 
 #include "slg/slg.h"
 #include "slg/sdl/sdl.h"
@@ -159,6 +160,57 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	scene->ParseObjects(prop);
 }
 
+static void DoRendering(RenderSession *session) {
+	const unsigned int haltTime = session->renderConfig->cfg.GetInt("batch.halttime", 0);
+	const unsigned int haltSpp = session->renderConfig->cfg.GetInt("batch.haltspp", 0);
+	const float haltThreshold = session->renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
+
+	// Start the rendering
+	session->Start();
+	const double startTime = WallClockTime();
+
+	double lastFilmUpdate = startTime;
+	char buf[512];
+	for (;;) {
+		boost::this_thread::sleep(boost::posix_time::millisec(1000));
+
+		// Film update may be required by some render engine to
+		// update statistics, convergence test and more
+		if (WallClockTime() - lastFilmUpdate > 5.0) {
+			session->renderEngine->UpdateFilm();
+			lastFilmUpdate =  WallClockTime();
+		}
+
+		const double now = WallClockTime();
+		const double elapsedTime = now - startTime;
+		if ((haltTime > 0) && (elapsedTime >= haltTime))
+			break;
+
+		const unsigned int pass = session->renderEngine->GetPass();
+		if ((haltSpp > 0) && (pass >= haltSpp))
+			break;
+
+		// Convergence test is update inside UpdateFilm()
+		const float convergence = session->renderEngine->GetConvergence();
+		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
+			break;
+
+		// Print some information about the rendering progress
+		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
+				int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence,
+				session->renderEngine->GetTotalSamplesSec() / 1000000.0,
+				session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+
+		SLG_LOG(buf);
+	}
+
+	// Stop the rendering
+	session->Stop();
+
+	// Save the rendered image
+	session->FilmSave();
+}
+
 int main(int argc, char *argv[]) {
 	LuxRays_DebugHandler = ::LuxRaysDebugHandler;
 	SLG_DebugHandler = ::SLGDebugHandler;
@@ -271,55 +323,20 @@ int main(int argc, char *argv[]) {
 				Property("film.outputs.1.filename")("image.png"),
 				*scene);
 		RenderSession *session = new RenderSession(config);
-		RenderEngine *engine = session->renderEngine;
-
-		const unsigned int haltTime = config->cfg.GetInt("batch.halttime", 0);
-		const unsigned int haltSpp = config->cfg.GetInt("batch.haltspp", 0);
-		const float haltThreshold = config->cfg.GetFloat("batch.haltthreshold", -1.f);
 
 		// Start the rendering
-		session->Start();
-		const double startTime = WallClockTime();
+		DoRendering(session);
+		boost::filesystem::rename("image.png", "image0.png");
 
-		double lastFilmUpdate = startTime;
-		char buf[512];
-		for (;;) {
-			boost::this_thread::sleep(boost::posix_time::millisec(1000));
+		// Edit a texture
+		SLG_LOG("Editing a texture...");
+		scene->ParseTextures(
+			Property("scene.textures.map.type")("constfloat3") <<
+			Property("scene.textures.map.value")(0.f, 0.f, 1.f));
 
-			// Film update may be required by some render engine to
-			// update statistics, convergence test and more
-			if (WallClockTime() - lastFilmUpdate > 5.0) {
-				session->renderEngine->UpdateFilm();
-				lastFilmUpdate =  WallClockTime();
-			}
-
-			const double now = WallClockTime();
-			const double elapsedTime = now - startTime;
-			if ((haltTime > 0) && (elapsedTime >= haltTime))
-				break;
-
-			const unsigned int pass = engine->GetPass();
-			if ((haltSpp > 0) && (pass >= haltSpp))
-				break;
-
-			// Convergence test is update inside UpdateFilm()
-			const float convergence = engine->GetConvergence();
-			if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
-				break;
-
-			// Print some information about the rendering progress
-			sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
-					int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
-					config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-			SLG_LOG(buf);
-		}
-
-		// Stop the rendering
-		session->Stop();
-
-		// Save the rendered image
-		session->FilmSave();
+		// Redo the rendering
+		DoRendering(session);
+		boost::filesystem::rename("image.png", "image1.png");
 
 		delete session;
 		SLG_LOG("Done.");

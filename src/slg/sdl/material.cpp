@@ -70,7 +70,7 @@ void MaterialDefinitions::DefineMaterial(const std::string &name, Material *m) {
 	matsByName.insert(std::make_pair(name, m));
 }
 
-void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
+void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *newMat) {
 	if (!IsMaterialDefined(name))
 		throw std::runtime_error("Can not update an undefined material: " + name);
 
@@ -78,16 +78,21 @@ void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
 
 	// Update name/material definition
 	const u_int index = GetMaterialIndex(name);
-	mats[index] = m;
+	mats[index] = newMat;
 	matsByName.erase(name);
-	matsByName.insert(std::make_pair(name, m));
+	matsByName.insert(std::make_pair(name, newMat));
 
 	// Delete old material
 	delete oldMat;
 
 	// Update all possible reference to old material with the new one
-	for (u_int i = 0; i < mats.size(); ++i)
-		mats[i]->UpdateMaterialReference(oldMat, m);
+	BOOST_FOREACH(Material *mat, mats)
+		mat->UpdateMaterialReferences(oldMat, newMat);
+}
+
+void MaterialDefinitions::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	BOOST_FOREACH(Material *mat, mats)
+		mat->UpdateTextureReferences(oldTex, newTex);
 }
 
 Material *MaterialDefinitions::GetMaterial(const std::string &name) {
@@ -180,6 +185,13 @@ void MatteMaterial::AddReferencedTextures(std::set<const Texture *> &referencedT
 	Kd->AddReferencedTextures(referencedTexs);
 }
 
+void MatteMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kd == oldTex)
+		Kd = newTex;
+}
+
 Properties MatteMaterial::ToProperties() const  {
 	Properties props;
 
@@ -223,6 +235,13 @@ void MirrorMaterial::AddReferencedTextures(std::set<const Texture *> &referenced
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
+}
+
+void MirrorMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
 }
 
 Properties MirrorMaterial::ToProperties() const  {
@@ -331,6 +350,19 @@ void GlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedT
 	Kt->AddReferencedTextures(referencedTexs);
 	ousideIor->AddReferencedTextures(referencedTexs);
 	ior->AddReferencedTextures(referencedTexs);
+}
+
+void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (Kt == oldTex)
+		Kt = newTex;
+	if (ousideIor == oldTex)
+		ousideIor = newTex;
+	if (ior == oldTex)
+		ior = newTex;
 }
 
 Properties GlassMaterial::ToProperties() const  {
@@ -506,6 +538,19 @@ void ArchGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referen
 	ior->AddReferencedTextures(referencedTexs);
 }
 
+void ArchGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (Kt == oldTex)
+		Kt = newTex;
+	if (ousideIor == oldTex)
+		ousideIor = newTex;
+	if (ior == oldTex)
+		ior = newTex;
+}
+
 Properties ArchGlassMaterial::ToProperties() const  {
 	Properties props;
 
@@ -581,6 +626,15 @@ void MetalMaterial::AddReferencedTextures(std::set<const Texture *> &referencedT
 
 	Kr->AddReferencedTextures(referencedTexs);
 	exponent->AddReferencedTextures(referencedTexs);
+}
+
+void MetalMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (exponent == oldTex)
+		exponent = newTex;
 }
 
 Properties MetalMaterial::ToProperties() const  {
@@ -765,7 +819,7 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = weight1 * reversePdfWMatA + weight2 * reversePdfWMatB;
 }
 
-void MixMaterial::UpdateMaterialReference(const Material *oldMat,  const Material *newMat) {
+void MixMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 	if (matA == oldMat)
 		matA = newMat;
 
@@ -805,6 +859,16 @@ void MixMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTex
 	matA->AddReferencedTextures(referencedTexs);
 	matB->AddReferencedTextures(referencedTexs);
 	mixFactor->AddReferencedTextures(referencedTexs);
+}
+
+void MixMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	matA->UpdateTextureReferences(oldTex, newTex);
+	matB->UpdateTextureReferences(oldTex, newTex);
+
+	if (mixFactor == oldTex)
+		mixFactor = newTex;
 }
 
 Properties MixMaterial::ToProperties() const  {
@@ -951,6 +1015,15 @@ void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
+}
+
+void MatteTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (Kt == oldTex)
+		Kt = newTex;
 }
 
 Properties MatteTranslucentMaterial::ToProperties() const  {
@@ -1285,6 +1358,25 @@ void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &reference
 	index->AddReferencedTextures(referencedTexs);
 }
 
+void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kd == oldTex)
+		Kd = newTex;
+	if (Ks == oldTex)
+		Ks = newTex;
+	if (nu == oldTex)
+		nu = newTex;
+	if (nv == oldTex)
+		nv = newTex;
+	if (Ka == oldTex)
+		Ka = newTex;
+	if (depth == oldTex)
+		depth = newTex;
+	if (index == oldTex)
+		index = newTex;
+}
+
 Properties Glossy2Material::ToProperties() const  {
 	Properties props;
 
@@ -1432,6 +1524,19 @@ void Metal2Material::AddReferencedTextures(std::set<const Texture *> &referenced
 	k->AddReferencedTextures(referencedTexs);
 	nu->AddReferencedTextures(referencedTexs);
 	nv->AddReferencedTextures(referencedTexs);
+}
+
+void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (n == oldTex)
+		n = newTex;
+	if (k == oldTex)
+		k = newTex;
+	if (nu == oldTex)
+		nu = newTex;
+	if (nv == oldTex)
+		nv = newTex;
 }
 
 Properties Metal2Material::ToProperties() const  {
@@ -1765,6 +1870,22 @@ void RoughGlassMaterial::AddReferencedTextures(std::set<const Texture *> &refere
 	nv->AddReferencedTextures(referencedTexs);
 }
 
+void RoughGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (Kt == oldTex)
+		Kt = newTex;
+	if (ousideIor == oldTex)
+		ousideIor = newTex;
+	if (ior == oldTex)
+		ior = newTex;
+	if (nu == oldTex)
+		nu = newTex;
+	if (nv == oldTex)
+		nv = newTex;
+}
 
 Properties RoughGlassMaterial::ToProperties() const  {
 	Properties props;

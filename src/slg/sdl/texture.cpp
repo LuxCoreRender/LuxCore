@@ -166,19 +166,27 @@ TextureDefinitions::~TextureDefinitions() {
 		delete t;
 }
 
-void TextureDefinitions::DefineTexture(const string &name, Texture *t) {
+bool TextureDefinitions::DefineTexture(const string &name, Texture *newTex) {
 	if (IsTextureDefined(name)) {
-		// Overwrite the previous definition
-		const u_int index = GetTextureIndex(name);
-		delete texs[index];
-		texs[index] = t;
+		// Delete the old texture definition
+		const Texture *oldTex = GetTexture(name);
+		DeleteTexture(name);
 
+		// Add the new texture definition
 		texsByName.erase(name);
-		texsByName.insert(make_pair(name, t));
+		texsByName.insert(make_pair(name, newTex));
+
+		// Update all references
+		BOOST_FOREACH(Texture *tex, texs)
+			tex->UpdateTextureReferences(oldTex, newTex);
+
+		return false;
 	} else {
 		// Add a new texture
-		texs.push_back(t);
-		texsByName.insert(make_pair(name, t));
+		texs.push_back(newTex);
+		texsByName.insert(make_pair(name, newTex));
+
+		return true;
 	}
 }
 
