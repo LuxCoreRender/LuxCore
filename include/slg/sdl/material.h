@@ -170,7 +170,7 @@ public:
 		float *directPdfW, float *reversePdfW) const = 0;
 
 	// Update any reference to oldMat with newMat (mostly used for updating Mix material)
-	virtual void UpdateMaterialReference(const Material *oldMat, const Material *newMat) { }
+	virtual void UpdateMaterialReferences(const Material *oldMat, const Material *newMat) { }
 	// Return true if the material is referencing the specified material
 	virtual bool IsReferencing(const Material *mat) const { return (this == mat); }
 	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const {
@@ -183,6 +183,15 @@ public:
 			bumpTex->AddReferencedTextures(referencedTexs);
 		if (normalTex)
 			normalTex->AddReferencedTextures(referencedTexs);
+	}
+	// Update any reference to oldTex with newTex
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (emittedTex == oldTex)
+			emittedTex = newTex;
+		if (bumpTex == oldTex)
+			bumpTex = newTex;
+		if (normalTex == oldTex)
+			normalTex = newTex;
 	}
 
 	virtual luxrays::Properties ToProperties() const;
@@ -212,6 +221,8 @@ public:
 	}
 	void DefineMaterial(const std::string &name, Material *m);
 	void UpdateMaterial(const std::string &name, Material *m);
+
+	void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	Material *GetMaterial(const std::string &name);
 	Material *GetMaterial(const u_int index) {
@@ -255,6 +266,7 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -296,6 +308,7 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -340,6 +353,7 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -393,6 +407,7 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -439,6 +454,7 @@ public:
 	}
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -460,7 +476,7 @@ private:
 class MixMaterial : public Material {
 public:
 	MixMaterial(const Texture *bump, const Texture *normal,
-			const Material *mA, const Material *mB, const Texture *mix) :
+			Material *mA, Material *mB, const Texture *mix) :
 			Material(NULL, bump, normal), matA(mA), matB(mB), mixFactor(mix) { }
 
 	virtual MaterialType GetType() const { return MIX; }
@@ -502,10 +518,11 @@ public:
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void UpdateMaterialReference(const Material *oldMat,  const Material *newMat);
+	virtual void UpdateMaterialReferences(Material *oldMat, Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
 	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const;
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -514,8 +531,8 @@ public:
 	const Texture *GetMixFactor() const { return mixFactor; }
 
 private:
-	const Material *matA;
-	const Material *matB;
+	Material *matA;
+	Material *matB;
 	const Texture *mixFactor;
 };
 
@@ -581,6 +598,7 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -620,6 +638,7 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -680,6 +699,7 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -724,6 +744,7 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 

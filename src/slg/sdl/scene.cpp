@@ -416,7 +416,16 @@ void Scene::ParseTextures(const Properties &props) {
 		SDL_LOG("Texture definition: " << texName);
 
 		Texture *tex = CreateTexture(texName, props);
-		texDefs.DefineTexture(texName, tex);
+
+		if (texDefs.IsTextureDefined(texName)) {
+			const Texture *oldTex = texDefs.GetTexture(texName);
+
+			texDefs.DefineTexture(texName, tex);
+			matDefs.UpdateTextureReferences(oldTex, tex);
+		} else {
+			// Only a new texture
+			texDefs.DefineTexture(texName, tex);
+		}
 	}
 
 	editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);

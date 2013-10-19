@@ -84,7 +84,10 @@ public:
 	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);
 	}
-	
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	}
+
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 };
 
@@ -100,7 +103,10 @@ public:
 	bool IsTextureDefined(const std::string &name) const {
 		return (texsByName.count(name) > 0);
 	}
-	void DefineTexture(const std::string &name, Texture *t);
+
+	// Returns true if is a new texture, false if an existing texture with the
+	// same name has been overwritten.
+	bool DefineTexture(const std::string &name, Texture *t);
 
 	Texture *GetTexture(const std::string &name);
 	Texture *GetTexture(const u_int index) {
@@ -395,6 +401,13 @@ public:
 		tex2->AddReferencedTextures(referencedTexs);
 	}
 
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
+	}
+
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
 
@@ -429,6 +442,11 @@ public:
 		tex->AddReferencedTextures(referencedTexs);
 	}
 
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex == oldTex)
+			tex = newTex;
+	}
+
 	const Texture *GetTexture() const { return tex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
@@ -453,6 +471,11 @@ public:
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex->AddReferencedTextures(referencedTexs);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex == oldTex)
+			tex = newTex;
 	}
 
 	const Texture *GetTexture() const { return tex; }
@@ -486,6 +509,13 @@ public:
 		tex2->AddReferencedTextures(referencedTexs);
 	}
 
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
+	}
+
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const Texture *GetTexture1() const { return tex1; }
 	const Texture *GetTexture2() const { return tex2; }
@@ -515,6 +545,13 @@ public:
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
 	}
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
@@ -552,6 +589,15 @@ public:
 		amount->AddReferencedTextures(referencedTexs);
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (amount == oldTex)
+			amount = newTex;
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
 	}
 
 	const Texture *GetAmountTexture() const { return amount; }
@@ -653,6 +699,13 @@ public:
 		outsideTex->AddReferencedTextures(referencedTexs);
 	}
 
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (insideTex == oldTex)
+			insideTex = newTex;
+		if (outsideTex == oldTex)
+			outsideTex = newTex;
+	}
+
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const Texture *GetInsideTex() const { return insideTex; }
 	const Texture *GetOutsideTex() const { return outsideTex; }
@@ -697,6 +750,15 @@ public:
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
 		tex3->AddReferencedTextures(referencedTexs);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
+		if (tex3 == oldTex)
+			tex3 = newTex;
 	}
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
@@ -768,6 +830,13 @@ public:
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
 	}
 
 	const Texture *GetTexture1() const { return tex1; }
@@ -888,6 +957,11 @@ public:
 		amount->AddReferencedTextures(referencedTexs);
 	}
 
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (amount == oldTex)
+			amount = newTex;
+	}
+
 	const Texture *GetAmountTexture() const { return amount; }
 	const std::vector<float> &GetOffsets() const { return offsets; }
 	const std::vector<luxrays::Spectrum> &GetValues() const { return values; }
@@ -918,10 +992,6 @@ public:
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
-	}
-
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 };
 
@@ -944,10 +1014,6 @@ public:
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
-	}
-
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 };
 
@@ -969,10 +1035,6 @@ public:
 
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
-
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
-	}
 
 	u_int GetChannel() const { return channel; }
 
