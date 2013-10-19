@@ -23,6 +23,7 @@
 #define _LUXRAYS_UV_H
 
 #include <ostream>
+#include "luxrays/core/utils.h"
 
 namespace luxrays {
 
