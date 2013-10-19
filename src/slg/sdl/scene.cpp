@@ -75,48 +75,7 @@ Scene::Scene(const string &fileName, const float imageScale) {
 	SDL_LOG("Reading scene: " << fileName);
 
 	Properties scnProp(fileName);
-
-	//--------------------------------------------------------------------------
-	// Read camera position and target
-	//--------------------------------------------------------------------------
-
-	ParseCamera(scnProp);
-
-	//--------------------------------------------------------------------------
-	// Read all textures
-	//--------------------------------------------------------------------------
-
-	ParseTextures(scnProp);
-
-	//--------------------------------------------------------------------------
-	// Read all materials
-	//--------------------------------------------------------------------------
-
-	ParseMaterials(scnProp);
-
-	//--------------------------------------------------------------------------
-	// Read all objects .ply file
-	//--------------------------------------------------------------------------
-
-	ParseObjects(scnProp);
-
-	//--------------------------------------------------------------------------
-	// Check if there is an infinitelight source defined
-	//--------------------------------------------------------------------------
-
-	AddInfiniteLight(scnProp);
-
-	//--------------------------------------------------------------------------
-	// Check if there is a SkyLight defined
-	//--------------------------------------------------------------------------
-
-	AddSkyLight(scnProp);
-
-	//--------------------------------------------------------------------------
-	// Check if there is a SunLight defined
-	//--------------------------------------------------------------------------
-
-	AddSunLight(scnProp);
+	Parse(scnProp);
 
 	//--------------------------------------------------------------------------
 
@@ -283,41 +242,41 @@ Properties Scene::ToProperties(const string &directoryName) {
 		return props;
 }
 
-vector<string> Scene::GetStringParameters(const Properties &prop, const string &paramName,
-		const u_int paramCount, const string &defaultValue) {
-	const vector<string> vs = prop.GetStringVector(paramName, defaultValue);
-	if (vs.size() != paramCount) {
-		stringstream ss;
-		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-		throw runtime_error(ss.str());
-	}
-
-	return vs;
-}
-
-vector<int> Scene::GetIntParameters(const Properties &prop, const string &paramName,
-		const u_int paramCount, const string &defaultValue) {
-	const vector<int> vi = prop.GetIntVector(paramName, defaultValue);
-	if (vi.size() != paramCount) {
-		stringstream ss;
-		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-		throw runtime_error(ss.str());
-	}
-
-	return vi;
-}
-
-vector<float> Scene::GetFloatParameters(const Properties &prop, const string &paramName,
-		const u_int paramCount, const string &defaultValue) {
-	const vector<float> vf = prop.GetFloatVector(paramName, defaultValue);
-	if (vf.size() != paramCount) {
-		stringstream ss;
-		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
-		throw runtime_error(ss.str());
-	}
-
-	return vf;
-}
+//vector<string> Scene::GetStringParameters(const Properties &prop, const string &paramName,
+//		const u_int paramCount, const string &defaultValue) {
+//	const vector<string> vs = prop.GetStringVector(paramName, defaultValue);
+//	if (vs.size() != paramCount) {
+//		stringstream ss;
+//		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
+//		throw runtime_error(ss.str());
+//	}
+//
+//	return vs;
+//}
+//
+//vector<int> Scene::GetIntParameters(const Properties &prop, const string &paramName,
+//		const u_int paramCount, const string &defaultValue) {
+//	const vector<int> vi = prop.GetIntVector(paramName, defaultValue);
+//	if (vi.size() != paramCount) {
+//		stringstream ss;
+//		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
+//		throw runtime_error(ss.str());
+//	}
+//
+//	return vi;
+//}
+//
+//vector<float> Scene::GetFloatParameters(const Properties &prop, const string &paramName,
+//		const u_int paramCount, const string &defaultValue) {
+//	const vector<float> vf = prop.GetFloatVector(paramName, defaultValue);
+//	if (vf.size() != paramCount) {
+//		stringstream ss;
+//		ss << "Syntax error in " << paramName << " (required " << paramCount << " parameters)";
+//		throw runtime_error(ss.str());
+//	}
+//
+//	return vf;
+//}
 
 //--------------------------------------------------------------------------
 // Methods to build a scene from scratch
@@ -351,6 +310,38 @@ void Scene::RebuildTriangleLightDefs() {
 	// Use the new versions
 	triLightDefs = newTriLights;
 	meshTriLightDefsOffset = newMeshTriLightOffset;
+}
+
+void Scene::Parse(const Properties &props) {
+	//--------------------------------------------------------------------------
+	// Read camera position and target
+	//--------------------------------------------------------------------------
+
+	ParseCamera(props);
+
+	//--------------------------------------------------------------------------
+	// Read all textures
+	//--------------------------------------------------------------------------
+
+	ParseTextures(props);
+
+	//--------------------------------------------------------------------------
+	// Read all materials
+	//--------------------------------------------------------------------------
+
+	ParseMaterials(props);
+
+	//--------------------------------------------------------------------------
+	// Read all objects .ply file
+	//--------------------------------------------------------------------------
+
+	ParseObjects(props);
+
+	//--------------------------------------------------------------------------
+	// Read all env. lights
+	//--------------------------------------------------------------------------
+
+	ParseEnvLights(props);
 }
 
 void Scene::ParseCamera(const Properties &props) {
@@ -572,6 +563,88 @@ void Scene::ParseObjects(const Properties &props) {
 	editActions.AddActions(GEOMETRY_EDIT);
 }
 
+void Scene::ParseEnvLights(const Properties &props) {
+	//--------------------------------------------------------------------------
+	// SkyLight
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("scene.infinitelight")) {
+		const Matrix4x4 mat = props.Get("scene.skylight.transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SkyLight *sl = new SkyLight(light2World,
+				props.Get("scene.skylight.turbidity", MakePropertyValues(2.2f)).Get<float>(),
+				props.Get("scene.skylight.dir", MakePropertyValues(0.f, 0.f, 1.f)).Get<Vector>());
+		sl->SetGain(props.Get("scene.skylight.gain", MakePropertyValues(1.f, 1.f, 1.f)).Get<Spectrum>());
+		sl->SetSamples(props.Get("scene.skylight.samples", MakePropertyValues(-1)).Get<int>());
+		sl->SetID(props.Get("scene.skylight.id", MakePropertyValues(0)).Get<int>());
+		sl->SetIndirectDiffuseVisibility(props.Get("scene.skylight.visibility.indirect.diffuse.enable", MakePropertyValues(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get("scene.skylight.visibility.indirect.glossy.enable", MakePropertyValues(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get("scene.skylight.visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
+		sl->Preprocess();
+
+		// Delete the old env. light
+		if (envLight)
+			delete envLight;
+		envLight = sl;
+	}
+
+	//--------------------------------------------------------------------------
+	// InfiniteLight
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("scene.infinitelight")) {
+		const Matrix4x4 mat = props.Get("scene.infinitelight.transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		const string imageName = props.Get("scene.infinitelight.file", MakePropertyValues("image.png")).Get<string>();
+		const float gamma = props.Get("scene.infinitelight.gamma", MakePropertyValues(2.2f)).Get<float>();
+		ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
+		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
+
+		il->SetGain(props.Get("scene.infinitelight.gain", MakePropertyValues(1.f, 1.f, 1.f)).Get<Spectrum>());
+
+		const UV shift = props.Get("scene.infinitelight.shift", MakePropertyValues(0.f, 0.f)).Get<UV>();
+		il->GetUVMapping()->uDelta = shift.u;
+		il->GetUVMapping()->vDelta = shift.v;
+		il->SetSamples(props.Get("scene.infinitelight.samples", MakePropertyValues(-1)).Get<int>());
+		il->SetID(props.Get("scene.infinitelight.id", MakePropertyValues(0)).Get<int>());
+		il->SetIndirectDiffuseVisibility(props.Get("scene.infinitelight.visibility.indirect.diffuse.enable", MakePropertyValues(true)).Get<bool>());
+		il->SetIndirectGlossyVisibility(props.Get("scene.infinitelight.visibility.indirect.glossy.enable", MakePropertyValues(true)).Get<bool>());
+		il->SetIndirectSpecularVisibility(props.Get("scene.infinitelight.visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
+		il->Preprocess();
+
+		// Delete the old env. light
+		if (envLight)
+			delete envLight;
+		envLight = il;
+	}
+
+	//--------------------------------------------------------------------------
+	// SunLight
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("scene.sunlight")) {
+		const Matrix4x4 mat = props.Get("scene.sunlight.transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SunLight *sl = new SunLight(light2World,
+				props.Get("scene.sunlight.turbidity", MakePropertyValues(2.2f)).Get<float>(),
+				props.Get("scene.sunlight.relsize", MakePropertyValues(1.0f)).Get<float>(),
+				props.Get("scene.sunlight.dir", MakePropertyValues(0.f, 0.f, 1.f)).Get<Vector>());
+
+		sl->SetGain(props.Get("scene.sunlight.gain", MakePropertyValues(1.f, 1.f, 1.f)).Get<Spectrum>());
+		sl->SetSamples(props.Get("scene.sunlight.samples", MakePropertyValues(-1)).Get<int>());
+		sl->SetID(props.Get("scene.sunlight.id", MakePropertyValues(0)).Get<int>());
+		sl->SetIndirectDiffuseVisibility(props.Get("scene.sunlight.visibility.indirect.diffuse.enable", MakePropertyValues(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get("scene.sunlight.visibility.indirect.glossy.enable", MakePropertyValues(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get("scene.sunlight.visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
+		sl->Preprocess();
+
+		sunLight = sl;
+	}
+}
+
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
 	SceneObject *obj = objDefs.GetSceneObject(objName);
 	ExtMesh *mesh = obj->GetExtMesh();
@@ -589,126 +662,6 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 		for (u_int i = meshTriLightDefsOffset[meshIndex]; i < mesh->GetTotalTriangleCount(); ++i)
 			triLightDefs[i]->Init();
 	}
-}
-
-void Scene::AddInfiniteLight(const string &propsString) {
-	Properties prop;
-	prop.SetFromString(propsString);
-
-	AddInfiniteLight(prop);
-}
-
-void Scene::AddInfiniteLight(const Properties &props) {
-	const vector<string> ilParams = props.GetStringVector("scene.infinitelight.file", "");
-
-	if (ilParams.size() > 0) {
-		if (envLight)
-			throw runtime_error("Can not define an infinitelight when there is already an skylight defined");
-
-		vector<float> vf = GetFloatParameters(props, "scene.infinitelight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-		const Matrix4x4 mat(
-				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
-		const Transform light2World(mat);
-
-		const float gamma = props.GetFloat("scene.infinitelight.gamma", 2.2f);
-		ImageMap *imgMap = imgMapCache.GetImageMap(ilParams.at(0), gamma);
-		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
-
-		vf = GetFloatParameters(props, "scene.infinitelight.gain", 3, "1.0 1.0 1.0");
-		il->SetGain(Spectrum(vf.at(0), vf.at(1), vf.at(2)));
-
-		vf = GetFloatParameters(props, "scene.infinitelight.shift", 2, "0.0 0.0");
-		il->GetUVMapping()->uDelta = vf.at(0);
-		il->GetUVMapping()->vDelta = vf.at(1);
-		il->SetSamples(props.GetInt("scene.infinitelight.samples", -1));
-		il->SetID(props.GetInt("scene.infinitelight.id", 0));
-		il->SetIndirectDiffuseVisibility(props.GetBoolean("scene.infinitelight.visibility.indirect.diffuse.enable", true));
-		il->SetIndirectGlossyVisibility(props.GetBoolean("scene.infinitelight.visibility.indirect.glossy.enable", true));
-		il->SetIndirectSpecularVisibility(props.GetBoolean("scene.infinitelight.visibility.indirect.specular.enable", true));
-		il->Preprocess();
-
-		envLight = il;
-	} else
-		envLight = NULL;
-}
-
-void Scene::AddSkyLight(const string &propsString) {
-	Properties prop;
-	prop.SetFromString(propsString);
-
-	AddSkyLight(prop);
-}
-
-void Scene::AddSkyLight(const Properties &props) {
-	const vector<string> silParams = props.GetStringVector("scene.skylight.dir", "");
-
-	if (silParams.size() > 0) {
-		if (envLight)
-			throw runtime_error("Can not define a skylight when there is already an infinitelight defined");
-
-		vector<float> vf = GetFloatParameters(props, "scene.skylight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-		const Matrix4x4 mat(
-				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
-		const Transform light2World(mat);
-
-		vector<float> sdir = GetFloatParameters(props, "scene.skylight.dir", 3, "0.0 0.0 1.0");
-		const float turb = props.GetFloat("scene.skylight.turbidity", 2.2f);
-		vector<float> gain = GetFloatParameters(props, "scene.skylight.gain", 3, "1.0 1.0 1.0");
-
-		SkyLight *sl = new SkyLight(light2World, turb, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sl->SetSamples(props.GetInt("scene.skylight.samples", -1));
-		sl->SetID(props.GetInt("scene.skylight.id", 0));
-		sl->SetIndirectDiffuseVisibility(props.GetBoolean("scene.skylight.visibility.indirect.diffuse.enable", true));
-		sl->SetIndirectGlossyVisibility(props.GetBoolean("scene.skylight.visibility.indirect.glossy.enable", true));
-		sl->SetIndirectSpecularVisibility(props.GetBoolean("scene.skylight.visibility.indirect.specular.enable", true));
-		sl->Preprocess();
-
-		envLight = sl;
-	}
-}
-
-void Scene::AddSunLight(const string &propsString) {
-	Properties prop;
-	prop.SetFromString(propsString);
-
-	AddSunLight(prop);
-}
-
-void Scene::AddSunLight(const Properties &props) {
-	const vector<string> sulParams = props.GetStringVector("scene.sunlight.dir", "");
-	if (sulParams.size() > 0) {
-		vector<float> vf = GetFloatParameters(props, "scene.sunlight.transformation", 16, "1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-		const Matrix4x4 mat(
-				vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-				vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-				vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-				vf.at(3), vf.at(7), vf.at(11), vf.at(15));
-		const Transform light2World(mat);
-
-		vector<float> sdir = GetFloatParameters(props, "scene.sunlight.dir", 3, "0.0 0.0 1.0");
-		const float turb = props.GetFloat("scene.sunlight.turbidity", 2.2f);
-		const float relSize = props.GetFloat("scene.sunlight.relsize", 1.0f);
-		vector<float> gain = GetFloatParameters(props, "scene.sunlight.gain", 3, "1.0 1.0 1.0");
-
-		SunLight *sl = new SunLight(light2World, turb, relSize, Vector(sdir.at(0), sdir.at(1), sdir.at(2)));
-		sl->SetGain(Spectrum(gain.at(0), gain.at(1), gain.at(2)));
-		sl->SetSamples(props.GetInt("scene.sunlight.samples", -1));
-		sl->SetID(props.GetInt("scene.sunlight.id", 0));
-		sl->SetIndirectDiffuseVisibility(props.GetBoolean("scene.sunlight.visibility.indirect.diffuse.enable", true));
-		sl->SetIndirectGlossyVisibility(props.GetBoolean("scene.sunlight.visibility.indirect.glossy.enable", true));
-		sl->SetIndirectSpecularVisibility(props.GetBoolean("scene.sunlight.visibility.indirect.specular.enable", true));
-		sl->Preprocess();
-
-		sunLight = sl;
-	} else
-		sunLight = NULL;
 }
 
 void Scene::RemoveUnusedMaterials() {

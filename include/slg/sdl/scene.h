@@ -85,19 +85,9 @@ public:
 		extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
 	}
 
-	void ParseCamera(const luxrays::Properties &props);
-	void ParseTextures(const luxrays::Properties &props);
-	void ParseMaterials(const luxrays::Properties &props);
-	void ParseObjects(const luxrays::Properties &props);
+	void Parse(const luxrays::Properties &props);
 
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
-
-	void AddInfiniteLight(const std::string &propsString);
-	void AddInfiniteLight(const luxrays::Properties &props);
-	void AddSkyLight(const std::string &propsString);
-	void AddSkyLight(const luxrays::Properties &props);
-	void AddSunLight(const std::string &propsString);
-	void AddSunLight(const luxrays::Properties &props);
 
 	void RemoveUnusedMaterials();
 	void RemoveUnusedTextures();
@@ -132,15 +122,21 @@ public:
 	EditActionList editActions;
 
 protected:
-	static std::vector<std::string> GetStringParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
-	static std::vector<int> GetIntParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
-	static std::vector<float> GetFloatParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
+//	static std::vector<std::string> GetStringParameters(const luxrays::Properties &prop,
+//		const std::string &paramName, const u_int paramCount,
+//		const std::string &defaultValue);
+//	static std::vector<int> GetIntParameters(const luxrays::Properties &prop,
+//		const std::string &paramName, const u_int paramCount,
+//		const std::string &defaultValue);
+//	static std::vector<float> GetFloatParameters(const luxrays::Properties &prop,
+//		const std::string &paramName, const u_int paramCount,
+//		const std::string &defaultValue);
+
+	void ParseCamera(const luxrays::Properties &props);
+	void ParseTextures(const luxrays::Properties &props);
+	void ParseMaterials(const luxrays::Properties &props);
+	void ParseObjects(const luxrays::Properties &props);
+	void ParseEnvLights(const luxrays::Properties &props);
 
 	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
 	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
