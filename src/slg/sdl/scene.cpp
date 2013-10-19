@@ -32,6 +32,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/format.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/intersectiondevice.h"
@@ -160,9 +161,8 @@ void Scene::Preprocess(Context *ctx) {
 	dataSet->SetAcceleratorType(accelType);
 
 	// Add all objects
-	const vector<ExtMesh *> &objects = meshDefs.GetAllMesh();
-	for (vector<ExtMesh *>::const_iterator obj = objects.begin(); obj != objects.end(); ++obj)
-		dataSet->Add(*obj);
+	for (u_int i = 0; i < objDefs.GetSize(); ++i)
+		dataSet->Add(objDefs.GetSceneObject(i)->GetExtMesh());
 
 	dataSet->Preprocess();
 
@@ -191,6 +191,8 @@ void Scene::Preprocess(Context *ctx) {
 	// Initialize the light source indices
 	for (u_int i = 0; i < lightCount; ++i)
 		GetLightByIndex(i)->SetSceneIndex(i);
+
+	editActions.Reset();
 }
 
 Properties Scene::ToProperties(const string &directoryName) {
@@ -267,15 +269,15 @@ Properties Scene::ToProperties(const string &directoryName) {
 
 		SDL_LOG("Saving object information:");
 		lastPrint = WallClockTime();
-		for (u_int i = 0; i < meshDefs.GetSize(); ++i) {			
+		for (u_int i = 0; i < objDefs.GetSize(); ++i) {			
 			if (WallClockTime() - lastPrint > 2.0) {
-				SDL_LOG("  " << i << "/" << meshDefs.GetSize());
+				SDL_LOG("  " << i << "/" << objDefs.GetSize());
 				lastPrint = WallClockTime();
 			}
 
-			const ExtMesh *mesh = meshDefs.GetExtMesh(i);
-			//SDL_LOG("  " + mesh->GetName());
-			props.Set(mesh->ToProperties(objectMaterials[i]->GetName(), extMeshCache));
+			const SceneObject *obj = objDefs.GetSceneObject(i);
+			//SDL_LOG("  " + obj->GetName());
+			props.Set(obj->ToProperties(extMeshCache));
 		}
 
 		return props;
@@ -320,6 +322,36 @@ vector<float> Scene::GetFloatParameters(const Properties &prop, const string &pa
 //--------------------------------------------------------------------------
 // Methods to build a scene from scratch
 //--------------------------------------------------------------------------
+
+void Scene::RebuildTriangleLightDefs() {
+	// I have to build a new version of lights and triangleLightSource
+	vector<TriangleLight *> newTriLights;
+	vector<u_int> newMeshTriLightOffset;
+
+	for (u_int i = 0; i < objDefs.GetSize(); ++i) {
+		const SceneObject *obj = objDefs.GetSceneObject(i);
+		const ExtMesh *mesh = obj->GetExtMesh();
+		const Material *m = obj->GetMaterial();
+
+		if (m->IsLightSource()) {
+			newMeshTriLightOffset.push_back(newTriLights.size());
+
+			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
+				TriangleLight *tl = new TriangleLight(m, mesh, i, j);
+				newTriLights.push_back(tl);
+			}
+		} else
+			newMeshTriLightOffset.push_back(NULL_INDEX);
+	}
+
+	// Delete all old TriangleLight
+	for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
+		delete *l;
+
+	// Use the new versions
+	triLightDefs = newTriLights;
+	meshTriLightDefsOffset = newMeshTriLightOffset;
+}
 
 void Scene::ParseCamera(const Properties &props) {
 	if (!props.HaveNames("scene.camera.lookat")) {
@@ -461,38 +493,11 @@ void Scene::ParseMaterials(const Properties &props) {
 			matDefs.DefineMaterial(matName, newMat);
 
 			// Replace old material direct references with new one
-			for (u_int i = 0; i < objectMaterials.size(); ++i) {
-				if (objectMaterials[i] == oldMat)
-					objectMaterials[i] = newMat;
-			}
+			objDefs.UpdateMaterialReferences(oldMat, newMat);
 
-			// Check if old and/or the new material were/is light sources
+			// Check if the old and/or the new material were/is light sources
 			if (wasLightSource || newMat->IsLightSource()) {
-				// I have to build a new version of lights and triangleLightSource
-				vector<TriangleLight *> newTriLights;
-				vector<u_int> newMeshTriLightOffset;
-
-				for (u_int i = 0; i < meshDefs.GetSize(); ++i) {
-					const ExtMesh *mesh = meshDefs.GetExtMesh(i);
-
-					if (objectMaterials[i]->IsLightSource()) {
-						newMeshTriLightOffset.push_back(newTriLights.size());
-
-						for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
-							TriangleLight *tl = new TriangleLight(objectMaterials[i], mesh, i, j);
-							newTriLights.push_back(tl);
-						}
-					} else
-						newMeshTriLightOffset.push_back(NULL_INDEX);
-				}
-
-				// Delete all old TriangleLight
-				for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
-					delete *l;
-
-				// Use the new versions
-				triLightDefs = newTriLights;
-				meshTriLightDefsOffset = newMeshTriLightOffset;
+				RebuildTriangleLightDefs();
 
 				editActions.AddAction(AREALIGHTS_EDIT);
 			}
@@ -520,7 +525,40 @@ void Scene::ParseObjects(const Properties &props) {
 		if (objName == "")
 			throw runtime_error("Syntax error in " + key);
 
-		CreateObject(objName, props);
+		SceneObject *obj = CreateObject(objName, props);
+
+		if (objDefs.IsSceneObjectDefined(objName)) {
+			// A replacement for an existing object
+			const SceneObject *oldObj = objDefs.GetSceneObject(objName);
+			const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
+
+			objDefs.DefineSceneObject(objName, obj);
+
+			// Check if the old and/or the new object were/is light sources
+			if (wasLightSource || obj->GetMaterial()->IsLightSource()) {
+				RebuildTriangleLightDefs();
+
+				editActions.AddAction(AREALIGHTS_EDIT);
+			}
+		} else {
+			// Only a new object
+			objDefs.DefineSceneObject(objName, obj);
+			
+			// Check if it is a light sources
+			const Material *mat = obj->GetMaterial();
+			if (mat->IsLightSource()) {
+				const ExtMesh *mesh = obj->GetExtMesh();
+				SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
+
+				meshTriLightDefsOffset.push_back(triLightDefs.size());
+				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
+					TriangleLight *tl = new TriangleLight(mat, mesh, objDefs.GetSize() - 1, i);
+					triLightDefs.push_back(tl);
+				}
+			} else
+				meshTriLightDefsOffset.push_back(NULL_INDEX);
+		}
+
 		++objCount;
 
 		const double now = WallClockTime();
@@ -535,7 +573,8 @@ void Scene::ParseObjects(const Properties &props) {
 }
 
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
-	ExtMesh *mesh = meshDefs.GetExtMesh(objName);
+	SceneObject *obj = objDefs.GetSceneObject(objName);
+	ExtMesh *mesh = obj->GetExtMesh();
 
 	ExtInstanceTriangleMesh *instanceMesh = dynamic_cast<ExtInstanceTriangleMesh *>(mesh);
 	if (instanceMesh)
@@ -544,9 +583,9 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 		mesh->ApplyTransform(trans);
 
 	// Check if it is a light source
-	const u_int meshIndex = meshDefs.GetExtMeshIndex(objName);
-	if (objectMaterials[meshIndex]->IsLightSource()) {
+	if (obj->GetMaterial()->IsLightSource()) {
 		// Have to update all light sources using this mesh
+		const u_int meshIndex = objDefs.GetSceneObjectIndex(objName);
 		for (u_int i = meshTriLightDefsOffset[meshIndex]; i < mesh->GetTotalTriangleCount(); ++i)
 			triLightDefs[i]->Init();
 	}
@@ -674,36 +713,36 @@ void Scene::AddSunLight(const Properties &props) {
 
 void Scene::RemoveUnusedMaterials() {
 	// Build a list of all referenced material names
-	set<const Material *> referencedMats;
-	for (vector<Material *>::const_iterator it = objectMaterials.begin(); it < objectMaterials.end(); ++it)
-		(*it)->AddReferencedMaterials(referencedMats);
+	boost::unordered_set<const Material *> referencedMats;
+	for (u_int i = 0; i < objDefs.GetSize(); ++i)
+		objDefs.GetSceneObject(i)->AddReferencedMaterials(referencedMats);
 
 	// Get the list of all defined material
-	vector<string> definedMats = matDefs.GetMaterialNames();
-	for (vector<string>::const_iterator it = definedMats.begin(); it < definedMats.end(); ++it) {
-		Material *m = matDefs.GetMaterial(*it);
+	const vector<string> definedMats = matDefs.GetMaterialNames();
+	BOOST_FOREACH(const string  &matName, definedMats) {
+		Material *m = matDefs.GetMaterial(matName);
 
 		if (referencedMats.count(m) == 0) {
-			SDL_LOG("Deleting unreferenced material: " << *it);
-			matDefs.DeleteMaterial(*it);
+			SDL_LOG("Deleting unreferenced material: " << matName);
+			matDefs.DeleteMaterial(matName);
 		}
 	}
 }
 
 void Scene::RemoveUnusedTextures() {
 	// Build a list of all referenced textures names
-	set<const Texture *> referencedTexs;
-	for (vector<Material *>::const_iterator it = objectMaterials.begin(); it < objectMaterials.end(); ++it)
-		(*it)->AddReferencedTextures(referencedTexs);
+	boost::unordered_set<const Texture *> referencedTexs;
+	for (u_int i = 0; i < matDefs.GetSize(); ++i)
+		matDefs.GetMaterial(i)->AddReferencedTextures(referencedTexs);
 
 	// Get the list of all defined material
 	vector<string> definedTexs = texDefs.GetTextureNames();
-	for (vector<string>::const_iterator it = definedTexs.begin(); it < definedTexs.end(); ++it) {
-		Texture *t = texDefs.GetTexture(*it);
+	BOOST_FOREACH(const string  &texName, definedTexs) {
+		Texture *t = texDefs.GetTexture(texName);
 
 		if (referencedTexs.count(t) == 0) {
-			SDL_LOG("Deleting unreferenced texture: " << *it);
-			texDefs.DeleteTexture(*it);
+			SDL_LOG("Deleting unreferenced texture: " << texName);
+			texDefs.DeleteTexture(texName);
 		}
 	}
 }
@@ -733,7 +772,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 			}
 		}
 
-		const Matrix4x4 mat = props.Get(prefixName + ".transformation", MakeMatrix4x4Identity()).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(prefixName + ".transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new UVMapping3D(trans);
@@ -745,7 +784,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 			}
 		}
 
-		const Matrix4x4 mat = props.Get(prefixName + ".transformation", MakeMatrix4x4Identity()).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(prefixName + ".transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new GlobalMapping3D(trans);
@@ -1041,7 +1080,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	return mat;
 }
 
-void Scene::CreateObject(const string &objName, const Properties &props) {
+SceneObject *Scene::CreateObject(const string &objName, const Properties &props) {
 	const string key = "scene.objects." + objName;
 
 	// Extract the material name
@@ -1058,34 +1097,21 @@ void Scene::CreateObject(const string &objName, const Properties &props) {
 	const bool usePlyNormals = props.Get(key + ".useplynormals", MakePropertyValues(false)).Get<bool>();
 
 	// Check if I have to use an instance mesh or not
-	ExtMesh *meshObject;
+	ExtMesh *mesh;
 	if (props.IsDefined(key + ".transformation")) {
-		const Matrix4x4 mat = props.Get(key + ".transformation", MakeMatrix4x4Identity()).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(key + ".transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
-		meshObject = extMeshCache.GetExtMesh(plyFileName, usePlyNormals, trans);
+		mesh = extMeshCache.GetExtMesh(plyFileName, usePlyNormals, &trans);
 	} else
-		meshObject = extMeshCache.GetExtMesh(plyFileName, usePlyNormals);
-
-	meshDefs.DefineExtMesh(objName, meshObject);
+		mesh = extMeshCache.GetExtMesh(plyFileName, usePlyNormals);
 
 	// Get the material
 	if (!matDefs.IsMaterialDefined(matName))
 		throw runtime_error("Unknown material: " + matName);
-	Material *mat = matDefs.GetMaterial(matName);
+	const Material *mat = matDefs.GetMaterial(matName);
 
-	// Check if it is a light sources
-	objectMaterials.push_back(mat);
-	if (mat->IsLightSource()) {
-		SDL_LOG("The " << objName << " object is a light sources with " << meshObject->GetTotalTriangleCount() << " triangles");
-
-		meshTriLightDefsOffset.push_back(triLightDefs.size());
-		for (u_int i = 0; i < meshObject->GetTotalTriangleCount(); ++i) {
-			TriangleLight *tl = new TriangleLight(mat, meshObject, meshDefs.GetSize() - 1, i);
-			triLightDefs.push_back(tl);
-		}
-	} else
-		meshTriLightDefsOffset.push_back(NULL_INDEX);
+	return new SceneObject(mesh, mat);
 }
 
 //------------------------------------------------------------------------------
@@ -1107,6 +1133,7 @@ LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
 
 const u_int Scene::GetLightCount() const {
 	u_int lightsSize = static_cast<u_int>(triLightDefs.size());
+
 	if (envLight)
 		++lightsSize;
 	if (sunLight)

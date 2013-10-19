@@ -410,7 +410,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						boost::asio::streambuf response;
 						std::ostream respStream(&response);
 
-						std::vector<std::string> names = scene->meshDefs.GetExtMeshNames();
+						std::vector<std::string> names = scene->objDefs.GetSceneObjectNames();
 						for (std::vector<std::string>::const_iterator iter = names.begin(); iter < names.end(); ++iter)
 							respStream << (*iter) << "\n";
 
@@ -764,15 +764,15 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									scene->UpdateObjectTransformation(objName, trans);
 
 									// Check if it is a light source
-									const u_int meshIndex = scene->meshDefs.GetExtMeshIndex(objName);
-									if (scene->objectMaterials[meshIndex]->IsLightSource()) {
+									const SceneObject *obj = scene->objDefs.GetSceneObject(objName);
+									if (obj->GetMaterial()->IsLightSource()) {
 										// Some render engine requires a complete update when
 										// modifying a light source
 										session->editActions.AddAction(AREALIGHTS_EDIT);
 									}
 
 									// Set the flag to Update the DataSet
-									ExtMesh *mesh = scene->meshDefs.GetExtMesh(objName);
+									const ExtMesh *mesh = obj->GetExtMesh();
 									if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE)
 										session->editActions.AddAction(INSTANCE_TRANS_EDIT);
 									else

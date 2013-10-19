@@ -153,9 +153,9 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	// Add the object to the scene
 	Properties prop;
 	prop.SetFromString(
-		"scene.objects." + meshName + ".ply = " + meshName + "\n"
-		"scene.objects." + meshName + ".material = " + matName + "\n"
-		"scene.objects." + meshName + ".useplynormals = 0\n"
+		"scene.objects." + objName + ".ply = " + meshName + "\n"
+		"scene.objects." + objName + ".material = " + matName + "\n"
+		"scene.objects." + objName + ".useplynormals = 0\n"
 		);
 	scene->ParseObjects(prop);
 }
@@ -165,8 +165,6 @@ static void DoRendering(RenderSession *session) {
 	const unsigned int haltSpp = session->renderConfig->cfg.GetInt("batch.haltspp", 0);
 	const float haltThreshold = session->renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
 
-	// Start the rendering
-	session->Start();
 	const double startTime = WallClockTime();
 
 	double lastFilmUpdate = startTime;
@@ -203,9 +201,6 @@ static void DoRendering(RenderSession *session) {
 
 		SLG_LOG(buf);
 	}
-
-	// Stop the rendering
-	session->Stop();
 
 	// Save the rendered image
 	session->FilmSave();
@@ -324,29 +319,66 @@ int main(int argc, char *argv[]) {
 				*scene);
 		RenderSession *session = new RenderSession(config);
 
+		//----------------------------------------------------------------------
 		// Start the rendering
+		//----------------------------------------------------------------------
+
+		session->Start();
+
 		DoRendering(session);
 		boost::filesystem::rename("image.png", "image0.png");
 
+		//----------------------------------------------------------------------
 		// Edit a texture
+		//----------------------------------------------------------------------
+
 		SLG_LOG("Editing a texture...");
+		session->BeginEdit();
 		scene->ParseTextures(
 			Property("scene.textures.map.type")("constfloat3") <<
 			Property("scene.textures.map.value")(0.f, 0.f, 1.f));
+		session->editActions = scene->editActions;
+		session->EndEdit();
 
 		// And redo the rendering
 		DoRendering(session);
 		boost::filesystem::rename("image.png", "image1.png");
 
+		//----------------------------------------------------------------------
 		// Edit a material
+		//----------------------------------------------------------------------
+
 		SLG_LOG("Editing a material...");
+		session->BeginEdit();
 		scene->ParseMaterials(
 			Property("scene.materials.mat_white.type")("mirror") <<
 			Property("scene.materials.mat_white.kr")(.9f, .9f, .9f));
+		session->editActions = scene->editActions;
+		session->EndEdit();
 
 		// And redo the rendering
 		DoRendering(session);
 		boost::filesystem::rename("image.png", "image2.png");
+
+		//----------------------------------------------------------------------
+		// Edit an object
+		//----------------------------------------------------------------------
+
+		SLG_LOG("Editing an object...");
+		session->BeginEdit();
+		scene->ParseMaterials(
+			Property("scene.materials.mat_white.type")("matte") <<
+			Property("scene.materials.mat_white.kr")(.7f, .7f, .7f));
+		CreateBox(scene, "box03", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
+		session->editActions = scene->editActions;
+		session->EndEdit();
+
+		// And redo the rendering
+		DoRendering(session);
+		boost::filesystem::rename("image.png", "image3.png");
+
+		// Stop the rendering
+		session->Stop();
 
 		delete session;
 		SLG_LOG("Done.");

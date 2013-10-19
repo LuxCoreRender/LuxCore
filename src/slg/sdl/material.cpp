@@ -58,8 +58,8 @@ Properties Material::ToProperties() const {
 MaterialDefinitions::MaterialDefinitions() { }
 
 MaterialDefinitions::~MaterialDefinitions() {
-	for (std::vector<Material *>::const_iterator it = mats.begin(); it != mats.end(); ++it)
-		delete (*it);
+	BOOST_FOREACH(Material *m, mats)
+		delete m;
 }
 
 void MaterialDefinitions::DefineMaterial(const std::string &name, Material *newMat) {
@@ -174,7 +174,7 @@ void MatteMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
 }
 
-void MatteMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MatteMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
@@ -226,7 +226,7 @@ Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	return Kr->GetSpectrumValue(hitPoint).Clamp() / (*absCosSampledDir);
 }
 
-void MirrorMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MirrorMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -338,7 +338,7 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	return result / (*absCosSampledDir);
 }
 
-void GlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void GlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -524,7 +524,7 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		return Spectrum();
 }
 
-void ArchGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void ArchGlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -616,7 +616,7 @@ Spectrum MetalMaterial::Sample(const HitPoint &hitPoint,
 		return Spectrum();
 }
 
-void MetalMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MetalMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -838,7 +838,7 @@ bool MixMaterial::IsReferencing(const Material *mat) const {
 	return false;
 }
 
-void MixMaterial::AddReferencedMaterials(std::set<const Material *> &referencedMats) const {
+void MixMaterial::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 	Material::AddReferencedMaterials(referencedMats);
 
 	referencedMats.insert(matA);
@@ -848,7 +848,7 @@ void MixMaterial::AddReferencedMaterials(std::set<const Material *> &referencedM
 	matB->AddReferencedMaterials(referencedMats);
 }
 
-void MixMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MixMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	matA->AddReferencedTextures(referencedTexs);
@@ -1005,7 +1005,7 @@ void MatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (.5f * INV_PI));
 }
 
-void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MatteTranslucentMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -1341,7 +1341,7 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void Glossy2Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
@@ -1512,7 +1512,7 @@ void Metal2Material::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localSampledDir, wh));
 }
 
-void Metal2Material::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void Metal2Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	n->AddReferencedTextures(referencedTexs);
@@ -1854,7 +1854,7 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void RoughGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void RoughGlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
