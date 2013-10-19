@@ -122,16 +122,6 @@ public:
 	EditActionList editActions;
 
 protected:
-//	static std::vector<std::string> GetStringParameters(const luxrays::Properties &prop,
-//		const std::string &paramName, const u_int paramCount,
-//		const std::string &defaultValue);
-//	static std::vector<int> GetIntParameters(const luxrays::Properties &prop,
-//		const std::string &paramName, const u_int paramCount,
-//		const std::string &defaultValue);
-//	static std::vector<float> GetFloatParameters(const luxrays::Properties &prop,
-//		const std::string &paramName, const u_int paramCount,
-//		const std::string &defaultValue);
-
 	void ParseCamera(const luxrays::Properties &props);
 	void ParseTextures(const luxrays::Properties &props);
 	void ParseMaterials(const luxrays::Properties &props);
