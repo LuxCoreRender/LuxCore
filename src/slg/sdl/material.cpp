@@ -960,13 +960,13 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	const Spectrum r = Kr->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum t = Kt->GetSpectrumValue(hitPoint).Clamp() * 
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp() * 
 		// Energy conservation
-		(Spectrum(1.f) - r);
+		(Spectrum(1.f) - kr);
 
-	const bool isKrBlack = r.Black();
-	const bool isKtBlack = t.Black();
+	const bool isKrBlack = kr.Black();
+	const bool isKtBlack = kt.Black();
 
 	// Decide to transmit or reflect
 	float threshold;
@@ -982,16 +982,16 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			return Spectrum();
 	}
 
-	*pdfW *= threshold;
-
 	if (passThroughEvent < threshold) {
 		*localSampledDir *= Sgn(localFixedDir.z);
 		*event = DIFFUSE | REFLECT;
-		return r * INV_PI;
+		*pdfW *= threshold;
+		return kr * INV_PI;
 	} else {
 		*localSampledDir *= -Sgn(localFixedDir.z);
 		*event = DIFFUSE | TRANSMIT;
-		return t * INV_PI;
+		*pdfW *= (1.f - threshold);
+		return kt * INV_PI;
 	}
 }
 

@@ -634,15 +634,17 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 			return BLACK;
 	}
 
-	*pdfW *= threshold;
-
 	if (passThroughEvent < threshold) {
 		*sampledDir *= (signbit(fixedDir.z) ? -1.f : 1.f);
 		*event = DIFFUSE | REFLECT;
+		*pdfW *= threshold;
+
 		return kr * M_1_PI_F;
 	} else {
 		*sampledDir *= -(signbit(fixedDir.z) ? -1.f : 1.f);
 		*event = DIFFUSE | TRANSMIT;
+		*pdfW *= (1.f - threshold);
+
 		return kt * M_1_PI_F;
 	}
 }
