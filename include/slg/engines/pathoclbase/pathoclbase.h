@@ -169,7 +169,7 @@ protected:
 
 class PathOCLBaseRenderEngine : public OCLRenderEngine {
 public:
-	PathOCLBaseRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+	PathOCLBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		const bool realTime = false);
 	virtual ~PathOCLBaseRenderEngine();
 

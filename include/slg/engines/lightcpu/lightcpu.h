@@ -57,7 +57,7 @@ private:
 
 class LightCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	LightCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	LightCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return LIGHTCPU; }
 

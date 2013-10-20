@@ -46,6 +46,7 @@
 
 #include "slg/slg.h"
 
+extern slg::RenderConfig *config;
 extern slg::RenderSession *session;
 
 // Options

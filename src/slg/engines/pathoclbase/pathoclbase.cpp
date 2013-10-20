@@ -52,7 +52,7 @@ using namespace slg;
 // PathOCLBaseRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
+PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
 		const bool realTime) : OCLRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);

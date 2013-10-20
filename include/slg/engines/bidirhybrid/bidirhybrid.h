@@ -127,7 +127,7 @@ private:
 
 class BiDirHybridRenderEngine : public HybridRenderEngine {
 public:
-	BiDirHybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	BiDirHybridRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return BIDIRHYBRID; }
 

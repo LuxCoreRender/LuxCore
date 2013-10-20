@@ -29,7 +29,7 @@ using namespace slg;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirCPURenderEngine::BiDirCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
 	lightPathsCount = 1;
 	baseRadius = 0.f;

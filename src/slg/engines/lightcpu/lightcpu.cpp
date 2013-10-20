@@ -29,7 +29,7 @@ using namespace slg;
 // LightCPURenderEngine
 //------------------------------------------------------------------------------
 
-LightCPURenderEngine::LightCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+LightCPURenderEngine::LightCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);

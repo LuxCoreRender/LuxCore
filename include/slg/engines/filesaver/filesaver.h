@@ -37,7 +37,7 @@ namespace slg {
 
 class FileSaverRenderEngine : public RenderEngine {
 public:
-	FileSaverRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return FILESAVER; }
 

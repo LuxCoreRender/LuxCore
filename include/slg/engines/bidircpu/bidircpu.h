@@ -102,7 +102,7 @@ protected:
 
 class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	BiDirCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	BiDirCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return BIDIRCPU; }
 

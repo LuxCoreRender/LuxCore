@@ -53,7 +53,7 @@ using namespace slg;
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
+PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
 		const bool realTime) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime) {
 }
 

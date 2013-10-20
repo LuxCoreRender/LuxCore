@@ -23,18 +23,6 @@
 
 #include "slg/renderengine.h"
 #include "slg/renderconfig.h"
-#include "slg/engines/rtpathocl/rtpathocl.h"
-#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
-#include "slg/engines/lightcpu/lightcpu.h"
-#include "slg/engines/pathcpu/pathcpu.h"
-#include "slg/engines/bidircpu/bidircpu.h"
-#include "slg/engines/bidirhybrid/bidirhybrid.h"
-#include "slg/engines/cbidirhybrid/cbidirhybrid.h"
-#include "slg/engines/bidirvmcpu/bidirvmcpu.h"
-#include "slg/engines/filesaver/filesaver.h"
-#include "slg/engines/pathhybrid/pathhybrid.h"
-#include "slg/engines/biaspathcpu/biaspathcpu.h"
-#include "slg/engines/biaspathocl/biaspathocl.h"
 #include "slg/sdl/bsdf.h"
 
 #include "luxrays/core/intersectiondevice.h"
@@ -50,7 +38,7 @@ using namespace slg;
 // RenderEngine
 //------------------------------------------------------------------------------
 
-RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	seedBaseGenerator(131) {
 	renderConfig = cfg;
 	film = flm;
@@ -282,59 +270,6 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 	}
 }
 
-RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
-		RenderConfig *renderConfig, Film *film, boost::mutex *filmMutex) {
-	switch (engineType) {
-		case LIGHTCPU:
-			return new LightCPURenderEngine(renderConfig, film, filmMutex);
-		case PATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new PathOCLRenderEngine(renderConfig, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-#endif
-		case PATHCPU:
-			return new PathCPURenderEngine(renderConfig, film, filmMutex);
-		case BIDIRCPU:
-			return new BiDirCPURenderEngine(renderConfig, film, filmMutex);
-		case BIDIRHYBRID:
-			return new BiDirHybridRenderEngine(renderConfig, film, filmMutex);
-		case CBIDIRHYBRID:
-			return new CBiDirHybridRenderEngine(renderConfig, film, filmMutex);
-		case BIDIRVMCPU:
-			return new BiDirVMCPURenderEngine(renderConfig, film, filmMutex);
-		case FILESAVER:
-			return new FileSaverRenderEngine(renderConfig, film, filmMutex);
-		case RTPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTPathOCLRenderEngine(renderConfig, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new PathCPURenderEngine(renderConfig, film, filmMutex);
-#endif
-		case PATHHYBRID:
-			return new PathHybridRenderEngine(renderConfig, film, filmMutex);
-		case BIASPATHCPU:
-			return new BiasPathCPURenderEngine(renderConfig, film, filmMutex);
-		case BIASPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new BiasPathOCLRenderEngine(renderConfig, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new BiasPathCPURenderEngine(renderConfig, film, filmMutex);
-#endif
-		case RTBIASPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTBiasPathOCLRenderEngine(renderConfig, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new BiasPathCPURenderEngine(renderConfig, film, filmMutex);
-#endif
-		default:
-			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
-	}
-}
-
 //------------------------------------------------------------------------------
 // CPURenderThread
 //------------------------------------------------------------------------------
@@ -399,7 +334,7 @@ void CPURenderThread::EndEdit(const EditActionList &editActions) {
 // CPURenderEngine
 //------------------------------------------------------------------------------
 
-CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
 	const size_t renderThreadCount =  cfg->cfg.GetInt("native.threads.count",
 			boost::thread::hardware_concurrency());
@@ -501,7 +436,7 @@ void CPUNoTileRenderThread::StartRenderThread() {
 // CPUNoTileRenderEngine
 //------------------------------------------------------------------------------
 
-CPUNoTileRenderEngine::CPUNoTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+CPUNoTileRenderEngine::CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	CPURenderEngine(cfg, flm, flmMutex) {
 }
 
@@ -684,7 +619,7 @@ void CPUTileRenderThread::StartRenderThread() {
 // CPUTileRenderEngine
 //------------------------------------------------------------------------------
 
-CPUTileRenderEngine::CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+CPUTileRenderEngine::CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	CPURenderEngine(cfg, flm, flmMutex) {
 	tileRepository = NULL;
 }
@@ -755,7 +690,7 @@ void CPUTileRenderEngine::UpdateCounters() {
 // OCLRenderEngine
 //------------------------------------------------------------------------------
 
-OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
+OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 	boost::mutex *flmMutex, bool fatal) : RenderEngine(rcfg, flm, flmMutex) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
@@ -1065,7 +1000,7 @@ void HybridRenderThread::RenderFunc() {
 // HybridRenderEngine
 //------------------------------------------------------------------------------
 
-HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
+HybridRenderEngine::HybridRenderEngine(const RenderConfig *rcfg, Film *flm,
 	boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex, false) {
 	//--------------------------------------------------------------------------
 	// Create the intersection devices and render threads
