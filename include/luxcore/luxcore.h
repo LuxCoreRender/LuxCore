@@ -44,6 +44,7 @@
 #include <string>
 
 #include <luxrays/utils/properties.h>
+#include <slg/renderconfig.h>
 #include <luxcore/cfg.h>
 
 /*!
@@ -52,6 +53,34 @@
  * \brief The LuxCore classes are defined within this namespace.
  */
 namespace luxcore {
+
+class RenderConfig {
+public:
+	/*!
+	 * \brief Constructs a new RenderConfig using the provided Properties and
+	 * (optional) Scene.
+	 *
+	 * \param props are the Properties used to build the new RenderConfig.
+	 * \param scene is the scene used to build the new RenderConfig. The scene
+	 * is not deleted by the destructor if the parameter is not NULL. If it is NULL
+	 * the scene will be read from the file specified in "scene.file" Property
+	 * and deleted by the destructor.
+	 *
+	 * \return a new RenderConfig.
+	 */
+	RenderConfig(const luxrays::Properties &props);//, Scene *scene = NULL);
+	~RenderConfig();
+
+	/*!
+	 * \brief Returns a reference to the Properties used to create the RenderConfig;
+	 *
+	 * \return the RenderConfig properties.
+	 */
+	const luxrays::Properties &GetProperties() const { return renderConfig->cfg; }
+
+private:
+	slg::RenderConfig *renderConfig;
+};
 
 }
 

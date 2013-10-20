@@ -29,7 +29,7 @@ using namespace slg;
 // CBiDirHybridRenderEngine
 //------------------------------------------------------------------------------
 
-CBiDirHybridRenderEngine::CBiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+CBiDirHybridRenderEngine::CBiDirHybridRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		BiDirHybridRenderEngine(rcfg, flm, flmMutex) {
 }
 

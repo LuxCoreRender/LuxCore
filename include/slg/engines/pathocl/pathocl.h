@@ -91,7 +91,7 @@ protected:
 
 class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 			const bool realTime = false);
 	virtual ~PathOCLRenderEngine();
 

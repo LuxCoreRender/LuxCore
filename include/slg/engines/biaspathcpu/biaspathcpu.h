@@ -107,7 +107,7 @@ private:
 
 class BiasPathCPURenderEngine : public CPUTileRenderEngine {
 public:
-	BiasPathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	BiasPathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~BiasPathCPURenderEngine();
 
 	RenderEngineType GetEngineType() const { return BIASPATHCPU; }
