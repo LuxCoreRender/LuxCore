@@ -101,7 +101,7 @@ private:
 
 class BiDirVMCPURenderEngine : public BiDirCPURenderEngine {
 public:
-	BiDirVMCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	BiDirVMCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return BIDIRVMCPU; }
 

@@ -33,7 +33,7 @@ namespace slg {
 
 class CBiDirHybridRenderEngine : public BiDirHybridRenderEngine {
 public:
-	CBiDirHybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CBiDirHybridRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return CBIDIRHYBRID; }
 

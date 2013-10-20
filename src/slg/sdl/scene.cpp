@@ -316,7 +316,7 @@ void Scene::ParseCamera(const Properties &props) {
 
 	Point orig, target;
 	if (props.IsDefined("scene.camera.lookat")) {
-		SDL_LOG("WARNING: deprecated syntax used in property scene.camera.lookat");
+		SDL_LOG("WARNING: deprecated property scene.camera.lookat");
 
 		const Property &prop = props.Get("scene.camera.lookat");
 		orig.x = prop.GetValue<float>(0);
@@ -891,7 +891,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		mat = new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
 	} else if (matType == "mirror") {
 		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
-		
+
 		mat = new MirrorMaterial(emissionTex, bumpTex, normalTex, kr);
 	} else if (matType == "glass") {
 		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));

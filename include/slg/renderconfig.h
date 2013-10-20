@@ -34,28 +34,26 @@ namespace slg {
 
 class RenderConfig {
 public:
-	RenderConfig(const std::string &propsString, Scene &scene);
-	RenderConfig(const luxrays::Properties &props, Scene &scene);
-	RenderConfig(const std::string *fileName, const luxrays::Properties *additionalProperties);
+	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
 	~RenderConfig();
 
-	void SetScreenRefreshInterval(const unsigned int t);
-	unsigned int GetScreenRefreshInterval() const;
-	void GetScreenSize(u_int *width, u_int *height) const;
+	void SetScreenRefreshInterval(const u_int t);
+	u_int GetScreenRefreshInterval() const;
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
+	void GetScreenSize(u_int *width, u_int *height) const;
 
+	Film *AllocFilm(FilmOutputs &filmOutputs) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
 		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
+	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
 	luxrays::Properties cfg;
 	Scene *scene;
 
 private:
-	void Init(const std::string *fileName, const luxrays::Properties *additionalProperties,
-		Scene *scene);
-
-	unsigned int screenRefreshInterval;
+	u_int screenRefreshInterval;
+	bool allocatedScene;
 };
 
 }

@@ -88,7 +88,7 @@ protected:
 
 class BiasPathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	BiasPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+	BiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 			const bool realTime = false);
 	virtual ~BiasPathOCLRenderEngine();
 

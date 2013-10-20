@@ -29,7 +29,7 @@ using namespace slg;
 // BiDirCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+BiDirVMCPURenderEngine::BiDirVMCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		BiDirCPURenderEngine(rcfg, flm, flmMutex) {
 }
 

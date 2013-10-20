@@ -57,7 +57,7 @@ typedef enum {
 
 class RenderEngine {
 public:
-	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RenderEngine();
 
 	virtual void Start();
@@ -111,8 +111,6 @@ public:
 
 	static RenderEngineType String2RenderEngineType(const std::string &type);
 	static const std::string RenderEngineType2String(const RenderEngineType type);
-	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
-		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 protected:
 	virtual void StartLockLess() = 0;
@@ -129,7 +127,7 @@ protected:
 	vector<luxrays::DeviceDescription *> selectedDeviceDescs;
 	vector<luxrays::IntersectionDevice *> intersectionDevices;
 
-	RenderConfig *renderConfig;
+	const RenderConfig *renderConfig;
 	Film *film;
 	boost::mutex *filmMutex;
 
@@ -184,7 +182,7 @@ protected:
 
 class CPURenderEngine : public RenderEngine {
 public:
-	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPURenderEngine();
 
 	friend class CPURenderThread;
@@ -227,7 +225,7 @@ protected:
 
 class CPUNoTileRenderEngine : public CPURenderEngine {
 public:
-	CPUNoTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPUNoTileRenderEngine();
 
 	friend class CPUNoTileRenderThread;
@@ -296,7 +294,7 @@ protected:
 
 class CPUTileRenderEngine : public CPURenderEngine {
 public:
-	CPUTileRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPUTileRenderEngine();
 
 	void GetPendingTiles(vector<TileRepository::Tile> &tiles) { return tileRepository->GetPendingTiles(tiles); }
@@ -328,7 +326,7 @@ protected:
 
 class OCLRenderEngine : public RenderEngine {
 public:
-	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+	OCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
 
 	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
@@ -410,7 +408,7 @@ protected:
 
 class HybridRenderEngine : public OCLRenderEngine {
 public:
-	HybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	HybridRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~HybridRenderEngine() { }
 
 	friend class HybridRenderState;

@@ -31,7 +31,7 @@ using namespace slg;
 // PathCPURenderEngine
 //------------------------------------------------------------------------------
 
-BiasPathCPURenderEngine::BiasPathCPURenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+BiasPathCPURenderEngine::BiasPathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUTileRenderEngine(rcfg, flm, flmMutex) {
 	pixelFilterDistribution = NULL;
 

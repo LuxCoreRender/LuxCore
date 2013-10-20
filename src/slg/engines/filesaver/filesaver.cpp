@@ -37,7 +37,7 @@ using namespace boost::filesystem;
 // Scene FileSaver render engine
 //------------------------------------------------------------------------------
 
-FileSaverRenderEngine::FileSaverRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+FileSaverRenderEngine::FileSaverRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		RenderEngine(rcfg, flm, flmMutex) {
 	film->Init();
 }

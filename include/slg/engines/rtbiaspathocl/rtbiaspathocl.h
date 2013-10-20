@@ -89,7 +89,7 @@ protected:
 
 class RTBiasPathOCLRenderEngine : public BiasPathOCLRenderEngine {
 public:
-	RTBiasPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RTBiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RTBiasPathOCLRenderEngine();
 
 	virtual RenderEngineType GetEngineType() const { return RTBIASPATHOCL; }

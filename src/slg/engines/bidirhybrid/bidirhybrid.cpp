@@ -29,7 +29,7 @@ using namespace slg;
 // BiDirHybridRenderEngine
 //------------------------------------------------------------------------------
 
-BiDirHybridRenderEngine::BiDirHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+BiDirHybridRenderEngine::BiDirHybridRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		HybridRenderEngine(rcfg, flm, flmMutex) {
 	// For classic BiDir, the count is always 1
 	eyePathCount = 1;

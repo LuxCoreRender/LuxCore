@@ -90,7 +90,7 @@ private:
 
 class PathHybridRenderEngine : public HybridRenderEngine {
 public:
-	PathHybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathHybridRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return PATHHYBRID; }
 

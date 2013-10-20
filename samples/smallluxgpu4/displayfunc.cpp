@@ -344,6 +344,24 @@ void timerFunc(int value) {
 		glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 }
 
+static void SetRenderingEngineType(const RenderEngineType engineType) {
+	if (engineType != session->renderEngine->GetEngineType()) {
+		// Stop the session
+		session->Stop();
+
+		// Delete the session
+		delete session;
+		session = NULL;
+
+		// Change the render engine
+		config->cfg.Set(Property("renderengine.type")(RenderEngine::RenderEngineType2String(engineType)));
+		session = new RenderSession(config);
+
+		// Re-start the rendering
+		session->Start();
+	}
+}
+
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
@@ -418,6 +436,9 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		case 'i':
 			session->Stop();
+			delete session;
+			session = NULL;
+
 			if (session->renderConfig->cfg.GetString("sampler.type", "RANDOM") == "RANDOM") {
 				session->renderConfig->cfg.SetString("sampler.type", "SOBOL");
 				session->renderConfig->cfg.SetString("path.sampler.type", "SOBOL");
@@ -428,6 +449,8 @@ void keyFunc(unsigned char key, int x, int y) {
 				session->renderConfig->cfg.SetString("sampler.type", "RANDOM");
 				session->renderConfig->cfg.SetString("path.sampler.type", "RANDOM");				
 			}
+
+			session = new RenderSession(config);
 			session->Start();
 			break;
 		case 'n': {
@@ -538,50 +561,50 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		}
 		case '1':
-			session->SetRenderingEngineType(PATHOCL);
+			SetRenderingEngineType(PATHOCL);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '2':
-			session->SetRenderingEngineType(LIGHTCPU);
+			SetRenderingEngineType(LIGHTCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '3':
-			session->SetRenderingEngineType(PATHCPU);
+			SetRenderingEngineType(PATHCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '4':
-			session->SetRenderingEngineType(BIDIRCPU);
+			SetRenderingEngineType(BIDIRCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '5':
-			session->SetRenderingEngineType(BIDIRHYBRID);
+			SetRenderingEngineType(BIDIRHYBRID);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '6':
-			session->SetRenderingEngineType(CBIDIRHYBRID);
+			SetRenderingEngineType(CBIDIRHYBRID);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '7':
-			session->SetRenderingEngineType(BIDIRVMCPU);
+			SetRenderingEngineType(BIDIRVMCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '8':
-			session->SetRenderingEngineType(RTPATHOCL);
+			SetRenderingEngineType(RTPATHOCL);
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
 			if (session->renderConfig->GetScreenRefreshInterval() > 33)
@@ -589,26 +612,26 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 #endif
 		case '9':
-			session->SetRenderingEngineType(PATHHYBRID);
+			SetRenderingEngineType(PATHHYBRID);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '0':
-			session->SetRenderingEngineType(BIASPATHCPU);
+			SetRenderingEngineType(BIASPATHCPU);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '-':
-			session->SetRenderingEngineType(BIASPATHOCL);
+			SetRenderingEngineType(BIASPATHOCL);
 			glutIdleFunc(NULL);
 			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '=':
-			session->SetRenderingEngineType(RTBIASPATHOCL);
+			SetRenderingEngineType(RTBIASPATHOCL);
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
 			break;
