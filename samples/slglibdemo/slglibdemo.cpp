@@ -307,7 +307,7 @@ int main(int argc, char *argv[]) {
 				Property("batch.halttime")(10) <<
 				Property("film.outputs.1.type")("RGB_TONEMAPPED") <<
 				Property("film.outputs.1.filename")("image.png"),
-				*scene);
+				scene);
 		RenderSession *session = new RenderSession(config);
 
 		//----------------------------------------------------------------------
@@ -372,6 +372,9 @@ int main(int argc, char *argv[]) {
 		session->Stop();
 
 		delete session;
+		delete config;
+		delete scene;
+
 		SLG_LOG("Done.");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

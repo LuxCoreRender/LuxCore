@@ -36,7 +36,7 @@ using namespace slg;
 // BiasPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
+BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
 			const bool realTime) :
 		PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime) {
 	pixelFilterDistribution = NULL;

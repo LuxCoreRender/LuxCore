@@ -32,7 +32,7 @@ using namespace slg;
 // RTBiasPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-RTBiasPathOCLRenderEngine::RTBiasPathOCLRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+RTBiasPathOCLRenderEngine::RTBiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		BiasPathOCLRenderEngine(rcfg, flm, flmMutex, true) {
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
 	frameTime = 0.f;

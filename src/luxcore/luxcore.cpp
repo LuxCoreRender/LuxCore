@@ -24,3 +24,15 @@
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
+
+//------------------------------------------------------------------------------
+// RenderConfig
+//------------------------------------------------------------------------------
+
+RenderConfig::RenderConfig(const luxrays::Properties &props) {
+	renderConfig = new slg::RenderConfig(props);
+}
+
+RenderConfig::~RenderConfig() {
+	delete renderConfig;
+}

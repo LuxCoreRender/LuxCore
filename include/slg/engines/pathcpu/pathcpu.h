@@ -70,7 +70,7 @@ private:
 
 class PathCPURenderEngine : public CPUNoTileRenderEngine {
 public:
-	PathCPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
 	RenderEngineType GetEngineType() const { return PATHCPU; }
 

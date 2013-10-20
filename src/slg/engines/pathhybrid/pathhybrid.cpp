@@ -29,7 +29,7 @@ using namespace slg;
 // PathHybridRenderEngine
 //------------------------------------------------------------------------------
 
-PathHybridRenderEngine::PathHybridRenderEngine(RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
+PathHybridRenderEngine::PathHybridRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		HybridRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);

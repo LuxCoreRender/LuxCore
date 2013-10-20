@@ -48,6 +48,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+RenderConfig *config = NULL;
 RenderSession *session = NULL;
 
 //------------------------------------------------------------------------------
@@ -142,10 +143,10 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 	// of tile rendering
 	if (config->cfg.IsDefined("batch.halttime") && (config->cfg.GetInt("batch.halttime", 0) > 0))
 		throw runtime_error("batch.halttime parameter can not be used with batch.tile");
-	// image.subregion condition doesn't make sense in the context
+	// film.subregion condition doesn't make sense in the context
 	// of tile rendering
-	if (config->cfg.IsDefined("image.subregion"))
-		throw runtime_error("image.subregion parameter can not be used with batch.tile");
+	if (config->cfg.IsDefined("film.subregion"))
+		throw runtime_error("film.subregion parameter can not be used with batch.tile");
 
 	// Force the film update at 2.5secs (mostly used by PathOCL)
 	config->SetScreenRefreshInterval(2500);
@@ -454,10 +455,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		// Load the Scene
+		
 		if (configFileName.compare("") == 0)
 			configFileName = "scenes/luxball/luxball.cfg";
 
-		RenderConfig *config = new RenderConfig(&configFileName, &cmdLineProp);
+		config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
 
 		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
 		const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);
@@ -520,6 +523,9 @@ int main(int argc, char *argv[]) {
 		SLG_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}
+
+	delete session;
+	delete config;
 
 	return EXIT_SUCCESS;
 }

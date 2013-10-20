@@ -97,7 +97,7 @@ protected:
 
 class RTPathOCLRenderEngine : public PathOCLRenderEngine {
 public:
-	RTPathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RTPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RTPathOCLRenderEngine();
 
 	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
