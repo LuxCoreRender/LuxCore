@@ -38,11 +38,11 @@ public:
 	void Start();
 	void Stop();
 
-	void BeginEdit();
-	void EndEdit();
+	void BeginSceneEdit();
+	void EndSceneEdit();
 
-	bool NeedPeriodicSave();
-	void FilmSave();
+	bool NeedPeriodicFilmSave();
+	void SaveFilm();
 
 	RenderConfig *renderConfig;
 	RenderEngine *renderEngine;

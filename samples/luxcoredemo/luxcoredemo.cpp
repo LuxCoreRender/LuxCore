@@ -114,7 +114,52 @@ int main(int argc, char *argv[]) {
 				cout << "[" << n << "]";
 			cout << "\n\n";
 
-			cout << props0.Get("doesnt.exist.test", MakePropertyValues(0, 1, 2)) << "\n";
+			cout << props0.Get("doesnt.exist.test", MakePropertyValues(0, 1, 2)) << "\n\n";
+		}
+		
+		//----------------------------------------------------------------------
+		cout << "RenderConfig and RenderSesison examples (requires scenes directory)...\n";
+		//----------------------------------------------------------------------
+
+		{
+			//------------------------------------------------------------------
+			cout << "A simple rendering...\n";
+			//------------------------------------------------------------------
+
+			// Load the configuration from file
+			Properties props("scenes/luxball/luxball-hdr.cfg");
+
+			// Change the render engine to PATHCPU
+			props.Set(Property("renderengine.type")("PATHCPU"));
+
+			RenderConfig *config = new RenderConfig(props);
+			RenderSession *session = new RenderSession(config);
+
+			session->Start();
+
+			const double startTime = WallClockTime();
+			for (;;) {
+				boost::this_thread::sleep(boost::posix_time::millisec(1000));
+
+				const double elapsedTime = WallClockTime() - startTime;
+				// Print some information about the rendering progress
+				cout<<"[Elapsed time: " << (int)elapsedTime << "/5]\n";
+
+				if (elapsedTime > 5.0) {
+					// Time to stop the rendering
+					break;
+				}
+			}
+
+			session->Stop();
+
+			// Save the rendered image
+			session->SaveFilm();
+
+			delete session;
+			delete config;
+
+			cout << "Done.\n";
 		}
 	} catch (runtime_error err) {
 		cerr << "RUNTIME ERROR: " << err.what() << "\n";

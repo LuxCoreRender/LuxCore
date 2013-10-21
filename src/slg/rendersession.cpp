@@ -61,7 +61,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 RenderSession::~RenderSession() {
 	if (editMode)
-		EndEdit();
+		EndSceneEdit();
 	if (started)
 		Stop();
 
@@ -83,7 +83,7 @@ void RenderSession::Stop() {
 	renderEngine->Stop();
 }
 
-void RenderSession::BeginEdit() {
+void RenderSession::BeginSceneEdit() {
 	assert (started);
 	assert (!editMode);
 
@@ -93,7 +93,7 @@ void RenderSession::BeginEdit() {
 	editMode = true;
 }
 
-void RenderSession::EndEdit() {
+void RenderSession::EndSceneEdit() {
 	assert (started);
 	assert (editMode);
 
@@ -110,7 +110,7 @@ void RenderSession::EndEdit() {
 	editMode = false;
 }
 
-bool RenderSession::NeedPeriodicSave() {
+bool RenderSession::NeedPeriodicFilmSave() {
 	if (periodicSaveEnabled) {
 		const double now = WallClockTime();
 		if (now - lastPeriodicSave > periodiceSaveTime) {
@@ -122,7 +122,7 @@ bool RenderSession::NeedPeriodicSave() {
 		return false;
 }
 
-void RenderSession::FilmSave() {
+void RenderSession::SaveFilm() {
 	// Ask to the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 

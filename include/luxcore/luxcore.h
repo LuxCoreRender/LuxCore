@@ -45,6 +45,7 @@
 
 #include <luxrays/utils/properties.h>
 #include <slg/renderconfig.h>
+#include "slg/rendersession.h"
 #include <luxcore/cfg.h>
 
 /*!
@@ -54,6 +55,10 @@
  */
 namespace luxcore {
 
+/*!
+ * \brief RenderConfig stores all the configuration settings used to render a
+ * scene.
+ */
 class RenderConfig {
 public:
 	/*!
@@ -65,8 +70,6 @@ public:
 	 * is not deleted by the destructor if the parameter is not NULL. If it is NULL
 	 * the scene will be read from the file specified in "scene.file" Property
 	 * and deleted by the destructor.
-	 *
-	 * \return a new RenderConfig.
 	 */
 	RenderConfig(const luxrays::Properties &props);//, Scene *scene = NULL);
 	~RenderConfig();
@@ -78,8 +81,55 @@ public:
 	 */
 	const luxrays::Properties &GetProperties() const { return renderConfig->cfg; }
 
+	friend class RenderSession;
+
 private:
 	slg::RenderConfig *renderConfig;
+};
+
+/*!
+ * \brief RenderSession execute a rendering based on the RenderConfig provided.
+ */
+class RenderSession {
+public:
+	/*!
+	 * \brief Constructs a new RenderSession using the provided RenderConfig.
+	 *
+	 * \param config is the RenderConfig used to create the rendering session. The
+	 * RenderConfig is not deleted by the destructor.
+	 */
+	RenderSession(const RenderConfig *config);
+	~RenderSession();
+
+	/*!
+	 * \brief Starts the rendering.
+	 */
+	void Start() { renderSession->Start(); }
+	/*!
+	 * \brief Stops the rendering.
+	 */
+	void Stop() { renderSession->Stop(); }
+
+	/*!
+	 * \brief Suspends the rendering and allows to edit the Scene.
+	 */
+	void BeginSceneEdit() { renderSession->BeginSceneEdit(); }
+	/*!
+	 * \brief Ends the Scene editing and un-suspends the rendering.
+	 */
+	void EndSceneEdit() { renderSession->EndSceneEdit(); }
+
+	/*!
+	 * \brief Checks if it is time to save the film according the RenderConfig.
+	 */
+	bool NeedPeriodicFilmSave() { return renderSession->NeedPeriodicFilmSave(); }
+	/*!
+	 * \brief Saves all Film output channels
+	 */
+	void SaveFilm() { renderSession->SaveFilm(); }
+
+private:
+	slg::RenderSession *renderSession;
 };
 
 }

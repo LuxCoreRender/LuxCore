@@ -417,7 +417,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
 					} else if (command == "film.save") {
-						session->FilmSave();
+						session->SaveFilm();
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if ((command == "edit.stop") || (command == "render.start")) {
 						if (state == EDIT) {
@@ -425,14 +425,14 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								session->renderConfig->scene->RemoveUnusedMaterials();
 								session->renderConfig->scene->RemoveUnusedTextures();
 							}
-							session->EndEdit();
+							session->EndSceneEdit();
 						}
 
 						state = RUN;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if ((command == "edit.start") || (command == "render.stop")) {
 						if (state == RUN)
-							session->BeginEdit();
+							session->BeginSceneEdit();
 						state = EDIT;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "set") {
