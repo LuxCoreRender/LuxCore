@@ -92,11 +92,7 @@ void RTPathOCLRenderEngine::BeginEdit() {
 void RTPathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 	PathOCLRenderEngine::EndEdit(editActions);
 
-	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
-		throw std::runtime_error("RTPATHOCL doesn't support FILM_EDIT or MATERIAL_TYPES_EDIT actions");
-
 	updateActions.AddActions(editActions.GetActions());
-	
 	editMutex.unlock();
 }
 

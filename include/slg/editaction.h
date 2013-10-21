@@ -29,17 +29,16 @@
 namespace slg {
 
 typedef enum {
-	FILM_EDIT           = 0x001, // Use this for image Film resize (note: not supported by RTPATHOCL or RTBIASPATHOCL)
-	CAMERA_EDIT         = 0x002, // Use this for any Camera parameter editing
-	GEOMETRY_EDIT       = 0x004, // Use this for any DataSet related editing
-	INSTANCE_TRANS_EDIT = 0x008, // Use this for any instance transformation related editing
-	MATERIALS_EDIT      = 0x010, // Use this for any Material related editing
-	MATERIAL_TYPES_EDIT = 0x020, // Use this if the kind of materials used changes
-	AREALIGHTS_EDIT     = 0x040, // Use this for any AreaLight related editing
-	INFINITELIGHT_EDIT  = 0x080, // Use this for any InfiniteLight related editing
-	SUNLIGHT_EDIT       = 0x100, // Use this for any SunLight related editing
-	SKYLIGHT_EDIT       = 0x200, // Use this for any SkyLight related editing
-	IMAGEMAPS_EDIT      = 0x400  // Use this for any ImageMaps related editing
+	CAMERA_EDIT         = 1 << 0, // Use this for any Camera parameter editing
+	GEOMETRY_EDIT       = 1 << 1, // Use this for any DataSet related editing
+	INSTANCE_TRANS_EDIT = 1 << 2, // Use this for any instance transformation related editing
+	MATERIALS_EDIT      = 1 << 3, // Use this for any Material related editing
+	MATERIAL_TYPES_EDIT = 1 << 4, // Use this if the kind of materials used changes
+	AREALIGHTS_EDIT     = 1 << 5, // Use this for any AreaLight related editing
+	INFINITELIGHT_EDIT  = 1 << 6, // Use this for any InfiniteLight related editing
+	SUNLIGHT_EDIT       = 1 << 7, // Use this for any SunLight related editing
+	SKYLIGHT_EDIT       = 1 << 8, // Use this for any SkyLight related editing
+	IMAGEMAPS_EDIT      = 1 << 9  // Use this for any ImageMaps related editing
 } EditAction;
 
 class EditActionList {
@@ -49,7 +48,6 @@ public:
 	void Reset() { actions = 0; }
 	void AddAction(const EditAction a) { actions |= a; };
 	void AddAllAction() {
-		AddAction(FILM_EDIT);
 		AddAction(CAMERA_EDIT);
 		AddAction(GEOMETRY_EDIT);
 		AddAction(INSTANCE_TRANS_EDIT);
@@ -81,10 +79,6 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 			os << ", ";\
 		addSeparetor = true;
 
-	if (eal.Has(FILM_EDIT)) {
-        SHOW_SEP;
-		os << "FILM_EDIT";
-    }
 	if (eal.Has(CAMERA_EDIT)) {
         SHOW_SEP;
 		os << "CAMERA_EDIT";

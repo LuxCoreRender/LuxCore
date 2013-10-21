@@ -1140,11 +1140,6 @@ void PathOCLBaseRenderThread::EndEdit(const EditActionList &editActions) {
 	// Update OpenCL buffers
 	//--------------------------------------------------------------------------
 
-	if (editActions.Has(FILM_EDIT)) {
-		// Update Film
-		InitFilm();
-	}
-
 	if (editActions.Has(CAMERA_EDIT)) {
 		// Update Camera
 		InitCamera();
@@ -1199,7 +1194,7 @@ void PathOCLBaseRenderThread::EndEdit(const EditActionList &editActions) {
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
+	if (editActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
 	if (editActions.HasAnyAction()) {

@@ -317,12 +317,19 @@ void reshapeFunc(int newWidth, int newHeight) {
 		glLoadIdentity();
 		glOrtho(0.f, newWidth - 1.f, 0.f, newHeight - 1.f, -1.f, 1.f);
 
-		// RTPATHOCL and RTBIASPATHOCL don't support FILM_EDIT so I use a stop/start here
+		// Stop the session
 		session->Stop();
 
-		session->renderConfig->scene->camera->Update(newWidth, newHeight);
-		session->film->Resize(newWidth, newHeight);
+		// Delete the session
+		delete session;
+		session = NULL;
 
+		// Change the film size
+		config->cfg.Set(Property("film.width")(newWidth));
+		config->cfg.Set(Property("film.height")(newHeight));
+		session = new RenderSession(config);
+
+		// Re-start the rendering
 		session->Start();
 
 		glutPostRedisplay();
@@ -435,22 +442,27 @@ void keyFunc(unsigned char key, int x, int y) {
 			optOSDPrintHelp = (!optOSDPrintHelp);
 			break;
 		case 'i':
+			// Stop the session
 			session->Stop();
+
+			// Delete the session
 			delete session;
 			session = NULL;
 
-			if (session->renderConfig->cfg.GetString("sampler.type", "RANDOM") == "RANDOM") {
-				session->renderConfig->cfg.SetString("sampler.type", "SOBOL");
-				session->renderConfig->cfg.SetString("path.sampler.type", "SOBOL");
-			} else if (session->renderConfig->cfg.GetString("sampler.type", "SOBOL") == "SOBOL") {
-				session->renderConfig->cfg.SetString("sampler.type", "METROPOLIS");
-				session->renderConfig->cfg.SetString("path.sampler.type", "METROPOLIS");
+			// Change the Sampler
+			if (config->cfg.GetString("sampler.type", "RANDOM") == "RANDOM") {
+				config->cfg.SetString("sampler.type", "SOBOL");
+				config->cfg.SetString("path.sampler.type", "SOBOL");
+			} else if (config->cfg.GetString("sampler.type", "SOBOL") == "SOBOL") {
+				config->cfg.SetString("sampler.type", "METROPOLIS");
+				config->cfg.SetString("path.sampler.type", "METROPOLIS");
 			} else {
-				session->renderConfig->cfg.SetString("sampler.type", "RANDOM");
-				session->renderConfig->cfg.SetString("path.sampler.type", "RANDOM");				
+				config->cfg.SetString("sampler.type", "RANDOM");
+				config->cfg.SetString("path.sampler.type", "RANDOM");				
 			}
-
 			session = new RenderSession(config);
+
+			// Re-start the rendering
 			session->Start();
 			break;
 		case 'n': {

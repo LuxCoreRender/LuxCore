@@ -144,9 +144,6 @@ void BiasPathOCLRenderEngine::StopLockLess() {
 }
 
 void BiasPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	if (editActions.Has(FILM_EDIT))
-		InitPixelFilterDistribution();
-
 	if (GetEngineType() != RTBIASPATHOCL) {
 		// RTBIASPATHOCL will InitTiles() on next frame
 		tileRepository->Clear();

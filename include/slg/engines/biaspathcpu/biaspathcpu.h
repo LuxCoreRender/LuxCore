@@ -130,7 +130,6 @@ public:
 
 protected:
 	virtual void StartLockLess();
-	virtual void EndEditLockLess(const EditActionList &editActions);
 
 	FilterDistribution *pixelFilterDistribution;
 
