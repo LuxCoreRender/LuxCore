@@ -23,6 +23,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/assign.hpp>
+#include <boost/format.hpp>
 
 #include <luxcore/luxcore.h>
 
@@ -30,20 +31,9 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
-//static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
-//	printf("\n*** ");
-//	if(fif != FIF_UNKNOWN)
-//		printf("%s Format\n", FreeImage_GetFormatFromFIF(fif));
-//
-//	printf("%s", message);
-//	printf(" ***\n");
-//}
-
 int main(int argc, char *argv[]) {
 	try {
-//		// Initialize FreeImage Library
-//		FreeImage_Initialise(TRUE);
-//		FreeImage_SetOutputMessage(FreeImageErrorHandler);
+		luxcore::Init();
 
 		cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n\n" ;
 
@@ -142,8 +132,22 @@ int main(int argc, char *argv[]) {
 				boost::this_thread::sleep(boost::posix_time::millisec(1000));
 
 				const double elapsedTime = WallClockTime() - startTime;
+
 				// Print some information about the rendering progress
-				cout<<"[Elapsed time: " << (int)elapsedTime << "/5]\n";
+
+				// Update statistics
+				session->UpdateStats();
+
+				// Print all statistics
+				//cout << "[Elapsed time: " << (int)elapsedTime << "/5]\n";
+				//cout << session->GetStats();
+
+				const Properties &stats = session->GetStats();
+				cout << boost::format("[Elapsed time: %3d/5sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]\n") %
+						(int)stats.Get("stats.renderengine.time").Get<double>() %
+						stats.Get("stats.renderengine.pass").Get<u_int>() %
+						(stats.Get("stats.renderengine.total.samplesec").Get<double>()  / 1000000.0) %
+						(stats.Get("stats.dataset.trianglecount").Get<float>() / 1000.0);
 
 				if (elapsedTime > 5.0) {
 					// Time to stop the rendering

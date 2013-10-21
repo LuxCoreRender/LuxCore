@@ -56,6 +56,11 @@
 namespace luxcore {
 
 /*!
+ * \brief Initializes LuxCore API. This function has to be called before anything else.
+ */
+extern void Init();
+
+/*!
  * \brief RenderConfig stores all the configuration settings used to render a
  * scene.
  */
@@ -104,32 +109,44 @@ public:
 	/*!
 	 * \brief Starts the rendering.
 	 */
-	void Start() { renderSession->Start(); }
+	void Start();
 	/*!
 	 * \brief Stops the rendering.
 	 */
-	void Stop() { renderSession->Stop(); }
+	void Stop();
 
 	/*!
 	 * \brief Suspends the rendering and allows to edit the Scene.
 	 */
-	void BeginSceneEdit() { renderSession->BeginSceneEdit(); }
+	void BeginSceneEdit();
 	/*!
 	 * \brief Ends the Scene editing and un-suspends the rendering.
 	 */
-	void EndSceneEdit() { renderSession->EndSceneEdit(); }
+	void EndSceneEdit();
 
 	/*!
 	 * \brief Checks if it is time to save the film according the RenderConfig.
 	 */
-	bool NeedPeriodicFilmSave() { return renderSession->NeedPeriodicFilmSave(); }
+	bool NeedPeriodicFilmSave();
 	/*!
 	 * \brief Saves all Film output channels
 	 */
-	void SaveFilm() { renderSession->SaveFilm(); }
+	void SaveFilm();
+
+	/*!
+	 * \brief Updates the statistics.
+	 */
+	void UpdateStats();
+	/*!
+	 * \brief Returns a list of statistics related to the ongoing rendering.
+	 *
+	 * \return a Properties container with the statistics.
+	 */
+	const luxrays::Properties &GetStats() const;
 
 private:
 	slg::RenderSession *renderSession;
+	luxrays::Properties stats;
 };
 
 }
