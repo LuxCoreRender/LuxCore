@@ -183,7 +183,7 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 		// To setup new rendering parameters
 		if (loopIndex > 0) {
 			// I can begin an edit only after the start
-			session->BeginEdit();
+			session->BeginSceneEdit();
 
 			// I have to use a new seed or I will render exactly the same images
 			session->renderEngine->GenerateNewSeed();
@@ -216,7 +216,7 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 			if (sessionStarted) {
 				session->editActions.AddAction(CAMERA_EDIT);
 				session->editActions.AddAction(FILM_EDIT);
-				session->EndEdit();
+				session->EndSceneEdit();
 			} else {
 				session->Start();
 				sessionStarted = true;
@@ -283,7 +283,7 @@ static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) 
 			}
 
 			// To setup new rendering parameters
-			session->BeginEdit();
+			session->BeginSceneEdit();
 		}
 	}
 
@@ -314,9 +314,9 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 
 		// Check if periodic save is enabled
-		if (session->NeedPeriodicSave()) {
+		if (session->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
-			session->FilmSave();
+			session->SaveFilm();
 			lastFilmUpdate =  WallClockTime();
 		} else {
 			// Film update may be required by some render engine to
@@ -353,7 +353,7 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 	session->Stop();
 
 	// Save the rendered image
-	session->FilmSave();
+	session->SaveFilm();
 
 	delete session;
 	SLG_LOG("Done.");

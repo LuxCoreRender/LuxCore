@@ -203,7 +203,7 @@ static void DoRendering(RenderSession *session) {
 	}
 
 	// Save the rendered image
-	session->FilmSave();
+	session->SaveFilm();
 }
 
 int main(int argc, char *argv[]) {
@@ -324,12 +324,12 @@ int main(int argc, char *argv[]) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("Editing a texture...");
-		session->BeginEdit();
+		session->BeginSceneEdit();
 		scene->Parse(
 			Property("scene.textures.map.type")("constfloat3") <<
 			Property("scene.textures.map.value")(0.f, 0.f, 1.f));
 		session->editActions = scene->editActions;
-		session->EndEdit();
+		session->EndSceneEdit();
 
 		// And redo the rendering
 		DoRendering(session);
@@ -340,12 +340,12 @@ int main(int argc, char *argv[]) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("Editing a material...");
-		session->BeginEdit();
+		session->BeginSceneEdit();
 		scene->Parse(
 			Property("scene.materials.mat_white.type")("mirror") <<
 			Property("scene.materials.mat_white.kr")(.9f, .9f, .9f));
 		session->editActions = scene->editActions;
-		session->EndEdit();
+		session->EndSceneEdit();
 
 		// And redo the rendering
 		DoRendering(session);
@@ -356,13 +356,13 @@ int main(int argc, char *argv[]) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("Editing a material and an object...");
-		session->BeginEdit();
+		session->BeginSceneEdit();
 		scene->Parse(
 			Property("scene.materials.mat_white.type")("matte") <<
 			Property("scene.materials.mat_white.kr")(.7f, .7f, .7f));
 		CreateBox(scene, "box03", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
 		session->editActions = scene->editActions;
-		session->EndEdit();
+		session->EndSceneEdit();
 
 		// And redo the rendering
 		DoRendering(session);

@@ -36,3 +36,15 @@ RenderConfig::RenderConfig(const luxrays::Properties &props) {
 RenderConfig::~RenderConfig() {
 	delete renderConfig;
 }
+
+//------------------------------------------------------------------------------
+// RenderSession
+//------------------------------------------------------------------------------
+
+RenderSession::RenderSession(const RenderConfig *config) {
+	renderSession = new slg::RenderSession(config->renderConfig);
+}
+
+RenderSession::~RenderSession() {
+	delete renderSession;
+}

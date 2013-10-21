@@ -334,9 +334,9 @@ void timerFunc(int value) {
 	session->renderEngine->UpdateFilm();
 
 	// Check if periodic save is enabled
-	if (session->NeedPeriodicSave()) {
+	if (session->NeedPeriodicFilmSave()) {
 		// Time to save the image and film
-		session->FilmSave();
+		session->SaveFilm();
 	}
 
 	glutPostRedisplay();
@@ -365,7 +365,7 @@ static void SetRenderingEngineType(const RenderEngineType engineType) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-			session->FilmSave();
+			session->SaveFilm();
 			break;
 		}
 		case 27: { // Escape key
@@ -380,56 +380,56 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->Start();
 			break;
 		case 'a': {
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->TranslateLeft(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		}
 		case 'd': {
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->TranslateRight(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		}
 		case 'w': {
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->TranslateForward(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		}
 		case 's': {
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->TranslateBackward(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		}
 		case 'r':
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, optMoveStep));
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		case 'f':
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, -optMoveStep));
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		case 'h':
 			optOSDPrintHelp = (!optOSDPrintHelp);
@@ -513,7 +513,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		}
 		case 'k': {
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyesDistance();
 			const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
 			SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
@@ -521,11 +521,11 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		}
 		case 'l': {
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyesDistance();
 			const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
 			SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
@@ -533,11 +533,11 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		}
 		case ',': {
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			const float currentLenDistance = session->renderConfig->scene->camera->GetHorizontalStereoLensDistance();
 			const float newLensDistance = currentLenDistance + ((currentLenDistance == 0.f) ? .1f : (currentLenDistance * 0.05f));
 			SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
@@ -545,11 +545,11 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		}
 		case '.': {
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			const float currentLensDistance = session->renderConfig->scene->camera->GetHorizontalStereoLensDistance();
 			const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
 			SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
@@ -557,7 +557,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		}
 		case '1':
@@ -662,36 +662,36 @@ void keyFunc(unsigned char key, int x, int y) {
 void specialFunc(int key, int x, int y) {
 	switch (key) {
 		case GLUT_KEY_UP:
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->RotateUp(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		case GLUT_KEY_DOWN:
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->RotateDown(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		case GLUT_KEY_LEFT:
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->RotateLeft(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		case GLUT_KEY_RIGHT:
-			session->BeginEdit();
+			session->BeginSceneEdit();
 			session->renderConfig->scene->camera->RotateRight(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 			break;
 		default:
 			break;
@@ -738,7 +738,7 @@ static void motionFunc(int x, int y) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
-			session->BeginEdit();
+			session->BeginSceneEdit();
 
 			if (optMouseGrabMode) {
 				session->renderConfig->scene->camera->RotateUp(0.04f * distY * optRotateStep);
@@ -752,7 +752,7 @@ static void motionFunc(int x, int y) {
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
@@ -767,7 +767,7 @@ static void motionFunc(int x, int y) {
 			const int distX = x - mouseGrabLastX;
 			const int distY = y - mouseGrabLastY;
 
-			session->BeginEdit();
+			session->BeginSceneEdit();
 
 			if (optMouseGrabMode) {
 				session->renderConfig->scene->camera->TranslateLeft(0.04f * distX * optMoveStep);
@@ -781,7 +781,7 @@ static void motionFunc(int x, int y) {
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
 			session->editActions.AddAction(CAMERA_EDIT);
-			session->EndEdit();
+			session->EndSceneEdit();
 
 			mouseGrabLastX = x;
 			mouseGrabLastY = y;
