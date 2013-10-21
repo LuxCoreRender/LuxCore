@@ -223,20 +223,10 @@ void RTPathOCLRenderThread::SetAdditionalKernelArgs() {
 
 void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions) {
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
-	const bool amiDisplayThread = (engine->displayDeviceIndex == threadIndex);
 
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
 	//--------------------------------------------------------------------------
-
-	if (updateActions.Has(FILM_EDIT)) {
-		// Resize the Frame Buffer
-		InitFilm();
-
-		// Display thread initialization
-		if (amiDisplayThread)
-			InitDisplayThread();
-	}
 
 	if (updateActions.Has(CAMERA_EDIT)) {
 		// Update Camera
@@ -277,7 +267,7 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	if (updateActions.Has(FILM_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT))
+	if (updateActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
 	SetKernelArgs();

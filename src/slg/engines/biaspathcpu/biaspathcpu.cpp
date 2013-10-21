@@ -105,13 +105,6 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	CPURenderEngine::StartLockLess();
 }
 
-void BiasPathCPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
-	if (editActions.Has(FILM_EDIT))
-		InitPixelFilterDistribution();
-
-	CPUTileRenderEngine::EndEditLockLess(editActions);
-}
-
 PathDepthInfo::PathDepthInfo() {
 	depth = 0;
 	diffuseDepth = 0;

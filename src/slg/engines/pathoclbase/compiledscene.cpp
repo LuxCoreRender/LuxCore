@@ -1114,7 +1114,7 @@ void CompiledScene::CompileImageMaps() {
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {
-	if (editActions.Has(FILM_EDIT) || editActions.Has(CAMERA_EDIT))
+	if (editActions.Has(CAMERA_EDIT))
 		CompileCamera();
 	if (editActions.Has(GEOMETRY_EDIT))
 		CompileGeometry();

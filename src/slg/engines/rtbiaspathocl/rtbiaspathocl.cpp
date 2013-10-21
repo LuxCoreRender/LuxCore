@@ -94,9 +94,6 @@ void RTBiasPathOCLRenderEngine::BeginEdit() {
 void RTBiasPathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
 	BiasPathOCLRenderEngine::EndEdit(editActions);
 
-	if (editActions.Has(FILM_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
-		throw std::runtime_error("RTBIASPATHOCL doesn't support FILM_EDIT or MATERIAL_TYPES_EDIT actions");
-
 	updateActions.AddActions(editActions.GetActions());
 	editMutex.unlock();
 }

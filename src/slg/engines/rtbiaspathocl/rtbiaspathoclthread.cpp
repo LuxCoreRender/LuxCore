@@ -213,20 +213,10 @@ void RTBiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 
 void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions) {
 	RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
-	const bool amiDisplayThread = (engine->displayDeviceIndex == threadIndex);
 
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
 	//--------------------------------------------------------------------------
-
-	if (updateActions.Has(FILM_EDIT)) {
-		// Resize the Frame Buffer
-		InitFilm();
-
-		// Display thread initialization
-		if (amiDisplayThread)
-			InitDisplayThread();
-	}
 
 	if (updateActions.Has(CAMERA_EDIT)) {
 		// Update Camera
@@ -267,7 +257,7 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateAct
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	if (updateActions.Has(FILM_EDIT) || updateActions.Has(MATERIAL_TYPES_EDIT))
+	if (updateActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
 	SetKernelArgs();
