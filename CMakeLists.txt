@@ -1,32 +1,29 @@
-###########################################################################
-#   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  #
-#                                                                         #
-#   This file is part of LuxRays.                                         #
-#                                                                         #
-#   LuxRays is free software; you can redistribute it and/or modify       #
-#   it under the terms of the GNU General Public License as published by  #
-#   the Free Software Foundation; either version 3 of the License, or     #
-#   (at your option) any later version.                                   #
-#                                                                         #
-#   LuxRays is distributed in the hope that it will be useful,            #
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
-#   GNU General Public License for more details.                          #
-#                                                                         #
-#   You should have received a copy of the GNU General Public License     #
-#   along with this program.  If not, see <http://www.gnu.org/licenses/>. #
-#                                                                         #
-#   LuxRays website: http://www.luxrender.net                             #
-###########################################################################
+################################################################################
+# Copyright 1998-2013 by authors (see AUTHORS.txt)
+#
+#   This file is part of LuxRender.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
 
 MESSAGE(STATUS "CMAKE VERSION DETECTED " ${CMAKE_VERSION})
 
 
-###########################################################################
+################################################################################
 #
 # Check and configure cmake
 #
-###########################################################################
+################################################################################
 # Fresh start
 cmake_minimum_required(VERSION 2.8)
 cmake_policy(VERSION 2.8)
@@ -39,11 +36,11 @@ project(LuxRays)
 SET(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "limit configs" FORCE)
 
 
-###########################################################################
+################################################################################
 #
 # Include necessary submodules
 #
-###########################################################################
+################################################################################
 
 set(CMAKE_MODULE_PATH
 	"${LuxRays_SOURCE_DIR}"
@@ -108,22 +105,22 @@ endif()
 
 ADD_DEFINITIONS(-msse2 -mfpmath=sse -ftree-vectorize -funroll-loops -Wall -fPIC -DHAVE_PTHREAD_H)
 
-###########################################################################
+################################################################################
 #
 # LuxRays, SLG and LuxCore libraries
 #
-###########################################################################
+################################################################################
 
 add_subdirectory(src/luxrays)
 add_subdirectory(src/slg)
 add_subdirectory(src/luxcore)
 
 
-###########################################################################
+################################################################################
 #
 # Samples
 #
-###########################################################################
+################################################################################
 
 add_subdirectory(samples/benchsimple)
 add_subdirectory(samples/slglibdemo)
@@ -133,10 +130,10 @@ if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 
 
-###########################################################################
+################################################################################
 #
 # For non win32 we'll have to copy everything to a single dir
 #
-###########################################################################
+################################################################################
 
 INCLUDE(AssembleBinDirs)
