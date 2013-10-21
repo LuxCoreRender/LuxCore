@@ -1,5 +1,6 @@
+import time
 import sys
-sys.path.append(".")
+sys.path.append("./lib")
 
 import pyluxcore
 
@@ -22,7 +23,7 @@ print("[%s]\n" % pyluxcore.Property("test1.prop1").Add(1).Add(2).Add(3))
 prop = pyluxcore.Property("test1.prop1", [True, 1, 2.0, "aa"])
 print("[%s]" % prop)
 print("Size: %d" % prop.GetSize())
-print("List: %s\n" % str(prop.Get()))
+print("List: %s\n" % str(prop.GetValues()))
 
 props = pyluxcore.Properties()
 props.SetFromString("test1.prop1 = 1 2.0 aa \"quoted\"\ntest2.prop2 = 1 2.0 'quoted' bb\ntest2.prop3 = 1")
@@ -44,3 +45,50 @@ print("Get: %s" % props0.Get("prefix.test1.prop1"))
 print("Get default: %s\n" % props0.Get("doesnt.exist", ["default_value0", "default_value1"]))
 
 ################################################################################
+## RenderConfig and RenderSession examples
+################################################################################
+
+print("RenderConfig and RenderSession examples (requires scenes directory)...")
+
+# Load the configuration from file
+props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
+
+# Change the render engine to PATHCPU
+props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+
+config = pyluxcore.RenderConfig(props)
+session = pyluxcore.RenderSession(config)
+
+session.Start()
+
+startTime = time.time()
+while True:
+	time.sleep(1)
+
+	elapsedTime = time.time() - startTime
+
+	# Print some information about the rendering progress
+
+	# Update statistics
+	session.UpdateStats()
+
+	stats = session.GetStats();
+	print("[Elapsed time: %3d/5sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (\
+			stats.Get("stats.renderengine.time").GetFloat(), \
+			stats.Get("stats.renderengine.pass").GetInt(), \
+			(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0), \
+			(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+
+	if elapsedTime > 5.0:
+		# Time to stop the rendering
+		break
+
+session.Stop()
+
+# Save the rendered image
+session.SaveFilm()
+
+print("Done.\n")
+
+################################################################################
+

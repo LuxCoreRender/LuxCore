@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 		}
 		
 		//----------------------------------------------------------------------
-		cout << "RenderConfig and RenderSesison examples (requires scenes directory)...\n";
+		cout << "RenderConfig and RenderSession examples (requires scenes directory)...\n";
 		//----------------------------------------------------------------------
 
 		{
