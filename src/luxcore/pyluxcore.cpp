@@ -85,6 +85,22 @@ static boost::python::list Property_GetValuesList(luxrays::Property *prop) {
 	return l;
 }
 
+static bool Property_GetBool(luxrays::Property *prop) {
+	return prop->GetValue<bool>(0);
+}
+
+static int Property_GetInt(luxrays::Property *prop) {
+	return prop->GetValue<int>(0);
+}
+
+static double Property_GetFloat(luxrays::Property *prop) {
+	return prop->GetValue<double>(0);
+}
+
+static string Property_GetString(luxrays::Property *prop) {
+	return prop->GetValue<string>(0);
+}
+
 static boost::python::list Properties_GetAllNames1(luxrays::Properties *props) {
 	boost::python::list l;
 	const vector<string> &keys = props->GetAllNames();
@@ -180,7 +196,12 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetValue", &luxrays::Property::GetValue<double>)
 		.def("GetValue", &luxrays::Property::GetValue<string>)
 
-		.def("Get", &Property_GetValuesList)
+		.def("GetValues", &Property_GetValuesList)
+
+		.def("GetBool", &Property_GetBool)
+		.def("GetInt", &Property_GetInt)
+		.def("GetFloat", &Property_GetFloat)
+		.def("GetString", &Property_GetString)
 	
 		.def("GetValuesString", &luxrays::Property::GetValuesString)
 		.def("ToString", &luxrays::Property::ToString)
@@ -226,6 +247,29 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Get", &Properties_GetWithDefaultValues)
 	
 		.def(self_ns::str(self))
+    ;
+
+	//--------------------------------------------------------------------------
+	// RenderConfig class
+	//--------------------------------------------------------------------------
+
+    class_<RenderConfig>("RenderConfig", init<luxrays::Properties>())
+		.def("GetProperties", &RenderConfig::GetProperties, return_internal_reference<>())
+    ;
+
+	//--------------------------------------------------------------------------
+	// RenderSession class
+	//--------------------------------------------------------------------------
+
+    class_<RenderSession>("RenderSession", init<RenderConfig *>()[with_custodian_and_ward<1, 2>()])
+		.def("Start", &RenderSession::Start)
+		.def("Stop", &RenderSession::Stop)
+		.def("BeginSceneEdit", &RenderSession::BeginSceneEdit)
+		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
+		.def("NeedPeriodicFilmSave", &RenderSession::NeedPeriodicFilmSave)
+		.def("SaveFilm", &RenderSession::SaveFilm)
+		.def("UpdateStats", &RenderSession::UpdateStats)
+		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
     ;
 }
 
