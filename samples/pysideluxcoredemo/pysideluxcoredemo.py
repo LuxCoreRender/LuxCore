@@ -28,23 +28,23 @@ class RenderView(QMainWindow):
 		super(RenderView, self).__init__()
 		
 		# Load the configuration from file
-		self.props = pyluxcore.Properties(cfgFileName)
+		props = pyluxcore.Properties(cfgFileName)
 		
 		# Change the render engine to PATHCPU
-		self.props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
 
-		filmWidth = self.props.Get("film.width").GetInt()
-		filmHeight = self.props.Get("film.height").GetInt()
-		self.setGeometry(0, 0, filmWidth, filmHeight)
+		self.filmWidth = props.Get("film.width").GetInt()
+		self.filmHeight = props.Get("film.height").GetInt()
+		self.setGeometry(0, 0, self.filmWidth, self.filmHeight)
 		self.setWindowTitle('LuxCore RenderView')
 		self.center()
 		
-		# Allocate the image ofr the rendering
-		self.image = QImage(filmWidth, filmHeight, QImage.Format_RGB888)
+		# Allocate the image for the rendering
+		self.image = QImage(self.filmWidth, self.filmHeight, QImage.Format_RGB888)
 		self.image.fill(qRgb(0, 0, 0))
 
 		# Read the configuration and start the rendering
-		self.config = pyluxcore.RenderConfig(self.props)
+		self.config = pyluxcore.RenderConfig(props)
 		self.session = pyluxcore.RenderSession(self.config)
 		self.session.Start()
 		
@@ -64,11 +64,21 @@ class RenderView(QMainWindow):
 			self.session.UpdateStats()
 			
 			stats = self.session.GetStats();
-			print("[Elapsed time: %3dsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (\
-					stats.Get("stats.renderengine.time").GetFloat(), \
-					stats.Get("stats.renderengine.pass").GetInt(), \
-					(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0), \
-					(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+			print("[Elapsed time: %3dsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+				stats.Get("stats.renderengine.time").GetFloat(),
+				stats.Get("stats.renderengine.pass").GetInt(),
+				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
+				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+			
+			# Update the image
+			imageBuffer = self.session.GetScreenBuffer();
+			index = 0
+			for y in range(self.filmHeight):
+				for x in range(self.filmWidth):
+					self.image.setPixel(x, self.filmHeight - y -1, qRgb(imageBuffer[index], imageBuffer[index + 1], imageBuffer[index + 2]))
+					index += 3
+			
+			self.update()
 		else:
 			QFrame.timerEvent(self, event)
 	
@@ -82,15 +92,16 @@ class RenderView(QMainWindow):
 		self.session = None
 		
 		# Set the new size
-		filmWidth = event.size().width()
-		filmHeight = event.size().height()
-		self.props.Set(pyluxcore.Property("film.width", [filmWidth]))
-		self.props.Set(pyluxcore.Property("film.height", [filmHeight]))
-		self.image = QImage(filmWidth, filmHeight, QImage.Format_RGB888)
+		self.filmWidth = event.size().width()
+		self.filmHeight = event.size().height()
+		self.config.Parse(
+			pyluxcore.Properties().
+			Set(pyluxcore.Property("film.width", [self.filmWidth])).
+			Set(pyluxcore.Property("film.height", [self.filmHeight])))
+		self.image = QImage(self.filmWidth, self.filmHeight, QImage.Format_RGB888)
 		self.image.fill(qRgb(0, 0, 0))
 		
 		# Re-start the rendering
-		self.config = pyluxcore.RenderConfig(self.props)
 		self.session = pyluxcore.RenderSession(self.config)
 		self.session.Start()
 		

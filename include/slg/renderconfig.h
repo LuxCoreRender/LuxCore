@@ -34,6 +34,8 @@ public:
 	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
 	~RenderConfig();
 
+	void Parse(const luxrays::Properties &props);
+
 	void SetScreenRefreshInterval(const u_int t);
 	u_int GetScreenRefreshInterval() const;
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,

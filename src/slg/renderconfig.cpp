@@ -38,17 +38,13 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : cfg(props), scene(scn) {
+RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : scene(scn) {
 	SLG_LOG("Configuration: ");
 	const vector<string> &keys = cfg.GetAllNames();
 	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
 		SLG_LOG("  " << cfg.Get(*i));
 
-	// RTPATHOCL has a different default screen.refresh.interval value
-	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(cfg.GetString("renderengine.type", "PATHOCL"));
-	const int interval = (renderEngineType == RTPATHOCL) ? 33 : 100;
-	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", interval);
-
+	// Set the Scene
 	if (scn) {
 		scene = scn;
 		allocatedScene = false;
@@ -60,6 +56,24 @@ RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : cfg(p
 		scene = new Scene(sceneFileName, imageScale);
 		allocatedScene = true;
 	}
+
+	// Parse the configuration
+	Parse(props);
+}
+
+RenderConfig::~RenderConfig() {
+	// Check if the scene was allocated by me
+	if (allocatedScene)
+		delete scene;
+}
+
+void RenderConfig::Parse(const luxrays::Properties &props) {
+	cfg.Set(props);
+
+	// RTPATHOCL has a different default screen.refresh.interval value
+	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(cfg.GetString("renderengine.type", "PATHOCL"));
+	const int interval = (renderEngineType == RTPATHOCL) ? 33 : 100;
+	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", interval);
 
 	scene->enableInstanceSupport = cfg.Get("accelerator.instances.enable", MakePropertyValues(true)).Get<bool>();
 	const string accelType = cfg.Get("accelerator.type", MakePropertyValues("AUTO")).Get<string>();
@@ -84,12 +98,6 @@ RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : cfg(p
 	u_int *subRegion = GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion) ?
 		filmSubRegion : NULL;
 	scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
-}
-
-RenderConfig::~RenderConfig() {
-	// Check if the scene was allocated by me
-	if (allocatedScene)
-		delete scene;
 }
 
 void RenderConfig::SetScreenRefreshInterval(const u_int t) {

@@ -92,10 +92,10 @@ while True:
 	session.UpdateStats()
 
 	stats = session.GetStats();
-	print("[Elapsed time: %3d/5sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (\
-			stats.Get("stats.renderengine.time").GetFloat(), \
-			stats.Get("stats.renderengine.pass").GetInt(), \
-			(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0), \
+	print("[Elapsed time: %3d/5sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+			stats.Get("stats.renderengine.time").GetFloat(),
+			stats.Get("stats.renderengine.pass").GetInt(),
+			(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
 			(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
 
 	if elapsedTime > 5.0:

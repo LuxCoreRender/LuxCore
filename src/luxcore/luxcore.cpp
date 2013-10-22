@@ -51,6 +51,14 @@ RenderConfig::~RenderConfig() {
 	delete renderConfig;
 }
 
+const luxrays::Properties &RenderConfig::GetProperties() const {
+	return renderConfig->cfg;
+}
+
+void RenderConfig::Parse(const luxrays::Properties &props) {
+	renderConfig->Parse(props);
+}
+
 //------------------------------------------------------------------------------
 // RenderSession
 //------------------------------------------------------------------------------
@@ -84,6 +92,20 @@ bool RenderSession::NeedPeriodicFilmSave() {
 
 void RenderSession::SaveFilm() {
 	renderSession->SaveFilm();
+}
+
+vector<unsigned char> RenderSession::GetScreenBuffer() {
+	slg::Film *film = renderSession->film;
+
+	film->UpdateScreenBuffer();
+	const float *src = film->GetScreenBuffer();
+
+	const u_int count = film->GetWidth() * film->GetHeight() * 3;
+	vector<unsigned char> dst(count);
+	for (u_int i = 0; i < count; ++i)
+		dst[i] = (unsigned char)floor((src[i] * 255.f + .5f));
+
+	return dst;
 }
 
 void RenderSession::UpdateStats() {
