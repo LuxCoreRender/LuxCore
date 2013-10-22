@@ -81,7 +81,15 @@ public:
 	 *
 	 * \return the RenderConfig properties.
 	 */
-	const luxrays::Properties &GetProperties() const { return renderConfig->cfg; }
+	const luxrays::Properties &GetProperties() const;
+
+	/*!
+	 * \brief Sets configuration Properties with new values. this method can be
+	 * used only if the RenderConfig is not in use by a RenderSession.
+	 * 
+	 * \param props are the Properties to set. 
+	 */
+	void Parse(const luxrays::Properties &props);
 
 	friend class RenderSession;
 
@@ -129,6 +137,9 @@ public:
 	 * \brief Saves all Film output channels
 	 */
 	void SaveFilm();
+
+	// Just a temporary hack
+	vector<unsigned char> GetScreenBuffer();
 
 	/*!
 	 * \brief Updates the statistics.

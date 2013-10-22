@@ -322,8 +322,9 @@ void reshapeFunc(int newWidth, int newHeight) {
 		session = NULL;
 
 		// Change the film size
-		config->cfg.Set(Property("film.width")(newWidth));
-		config->cfg.Set(Property("film.height")(newHeight));
+		config->Parse(
+				Property("film.width")(newWidth) <<
+				Property("film.height")(newHeight));
 		session = new RenderSession(config);
 
 		// Re-start the rendering
@@ -358,7 +359,9 @@ static void SetRenderingEngineType(const RenderEngineType engineType) {
 		session = NULL;
 
 		// Change the render engine
-		config->cfg.Set(Property("renderengine.type")(RenderEngine::RenderEngineType2String(engineType)));
+		config->Parse(
+				Properties() <<
+				Property("renderengine.type")(RenderEngine::RenderEngineType2String(engineType)));
 		session = new RenderSession(config);
 
 		// Re-start the rendering

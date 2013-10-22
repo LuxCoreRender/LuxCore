@@ -16,8 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/python.hpp>
 #include <boost/foreach.hpp>
+#include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 
 #include <luxcore/luxcore.h>
 
@@ -173,6 +174,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	def("version", LuxCoreVersion, "Returns the LuxCore version");
 
+	class_<vector<unsigned char> >("UnsignedCharVector")
+        .def(vector_indexing_suite<vector<unsigned char> >());
+	class_<vector<float> >("FloatVector")
+        .def(vector_indexing_suite<vector<float> >());
+
 	//--------------------------------------------------------------------------
 	// Property class
 	//--------------------------------------------------------------------------
@@ -252,6 +258,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<RenderConfig>("RenderConfig", init<luxrays::Properties>())
 		.def("GetProperties", &RenderConfig::GetProperties, return_internal_reference<>())
+		.def("Parse", &RenderConfig::Parse)
     ;
 
 	//--------------------------------------------------------------------------
@@ -265,6 +272,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
 		.def("NeedPeriodicFilmSave", &RenderSession::NeedPeriodicFilmSave)
 		.def("SaveFilm", &RenderSession::SaveFilm)
+		.def("GetScreenBuffer", &RenderSession::GetScreenBuffer)
 		.def("UpdateStats", &RenderSession::UpdateStats)
 		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
     ;
