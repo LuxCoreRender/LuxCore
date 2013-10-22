@@ -52,19 +52,23 @@ Scene::Scene() {
 	dataSet = NULL;
 	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
-	lightsDistribution = NULL;
 
+	lightsDistribution = NULL;
 	lightGroupCount = 1;
 }
 
 Scene::Scene(const string &fileName, const float imageScale) {
 	// Just in case there is an unexpected exception during the scene loading
     camera = NULL;
+
 	envLight = NULL;
 	sunLight = NULL;
-	dataSet = NULL;
-	lightsDistribution = NULL;
 
+	dataSet = NULL;
+	accelType = ACCEL_AUTO;
+	enableInstanceSupport = true;
+
+	lightsDistribution = NULL;
 	lightGroupCount = 1;
 
 	imgMapCache.SetImageResize(imageScale);
@@ -80,10 +84,6 @@ Scene::Scene(const string &fileName, const float imageScale) {
 		throw runtime_error("The scene doesn't include any light source");
 
 	UpdateLightGroupCount();
-
-	dataSet = NULL;
-	accelType = ACCEL_AUTO;
-	enableInstanceSupport = true;
 }
 
 Scene::~Scene() {
