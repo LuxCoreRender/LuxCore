@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 ################################################################################
 # Copyright 1998-2013 by authors (see AUTHORS.txt)
 #
@@ -36,7 +38,8 @@ print("[%s]\n" % prop.ToString())
 
 print("[%s]\n" % pyluxcore.Property("test1.prop1").Add(1).Add(2).Add(3))
 
-prop = pyluxcore.Property("test1.prop1", [True, 1, 2.0, "aa"])
+pyvariable = 999
+prop = pyluxcore.Property("test1.prop1", [True, 1, 2.0, "aa", pyvariable])
 print("[%s]" % prop)
 print("Size: %d" % prop.GetSize())
 print("List: %s\n" % str(prop.GetValues()))
@@ -104,6 +107,6 @@ session.Stop()
 # Save the rendered image
 session.SaveFilm()
 
-print("Done.\n")
+print("Done.")
 
 ################################################################################
