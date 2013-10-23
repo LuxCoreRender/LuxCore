@@ -125,7 +125,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 
 PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -185,18 +185,18 @@ void PathOCLBaseRenderEngine::StopLockLess() {
 	compiledScene = NULL;
 }
 
-void PathOCLBaseRenderEngine::BeginEditLockLess() {
+void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
+		renderThreads[i]->BeginSceneEdit();
 }
 
-void PathOCLBaseRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	compiledScene->Recompile(editActions);
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
+		renderThreads[i]->EndSceneEdit(editActions);
 }
 
 #endif

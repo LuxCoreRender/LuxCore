@@ -147,10 +147,10 @@ void RTBiasPathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&screenBufferBuff);
 }
 
-void RTBiasPathOCLRenderThread::BeginEdit() {
+void RTBiasPathOCLRenderThread::BeginSceneEdit() {
 }
 
-void RTBiasPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
+void RTBiasPathOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
 }
 
 void RTBiasPathOCLRenderThread::InitDisplayThread() {

@@ -56,7 +56,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, bo
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 

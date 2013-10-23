@@ -40,15 +40,53 @@ void luxcore::Init() {
 }
 
 //------------------------------------------------------------------------------
+// Scene
+//------------------------------------------------------------------------------
+
+Scene::Scene(const float imageScale) {
+	scene = new slg::Scene(imageScale);
+	allocatedScene = true;
+}
+
+Scene::Scene(const string &fileName, const float imageScale) {
+	scene = new slg::Scene(fileName, imageScale);
+	allocatedScene = true;
+}
+
+Scene::Scene(slg::Scene *scn) {
+	scene = scn;
+	allocatedScene = false;
+}
+
+Scene::~Scene() {
+	if (allocatedScene)
+		delete scene;
+}
+
+void Scene::Parse(const luxrays::Properties &props) {
+	scene->Parse(props);
+}
+
+//------------------------------------------------------------------------------
 // RenderConfig
 //------------------------------------------------------------------------------
 
-RenderConfig::RenderConfig(const luxrays::Properties &props) {
-	renderConfig = new slg::RenderConfig(props);
+RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) {
+	if (scn) {
+		scene = scn;
+		allocatedScene = false;
+		renderConfig = new slg::RenderConfig(props, scn->scene);
+	} else {
+		renderConfig = new slg::RenderConfig(props);
+		scene = new Scene(renderConfig->scene);
+		allocatedScene = true;
+	}
 }
 
 RenderConfig::~RenderConfig() {
 	delete renderConfig;
+	if (allocatedScene)
+		delete scene;
 }
 
 const luxrays::Properties &RenderConfig::GetProperties() const {
@@ -57,6 +95,10 @@ const luxrays::Properties &RenderConfig::GetProperties() const {
 
 void RenderConfig::Parse(const luxrays::Properties &props) {
 	renderConfig->Parse(props);
+}
+
+Scene &RenderConfig::GetScene() {
+	return *scene;
 }
 
 //------------------------------------------------------------------------------

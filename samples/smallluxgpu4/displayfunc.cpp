@@ -391,7 +391,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->TranslateLeft(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		}
@@ -400,7 +400,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->TranslateRight(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		}
@@ -409,7 +409,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->TranslateForward(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		}
@@ -418,7 +418,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->TranslateBackward(optMoveStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		}
@@ -427,7 +427,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, optMoveStep));
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		case 'f':
@@ -435,7 +435,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, -optMoveStep));
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		case 'h':
@@ -520,7 +520,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->SetHorizontalStereo(!session->renderConfig->scene->camera->IsHorizontalStereoEnabled());
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->Start();
 			break;
 		}
@@ -532,7 +532,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->SetHorizontalStereoEyesDistance(newEyeDistance);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		}
@@ -544,7 +544,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->SetHorizontalStereoEyesDistance(newEyeDistance);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		}
@@ -556,7 +556,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->SetHorizontalStereoLensDistance(newLensDistance);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		}
@@ -568,7 +568,7 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->renderConfig->scene->camera->SetHorizontalStereoLensDistance(newLensDistance);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		}
@@ -678,7 +678,7 @@ void specialFunc(int key, int x, int y) {
 			session->renderConfig->scene->camera->RotateUp(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		case GLUT_KEY_DOWN:
@@ -686,7 +686,7 @@ void specialFunc(int key, int x, int y) {
 			session->renderConfig->scene->camera->RotateDown(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		case GLUT_KEY_LEFT:
@@ -694,7 +694,7 @@ void specialFunc(int key, int x, int y) {
 			session->renderConfig->scene->camera->RotateLeft(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		case GLUT_KEY_RIGHT:
@@ -702,7 +702,7 @@ void specialFunc(int key, int x, int y) {
 			session->renderConfig->scene->camera->RotateRight(optRotateStep);
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 			break;
 		default:
@@ -763,7 +763,7 @@ static void motionFunc(int x, int y) {
 
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 
 			mouseGrabLastX = x;
@@ -792,7 +792,7 @@ static void motionFunc(int x, int y) {
 
 			session->renderConfig->scene->camera->Update(
 				session->film->GetWidth(), session->film->GetHeight());
-			session->editActions.AddAction(CAMERA_EDIT);
+			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 
 			mouseGrabLastX = x;

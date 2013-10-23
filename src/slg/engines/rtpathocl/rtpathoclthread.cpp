@@ -157,10 +157,10 @@ void RTPathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&screenBufferBuff);
 }
 
-void RTPathOCLRenderThread::BeginEdit() {
+void RTPathOCLRenderThread::BeginSceneEdit() {
 }
 
-void RTPathOCLRenderThread::EndEdit(const EditActionList &editActions) {
+void RTPathOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
 
 }
 

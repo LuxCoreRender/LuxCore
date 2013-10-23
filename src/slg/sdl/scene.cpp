@@ -43,7 +43,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-Scene::Scene() {
+Scene::Scene(const float imageScale) {
 	camera = NULL;
 
 	envLight = NULL;
@@ -55,6 +55,9 @@ Scene::Scene() {
 
 	lightsDistribution = NULL;
 	lightGroupCount = 1;
+
+	editActions.AddAllAction();
+	imgMapCache.SetImageResize(imageScale);
 }
 
 Scene::Scene(const string &fileName, const float imageScale) {
@@ -71,6 +74,7 @@ Scene::Scene(const string &fileName, const float imageScale) {
 	lightsDistribution = NULL;
 	lightGroupCount = 1;
 
+	editActions.AddAllAction();
 	imgMapCache.SetImageResize(imageScale);
 
 	SDL_LOG("Reading scene: " << fileName);
@@ -110,43 +114,56 @@ void  Scene::UpdateLightGroupCount() {
 }
 
 void Scene::Preprocess(Context *ctx) {
-	// Rebuild the data set
-	delete dataSet;
-	dataSet = new DataSet(ctx);
-	dataSet->SetInstanceSupport(enableInstanceSupport);
-	dataSet->SetAcceleratorType(accelType);
+	// Check if I have to rebuild the dataset
+	if (editActions.Has(GEOMETRY_EDIT)) {
+		// Rebuild the data set
+		delete dataSet;
+		dataSet = new DataSet(ctx);
+		dataSet->SetInstanceSupport(enableInstanceSupport);
+		dataSet->SetAcceleratorType(accelType);
 
-	// Add all objects
-	for (u_int i = 0; i < objDefs.GetSize(); ++i)
-		dataSet->Add(objDefs.GetSceneObject(i)->GetExtMesh());
+		// Add all objects
+		for (u_int i = 0; i < objDefs.GetSize(); ++i)
+			dataSet->Add(objDefs.GetSceneObject(i)->GetExtMesh());
 
-	dataSet->Preprocess();
-
-	// Update the count of light groups
-	UpdateLightGroupCount();
-
-	// Rebuild the data to power based light sampling
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * dataSet->GetBSphere().rad * 1.01f;
-	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
-	const u_int lightCount = GetLightCount();
-	float *lightPower = new float[lightCount];
-	for (u_int i = 0; i < lightCount; ++i) {
-		const LightSource *l = GetLightByIndex(i);
-		lightPower[i] = l->GetPower(*this);
-
-		// In order to avoid over-sampling of distant lights
-		if ((l->GetType() == TYPE_IL) ||
-				(l->GetType() == TYPE_IL_SKY) ||
-				(l->GetType() == TYPE_SUN))
-			lightPower[i] *= iWorldRadius2;
+		dataSet->Preprocess();
 	}
 
-	lightsDistribution = new Distribution1D(lightPower, lightCount);
-	delete lightPower;
+	// Check if something has changed in light sources
+	if (editActions.Has(GEOMETRY_EDIT) ||
+			editActions.Has(MATERIALS_EDIT) ||
+			editActions.Has(MATERIAL_TYPES_EDIT) ||
+			editActions.Has(AREALIGHTS_EDIT) ||
+			editActions.Has(INFINITELIGHT_EDIT) ||
+			editActions.Has(SUNLIGHT_EDIT) ||
+			editActions.Has(SKYLIGHT_EDIT) ||
+			editActions.Has(IMAGEMAPS_EDIT)) {
+		// Update the count of light groups
+		UpdateLightGroupCount();
 
-	// Initialize the light source indices
-	for (u_int i = 0; i < lightCount; ++i)
-		GetLightByIndex(i)->SetSceneIndex(i);
+		// Rebuild the data to power based light sampling
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * dataSet->GetBSphere().rad * 1.01f;
+		const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
+		const u_int lightCount = GetLightCount();
+		float *lightPower = new float[lightCount];
+		for (u_int i = 0; i < lightCount; ++i) {
+			const LightSource *l = GetLightByIndex(i);
+			lightPower[i] = l->GetPower(*this);
+
+			// In order to avoid over-sampling of distant lights
+			if ((l->GetType() == TYPE_IL) ||
+					(l->GetType() == TYPE_IL_SKY) ||
+					(l->GetType() == TYPE_SUN))
+				lightPower[i] *= iWorldRadius2;
+		}
+
+		lightsDistribution = new Distribution1D(lightPower, lightCount);
+		delete lightPower;
+
+		// Initialize the light source indices
+		for (u_int i = 0; i < lightCount; ++i)
+			GetLightByIndex(i)->SetSceneIndex(i);
+	}
 
 	editActions.Reset();
 }

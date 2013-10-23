@@ -253,11 +253,22 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     ;
 
 	//--------------------------------------------------------------------------
+	// Scene class
+	//--------------------------------------------------------------------------
+
+    class_<Scene>("Scene", init<optional<float> >())
+		.def(init<string, optional<float> >())
+		.def("Parse", &Scene::Parse)
+    ;
+
+	//--------------------------------------------------------------------------
 	// RenderConfig class
 	//--------------------------------------------------------------------------
 
     class_<RenderConfig>("RenderConfig", init<luxrays::Properties>())
+		.def(init<luxrays::Properties, Scene *>()[with_custodian_and_ward<1, 3>()])
 		.def("GetProperties", &RenderConfig::GetProperties, return_internal_reference<>())
+		.def("GetScene", &RenderConfig::GetScene, return_internal_reference<>())
 		.def("Parse", &RenderConfig::Parse)
     ;
 

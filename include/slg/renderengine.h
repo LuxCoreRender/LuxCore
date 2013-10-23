@@ -59,8 +59,8 @@ public:
 
 	virtual void Start();
 	virtual void Stop();
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	void UpdateFilm();
 	virtual bool WaitNewFrame() { return false; };
@@ -113,8 +113,8 @@ protected:
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;
 
-	virtual void BeginEditLockLess() = 0;
-	virtual void EndEditLockLess(const EditActionList &editActions) = 0;
+	virtual void BeginSceneEditLockLess() = 0;
+	virtual void EndSceneEditLockLess(const EditActionList &editActions) = 0;
 
 	virtual void UpdateFilmLockLess() = 0;
 	virtual void UpdateCounters() = 0;
@@ -157,8 +157,8 @@ public:
 	virtual void Interrupt();
 	virtual void Stop();
 
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	friend class CPURenderEngine;
 
@@ -191,8 +191,8 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	virtual void BeginEditLockLess();
-	virtual void EndEditLockLess(const EditActionList &editActions);
+	virtual void BeginSceneEditLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	virtual void UpdateFilmLockLess() = 0;
 	virtual void UpdateCounters() = 0;
@@ -308,7 +308,7 @@ protected:
 	// virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	virtual void EndEditLockLess(const EditActionList &editActions);
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	virtual void UpdateFilmLockLess() { }
 	virtual void UpdateCounters();
@@ -362,8 +362,8 @@ public:
     void Interrupt();
 	void Stop();
 
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
+	void BeginSceneEdit();
+	void EndSceneEdit(const EditActionList &editActions);
 
 	friend class HybridRenderState;
 	friend class HybridRenderEngine;
@@ -418,8 +418,8 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	virtual void BeginEditLockLess();
-	virtual void EndEditLockLess(const EditActionList &editActions);
+	virtual void BeginSceneEditLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();

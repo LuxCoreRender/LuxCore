@@ -58,7 +58,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 
 RenderEngine::~RenderEngine() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -107,23 +107,24 @@ void RenderEngine::Stop() {
 	UpdateFilmLockLess();
 }
 
-void RenderEngine::BeginEdit() {
+void RenderEngine::BeginSceneEdit() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
 	assert (started);
 	assert (!editMode);
 	editMode = true;
 
-	BeginEditLockLess();
+	BeginSceneEditLockLess();
 }
 
-void RenderEngine::EndEdit(const EditActionList &editActions) {
+void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
 	assert (started);
 	assert (editMode);
 
-	bool dataSetUpdated;
+	// Check if I have to stop the LuxRays Context
+	bool contextStopped;
 	if (editActions.Has(GEOMETRY_EDIT) ||
 			(editActions.Has(INSTANCE_TRANS_EDIT) &&
 			!renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate())) {
@@ -132,22 +133,21 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 
 		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
 		ctx->SetDataSet(NULL);
+		
+		contextStopped = true;
+	} else
+		contextStopped = false;
 
-		// For all other accelerator, I have to rebuild the DataSet
-		renderConfig->scene->Preprocess(ctx);
+	// Pre-process scene data
+	renderConfig->scene->Preprocess(ctx);
 
+	if (contextStopped) {
 		// Set the LuxRays SataSet
 		ctx->SetDataSet(renderConfig->scene->dataSet);
 
 		// Restart all intersection devices
 		ctx->Start();
-
-		dataSetUpdated = true;
-	} else
-		dataSetUpdated = false;
-
-	if (!dataSetUpdated &&
-			renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate() &&
+	} else if (renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate() &&
 			editActions.Has(INSTANCE_TRANS_EDIT)) {
 		// Update the DataSet
 		ctx->UpdateDataSet();
@@ -164,7 +164,7 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 
 	editMode = false;
 
-	EndEditLockLess(editActions);
+	EndSceneEditLockLess(editActions);
 }
 
 void RenderEngine::SetSeed(const unsigned long seed) {
@@ -283,7 +283,7 @@ CPURenderThread::CPURenderThread(CPURenderEngine *engine,
 
 CPURenderThread::~CPURenderThread() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 }
@@ -319,11 +319,11 @@ void CPURenderThread::StopRenderThread() {
 	}
 }
 
-void CPURenderThread::BeginEdit() {
+void CPURenderThread::BeginSceneEdit() {
 	StopRenderThread();
 }
 
-void CPURenderThread::EndEdit(const EditActionList &editActions) {
+void CPURenderThread::EndSceneEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
@@ -365,7 +365,7 @@ CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mute
 
 CPURenderEngine::~CPURenderEngine() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -388,16 +388,16 @@ void CPURenderEngine::StopLockLess() {
 		renderThreads[i]->Stop();
 }
 
-void CPURenderEngine::BeginEditLockLess() {
+void CPURenderEngine::BeginSceneEditLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
+		renderThreads[i]->BeginSceneEdit();
 }
 
-void CPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
+void CPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
+		renderThreads[i]->EndSceneEdit(editActions);
 }
 
 //------------------------------------------------------------------------------
@@ -658,12 +658,12 @@ void CPUTileRenderEngine::StopLockLess() {
 	tileRepository = NULL;
 }
 
-void CPUTileRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+void CPUTileRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	tileRepository->Clear();
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 	printedRenderingTime = false;
 
-	CPURenderEngine::EndEditLockLess(editActions);
+	CPURenderEngine::EndSceneEditLockLess(editActions);
 }
 
 void CPUTileRenderEngine::UpdateCounters() {
@@ -799,7 +799,7 @@ HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
 
 HybridRenderThread::~HybridRenderThread() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -845,11 +845,11 @@ void HybridRenderThread::StopRenderThread() {
 	}
 }
 
-void HybridRenderThread::BeginEdit() {
+void HybridRenderThread::BeginSceneEdit() {
 	StopRenderThread();
 }
 
-void HybridRenderThread::EndEdit(const EditActionList &editActions) {
+void HybridRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
@@ -1053,19 +1053,19 @@ void HybridRenderEngine::StopLockLess() {
 		renderThreads[i]->Stop();
 }
 
-void HybridRenderEngine::BeginEditLockLess() {
+void HybridRenderEngine::BeginSceneEditLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
+		renderThreads[i]->BeginSceneEdit();
 }
 
-void HybridRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+void HybridRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	// Reset statistics in order to be more accurate
 	intersectionDevices[0]->ResetPerformaceStats();
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
+		renderThreads[i]->EndSceneEdit(editActions);
 }
 
 void HybridRenderEngine::UpdateFilmLockLess() {

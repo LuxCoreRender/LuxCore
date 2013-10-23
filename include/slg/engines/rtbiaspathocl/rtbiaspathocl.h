@@ -40,8 +40,8 @@ public:
 	virtual void Interrupt();
 	virtual void Stop();
 
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	friend class RTBiasPathOCLRenderEngine;
 
@@ -92,8 +92,8 @@ public:
 	virtual RenderEngineType GetEngineType() const { return RTBIASPATHOCL; }
 	double GetFrameTime() const { return frameTime; }
 
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	bool WaitNewFrame();
 

@@ -40,8 +40,8 @@ public:
 	virtual void Interrupt();
 	virtual void Stop();
 
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	void SetAssignedIterations(const u_int iters) { assignedIters = iters; }
 	u_int GetAssignedIterations() const { return assignedIters; }
@@ -100,8 +100,8 @@ public:
 	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
 	double GetFrameTime() const { return frameTime; }
 
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	bool WaitNewFrame();
 

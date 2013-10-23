@@ -42,7 +42,8 @@
 
 #include <luxrays/utils/properties.h>
 #include <slg/renderconfig.h>
-#include "slg/rendersession.h"
+#include <slg/rendersession.h>
+#include <slg/sdl/scene.h>
 #include <luxcore/cfg.h>
 
 /*!
@@ -56,6 +57,45 @@ namespace luxcore {
  * \brief Initializes LuxCore API. This function has to be called before anything else.
  */
 extern void Init();
+
+
+/*!
+ * \brief Scene stores textures, mateirials and objects definitions.
+ */
+class Scene {
+public:
+	/*!
+	 * \brief Constructs a new empty Scene.
+	 *
+	 * \param imageScale defines the scale used for storing any kind of image in memory.
+	 */
+	Scene(const float imageScale = 1.f);
+	/*!
+	 * \brief Constructs a new Scene as defined in fileName file.
+	 *
+	 * \param fileName is the name of the file with the scene description to read.
+	 * \param imageScale defines the scale used for storing any kind of image in memory.
+	 */
+	Scene(const std::string &fileName, const float imageScale = 1.f);
+	~Scene();
+	
+	/*!
+	 * \brief Edits or creates textures, materials and/or objects based on the Properties
+	 * defined.
+	 *
+	 * \param props are the Properties with the definition of textures,
+	 * materials and/or objects
+	 */
+	void Parse(const luxrays::Properties &props);
+
+	friend class RenderConfig;
+
+private:
+	Scene(slg::Scene *scn);
+
+	slg::Scene *scene;
+	bool allocatedScene;
+};
 
 /*!
  * \brief RenderConfig stores all the configuration settings used to render a
@@ -73,7 +113,7 @@ public:
 	 * the scene will be read from the file specified in "scene.file" Property
 	 * and deleted by the destructor.
 	 */
-	RenderConfig(const luxrays::Properties &props);//, Scene *scene = NULL);
+	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
 	~RenderConfig();
 
 	/*!
@@ -82,6 +122,13 @@ public:
 	 * \return the RenderConfig properties.
 	 */
 	const luxrays::Properties &GetProperties() const;
+
+	/*!
+	 * \brief Returns a reference to the Scene used in the RenderConfig;
+	 *
+	 * \return the reference to the RenderConfig Scene.
+	 */
+	Scene &GetScene();
 
 	/*!
 	 * \brief Sets configuration Properties with new values. this method can be
@@ -95,6 +142,9 @@ public:
 
 private:
 	slg::RenderConfig *renderConfig;
+
+	Scene *scene;
+	bool allocatedScene;
 };
 
 /*!

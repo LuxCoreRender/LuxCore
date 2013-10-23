@@ -19,6 +19,7 @@
 import sys
 sys.path.append("./lib")
 
+#import time
 import pyluxcore
 from PySide.QtCore import *
 from PySide.QtGui import *
@@ -26,6 +27,9 @@ from PySide.QtGui import *
 class RenderView(QMainWindow):
 	def __init__(self, cfgFileName):
 		super(RenderView, self).__init__()
+		
+		self.createActions()
+		self.createMenus()
 		
 		# Load the configuration from file
 		props = pyluxcore.Properties(cfgFileName)
@@ -44,18 +48,89 @@ class RenderView(QMainWindow):
 		self.image.fill(qRgb(0, 0, 0))
 
 		# Read the configuration and start the rendering
-		self.config = pyluxcore.RenderConfig(props)
+		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
+			props.Get("images.scale", [1.0]).GetFloat())
+		self.config = pyluxcore.RenderConfig(props, self.scene)
 		self.session = pyluxcore.RenderSession(self.config)
 		self.session.Start()
 		
 		self.timer = QBasicTimer()
 		self.timer.start(1000, self)
+
+	def createActions(self):
+		self.quitAct = QAction("&Quit", self, triggered = self.close)
+		self.saveImageAct = QAction("&Save image", self, triggered = self.saveImage)
+		
+		self.luxBallMatMirrorAct = QAction("&Mirror", self, triggered = self.luxBallMatMirror)
+		self.luxBallMatMatteAct = QAction("M&atte", self, triggered = self.luxBallMatMatte)
+		self.luxBallMatGlassAct = QAction("&Glass", self, triggered = self.luxBallMatGlass)
+	
+	def createMenus(self):
+		fileMenu = QMenu("&File", self)
+		fileMenu.addAction(self.saveImageAct)
+		fileMenu.addAction(self.quitAct)
+		
+		luxBallMatMenu = QMenu("&LuxBall Material", self)
+		luxBallMatMenu.addAction(self.luxBallMatMirrorAct)
+		luxBallMatMenu.addAction(self.luxBallMatMatteAct)
+		luxBallMatMenu.addAction(self.luxBallMatGlassAct)
+		
+		self.menuBar().addMenu(fileMenu)
+		self.menuBar().addMenu(luxBallMatMenu)
 	
 	def center(self):
 		screen = QDesktopWidget().screenGeometry()
 		size =  self.geometry()
 		self.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
 	
+	def saveImage(self):
+		# Save the rendered image
+		self.session.SaveFilm()
+		print("Image saved");
+		
+	def luxBallMatMirror(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+
+		# Edit the material
+		self.scene.Parse(pyluxcore.Properties().
+			Set(pyluxcore.Property("scene.materials.shell.type", ["mirror"])).
+			Set(pyluxcore.Property("scene.materials.shell.kr", [0.75, 0.75, 0.75])))
+
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("LuxBall material set to: Mirror");
+	
+	def luxBallMatMatte(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+
+		# Edit the material
+		self.scene.Parse(pyluxcore.Properties().
+			Set(pyluxcore.Property("scene.materials.shell.type", ["matte"])).
+			Set(pyluxcore.Property("scene.materials.shell.kd", [0.75, 0.0, 0.0])))
+
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("LuxBall material set to: Matte");
+	
+	def luxBallMatGlass(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+
+		# Edit the material
+		self.scene.Parse(pyluxcore.Properties().
+			Set(pyluxcore.Property("scene.materials.shell.type", ["glass"])).
+			Set(pyluxcore.Property("scene.materials.shell.kr", [0.69, 0.78, 1.0])).
+			Set(pyluxcore.Property("scene.materials.shell.kt", [0.69, 0.78, 1.0])).
+			Set(pyluxcore.Property("scene.materials.shell.ioroutside", [1.0])).
+			Set(pyluxcore.Property("scene.materials.shell.iorinside", [1.45]))
+			)
+
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("LuxBall material set to: Matte");
+		
 	def timerEvent(self, event):
 		if event.timerId() == self.timer.timerId():
 			# Print some information about the rendering progress
@@ -64,19 +139,22 @@ class RenderView(QMainWindow):
 			self.session.UpdateStats()
 			
 			stats = self.session.GetStats();
-			print("[Elapsed time: %3dsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+			print("[Elapsed time: %3.1fsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
 				stats.Get("stats.renderengine.time").GetFloat(),
 				stats.Get("stats.renderengine.pass").GetInt(),
 				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
 				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
 			
 			# Update the image
+			#t1 = time.time()
 			imageBuffer = self.session.GetScreenBuffer();
 			index = 0
 			for y in range(self.filmHeight):
 				for x in range(self.filmWidth):
 					self.image.setPixel(x, self.filmHeight - y -1, qRgb(imageBuffer[index], imageBuffer[index + 1], imageBuffer[index + 2]))
 					index += 3
+			#t2 = time.time()
+			#print("Image update time: %f" % ((t2 - t1) / 1000.0))
 			
 			self.update()
 		else:
@@ -108,21 +186,12 @@ class RenderView(QMainWindow):
 		super(RenderView, self).resizeEvent(event)
 	
 	def closeEvent(self, event):
+		self.timer.stop()
 		self.session.Stop()
-		
-		ret = QMessageBox.warning(self, "Save ?", \
-				"Do you want to save the image ?", \
-				QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
-		if ret == QMessageBox.Save:
-			# Save the rendered image
-			self.session.SaveFilm()
-			print("Done.")
-			event.accept()
-		elif ret == QMessageBox.Discard:
-			print("Done.")
-			event.accept()
-		elif ret == QMessageBox.Cancel:
-			event.ignore()
+		self.session = None
+		self.config = None
+		self.scene = None
+		event.accept()
 
 def main():   
 	print("LuxCore %s" % pyluxcore.version())
