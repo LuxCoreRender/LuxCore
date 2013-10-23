@@ -49,8 +49,8 @@ public:
 	virtual void Interrupt();
 	virtual void Stop();
 
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	friend class PathOCLBaseRenderEngine;
 
@@ -188,8 +188,8 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	virtual void BeginEditLockLess();
-	virtual void EndEditLockLess(const EditActionList &editActions);
+	virtual void BeginSceneEditLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	boost::mutex setKernelArgsMutex;
 

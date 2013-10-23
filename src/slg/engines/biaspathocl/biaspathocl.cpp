@@ -140,7 +140,7 @@ void BiasPathOCLRenderEngine::StopLockLess() {
 	tileRepository = NULL;
 }
 
-void BiasPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+void BiasPathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	if (GetEngineType() != RTBIASPATHOCL) {
 		// RTBIASPATHOCL will InitTiles() on next frame
 		tileRepository->Clear();
@@ -148,7 +148,7 @@ void BiasPathOCLRenderEngine::EndEditLockLess(const EditActionList &editActions)
 		printedRenderingTime = false;
 	}
 
-	PathOCLBaseRenderEngine::EndEditLockLess(editActions);
+	PathOCLBaseRenderEngine::EndSceneEditLockLess(editActions);
 }
 
 const bool BiasPathOCLRenderEngine::NextTile(TileRepository::Tile **tile, const Film *tileFilm) {

@@ -84,8 +84,7 @@ void RenderSession::BeginSceneEdit() {
 	assert (started);
 	assert (!editMode);
 
-	renderEngine->BeginEdit();
-	editActions.Reset();
+	renderEngine->BeginSceneEdit();
 
 	editMode = true;
 }
@@ -93,6 +92,9 @@ void RenderSession::BeginSceneEdit() {
 void RenderSession::EndSceneEdit() {
 	assert (started);
 	assert (editMode);
+
+	// Make a copy of the edit actions
+	const EditActionList editActions = renderConfig->scene->editActions;
 
 	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
 			(renderEngine->GetEngineType() != RTBIASPATHOCL)) {
@@ -103,7 +105,7 @@ void RenderSession::EndSceneEdit() {
 			film->Reset();
 	}
 
-	renderEngine->EndEdit(editActions);
+	renderEngine->EndSceneEdit(editActions);
 	editMode = false;
 }
 

@@ -43,7 +43,7 @@ namespace slg {
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods
-	Scene();
+	Scene(const float imageScale = 1.f);
 	// Constructor used to load a scene from file
 	Scene(const std::string &fileName, const float imageScale = 1.f);
 	~Scene();

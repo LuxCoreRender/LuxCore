@@ -59,7 +59,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 
 PathOCLRenderThread::~PathOCLRenderThread() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 

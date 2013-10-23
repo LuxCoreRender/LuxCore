@@ -48,8 +48,6 @@ public:
 	Film *film;
 	FilmOutputs filmOutputs;
 
-	EditActionList editActions;
-
 protected:
 	double lastPeriodicSave, periodiceSaveTime;
 

@@ -56,7 +56,7 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 
 BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 

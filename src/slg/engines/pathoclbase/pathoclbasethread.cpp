@@ -106,7 +106,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 
 PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -1128,11 +1128,11 @@ void PathOCLBaseRenderThread::StopRenderThread() {
 	}
 }
 
-void PathOCLBaseRenderThread::BeginEdit() {
+void PathOCLBaseRenderThread::BeginSceneEdit() {
 	StopRenderThread();
 }
 
-void PathOCLBaseRenderThread::EndEdit(const EditActionList &editActions) {
+void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
 	//--------------------------------------------------------------------------

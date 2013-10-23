@@ -77,17 +77,17 @@ void RTPathOCLRenderEngine::StopLockLess() {
 	PathOCLRenderEngine::StopLockLess();
 }
 
-void RTPathOCLRenderEngine::BeginEdit() {
+void RTPathOCLRenderEngine::BeginSceneEdit() {
 	// NOTE: this is a huge trick, the LuxRays context is stopped by RenderEngine
 	// but the threads are still using the intersection devices in RTPATHOCL.
 	// The result is that stuff like geometry edit will not work.
 	editMutex.lock();
 
-	PathOCLRenderEngine::BeginEdit();
+	PathOCLRenderEngine::BeginSceneEdit();
 }
 
-void RTPathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
-	PathOCLRenderEngine::EndEdit(editActions);
+void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
+	PathOCLRenderEngine::EndSceneEdit(editActions);
 
 	updateActions.AddActions(editActions.GetActions());
 	editMutex.unlock();

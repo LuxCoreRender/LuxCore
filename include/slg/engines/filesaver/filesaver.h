@@ -46,8 +46,8 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess() { }
 
-	virtual void BeginEditLockLess() { }
-	virtual void EndEditLockLess(const EditActionList &editActions) { SaveScene(); }
+	virtual void BeginSceneEditLockLess() { }
+	virtual void EndSceneEditLockLess(const EditActionList &editActions) { SaveScene(); }
 
 	virtual void UpdateFilmLockLess() { }
 	virtual void UpdateCounters() { }

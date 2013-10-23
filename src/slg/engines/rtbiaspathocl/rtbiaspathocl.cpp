@@ -79,17 +79,17 @@ void RTBiasPathOCLRenderEngine::StopLockLess() {
 	BiasPathOCLRenderEngine::StopLockLess();
 }
 
-void RTBiasPathOCLRenderEngine::BeginEdit() {
+void RTBiasPathOCLRenderEngine::BeginSceneEdit() {
 	// NOTE: this is a huge trick, the LuxRays context is stopped by RenderEngine
 	// but the threads are still using the intersection devices in RTPATHOCL.
 	// The result is that stuff like geometry edit will not work.
 	editMutex.lock();
 
-	BiasPathOCLRenderEngine::BeginEdit();
+	BiasPathOCLRenderEngine::BeginSceneEdit();
 }
 
-void RTBiasPathOCLRenderEngine::EndEdit(const EditActionList &editActions) {
-	BiasPathOCLRenderEngine::EndEdit(editActions);
+void RTBiasPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
+	BiasPathOCLRenderEngine::EndSceneEdit(editActions);
 
 	updateActions.AddActions(editActions.GetActions());
 	editMutex.unlock();
