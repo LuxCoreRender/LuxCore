@@ -19,7 +19,6 @@
 import sys
 sys.path.append("./lib")
 
-#import time
 import pyluxcore
 from PySide.QtCore import *
 from PySide.QtGui import *
@@ -44,8 +43,7 @@ class RenderView(QMainWindow):
 		self.center()
 		
 		# Allocate the image for the rendering
-		self.image = QImage(self.filmWidth, self.filmHeight, QImage.Format_RGB888)
-		self.image.fill(qRgb(0, 0, 0))
+		self.imageBuffer = bytearray(self.filmWidth * self.filmHeight * 3)
 
 		# Read the configuration and start the rendering
 		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
@@ -55,7 +53,7 @@ class RenderView(QMainWindow):
 		self.session.Start()
 		
 		self.timer = QBasicTimer()
-		self.timer.start(1000, self)
+		self.timer.start(500, self)
 
 	def createActions(self):
 		self.quitAct = QAction("&Quit", self, triggered = self.close)
@@ -146,15 +144,7 @@ class RenderView(QMainWindow):
 				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
 			
 			# Update the image
-			#t1 = time.time()
-			imageBuffer = self.session.GetScreenBuffer();
-			index = 0
-			for y in range(self.filmHeight):
-				for x in range(self.filmWidth):
-					self.image.setPixel(x, self.filmHeight - y -1, qRgb(imageBuffer[index], imageBuffer[index + 1], imageBuffer[index + 2]))
-					index += 3
-			#t2 = time.time()
-			#print("Image update time: %f" % ((t2 - t1) / 1000.0))
+			self.session.GetScreenBuffer(self.imageBuffer);
 			
 			self.update()
 		else:
@@ -162,7 +152,8 @@ class RenderView(QMainWindow):
 	
 	def paintEvent(self, event):
 		painter = QPainter(self)
-		painter.drawImage(QPoint(0, 0), self.image)
+		image = QImage(self.imageBuffer, self.filmWidth, self.filmHeight, QImage.Format_RGB888)
+		painter.drawImage(QPoint(0, 0), image)
 	
 	def resizeEvent(self, event):
 		# Stop the rendering
@@ -176,8 +167,7 @@ class RenderView(QMainWindow):
 			pyluxcore.Properties().
 			Set(pyluxcore.Property("film.width", [self.filmWidth])).
 			Set(pyluxcore.Property("film.height", [self.filmHeight])))
-		self.image = QImage(self.filmWidth, self.filmHeight, QImage.Format_RGB888)
-		self.image.fill(qRgb(0, 0, 0))
+		self.imageBuffer = bytearray(self.filmWidth * self.filmHeight * 3)
 		
 		# Re-start the rendering
 		self.session = pyluxcore.RenderSession(self.config)
