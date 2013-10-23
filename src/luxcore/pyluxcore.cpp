@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <Python.h>
+
 #include <boost/foreach.hpp>
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
@@ -156,6 +158,28 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 	return luxrays::Property(name, values);
 }
 
+static void RenderSession_GetScreenBuffer(RenderSession *renderSession,
+		boost::python::object &obj) {
+	if (PyByteArray_Check(obj.ptr())) {
+		unsigned char *dst = (unsigned char *)PyByteArray_AsString(obj.ptr());
+		const float *src = renderSession->GetScreenBuffer();
+
+		const u_int width = renderSession->GetRenderConfig().GetProperties().Get("film.width").Get<u_int>();
+		const u_int height = renderSession->GetRenderConfig().GetProperties().Get("film.height").Get<u_int>();
+
+		for (u_int y = 0; y < height; ++y) {
+			const u_int srcOffset = (height - y - 1) * width * 3;
+			const u_int dstOffset = y * width * 3;
+
+			for (u_int x = 0; x < width * 3; ++x)
+				dst[dstOffset + x] = (unsigned char)floor((src[srcOffset + x] * 255.f + .5f));
+		}
+	} else {
+		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data RenderSession.GetScreenBuffer() method: " + objType);
+	}
+}
+
 //------------------------------------------------------------------------------
 
 BOOST_PYTHON_MODULE(pyluxcore) {
@@ -283,7 +307,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
 		.def("NeedPeriodicFilmSave", &RenderSession::NeedPeriodicFilmSave)
 		.def("SaveFilm", &RenderSession::SaveFilm)
-		.def("GetScreenBuffer", &RenderSession::GetScreenBuffer)
+		.def("GetScreenBuffer", &RenderSession_GetScreenBuffer)
 		.def("UpdateStats", &RenderSession::UpdateStats)
 		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
     ;

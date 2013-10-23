@@ -162,6 +162,14 @@ public:
 	~RenderSession();
 
 	/*!
+	 * \brief Returns a reference to the RenderingConfig used to create this
+	 * RenderSession.
+	 *
+	 * \return a reference to the RenderingConfig.
+	 */
+	const RenderConfig &GetRenderConfig() const;
+
+	/*!
 	 * \brief Starts the rendering.
 	 */
 	void Start();
@@ -189,7 +197,7 @@ public:
 	void SaveFilm();
 
 	// Just a temporary hack
-	vector<unsigned char> GetScreenBuffer();
+	const float *GetScreenBuffer();
 
 	/*!
 	 * \brief Updates the statistics.
@@ -203,6 +211,7 @@ public:
 	const luxrays::Properties &GetStats() const;
 
 private:
+	const RenderConfig *renderConfig;
 	slg::RenderSession *renderSession;
 	luxrays::Properties stats;
 };

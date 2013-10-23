@@ -105,13 +105,18 @@ Scene &RenderConfig::GetScene() {
 // RenderSession
 //------------------------------------------------------------------------------
 
-RenderSession::RenderSession(const RenderConfig *config) {
+RenderSession::RenderSession(const RenderConfig *config) : renderConfig(config) {
 	renderSession = new slg::RenderSession(config->renderConfig);
 }
 
 RenderSession::~RenderSession() {
 	delete renderSession;
 }
+
+const RenderConfig &RenderSession::GetRenderConfig() const {
+	return *renderConfig;
+}
+
 void RenderSession::Start() {
 	renderSession->Start();
 }
@@ -136,18 +141,11 @@ void RenderSession::SaveFilm() {
 	renderSession->SaveFilm();
 }
 
-vector<unsigned char> RenderSession::GetScreenBuffer() {
+const float *RenderSession::GetScreenBuffer() {
 	slg::Film *film = renderSession->film;
 
 	film->UpdateScreenBuffer();
-	const float *src = film->GetScreenBuffer();
-
-	const u_int count = film->GetWidth() * film->GetHeight() * 3;
-	vector<unsigned char> dst(count);
-	for (u_int i = 0; i < count; ++i)
-		dst[i] = (unsigned char)floor((src[i] * 255.f + .5f));
-
-	return dst;
+	return film->GetScreenBuffer();
 }
 
 void RenderSession::UpdateStats() {
