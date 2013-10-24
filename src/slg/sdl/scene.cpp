@@ -342,12 +342,12 @@ void Scene::ParseCamera(const Properties &props) {
 		SDL_LOG("WARNING: deprecated property scene.camera.lookat");
 
 		const Property &prop = props.Get("scene.camera.lookat");
-		orig.x = prop.GetValue<float>(0);
-		orig.y = prop.GetValue<float>(1);
-		orig.z = prop.GetValue<float>(2);
-		target.x = prop.GetValue<float>(3);
-		target.y = prop.GetValue<float>(4);
-		target.z = prop.GetValue<float>(5);
+		orig.x = prop.Get<float>(0);
+		orig.y = prop.Get<float>(1);
+		orig.z = prop.Get<float>(2);
+		target.x = prop.Get<float>(3);
+		target.y = prop.Get<float>(4);
+		target.z = prop.Get<float>(5);
 	} else {
 		orig = props.Get("scene.camera.lookat.orig", MakePropertyValues(0.f, 10.f, 0.f)).Get<Point>();
 		target = props.Get("scene.camera.lookat.target", MakePropertyValues(0.f, 0.f, 0.f)).Get<Point>();
@@ -363,10 +363,10 @@ void Scene::ParseCamera(const Properties &props) {
 		float screenWindow[4];
 
 		const Property &prop = props.Get("scene.camera.screenwindow", MakePropertyValues(0.f, 1.f, 0.f, 1.f));
-		screenWindow[0] = prop.GetValue<float>(0);
-		screenWindow[1] = prop.GetValue<float>(1);
-		screenWindow[2] = prop.GetValue<float>(2);
-		screenWindow[3] = prop.GetValue<float>(3);
+		screenWindow[0] = prop.Get<float>(0);
+		screenWindow[1] = prop.Get<float>(1);
+		screenWindow[2] = prop.Get<float>(2);
+		screenWindow[3] = prop.Get<float>(3);
 
 		newCamera.reset(new PerspectiveCamera(orig, target, up, &screenWindow[0]));
 	} else

@@ -210,9 +210,9 @@ public:
 		return newProp;
 	}
 	/*!
-	 * \brief Return a new property with a prefix added to the name.
+	 * \brief Return a new property with a new name.
 	 * 
-	 * \param prefix is the string to add to the name.
+	 * \param prefix is the string to use for the new name.
 	 *
 	 * \return a new property.
 	 */
@@ -244,7 +244,7 @@ public:
 	 * 
 	 * \throws std::runtime_error if the index is out of bound.
 	 */
-	template<class T> T GetValue(const u_int index) const {
+	template<class T> T Get(const u_int index) const {
 		if (index >= values.size())
 			throw std::runtime_error("Out of bound error for property: " + name);
 
@@ -540,7 +540,7 @@ public:
 	 */
 	Properties &operator<<(const Properties &props);
 	/*!
-	 * \brief Sets the list of Property while adding a prefix to all names .
+	 * \brief Sets the list of Property while adding a prefix to all names.
 	 * 
 	 * \param props is the list of Property to set.
 	 * 
@@ -554,7 +554,7 @@ public:
 	 * 
 	 * \return a reference to the modified properties.
 	 */
-	Properties &Set(std::istream &stream);
+	Properties &SetFromStream(std::istream &stream);
 	/*!
 	 * \brief Sets the list of Property coming from a file.
 	 * 
