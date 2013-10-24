@@ -24,6 +24,16 @@
 using namespace luxrays;
 using namespace slg;
 
+void SceneObject::AddReferencedMeshes(boost::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const {
+	referencedMesh.insert(mesh);
+
+	// Check if it is an instance and add referenced mesh
+	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+		ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
+		referencedMesh.insert(imesh->GetExtTriangleMesh());
+	}	
+}
+
 void SceneObject::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
 	if (mat == oldMat)
 		mat = newMat;
@@ -36,10 +46,7 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache) const {
 	props.SetString("scene.objects." + name + ".material", mat->GetName());
 	props.SetString("scene.objects." + name + ".ply",
 			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(mesh)).str() + ".ply");
-	if (mesh->HasNormals())
-		props << Property("scene.objects." + name + ".useplynormals")(true);
-	else
-		props << Property("scene.objects." + name + ".useplynormals")(false);
+	props << Property("scene.objects." + name + ".useplynormals")(mesh->HasNormals());
 
 	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;

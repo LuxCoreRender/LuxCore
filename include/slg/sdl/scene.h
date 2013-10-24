@@ -70,7 +70,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	void DefineImageMap(const std::string &name, ImageMap *im) {
-		imgMapCache.DefineImgMap(name, im);
+		imgMapCache.DefineImageMap(name, im);
 	}
 	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh,
 		const bool usePlyNormals = true) {
@@ -89,10 +89,10 @@ public:
 
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 
+	void RemoveUnusedImageMaps();
 	void RemoveUnusedTextures();
 	void RemoveUnusedMaterials();
-	// TODO: a method to remove unused image maps from cache
-	// TODO: a method to remove unused meshes from cache
+	void RemoveUnusedMeshes();
 
 	//--------------------------------------------------------------------------
 

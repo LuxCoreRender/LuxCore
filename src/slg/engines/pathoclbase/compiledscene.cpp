@@ -1058,7 +1058,7 @@ void CompiledScene::CompileImageMaps() {
 
 	const double tStart = WallClockTime();
 
-	std::vector<ImageMap *> ims;
+	std::vector<const ImageMap *> ims;
 	scene->imgMapCache.GetImageMaps(ims);
 
 	imageMapDescs.resize(ims.size());

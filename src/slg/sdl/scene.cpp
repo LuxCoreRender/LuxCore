@@ -226,7 +226,7 @@ Properties Scene::ToProperties(const string &directoryName) {
 
 		// Write the image map information
 		SDL_LOG("Saving image map information:");
-		vector<ImageMap *> ims;
+		vector<const ImageMap *> ims;
 		imgMapCache.GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
 			const string fileName = directoryName + "/imagemap-" + (boost::format("%05d") % i).str() + ".exr";
@@ -648,6 +648,27 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 	}
 }
 
+void Scene::RemoveUnusedImageMaps() {
+	// Build a list of all referenced image maps
+	boost::unordered_set<const ImageMap *> referencedImgMaps;
+	for (u_int i = 0; i < texDefs.GetSize(); ++i)
+		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
+
+	// Add the infinite light image
+	if (envLight && (envLight->GetType() == TYPE_IL))
+		referencedImgMaps.insert(((InfiniteLight *)envLight)->GetImageMap());
+
+	// Get the list of all defined image maps
+	std::vector<const ImageMap *> ims;
+	imgMapCache.GetImageMaps(ims);
+	BOOST_FOREACH(const ImageMap *im, ims) {
+		if (referencedImgMaps.count(im) == 0) {
+			SDL_LOG("Deleting unreferenced texture: " << imgMapCache.GetPath(im));
+			imgMapCache.DeleteImageMap(im);
+		}
+	}
+}
+
 void Scene::RemoveUnusedTextures() {
 	// Build a list of all referenced textures names
 	boost::unordered_set<const Texture *> referencedTexs;
@@ -684,8 +705,29 @@ void Scene::RemoveUnusedMaterials() {
 			SDL_LOG("Deleting unreferenced material: " << matName);
 			matDefs.DeleteMaterial(matName);
 
-			// Delete the texture definition from the properties
+			// Delete the material definition from the properties
 			sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.materials." + matName));
+		}
+	}
+}
+
+void Scene::RemoveUnusedMeshes() {
+	// Build a list of all referenced mesh
+	boost::unordered_set<const ExtMesh *> referencedMesh;
+	for (u_int i = 0; i < objDefs.GetSize(); ++i)
+		objDefs.GetSceneObject(i)->AddReferencedMeshes(referencedMesh);
+
+	// Get the list of all defined material
+	const vector<string> definedObjects = objDefs.GetSceneObjectNames();
+	BOOST_FOREACH(const string  &objName, definedObjects) {
+		SceneObject *obj = objDefs.GetSceneObject(objName);
+
+		if (referencedMesh.count(obj->GetExtMesh()) == 0) {
+			SDL_LOG("Deleting unreferenced mesh: " << objName);
+			objDefs.DeleteSceneObject(objName);
+
+			// Delete the object definition from the properties
+			sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.objects." + objName));
 		}
 	}
 }
