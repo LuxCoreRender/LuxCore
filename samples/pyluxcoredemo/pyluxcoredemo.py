@@ -30,7 +30,7 @@ print("LuxCore %s\n" % pyluxcore.version())
 
 print("Properties examples...")
 prop = pyluxcore.Property("test1.prop1", "aa")
-print("test1.prop1 => %s\n" % prop.GetValue(0))
+print("test1.prop1 => %s\n" % prop.GetValueString(0))
 
 prop.Clear().Add(0).Add(2).Add(3)
 prop.Set(0, 1)

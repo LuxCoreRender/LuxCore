@@ -48,6 +48,8 @@ public:
 	Scene(const std::string &fileName, const float imageScale = 1.f);
 	~Scene();
 
+	const luxrays::Properties &GetProperties() const { return sceneProperties; }
+
 	const u_int GetLightCount() const;
 	LightSource *GetLightByType(const LightSourceType lightType) const;
 	LightSource *GetLightByIndex(const u_int index) const;
@@ -59,7 +61,7 @@ public:
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
 
 	void UpdateLightGroupCount();
-	void Preprocess(luxrays::Context *ctx);
+	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight);
 
 	luxrays::Properties ToProperties(const std::string &directoryName);
 
@@ -83,12 +85,12 @@ public:
 	}
 
 	void Parse(const luxrays::Properties &props);
+	void DeleteObject(const std::string &objName);
 
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 
-	void RemoveUnusedMaterials();
 	void RemoveUnusedTextures();
-
+	void RemoveUnusedMaterials();
 	// TODO: a method to remove unused image maps from cache
 	// TODO: a method to remove unused meshes from cache
 
@@ -132,7 +134,9 @@ protected:
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
 
-	void RebuildTriangleLightDefs();
+	void UpdateTriangleLightDefs();
+
+	luxrays::Properties sceneProperties;
 };
 
 }

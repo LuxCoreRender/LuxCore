@@ -63,8 +63,16 @@ Scene::~Scene() {
 		delete scene;
 }
 
+const Properties &Scene::GetProperties() const {
+	return scene->GetProperties();
+}
+
 void Scene::Parse(const luxrays::Properties &props) {
 	scene->Parse(props);
+}
+
+void Scene::DeleteObject(const std::string &objName) {
+	scene->DeleteObject(objName);
 }
 
 //------------------------------------------------------------------------------

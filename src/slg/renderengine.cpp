@@ -50,7 +50,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
-	renderConfig->scene->Preprocess(ctx);
+	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight());
 
 	samplesCount = 0;
 	elapsedTime = 0.0f;
@@ -139,7 +139,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		contextStopped = false;
 
 	// Pre-process scene data
-	renderConfig->scene->Preprocess(ctx);
+	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight());
 
 	if (contextStopped) {
 		// Set the LuxRays SataSet

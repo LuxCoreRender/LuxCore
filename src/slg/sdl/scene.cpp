@@ -81,7 +81,7 @@ Scene::Scene(const string &fileName, const float imageScale) {
 
 	Properties scnProp(fileName);
 	Parse(scnProp);
-
+	
 	//--------------------------------------------------------------------------
 
 	if (!envLight && !sunLight && (triLightDefs.size() == 0))
@@ -113,7 +113,41 @@ void  Scene::UpdateLightGroupCount() {
 	}
 }
 
-void Scene::Preprocess(Context *ctx) {
+void Scene::UpdateTriangleLightDefs() {
+	// I have to build a new version of lights and triangleLightSource
+	vector<TriangleLight *> newTriLights;
+	vector<u_int> newMeshTriLightOffset;
+
+	for (u_int i = 0; i < objDefs.GetSize(); ++i) {
+		const SceneObject *obj = objDefs.GetSceneObject(i);
+		const ExtMesh *mesh = obj->GetExtMesh();
+		const Material *m = obj->GetMaterial();
+
+		if (m->IsLightSource()) {
+			newMeshTriLightOffset.push_back(newTriLights.size());
+
+			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
+				TriangleLight *tl = new TriangleLight(m, mesh, i, j);
+				newTriLights.push_back(tl);
+			}
+		} else
+			newMeshTriLightOffset.push_back(NULL_INDEX);
+	}
+
+	// Delete all old TriangleLight
+	for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
+		delete *l;
+
+	// Use the new versions
+	triLightDefs = newTriLights;
+	meshTriLightDefsOffset = newMeshTriLightOffset;
+}
+
+void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight) {
+	// Check if I have to update the camera
+	if (editActions.Has(CAMERA_EDIT))
+		camera->Update(filmWidth, filmHeight);
+
 	// Check if I have to rebuild the dataset
 	if (editActions.Has(GEOMETRY_EDIT)) {
 		// Rebuild the data set
@@ -140,6 +174,9 @@ void Scene::Preprocess(Context *ctx) {
 			editActions.Has(IMAGEMAPS_EDIT)) {
 		// Update the count of light groups
 		UpdateLightGroupCount();
+
+		// Update triangle light definitions
+		UpdateTriangleLightDefs();
 
 		// Rebuild the data to power based light sampling
 		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * dataSet->GetBSphere().rad * 1.01f;
@@ -257,40 +294,12 @@ Properties Scene::ToProperties(const string &directoryName) {
 }
 
 //--------------------------------------------------------------------------
-// Methods to build a scene from scratch
+// Methods to build and edit a scene
 //--------------------------------------------------------------------------
 
-void Scene::RebuildTriangleLightDefs() {
-	// I have to build a new version of lights and triangleLightSource
-	vector<TriangleLight *> newTriLights;
-	vector<u_int> newMeshTriLightOffset;
-
-	for (u_int i = 0; i < objDefs.GetSize(); ++i) {
-		const SceneObject *obj = objDefs.GetSceneObject(i);
-		const ExtMesh *mesh = obj->GetExtMesh();
-		const Material *m = obj->GetMaterial();
-
-		if (m->IsLightSource()) {
-			newMeshTriLightOffset.push_back(newTriLights.size());
-
-			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
-				TriangleLight *tl = new TriangleLight(m, mesh, i, j);
-				newTriLights.push_back(tl);
-			}
-		} else
-			newMeshTriLightOffset.push_back(NULL_INDEX);
-	}
-
-	// Delete all old TriangleLight
-	for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
-		delete *l;
-
-	// Use the new versions
-	triLightDefs = newTriLights;
-	meshTriLightDefsOffset = newMeshTriLightOffset;
-}
-
 void Scene::Parse(const Properties &props) {
+	sceneProperties.Set(props);
+
 	//--------------------------------------------------------------------------
 	// Read camera position and target
 	//--------------------------------------------------------------------------
@@ -323,7 +332,7 @@ void Scene::Parse(const Properties &props) {
 }
 
 void Scene::ParseCamera(const Properties &props) {
-	if (!props.HaveNames("scene.camera.lookat")) {
+	if (!props.HaveNames("scene.camera")) {
 		// There is no camera definition
 		return;
 	}
@@ -340,14 +349,14 @@ void Scene::ParseCamera(const Properties &props) {
 		target.y = prop.GetValue<float>(4);
 		target.z = prop.GetValue<float>(5);
 	} else {
-		orig = props.Get("scene.camera.lookat.orig").Get<Point>();
-		target = props.Get("scene.camera.lookat.target").Get<Point>();
+		orig = props.Get("scene.camera.lookat.orig", MakePropertyValues(0.f, 10.f, 0.f)).Get<Point>();
+		target = props.Get("scene.camera.lookat.target", MakePropertyValues(0.f, 0.f, 0.f)).Get<Point>();
 	}
 
 	SDL_LOG("Camera position: " << orig);
 	SDL_LOG("Camera target: " << target);
 
-	const Vector up = props.Get("scene.camera.up", MakePropertyValues(0.f, 0.f, .1f)).Get<Vector>();
+	const Vector up = props.Get("scene.camera.up", MakePropertyValues(0.f, 0.f, 1.f)).Get<Vector>();
 
 	auto_ptr<PerspectiveCamera> newCamera;
 	if (props.IsDefined("scene.camera.screenwindow")) {
@@ -465,11 +474,8 @@ void Scene::ParseMaterials(const Properties &props) {
 			objDefs.UpdateMaterialReferences(oldMat, newMat);
 
 			// Check if the old and/or the new material were/is light sources
-			if (wasLightSource || newMat->IsLightSource()) {
-				RebuildTriangleLightDefs();
-
+			if (wasLightSource || newMat->IsLightSource())
 				editActions.AddAction(AREALIGHTS_EDIT);
-			}
 		} else {
 			// Only a new Material
 			matDefs.DefineMaterial(matName, newMat);
@@ -504,11 +510,8 @@ void Scene::ParseObjects(const Properties &props) {
 			objDefs.DefineSceneObject(objName, obj);
 
 			// Check if the old and/or the new object were/is light sources
-			if (wasLightSource || obj->GetMaterial()->IsLightSource()) {
-				RebuildTriangleLightDefs();
-
+			if (wasLightSource || obj->GetMaterial()->IsLightSource())
 				editActions.AddAction(AREALIGHTS_EDIT);
-			}
 		} else {
 			// Only a new object
 			objDefs.DefineSceneObject(objName, obj);
@@ -645,24 +648,6 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 	}
 }
 
-void Scene::RemoveUnusedMaterials() {
-	// Build a list of all referenced material names
-	boost::unordered_set<const Material *> referencedMats;
-	for (u_int i = 0; i < objDefs.GetSize(); ++i)
-		objDefs.GetSceneObject(i)->AddReferencedMaterials(referencedMats);
-
-	// Get the list of all defined material
-	const vector<string> definedMats = matDefs.GetMaterialNames();
-	BOOST_FOREACH(const string  &matName, definedMats) {
-		Material *m = matDefs.GetMaterial(matName);
-
-		if (referencedMats.count(m) == 0) {
-			SDL_LOG("Deleting unreferenced material: " << matName);
-			matDefs.DeleteMaterial(matName);
-		}
-	}
-}
-
 void Scene::RemoveUnusedTextures() {
 	// Build a list of all referenced textures names
 	boost::unordered_set<const Texture *> referencedTexs;
@@ -677,7 +662,45 @@ void Scene::RemoveUnusedTextures() {
 		if (referencedTexs.count(t) == 0) {
 			SDL_LOG("Deleting unreferenced texture: " << texName);
 			texDefs.DeleteTexture(texName);
+
+			// Delete the texture definition from the properties
+			sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.textures." + texName));
 		}
+	}
+}
+
+void Scene::RemoveUnusedMaterials() {
+	// Build a list of all referenced material names
+	boost::unordered_set<const Material *> referencedMats;
+	for (u_int i = 0; i < objDefs.GetSize(); ++i)
+		objDefs.GetSceneObject(i)->AddReferencedMaterials(referencedMats);
+
+	// Get the list of all defined material
+	const vector<string> definedMats = matDefs.GetMaterialNames();
+	BOOST_FOREACH(const string  &matName, definedMats) {
+		Material *m = matDefs.GetMaterial(matName);
+
+		if (referencedMats.count(m) == 0) {
+			SDL_LOG("Deleting unreferenced material: " << matName);
+			matDefs.DeleteMaterial(matName);
+
+			// Delete the texture definition from the properties
+			sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.materials." + matName));
+		}
+	}
+}
+
+void Scene::DeleteObject(const std::string &objName) {
+	if (objDefs.IsSceneObjectDefined(objName)) {
+		if (objDefs.GetSceneObject(objName)->GetMaterial()->IsLightSource())
+			editActions.AddAction(AREALIGHTS_EDIT);
+
+		objDefs.DeleteSceneObject(objName);
+		
+		editActions.AddAction(GEOMETRY_EDIT);
+
+		// Delete the object definition from the properties
+		sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.objects." + objName));
 	}
 }
 

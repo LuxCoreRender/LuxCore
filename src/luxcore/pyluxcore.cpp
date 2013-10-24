@@ -218,10 +218,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetSize", &luxrays::Property::GetSize)
 		.def("Clear", &luxrays::Property::Clear, return_internal_reference<>())
 
-		.def("GetValue", &luxrays::Property::GetValue<bool>)
-		.def("GetValue", &luxrays::Property::GetValue<int>)
-		.def("GetValue", &luxrays::Property::GetValue<double>)
-		.def("GetValue", &luxrays::Property::GetValue<string>)
+		.def("GetValueBool", &luxrays::Property::GetValue<bool>)
+		.def("GetValueInt", &luxrays::Property::GetValue<int>)
+		.def("GetValueFloat", &luxrays::Property::GetValue<double>)
+		.def("GetValueString", &luxrays::Property::GetValue<string>)
 
 		.def("GetValues", &Property_GetValuesList)
 
@@ -268,6 +268,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetAllNames", &Properties_GetAllNames2)
 		.def("GetAllUniqueSubNames", &Properties_GetAllUniqueSubNames)
 		.def("HaveNames", &luxrays::Properties::HaveNames)
+		.def("GetAllProperties", &luxrays::Properties::GetAllProperties)
 
 		.def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
 			("Get", &luxrays::Properties::Get, return_internal_reference<>())
@@ -282,7 +283,9 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<Scene>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
+		.def("GetProperties", &Scene::GetProperties, return_internal_reference<>())
 		.def("Parse", &Scene::Parse)
+		.def("DeleteObject", &Scene::DeleteObject)
     ;
 
 	//--------------------------------------------------------------------------
