@@ -50,6 +50,8 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
+	// Force a complete preprocessing
+	renderConfig->scene->editActions.AddAllAction();
 	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight());
 
 	samplesCount = 0;

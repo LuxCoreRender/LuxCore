@@ -307,8 +307,6 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 //	class_<vector<float> >("FloatVector")
 //        .def(vector_indexing_suite<vector<float> >());
 
-	
-
 	//--------------------------------------------------------------------------
 	// Property class
 	//--------------------------------------------------------------------------
