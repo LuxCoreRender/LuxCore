@@ -52,12 +52,12 @@ class RenderView(QMainWindow):
 			props.Get("images.scale", [1.0]).GetFloat())
 		sceneProps = self.scene.GetProperties()
 		# Save Camera position
-		self.cameraPos = [
-			sceneProps.Get("scene.camera.lookat.orig").GetValueFloat(0),
-			sceneProps.Get("scene.camera.lookat.orig").GetValueFloat(1),
-			sceneProps.Get("scene.camera.lookat.orig").GetValueFloat(2)]
+		self.cameraPos = sceneProps.Get("scene.camera.lookat.orig").GetFloats()
+		# Create the rendering configuration
 		self.config = pyluxcore.RenderConfig(props, self.scene)
+		# Create the rendering session
 		self.session = pyluxcore.RenderSession(self.config)
+		# Start the rendering
 		self.session.Start()
 		
 		self.timer = QBasicTimer()
@@ -243,7 +243,8 @@ class RenderView(QMainWindow):
 		self.scene = None
 		event.accept()
 
-def main():   
+def main():
+	pyluxcore.Init()
 	print("LuxCore %s" % pyluxcore.version())
 	
 	app = QApplication(sys.argv)

@@ -18,6 +18,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
+#include "slg/slg.h"
 #include "luxcore/luxcore.h"
 
 using namespace std;
@@ -33,7 +34,23 @@ static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf(" ***\n");
 }
 
+static void LuxRaysDebugHandler(const char *msg) {
+	cerr << "[LuxRays] " << msg << endl;
+}
+
+static void SDLDebugHandler(const char *msg) {
+	cerr << "[SDL] " << msg << endl;
+}
+
+static void SLGDebugHandler(const char *msg) {
+	cerr << "[LuxCore] " << msg << endl;
+}
+
 void luxcore::Init() {
+	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
+	slg::SLG_DebugHandler = ::SLGDebugHandler;
+	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;
+
 	// Initialize FreeImage Library
 	FreeImage_Initialise(TRUE);
 	FreeImage_SetOutputMessage(FreeImageErrorHandler);

@@ -80,7 +80,7 @@ std::string Property::GetValuesString() const {
 	for (u_int i = 0; i < values.size(); ++i) {
 		if (i != 0)
 			ss << " ";
-		ss << GetValue<string>(i);
+		ss << Get<string>(i);
 	}
 	return ss.str();
 }
@@ -92,43 +92,43 @@ std::string Property::GetValuesString() const {
 template<> bool Property::Get<bool>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return GetValue<bool>(0);
+	return Get<bool>(0);
 }
 
 template<> int Property::Get<int>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return GetValue<int>(0);
+	return Get<int>(0);
 }
 
 template<> u_int Property::Get<u_int>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return GetValue<u_int>(0);
+	return Get<u_int>(0);
 }
 
 template<> float Property::Get<float>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return GetValue<float>(0);
+	return Get<float>(0);
 }
 
 template<> double Property::Get<double>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return GetValue<double>(0);
+	return Get<double>(0);
 }
 
 template<> size_t Property::Get<size_t>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return GetValue<size_t>(0);
+	return Get<size_t>(0);
 }
 
 template<> string Property::Get<string>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return GetValue<string>(0);
+	return Get<string>(0);
 }
 
 //------------------------------------------------------------------------------
@@ -138,41 +138,41 @@ template<> string Property::Get<string>() const {
 template<> luxrays::UV Property::Get<luxrays::UV>() const {
 	if (values.size() != 2)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::UV(GetValue<float>(0), GetValue<float>(1));
+	return luxrays::UV(Get<float>(0), Get<float>(1));
 }
 
 template<> luxrays::Vector Property::Get<luxrays::Vector>() const {
 	if (values.size() != 3)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Vector(GetValue<float>(0), GetValue<float>(1), GetValue<float>(2));
+	return luxrays::Vector(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
 template<> luxrays::Normal Property::Get<luxrays::Normal>() const {
 	if (values.size() != 3)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Normal(GetValue<float>(0), GetValue<float>(1), GetValue<float>(2));
+	return luxrays::Normal(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
 template<> luxrays::Point Property::Get<luxrays::Point>() const {
 	if (values.size() != 3)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Point(GetValue<float>(0), GetValue<float>(1), GetValue<float>(2));
+	return luxrays::Point(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
 template<> luxrays::Spectrum Property::Get<luxrays::Spectrum>() const {
 	if (values.size() != 3)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Spectrum(GetValue<float>(0), GetValue<float>(1), GetValue<float>(2));
+	return luxrays::Spectrum(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
 template<> luxrays::Matrix4x4 Property::Get<luxrays::Matrix4x4>() const {
 	if (values.size() != 16)
 		throw std::runtime_error("Wrong number of values in property: " + name);
 	return luxrays::Matrix4x4(
-			GetValue<float>(0), GetValue<float>(1), GetValue<float>(2), GetValue<float>(3),
-			GetValue<float>(4), GetValue<float>(5), GetValue<float>(6), GetValue<float>(7),
-			GetValue<float>(8), GetValue<float>(9), GetValue<float>(10), GetValue<float>(11),
-			GetValue<float>(12), GetValue<float>(13), GetValue<float>(14), GetValue<float>(15));
+			Get<float>(0), Get<float>(1), Get<float>(2), Get<float>(3),
+			Get<float>(4), Get<float>(5), Get<float>(6), Get<float>(7),
+			Get<float>(8), Get<float>(9), Get<float>(10), Get<float>(11),
+			Get<float>(12), Get<float>(13), Get<float>(14), Get<float>(15));
 }
 
 std::string Property::ToString() const {
@@ -233,7 +233,7 @@ Properties &Properties::Set(const Properties &props, const std::string &prefix) 
 	return *this;	
 }
 
-Properties &Properties::Set(istream &stream) {
+Properties &Properties::SetFromStream(istream &stream) {
 	char buf[512];
 
 	for (int lineNumber = 1;; ++lineNumber) {
@@ -336,13 +336,13 @@ Properties &Properties::SetFromFile(const string &fileName) {
 		throw runtime_error(buf);
 	}
 
-	return Set(file);
+	return SetFromStream(file);
 }
 
 Properties &Properties::SetFromString(const string &propDefinitions) {
 	istringstream stream(propDefinitions);
 
-	return Set(stream);
+	return SetFromStream(stream);
 }
 
 Properties &Properties::Clear() {

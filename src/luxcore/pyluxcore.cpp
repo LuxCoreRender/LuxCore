@@ -39,7 +39,7 @@ static const char *LuxCoreVersion() {
 // Glue for Properties class
 //------------------------------------------------------------------------------
 
-static luxrays::Property *Property_InitWithList(const str &name, boost::python::list &l) {
+static luxrays::Property *Property_InitWithList(const str &name, const boost::python::list &l) {
 	luxrays::Property *prop = new luxrays::Property(extract<string>(name));
 
 	const boost::python::ssize_t size = len(l);
@@ -59,47 +59,147 @@ static luxrays::Property *Property_InitWithList(const str &name, boost::python::
 			const string v = extract<string>(l[i]);
 			prop->Add(v);
 		} else
-			throw std::runtime_error("Unsupported data type included in Property constructor list: " + objType);
+			throw std::runtime_error("Unsupported data type included in a Property constructor list: " + objType);
 	}
 
 	return prop;
 }
 
-static boost::python::list Property_GetValuesList(luxrays::Property *prop) {
+static boost::python::list Property_Get(luxrays::Property *prop) {
 	boost::python::list l;
 	for (u_int i = 0; i < prop->GetSize(); ++i) {
 		const std::type_info &tinfo = prop->GetValueType(i);
 
 		if (tinfo == typeid(bool))
-			l.append(prop->GetValue<bool>(i));
+			l.append(prop->Get<bool>(i));
 		else if (tinfo == typeid(int))
-			l.append(prop->GetValue<int>(i));
+			l.append(prop->Get<int>(i));
 		else if (tinfo == typeid(double))
-			l.append(prop->GetValue<double>(i));
+			l.append(prop->Get<double>(i));
 		else if (tinfo == typeid(string))
-			l.append(prop->GetValue<string>(i));
+			l.append(prop->Get<string>(i));
 		else
-			throw std::runtime_error("Unsupported data type in list extraction of Property: " + prop->GetName());
+			throw std::runtime_error("Unsupported data type in list extraction of a Property: " + prop->GetName());
 	}
 
 	return l;
 }
 
+static boost::python::list Property_GetBools(luxrays::Property *prop) {
+	boost::python::list l;
+	for (u_int i = 0; i < prop->GetSize(); ++i)
+		l.append(prop->Get<bool>(i));
+	return l;
+}
+
+static boost::python::list Property_GetInts(luxrays::Property *prop) {
+	boost::python::list l;
+	for (u_int i = 0; i < prop->GetSize(); ++i)
+		l.append(prop->Get<int>(i));
+	return l;
+}
+
+static boost::python::list Property_GetFloats(luxrays::Property *prop) {
+	boost::python::list l;
+	for (u_int i = 0; i < prop->GetSize(); ++i)
+		l.append(prop->Get<double>(i));
+	return l;
+}
+
+static boost::python::list Property_GetStrings(luxrays::Property *prop) {
+	boost::python::list l;
+	for (u_int i = 0; i < prop->GetSize(); ++i)
+		l.append(prop->Get<string>(i));
+	return l;
+}
+
 static bool Property_GetBool(luxrays::Property *prop) {
-	return prop->GetValue<bool>(0);
+	return prop->Get<bool>(0);
 }
 
 static int Property_GetInt(luxrays::Property *prop) {
-	return prop->GetValue<int>(0);
+	return prop->Get<int>(0);
 }
 
 static double Property_GetFloat(luxrays::Property *prop) {
-	return prop->GetValue<double>(0);
+	return prop->Get<double>(0);
 }
 
 static string Property_GetString(luxrays::Property *prop) {
-	return prop->GetValue<string>(0);
+	return prop->Get<string>(0);
 }
+
+static luxrays::Property &Property_Add(luxrays::Property *prop, const boost::python::list &l) {
+	const boost::python::ssize_t size = len(l);
+	for (boost::python::ssize_t i = 0; i < size; ++i) {
+		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+
+		if (objType == "bool") {
+			const bool v = extract<bool>(l[i]);
+			prop->Add(v);
+		} else if (objType == "int") {
+			const int v = extract<int>(l[i]);
+			prop->Add(v);
+		} else if (objType == "float") {
+			const double v = extract<double>(l[i]);
+			prop->Add(v);
+		} else if (objType == "str") {
+			const string v = extract<string>(l[i]);
+			prop->Add(v);
+		} else
+			throw std::runtime_error("Unsupported data type included in Property.Set() method list: " + objType);
+	}
+
+	return *prop;
+}
+
+static luxrays::Property &Property_Set(luxrays::Property *prop, const boost::python::list &l) {
+	const boost::python::ssize_t size = len(l);
+	for (boost::python::ssize_t i = 0; i < size; ++i) {
+		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+
+		if (objType == "bool") {
+			const bool v = extract<bool>(l[i]);
+			prop->Set(i, v);
+		} else if (objType == "int") {
+			const int v = extract<int>(l[i]);
+			prop->Set(i, v);
+		} else if (objType == "float") {
+			const double v = extract<double>(l[i]);
+			prop->Set(i, v);
+		} else if (objType == "str") {
+			const string v = extract<string>(l[i]);
+			prop->Set(i, v);
+		} else
+			throw std::runtime_error("Unsupported data type included in Property.Set() method list: " + objType);
+	}
+
+	return *prop;
+}
+
+static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
+		const boost::python::object &obj) {
+	const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+
+	if (objType == "bool") {
+		const bool v = extract<bool>(obj);
+		prop->Set(i, v);
+	} else if (objType == "int") {
+		const int v = extract<int>(obj);
+		prop->Set(i, v);
+	} else if (objType == "float") {
+		const double v = extract<double>(obj);
+		prop->Set(i, v);
+	} else if (objType == "str") {
+		const string v = extract<string>(obj);
+		prop->Set(i, v);
+	} else
+		throw std::runtime_error("Unsupported data type used for Property.Set() method: " + objType);
+
+	return *prop;
+}
+
+//------------------------------------------------------------------------------
 
 static boost::python::list Properties_GetAllNames1(luxrays::Properties *props) {
 	boost::python::list l;
@@ -158,6 +258,8 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 	return luxrays::Property(name, values);
 }
 
+//------------------------------------------------------------------------------
+
 static void RenderSession_GetScreenBuffer(RenderSession *renderSession,
 		boost::python::object &obj) {
 	if (PyByteArray_Check(obj.ptr())) {
@@ -198,10 +300,14 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	def("version", LuxCoreVersion, "Returns the LuxCore version");
 
-	class_<vector<unsigned char> >("UnsignedCharVector")
-        .def(vector_indexing_suite<vector<unsigned char> >());
-	class_<vector<float> >("FloatVector")
-        .def(vector_indexing_suite<vector<float> >());
+	def("Init", &Init);
+
+//	class_<vector<unsigned char> >("UnsignedCharVector")
+//        .def(vector_indexing_suite<vector<unsigned char> >());
+//	class_<vector<float> >("FloatVector")
+//        .def(vector_indexing_suite<vector<float> >());
+
+	
 
 	//--------------------------------------------------------------------------
 	// Property class
@@ -218,30 +324,35 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetSize", &luxrays::Property::GetSize)
 		.def("Clear", &luxrays::Property::Clear, return_internal_reference<>())
 
-		.def("GetValueBool", &luxrays::Property::GetValue<bool>)
-		.def("GetValueInt", &luxrays::Property::GetValue<int>)
-		.def("GetValueFloat", &luxrays::Property::GetValue<double>)
-		.def("GetValueString", &luxrays::Property::GetValue<string>)
+		.def("Get", &Property_Get)
 
-		.def("GetValues", &Property_GetValuesList)
+		.def<bool (luxrays::Property::*)(const u_int) const>
+			("GetBool", &luxrays::Property::Get)
+		.def<int (luxrays::Property::*)(const u_int) const>
+			("GetInt", &luxrays::Property::Get)
+		.def<double (luxrays::Property::*)(const u_int) const>
+			("GetFloat", &luxrays::Property::Get)
+		.def<string (luxrays::Property::*)(const u_int) const>
+			("GetString", &luxrays::Property::Get)
 
 		.def("GetBool", &Property_GetBool)
 		.def("GetInt", &Property_GetInt)
 		.def("GetFloat", &Property_GetFloat)
 		.def("GetString", &Property_GetString)
+
+		.def("GetBools", &Property_GetBools)
+		.def("GetInts", &Property_GetInts)
+		.def("GetFloats", &Property_GetFloats)
+		.def("GetStrings", &Property_GetStrings)
 	
 		.def("GetValuesString", &luxrays::Property::GetValuesString)
 		.def("ToString", &luxrays::Property::ToString)
 
-		.def("Add", &luxrays::Property::Add<bool>, return_internal_reference<>())
-		.def("Add", &luxrays::Property::Add<int>, return_internal_reference<>())
-		.def("Add", &luxrays::Property::Add<double>, return_internal_reference<>())
-		.def("Add", &luxrays::Property::Add<string>, return_internal_reference<>())
-
-		.def("Set", &luxrays::Property::Set<bool>, return_internal_reference<>())
-		.def("Set", &luxrays::Property::Set<int>, return_internal_reference<>())
-		.def("Set", &luxrays::Property::Set<double>, return_internal_reference<>())
-		.def("Set", &luxrays::Property::Set<string>, return_internal_reference<>())
+		.def("Add", &Property_Add, return_internal_reference<>())
+		.def<luxrays::Property &(*)(luxrays::Property *, const boost::python::list &)>
+			("Set", &Property_Set, return_internal_reference<>())
+		.def<luxrays::Property &(*)(luxrays::Property *, const u_int, const boost::python::object &)>
+			("Set", &Property_Set, return_internal_reference<>())
 
 		.def(self_ns::str(self))
     ;

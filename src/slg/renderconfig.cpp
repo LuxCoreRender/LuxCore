@@ -40,9 +40,9 @@ using namespace slg;
 
 RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : scene(scn) {
 	SLG_LOG("Configuration: ");
-	const vector<string> &keys = cfg.GetAllNames();
+	const vector<string> &keys = props.GetAllNames();
 	for (vector<string>::const_iterator i = keys.begin(); i != keys.end(); ++i)
-		SLG_LOG("  " << cfg.Get(*i));
+		SLG_LOG("  " << props.Get(*i));
 
 	// Set the Scene
 	if (scn) {
@@ -50,8 +50,8 @@ RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : scene
 		allocatedScene = false;
 	} else {
 		// Create the Scene
-		const string sceneFileName = cfg.GetString("scene.file", "scenes/luxball/luxball.scn");
-		const float imageScale = Max(.01f, cfg.GetFloat("images.scale", 1.f));
+		const string sceneFileName = props.GetString("scene.file", "scenes/luxball/luxball.scn");
+		const float imageScale = Max(.01f, props.GetFloat("images.scale", 1.f));
 
 		scene = new Scene(sceneFileName, imageScale);
 		allocatedScene = true;
@@ -132,10 +132,10 @@ bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		if (prop.GetSize() != 4)
 			throw runtime_error("Syntax error in film.subregion (required 4 parameters)");
 
-		subRegion[0] = Max(0u, Min(width - 1, prop.GetValue<u_int>(0)));
-		subRegion[1] = Max(0u, Min(width - 1, Max(subRegion[0] + 1, prop.GetValue<u_int>(1))));
-		subRegion[2] = Max(0u, Min(height - 1, prop.GetValue<u_int>(2)));
-		subRegion[3] = Max(0u, Min(height - 1, Max(subRegion[2] + 1, prop.GetValue<u_int>(3))));
+		subRegion[0] = Max(0u, Min(width - 1, prop.Get<u_int>(0)));
+		subRegion[1] = Max(0u, Min(width - 1, Max(subRegion[0] + 1, prop.Get<u_int>(1))));
+		subRegion[2] = Max(0u, Min(height - 1, prop.Get<u_int>(2)));
+		subRegion[3] = Max(0u, Min(height - 1, Max(subRegion[2] + 1, prop.Get<u_int>(3))));
 		subRegionUsed = true;
 	} else {
 		subRegion[0] = 0;
