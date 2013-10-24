@@ -62,6 +62,7 @@ typedef enum {
 	WRINKLED, UV_TEX, BAND_TEX
 } TextureType;
 
+class ImageMap;
 class ImageMapCache;
 
 class Texture {
@@ -81,6 +82,8 @@ public:
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -310,11 +313,11 @@ public:
 
 	void SetImageResize(const float s) { allImageScale = s; }
 
-	void DefineImgMap(const std::string &name, ImageMap *im);
+	void DefineImageMap(const std::string &name, ImageMap *im);
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
 
-	// Get a path from imageMap object
+	// Get a path/name from imageMap object
 	const std::string &GetPath(const slg::ImageMap *im)const {
 		for (boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im)
@@ -337,7 +340,7 @@ public:
 
 	u_int GetImageMapIndex(const ImageMap *im) const;
 
-	void GetImageMaps(std::vector<ImageMap *> &ims);
+	void GetImageMaps(std::vector<const ImageMap *> &ims);
 	u_int GetSize()const { return static_cast<u_int>(mapByName.size()); }
 	bool IsImageMapDefined(const std::string &name) const { return mapByName.find(name) != mapByName.end(); }
 
@@ -364,6 +367,10 @@ public:
 	const ImageMap *GetImageMap() const { return imgMap; }
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const float GetGain() const { return gain; }
+
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		referencedImgMaps.insert(imgMap);
+	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
@@ -395,6 +402,10 @@ public:
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -437,6 +448,9 @@ public:
 
 		tex->AddReferencedTextures(referencedTexs);
 	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex->AddReferencedImageMaps(referencedImgMaps);
+	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 		if (tex == oldTex)
@@ -467,6 +481,9 @@ public:
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -503,6 +520,10 @@ public:
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -541,6 +562,10 @@ public:
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -585,6 +610,10 @@ public:
 		amount->AddReferencedTextures(referencedTexs);
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -694,6 +723,10 @@ public:
 		insideTex->AddReferencedTextures(referencedTexs);
 		outsideTex->AddReferencedTextures(referencedTexs);
 	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		insideTex->AddReferencedImageMaps(referencedImgMaps);
+		outsideTex->AddReferencedImageMaps(referencedImgMaps);
+	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 		if (insideTex == oldTex)
@@ -746,6 +779,11 @@ public:
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
 		tex3->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
+		tex3->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -826,6 +864,10 @@ public:
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -951,6 +993,9 @@ public:
 		Texture::AddReferencedTextures(referencedTexs);
 
 		amount->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		amount->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {

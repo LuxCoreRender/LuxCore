@@ -77,6 +77,7 @@ class RenderView(QMainWindow):
 		self.luxBallMatMirrorAct = QAction("&Mirror", self, triggered = self.luxBallMatMirror)
 		self.luxBallMatMatteAct = QAction("M&atte", self, triggered = self.luxBallMatMatte)
 		self.luxBallMatGlassAct = QAction("&Glass", self, triggered = self.luxBallMatGlass)
+		self.luxBallMatGlossyImageMapAct = QAction("G&lossy with image map", self, triggered = self.luxBallMatGlossyImageMap)
 	
 	def createMenus(self):
 		fileMenu = QMenu("&File", self)
@@ -92,6 +93,7 @@ class RenderView(QMainWindow):
 		luxBallMatMenu.addAction(self.luxBallMatMirrorAct)
 		luxBallMatMenu.addAction(self.luxBallMatMatteAct)
 		luxBallMatMenu.addAction(self.luxBallMatGlassAct)
+		luxBallMatMenu.addAction(self.luxBallMatGlossyImageMapAct)
 		
 		self.menuBar().addMenu(fileMenu)
 		self.menuBar().addMenu(cameraMenu)
@@ -131,7 +133,7 @@ class RenderView(QMainWindow):
 
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[2], self.cameraPos[2]));
+		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]));
 	
 	def cameraMoveRight(self):
 		# Begin scene editing
@@ -144,7 +146,7 @@ class RenderView(QMainWindow):
 
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[2], self.cameraPos[2]));
+		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]));
 	
 	def luxBallMatMirror(self):
 		# Begin scene editing
@@ -154,7 +156,11 @@ class RenderView(QMainWindow):
 		self.scene.Parse(pyluxcore.Properties().
 			Set(pyluxcore.Property("scene.materials.shell.type", ["mirror"])).
 			Set(pyluxcore.Property("scene.materials.shell.kr", [0.75, 0.75, 0.75])))
-
+		# To remove unreferenced constant textures defined implicitely
+		self.scene.RemoveUnusedTextures()
+		# To remove all unreferenced image maps (note: the order of call does matter)
+		self.scene.RemoveUnusedImageMaps()
+		
 		# End scene editing
 		self.session.EndSceneEdit()
 		print("LuxBall material set to: Mirror");
@@ -167,7 +173,12 @@ class RenderView(QMainWindow):
 		self.scene.Parse(pyluxcore.Properties().
 			Set(pyluxcore.Property("scene.materials.shell.type", ["matte"])).
 			Set(pyluxcore.Property("scene.materials.shell.kd", [0.75, 0.0, 0.0])))
-
+		
+		# To remove unreferenced constant textures defined implicitely
+		self.scene.RemoveUnusedTextures()
+		# To remove all unreferenced image maps (note: the order of call does matter)
+		self.scene.RemoveUnusedImageMaps()
+		
 		# End scene editing
 		self.session.EndSceneEdit()
 		print("LuxBall material set to: Matte");
@@ -184,11 +195,41 @@ class RenderView(QMainWindow):
 			Set(pyluxcore.Property("scene.materials.shell.ioroutside", [1.0])).
 			Set(pyluxcore.Property("scene.materials.shell.iorinside", [1.45]))
 			)
-
+		
+		# To remove unreferenced constant textures defined implicitely
+		self.scene.RemoveUnusedTextures()
+		# To remove all unreferenced image maps (note: the order of call does matter)
+		self.scene.RemoveUnusedImageMaps()
+		
 		# End scene editing
 		self.session.EndSceneEdit()
 		print("LuxBall material set to: Matte");
+
+	def luxBallMatGlossyImageMap(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+
+		# Edit the material
+		self.scene.Parse(pyluxcore.Properties().
+			Set(pyluxcore.Property("scene.textures.tex.type", ["imagemap"])).
+			Set(pyluxcore.Property("scene.textures.tex.file", ["scenes/bump/map.png"])).
+			Set(pyluxcore.Property("scene.textures.tex.gain", [0.6])).
+			Set(pyluxcore.Property("scene.textures.tex.mapping.uvscale", [16, -16])).
+			Set(pyluxcore.Property("scene.materials.shell.type", ["glossy2"])).
+			Set(pyluxcore.Property("scene.materials.shell.kd", ["tex"])).
+			Set(pyluxcore.Property("scene.materials.shell.ks", [0.25, 0.0, 0.0])).
+			Set(pyluxcore.Property("scene.materials.shell.uroughness", [0.05])).
+			Set(pyluxcore.Property("scene.materials.shell.vroughness", [0.05])))
+
+		# To remove unreferenced constant textures defined implicitely
+		self.scene.RemoveUnusedTextures()
+		# To remove all unreferenced image maps (note: the order of call does matter)
+		self.scene.RemoveUnusedImageMaps()
 		
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("LuxBall material set to: Matte");
+	
 	def timerEvent(self, event):
 		if event.timerId() == self.timer.timerId():
 			# Print some information about the rendering progress

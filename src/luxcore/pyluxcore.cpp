@@ -395,6 +395,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetProperties", &Scene::GetProperties, return_internal_reference<>())
 		.def("Parse", &Scene::Parse)
 		.def("DeleteObject", &Scene::DeleteObject)
+		.def("RemoveUnusedImageMaps", &Scene::RemoveUnusedImageMaps)
+		.def("RemoveUnusedTextures", &Scene::RemoveUnusedTextures)
+		.def("RemoveUnusedMaterials", &Scene::RemoveUnusedMaterials)
+		.def("RemoveUnusedMeshes", &Scene::RemoveUnusedMeshes)
     ;
 
 	//--------------------------------------------------------------------------

@@ -52,6 +52,7 @@ public:
 	void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 		mat->AddReferencedMaterials(referencedMats);
 	}
+	void AddReferencedMeshes(boost::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const;
 
 	// Update any reference to oldMat with newMat
 	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);

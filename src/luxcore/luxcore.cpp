@@ -92,6 +92,22 @@ void Scene::DeleteObject(const std::string &objName) {
 	scene->DeleteObject(objName);
 }
 
+void Scene::RemoveUnusedImageMaps() {
+	scene->RemoveUnusedImageMaps();
+}
+
+void Scene::RemoveUnusedTextures() {
+	scene->RemoveUnusedTextures();
+}
+
+void Scene::RemoveUnusedMaterials() {
+	scene->RemoveUnusedMaterials();
+}
+
+void Scene::RemoveUnusedMeshes() {
+	scene->RemoveUnusedMeshes();
+}
+
 //------------------------------------------------------------------------------
 // RenderConfig
 //------------------------------------------------------------------------------
@@ -118,12 +134,12 @@ const luxrays::Properties &RenderConfig::GetProperties() const {
 	return renderConfig->cfg;
 }
 
-void RenderConfig::Parse(const luxrays::Properties &props) {
-	renderConfig->Parse(props);
-}
-
 Scene &RenderConfig::GetScene() {
 	return *scene;
+}
+
+void RenderConfig::Parse(const luxrays::Properties &props) {
+	renderConfig->Parse(props);
 }
 
 //------------------------------------------------------------------------------

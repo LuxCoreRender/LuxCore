@@ -46,6 +46,13 @@
 #include <slg/sdl/scene.h>
 #include <luxcore/cfg.h>
 
+/*! \mainpage LuxCore
+ *
+ * \section intro_sec Introduction
+ *
+ * LuxCore is the new LuxRender C++ API.
+ */
+
 /*!
  * \namespace luxcore
  *
@@ -101,6 +108,23 @@ public:
 	 * \param objName is the name of the object to delete.
 	 */
 	void DeleteObject(const std::string &objName);
+
+	/*!
+	 * \brief Removes all unused textures.
+	 */
+	void RemoveUnusedImageMaps();
+	/*!
+	 * \brief Removes all unused textures.
+	 */
+	void RemoveUnusedTextures();
+	/*!
+	 * \brief Removes all unused materials.
+	 */
+	void RemoveUnusedMaterials();
+	/*!
+	 * \brief Removes all unused meshes.
+	 */
+	void RemoveUnusedMeshes();
 
 	friend class RenderConfig;
 

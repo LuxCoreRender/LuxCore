@@ -624,7 +624,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma) 
 	}
 }
 
-void ImageMapCache::DefineImgMap(const string &name, ImageMap *im) {
+void ImageMapCache::DefineImageMap(const string &name, ImageMap *im) {
 	SDL_LOG("Define ImageMap: " << name);
 
 	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(name);
@@ -652,9 +652,9 @@ u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
 	throw runtime_error("Unknown image map: " + boost::lexical_cast<string>(im));
 }
 
-void ImageMapCache::GetImageMaps(vector<ImageMap *> &ims) {
+void ImageMapCache::GetImageMaps(vector<const ImageMap *> &ims) {
 	ims.reserve(maps.size());
-	
+
 	BOOST_FOREACH(ImageMap *im, maps)
 		ims.push_back(im);
 }
