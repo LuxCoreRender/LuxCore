@@ -1,4 +1,5 @@
-scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
+scene.camera.lookat.orig = 0.5 -1.4 1.7
+scene.camera.lookat.target = 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
 scene.materials.shell.type = glass

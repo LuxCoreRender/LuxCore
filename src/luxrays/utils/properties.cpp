@@ -395,6 +395,16 @@ bool Properties::HaveNames(const std::string &prefix) const {
 	return false;
 }
 
+Properties Properties::GetAllProperties(const std::string &prefix) const {
+	Properties subset;
+	BOOST_FOREACH(const string &name, names) {
+		if (name.find(prefix) == 0)
+			subset.Set(Get(name));
+	}
+
+	return subset;
+}
+
 bool Properties::IsDefined(const string &propName) const {
 	return (props.count(propName) != 0);
 }
@@ -421,6 +431,11 @@ void Properties::Delete(const string &propName) {
 		names.erase(it);
 
 	props.erase(propName);
+}
+
+void Properties::DeleteAll(const vector<string> &propNames) {
+	BOOST_FOREACH(const string &n, propNames)
+		Delete(n);
 }
 
 string Properties::ToString() const {

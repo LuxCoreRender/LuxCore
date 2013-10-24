@@ -80,13 +80,27 @@ public:
 	~Scene();
 	
 	/*!
-	 * \brief Edits or creates textures, materials and/or objects based on the Properties
-	 * defined.
+	 * \brief Returns all the Properties required to define this Scene.
 	 *
-	 * \param props are the Properties with the definition of textures,
-	 * materials and/or objects
+	 * \return a reference to the Properties of this Scene.
+	 */
+	const luxrays::Properties &GetProperties() const;
+
+	/*!
+	 * \brief Edits or creates camera, textures, materials and/or objects
+	 * based on the Properties defined.
+	 *
+	 * \param props are the Properties with the definition of camera, textures,
+	 * materials and/or objects.
 	 */
 	void Parse(const luxrays::Properties &props);
+
+	/*!
+	 * \brief Deletes an object from the scene.
+	 *
+	 * \param objName is the name of the object to delete.
+	 */
+	void DeleteObject(const std::string &objName);
 
 	friend class RenderConfig;
 

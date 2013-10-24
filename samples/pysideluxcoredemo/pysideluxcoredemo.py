@@ -27,6 +27,8 @@ class RenderView(QMainWindow):
 	def __init__(self, cfgFileName):
 		super(RenderView, self).__init__()
 		
+		self.dofEnabled = True
+		
 		self.createActions()
 		self.createMenus()
 		
@@ -48,6 +50,12 @@ class RenderView(QMainWindow):
 		# Read the configuration and start the rendering
 		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
 			props.Get("images.scale", [1.0]).GetFloat())
+		sceneProps = self.scene.GetProperties()
+		# Save Camera position
+		self.cameraPos = [
+			sceneProps.Get("scene.camera.lookat.orig").GetValueFloat(0),
+			sceneProps.Get("scene.camera.lookat.orig").GetValueFloat(1),
+			sceneProps.Get("scene.camera.lookat.orig").GetValueFloat(2)]
 		self.config = pyluxcore.RenderConfig(props, self.scene)
 		self.session = pyluxcore.RenderSession(self.config)
 		self.session.Start()
@@ -57,7 +65,14 @@ class RenderView(QMainWindow):
 
 	def createActions(self):
 		self.quitAct = QAction("&Quit", self, triggered = self.close)
+		self.quitAct.setShortcuts(QKeySequence.Quit)
 		self.saveImageAct = QAction("&Save image", self, triggered = self.saveImage)
+		
+		self.cameraToggleDOFAct = QAction("Togle &DOF", self, triggered = self.cameraToggleDOF)
+		self.cameraMoveLeftAct = QAction("Move &left", self, triggered = self.cameraMoveLeft)
+		self.cameraMoveLeftAct.setShortcuts(QKeySequence.MoveToPreviousChar)
+		self.cameraMoveRightAct = QAction("Move &right", self, triggered = self.cameraMoveRight)
+		self.cameraMoveRightAct.setShortcuts(QKeySequence.MoveToNextChar)
 		
 		self.luxBallMatMirrorAct = QAction("&Mirror", self, triggered = self.luxBallMatMirror)
 		self.luxBallMatMatteAct = QAction("M&atte", self, triggered = self.luxBallMatMatte)
@@ -68,12 +83,18 @@ class RenderView(QMainWindow):
 		fileMenu.addAction(self.saveImageAct)
 		fileMenu.addAction(self.quitAct)
 		
+		cameraMenu = QMenu("&Camera", self)
+		cameraMenu.addAction(self.cameraToggleDOFAct)
+		cameraMenu.addAction(self.cameraMoveLeftAct)
+		cameraMenu.addAction(self.cameraMoveRightAct)
+
 		luxBallMatMenu = QMenu("&LuxBall Material", self)
 		luxBallMatMenu.addAction(self.luxBallMatMirrorAct)
 		luxBallMatMenu.addAction(self.luxBallMatMatteAct)
 		luxBallMatMenu.addAction(self.luxBallMatGlassAct)
 		
 		self.menuBar().addMenu(fileMenu)
+		self.menuBar().addMenu(cameraMenu)
 		self.menuBar().addMenu(luxBallMatMenu)
 	
 	def center(self):
@@ -85,7 +106,46 @@ class RenderView(QMainWindow):
 		# Save the rendered image
 		self.session.SaveFilm()
 		print("Image saved");
-		
+	
+	def cameraToggleDOF(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+
+		# Edit the camera
+		self.dofEnabled = not self.dofEnabled;
+		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.camera").
+			Set(pyluxcore.Property("scene.camera.lensradius", [0.015 if self.dofEnabled else 0.0])))
+
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("Camera DOF toggled: %s" % (str(self.dofEnabled)))
+	
+	def cameraMoveLeft(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+
+		# Edit the camera
+		self.cameraPos[0] -= 0.5
+		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.camera").
+			Set(pyluxcore.Property("scene.camera.lookat.orig", self.cameraPos)))
+
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[2], self.cameraPos[2]));
+	
+	def cameraMoveRight(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+
+		# Edit the camera
+		self.cameraPos[0] += 0.5
+		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.camera").
+			Set(pyluxcore.Property("scene.camera.lookat.orig", self.cameraPos)))
+
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[2], self.cameraPos[2]));
+	
 	def luxBallMatMirror(self):
 		# Begin scene editing
 		self.session.BeginSceneEdit()

@@ -613,13 +613,21 @@ public:
 	 */
 	std::vector<std::string> GetAllUniqueSubNames(const std::string &prefix) const;
 	/*!
-	 * \brief Returns if there are Property starting for specific prefix.
+	 * \brief Returns if there are at least a Property starting for specific prefix.
 	 *
 	 * \param prefix of the Property to look for.
 	 *
 	 * \return true if there is at least on Property starting for the prefix.
 	 */
 	bool HaveNames(const std::string &prefix) const;
+	/*!
+	 * \brief Returns all a copy of all Property with a name starting with a specific prefix.
+	 * 
+	 * \param prefix of the Property names to use.
+	 *
+	 * \return a copy of all Property matching the prefix.
+	 */
+	Properties GetAllProperties(const std::string &prefix) const;
 	/*!
 	 * \brief Returns a property.
 	 *
@@ -642,6 +650,7 @@ public:
 
 	bool IsDefined(const std::string &propName) const;
 	void Delete(const std::string &propName);
+	void DeleteAll(const std::vector<std::string> &propNames);
 
 	std::string ToString() const;
 
