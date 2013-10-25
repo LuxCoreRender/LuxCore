@@ -45,7 +45,7 @@ class RenderView(QMainWindow):
 		self.center()
 		
 		# Allocate the image for the rendering
-		self.imageBuffer = bytearray(self.filmWidth * self.filmHeight * 3)
+		self.imageBuffer = bytearray(self.filmWidth * self.filmHeight * 4)
 
 		# Read the configuration and start the rendering
 		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
@@ -53,6 +53,11 @@ class RenderView(QMainWindow):
 		sceneProps = self.scene.GetProperties()
 		# Save Camera position
 		self.cameraPos = sceneProps.Get("scene.camera.lookat.orig").GetFloats()
+		# Save all LuxBall object properties
+		self.luxBallProps = sceneProps.GetAllProperties("scene.objects.luxinner"). \
+			Set(sceneProps.GetAllProperties("scene.objects.luxtext")). \
+			Set(sceneProps.GetAllProperties("scene.objects.luxshell"))
+		self.luxBallPos = [0.0, 0.0, 0.0]
 		# Create the rendering configuration
 		self.config = pyluxcore.RenderConfig(props, self.scene)
 		# Create the rendering session
@@ -78,6 +83,11 @@ class RenderView(QMainWindow):
 		self.luxBallMatMatteAct = QAction("M&atte", self, triggered = self.luxBallMatMatte)
 		self.luxBallMatGlassAct = QAction("&Glass", self, triggered = self.luxBallMatGlass)
 		self.luxBallMatGlossyImageMapAct = QAction("G&lossy with image map", self, triggered = self.luxBallMatGlossyImageMap)
+
+		self.luxBallMoveLeftAct = QAction("Move &left", self, triggered = self.luxBallMoveLeft)
+		self.luxBallMoveLeftAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Left)])
+		self.luxBallMoveRightAct = QAction("Move &right", self, triggered = self.luxBallMoveRight)
+		self.luxBallMoveRightAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Right)])
 	
 	def createMenus(self):
 		fileMenu = QMenu("&File", self)
@@ -95,6 +105,10 @@ class RenderView(QMainWindow):
 		luxBallMatMenu.addAction(self.luxBallMatGlassAct)
 		luxBallMatMenu.addAction(self.luxBallMatGlossyImageMapAct)
 		
+		luxBallMatMenu = QMenu("&LuxBall Position", self)
+		luxBallMatMenu.addAction(self.luxBallMoveLeftAct)
+		luxBallMatMenu.addAction(self.luxBallMoveRightAct)
+
 		self.menuBar().addMenu(fileMenu)
 		self.menuBar().addMenu(cameraMenu)
 		self.menuBar().addMenu(luxBallMatMenu)
@@ -230,6 +244,44 @@ class RenderView(QMainWindow):
 		self.session.EndSceneEdit()
 		print("LuxBall material set to: Matte");
 	
+	def luxBallMoveLeft(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+		
+		self.luxBallPos[0] -= 0.2
+		# Set the new LuxBall position (note: using the transpose matrix)
+		mat = [1.0, 0.0, 0.0, self.luxBallPos[0],
+			0.0, 1.0, 0.0, self.luxBallPos[1],
+			0.0, 0.0, 1.0, self.luxBallPos[2],
+			0.0, 0.0, 0.0, 1.0]
+		self.scene.Parse(pyluxcore.Properties(self.luxBallProps).
+			Set(pyluxcore.Property("scene.objects.luxinner.transformation", mat)).
+			Set(pyluxcore.Property("scene.objects.luxtext.transformation", mat)).
+			Set(pyluxcore.Property("scene.objects.luxshell.transformation", mat)))
+		
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("LuxBall new position: %f, %f, %f" % (self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2]));
+
+	def luxBallMoveRight(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
+		
+		self.luxBallPos[0] += 0.2
+		# Set the new LuxBall position (note: using the transpose matrix)
+		mat = [1.0, 0.0, 0.0, self.luxBallPos[0],
+			0.0, 1.0, 0.0, self.luxBallPos[1],
+			0.0, 0.0, 1.0, self.luxBallPos[2],
+			0.0, 0.0, 0.0, 1.0]
+		self.scene.Parse(pyluxcore.Properties(self.luxBallProps).
+			Set(pyluxcore.Property("scene.objects.luxinner.transformation", mat)).
+			Set(pyluxcore.Property("scene.objects.luxtext.transformation", mat)).
+			Set(pyluxcore.Property("scene.objects.luxshell.transformation", mat)))
+		
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("LuxBall new position: %f, %f, %f" % (self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2]));
+
 	def timerEvent(self, event):
 		if event.timerId() == self.timer.timerId():
 			# Print some information about the rendering progress
@@ -253,7 +305,7 @@ class RenderView(QMainWindow):
 	
 	def paintEvent(self, event):
 		painter = QPainter(self)
-		image = QImage(self.imageBuffer, self.filmWidth, self.filmHeight, QImage.Format_RGB888)
+		image = QImage(self.imageBuffer, self.filmWidth, self.filmHeight, QImage.Format_RGB32)
 		painter.drawImage(QPoint(0, 0), image)
 	
 	def resizeEvent(self, event):
@@ -262,13 +314,13 @@ class RenderView(QMainWindow):
 		self.session = None
 		
 		# Set the new size
-		self.filmWidth = event.size().width()
-		self.filmHeight = event.size().height()
+		self.filmWidth = int(event.size().width())
+		self.filmHeight = int(event.size().height())
 		self.config.Parse(
 			pyluxcore.Properties().
 			Set(pyluxcore.Property("film.width", [self.filmWidth])).
 			Set(pyluxcore.Property("film.height", [self.filmHeight])))
-		self.imageBuffer = bytearray(self.filmWidth * self.filmHeight * 3)
+		self.imageBuffer = bytearray(self.filmWidth * self.filmHeight * 4)
 		
 		# Re-start the rendering
 		self.session = pyluxcore.RenderSession(self.config)

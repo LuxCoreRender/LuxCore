@@ -208,6 +208,7 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
 	GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
 
+	SDL_LOG("Film resolution: " << filmFullWidth << "x" << filmFullHeight);
 	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight));
 	film->SetFilter(filter.release());
 
