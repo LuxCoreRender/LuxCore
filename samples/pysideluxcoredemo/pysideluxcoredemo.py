@@ -74,9 +74,9 @@ class RenderView(QMainWindow):
 		self.saveImageAct = QAction("&Save image", self, triggered = self.saveImage)
 		
 		self.cameraToggleDOFAct = QAction("Togle &DOF", self, triggered = self.cameraToggleDOF)
-		self.cameraMoveLeftAct = QAction("Move &left", self, triggered = self.cameraMoveLeft)
+		self.cameraMoveLeftAct = QAction("Move &left", self, triggered = lambda: self.cameraMove(-0.5))
 		self.cameraMoveLeftAct.setShortcuts(QKeySequence.MoveToPreviousChar)
-		self.cameraMoveRightAct = QAction("Move &right", self, triggered = self.cameraMoveRight)
+		self.cameraMoveRightAct = QAction("Move &right", self, triggered = lambda: self.cameraMove(0.5))
 		self.cameraMoveRightAct.setShortcuts(QKeySequence.MoveToNextChar)
 		
 		self.luxBallMatMirrorAct = QAction("&Mirror", self, triggered = self.luxBallMatMirror)
@@ -84,9 +84,9 @@ class RenderView(QMainWindow):
 		self.luxBallMatGlassAct = QAction("&Glass", self, triggered = self.luxBallMatGlass)
 		self.luxBallMatGlossyImageMapAct = QAction("G&lossy with image map", self, triggered = self.luxBallMatGlossyImageMap)
 
-		self.luxBallMoveLeftAct = QAction("Move &left", self, triggered = self.luxBallMoveLeft)
+		self.luxBallMoveLeftAct = QAction("Move &left", self, triggered = lambda: self.luxBallMove(-0.2))
 		self.luxBallMoveLeftAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Left)])
-		self.luxBallMoveRightAct = QAction("Move &right", self, triggered = self.luxBallMoveRight)
+		self.luxBallMoveRightAct = QAction("Move &right", self, triggered = lambda: self.luxBallMove(0.2))
 		self.luxBallMoveRightAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Right)])
 	
 	def createMenus(self):
@@ -136,25 +136,12 @@ class RenderView(QMainWindow):
 		self.session.EndSceneEdit()
 		print("Camera DOF toggled: %s" % (str(self.dofEnabled)))
 	
-	def cameraMoveLeft(self):
+	def cameraMove(self, t):
 		# Begin scene editing
 		self.session.BeginSceneEdit()
 
 		# Edit the camera
-		self.cameraPos[0] -= 0.5
-		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.camera").
-			Set(pyluxcore.Property("scene.camera.lookat.orig", self.cameraPos)))
-
-		# End scene editing
-		self.session.EndSceneEdit()
-		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]));
-	
-	def cameraMoveRight(self):
-		# Begin scene editing
-		self.session.BeginSceneEdit()
-
-		# Edit the camera
-		self.cameraPos[0] += 0.5
+		self.cameraPos[0] += t
 		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.camera").
 			Set(pyluxcore.Property("scene.camera.lookat.orig", self.cameraPos)))
 
@@ -244,30 +231,11 @@ class RenderView(QMainWindow):
 		self.session.EndSceneEdit()
 		print("LuxBall material set to: Matte");
 	
-	def luxBallMoveLeft(self):
+	def luxBallMove(self, t):
 		# Begin scene editing
 		self.session.BeginSceneEdit()
 		
-		self.luxBallPos[0] -= 0.2
-		# Set the new LuxBall position (note: using the transpose matrix)
-		mat = [1.0, 0.0, 0.0, self.luxBallPos[0],
-			0.0, 1.0, 0.0, self.luxBallPos[1],
-			0.0, 0.0, 1.0, self.luxBallPos[2],
-			0.0, 0.0, 0.0, 1.0]
-		self.scene.Parse(pyluxcore.Properties(self.luxBallProps).
-			Set(pyluxcore.Property("scene.objects.luxinner.transformation", mat)).
-			Set(pyluxcore.Property("scene.objects.luxtext.transformation", mat)).
-			Set(pyluxcore.Property("scene.objects.luxshell.transformation", mat)))
-		
-		# End scene editing
-		self.session.EndSceneEdit()
-		print("LuxBall new position: %f, %f, %f" % (self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2]));
-
-	def luxBallMoveRight(self):
-		# Begin scene editing
-		self.session.BeginSceneEdit()
-		
-		self.luxBallPos[0] += 0.2
+		self.luxBallPos[0] += t
 		# Set the new LuxBall position (note: using the transpose matrix)
 		mat = [1.0, 0.0, 0.0, self.luxBallPos[0],
 			0.0, 1.0, 0.0, self.luxBallPos[1],
