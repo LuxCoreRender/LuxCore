@@ -268,13 +268,17 @@ static void RenderSession_GetScreenBuffer(RenderSession *renderSession,
 
 		const u_int width = renderSession->GetRenderConfig().GetProperties().Get("film.width").Get<u_int>();
 		const u_int height = renderSession->GetRenderConfig().GetProperties().Get("film.height").Get<u_int>();
-
 		for (u_int y = 0; y < height; ++y) {
-			const u_int srcOffset = (height - y - 1) * width * 3;
-			const u_int dstOffset = y * width * 3;
+			u_int srcIndex = (height - y - 1) * width * 3;
+			u_int dstIndex = y * width * 4;
 
-			for (u_int x = 0; x < width * 3; ++x)
-				dst[dstOffset + x] = (unsigned char)floor((src[srcOffset + x] * 255.f + .5f));
+			for (u_int x = 0; x < width; ++x) {
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
+				dst[dstIndex++] = 0xff;
+				srcIndex += 3;
+			}
 		}
 	} else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
@@ -361,6 +365,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<luxrays::Properties>("Properties", init<>())
 		.def(init<string>())
+		.def(init<luxrays::Properties>())
 
 		// Required because Properties::Set is overloaded
 		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Property &)>
