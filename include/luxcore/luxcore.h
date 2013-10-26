@@ -94,6 +94,43 @@ public:
 	const luxrays::Properties &GetProperties() const;
 
 	/*!
+	 * \brief Sets if the Scene class destructor has to delete all the arrays
+	 * pointed by the defined meshes or not.
+	 *
+	 * \param v defines if I have to delete the mesh data or not.
+	 */
+	void SetDeleteMeshData(const bool v);
+	/*!
+	 * \brief Defines a mesh (to be later used in one or more scene objects). The
+	 * memory allocate for the ExtTriangleMesh is always freed by the Scene class
+	 * however the memory for the all vertices, triangle indices, etc. will be
+	 * freed or not according the settings.
+	 *
+	 * \param meshName is the name of the define mesh.
+	 * \param mesh is a pointer to the mesh to be used.
+	 */
+	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
+	/*!
+	 * \brief Defines a mesh (to be later used in one or more scene objects). The
+	 * memory allocate for the ExtTriangleMesh is always freed by the Scene class
+	 * however the memory for the all vertices, triangle indices, etc. will be
+	 * freed or not according the settings.
+	 *
+	 * \param meshName is the name of the define mesh.
+	 * \param plyNbVerts is the number of mesh vertices.
+	 * \param plyNbTris is the number of mesh triangles.
+	 * \param p is a pointer to an array of vertices.
+	 * \param vi is a pointer to an array of triangles.
+	 * \param n is a pointer to an array of normals. It can be NULL.
+	 * \param uv is a pointer to an array of UV coordinates. It can be NULL.
+	 * \param cols is a pointer to an array of vertices colors. It can be NULL.
+	 * \param alphas is a pointer to an array of vertices alpha. It can be NULL.
+	 */
+	void DefineMesh(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
+		luxrays::Spectrum *cols, float *alphas);
+	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects
 	 * based on the Properties defined.
 	 *

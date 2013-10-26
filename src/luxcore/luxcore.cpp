@@ -84,6 +84,21 @@ const Properties &Scene::GetProperties() const {
 	return scene->GetProperties();
 }
 
+void Scene::SetDeleteMeshData(const bool v) {
+	scene->extMeshCache.SetDeleteMeshData(v);
+}
+
+void Scene::DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh) {
+	scene->DefineMesh(meshName, mesh);
+}
+
+void Scene::DefineMesh(const std::string &meshName,
+	const long plyNbVerts, const long plyNbTris,
+	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
+	luxrays::Spectrum *cols, float *alphas) {
+	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, true);
+}
+
 void Scene::Parse(const luxrays::Properties &props) {
 	scene->Parse(props);
 }

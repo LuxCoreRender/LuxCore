@@ -28,6 +28,7 @@ class RenderView(QMainWindow):
 		super(RenderView, self).__init__()
 		
 		self.dofEnabled = True
+		self.luxBallShapeIsCube = False
 		
 		self.createActions()
 		self.createMenus()
@@ -53,10 +54,6 @@ class RenderView(QMainWindow):
 		sceneProps = self.scene.GetProperties()
 		# Save Camera position
 		self.cameraPos = sceneProps.Get("scene.camera.lookat.orig").GetFloats()
-		# Save all LuxBall object properties
-		self.luxBallProps = sceneProps.GetAllProperties("scene.objects.luxinner"). \
-			Set(sceneProps.GetAllProperties("scene.objects.luxtext")). \
-			Set(sceneProps.GetAllProperties("scene.objects.luxshell"))
 		self.luxBallPos = [0.0, 0.0, 0.0]
 		# Create the rendering configuration
 		self.config = pyluxcore.RenderConfig(props, self.scene)
@@ -88,6 +85,8 @@ class RenderView(QMainWindow):
 		self.luxBallMoveLeftAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Left)])
 		self.luxBallMoveRightAct = QAction("Move &right", self, triggered = lambda: self.luxBallMove(0.2))
 		self.luxBallMoveRightAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Right)])
+		
+		self.luxBallShapeToggleAct = QAction("Toggle S&hell", self, triggered = self.luxBallShapeToggle)
 	
 	def createMenus(self):
 		fileMenu = QMenu("&File", self)
@@ -108,10 +107,14 @@ class RenderView(QMainWindow):
 		luxBallMatMenu = QMenu("&LuxBall Position", self)
 		luxBallMatMenu.addAction(self.luxBallMoveLeftAct)
 		luxBallMatMenu.addAction(self.luxBallMoveRightAct)
-
+		
+		luxBallShapeMenu = QMenu("&LuxBall Shape", self)
+		luxBallShapeMenu.addAction(self.luxBallShapeToggleAct)
+		
 		self.menuBar().addMenu(fileMenu)
 		self.menuBar().addMenu(cameraMenu)
 		self.menuBar().addMenu(luxBallMatMenu)
+		self.menuBar().addMenu(luxBallShapeMenu)
 	
 	def center(self):
 		screen = QDesktopWidget().screenGeometry()
@@ -121,14 +124,14 @@ class RenderView(QMainWindow):
 	def saveImage(self):
 		# Save the rendered image
 		self.session.SaveFilm()
-		print("Image saved");
+		print("Image saved")
 	
 	def cameraToggleDOF(self):
 		# Begin scene editing
 		self.session.BeginSceneEdit()
 
 		# Edit the camera
-		self.dofEnabled = not self.dofEnabled;
+		self.dofEnabled = not self.dofEnabled
 		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.camera").
 			Set(pyluxcore.Property("scene.camera.lensradius", [0.015 if self.dofEnabled else 0.0])))
 
@@ -147,7 +150,7 @@ class RenderView(QMainWindow):
 
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]));
+		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]))
 	
 	def luxBallMatMirror(self):
 		# Begin scene editing
@@ -164,7 +167,7 @@ class RenderView(QMainWindow):
 		
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("LuxBall material set to: Mirror");
+		print("LuxBall material set to: Mirror")
 	
 	def luxBallMatMatte(self):
 		# Begin scene editing
@@ -182,7 +185,7 @@ class RenderView(QMainWindow):
 		
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("LuxBall material set to: Matte");
+		print("LuxBall material set to: Matte")
 	
 	def luxBallMatGlass(self):
 		# Begin scene editing
@@ -204,7 +207,7 @@ class RenderView(QMainWindow):
 		
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("LuxBall material set to: Matte");
+		print("LuxBall material set to: Matte")
 
 	def luxBallMatGlossyImageMap(self):
 		# Begin scene editing
@@ -229,7 +232,7 @@ class RenderView(QMainWindow):
 		
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("LuxBall material set to: Matte");
+		print("LuxBall material set to: Matte")
 	
 	def luxBallMove(self, t):
 		# Begin scene editing
@@ -241,15 +244,95 @@ class RenderView(QMainWindow):
 			0.0, 1.0, 0.0, self.luxBallPos[1],
 			0.0, 0.0, 1.0, self.luxBallPos[2],
 			0.0, 0.0, 0.0, 1.0]
-		self.scene.Parse(pyluxcore.Properties(self.luxBallProps).
-			Set(pyluxcore.Property("scene.objects.luxinner.transformation", mat)).
-			Set(pyluxcore.Property("scene.objects.luxtext.transformation", mat)).
+		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxtext").
+			Set(pyluxcore.Property("scene.objects.luxtext.transformation", mat)))
+		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxinner").
+			Set(pyluxcore.Property("scene.objects.luxinner.transformation", mat)))
+		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxshell").
 			Set(pyluxcore.Property("scene.objects.luxshell.transformation", mat)))
 		
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("LuxBall new position: %f, %f, %f" % (self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2]));
+		print("LuxBall new position: %f, %f, %f" % (self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2]))
+		
+	def luxBallShapeToggle(self):
+		# Begin scene editing
+		self.session.BeginSceneEdit()
 
+		# Edit the LuxBall shape
+		if self.luxBallShapeIsCube:
+			self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxshell").
+				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["scenes/luxball/luxball-shell.ply"])).
+				Set(pyluxcore.Property("scene.objects.luxshell.useplynormals", [False])))
+			self.luxBallShapeIsCube = False
+		else:
+			self.scene.DefineMesh("LuxCubeMesh", [
+				# Bottom face
+				(-0.405577, -0.343839, 0.14),
+				(-0.405577, 0.506553, 0.14),
+				(0.443491, 0.506553, 0.14),
+				(0.443491, -0.343839, 0.14),
+				# Top face
+				(-0.405577, -0.343839, 0.819073),
+				(0.443491, -0.343839, 0.819073),
+				(0.443491, 0.506553, 0.819073),
+				(-0.405577, 0.506553, 0.819073),
+				# Side left
+				(-0.405577, -0.343839, 0.14),
+				(-0.405577, -0.343839, 0.819073),
+				(-0.405577, 0.506553, 0.819073),
+				(-0.405577, 0.506553, 0.14),
+				# Side right
+				(0.443491, -0.343839, 0.14),
+				(0.443491, 0.506553, 0.14),
+				(0.443491, 0.506553, 0.819073),
+				(0.443491, -0.343839, 0.819073),
+				# Side back
+				(-0.405577, -0.343839, 0.14),
+				(0.443491, -0.343839, 0.14),
+				(0.443491, -0.343839, 0.819073),
+				(-0.405577, -0.343839, 0.819073),
+				# Side front
+				(-0.405577, 0.506553, 0.14),
+				(-0.405577, 0.506553, 0.819073),
+				(0.443491, 0.506553, 0.819073),
+				(0.443491, 0.506553, 0.14)], [
+				# Bottom face
+				(0, 1, 2), (2, 3, 0),
+				# Top face
+				(4, 5, 6), (6, 7, 4),
+				# Side left
+				(8, 9, 10), (10, 11, 8),
+				# Side right
+				(12, 13, 14), (14, 15, 12),
+				# Side back
+				(16, 17, 18), (18, 19, 16),
+				# Side back
+				(20, 21, 22), (22, 23, 20)
+				], None, [
+				# Bottom face
+				(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0),
+				# Top face
+				(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0),
+				# Side left
+				(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0),
+				# Side right
+				(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0),
+				# Side back
+				(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0),
+				# Side front
+				(0.0, 0.0),(1.0, 0.0), (1.0, 1.0),	(0.0, 1.0)
+				], None, None)
+			self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxshell").
+				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["LuxCubeMesh"])).
+				Set(pyluxcore.Property("scene.objects.luxshell.useplynormals", [True])))
+			self.luxBallShapeIsCube = True
+			
+
+		# End scene editing
+		self.session.EndSceneEdit()
+		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]))
+	
 	def timerEvent(self, event):
 		if event.timerId() == self.timer.timerId():
 			# Print some information about the rendering progress
@@ -257,7 +340,7 @@ class RenderView(QMainWindow):
 			# Update statistics
 			self.session.UpdateStats()
 			
-			stats = self.session.GetStats();
+			stats = self.session.GetStats()
 			print("[Elapsed time: %3.1fsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
 				stats.Get("stats.renderengine.time").GetFloat(),
 				stats.Get("stats.renderengine.pass").GetInt(),
@@ -265,7 +348,7 @@ class RenderView(QMainWindow):
 				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
 			
 			# Update the image
-			self.session.GetScreenBuffer(self.imageBuffer);
+			self.session.GetScreenBuffer(self.imageBuffer)
 			
 			self.update()
 		else:
