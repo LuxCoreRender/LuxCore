@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
 #include <Python.h>
 
 #include <boost/foreach.hpp>
@@ -232,7 +233,7 @@ static boost::python::list Properties_GetAllUniqueSubNames(luxrays::Properties *
 }
 
 static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *props,
-		const string &name, boost::python::list &l) {
+		const string &name, const boost::python::list &l) {
 	luxrays::PropertyValues values;
 	
 	const boost::python::ssize_t size = len(l);
@@ -256,6 +257,161 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 	}
 
 	return luxrays::Property(name, values);
+}
+
+//------------------------------------------------------------------------------
+
+static void Scene_DefineMesh(Scene *scene, const string &meshName,
+		boost::python::object &p, boost::python::object &vi,
+		boost::python::object &n, boost::python::object &uv,
+		boost::python::object &cols, boost::python::object &alphas) {
+	// NOTE: I would like to use boost::scoped_array because but
+	// some guy has decided that boost::scoped_array must not have
+	// a release() method for some ideological reason...
+
+	// Translate all vertices
+	long plyNbVerts;
+	luxrays::Point *points = NULL;
+	extract<boost::python::list> getPList(p);
+	if (getPList.check()) {
+		const boost::python::list &l = getPList();
+		const boost::python::ssize_t size = len(l);
+		plyNbVerts = size;
+
+		points = new luxrays::Point[size];
+		for (boost::python::ssize_t i = 0; i < size; ++i) {
+			extract<boost::python::tuple> getTuple(l[i]);
+			if (getTuple.check()) {
+				const boost::python::tuple &t = getTuple();
+				points[i] = luxrays::Point(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
+			} else {
+				const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+				throw std::runtime_error("Wrong data type in the list of vertices of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+			}
+		}
+	} else {
+		const string objType = extract<string>((p.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Wrong data type for the list of vertices of method Scene.DefineMesh(): " + objType);
+	}
+
+	// Translate all triangles
+	long plyNbTris;
+	luxrays::Triangle *tris = NULL;
+	extract<boost::python::list> getVIList(vi);
+	if (getVIList.check()) {
+		const boost::python::list &l = getVIList();
+		const boost::python::ssize_t size = len(l);
+		plyNbTris = size;
+
+		tris = new luxrays::Triangle[size];
+		for (boost::python::ssize_t i = 0; i < size; ++i) {
+			extract<boost::python::tuple> getTuple(l[i]);
+			if (getTuple.check()) {
+				const boost::python::tuple &t = getTuple();
+				tris[i] = luxrays::Triangle(extract<u_int>(t[0]), extract<u_int>(t[1]), extract<u_int>(t[2]));
+			} else {
+				const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+				throw std::runtime_error("Wrong data type in the list of triangles of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+			}
+		}
+	} else {
+		const string objType = extract<string>((vi.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Wrong data type for the list of triangles of method Scene.DefineMesh(): " + objType);
+	}
+
+	// Translate all normals
+	luxrays::Normal *normals = NULL;
+	if (!n.is_none()) {
+		extract<boost::python::list> getNList(n);
+		if (getNList.check()) {
+			const boost::python::list &l = getNList();
+			const boost::python::ssize_t size = len(l);
+
+			normals = new luxrays::Normal[size];
+			for (boost::python::ssize_t i = 0; i < size; ++i) {
+				extract<boost::python::tuple> getTuple(l[i]);
+				if (getTuple.check()) {
+					const boost::python::tuple &t = getTuple();
+					normals[i] = luxrays::Normal(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
+				} else {
+					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+					throw std::runtime_error("Wrong data type in the list of triangles of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+				}
+			}
+		} else {
+			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
+			throw std::runtime_error("Wrong data type for the list of triangles of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
+	// Translate all UVs
+	luxrays::UV *uvs = NULL;
+	if (!uv.is_none()) {
+		extract<boost::python::list> getUVList(uv);
+		if (getUVList.check()) {
+			const boost::python::list &l = getUVList();
+			const boost::python::ssize_t size = len(l);
+
+			uvs = new luxrays::UV[size];
+			for (boost::python::ssize_t i = 0; i < size; ++i) {
+				extract<boost::python::tuple> getTuple(l[i]);
+				if (getTuple.check()) {
+					const boost::python::tuple &t = getTuple();
+					uvs[i] = luxrays::UV(extract<float>(t[0]), extract<float>(t[1]));
+				} else {
+					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+					throw std::runtime_error("Wrong data type in the list of UVs of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+				}
+			}
+		} else {
+			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
+			throw std::runtime_error("Wrong data type for the list of UVs of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
+	// Translate all colors
+	luxrays::Spectrum *colors = NULL;
+	if (!uv.is_none()) {
+		extract<boost::python::list> getColList(uv);
+		if (getColList.check()) {
+			const boost::python::list &l = getColList();
+			const boost::python::ssize_t size = len(l);
+
+			colors = new luxrays::Spectrum[size];
+			for (boost::python::ssize_t i = 0; i < size; ++i) {
+				extract<boost::python::tuple> getTuple(l[i]);
+				if (getTuple.check()) {
+					const boost::python::tuple &t = getTuple();
+					colors[i] = luxrays::Spectrum(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[1]));
+				} else {
+					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+					throw std::runtime_error("Wrong data type in the list of colors of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+				}
+			}
+		} else {
+			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
+			throw std::runtime_error("Wrong data type for the list of colors of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
+	// Translate all alphas
+	float *as = NULL;
+	if (!alphas.is_none()) {
+		extract<boost::python::list> getAlphaList(uv);
+		if (getAlphaList.check()) {
+			const boost::python::list &l = getAlphaList();
+			const boost::python::ssize_t size = len(l);
+
+			as = new float[size];
+			for (boost::python::ssize_t i = 0; i < size; ++i)
+				as[i] = extract<float>(l[i]);
+		} else {
+			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
+			throw std::runtime_error("Wrong data type for the list of alphas of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
+	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
 }
 
 //------------------------------------------------------------------------------
@@ -398,6 +554,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<Scene>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
 		.def("GetProperties", &Scene::GetProperties, return_internal_reference<>())
+		.def("DefineMesh", &Scene_DefineMesh)
 		.def("Parse", &Scene::Parse)
 		.def("DeleteObject", &Scene::DeleteObject)
 		.def("RemoveUnusedImageMaps", &Scene::RemoveUnusedImageMaps)
