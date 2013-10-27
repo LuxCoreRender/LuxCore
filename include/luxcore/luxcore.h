@@ -73,6 +73,14 @@ class RenderSession;
  */
 class Film {
 public:
+	typedef enum {
+		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
+		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
+		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
+		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
+		RADIANCE_GROUP, UV, RAYCOUNT
+	} FilmOutputType;
+
 	~Film();
 
 	/*!
@@ -88,13 +96,23 @@ public:
 	 */
 	u_int GetHeight() const;
 	/*!
-	 * \brief Checks if it is time to save the film according the RenderConfig.
-	 */
-	bool NeedPeriodicSave();
-	/*!
 	 * \brief Saves all Film output channels.
 	 */
-	void Save();
+	void Save() const;
+
+	/*!
+	 * \brief Fills the buffer with a Film output channel.
+	 *
+	 * \param type is the Film output channel to use. It must be one
+	 * of the enabled channels in RenderConfig. The supported template types are
+	 * float and unsigned int.
+	 * \param buffer is the place where the data will be copied.
+	 * \param index of the buffer to use. Most of the times is 0 however, for instance,
+	 * if more than one light group is used, select the group to return.
+	 */
+	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const u_int index = 0) const {
+		throw std::runtime_error("Called Film::GetOutput() with wrong type");
+	}
 
 	// Just a temporary hack
 	const float *GetScreenBuffer();
@@ -106,6 +124,9 @@ private:
 
 	const RenderSession &renderSession;
 };
+
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const;
+template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const;
 
 /*!
  * \brief Scene stores textures, materials and objects definitions.
@@ -303,6 +324,10 @@ public:
 	 */
 	void EndSceneEdit();
 
+	/*!
+	 * \brief Checks if it is time to save the film according the RenderConfig.
+	 */
+	bool NeedPeriodicFilmSave();
 	/*!
 	 * \brief Returns a reference to a Film with the output of the rendering.
 	 *

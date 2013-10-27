@@ -74,12 +74,25 @@ u_int Film::GetHeight() const {
 	return renderSession.renderSession->film->GetHeight();
 }
 
-bool Film::NeedPeriodicSave() {
-	return renderSession.renderSession->NeedPeriodicFilmSave();
+void Film::Save() const {
+	renderSession.renderSession->SaveFilm();
 }
 
-void Film::Save() {
-	renderSession.renderSession->SaveFilm();
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const {
+//	switch (type) {
+//		case RGB:
+//			break;
+
+//		RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
+//		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
+//		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
+//		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
+//		RADIANCE_GROUP, UV, RAYCOUNT		
+//	}
+}
+
+template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const {
+	
 }
 
 const float *Film::GetScreenBuffer() {
@@ -220,6 +233,10 @@ void RenderSession::BeginSceneEdit() {
 
 void RenderSession::EndSceneEdit() {
 	renderSession->EndSceneEdit();
+}
+
+bool RenderSession::NeedPeriodicFilmSave() {
+	return renderSession->NeedPeriodicFilmSave();
 }
 
 Film &RenderSession::GetFilm() {

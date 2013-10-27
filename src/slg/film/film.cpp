@@ -813,12 +813,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				return;
 			break;
 		default:
-			throw std::runtime_error("Unknown film output type");
-	}
-
-	if ((type == FilmOutputs::RGB) || (type == FilmOutputs::RGBA)) {
-		// In order to merge the all radiance buffers
-		UpdateScreenBufferImpl(TONEMAP_NONE);
+			throw std::runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
 
 	// Allocate the image
@@ -834,13 +829,30 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			switch (type) {
 				case FilmOutputs::RGB: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					// channel_RGB_TONEMAPPED has the _untonemapped_ version of
-					// the image in the case of an HDR because of the call
-					// to UpdateScreenBufferImpl(TONEMAP_NONE)
-					const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
-					dst[x].red = src[0];
-					dst[x].green = src[1];
-					dst[x].blue = src[2];
+					Spectrum c;
+					// Accumulate all light groups
+					for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
+						if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
+							const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
+
+							const float weight = src[3];
+							if (weight > 0.f)
+								c += Spectrum(src) / weight;
+						}
+					}
+					for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
+						if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+							const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
+
+							const float weight = src[3];
+							if (weight > 0.f)
+								c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
+						}
+					}
+
+					dst[x].red = c.r;
+					dst[x].green = c.g;
+					dst[x].blue = c.b;
 					break;
 				}
 				case FilmOutputs::RGB_TONEMAPPED: {
@@ -861,13 +873,30 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				}
 				case FilmOutputs::RGBA: {
 					FIRGBAF *dst = (FIRGBAF *)bits;
-					// channel_RGB_TONEMAPPED has the _untonemapped_ version of
-					// the image in the case of an HDR because of the call
-					// to UpdateScreenBufferImpl(TONEMAP_NONE)
-					const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
-					dst[x].red = src[0];
-					dst[x].green = src[1];
-					dst[x].blue = src[2];
+					Spectrum c;
+					// Accumulate all light groups
+					for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
+						if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
+							const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
+
+							const float weight = src[3];
+							if (weight > 0.f)
+								c += Spectrum(src) / weight;
+						}
+					}
+					for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
+						if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+							const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
+
+							const float weight = src[3];
+							if (weight > 0.f)
+								c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
+						}
+					}
+
+					dst[x].red = c.r;
+					dst[x].green = c.g;
+					dst[x].blue = c.b;
 
 					const float *alphaData = channel_ALPHA->GetPixel(x, y);
 					if (alphaData[1] == 0.f)
@@ -1151,7 +1180,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					break;
 				}
 				default:
-					throw std::runtime_error("Unknown film output type: " + ToString(type));
+					throw std::runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 			}
 		}
 
@@ -1163,10 +1192,297 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 		throw std::runtime_error("Failed image save");
 
 	FreeImage_Unload(dib);
+}
 
-	if ((type == FilmOutputs::RGB) || (type == FilmOutputs::RGBA)) {
-		// To restore the used tonemapping instead of NONE
-		UpdateScreenBuffer();
+template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) const {
+	switch (type) {
+		case FilmOutputs::RGB: {
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				Spectrum c;
+				if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
+					const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixel(i);
+
+					const float weight = src[3];
+					if (weight > 0.f)
+						c += Spectrum(src) / weight;
+				}
+				if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+					const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixel(i);
+
+					const float weight = src[3];
+					if (weight > 0.f)
+						c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
+				}
+
+				*dst++ = c.r;
+				*dst++ = c.g;
+				*dst++ = c.b;
+			}
+			break;
+		}
+		case FilmOutputs::RGB_TONEMAPPED:
+			std::copy(channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetPixels() + pixelCount * 3, buffer);
+			break;
+		case FilmOutputs::RGBA: {
+			float *srcAlpha = channel_ALPHA->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				Spectrum c;
+				if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
+					const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixel(i);
+
+					const float weight = src[3];
+					if (weight > 0.f)
+						c += Spectrum(src) / weight;
+				}
+				if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+					const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixel(i);
+
+					const float weight = src[3];
+					if (weight > 0.f)
+						c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
+				}
+
+				*dst++ = c.r;
+				*dst++ = c.g;
+				*dst++ = c.b;
+				
+				if (srcAlpha[1] == 0.f)
+					*dst++ = 0.f;
+				else
+					*dst++ = srcAlpha[0] / srcAlpha[1];
+				srcAlpha += 2;
+			}
+			break;
+		}
+		case FilmOutputs::RGBA_TONEMAPPED: {
+			float *srcRGB = channel_RGB_TONEMAPPED->GetPixels();
+			float *srcAlpha = channel_ALPHA->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				*dst++ = *srcRGB++;
+				*dst++ = *srcRGB++;
+				*dst++ = *srcRGB++;
+				if (srcAlpha[1] == 0.f)
+					*dst++ = 0.f;
+				else
+					*dst++ = srcAlpha[0] / srcAlpha[1];
+				srcAlpha += 2;
+			}
+			break;
+		}
+		case FilmOutputs::ALPHA: {
+			float *srcAlpha = channel_ALPHA->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (srcAlpha[1] == 0.f)
+					*dst++ = 0.f;
+				else
+					*dst++ = srcAlpha[0] / srcAlpha[1];
+				srcAlpha += 2;
+			}
+			break;
+		}
+		case FilmOutputs::DEPTH:
+			std::copy(channel_DEPTH->GetPixels(), channel_DEPTH->GetPixels() + pixelCount, buffer);
+			break;
+		case FilmOutputs::POSITION:
+			std::copy(channel_DEPTH->GetPixels(), channel_DEPTH->GetPixels() + pixelCount * 3, buffer);
+			break;
+		case FilmOutputs::GEOMETRY_NORMAL:
+			std::copy(channel_GEOMETRY_NORMAL->GetPixels(), channel_GEOMETRY_NORMAL->GetPixels() + pixelCount * 3, buffer);
+			break;
+		case FilmOutputs::SHADING_NORMAL:
+			std::copy(channel_SHADING_NORMAL->GetPixels(), channel_SHADING_NORMAL->GetPixels() + pixelCount * 3, buffer);
+			break;
+		case FilmOutputs::DIRECT_DIFFUSE: {
+			float *src = channel_DIRECT_DIFFUSE->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[3] == 0.f) {
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+				} else {
+					const float k = 1.f / src[3];
+					*dst++ = src[0] * k;
+					*dst++ = src[1] * k;
+					*dst++ = src[2] * k;
+				}
+				src += 4;
+			}
+			break;
+		}
+		case FilmOutputs::DIRECT_GLOSSY: {
+			float *src = channel_DIRECT_GLOSSY->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[3] == 0.f) {
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+				} else {
+					const float k = 1.f / src[3];
+					*dst++ = src[0] * k;
+					*dst++ = src[1] * k;
+					*dst++ = src[2] * k;
+				}
+				src += 4;
+			}
+			break;
+		}
+		case FilmOutputs::EMISSION: {
+			float *src = channel_EMISSION->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[3] == 0.f) {
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+				} else {
+					const float k = 1.f / src[3];
+					*dst++ = src[0] * k;
+					*dst++ = src[1] * k;
+					*dst++ = src[2] * k;
+				}
+				src += 4;
+			}
+			break;
+		}
+		case FilmOutputs::INDIRECT_DIFFUSE: {
+			float *src = channel_INDIRECT_DIFFUSE->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[3] == 0.f) {
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+				} else {
+					const float k = 1.f / src[3];
+					*dst++ = src[0] * k;
+					*dst++ = src[1] * k;
+					*dst++ = src[2] * k;
+				}
+				src += 4;
+			}
+			break;
+		}
+		case FilmOutputs::INDIRECT_GLOSSY: {
+			float *src = channel_INDIRECT_GLOSSY->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[3] == 0.f) {
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+				} else {
+					const float k = 1.f / src[3];
+					*dst++ = src[0] * k;
+					*dst++ = src[1] * k;
+					*dst++ = src[2] * k;
+				}
+				src += 4;
+			}
+			break;
+		}
+		case FilmOutputs::INDIRECT_SPECULAR: {
+			float *src = channel_INDIRECT_SPECULAR->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[3] == 0.f) {
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+					*dst++ = 0.f;
+				} else {
+					const float k = 1.f / src[3];
+					*dst++ = src[0] * k;
+					*dst++ = src[1] * k;
+					*dst++ = src[2] * k;
+				}
+				src += 4;
+			}
+			break;
+		}
+		case FilmOutputs::MATERIAL_ID_MASK: {
+			float *src = channel_MATERIAL_ID_MASKs[index]->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[1] == 0.f)
+					*dst++ = 0.f;
+				else
+					*dst++ = src[0] / src[1];
+				src += 2;
+			}
+			break;
+		}
+		case FilmOutputs::DIRECT_SHADOW_MASK: {
+			float *src = channel_DIRECT_SHADOW_MASK->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[1] == 0.f)
+					*dst++ = 0.f;
+				else
+					*dst++ = src[0] / src[1];
+				src += 2;
+			}
+			break;
+		}
+		case FilmOutputs::INDIRECT_SHADOW_MASK: {
+			float *src = channel_INDIRECT_SHADOW_MASK->GetPixels();
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (src[1] == 0.f)
+					*dst++ = 0.f;
+				else
+					*dst++ = src[0] / src[1];
+				src += 2;
+			}
+			break;
+		}
+		case FilmOutputs::RADIANCE_GROUP: {
+			float *dst = buffer;
+			for (u_int i = 0; i < pixelCount; ++i) {
+				Spectrum c;
+				if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
+					const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixel(i);
+
+					const float weight = src[3];
+					if (weight > 0.f)
+						c += Spectrum(src) / weight;
+				}
+				if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+					const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixel(i);
+
+					const float weight = src[3];
+					if (weight > 0.f)
+						c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
+				}
+
+				*dst++ = c.r;
+				*dst++ = c.g;
+				*dst++ = c.b;
+			}
+			break;
+		}
+		case FilmOutputs::UV:
+			std::copy(channel_UV->GetPixels(), channel_UV->GetPixels() + pixelCount * 2, buffer);
+			break;
+		case FilmOutputs::RAYCOUNT:
+			std::copy(channel_RAYCOUNT->GetPixels(), channel_RAYCOUNT->GetPixels() + pixelCount, buffer);
+			break;
+		default:
+			throw std::runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
+	}
+}
+
+template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) const {
+	switch (type) {
+		case FilmOutputs::MATERIAL_ID:
+			std::copy(channel_MATERIAL_ID->GetPixels(), channel_MATERIAL_ID->GetPixels() + pixelCount, buffer);
+			break;
+		default:
+			throw std::runtime_error("Unknown film output type in Film::GetOutput<u_int>(): " + ToString(type));
 	}
 }
 
