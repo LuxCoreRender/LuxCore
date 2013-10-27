@@ -65,6 +65,47 @@ namespace luxcore {
  */
 extern void Init();
 
+class RenderSession;
+
+/*!
+ * \brief Film stores all the outputs of a rendering. It can be obtained only
+ * from a RenderSession.
+ */
+class Film {
+public:
+	~Film();
+
+	/*!
+	 * \brief Returns the Film width.
+	 * 
+	 * \return the Film width.
+	 */
+	u_int GetWidth() const;
+	/*!
+	 * \brief Returns the Film height.
+	 * 
+	 * \return the Film width.
+	 */
+	u_int GetHeight() const;
+	/*!
+	 * \brief Checks if it is time to save the film according the RenderConfig.
+	 */
+	bool NeedPeriodicSave();
+	/*!
+	 * \brief Saves all Film output channels.
+	 */
+	void Save();
+
+	// Just a temporary hack
+	const float *GetScreenBuffer();
+
+	friend class RenderSession;
+
+private:
+	Film(const RenderSession &session);
+
+	const RenderSession &renderSession;
+};
 
 /*!
  * \brief Scene stores textures, materials and objects definitions.
@@ -263,16 +304,11 @@ public:
 	void EndSceneEdit();
 
 	/*!
-	 * \brief Checks if it is time to save the film according the RenderConfig.
+	 * \brief Returns a reference to a Film with the output of the rendering.
+	 *
+	 * \return the reference to the Film.
 	 */
-	bool NeedPeriodicFilmSave();
-	/*!
-	 * \brief Saves all Film output channels
-	 */
-	void SaveFilm();
-
-	// Just a temporary hack
-	const float *GetScreenBuffer();
+	Film &GetFilm();
 
 	/*!
 	 * \brief Updates the statistics.
@@ -285,8 +321,12 @@ public:
 	 */
 	const luxrays::Properties &GetStats() const;
 
+	friend class Film;
+
 private:
 	const RenderConfig *renderConfig;
+	Film film;
+
 	slg::RenderSession *renderSession;
 	luxrays::Properties stats;
 };

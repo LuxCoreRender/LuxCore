@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
 			session->Stop();
 
 			// Save the rendered image
-			session->SaveFilm();
+			session->GetFilm().Save();
 
 			delete session;
 			delete config;
