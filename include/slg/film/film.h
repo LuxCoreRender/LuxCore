@@ -175,6 +175,10 @@ public:
 	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
 		const luxrays::Properties *props = NULL);
 
+	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer, const u_int index = 0) const {
+		throw std::runtime_error("Called Film::GetOutput() with wrong type");
+	}
+
 	void UpdateScreenBuffer();
 	float *GetScreenBuffer() const {
 		return channel_RGB_TONEMAPPED->GetPixels();
@@ -279,6 +283,9 @@ private:
 
 	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
+
+template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) const;
+template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) const;
 
 //------------------------------------------------------------------------------
 // SampleResult

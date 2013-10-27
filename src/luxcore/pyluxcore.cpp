@@ -569,7 +569,6 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	//--------------------------------------------------------------------------
 
     class_<Film>("Film", no_init)
-		.def("NeedPeriodicSave", &Film::NeedPeriodicSave)
 		.def("Save", &Film::Save)
 		.def("GetScreenBuffer", &Film_GetScreenBuffer)
     ;
@@ -610,6 +609,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Stop", &RenderSession::Stop)
 		.def("BeginSceneEdit", &RenderSession::BeginSceneEdit)
 		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
+		.def("NeedPeriodicFilmSave", &RenderSession::NeedPeriodicFilmSave)
 		.def("GetFilm", &RenderSession::GetFilm, return_internal_reference<>())
 		.def("UpdateStats", &RenderSession::UpdateStats)
 		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
