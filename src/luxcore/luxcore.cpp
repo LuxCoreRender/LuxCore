@@ -78,28 +78,134 @@ void Film::Save() const {
 	renderSession.renderSession->SaveFilm();
 }
 
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const {
-//	switch (type) {
-//		case RGB:
-//			break;
+size_t Film::GetOutputSize(const FilmOutputType type) const {
+	const u_int pixelCount = renderSession.renderSession->film->GetWidth() * renderSession.renderSession->film->GetHeight();
+	switch (type) {
+		case RGB:
+			return 3 * pixelCount;
+		case RGBA:
+			return 3 * pixelCount;
+		case RGB_TONEMAPPED:
+			return 3 * pixelCount;
+		case RGBA_TONEMAPPED:
+			return 4 * pixelCount;
+		case ALPHA:
+			return pixelCount;
+		case DEPTH:
+			return pixelCount;
+		case POSITION:
+			return 3 * pixelCount;
+		case GEOMETRY_NORMAL:
+			return 3 * pixelCount;
+		case SHADING_NORMAL:
+			return 3 * pixelCount;
+		case DIRECT_DIFFUSE:
+			return 3 * pixelCount;
+		case DIRECT_GLOSSY:
+			return 3 * pixelCount;
+		case EMISSION:
+			return 3 * pixelCount;
+		case INDIRECT_DIFFUSE:
+			return 3 * pixelCount;
+		case INDIRECT_GLOSSY:
+			return 3 * pixelCount;
+		case INDIRECT_SPECULAR:
+			return 3 * pixelCount;
+		case MATERIAL_ID_MASK:
+			return pixelCount;
+		case DIRECT_SHADOW_MASK:
+			return 3 * pixelCount;
+		case INDIRECT_SHADOW_MASK:
+			return 3 * pixelCount;
+		case RADIANCE_GROUP:
+			return 3 * pixelCount;
+		case UV:
+			return 2 * pixelCount;
+		case RAYCOUNT:
+			return pixelCount;
+		default:
+			throw std::runtime_error("Unknown FilmOutputType in Film::GetOutputSize()" + ToString(type));
+	}
+}
 
-//		RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
-//		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
-//		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
-//		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
-//		RADIANCE_GROUP, UV, RAYCOUNT		
-//	}
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const {
+	switch (type) {
+		case RGB:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::RGB, buffer, index);
+			break;
+		case RGBA:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::RGBA, buffer, index);
+			break;
+		case RGB_TONEMAPPED:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::RGB_TONEMAPPED, buffer, index);
+			break;
+		case RGBA_TONEMAPPED:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::RGBA_TONEMAPPED, buffer, index);
+			break;
+		case ALPHA:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::ALPHA, buffer, index);
+			break;
+		case DEPTH:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::DEPTH, buffer, index);
+			break;
+		case POSITION:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::POSITION, buffer, index);
+			break;
+		case GEOMETRY_NORMAL:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::GEOMETRY_NORMAL, buffer, index);
+			break;
+		case SHADING_NORMAL:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::SHADING_NORMAL, buffer, index);
+			break;
+		case DIRECT_DIFFUSE:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::DIRECT_DIFFUSE, buffer, index);
+			break;
+		case DIRECT_GLOSSY:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::DIRECT_GLOSSY, buffer, index);
+			break;
+		case EMISSION:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::EMISSION, buffer, index);
+			break;
+		case INDIRECT_DIFFUSE:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::INDIRECT_DIFFUSE, buffer, index);
+			break;
+		case INDIRECT_GLOSSY:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::INDIRECT_GLOSSY, buffer, index);
+			break;
+		case INDIRECT_SPECULAR:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::INDIRECT_SPECULAR, buffer, index);
+			break;
+		case MATERIAL_ID_MASK:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::MATERIAL_ID_MASK, buffer, index);
+			break;
+		case DIRECT_SHADOW_MASK:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::DIRECT_SHADOW_MASK, buffer, index);
+			break;
+		case INDIRECT_SHADOW_MASK:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::INDIRECT_SHADOW_MASK, buffer, index);
+			break;
+		case RADIANCE_GROUP:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::RADIANCE_GROUP, buffer, index);
+			break;
+		case UV:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::UV, buffer, index);
+			break;
+		case RAYCOUNT:
+			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::RAYCOUNT, buffer, index);
+			break;
+		default:
+			throw std::runtime_error("Unknown FilmOutputType in Film::GetOutput<float>()" + ToString(type));
+	}
 }
 
 template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const {
-	
-}
-
-const float *Film::GetScreenBuffer() {
-	slg::Film *film = renderSession.renderSession->film;
-
-	film->UpdateScreenBuffer();
-	return film->GetScreenBuffer();
+	switch (type) {
+		case MATERIAL_ID:
+			renderSession.renderSession->film->GetOutput<u_int>(slg::FilmOutputs::MATERIAL_ID, buffer, index);
+			break;
+		default:
+			throw std::runtime_error("Unknown FilmOutputType in Film::GetOutput<u_int>()" + ToString(type));
+	}
 }
 
 //------------------------------------------------------------------------------

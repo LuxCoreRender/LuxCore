@@ -129,6 +129,5 @@ void RenderSession::SaveFilm() {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	// Save the film
-	film->UpdateScreenBuffer();
 	film->Output(filmOutputs);
 }

@@ -30,6 +30,7 @@ class RenderView(QMainWindow):
 		
 		self.dofEnabled = True
 		self.luxBallShapeIsCube = False
+		self.selectedFilmChannel = pyluxcore.FilmOutputType.RGB_TONEMAPPED
 		
 		self.createActions()
 		self.createMenus()
@@ -47,7 +48,8 @@ class RenderView(QMainWindow):
 		self.center()
 		
 		# Allocate the image for the rendering
-		self.imageBuffer = array('B', [0] * (self.filmWidth * self.filmHeight * 4))
+		self.imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
+		self.imageBufferUChar = array('b', [0] * (self.filmWidth * self.filmHeight * 4))
 
 		# Read the configuration and start the rendering
 		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
@@ -88,6 +90,15 @@ class RenderView(QMainWindow):
 		self.luxBallMoveRightAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Right)])
 		
 		self.luxBallShapeToggleAct = QAction("Toggle S&hell", self, triggered = self.luxBallShapeToggle)
+
+		self.filmSetOutputChannel_RGB_TONEMAPPED_Act = QAction("&RGB TONEMAPPED output channel", self,
+			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.RGB_TONEMAPPED))
+		self.filmSetOutputChannel_DIRECT_DIFFUSE_Act = QAction("&DIRECT DIFFUSE output channel", self,
+			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.DIRECT_DIFFUSE))
+		self.filmSetOutputChannel_INDIRECT_SPECULAR_Act = QAction("&INDIRECT DIFFUSE output channel", self,
+			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.INDIRECT_SPECULAR))
+		self.filmSetOutputChannel_EMISSION_Act = QAction("&EMISSION output channel", self,
+			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.EMISSION))
 	
 	def createMenus(self):
 		fileMenu = QMenu("&File", self)
@@ -112,10 +123,17 @@ class RenderView(QMainWindow):
 		luxBallShapeMenu = QMenu("&LuxBall Shape", self)
 		luxBallShapeMenu.addAction(self.luxBallShapeToggleAct)
 		
+		filmMenu = QMenu("Film", self)
+		filmMenu.addAction(self.filmSetOutputChannel_RGB_TONEMAPPED_Act)
+		filmMenu.addAction(self.filmSetOutputChannel_DIRECT_DIFFUSE_Act)
+		filmMenu.addAction(self.filmSetOutputChannel_INDIRECT_SPECULAR_Act)
+		filmMenu.addAction(self.filmSetOutputChannel_EMISSION_Act)
+		
 		self.menuBar().addMenu(fileMenu)
 		self.menuBar().addMenu(cameraMenu)
 		self.menuBar().addMenu(luxBallMatMenu)
 		self.menuBar().addMenu(luxBallShapeMenu)
+		self.menuBar().addMenu(filmMenu)
 	
 	def center(self):
 		screen = QDesktopWidget().screenGeometry()
@@ -334,6 +352,30 @@ class RenderView(QMainWindow):
 		self.session.EndSceneEdit()
 		print("Camera new position: %f, %f, %f" % (self.cameraPos[0], self.cameraPos[1], self.cameraPos[2]))
 	
+	def filmSetOutputChannel(self, type):
+		# Stop the rendering
+		self.session.Stop()
+		self.session = None
+		
+		# Delete old channel outputs
+		props = self.config.GetProperties()
+		props.DeleteAll(props.GetAllNames("film.outputs"))
+		
+		# Set the new channel outputs
+		props.Set(pyluxcore.Property("film.outputs.1.type", ["RGB_TONEMAPPED"])). \
+			Set(pyluxcore.Property("film.outputs.1.filename", ["luxball_RGB_TONEMAPPED.png"])). \
+			Set(pyluxcore.Property("film.outputs.2.type", [str(type)])). \
+			Set(pyluxcore.Property("film.outputs.2.filename", ["luxball_SELECTED_OUTPUT.exr"]))
+		self.selectedFilmChannel = type
+		
+		# Create the new RenderConfig
+		self.config = pyluxcore.RenderConfig(props, self.scene)
+		
+		# Re-start the rendering
+		self.session = pyluxcore.RenderSession(self.config)
+		self.session.Start()
+		print("Film channel selected: %s" % (str(type)))
+	
 	def timerEvent(self, event):
 		if event.timerId() == self.timer.timerId():
 			# Print some information about the rendering progress
@@ -349,7 +391,9 @@ class RenderView(QMainWindow):
 				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
 			
 			# Update the image
-			self.session.GetFilm().GetScreenBuffer(self.imageBuffer)
+			self.session.GetFilm().GetOutputFloat(self.selectedFilmChannel, self.imageBufferFloat)
+			pyluxcore.ConvertFilmChannelOutput_3xFloat_To_4xUChar(self.filmWidth, self.filmHeight, self.imageBufferFloat, self.imageBufferUChar,
+				False if self.selectedFilmChannel == pyluxcore.FilmOutputType.RGB_TONEMAPPED else True)
 			
 			self.update()
 		else:
@@ -357,7 +401,7 @@ class RenderView(QMainWindow):
 	
 	def paintEvent(self, event):
 		painter = QPainter(self)
-		image = QImage(self.imageBuffer, self.filmWidth, self.filmHeight, QImage.Format_RGB32)
+		image = QImage(self.imageBufferUChar, self.filmWidth, self.filmHeight, QImage.Format_RGB32)
 		painter.drawImage(QPoint(0, 0), image)
 	
 	def resizeEvent(self, event):
@@ -372,7 +416,8 @@ class RenderView(QMainWindow):
 			pyluxcore.Properties().
 			Set(pyluxcore.Property("film.width", [self.filmWidth])).
 			Set(pyluxcore.Property("film.height", [self.filmHeight])))
-		self.imageBuffer = array('B', [0] * (self.filmWidth * self.filmHeight * 4))
+		self.imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
+		self.imageBufferUChar = array('b', [0] * (self.filmWidth * self.filmHeight * 4))
 		
 		# Re-start the rendering
 		self.session = pyluxcore.RenderSession(self.config)

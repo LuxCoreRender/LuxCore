@@ -471,7 +471,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 				// The film has been locked before
 				oclQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
-						screenBufferBuff->getInfo<CL_MEM_SIZE>(), engine->film->GetScreenBuffer());
+						screenBufferBuff->getInfo<CL_MEM_SIZE>(), engine->film->channel_RGB_TONEMAPPED->GetPixels());
 				oclQueue.finish();
 			}
 

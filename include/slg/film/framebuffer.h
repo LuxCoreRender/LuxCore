@@ -142,7 +142,7 @@ public:
 		} else {
 			if (src[CHANNELS - 1] == 0) {
 				for (u_int i = 0; i < CHANNELS; ++i)
-					dst[i] += 0;
+					dst[i] = 0;
 			} else {
 				const T k = 1.f / src[CHANNELS - 1];
 				for (u_int i = 0; i < CHANNELS; ++i)

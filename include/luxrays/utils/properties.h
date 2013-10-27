@@ -648,8 +648,26 @@ public:
 	 */
 	const Property Get(const std::string &propName, const PropertyValues &defaultValues) const;
 
+	/*!
+	 * \brief Returns if a Property with the given name has been defined.
+	 *
+	 * \param propName is the name of the Property to check.
+	 *
+	 * \return if defined or not.
+	 */
 	bool IsDefined(const std::string &propName) const;
+
+	/*!
+	 * \brief Deletes a Property with the given name.
+	 *
+	 * \param propName is the name of the Property to delete.
+	 */
 	void Delete(const std::string &propName);
+	/*!
+	 * \brief Deletes all listed Property.
+	 *
+	 * \param propNames is the list of the Property to delete.
+	 */
 	void DeleteAll(const std::vector<std::string> &propNames);
 
 	std::string ToString() const;
