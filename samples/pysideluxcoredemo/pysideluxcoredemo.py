@@ -48,8 +48,7 @@ class RenderView(QMainWindow):
 		self.center()
 		
 		# Allocate the image for the rendering
-		self.imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
-		self.imageBufferUChar = array('b', [0] * (self.filmWidth * self.filmHeight * 4))
+		self.allocateImageBuffers()
 
 		# Read the configuration and start the rendering
 		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
@@ -67,6 +66,19 @@ class RenderView(QMainWindow):
 		
 		self.timer = QBasicTimer()
 		self.timer.start(500, self)
+	
+	def allocateImageBuffers(self):
+		########################################################################
+		#
+		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
+		#
+		########################################################################
+		if sys.version_info<(3,0,0):
+			self.imageBufferFloat = buffer(array('f', [0.0] * (self.filmWidth * self.filmHeight * 3)))
+			self.imageBufferUChar = buffer(array('b', [0] * (self.filmWidth * self.filmHeight * 4)))
+		else:
+			self.imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
+			self.imageBufferUChar = array('b', [0] * (self.filmWidth * self.filmHeight * 4))
 
 	def createActions(self):
 		self.quitAct = QAction("&Quit", self, triggered = self.close)
@@ -95,7 +107,7 @@ class RenderView(QMainWindow):
 			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.RGB_TONEMAPPED))
 		self.filmSetOutputChannel_DIRECT_DIFFUSE_Act = QAction("&DIRECT DIFFUSE output channel", self,
 			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.DIRECT_DIFFUSE))
-		self.filmSetOutputChannel_INDIRECT_SPECULAR_Act = QAction("&INDIRECT DIFFUSE output channel", self,
+		self.filmSetOutputChannel_INDIRECT_SPECULAR_Act = QAction("&INDIRECT SPECULAR output channel", self,
 			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.INDIRECT_SPECULAR))
 		self.filmSetOutputChannel_EMISSION_Act = QAction("&EMISSION output channel", self,
 			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.EMISSION))
@@ -116,9 +128,9 @@ class RenderView(QMainWindow):
 		luxBallMatMenu.addAction(self.luxBallMatGlassAct)
 		luxBallMatMenu.addAction(self.luxBallMatGlossyImageMapAct)
 		
-		luxBallMatMenu = QMenu("&LuxBall Position", self)
-		luxBallMatMenu.addAction(self.luxBallMoveLeftAct)
-		luxBallMatMenu.addAction(self.luxBallMoveRightAct)
+		luxBallPosMenu = QMenu("&LuxBall Position", self)
+		luxBallPosMenu.addAction(self.luxBallMoveLeftAct)
+		luxBallPosMenu.addAction(self.luxBallMoveRightAct)
 		
 		luxBallShapeMenu = QMenu("&LuxBall Shape", self)
 		luxBallShapeMenu.addAction(self.luxBallShapeToggleAct)
@@ -132,6 +144,7 @@ class RenderView(QMainWindow):
 		self.menuBar().addMenu(fileMenu)
 		self.menuBar().addMenu(cameraMenu)
 		self.menuBar().addMenu(luxBallMatMenu)
+		self.menuBar().addMenu(luxBallPosMenu)
 		self.menuBar().addMenu(luxBallShapeMenu)
 		self.menuBar().addMenu(filmMenu)
 	
@@ -416,8 +429,7 @@ class RenderView(QMainWindow):
 			pyluxcore.Properties().
 			Set(pyluxcore.Property("film.width", [self.filmWidth])).
 			Set(pyluxcore.Property("film.height", [self.filmHeight])))
-		self.imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
-		self.imageBufferUChar = array('b', [0] * (self.filmWidth * self.filmHeight * 4))
+		self.allocateImageBuffers()
 		
 		# Re-start the rendering
 		self.session = pyluxcore.RenderSession(self.config)
