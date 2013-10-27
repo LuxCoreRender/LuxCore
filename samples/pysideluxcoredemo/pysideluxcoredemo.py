@@ -124,7 +124,7 @@ class RenderView(QMainWindow):
 	
 	def saveImage(self):
 		# Save the rendered image
-		self.session.SaveFilm()
+		self.session.GetFilm().Save()
 		print("Image saved")
 	
 	def cameraToggleDOF(self):
@@ -349,7 +349,7 @@ class RenderView(QMainWindow):
 				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
 			
 			# Update the image
-			self.session.GetScreenBuffer(self.imageBuffer)
+			self.session.GetFilm().GetScreenBuffer(self.imageBuffer)
 			
 			self.update()
 		else:

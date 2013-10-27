@@ -262,6 +262,47 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 }
 
 //------------------------------------------------------------------------------
+// Glue for Film class
+//------------------------------------------------------------------------------
+
+static void Film_GetScreenBuffer(Film *film,
+		boost::python::object &obj) {
+	if (PyObject_CheckBuffer(obj.ptr())) {
+		Py_buffer view;
+		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
+			const u_int width = film->GetWidth();
+			const u_int height = film->GetHeight();
+
+			if (view.len >= width * height * 4) {
+				unsigned char *dst = (unsigned char *)view.buf;
+				const float *src = film->GetScreenBuffer();
+
+				for (u_int y = 0; y < height; ++y) {
+					u_int srcIndex = (height - y - 1) * width * 3;
+					u_int dstIndex = y * width * 4;
+
+					for (u_int x = 0; x < width; ++x) {
+						dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
+						dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
+						dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
+						dst[dstIndex++] = 0xff;
+						srcIndex += 3;
+					}
+				}
+			} else
+				throw std::runtime_error("Not enough space in the buffer of Film.GetScreenBuffer() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * 4));
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw std::runtime_error("Unable to get a data view in Film.GetScreenBuffer() method: " + objType);
+		}
+	}	else {
+		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data type Film.GetScreenBuffer() method: " + objType);
+	}
+}
+
+//------------------------------------------------------------------------------
 // Glue for Scene class
 //------------------------------------------------------------------------------
 
@@ -419,47 +460,6 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 }
 
 //------------------------------------------------------------------------------
-// Glue for RenderSession class
-//------------------------------------------------------------------------------
-
-static void RenderSession_GetScreenBuffer(RenderSession *renderSession,
-		boost::python::object &obj) {
-	if (PyObject_CheckBuffer(obj.ptr())) {
-		Py_buffer view;
-		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
-			const u_int width = renderSession->GetRenderConfig().GetProperties().Get("film.width").Get<u_int>();
-			const u_int height = renderSession->GetRenderConfig().GetProperties().Get("film.height").Get<u_int>();
-
-			if (view.len >= width * height * 4) {
-				unsigned char *dst = (unsigned char *)view.buf;
-				const float *src = renderSession->GetScreenBuffer();
-
-				for (u_int y = 0; y < height; ++y) {
-					u_int srcIndex = (height - y - 1) * width * 3;
-					u_int dstIndex = y * width * 4;
-
-					for (u_int x = 0; x < width; ++x) {
-						dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
-						dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
-						dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
-						dst[dstIndex++] = 0xff;
-						srcIndex += 3;
-					}
-				}
-			} else
-				throw std::runtime_error("Not enough space in the buffer of RenderSession.GetScreenBuffer() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * 4));
-		} else {
-			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw std::runtime_error("Unable to get a data view in RenderSession.GetScreenBuffer() method: " + objType);
-		}
-	}	else {
-		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type RenderSession.GetScreenBuffer() method: " + objType);
-	}
-}
-
-//------------------------------------------------------------------------------
 
 BOOST_PYTHON_MODULE(pyluxcore) {
 	docstring_options doc_options(
@@ -565,6 +565,16 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     ;
 
 	//--------------------------------------------------------------------------
+	// Film class
+	//--------------------------------------------------------------------------
+
+    class_<Film>("Film", no_init)
+		.def("NeedPeriodicSave", &Film::NeedPeriodicSave)
+		.def("Save", &Film::Save)
+		.def("GetScreenBuffer", &Film_GetScreenBuffer)
+    ;
+
+	//--------------------------------------------------------------------------
 	// Scene class
 	//--------------------------------------------------------------------------
 
@@ -600,9 +610,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("Stop", &RenderSession::Stop)
 		.def("BeginSceneEdit", &RenderSession::BeginSceneEdit)
 		.def("EndSceneEdit", &RenderSession::EndSceneEdit)
-		.def("NeedPeriodicFilmSave", &RenderSession::NeedPeriodicFilmSave)
-		.def("SaveFilm", &RenderSession::SaveFilm)
-		.def("GetScreenBuffer", &RenderSession_GetScreenBuffer)
+		.def("GetFilm", &RenderSession::GetFilm, return_internal_reference<>())
 		.def("UpdateStats", &RenderSession::UpdateStats)
 		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
     ;

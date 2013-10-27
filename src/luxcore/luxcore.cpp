@@ -57,6 +57,39 @@ void luxcore::Init() {
 }
 
 //------------------------------------------------------------------------------
+// Film
+//------------------------------------------------------------------------------
+
+Film::Film(const RenderSession &session) : renderSession(session) {
+}
+
+Film::~Film() {
+}
+
+u_int Film::GetWidth() const {
+	return renderSession.renderSession->film->GetWidth();
+}
+
+u_int Film::GetHeight() const {
+	return renderSession.renderSession->film->GetHeight();
+}
+
+bool Film::NeedPeriodicSave() {
+	return renderSession.renderSession->NeedPeriodicFilmSave();
+}
+
+void Film::Save() {
+	renderSession.renderSession->SaveFilm();
+}
+
+const float *Film::GetScreenBuffer() {
+	slg::Film *film = renderSession.renderSession->film;
+
+	film->UpdateScreenBuffer();
+	return film->GetScreenBuffer();
+}
+
+//------------------------------------------------------------------------------
 // Scene
 //------------------------------------------------------------------------------
 
@@ -161,7 +194,7 @@ void RenderConfig::Parse(const luxrays::Properties &props) {
 // RenderSession
 //------------------------------------------------------------------------------
 
-RenderSession::RenderSession(const RenderConfig *config) : renderConfig(config) {
+RenderSession::RenderSession(const RenderConfig *config) : renderConfig(config), film(*this) {
 	renderSession = new slg::RenderSession(config->renderConfig);
 }
 
@@ -189,19 +222,8 @@ void RenderSession::EndSceneEdit() {
 	renderSession->EndSceneEdit();
 }
 
-bool RenderSession::NeedPeriodicFilmSave() {
-	return renderSession->NeedPeriodicFilmSave();
-}
-
-void RenderSession::SaveFilm() {
-	renderSession->SaveFilm();
-}
-
-const float *RenderSession::GetScreenBuffer() {
-	slg::Film *film = renderSession->film;
-
-	film->UpdateScreenBuffer();
-	return film->GetScreenBuffer();
+Film &RenderSession::GetFilm() {
+	return film;
 }
 
 void RenderSession::UpdateStats() {
