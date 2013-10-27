@@ -194,107 +194,107 @@ void Film::Resize(const u_int w, const u_int h) {
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		channel_RADIANCE_PER_PIXEL_NORMALIZEDs.resize(radianceGroupCount, NULL);
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = new GenericFrameBuffer<4, float>(width, height);
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = new GenericFrameBuffer<4, 1, float>(width, height);
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
 		}
 	}
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
 		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount, NULL);
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i] = new GenericFrameBuffer<4, float>(width, height);
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i] = new GenericFrameBuffer<3, 0, float>(width, height);
 			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
 		}
 	}
 	if (HasChannel(ALPHA)) {
-		channel_ALPHA = new GenericFrameBuffer<2, float>(width, height);
+		channel_ALPHA = new GenericFrameBuffer<2, 1, float>(width, height);
 		channel_ALPHA->Clear();
 	}
 	if (HasChannel(TONEMAPPED_FRAMEBUFFER)) {
-		channel_RGB_TONEMAPPED = new GenericFrameBuffer<3, float>(width, height);
+		channel_RGB_TONEMAPPED = new GenericFrameBuffer<3, 0, float>(width, height);
 		channel_RGB_TONEMAPPED->Clear();
 
 		convTest = new ConvergenceTest(width, height);
 	}
 	if (HasChannel(DEPTH)) {
-		channel_DEPTH = new GenericFrameBuffer<1, float>(width, height);
+		channel_DEPTH = new GenericFrameBuffer<1, 0, float>(width, height);
 		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(POSITION)) {
-		channel_POSITION = new GenericFrameBuffer<3, float>(width, height);
+		channel_POSITION = new GenericFrameBuffer<3, 0, float>(width, height);
 		channel_POSITION->Clear(std::numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(GEOMETRY_NORMAL)) {
-		channel_GEOMETRY_NORMAL = new GenericFrameBuffer<3, float>(width, height);
+		channel_GEOMETRY_NORMAL = new GenericFrameBuffer<3, 0, float>(width, height);
 		channel_GEOMETRY_NORMAL->Clear(std::numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(SHADING_NORMAL)) {
-		channel_SHADING_NORMAL = new GenericFrameBuffer<3, float>(width, height);
+		channel_SHADING_NORMAL = new GenericFrameBuffer<3, 0, float>(width, height);
 		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID)) {
-		channel_MATERIAL_ID = new GenericFrameBuffer<1, u_int>(width, height);
+		channel_MATERIAL_ID = new GenericFrameBuffer<1, 0, u_int>(width, height);
 		channel_MATERIAL_ID->Clear(std::numeric_limits<u_int>::max());
 		hasDataChannel = true;
 	}
 	if (HasChannel(DIRECT_DIFFUSE)) {
-		channel_DIRECT_DIFFUSE = new GenericFrameBuffer<4, float>(width, height);
+		channel_DIRECT_DIFFUSE = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_DIRECT_DIFFUSE->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_GLOSSY)) {
-		channel_DIRECT_GLOSSY = new GenericFrameBuffer<4, float>(width, height);
+		channel_DIRECT_GLOSSY = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_DIRECT_GLOSSY->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(EMISSION)) {
-		channel_EMISSION = new GenericFrameBuffer<4, float>(width, height);
+		channel_EMISSION = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_EMISSION->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_DIFFUSE)) {
-		channel_INDIRECT_DIFFUSE = new GenericFrameBuffer<4, float>(width, height);
+		channel_INDIRECT_DIFFUSE = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_INDIRECT_DIFFUSE->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_GLOSSY)) {
-		channel_INDIRECT_GLOSSY = new GenericFrameBuffer<4, float>(width, height);
+		channel_INDIRECT_GLOSSY = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_INDIRECT_GLOSSY->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_SPECULAR)) {
-		channel_INDIRECT_SPECULAR = new GenericFrameBuffer<4, float>(width, height);
+		channel_INDIRECT_SPECULAR = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_INDIRECT_SPECULAR->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID_MASK)) {
 		for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
-			GenericFrameBuffer<2, float> *buf = new GenericFrameBuffer<2, float>(width, height);
+			GenericFrameBuffer<2, 1, float> *buf = new GenericFrameBuffer<2, 1, float>(width, height);
 			buf->Clear();
 			channel_MATERIAL_ID_MASKs.push_back(buf);
 		}
 		hasDataChannel = true;
 	}
 	if (HasChannel(DIRECT_SHADOW_MASK)) {
-		channel_DIRECT_SHADOW_MASK = new GenericFrameBuffer<2, float>(width, height);
+		channel_DIRECT_SHADOW_MASK = new GenericFrameBuffer<2, 1, float>(width, height);
 		channel_DIRECT_SHADOW_MASK->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_SHADOW_MASK)) {
-		channel_INDIRECT_SHADOW_MASK = new GenericFrameBuffer<2, float>(width, height);
+		channel_INDIRECT_SHADOW_MASK = new GenericFrameBuffer<2, 1, float>(width, height);
 		channel_INDIRECT_SHADOW_MASK->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(UV)) {
-		channel_UV = new GenericFrameBuffer<2, float>(width, height);
+		channel_UV = new GenericFrameBuffer<2, 0, float>(width, height);
 		channel_UV->Clear(std::numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(RAYCOUNT)) {
-		channel_RAYCOUNT = new GenericFrameBuffer<1, float>(width, height);
+		channel_RAYCOUNT = new GenericFrameBuffer<1, 0, float>(width, height);
 		channel_RAYCOUNT->Clear();
 		hasDataChannel = true;
 	}
@@ -829,39 +829,14 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			switch (type) {
 				case FilmOutputs::RGB: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					Spectrum c;
 					// Accumulate all light groups
-					for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
-						if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
-							const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
-
-							const float weight = src[3];
-							if (weight > 0.f)
-								c += Spectrum(src) / weight;
-						}
-					}
-					for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
-						if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-							const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
-
-							const float weight = src[3];
-							if (weight > 0.f)
-								c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
-						}
-					}
-
-					dst[x].red = c.r;
-					dst[x].green = c.g;
-					dst[x].blue = c.b;
+					GetPixelFromMergedSampleBuffers(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::RGB_TONEMAPPED: {
 					if (hdrImage) {
 						FIRGBF *dst = (FIRGBF *)bits;
-						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
-						dst[x].red = src[0];
-						dst[x].green = src[1];
-						dst[x].blue = src[2];
+						channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, &dst[x].red);
 					} else {
 						BYTE *dst = &bits[x * 3];
 						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
@@ -873,51 +848,16 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				}
 				case FilmOutputs::RGBA: {
 					FIRGBAF *dst = (FIRGBAF *)bits;
-					Spectrum c;
 					// Accumulate all light groups
-					for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
-						if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
-							const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
-
-							const float weight = src[3];
-							if (weight > 0.f)
-								c += Spectrum(src) / weight;
-						}
-					}
-					for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
-						if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-							const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
-
-							const float weight = src[3];
-							if (weight > 0.f)
-								c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
-						}
-					}
-
-					dst[x].red = c.r;
-					dst[x].green = c.g;
-					dst[x].blue = c.b;
-
-					const float *alphaData = channel_ALPHA->GetPixel(x, y);
-					if (alphaData[1] == 0.f)
-						dst[x].alpha = 0.f;
-					else
-						dst[x].alpha = alphaData[0] / alphaData[1];
+					GetPixelFromMergedSampleBuffers(x, y, &dst[x].red);
+					channel_ALPHA->GetWeightedPixel(x, y, &dst[x].alpha);
 					break;
 				}
 				case FilmOutputs::RGBA_TONEMAPPED: {
 					if (hdrImage) {
 						FIRGBAF *dst = (FIRGBAF *)bits;
-						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
-						dst[x].red = src[0];
-						dst[x].green = src[1];
-						dst[x].blue = src[2];
-
-						const float *alphaData = channel_ALPHA->GetPixel(x, y);
-						if (alphaData[1] == 0.f)
-							dst[x].alpha = 0.f;
-						else
-							dst[x].alpha = alphaData[0] / alphaData[1];
+						channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, &dst[x].red);
+						channel_ALPHA->GetWeightedPixel(x, y, &dst[x].alpha);
 					} else {
 						BYTE *dst = &bits[x * 4];
 						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
@@ -925,62 +865,43 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 						dst[FI_RGBA_GREEN] = (BYTE)(src[1] * 255.f + .5f);
 						dst[FI_RGBA_BLUE] = (BYTE)(src[2] * 255.f + .5f);
 
-						const float *alphaData = channel_ALPHA->GetPixel(x, y);
-						if (alphaData[1] == 0.f)
-							dst[FI_RGBA_ALPHA] = 0;
-						else
-							dst[FI_RGBA_ALPHA] = (BYTE)((alphaData[0] / alphaData[1]) * 255.f + .5f);
+						float alpha;
+						channel_ALPHA->GetWeightedPixel(x, y, &alpha);
+						dst[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
 					}
 					break;
 				}
 				case FilmOutputs::ALPHA: {
 					if (hdrImage) {
 						float *dst = (float *)bits;
-
-						const float *alphaData = channel_ALPHA->GetPixel(x, y);
-						if (alphaData[1] == 0.f)
-							dst[x] = 0.f;
-						else
-							dst[x] = alphaData[0] / alphaData[1];
+						channel_ALPHA->GetWeightedPixel(x, y, &dst[x]);
 					} else {
 						BYTE *dst = &bits[x];
 
-						const float *alphaData = channel_ALPHA->GetPixel(x, y);
-						if (alphaData[1] == 0.f)
-							*dst = 0;
-						else
-							*dst = (BYTE)((alphaData[0] / alphaData[1]) * 255.f + .5f);
+						float alpha;
+						channel_ALPHA->GetWeightedPixel(x, y, &alpha);
+						dst[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
 					}
 					break;
 				}
 				case FilmOutputs::DEPTH: {
 					float *dst = (float *)bits;
-
-					dst[x] = channel_DEPTH->GetPixel(x, y)[0];
+					channel_DEPTH->GetWeightedPixel(x, y, &dst[x]);
 					break;
 				}
 				case FilmOutputs::POSITION: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_POSITION->GetPixel(x, y);
-					dst[x].red = src[0];
-					dst[x].green = src[1];
-					dst[x].blue = src[2];
+					channel_POSITION->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::GEOMETRY_NORMAL: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_GEOMETRY_NORMAL->GetPixel(x, y);
-					dst[x].red = src[0];
-					dst[x].green = src[1];
-					dst[x].blue = src[2];
+					channel_GEOMETRY_NORMAL->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::SHADING_NORMAL: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_SHADING_NORMAL->GetPixel(x, y);
-					dst[x].red = src[0];
-					dst[x].green = src[1];
-					dst[x].blue = src[2];
+					channel_SHADING_NORMAL->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::MATERIAL_ID: {
@@ -993,190 +914,96 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				}
 				case FilmOutputs::DIRECT_DIFFUSE: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_DIRECT_DIFFUSE->GetPixel(x, y);
-					if (src[3] == 0.f) {
-						dst[x].red = 0.f;
-						dst[x].green = 0.f;
-						dst[x].blue = 0.f;
-					} else {
-						const float iweight = 1.f / src[3];
-						dst[x].red = src[0] * iweight;
-						dst[x].green = src[1] * iweight;
-						dst[x].blue = src[2] * iweight;
-					}
+					channel_DIRECT_DIFFUSE->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::DIRECT_GLOSSY: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_DIRECT_GLOSSY->GetPixel(x, y);
-					if (src[3] == 0.f) {
-						dst[x].red = 0.f;
-						dst[x].green = 0.f;
-						dst[x].blue = 0.f;
-					} else {
-						const float iweight = 1.f / src[3];
-						dst[x].red = src[0] * iweight;
-						dst[x].green = src[1] * iweight;
-						dst[x].blue = src[2] * iweight;
-					}
+					channel_DIRECT_GLOSSY->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::EMISSION: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_EMISSION->GetPixel(x, y);
-					if (src[3] == 0.f) {
-						dst[x].red = 0.f;
-						dst[x].green = 0.f;
-						dst[x].blue = 0.f;
-					} else {
-						const float iweight = 1.f / src[3];
-						dst[x].red = src[0] * iweight;
-						dst[x].green = src[1] * iweight;
-						dst[x].blue = src[2] * iweight;
-					}
+					channel_EMISSION->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::INDIRECT_DIFFUSE: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_INDIRECT_DIFFUSE->GetPixel(x, y);
-					if (src[3] == 0.f) {
-						dst[x].red = 0.f;
-						dst[x].green = 0.f;
-						dst[x].blue = 0.f;
-					} else {
-						const float iweight = 1.f / src[3];
-						dst[x].red = src[0] * iweight;
-						dst[x].green = src[1] * iweight;
-						dst[x].blue = src[2] * iweight;
-					}
+					channel_INDIRECT_DIFFUSE->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::INDIRECT_GLOSSY: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_INDIRECT_GLOSSY->GetPixel(x, y);
-					if (src[3] == 0.f) {
-						dst[x].red = 0.f;
-						dst[x].green = 0.f;
-						dst[x].blue = 0.f;
-					} else {
-						const float iweight = 1.f / src[3];
-						dst[x].red = src[0] * iweight;
-						dst[x].green = src[1] * iweight;
-						dst[x].blue = src[2] * iweight;
-					}
+					channel_INDIRECT_GLOSSY->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::INDIRECT_SPECULAR: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_INDIRECT_SPECULAR->GetPixel(x, y);
-					if (src[3] == 0.f) {
-						dst[x].red = 0.f;
-						dst[x].green = 0.f;
-						dst[x].blue = 0.f;
-					} else {
-						const float iweight = 1.f / src[3];
-						dst[x].red = src[0] * iweight;
-						dst[x].green = src[1] * iweight;
-						dst[x].blue = src[2] * iweight;
-					}
+					channel_INDIRECT_SPECULAR->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				case FilmOutputs::MATERIAL_ID_MASK: {
 					if (hdrImage) {
 						float *dst = (float *)bits;
-
-						const float *maskData = channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetPixel(x, y);
-						if (maskData[1] == 0.f)
-							dst[x] = 0.f;
-						else
-							dst[x] = maskData[0] / maskData[1];
+						channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetWeightedPixel(x, y, &dst[x]);
 					} else {
 						BYTE *dst = &bits[x];
 
-						const float *maskData = channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetPixel(x, y);
-						if (maskData[1] == 0.f)
-							*dst = 0;
-						else
-							*dst = (BYTE)((maskData[0] / maskData[1]) * 255.f + .5f);
+						float maskData;
+						channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetWeightedPixel(x, y, &maskData);
+						*dst = (BYTE)(maskData * 255.f + .5f);
 					}
 					break;
 				}
 				case FilmOutputs::DIRECT_SHADOW_MASK: {
 					if (hdrImage) {
 						float *dst = (float *)bits;
-
-						const float *shadowData = channel_DIRECT_SHADOW_MASK->GetPixel(x, y);
-						if (shadowData[1] == 0.f)
-							dst[x] = 0.f;
-						else
-							dst[x] = shadowData[0] / shadowData[1];
+						channel_DIRECT_SHADOW_MASK->GetWeightedPixel(x, y, &dst[x]);
 					} else {
 						BYTE *dst = &bits[x];
 
-						const float *shadowData = channel_DIRECT_SHADOW_MASK->GetPixel(x, y);
-						if (shadowData[1] == 0.f)
-							*dst = 0;
-						else
-							*dst = (BYTE)((shadowData[0] / shadowData[1]) * 255.f + .5f);
+						float shadowData;
+						channel_DIRECT_SHADOW_MASK->GetWeightedPixel(x, y, &shadowData);
+						*dst = (BYTE)(shadowData * 255.f + .5f);
 					}
 					break;
 				}
 				case FilmOutputs::INDIRECT_SHADOW_MASK: {
 					if (hdrImage) {
 						float *dst = (float *)bits;
-
-						const float *shadowData = channel_INDIRECT_SHADOW_MASK->GetPixel(x, y);
-						if (shadowData[1] == 0.f)
-							dst[x] = 0.f;
-						else
-							dst[x] = shadowData[0] / shadowData[1];
+						channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(x, y, &dst[x]);
 					} else {
 						BYTE *dst = &bits[x];
 
-						const float *shadowData = channel_INDIRECT_SHADOW_MASK->GetPixel(x, y);
-						if (shadowData[1] == 0.f)
-							*dst = 0;
-						else
-							*dst = (BYTE)((shadowData[0] / shadowData[1]) * 255.f + .5f);
+						float shadowData;
+						channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(x, y, &shadowData);
+						*dst = (BYTE)(shadowData * 255.f + .5f);
 					}
 					break;
 				}
 				case FilmOutputs::RADIANCE_GROUP: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					Spectrum c;
-					if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
-						const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
+					dst[x].red = 0.f;
+					dst[x].green = 0.f;
+					dst[x].blue = 0.f;
 
-						const float weight = src[3];
-						if (weight > 0.f)
-							c += Spectrum(src) / weight;
-					}
-					if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-						const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->GetPixel(x, y);
-						
-						const float weight = src[3];
-						if (weight > 0.f)
-							c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
-					}
+					// Accumulate all light groups
+					if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size())
+						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, &dst[x].red);
+					if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size())
+						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, &dst[x].red);
 
-					dst[x].red = c.r;
-					dst[x].green = c.g;
-					dst[x].blue = c.b;
 					break;
 				}
 				case FilmOutputs::UV: {
 					FIRGBF *dst = (FIRGBF *)bits;
-					const float *src = channel_UV->GetPixel(x, y);
-					dst[x].red = src[0];
-					dst[x].green = src[1];
+					channel_UV->GetWeightedPixel(x, y, &dst[x].red);
 					dst[x].blue = 0.f;
 					break;
 				}
 				case FilmOutputs::RAYCOUNT: {
 					float *dst = (float *)bits;
-
-					const float *rayCountData = channel_RAYCOUNT->GetPixel(x, y);
-					dst[x] = rayCountData[0];
+					channel_RAYCOUNT->GetWeightedPixel(x, y, &dst[x]);
 					break;
 				}
 				default:
@@ -1197,91 +1024,35 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) const {
 	switch (type) {
 		case FilmOutputs::RGB: {
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				Spectrum c;
-				if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
-					const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixel(i);
-
-					const float weight = src[3];
-					if (weight > 0.f)
-						c += Spectrum(src) / weight;
-				}
-				if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-					const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixel(i);
-
-					const float weight = src[3];
-					if (weight > 0.f)
-						c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
-				}
-
-				*dst++ = c.r;
-				*dst++ = c.g;
-				*dst++ = c.b;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				GetPixelFromMergedSampleBuffers(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::RGB_TONEMAPPED:
 			std::copy(channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::RGBA: {
-			float *srcAlpha = channel_ALPHA->GetPixels();
-			float *dst = buffer;
 			for (u_int i = 0; i < pixelCount; ++i) {
-				Spectrum c;
-				if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
-					const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixel(i);
-
-					const float weight = src[3];
-					if (weight > 0.f)
-						c += Spectrum(src) / weight;
-				}
-				if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-					const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixel(i);
-
-					const float weight = src[3];
-					if (weight > 0.f)
-						c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
-				}
-
-				*dst++ = c.r;
-				*dst++ = c.g;
-				*dst++ = c.b;
-				
-				if (srcAlpha[1] == 0.f)
-					*dst++ = 0.f;
-				else
-					*dst++ = srcAlpha[0] / srcAlpha[1];
-				srcAlpha += 2;
+				const u_int offset = i * 4;
+				GetPixelFromMergedSampleBuffers(i, &buffer[offset]);
+				channel_ALPHA->GetWeightedPixel(i, &buffer[offset + 3]);
 			}
 			break;
 		}
 		case FilmOutputs::RGBA_TONEMAPPED: {
 			float *srcRGB = channel_RGB_TONEMAPPED->GetPixels();
-			float *srcAlpha = channel_ALPHA->GetPixels();
 			float *dst = buffer;
 			for (u_int i = 0; i < pixelCount; ++i) {
 				*dst++ = *srcRGB++;
 				*dst++ = *srcRGB++;
 				*dst++ = *srcRGB++;
-				if (srcAlpha[1] == 0.f)
-					*dst++ = 0.f;
-				else
-					*dst++ = srcAlpha[0] / srcAlpha[1];
-				srcAlpha += 2;
+				channel_ALPHA->GetWeightedPixel(i, dst++);
 			}
 			break;
 		}
 		case FilmOutputs::ALPHA: {
-			float *srcAlpha = channel_ALPHA->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (srcAlpha[1] == 0.f)
-					*dst++ = 0.f;
-				else
-					*dst++ = srcAlpha[0] / srcAlpha[1];
-				srcAlpha += 2;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_ALPHA->GetWeightedPixel(i, &buffer[i]);
 			break;
 		}
 		case FilmOutputs::DEPTH:
@@ -1297,167 +1068,56 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			std::copy(channel_SHADING_NORMAL->GetPixels(), channel_SHADING_NORMAL->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::DIRECT_DIFFUSE: {
-			float *src = channel_DIRECT_DIFFUSE->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[3] == 0.f) {
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-				} else {
-					const float k = 1.f / src[3];
-					*dst++ = src[0] * k;
-					*dst++ = src[1] * k;
-					*dst++ = src[2] * k;
-				}
-				src += 4;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_DIRECT_DIFFUSE->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::DIRECT_GLOSSY: {
-			float *src = channel_DIRECT_GLOSSY->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[3] == 0.f) {
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-				} else {
-					const float k = 1.f / src[3];
-					*dst++ = src[0] * k;
-					*dst++ = src[1] * k;
-					*dst++ = src[2] * k;
-				}
-				src += 4;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_DIRECT_GLOSSY->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::EMISSION: {
-			float *src = channel_EMISSION->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[3] == 0.f) {
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-				} else {
-					const float k = 1.f / src[3];
-					*dst++ = src[0] * k;
-					*dst++ = src[1] * k;
-					*dst++ = src[2] * k;
-				}
-				src += 4;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_EMISSION->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::INDIRECT_DIFFUSE: {
-			float *src = channel_INDIRECT_DIFFUSE->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[3] == 0.f) {
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-				} else {
-					const float k = 1.f / src[3];
-					*dst++ = src[0] * k;
-					*dst++ = src[1] * k;
-					*dst++ = src[2] * k;
-				}
-				src += 4;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_DIFFUSE->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::INDIRECT_GLOSSY: {
-			float *src = channel_INDIRECT_GLOSSY->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[3] == 0.f) {
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-				} else {
-					const float k = 1.f / src[3];
-					*dst++ = src[0] * k;
-					*dst++ = src[1] * k;
-					*dst++ = src[2] * k;
-				}
-				src += 4;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_GLOSSY->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::INDIRECT_SPECULAR: {
-			float *src = channel_INDIRECT_SPECULAR->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[3] == 0.f) {
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-					*dst++ = 0.f;
-				} else {
-					const float k = 1.f / src[3];
-					*dst++ = src[0] * k;
-					*dst++ = src[1] * k;
-					*dst++ = src[2] * k;
-				}
-				src += 4;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_SPECULAR->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::MATERIAL_ID_MASK: {
-			float *src = channel_MATERIAL_ID_MASKs[index]->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[1] == 0.f)
-					*dst++ = 0.f;
-				else
-					*dst++ = src[0] / src[1];
-				src += 2;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_MATERIAL_ID_MASKs[index]->GetWeightedPixel(i, &buffer[i]);
 			break;
 		}
 		case FilmOutputs::DIRECT_SHADOW_MASK: {
-			float *src = channel_DIRECT_SHADOW_MASK->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[1] == 0.f)
-					*dst++ = 0.f;
-				else
-					*dst++ = src[0] / src[1];
-				src += 2;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_DIRECT_SHADOW_MASK->GetWeightedPixel(i, &buffer[i]);
 			break;
 		}
 		case FilmOutputs::INDIRECT_SHADOW_MASK: {
-			float *src = channel_INDIRECT_SHADOW_MASK->GetPixels();
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (src[1] == 0.f)
-					*dst++ = 0.f;
-				else
-					*dst++ = src[0] / src[1];
-				src += 2;
-			}
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(i, &buffer[i]);
 			break;
 		}
 		case FilmOutputs::RADIANCE_GROUP: {
 			float *dst = buffer;
 			for (u_int i = 0; i < pixelCount; ++i) {
 				Spectrum c;
-				if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
-					const float *src = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixel(i);
-
-					const float weight = src[3];
-					if (weight > 0.f)
-						c += Spectrum(src) / weight;
-				}
-				if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
-					const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixel(i);
-
-					const float weight = src[3];
-					if (weight > 0.f)
-						c += Spectrum(src) / (pixelCount / statsTotalSampleCount);
-				}
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->AccumulateWeightedPixel(i, &c.r);
+				channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, &c.r);
 
 				*dst++ = c.r;
 				*dst++ = c.g;
@@ -1483,6 +1143,26 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 			break;
 		default:
 			throw std::runtime_error("Unknown film output type in Film::GetOutput<u_int>(): " + ToString(type));
+	}
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
+	c[0] = 0.f;
+	c[1] = 0.f;
+	c[2] = 0.f;
+
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
+		channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(index, c);
+
+	if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
+		const float k = statsTotalSampleCount / pixelCount;
+		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
+			const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
+
+			c[0] += src[0] * k;
+			c[1] += src[1] * k;
+			c[2] += src[2] * k;
+		}
 	}
 }
 

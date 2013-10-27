@@ -23,7 +23,7 @@
 
 namespace slg {
 
-template<u_int CHANNELS, class T> class GenericFrameBuffer {
+template<u_int CHANNELS, u_int WEIGHT_CHANNELS, class T> class GenericFrameBuffer {
 public:
 	GenericFrameBuffer(const u_int w, const u_int h)
 		: width(w), height(h) {
@@ -121,9 +121,65 @@ public:
 		return &pixels[index * CHANNELS];
 	}
 
+	void GetWeightedPixel(const u_int x, const u_int y, T *dst) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		GetWeightedPixel(x + y * width, dst);
+	}
+
+	void GetWeightedPixel(const u_int index, T *dst) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		const T *src = GetPixel(index);
+
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				dst[i] = src[i];
+		} else {
+			if (src[CHANNELS - 1] == 0) {
+				for (u_int i = 0; i < CHANNELS; ++i)
+					dst[i] += 0;
+			} else {
+				const T k = 1.f / src[CHANNELS - 1];
+				for (u_int i = 0; i < CHANNELS; ++i)
+					dst[i] = src[i] * k;
+			}
+		}
+	}
+
+	void AccumulateWeightedPixel(const u_int x, const u_int y, T *dst) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		AccumulateWeightedPixel(x + y * width, dst);
+	}
+
+	void AccumulateWeightedPixel(const u_int index, T *dst) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		const T *src = GetPixel(index);
+
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				dst[i] += src[i];
+		} else {
+			if (src[CHANNELS - 1] != 0) {
+				const T k = 1.f / src[CHANNELS - 1];
+				for (u_int i = 0; i < CHANNELS; ++i)
+					dst[i] += src[i] * k;
+			}
+		}
+	}
+
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
-	u_int GetChannels() const { return CHANNELS; }
 
 private:
 	const u_int width, height;

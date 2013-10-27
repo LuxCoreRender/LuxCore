@@ -217,30 +217,34 @@ public:
 		const SampleResult &sampleResult, const float weight = 1.f);
 	void SplatSample(const SampleResult &sampleResult, const float weight = 1.f);
 
-	std::vector<GenericFrameBuffer<4, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	std::vector<GenericFrameBuffer<4, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	GenericFrameBuffer<2, float> *channel_ALPHA;
-	GenericFrameBuffer<3, float> *channel_RGB_TONEMAPPED;
-	GenericFrameBuffer<1, float> *channel_DEPTH;
-	GenericFrameBuffer<3, float> *channel_POSITION;
-	GenericFrameBuffer<3, float> *channel_GEOMETRY_NORMAL;
-	GenericFrameBuffer<3, float> *channel_SHADING_NORMAL;
-	GenericFrameBuffer<1, u_int> *channel_MATERIAL_ID;
-	GenericFrameBuffer<4, float> *channel_DIRECT_DIFFUSE;
-	GenericFrameBuffer<4, float> *channel_DIRECT_GLOSSY;
-	GenericFrameBuffer<4, float> *channel_EMISSION;
-	GenericFrameBuffer<4, float> *channel_INDIRECT_DIFFUSE;
-	GenericFrameBuffer<4, float> *channel_INDIRECT_GLOSSY;
-	GenericFrameBuffer<4, float> *channel_INDIRECT_SPECULAR;
-	std::vector<GenericFrameBuffer<2, float> *> channel_MATERIAL_ID_MASKs;
-	GenericFrameBuffer<2, float> *channel_DIRECT_SHADOW_MASK;
-	GenericFrameBuffer<2, float> *channel_INDIRECT_SHADOW_MASK;
-	GenericFrameBuffer<2, float> *channel_UV;
-	GenericFrameBuffer<1, float> *channel_RAYCOUNT;
+	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
+	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
+	GenericFrameBuffer<2, 1, float> *channel_ALPHA;
+	GenericFrameBuffer<3, 0, float> *channel_RGB_TONEMAPPED;
+	GenericFrameBuffer<1, 0, float> *channel_DEPTH;
+	GenericFrameBuffer<3, 0, float> *channel_POSITION;
+	GenericFrameBuffer<3, 0, float> *channel_GEOMETRY_NORMAL;
+	GenericFrameBuffer<3, 0, float> *channel_SHADING_NORMAL;
+	GenericFrameBuffer<1, 0, u_int> *channel_MATERIAL_ID;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY;
+	GenericFrameBuffer<4, 1, float> *channel_EMISSION;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR;
+	std::vector<GenericFrameBuffer<2, 1, float> *> channel_MATERIAL_ID_MASKs;
+	GenericFrameBuffer<2, 1, float> *channel_DIRECT_SHADOW_MASK;
+	GenericFrameBuffer<2, 1, float> *channel_INDIRECT_SHADOW_MASK;
+	GenericFrameBuffer<2, 0, float> *channel_UV;
+	GenericFrameBuffer<1, 0, float> *channel_RAYCOUNT;
 
 private:
 	void UpdateScreenBufferImpl(const ToneMapType type);
 	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
+	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
+		GetPixelFromMergedSampleBuffers(x + y * width, c);
+	}
 
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
