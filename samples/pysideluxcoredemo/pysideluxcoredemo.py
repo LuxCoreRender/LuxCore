@@ -18,6 +18,7 @@
 
 import sys
 sys.path.append("./lib")
+from array import *
 
 import pyluxcore
 from PySide.QtCore import *
@@ -46,7 +47,7 @@ class RenderView(QMainWindow):
 		self.center()
 		
 		# Allocate the image for the rendering
-		self.imageBuffer = bytearray(self.filmWidth * self.filmHeight * 4)
+		self.imageBuffer = array('B', [0] * (self.filmWidth * self.filmHeight * 4))
 
 		# Read the configuration and start the rendering
 		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
@@ -371,7 +372,7 @@ class RenderView(QMainWindow):
 			pyluxcore.Properties().
 			Set(pyluxcore.Property("film.width", [self.filmWidth])).
 			Set(pyluxcore.Property("film.height", [self.filmHeight])))
-		self.imageBuffer = bytearray(self.filmWidth * self.filmHeight * 4)
+		self.imageBuffer = array('B', [0] * (self.filmWidth * self.filmHeight * 4))
 		
 		# Re-start the rendering
 		self.session = pyluxcore.RenderSession(self.config)

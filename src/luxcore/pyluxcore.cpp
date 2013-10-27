@@ -37,7 +37,7 @@ static const char *LuxCoreVersion() {
 }
 
 //------------------------------------------------------------------------------
-// Glue for Properties class
+// Glue for Property class
 //------------------------------------------------------------------------------
 
 static luxrays::Property *Property_InitWithList(const str &name, const boost::python::list &l) {
@@ -201,6 +201,8 @@ static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
 }
 
 //------------------------------------------------------------------------------
+// Glue for Properties class
+//------------------------------------------------------------------------------
 
 static boost::python::list Properties_GetAllNames1(luxrays::Properties *props) {
 	boost::python::list l;
@@ -259,6 +261,8 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 	return luxrays::Property(name, values);
 }
 
+//------------------------------------------------------------------------------
+// Glue for Scene class
 //------------------------------------------------------------------------------
 
 static void Scene_DefineMesh(Scene *scene, const string &meshName,
@@ -415,30 +419,43 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 }
 
 //------------------------------------------------------------------------------
+// Glue for RenderSession class
+//------------------------------------------------------------------------------
 
 static void RenderSession_GetScreenBuffer(RenderSession *renderSession,
 		boost::python::object &obj) {
-	if (PyByteArray_Check(obj.ptr())) {
-		unsigned char *dst = (unsigned char *)PyByteArray_AsString(obj.ptr());
-		const float *src = renderSession->GetScreenBuffer();
+	if (PyObject_CheckBuffer(obj.ptr())) {
+		Py_buffer view;
+		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
+			const u_int width = renderSession->GetRenderConfig().GetProperties().Get("film.width").Get<u_int>();
+			const u_int height = renderSession->GetRenderConfig().GetProperties().Get("film.height").Get<u_int>();
 
-		const u_int width = renderSession->GetRenderConfig().GetProperties().Get("film.width").Get<u_int>();
-		const u_int height = renderSession->GetRenderConfig().GetProperties().Get("film.height").Get<u_int>();
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = (height - y - 1) * width * 3;
-			u_int dstIndex = y * width * 4;
+			if (view.len >= width * height * 4) {
+				unsigned char *dst = (unsigned char *)view.buf;
+				const float *src = renderSession->GetScreenBuffer();
 
-			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
-				dst[dstIndex++] = 0xff;
-				srcIndex += 3;
-			}
+				for (u_int y = 0; y < height; ++y) {
+					u_int srcIndex = (height - y - 1) * width * 3;
+					u_int dstIndex = y * width * 4;
+
+					for (u_int x = 0; x < width; ++x) {
+						dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
+						dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
+						dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
+						dst[dstIndex++] = 0xff;
+						srcIndex += 3;
+					}
+				}
+			} else
+				throw std::runtime_error("Not enough space in the buffer of RenderSession.GetScreenBuffer() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * 4));
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw std::runtime_error("Unable to get a data view in RenderSession.GetScreenBuffer() method: " + objType);
 		}
-	} else {
+	}	else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data RenderSession.GetScreenBuffer() method: " + objType);
+		throw std::runtime_error("Unsupported data type RenderSession.GetScreenBuffer() method: " + objType);
 	}
 }
 
