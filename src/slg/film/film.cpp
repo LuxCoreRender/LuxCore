@@ -656,6 +656,8 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			bitCount = 96;
 			break;
 		case FilmOutputs::RGB_TONEMAPPED:
+			UpdateChannel_RGB_TONEMAPPED();
+
 			imageType = hdrImage ? FIT_RGBF : FIT_BITMAP;
 			bitCount = hdrImage ? 96 : 24;
 			break;
@@ -666,6 +668,8 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 			bitCount = 128;
 			break;
 		case FilmOutputs::RGBA_TONEMAPPED:
+			UpdateChannel_RGB_TONEMAPPED();
+
 			imageType = hdrImage ? FIT_RGBAF : FIT_BITMAP;
 			bitCount = hdrImage ? 128 : 32;
 			break;
@@ -1021,7 +1025,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 	FreeImage_Unload(dib);
 }
 
-template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) const {
+template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) {
 	switch (type) {
 		case FilmOutputs::RGB: {
 			for (u_int i = 0; i < pixelCount; ++i)
@@ -1029,6 +1033,8 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::RGB_TONEMAPPED:
+			UpdateChannel_RGB_TONEMAPPED();
+
 			std::copy(channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::RGBA: {
@@ -1040,6 +1046,8 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::RGBA_TONEMAPPED: {
+			UpdateChannel_RGB_TONEMAPPED();
+
 			float *srcRGB = channel_RGB_TONEMAPPED->GetPixels();
 			float *dst = buffer;
 			for (u_int i = 0; i < pixelCount; ++i) {
@@ -1059,7 +1067,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			std::copy(channel_DEPTH->GetPixels(), channel_DEPTH->GetPixels() + pixelCount, buffer);
 			break;
 		case FilmOutputs::POSITION:
-			std::copy(channel_DEPTH->GetPixels(), channel_DEPTH->GetPixels() + pixelCount * 3, buffer);
+			std::copy(channel_POSITION->GetPixels(), channel_POSITION->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::GEOMETRY_NORMAL:
 			std::copy(channel_GEOMETRY_NORMAL->GetPixels(), channel_GEOMETRY_NORMAL->GetPixels() + pixelCount * 3, buffer);
@@ -1136,7 +1144,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 	}
 }
 
-template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) const {
+template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) {
 	switch (type) {
 		case FilmOutputs::MATERIAL_ID:
 			std::copy(channel_MATERIAL_ID->GetPixels(), channel_MATERIAL_ID->GetPixels() + pixelCount, buffer);
@@ -1166,68 +1174,14 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 	}
 }
 
-void Film::UpdateScreenBuffer() {
-	UpdateScreenBufferImpl(toneMapParams->GetType());
-}
-
-void Film::MergeSampleBuffers(Spectrum *p, std::vector<bool> &frameBufferMask) const {
-	const u_int pixelCount = width * height;
-
-	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
-
-	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			for (u_int j = 0; j < pixelCount; ++j) {
-				const float *sp = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(j);
-
-				if (sp[3] > 0.f) {
-					if (frameBufferMask[j])
-						p[j] += Spectrum(sp) / sp[3];
-					else
-						p[j] = Spectrum(sp) / sp[3];
-					frameBufferMask[j] = true;
-				}
-			}
-		}
-	}
-
-	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		const float factor = pixelCount / statsTotalSampleCount;
-
-		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			for (u_int j = 0; j < pixelCount; ++j) {
-				const float *sp = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j);
-
-				if (sp[3] > 0.f) {
-					if (frameBufferMask[j])
-						p[j] += Spectrum(sp) * factor;
-					else
-						p[j] = Spectrum(sp) * factor;
-					frameBufferMask[j] = true;
-				}
-			}
-		}
-	}
-
-	if (!enabledOverlappedScreenBufferUpdate) {
-		for (u_int i = 0; i < pixelCount; ++i) {
-			if (!frameBufferMask[i]) {
-				p[i].r = 0.f;
-				p[i].g = 0.f;
-				p[i].b = 0.f;
-			}
-		}
-	}
-}
-
-void Film::UpdateScreenBufferImpl(const ToneMapType type) {
+void Film::UpdateChannel_RGB_TONEMAPPED() {
 	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
 			!HasChannel(TONEMAPPED_FRAMEBUFFER)) {
 		// Nothing to do
 		return;
 	}
 
-	switch (type) {
+	switch (toneMapParams->GetType()) {
 		case TONEMAP_NONE: {
 			Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
 			std::vector<bool> frameBufferMask(pixelCount, false);
@@ -1312,6 +1266,56 @@ void Film::UpdateScreenBufferImpl(const ToneMapType type) {
 		default:
 			assert (false);
 			break;
+	}
+}
+
+void Film::MergeSampleBuffers(Spectrum *p, std::vector<bool> &frameBufferMask) const {
+	const u_int pixelCount = width * height;
+
+	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
+
+	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			for (u_int j = 0; j < pixelCount; ++j) {
+				const float *sp = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(j);
+
+				if (sp[3] > 0.f) {
+					if (frameBufferMask[j])
+						p[j] += Spectrum(sp) / sp[3];
+					else
+						p[j] = Spectrum(sp) / sp[3];
+					frameBufferMask[j] = true;
+				}
+			}
+		}
+	}
+
+	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
+		const float factor = pixelCount / statsTotalSampleCount;
+
+		for (u_int i = 0; i < radianceGroupCount; ++i) {
+			for (u_int j = 0; j < pixelCount; ++j) {
+				const float *sp = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j);
+
+				if (sp[3] > 0.f) {
+					if (frameBufferMask[j])
+						p[j] += Spectrum(sp) * factor;
+					else
+						p[j] = Spectrum(sp) * factor;
+					frameBufferMask[j] = true;
+				}
+			}
+		}
+	}
+
+	if (!enabledOverlappedScreenBufferUpdate) {
+		for (u_int i = 0; i < pixelCount; ++i) {
+			if (!frameBufferMask[i]) {
+				p[i].r = 0.f;
+				p[i].g = 0.f;
+				p[i].b = 0.f;
+			}
+		}
 	}
 }
 
@@ -1490,5 +1494,8 @@ void Film::ResetConvergenceTest() {
 }
 
 u_int Film::RunConvergenceTest() {
+	// Required in order to have a valid convergence test
+	UpdateChannel_RGB_TONEMAPPED();
+
 	return convTest->Test((const float *)channel_RGB_TONEMAPPED->GetPixels());
 }

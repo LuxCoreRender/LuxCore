@@ -175,14 +175,11 @@ public:
 	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
 		const luxrays::Properties *props = NULL);
 
-	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer, const u_int index = 0) const {
+	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer, const u_int index = 0) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
-	void UpdateScreenBuffer();
-	float *GetScreenBuffer() const {
-		return channel_RGB_TONEMAPPED->GetPixels();
-	}
+	void UpdateChannel_RGB_TONEMAPPED();
 
 	//--------------------------------------------------------------------------
 
@@ -239,7 +236,6 @@ public:
 	GenericFrameBuffer<1, 0, float> *channel_RAYCOUNT;
 
 private:
-	void UpdateScreenBufferImpl(const ToneMapType type);
 	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
@@ -288,8 +284,8 @@ private:
 	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
 
-template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) const;
-template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) const;
+template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index);
+template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index);
 
 //------------------------------------------------------------------------------
 // SampleResult

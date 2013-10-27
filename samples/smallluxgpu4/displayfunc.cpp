@@ -279,8 +279,8 @@ void displayFunc(void) {
 		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
 
 	if (!optRealTimeMode)
-		session->film->UpdateScreenBuffer();
-	const float *pixels = session->film->GetScreenBuffer();
+		session->film->UpdateChannel_RGB_TONEMAPPED();
+	const float *pixels = session->film->channel_RGB_TONEMAPPED->GetPixels();
 
 	glRasterPos2i(0, 0);
 	glDrawPixels(session->film->GetWidth(), session->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);

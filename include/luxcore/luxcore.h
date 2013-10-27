@@ -101,6 +101,12 @@ public:
 	void Save() const;
 
 	/*!
+	 * \brief Returns the size (in float or u_int) of a Film output channel.
+	 *
+	 * \param type is the Film output channel to use.
+	 */
+	size_t GetOutputSize(const FilmOutputType type) const;
+	/*!
 	 * \brief Fills the buffer with a Film output channel.
 	 *
 	 * \param type is the Film output channel to use. It must be one
@@ -113,9 +119,6 @@ public:
 	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const u_int index = 0) const {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
-
-	// Just a temporary hack
-	const float *GetScreenBuffer();
 
 	friend class RenderSession;
 

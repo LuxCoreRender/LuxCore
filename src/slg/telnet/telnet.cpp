@@ -868,7 +868,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(&h, sizeof(unsigned int))));
 
 							// Transmit the framebuffer (RGB float)
-							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(session->film->GetScreenBuffer(),
+							session->film->UpdateChannel_RGB_TONEMAPPED();
+							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(session->film->channel_RGB_TONEMAPPED->GetPixels(),
 									sizeof(float) * w * h * 3)));
 						}
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
@@ -886,7 +887,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							// Translate the framebuffer
 							unsigned char *fb = new unsigned char[w * h * 3];
 							unsigned char *dst = fb;
-							const float *src = session->film->GetScreenBuffer();
+							session->film->UpdateChannel_RGB_TONEMAPPED();
+							const float *src = session->film->channel_RGB_TONEMAPPED->GetPixels();
 							for (unsigned int i = 0; i < w * h; ++i) {
 								*dst++ = (*src++) * 255.f + .5f;
 								*dst++ = (*src++) * 255.f + .5f;
