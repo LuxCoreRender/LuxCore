@@ -67,7 +67,7 @@ extern void Init();
 
 
 /*!
- * \brief Scene stores textures, mateirials and objects definitions.
+ * \brief Scene stores textures, materials and objects definitions.
  */
 class Scene {
 public:
