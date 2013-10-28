@@ -297,6 +297,33 @@ Properties Scene::ToProperties(const string &directoryName) {
 // Methods to build and edit a scene
 //--------------------------------------------------------------------------
 
+void Scene::DefineImageMap(const std::string &name, ImageMap *im) {
+	imgMapCache.DefineImageMap(name, im);
+
+	editActions.AddAction(IMAGEMAPS_EDIT);
+}
+void Scene::DefineImageMap(const std::string &name, float *cols, const float gamma,
+	const u_int channels, const u_int width, const u_int height) {
+	DefineImageMap(name, new ImageMap(cols, gamma, channels, width, height));
+
+	editActions.AddAction(IMAGEMAPS_EDIT);
+}
+void Scene::DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh,
+	const bool usePlyNormals) {
+	extMeshCache.DefineExtMesh(meshName, mesh, usePlyNormals);
+
+	editActions.AddAction(GEOMETRY_EDIT);
+}
+void Scene::DefineMesh(const std::string &meshName,
+	const long plyNbVerts, const long plyNbTris,
+	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
+	luxrays::Spectrum *cols, float *alphas,
+	const bool usePlyNormals) {
+	extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
+
+	editActions.AddAction(GEOMETRY_EDIT);
+}
+
 void Scene::Parse(const Properties &props) {
 	sceneProperties.Set(props);
 
