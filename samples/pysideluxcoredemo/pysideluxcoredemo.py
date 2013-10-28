@@ -69,9 +69,7 @@ class RenderView(QMainWindow):
 	
 	def allocateImageBuffers(self):
 		########################################################################
-		#
 		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
-		#
 		########################################################################
 		if sys.version_info<(3,0,0):
 			self.imageBufferFloat = buffer(array('f', [0.0] * (self.filmWidth * self.filmHeight * 3)))
@@ -245,10 +243,31 @@ class RenderView(QMainWindow):
 		# Begin scene editing
 		self.session.BeginSceneEdit()
 
+		# Define check map
+		########################################################################
+		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
+		########################################################################
+		if sys.version_info<(3,0,0):
+			imageMap = buffer(array('f', [0.0] * (128 * 128 * 3)))
+		else:
+			imageMap = array('f', [0.0] * (128 * 128 * 3))
+		for y in range(128):
+			for x in range(128):
+				offset = (x + y * 128) * 3
+				if (x % 64 < 32) ^ (y % 64 < 32):
+					imageMap[offset] = 1.0
+					imageMap[offset] = 1.0
+					imageMap[offset] = 1.0
+				else:
+					imageMap[offset] = 1.0
+					imageMap[offset] = 0.0
+					imageMap[offset] = 0.0
+		self.scene.DefineImageMap("check_map", imageMap, 2.2, 3, 128, 128)
+
 		# Edit the material
 		self.scene.Parse(pyluxcore.Properties().
 			Set(pyluxcore.Property("scene.textures.tex.type", ["imagemap"])).
-			Set(pyluxcore.Property("scene.textures.tex.file", ["scenes/bump/map.png"])).
+			Set(pyluxcore.Property("scene.textures.tex.file", ["check_map"])).
 			Set(pyluxcore.Property("scene.textures.tex.gain", [0.6])).
 			Set(pyluxcore.Property("scene.textures.tex.mapping.uvscale", [16, -16])).
 			Set(pyluxcore.Property("scene.materials.shell.type", ["glossy2"])).

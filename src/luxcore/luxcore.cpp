@@ -236,6 +236,11 @@ const Properties &Scene::GetProperties() const {
 	return scene->GetProperties();
 }
 
+void Scene::DefineImageMap(const std::string &imgMapName, float *cols, const float gamma,
+		const u_int channels, const u_int width, const u_int height) {
+	scene->DefineImageMap(imgMapName, cols, gamma, channels, width, height);
+}
+
 void Scene::SetDeleteMeshData(const bool v) {
 	scene->extMeshCache.SetDeleteMeshData(v);
 }

@@ -159,6 +159,19 @@ public:
 	const luxrays::Properties &GetProperties() const;
 
 	/*!
+	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
+	 * The memory allocated for cols array is always freed by the Scene class.
+	 *
+	 * \param imgMapName is the name of the defined image map.
+	 * \param cols is a pointer to the an array of float.
+	 * \param gamma is the gamma correction value of the image.
+	 * \param channels is the number of float used for each pixel (1 or 3).
+	 * \param width is the width of the image map.
+	 * \param height is the width of the image map.
+	 */
+	void DefineImageMap(const std::string &imgMapName, float *cols, const float gamma,
+		const u_int channels, const u_int width, const u_int height);
+	/*!
 	 * \brief Sets if the Scene class destructor has to delete all the arrays
 	 * pointed by the defined meshes or not.
 	 *
@@ -167,11 +180,11 @@ public:
 	void SetDeleteMeshData(const bool v);
 	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects). The
-	 * memory allocate for the ExtTriangleMesh is always freed by the Scene class
+	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class
 	 * however the memory for the all vertices, triangle indices, etc. will be
 	 * freed or not according the settings.
 	 *
-	 * \param meshName is the name of the define mesh.
+	 * \param meshName is the name of the defined mesh.
 	 * \param mesh is a pointer to the mesh to be used.
 	 */
 	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
