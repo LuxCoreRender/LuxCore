@@ -21,10 +21,11 @@
 #define BOOST_PYTHON_STATIC_LIB
 
 #include <memory>
-#include <Python.h>
 
 #include <boost/foreach.hpp>
 #include <boost/python.hpp>
+
+#include <Python.h>
 
 #include <luxcore/luxcore.h>
 
