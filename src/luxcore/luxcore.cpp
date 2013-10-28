@@ -394,7 +394,8 @@ void RenderSession::UpdateStats() {
 	}
 	stats.Set(devicesNames);
 
-	stats.Set(Property("stats.dataset.trianglecount")(renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
+	// The explicit cast to size_t is required by VisualC++
+	stats.Set(Property("stats.dataset.trianglecount")((size_t)renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
 }
 
 const Properties &RenderSession::GetStats() const {

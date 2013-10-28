@@ -16,12 +16,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define BOOST_PYTHON_STATIC_LIB
+
 #include <memory>
 #include <Python.h>
 
 #include <boost/foreach.hpp>
 #include <boost/python.hpp>
-#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 
 #include <luxcore/luxcore.h>
 
