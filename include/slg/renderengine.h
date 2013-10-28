@@ -89,8 +89,8 @@ public:
 	// Statistics related methods
 	//--------------------------------------------------------------------------
 
-	unsigned int GetPass() const {
-		return static_cast<unsigned int>(samplesCount / (film->GetWidth() * film->GetHeight()));
+	u_int GetPass() const {
+		return static_cast<u_int>(samplesCount / (film->GetWidth() * film->GetHeight()));
 	}
 	double GetTotalSampleCount() const { return samplesCount; }
 	float GetConvergence() const { return convergence; }
@@ -354,7 +354,7 @@ protected:
 
 class HybridRenderThread {
 public:
-	HybridRenderThread(HybridRenderEngine *re, const unsigned int index,
+	HybridRenderThread(HybridRenderEngine *re, const u_int index,
 			luxrays::IntersectionDevice *device);
 	~HybridRenderThread();
 
@@ -384,13 +384,13 @@ protected:
 	Film *threadFilm;
 	luxrays::IntersectionDevice *device;
 
-	unsigned int threadIndex;
+	u_int threadIndex;
 	HybridRenderEngine *renderEngine;
 	u_int pixelCount;
 
 	double samplesCount;
 
-	unsigned int pendingRayBuffers;
+	u_int pendingRayBuffers;
 	luxrays::RayBuffer *currentRayBufferToSend;
 	std::deque<luxrays::RayBuffer *> freeRayBuffers;
 

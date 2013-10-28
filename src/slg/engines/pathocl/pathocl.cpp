@@ -177,7 +177,7 @@ void PathOCLRenderEngine::UpdateCounters() {
 	elapsedTime = WallClockTime() - startTime;
 
 	// Update the sample count statistic
-	unsigned long long totalCount = 0;
+	double totalCount = 0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		slg::ocl::pathocl::GPUTaskStats *stats = ((PathOCLRenderThread *)(renderThreads[i]))->gpuTaskStats;
 
