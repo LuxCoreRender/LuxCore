@@ -304,6 +304,8 @@ void PathOCLRenderThread::AdditionalInit() {
 	// In case renderEngine->taskCount has changed
 	delete[] gpuTaskStats;
 	gpuTaskStats = new slg::ocl::pathocl::GPUTaskStats[taskCount];
+	for (u_int i = 0; i < taskCount; ++i)
+		gpuTaskStats[i].sampleCount = 0;
 
 	//--------------------------------------------------------------------------
 	// Allocate Ray/RayHit buffers
