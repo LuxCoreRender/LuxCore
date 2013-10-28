@@ -80,7 +80,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	/*!
-	 * \brief Return a list of all aviable device descriptions within the Context.
+	 * \brief Return a list of all available device descriptions within the Context.
 	 *
 	 * \return the vector of all DeviceDescription available.
 	 */

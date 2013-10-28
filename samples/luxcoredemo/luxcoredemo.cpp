@@ -103,7 +103,28 @@ int main(int argc, char *argv[]) {
 
 			cout << props0.Get("doesnt.exist.test", MakePropertyValues(0, 1, 2)) << "\n\n";
 		}
-		
+
+		//----------------------------------------------------------------------
+		cout << "LuxRays device information example...\n";
+		//----------------------------------------------------------------------
+
+		{
+			luxrays::Context ctx;
+			const vector<luxrays::DeviceDescription *> &deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+
+			// Print device info
+			for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
+				luxrays::DeviceDescription *desc = deviceDescriptions[i];
+				cout << "Device " << i << " name: " << desc->GetName() << "\n";
+				cout << "Device " << i << " type: " << luxrays::DeviceDescription::GetDeviceType(desc->GetType()) << "\n";
+				cout << "Device " << i << " compute units: " << desc->GetComputeUnits() << "\n";
+				cout << "Device " << i << " preferred float vector width: " << desc->GetNativeVectorWidthFloat() << "\n";
+				cout << "Device " << i << " max allocable memory: " << desc->GetMaxMemory() / (1024 * 1024) << "MBytes" << "\n";
+				cout << "Device " << i << " max allocable memory block size: " << desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes" << "\n";
+			}
+		}
+		cout << "\n";
+
 		//----------------------------------------------------------------------
 		cout << "RenderConfig and RenderSession examples (requires scenes directory)...\n";
 		//----------------------------------------------------------------------

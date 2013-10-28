@@ -71,6 +71,14 @@ print("Get: %s" % props0.Get("prefix.test1.prop1"))
 print("Get default: %s\n" % props0.Get("doesnt.exist", ["default_value0", "default_value1"]))
 
 ################################################################################
+## LuxRays device information examples
+################################################################################
+
+print("LuxRays device information example......")
+deviceList = pyluxcore.GetOpenCLDeviceList()
+print("OpenCL device list: %s\n" % str(deviceList))
+
+################################################################################
 ## RenderConfig and RenderSession examples
 ################################################################################
 
