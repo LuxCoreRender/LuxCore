@@ -294,7 +294,7 @@ class RenderView(QMainWindow):
 		
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("LuxBall material set to: Matte")
+		print("LuxBall material set to: Glass")
 
 	def luxBallMatGlossyImageMap(self):
 		# Begin scene editing
@@ -340,7 +340,7 @@ class RenderView(QMainWindow):
 		
 		# End scene editing
 		self.session.EndSceneEdit()
-		print("LuxBall material set to: Matte")
+		print("LuxBall material set to: Glossy with image map")
 	
 	def luxBallMove(self, t):
 		# Begin scene editing

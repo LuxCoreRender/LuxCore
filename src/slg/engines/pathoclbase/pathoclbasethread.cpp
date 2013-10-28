@@ -1185,7 +1185,16 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 			editActions.Has(INFINITELIGHT_EDIT)) {
 		// Update Scene light power distribution for direct light sampling
 		InitLightsDistribution();
+
+		const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
+		if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (triAreaLightCount == 0))
+			throw runtime_error("There are no light sources supported by PathOCL in the scene");
 	}
+
+	// A material types edit can enable/disable PARAM_HAS_PASSTHROUGH parameter
+	// and change the size of the structure allocated
+	if (editActions.Has(MATERIAL_TYPES_EDIT))
+		AdditionalInit();
 
 	//--------------------------------------------------------------------------
 	// Recompile Kernels if required
