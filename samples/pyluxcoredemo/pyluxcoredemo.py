@@ -112,7 +112,7 @@ while True:
 session.Stop()
 
 # Save the rendered image
-session.SaveFilm()
+session.GetFilm().Save()
 
 print("Done.")
 
