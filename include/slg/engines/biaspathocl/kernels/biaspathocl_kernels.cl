@@ -604,20 +604,20 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					}
 				} else {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-					sample->result.indirectShadowMask = 0.f;
+					sampleResult->indirectShadowMask = 0.f;
 #endif
 
 					if (pathBSDFEvent & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-						VADD3F(&sample->result.indirectDiffuse.r, lightRadiance);
+						VADD3F(&sampleResult->indirectDiffuse.r, lightRadiance);
 #endif
 					} else if (pathBSDFEvent & GLOSSY) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-						VADD3F(&sample->result.indirectGlossy.r, lightRadiance);
+						VADD3F(&sampleResult->indirectGlossy.r, lightRadiance);
 #endif
 					} else if (pathBSDFEvent & SPECULAR) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-						VADD3F(&sample->result.indirectSpecular.r, lightRadiance);
+						VADD3F(&sampleResult->indirectSpecular.r, lightRadiance);
 #endif
 					}
 				}
@@ -625,7 +625,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 			else {
 				if (firstPathVertex) {
-					const int lightSamplesCount = lightSamples[*currentLightIndex];
+					const int lightSamplesCount = lightSamples[taskDirectLight->lightIndex];
 					const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
 
 					sampleResult->directShadowMask += 1.f / (sampleCount * sampleCount);
