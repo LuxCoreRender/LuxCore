@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// Windows seems to require this #define otherwise VisualC++ looks for
+// Boost Python DLL symbols
 #define BOOST_PYTHON_STATIC_LIB
 
 #include <memory>
@@ -387,7 +389,7 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 				film->GetOutput<u_int>(type, buffer, index);
 			} else
 				throw std::runtime_error("Not enough space in the buffer of Film.GetOutputUInt() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float)));
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(u_int)));
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw std::runtime_error("Unable to get a data view in Film.GetOutputUInt() method: " + objType);
@@ -406,6 +408,32 @@ static void Film_GetOutputUInt2(Film *film, const Film::FilmOutputType type,
 //------------------------------------------------------------------------------
 // Glue for Scene class
 //------------------------------------------------------------------------------
+
+static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
+		boost::python::object &obj, const float gamma,
+		const u_int channels, const u_int width, const u_int height) {
+	if (PyObject_CheckBuffer(obj.ptr())) {
+		Py_buffer view;
+		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
+			if ((size_t)view.len >= width * height * channels * sizeof(float)) {
+				float *buffer = (float *)view.buf;
+				// Make a copy of the buffer
+				float *cols = new float[width * height * channels];
+				copy(buffer, buffer + width * height * channels, cols);
+
+				scene->DefineImageMap(imgMapName, cols, gamma, channels, width, height);
+			} else
+				throw std::runtime_error("Not enough space in the buffer of Scene.DefineImageMap() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * channels * sizeof(float)));
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw std::runtime_error("Unable to get a data view in Scene.DefineImageMap() method: " + objType);
+		}
+	}	else {
+		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data type Scene.DefineImageMap() method: " + objType);
+	}
+}
 
 static void Scene_DefineMesh(Scene *scene, const string &meshName,
 		boost::python::object &p, boost::python::object &vi,
@@ -710,6 +738,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<Scene>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
 		.def("GetProperties", &Scene::GetProperties, return_internal_reference<>())
+		.def("DefineImageMap", &Scene_DefineImageMap)
 		.def("DefineMesh", &Scene_DefineMesh)
 		.def("Parse", &Scene::Parse)
 		.def("DeleteObject", &Scene::DeleteObject)

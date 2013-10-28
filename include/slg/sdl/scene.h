@@ -72,6 +72,10 @@ public:
 	void DefineImageMap(const std::string &name, ImageMap *im) {
 		imgMapCache.DefineImageMap(name, im);
 	}
+	void DefineImageMap(const std::string &name, float *cols, const float gamma,
+		const u_int channels, const u_int width, const u_int height) {
+		DefineImageMap(name, new ImageMap(cols, gamma, channels, width, height));
+	}
 	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh,
 		const bool usePlyNormals = true) {
 		extMeshCache.DefineExtMesh(meshName, mesh, usePlyNormals);
