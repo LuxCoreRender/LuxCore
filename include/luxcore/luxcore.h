@@ -61,7 +61,8 @@
 namespace luxcore {
 
 /*!
- * \brief Initializes LuxCore API. This function has to be called before anything else.
+ * \brief Initializes LuxCore API. This function has to be called before
+ * anything else.
  */
 extern void Init();
 

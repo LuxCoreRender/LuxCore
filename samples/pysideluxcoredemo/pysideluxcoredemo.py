@@ -16,9 +16,11 @@
 # limitations under the License.
 ################################################################################
 
+from array import ArrayType
 import sys
 sys.path.append("./lib")
 from array import *
+from functools import partial
 
 import pyluxcore
 from PySide.QtCore import *
@@ -83,10 +85,19 @@ class RenderView(QMainWindow):
 		self.quitAct.setShortcuts(QKeySequence.Quit)
 		self.saveImageAct = QAction("&Save image", self, triggered = self.saveImage)
 		
+		# RenderEngine type
+		self.renderEnginePathCPUAct = QAction("Path&CPU", self, triggered = self.renderEnginePathCPU)
+		# Get the list of all OpenCL devices avilable
+		self.deviceList = pyluxcore.GetOpenCLDeviceList()
+		self.renderEnginePathOCLActs = []
+		for i in range(len(self.deviceList)):
+			self.renderEnginePathOCLActs.append(
+				QAction(self.deviceList[i][0], self, triggered = partial(self.renderEnginePathOCL, i)))
+		
 		self.cameraToggleDOFAct = QAction("Togle &DOF", self, triggered = self.cameraToggleDOF)
-		self.cameraMoveLeftAct = QAction("Move &left", self, triggered = lambda: self.cameraMove(-0.5))
+		self.cameraMoveLeftAct = QAction("Move &left", self, triggered = partial(self.cameraMove, -0.5))
 		self.cameraMoveLeftAct.setShortcuts(QKeySequence.MoveToPreviousChar)
-		self.cameraMoveRightAct = QAction("Move &right", self, triggered = lambda: self.cameraMove(0.5))
+		self.cameraMoveRightAct = QAction("Move &right", self, triggered = partial(self.cameraMove, 0.5))
 		self.cameraMoveRightAct.setShortcuts(QKeySequence.MoveToNextChar)
 		
 		self.luxBallMatMirrorAct = QAction("&Mirror", self, triggered = self.luxBallMatMirror)
@@ -94,27 +105,35 @@ class RenderView(QMainWindow):
 		self.luxBallMatGlassAct = QAction("&Glass", self, triggered = self.luxBallMatGlass)
 		self.luxBallMatGlossyImageMapAct = QAction("G&lossy with image map", self, triggered = self.luxBallMatGlossyImageMap)
 
-		self.luxBallMoveLeftAct = QAction("Move &left", self, triggered = lambda: self.luxBallMove(-0.2))
+		self.luxBallMoveLeftAct = QAction("Move &left", self, triggered = partial(self.luxBallMove, -0.2))
 		self.luxBallMoveLeftAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Left)])
-		self.luxBallMoveRightAct = QAction("Move &right", self, triggered = lambda: self.luxBallMove(0.2))
+		self.luxBallMoveRightAct = QAction("Move &right", self, triggered = partial(self.luxBallMove, 0.2))
 		self.luxBallMoveRightAct.setShortcuts([QKeySequence(Qt.CTRL + Qt.Key_Right)])
 		
 		self.luxBallShapeToggleAct = QAction("Toggle S&hell", self, triggered = self.luxBallShapeToggle)
 
 		self.filmSetOutputChannel_RGB_TONEMAPPED_Act = QAction("&RGB TONEMAPPED output channel", self,
-			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.RGB_TONEMAPPED))
+			triggered = partial(self.filmSetOutputChannel, pyluxcore.FilmOutputType.RGB_TONEMAPPED))
 		self.filmSetOutputChannel_DIRECT_DIFFUSE_Act = QAction("&DIRECT DIFFUSE output channel", self,
-			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.DIRECT_DIFFUSE))
+			triggered = partial(self.filmSetOutputChannel, pyluxcore.FilmOutputType.DIRECT_DIFFUSE))
 		self.filmSetOutputChannel_INDIRECT_SPECULAR_Act = QAction("&INDIRECT SPECULAR output channel", self,
-			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.INDIRECT_SPECULAR))
+			triggered = partial(self.filmSetOutputChannel, pyluxcore.FilmOutputType.INDIRECT_SPECULAR))
 		self.filmSetOutputChannel_EMISSION_Act = QAction("&EMISSION output channel", self,
-			triggered = lambda: self.filmSetOutputChannel(pyluxcore.FilmOutputType.EMISSION))
+			triggered = partial(self.filmSetOutputChannel, pyluxcore.FilmOutputType.EMISSION))
 	
 	def createMenus(self):
 		fileMenu = QMenu("&File", self)
 		fileMenu.addAction(self.saveImageAct)
 		fileMenu.addAction(self.quitAct)
 		
+		renderEngineMenu = QMenu("&Render Engine", self)
+		renderEngineMenu.addAction(self.renderEnginePathCPUAct)
+		renderEnginePathOCLMenu = QMenu("Path&GPU", self)
+		renderEngineMenu.addMenu(renderEnginePathOCLMenu);
+		# Add an entry for each OpenCL device
+		for i in range(len(self.deviceList)):
+			renderEnginePathOCLMenu.addAction(self.renderEnginePathOCLActs[i])
+
 		cameraMenu = QMenu("&Camera", self)
 		cameraMenu.addAction(self.cameraToggleDOFAct)
 		cameraMenu.addAction(self.cameraMoveLeftAct)
@@ -140,6 +159,7 @@ class RenderView(QMainWindow):
 		filmMenu.addAction(self.filmSetOutputChannel_EMISSION_Act)
 		
 		self.menuBar().addMenu(fileMenu)
+		self.menuBar().addMenu(renderEngineMenu)
 		self.menuBar().addMenu(cameraMenu)
 		self.menuBar().addMenu(luxBallMatMenu)
 		self.menuBar().addMenu(luxBallPosMenu)
@@ -155,6 +175,43 @@ class RenderView(QMainWindow):
 		# Save the rendered image
 		self.session.GetFilm().Save()
 		print("Image saved")
+	
+	def renderEnginePathCPU(self):
+		# Stop the rendering
+		self.session.Stop()
+		self.session = None
+		
+		# Change the render engine to PATHCPU
+		props = self.config.GetProperties()
+		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+		
+		# Create the new RenderConfig
+		self.config = pyluxcore.RenderConfig(props, self.scene)
+		
+		# Re-start the rendering
+		self.session = pyluxcore.RenderSession(self.config)
+		self.session.Start()
+		print("PathCPU selected")
+	
+	def renderEnginePathOCL(self, index):
+		# Stop the rendering
+		self.session.Stop()
+		self.session = None
+		
+		# Change the render engine to PATHCPU
+		props = self.config.GetProperties()
+		selectString = list("0" * len(self.deviceList))
+		selectString[index] = "1"
+		props.Set(pyluxcore.Property("renderengine.type", ["PATHOCL"])). \
+			Set(pyluxcore.Property("opencl.devices.select", ["".join(selectString)]))
+		
+		# Create the new RenderConfig
+		self.config = pyluxcore.RenderConfig(props, self.scene)
+		
+		# Re-start the rendering
+		self.session = pyluxcore.RenderSession(self.config)
+		self.session.Start()
+		print("PathOCL selected: %s" % self.deviceList[index][0])
 	
 	def cameraToggleDOF(self):
 		# Begin scene editing

@@ -34,9 +34,104 @@ using namespace boost::python;
 
 namespace luxcore {
 
+//------------------------------------------------------------------------------
+// Module functions
+//------------------------------------------------------------------------------
+
 static const char *LuxCoreVersion() {
 	static const char *luxCoreVersion = LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR;
 	return luxCoreVersion;
+}
+
+static void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
+		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}
+	if (!PyObject_CheckBuffer(objDst.ptr())) {
+		const string objType = extract<string>((objDst.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data type in destination object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}	
+	Py_buffer dstView;
+	if (PyObject_GetBuffer(objDst.ptr(), &dstView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}
+
+	if (srcView.len / (3 * 4) != dstView.len / 4)
+		throw std::runtime_error("Wrong buffer size in ConvertFilmChannelOutput_3xFloat_To_4xUChar()");
+
+	const float *src = (float *)srcView.buf;
+	unsigned char *dst = (unsigned char *)dstView.buf;
+
+	if (normalize) {
+		// Look for the max. in source buffer
+
+		float maxValue = 0.f;
+		for (u_int i = 0; i < width * height * 3; ++i) {
+			const float value = src[i];
+			if (!isinf(value) && (value > maxValue))
+				maxValue = value;
+		}
+		const float k = (maxValue == 0.f) ? 0.f : (255.f / maxValue);
+
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = (height - y - 1) * width * 3;
+			u_int dstIndex = y * width * 4;
+
+			for (u_int x = 0; x < width; ++x) {
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * k + .5f));
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * k + .5f));
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * k + .5f));
+				dst[dstIndex++] = 0xff;
+				srcIndex += 3;
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = (height - y - 1) * width * 3;
+			u_int dstIndex = y * width * 4;
+
+			for (u_int x = 0; x < width; ++x) {
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
+				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
+				dst[dstIndex++] = 0xff;
+				srcIndex += 3;
+			}
+		}
+	}
+}
+
+static boost::python::list GetOpenCLDeviceList() {
+	luxrays::Context ctx;
+	vector<luxrays::DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+
+	// Select only OpenCL devices
+	luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+
+	// Add all device information to the list
+	boost::python::list l;
+	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
+		luxrays::DeviceDescription *desc = deviceDescriptions[i];
+
+		l.append(boost::python::make_tuple(
+				desc->GetName(),
+				luxrays::DeviceDescription::GetDeviceType(desc->GetType()),
+				desc->GetComputeUnits(),
+				desc->GetNativeVectorWidthFloat(),
+				desc->GetMaxMemory(),
+				desc->GetMaxMemoryAllocSize()));
+	}
+
+	return l;
 }
 
 //------------------------------------------------------------------------------
@@ -279,73 +374,6 @@ void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list 
 //------------------------------------------------------------------------------
 // Glue for Film class
 //------------------------------------------------------------------------------
-
-static void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
-		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}
-	if (!PyObject_CheckBuffer(objDst.ptr())) {
-		const string objType = extract<string>((objDst.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in destination object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}	
-	Py_buffer dstView;
-	if (PyObject_GetBuffer(objDst.ptr(), &dstView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}
-
-	if (srcView.len / (3 * 4) != dstView.len / 4)
-		throw std::runtime_error("Wrong buffer size in ConvertFilmChannelOutput_3xFloat_To_4xUChar()");
-
-	const float *src = (float *)srcView.buf;
-	unsigned char *dst = (unsigned char *)dstView.buf;
-
-	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height * 3; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && (value > maxValue))
-				maxValue = value;
-		}
-		const float k = (maxValue == 0.f) ? 0.f : (255.f / maxValue);
-
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = (height - y - 1) * width * 3;
-			u_int dstIndex = y * width * 4;
-
-			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * k + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * k + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * k + .5f));
-				dst[dstIndex++] = 0xff;
-				srcIndex += 3;
-			}
-		}
-	} else {
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = (height - y - 1) * width * 3;
-			u_int dstIndex = y * width * 4;
-
-			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
-				dst[dstIndex++] = 0xff;
-				srcIndex += 3;
-			}
-		}
-	}
-}
 
 static size_t Film_GetOutputSize(Film *film, const Film::FilmOutputType type) {
 	return film->GetOutputSize(type);
@@ -609,6 +637,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("Init", &Init);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &ConvertFilmChannelOutput_3xFloat_To_4xUChar);
 
+	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
+	
 	//--------------------------------------------------------------------------
 	// Property class
 	//--------------------------------------------------------------------------
