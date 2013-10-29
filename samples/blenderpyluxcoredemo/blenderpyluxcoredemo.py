@@ -37,8 +37,9 @@ import sys
 # The writing of your own code carries some privilege...
 sys.path.append("/home/david/projects/luxrender-dev/luxrays/lib")
 
-import bpy
 from mathutils import Matrix, Vector
+import bpy
+import bgl
 
 import pyluxcore
 
@@ -49,28 +50,34 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 	bl_label = "LuxCoreDemo Renderer"
 	bl_use_preview = True
 	
-	# This is the only method called by blender, in this example
-	# we use it to detect preview rendering and call the implementation
-	# in another method.
-	def render(self, blScene):
-		print("LuxCore render call")
-		
+	def __init__(self):
+		print("LuxCore __init__ call")
 		pyluxcore.Init()
-		
+		self.imageBufferFloat = None
+		self.session = None
+	
+	def __del__(self):
+		print("LuxCore __del__ call")
+		if (self.session != None):
+			self.session.Stop()
+	
+	def CreateRenderConfigProps(self):
 		########################################################################
 		# RenderConfig properties
 		########################################################################
 		
 		cfgProps = pyluxcore.Properties()
-		
-		scale = blScene.render.resolution_percentage / 100.0
-		filmWidth = int(blScene.render.resolution_x * scale)
-		filmHeight = int(blScene.render.resolution_y * scale)
-		
+
 		cfgProps.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
-		cfgProps.Set(pyluxcore.Property("film.width", [filmWidth]))
-		cfgProps.Set(pyluxcore.Property("film.height", [filmHeight]))
+		#props.Set(pyluxcore.Property("renderengine.type", ["PATHGPU"]))
+		#props.Set(pyluxcore.Property("opencl.devices.select", ["00010"]))
 		
+		cfgProps.Set(pyluxcore.Property("film.width", [self.filmWidth]))
+		cfgProps.Set(pyluxcore.Property("film.height", [self.filmHeight]))
+		
+		return cfgProps
+	
+	def ConvertBlenderScene(self, blScene):
 		########################################################################
 		# Create the scene
 		########################################################################
@@ -151,14 +158,28 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 			sceneProps.Set(pyluxcore.Property("scene.objects." + objName + ".material", ["dummymat"]))
 			sceneProps.Set(pyluxcore.Property("scene.objects." + objName + ".ply", ["Mesh-" + objName]))
 		
+		scene.Parse(sceneProps)
+		
+		return scene
+	
+	# This is the only method called by blender, in this example
+	# we use it to detect preview rendering and call the implementation
+	# in another method.
+	def render(self, blScene):
+		print("LuxCore render call")
+		
+		scale = blScene.render.resolution_percentage / 100.0
+		self.filmWidth = int(blScene.render.resolution_x * scale)
+		self.filmHeight = int(blScene.render.resolution_y * scale)
+
 		########################################################################
 		# Do the rendering
 		########################################################################
-
-		imageBufferFloat = array('f', [0.0] * (filmWidth * filmHeight * 3))
 		
-		scene.Parse(sceneProps)
-		config = pyluxcore.RenderConfig(cfgProps, scene)
+		imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
+		
+		scene = self.ConvertBlenderScene(blScene)
+		config = pyluxcore.RenderConfig(self.CreateRenderConfigProps(), scene)
 		session = pyluxcore.RenderSession(config)
 
 		session.Start()
@@ -185,9 +206,9 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 			session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)
 			
 			# Here we write the pixel values to the RenderResult
-			result = self.begin_result(0, 0, filmWidth, filmHeight)
+			result = self.begin_result(0, 0, self.filmWidth, self.filmHeight)
 			layer = result.layers[0]
-			layer.rect = pyluxcore.ConvertFilmChannelOutput_3xFloat_To_3xFloatList(filmWidth, filmHeight, imageBufferFloat)
+			layer.rect = pyluxcore.ConvertFilmChannelOutput_3xFloat_To_3xFloatList(self.filmWidth, self.filmHeight, imageBufferFloat)
 			self.end_result(result)
 			
 			if self.test_break():
@@ -200,9 +221,45 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 	
 	def view_update(self, context):
 		print("LuxCore view_update call")
+		
+		if (self.session != None):
+			self.session.Stop()
+		
+		self.filmWidth = context.region.width
+		self.filmHeight = context.region.height
+		print("Film size: %dx%d" % (self.filmWidth, self.filmHeight))
+
+		########################################################################
+		# Setup the rendering
+		########################################################################
+		
+		if (self.imageBufferFloat == None):
+			self.imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
+		
+		scene = self.ConvertBlenderScene(bpy.context.scene)
+		config = pyluxcore.RenderConfig(self.CreateRenderConfigProps(), scene)
+		self.session = pyluxcore.RenderSession(config)
+
+		self.session.Start()
 	
 	def view_draw(self, context):
 		print("LuxCore view_draw call")
+		
+		# Update statistics
+		self.session.UpdateStats()
+
+		stats = self.session.GetStats();
+		print("[Elapsed time: %3d][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+				stats.Get("stats.renderengine.time").GetFloat(),
+				stats.Get("stats.renderengine.pass").GetInt(),
+				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
+				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+		
+		# Update the screen
+		self.session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, self.imageBufferFloat)
+		glBuffer = bgl.Buffer(bgl.GL_FLOAT, [self.filmWidth * self.filmHeight * 3], self.imageBufferFloat)
+		bgl.glRasterPos2i(0, 0)
+		bgl.glDrawPixels(self.filmWidth, self.filmHeight, bgl.GL_RGB, bgl.GL_FLOAT, glBuffer);
 
 # Register the RenderEngine
 bpy.utils.register_class(LuxCoreDemoRenderEngine)
