@@ -69,8 +69,8 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 		cfgProps = pyluxcore.Properties()
 
 		cfgProps.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
-		#props.Set(pyluxcore.Property("renderengine.type", ["PATHGPU"]))
-		#props.Set(pyluxcore.Property("opencl.devices.select", ["00010"]))
+		#cfgProps.Set(pyluxcore.Property("renderengine.type", ["PATHOCL"]))
+		#cfgProps.Set(pyluxcore.Property("opencl.devices.select", ["10000"]))
 		
 		cfgProps.Set(pyluxcore.Property("film.width", [self.filmWidth]))
 		cfgProps.Set(pyluxcore.Property("film.height", [self.filmHeight]))
@@ -260,6 +260,9 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 		glBuffer = bgl.Buffer(bgl.GL_FLOAT, [self.filmWidth * self.filmHeight * 3], self.imageBufferFloat)
 		bgl.glRasterPos2i(0, 0)
 		bgl.glDrawPixels(self.filmWidth, self.filmHeight, bgl.GL_RGB, bgl.GL_FLOAT, glBuffer);
+		
+		# Trigger another update
+		self.tag_redraw()
 
 # Register the RenderEngine
 bpy.utils.register_class(LuxCoreDemoRenderEngine)
