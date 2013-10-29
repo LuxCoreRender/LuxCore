@@ -189,7 +189,7 @@ static int FaceCB(p_ply_argument argument) {
 	return 1;
 }
 
-ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals) {
+ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileName) {
 	p_ply plyfile = ply_open(fileName.c_str(), NULL);
 	if (!plyfile) {
 		std::stringstream ss;
@@ -226,7 +226,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
 	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n, 2);
-	if (((plyNbNormals > 0) || usePlyNormals) && (plyNbNormals != plyNbVerts)) {
+	if ((plyNbNormals > 0) && (plyNbNormals != plyNbVerts)) {
 		std::stringstream ss;
 		ss << "Wrong count of normals in '" << fileName << "'";
 		throw std::runtime_error(ss.str());
@@ -264,7 +264,10 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	p = new Point[plyNbVerts];
 	vi = new Triangle[plyNbTris];
-	n = new Normal[plyNbVerts];
+	if (plyNbNormals == 0)
+		n = NULL;
+	else
+		n = new Normal[plyNbNormals];
 	if (plyNbUVs == 0)
 		uv = NULL;
 	else
@@ -294,23 +297,13 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	ply_close(plyfile);
 
-	return CreateExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
+	return CreateExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 }
 
 ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
 	const long plyNbVerts, const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas,
-	const bool usePlyNormals) {
-	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
-
-	if (!usePlyNormals) {
-		// It looks like normals exported by Blender are bugged
-		mesh->ComputeNormals();
-	} else {
-		assert (n != NULL);
-	}
-
-	return mesh;
+	Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas) {
+	return new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 }
 
 //------------------------------------------------------------------------------

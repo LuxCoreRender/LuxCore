@@ -77,7 +77,7 @@ scene.materials.wall_white.kd = 0.85 0.85 0.85
 scene.materials.white_plastic.kd = 0.85 0.85 0.85
 ################################################################################
 scene.objects.black_matte.material = black_matte
-scene.objects.black_matte.ply = scenes/kitchen/black matte.ply
+scene.objects.black_matte.ply = "scenes/kitchen/black matte.ply"
 scene.objects.black_glass.material = black_glass
 scene.objects.black_glass.ply = scenes/kitchen/black_glass.ply
 scene.objects.desktop.material = desktop

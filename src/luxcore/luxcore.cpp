@@ -253,7 +253,7 @@ void Scene::DefineMesh(const std::string &meshName,
 	const long plyNbVerts, const long plyNbTris,
 	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 	luxrays::Spectrum *cols, float *alphas) {
-	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, true);
+	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 }
 
 void Scene::Parse(const luxrays::Properties &props) {

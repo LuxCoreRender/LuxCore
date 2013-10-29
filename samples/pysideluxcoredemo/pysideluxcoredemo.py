@@ -370,8 +370,7 @@ class RenderView(QMainWindow):
 		# Edit the LuxBall shape
 		if self.luxBallShapeIsCube:
 			self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxshell").
-				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["scenes/luxball/luxball-shell.ply"])).
-				Set(pyluxcore.Property("scene.objects.luxshell.useplynormals", [False])))
+				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["scenes/luxball/luxball-shell.ply"])))
 			self.luxBallShapeIsCube = False
 		else:
 			self.scene.DefineMesh("LuxCubeMesh", [
@@ -432,8 +431,7 @@ class RenderView(QMainWindow):
 				(0.0, 0.0),(1.0, 0.0), (1.0, 1.0),	(0.0, 1.0)
 				], None, None)
 			self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxshell").
-				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["LuxCubeMesh"])).
-				Set(pyluxcore.Property("scene.objects.luxshell.useplynormals", [True])))
+				Set(pyluxcore.Property("scene.objects.luxshell.ply", ["LuxCubeMesh"])))
 			self.luxBallShapeIsCube = True
 			
 
