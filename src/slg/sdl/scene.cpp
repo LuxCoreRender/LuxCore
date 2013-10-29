@@ -576,7 +576,7 @@ void Scene::ParseEnvLights(const Properties &props) {
 	// SkyLight
 	//--------------------------------------------------------------------------
 
-	if (props.HaveNames("scene.infinitelight")) {
+	if (props.HaveNames("scene.skylight")) {
 		const Matrix4x4 mat = props.Get("scene.skylight.transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
