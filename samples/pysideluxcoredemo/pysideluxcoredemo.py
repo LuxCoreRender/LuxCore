@@ -16,7 +16,6 @@
 # limitations under the License.
 ################################################################################
 
-from array import ArrayType
 import sys
 sys.path.append("./lib")
 from array import *
