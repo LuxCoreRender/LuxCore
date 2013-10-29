@@ -111,6 +111,34 @@ static void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const
 	}
 }
 
+static boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_int height,
+		boost::python::object &objSrc) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+	}	
+
+	const float *src = (float *)srcView.buf;
+	boost::python::list l;
+
+	for (u_int y = 0; y < height; ++y) {
+		u_int srcIndex = y * width * 3;
+
+		for (u_int x = 0; x < width; ++x) {
+			l.append(boost::python::make_tuple(src[srcIndex + 2], src[srcIndex + 1], src[srcIndex], 1.f));
+			srcIndex += 3;
+		}
+	}
+
+	return l;
+}
+
 static boost::python::list GetOpenCLDeviceList() {
 	luxrays::Context ctx;
 	vector<luxrays::DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
@@ -637,6 +665,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	def("Init", &Init);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &ConvertFilmChannelOutput_3xFloat_To_4xUChar);
+	def("ConvertFilmChannelOutput_3xFloat_To_3xFloatList", &ConvertFilmChannelOutput_3xFloat_To_3xFloatList);
 
 	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
 	
