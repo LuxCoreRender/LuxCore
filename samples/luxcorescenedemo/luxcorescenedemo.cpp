@@ -19,37 +19,14 @@
 #include <iostream>
 #include <boost/filesystem/operations.hpp>
 
-#include "slg/slg.h"
-#include "slg/sdl/sdl.h"
-#include "slg/rendersession.h"
-
 #include "luxrays/core/utils.h"
 #include "luxrays/utils/ocl.h"
 
+#include "luxcore/luxcore.h"
+
 using namespace std;
 using namespace luxrays;
-using namespace slg;
-
-void LuxRaysDebugHandler(const char *msg) {
-	cerr << "[LuxRays] " << msg << endl;
-}
-
-void SDLDebugHandler(const char *msg) {
-	cerr << "[SDL] " << msg << endl;
-}
-
-void SLGDebugHandler(const char *msg) {
-	cerr << "[SLG] " << msg << endl;
-}
-
-static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
-	printf("\n*** ");
-	if(fif != FIF_UNKNOWN)
-		printf("%s Format\n", FreeImage_GetFormatFromFIF(fif));
-
-	printf("%s", message);
-	printf(" ***\n");
-}
+using namespace luxcore;
 
 static void CreateBox(Scene *scene, const string &objName, const string &matName,
 		const bool enableUV, const BBox &bbox) {
@@ -109,7 +86,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	const string &meshName = "Mesh-" + objName;
 	if (!enableUV) {
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, NULL, NULL, NULL, false);
+		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, NULL, NULL, NULL);
 	} else {
 		UV *uv = new UV[24];
 		// Bottom face
@@ -144,74 +121,61 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 		uv[23] = UV(0.f, 1.f);
 
 		// Define the object
-		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, uv, NULL, NULL, false);
+		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, uv, NULL, NULL);
 	}
 
 	// Add the object to the scene
-	Properties prop;
-	prop.SetFromString(
+	Properties props;
+	props.SetFromString(
 		"scene.objects." + objName + ".ply = " + meshName + "\n"
 		"scene.objects." + objName + ".material = " + matName + "\n"
-		"scene.objects." + objName + ".useplynormals = 0\n"
+		"scene.objects." + objName + ".useplynormals = 1\n"
 		);
-	scene->Parse(prop);
+	scene->Parse(props);
 }
 
 static void DoRendering(RenderSession *session) {
-	const unsigned int haltTime = session->renderConfig->cfg.GetInt("batch.halttime", 0);
-	const unsigned int haltSpp = session->renderConfig->cfg.GetInt("batch.haltspp", 0);
-	const float haltThreshold = session->renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
+	const u_int haltTime = session->GetRenderConfig().GetProperties().GetInt("batch.halttime", 0);
+	const u_int haltSpp = session->GetRenderConfig().GetProperties().GetInt("batch.haltspp", 0);
+	const float haltThreshold = session->GetRenderConfig().GetProperties().GetFloat("batch.haltthreshold", -1.f);
 
-	const double startTime = WallClockTime();
-
-	double lastFilmUpdate = startTime;
 	char buf[512];
+	const Properties &stats = session->GetStats();
 	for (;;) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 
-		// Film update may be required by some render engine to
-		// update statistics, convergence test and more
-		if (WallClockTime() - lastFilmUpdate > 5.0) {
-			session->renderEngine->UpdateFilm();
-			lastFilmUpdate =  WallClockTime();
-		}
-
-		const double now = WallClockTime();
-		const double elapsedTime = now - startTime;
+		session->UpdateStats();
+		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
 		if ((haltTime > 0) && (elapsedTime >= haltTime))
 			break;
 
-		const unsigned int pass = session->renderEngine->GetPass();
+		const u_int pass = stats.Get("stats.renderengine.pass").Get<u_int>();
 		if ((haltSpp > 0) && (pass >= haltSpp))
 			break;
 
 		// Convergence test is update inside UpdateFilm()
-		const float convergence = session->renderEngine->GetConvergence();
+		const float convergence = stats.Get("stats.renderengine.convergence").Get<u_int>();
 		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
 			break;
 
 		// Print some information about the rendering progress
 		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
 				int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence,
-				session->renderEngine->GetTotalSamplesSec() / 1000000.0,
-				session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+				stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0,
+				stats.Get("stats.dataset.trianglecount").Get<size_t>() / 1000.0);
 
 		SLG_LOG(buf);
 	}
 
 	// Save the rendered image
-	session->SaveFilm();
+	session->GetFilm().Save();
 }
 
 int main(int argc, char *argv[]) {
-	LuxRays_DebugHandler = ::LuxRaysDebugHandler;
-	SLG_DebugHandler = ::SLGDebugHandler;
-	SLG_SDLDebugHandler = ::SDLDebugHandler;
-
 	try {
-		// Initialize FreeImage Library
-		FreeImage_Initialise(TRUE);
-		FreeImage_SetOutputMessage(FreeImageErrorHandler);
+		luxcore::Init();
+
+		cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n" ;
 
 		//----------------------------------------------------------------------
 		// Build the scene to render
@@ -220,16 +184,9 @@ int main(int argc, char *argv[]) {
 		Scene *scene = new Scene();
 
 		// Setup the camera
-		//
-		// Old deprecated syntax:
-		//scene->CreateCamera(
-		//	"scene.camera.lookat = 1.0 6.0 3.0  0.0 0.0 0.5\n"
-		//	"scene.camera.fieldofview = 60.0\n"
-		//	);
-		//
-		// New syntax
 		scene->Parse(
-				Property("scene.camera.lookat")(1.f , 6.f , 3.f)(0.f , 0.f , .5f) <<
+				Property("scene.camera.lookat.orig")(1.f , 6.f , 3.f) <<
+				Property("scene.camera.lookat.target")(0.f , 0.f , .5f) <<
 				Property("scene.camera.fieldofview")(60.f));
 
 		// Define texture maps
@@ -250,7 +207,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		scene->DefineImageMap("check_texmap", new ImageMap(img, 1.f, 3, size, size));
+		scene->DefineImageMap("check_texmap", img, 1.f, 3, size, size);
 		scene->Parse(
 			Property("scene.textures.map.type")("imagemap") <<
 			Property("scene.textures.map.file")("check_texmap") <<

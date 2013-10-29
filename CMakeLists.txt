@@ -125,8 +125,8 @@ add_subdirectory(src/luxcore)
 ################################################################################
 
 add_subdirectory(samples/benchsimple)
-add_subdirectory(samples/slglibdemo)
 add_subdirectory(samples/luxcoredemo)
+add_subdirectory(samples/luxcorescenedemo)
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	add_subdirectory(samples/smallluxgpu4)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
