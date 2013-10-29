@@ -282,7 +282,7 @@ Properties &Properties::SetFromStream(istream &stream) {
 				bool found = false;
 				while (last < len) {
 					if ((value[last] == '"') || (value[last] == '\'')) {
-						prop.Add(value.substr(first, last - first - 1));
+						prop.Add(value.substr(first, last - first));
 						found = true;
 						++last;
 
