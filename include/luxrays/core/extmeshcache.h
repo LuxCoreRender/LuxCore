@@ -42,19 +42,16 @@ public:
 	void DefineExtMesh(const std::string &fileName,
 		const u_int plyNbVerts, const u_int plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
-		luxrays::Spectrum *cols, float *alphas,
-		const bool usePlyNormals);
-	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
-		const bool usePlyNormals);
+		luxrays::Spectrum *cols, float *alphas);
+	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh);
 
-	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals,
-		const Transform *trans = NULL);
+	ExtMesh *GetExtMesh(const std::string &fileName, const Transform *trans = NULL);
 
 	// Note: before call to DeleteExtMesh, be sore to not have any instance referencing
 	// the geometry
-	void DeleteExtMesh(const std::string &fileName, const bool usePlyNormals);
+	void DeleteExtMesh(const std::string &fileName);
 
-	u_int GetExtMeshIndex(const std::string &fileName, const bool usePlyNormals) const;
+	u_int GetExtMeshIndex(const std::string &fileName) const;
 	u_int GetExtMeshIndex(const ExtMesh *m) const;
 
 	const std::vector<ExtMesh *> &GetMeshes() const { return meshes; }

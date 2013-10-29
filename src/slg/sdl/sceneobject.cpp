@@ -46,7 +46,6 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache) const {
 	props.SetString("scene.objects." + name + ".material", mat->GetName());
 	props.SetString("scene.objects." + name + ".ply",
 			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(mesh)).str() + ".ply");
-	props << Property("scene.objects." + name + ".useplynormals")(mesh->HasNormals());
 
 	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;

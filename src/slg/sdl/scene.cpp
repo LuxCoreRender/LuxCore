@@ -308,18 +308,16 @@ void Scene::DefineImageMap(const std::string &name, float *cols, const float gam
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
-void Scene::DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh,
-	const bool usePlyNormals) {
-	extMeshCache.DefineExtMesh(meshName, mesh, usePlyNormals);
+void Scene::DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh) {
+	extMeshCache.DefineExtMesh(meshName, mesh);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }
 void Scene::DefineMesh(const std::string &meshName,
 	const long plyNbVerts, const long plyNbTris,
 	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-	luxrays::Spectrum *cols, float *alphas,
-	const bool usePlyNormals) {
-	extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
+	luxrays::Spectrum *cols, float *alphas) {
+	extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }
@@ -1119,18 +1117,15 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 	if (plyFileName == "")
 		throw runtime_error("Syntax error in object .ply file name: " + objName);
 
-	// Check if I have to calculate normal or not
-	const bool usePlyNormals = props.Get(key + ".useplynormals", MakePropertyValues(false)).Get<bool>();
-
 	// Check if I have to use an instance mesh or not
 	ExtMesh *mesh;
 	if (props.IsDefined(key + ".transformation")) {
 		const Matrix4x4 mat = props.Get(key + ".transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
-		mesh = extMeshCache.GetExtMesh(plyFileName, usePlyNormals, &trans);
+		mesh = extMeshCache.GetExtMesh(plyFileName, &trans);
 	} else
-		mesh = extMeshCache.GetExtMesh(plyFileName, usePlyNormals);
+		mesh = extMeshCache.GetExtMesh(plyFileName);
 
 	// Get the material
 	if (!matDefs.IsMaterialDefined(matName))

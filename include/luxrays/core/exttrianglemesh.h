@@ -160,11 +160,10 @@ public:
 
 	virtual void WritePly(const std::string &fileName) const;
 
-	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals = false);
+	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName);
 	static ExtTriangleMesh *CreateExtTriangleMesh(
 		const long plyNbVerts, const long plyNbTris,
-		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas,
-		const bool usePlyNormals);
+		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas);
 
 private:
 	unsigned int vertCount;

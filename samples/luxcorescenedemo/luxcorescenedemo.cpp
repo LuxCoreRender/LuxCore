@@ -129,7 +129,6 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	props.SetFromString(
 		"scene.objects." + objName + ".ply = " + meshName + "\n"
 		"scene.objects." + objName + ".material = " + matName + "\n"
-		"scene.objects." + objName + ".useplynormals = 1\n"
 		);
 	scene->Parse(props);
 }
