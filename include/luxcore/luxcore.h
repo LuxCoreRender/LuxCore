@@ -357,7 +357,9 @@ public:
 	 */
 	void UpdateStats();
 	/*!
-	 * \brief Returns a list of statistics related to the ongoing rendering.
+	 * \brief Returns a list of statistics related to the ongoing rendering. The
+	 * returned Properties is granted to have a content only after the first call
+	 * to UpdateStats method.
 	 *
 	 * \return a Properties container with the statistics.
 	 */

@@ -18,14 +18,14 @@
 
 ################################################################################
 #
-# SLG library demo
+# LuxCore library scene demo
 #
 ################################################################################
 
-set(SLGLIBDEMO_SRCS
-	slglibdemo.cpp
+set(LUXCORESCENEDEMO_SRCS
+	luxcorescenedemo.cpp
 	)
 
-add_executable(slg4libdemo ${SLGLIBDEMO_SRCS})
+add_executable(luxcorescenedemo ${LUXCORESCENEDEMO_SRCS})
 
-TARGET_LINK_LIBRARIES(slg4libdemo smallluxgpu luxrays)
+TARGET_LINK_LIBRARIES(luxcorescenedemo luxcore smallluxgpu luxrays)
