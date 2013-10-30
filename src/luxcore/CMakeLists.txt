@@ -121,7 +121,13 @@ set(PYLUXCORE_SRCS
 )
 
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
-target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+
+if(APPLE)
+	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+else()
+	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+endif()
+
 set_target_properties(pyluxcore PROPERTIES PREFIX "")
 if(MSVC)
 	set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")

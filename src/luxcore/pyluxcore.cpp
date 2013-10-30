@@ -16,9 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#ifdef WIN32
 // Windows seems to require this #define otherwise VisualC++ looks for
 // Boost Python DLL symbols
+// do not use for unixes, it makes some symbols local
 #define BOOST_PYTHON_STATIC_LIB
+#endif
 
 #include <memory>
 
