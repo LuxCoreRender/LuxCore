@@ -55,6 +55,8 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 		pyluxcore.Init()
 		self.imageBufferFloat = None
 		self.session = None
+		self.filmWidth = -1
+		self.filmHeight = -1
 	
 	def __del__(self):
 		print("LuxCore __del__ call")
@@ -225,16 +227,15 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 		if (self.session != None):
 			self.session.Stop()
 		
-		self.filmWidth = context.region.width
-		self.filmHeight = context.region.height
-		print("Film size: %dx%d" % (self.filmWidth, self.filmHeight))
+		if (self.filmWidth != context.region.width) or (self.filmHeight != context.region.height):
+			self.filmWidth = context.region.width
+			self.filmHeight = context.region.height
+			self.imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
+			print("Film size: %dx%d" % (self.filmWidth, self.filmHeight))
 
 		########################################################################
 		# Setup the rendering
 		########################################################################
-		
-		if (self.imageBufferFloat == None):
-			self.imageBufferFloat = array('f', [0.0] * (self.filmWidth * self.filmHeight * 3))
 		
 		scene = self.ConvertBlenderScene(bpy.context.scene)
 		config = pyluxcore.RenderConfig(self.CreateRenderConfigProps(), scene)
@@ -244,6 +245,10 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 	
 	def view_draw(self, context):
 		print("LuxCore view_draw call")
+		
+		# Check if the size of the window is changed
+		if (self.filmWidth != context.region.width) or (self.filmHeight != context.region.height):
+			self.view_update(context)
 		
 		# Update statistics
 		self.session.UpdateStats()
