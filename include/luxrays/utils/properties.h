@@ -86,8 +86,55 @@ inline PropertyValues MakePropertyValues(const char *s) {
    return values;
 }
 /*!
- * \brief Create a list of values representing an identity 4x4 matrix to
+ * \brief Create a list of values representing a UV to
  * be used by a Property.
+ *
+ * \param v is the UV to use.
+ *
+ * \return a PropertyValues.
+ */
+template<> PropertyValues MakePropertyValues<UV>(const UV &v);
+/*!
+ * \brief Create a list of values representing a Vector to
+ * be used by a Property.
+ *
+ * \param v is the Vector to use.
+ *
+ * \return a PropertyValues.
+ */
+template<> PropertyValues MakePropertyValues<Vector>(const Vector &v);
+/*!
+ * \brief Create a list of values representing a Normal to
+ * be used by a Property.
+ *
+ * \param v is the Normal to use.
+ *
+ * \return a PropertyValues.
+ */
+template<> PropertyValues MakePropertyValues<Normal>(const Normal &v);
+/*!
+ * \brief Create a list of values representing a Point to
+ * be used by a Property.
+ *
+ * \param v is the Point to use.
+ *
+ * \return a PropertyValues.
+ */
+template<> PropertyValues MakePropertyValues<Point>(const Point &v);
+/*!
+ * \brief Create a list of values representing a Spectrum to
+ * be used by a Property.
+ *
+ * \param v is the Spectrum to use.
+ *
+ * \return a PropertyValues.
+ */
+template<> PropertyValues MakePropertyValues<Spectrum>(const Spectrum &v);
+/*!
+ * \brief Create a list of values representing a Matrix4x4 to
+ * be used by a Property.
+ *
+ * \param m is the Matrix4x4 to use.
  *
  * \return a PropertyValues.
  */
@@ -462,7 +509,7 @@ private:
 	PropertyValues values;
 };	
 
-// Basic types
+// Get basic types
 template<> bool Property::Get<bool>() const;
 template<> int Property::Get<int>() const;
 template<> u_int Property::Get<u_int>() const;
@@ -470,13 +517,21 @@ template<> float Property::Get<float>() const;
 template<> double Property::Get<double>() const;
 template<> size_t Property::Get<size_t>() const;
 template<> std::string Property::Get<std::string>() const;
-// LuxRays types
-template<> luxrays::UV Property::Get<luxrays::UV>() const;
-template<> luxrays::Vector Property::Get<luxrays::Vector>() const;
-template<> luxrays::Normal Property::Get<luxrays::Normal>() const;
-template<> luxrays::Point Property::Get<luxrays::Point>() const;
-template<> luxrays::Spectrum Property::Get<luxrays::Spectrum>() const;
-template<> luxrays::Matrix4x4 Property::Get<luxrays::Matrix4x4>() const;
+// Get LuxRays types
+template<> UV Property::Get<UV>() const;
+template<> Vector Property::Get<Vector>() const;
+template<> Normal Property::Get<Normal>() const;
+template<> Point Property::Get<Point>() const;
+template<> Spectrum Property::Get<Spectrum>() const;
+template<> Matrix4x4 Property::Get<Matrix4x4>() const;
+
+// Add LuxRays types
+template<> Property &Property::Add<UV>(const UV &val);
+template<> Property &Property::Add<Vector>(const Vector &val);
+template<> Property &Property::Add<Normal>(const Normal &val);
+template<> Property &Property::Add<Point>(const Point &val);
+template<> Property &Property::Add<Spectrum>(const Spectrum &val);
+template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &val);
 
 inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 	os << p.ToString();
@@ -670,6 +725,11 @@ public:
 	 */
 	void DeleteAll(const std::vector<std::string> &propNames);
 
+	/*!
+	 * \brief Converts all Properties in a string.
+	 *
+	 * \return a string with the definition of all properties.
+	 */
 	std::string ToString() const;
 
 	//--------------------------------------------------------------------------

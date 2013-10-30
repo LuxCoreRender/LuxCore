@@ -37,7 +37,51 @@
 using namespace luxrays;
 using namespace std;
 
-template<> PropertyValues luxrays::MakePropertyValues<Matrix4x4>(const Matrix4x4 &m) {
+template<> PropertyValues MakePropertyValues<UV>(const UV &v) {
+	PropertyValues values(3);
+	values[0] = v.u;
+	values[1] = v.v;
+
+	return values;
+}
+
+template<> PropertyValues MakePropertyValues<Vector>(const Vector &v) {
+	PropertyValues values(3);
+	values[0] = v.x;
+	values[1] = v.y;
+	values[2] = v.z;
+
+	return values;
+}
+
+template<> PropertyValues MakePropertyValues<Normal>(const Normal &v) {
+	PropertyValues values(3);
+	values[0] = v.x;
+	values[1] = v.y;
+	values[2] = v.z;
+
+	return values;
+}
+
+template<> PropertyValues MakePropertyValues<Point>(const Point &v) {
+	PropertyValues values(3);
+	values[0] = v.x;
+	values[1] = v.y;
+	values[2] = v.z;
+
+	return values;
+}
+
+template<> PropertyValues MakePropertyValues<Spectrum>(const Spectrum &v) {
+	PropertyValues values(3);
+	values[0] = v.r;
+	values[1] = v.g;
+	values[2] = v.b;
+
+	return values;
+}
+
+template<> PropertyValues MakePropertyValues<Matrix4x4>(const Matrix4x4 &m) {
 	PropertyValues values(16);
 
 	for (u_int i = 0; i < 4; ++i) {
@@ -86,7 +130,7 @@ std::string Property::GetValuesString() const {
 }
 
 //------------------------------------------------------------------------------
-// Basic types
+// Get basic types
 //------------------------------------------------------------------------------
 
 template<> bool Property::Get<bool>() const {
@@ -132,48 +176,84 @@ template<> string Property::Get<string>() const {
 }
 
 //------------------------------------------------------------------------------
-// LuxRays types
+// Get LuxRays types
 //------------------------------------------------------------------------------
 
-template<> luxrays::UV Property::Get<luxrays::UV>() const {
+template<> UV Property::Get<UV>() const {
 	if (values.size() != 2)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::UV(Get<float>(0), Get<float>(1));
+	return UV(Get<float>(0), Get<float>(1));
 }
 
-template<> luxrays::Vector Property::Get<luxrays::Vector>() const {
+template<> Vector Property::Get<Vector>() const {
 	if (values.size() != 3)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Vector(Get<float>(0), Get<float>(1), Get<float>(2));
+	return Vector(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
-template<> luxrays::Normal Property::Get<luxrays::Normal>() const {
+template<> Normal Property::Get<Normal>() const {
 	if (values.size() != 3)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Normal(Get<float>(0), Get<float>(1), Get<float>(2));
+	return Normal(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
-template<> luxrays::Point Property::Get<luxrays::Point>() const {
+template<> Point Property::Get<Point>() const {
 	if (values.size() != 3)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Point(Get<float>(0), Get<float>(1), Get<float>(2));
+	return Point(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
-template<> luxrays::Spectrum Property::Get<luxrays::Spectrum>() const {
+template<> Spectrum Property::Get<Spectrum>() const {
 	if (values.size() != 3)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Spectrum(Get<float>(0), Get<float>(1), Get<float>(2));
+	return Spectrum(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
-template<> luxrays::Matrix4x4 Property::Get<luxrays::Matrix4x4>() const {
+template<> Matrix4x4 Property::Get<Matrix4x4>() const {
 	if (values.size() != 16)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return luxrays::Matrix4x4(
+	return Matrix4x4(
 			Get<float>(0), Get<float>(1), Get<float>(2), Get<float>(3),
 			Get<float>(4), Get<float>(5), Get<float>(6), Get<float>(7),
 			Get<float>(8), Get<float>(9), Get<float>(10), Get<float>(11),
 			Get<float>(12), Get<float>(13), Get<float>(14), Get<float>(15));
 }
+
+//------------------------------------------------------------------------------
+// Add LuxRays types
+//------------------------------------------------------------------------------
+
+template<> Property &Property::Add<UV>(const UV &v) {
+	return Add(v.u).Add(v.v);
+}
+
+template<> Property &Property::Add<Vector>(const Vector &v) {
+	return Add(v.x).Add(v.y).Add(v.z);
+}
+
+template<> Property &Property::Add<Normal>(const Normal &v) {
+	return Add(v.x).Add(v.y).Add(v.z);
+}
+
+template<> Property &Property::Add<Point>(const Point &v) {
+	return Add(v.x).Add(v.y).Add(v.z);
+}
+
+template<> Property &Property::Add<Spectrum>(const Spectrum &v) {
+	return Add(v.r).Add(v.g).Add(v.b);
+}
+
+template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &m) {
+	for (u_int i = 0; i < 4; ++i) {
+		for (u_int j = 0; j < 4; ++j) {
+			Add(m.m[i][j]);
+		}
+	}
+
+	return *this;
+}
+
+//------------------------------------------------------------------------------
 
 std::string Property::ToString() const {
 	return name + " = " + GetValuesString();
