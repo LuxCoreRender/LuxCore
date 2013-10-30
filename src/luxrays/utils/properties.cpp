@@ -213,10 +213,10 @@ template<> Matrix4x4 Property::Get<Matrix4x4>() const {
 	if (values.size() != 16)
 		throw std::runtime_error("Wrong number of values in property: " + name);
 	return Matrix4x4(
-			Get<float>(0), Get<float>(1), Get<float>(2), Get<float>(3),
-			Get<float>(4), Get<float>(5), Get<float>(6), Get<float>(7),
-			Get<float>(8), Get<float>(9), Get<float>(10), Get<float>(11),
-			Get<float>(12), Get<float>(13), Get<float>(14), Get<float>(15));
+			Get<float>(0), Get<float>(4), Get<float>(8), Get<float>(12),
+			Get<float>(1), Get<float>(5), Get<float>(9), Get<float>(13),
+			Get<float>(2), Get<float>(6), Get<float>(10), Get<float>(14),
+			Get<float>(3), Get<float>(7), Get<float>(11), Get<float>(15));
 }
 
 //------------------------------------------------------------------------------
@@ -246,7 +246,7 @@ template<> Property &Property::Add<Spectrum>(const Spectrum &v) {
 template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &m) {
 	for (u_int i = 0; i < 4; ++i) {
 		for (u_int j = 0; j < 4; ++j) {
-			Add(m.m[i][j]);
+			Add(m.m[j][i]);
 		}
 	}
 
