@@ -61,14 +61,21 @@ int main(int argc, char *argv[]) {
 			cout << Property::ExtractPrefix(prop.GetName(), 4) << "\n";
 			cout << Property::ExtractPrefix(prop.GetName(), 5) << "\n";
 
-			Matrix4x4 m;
-			m.m[3][0] = 1.f;
-			prop.Clear().Add(m);
-			Matrix4x4 mcpy = prop.Get<Matrix4x4>();
+			prop = Property("test.matrix");
+			Matrix4x4 m0;
+			m0.m[3][0] = 1.f;
+			prop.Add(m0);
+			cout << prop << "\n";
+
+			Matrix4x4 m1 = prop.Get<Matrix4x4>();
 			for (u_int i = 0; i < 4; ++i)
 				for (u_int j = 0; j < 4; ++j)
-					if (mcpy.m[j][i] != m.m[j][i])
+					if (m1.m[j][i] != m0.m[j][i])
 						cout << "ERROR in Matrix4x4 test !\n";
+
+			prop = Property("test.matrix", MakePropertyValues(m0));
+			cout << prop << "\n";
+
 			cout << "\n";
 
 			//------------------------------------------------------------------
