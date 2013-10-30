@@ -35,8 +35,15 @@ if (FreeImage_FOUND)
 	include_directories(SYSTEM ${FreeImage_INCLUDE_DIRS})
 endif ()
 
-# Find Python Libraries
-find_package(PythonLibs)
+if(NOT APPLE)
+	# Find Python Libraries
+	find_package(PythonLibs)
+else(not APPLE)
+	# use Blender python libs for static compiling !
+	SET(PYTHON_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py33_uni_intel/libbf_python_ext.a ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py33_uni_intel/libbf_python.a)
+	SET(PYTHON_INCLUDE_DIRS ${OSX_DEPENDENCY_ROOT}/include/Python3.3m)
+	SET(PYTHONLIBS_FOUND ON)
+endif()
 include_directories (${PYTHON_INCLUDE_DIRS})
 
 # Find Boost
