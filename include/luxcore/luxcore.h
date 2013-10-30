@@ -62,9 +62,12 @@ namespace luxcore {
 
 /*!
  * \brief Initializes LuxCore API. This function has to be called before
- * anything else.
+ * anything else. This function is thread safe. It can be called multiple times
+ * if you want to update the log handler.
+ *
+ * \param LogHandler is a pointer to a function receiving all LuxCore log messages.
  */
-extern void Init();
+extern void Init(void (*LogHandler)(const char *) = NULL);
 
 class RenderSession;
 

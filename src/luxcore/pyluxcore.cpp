@@ -27,6 +27,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/python.hpp>
+#include <boost/python/call.hpp>
 
 #include <Python.h>
 
@@ -41,6 +42,26 @@ namespace luxcore {
 //------------------------------------------------------------------------------
 // Module functions
 //------------------------------------------------------------------------------
+
+static boost::mutex luxCoreInitMutex;
+static PyObject *luxCoreLogHandler = NULL;
+
+static void PythonDebugHandler(const char *msg) {
+	boost::python::call<void>(luxCoreLogHandler, msg);
+}
+
+static void LuxCore_Init() {
+	boost::unique_lock<boost::mutex> lock(luxCoreInitMutex);
+	Init();
+}
+
+static void LuxCore_InitDefaultHandler(boost::python::object &logHandler) {
+	boost::unique_lock<boost::mutex> lock(luxCoreInitMutex);
+	// I wonder if I should increase the reference count for Python
+	luxCoreLogHandler = logHandler.ptr();
+
+	Init(&PythonDebugHandler);
+}
 
 static const char *LuxCoreVersion() {
 	static const char *luxCoreVersion = LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR;
@@ -666,7 +687,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	def("version", LuxCoreVersion, "Returns the LuxCore version");
 
-	def("Init", &Init);
+	def("Init", &LuxCore_Init);
+	def("Init", &LuxCore_InitDefaultHandler);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &ConvertFilmChannelOutput_3xFloat_To_4xUChar);
 	def("ConvertFilmChannelOutput_3xFloat_To_3xFloatList", &ConvertFilmChannelOutput_3xFloat_To_3xFloatList);
 

@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/thread/once.hpp>
+#include <boost/thread/mutex.hpp>
+
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
 #include "slg/slg.h"
@@ -25,34 +28,78 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
-static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
-	printf("\n*** ");
-	if(fif != FIF_UNKNOWN)
-		printf("%s Format\n", FreeImage_GetFormatFromFIF(fif));
+//------------------------------------------------------------------------------
+// Initialization and logging
+//------------------------------------------------------------------------------
 
-	printf("%s", message);
-	printf(" ***\n");
+static void (*LuxCoreLogHandler)(const char *msg) = NULL;
+
+static void DefaultDebugHandler(const char *msg) {
+	cerr << msg << endl;
+}
+
+static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
+	if (LuxCoreLogHandler) {
+		stringstream ss;
+		ss << "[FreeImage] ";
+		if (fif != FIF_UNKNOWN)
+			ss << FreeImage_GetFormatFromFIF(fif) << " Format: ";
+		ss << message;
+		LuxCoreLogHandler(ss.str().c_str());
+	}
 }
 
 static void LuxRaysDebugHandler(const char *msg) {
-	cerr << "[LuxRays] " << msg << endl;
+	if (LuxCoreLogHandler) {
+		stringstream ss;
+		ss << "[LuxRays] " << msg;
+		LuxCoreLogHandler(ss.str().c_str());
+	}
 }
 
 static void SDLDebugHandler(const char *msg) {
-	cerr << "[SDL] " << msg << endl;
+	if (LuxCoreLogHandler) {
+		stringstream ss;
+		ss << "[SDL] " << msg;
+		LuxCoreLogHandler(ss.str().c_str());
+	}
 }
 
 static void SLGDebugHandler(const char *msg) {
-	cerr << "[LuxCore] " << msg << endl;
+	if (LuxCoreLogHandler) {
+		stringstream ss;
+		ss << "[LuxCore] " << msg;
+		LuxCoreLogHandler(ss.str().c_str());
+	}
 }
 
-void luxcore::Init() {
-	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
-	slg::SLG_DebugHandler = ::SLGDebugHandler;
-	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;
-
+static void InitFreeImage() {
 	// Initialize FreeImage Library
 	FreeImage_Initialise(TRUE);
+}
+
+void luxcore::Init(void (*LogHandler)(const char *)) {
+	static boost::once_flag initFreeImageOnce = BOOST_ONCE_INIT;
+
+	// Run the FreeImage initialization only once
+	boost::call_once(initFreeImageOnce, &InitFreeImage);
+
+	// To be thread safe
+	static boost::mutex initMutex;
+	boost::unique_lock<boost::mutex> lock(initMutex);
+	
+	// Set all debug handlers
+	if (LogHandler) {
+		// User provided handler
+		LuxCoreLogHandler = LogHandler;
+	} else {
+		// Default handler
+		LuxCoreLogHandler = DefaultDebugHandler;
+	}
+
+	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
+	slg::SLG_DebugHandler = ::SLGDebugHandler;
+	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;	
 	FreeImage_SetOutputMessage(FreeImageErrorHandler);
 }
 

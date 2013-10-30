@@ -19,6 +19,7 @@
 import sys
 sys.path.append("./lib")
 from array import *
+from time import gmtime, strftime
 from functools import partial
 
 import pyluxcore
@@ -467,7 +468,7 @@ class RenderView(QMainWindow):
 			self.session.UpdateStats()
 			
 			stats = self.session.GetStats()
-			print("[Elapsed time: %3.1fsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+			LogHandler("[Elapsed time: %3.1fsec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
 				stats.Get("stats.renderengine.time").GetFloat(),
 				stats.Get("stats.renderengine.pass").GetInt(),
 				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
@@ -515,8 +516,11 @@ class RenderView(QMainWindow):
 		self.scene = None
 		event.accept()
 
+def LogHandler(msg):
+	print("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", gmtime()), msg))
+
 def main():
-	pyluxcore.Init()
+	pyluxcore.Init(LogHandler)
 	print("LuxCore %s" % pyluxcore.version())
 	
 	app = QApplication(sys.argv)
