@@ -253,9 +253,9 @@ int main(int argc, char *argv[]) {
 					configFileName = string(argv[++i]);
 				}
 
-				else if (argv[i][1] == 'e') cmdLineProp.SetString("image.height", argv[++i]);
+				else if (argv[i][1] == 'e') cmdLineProp.SetString("film.height", argv[++i]);
 
-				else if (argv[i][1] == 'w') cmdLineProp.SetString("image.width", argv[++i]);
+				else if (argv[i][1] == 'w') cmdLineProp.SetString("film.width", argv[++i]);
 
 				else if (argv[i][1] == 'f') cmdLineProp.SetString("scene.file", argv[++i]);
 
