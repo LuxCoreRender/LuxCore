@@ -300,13 +300,7 @@ class RenderView(QMainWindow):
 		self.session.BeginSceneEdit()
 
 		# Define check map
-		########################################################################
-		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
-		########################################################################
-		if sys.version_info<(3,0,0):
-			imageMap = buffer(array('f', [0.0] * (128 * 128 * 3)))
-		else:
-			imageMap = array('f', [0.0] * (128 * 128 * 3))
+		imageMap = array('f', [0.0] * (128 * 128 * 3))
 		for y in range(128):
 			for x in range(128):
 				offset = (x + y * 128) * 3
@@ -318,7 +312,10 @@ class RenderView(QMainWindow):
 					imageMap[offset] = 1.0
 					imageMap[offset] = 0.0
 					imageMap[offset] = 0.0
-		self.scene.DefineImageMap("check_map", imageMap, 2.2, 3, 128, 128)
+		########################################################################
+		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
+		########################################################################
+		self.scene.DefineImageMap("check_map", buffer(imageMap) if sys.version_info<(3,0,0) else imageMap, 2.2, 3, 128, 128)
 
 		# Edit the material
 		self.scene.Parse(pyluxcore.Properties().
