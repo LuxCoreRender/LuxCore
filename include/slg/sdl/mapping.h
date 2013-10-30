@@ -92,9 +92,9 @@ public:
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const {
 		luxrays::Properties props;
-		props.SetString(name + ".type", "uvmapping2d");
-		props.SetString(name + ".uvscale", luxrays::ToString(uScale) + " " + luxrays::ToString(vScale));
-		props.SetString(name + ".uvdelta", luxrays::ToString(uDelta) + " " + luxrays::ToString(vDelta));
+		props.Set(luxrays::Property(name + ".type")("uvmapping2d"));
+		props.Set(luxrays::Property(name + ".uvscale")(uScale, vScale));
+		props.Set(luxrays::Property(name + ".uvdelta")(uDelta, vDelta));
 
 		return props;
 	}
@@ -119,8 +119,8 @@ public:
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const {
 		luxrays::Properties props;
-		props.SetString(name + ".type", "uvmapping3d");
-		props.SetString(name + ".transformation", luxrays::ToString(worldToLocal.mInv));
+		props.Set(luxrays::Property(name + ".type")("uvmapping3d"));
+		props.Set(luxrays::Property(name + ".transformation")(worldToLocal.mInv));
 
 		return props;
 	}
@@ -143,8 +143,8 @@ public:
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const {
 		luxrays::Properties props;
-		props.SetString(name + ".type", "globalmapping3d");
-		props.SetString(name + ".transformation", luxrays::ToString(worldToLocal.mInv));
+		props.Set(luxrays::Property(name + ".type")("globalmapping3d"));
+		props.Set(luxrays::Property(name + ".transformation")(worldToLocal.mInv));
 
 		return props;
 	}

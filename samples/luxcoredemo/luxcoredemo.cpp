@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 			prop.Set(0, 1);
 			cout << prop.ToString() << "\n\n";
 
-			prop.Clear()(1.f, 2.f, 3.f);
+			prop.Clear()(1.f)(2.f)(3.f);
 			cout << prop.Get<luxrays::Vector>() << "\n\n";
 
 			cout << prop.AddedNamePrefix("prefix.test.") << "\n\n";
@@ -61,12 +61,22 @@ int main(int argc, char *argv[]) {
 			cout << Property::ExtractPrefix(prop.GetName(), 4) << "\n";
 			cout << Property::ExtractPrefix(prop.GetName(), 5) << "\n";
 
+			Matrix4x4 m;
+			m.m[3][0] = 1.f;
+			prop.Clear().Add(m);
+			Matrix4x4 mcpy = prop.Get<Matrix4x4>();
+			for (u_int i = 0; i < 4; ++i)
+				for (u_int j = 0; j < 4; ++j)
+					if (mcpy.m[j][i] != m.m[j][i])
+						cout << "ERROR in Matrix4x4 test !\n";
+			cout << "\n";
+
 			//------------------------------------------------------------------
 			cout << "Properties examples...\n";
 			//------------------------------------------------------------------
 
 			Properties props(
-					Property("test1.prop1")(1.f, 2.f, 3.f) <<
+					Property("test1.prop1")(Vector(1.f, 2.f, 3.f)) <<
 					Property("test2.prop2")("test"));
 			cout << props << "\n";
 
@@ -83,11 +93,11 @@ int main(int argc, char *argv[]) {
 			cout << "Size: " << props.Get("test2.prop2").GetSize() << "\n\n";
 
 			Properties props0(
-					Property("test1.prop1.sub0.a")(1.f, 2.f, 3.f) <<
+					Property("test1.prop1.sub0.a")(Vector(1.f, 2.f, 3.f)) <<
 					Property("test1.prop1.sub0.b")("test1") <<
 					Property("test1.prop2.sub1")("test2"));
 			Properties props1(
-					Property("test2.prop1")(1.f, 2.f, 3.f) <<
+					Property("test2.prop1")(Vector(1.f, 2.f, 3.f)) <<
 					Property("test2.prop2")("test"));
 			props0.Set(props1);
 			cout << props0 << "\n";
