@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include "slg/slg.h"
@@ -173,8 +170,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 			// Add the ray to trace and the result
 			lightSampleValue.push_back(u0);
 			thread->PushRay(eyeRay);
-			AddSampleResult(lightSampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
-					radiance, 1.f);
+			AddSampleResult(lightSampleResults, scrX, scrY, radiance);
 			return true;
 		}
 	}
@@ -243,7 +239,8 @@ void BiDirState::DirectLightSampling(HybridRenderThread *renderThread,
 }
 
 void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
-		const Spectrum &lightRadiance, const float directPdfA, const float emissionPdfW,
+		const LightSource *light, const Spectrum &lightRadiance,
+		const float directPdfA, const float emissionPdfW,
 		const PathVertex &eyeVertex, Spectrum *radiance) const {
 	if (lightRadiance.Black())
 		return;
@@ -256,7 +253,7 @@ void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
 	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
 	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
-	const float lightPickPdf = scene->PickLightPdf();
+	const float lightPickPdf = scene->SampleAllLightPdf(light);
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -275,15 +272,15 @@ void BiDirState::DirectHitLight(HybridRenderThread *renderThread,
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
-		DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+		DirectHitLight(renderThread, eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
 		if (scene->envLight) {
 			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+			DirectHitLight(renderThread, scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 		if (scene->sunLight) {
 			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(renderThread, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+			DirectHitLight(renderThread, scene->sunLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
 }
@@ -500,9 +497,9 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 		eyeSampleResults[eyePathIndex].alpha = 1.f;
 
 		Ray eyeRay;
-		eyeSampleResults[eyePathIndex].screenX = luxrays::Min(sampler->GetSample(eyePathSampleOffset) * filmWidth, (float)(filmWidth - 1));
-		eyeSampleResults[eyePathIndex].screenY = luxrays::Min(sampler->GetSample(eyePathSampleOffset + 1) * filmHeight, (float)(filmHeight - 1));
-		camera->GenerateRay(eyeSampleResults[eyePathIndex].screenX, eyeSampleResults[eyePathIndex].screenY, &eyeRay,
+		eyeSampleResults[eyePathIndex].filmX = luxrays::Min(sampler->GetSample(eyePathSampleOffset) * filmWidth, (float)(filmWidth - 1));
+		eyeSampleResults[eyePathIndex].filmY = luxrays::Min(sampler->GetSample(eyePathSampleOffset + 1) * filmHeight, (float)(filmHeight - 1));
+		camera->GenerateRay(eyeSampleResults[eyePathIndex].filmX, eyeSampleResults[eyePathIndex].filmY, &eyeRay,
 			sampler->GetSample(eyePathSampleOffset + 4), sampler->GetSample(eyePathSampleOffset + 5));
 
 		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
@@ -635,8 +632,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 	vector<SampleResult> validSampleResults;
 
 	// Elaborate the RayHit results for each eye paths
-	SampleResult eyeSampleResult;
-	eyeSampleResult.type = PER_PIXEL_NORMALIZED;
+	SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 	u_int currentLightSampleResultsIndex = 0;
 	for (u_int eyePathIndex = 0; eyePathIndex < renderEngine->eyePathCount; ++eyePathIndex) {
 		// For each eye path, elaborate the RayHit results for eye to light path vertex connections
@@ -646,16 +642,16 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 			thread->PopRay(&ray, &rayHit);
 
 			if (ValidResult(thread, ray, rayHit, lightSampleValue[currentLightSampleResultsIndex],
-					&lightSampleResults[currentLightSampleResultsIndex].radiance))
+					&lightSampleResults[currentLightSampleResultsIndex].radiancePerScreenNormalized[0]))
 				validSampleResults.push_back(lightSampleResults[currentLightSampleResultsIndex]);
 
 			++currentLightSampleResultsIndex;
 		}
 
+		eyeSampleResult.filmX = eyeSampleResults[eyePathIndex].filmX;
+		eyeSampleResult.filmY = eyeSampleResults[eyePathIndex].filmY;
+		eyeSampleResult.radiancePerPixelNormalized[0] = eyeSampleResults[eyePathIndex].radiance;
 		eyeSampleResult.alpha = eyeSampleResults[eyePathIndex].alpha;
-		eyeSampleResult.screenX = eyeSampleResults[eyePathIndex].screenX;
-		eyeSampleResult.screenY = eyeSampleResults[eyePathIndex].screenY;
-		eyeSampleResult.radiance = eyeSampleResults[eyePathIndex].radiance;
 		for (u_int i = 0; i < eyeSampleResults[eyePathIndex].sampleRadiance.size(); ++i) {
 			const Ray *ray;
 			const RayHit *rayHit;
@@ -663,7 +659,7 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 
 			if (ValidResult(thread, ray, rayHit, eyeSampleResults[eyePathIndex].sampleValue[i],
 					&eyeSampleResults[eyePathIndex].sampleRadiance[i]))
-				eyeSampleResult.radiance += eyeSampleResults[eyePathIndex].sampleRadiance[i];
+				eyeSampleResult.radiancePerPixelNormalized[0] += eyeSampleResults[eyePathIndex].sampleRadiance[i];
 		}
 		validSampleResults.push_back(eyeSampleResult);
 	}

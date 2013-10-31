@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 // Boundary Volume Hierarchy accelerator
@@ -290,19 +287,25 @@ public:
 		std::stringstream opts;
 		opts << " -D LUXRAYS_OPENCL_KERNEL"
 				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
-				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
-				" -D MBVH_VERTS_PAGE_COUNT=" << vertsBuffs.size() <<
-				" -D MBVH_NODES_PAGE_SIZE=" << pageNodeCount <<
-				" -D MBVH_NODES_PAGE_COUNT=" << nodeBuffs.size();
+				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
+		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH compile options: \n" << opts.str());
+
+		std::stringstream kernelDefs;
+		kernelDefs << "#define MBVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
+				"#define MBVH_NODES_PAGE_SIZE " << pageNodeCount << "\n"
+				"#define MBVH_NODES_PAGE_COUNT " << nodeBuffs.size() << "\n";
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
-			opts << " -D MBVH_VERTS_PAGE" << i << "=1";
+			kernelDefs << "#define MBVH_VERTS_PAGE" << i << " 1\n";
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
-			opts << " -D MBVH_NODES_PAGE" << i << "=1";
+			kernelDefs << "#define MBVH_NODES_PAGE" << i << " 1\n";
 		if (uniqueLeafsTransformBuff)
-			opts << " -D MBVH_HAS_TRANSFORMATIONS=1";
-		LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH compile options: " << opts.str());
+			kernelDefs << "#define MBVH_HAS_TRANSFORMATIONS 1\n";
+		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH kernel definitions: \n" << kernelDefs.str());
+
+		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_mbvh;
 
 		std::string code(
+			kernelDefs.str() +
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
 			luxrays::ocl::KernelSource_epsilon_funcs +
@@ -315,8 +318,8 @@ public:
 			luxrays::ocl::KernelSource_matrix4x4_types +
 			luxrays::ocl::KernelSource_matrix4x4_funcs +
 			luxrays::ocl::KernelSource_triangle_types +
-			luxrays::ocl::KernelSource_triangle_funcs);
-		code += luxrays::ocl::KernelSource_mbvh;
+			luxrays::ocl::KernelSource_triangle_funcs +
+			luxrays::ocl::KernelSource_mbvh);
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {
@@ -332,7 +335,7 @@ public:
 
 		// Setup kernels
 		for (u_int i = 0; i < kernelCount; ++i) {
-			kernels[i] = new cl::Kernel(program, "Intersect");
+			kernels[i] = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
 
 			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
@@ -344,13 +347,7 @@ public:
 			}
 
 			// Set arguments
-			u_int argIndex = 3;
-			if (uniqueLeafsTransformBuff)
-				kernels[i]->setArg(argIndex++, *uniqueLeafsTransformBuff);
-			for (u_int j = 0; j < vertsBuffs.size(); ++j)
-				kernels[i]->setArg(argIndex++, *vertsBuffs[j]);
-			for (u_int j = 0; j < nodeBuffs.size(); ++j)
-				kernels[i]->setArg(argIndex++, *nodeBuffs[j]);
+			SetIntersectionKernelArgs(*(kernels[i]), 3);
 		}
 	}
 	virtual ~OpenCLMBVHKernels() {
@@ -373,6 +370,8 @@ public:
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
+	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex);
+
 	// BVH fields
 	vector<cl::Buffer *> vertsBuffs;
 	vector<cl::Buffer *> nodeBuffs;
@@ -390,6 +389,18 @@ void OpenCLMBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int
 	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
 		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
 		event);
+}
+
+u_int OpenCLMBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
+	u_int argIndex = index;
+	if (uniqueLeafsTransformBuff)
+		kernel.setArg(argIndex++, *uniqueLeafsTransformBuff);
+	for (u_int i = 0; i < vertsBuffs.size(); ++i)
+		kernel.setArg(argIndex++, *vertsBuffs[i]);
+	for (u_int i = 0; i < nodeBuffs.size(); ++i)
+		kernel.setArg(argIndex++, *nodeBuffs[i]);
+
+	return argIndex;
 }
 
 OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,

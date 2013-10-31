@@ -1,24 +1,21 @@
 #line 2 "qbvh_kernel.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 typedef struct QuadRay {
@@ -160,44 +157,39 @@ void QuadTriangle_Intersect(
 	rayHit->triangleIndex = tIndex;
 }
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
-		__global Ray *rays,
-		__global RayHit *rayHits,
-#ifdef USE_IMAGE_STORAGE
-        __read_only image2d_t nodes,
-        __read_only image2d_t quadTris,
+#if defined(QBVH_USE_LOCAL_MEMORY)
+#define QBVH_LOCAL_MEMORY_PARAM_DECL , __local int *nodeStacks
+#define QBVH_LOCAL_MEMORY_PARAM , nodeStacks
 #else
-		__global QBVHNode *nodes,
-		__global QuadTiangle *quadTris,
+#define QBVH_LOCAL_MEMORY_PARAM_DECL
+#define QBVH_LOCAL_MEMORY_PARAM
 #endif
-		const uint rayCount
-#if defined(USE_LOCAL_MEMORY_FOR_STACK)
-		, __local int *nodeStacks
-#endif
-		) {
-	// Select the ray to check
-	const int gid = get_global_id(0);
-	if (gid >= rayCount)
-		return;
 
+#ifdef USE_IMAGE_STORAGE
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __read_only image2d_t nodes, __read_only image2d_t quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris QBVH_LOCAL_MEMORY_PARAM
+#else
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global QuadTiangle *quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris QBVH_LOCAL_MEMORY_PARAM
+#endif
+				
+void Accelerator_Intersect(
+		Ray *ray,
+		RayHit *rayHit
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
 	// Prepare the ray for intersection
 	QuadRay ray4;
-	{
-        __global float4 *basePtr =(__global float4 *)&rays[gid];
-        float4 data0 = (*basePtr++);
-        float4 data1 = (*basePtr);
+	ray4.ox = (float4)ray->o.x;
+	ray4.oy = (float4)ray->o.y;
+	ray4.oz = (float4)ray->o.z;
 
-        ray4.ox = (float4)data0.x;
-        ray4.oy = (float4)data0.y;
-        ray4.oz = (float4)data0.z;
+	ray4.dx = (float4)ray->d.x;
+	ray4.dy = (float4)ray->d.y;
+	ray4.dz = (float4)ray->d.z;
 
-        ray4.dx = (float4)data0.w;
-        ray4.dy = (float4)data1.x;
-        ray4.dz = (float4)data1.y;
-
-        ray4.mint = (float4)data1.z;
-        ray4.maxt = (float4)data1.w;
-	}
+	ray4.mint = (float4)ray->mint;
+	ray4.maxt = (float4)ray->maxt;
 
 	const float4 invDir0 = (float4)(1.f / ray4.dx.s0);
 	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
@@ -211,18 +203,17 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	const int isigns1 = 1 - signs1;
 	const int isigns2 = 1 - signs2;
 
-	RayHit rayHit;
-	rayHit.meshIndex = NULL_INDEX;
-	rayHit.triangleIndex = NULL_INDEX;
+	rayHit->meshIndex = NULL_INDEX;
+	rayHit->triangleIndex = NULL_INDEX;
 
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
-#if defined(USE_LOCAL_MEMORY_FOR_STACK)
 	// nodeStack leads to a lot of local memory banks conflicts however it has not real
-	// impact on performances (I guess access latency is hiden by other stuff).
+	// impact on performances (I guess access latency is hidden by other stuff).
 	// Avoiding conflicts is easy to do but it requires to know the work group
 	// size (not worth doing if there are not performance benefits).
+#if defined(QBVH_USE_LOCAL_MEMORY)
 	__local int *nodeStack = &nodeStacks[QBVH_STACK_SIZE * get_local_id(0)];
 #else
 	int nodeStack[QBVH_STACK_SIZE];
@@ -340,18 +331,40 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
                     edge1x, edge1y, edge1z,
                     edge2x, edge2y, edge2z,
                     meshIndex, triangleIndex,
-                    &ray4, &rayHit);
+                    &ray4, rayHit);
             }
 		}
 	}
 
 	//printf("MaxDepth=%02d\n", maxDepth);
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(
+		__global Ray *rays,
+		__global RayHit *rayHits,
+		const uint rayCount
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
+	// Select the ray to check
+	const int gid = get_global_id(0);
+	if (gid >= rayCount)
+		return;
+
+	Ray ray;
+	Ray_ReadAligned4_Private(&rays[gid], &ray);
+
+	RayHit rayHit;
+	Accelerator_Intersect(
+		&ray,
+		&rayHit
+		ACCELERATOR_INTERSECT_PARAM
+		);
 
 	// Write result
-	__global RayHit *rh = &rayHits[gid];
-	rh->t = rayHit.t;
-	rh->b1 = rayHit.b1;
-	rh->b2 = rayHit.b2;
-	rh->meshIndex = rayHit.meshIndex;
-	rh->triangleIndex = rayHit.triangleIndex;
+	__global RayHit *memRayHit = &rayHits[gid];
+	memRayHit->t = rayHit.t;
+	memRayHit->b1 = rayHit.b1;
+	memRayHit->b2 = rayHit.b2;
+	memRayHit->meshIndex = rayHit.meshIndex;
+	memRayHit->triangleIndex = rayHit.triangleIndex;
 }

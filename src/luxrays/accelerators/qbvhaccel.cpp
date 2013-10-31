@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 2007 by Anthony Pajot   
- *   anthony.pajot@etu.enseeiht.fr
- *
- * This file is part of FlexRay
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ *                                                                         *
+ *   This file is part of LuxRender.                                       *
+ *                                                                         *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
+ *                                                                         *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
+ *                                                                         *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include "luxrays/accelerators/qbvhaccel.h"
@@ -31,9 +28,11 @@
 
 namespace luxrays {
 
-/***************************************************/
-
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
+//------------------------------------------------------------------------------
+// Intersection kernel using normal OpenCL buffers for storing data
+//------------------------------------------------------------------------------
 
 class OpenCLQBVHKernels : public OpenCLKernels {
 public:
@@ -46,20 +45,27 @@ public:
 		cl::Context &oclContext = device->GetOpenCLContext();
 		cl::Device &oclDevice = device->GetOpenCLDevice();
 
-		// Compile the source
-		std::stringstream params;
-		params << "-D LUXRAYS_OPENCL_KERNEL"
+		//----------------------------------------------------------------------
+		// Compile kernel sources
+		//----------------------------------------------------------------------
+
+		std::stringstream opts;
+		opts << " -D LUXRAYS_OPENCL_KERNEL"
 				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
-				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
-				" -D QBVH_STACK_SIZE=" << stackSize;
-		// Check if it is better to use the local memory for the stack
-		if (device->GetDeviceDesc()->GetType() == DEVICE_TYPE_OPENCL_GPU) {
-			useLocalMemmoryForStack = true;
-			params << " -D USE_LOCAL_MEMORY_FOR_STACK";
-		} else
-			useLocalMemmoryForStack = false;
+				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
+		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compile options: \n" << opts.str());
+
+		std::stringstream kernelDefs;
+		kernelDefs << "#define QBVH_STACK_SIZE " << stackSize << "\n";
+		// Use local memory only if not running on a CPU
+		if (device->GetType() != DEVICE_TYPE_OPENCL_CPU)
+			kernelDefs << "#define QBVH_USE_LOCAL_MEMORY\n";
+		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel definitions: \n" << kernelDefs.str());
+
+		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_qbvh;
 
 		std::string code(
+			kernelDefs.str() +
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
 			luxrays::ocl::KernelSource_epsilon_funcs +
@@ -67,14 +73,14 @@ public:
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
 			luxrays::ocl::KernelSource_ray_funcs +
-			luxrays::ocl::KernelSource_bbox_types);
-		code += luxrays::ocl::KernelSource_qbvh;
+			luxrays::ocl::KernelSource_bbox_types +
+			luxrays::ocl::KernelSource_qbvh);
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, params.str().c_str());
+			program.build(buildDevice, opts.str().c_str());
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -84,7 +90,7 @@ public:
 		}
 
 		for (u_int i = 0; i < kernelCount; ++i) {
-			kernels[i] = new cl::Kernel(program, "Intersect");
+			kernels[i] = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
 
 			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
@@ -94,7 +100,7 @@ public:
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				//	"] QBVH kernel work group size: " << workGroupSize);
 
-				if (useLocalMemmoryForStack && (workGroupSize > 256)) {
+				if ((device->GetType() != DEVICE_TYPE_OPENCL_CPU) && (workGroupSize > 256)) {
 					// Otherwise I will probably run out of local memory
 					workGroupSize = 256;
 					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -118,13 +124,58 @@ public:
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
+	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex);
+
 protected:
 	// QBVH fields
 	cl::Buffer *trisBuff;
 	cl::Buffer *qbvhBuff;
-
-	bool useLocalMemmoryForStack;
 };
+
+void OpenCLQBVHKernels::SetBuffers(cl::Buffer *t, cl::Buffer *q) {
+	trisBuff = t;
+	qbvhBuff = q;
+
+	// Set arguments
+	BOOST_FOREACH(cl::Kernel *kernel, kernels)
+		SetIntersectionKernelArgs(*kernel, 3);
+}
+
+void OpenCLQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
+		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
+	kernels[kernelIndex]->setArg(0, rBuff);
+	kernels[kernelIndex]->setArg(1, hBuff);
+	kernels[kernelIndex]->setArg(2, rayCount);
+
+	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
+	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
+		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
+		event);
+}
+
+u_int OpenCLQBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
+	u_int argIndex = index;
+	kernel.setArg(argIndex++, *qbvhBuff);
+	kernel.setArg(argIndex++, *trisBuff);
+
+	// I use local memory only if I'm not running on a CPU
+	if (device->GetType() != DEVICE_TYPE_OPENCL_CPU) {
+		// Check if we have enough local memory
+		if (stackSize * workGroupSize * sizeof(cl_int) >
+			device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+			throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+				" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
+	
+		kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
+	}
+
+	return argIndex;
+}
+
+//------------------------------------------------------------------------------
+// Intersection kernel using OpenCL image for storing data
+//------------------------------------------------------------------------------
 
 class OpenCLQBVHImageKernels : public OpenCLKernels {
 public:
@@ -137,21 +188,28 @@ public:
 		cl::Context &oclContext = device->GetOpenCLContext();
 		cl::Device &oclDevice = device->GetOpenCLDevice();
 
-		// Compile the source
-		std::stringstream params;
-		params << "-D LUXRAYS_OPENCL_KERNEL"
+		//----------------------------------------------------------------------
+		// Compile kernel sources
+		//----------------------------------------------------------------------
+
+		std::stringstream opts;
+		opts << " -D LUXRAYS_OPENCL_KERNEL"
 				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
-				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
-				" -D USE_IMAGE_STORAGE"
-				" -D QBVH_STACK_SIZE=" << stackSize;
-		// Check if it is better to use the local memory for the stack
-		if (device->GetDeviceDesc()->GetType() == DEVICE_TYPE_OPENCL_GPU) {
-			useLocalMemmoryForStack = true;
-			params << " -D USE_LOCAL_MEMORY_FOR_STACK";
-		} else
-			useLocalMemmoryForStack = false;
+				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
+		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compile options: \n" << opts.str());
+
+		std::stringstream kernelDefs;
+		kernelDefs << "#define QBVH_STACK_SIZE " << stackSize << "\n"
+				"#define USE_IMAGE_STORAGE\n";
+		// Use local memory only if not running on a CPU
+		if (device->GetType() != DEVICE_TYPE_OPENCL_CPU)
+			kernelDefs << "#define QBVH_USE_LOCAL_MEMORY\n";
+		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel definitions: \n" << kernelDefs.str());
+
+		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_qbvh;
 
 		std::string code(
+			kernelDefs.str() +
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
 			luxrays::ocl::KernelSource_epsilon_funcs +
@@ -159,14 +217,14 @@ public:
 			luxrays::ocl::KernelSource_vector_types +
 			luxrays::ocl::KernelSource_ray_types +
 			luxrays::ocl::KernelSource_ray_funcs +
-			luxrays::ocl::KernelSource_bbox_types);
-		code += luxrays::ocl::KernelSource_qbvh;
+			luxrays::ocl::KernelSource_bbox_types +
+			luxrays::ocl::KernelSource_qbvh);
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, params.str().c_str());
+			program.build(buildDevice, opts.str().c_str());
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -177,17 +235,17 @@ public:
 		}
 
 		for (u_int i = 0; i < kernelCount; ++i) {
-			kernels[i] = new cl::Kernel(program, "Intersect");
+			kernels[i] = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
 
 			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
-			else if (useLocalMemmoryForStack) {
+			else {
 				kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
 					CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				//	"] QBVH kernel work group size: " << workGroupSize);
 
-				if (useLocalMemmoryForStack && (workGroupSize > 256)) {
+				if ((device->GetType() != DEVICE_TYPE_OPENCL_CPU) && (workGroupSize > 256)) {
 					// Otherwise I will probably run out of local memory
 					workGroupSize = 256;
 					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -211,67 +269,21 @@ public:
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
+	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex);
+
 protected:
 	// QBVH with image storage fields
 	cl::Image2D *trisBuff;
 	cl::Image2D *qbvhBuff;
-
-	bool useLocalMemmoryForStack;
 };
-
-void OpenCLQBVHKernels::SetBuffers(cl::Buffer *t, cl::Buffer *q) {
-	trisBuff = t;
-	qbvhBuff = q;
-
-	// Set arguments
-	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-		kernel->setArg(2, *qbvhBuff);
-		kernel->setArg(3, *trisBuff);
-		if (useLocalMemmoryForStack) {
-			// Check if we have enough local memory
-			if (stackSize * workGroupSize * sizeof(cl_int) >
-				device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
-				throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
-					" and QBVH stack depth (try to reduce the work group size and/or the stack depth). Required local memory " +
-					ToString(stackSize * workGroupSize * sizeof(cl_int)) + " bytes, " +
-					ToString(device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>()) + " available.");
-			kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
-		}
-	}
-}
-
-void OpenCLQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-	kernels[kernelIndex]->setArg(0, rBuff);
-	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(4, rayCount);
-
-	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
-	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
-		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
-		event);
-}
 
 void OpenCLQBVHImageKernels::SetBuffers(cl::Image2D *t, cl::Image2D *q) {
 	trisBuff = t;
 	qbvhBuff = q;
 
 	// Set arguments
-	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-		kernel->setArg(2, *qbvhBuff);
-		kernel->setArg(3, *trisBuff);
-		if (useLocalMemmoryForStack) {
-			// Check if we have enough local memory
-			if (stackSize * workGroupSize * sizeof(cl_int) >
-				device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
-				throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
-					" and QBVH stack depth (try to reduce the work group size and/or the stack depth). Required local memory " +
-					ToString(stackSize * workGroupSize * sizeof(cl_int)) + " bytes, " +
-					ToString(device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>()) + " available.");
-			kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
-		}
-	}
+	BOOST_FOREACH(cl::Kernel *kernel, kernels)
+		SetIntersectionKernelArgs(*kernel, 3);
 }
 
 void OpenCLQBVHImageKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
@@ -279,13 +291,34 @@ void OpenCLQBVHImageKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const 
 	const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernels[kernelIndex]->setArg(0, rBuff);
 	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(4, rayCount);
+	kernels[kernelIndex]->setArg(2, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
 	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
 		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
 		event);
 }
+
+u_int OpenCLQBVHImageKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
+	u_int argIndex = index;
+	kernel.setArg(argIndex++, *qbvhBuff);
+	kernel.setArg(argIndex++, *trisBuff);
+
+	// I use local memory only if I'm not running on a CPU
+	if (device->GetType() != DEVICE_TYPE_OPENCL_CPU) {
+		// Check if we have enough local memory
+		if (stackSize * workGroupSize * sizeof(cl_int) >
+			device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+			throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+				" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
+
+		kernel.setArg(argIndex++, stackSize * workGroupSize * sizeof(cl_int), NULL);
+	}
+
+	return argIndex;
+}
+
+//------------------------------------------------------------------------------
 
 OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const {

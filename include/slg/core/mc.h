@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_MC_H
@@ -137,6 +134,7 @@ inline void ComputeStep1dCDF(const float *f, unsigned int nSteps, float *c, floa
 }
 
 // A utility class for sampling from a regularly sampled 1D distribution.
+
 class Distribution1D {
 public:
 
@@ -148,16 +146,21 @@ public:
 	 * @param f The values of the function.
 	 * @param n The number of samples.
 	 */
-	Distribution1D(const float *f, unsigned int n) {
+	Distribution1D(const float *f, u_int n) {
 		func = new float[n];
 		cdf = new float[n + 1];
 		count = n;
+		invCount = 1.f / count;
 		memcpy(func, f, n * sizeof (float));
 		// funcInt is the sum of all f elements divided by the number
 		// of elements, ie the average value of f over [0;1)
 		ComputeStep1dCDF(func, n, &funcInt, cdf);
-		invFuncInt = 1.f / funcInt;
-		invCount = 1.f / count;
+		if (funcInt > 0.f) {
+			const float invFuncInt = 1.f / funcInt;
+			// Normalize func to speed up computations
+			for (u_int i = 0; i < count; ++i)
+				func[i] *= invFuncInt;
+		}
 	}
 
 	~Distribution1D() {
@@ -166,7 +169,8 @@ public:
 	}
 
 	/**
-	 * Samples from this distribution.
+	 * Samples a point from this distribution.
+	 * The pdf is computed so that int(u=0..1, pdf(u)*du) = 1
 	 *
 	 * @param u   The random value used to sample.
 	 * @param pdf The pointer to the float where the pdf of the sample
@@ -175,17 +179,29 @@ public:
 	 *
 	 * @return The x value of the sample (i.e. the x in f(x)).
 	 */
-	float SampleContinuous(float u, float *pdf, unsigned int *off = NULL) const {
+	float SampleContinuous(float u, float *pdf, u_int *off = NULL) const {
 		// Find surrounding CDF segments and _offset_
-		float *ptr = std::lower_bound(cdf, cdf + count + 1, u);
-		unsigned int offset = static_cast<unsigned int>(luxrays::Max(0, static_cast<int>(ptr - cdf - 1)));
+		if (u <= cdf[0]) {
+			*pdf = func[0];
+			if (off)
+				*off = 0;
+			return 0.f;
+		}
+		if (u >= cdf[count]) {
+			*pdf = func[count - 1];
+			if (off)
+				*off = count - 1;
+			return 1.f;
+		}
+		const float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
+		const u_int offset = ptr - cdf - 1;
 
 		// Compute offset along CDF segment
 		const float du = (u - cdf[offset]) /
 				(cdf[offset + 1] - cdf[offset]);
 
 		// Compute PDF for sampled offset
-		*pdf = func[offset] * invFuncInt;
+		*pdf = func[offset];
 
 		// Save offset
 		if (off)
@@ -196,7 +212,9 @@ public:
 	}
 
 	/**
-	 * Samples from this distribution.
+	 * Samples an interval from this distribution.
+	 * The pdf is computed so that sum(i=0..n-1, pdf(i)) = 1
+	 * with n the number of intervals
 	 *
 	 * @param u   The random value used to sample.
 	 * @param pdf The pointer to the float where the pdf of the sample
@@ -205,10 +223,22 @@ public:
 	 *
 	 * @return The index of the sampled interval.
 	 */
-	unsigned int SampleDiscrete(float u, float *pdf, float *du = NULL) const {
+	u_int SampleDiscrete(float u, float *pdf, float *du = NULL) const {
 		// Find surrounding CDF segments and _offset_
-		float *ptr = std::lower_bound(cdf, cdf + count + 1, u);
-		unsigned int offset = static_cast<unsigned int>(luxrays::Max(0, static_cast<int>(ptr - cdf - 1)));
+		if (u <= cdf[0]) {
+			if (du)
+				*du = 0.f;
+			*pdf = func[0] * invCount;
+			return 0;
+		}
+		if (u >= cdf[count]) {
+			if (du)
+				*du = 1.f;
+			*pdf = func[count - 1] * invCount;
+			return count - 1;
+		}
+		float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
+		u_int offset = ptr - cdf - 1;
 
 		// Compute offset along CDF segment
 		if (du)
@@ -216,21 +246,43 @@ public:
 			(cdf[offset + 1] - cdf[offset]);
 
 		// Compute PDF for sampled offset
-		*pdf = func[offset] * invFuncInt * invCount;
+		*pdf = func[offset] * invCount;
 		return offset;
 	}
 
+	/**
+	 * The pdf associated to a given interval
+	 * 
+	 * @param offset The interval number in the [0,n) range
+	 *
+	 * @return The pdf so that sum(i=0..n-1, pdf(i)) = 1
+	 */
+	float Pdf(u_int offset) const {
+		return func[offset] * invCount;
+	}
+
+	/**
+	 * The pdf associated to a given point
+	 * 
+	 * @param offset The point position in the [0,1) range
+	 *
+	 * @return The pdf so that int(u=0..1, pdf(u)*du) = 1
+	 */
 	float Pdf(float u) const {
-		return func[Offset(u)] * invFuncInt;
+		return func[Offset(u)];
 	}
 
 	float Average() const {
 		return funcInt;
 	}
 
-	unsigned int Offset(float u) const {
+	u_int Offset(float u) const {
 		return luxrays::Min(count - 1, luxrays::Floor2UInt(u * count));
 	}
+
+	const u_int GetCount() const { return count; }
+	const float *GetFuncs() const { return func; }
+	const float *GetCDFs() const { return cdf; }
 
 private:
 	// Distribution1D Private Data
@@ -242,44 +294,46 @@ private:
 	 * The function integral (assuming it is regularly sampled with an interval of 1),
 	 * the inverted function integral and the inverted count.
 	 */
-	float funcInt, invFuncInt, invCount;
+	float funcInt, invCount;
 	/*
 	 * The number of function values. The number of cdf values is count+1.
 	 */
-	unsigned int count;
+	u_int count;
 };
 
 class Distribution2D {
 public:
-	Distribution2D(const float *data, unsigned int nu, unsigned int nv) {
+	// Distribution2D Public Methods
+
+	Distribution2D(const float *data, u_int nu, u_int nv) {
 		pConditionalV.reserve(nv);
 		// Compute conditional sampling distribution for $\tilde{v}$
-		for (unsigned int v = 0; v < nv; ++v)
+		for (u_int v = 0; v < nv; ++v)
 			pConditionalV.push_back(new Distribution1D(data + v * nu, nu));
 		// Compute marginal sampling distribution $p[\tilde{v}]$
 		std::vector<float> marginalFunc;
 		marginalFunc.reserve(nv);
-		for (unsigned int v = 0; v < nv; ++v)
+		for (u_int v = 0; v < nv; ++v)
 			marginalFunc.push_back(pConditionalV[v]->Average());
 		pMarginal = new Distribution1D(&marginalFunc[0], nv);
 	}
 
 	~Distribution2D() {
 		delete pMarginal;
-		for (unsigned int i = 0; i < pConditionalV.size(); ++i)
+		for (u_int i = 0; i < pConditionalV.size(); ++i)
 			delete pConditionalV[i];
 	}
 
 	void SampleContinuous(float u0, float u1, float uv[2],
 			float *pdf) const {
 		float pdfs[2];
-		unsigned int v;
+		u_int v;
 		uv[1] = pMarginal->SampleContinuous(u1, &pdfs[1], &v);
 		uv[0] = pConditionalV[v]->SampleContinuous(u0, &pdfs[0]);
 		*pdf = pdfs[0] * pdfs[1];
 	}
 
-	void SampleDiscrete(float u0, float u1, unsigned int uv[2], float *pdf) const {
+	void SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf) const {
 		float pdfs[2];
 		uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1]);
 		uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0]);
@@ -293,6 +347,13 @@ public:
 
 	float Average() const {
 		return pMarginal->Average();
+	}
+
+	const u_int GetWidth() const { return pConditionalV[0]->GetCount(); }
+	const u_int GetHeight() const { return pMarginal->GetCount(); }
+	const Distribution1D *GetMarginalDistribution() const { return pMarginal; }
+	const Distribution1D *GetConditionalDistribution(const u_int i) const {
+		return pConditionalV[i];
 	}
 
 private:

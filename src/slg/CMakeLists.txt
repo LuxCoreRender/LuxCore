@@ -1,23 +1,20 @@
-###########################################################################
-#   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  #
-#                                                                         #
-#   This file is part of LuxRays.                                         #
-#                                                                         #
-#   LuxRays is free software; you can redistribute it and/or modify       #
-#   it under the terms of the GNU General Public License as published by  #
-#   the Free Software Foundation; either version 3 of the License, or     #
-#   (at your option) any later version.                                   #
-#                                                                         #
-#   LuxRays is distributed in the hope that it will be useful,            #
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
-#   GNU General Public License for more details.                          #
-#                                                                         #
-#   You should have received a copy of the GNU General Public License     #
-#   along with this program.  If not, see <http://www.gnu.org/licenses/>. #
-#                                                                         #
-#   LuxRays website: http://www.luxrender.net                             #
-###########################################################################
+################################################################################
+# Copyright 1998-2013 by authors (see AUTHORS.txt)
+#
+#   This file is part of LuxRender.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
 
 #############################################################################
 #############################################################################
@@ -30,7 +27,7 @@
 #############################################################################
 
 set(SLG_VERSION_MAJOR 4)
-set(SLG_VERSION_MINOR 0devel1)
+set(SLG_VERSION_MINOR 0devel2)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -95,9 +92,15 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/core/mc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/datatypes.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/pathoclbase_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/rtpathoclbase_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_kernels.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/rtpathocl_kernels.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_datatypes.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filter_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sampler/sampler_types.cl
@@ -135,11 +138,13 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/hashgrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/cbidirhybrid/cbidirhybrid.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/compiledscene.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledscene.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathoclthread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/rtpathocl.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/rtpathoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathocl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/rtpathocl/rtpathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/lightcpu/lightcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcpu.cpp
@@ -148,7 +153,14 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathhybrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathhybridthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathstate.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcpu.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcputhread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathocl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathoclthread.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathocl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
@@ -159,6 +171,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/light.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/material.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/sdl/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/spd.cpp
@@ -173,6 +186,8 @@ SOURCE_GROUP("Source Files\\SLG Library" FILES ${SLG_LIB_SRCS})
 set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/camera_types_kernel.cpp
@@ -191,9 +206,13 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/hitpoint_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/datatypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathoclbase_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/rtpathoclbase_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_datatypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_kernels_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/rtpathocl_kernels_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_datatypes_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_kernels_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Kernels" FILES ${SLG_SRCS_KERNELS})
 

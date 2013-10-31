@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
@@ -34,7 +31,7 @@ using namespace slg;
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPURenderThread(engine, index, device, true, true) {
+		CPUNoTileRenderThread(engine, index, device) {
 }
 
 void BiDirCPURenderThread::ConnectVertices(
@@ -104,7 +101,7 @@ void BiDirCPURenderThread::ConnectVertices(
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
-				eyeSampleResult->radiance += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
+				eyeSampleResult->radiancePerPixelNormalized[0] += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
 						connectionThroughput * lightBsdfEval * lightVertex.throughput;
 			}
 		}
@@ -158,9 +155,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
 					connectionThroughput * lightVertex.throughput * bsdfEval;
-
-				AddSampleResult(sampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
-						radiance, 1.f);
+				AddSampleResult(sampleResults, scrX, scrY, radiance);
 			}
 		}
 	}
@@ -225,7 +220,8 @@ void BiDirCPURenderThread::DirectLightSampling(
 	}
 }
 
-void BiDirCPURenderThread::DirectHitLight(const Spectrum &lightRadiance,
+void BiDirCPURenderThread::DirectHitLight(
+		const LightSource *light, const Spectrum &lightRadiance,
 		const float directPdfA, const float emissionPdfW,
 		const PathVertexVM &eyeVertex, Spectrum *radiance) const {
 	if (lightRadiance.Black())
@@ -238,7 +234,7 @@ void BiDirCPURenderThread::DirectHitLight(const Spectrum &lightRadiance,
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	const float lightPickPdf = scene->PickLightPdf();
+	const float lightPickPdf = scene->SampleAllLightPdf(light);
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -256,15 +252,15 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
-		DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+		DirectHitLight(eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
 		if (scene->envLight) {
 			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+			DirectHitLight(scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 		if (scene->sunLight) {
 			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+			DirectHitLight(scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
 }
@@ -459,14 +455,13 @@ void BiDirCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		PathVertexVM eyeVertex;
-		SampleResult eyeSampleResult;
-		eyeSampleResult.type = PER_PIXEL_NORMALIZED;
+		SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 		eyeSampleResult.alpha = 1.f;
 
 		Ray eyeRay;
-		eyeSampleResult.screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-		eyeSampleResult.screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-		camera->GenerateRay(eyeSampleResult.screenX, eyeSampleResult.screenY, &eyeRay,
+		eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+		eyeSampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+		camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 			sampler->GetSample(10), sampler->GetSample(11));
 
 		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
@@ -494,7 +489,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 				eyeVertex.throughput *= connectionThroughput;
 
-				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance);
+				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 				if (eyeVertex.depth == 1)
 					eyeSampleResult.alpha = 0.f;
@@ -512,7 +507,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			// Check if it is a light source
 			if (eyeVertex.bsdf.IsLightSource()) {
-				DirectHitLight(true, eyeVertex, &eyeSampleResult.radiance);
+				DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 				// SLG light sources are like black bodies
 				break;
@@ -529,7 +524,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					eyeVertex, &eyeSampleResult.radiance);
+					eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 			//------------------------------------------------------------------
 			// Connect vertex path ray with all light path vertices

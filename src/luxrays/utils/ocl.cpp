@@ -1,32 +1,30 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <iostream>
 #include <fstream>
+#include <string.h>
 
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
-#include <string.h>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/utils.h"
@@ -240,8 +238,14 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 oclKernelPersistentCache::oclKernelPersistentCache(const std::string &applicationName) {
 	appName = applicationName;
 
+	// Just to be safe
+	boost::replace_all(appName, ":", "-");
+	boost::replace_all(appName, " ", "-");
+	boost::replace_all(appName, "/", "-");
+	boost::replace_all(appName, "\\", "-");
+
 	// Crate the cache directory
-	boost::filesystem::create_directories("kernel_cache/" + appName);
+	boost::filesystem::create_directories(boost::filesystem::temp_directory_path() / "kernel_cache" / appName);
 }
 
 oclKernelPersistentCache::~oclKernelPersistentCache() {
@@ -251,12 +255,19 @@ oclKernelPersistentCache::~oclKernelPersistentCache() {
 // From: http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
 
 std::string oclKernelPersistentCache::HashString(const std::string &ss) {
-	const char *s = ss.c_str();
+	const u_int hash = HashBin(ss.c_str(), ss.length());
 
-	unsigned int hash = 0;
+	char buf[9];
+	sprintf(buf, "%08x", hash);
 
-	for (; *s; ++s) {
-		hash += *s;
+	return std::string(buf);
+}
+
+u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
+	u_int hash = 0;
+
+	for (u_int i = 0; i < size; ++i) {
+		hash += *s++;
 		hash += (hash << 10);
 		hash ^= (hash >> 6);
 	}
@@ -265,10 +276,7 @@ std::string oclKernelPersistentCache::HashString(const std::string &ss) {
 	hash ^= (hash >> 11);
 	hash += (hash << 15);
 
-	char buf[9];
-	sprintf(buf, "%08x", hash);
-
-	return std::string(buf);
+	return hash;
 }
 
 cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device& device,
@@ -281,10 +289,12 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	std::string deviceName = device.getInfo<CL_DEVICE_NAME>();
 	std::string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
 	std::string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
-	std::string dirName = "kernel_cache/" + appName + "/" + platformName + "/" + deviceName + "/" + deviceUnits;
-	std::string fileName = dirName +"/" +kernelName;
+	boost::filesystem::path dirPath = boost::filesystem::temp_directory_path() / "kernel_cache" /
+			appName / platformName / deviceName / deviceUnits;
+	boost::filesystem::path filePath = dirPath / kernelName;
+	const std::string fileName = filePath.generic_string();
 	
-	if (!boost::filesystem::exists(fileName)) {
+	if (!boost::filesystem::exists(filePath)) {
 		// It isn't available, compile the source
 		cl::Program *program = ForcedCompile(
 				context, device, kernelsParameters, kernelSource, error);
@@ -294,16 +304,20 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		// Obtain the binaries of the sources
 		VECTOR_CLASS<char *> bins = program->getInfo<CL_PROGRAM_BINARIES>();
 		assert (bins.size() == 1);
-		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES >();
+		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES>();
 		assert (sizes.size() == 1);
 
 		// Create the file only if the binaries include something
 		if (sizes[0] > 0) {
 			// Add the kernel to the cache
-			boost::filesystem::create_directories(dirName);
+			boost::filesystem::create_directories(dirPath);
 			BOOST_OFSTREAM file(fileName.c_str(), std::ios_base::out | std::ios_base::binary);
-			file.write(bins[0], sizes[0]);
 
+			// Write the binary hash
+			const u_int hashBin = HashBin(bins[0], sizes[0]);
+			file.write((char *)&hashBin, sizeof(int));
+
+			file.write(bins[0], sizes[0]);
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -319,14 +333,20 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 
 		return program;
 	} else {
-		const size_t kernelSize = boost::filesystem::file_size(fileName);
+		const size_t fileSize = boost::filesystem::file_size(filePath);
 
-		if (kernelSize > 0) {
+		if (fileSize > 4) {
+			const size_t kernelSize = fileSize - 4;
+
 			char *kernelBin = new char[kernelSize];
 
 			BOOST_IFSTREAM file(fileName.c_str(), std::ios_base::in | std::ios_base::binary);
-			file.read(kernelBin, kernelSize);
 
+			// Read the binary hash
+			u_int hashBin;
+			file.read((char *)&hashBin, sizeof(int));
+
+			file.read(kernelBin, kernelSize);
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -336,23 +356,29 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 
 			file.close();
 
-			// Compile from the binaries
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(device);
-			cl::Program *program = new cl::Program(context, buildDevice,
-					cl::Program::Binaries(1, std::make_pair(kernelBin, kernelSize)));
-			program->build(buildDevice);
+			// Check the binary hash
+			if (hashBin != HashBin(kernelBin, kernelSize)) {
+				// Something wrong in the file, remove the file and retry
+				boost::filesystem::remove(filePath);
+				return Compile(context, device, kernelsParameters, kernelSource, cached, error);
+			} else {
+				// Compile from the binaries
+				VECTOR_CLASS<cl::Device> buildDevice;
+				buildDevice.push_back(device);
+				cl::Program *program = new cl::Program(context, buildDevice,
+						cl::Program::Binaries(1, std::make_pair(kernelBin, kernelSize)));
+				program->build(buildDevice);
 
-			if (cached)
-				*cached = true;
+				if (cached)
+					*cached = true;
 
-			delete[] kernelBin;
+				delete[] kernelBin;
 
-			return program;
+				return program;
+			}
 		} else {
 			// Something wrong in the file, remove the file and retry
-			boost::filesystem::remove(fileName);
-
+			boost::filesystem::remove(filePath);
 			return Compile(context, device, kernelsParameters, kernelSource, cached, error);
 		}
 	}

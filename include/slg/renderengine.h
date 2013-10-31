@@ -1,26 +1,25 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_RENDERENGINE_H
 #define	_SLG_RENDERENGINE_H
+
+#include <deque>
 
 #include "luxrays/core/utils.h"
 
@@ -34,7 +33,7 @@
 namespace slg {
 
 typedef enum {
-	PATHOCL  = 4,
+	PATHOCL = 4,
 	LIGHTCPU = 5,
 	PATHCPU = 6,
 	BIDIRCPU = 7,
@@ -43,7 +42,10 @@ typedef enum {
 	BIDIRVMCPU = 10,
 	FILESAVER = 11,
 	RTPATHOCL = 12,
-	PATHHYBRID = 13
+	PATHHYBRID = 13,
+	BIASPATHCPU = 14,
+	BIASPATHOCL = 15,
+	RTBIASPATHOCL = 16
 } RenderEngineType;
 
 //------------------------------------------------------------------------------
@@ -52,13 +54,13 @@ typedef enum {
 
 class RenderEngine {
 public:
-	RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RenderEngine();
 
-	void Start();
-	void Stop();
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
+	virtual void Start();
+	virtual void Stop();
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	void UpdateFilm();
 	virtual bool WaitNewFrame() { return false; };
@@ -87,8 +89,8 @@ public:
 	// Statistics related methods
 	//--------------------------------------------------------------------------
 
-	unsigned int GetPass() const {
-		return static_cast<unsigned int>(samplesCount / (film->GetWidth() * film->GetHeight()));
+	u_int GetPass() const {
+		return static_cast<u_int>(samplesCount / (film->GetWidth() * film->GetHeight()));
 	}
 	double GetTotalSampleCount() const { return samplesCount; }
 	float GetConvergence() const { return convergence; }
@@ -106,15 +108,13 @@ public:
 
 	static RenderEngineType String2RenderEngineType(const std::string &type);
 	static const std::string RenderEngineType2String(const RenderEngineType type);
-	static RenderEngine *AllocRenderEngine(const RenderEngineType engineType,
-		RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 protected:
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;
 
-	virtual void BeginEditLockLess() = 0;
-	virtual void EndEditLockLess(const EditActionList &editActions) = 0;
+	virtual void BeginSceneEditLockLess() = 0;
+	virtual void EndSceneEditLockLess(const EditActionList &editActions) = 0;
 
 	virtual void UpdateFilmLockLess() = 0;
 	virtual void UpdateCounters() = 0;
@@ -124,7 +124,7 @@ protected:
 	vector<luxrays::DeviceDescription *> selectedDeviceDescs;
 	vector<luxrays::IntersectionDevice *> intersectionDevices;
 
-	RenderConfig *renderConfig;
+	const RenderConfig *renderConfig;
 	Film *film;
 	boost::mutex *filmMutex;
 
@@ -150,17 +150,15 @@ class CPURenderEngine;
 class CPURenderThread {
 public:
 	CPURenderThread(CPURenderEngine *engine,
-			const u_int index, luxrays::IntersectionDevice *dev,
-			const bool enablePerPixelNormBuffer,
-			const bool enablePerScreenNormBuffer);
+			const u_int index, luxrays::IntersectionDevice *dev);
 	virtual ~CPURenderThread();
 
 	virtual void Start();
 	virtual void Interrupt();
 	virtual void Stop();
 
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
+	virtual void BeginSceneEdit();
+	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	friend class CPURenderEngine;
 
@@ -170,22 +168,18 @@ protected:
 	virtual void StartRenderThread();
 	virtual void StopRenderThread();
 
-	virtual void RenderFunc() = 0;
-
 	u_int threadIndex;
 	CPURenderEngine *renderEngine;
 
 	boost::thread *renderThread;
-	Film *threadFilm;
 	luxrays::IntersectionDevice *device;
 
 	bool started, editMode;
-	bool enablePerPixelNormBuffer, enablePerScreenNormBuffer;
 };
 
 class CPURenderEngine : public RenderEngine {
 public:
-	CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPURenderEngine();
 
 	friend class CPURenderThread;
@@ -197,13 +191,130 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	virtual void BeginEditLockLess();
-	virtual void EndEditLockLess(const EditActionList &editActions);
+	virtual void BeginSceneEditLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
-	virtual void UpdateFilmLockLess();
-	virtual void UpdateCounters();
+	virtual void UpdateFilmLockLess() = 0;
+	virtual void UpdateCounters() = 0;
 
 	vector<CPURenderThread *> renderThreads;
+};
+
+//------------------------------------------------------------------------------
+// CPU render engines with no tile rendering
+//------------------------------------------------------------------------------
+
+class CPUNoTileRenderEngine;
+
+class CPUNoTileRenderThread : public CPURenderThread {
+public:
+	CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
+			const u_int index, luxrays::IntersectionDevice *dev);
+	virtual ~CPUNoTileRenderThread();
+
+	friend class CPUNoTileRenderEngine;
+
+protected:
+	virtual void StartRenderThread();
+
+	Film *threadFilm;
+};
+
+class CPUNoTileRenderEngine : public CPURenderEngine {
+public:
+	CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~CPUNoTileRenderEngine();
+
+	friend class CPUNoTileRenderThread;
+
+protected:
+	virtual void UpdateFilmLockLess();
+	virtual void UpdateCounters();
+};
+
+//------------------------------------------------------------------------------
+// TileRepository 
+//------------------------------------------------------------------------------
+
+class TileRepository {
+public:
+	typedef struct {
+		u_int xStart, yStart;
+		// -1 means: tile has to be rendered with all samples
+		int sampleIndex;
+	} Tile;
+
+	TileRepository(const u_int size);
+	~TileRepository();
+
+	void HilberCurveTiles(const int sampleIndex,
+		const u_int n, const int xo, const int yo,
+		const int xd, const int yd, const int xp, const int yp,
+		const int xEnd, const int yEnd);
+
+	void Clear();
+	void GetPendingTiles(vector<Tile> &tiles);
+
+	void InitTiles(const u_int width, const u_int height);
+	const bool NextTile(Tile **tile, const u_int width, const u_int height);
+
+	u_int tileSize;
+	u_int totalSamplesPerPixel;
+	bool enableProgressiveRefinement, enableMultipassRendering;
+	bool done;
+
+private:
+	boost::mutex tileMutex;
+	std::deque<Tile *> todoTiles;
+	std::vector<Tile *> pendingTiles;
+};
+
+//------------------------------------------------------------------------------
+// CPU render engines with tile rendering
+//------------------------------------------------------------------------------
+
+class CPUTileRenderEngine;
+
+class CPUTileRenderThread : public CPURenderThread {
+public:
+	CPUTileRenderThread(CPUTileRenderEngine *engine,
+			const u_int index, luxrays::IntersectionDevice *dev);
+	virtual ~CPUTileRenderThread();
+
+	friend class CPUTileRenderEngine;
+
+protected:
+	virtual void StartRenderThread();
+
+	Film *tileFilm;
+};
+
+class CPUTileRenderEngine : public CPURenderEngine {
+public:
+	CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~CPUTileRenderEngine();
+
+	void GetPendingTiles(vector<TileRepository::Tile> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	u_int GetTileSize() const { return tileRepository->tileSize; }
+
+	friend class CPUTileRenderThread;
+
+protected:
+	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
+
+	// I don't implement StartLockLess() here because the step of initializing
+	// the tile repository is left to the sub-class (so some TileRepository
+	// can be set before to start all rendering threads).
+	// virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
+
+	virtual void UpdateFilmLockLess() { }
+	virtual void UpdateCounters();
+
+	TileRepository *tileRepository;
+	bool printedRenderingTime;
 };
 
 //------------------------------------------------------------------------------
@@ -212,7 +323,7 @@ protected:
 
 class OCLRenderEngine : public RenderEngine {
 public:
-	OCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+	OCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
 
 	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
@@ -243,7 +354,7 @@ protected:
 
 class HybridRenderThread {
 public:
-	HybridRenderThread(HybridRenderEngine *re, const unsigned int index,
+	HybridRenderThread(HybridRenderEngine *re, const u_int index,
 			luxrays::IntersectionDevice *device);
 	~HybridRenderThread();
 
@@ -251,8 +362,8 @@ public:
     void Interrupt();
 	void Stop();
 
-	void BeginEdit();
-	void EndEdit(const EditActionList &editActions);
+	void BeginSceneEdit();
+	void EndSceneEdit(const EditActionList &editActions);
 
 	friend class HybridRenderState;
 	friend class HybridRenderEngine;
@@ -273,13 +384,13 @@ protected:
 	Film *threadFilm;
 	luxrays::IntersectionDevice *device;
 
-	unsigned int threadIndex;
+	u_int threadIndex;
 	HybridRenderEngine *renderEngine;
 	u_int pixelCount;
 
 	double samplesCount;
 
-	unsigned int pendingRayBuffers;
+	u_int pendingRayBuffers;
 	luxrays::RayBuffer *currentRayBufferToSend;
 	std::deque<luxrays::RayBuffer *> freeRayBuffers;
 
@@ -294,7 +405,7 @@ protected:
 
 class HybridRenderEngine : public OCLRenderEngine {
 public:
-	HybridRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	HybridRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~HybridRenderEngine() { }
 
 	friend class HybridRenderState;
@@ -307,8 +418,8 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-	virtual void BeginEditLockLess();
-	virtual void EndEditLockLess(const EditActionList &editActions);
+	virtual void BeginSceneEditLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();

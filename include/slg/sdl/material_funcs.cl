@@ -1,24 +1,21 @@
 #line 2 "material_funcs.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
@@ -84,7 +81,7 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL)
 		case METAL:
-			return SPECULAR | REFLECT;
+			return GLOSSY | REFLECT;
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -100,7 +97,7 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
-			return DIFFUSE | GLOSSY | REFLECT;
+			return GLOSSY | REFLECT;
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
@@ -121,67 +118,68 @@ float3 Material_SampleNoMix(__global Material *material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return MatteMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event
+					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
 			return MirrorMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1, pdfW, cosSampledDir, event
+					u0, u1, pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
 			return GlassMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL)
 		case METAL:
 			return MetalMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event
+					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
 			return ArchGlassMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
 			return NullMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1, pdfW, cosSampledDir, event
+					u0, u1, pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 		case MATTETRANSLUCENT:
 			return MatteTranslucentMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
 			return Glossy2Material_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
 			return Metal2Material_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event
+					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
 		case ROUGHGLASS:
 			return RoughGlassMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event
+					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 		default:
@@ -457,7 +455,8 @@ float3 MixMaterial_Evaluate(__global Material *material,
 float3 MixMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, const float passEvent,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
 	__global Material *evaluationMatList[MIX_STACK_SIZE];
 	float parentWeightList[MIX_STACK_SIZE];
@@ -516,7 +515,8 @@ float3 MixMaterial_Sample(__global Material *material,
 			const float3 sampleResult = Material_SampleNoMix(matFirst, hitPoint,
 					fixedDir, sampledDir,
 					u0, u1, passThroughEventFirst,
-					&pdfWMatFirst, cosSampledDir, event
+					&pdfWMatFirst, cosSampledDir, event,
+					requestedEvent
 					TEXTURES_PARAM);
 
 			if (all(isequal(sampleResult, BLACK)))
@@ -771,7 +771,8 @@ float3 Material_Sample(__global Material *material,	__global HitPoint *hitPoint,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
@@ -779,7 +780,7 @@ float3 Material_Sample(__global Material *material,	__global HitPoint *hitPoint,
 				fixedDir, sampledDir,
 				u0, u1,
 				passThroughEvent,
-				pdfW, cosSampledDir, event
+				pdfW, cosSampledDir, event, requestedEvent
 				MATERIALS_PARAM);
 	else
 #endif
@@ -789,7 +790,7 @@ float3 Material_Sample(__global Material *material,	__global HitPoint *hitPoint,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent,
 #endif
-				pdfW, cosSampledDir, event
+				pdfW, cosSampledDir, event, requestedEvent
 				TEXTURES_PARAM);
 }
 
