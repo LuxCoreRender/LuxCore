@@ -52,6 +52,12 @@ public:
 				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 				" -D QBVH_STACK_SIZE=" << stackSize;
+		// Check if it is better to use the local memory for the stack
+		if (device->GetDeviceDesc()->GetType() == DEVICE_TYPE_OPENCL_GPU) {
+			useLocalMemmoryForStack = true;
+			params << " -D USE_LOCAL_MEMORY_FOR_STACK";
+		} else
+			useLocalMemmoryForStack = false;
 
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
@@ -88,7 +94,7 @@ public:
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				//	"] QBVH kernel work group size: " << workGroupSize);
 
-				if (workGroupSize > 256) {
+				if (useLocalMemmoryForStack && (workGroupSize > 256)) {
 					// Otherwise I will probably run out of local memory
 					workGroupSize = 256;
 					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -116,6 +122,8 @@ protected:
 	// QBVH fields
 	cl::Buffer *trisBuff;
 	cl::Buffer *qbvhBuff;
+
+	bool useLocalMemmoryForStack;
 };
 
 class OpenCLQBVHImageKernels : public OpenCLKernels {
@@ -136,6 +144,12 @@ public:
 				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 				" -D USE_IMAGE_STORAGE"
 				" -D QBVH_STACK_SIZE=" << stackSize;
+		// Check if it is better to use the local memory for the stack
+		if (device->GetDeviceDesc()->GetType() == DEVICE_TYPE_OPENCL_GPU) {
+			useLocalMemmoryForStack = true;
+			params << " -D USE_LOCAL_MEMORY_FOR_STACK";
+		} else
+			useLocalMemmoryForStack = false;
 
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
@@ -167,13 +181,13 @@ public:
 
 			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
-			else {
+			else if (useLocalMemmoryForStack) {
 				kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
 					CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
 				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				//	"] QBVH kernel work group size: " << workGroupSize);
 
-				if (workGroupSize > 256) {
+				if (useLocalMemmoryForStack && (workGroupSize > 256)) {
 					// Otherwise I will probably run out of local memory
 					workGroupSize = 256;
 					//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -201,6 +215,8 @@ protected:
 	// QBVH with image storage fields
 	cl::Image2D *trisBuff;
 	cl::Image2D *qbvhBuff;
+
+	bool useLocalMemmoryForStack;
 };
 
 void OpenCLQBVHKernels::SetBuffers(cl::Buffer *t, cl::Buffer *q) {
@@ -211,13 +227,16 @@ void OpenCLQBVHKernels::SetBuffers(cl::Buffer *t, cl::Buffer *q) {
 	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
 		kernel->setArg(2, *qbvhBuff);
 		kernel->setArg(3, *trisBuff);
-		// Check if we have enough local memory
-		if (stackSize * workGroupSize * sizeof(cl_int) >
-			device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
-			throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
-				" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
-
-		kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
+		if (useLocalMemmoryForStack) {
+			// Check if we have enough local memory
+			if (stackSize * workGroupSize * sizeof(cl_int) >
+				device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+				throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+					" and QBVH stack depth (try to reduce the work group size and/or the stack depth). Required local memory " +
+					ToString(stackSize * workGroupSize * sizeof(cl_int)) + " bytes, " +
+					ToString(device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>()) + " available.");
+			kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
+		}
 	}
 }
 
@@ -242,12 +261,16 @@ void OpenCLQBVHImageKernels::SetBuffers(cl::Image2D *t, cl::Image2D *q) {
 	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
 		kernel->setArg(2, *qbvhBuff);
 		kernel->setArg(3, *trisBuff);
-		// Check if we have enough local memory
-		if (stackSize * workGroupSize * sizeof(cl_int) >
-			device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
-			throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
-				" and QBVH stack depth (try to reduce the work group size and/or the stack depth)");
-		kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
+		if (useLocalMemmoryForStack) {
+			// Check if we have enough local memory
+			if (stackSize * workGroupSize * sizeof(cl_int) >
+				device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>())
+				throw std::runtime_error("Not enough OpenCL device local memory available for the required work group size"
+					" and QBVH stack depth (try to reduce the work group size and/or the stack depth). Required local memory " +
+					ToString(stackSize * workGroupSize * sizeof(cl_int)) + " bytes, " +
+					ToString(device->GetOpenCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>()) + " available.");
+			kernel->setArg(5, stackSize * workGroupSize * sizeof(cl_int), NULL);
+		}
 	}
 }
 
