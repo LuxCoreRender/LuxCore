@@ -37,7 +37,7 @@
 using namespace luxrays;
 using namespace std;
 
-template<> PropertyValues MakePropertyValues<UV>(const UV &v) {
+template<> PropertyValues luxrays::MakePropertyValues<UV>(const UV &v) {
 	PropertyValues values(3);
 	values[0] = v.u;
 	values[1] = v.v;
@@ -45,7 +45,7 @@ template<> PropertyValues MakePropertyValues<UV>(const UV &v) {
 	return values;
 }
 
-template<> PropertyValues MakePropertyValues<Vector>(const Vector &v) {
+template<> PropertyValues luxrays::MakePropertyValues<Vector>(const Vector &v) {
 	PropertyValues values(3);
 	values[0] = v.x;
 	values[1] = v.y;
@@ -54,7 +54,7 @@ template<> PropertyValues MakePropertyValues<Vector>(const Vector &v) {
 	return values;
 }
 
-template<> PropertyValues MakePropertyValues<Normal>(const Normal &v) {
+template<> PropertyValues luxrays::MakePropertyValues<Normal>(const Normal &v) {
 	PropertyValues values(3);
 	values[0] = v.x;
 	values[1] = v.y;
@@ -63,7 +63,7 @@ template<> PropertyValues MakePropertyValues<Normal>(const Normal &v) {
 	return values;
 }
 
-template<> PropertyValues MakePropertyValues<Point>(const Point &v) {
+template<> PropertyValues luxrays::MakePropertyValues<Point>(const Point &v) {
 	PropertyValues values(3);
 	values[0] = v.x;
 	values[1] = v.y;
@@ -72,7 +72,7 @@ template<> PropertyValues MakePropertyValues<Point>(const Point &v) {
 	return values;
 }
 
-template<> PropertyValues MakePropertyValues<Spectrum>(const Spectrum &v) {
+template<> PropertyValues luxrays::MakePropertyValues<Spectrum>(const Spectrum &v) {
 	PropertyValues values(3);
 	values[0] = v.r;
 	values[1] = v.g;
@@ -81,7 +81,7 @@ template<> PropertyValues MakePropertyValues<Spectrum>(const Spectrum &v) {
 	return values;
 }
 
-template<> PropertyValues MakePropertyValues<Matrix4x4>(const Matrix4x4 &m) {
+template<> PropertyValues luxrays::MakePropertyValues<Matrix4x4>(const Matrix4x4 &m) {
 	PropertyValues values(16);
 
 	for (u_int i = 0; i < 4; ++i) {
