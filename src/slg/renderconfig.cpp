@@ -50,8 +50,8 @@ RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : scene
 		allocatedScene = false;
 	} else {
 		// Create the Scene
-		const string sceneFileName = props.GetString("scene.file", "scenes/luxball/luxball.scn");
-		const float imageScale = Max(.01f, props.GetFloat("images.scale", 1.f));
+		const string sceneFileName = props.Get(Property("scene.file")("scenes/luxball/luxball.scn")).Get<string>();
+		const float imageScale = Max(.01f, props.Get(Property("images.scale")(1.f)).Get<float>());
 
 		scene = new Scene(sceneFileName, imageScale);
 		allocatedScene = true;
@@ -71,9 +71,10 @@ void RenderConfig::Parse(const luxrays::Properties &props) {
 	cfg.Set(props);
 
 	// RTPATHOCL has a different default screen.refresh.interval value
-	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(cfg.GetString("renderengine.type", "PATHOCL"));
+	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(
+		cfg.Get(Property("renderengine.type")("PATHOCL")).Get<string>());
 	const int interval = (renderEngineType == RTPATHOCL) ? 33 : 100;
-	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", interval);
+	screenRefreshInterval = cfg.Get(Property("screen.refresh.interval")(interval)).Get<u_int>();
 
 	scene->enableInstanceSupport = cfg.Get(Property("accelerator.instances.enable")(true)).Get<bool>();
 	const string accelType = cfg.Get(Property("accelerator.type")("AUTO")).Get<string>();
@@ -170,8 +171,8 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	// Create the filter
 	//--------------------------------------------------------------------------
 
-	const FilterType filterType = Filter::String2FilterType(cfg.GetString("film.filter.type", "GAUSSIAN"));
-	const float filterWidth = cfg.GetFloat("film.filter.width", 1.5f);
+	const FilterType filterType = Filter::String2FilterType(cfg.Get(Property("film.filter.type")("GAUSSIAN")).Get<string>());
+	const float filterWidth = cfg.Get(Property("film.filter.width")(1.5f)).Get<float>();
 
 	auto_ptr<Filter> filter;
 	switch (filterType) {
@@ -181,19 +182,19 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			filter.reset(new BoxFilter(filterWidth, filterWidth));
 			break;
 		case FILTER_GAUSSIAN: {
-			const float alpha = cfg.GetFloat("film.filter.gaussian.alpha", 2.f);
+			const float alpha = cfg.Get(Property("film.filter.gaussian.alpha")(2.f)).Get<float>();
 			filter.reset(new GaussianFilter(filterWidth, filterWidth, alpha));
 			break;
 		}
 		case FILTER_MITCHELL: {
-			const float b = cfg.GetFloat("film.filter.mitchell.b", 1.f / 3.f);
-			const float c = cfg.GetFloat("film.filter.mitchell.c", 1.f / 3.f);
+			const float b = cfg.Get(Property("film.filter.mitchell.b")(1.f / 3.f)).Get<float>();
+			const float c = cfg.Get(Property("film.filter.mitchell.c")(1.f / 3.f)).Get<float>();
 			filter.reset(new MitchellFilter(filterWidth, filterWidth, b, c));
 			break;
 		}
 		case FILTER_MITCHELL_SS: {
-			const float b = cfg.GetFloat("film.filter.mitchellss.b", 1.f / 3.f);
-			const float c = cfg.GetFloat("film.filter.mitchellss.c", 1.f / 3.f);
+			const float b = cfg.Get(Property("film.filter.mitchellss.b")(1.f / 3.f)).Get<float>();
+			const float c = cfg.Get(Property("film.filter.mitchellss.c")(1.f / 3.f)).Get<float>();
 			filter.reset(new MitchellFilterSS(filterWidth, filterWidth, b, c));
 			break;
 		}
@@ -212,26 +213,28 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight));
 	film->SetFilter(filter.release());
 
-	const int toneMapType = cfg.GetInt("film.tonemap.type", 0);
+	const int toneMapType = cfg.Get(Property("film.tonemap.type")(0)).Get<int>();
 	if (toneMapType == 0) {
 		LinearToneMapParams params;
-		params.scale = cfg.GetFloat("film.tonemap.linear.scale", params.scale);
+		params.scale = cfg.Get(Property("film.tonemap.linear.scale")(params.scale)).Get<float>();
 		film->SetToneMapParams(params);
 	} else {
 		Reinhard02ToneMapParams params;
-		params.preScale = cfg.GetFloat("film.tonemap.reinhard02.prescale", params.preScale);
-		params.postScale = cfg.GetFloat("film.tonemap.reinhard02.postscale", params.postScale);
-		params.burn = cfg.GetFloat("film.tonemap.reinhard02.burn", params.burn);
+		params.preScale = cfg.Get(Property("film.tonemap.reinhard02.prescale")(params.preScale)).Get<float>();
+		params.postScale = cfg.Get(Property("film.tonemap.reinhard02.postscale")(params.postScale)).Get<float>();
+		params.burn = cfg.Get(Property("film.tonemap.reinhard02.burn")(params.burn)).Get<float>();
 		film->SetToneMapParams(params);
 	}
 
-	const float gamma = cfg.GetFloat("film.gamma", 2.2f);
+	const float gamma = cfg.Get(Property("film.gamma")(2.2f)).Get<float>();
 	if (gamma != 2.2f)
 		film->SetGamma(gamma);
 
 	// For compatibility with the past
 	if (cfg.IsDefined("film.alphachannel.enable")) {
-		if (cfg.GetInt("film.alphachannel.enable", 0) != 0)
+		SLG_LOG("WARNING: deprecated property film.alphachannel.enable");
+
+		if (cfg.Get(Property("film.alphachannel.enable")(0)).Get<bool>())
 			film->AddChannel(Film::ALPHA);
 		else
 			film->RemoveChannel(Film::ALPHA);
@@ -258,8 +261,8 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			continue;
 
 		outputNames.insert(outputName);
-		const string type = cfg.GetString("film.outputs." + outputName + ".type", "RGB_TONEMAPPED");
-		const string fileName = cfg.GetString("film.outputs." + outputName + ".filename", "image.png");
+		const string type = cfg.Get(Property("film.outputs." + outputName + ".type")("RGB_TONEMAPPED")).Get<string>();
+		const string fileName = cfg.Get(Property("film.outputs." + outputName + ".filename")("image.png")).Get<string>();
 
 		SDL_LOG("Film output definition: " << type << " [" << fileName << "]");
 
@@ -361,9 +364,9 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			} else
 				throw std::runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
 		} else if (type == "MATERIAL_ID_MASK") {
-			const u_int materialID = cfg.GetInt("film.outputs." + outputName + ".id", 255);
+			const u_int materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255)).Get<u_int>();
 			Properties prop;
-			prop.SetString("id", ToString(materialID));
+			prop.Set(Property("id")(materialID));
 
 			film->AddChannel(Film::MATERIAL_ID);
 			film->AddChannel(Film::MATERIAL_ID_MASK, &prop);
@@ -375,9 +378,9 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			film->AddChannel(Film::INDIRECT_SHADOW_MASK);
 			filmOutputs.Add(FilmOutputs::INDIRECT_SHADOW_MASK, fileName);
 		} else if (type == "RADIANCE_GROUP") {
-			const u_int lightID = cfg.GetInt("film.outputs." + outputName + ".id", 0);
+			const u_int lightID = cfg.Get(Property("film.outputs." + outputName + ".id")(0)).Get<u_int>();
 			Properties prop;
-			prop.SetString("id", ToString(lightID));
+			prop.Set(Property("id")(lightID));
 
 			filmOutputs.Add(FilmOutputs::RADIANCE_GROUP, fileName, &prop);
 		} else if (type == "UV") {
@@ -395,7 +398,7 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	if (cfg.IsDefined("image.filename")) {
 		SLG_LOG("WARNING: deprecated property image.filename");
 		filmOutputs.Add(film->HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_TONEMAPPED : FilmOutputs::RGB_TONEMAPPED,
-				cfg.GetString("image.filename", "image.png"));
+				cfg.Get(Property("image.filename")("image.png")).Get<string>());
 	}
 
 	// Default setting
@@ -427,7 +430,8 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMutex) const {
-	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(cfg.Get(Property("renderengine.type")("PATHOCL")).Get<string>());
+	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(
+		cfg.Get(Property("renderengine.type")("PATHOCL")).Get<string>());
 
 	switch (renderEngineType) {
 		case LIGHTCPU:

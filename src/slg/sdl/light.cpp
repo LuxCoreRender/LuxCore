@@ -166,21 +166,15 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	props.SetString("scene.infinitelight.file", "imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr");
-	props.SetString("scene.infinitelight.gain",
-			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
-	props.SetString("scene.infinitelight.shift", ToString(mapping.uDelta) + " " + ToString(mapping.vDelta));
-	props.SetString("scene.infinitelight.transformation",
-			ToString(lightToWorld.m.m[0][0]) + " " + ToString(lightToWorld.m.m[1][0]) + " " + ToString(lightToWorld.m.m[2][0]) + " " + ToString(lightToWorld.m.m[3][0]) + " " +
-			ToString(lightToWorld.m.m[0][1]) + " " + ToString(lightToWorld.m.m[1][1]) + " " + ToString(lightToWorld.m.m[2][1]) + " " + ToString(lightToWorld.m.m[3][1]) + " " +
-			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
-			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
-		);
-	props.SetString("scene.infinitelight.samples", ToString(samples));
-	props.SetString("scene.infinitelight.visibility.indirect.diffuse.enable", ToString(isVisibleIndirectDiffuse));
-	props.SetString("scene.infinitelight.visibility.indirect.glossy.enable", ToString(isVisibleIndirectGlossy));
-	props.SetString("scene.infinitelight.visibility.indirect.specular.enable", ToString(isVisibleIndirectSpecular));
+	props.Set(Property("scene.infinitelight.file")("imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+	props.Set(Property("scene.infinitelight.gain")(gain));
+	props.Set(Property("scene.infinitelight.shift")(mapping.uDelta, mapping.vDelta));
+	props.Set(Property("scene.infinitelight.transformation")(lightToWorld.m));
+	props.Set(Property("scene.infinitelight.samples")(samples));
+	props.Set(Property("scene.infinitelight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
+	props.Set(Property("scene.infinitelight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
+	props.Set(Property("scene.infinitelight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
 
 
 	return props;
@@ -401,22 +395,14 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const Vector localSunDir = GetSunDir();
-	props.SetString("scene.skylight.dir",
-			ToString(localSunDir.x) + " " + ToString(localSunDir.y) + " " + ToString(localSunDir.z));
-	props.SetString("scene.skylight.gain",
-			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
-	props.SetString("scene.skylight.turbidity", ToString(turbidity));
-	props.SetString("scene.skylight.transformation",
-			ToString(lightToWorld.m.m[0][0]) + " " + ToString(lightToWorld.m.m[1][0]) + " " + ToString(lightToWorld.m.m[2][0]) + " " + ToString(lightToWorld.m.m[3][0]) + " " +
-			ToString(lightToWorld.m.m[0][1]) + " " + ToString(lightToWorld.m.m[1][1]) + " " + ToString(lightToWorld.m.m[2][1]) + " " + ToString(lightToWorld.m.m[3][1]) + " " +
-			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
-			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
-		);
-	props.SetString("scene.skylight.samples", ToString(samples));
-	props.SetString("scene.skylight.visibility.indirect.diffuse.enable", ToString(isVisibleIndirectDiffuse));
-	props.SetString("scene.skylight.visibility.indirect.glossy.enable", ToString(isVisibleIndirectGlossy));
-	props.SetString("scene.skylight.visibility.indirect.specular.enable", ToString(isVisibleIndirectSpecular));
+	props.Set(Property("scene.skylight.dir")(GetSunDir()));
+	props.Set(Property("scene.skylight.gain")(gain));
+	props.Set(Property("scene.skylight.turbidity")(turbidity));
+	props.Set(Property("scene.skylight.transformation")(lightToWorld.m));
+	props.Set(Property("scene.skylight.samples")(samples));
+	props.Set(Property("scene.skylight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
+	props.Set(Property("scene.skylight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
+	props.Set(Property("scene.skylight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
 
 	return props;
 }
@@ -587,23 +573,15 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 Properties SunLight::ToProperties() const {
 	Properties props;
 
-	const Vector localSunDir = GetDir();
-	props.SetString("scene.sunlight.dir",
-			ToString(localSunDir.x) + " " + ToString(localSunDir.y) + " " + ToString(localSunDir.z));
-	props.SetString("scene.sunlight.gain",
-			ToString(gain.r) + " " + ToString(gain.g) + " " + ToString(gain.b));
-	props.SetString("scene.sunlight.turbidity", ToString(turbidity));
-	props.SetString("scene.sunlight.relsize", ToString(relSize));
-	props.SetString("scene.sunlight.transformation",
-			ToString(lightToWorld.m.m[0][0]) + " " + ToString(lightToWorld.m.m[1][0]) + " " + ToString(lightToWorld.m.m[2][0]) + " " + ToString(lightToWorld.m.m[3][0]) + " " +
-			ToString(lightToWorld.m.m[0][1]) + " " + ToString(lightToWorld.m.m[1][1]) + " " + ToString(lightToWorld.m.m[2][1]) + " " + ToString(lightToWorld.m.m[3][1]) + " " +
-			ToString(lightToWorld.m.m[0][2]) + " " + ToString(lightToWorld.m.m[1][2]) + " " + ToString(lightToWorld.m.m[2][2]) + " " + ToString(lightToWorld.m.m[3][2]) + " " +
-			ToString(lightToWorld.m.m[0][3]) + " " + ToString(lightToWorld.m.m[1][3]) + " " + ToString(lightToWorld.m.m[2][3]) + " " + ToString(lightToWorld.m.m[3][3])
-		);
-	props.SetString("scene.sunlight.samples", ToString(samples));
-	props.SetString("scene.sunlight.visibility.indirect.diffuse.enable", ToString(isVisibleIndirectDiffuse));
-	props.SetString("scene.sunlight.visibility.indirect.glossy.enable", ToString(isVisibleIndirectGlossy));
-	props.SetString("scene.sunlight.visibility.indirect.specular.enable", ToString(isVisibleIndirectSpecular));
+	props.Set(Property("scene.sunlight.dir")(GetDir()));
+	props.Set(Property("scene.sunlight.gain")(gain));
+	props.Set(Property("scene.sunlight.turbidity")(turbidity));
+	props.Set(Property("scene.sunlight.relsize")(relSize));
+	props.Set(Property("scene.sunlight.transformation")(lightToWorld.m));
+	props.Set(Property("scene.sunlight.samples")(samples));
+	props.Set(Property("scene.sunlight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
+	props.Set(Property("scene.sunlight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
+	props.Set(Property("scene.sunlight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
 
 	return props;
 }

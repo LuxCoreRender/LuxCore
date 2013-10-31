@@ -46,8 +46,8 @@ void FileSaverRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	directoryName = cfg.GetString("filesaver.directory", "slg-exported-scene");
-	renderEngineType = cfg.GetString("filesaver.renderengine.type", "PATHOCL");
+	directoryName = cfg.Get(Property("filesaver.directory")("slg-exported-scene")).Get<string>();
+	renderEngineType = cfg.Get(Property("filesaver.renderengine.type")("PATHOCL")).Get<string>();
 	
 	SaveScene();
 }
@@ -80,9 +80,9 @@ void FileSaverRenderEngine::SaveScene() {
 		Properties cfg = renderConfig->cfg;
 
 		// Overwrite the scene file name
-		cfg.SetString("scene.file", "scene.scn");
+		cfg.Set(Property("scene.file")("scene.scn"));
 		// Set render engine type
-		cfg.SetString("renderengine.type", boost::lexical_cast<std::string>(renderEngineType));
+		cfg.Set(Property("renderengine.type")(renderEngineType));
 		// Remove FileSaver Option
 		cfg.Delete("filesaver.directory");
 

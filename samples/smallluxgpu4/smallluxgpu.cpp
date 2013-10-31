@@ -132,7 +132,7 @@ static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf(" ***\n");
 }
 
-static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, const float haltThreshold) {
+static int BatchSimpleMode(const double haltTime, const u_int haltSpp, const float haltThreshold) {
 	RenderConfig *config = session->renderConfig;
 	RenderEngine *engine = session->renderEngine;
 
@@ -168,7 +168,7 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 		if ((haltTime > 0) && (elapsedTime >= haltTime))
 			break;
 
-		const unsigned int pass = engine->GetPass();
+		const u_int pass = engine->GetPass();
 		if ((haltSpp > 0) && (pass >= haltSpp))
 			break;
 
@@ -253,20 +253,20 @@ int main(int argc, char *argv[]) {
 					configFileName = string(argv[++i]);
 				}
 
-				else if (argv[i][1] == 'e') cmdLineProp.SetString("film.height", argv[++i]);
+				else if (argv[i][1] == 'e') cmdLineProp.Set(Property("film.height")(argv[++i]));
 
-				else if (argv[i][1] == 'w') cmdLineProp.SetString("film.width", argv[++i]);
+				else if (argv[i][1] == 'w') cmdLineProp.Set(Property("film.width")(argv[++i]));
 
-				else if (argv[i][1] == 'f') cmdLineProp.SetString("scene.file", argv[++i]);
+				else if (argv[i][1] == 'f') cmdLineProp.Set(Property("scene.file")(argv[++i]));
 
-				else if (argv[i][1] == 't') cmdLineProp.SetString("batch.halttime", argv[++i]);
+				else if (argv[i][1] == 't') cmdLineProp.Set(Property("batch.halttime")(argv[++i]));
 
 				else if (argv[i][1] == 'T') telnetServerEnabled = true;
 
 				else if (argv[i][1] == 'm') optMouseGrabMode = true;
 
 				else if (argv[i][1] == 'D') {
-					cmdLineProp.SetString(argv[i + 1], argv[i + 2]);
+					cmdLineProp.Set(Property(argv[i + 1]).Add(argv[i + 2]));
 					i += 2;
 				}
 
@@ -298,16 +298,16 @@ int main(int argc, char *argv[]) {
 
 		config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
 
-		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
-		const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);
-		const float haltthreshold = config->cfg.GetFloat("batch.haltthreshold", -1.f);
-		if ((halttime > 0) || (haltspp > 0) || (haltthreshold >= 0.f))
+		const u_int haltTime = config->cfg.Get(Property("batch.halttime")(0)).Get<u_int>();
+		const u_int haltSpp = config->cfg.Get(Property("batch.haltspp")(0)).Get<u_int>();
+		const float haltThreshold = config->cfg.Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
+		if ((haltTime > 0) || (haltSpp > 0) || (haltThreshold >= 0.f))
 			batchMode = true;
 		else
 			batchMode = false;
 
 		const bool fileSaverRenderEngine = (RenderEngine::String2RenderEngineType(
-			config->cfg.GetString("renderengine.type", "PATHOCL")) == FILESAVER);
+			config->cfg.Get(Property("renderengine.type")("PATHOCL")).Get<string>()) == FILESAVER);
 
 		if (fileSaverRenderEngine) {
 			session = new RenderSession(config);
@@ -323,7 +323,7 @@ int main(int argc, char *argv[]) {
 		} else if (batchMode) {
 			session = new RenderSession(config);
 
-			return BatchSimpleMode(halttime, haltspp, haltthreshold);
+			return BatchSimpleMode(haltTime, haltSpp, haltThreshold);
 		} else {
 			// It is important to initialize OpenGL before OpenCL
 			// (for OpenGL/OpenCL inter-operability)

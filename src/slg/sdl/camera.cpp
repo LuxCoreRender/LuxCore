@@ -257,24 +257,20 @@ bool PerspectiveCamera::SampleLens(const float u1, const float u2,
 Properties PerspectiveCamera::ToProperties() const {
 	Properties props;
 
-	props.SetString("scene.camera.lookat",
-			ToString(orig.x) + " " + ToString(orig.y) + " " + ToString(orig.z) + " " +
-			ToString(target.x) + " " + ToString(target.y) + " " + ToString(target.z));
-
-	props.SetString("scene.camera.up", ToString(up.x) + " " + ToString(up.y) + " " + ToString(up.z));
+	props.Set(Property("scene.camera.lookat.orig")(orig));
+	props.Set(Property("scene.camera.lookat.target")(target));
+	props.Set(Property("scene.camera.up")(up.x));
 
 	if (!autoUpdateFilmRegion)
-		props.SetString("scene.camera.screenwindow",
-			ToString(filmRegion[0]) + " " + ToString(filmRegion[1]) + " " + 
-			ToString(filmRegion[2]) + " " + ToString(filmRegion[3]));
+		props.Set(Property("scene.camera.screenwindow")(filmRegion[0], filmRegion[1], filmRegion[2], filmRegion[3]));
 
-	props.SetString("scene.camera.cliphither", ToString(clipHither));
-	props.SetString("scene.camera.clipyon", ToString(clipYon));
-	props.SetString("scene.camera.lensradius", ToString(lensRadius));
-	props.SetString("scene.camera.focaldistance", ToString(focalDistance));
-	props.SetString("scene.camera.fieldofview", ToString(fieldOfView));
-	props.SetString("scene.camera.horizontalstereo.enable", ToString(enableHorizStereo));
-	props.SetString("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable", ToString(enableOculusRiftBarrel));
+	props.Set(Property("scene.camera.cliphither")(clipHither));
+	props.Set(Property("scene.camera.clipyon")(clipYon));
+	props.Set(Property("scene.camera.lensradius")(lensRadius));
+	props.Set(Property("scene.camera.focaldistance")(focalDistance));
+	props.Set(Property("scene.camera.fieldofview")(fieldOfView));
+	props.Set(Property("scene.camera.horizontalstereo.enable")(enableHorizStereo));
+	props.Set(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
 
 	return props;
 }

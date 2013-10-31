@@ -45,10 +45,12 @@ void BiDirHybridRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxEyePathDepth = cfg.GetInt("path.maxdepth", 5);
-	maxLightPathDepth = cfg.GetInt("light.maxdepth", 5);
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", .5f));
+	maxEyePathDepth = cfg.Get(Property("path.maxdepth")(5)).Get<int>();
+	maxLightPathDepth = cfg.Get(Property("light.maxdepth")(5)).Get<int>();
+	rrDepth = cfg.Get(Property("light.russianroulette.depth")(
+			cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>())).Get<int>();
+	rrImportanceCap = cfg.Get(Property("light.russianroulette.cap")(
+			cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>())).Get<float>();
 
 	HybridRenderEngine::StartLockLess();
 }

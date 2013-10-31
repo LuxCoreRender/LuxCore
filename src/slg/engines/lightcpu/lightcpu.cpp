@@ -42,9 +42,12 @@ void LightCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = cfg.GetInt("light.maxdepth", cfg.GetInt("path.maxdepth", 5));
-	rrDepth = cfg.GetInt("light.russianroulette.depth", cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = cfg.GetFloat("light.russianroulette.cap", cfg.GetFloat("path.russianroulette.cap", .5f));
+	maxPathDepth = cfg.Get(Property("light.maxdepth")(
+			cfg.Get(Property("path.maxdepth")(5)).Get<int>())).Get<int>();
+	rrDepth = cfg.Get(Property("light.russianroulette.depth")(
+			cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>())).Get<int>();
+	rrImportanceCap = cfg.Get(Property("light.russianroulette.cap")(
+			cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>())).Get<float>();
 
 	CPUNoTileRenderEngine::StartLockLess();
 }

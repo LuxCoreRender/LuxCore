@@ -160,7 +160,7 @@ static void PrintHelpAndSettings() {
 	glRasterPos2i(20, fontOffset);
 	const string samplerName = ((session->renderEngine->GetEngineType() == BIASPATHCPU) ||
 		(session->renderEngine->GetEngineType() == RTBIASPATHOCL)) ?
-			"N/A" : session->renderConfig->cfg.GetString("sampler.type", "RANDOM");
+			"N/A" : session->renderConfig->cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 	sprintf(buf, "[Render engine %s][Sampler %s][Tone mapping %s]",
 			RenderEngine::RenderEngineType2String(session->renderEngine->GetEngineType()).c_str(),
 			samplerName.c_str(),
@@ -441,7 +441,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'h':
 			optOSDPrintHelp = (!optOSDPrintHelp);
 			break;
-		case 'i':
+		case 'i': {
 			// Stop the session
 			session->Stop();
 
@@ -450,21 +450,23 @@ void keyFunc(unsigned char key, int x, int y) {
 			session = NULL;
 
 			// Change the Sampler
-			if (config->cfg.GetString("sampler.type", "RANDOM") == "RANDOM") {
-				config->cfg.SetString("sampler.type", "SOBOL");
-				config->cfg.SetString("path.sampler.type", "SOBOL");
-			} else if (config->cfg.GetString("sampler.type", "SOBOL") == "SOBOL") {
-				config->cfg.SetString("sampler.type", "METROPOLIS");
-				config->cfg.SetString("path.sampler.type", "METROPOLIS");
+			const string samplerName = config->cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+			if (samplerName == "RANDOM") {
+				config->cfg.Set(Property("sampler.type")("SOBOL"));
+				config->cfg.Set(Property("path.sampler.type")("SOBOL"));
+			} else if (samplerName == "SOBOL") {
+				config->cfg.Set(Property("sampler.type")("METROPOLIS"));
+				config->cfg.Set(Property("path.sampler.type")("METROPOLIS"));
 			} else {
-				config->cfg.SetString("sampler.type", "RANDOM");
-				config->cfg.SetString("path.sampler.type", "RANDOM");				
+				config->cfg.Set(Property("sampler.type")("RANDOM"));
+				config->cfg.Set(Property("path.sampler.type")("RANDOM"));
 			}
 			session = new RenderSession(config);
 
 			// Re-start the rendering
 			session->Start();
 			break;
+		}
 		case 'n': {
 			const u_int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
 			if (screenRefreshInterval > 1000)
