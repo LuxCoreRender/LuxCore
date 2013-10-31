@@ -77,9 +77,14 @@ public:
 		assert (y < height);
 
 		T *pixel = &pixels[(x + y * width) * CHANNELS];
-		for (u_int i = 0; i < CHANNELS - 1; ++i)
-			pixel[i] += v[i] * weight;
-		pixel[CHANNELS - 1] += weight;
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				pixel[i] += v[i] * weight;			
+		} else {
+			for (u_int i = 0; i < CHANNELS - 1; ++i)
+				pixel[i] += v[i] * weight;
+			pixel[CHANNELS - 1] += weight;
+		}
 	}
 
 	void SetPixel(const u_int x, const u_int y, const T *v) {
