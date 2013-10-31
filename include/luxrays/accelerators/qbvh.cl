@@ -170,8 +170,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 		__global QBVHNode *nodes,
 		__global QuadTiangle *quadTris,
 #endif
-		const uint rayCount,
-		__local int *nodeStacks) {
+		const uint rayCount
+#if defined(USE_LOCAL_MEMORY_FOR_STACK)
+		, __local int *nodeStacks
+#endif
+		) {
 	// Select the ray to check
 	const int gid = get_global_id(0);
 	if (gid >= rayCount)
@@ -215,11 +218,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
+#if defined(USE_LOCAL_MEMORY_FOR_STACK)
 	// nodeStack leads to a lot of local memory banks conflicts however it has not real
 	// impact on performances (I guess access latency is hiden by other stuff).
 	// Avoiding conflicts is easy to do but it requires to know the work group
 	// size (not worth doing if there are not performance benefits).
 	__local int *nodeStack = &nodeStacks[QBVH_STACK_SIZE * get_local_id(0)];
+#else
+	int nodeStack[QBVH_STACK_SIZE];
+#endif
 	nodeStack[0] = 0; // first node to handle: root node
 
 #ifdef USE_IMAGE_STORAGE
