@@ -1163,13 +1163,13 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 		channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(index, c);
 
 	if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
-		const float k = statsTotalSampleCount / pixelCount;
+		const float factor = statsTotalSampleCount / pixelCount;
 		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
 			const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
 
-			c[0] += src[0] * k;
-			c[1] += src[1] * k;
-			c[2] += src[2] * k;
+			c[0] += src[0] * factor;
+			c[1] += src[1] * factor;
+			c[2] += src[2] * factor;
 		}
 	}
 }
@@ -1295,13 +1295,13 @@ void Film::MergeSampleBuffers(Spectrum *p, std::vector<bool> &frameBufferMask) c
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			for (u_int j = 0; j < pixelCount; ++j) {
-				const float *sp = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j);
+				const Spectrum s(channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j));
 
-				if (sp[3] > 0.f) {
+				if (!s.Black()) {
 					if (frameBufferMask[j])
-						p[j] += Spectrum(sp) * factor;
+						p[j] += s * factor;
 					else
-						p[j] = Spectrum(sp) * factor;
+						p[j] = s * factor;
 					frameBufferMask[j] = true;
 				}
 			}
