@@ -75,8 +75,8 @@ void RenderConfig::Parse(const luxrays::Properties &props) {
 	const int interval = (renderEngineType == RTPATHOCL) ? 33 : 100;
 	screenRefreshInterval = cfg.GetInt("screen.refresh.interval", interval);
 
-	scene->enableInstanceSupport = cfg.Get("accelerator.instances.enable", MakePropertyValues(true)).Get<bool>();
-	const string accelType = cfg.Get("accelerator.type", MakePropertyValues("AUTO")).Get<string>();
+	scene->enableInstanceSupport = cfg.Get(Property("accelerator.instances.enable")(true)).Get<bool>();
+	const string accelType = cfg.Get(Property("accelerator.type")("AUTO")).Get<string>();
 	// "-1" is for compatibility with the past. However all other old values are
 	// not emulated (i.e. the "AUTO" behavior is preferred in that case)
 	if ((accelType == "AUTO") || (accelType == "-1"))
@@ -113,22 +113,22 @@ bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 	u_int width = 640;
 	if (cfg.IsDefined("image.width")) {
 		SLG_LOG("WARNING: deprecated property image.width");
-		width = cfg.Get("image.width", MakePropertyValues(width)).Get<u_int>();
+		width = cfg.Get(Property("image.width")(width)).Get<u_int>();
 	}
-	width = cfg.Get("film.width", MakePropertyValues(width)).Get<u_int>();
+	width = cfg.Get(Property("film.width")(width)).Get<u_int>();
 
 	u_int height = 480;
 	if (cfg.IsDefined("image.height")) {
 		SLG_LOG("WARNING: deprecated property image.height");
-		height = cfg.Get("image.height", MakePropertyValues(height)).Get<u_int>();
+		height = cfg.Get(Property("image.height")(height)).Get<u_int>();
 	}
-	height = cfg.Get("film.height", MakePropertyValues(height)).Get<u_int>();
+	height = cfg.Get(Property("film.height")(height)).Get<u_int>();
 
 	// Check if I'm rendering a film subregion
 	u_int subRegion[4];
 	bool subRegionUsed;
 	if (cfg.IsDefined("film.subregion")) {
-		const Property &prop = cfg.Get("film.subregion", MakePropertyValues(0, width - 1u, 0, height - 1u));
+		const Property &prop = cfg.Get(Property("film.subregion")(0, width - 1u, 0, height - 1u));
 		if (prop.GetSize() != 4)
 			throw runtime_error("Syntax error in film.subregion (required 4 parameters)");
 
@@ -407,14 +407,14 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const {
-	const SamplerType samplerType = Sampler::String2SamplerType(cfg.Get("sampler.type", MakePropertyValues("RANDOM")).Get<string>());
+	const SamplerType samplerType = Sampler::String2SamplerType(cfg.Get(Property("sampler.type")("RANDOM")).Get<string>());
 	switch (samplerType) {
 		case RANDOM:
 			return new RandomSampler(rndGen, film);
 		case METROPOLIS: {
-			const float rate = cfg.Get("sampler.largesteprate", MakePropertyValues(.4f)).Get<float>();
-			const float reject = cfg.Get("sampler.maxconsecutivereject", MakePropertyValues(512)).Get<float>();
-			const float mutationrate = cfg.Get("sampler.imagemutationrate", MakePropertyValues(.1f)).Get<float>();
+			const float rate = cfg.Get(Property("sampler.largesteprate")(.4f)).Get<float>();
+			const float reject = cfg.Get(Property("sampler.maxconsecutivereject")(512)).Get<float>();
+			const float mutationrate = cfg.Get(Property("sampler.imagemutationrate")(.1f)).Get<float>();
 
 			return new MetropolisSampler(rndGen, film, reject, rate, mutationrate,
 					metropolisSharedTotalLuminance, metropolisSharedSampleCount);
@@ -427,7 +427,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMutex) const {
-	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(cfg.Get("renderengine.type", MakePropertyValues("PATHOCL")).Get<string>());
+	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(cfg.Get(Property("renderengine.type")("PATHOCL")).Get<string>());
 
 	switch (renderEngineType) {
 		case LIGHTCPU:

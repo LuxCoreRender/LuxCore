@@ -37,70 +37,6 @@
 using namespace luxrays;
 using namespace std;
 
-namespace luxrays {
-
-//------------------------------------------------------------------------------
-// Specialize templates
-//------------------------------------------------------------------------------
-		
-template<> PropertyValues MakePropertyValues<UV>(const UV &v) {
-	PropertyValues values(3);
-	values[0] = v.u;
-	values[1] = v.v;
-
-	return values;
-}
-
-template<> PropertyValues MakePropertyValues<Vector>(const Vector &v) {
-	PropertyValues values(3);
-	values[0] = v.x;
-	values[1] = v.y;
-	values[2] = v.z;
-
-	return values;
-}
-
-template<> PropertyValues MakePropertyValues<Normal>(const Normal &v) {
-	PropertyValues values(3);
-	values[0] = v.x;
-	values[1] = v.y;
-	values[2] = v.z;
-
-	return values;
-}
-
-template<> PropertyValues MakePropertyValues<Point>(const Point &v) {
-	PropertyValues values(3);
-	values[0] = v.x;
-	values[1] = v.y;
-	values[2] = v.z;
-
-	return values;
-}
-
-template<> PropertyValues MakePropertyValues<Spectrum>(const Spectrum &v) {
-	PropertyValues values(3);
-	values[0] = v.r;
-	values[1] = v.g;
-	values[2] = v.b;
-
-	return values;
-}
-
-template<> PropertyValues MakePropertyValues<Matrix4x4>(const Matrix4x4 &m) {
-	PropertyValues values(16);
-
-	for (u_int i = 0; i < 4; ++i) {
-		for (u_int j = 0; j < 4; ++j) {
-			values[i * 4 + j] = m.m[j][i];
-		}
-	}
-
-	return values;
-}
-	
-} // end namespace luxrays
-
 //------------------------------------------------------------------------------
 // Property class
 //------------------------------------------------------------------------------
@@ -505,10 +441,10 @@ const Property &Properties::Get(const std::string &propName) const {
 	return it->second;
 }
 
-const Property Properties::Get(const std::string &propName, const PropertyValues &defaultValues) const {
-	boost::unordered_map<std::string, Property>::const_iterator it = props.find(propName);
+const Property &Properties::Get(const Property &prop) const {
+	boost::unordered_map<std::string, Property>::const_iterator it = props.find(prop.GetName());
 	if (it == props.end())
-		return Property(propName, defaultValues);
+		return prop;
 
 	return it->second;
 }

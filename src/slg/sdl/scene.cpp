@@ -374,20 +374,20 @@ void Scene::ParseCamera(const Properties &props) {
 		target.y = prop.Get<float>(4);
 		target.z = prop.Get<float>(5);
 	} else {
-		orig = props.Get("scene.camera.lookat.orig", MakePropertyValues(0.f, 10.f, 0.f)).Get<Point>();
-		target = props.Get("scene.camera.lookat.target", MakePropertyValues(0.f, 0.f, 0.f)).Get<Point>();
+		orig = props.Get(Property("scene.camera.lookat.orig")(0.f, 10.f, 0.f)).Get<Point>();
+		target = props.Get(Property("scene.camera.lookat.target")(0.f, 0.f, 0.f)).Get<Point>();
 	}
 
 	SDL_LOG("Camera position: " << orig);
 	SDL_LOG("Camera target: " << target);
 
-	const Vector up = props.Get("scene.camera.up", MakePropertyValues(0.f, 0.f, 1.f)).Get<Vector>();
+	const Vector up = props.Get(Property("scene.camera.up")(0.f, 0.f, 1.f)).Get<Vector>();
 
 	auto_ptr<PerspectiveCamera> newCamera;
 	if (props.IsDefined("scene.camera.screenwindow")) {
 		float screenWindow[4];
 
-		const Property &prop = props.Get("scene.camera.screenwindow", MakePropertyValues(0.f, 1.f, 0.f, 1.f));
+		const Property &prop = props.Get(Property("scene.camera.screenwindow")(0.f, 1.f, 0.f, 1.f));
 		screenWindow[0] = prop.Get<float>(0);
 		screenWindow[1] = prop.Get<float>(1);
 		screenWindow[2] = prop.Get<float>(2);
@@ -397,25 +397,25 @@ void Scene::ParseCamera(const Properties &props) {
 	} else
 		newCamera.reset(new PerspectiveCamera(orig, target, up));
 
-	newCamera->clipHither = props.Get("scene.camera.cliphither", MakePropertyValues(1e-3f)).Get<float>();
-	newCamera->clipYon = props.Get("scene.camera.clipyon", MakePropertyValues(1e30f)).Get<float>();
-	newCamera->lensRadius = props.Get("scene.camera.lensradius", MakePropertyValues(0.f)).Get<float>();
-	newCamera->focalDistance = props.Get("scene.camera.focaldistance", MakePropertyValues(10.f)).Get<float>();
-	newCamera->fieldOfView = props.Get("scene.camera.fieldofview", MakePropertyValues(45.f)).Get<float>();
+	newCamera->clipHither = props.Get(Property("scene.camera.cliphither")(1e-3f)).Get<float>();
+	newCamera->clipYon = props.Get(Property("scene.camera.clipyon")(1e30f)).Get<float>();
+	newCamera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
+	newCamera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
+	newCamera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
 
-	if (props.Get("scene.camera.horizontalstereo.enable", MakePropertyValues(false)).Get<bool>()) {
+	if (props.Get(Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>()) {
 		SDL_LOG("Camera horizontal stereo enabled");
 		newCamera->SetHorizontalStereo(true);
 
-		const float eyesDistance = props.Get("scene.camera.horizontalstereo.eyesdistance", MakePropertyValues(.0626f)).Get<float>();
+		const float eyesDistance = props.Get(Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
 		SDL_LOG("Camera horizontal stereo eyes distance: " << eyesDistance);
 		newCamera->SetHorizontalStereoEyesDistance(eyesDistance);
-		const float lesnDistance = props.Get("scene.camera.horizontalstereo.lensdistance", MakePropertyValues(.1f)).Get<float>();
+		const float lesnDistance = props.Get(Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
 		SDL_LOG("Camera horizontal stereo lens distance: " << lesnDistance);
 		newCamera->SetHorizontalStereoLensDistance(lesnDistance);
 
 		// Check if I have to enable Oculus Rift Barrel post-processing
-		if (props.Get("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable", MakePropertyValues(false)).Get<bool>()) {
+		if (props.Get(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(false)).Get<bool>()) {
 			SDL_LOG("Camera Oculus Rift Barrel post-processing enabled");
 			newCamera->SetOculusRiftBarrel(true);
 		} else {
@@ -575,18 +575,18 @@ void Scene::ParseEnvLights(const Properties &props) {
 	//--------------------------------------------------------------------------
 
 	if (props.HaveNames("scene.skylight")) {
-		const Matrix4x4 mat = props.Get("scene.skylight.transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(Property("scene.skylight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
 		SkyLight *sl = new SkyLight(light2World,
-				props.Get("scene.skylight.turbidity", MakePropertyValues(2.2f)).Get<float>(),
-				props.Get("scene.skylight.dir", MakePropertyValues(0.f, 0.f, 1.f)).Get<Vector>());
-		sl->SetGain(props.Get("scene.skylight.gain", MakePropertyValues(1.f, 1.f, 1.f)).Get<Spectrum>());
-		sl->SetSamples(props.Get("scene.skylight.samples", MakePropertyValues(-1)).Get<int>());
-		sl->SetID(props.Get("scene.skylight.id", MakePropertyValues(0)).Get<int>());
-		sl->SetIndirectDiffuseVisibility(props.Get("scene.skylight.visibility.indirect.diffuse.enable", MakePropertyValues(true)).Get<bool>());
-		sl->SetIndirectGlossyVisibility(props.Get("scene.skylight.visibility.indirect.glossy.enable", MakePropertyValues(true)).Get<bool>());
-		sl->SetIndirectSpecularVisibility(props.Get("scene.skylight.visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
+				props.Get(Property("scene.skylight.turbidity")(2.2f)).Get<float>(),
+				props.Get(Property("scene.skylight.dir")(0.f, 0.f, 1.f)).Get<Vector>());
+		sl->SetGain(props.Get(Property("scene.skylight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
+		sl->SetSamples(props.Get(Property("scene.skylight.samples")(-1)).Get<int>());
+		sl->SetID(props.Get(Property("scene.skylight.id")(0)).Get<int>());
+		sl->SetIndirectDiffuseVisibility(props.Get(Property("scene.skylight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property("scene.skylight.visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property("scene.skylight.visibility.indirect.specular.enable")(true)).Get<bool>());
 		sl->Preprocess();
 
 		// Delete the old env. light
@@ -600,24 +600,24 @@ void Scene::ParseEnvLights(const Properties &props) {
 	//--------------------------------------------------------------------------
 
 	if (props.HaveNames("scene.infinitelight")) {
-		const Matrix4x4 mat = props.Get("scene.infinitelight.transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(Property("scene.infinitelight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		const string imageName = props.Get("scene.infinitelight.file", MakePropertyValues("image.png")).Get<string>();
-		const float gamma = props.Get("scene.infinitelight.gamma", MakePropertyValues(2.2f)).Get<float>();
+		const string imageName = props.Get(Property("scene.infinitelight.file")("image.png")).Get<string>();
+		const float gamma = props.Get(Property("scene.infinitelight.gamma")(2.2f)).Get<float>();
 		ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
 		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
 
-		il->SetGain(props.Get("scene.infinitelight.gain", MakePropertyValues(1.f, 1.f, 1.f)).Get<Spectrum>());
+		il->SetGain(props.Get(Property("scene.infinitelight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
 
-		const UV shift = props.Get("scene.infinitelight.shift", MakePropertyValues(0.f, 0.f)).Get<UV>();
+		const UV shift = props.Get(Property("scene.infinitelight.shift")(0.f, 0.f)).Get<UV>();
 		il->GetUVMapping()->uDelta = shift.u;
 		il->GetUVMapping()->vDelta = shift.v;
-		il->SetSamples(props.Get("scene.infinitelight.samples", MakePropertyValues(-1)).Get<int>());
-		il->SetID(props.Get("scene.infinitelight.id", MakePropertyValues(0)).Get<int>());
-		il->SetIndirectDiffuseVisibility(props.Get("scene.infinitelight.visibility.indirect.diffuse.enable", MakePropertyValues(true)).Get<bool>());
-		il->SetIndirectGlossyVisibility(props.Get("scene.infinitelight.visibility.indirect.glossy.enable", MakePropertyValues(true)).Get<bool>());
-		il->SetIndirectSpecularVisibility(props.Get("scene.infinitelight.visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
+		il->SetSamples(props.Get(Property("scene.infinitelight.samples")(-1)).Get<int>());
+		il->SetID(props.Get(Property("scene.infinitelight.id")(0)).Get<int>());
+		il->SetIndirectDiffuseVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		il->SetIndirectGlossyVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.glossy.enable")(true)).Get<bool>());
+		il->SetIndirectSpecularVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.specular.enable")(true)).Get<bool>());
 		il->Preprocess();
 
 		// Delete the old env. light
@@ -631,20 +631,20 @@ void Scene::ParseEnvLights(const Properties &props) {
 	//--------------------------------------------------------------------------
 
 	if (props.HaveNames("scene.sunlight")) {
-		const Matrix4x4 mat = props.Get("scene.sunlight.transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(Property("scene.sunlight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
 		SunLight *sl = new SunLight(light2World,
-				props.Get("scene.sunlight.turbidity", MakePropertyValues(2.2f)).Get<float>(),
-				props.Get("scene.sunlight.relsize", MakePropertyValues(1.0f)).Get<float>(),
-				props.Get("scene.sunlight.dir", MakePropertyValues(0.f, 0.f, 1.f)).Get<Vector>());
+				props.Get(Property("scene.sunlight.turbidity")(2.2f)).Get<float>(),
+				props.Get(Property("scene.sunlight.relsize")(1.0f)).Get<float>(),
+				props.Get(Property("scene.sunlight.dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
-		sl->SetGain(props.Get("scene.sunlight.gain", MakePropertyValues(1.f, 1.f, 1.f)).Get<Spectrum>());
-		sl->SetSamples(props.Get("scene.sunlight.samples", MakePropertyValues(-1)).Get<int>());
-		sl->SetID(props.Get("scene.sunlight.id", MakePropertyValues(0)).Get<int>());
-		sl->SetIndirectDiffuseVisibility(props.Get("scene.sunlight.visibility.indirect.diffuse.enable", MakePropertyValues(true)).Get<bool>());
-		sl->SetIndirectGlossyVisibility(props.Get("scene.sunlight.visibility.indirect.glossy.enable", MakePropertyValues(true)).Get<bool>());
-		sl->SetIndirectSpecularVisibility(props.Get("scene.sunlight.visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
+		sl->SetGain(props.Get(Property("scene.sunlight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
+		sl->SetSamples(props.Get(Property("scene.sunlight.samples")(-1)).Get<int>());
+		sl->SetID(props.Get(Property("scene.sunlight.id")(0)).Get<int>());
+		sl->SetIndirectDiffuseVisibility(props.Get(Property("scene.sunlight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property("scene.sunlight.visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property("scene.sunlight.visibility.indirect.specular.enable")(true)).Get<bool>());
 		sl->Preprocess();
 
 		// Delete the old sun light
@@ -774,11 +774,11 @@ void Scene::DeleteObject(const std::string &objName) {
 //------------------------------------------------------------------------------
 
 TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const Properties &props) {
-	const string mapType = props.Get(prefixName + ".type", MakePropertyValues("uvmapping2d")).Get<string>();
+	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping2d")).Get<string>();
 
 	if (mapType == "uvmapping2d") {
-		const UV uvScale = props.Get(prefixName + ".uvscale", MakePropertyValues(1.f, 1.f)).Get<UV>();
-		const UV uvDelta = props.Get(prefixName + ".uvdelta", MakePropertyValues(0.f, 0.f)).Get<UV>();
+		const UV uvScale = props.Get(Property(prefixName + ".uvscale")(1.f, 1.f)).Get<UV>();
+		const UV uvDelta = props.Get(Property(prefixName + ".uvdelta")(0.f, 0.f)).Get<UV>();
 
 		return new UVMapping2D(uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
 	} else
@@ -786,7 +786,7 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 }
 
 TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const Properties &props) {
-	const string mapType = props.Get(prefixName + ".type", MakePropertyValues("uvmapping3d")).Get<string>();
+	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping3d")).Get<string>();
 
 	if (mapType == "uvmapping3d") {
 		PropertyValues matIdentity(16);
@@ -796,7 +796,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 			}
 		}
 
-		const Matrix4x4 mat = props.Get(prefixName + ".transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new UVMapping3D(trans);
@@ -808,7 +808,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 			}
 		}
 
-		const Matrix4x4 mat = props.Get(prefixName + ".transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		return new GlobalMapping3D(trans);
@@ -818,100 +818,100 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 
 Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	const string propName = "scene.textures." + texName;
-	const string texType = props.Get(propName + ".type", MakePropertyValues("imagemap")).Get<string>();
+	const string texType = props.Get(Property(propName + ".type")("imagemap")).Get<string>();
 
 	if (texType == "imagemap") {
-		const string name = props.Get(propName + ".file", MakePropertyValues("image.png")).Get<string>();
-		const float gamma = props.Get(propName + ".gamma", MakePropertyValues(2.2f)).Get<float>();
-		const float gain = props.Get(propName + ".gain", MakePropertyValues(1.0f)).Get<float>();
+		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
+		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
+		const float gain = props.Get(Property(propName + ".gain")(1.0f)).Get<float>();
 
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma);
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
 	} else if (texType == "constfloat1") {
-		const float v = props.Get(propName + ".value", MakePropertyValues(1.f)).Get<float>();
+		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
 		return new ConstFloatTexture(v);
 	} else if (texType == "constfloat3") {
-		const Spectrum v = props.Get(propName + ".value", MakePropertyValues(1.f)).Get<Spectrum>();
+		const Spectrum v = props.Get(Property(propName + ".value")(1.f)).Get<Spectrum>();
 		return new ConstFloat3Texture(v);
 	} else if (texType == "scale") {
-		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(1.f)));
-		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(1.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		return new ScaleTexture(tex1, tex2);
 	} else if (texType == "fresnelapproxn") {
-		const Texture *tex = GetTexture(props.Get(propName + ".texture", MakePropertyValues(.5f, .5f, .5f)));
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
 		return new FresnelApproxNTexture(tex);
 	} else if (texType == "fresnelapproxk") {
-		const Texture *tex = GetTexture(props.Get(propName + ".texture", MakePropertyValues(.5f, .5f, .5f)));
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(.5f, .5f, .5f)));
 		return new FresnelApproxKTexture(tex);
 	} else if (texType == "checkerboard2d") {
-		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(1.f)));
-		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(0.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
 		return new CheckerBoard2DTexture(CreateTextureMapping2D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "checkerboard3d") {
-		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(1.f)));
-		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(0.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
 	} else if (texType == "mix") {
-		const Texture *amtTex = GetTexture(props.Get(propName + ".amount", MakePropertyValues(.5f)));
-		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(0.f)));
-		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(1.f)));
+		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 
 		return new MixTexture(amtTex, tex1, tex2);
 	} else if (texType == "fbm") {
-		const int octaves = props.Get(propName + ".octaves", MakePropertyValues(8)).Get<int>();
-		const float omega = props.Get(propName + ".roughness", MakePropertyValues(.5f)).Get<float>();
+		const int octaves = props.Get(Property(propName + ".octaves")(8)).Get<int>();
+		const float omega = props.Get(Property(propName + ".roughness")(.5f)).Get<float>();
 
 		return new FBMTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else if (texType == "marble") {
-		const int octaves = props.Get(propName + ".octaves", MakePropertyValues(8)).Get<int>();
-		const float omega = props.Get(propName + ".roughness", MakePropertyValues(.5f)).Get<float>();
-		const float scale = props.Get(propName + ".scale", MakePropertyValues(1.f)).Get<float>();
-		const float variation = props.Get(propName + ".variation", MakePropertyValues(.2f)).Get<float>();
+		const int octaves = props.Get(Property(propName + ".octaves")(8)).Get<int>();
+		const float omega = props.Get(Property(propName + ".roughness")(.5f)).Get<float>();
+		const float scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
+		const float variation = props.Get(Property(propName + ".variation")(.2f)).Get<float>();
 
 		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else if (texType == "dots") {
-		const Texture *insideTex = GetTexture(props.Get(propName + ".inside", MakePropertyValues(1.f)));
-		const Texture *outsideTex = GetTexture(props.Get(propName + ".outside", MakePropertyValues(0.f)));
+		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
+		const Texture *outsideTex = GetTexture(props.Get(Property(propName + ".outside")(0.f)));
 
 		return new DotsTexture(CreateTextureMapping2D(propName + ".mapping", props), insideTex, outsideTex);
 	} else if (texType == "brick") {
-		const Texture *tex1 = GetTexture(props.Get(propName + ".bricktex", MakePropertyValues(1.f, 1.f, 1.f)));
-		const Texture *tex2 = GetTexture(props.Get(propName + ".mortartex", MakePropertyValues(.2f, .2f, .2f)));
-		const Texture *tex3 = GetTexture(props.Get(propName + ".brickmodtex", MakePropertyValues(1.f, 1.f, 1.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".bricktex")(1.f, 1.f, 1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".mortartex")(.2f, .2f, .2f)));
+		const Texture *tex3 = GetTexture(props.Get(Property(propName + ".brickmodtex")(1.f, 1.f, 1.f)));
 
-		const string brickbond = props.Get(propName + ".brickbond", MakePropertyValues("running")).Get<string>();
-		const float brickwidth = props.Get(propName + ".brickwidth", MakePropertyValues(.3f)).Get<float>();
-		const float brickheight = props.Get(propName + ".brickheight", MakePropertyValues(.1f)).Get<float>();
-		const float brickdepth = props.Get(propName + ".brickdepth", MakePropertyValues(.15f)).Get<float>();
-		const float mortarsize = props.Get(propName + ".mortarsize", MakePropertyValues(.01f)).Get<float>();
-		const float brickrun = props.Get(propName + ".brickrun", MakePropertyValues(.75f)).Get<float>();
-		const float brickbevel = props.Get(propName + ".brickbevel", MakePropertyValues(0.f)).Get<float>();
+		const string brickbond = props.Get(Property(propName + ".brickbond")("running")).Get<string>();
+		const float brickwidth = props.Get(Property(propName + ".brickwidth")(.3f)).Get<float>();
+		const float brickheight = props.Get(Property(propName + ".brickheight")(.1f)).Get<float>();
+		const float brickdepth = props.Get(Property(propName + ".brickdepth")(.15f)).Get<float>();
+		const float mortarsize = props.Get(Property(propName + ".mortarsize")(.01f)).Get<float>();
+		const float brickrun = props.Get(Property(propName + ".brickrun")(.75f)).Get<float>();
+		const float brickbevel = props.Get(Property(propName + ".brickbevel")(0.f)).Get<float>();
 
 		return new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
 				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
 	} else if (texType == "add") {
-		const Texture *tex1 = GetTexture(props.Get(propName + ".texture1", MakePropertyValues(1.f)));
-		const Texture *tex2 = GetTexture(props.Get(propName + ".texture2", MakePropertyValues(1.f)));
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		return new AddTexture(tex1, tex2);
 	} else if (texType == "windy") {
 		return new WindyTexture(CreateTextureMapping3D(propName + ".mapping", props));
 	} else if (texType == "wrinkled") {
-		const int octaves = props.Get(propName + ".octaves", MakePropertyValues(8)).Get<int>();
-		const float omega = props.Get(propName + ".roughness", MakePropertyValues(.5f)).Get<float>();
+		const int octaves = props.Get(Property(propName + ".octaves")(8)).Get<int>();
+		const float omega = props.Get(Property(propName + ".roughness")(.5f)).Get<float>();
 
 		return new WrinkledTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega);
 	} else if (texType == "uv") {
 		return new UVTexture(CreateTextureMapping2D(propName + ".mapping", props));
 	} else if (texType == "band") {
-		const Texture *amtTex = GetTexture(props.Get(propName + ".amount", MakePropertyValues(.5f)));
+		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
 		vector<float> offsets;
 		vector<Spectrum> values;
 		for (u_int i = 0; props.IsDefined(propName + ".offset" + ToString(i)); ++i) {
-			const float offset = props.Get(propName + ".offset" + ToString(i), MakePropertyValues(0.f)).Get<float>();
-			const Spectrum value = props.Get(propName + ".value" + ToString(i), MakePropertyValues(1.f, 1.f, 1.f)).Get<Spectrum>();
+			const float offset = props.Get(Property(propName + ".offset" + ToString(i))(0.f)).Get<float>();
+			const Spectrum value = props.Get(Property(propName + ".value" + ToString(i))(1.f, 1.f, 1.f)).Get<Spectrum>();
 
 			offsets.push_back(offset);
 			values.push_back(value);
@@ -925,7 +925,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "hitpointalpha") {
 		return new HitPointAlphaTexture();
 	} else if (texType == "hitpointgrey") {
-		const int channel = props.Get(propName + ".channel", MakePropertyValues(-1)).Get<int>();
+		const int channel = props.Get(Property(propName + ".channel")(-1)).Get<int>();
 
 		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ? 
 			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
@@ -973,10 +973,10 @@ Texture *Scene::GetTexture(const luxrays::Property &prop) {
 
 Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName, const Properties &props) {
 	const string propName = "scene.materials." + matName;
-	const string matType = props.Get(propName + ".type", MakePropertyValues("matte")).Get<string>();
+	const string matType = props.Get(Property(propName + ".type")("matte")).Get<string>();
 
 	Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
-		GetTexture(props.Get(propName + ".emission", MakePropertyValues(0.f, 0.f, 0.f))) : NULL;
+		GetTexture(props.Get(Property(propName + ".emission")(0.f, 0.f, 0.f))) : NULL;
 	// Required to remove light source while editing the scene
 	if (emissionTex && (
 			((emissionTex->GetType() == CONST_FLOAT) && (((ConstFloatTexture *)emissionTex)->GetValue() == 0.f)) ||
@@ -984,42 +984,42 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		emissionTex = NULL;
 
 	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
-		GetTexture(props.Get(propName + ".bumptex", MakePropertyValues(1.f))) : NULL;
+		GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : NULL;
 	Texture *normalTex =props.IsDefined(propName + ".normaltex") ? 
-		GetTexture(props.Get(propName + ".normaltex", MakePropertyValues(1.f))) : NULL;
+		GetTexture(props.Get(Property(propName + ".normaltex")(1.f))) : NULL;
 
 	Material *mat;
 	if (matType == "matte") {
-		Texture *kd = GetTexture(props.Get(propName + ".kd", MakePropertyValues(.75f, .75f, .75f)));
+		Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.75f, .75f, .75f)));
 
 		mat = new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
 	} else if (matType == "mirror") {
-		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
+		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 
 		mat = new MirrorMaterial(emissionTex, bumpTex, normalTex, kr);
 	} else if (matType == "glass") {
-		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
-		Texture *kt = GetTexture(props.Get(propName + ".kt", MakePropertyValues(1.f, 1.f, 1.f)));
-		Texture *ioroutside = GetTexture(props.Get(propName + ".ioroutside", MakePropertyValues(1.f)));
-		Texture *iorinside = GetTexture(props.Get(propName + ".iorinside", MakePropertyValues(1.5f)));
+		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
+		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
+		Texture *ioroutside = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
+		Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
 
 		mat = new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "metal") {
-		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
-		Texture *exp = GetTexture(props.Get(propName + ".exp", MakePropertyValues(10.f)));
+		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
+		Texture *exp = GetTexture(props.Get(Property(propName + ".exp")(10.f)));
 
 		mat = new MetalMaterial(emissionTex, bumpTex, normalTex, kr, exp);
 	} else if (matType == "archglass") {
-		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
-		Texture *kt = GetTexture(props.Get(propName + ".kt", MakePropertyValues(1.f, 1.f, 1.f)));
-		Texture *ioroutside = GetTexture(props.Get(propName + ".ioroutside", MakePropertyValues(1.f)));
-		Texture *iorinside = GetTexture(props.Get(propName + ".iorinside", MakePropertyValues(1.f)));
+		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
+		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
+		Texture *ioroutside = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
+		Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.f)));
 
 		mat = new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "mix") {
-		Material *matA = matDefs.GetMaterial(props.Get(propName + ".material1", MakePropertyValues("mat1")).Get<string>());
-		Material *matB = matDefs.GetMaterial(props.Get(propName + ".material2", MakePropertyValues("mat2")).Get<string>());
-		Texture *mix = GetTexture(props.Get(propName + ".amount", MakePropertyValues(.5f)));
+		Material *matA = matDefs.GetMaterial(props.Get(Property(propName + ".material1")("mat1")).Get<string>());
+		Material *matB = matDefs.GetMaterial(props.Get(Property(propName + ".material2")("mat2")).Get<string>());
+		Texture *mix = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
 		MixMaterial *mixMat = new MixMaterial(bumpTex, normalTex, matA, matB, mix);
 
@@ -1033,28 +1033,28 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	} else if (matType == "null") {
 		mat = new NullMaterial();
 	} else if (matType == "mattetranslucent") {
-		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(.5f, .5f, .5f)));
-		Texture *kt = GetTexture(props.Get(propName + ".kt", MakePropertyValues(.5f, .5f, .5f)));
+		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(.5f, .5f, .5f)));
+		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(.5f, .5f, .5f)));
 
 		mat = new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
 	} else if (matType == "glossy2") {
-		Texture *kd = GetTexture(props.Get(propName + ".kd", MakePropertyValues(.5f, .5f, .5f)));
-		Texture *ks = GetTexture(props.Get(propName + ".ks", MakePropertyValues(.5f, .5f, .5f)));
-		Texture *nu = GetTexture(props.Get(propName + ".uroughness", MakePropertyValues(.1f)));
-		Texture *nv = GetTexture(props.Get(propName + ".vroughness", MakePropertyValues(.1f)));
-		Texture *ka = GetTexture(props.Get(propName + ".ka", MakePropertyValues(0.f)));
-		Texture *d = GetTexture(props.Get(propName + ".d", MakePropertyValues(0.f)));
-		Texture *index = GetTexture(props.Get(propName + ".index", MakePropertyValues(0.f)));
-		const bool multibounce = props.Get(propName + ".multibounce", MakePropertyValues(false)).Get<bool>();
+		Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
+		Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));
+		Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
+		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
+		Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f)));
+		Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
+		Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f)));
+		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
 
 		mat = new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
 	} else if (matType == "metal2") {
-		Texture *nu = GetTexture(props.Get(propName + ".uroughness", MakePropertyValues(.1f)));
-		Texture *nv = GetTexture(props.Get(propName + ".vroughness", MakePropertyValues(.1f)));
+		Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
+		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
 
 		Texture *eta, *k;
 		if (props.IsDefined(propName + ".preset")) {
-			const string type = props.Get(propName + ".preset", MakePropertyValues("aluminium")).Get<string>();
+			const string type = props.Get(Property(propName + ".preset")("aluminium")).Get<string>();
 
 			if (type == "aluminium") {
 				eta = GetTexture(Property("Implicit-Aluminium-eta")("1.697 0.879833 0.530174"));
@@ -1074,53 +1074,53 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			} else
 				throw runtime_error("Unknown Metal2 preset: " + type);
 		} else {
-			eta = GetTexture(props.Get(propName + ".n", MakePropertyValues(.5f, .5f, .5f)));
-			k = GetTexture(props.Get(propName + ".k", MakePropertyValues(.5f, .5f, .5f)));
+			eta = GetTexture(props.Get(Property(propName + ".n")(.5f, .5f, .5f)));
+			k = GetTexture(props.Get(Property(propName + ".k")(.5f, .5f, .5f)));
 		}
 
 		mat = new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
 	} else if (matType == "roughglass") {
-		Texture *kr = GetTexture(props.Get(propName + ".kr", MakePropertyValues(1.f, 1.f, 1.f)));
-		Texture *kt = GetTexture(props.Get(propName + ".kt", MakePropertyValues(1.f, 1.f, 1.f)));
-		Texture *ioroutside = GetTexture(props.Get(propName + ".ioroutside", MakePropertyValues(1.f)));
-		Texture *iorinside = GetTexture(props.Get(propName + ".iorinside", MakePropertyValues(1.5f)));
-		Texture *nu = GetTexture(props.Get(propName + ".uroughness", MakePropertyValues(.1f)));
-		Texture *nv = GetTexture(props.Get(propName + ".vroughness", MakePropertyValues(.1f)));
+		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
+		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
+		Texture *ioroutside = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
+		Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
+		Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
+		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
 
 		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
-	mat->SetID(props.Get(propName + ".id", MakePropertyValues(defaultMatID)).Get<u_int>());
-	mat->SetLightID(props.Get(propName + ".emission.id", MakePropertyValues(0u)).Get<u_int>());
+	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
+	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 
-	mat->SetSamples(Max(-1, props.Get(propName + ".samples", MakePropertyValues(-1)).Get<int>()));
-	mat->SetEmittedSamples(Max(-1, props.Get(propName + ".emission.samples", MakePropertyValues(-1)).Get<int>()));
+	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
+	mat->SetEmittedSamples(Max(-1, props.Get(Property(propName + ".emission.samples")(-1)).Get<int>()));
 
-	mat->SetIndirectDiffuseVisibility(props.Get(propName + ".visibility.indirect.diffuse.enable", MakePropertyValues(true)).Get<bool>());
-	mat->SetIndirectGlossyVisibility(props.Get(propName + ".visibility.indirect.glossy.enable", MakePropertyValues(true)).Get<bool>());
-	mat->SetIndirectSpecularVisibility(props.Get(propName + ".visibility.indirect.specular.enable", MakePropertyValues(true)).Get<bool>());
+	mat->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+	mat->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+	mat->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
 	return mat;
 }
 
 SceneObject *Scene::CreateObject(const string &objName, const Properties &props) {
-	const string key = "scene.objects." + objName;
+	const string propName = "scene.objects." + objName;
 
 	// Extract the material name
-	const string matName = props.Get(key + ".material", MakePropertyValues("")).Get<string>();
+	const string matName = props.Get(Property(propName + ".material")("")).Get<string>();
 	if (matName == "")
 		throw runtime_error("Syntax error in object material reference: " + objName);
 
 	// Build the object
-	const string plyFileName = props.Get(key + ".ply", MakePropertyValues("")).Get<string>();
+	const string plyFileName = props.Get(Property(propName + ".ply")("")).Get<string>();
 	if (plyFileName == "")
 		throw runtime_error("Syntax error in object .ply file name: " + objName);
 
 	// Check if I have to use an instance mesh or not
 	ExtMesh *mesh;
-	if (props.IsDefined(key + ".transformation")) {
-		const Matrix4x4 mat = props.Get(key + ".transformation", MakePropertyValues(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+	if (props.IsDefined(propName + ".transformation")) {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
 		mesh = extMeshCache.GetExtMesh(plyFileName, &trans);

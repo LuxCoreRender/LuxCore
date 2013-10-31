@@ -65,130 +65,6 @@ typedef boost::variant<bool, int, u_int, float, double, size_t, std::string> Pro
 typedef std::vector<PropertyValue> PropertyValues;
 
 /*!
- * \brief Create a list of values to be used by a Property.
- *
- * \param val0 is the value to use.
- * 
- * \return a PropertyValues.
- */
-template<class T0> PropertyValues MakePropertyValues(const T0 &val0) {
-	PropertyValues values;
-	values.push_back(val0);
-   return values;
-}
-/*!
- * \brief Required to work around the problem of char* to bool conversion
- * (instead of char* to string).
- */
-inline PropertyValues MakePropertyValues(const char *s) {
-	PropertyValues values;
-	values.push_back(std::string(s));
-   return values;
-}
-/*!
- * \brief Create a list of values representing a UV to
- * be used by a Property.
- *
- * \param v is the UV to use.
- *
- * \return a PropertyValues.
- */
-template<> PropertyValues MakePropertyValues<UV>(const UV &v);
-/*!
- * \brief Create a list of values representing a Vector to
- * be used by a Property.
- *
- * \param v is the Vector to use.
- *
- * \return a PropertyValues.
- */
-template<> PropertyValues MakePropertyValues<Vector>(const Vector &v);
-/*!
- * \brief Create a list of values representing a Normal to
- * be used by a Property.
- *
- * \param v is the Normal to use.
- *
- * \return a PropertyValues.
- */
-template<> PropertyValues MakePropertyValues<Normal>(const Normal &v);
-/*!
- * \brief Create a list of values representing a Point to
- * be used by a Property.
- *
- * \param v is the Point to use.
- *
- * \return a PropertyValues.
- */
-template<> PropertyValues MakePropertyValues<Point>(const Point &v);
-/*!
- * \brief Create a list of values representing a Spectrum to
- * be used by a Property.
- *
- * \param v is the Spectrum to use.
- *
- * \return a PropertyValues.
- */
-template<> PropertyValues MakePropertyValues<Spectrum>(const Spectrum &v);
-/*!
- * \brief Create a list of values representing a Matrix4x4 to
- * be used by a Property.
- *
- * \param m is the Matrix4x4 to use.
- *
- * \return a PropertyValues.
- */
-template<> PropertyValues MakePropertyValues<Matrix4x4>(const Matrix4x4 &m);
-/*!
- * \brief Create a list of values to be used by a Property.
- *
- * \param val0 is the value to use.
- * \param val1 is the value to use.
- * 
- * \return a PropertyValues.
- */
-template<class T0, class T1> PropertyValues MakePropertyValues(const T0 &val0, const T1 &val1) {
-	PropertyValues values;
-	values.push_back(val0);
-	values.push_back(val1);
-   return values;
-}
-/*!
- * \brief Create a list of values to be used by a Property.
- *
- * \param val0 is the value to use.
- * \param val1 is the value to use.
- * \param val2 is the value to use.
- * 
- * \return a PropertyValues.
- */
-template<class T0, class T1, class T2> PropertyValues MakePropertyValues(const T0 &val0, const T1 &val1, const T2 &val2) {
-	PropertyValues values;
-	values.push_back(val0);
-	values.push_back(val1);
-	values.push_back(val2);
-   return values;
-}
-/*!
- * \brief Create a list of values to be used by a Property.
- *
- * \param val0 is the value to use.
- * \param val1 is the value to use.
- * \param val2 is the value to use.
- * \param val3 is the value to use.
- * 
- * \return a PropertyValues.
- */
-template<class T0, class T1, class T2, class T3> PropertyValues MakePropertyValues(const T0 &val0, const T1 &val1, const T2 &val2, const T3 &val3) {
-	PropertyValues values;
-	values.push_back(val0);
-	values.push_back(val1);
-	values.push_back(val2);
-	values.push_back(val3);
-   return values;
-}
-
-/*!
  * \brief A generic container for values.
  *
  * A Property is a container associating a vector of values to a string name. The
@@ -694,14 +570,15 @@ public:
 	 */
 	const Property &Get(const std::string &propName) const;
 	/*!
-	 * \brief Returns a property if it has been defined or the default value.
+	 * \brief Returns a Property with the same name of the passed Property if
+	 * it has been defined or the passed Property itself (i.e. the default values).
 	 *
-	 * \param propName is the name of the Property to return.
-	 * \param defaultValues the Property to return if it has not been defined.
+	 * \param defaultProp has the Property to look for and the default values in
+	 * case it has not been defined.
 	 *
 	 * \return a Property.
 	 */
-	const Property Get(const std::string &propName, const PropertyValues &defaultValues) const;
+	const Property &Get(const Property &defaultProp) const;
 
 	/*!
 	 * \brief Returns if a Property with the given name has been defined.
