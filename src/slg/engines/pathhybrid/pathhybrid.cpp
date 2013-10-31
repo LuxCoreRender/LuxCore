@@ -40,9 +40,9 @@ void PathHybridRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = cfg.GetInt("path.maxdepth", 5);
-	rrDepth = cfg.GetInt("path.russianroulette.depth", 3);
-	rrImportanceCap = cfg.GetFloat("path.russianroulette.cap", .5f);
+	maxPathDepth = Max(1, cfg.Get(Property("path.maxdepth")(5)).Get<int>());
+	rrDepth = Max(1, cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>(), 0.f, 1.f);
 
 	HybridRenderEngine::StartLockLess();
 }

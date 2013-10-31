@@ -51,16 +51,16 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	displayDeviceIndex = cfg.GetInt("rtpath.displaydevice.index", 0);
+	displayDeviceIndex = cfg.Get(Property("rtpath.displaydevice.index")(0)).Get<u_int>();
 	if (displayDeviceIndex >= intersectionDevices.size())
 		throw std::runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<std::string>(displayDeviceIndex) +
 				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
 
-	blurTimeWindow = Max(0.f, cfg.GetFloat("rtpath.blur.timewindow", 3.f));
-	blurMinCap =  Max(0.f, cfg.GetFloat("rtpath.blur.mincap", 0.01f));
-	blurMaxCap =  Max(0.f, cfg.GetFloat("rtpath.blur.maxcap", 0.2f));
+	blurTimeWindow = Max(0.f, cfg.Get(Property("rtpath.blur.timewindow")(3.f)).Get<float>());
+	blurMinCap =  Max(0.f, cfg.Get(Property("rtpath.blur.mincap")(0.01f)).Get<float>());
+	blurMaxCap =  Max(0.f, cfg.Get(Property("rtpath.blur.maxcap")(0.2f)).Get<float>());
 
-	ghostEffect = 1.f - Clamp(cfg.GetFloat("rtpath.ghosteffect.intensity", 0.05f), 0.f, 1.f);
+	ghostEffect = 1.f - Clamp(cfg.Get(Property("rtpath.ghosteffect.intensity")(0.05f)).Get<float>(), 0.f, 1.f);
 
 	BiasPathOCLRenderEngine::StartLockLess();
 }

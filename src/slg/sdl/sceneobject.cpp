@@ -43,9 +43,9 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache) const {
 	Properties props;
 
 	const std::string name = GetName();
-	props.SetString("scene.objects." + name + ".material", mat->GetName());
-	props.SetString("scene.objects." + name + ".ply",
-			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(mesh)).str() + ".ply");
+	props.Set(Property("scene.objects." + name + ".material")(mat->GetName()));
+	props.Set(Property("scene.objects." + name + ".ply")(
+			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(mesh)).str() + ".ply"));
 
 	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;

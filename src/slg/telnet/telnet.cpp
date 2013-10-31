@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <string>
+#include <algorithm>
 
 #include <boost/asio.hpp>
 #include <boost/thread/thread.hpp>
@@ -217,7 +218,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						} else if (property == "image.filename") {
 							boost::asio::streambuf response;
 							std::ostream respStream(&response);
-							respStream << session->renderConfig->cfg.GetString("image.filename", "image.png") << "\n";
+							respStream << session->renderConfig->cfg.Get(Property("image.filename")("image.png")) << "\n";
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
 						} else if (property == "scene.infinitelight.gain") {
@@ -444,21 +445,17 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							if (echoCommandOn)
 								SLG_LOG("[Telnet server] Set: " << properties);
 
-							// Split the line by comma
-							std::vector<std::string> splitProperties;
-							boost::split(splitProperties, properties, boost::is_any_of(","));
-							for (std::vector<std::string>::iterator it = splitProperties.begin(); it < splitProperties.end(); ++it)
-								boost::trim(*it);
+							// Replace comma with new line
+							std::replace(properties.begin(), properties.end(), ',', '\n');
 
 							// Build the Properties
 							Properties props;
-							const string propertyName = props.SetString(splitProperties[0]);
-							for (std::vector<std::string>::const_iterator it = splitProperties.begin() + 1; it < splitProperties.end(); ++it)
-								props.SetString(*it);
+							props.SetFromString(properties);
+							const string propertyName = props.GetAllNames()[0];
 
 							// Check if is one of the supported properties
 							if (propertyName == "film.tonemap.linear.scale") {
-								const float k = props.GetFloat(propertyName, 1.f);
+								const float k = props.Get(Property(propertyName)(1.f)).Get<float>();
 
 								if (film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
 									boost::asio::streambuf response;
@@ -474,7 +471,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.burn") {
-								const float k = props.GetFloat(propertyName, 3.75f);
+								const float k = props.Get(Property(propertyName)(3.75f)).Get<float>();
 
 								if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
 									boost::asio::streambuf response;
@@ -490,7 +487,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.postscale") {
-								const float k = props.GetFloat(propertyName, 1.2f);
+								const float k = props.Get(Property(propertyName)(1.2f)).Get<float>();
 
 								if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
 									boost::asio::streambuf response;
@@ -506,7 +503,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.reinhard02.prescale") {
-								const float k = props.GetFloat(propertyName, 1.f);
+								const float k = props.Get(Property(propertyName)(1.f)).Get<float>();
 
 								if (film->GetToneMapParams()->GetType() == TONEMAP_REINHARD02) {
 									boost::asio::streambuf response;
@@ -522,7 +519,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									SLG_LOG("[Telnet server] Not using TONEMAP_REINHARD02");
 								}
 							} else if (propertyName == "film.tonemap.type") {
-								const int type = props.GetInt(propertyName, 0);
+								const int type = props.Get(Property(propertyName)(0)).Get<float>();
 
 								if (type == 0) {
 									LinearToneMapParams params;
@@ -536,9 +533,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								boost::asio::write(socket, response);
 							} else if (propertyName == "image.filename") {
 								// Get the image file name
-								const string fileName = props.GetString(propertyName, "image.png");
+								const string fileName = props.Get(Property(propertyName)("image.png")).Get<string>();
 
-								session->renderConfig->cfg.SetString("image.filename", fileName);
+								session->renderConfig->cfg.Get(Property("image.filename")(fileName));
 								respStream << "OK\n";
 								boost::asio::write(socket, response);
 							} else if (propertyName == "scene.infinitelight.gain") {
@@ -546,9 +543,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								if (state == EDIT) {
 									InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 									if (il) {
-										const std::vector<float> vf = props.GetFloatVector(propertyName, "1.0 1.0 1.0");
-										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
-										il->SetGain(gain);
+										il->SetGain(props.Get(Property(propertyName)(1.f, 1.f, 1.f)).Get<Spectrum>());
 										session->renderConfig->scene->editActions.AddAction(INFINITELIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
@@ -565,9 +560,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								if (state == EDIT) {
 									InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
 									if (il) {
-										const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0");
-										il->GetUVMapping()->uDelta = vf.at(0);
-										il->GetUVMapping()->vDelta = vf.at(1);
+										const Property prop = props.Get(Property(propertyName)(0.f, 0.f));
+										il->GetUVMapping()->uDelta = prop.Get<float>(0);
+										il->GetUVMapping()->vDelta = prop.Get<float>(1);
 										session->renderConfig->scene->editActions.AddAction(INFINITELIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
@@ -584,9 +579,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								if (state == EDIT) {
 									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
-										const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0 1.0");
-										Vector dir(vf.at(0), vf.at(1), vf.at(2));
-										sl->SetSunDir(dir);
+										sl->SetSunDir(props.Get(Property(propertyName)(0.f, 0.f, 1.f)).Get<Vector>());
 										sl->Preprocess();
 										session->renderConfig->scene->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
@@ -604,9 +597,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								if (state == EDIT) {
 									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
-										const std::vector<float> vf = props.GetFloatVector(propertyName, "1.0 1.0 1.0");
-										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
-										sl->SetGain(gain);
+										sl->SetGain(props.Get(Property(propertyName)(1.f, 1.f, 1.f)).Get<Spectrum>());
 										session->renderConfig->scene->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
@@ -623,7 +614,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 								if (state == EDIT) {
 									SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
 									if (sl) {
-										sl->SetTurbidity(props.GetFloat(propertyName, 2.2f));
+										sl->SetTurbidity(props.Get(Property(propertyName)(2.2f)).Get<float>());
 										sl->Preprocess();
 										session->renderConfig->scene->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
@@ -641,7 +632,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									// Look for the SunLight
 									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
-										sl->SetTurbidity(props.GetFloat(propertyName, 2.2f));
+										sl->SetTurbidity(props.Get(Property(propertyName)(2.2f)).Get<float>());
 										sl->Preprocess();
 										session->renderConfig->scene->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
@@ -659,7 +650,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									// Look for the SunLight
 									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
-										sl->SetRelSize(props.GetFloat(propertyName, 1.f));
+										sl->SetRelSize(props.Get(Property(propertyName)(1.f)).Get<float>());
 										sl->Preprocess();
 										session->renderConfig->scene->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
@@ -677,9 +668,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									// Look for the SunLight
 									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
-										const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0 1.0");
-										Vector dir(vf.at(0), vf.at(1), vf.at(2));
-										sl->SetDir(dir);
+										sl->SetDir(props.Get(Property(propertyName)(0.f, 0.f, 1.f)).Get<Vector>());
 										sl->Preprocess();
 										session->renderConfig->scene->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
@@ -697,9 +686,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									// Look for the SunLight
 									SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
 									if (sl) {
-										const std::vector<float> vf = props.GetFloatVector(propertyName, "1.0 1.0 1.0");
-										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
-										sl->SetGain(gain);
+										sl->SetGain(props.Get(Property(propertyName)(1.f, 1.f, 1.f)).Get<Spectrum>());
 										sl->Preprocess();
 										session->renderConfig->scene->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
@@ -748,14 +735,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										throw std::runtime_error("Syntax error in " + propertyName);
 
 									// Read the new transformation
-									const std::vector<float> vf = props.GetFloatVector(propertyName,
-											"1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  0.0 0.0 0.0 1.0");
-									const Matrix4x4 mat(
-											vf.at(0), vf.at(4), vf.at(8), vf.at(12),
-											vf.at(1), vf.at(5), vf.at(9), vf.at(13),
-											vf.at(2), vf.at(6), vf.at(10), vf.at(14),
-											vf.at(3), vf.at(7), vf.at(11), vf.at(15));
-									const Transform trans(mat);
+									const Transform trans(props.Get(Property(propertyName)(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>());
 
 									// Update object transformation
 									scene->UpdateObjectTransformation(objName, trans);
@@ -783,9 +763,9 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.camera.lookat") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									const std::vector<float> vf = props.GetFloatVector(propertyName, "10.0 0.0 0.0  0.0 0.0 0.0");
-									Point o(vf.at(0), vf.at(1), vf.at(2));
-									Point t(vf.at(3), vf.at(4), vf.at(5));
+									const Property prop = props.Get(Property(propertyName)(10.f, 0.f, 0.f)(0.f, 0.f, 0.f));
+									Point o(prop.Get<float>(0), prop.Get<float>(1), prop.Get<float>(2));
+									Point t(prop.Get<float>(3), prop.Get<float>(4), prop.Get<float>(5));
 
 									scene->camera->orig = o;
 									scene->camera->target = t;
@@ -800,8 +780,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.camera.up") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0 0.1");
-									Vector up(vf.at(0), vf.at(1), vf.at(2));
+									Vector up(props.Get(Property(propertyName)(1.f, 1.f, 1.f)).Get<Vector>());
 
 									scene->camera->up = Normalize(up);
 									scene->camera->Update(film->GetWidth(),
@@ -815,7 +794,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.camera.lensradius") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									scene->camera->lensRadius = props.GetFloat(propertyName, 0.f);
+									scene->camera->lensRadius = props.Get(Property(propertyName)(0.f)).Get<float>();
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
 									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
@@ -827,7 +806,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.camera.fieldofview") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									scene->camera->fieldOfView = props.GetFloat(propertyName, 0.f);
+									scene->camera->fieldOfView = props.Get(Property(propertyName)(0.f)).Get<float>();
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
 									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
@@ -839,7 +818,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName == "scene.camera.focaldistance") {
 								// Check if we are in the right state
 								if (state == EDIT) {
-									scene->camera->focalDistance = props.GetFloat(propertyName, 0.f);
+									scene->camera->focalDistance = props.Get(Property(propertyName)(0.f)).Get<float>();
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
 									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);

@@ -134,9 +134,9 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 }
 
 static void DoRendering(RenderSession *session) {
-	const u_int haltTime = session->GetRenderConfig().GetProperties().GetInt("batch.halttime", 0);
-	const u_int haltSpp = session->GetRenderConfig().GetProperties().GetInt("batch.haltspp", 0);
-	const float haltThreshold = session->GetRenderConfig().GetProperties().GetFloat("batch.haltthreshold", -1.f);
+	const u_int haltTime = session->GetRenderConfig().GetProperties().Get(Property("batch.halttime")(0)).Get<u_int>();
+	const u_int haltSpp = session->GetRenderConfig().GetProperties().Get(Property("batch.haltspp")(0)).Get<u_int>();
+	const float haltThreshold = session->GetRenderConfig().GetProperties().Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
 
 	char buf[512];
 	const Properties &stats = session->GetStats();

@@ -47,7 +47,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	film->AddChannel(Film::TONEMAPPED_FRAMEBUFFER);
 
 	// Create LuxRays context
-	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
+	const int oclPlatformIndex = renderConfig->cfg.Get(Property("opencl.platform.index")(-1)).Get<int>();
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
 	// Force a complete preprocessing
@@ -77,9 +77,9 @@ void RenderEngine::Start() {
 	assert (!started);
 	started = true;
 
-	const float epsilonMin = renderConfig->cfg.GetFloat("scene.epsilon.min", DEFAULT_EPSILON_MIN);
+	const float epsilonMin = renderConfig->cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN)).Get<float>();
 	MachineEpsilon::SetMin(epsilonMin);
-	const float epsilonMax = renderConfig->cfg.GetFloat("scene.epsilon.max", DEFAULT_EPSILON_MAX);
+	const float epsilonMax = renderConfig->cfg.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX)).Get<float>();
 	MachineEpsilon::SetMax(epsilonMax);
 
 	ctx->Start();
@@ -186,7 +186,7 @@ void RenderEngine::UpdateFilm() {
 		UpdateFilmLockLess();
 		UpdateCounters();
 
-		const float haltthreshold = renderConfig->cfg.GetFloat("batch.haltthreshold", -1.f);
+		const float haltthreshold = renderConfig->cfg.Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
 		if (haltthreshold >= 0.f) {
 			// Check if it is time to run the convergence test again
 			const u_int imgWidth = film->GetWidth();
@@ -334,8 +334,8 @@ void CPURenderThread::EndSceneEdit(const EditActionList &editActions) {
 
 CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
-	const size_t renderThreadCount =  cfg->cfg.GetInt("native.threads.count",
-			boost::thread::hardware_concurrency());
+	const size_t renderThreadCount =  cfg->cfg.Get(Property("native.threads.count",
+			boost::thread::hardware_concurrency())).Get<size_t>();
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -693,17 +693,17 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
 
-	const bool useCPUs = (cfg.GetInt("opencl.cpu.use", 1) != 0);
-	const bool useGPUs = (cfg.GetInt("opencl.gpu.use", 1) != 0);
+	const bool useCPUs = cfg.Get(Property("opencl.cpu.use")(true)).Get<bool>();
+	const bool useGPUs = cfg.Get(Property("opencl.gpu.use")(true)).Get<bool>();
 	// 0 means use the value suggested by the OpenCL driver
-	const u_int forceGPUWorkSize = cfg.GetInt("opencl.gpu.workgroup.size", 0);
+	const u_int forceGPUWorkSize = cfg.Get(Property("opencl.gpu.workgroup.size")(0)).Get<u_int>();
 	// 0 means use the value suggested by the OpenCL driver
 #if defined(__APPLE__)	
-	const u_int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 1);
+	const u_int forceCPUWorkSize = cfg.Get(Property("opencl.cpu.workgroup.size")(1)).Get<u_int>();
 #else
-	const u_int forceCPUWorkSize = cfg.GetInt("opencl.cpu.workgroup.size", 0);
+	const u_int forceCPUWorkSize = cfg.Get(Property("opencl.cpu.workgroup.size")(0)).Get<u_int>();
 #endif
-	const string oclDeviceConfig = cfg.GetString("opencl.devices.select", "");
+	const string oclDeviceConfig = cfg.Get(Property("opencl.devices.select")("")).Get<string>();
 
 	// Start OpenCL devices
 	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
@@ -1024,9 +1024,9 @@ HybridRenderEngine::HybridRenderEngine(const RenderConfig *rcfg, Film *flm,
 	intersectionDevices[0]->SetQueueCount(renderThreadCount);
 
 	// Check if I have to set max. QBVH stack size
-	const bool enableImageStorage = renderConfig->cfg.GetBoolean("accelerator.imagestorage.enable", true);
-	const size_t qbvhStackSize = renderConfig->cfg.GetInt("accelerator.qbvh.stacksize.max",
-			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)));
+	const bool enableImageStorage = renderConfig->cfg.Get(Property("accelerator.imagestorage.enable")(true)).Get<bool>();
+	const size_t qbvhStackSize = renderConfig->cfg.Get(Property("accelerator.qbvh.stacksize.max")(
+			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<size_t>();
 	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
 		intersectionDevices[i]->SetEnableImageStorage(enableImageStorage);
 		intersectionDevices[i]->SetMaxStackSize(qbvhStackSize);

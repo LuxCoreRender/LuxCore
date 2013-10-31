@@ -70,27 +70,27 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.GetInt("biaspath.pathdepth.total", 10));
-	maxPathDepth.diffuseDepth = Max(0, cfg.GetInt("biaspath.pathdepth.diffuse", 1));
-	maxPathDepth.glossyDepth = Max(0, cfg.GetInt("biaspath.pathdepth.glossy", 1));
-	maxPathDepth.specularDepth = Max(0, cfg.GetInt("biaspath.pathdepth.specular", 2));
+	maxPathDepth.depth = Max(0, cfg.Get(Property("biaspath.pathdepth.total")(10)).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.diffuse")(1)).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.glossy")(1)).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.specular")(2)).Get<int>());
 
 	// Samples settings
-	aaSamples = Max(1, cfg.GetInt("biaspath.sampling.aa.size", 3));
-	diffuseSamples = Max(0, cfg.GetInt("biaspath.sampling.diffuse.size", 2));
-	glossySamples = Max(0, cfg.GetInt("biaspath.sampling.glossy.size", 2));
-	specularSamples = Max(0, cfg.GetInt("biaspath.sampling.specular.size", 1));
-	directLightSamples = Max(1, cfg.GetInt("biaspath.sampling.directlight.size", 1));
+	aaSamples = Max(1, cfg.Get(Property("biaspath.sampling.aa.size")(3)).Get<int>());
+	diffuseSamples = Max(0, cfg.Get(Property("biaspath.sampling.diffuse.size")(2)).Get<int>());
+	glossySamples = Max(0, cfg.Get(Property("biaspath.sampling.glossy.size")(2)).Get<int>());
+	specularSamples = Max(0, cfg.Get(Property("biaspath.sampling.specular.size")(1)).Get<int>());
+	directLightSamples = Max(1, cfg.Get(Property("biaspath.sampling.directlight.size")(1)).Get<int>());
 
 	// Clamping settings
-	radianceClampMaxValue = Max(0.f, cfg.GetFloat("biaspath.clamping.radiance.maxvalue", 10.f));
-	pdfClampValue = Max(0.f, cfg.GetFloat("biaspath.clamping.pdf.value", 0.f));
+	radianceClampMaxValue = Max(0.f, cfg.Get(Property("biaspath.clamping.radiance.maxvalue")(10.f)).Get<float>());
+	pdfClampValue = Max(0.f, cfg.Get(Property("biaspath.clamping.pdf.value")(0.f)).Get<float>());
 
 	// Light settings
-	lowLightThreashold = Max(0.f, cfg.GetFloat("biaspath.lights.lowthreshold", .001f));
-	nearStartLight = Max(0.f, cfg.GetFloat("biaspath.lights.nearstart", .001f));
+	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(.001f)).Get<float>());
+	nearStartLight = Max(0.f, cfg.Get(Property("biaspath.lights.nearstart")(.001f)).Get<float>());
 
-	string lightStratType = cfg.GetString("biaspath.lights.samplingstrategy.type", "ALL");
+	string lightStratType = cfg.Get(Property("biaspath.lights.samplingstrategy.type")("ALL")).Get<string>();
 	if (lightStratType == "ALL")
 		lightSamplingStrategyONE = false;
 	else if (lightStratType == "ONE")
@@ -110,14 +110,14 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 			defaultTileSize = Max(film->GetWidth(), film->GetHeight()) / 4;
 	} else
 		defaultTileSize = 32;
-	tileRepository = new TileRepository(Max(renderConfig->cfg.GetInt("tile.size", defaultTileSize), 8));
+	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(defaultTileSize)).Get<u_int>(), 8u));
 
 	if (GetEngineType() == RTBIASPATHOCL) {
 		tileRepository->enableProgressiveRefinement = false;
 		tileRepository->enableMultipassRendering = false;
 	} else {
-		tileRepository->enableProgressiveRefinement = cfg.GetBoolean("tile.progressiverefinement.enable", false);
-		tileRepository->enableMultipassRendering = cfg.GetBoolean("tile.multipass.enable", false);
+		tileRepository->enableProgressiveRefinement = cfg.Get(Property("tile.progressiverefinement.enable")(false)).Get<bool>();
+		tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(false)).Get<bool>();
 	}
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());

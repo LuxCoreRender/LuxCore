@@ -126,7 +126,7 @@ void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 	channels.insert(type);
 	switch (type) {
 		case MATERIAL_ID_MASK: {
-			const u_int id = prop->GetInt("id", 255);
+			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
 			if (std::count(maskMaterialIDs.begin(), maskMaterialIDs.end(), id) == 0)
 				maskMaterialIDs.push_back(id);
 			break;
@@ -763,7 +763,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				bitCount = hdrImage ? 32 : 8;
 
 				// Look for the material mask ID index
-				const u_int id = props->GetInt("id", 255);
+				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
 				bool found = false;
 				for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
 					if (maskMaterialIDs[i] == id) {
@@ -796,7 +796,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				imageType = FIT_RGBF;
 				bitCount = 96;
 
-				radianceGroupIndex = props->GetInt("id", 0);
+				radianceGroupIndex = props->Get(Property("id")(0)).Get<u_int>();
 				if (radianceGroupIndex >= radianceGroupCount)
 					return;
 			} else

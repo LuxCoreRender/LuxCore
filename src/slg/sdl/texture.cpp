@@ -667,8 +667,8 @@ Properties ConstFloatTexture::ToProperties(const ImageMapCache &imgMapCache) con
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "constfloat1");
-	props.SetString("scene.textures." + name + ".value", ToString(value));
+	props.Set(Property("scene.textures." + name + ".type")("constfloat1"));
+	props.Set(Property("scene.textures." + name + ".value")(value));
 
 	return props;
 }
@@ -681,9 +681,8 @@ Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) co
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "constfloat3");
-	props.SetString("scene.textures." + name + ".value",
-			ToString(color.r) + " " + ToString(color.g) + " " + ToString(color.b));
+	props.Set(Property("scene.textures." + name + ".type")("constfloat3"));
+	props.Set(Property("scene.textures." + name + ".value")(color));
 
 	return props;
 }
@@ -714,11 +713,11 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "imagemap");
-	props.SetString("scene.textures." + name + ".file", "imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr");
-	props.SetString("scene.textures." + name + ".gamma", "1.0");
-	props.SetString("scene.textures." + name + ".gain", ToString(gain));
+	props.Set(Property("scene.textures." + name + ".type")("imagemap"));
+	props.Set(Property("scene.textures." + name + ".file")("imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr"));
+	props.Set(Property("scene.textures." + name + ".gamma")("1.0"));
+	props.Set(Property("scene.textures." + name + ".gain")(gain));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -747,9 +746,9 @@ Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "scale");
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("scale"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 
 	return props;
 }
@@ -822,8 +821,8 @@ Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache)
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "fresnelapproxn");
-	props.SetString("scene.textures." + name + ".texture", tex->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxn"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
 
 	return props;
 }
@@ -832,8 +831,8 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache)
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "fresnelapproxk");
-	props.SetString("scene.textures." + name + ".texture", tex->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxk"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
 
 	return props;
 }
@@ -869,9 +868,9 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache)
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "checkerboard2d");
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("checkerboard2d"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -904,9 +903,9 @@ Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache)
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "checkerboard3d");
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("checkerboard3d"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -947,10 +946,10 @@ Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "mix");
-	props.SetString("scene.textures." + name + ".amount", amount->GetName());
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("mix"));
+	props.Set(Property("scene.textures." + name + ".amount")(amount->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 
 	return props;
 }
@@ -978,9 +977,9 @@ Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "fbm");
-	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
-	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
+	props.Set(Property("scene.textures." + name + ".type")("fbm"));
+	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props.Set(Property("scene.textures." + name + ".roughness")(omega));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -1049,11 +1048,11 @@ Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "marble");
-	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
-	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
-	props.SetString("scene.textures." + name + ".scale", ToString(scale));
-	props.SetString("scene.textures." + name + ".variation", ToString(variation));
+	props.Set(Property("scene.textures." + name + ".type")("marble"));
+	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props.Set(Property("scene.textures." + name + ".roughness")(omega));
+	props.Set(Property("scene.textures." + name + ".scale")(scale));
+	props.Set(Property("scene.textures." + name + ".variation")(variation));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -1116,9 +1115,9 @@ Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "dots");
-	props.SetString("scene.textures." + name + ".inside", insideTex->GetName());
-	props.SetString("scene.textures." + name + ".outside", outsideTex->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("dots"));
+	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetName()));
+	props.Set(Property("scene.textures." + name + ".outside")(outsideTex->GetName()));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -1324,16 +1323,16 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "brick");
-	props.SetString("scene.textures." + name + ".bricktex", tex1->GetName());
-	props.SetString("scene.textures." + name + ".mortartex", tex2->GetName());
-	props.SetString("scene.textures." + name + ".brickmodtex", tex3->GetName());
-	props.SetString("scene.textures." + name + ".brickwidth", ToString(brickwidth));
-	props.SetString("scene.textures." + name + ".brickheight", ToString(brickheight));
-	props.SetString("scene.textures." + name + ".brickdepth", ToString(brickdepth));
-	props.SetString("scene.textures." + name + ".mortarsize", ToString(mortarsize));
-	props.SetString("scene.textures." + name + ".brickrun", ToString(run));
-	props.SetString("scene.textures." + name + ".brickbevel", ToString(bevelwidth * brickwidth));
+	props.Set(Property("scene.textures." + name + ".type")("brick"));
+	props.Set(Property("scene.textures." + name + ".bricktex")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".mortartex")(tex2->GetName()));
+	props.Set(Property("scene.textures." + name + ".brickmodtex")(tex3->GetName()));
+	props.Set(Property("scene.textures." + name + ".brickwidth")(brickwidth));
+	props.Set(Property("scene.textures." + name + ".brickheight")(brickheight));
+	props.Set(Property("scene.textures." + name + ".brickdepth")(brickdepth));
+	props.Set(Property("scene.textures." + name + ".mortarsize")(mortarsize));
+	props.Set(Property("scene.textures." + name + ".brickrun")(run));
+	props.Set(Property("scene.textures." + name + ".brickbevel")(bevelwidth * brickwidth));
 
 	string brickBondValue;
 	switch (bond) {
@@ -1357,7 +1356,7 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 			brickBondValue = "stacked";
 			break;
 	}
-	props.SetString("scene.textures." + name + ".brickbond", brickBondValue);
+	props.Set(Property("scene.textures." + name + ".brickbond")(brickBondValue));
 
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
@@ -1387,9 +1386,9 @@ Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "add");
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("add"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 
 	return props;
 }
@@ -1418,7 +1417,7 @@ Properties WindyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "windy");
+	props.Set(Property("scene.textures." + name + ".type")("windy"));
 
 	return props;
 }
@@ -1444,9 +1443,9 @@ Properties WrinkledTexture::ToProperties(const ImageMapCache &imgMapCache) const
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "wrinkled");
-	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
-	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
+	props.Set(Property("scene.textures." + name + ".type")("wrinkled"));
+	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props.Set(Property("scene.textures." + name + ".roughness")(omega));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -1474,7 +1473,7 @@ Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "uv");
+	props.Set(Property("scene.textures." + name + ".type")("uv"));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -1515,13 +1514,12 @@ Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "band");
-	props.SetString("scene.textures." + name + ".amount", amount->GetName());
+	props.Set(Property("scene.textures." + name + ".type")("band"));
+	props.Set(Property("scene.textures." + name + ".amount")(amount->GetName()));
 
 	for (u_int i = 0; i < offsets.size(); ++i) {
-		props.SetString("scene.textures." + name + ".offset" + ToString(i), ToString(offsets[i]));
-		props.SetString("scene.textures." + name + ".value" + ToString(i),
-				ToString(values[i].r) + " " + ToString(values[i].g) + " " + ToString(values[i].b));
+		props.Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));
+		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i].b));
 	}
 
 	return props;
@@ -1543,7 +1541,7 @@ Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache) 
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "hitpointcolor");
+	props.Set(Property("scene.textures." + name + ".type")("hitpointcolor"));
 
 	return props;
 }
@@ -1564,7 +1562,7 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) 
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "hitpointalpha");
+	props.Set(Property("scene.textures." + name + ".type")("hitpointalpha"));
 
 	return props;
 }
@@ -1586,8 +1584,8 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) c
 	Properties props;
 
 	const string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "hitpointgrey");
-	props.SetString("scene.textures." + name + ".channel", ToString(
+	props.Set(Property("scene.textures." + name + ".type")("hitpointgrey"));
+	props.Set(Property("scene.textures." + name + ".channel")(
 		((channel != 0) && (channel != 1) && (channel != 2)) ? -1 : ((int)channel)));
 
 	return props;

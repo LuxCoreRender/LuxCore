@@ -80,7 +80,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
 	} else {
-		taskCount = cfg.GetInt("opencl.task.count", 65536);
+		taskCount = cfg.Get(Property("opencl.task.count")(65536)).Get<u_int>();
 		// I don't know yet the workgroup size of each device so I can not
 		// round up task count to be a multiply of workgroups size of all devices
 		// used. rounding to 2048 is a simple trick base don the assumption that
@@ -93,24 +93,24 @@ void PathOCLRenderEngine::StartLockLess() {
 	// General path tracing settings
 	//--------------------------------------------------------------------------	
 	
-	maxPathDepth = Max(1, cfg.GetInt("path.maxdepth", 5));
-	rrDepth = Max(1, cfg.GetInt("path.russianroulette.depth", 3));
-	rrImportanceCap = Clamp(cfg.GetFloat("path.russianroulette.cap", .5f), 0.f, 1.f);
+	maxPathDepth = Max(1, cfg.Get(Property("path.maxdepth")(5)).Get<int>());
+	rrDepth = Max(1, cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>(), 0.f, 1.f);
 
 	//--------------------------------------------------------------------------
 	// Sampler
 	//--------------------------------------------------------------------------
 
 	sampler = new slg::ocl::Sampler();
-	const SamplerType samplerType = Sampler::String2SamplerType(cfg.GetString("sampler.type", "RANDOM"));
+	const SamplerType samplerType = Sampler::String2SamplerType(cfg.Get(Property("sampler.type")("RANDOM")).Get<string>());
 	switch (samplerType) {
 		case RANDOM:
 			sampler->type = slg::ocl::RANDOM;
 			break;
 		case METROPOLIS: {
-			const float largeMutationProbability = cfg.GetFloat("sampler.largesteprate", .4f);
-			const float imageMutationRange = cfg.GetFloat("sampler.imagemutationrate", .1f);
-			const float maxRejects = cfg.GetFloat("sampler.maxconsecutivereject", 512);
+			const float largeMutationProbability = cfg.Get(Property("sampler.largesteprate")(.4f)).Get<int>();
+			const float imageMutationRange = cfg.Get(Property("sampler.imagemutationrate")(.1f)).Get<int>();
+			const u_int maxRejects = cfg.Get(Property("sampler.maxconsecutivereject")(512)).Get<u_int>();
 
 			sampler->type = slg::ocl::METROPOLIS;
 			sampler->metropolis.largeMutationProbability = largeMutationProbability;
@@ -160,7 +160,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	} else
 		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
 
-	usePixelAtomics = (cfg.GetInt("path.pixelatomics.enable", 0) != 0);	
+	usePixelAtomics = cfg.Get(Property("path.pixelatomics.enable")(false)).Get<bool>();
 
 	PathOCLBaseRenderEngine::StartLockLess();
 }

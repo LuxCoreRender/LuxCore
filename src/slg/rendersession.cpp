@@ -39,7 +39,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 	const Properties &cfg = renderConfig->cfg;
 
-	periodiceSaveTime = cfg.GetFloat("batch.periodicsave", 0.f);
+	periodiceSaveTime = cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 

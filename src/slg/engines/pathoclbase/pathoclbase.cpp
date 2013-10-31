@@ -88,9 +88,9 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	// Check if I have to disable image storage and set max. QBVH stack size
-	const bool enableImageStorage = cfg.GetBoolean("accelerator.imagestorage.enable", true);
-	const size_t qbvhStackSize = cfg.GetInt("accelerator.qbvh.stacksize.max",
-			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)));
+	const bool enableImageStorage = cfg.Get(Property("accelerator.imagestorage.enable")(true)).Get<bool>();
+	const size_t qbvhStackSize = cfg.Get(Property("accelerator.qbvh.stacksize.max")(
+			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<size_t>();
 	SLG_LOG("OpenCL Devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
 		SLG_LOG("[" << devs[i]->GetName() << "]");
@@ -143,7 +143,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	if (cfg.IsDefined("opencl.memory.maxpagesize"))
-		maxMemPageSize = cfg.GetSize("opencl.memory.maxpagesize", 512 * 1024 * 1024);
+		maxMemPageSize = cfg.Get(Property("opencl.memory.maxpagesize")(512 * 1024 * 1024)).Get<size_t>();
 	else {
 		// Look for the max. page size allowed
 		maxMemPageSize = ((OpenCLIntersectionDevice *)(intersectionDevices[0]))->GetDeviceDesc()->GetMaxMemoryAllocSize();

@@ -330,10 +330,23 @@ public:
 		values.clear();
 		return Add(val);
 	}
+
 	/*!
 	 * \brief Required to work around the problem of char* to bool conversion
 	 * (instead of char* to string).
 	 */
+	Property &Add(const char *val) {
+		values.push_back(std::string(val));
+		return *this;
+	}
+	/*!
+	 * \brief Required to work around the problem of char* to bool conversion
+	 * (instead of char* to string).
+	 */
+	Property &Add(char *val) {
+		values.push_back(std::string(val));
+		return *this;
+	}
 	Property &operator()(const char *val) {
 		return Add(std::string(val));
 	}
@@ -341,7 +354,22 @@ public:
 	 * \brief Required to work around the problem of char* to bool conversion
 	 * (instead of char* to string).
 	 */
+	Property &operator()(char *val) {
+		return Add(std::string(val));
+	}
+	/*!
+	 * \brief Required to work around the problem of char* to bool conversion
+	 * (instead of char* to string).
+	 */
 	Property &operator=(const char *val) {
+		values.clear();
+		return Add(std::string(val));
+	}
+	/*!
+	 * \brief Required to work around the problem of char* to bool conversion
+	 * (instead of char* to string).
+	 */
+	Property &operator=(char *val) {
 		values.clear();
 		return Add(std::string(val));
 	}
@@ -608,27 +636,6 @@ public:
 	 * \return a string with the definition of all properties.
 	 */
 	std::string ToString() const;
-
-	//--------------------------------------------------------------------------
-	// Old deprecated interface
-	//--------------------------------------------------------------------------
-
-	std::string GetString(const std::string &propName, const std::string defaultValue) const;
-	bool GetBoolean(const std::string &propName, const bool defaultValue) const;
-	int GetInt(const std::string &propName, const int defaultValue) const;
-	size_t GetSize(const std::string &propName, const size_t defaultValue) const;
-	float GetFloat(const std::string &propName, const float defaultValue) const;
-
-	std::vector<std::string> GetStringVector(const std::string &propName, const std::string &defaultValue) const;
-	std::vector<int> GetIntVector(const std::string &propName, const std::string &defaultValue) const;
-	std::vector<float> GetFloatVector(const std::string &propName, const std::string &defaultValue) const;
-
-	void SetString(const std::string &propName, const std::string &value);
-	std::string SetString(const std::string &property);
-
-	static std::vector<std::string> ConvertToStringVector(const std::string &values);
-	static std::vector<int> ConvertToIntVector(const std::string &values);
-	static std::vector<float> ConvertToFloatVector(const std::string &values);
 
 private:
 	// This vector used, among other things, to keep track of the insertion order

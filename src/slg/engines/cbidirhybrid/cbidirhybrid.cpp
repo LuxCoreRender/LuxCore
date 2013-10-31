@@ -37,8 +37,8 @@ void CBiDirHybridRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	eyePathCount = cfg.GetInt("cbidir.eyepath.count", 5);
-	lightPathCount = cfg.GetInt("cbidir.lightpath.count", 5);
+	eyePathCount = cfg.Get(Property("cbidir.eyepath.count")(5)).Get<int>();
+	lightPathCount = cfg.Get(Property("cbidir.lightpath.count")(5)).Get<int>();
 
 	BiDirHybridRenderEngine::StartLockLess();
 }
