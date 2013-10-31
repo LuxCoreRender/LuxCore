@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _LUXRAYS_EXTMESHCACHE_H
@@ -25,6 +22,8 @@
 #include <string>
 #include <vector>
 #include <map>
+
+#include <boost/unordered_map.hpp>
 
 #include "luxrays/core/spectrum.h"
 #include "luxrays/core/geometry/transform.h"
@@ -43,28 +42,22 @@ public:
 	void DefineExtMesh(const std::string &fileName,
 		const u_int plyNbVerts, const u_int plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
-		luxrays::Spectrum *cols, float *alphas,
-		const bool usePlyNormals);
-	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
-		const bool usePlyNormals);
+		luxrays::Spectrum *cols, float *alphas);
+	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh);
+
+	ExtMesh *GetExtMesh(const std::string &fileName, const Transform *trans = NULL);
 
 	// Note: before call to DeleteExtMesh, be sore to not have any instance referencing
 	// the geometry
-	void DeleteExtMesh(const std::string &fileName, const bool usePlyNormals);
-    void DeleteExtMesh(luxrays::ExtTriangleMesh *mesh);
+	void DeleteExtMesh(const std::string &fileName);
 
-	ExtMesh *FindExtMesh(const std::string &fileName, const bool usePlyNormals);
-
-	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals);
-	ExtMesh *GetExtMesh(const std::string &fileName, const bool usePlyNormals,
-		const Transform &trans);
-
+	u_int GetExtMeshIndex(const std::string &fileName) const;
 	u_int GetExtMeshIndex(const ExtMesh *m) const;
 
 	const std::vector<ExtMesh *> &GetMeshes() const { return meshes; }
 
 public:
-	std::map<std::string, ExtTriangleMesh *> meshByName;
+	boost::unordered_map<std::string, ExtTriangleMesh *> meshByName;
 	// Used to preserve insertion order and to retrieve insertion index
 	std::vector<ExtMesh *> meshes;
 

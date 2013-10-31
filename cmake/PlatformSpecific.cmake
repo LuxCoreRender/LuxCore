@@ -1,23 +1,20 @@
-###########################################################################
-#   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  #
-#                                                                         #
-#   This file is part of LuxRays.                                         #
-#                                                                         #
-#   LuxRays is free software; you can redistribute it and/or modify       #
-#   it under the terms of the GNU General Public License as published by  #
-#   the Free Software Foundation; either version 3 of the License, or     #
-#   (at your option) any later version.                                   #
-#                                                                         #
-#   LuxRays is distributed in the hope that it will be useful,            #
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of        #
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         #
-#   GNU General Public License for more details.                          #
-#                                                                         #
-#   You should have received a copy of the GNU General Public License     #
-#   along with this program.  If not, see <http://www.gnu.org/licenses/>. #
-#                                                                         #
-#   LuxRays website: http://www.luxrender.net                             #
-###########################################################################
+################################################################################
+# Copyright 1998-2013 by authors (see AUTHORS.txt)
+#
+#   This file is part of LuxRender.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
 
 # Use relative paths
 # This is mostly to reduce path size for command-line limits on windows
@@ -154,7 +151,6 @@ IF(APPLE)
 #	INCLUDE_DIRECTORIES( ${OSX_DEPENDENCY_ROOT}/include )
 
 	### options
-	option(OSX_BUILD_LUXMARK "Compile LuxMark too" FALSE)
 	option(OSX_UPDATE_LUXRAYS_REPO "Copy LuxRays dependencies over to macos repo after compile" FALSE)
 
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
@@ -189,7 +185,6 @@ IF(APPLE)
 		MESSAGE(STATUS "BUILD_TYPE : " ${CMAKE_BUILD_TYPE} " - compile with: make " )
 	endif()
 	MESSAGE(STATUS "UPDATE_LUXRAYS_IN_MACOS_REPO : " ${OSX_UPDATE_LUXRAYS_REPO})
-	MESSAGE(STATUS "BUILD_LUXMARK_OSX : " ${OSX_BUILD_LUXMARK})
 	MESSAGE(STATUS "")
 	MESSAGE(STATUS "#####################################################################")
 

@@ -1,24 +1,21 @@
 #line 2 "light_funcs.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
@@ -27,8 +24,9 @@
 
 #if defined(PARAM_HAS_INFINITELIGHT)
 
-float3 InfiniteLight_GetRadiance(
-	__global InfiniteLight *infiniteLight, const float3 dir
+float3 InfiniteLight_GetRadiance(__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistirbution,
+		const float3 dir, float *directPdfA
 	IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
@@ -39,7 +37,62 @@ float3 InfiniteLight_GetRadiance(
 		SphericalPhi(localDir) * (1.f / (2.f * M_PI_F)),
 		SphericalTheta(localDir) * M_1_PI_F);
 
-	// TextureMapping2D_Map() is expendaded here
+	// TextureMapping2D_Map() is expended here
+	const float2 scale = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uScale);
+	const float2 delta = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uDelta);
+	const float2 mapUV = uv * scale + delta;
+
+	const float distPdf = Distribution2D_Pdf(infiniteLightDistirbution, mapUV.s0, mapUV.s1);
+	*directPdfA = distPdf / (4.f * M_PI_F);
+
+	return VLOAD3F(&infiniteLight->gain.r) * ImageMap_GetSpectrum(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			mapUV.s0, mapUV.s1);
+}
+
+float3 InfiniteLight_Illuminate(__global InfiniteLight *infiniteLight,
+		__global float *infiniteLightDistirbution,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		const float u0, const float u1, const float3 p,
+		float3 *dir, float *distance, float *directPdfW
+		IMAGEMAPS_PARAM_DECL) {
+	float2 sampleUV;
+	float distPdf;
+	Distribution2D_SampleContinuous(infiniteLightDistirbution, u0, u1, &sampleUV, &distPdf);
+
+	const float phi = sampleUV.s0 * 2.f * M_PI_F;
+	const float theta = sampleUV.s1 * M_PI_F;
+	*dir = normalize(Transform_ApplyVector(&infiniteLight->light2World,
+			SphericalDirection(sin(theta), cos(theta), phi)));
+
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	*directPdfW = distPdf / (4.f * M_PI_F);
+
+	// InfiniteLight_GetRadiance  is expended here
+	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->imageMapIndex];
+	__global float *pixels = ImageMap_GetPixelsAddress(
+			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+
+	const float2 uv = (float2)(sampleUV.s0, sampleUV.s1);
+
+	// TextureMapping2D_Map() is expended here
 	const float2 scale = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uScale);
 	const float2 delta = VLOAD2F(&infiniteLight->mapping.uvMapping2D.uDelta);
 	const float2 mapUV = uv * scale + delta;
@@ -105,13 +158,43 @@ float3 SkyLight_GetSkySpectralRadiance(__global SkyLight *skyLight,
 	return SkyLight_ChromaticityToSpectrum(Y, x, y);
 }
 
-float3 SkyLight_GetRadiance(__global SkyLight *skyLight, const float3 dir) {
+float3 SkyLight_GetRadiance(__global SkyLight *skyLight, const float3 dir,
+		float *directPdfA) {
+	*directPdfA = 1.f / (4.f * M_PI_F);
+
 	const float3 localDir = normalize(Transform_InvApplyVector(&skyLight->light2World, -dir));
 	const float theta = SphericalTheta(localDir);
 	const float phi = SphericalPhi(localDir);
 	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
 
 	return VLOAD3F(&skyLight->gain.r) * s;
+}
+
+float3 SkyLight_Illuminate(__global SkyLight *skyLight,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		const float u0, const float u1, const float3 p,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+
+	const float3 localDir = normalize(Transform_ApplyVector(&skyLight->light2World, -(*dir)));
+	*dir = normalize(Transform_ApplyVector(&skyLight->light2World,  UniformSampleSphere(u0, u1)));
+
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	return SkyLight_GetRadiance(skyLight, -(*dir), directPdfW);
 }
 
 #endif

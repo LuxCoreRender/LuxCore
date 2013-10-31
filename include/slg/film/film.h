@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_FILM_H
@@ -29,6 +26,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <set>
 
 #if defined (WIN32)
 #include <windows.h>
@@ -38,6 +36,10 @@
 
 #include <boost/thread/mutex.hpp>
 
+#include "luxrays/core/geometry/point.h"
+#include "luxrays/core/geometry/normal.h"
+#include "luxrays/core/geometry/uv.h"
+#include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/film/filter.h"
 #include "slg/film/tonemapping.h"
@@ -46,60 +48,102 @@
 
 namespace slg {
 
-typedef enum {
-	PER_PIXEL_NORMALIZED = 0,
-	PER_SCREEN_NORMALIZED = 1
-} FilmBufferType;
+//------------------------------------------------------------------------------
+// FilmOutput
+//------------------------------------------------------------------------------
+
+class FilmOutputs {
+public:
+	typedef enum {
+		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
+		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
+		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
+		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
+		RADIANCE_GROUP, UV, RAYCOUNT
+	} FilmOutputType;
+
+	FilmOutputs() { }
+	~FilmOutputs() { }
+
+	u_int GetCount() const { return types.size(); }
+	FilmOutputType GetType(const u_int index) const { return types[index]; }
+	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
+	const luxrays::Properties &GetProperties(const u_int index) const { return props[index]; }
+
+	void Add(const FilmOutputType type, const std::string &fileName,
+		const luxrays::Properties *prop = NULL);
+
+private:
+	std::vector<FilmOutputType> types;
+	std::vector<std::string> fileNames;
+	std::vector<luxrays::Properties> props;
+};
 
 //------------------------------------------------------------------------------
-// Base class for all Film implementation
+// Film
 //------------------------------------------------------------------------------
+
+class SampleResult;
 
 #define GAMMA_TABLE_SIZE 1024
 
 class Film {
 public:
+	typedef enum {
+		RADIANCE_PER_PIXEL_NORMALIZED = 1<<0,
+		RADIANCE_PER_SCREEN_NORMALIZED = 1<<1,
+		ALPHA = 1<<2,
+		TONEMAPPED_FRAMEBUFFER = 1<<3,
+		DEPTH = 1<<4,
+		POSITION = 1<<5,
+		GEOMETRY_NORMAL = 1<<6,
+		SHADING_NORMAL = 1<<7,
+		MATERIAL_ID = 1<<8,
+		DIRECT_DIFFUSE = 1<<9,
+		DIRECT_GLOSSY = 1<<10,
+		EMISSION = 1<<11,
+		INDIRECT_DIFFUSE = 1<<12,
+		INDIRECT_GLOSSY = 1<<13,
+		INDIRECT_SPECULAR = 1<<14,
+		MATERIAL_ID_MASK = 1<<15,
+		DIRECT_SHADOW_MASK = 1<<16,
+		INDIRECT_SHADOW_MASK = 1<<17,
+		UV = 1<<18,
+		RAYCOUNT = 1<<19
+	} FilmChannelType;
+
 	Film(const u_int w, const u_int h);
 	~Film();
 
-	void Init() { Init(width, height); }
-	void Init(const u_int w, const u_int h);
-	void InitGammaTable(const float gamma = 2.2f);
+	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
+	// This one must be called before Init()
+	void AddChannel(const FilmChannelType type,
+		const luxrays::Properties *prop = NULL);
+	// This one must be called before Init()
+	void RemoveChannel(const FilmChannelType type);
+	// This one must be called before Init()
+	void SetRadianceGroupCount(const u_int count) { radianceGroupCount = count; }
+	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
+	u_int GetMaskMaterialIDCount() const { return maskMaterialIDs.size(); }
+	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }
+	
+
+	void Init();
+	void Resize(const u_int w, const u_int h);
+	void SetGamma(const float gamma = 2.2f);
 	void Reset();
 
 	//--------------------------------------------------------------------------
 	// Dynamic settings
 	//--------------------------------------------------------------------------
 
-	void SetPerPixelNormalizedBufferFlag(const bool enablePerPixelNormBuffer) {
-		enablePerPixelNormalizedBuffer = enablePerPixelNormBuffer;
-	}
-	void SetPerScreenNormalizedBufferFlag(const bool enablePerScreenNormBuffer) {
-		enablePerScreenNormalizedBuffer = enablePerScreenNormBuffer;
-	}
-	void SetFrameBufferFlag(const bool enableFrmBuffer) {
-		enableFrameBuffer = enableFrmBuffer;
-	}
-
-	bool HasPerPixelNormalizedBuffer() const { return enablePerPixelNormalizedBuffer; }
-	bool HasPerScreenNormalizedBuffer() const { return enablePerScreenNormalizedBuffer; }
-	bool HasFrameBuffer() const { return enableFrameBuffer; }
-
-	void SetAlphaChannelFlag(const bool alphaChannel) {
-		// Alpha buffer uses the weights in PER_PIXEL_NORMALIZED buffer
-		assert (!alphaChannel || (alphaChannel && enablePerPixelNormalizedBuffer));
-
-		enableAlphaChannel = alphaChannel;
-	}
-	bool IsAlphaChannelEnabled() const { return enableAlphaChannel; }
-
 	void SetOverlappedScreenBufferUpdateFlag(const bool overlappedScreenBufferUpdate) {
 		enabledOverlappedScreenBufferUpdate = overlappedScreenBufferUpdate;
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
-	void SetFilterType(const FilterType filter);
-	FilterType GetFilterType() const { return filterType; }
+	void SetFilter(Filter *flt);
+	const Filter *GetFilter() const { return filter; }
 
 	const ToneMapParams *GetToneMapParams() const { return toneMapParams; }
 	void SetToneMapParams(const ToneMapParams &params) {
@@ -109,11 +153,10 @@ public:
 	}
 
 	void CopyDynamicSettings(const Film &film) {
-		SetPerPixelNormalizedBufferFlag(HasPerPixelNormalizedBuffer());
-		SetPerScreenNormalizedBufferFlag(HasPerScreenNormalizedBuffer());
-		SetFrameBufferFlag(HasFrameBuffer());
-		SetAlphaChannelFlag(film.IsAlphaChannelEnabled());
-		SetFilterType(film.GetFilterType());
+		channels = film.channels;
+		maskMaterialIDs = film.maskMaterialIDs;
+		radianceGroupCount = film.radianceGroupCount;
+		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetToneMapParams(*(film.GetToneMapParams()));
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 	}
@@ -128,11 +171,15 @@ public:
 		AddFilm(film, 0, 0, width, height, 0, 0);
 	}
 
-	void SaveScreenBuffer(const std::string &filmFile);
-	void UpdateScreenBuffer();
-	float *GetScreenBuffer() const {
-		return (float *)frameBuffer->GetPixels();
+	void Output(const FilmOutputs &filmOutputs);
+	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
+		const luxrays::Properties *props = NULL);
+
+	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer, const u_int index = 0) {
+		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
+
+	void UpdateChannel_RGB_TONEMAPPED();
 
 	//--------------------------------------------------------------------------
 
@@ -149,15 +196,6 @@ public:
 		return GetTotalSampleCount() / GetTotalTime();
 	}
 
-	const SamplePixel *GetSamplePixel(const FilmBufferType type,
-		const u_int x, const u_int y) const {
-		return sampleFrameBuffer[type]->GetPixel(x, y);
-	}
-
-	const AlphaPixel *GetAlphaPixel(const u_int x, const u_int y) const {
-		return alphaFrameBuffer->GetPixel(x, y);
-	}
-
 	//--------------------------------------------------------------------------
 
 	void ResetConvergenceTest();
@@ -165,36 +203,44 @@ public:
 
 	//--------------------------------------------------------------------------
 
+	void SetSampleCount(const double count) {
+		statsTotalSampleCount = count;
+	}
 	void AddSampleCount(const double count) {
 		statsTotalSampleCount += count;
 	}
 
-	void AddRadiance(const FilmBufferType type, const u_int x, const u_int y,
-		const luxrays::Spectrum &radiance, const float weight) {
-		SamplePixel *sp = sampleFrameBuffer[type]->GetPixel(x, y);
+	void AddSample(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight = 1.f);
+	void SplatSample(const SampleResult &sampleResult, const float weight = 1.f);
 
-		sp->radiance += weight * radiance;
-		sp->weight += weight;
-	}
-
-	void SetAlpha(const u_int x, const u_int y, const float alpha) {
-		alphaFrameBuffer->SetPixel(x, y, alpha);
-	}
-
-	void AddAlpha(const u_int x, const u_int y, const float alpha,
-		const float weight) {
-		AlphaPixel *ap = alphaFrameBuffer->GetPixel(x, y);
-
-		ap->alpha += weight * alpha;
-	}
-
-	void SplatFiltered(const FilmBufferType type, const float screenX,
-		const float screenY, const luxrays::Spectrum &radiance, const float alpha,
-		const float weight = 1.f);
+	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
+	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
+	GenericFrameBuffer<2, 1, float> *channel_ALPHA;
+	GenericFrameBuffer<3, 0, float> *channel_RGB_TONEMAPPED;
+	GenericFrameBuffer<1, 0, float> *channel_DEPTH;
+	GenericFrameBuffer<3, 0, float> *channel_POSITION;
+	GenericFrameBuffer<3, 0, float> *channel_GEOMETRY_NORMAL;
+	GenericFrameBuffer<3, 0, float> *channel_SHADING_NORMAL;
+	GenericFrameBuffer<1, 0, u_int> *channel_MATERIAL_ID;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY;
+	GenericFrameBuffer<4, 1, float> *channel_EMISSION;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR;
+	std::vector<GenericFrameBuffer<2, 1, float> *> channel_MATERIAL_ID_MASKs;
+	GenericFrameBuffer<2, 1, float> *channel_DIRECT_SHADOW_MASK;
+	GenericFrameBuffer<2, 1, float> *channel_INDIRECT_SHADOW_MASK;
+	GenericFrameBuffer<2, 0, float> *channel_UV;
+	GenericFrameBuffer<1, 0, float> *channel_RAYCOUNT;
 
 private:
-	void UpdateScreenBufferImpl(const ToneMapType type);
-	void MergeSampleBuffers(Pixel *p, std::vector<bool> &frameBufferMask) const;
+	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
+	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
+		GetPixelFromMergedSampleBuffers(x + y * width, c);
+	}
 
 	float Radiance2PixelFloat(const float x) const {
 		// Very slow !
@@ -204,37 +250,107 @@ private:
 		return gammaTable[index];
 	}
 
-	Pixel Radiance2Pixel(const luxrays::Spectrum& c) const {
+	luxrays::Spectrum Radiance2Pixel(const luxrays::Spectrum &c) const {
 		return luxrays::Spectrum(
 				Radiance2PixelFloat(c.r),
 				Radiance2PixelFloat(c.g),
 				Radiance2PixelFloat(c.b));
 	}
 
-	u_int width, height, pixelCount;
+	void AddSampleResultColor(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight);
+	void AddSampleResultData(const u_int x, const u_int y,
+		const SampleResult &sampleResult);
+
+	std::set<FilmChannelType> channels;
+	u_int width, height, pixelCount, radianceGroupCount;
+	std::vector<u_int> maskMaterialIDs;
+
+	// Used to speedup sample splatting, initialized inside Init()
+	bool hasDataChannel, hasComposingChannel;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
 	float gamma;
 	float gammaTable[GAMMA_TABLE_SIZE];
 
-	FilterType filterType;
 	ToneMapParams *toneMapParams;
-
-	// Two sample buffers, one PER_PIXEL_NORMALIZED and the other PER_SCREEN_NORMALIZED
-	SampleFrameBuffer *sampleFrameBuffer[2];
-	AlphaFrameBuffer *alphaFrameBuffer;
-	FrameBuffer *frameBuffer;
 
 	ConvergenceTest *convTest;
 
 	Filter *filter;
 	FilterLUTs *filterLUTs;
 
-	bool enableAlphaChannel, enabledOverlappedScreenBufferUpdate,
-		enablePerPixelNormalizedBuffer, enablePerScreenNormalizedBuffer,
-		enableFrameBuffer;
+	bool initialized, enabledOverlappedScreenBufferUpdate;
 };
+
+template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index);
+template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index);
+
+//------------------------------------------------------------------------------
+// SampleResult
+//------------------------------------------------------------------------------
+
+class SampleResult {
+public:
+	SampleResult() { }
+	SampleResult(const u_int channelTypes, const u_int radianceGroupCount) {
+		Init(channelTypes, radianceGroupCount);
+	}
+	~SampleResult() { }
+
+	void Init(const u_int channelTypes, const u_int radianceGroupCount) {
+		channels = channelTypes;
+		if (channels | Film::RADIANCE_PER_PIXEL_NORMALIZED)
+			radiancePerPixelNormalized.resize(radianceGroupCount);
+		if (channels | Film::RADIANCE_PER_SCREEN_NORMALIZED)
+			radiancePerScreenNormalized.resize(radianceGroupCount);
+	}
+	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type); }
+
+	float filmX, filmY;
+	std::vector<luxrays::Spectrum> radiancePerPixelNormalized, radiancePerScreenNormalized;
+	float alpha, depth;
+	luxrays::Point position;
+	luxrays::Normal geometryNormal, shadingNormal;
+	// Note: MATERIAL_ID_MASK is calculated starting from materialID field
+	u_int materialID;
+	luxrays::Spectrum directDiffuse, directGlossy;
+	luxrays::Spectrum emission;
+	luxrays::Spectrum indirectDiffuse, indirectGlossy, indirectSpecular;
+	float directShadowMask, indirectShadowMask;
+	luxrays::UV uv;
+	float rayCount;
+
+private:
+	u_int channels;
+};
+
+inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
+	const float filmX, const float filmY,
+	const luxrays::Spectrum &radiancePPN,
+	const float alpha) {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	sampleResults[size].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
+	sampleResults[size].filmX = filmX;
+	sampleResults[size].filmY = filmY;
+	sampleResults[size].radiancePerPixelNormalized[0] = radiancePPN;
+	sampleResults[size].alpha = alpha;
+}
+
+inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
+	const float filmX, const float filmY,
+	const luxrays::Spectrum &radiancePSN) {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	sampleResults[size].Init(Film::RADIANCE_PER_SCREEN_NORMALIZED, 1);
+	sampleResults[size].filmX = filmX;
+	sampleResults[size].filmY = filmY;
+	sampleResults[size].radiancePerScreenNormalized[0] = radiancePSN;
+}
 
 }
 

@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include <boost/lexical_cast.hpp>
@@ -29,42 +26,65 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// Material
+//------------------------------------------------------------------------------
+
+Properties Material::ToProperties() const {
+	luxrays::Properties props;
+
+	const std::string name = GetName();
+	props.SetString("scene.materials." + name + ".emission.samples", luxrays::ToString(emittedSamples));
+	if (emittedTex)
+		props.SetString("scene.materials." + name + ".emission", emittedTex->GetName());
+	if (bumpTex)
+		props.SetString("scene.materials." + name + ".bumptex", bumpTex->GetName());
+	if (normalTex)
+		props.SetString("scene.materials." + name + ".normaltex", normalTex->GetName());
+
+	props.SetString("scene.materials." + name + ".visibility.indirect.diffuse.enable", ToString(isVisibleIndirectDiffuse));
+	props.SetString("scene.materials." + name + ".visibility.indirect.glossy.enable", ToString(isVisibleIndirectGlossy));
+	props.SetString("scene.materials." + name + ".visibility.indirect.specular.enable", ToString(isVisibleIndirectSpecular));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // MaterialDefinitions
 //------------------------------------------------------------------------------
 
 MaterialDefinitions::MaterialDefinitions() { }
 
 MaterialDefinitions::~MaterialDefinitions() {
-	for (std::vector<Material *>::const_iterator it = mats.begin(); it != mats.end(); ++it)
-		delete (*it);
+	BOOST_FOREACH(Material *m, mats)
+		delete m;
 }
 
-void MaterialDefinitions::DefineMaterial(const std::string &name, Material *m) {
-	if (IsMaterialDefined(name))
-		throw std::runtime_error("Already defined material: " + name);
+void MaterialDefinitions::DefineMaterial(const std::string &name, Material *newMat) {
+	if (IsMaterialDefined(name)) {
+		const Material *oldMat = GetMaterial(name);
 
-	mats.push_back(m);
-	matsByName.insert(std::make_pair(name, m));
+		// Update name/material definition
+		const u_int index = GetMaterialIndex(name);
+		mats[index] = newMat;
+		matsByName.erase(name);
+		matsByName.insert(std::make_pair(name, newMat));
+
+		// Update all possible reference to old material with the new one
+		BOOST_FOREACH(Material *mat, mats)
+			mat->UpdateMaterialReferences(oldMat, newMat);
+
+		// Delete old material
+		delete oldMat;
+	} else {
+		// Add the new material
+		mats.push_back(newMat);
+		matsByName.insert(std::make_pair(name, newMat));
+	}
 }
 
-void MaterialDefinitions::UpdateMaterial(const std::string &name, Material *m) {
-	if (!IsMaterialDefined(name))
-		throw std::runtime_error("Can not update an undefined material: " + name);
-
-	Material *oldMat = GetMaterial(name);
-
-	// Update name/material definition
-	const u_int index = GetMaterialIndex(name);
-	mats[index] = m;
-	matsByName.erase(name);
-	matsByName.insert(std::make_pair(name, m));
-
-	// Delete old material
-	delete oldMat;
-
-	// Update all possible reference to old material with the new one
-	for (u_int i = 0; i < mats.size(); ++i)
-		mats[i]->UpdateMaterialReference(oldMat, m);
+void MaterialDefinitions::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	BOOST_FOREACH(Material *mat, mats)
+		mat->UpdateTextureReferences(oldTex, newTex);
 }
 
 Material *MaterialDefinitions::GetMaterial(const std::string &name) {
@@ -125,8 +145,10 @@ Spectrum MatteMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MatteMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
@@ -149,10 +171,17 @@ void MatteMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
 }
 
-void MatteMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MatteMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
+}
+
+void MatteMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kd == oldTex)
+		Kd = newTex;
 }
 
 Properties MatteMaterial::ToProperties() const  {
@@ -161,7 +190,7 @@ Properties MatteMaterial::ToProperties() const  {
 	const std::string name = GetName();
 	props.SetString("scene.materials." + name + ".type", "matte");
 	props.SetString("scene.materials." + name + ".kd", Kd->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -179,7 +208,11 @@ Spectrum MirrorMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (SPECULAR | REFLECT)))
+		return Spectrum();
+
 	*event = SPECULAR | REFLECT;
 
 	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
@@ -190,10 +223,17 @@ Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	return Kr->GetSpectrumValue(hitPoint).Clamp() / (*absCosSampledDir);
 }
 
-void MirrorMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MirrorMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
+}
+
+void MirrorMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
 }
 
 Properties MirrorMaterial::ToProperties() const  {
@@ -202,7 +242,7 @@ Properties MirrorMaterial::ToProperties() const  {
 	const std::string name = GetName();
 	props.SetString("scene.materials." + name + ".type", "mirror");
 	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -220,7 +260,11 @@ Spectrum GlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & SPECULAR))
+		return Spectrum();
+
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
@@ -237,7 +281,19 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return Spectrum();
+	}
+
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
@@ -279,13 +335,26 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	return result / (*absCosSampledDir);
 }
 
-void GlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void GlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
 	ousideIor->AddReferencedTextures(referencedTexs);
 	ior->AddReferencedTextures(referencedTexs);
+}
+
+void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (Kt == oldTex)
+		Kt = newTex;
+	if (ousideIor == oldTex)
+		ousideIor = newTex;
+	if (ior == oldTex)
+		ior = newTex;
 }
 
 Properties GlassMaterial::ToProperties() const  {
@@ -297,7 +366,7 @@ Properties GlassMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
 	props.SetString("scene.materials." + name + ".ioroutside", ousideIor->GetName());
 	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -315,7 +384,11 @@ Spectrum ArchGlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & SPECULAR))
+		return Spectrum();
+
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
 
@@ -332,7 +405,19 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return Spectrum();
+	}
+
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
@@ -436,13 +521,26 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		return Spectrum();
 }
 
-void ArchGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void ArchGlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
 	ousideIor->AddReferencedTextures(referencedTexs);
 	ior->AddReferencedTextures(referencedTexs);
+}
+
+void ArchGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (Kt == oldTex)
+		Kt = newTex;
+	if (ousideIor == oldTex)
+		ousideIor = newTex;
+	if (ior == oldTex)
+		ior = newTex;
 }
 
 Properties ArchGlassMaterial::ToProperties() const  {
@@ -454,7 +552,7 @@ Properties ArchGlassMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
 	props.SetString("scene.materials." + name + ".ioroutside", ousideIor->GetName());
 	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -497,12 +595,16 @@ Vector MetalMaterial::GlossyReflection(const Vector &localFixedDir, const float 
 Spectrum MetalMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (GLOSSY | REFLECT)))
+		return Spectrum();
+
 	const float e = 1.f / (Max(exponent->GetFloatValue(hitPoint), 0.f) + 1.f);
 	*localSampledDir = GlossyReflection(localFixedDir, e, u0, u1);
 
 	if (localSampledDir->z * localFixedDir.z > 0.f) {
-		*event = SPECULAR | REFLECT;
+		*event = GLOSSY | REFLECT;
 		*pdfW = 1.f;
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		// The absCosSampledDir is used to compensate the other one used inside the integrator
@@ -511,11 +613,20 @@ Spectrum MetalMaterial::Sample(const HitPoint &hitPoint,
 		return Spectrum();
 }
 
-void MetalMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MetalMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
 	exponent->AddReferencedTextures(referencedTexs);
+}
+
+void MetalMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (exponent == oldTex)
+		exponent = newTex;
 }
 
 Properties MetalMaterial::ToProperties() const  {
@@ -525,7 +636,7 @@ Properties MetalMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".type", "metal");
 	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
 	props.SetString("scene.materials." + name + ".exp", exponent->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -543,6 +654,10 @@ Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		return matA->GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent / weight1);
 	else
 		return matB->GetPassThroughTransparency(hitPoint, localFixedDir, (passThroughEvent - weight2) / weight2);
+}
+
+float MixMaterial::GetEmittedRadianceY() const {
+	return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(), matB->GetEmittedRadianceY());
 }
 
 Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint) const {
@@ -636,7 +751,8 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
@@ -653,7 +769,7 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 
 	// Sample the first material
 	Spectrum result = matFirst->Sample(hitPoint, localFixedDir, localSampledDir,
-			u0, u1, passThroughEventFirst, pdfW, absCosSampledDir, event);
+			u0, u1, passThroughEventFirst, pdfW, absCosSampledDir, event, requestedEvent);
 	if (result.Black())
 		return Spectrum();
 	*pdfW *= weightFirst;
@@ -695,7 +811,7 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = weight1 * reversePdfWMatA + weight2 * reversePdfWMatB;
 }
 
-void MixMaterial::UpdateMaterialReference(const Material *oldMat,  const Material *newMat) {
+void MixMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 	if (matA == oldMat)
 		matA = newMat;
 
@@ -719,7 +835,7 @@ bool MixMaterial::IsReferencing(const Material *mat) const {
 	return false;
 }
 
-void MixMaterial::AddReferencedMaterials(std::set<const Material *> &referencedMats) const {
+void MixMaterial::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 	Material::AddReferencedMaterials(referencedMats);
 
 	referencedMats.insert(matA);
@@ -729,12 +845,22 @@ void MixMaterial::AddReferencedMaterials(std::set<const Material *> &referencedM
 	matB->AddReferencedMaterials(referencedMats);
 }
 
-void MixMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MixMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	matA->AddReferencedTextures(referencedTexs);
 	matB->AddReferencedTextures(referencedTexs);
 	mixFactor->AddReferencedTextures(referencedTexs);
+}
+
+void MixMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	matA->UpdateTextureReferences(oldTex, newTex);
+	matB->UpdateTextureReferences(oldTex, newTex);
+
+	if (mixFactor == oldTex)
+		mixFactor = newTex;
 }
 
 Properties MixMaterial::ToProperties() const  {
@@ -745,7 +871,7 @@ Properties MixMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".material1", matA->GetName());
 	props.SetString("scene.materials." + name + ".material2", matB->GetName());
 	props.SetString("scene.materials." + name + ".amount", mixFactor->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -763,7 +889,11 @@ Spectrum NullMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
+		return Spectrum();
+
 	//throw std::runtime_error("Internal error, called NullMaterial::Sample()");
 
 	*localSampledDir = -localFixedDir;
@@ -779,7 +909,7 @@ Properties NullMaterial::ToProperties() const  {
 
 	const std::string name = GetName();
 	props.SetString("scene.materials." + name + ".type", "null");
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -816,8 +946,10 @@ Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (DIFFUSE | REFLECT | TRANSMIT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	*localSampledDir = CosineSampleHemisphere(u0, u1, pdfW);
@@ -825,21 +957,38 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	*pdfW *= .5f;
-
-	const Spectrum r = Kr->GetSpectrumValue(hitPoint).Clamp();
-	const Spectrum t = Kt->GetSpectrumValue(hitPoint).Clamp() * 
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp() * 
 		// Energy conservation
-		(Spectrum(1.f) - r);
+		(Spectrum(1.f) - kr);
 
-	if (passThroughEvent < .5f) {
+	const bool isKrBlack = kr.Black();
+	const bool isKtBlack = kt.Black();
+
+	// Decide to transmit or reflect
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return Spectrum();
+	}
+
+	if (passThroughEvent < threshold) {
 		*localSampledDir *= Sgn(localFixedDir.z);
 		*event = DIFFUSE | REFLECT;
-		return r * INV_PI;
+		*pdfW *= threshold;
+		return kr * INV_PI;
 	} else {
 		*localSampledDir *= -Sgn(localFixedDir.z);
 		*event = DIFFUSE | TRANSMIT;
-		return t * INV_PI;
+		*pdfW *= (1.f - threshold);
+		return kt * INV_PI;
 	}
 }
 
@@ -853,11 +1002,20 @@ void MatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (.5f * INV_PI));
 }
 
-void MatteTranslucentMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void MatteTranslucentMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
+}
+
+void MatteTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (Kt == oldTex)
+		Kt = newTex;
 }
 
 Properties MatteTranslucentMaterial::ToProperties() const  {
@@ -867,7 +1025,7 @@ Properties MatteTranslucentMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".type", "mattetranslucent");
 	props.SetString("scene.materials." + name + ".kr", Kr->GetName());
 	props.SetString("scene.materials." + name + ".kt", Kt->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -995,7 +1153,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 		if (reversePdfW)
 			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
 
-		*event = DIFFUSE | REFLECT;
+		*event = GLOSSY | REFLECT;
 		return baseF;
 	}
 
@@ -1055,8 +1213,10 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
@@ -1095,7 +1255,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, localFixedDir, *localSampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, *localSampledDir);
 
-		*event = DIFFUSE | REFLECT;
+		*event = GLOSSY | REFLECT;
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(hitPoint.fromLight, ks, roughness, anisotropy,
@@ -1178,7 +1338,7 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void Glossy2Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
@@ -1188,6 +1348,25 @@ void Glossy2Material::AddReferencedTextures(std::set<const Texture *> &reference
 	Ka->AddReferencedTextures(referencedTexs);
 	depth->AddReferencedTextures(referencedTexs);
 	index->AddReferencedTextures(referencedTexs);
+}
+
+void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kd == oldTex)
+		Kd = newTex;
+	if (Ks == oldTex)
+		Ks = newTex;
+	if (nu == oldTex)
+		nu = newTex;
+	if (nv == oldTex)
+		nv = newTex;
+	if (Ka == oldTex)
+		Ka = newTex;
+	if (depth == oldTex)
+		depth = newTex;
+	if (index == oldTex)
+		index = newTex;
 }
 
 Properties Glossy2Material::ToProperties() const  {
@@ -1202,7 +1381,8 @@ Properties Glossy2Material::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".ka", Ka->GetName());
 	props.SetString("scene.materials." + name + ".d", depth->GetName());
 	props.SetString("scene.materials." + name + ".index", index->GetName());
-	props.Load(Material::ToProperties());
+	props.SetString("scene.materials." + name + ".multibounce", ToString(multibounce));
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -1259,8 +1439,10 @@ Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
+			fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
@@ -1327,13 +1509,26 @@ void Metal2Material::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localSampledDir, wh));
 }
 
-void Metal2Material::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void Metal2Material::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	n->AddReferencedTextures(referencedTexs);
 	k->AddReferencedTextures(referencedTexs);
 	nu->AddReferencedTextures(referencedTexs);
 	nv->AddReferencedTextures(referencedTexs);
+}
+
+void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (n == oldTex)
+		n = newTex;
+	if (k == oldTex)
+		k = newTex;
+	if (nu == oldTex)
+		nu = newTex;
+	if (nv == oldTex)
+		nv = newTex;
 }
 
 Properties Metal2Material::ToProperties() const  {
@@ -1345,7 +1540,7 @@ Properties Metal2Material::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".k", k->GetName());
 	props.SetString("scene.materials." + name + ".uroughness", nu->GetName());
 	props.SetString("scene.materials." + name + ".vroughness", nv->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }
@@ -1454,10 +1649,12 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 }
 
 Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
-	const Vector &localFixedDir, Vector *localSampledDir,
-	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
-	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (GLOSSY | REFLECT | TRANSMIT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp();
@@ -1489,7 +1686,19 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 	const float coso = fabsf(localFixedDir.z);
 
 	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	float threshold;
+	if ((requestedEvent & REFLECT) && !isKrBlack) {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if ((requestedEvent & TRANSMIT) && !isKtBlack)
+			threshold = 1.f;
+		else
+			return Spectrum();
+	}
+
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
@@ -1642,7 +1851,7 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	}
 }
 
-void RoughGlassMaterial::AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+void RoughGlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kr->AddReferencedTextures(referencedTexs);
@@ -1653,6 +1862,22 @@ void RoughGlassMaterial::AddReferencedTextures(std::set<const Texture *> &refere
 	nv->AddReferencedTextures(referencedTexs);
 }
 
+void RoughGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kr == oldTex)
+		Kr = newTex;
+	if (Kt == oldTex)
+		Kt = newTex;
+	if (ousideIor == oldTex)
+		ousideIor = newTex;
+	if (ior == oldTex)
+		ior = newTex;
+	if (nu == oldTex)
+		nu = newTex;
+	if (nv == oldTex)
+		nv = newTex;
+}
 
 Properties RoughGlassMaterial::ToProperties() const  {
 	Properties props;
@@ -1665,7 +1890,7 @@ Properties RoughGlassMaterial::ToProperties() const  {
 	props.SetString("scene.materials." + name + ".iorinside", ior->GetName());
 	props.SetString("scene.materials." + name + ".uroughness", nu->GetName());
 	props.SetString("scene.materials." + name + ".vroughness", nv->GetName());
-	props.Load(Material::ToProperties());
+	props.Set(Material::ToProperties());
 
 	return props;
 }

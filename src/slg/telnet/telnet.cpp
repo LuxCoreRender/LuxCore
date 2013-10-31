@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include <iostream>
@@ -104,7 +101,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						respStream << "help.get - print the list of get supported properties\n";
 						respStream << "help.set - print the list of set supported properties\n";
 						respStream << "image.reset - reset the rendering image (requires edit.start)\n";
-						respStream << "image.save - save the rendering image\n";
+						respStream << "film.save - save the rendering image\n";
 						respStream << "material.list - print the list of materials\n";
 						respStream << "object.list - print the list of objects\n";
 						respStream << "set <property name> = <values> - set the value of a (supported) property\n";
@@ -410,29 +407,29 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 						boost::asio::streambuf response;
 						std::ostream respStream(&response);
 
-						std::vector<std::string> names = scene->meshDefs.GetExtMeshNames();
+						std::vector<std::string> names = scene->objDefs.GetSceneObjectNames();
 						for (std::vector<std::string>::const_iterator iter = names.begin(); iter < names.end(); ++iter)
 							respStream << (*iter) << "\n";
 
 						respStream << "OK\n";
 						boost::asio::write(socket, response);
-					} else if (command == "image.save") {
-						session->SaveFilmImage();
+					} else if (command == "film.save") {
+						session->SaveFilm();
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if ((command == "edit.stop") || (command == "render.start")) {
 						if (state == EDIT) {
-							if (session->editActions.Has(MATERIALS_EDIT)) {
+							if (session->renderConfig->scene->editActions.Has(MATERIALS_EDIT)) {
 								session->renderConfig->scene->RemoveUnusedMaterials();
 								session->renderConfig->scene->RemoveUnusedTextures();
 							}
-							session->EndEdit();
+							session->EndSceneEdit();
 						}
 
 						state = RUN;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if ((command == "edit.start") || (command == "render.stop")) {
 						if (state == RUN)
-							session->BeginEdit();
+							session->BeginSceneEdit();
 						state = EDIT;
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 					} else if (command == "set") {
@@ -552,7 +549,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										const std::vector<float> vf = props.GetFloatVector(propertyName, "1.0 1.0 1.0");
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 										il->SetGain(gain);
-										session->editActions.AddAction(INFINITELIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(INFINITELIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -571,7 +568,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										const std::vector<float> vf = props.GetFloatVector(propertyName, "0.0 0.0");
 										il->GetUVMapping()->uDelta = vf.at(0);
 										il->GetUVMapping()->vDelta = vf.at(1);
-										session->editActions.AddAction(INFINITELIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(INFINITELIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -591,7 +588,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										Vector dir(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetSunDir(dir);
 										sl->Preprocess();
-										session->editActions.AddAction(SKYLIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -610,7 +607,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										const std::vector<float> vf = props.GetFloatVector(propertyName, "1.0 1.0 1.0");
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetGain(gain);
-										session->editActions.AddAction(SKYLIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -628,7 +625,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									if (sl) {
 										sl->SetTurbidity(props.GetFloat(propertyName, 2.2f));
 										sl->Preprocess();
-										session->editActions.AddAction(SKYLIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(SKYLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -646,7 +643,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									if (sl) {
 										sl->SetTurbidity(props.GetFloat(propertyName, 2.2f));
 										sl->Preprocess();
-										session->editActions.AddAction(SUNLIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -664,7 +661,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									if (sl) {
 										sl->SetRelSize(props.GetFloat(propertyName, 1.f));
 										sl->Preprocess();
-										session->editActions.AddAction(SUNLIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -684,7 +681,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										Vector dir(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetDir(dir);
 										sl->Preprocess();
-										session->editActions.AddAction(SUNLIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -704,7 +701,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 										Spectrum gain(vf.at(0), vf.at(1), vf.at(2));
 										sl->SetGain(gain);
 										sl->Preprocess();
-										session->editActions.AddAction(SUNLIGHT_EDIT);
+										session->renderConfig->scene->editActions.AddAction(SUNLIGHT_EDIT);
 										respStream << "OK\n";
 										boost::asio::write(socket, response);
 									} else {
@@ -718,12 +715,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if (propertyName.find("scene.materials.") == 0) {
 								if (state == EDIT) {
 									// Check if it is the name of a known material
-									const std::string matName = Properties::ExtractField(propertyName, 2);
+									const std::string matName = Property::ExtractField(propertyName, 2);
 									if (matName == "")
 										throw std::runtime_error("Syntax error in " + propertyName);
 
 									// Update material definition
-									scene->UpdateMaterial(matName, props);
+									scene->Parse(props);
 									const Material *newMat = scene->matDefs.GetMaterial(matName);
 
 									// To enable this optimization, I should check not only all
@@ -731,12 +728,12 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									// Doesn't seem worth the work.
 									//// Check if the material type is one of the already enabled
 									//if (!session->renderEngine->IsMaterialCompiled(newMat->GetType()))
-										session->editActions.AddAction(MATERIAL_TYPES_EDIT);
+										session->renderConfig->scene->editActions.AddAction(MATERIAL_TYPES_EDIT);
 									// Check if both are light sources
 									if (newMat->IsLightSource())
-										session->editActions.AddAction(AREALIGHTS_EDIT);
+										session->renderConfig->scene->editActions.AddAction(AREALIGHTS_EDIT);
 
-									session->editActions.AddAction(MATERIALS_EDIT);
+									session->renderConfig->scene->editActions.AddAction(MATERIALS_EDIT);
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
@@ -746,7 +743,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							} else if ((propertyName.find("scene.objects.") == 0) && (propertyName.find(".transformation") == propertyName.size() - 15)) {
 								if (state == EDIT) {
 									// Check if it is the name of a known objects
-									const std::string objName = Properties::ExtractField(propertyName, 2);
+									const std::string objName = Property::ExtractField(propertyName, 2);
 									if (objName == "")
 										throw std::runtime_error("Syntax error in " + propertyName);
 
@@ -764,19 +761,19 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									scene->UpdateObjectTransformation(objName, trans);
 
 									// Check if it is a light source
-									const u_int meshIndex = scene->meshDefs.GetExtMeshIndex(objName);
-									if (scene->objectMaterials[meshIndex]->IsLightSource()) {
+									const SceneObject *obj = scene->objDefs.GetSceneObject(objName);
+									if (obj->GetMaterial()->IsLightSource()) {
 										// Some render engine requires a complete update when
 										// modifying a light source
-										session->editActions.AddAction(AREALIGHTS_EDIT);
+										session->renderConfig->scene->editActions.AddAction(AREALIGHTS_EDIT);
 									}
 
 									// Set the flag to Update the DataSet
-									ExtMesh *mesh = scene->meshDefs.GetExtMesh(objName);
+									const ExtMesh *mesh = obj->GetExtMesh();
 									if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE)
-										session->editActions.AddAction(INSTANCE_TRANS_EDIT);
+										session->renderConfig->scene->editActions.AddAction(INSTANCE_TRANS_EDIT);
 									else
-										session->editActions.AddAction(GEOMETRY_EDIT);
+										session->renderConfig->scene->editActions.AddAction(GEOMETRY_EDIT);
 
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
@@ -794,7 +791,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									scene->camera->target = t;
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
-									session->editActions.AddAction(CAMERA_EDIT);
+									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
@@ -809,7 +806,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									scene->camera->up = Normalize(up);
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
-									session->editActions.AddAction(CAMERA_EDIT);
+									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
@@ -821,7 +818,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									scene->camera->lensRadius = props.GetFloat(propertyName, 0.f);
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
-									session->editActions.AddAction(CAMERA_EDIT);
+									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
@@ -833,7 +830,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									scene->camera->fieldOfView = props.GetFloat(propertyName, 0.f);
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
-									session->editActions.AddAction(CAMERA_EDIT);
+									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
@@ -845,7 +842,7 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									scene->camera->focalDistance = props.GetFloat(propertyName, 0.f);
 									scene->camera->Update(film->GetWidth(),
 											film->GetHeight());
-									session->editActions.AddAction(CAMERA_EDIT);
+									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
 								} else {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
@@ -871,7 +868,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(&h, sizeof(unsigned int))));
 
 							// Transmit the framebuffer (RGB float)
-							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(session->film->GetScreenBuffer(),
+							session->film->UpdateChannel_RGB_TONEMAPPED();
+							boost::asio::write(socket, boost::asio::buffer(boost::asio::const_buffer(session->film->channel_RGB_TONEMAPPED->GetPixels(),
 									sizeof(float) * w * h * 3)));
 						}
 						boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
@@ -889,7 +887,8 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							// Translate the framebuffer
 							unsigned char *fb = new unsigned char[w * h * 3];
 							unsigned char *dst = fb;
-							const float *src = session->film->GetScreenBuffer();
+							session->film->UpdateChannel_RGB_TONEMAPPED();
+							const float *src = session->film->channel_RGB_TONEMAPPED->GetPixels();
 							for (unsigned int i = 0; i < w * h; ++i) {
 								*dst++ = (*src++) * 255.f + .5f;
 								*dst++ = (*src++) * 255.f + .5f;

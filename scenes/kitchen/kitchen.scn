@@ -64,6 +64,7 @@ scene.materials.mortar_floor.kd = 0.85 0.85 0.85
 scene.materials.outside_grey.kd = 0.7 0.7 0.7
 scene.materials.outside_yellow.kd = 0.890054 0.865034 0.678942
 scene.materials.portal.emission = 4.0 4.0 5.5
+#scene.materials.portal.emission.samples = 3
 scene.materials.small_tiles.kd = 0.394299 0.328256 0.463319
 scene.materials.small_tiles_bump.kd = 0.136278 0.113598 0.15998
 scene.materials.tiles_metal_brushed.kd = 0.592632 0.592632 0.592632
@@ -76,7 +77,7 @@ scene.materials.wall_white.kd = 0.85 0.85 0.85
 scene.materials.white_plastic.kd = 0.85 0.85 0.85
 ################################################################################
 scene.objects.black_matte.material = black_matte
-scene.objects.black_matte.ply = scenes/kitchen/black matte.ply
+scene.objects.black_matte.ply = "scenes/kitchen/black matte.ply"
 scene.objects.black_glass.material = black_glass
 scene.objects.black_glass.ply = scenes/kitchen/black_glass.ply
 scene.objects.desktop.material = desktop

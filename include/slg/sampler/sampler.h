@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_SAMPLER_H
@@ -31,36 +28,30 @@
 
 namespace slg {
 
+inline double RadicalInverse(u_int n, u_int base) {
+	double val = 0.;
+	double invBase = 1. / base, invBi = invBase;
+	while (n > 0) {
+		// Compute next digit of radical inverse
+		u_int d_i = (n % base);
+		val += d_i * invBi;
+		n /= base;
+		invBi *= invBase;
+	}
+	return val;
+}
+
 //------------------------------------------------------------------------------
 // OpenCL data types
 //------------------------------------------------------------------------------
 
 namespace ocl {
 #include "slg/sampler/sampler_types.cl"
-} 
+}
 
 //------------------------------------------------------------------------------
 // Sampler
 //------------------------------------------------------------------------------
-
-typedef struct {
-	FilmBufferType type;
-	float screenX, screenY;
-	luxrays::Spectrum radiance;
-	float alpha;
-} SampleResult;
-
-inline void AddSampleResult(std::vector<SampleResult> &sampleResults, const FilmBufferType type,
-	const float screenX, const float screenY, const luxrays::Spectrum &radiance, const float alpha) {
-	SampleResult sr;
-	sr.type = type;
-	sr.screenX = screenX;
-	sr.screenY = screenY;
-	sr.radiance = radiance;
-	sr.alpha = alpha;
-
-	sampleResults.push_back(sr);
-}
 
 typedef enum {
 	RANDOM = 0,
@@ -84,6 +75,11 @@ public:
 	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
+	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const {
+		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
+			film->SplatSample(*sr, weight);
+	}
+
 	luxrays::RandomGenerator *rndGen;
 	Film *film;
 };
@@ -101,12 +97,7 @@ public:
 	virtual void RequestSamples(const u_int size) { }
 
 	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
-	virtual void NextSample(const std::vector<SampleResult> &sampleResults) {
-		film->AddSampleCount(1.0);
-
-		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-			film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
-	}
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 };
 
 //------------------------------------------------------------------------------

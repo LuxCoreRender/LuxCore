@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include <boost/lexical_cast.hpp>
@@ -54,6 +51,15 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 		default:
 			throw std::runtime_error("Unknown sampler type: " + boost::lexical_cast<std::string>(type));
 	}
+}
+
+//------------------------------------------------------------------------------
+// Random sampler
+//------------------------------------------------------------------------------
+
+void RandomSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+	film->AddSampleCount(1.0);
+	AddSamplesToFilm(sampleResults);
 }
 
 //------------------------------------------------------------------------------
@@ -164,11 +170,25 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	const unsigned int pixelCount = film->GetWidth() * film->GetHeight();
 	float newLuminance = 0.f;
 	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
-		const float luminance = sr->radiance.Y();
-		assert (!isnan(luminance) && !isinf(luminance));
+		if (sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
+			for (u_int i = 0; i < sr->radiancePerPixelNormalized.size(); ++i) {
+				const float luminance = sr->radiancePerPixelNormalized[i].Y();
+				assert (!isnan(luminance) && !isinf(luminance));
 
-		if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
-			newLuminance += luminance;
+				if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
+					newLuminance += luminance;
+			}
+		}
+
+		if (sr->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
+			for (u_int i = 0; i < sr->radiancePerScreenNormalized.size(); ++i) {
+				const float luminance = sr->radiancePerScreenNormalized[i].Y();
+				assert (!isnan(luminance) && !isinf(luminance));
+
+				if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
+					newLuminance += luminance;
+			}
+		}
 	}
 
 	if (isLargeMutation) {
@@ -196,10 +216,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	if ((accProb == 1.f) || (rndGen->floatValue() < accProb)) {
 		// Add accumulated SampleResult of previous reference sample
 		const float norm = weight / (currentLuminance / meanIntensity + currentLargeMutationProbability);
-		if (norm > 0.f) {
-			for (std::vector<SampleResult>::const_iterator sr = currentSampleResult.begin(); sr < currentSampleResult.end(); ++sr)
-				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha, norm);
-		}
+		if (norm > 0.f)
+			AddSamplesToFilm(currentSampleResult, norm);
 
 		// Save new contributions for reference
 		weight = newWeight;
@@ -213,10 +231,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	} else {
 		// Add contribution of new sample before rejecting it
 		const float norm = newWeight / (newLuminance / meanIntensity + currentLargeMutationProbability);
-		if (norm > 0.f) {
-			for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-				film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha, norm);
-		}
+		if (norm > 0.f)
+			AddSamplesToFilm(sampleResults, norm);
 
 		// Restart from previous reference
 		stamp = currentStamp;
@@ -281,9 +297,7 @@ float SobolSampler::GetSample(const u_int index) {
 
 void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
-
-	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-		film->SplatFiltered(sr->type, sr->screenX, sr->screenY, sr->radiance, sr->alpha);
+	AddSamplesToFilm(sampleResults);
 
 	++pass;
 }

@@ -1,24 +1,21 @@
 #line 2 "mqbvh_kernel.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 // Using a large stack size to avoid the allocation of the array on
@@ -279,48 +276,29 @@ void LeafIntersect(
 	}
 }
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
-		__global Ray *rays,
-		__global RayHit *rayHits,
-		__global QBVHNode *nodes,
-		const uint rayCount,
-        __global unsigned int *qbvhMemMap,
-		__global QBVHNode *leafNodes,
-		__global QuadTiangle *leafQuadTris,
-        __global Matrix4x4 *leafTransformations) {
-	// Select the ray to check
-	const int gid = get_global_id(0);
-	if (gid >= rayCount)
-		return;
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global unsigned int *qbvhMemMap, __global QBVHNode *leafNodes, __global QuadTiangle *leafQuadTris, __global Matrix4x4 *leafTransformations
+#define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris, leafTransformations
 
+void Accelerator_Intersect(
+		Ray *ray,
+		RayHit *rayHit
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
 	// Prepare the ray for intersection
+    Point rayOrig = ray->o;
+    Vector rayDir = ray->d;
+
 	QuadRay ray4;
-    Point rayOrig;
-    Vector rayDir;
-	{
-        __global float4 *basePtr =(__global float4 *)&rays[gid];
-        float4 data0 = (*basePtr++);
-        float4 data1 = (*basePtr);
+	ray4.ox = (float4)ray->o.x;
+	ray4.oy = (float4)ray->o.y;
+	ray4.oz = (float4)ray->o.z;
 
-        rayOrig.x = data0.x;
-        rayOrig.y = data0.y;
-        rayOrig.z = data0.z;
+	ray4.dx = (float4)ray->d.x;
+	ray4.dy = (float4)ray->d.y;
+	ray4.dz = (float4)ray->d.z;
 
-        rayDir.x = data0.w;
-        rayDir.y = data1.x;
-        rayDir.z = data1.y;
-
-        ray4.ox = (float4)data0.x;
-        ray4.oy = (float4)data0.y;
-        ray4.oz = (float4)data0.z;
-
-        ray4.dx = (float4)data0.w;
-        ray4.dy = (float4)data1.x;
-        ray4.dz = (float4)data1.y;
-
-        ray4.mint = (float4)data1.z;
-        ray4.maxt = (float4)data1.w;
-	}
+	ray4.mint = (float4)ray->mint;
+	ray4.maxt = (float4)ray->maxt;
 
 	const float4 invDir0 = (float4)(1.f / ray4.dx.s0);
 	const float4 invDir1 = (float4)(1.f / ray4.dy.s0);
@@ -330,9 +308,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	const int signs1 = signbit(ray4.dy.s0);
 	const int signs2 = signbit(ray4.dz.s0);
 
-	RayHit rayHit;
-	rayHit.meshIndex = NULL_INDEX;
-	rayHit.triangleIndex = NULL_INDEX;
+	rayHit->meshIndex = NULL_INDEX;
+	rayHit->triangleIndex = NULL_INDEX;
 
 	//------------------------------
 	// Main loop
@@ -385,23 +362,44 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
             LeafIntersect(&tray, &tmpRayHit, n, qt);
 
             if (tmpRayHit.meshIndex != NULL_INDEX) {
-                rayHit.t = tmpRayHit.t;
-                rayHit.b1 = tmpRayHit.b1;
-                rayHit.b2 = tmpRayHit.b2;
-                rayHit.meshIndex = leafIndex;
-				rayHit.triangleIndex = tmpRayHit.triangleIndex;
+                rayHit->t = tmpRayHit.t;
+                rayHit->b1 = tmpRayHit.b1;
+                rayHit->b2 = tmpRayHit.b2;
+                rayHit->meshIndex = leafIndex;
+				rayHit->triangleIndex = tmpRayHit.triangleIndex;
 
                 ray4.maxt = (float4)tmpRayHit.t;
             }
 		}
 	}
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(
+		__global Ray *rays,
+		__global RayHit *rayHits,
+		const uint rayCount
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
+	// Select the ray to check
+	const int gid = get_global_id(0);
+	if (gid >= rayCount)
+		return;
+
+	Ray ray;
+	Ray_ReadAligned4_Private(&rays[gid], &ray);
+
+	RayHit rayHit;
+	Accelerator_Intersect(
+		&ray,
+		&rayHit
+		ACCELERATOR_INTERSECT_PARAM
+		);
 
 	// Write result
-	// Write result
-	__global RayHit *rh = &rayHits[gid];
-	rh->t = rayHit.t;
-	rh->b1 = rayHit.b1;
-	rh->b2 = rayHit.b2;
-	rh->meshIndex = rayHit.meshIndex;
-	rh->triangleIndex = rayHit.triangleIndex;
+	__global RayHit *memRayHit = &rayHits[gid];
+	memRayHit->t = rayHit.t;
+	memRayHit->b1 = rayHit.b1;
+	memRayHit->b2 = rayHit.b2;
+	memRayHit->meshIndex = rayHit.meshIndex;
+	memRayHit->triangleIndex = rayHit.triangleIndex;
 }

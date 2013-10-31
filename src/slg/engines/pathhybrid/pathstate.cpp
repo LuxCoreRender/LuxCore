@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include <algorithm>
@@ -41,7 +38,7 @@ PathHybridState::PathHybridState(PathHybridRenderThread *renderThread,
 		Film *film, luxrays::RandomGenerator *rndGen) : HybridRenderState(renderThread, film, rndGen), sampleResults(1) {
 	PathHybridRenderEngine *renderEngine = (PathHybridRenderEngine *)renderThread->renderEngine;
 
-	sampleResults[0].type = PER_PIXEL_NORMALIZED;
+	sampleResults[0].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 
 	// Setup the sampler
 	const u_int sampleSize = sampleBootSize + renderEngine->maxPathDepth * sampleStepSize;
@@ -66,13 +63,13 @@ void PathHybridState::Init(const PathHybridRenderThread *thread) {
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();
 
-	sampleResults[0].screenX = std::min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-	sampleResults[0].screenY = std::min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-	camera->GenerateRay(sampleResults[0].screenX, sampleResults[0].screenY, &nextPathVertexRay,
+	sampleResults[0].filmX = std::min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+	sampleResults[0].filmY = std::min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+	camera->GenerateRay(sampleResults[0].filmX, sampleResults[0].filmY, &nextPathVertexRay,
 		sampler->GetSample(2), sampler->GetSample(3));
 
 	sampleResults[0].alpha = 1.f;
-	sampleResults[0].radiance = Spectrum(0.f);
+	sampleResults[0].radiancePerPixelNormalized[0] = Spectrum(0.f);
 	lastSpecular = true;
 }
 
@@ -85,9 +82,9 @@ void PathHybridState::DirectHitInfiniteLight(const Scene *scene, const Vector &e
 		if (!envRadiance.Black()) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
-				sampleResults[0].radiance += throuput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
+				sampleResults[0].radiancePerPixelNormalized[0] += throuput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
 			} else
-				sampleResults[0].radiance += throuput * envRadiance;
+				sampleResults[0].radiancePerPixelNormalized[0] += throuput * envRadiance;
 		}
 	}
 
@@ -97,9 +94,9 @@ void PathHybridState::DirectHitInfiniteLight(const Scene *scene, const Vector &e
 		if (!sunRadiance.Black()) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
-				sampleResults[0].radiance += throuput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
+				sampleResults[0].radiancePerPixelNormalized[0] += throuput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
 			} else
-				sampleResults[0].radiance += throuput * sunRadiance;
+				sampleResults[0].radiancePerPixelNormalized[0] += throuput * sunRadiance;
 		}
 	}
 }
@@ -111,7 +108,7 @@ void PathHybridState::DirectHitFiniteLight(const Scene *scene, const float dista
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!lastSpecular) {
-			const float lightPickProb = scene->PickLightPdf();
+			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -120,7 +117,7 @@ void PathHybridState::DirectHitFiniteLight(const Scene *scene, const float dista
 		} else
 			weight = 1.f;
 
-		sampleResults[0].radiance +=  throuput * weight * emittedRadiance;
+		sampleResults[0].radiancePerPixelNormalized[0] +=  throuput * weight * emittedRadiance;
 	}
 }
 
@@ -240,7 +237,7 @@ double PathHybridState::CollectResults(HybridRenderThread *renderThread) {
 				sampler->GetSample(sampleOffset + 5), &directLightRadiance);
 		if (miss) {
 			// The light source is visible, add the direct light sampling component
-			sampleResults[0].radiance += directLightRadiance;
+			sampleResults[0].radiancePerPixelNormalized[0] += directLightRadiance;
 		}
 	}
 

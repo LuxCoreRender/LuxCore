@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_EDITACTION_H
@@ -29,17 +26,16 @@
 namespace slg {
 
 typedef enum {
-	FILM_EDIT           = 0x01,  // Use this for image Film resize (note: not supported by RTPATHOCL)
-	CAMERA_EDIT         = 0x02,  // Use this for any Camera parameter editing
-	GEOMETRY_EDIT       = 0x04,  // Use this for any DataSet related editing
-	INSTANCE_TRANS_EDIT = 0x08,  // Use this for any instance transformation related editing
-	MATERIALS_EDIT      = 0x10,  // Use this for any Material related editing
-	MATERIAL_TYPES_EDIT = 0x20,  // Use this if the kind of materials used changes
-	AREALIGHTS_EDIT     = 0x40,  // Use this for any AreaLight related editing
-	INFINITELIGHT_EDIT  = 0x80,  // Use this for any InfiniteLight related editing
-	SUNLIGHT_EDIT       = 0x100, // Use this for any SunLight related editing
-	SKYLIGHT_EDIT       = 0x200, // Use this for any SkyLight related editing
-	IMAGEMAPS_EDIT      = 0x400  // Use this for any ImageMaps related editing
+	CAMERA_EDIT         = 1 << 0, // Use this for any Camera parameter editing
+	GEOMETRY_EDIT       = 1 << 1, // Use this for any DataSet related editing
+	INSTANCE_TRANS_EDIT = 1 << 2, // Use this for any instance transformation related editing
+	MATERIALS_EDIT      = 1 << 3, // Use this for any Material related editing
+	MATERIAL_TYPES_EDIT = 1 << 4, // Use this if the kind of materials used changes
+	AREALIGHTS_EDIT     = 1 << 5, // Use this for any AreaLight related editing
+	INFINITELIGHT_EDIT  = 1 << 6, // Use this for any InfiniteLight related editing
+	SUNLIGHT_EDIT       = 1 << 7, // Use this for any SunLight related editing
+	SKYLIGHT_EDIT       = 1 << 8, // Use this for any SkyLight related editing
+	IMAGEMAPS_EDIT      = 1 << 9  // Use this for any ImageMaps related editing
 } EditAction;
 
 class EditActionList {
@@ -49,7 +45,6 @@ public:
 	void Reset() { actions = 0; }
 	void AddAction(const EditAction a) { actions |= a; };
 	void AddAllAction() {
-		AddAction(FILM_EDIT);
 		AddAction(CAMERA_EDIT);
 		AddAction(GEOMETRY_EDIT);
 		AddAction(INSTANCE_TRANS_EDIT);
@@ -81,10 +76,6 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 			os << ", ";\
 		addSeparetor = true;
 
-	if (eal.Has(FILM_EDIT)) {
-        SHOW_SEP;
-		os << "FILM_EDIT";
-    }
 	if (eal.Has(CAMERA_EDIT)) {
         SHOW_SEP;
 		os << "CAMERA_EDIT";

@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include "slg/rendersession.h"
@@ -42,12 +39,6 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 
 	const Properties &cfg = renderConfig->cfg;
 
-	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
-	if (renderConfig->GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion))
-		renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, filmSubRegion);
-	else
-		renderConfig->scene->camera->Update(filmFullWidth, filmFullHeight, NULL);
-
 	periodiceSaveTime = cfg.GetFloat("batch.periodicsave", 0.f);
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
@@ -56,50 +47,23 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = new Film(renderConfig->scene->camera->GetFilmWeight(),
-			renderConfig->scene->camera->GetFilmHeight());
-
-	const FilterType filterType = Filter::String2FilterType(cfg.GetString("film.filter.type", "GAUSSIAN"));
-	film->SetFilterType(filterType);
-
-	const int toneMapType = cfg.GetInt("film.tonemap.type", 0);
-	if (toneMapType == 0) {
-		LinearToneMapParams params;
-		params.scale = cfg.GetFloat("film.tonemap.linear.scale", params.scale);
-		film->SetToneMapParams(params);
-	} else {
-		Reinhard02ToneMapParams params;
-		params.preScale = cfg.GetFloat("film.tonemap.reinhard02.prescale", params.preScale);
-		params.postScale = cfg.GetFloat("film.tonemap.reinhard02.postscale", params.postScale);
-		params.burn = cfg.GetFloat("film.tonemap.reinhard02.burn", params.burn);
-		film->SetToneMapParams(params);
-	}
-
-	const float gamma = cfg.GetFloat("film.gamma", 2.2f);
-	if (gamma != 2.2f)
-		film->InitGammaTable(gamma);
-
-	// Check if I have to enable the alpha channel
-	film->SetAlphaChannelFlag(cfg.GetInt("film.alphachannel.enable", 0) != 0);
+	film = renderConfig->AllocFilm(filmOutputs);
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
 	//--------------------------------------------------------------------------
 
-	// Check the kind of render engine to start
-	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(cfg.GetString("renderengine.type", "PATHOCL"));
-	renderEngine = RenderEngine::AllocRenderEngine(renderEngineType, renderConfig, film, &filmMutex);
+	renderEngine = renderConfig->AllocRenderEngine(film, &filmMutex);
 }
 
 RenderSession::~RenderSession() {
 	if (editMode)
-		EndEdit();
+		EndSceneEdit();
 	if (started)
 		Stop();
 
 	delete renderEngine;
 	delete film;
-	delete renderConfig;
 }
 
 void RenderSession::Start() {
@@ -116,42 +80,36 @@ void RenderSession::Stop() {
 	renderEngine->Stop();
 }
 
-void RenderSession::BeginEdit() {
+void RenderSession::BeginSceneEdit() {
 	assert (started);
 	assert (!editMode);
 
-	renderEngine->BeginEdit();
-	editActions.Reset();
+	renderEngine->BeginSceneEdit();
 
 	editMode = true;
 }
 
-void RenderSession::EndEdit() {
+void RenderSession::EndSceneEdit() {
 	assert (started);
 	assert (editMode);
 
-	if (editActions.HasAnyAction())
-		film->Reset();
+	// Make a copy of the edit actions
+	const EditActionList editActions = renderConfig->scene->editActions;
 
-	if (renderEngine->GetEngineType() != RTPATHOCL)
+	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
+			(renderEngine->GetEngineType() != RTBIASPATHOCL)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
-	renderEngine->EndEdit(editActions);
+
+		// RTPATHOCL and RTBIASPATHOCL handle film Reset on their own
+		if (editActions.HasAnyAction())
+			film->Reset();
+	}
+
+	renderEngine->EndSceneEdit(editActions);
 	editMode = false;
 }
 
-void RenderSession::SetRenderingEngineType(const RenderEngineType engineType) {
-	if (engineType != renderEngine->GetEngineType()) {
-		Stop();
-
-		delete renderEngine;
-		renderEngine = RenderEngine::AllocRenderEngine(engineType,
-				renderConfig, film, &filmMutex);
-
-		Start();
-	}
-}
-
-bool RenderSession::NeedPeriodicSave() {
+bool RenderSession::NeedPeriodicFilmSave() {
 	if (periodicSaveEnabled) {
 		const double now = WallClockTime();
 		if (now - lastPeriodicSave > periodiceSaveTime) {
@@ -163,7 +121,7 @@ bool RenderSession::NeedPeriodicSave() {
 		return false;
 }
 
-void RenderSession::SaveFilmImage() {
+void RenderSession::SaveFilm() {
 	// Ask to the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 
@@ -171,8 +129,5 @@ void RenderSession::SaveFilmImage() {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	// Save the film
-	const string fileName = renderConfig->cfg.GetString("image.filename", "image.png");
-	film->UpdateScreenBuffer();
-	film->SaveScreenBuffer(fileName);
+	film->Output(filmOutputs);
 }
-

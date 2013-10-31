@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
@@ -124,14 +121,13 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			const vector<PathVertexVM> &lightPathVertices = lightPathsVertices[samplerIndex];
 
 			PathVertexVM eyeVertex;
-			SampleResult eyeSampleResult;
-			eyeSampleResult.type = PER_PIXEL_NORMALIZED;
+			SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 			eyeSampleResult.alpha = 1.f;
 
 			Ray eyeRay;
-			eyeSampleResult.screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-			eyeSampleResult.screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-			camera->GenerateRay(eyeSampleResult.screenX, eyeSampleResult.screenY, &eyeRay,
+			eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+			eyeSampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 				sampler->GetSample(9), sampler->GetSample(10));
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
@@ -159,7 +155,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 					eyeVertex.throughput *= connectionThroughput;
 
-					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance);
+					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 					if (eyeVertex.depth == 1)
 						eyeSampleResult.alpha = 0.f;
@@ -177,7 +173,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 				// Check if it is a light source
 				if (eyeVertex.bsdf.IsLightSource())
-					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiance);
+					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 				// Note: pass-through check is done inside SceneIntersect()
 
@@ -190,7 +186,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						sampler->GetSample(sampleOffset + 3),
 						sampler->GetSample(sampleOffset + 4),
 						sampler->GetSample(sampleOffset + 5),
-						eyeVertex, &eyeSampleResult.radiance);
+						eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
 				if (!eyeVertex.bsdf.IsDelta()) {
 					//----------------------------------------------------------
@@ -206,7 +202,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					// Vertex Merging step
 					//----------------------------------------------------------
 
-					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiance);
+					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 				}
 
 				//--------------------------------------------------------------

@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include <cstdio>
@@ -48,6 +45,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+RenderConfig *config = NULL;
 RenderSession *session = NULL;
 
 //------------------------------------------------------------------------------
@@ -134,169 +132,6 @@ static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
 	printf(" ***\n");
 }
 
-static int BatchTileMode(const unsigned int haltSpp, const float haltThreshold) {
-	RenderConfig *config = session->renderConfig;
-	RenderEngine *engine = session->renderEngine;
-
-	// batch.halttime condition doesn't make sense in the context
-	// of tile rendering
-	if (config->cfg.IsDefined("batch.halttime") && (config->cfg.GetInt("batch.halttime", 0) > 0))
-		throw runtime_error("batch.halttime parameter can not be used with batch.tile");
-	// image.subregion condition doesn't make sense in the context
-	// of tile rendering
-	if (config->cfg.IsDefined("image.subregion"))
-		throw runtime_error("image.subregion parameter can not be used with batch.tile");
-
-	// Force the film update at 2.5secs (mostly used by PathOCL)
-	config->SetScreenRefreshInterval(2500);
-
-	const u_int filterBorder = 2;
-
-	// Original film size
-	const u_int originalFilmWidth = session->film->GetWidth();
-	const u_int originalFilmHeight = session->film->GetHeight();
-
-	// Allocate a film where to merge all tiles
-	Film mergeTileFilm(originalFilmWidth, originalFilmWidth);
-	mergeTileFilm.CopyDynamicSettings(*(session->film));
-	mergeTileFilm.SetOverlappedScreenBufferUpdateFlag(false);
-	mergeTileFilm.Init();
-
-	// Get the tile size
-	vector<int> tileSize = config->cfg.GetIntVector("batch.tile", "256 256");
-	if (tileSize.size() != 2)
-		throw runtime_error("Syntax error in batch.tile (required 2 parameters)");
-	tileSize[0] = Max<int>(64, Min<int>(tileSize[0], originalFilmWidth));
-	tileSize[1] = Max<int>(64, Min<int>(tileSize[1], originalFilmHeight));
-	SLG_LOG("Tile size: " << tileSize[0] << " x " << tileSize[1]);
-
-	// Get the loop count
-	int loopCount = config->cfg.GetInt("batch.tile.loops", 1);
-
-	bool sessionStarted = false;
-	for (int loopIndex = 0; loopIndex < loopCount; ++loopIndex) {
-		u_int tileX = 0;
-		u_int tileY = 0;
-		const double startTime = WallClockTime();
-
-		// To setup new rendering parameters
-		if (loopIndex > 0) {
-			// I can begin an edit only after the start
-			session->BeginEdit();
-
-			// I have to use a new seed or I will render exactly the same images
-			session->renderEngine->GenerateNewSeed();
-		}
-
-		for (;;) {
-			SLG_LOG("Rendering tile offset: (" << tileX << "/" << originalFilmWidth  + 2 * filterBorder << ", " <<
-					tileY << "/" << originalFilmHeight + 2 * filterBorder << ")");
-
-			// Set the film subregion to render
-			u_int filmSubRegion[4];
-			filmSubRegion[0] = tileX;
-			filmSubRegion[1] = Min(tileX + tileSize[0] - 1, originalFilmWidth - 1) + 2 * filterBorder;
-			filmSubRegion[2] = tileY;
-			filmSubRegion[3] = Min(tileY + tileSize[1] - 1, originalFilmHeight - 1) + 2 * filterBorder;
-			SLG_LOG("Tile subregion: " << 
-					boost::lexical_cast<string>(filmSubRegion[0]) << " " << 
-					boost::lexical_cast<string>(filmSubRegion[1]) << " " <<
-					boost::lexical_cast<string>(filmSubRegion[2]) << " " <<
-					boost::lexical_cast<string>(filmSubRegion[3]));
-
-			// Update the camera and resize the film
-			session->renderConfig->scene->camera->Update(
-					originalFilmWidth + 2 * filterBorder,
-					originalFilmHeight + 2 * filterBorder,
-					filmSubRegion);
-			
-			session->film->Init(session->renderConfig->scene->camera->GetFilmWeight(),
-					session->renderConfig->scene->camera->GetFilmHeight());
-
-			if (sessionStarted) {
-				session->editActions.AddAction(CAMERA_EDIT);
-				session->editActions.AddAction(FILM_EDIT);
-				session->EndEdit();
-			} else {
-				session->Start();
-				sessionStarted = true;
-			}
-
-			double lastFilmUpdate = WallClockTime();
-			char buf[512];
-			for (;;) {
-				boost::this_thread::sleep(boost::posix_time::millisec(1000));
-
-				// Film update may be required by some render engine to
-				// update statistics, convergence test and more
-				if (WallClockTime() - lastFilmUpdate > 5.0) {
-					session->renderEngine->UpdateFilm();
-					lastFilmUpdate =  WallClockTime();
-				}
-
-				const unsigned int pass = engine->GetPass();
-				if ((haltSpp > 0) && (pass >= haltSpp))
-					break;
-
-				// Convergence test is update inside UpdateFilm()
-				const float convergence = engine->GetConvergence();
-				if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
-					break;
-
-				// Print some information about the rendering progress
-				const double now = WallClockTime();
-				const double elapsedTime = now - startTime;
-				sprintf(buf, "[Loop step: %d/%d][Elapsed time: %3d][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
-						loopIndex + 1, loopCount,
-						int(elapsedTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
-						config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-				SLG_LOG(buf);
-			}
-
-			// Splat the current tile on the merge film
-			session->renderEngine->UpdateFilm();
-
-			{
-				boost::unique_lock<boost::mutex> lock(session->filmMutex);
-				mergeTileFilm.AddFilm(*(session->film), filterBorder, filterBorder,
-						filmSubRegion[1] - filmSubRegion[0] - 2 * filterBorder + 1,
-						filmSubRegion[3] - filmSubRegion[2] - 2 * filterBorder + 1,
-						tileX, tileY);
-			}
-
-			// Save the merge film
-			const string fileName = config->cfg.GetString("image.filename", "image.png");
-			SLG_LOG("Saving merged tiles to: " << fileName);
-			mergeTileFilm.UpdateScreenBuffer();
-			mergeTileFilm.SaveScreenBuffer(fileName);
-
-			// Advance to the next tile
-			tileX += tileSize[0];
-			if (tileX >= originalFilmWidth) {
-				tileX = 0;
-				tileY += tileSize[1];
-
-				if (tileY >= originalFilmHeight) {
-					// Rendering done
-					break;
-				}
-			}
-
-			// To setup new rendering parameters
-			session->BeginEdit();
-		}
-	}
-
-	// Stop the rendering
-	session->Stop();
-
-	delete session;
-	SLG_LOG("Done.");
-
-	return EXIT_SUCCESS;
-}
-
 static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, const float haltThreshold) {
 	RenderConfig *config = session->renderConfig;
 	RenderEngine *engine = session->renderEngine;
@@ -315,9 +150,9 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 
 		// Check if periodic save is enabled
-		if (session->NeedPeriodicSave()) {
+		if (session->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
-			session->SaveFilmImage();
+			session->SaveFilm();
 			lastFilmUpdate =  WallClockTime();
 		} else {
 			// Film update may be required by some render engine to
@@ -354,7 +189,7 @@ static int BatchSimpleMode(const double haltTime, const unsigned int haltSpp, co
 	session->Stop();
 
 	// Save the rendered image
-	session->SaveFilmImage();
+	session->SaveFilm();
 
 	delete session;
 	SLG_LOG("Done.");
@@ -418,9 +253,9 @@ int main(int argc, char *argv[]) {
 					configFileName = string(argv[++i]);
 				}
 
-				else if (argv[i][1] == 'e') cmdLineProp.SetString("image.height", argv[++i]);
+				else if (argv[i][1] == 'e') cmdLineProp.SetString("film.height", argv[++i]);
 
-				else if (argv[i][1] == 'w') cmdLineProp.SetString("image.width", argv[++i]);
+				else if (argv[i][1] == 'w') cmdLineProp.SetString("film.width", argv[++i]);
 
 				else if (argv[i][1] == 'f') cmdLineProp.SetString("scene.file", argv[++i]);
 
@@ -456,10 +291,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		// Load the Scene
+		
 		if (configFileName.compare("") == 0)
 			configFileName = "scenes/luxball/luxball.cfg";
 
-		RenderConfig *config = new RenderConfig(&configFileName, &cmdLineProp);
+		config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
 
 		const unsigned int halttime = config->cfg.GetInt("batch.halttime", 0);
 		const unsigned int haltspp = config->cfg.GetInt("batch.haltspp", 0);
@@ -486,11 +323,7 @@ int main(int argc, char *argv[]) {
 		} else if (batchMode) {
 			session = new RenderSession(config);
 
-			// Check if I have to do tile rendering
-			if (config->cfg.IsDefined("batch.tile"))
-				return BatchTileMode(haltspp, haltthreshold);
-			else
-				return BatchSimpleMode(halttime, haltspp, haltthreshold);
+			return BatchSimpleMode(halttime, haltspp, haltthreshold);
 		} else {
 			// It is important to initialize OpenGL before OpenCL
 			// (for OpenGL/OpenCL inter-operability)
@@ -522,6 +355,9 @@ int main(int argc, char *argv[]) {
 		SLG_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}
+
+	delete session;
+	delete config;
 
 	return EXIT_SUCCESS;
 }

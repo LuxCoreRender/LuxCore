@@ -9,13 +9,13 @@ and at http://www.luxrender.net/wiki/index.php?title=LuxRays
 SLG (SmallLuxGPU)
 =================
 
-SmallLuxGPU is a LuxRays demo and LuxRender v0.8 "proof of concept". You can find
+SmallLuxGPU is a LuxRays demo and was a LuxRender v0.8 "proof of concept". You can find
 more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
 
-LuxMark
+LuxCore
 =======
 
-LuxMark is OpenCL benchmark based on SLG.
+LuxCore is the new LuxRender C++ and Python API.
 
 Authors
 =======
@@ -43,4 +43,4 @@ A special thanks goes to:
 - FreeImage open source image library. See http://freeimage.sourceforge.net for details;
 - Tomas Davidovic (http://www.davidovic.cz and http://www.smallvcm.com) for SmallVCM, an endless source of hints
 
-This software is released under GPL License (see COPYING.txt file).
+This software is released under   Apache License Version 2.0 (see COPYING.txt file).

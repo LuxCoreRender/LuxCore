@@ -1,24 +1,21 @@
 #line 2 "bvh_kernel.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 typedef struct {
@@ -61,137 +58,108 @@ void NextNode(uint *pageIndex, uint *nodeIndex) {
 }
 #endif
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
-		__global Ray *rays,
-		__global RayHit *rayHits,
-		const uint rayCount
-#if defined(BVH_VERTS_PAGE0)
-		, __global Point *vertPage0
+#if (BVH_NODES_PAGE_COUNT == 8)
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global Point *accelVertPage4, __global Point *accelVertPage5, __global Point *accelVertPage6, __global Point *accelVertPage7, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3, __global BVHAccelArrayNode *accelNodePage4, __global BVHAccelArrayNode *accelNodePage5, __global BVHAccelArrayNode *accelNodePage6, __global BVHAccelArrayNode *accelNodePage7
+#define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelVertPage5, accelVertPage6, accelVertPage7, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4, accelNodePage5, accelNodePage6, accelNodePage7
+#elif (BVH_NODES_PAGE_COUNT == 7)
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global Point *accelVertPage4, __global Point *accelVertPage5, __global Point *accelVertPage6, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3, __global BVHAccelArrayNode *accelNodePage4, __global BVHAccelArrayNode *accelNodePage5, __global BVHAccelArrayNode *accelNodePage6
+#define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelVertPage5, accelVertPage6, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4, accelNodePage5, accelNodePage6
+#elif (BVH_NODES_PAGE_COUNT == 6)
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global Point *accelVertPage4, __global Point *accelVertPage5, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3, __global BVHAccelArrayNode *accelNodePage4, __global BVHAccelArrayNode *accelNodePage5
+#define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelVertPage5, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4, accelNodePage5
+#elif (BVH_NODES_PAGE_COUNT == 5)
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global Point *accelVertPage4, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3, __global BVHAccelArrayNode *accelNodePage4
+#define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4
+#elif (BVH_NODES_PAGE_COUNT == 4)
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global Point *accelVertPage3, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2, __global BVHAccelArrayNode *accelNodePage3
+#define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3
+#elif (BVH_NODES_PAGE_COUNT == 3)
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __global Point *accelVertPage0, __global Point *accelVertPage1, __global Point *accelVertPage2, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1, __global BVHAccelArrayNode *accelNodePage2
+#define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelVertPage1, accelVertPage2, accelNodePage0, accelNodePage1, accelNodePage2
+#elif (BVH_NODES_PAGE_COUNT == 2)
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __global Point *accelVertPage0, __global Point *accelVertPage1, __global BVHAccelArrayNode *accelNodePage0, __global BVHAccelArrayNode *accelNodePage1
+#define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelVertPage1, accelNodePage0, accelNodePage1
+#elif (BVH_NODES_PAGE_COUNT == 1)
+#define ACCELERATOR_INTERSECT_PARAM_DECL , __global Point *accelVertPage0, __global BVHAccelArrayNode *accelNodePage0
+#define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelNodePage0
+#elif
+ERROR: unsuported BVH_NODES_PAGE_COUNT !!!
 #endif
-#if defined(BVH_VERTS_PAGE1)
-		, __global Point *vertPage1
-#endif
-#if defined(BVH_VERTS_PAGE2)
-		, __global Point *vertPage2
-#endif
-#if defined(BVH_VERTS_PAGE3)
-		, __global Point *vertPage3
-#endif
-#if defined(BVH_VERTS_PAGE4)
-		, __global Point *vertPage4
-#endif
-#if defined(BVH_VERTS_PAGE5)
-		, __global Point *vertPage5
-#endif
-#if defined(BVH_VERTS_PAGE6)
-		, __global Point *vertPage6
-#endif
-#if defined(BVH_VERTS_PAGE7)
-		, __global Point *vertPage7
-#endif
-#if defined(BVH_NODES_PAGE0)
-		, __global BVHAccelArrayNode *nodePage0
-#endif
-#if defined(BVH_NODES_PAGE1)
-		, __global BVHAccelArrayNode *nodePage1
-#endif
-#if defined(BVH_NODES_PAGE2)
-		, __global BVHAccelArrayNode *nodePage2
-#endif
-#if defined(BVH_NODES_PAGE3)
-		, __global BVHAccelArrayNode *nodePage3
-#endif
-#if defined(BVH_NODES_PAGE4)
-		, __global BVHAccelArrayNode *nodePage4
-#endif
-#if defined(BVH_NODES_PAGE5)
-		, __global BVHAccelArrayNode *nodePage5
-#endif
-#if defined(BVH_NODES_PAGE6)
-		, __global BVHAccelArrayNode *nodePage6
-#endif
-#if defined(BVH_NODES_PAGE7)
-		, __global BVHAccelArrayNode *nodePage7
-#endif
-		) {
-	// Select the ray to check
-	const int gid = get_global_id(0);
-	if (gid >= rayCount)
-		return;
 
+void Accelerator_Intersect(
+		Ray *ray,
+		RayHit *rayHit
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
 	// Initialize vertex page references
 #if (BVH_VERTS_PAGE_COUNT > 1)
-	__global Point *vertPages[BVH_VERTS_PAGE_COUNT];
+	__global Point *accelVertPages[BVH_VERTS_PAGE_COUNT];
 #if defined(BVH_VERTS_PAGE0)
-	vertPages[0] = vertPage0;
+	accelVertPages[0] = accelVertPage0;
 #endif
 #if defined(BVH_VERTS_PAGE1)
-	vertPages[1] = vertPage1;
+	accelVertPages[1] = accelVertPage1;
 #endif
 #if defined(BVH_VERTS_PAGE2)
-	vertPages[2] = vertPage2;
+	accelVertPages[2] = accelVertPage2;
 #endif
 #if defined(BVH_VERTS_PAGE3)
-	vertPages[3] = vertPage3;
+	accelVertPages[3] = accelVertPage3;
 #endif
 #if defined(BVH_VERTS_PAGE4)
-	vertPages[4] = vertPage4;
+	accelVertPages[4] = accelVertPage4;
 #endif
 #if defined(BVH_VERTS_PAGE5)
-	vertPages[5] = vertPage5;
+	accelVertPages[5] = accelVertPage5;
 #endif
 #if defined(BVH_VERTS_PAGE6)
-	vertPages[6] = vertPage6;
+	accelVertPages[6] = accelVertPage6;
 #endif
 #if defined(BVH_VERTS_PAGE7)
-	vertPages[7] = vertPage7;
+	accelVertPages[7] = accelVertPage7;
 #endif
 #endif
 
 	// Initialize node page references
 #if (BVH_NODES_PAGE_COUNT > 1)
-	__global BVHAccelArrayNode *nodePages[BVH_NODES_PAGE_COUNT];
+	__global BVHAccelArrayNode *accelNodePages[BVH_NODES_PAGE_COUNT];
 #if defined(BVH_NODES_PAGE0)
-	nodePages[0] = nodePage0;
+	accelNodePages[0] = accelNodePage0;
 #endif
 #if defined(BVH_NODES_PAGE1)
-	nodePages[1] = nodePage1;
+	accelNodePages[1] = accelNodePage1;
 #endif
 #if defined(BVH_NODES_PAGE2)
-	nodePages[2] = nodePage2;
+	accelNodePages[2] = accelNodePage2;
 #endif
 #if defined(BVH_NODES_PAGE3)
-	nodePages[3] = nodePage3;
+	accelNodePages[3] = accelNodePage3;
 #endif
 #if defined(BVH_NODES_PAGE4)
-	nodePages[4] = nodePage4;
+	accelNodePages[4] = accelNodePage4;
 #endif
 #if defined(BVH_NODES_PAGE5)
-	nodePages[5] = nodePage5;
+	accelNodePages[5] = accelNodePage5;
 #endif
 #if defined(BVH_NODES_PAGE6)
-	nodePages[6] = nodePage6;
+	accelNodePages[6] = accelNodePage6;
 #endif
 #if defined(BVH_NODES_PAGE7)
-	nodePages[7] = nodePage7;
+	accelNodePages[7] = accelNodePage7;
 #endif
 
-	const uint rootNodeData = nodePage0[0].nodeData;
+	const uint rootNodeData = accelNodePage0[0].nodeData;
 	const uint stopPage = BVHNodeData_GetPageIndex(rootNodeData);
 	const uint stopNode = BVHNodeData_GetNodeIndex(rootNodeData); // Non-existent
 	uint currentPage = 0; // Root Node Page
 #else
-	const uint stopNode = BVHNodeData_GetSkipIndex(nodePage0[0].nodeData); // Non-existent
+	const uint stopNode = BVHNodeData_GetSkipIndex(accelNodePage0[0].nodeData); // Non-existent
 #endif
 
-	__global Ray *ray = &rays[gid];
-	//const float3 rayOrig = VLOAD3F(&ray->o.x);
-	//const float3 rayDir = VLOAD3F(&ray->d.x);
-	//const float mint = ray->mint;
-	//float maxt = ray->maxt;
-	float3 rayOrig, rayDir;
-	float mint, maxt;
-	Ray_ReadAligned4(ray, &rayOrig, &rayDir, &mint, &maxt);
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+	const float mint = ray->mint;
+	float maxt = ray->maxt;
 
 	const float3 invRayDir = 1.f / rayDir;
 
@@ -202,11 +170,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 	float b1, b2;
 #if (BVH_NODES_PAGE_COUNT == 1)
 	while (currentNode < stopNode) {
-		__global BVHAccelArrayNode *node = &nodePage0[currentNode];
+		__global BVHAccelArrayNode *node = &accelNodePage0[currentNode];
 #else
 	while ((currentPage < stopPage) || (currentNode < stopNode)) {
-		__global BVHAccelArrayNode *nodePage = nodePages[currentPage];
-		__global BVHAccelArrayNode *node = &nodePage[currentNode];
+		__global BVHAccelArrayNode *accelNodePage = accelNodePages[currentPage];
+		__global BVHAccelArrayNode *node = &accelNodePage[currentNode];
 #endif
 		// Read the node
 		__global float4 *data = (__global float4 *)node;
@@ -227,23 +195,23 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 
 #if (BVH_VERTS_PAGE_COUNT == 1)
 			// Fast path for when there is only one memory page
-			const float3 p0 = VLOAD3F(&vertPage0[v0].x);
-			const float3 p1 = VLOAD3F(&vertPage0[v1].x);
-			const float3 p2 = VLOAD3F(&vertPage0[v2].x);
+			const float3 p0 = VLOAD3F(&accelVertPage0[v0].x);
+			const float3 p1 = VLOAD3F(&accelVertPage0[v1].x);
+			const float3 p2 = VLOAD3F(&accelVertPage0[v2].x);
 #else
 			const uint pv0 = (v0 & 0xe0000000u) >> 29;
 			const uint iv0 = (v0 & 0x1fffffffu);
-			__global Point *vp0 = vertPages[pv0];
+			__global Point *vp0 = accelVertPages[pv0];
 			const float3 p0 = VLOAD3F(&vp0[iv0].x);
 
 			const uint pv1 = (v1 & 0xe0000000u) >> 29;
 			const uint iv1 = (v1 & 0x1fffffffu);
-			__global Point *vp1 = vertPages[pv1];
+			__global Point *vp1 = accelVertPages[pv1];
 			const float3 p1 = VLOAD3F(&vp1[iv1].x);
 
 			const uint pv2 = (v2 & 0xe0000000u) >> 29;
 			const uint iv2 = (v2 & 0x1fffffffu);
-			__global Point *vp2 = vertPages[pv2];
+			__global Point *vp2 = accelVertPages[pv2];
 			const float3 p2 = VLOAD3F(&vp2[iv2].x);
 #endif
 
@@ -284,11 +252,39 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Intersect(
 		}
 	}
 
-	// Write result
-	__global RayHit *rayHit = &rayHits[gid];
 	rayHit->t = maxt;
 	rayHit->b1 = b1;
 	rayHit->b2 = b2;
 	rayHit->meshIndex = hitMeshIndex;
 	rayHit->triangleIndex = hitTriangleIndex;
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(
+		__global Ray *rays,
+		__global RayHit *rayHits,
+		const uint rayCount
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
+	// Select the ray to check
+	const int gid = get_global_id(0);
+	if (gid >= rayCount)
+		return;
+
+	Ray ray;
+	Ray_ReadAligned4_Private(&rays[gid], &ray);
+
+	RayHit rayHit;
+	Accelerator_Intersect(
+		&ray,
+		&rayHit
+		ACCELERATOR_INTERSECT_PARAM
+		);
+
+	// Write result
+	__global RayHit *memRayHit = &rayHits[gid];
+	memRayHit->t = rayHit.t;
+	memRayHit->b1 = rayHit.b1;
+	memRayHit->b2 = rayHit.b2;
+	memRayHit->meshIndex = rayHit.meshIndex;
+	memRayHit->triangleIndex = rayHit.triangleIndex;
 }

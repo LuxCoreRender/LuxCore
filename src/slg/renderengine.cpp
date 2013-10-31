@@ -1,35 +1,25 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
+
+#include <boost/format.hpp>
 
 #include "slg/renderengine.h"
 #include "slg/renderconfig.h"
-#include "slg/engines/pathocl/rtpathocl.h"
-#include "slg/engines/lightcpu/lightcpu.h"
-#include "slg/engines/pathcpu/pathcpu.h"
-#include "slg/engines/bidircpu/bidircpu.h"
-#include "slg/engines/bidirhybrid/bidirhybrid.h"
-#include "slg/engines/cbidirhybrid/cbidirhybrid.h"
-#include "slg/engines/bidirvmcpu/bidirvmcpu.h"
-#include "slg/engines/filesaver/filesaver.h"
-#include "slg/engines/pathhybrid/pathhybrid.h"
 #include "slg/sdl/bsdf.h"
 
 #include "luxrays/core/intersectiondevice.h"
@@ -45,7 +35,7 @@ using namespace slg;
 // RenderEngine
 //------------------------------------------------------------------------------
 
-RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	seedBaseGenerator(131) {
 	renderConfig = cfg;
 	film = flm;
@@ -54,11 +44,15 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 	editMode = false;
 	GenerateNewSeed();
 
+	film->AddChannel(Film::TONEMAPPED_FRAMEBUFFER);
+
 	// Create LuxRays context
 	const int oclPlatformIndex = renderConfig->cfg.GetInt("opencl.platform.index", -1);
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
-	renderConfig->scene->Preprocess(ctx);
+	// Force a complete preprocessing
+	renderConfig->scene->editActions.AddAllAction();
+	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight());
 
 	samplesCount = 0;
 	elapsedTime = 0.0f;
@@ -66,7 +60,7 @@ RenderEngine::RenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex)
 
 RenderEngine::~RenderEngine() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -115,23 +109,24 @@ void RenderEngine::Stop() {
 	UpdateFilmLockLess();
 }
 
-void RenderEngine::BeginEdit() {
+void RenderEngine::BeginSceneEdit() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
 	assert (started);
 	assert (!editMode);
 	editMode = true;
 
-	BeginEditLockLess();
+	BeginSceneEditLockLess();
 }
 
-void RenderEngine::EndEdit(const EditActionList &editActions) {
+void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
 	assert (started);
 	assert (editMode);
 
-	bool dataSetUpdated;
+	// Check if I have to stop the LuxRays Context
+	bool contextStopped;
 	if (editActions.Has(GEOMETRY_EDIT) ||
 			(editActions.Has(INSTANCE_TRANS_EDIT) &&
 			!renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate())) {
@@ -140,22 +135,21 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 
 		// To avoid reference to the DataSet de-allocated inside UpdateDataSet()
 		ctx->SetDataSet(NULL);
+		
+		contextStopped = true;
+	} else
+		contextStopped = false;
 
-		// For all other accelerator, I have to rebuild the DataSet
-		renderConfig->scene->Preprocess(ctx);
+	// Pre-process scene data
+	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight());
 
+	if (contextStopped) {
 		// Set the LuxRays SataSet
 		ctx->SetDataSet(renderConfig->scene->dataSet);
 
 		// Restart all intersection devices
 		ctx->Start();
-
-		dataSetUpdated = true;
-	} else
-		dataSetUpdated = false;
-
-	if (!dataSetUpdated &&
-			renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate() &&
+	} else if (renderConfig->scene->dataSet->DoesAllAcceleratorsSupportUpdate() &&
 			editActions.Has(INSTANCE_TRANS_EDIT)) {
 		// Update the DataSet
 		ctx->UpdateDataSet();
@@ -172,7 +166,7 @@ void RenderEngine::EndEdit(const EditActionList &editActions) {
 
 	editMode = false;
 
-	EndEditLockLess(editActions);
+	EndSceneEditLockLess(editActions);
 }
 
 void RenderEngine::SetSeed(const unsigned long seed) {
@@ -189,7 +183,6 @@ void RenderEngine::UpdateFilm() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
 	if (started) {
-		elapsedTime = WallClockTime() - startTime;
 		UpdateFilmLockLess();
 		UpdateCounters();
 
@@ -204,7 +197,6 @@ void RenderEngine::UpdateFilm() {
 			// Do not run the test if we don't have at least 16 new samples per pixel
 			if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * 16) &&
 					((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetScreenRefreshInterval())) {
-				film->UpdateScreenBuffer(); // Required in order to have a valid convergence test
 				convergence = 1.f - film->RunConvergenceTest() / (float)pixelCount;
 				lastConvergenceTestTime = now;
 				lastConvergenceTestSamplesCount = samplesCount;
@@ -234,6 +226,12 @@ RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
 		return RTPATHOCL;
 	if ((type.compare("13") == 0) || (type.compare("PATHHYBRID") == 0))
 		return PATHHYBRID;
+	if ((type.compare("14") == 0) || (type.compare("BIASPATHCPU") == 0))
+		return BIASPATHCPU;
+	if ((type.compare("15") == 0) || (type.compare("BIASPATHOCL") == 0))
+		return BIASPATHOCL;
+	if ((type.compare("16") == 0) || (type.compare("RTBIASPATHOCL") == 0))
+		return RTBIASPATHOCL;
 	throw runtime_error("Unknown render engine type: " + type);
 }
 
@@ -259,45 +257,14 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 			return "RTPATHOCL";
 		case PATHHYBRID:
 			return "PATHHYBRID";
+		case BIASPATHCPU:
+			return "BIASPATHCPU";
+		case BIASPATHOCL:
+			return "BIASPATHOCL";
+		case RTBIASPATHOCL:
+			return "RTBIASPATHOCL";
 		default:
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
-	}
-}
-
-RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
-		RenderConfig *renderConfig, Film *film, boost::mutex *filmMutex) {
-	switch (engineType) {
-		case LIGHTCPU:
-			return new LightCPURenderEngine(renderConfig, film, filmMutex);
-		case PATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new PathOCLRenderEngine(renderConfig, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-#endif
-		case PATHCPU:
-			return new PathCPURenderEngine(renderConfig, film, filmMutex);
-		case BIDIRCPU:
-			return new BiDirCPURenderEngine(renderConfig, film, filmMutex);
-		case BIDIRHYBRID:
-			return new BiDirHybridRenderEngine(renderConfig, film, filmMutex);
-		case CBIDIRHYBRID:
-			return new CBiDirHybridRenderEngine(renderConfig, film, filmMutex);
-		case BIDIRVMCPU:
-			return new BiDirVMCPURenderEngine(renderConfig, film, filmMutex);
-		case FILESAVER:
-			return new FileSaverRenderEngine(renderConfig, film, filmMutex);
-		case RTPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTPathOCLRenderEngine(renderConfig, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new PathCPURenderEngine(renderConfig, film, filmMutex);
-#endif
-		case PATHHYBRID:
-			return new PathHybridRenderEngine(renderConfig, film, filmMutex);
-		default:
-			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(engineType));
 	}
 }
 
@@ -306,27 +273,20 @@ RenderEngine *RenderEngine::AllocRenderEngine(const RenderEngineType engineType,
 //------------------------------------------------------------------------------
 
 CPURenderThread::CPURenderThread(CPURenderEngine *engine,
-		const u_int index, IntersectionDevice *dev,
-		const bool enablePerPixelNormBuf, const bool enablePerScreenNormBuf) {
+		const u_int index, IntersectionDevice *dev) {
 	threadIndex = index;
 	renderEngine = engine;
 	device = dev;
 
 	started = false;
 	editMode = false;
-
-	threadFilm = NULL;
-	enablePerPixelNormBuffer = enablePerPixelNormBuf;
-	enablePerScreenNormBuffer = enablePerScreenNormBuf;
 }
 
 CPURenderThread::~CPURenderThread() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
-
-	delete threadFilm;
 }
 
 void CPURenderThread::Start() {
@@ -347,18 +307,6 @@ void CPURenderThread::Stop() {
 }
 
 void CPURenderThread::StartRenderThread() {
-	const u_int filmWidth = renderEngine->film->GetWidth();
-	const u_int filmHeight = renderEngine->film->GetHeight();
-
-	delete threadFilm;
-
-	threadFilm = new Film(filmWidth, filmHeight);
-	threadFilm->CopyDynamicSettings(*(renderEngine->film));
-	threadFilm->SetPerPixelNormalizedBufferFlag(enablePerPixelNormBuffer);
-	threadFilm->SetPerScreenNormalizedBufferFlag(enablePerScreenNormBuffer);
-	threadFilm->SetFrameBufferFlag(false);
-	threadFilm->Init();
-
 	// Create the thread for the rendering
 	renderThread = AllocRenderThread();
 }
@@ -372,11 +320,11 @@ void CPURenderThread::StopRenderThread() {
 	}
 }
 
-void CPURenderThread::BeginEdit() {
+void CPURenderThread::BeginSceneEdit() {
 	StopRenderThread();
 }
 
-void CPURenderThread::EndEdit(const EditActionList &editActions) {
+void CPURenderThread::EndSceneEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
@@ -384,9 +332,8 @@ void CPURenderThread::EndEdit(const EditActionList &editActions) {
 // CPURenderEngine
 //------------------------------------------------------------------------------
 
-CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
-
 	const size_t renderThreadCount =  cfg->cfg.GetInt("native.threads.count",
 			boost::thread::hardware_concurrency());
 
@@ -419,7 +366,7 @@ CPURenderEngine::CPURenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flm
 
 CPURenderEngine::~CPURenderEngine() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -442,46 +389,306 @@ void CPURenderEngine::StopLockLess() {
 		renderThreads[i]->Stop();
 }
 
-void CPURenderEngine::BeginEditLockLess() {
+void CPURenderEngine::BeginSceneEditLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
+		renderThreads[i]->BeginSceneEdit();
 }
 
-void CPURenderEngine::EndEditLockLess(const EditActionList &editActions) {
+void CPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
+		renderThreads[i]->EndSceneEdit(editActions);
 }
 
-void CPURenderEngine::UpdateFilmLockLess() {
+//------------------------------------------------------------------------------
+// CPUNoTileRenderThread
+//------------------------------------------------------------------------------
+
+CPUNoTileRenderThread::CPUNoTileRenderThread(CPUNoTileRenderEngine *engine,
+		const u_int index, IntersectionDevice *dev) : CPURenderThread(engine, index, dev) {
+	threadFilm = NULL;
+}
+
+CPUNoTileRenderThread::~CPUNoTileRenderThread() {
+	delete threadFilm;
+}
+
+void CPUNoTileRenderThread::StartRenderThread() {
+	CPUNoTileRenderEngine *cpuNoTileEngine = (CPUNoTileRenderEngine *)renderEngine;
+
+	const u_int filmWidth = cpuNoTileEngine->film->GetWidth();
+	const u_int filmHeight = cpuNoTileEngine->film->GetHeight();
+
+	delete threadFilm;
+
+	threadFilm = new Film(filmWidth, filmHeight);
+	threadFilm->CopyDynamicSettings(*(cpuNoTileEngine->film));
+	threadFilm->RemoveChannel(Film::TONEMAPPED_FRAMEBUFFER);
+	threadFilm->Init();
+
+	CPURenderThread::StartRenderThread();
+}
+
+//------------------------------------------------------------------------------
+// CPUNoTileRenderEngine
+//------------------------------------------------------------------------------
+
+CPUNoTileRenderEngine::CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+	CPURenderEngine(cfg, flm, flmMutex) {
+}
+
+CPUNoTileRenderEngine::~CPUNoTileRenderEngine() {
+}
+
+void CPUNoTileRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
 	film->Reset();
 
 	// Merge the all thread films
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
-		if (renderThreads[i] && renderThreads[i]->threadFilm)
-			film->AddFilm(*(renderThreads[i]->threadFilm));
+		if (!renderThreads[i])
+			continue;
+
+		const Film *threadFilm = ((CPUNoTileRenderThread *)renderThreads[i])->threadFilm;
+		if (threadFilm)
+			film->AddFilm(*threadFilm);
 	}
 }
 
-void CPURenderEngine::UpdateCounters() {
+void CPUNoTileRenderEngine::UpdateCounters() {
+	elapsedTime = WallClockTime() - startTime;
+
 	// Update the sample count statistic
 	samplesCount = film->GetTotalSampleCount();
 
 	// Update the ray count statistic
 	double totalCount = 0.0;
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		totalCount += renderThreads[i]->device->GetTotalRaysCount();
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		const CPUNoTileRenderThread *thread = (CPUNoTileRenderThread *)renderThreads[i];
+		totalCount += thread->device->GetTotalRaysCount();
+	}
 	raysCount = totalCount;
+}
+
+//------------------------------------------------------------------------------
+// TileRepository
+//------------------------------------------------------------------------------
+
+TileRepository::TileRepository(const u_int size) {
+	tileSize = size;
+
+	enableProgressiveRefinement = false;
+	enableMultipassRendering = false;
+	done = false;
+}
+
+TileRepository::~TileRepository() {
+	Clear();
+}
+
+void TileRepository::Clear() {
+	// Free all left tiles
+	BOOST_FOREACH(Tile *tile, todoTiles) {
+		delete tile;
+	}
+	todoTiles.clear();
+
+	BOOST_FOREACH(Tile *tile, pendingTiles) {
+		delete tile;
+	}
+	pendingTiles.clear();
+}
+
+void TileRepository::GetPendingTiles(vector<Tile> &tiles) {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	tiles.resize(pendingTiles.size());
+	for (u_int i = 0; i < pendingTiles.size(); ++i)
+		tiles[i] = *(pendingTiles[i]);
+}
+
+void TileRepository::HilberCurveTiles(const int sampleIndex,
+		const u_int n, const int xo, const int yo,
+		const int xd, const int yd, const int xp, const int yp,
+		const int xEnd, const int yEnd) {
+	if (n <= 1) {
+		if((xo < xEnd) && (yo < yEnd)) {
+			Tile *tile = new Tile;
+			tile->xStart = xo;
+			tile->yStart = yo;
+			tile->sampleIndex = sampleIndex;
+			todoTiles.push_back(tile);
+		}
+	} else {
+		const u_int n2 = n >> 1;
+
+		HilberCurveTiles(sampleIndex, n2,
+			xo,
+			yo,
+			xp, yp, xd, yd, xEnd, yEnd);
+		HilberCurveTiles(sampleIndex, n2,
+			xo + xd * static_cast<int>(n2),
+			yo + yd * static_cast<int>(n2),
+			xd, yd, xp, yp, xEnd, yEnd);
+		HilberCurveTiles(sampleIndex, n2,
+			xo + (xp + xd) * static_cast<int>(n2),
+			yo + (yp + yd) * static_cast<int>(n2),
+			xd, yd, xp, yp, xEnd, yEnd);
+		HilberCurveTiles(sampleIndex, n2,
+			xo + xd * static_cast<int>(n2 - 1) + xp * static_cast<int>(n - 1),
+			yo + yd * static_cast<int>(n2 - 1) + yp * static_cast<int>(n - 1),
+			-xp, -yp, -xd, -yd, xEnd, yEnd);
+	}	
+}
+
+void TileRepository::InitTiles(const u_int width, const u_int height) {
+	u_int n = RoundUp(Max(width, height), tileSize) / tileSize;
+	if (!IsPowerOf2(n))
+		n = RoundUpPow2(n);
+	if (enableProgressiveRefinement) {
+		for (u_int i = 0; i < totalSamplesPerPixel; ++i)
+			HilberCurveTiles(i, n, 0, 0, 0, tileSize, tileSize, 0, width, height);
+	} else
+		HilberCurveTiles(-1, n, 0, 0, 0, tileSize, tileSize, 0, width, height);
+
+	done = false;
+}
+
+const bool TileRepository::NextTile(Tile **tile, const u_int width, const u_int height) {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	if (*tile) {
+		// Remove the tile from pending list
+		pendingTiles.erase(std::remove(pendingTiles.begin(), pendingTiles.end(), *tile), pendingTiles.end());
+
+		// Now I can free the memory
+		delete *tile;
+	}
+
+	if (todoTiles.size() == 0) {
+		// Check if multi-pass is enabled
+		if (enableMultipassRendering)
+			InitTiles(width, height);
+		else {
+			if (pendingTiles.size() == 0) {
+				// Rendering done
+				done = true;
+			}
+
+			return false;
+		}
+	}
+
+	*tile = todoTiles.front();
+	todoTiles.pop_front();
+	pendingTiles.push_back(*tile);
+
+	return true;
+}
+
+//------------------------------------------------------------------------------
+// CPUTileRenderThread
+//------------------------------------------------------------------------------
+
+CPUTileRenderThread::CPUTileRenderThread(CPUTileRenderEngine *engine,
+		const u_int index, IntersectionDevice *dev) :
+		CPURenderThread(engine, index, dev) {
+	tileFilm = NULL;
+}
+
+CPUTileRenderThread::~CPUTileRenderThread() {
+	delete tileFilm;
+}
+
+void CPUTileRenderThread::StartRenderThread() {
+	delete tileFilm;
+
+	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
+	tileFilm = new Film(cpuTileEngine->tileRepository->tileSize, cpuTileEngine->tileRepository->tileSize);
+	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
+	tileFilm->Init();
+
+	CPURenderThread::StartRenderThread();
+}
+
+//------------------------------------------------------------------------------
+// CPUTileRenderEngine
+//------------------------------------------------------------------------------
+
+CPUTileRenderEngine::CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
+	CPURenderEngine(cfg, flm, flmMutex) {
+	tileRepository = NULL;
+}
+
+CPUTileRenderEngine::~CPUTileRenderEngine() {
+	delete tileRepository;
+}
+
+const bool CPUTileRenderEngine::NextTile(TileRepository::Tile **tile, const Film *tileFilm) {
+	// Check if I have to add the tile to the film
+	if (*tile) {
+		boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+		film->AddFilm(*tileFilm,
+				0, 0,
+				Min(tileRepository->tileSize, film->GetWidth() - (*tile)->xStart),
+				Min(tileRepository->tileSize, film->GetHeight() - (*tile)->yStart),
+				(*tile)->xStart, (*tile)->yStart);
+	}
+
+	if (!tileRepository->NextTile(tile, film->GetWidth(), film->GetHeight())) {
+		boost::unique_lock<boost::mutex> lock(engineMutex);
+
+		if (!printedRenderingTime && tileRepository->done) {
+			elapsedTime = WallClockTime() - startTime;
+			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+			printedRenderingTime = true;
+		}
+
+		return false;
+	} else
+		return true;
+}
+
+void CPUTileRenderEngine::StopLockLess() {
+	CPURenderEngine::StopLockLess();
+
+	delete tileRepository;
+	tileRepository = NULL;
+}
+
+void CPUTileRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
+	tileRepository->Clear();
+	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	printedRenderingTime = false;
+
+	CPURenderEngine::EndSceneEditLockLess(editActions);
+}
+
+void CPUTileRenderEngine::UpdateCounters() {
+	// Update the sample count statistic
+	samplesCount = film->GetTotalSampleCount();
+
+	// Update the ray count statistic
+	double totalCount = 0.0;
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		const CPUTileRenderThread *thread = (CPUTileRenderThread *)renderThreads[i];
+		totalCount += thread->device->GetTotalRaysCount();
+	}
+	raysCount = totalCount;
+
+	// Update the time only until when the rendering is not finished
+	if (!tileRepository->done)
+		elapsedTime = WallClockTime() - startTime;
 }
 
 //------------------------------------------------------------------------------
 // OCLRenderEngine
 //------------------------------------------------------------------------------
 
-OCLRenderEngine::OCLRenderEngine(RenderConfig *rcfg, Film *flm,
+OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 	boost::mutex *flmMutex, bool fatal) : RenderEngine(rcfg, flm, flmMutex) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
@@ -593,7 +800,7 @@ HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
 
 HybridRenderThread::~HybridRenderThread() {
 	if (editMode)
-		EndEdit(EditActionList());
+		EndSceneEdit(EditActionList());
 	if (started)
 		Stop();
 
@@ -622,9 +829,6 @@ void HybridRenderThread::StartRenderThread() {
 	delete threadFilm;
 	threadFilm = new Film(filmWidth, filmHeight);
 	threadFilm->CopyDynamicSettings(*(renderEngine->film));
-	threadFilm->SetPerPixelNormalizedBufferFlag(true);
-	threadFilm->SetPerScreenNormalizedBufferFlag(true);
-	threadFilm->SetFrameBufferFlag(false);
 	threadFilm->Init();
 
 	samplesCount = 0.0;
@@ -642,11 +846,11 @@ void HybridRenderThread::StopRenderThread() {
 	}
 }
 
-void HybridRenderThread::BeginEdit() {
+void HybridRenderThread::BeginSceneEdit() {
 	StopRenderThread();
 }
 
-void HybridRenderThread::EndEdit(const EditActionList &editActions) {
+void HybridRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
@@ -794,7 +998,7 @@ void HybridRenderThread::RenderFunc() {
 // HybridRenderEngine
 //------------------------------------------------------------------------------
 
-HybridRenderEngine::HybridRenderEngine(RenderConfig *rcfg, Film *flm,
+HybridRenderEngine::HybridRenderEngine(const RenderConfig *rcfg, Film *flm,
 	boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex, false) {
 	//--------------------------------------------------------------------------
 	// Create the intersection devices and render threads
@@ -850,19 +1054,19 @@ void HybridRenderEngine::StopLockLess() {
 		renderThreads[i]->Stop();
 }
 
-void HybridRenderEngine::BeginEditLockLess() {
+void HybridRenderEngine::BeginSceneEditLockLess() {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->Interrupt();
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->BeginEdit();
+		renderThreads[i]->BeginSceneEdit();
 }
 
-void HybridRenderEngine::EndEditLockLess(const EditActionList &editActions) {
+void HybridRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	// Reset statistics in order to be more accurate
 	intersectionDevices[0]->ResetPerformaceStats();
 
 	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->EndEdit(editActions);
+		renderThreads[i]->EndSceneEdit(editActions);
 }
 
 void HybridRenderEngine::UpdateFilmLockLess() {
@@ -878,6 +1082,8 @@ void HybridRenderEngine::UpdateFilmLockLess() {
 }
 
 void HybridRenderEngine::UpdateCounters() {
+	elapsedTime = WallClockTime() - startTime;
+
 	// Update the sample count statistic
 	double totalCount = 0.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i)

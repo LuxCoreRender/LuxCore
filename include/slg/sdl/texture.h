@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_TEXTURE_H
@@ -34,6 +31,8 @@
 #include <set>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/unordered_set.hpp>
+#include <boost/unordered_map.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -63,6 +62,7 @@ typedef enum {
 	WRINKLED, UV_TEX, BAND_TEX
 } TextureType;
 
+class ImageMap;
 class ImageMapCache;
 
 class Texture {
@@ -75,14 +75,20 @@ public:
 
 	virtual float GetFloatValue(const HitPoint &hitPoint) const = 0;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const = 0;
+	virtual float Y() const = 0;
 
 	// Used for bump mapping support
 	virtual luxrays::UV GetDuDv() const = 0;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);
 	}
-	
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	}
+
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 };
 
@@ -98,6 +104,7 @@ public:
 	bool IsTextureDefined(const std::string &name) const {
 		return (texsByName.count(name) > 0);
 	}
+
 	void DefineTexture(const std::string &name, Texture *t);
 
 	Texture *GetTexture(const std::string &name);
@@ -115,7 +122,7 @@ public:
 private:
 
 	std::vector<Texture *> texs;
-	std::map<std::string, Texture *> texsByName;
+	boost::unordered_map<std::string, Texture *> texsByName;
 };
 
 //------------------------------------------------------------------------------
@@ -130,6 +137,7 @@ public:
 	virtual TextureType GetType() const { return CONST_FLOAT; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return value; }
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return luxrays::Spectrum(value); }
+	virtual float Y() const { return value; }
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
 
@@ -149,6 +157,7 @@ public:
 	virtual TextureType GetType() const { return CONST_FLOAT3; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return color.Y(); }
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
+	virtual float Y() const { return color.Y(); }
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
 
@@ -237,6 +246,9 @@ public:
 				ds * dt * GetAlphaTexel(s0 + 1, t0 + 1);
 	}
 
+	float GetSpectrumMean() const;
+	float GetSpectrumMeanY() const;
+
 private:
 	void Init(FIBITMAP *dib);
 	FIBITMAP *GetFreeImageBitMap() const;
@@ -245,7 +257,7 @@ private:
 		const u_int u = luxrays::Mod<int>(s, width);
 		const u_int v = luxrays::Mod<int>(t, height);
 
-		const unsigned index = v * width + u;
+		const u_int index = v * width + u;
 		assert (index >= 0);
 		assert (index < width * height);
 
@@ -262,7 +274,7 @@ private:
 		const u_int u = luxrays::Mod<int>(s, width);
 		const u_int v = luxrays::Mod<int>(t, height);
 
-		const unsigned index = v * width + u;
+		const u_int index = v * width + u;
 		assert (index >= 0);
 		assert (index < width * height);
 
@@ -280,7 +292,7 @@ private:
 			const u_int u = luxrays::Mod<int>(s, width);
 			const u_int v = luxrays::Mod<int>(t, height);
 
-			const unsigned index = v * width + u;
+			const u_int index = v * width + u;
 			assert (index >= 0);
 			assert (index < width * height);
 
@@ -301,13 +313,13 @@ public:
 
 	void SetImageResize(const float s) { allImageScale = s; }
 
-	void DefineImgMap(const std::string &name, ImageMap *im);
+	void DefineImageMap(const std::string &name, ImageMap *im);
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
 
-	// Get a path from imageMap object
+	// Get a path/name from imageMap object
 	const std::string &GetPath(const slg::ImageMap *im)const {
-		for (std::map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
+		for (boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im)
 				return it->first;
 		}
@@ -315,7 +327,7 @@ public:
 	}
 
 	void DeleteImageMap(const slg::ImageMap *im) {
-		for (std::map<std::string, ImageMap *>::iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
+		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im) {
 				delete it->second;
 
@@ -328,12 +340,12 @@ public:
 
 	u_int GetImageMapIndex(const ImageMap *im) const;
 
-	void GetImageMaps(std::vector<ImageMap *> &ims);
+	void GetImageMaps(std::vector<const ImageMap *> &ims);
 	u_int GetSize()const { return static_cast<u_int>(mapByName.size()); }
 	bool IsImageMapDefined(const std::string &name) const { return mapByName.find(name) != mapByName.end(); }
 
 private:
-	std::map<std::string, ImageMap *> mapByName;
+	boost::unordered_map<std::string, ImageMap *> mapByName;
 	// Used to preserve insertion order and to retrieve insertion index
 	std::vector<ImageMap *> maps;
 
@@ -348,12 +360,17 @@ public:
 	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return gain * imgMap->GetSpectrumMeanY(); }
 
 	virtual luxrays::UV GetDuDv() const { return DuDv; }
 
 	const ImageMap *GetImageMap() const { return imgMap; }
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const float GetGain() const { return gain; }
+
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		referencedImgMaps.insert(imgMap);
+	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
@@ -376,14 +393,26 @@ public:
 	virtual TextureType GetType() const { return SCALE_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return tex1->Y() * tex2->Y(); }
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
 	}
 
 	const Texture *GetTexture1() const { return tex1; }
@@ -410,13 +439,22 @@ public:
 	virtual TextureType GetType() const { return FRESNEL_APPROX_N; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const;
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex == oldTex)
+			tex = newTex;
 	}
 
 	const Texture *GetTexture() const { return tex; }
@@ -435,13 +473,22 @@ public:
 	virtual TextureType GetType() const { return FRESNEL_APPROX_K; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const;
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex == oldTex)
+			tex = newTex;
 	}
 
 	const Texture *GetTexture() const { return tex; }
@@ -464,14 +511,26 @@ public:
 	virtual TextureType GetType() const { return CHECKERBOARD2D; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return (tex1->Y() + tex2->Y()) * .5f; }
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
 	}
 
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
@@ -494,14 +553,26 @@ public:
 	virtual TextureType GetType() const { return CHECKERBOARD3D; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return (tex1->Y() + tex2->Y()) * .5f; }
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
 	}
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
@@ -529,15 +600,29 @@ public:
 	virtual TextureType GetType() const { return MIX_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const;
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		amount->AddReferencedTextures(referencedTexs);
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (amount == oldTex)
+			amount = newTex;
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
 	}
 
 	const Texture *GetAmountTexture() const { return amount; }
@@ -565,6 +650,7 @@ public:
 	virtual TextureType GetType() const { return FBM_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return .5f; }
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -594,6 +680,7 @@ public:
 	virtual TextureType GetType() const { return MARBLE; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const;
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -624,14 +711,28 @@ public:
 	virtual TextureType GetType() const { return DOTS; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const {
+		return (insideTex->Y() + outsideTex->Y()) * .5f;
+	}
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		insideTex->AddReferencedTextures(referencedTexs);
 		outsideTex->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		insideTex->AddReferencedImageMaps(referencedImgMaps);
+		outsideTex->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (insideTex == oldTex)
+			insideTex = newTex;
+		if (outsideTex == oldTex)
+			outsideTex = newTex;
 	}
 
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
@@ -665,15 +766,33 @@ public:
 	virtual TextureType GetType() const { return BRICK; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const {
+		const float m = powf(luxrays::Clamp(1.f - mortarsize, 0.f, 1.f), 3);
+		return luxrays::Lerp(m, tex2->Y(), tex1->Y());
+	}
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
 		tex3->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
+		tex3->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
+		if (tex3 == oldTex)
+			tex3 = newTex;
 	}
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
@@ -734,14 +853,28 @@ public:
 	virtual TextureType GetType() const { return ADD_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { 
+		return tex1->Y() + tex2->Y(); 
+	}
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		tex1->AddReferencedTextures(referencedTexs);
 		tex2->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex1->AddReferencedImageMaps(referencedImgMaps);
+		tex2->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex1 == oldTex)
+			tex1 = newTex;
+		if (tex2 == oldTex)
+			tex2 = newTex;
 	}
 
 	const Texture *GetTexture1() const { return tex1; }
@@ -766,6 +899,7 @@ public:
 	virtual TextureType GetType() const { return WINDY; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return .5f; }
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -790,6 +924,7 @@ public:
 	virtual TextureType GetType() const { return WRINKLED; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return .5f; }
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -817,6 +952,9 @@ public:
 	virtual TextureType GetType() const { return UV_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const {
+		return luxrays::Spectrum(.5f, .5f, 0.f).Y();
+	}
 
 	virtual luxrays::UV GetDuDv() const;
 
@@ -841,13 +979,28 @@ public:
 	virtual TextureType GetType() const { return BAND_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const {
+		float ret = offsets[0] * values[0].Y();
+		for (u_int i = 0; i < offsets.size() - 1; ++i)
+			ret += .5f * (offsets[i + 1] - offsets[i]) *
+				(values[i + 1].Y() + values[i].Y());
+		return ret;
+	}
 
 	virtual luxrays::UV GetDuDv() const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		amount->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		amount->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (amount == oldTex)
+			amount = newTex;
 	}
 
 	const Texture *GetAmountTexture() const { return amount; }
@@ -874,12 +1027,11 @@ public:
 	virtual TextureType GetType() const { return HITPOINTCOLOR; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return 1.f; }
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
-
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
-	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 };
@@ -896,12 +1048,12 @@ public:
 	virtual TextureType GetType() const { return HITPOINTALPHA; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return 1.f; }
+
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
-
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
-	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 };
@@ -918,12 +1070,12 @@ public:
 	virtual TextureType GetType() const { return HITPOINTGREY; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return 1.f; }
+
 
 	virtual luxrays::UV GetDuDv() const { return luxrays::UV(0.f, 0.f); }
-
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
-	}
 
 	u_int GetChannel() const { return channel; }
 

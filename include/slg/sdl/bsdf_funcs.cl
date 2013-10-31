@@ -1,32 +1,35 @@
 #line 2 "bsdf_funcs.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(BSDF_INIT_PARAM_RAY_MEM_SPACE)
+#define BSDF_INIT_PARAM_RAY_MEM_SPACE __global
+#endif
+#if !defined(BSDF_INIT_PARAM_RAYHIT_MEM_SPACE)
+#define BSDF_INIT_PARAM_RAYHIT_MEM_SPACE __global
+#endif
 void BSDF_Init(
 		__global BSDF *bsdf,
 		//const bool fromL,
 		__global Mesh *meshDescs,
 		__global uint *meshMats,
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global uint *meshTriLightDefsOffset,
 #endif
 		__global Point *vertices,
@@ -43,8 +46,14 @@ void BSDF_Init(
 		__global float *vertAlphas,
 #endif
 		__global Triangle *triangles,
-		__global Ray *ray,
-		__global RayHit *rayHit
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray,
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		RayHit *rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float u0
 #endif
@@ -57,8 +66,13 @@ void BSDF_Init(
 	bsdf->hitPoint.passThroughEvent = u0;
 #endif
 
+#if defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+#else
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
+#endif
 	const float3 hitPointP = rayOrig + rayHit->t * rayDir;
 	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
 	VSTORE3F(-rayDir, &bsdf->hitPoint.fixedDir.x);
@@ -150,7 +164,7 @@ void BSDF_Init(
 
 	//--------------------------------------------------------------------------
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// Check if it is a light source
 	bsdf->triangleLightSourceIndex = meshTriLightDefsOffset[meshIndex];
 #endif
@@ -245,7 +259,8 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 }
 
 float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
-		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event
+		float3 *sampledDir, float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
@@ -256,7 +271,8 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			bsdf->hitPoint.passThroughEvent,
 #endif
-			pdfW, cosSampledDir, event
+			pdfW, cosSampledDir, event,
+			requestedEvent
 			MATERIALS_PARAM);
 	if (Spectrum_IsBlack(result))
 		return 0.f;
@@ -274,13 +290,33 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 		return result;
 }
 
+BSDFEvent BSDF_GetEventTypes(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetEventTypes(&mats[bsdf->materialIndex]
+			MATERIALS_PARAM);
+}
+
 bool BSDF_IsDelta(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_IsDelta(&mats[bsdf->materialIndex]
 			MATERIALS_PARAM);
 }
 
-#if (PARAM_DL_LIGHT_COUNT > 0)
+uint BSDF_GetMaterialID(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return mats[bsdf->materialIndex].matID;
+}
+
+uint BSDF_GetLightID(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return mats[bsdf->materialIndex].lightID;
+}
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+bool BSDF_IsLightSource(__global BSDF *bsdf) {
+	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
+}
+
 float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
 		__global TriangleLight *triLightDefs, float *directPdfA
 		MATERIALS_PARAM_DECL) {
