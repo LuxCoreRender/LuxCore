@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 					if (m1.m[j][i] != m0.m[j][i])
 						cout << "ERROR in Matrix4x4 test !\n";
 
-			prop = Property("test.matrix", MakePropertyValues(m0));
+			prop = Property("test.matrix")(m0);
 			cout << prop << "\n";
 
 			cout << "\n";
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 				cout << "[" << n << "]";
 			cout << "\n\n";
 
-			cout << props0.Get("doesnt.exist.test", MakePropertyValues(0, 1, 2)) << "\n\n";
+			cout << props0.Get(Property("doesnt.exist.test")(0, 1, 2)) << "\n\n";
 		}
 
 		//----------------------------------------------------------------------

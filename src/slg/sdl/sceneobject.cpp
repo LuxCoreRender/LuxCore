@@ -49,7 +49,7 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache) const {
 
 	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;
-		props << Property("scene.objects." + name + ".transformation", MakePropertyValues(inst->GetTransformation().m));
+		props << Property("scene.objects." + name + ".transformation")(inst->GetTransformation().m);
 	}
 
 	return props;
