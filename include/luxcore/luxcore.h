@@ -44,6 +44,7 @@
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
 #include <slg/sdl/scene.h>
+#include <slg/film/film.h>
 #include <luxcore/cfg.h>
 
 /*! \mainpage LuxCore
@@ -59,6 +60,10 @@
  * \brief The LuxCore classes are defined within this namespace.
  */
 namespace luxcore {
+
+extern void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
+
+#define LC_LOG(a) { if (luxcore::LuxCore_LogHandler) { std::stringstream _LUXCORE_LOG_LOCAL_SS; _LUXCORE_LOG_LOCAL_SS << a; luxcore::LuxCore_LogHandler(_LUXCORE_LOG_LOCAL_SS.str().c_str()); } }
 
 /*!
  * \brief Initializes LuxCore API. This function has to be called before
@@ -124,6 +129,14 @@ public:
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
+	/*!
+	 * \brief Returns a pointer to the RGB_TONEMAPPED buffer. This is a fast path
+	 * to avoid a buffer copy.
+	 *
+	 * \return a pointer to a float array with RGB values.
+	 */
+	const float *GetRGBToneMappedOutput() const;
+
 	friend class RenderSession;
 
 private:
@@ -161,6 +174,13 @@ public:
 	 * \return a reference to the Properties of this Scene.
 	 */
 	const luxrays::Properties &GetProperties() const;
+	/*!
+	 * \brief Returns the DataSet of the scene. It is available only
+	 * during the rendering (i.e. after a RenderSession::Start()).
+	 *
+	 * \return a reference to the Properties of this Scene.
+	 */
+	const luxrays::DataSet &GetDataSet() const;
 
 	/*!
 	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
@@ -279,6 +299,13 @@ public:
 	 * \return the RenderConfig properties.
 	 */
 	const luxrays::Properties &GetProperties() const;
+	/*!
+	 * \brief Returns the Property with the given name or the default value if it
+	 * has not been defined.
+	 *
+	 * \return the Property with the given name.
+	 */
+	const luxrays::Property GetProperty(const std::string &name) const;
 
 	/*!
 	 * \brief Returns a reference to the Scene used in the RenderConfig;
@@ -294,6 +321,38 @@ public:
 	 * \param props are the Properties to set. 
 	 */
 	void Parse(const luxrays::Properties &props);
+	/*!
+	 * \brief Deletes any configuration Property starting for the given prefix. This
+	 * method should be used only when the RenderConfig is not used by any
+	 * RenderSession.
+	 * 
+	 * \param prefix is the prefix of the Properties to delete.
+	 */
+	void Delete(const std::string prefix);
+
+	/*!
+	 * \brief Return the configured Film width, height and if sub-region
+	 * rendering is enabled or less.
+	 * 
+	 * \param filmFullWidth is where the configured Film width is returned if the
+	 * pointer is not NULL. 
+	 * \param filmFullHeight is where the configured Film height is returned if the
+	 * pointer is not NULL. 
+	 * \param filmSubRegion is an array of 4 values with the horizontal
+	 * (followed by the vertical) begin and end of the Film region to
+	 * render (in pixels).
+	 *
+	 * \return True if there is a sub-region to render, false otherwise.
+	 */
+	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
+		u_int *filmSubRegion) const;
+
+	/*!
+	 * \brief Returns a Properties container with all default values
+	 * 
+	 * \return the default Properties.
+	 */
+	static const luxrays::Properties &GetDefaultProperties();
 
 	friend class RenderSession;
 
@@ -345,7 +404,15 @@ public:
 	void EndSceneEdit();
 
 	/*!
+	 * \brief Used to wait for the next frame with real-time render engines like
+	 * RTPATHOCL or RTBIASPATHOCL. It does nothing with other render engines.
+	 */
+	void WaitNewFrame();
+
+	/*!
 	 * \brief Checks if it is time to save the film according the RenderConfig.
+	 *
+	 * \return true if it is time to save the Film, false otherwise.
 	 */
 	bool NeedPeriodicFilmSave();
 	/*!
@@ -377,6 +444,55 @@ private:
 	slg::RenderSession *renderSession;
 	luxrays::Properties stats;
 };
+
+/*!
+ * \brief Types of render engines available.
+ */
+typedef slg::RenderEngineType RenderEngineType;
+/*!
+ * \brief Translates the name of a render engine in RenderEngineType.
+ *
+ * \param type is the name of the render engine.
+ */
+extern RenderEngineType String2RenderEngineType(const std::string &type);
+/*!
+ * \brief Translates a RenderEngineType in its name.
+ *
+ * \param type is the RenderEngineType to translate.
+ */
+extern const std::string RenderEngineType2String(const RenderEngineType type);
+/*!
+ * \brief Types of render engines available.
+ */
+typedef slg::SamplerType SamplerType;
+/*!
+ * \brief Translates the name of a sampler in SamplerType.
+ *
+ * \param type is the name of the render engine.
+ */
+extern SamplerType String2SamplerType(const std::string &type);
+/*!
+ * \brief Translates a SamplerType in its name.
+ *
+ * \param type is the SamplerType to translate.
+ */
+extern const std::string SamplerType2String(const RenderEngineType type);
+/*!
+ * \brief Types of render engines available.
+ */
+typedef slg::ToneMapType ToneMapType;
+/*!
+ * \brief Translates the name of a tone mapping in ToneMapType.
+ *
+ * \param type is the name of the render engine.
+ */
+extern ToneMapType String2ToneMapType(const std::string &type);
+/*!
+ * \brief Translates a ToneMapType in its name.
+ *
+ * \param type is the ToneMapType to translate.
+ */
+extern const std::string ToneMapType2String(const RenderEngineType type);
 
 }
 
