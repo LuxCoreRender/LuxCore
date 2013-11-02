@@ -18,8 +18,8 @@
 
 #ifdef WIN32
 // Windows seems to require this #define otherwise VisualC++ looks for
-// Boost Python DLL symbols
-// do not use for unixes, it makes some symbols local
+// Boost Python DLL symbols.
+// Do not use for Unix(s), it makes some symbol local.
 #define BOOST_PYTHON_STATIC_LIB
 #endif
 
@@ -517,9 +517,9 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 }
 
 static void Scene_DefineMesh(Scene *scene, const string &meshName,
-		boost::python::object &p, boost::python::object &vi,
-		boost::python::object &n, boost::python::object &uv,
-		boost::python::object &cols, boost::python::object &alphas) {
+		const boost::python::object &p, const boost::python::object &vi,
+		const boost::python::object &n, const boost::python::object &uv,
+		const boost::python::object &cols, const boost::python::object &alphas) {
 	// NOTE: I would like to use boost::scoped_array because but
 	// some guy has decided that boost::scoped_array must not have
 	// a release() method for some ideological reason...
@@ -670,12 +670,25 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 }
 
 //------------------------------------------------------------------------------
+// Glue for RenderConfig class
+//------------------------------------------------------------------------------
+
+static boost::python::tuple RenderConfig_GetFilmSize(RenderConfig *renderConfig) {
+	u_int filmWidth, filmHeight, filmSubRegion[4];
+	const bool result = renderConfig->GetFilmSize(&filmWidth, &filmHeight, filmSubRegion);
+
+	return boost::python::make_tuple(filmWidth, filmHeight,
+			boost::python::make_tuple(filmSubRegion[0], filmSubRegion[1], filmSubRegion[2], filmSubRegion[3]),
+			result);
+}
+
+//------------------------------------------------------------------------------
 
 BOOST_PYTHON_MODULE(pyluxcore) {
 	docstring_options doc_options(
 		true,	// Show user defined docstrings
 		true,	// Show python signatures
-		false	// Show c++ signatures
+		false	// Show C++ signatures
 	);
 
 	//This 'module' is actually a fake package
@@ -840,8 +853,12 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<RenderConfig>("RenderConfig", init<luxrays::Properties>())
 		.def(init<luxrays::Properties, Scene *>()[with_custodian_and_ward<1, 3>()])
 		.def("GetProperties", &RenderConfig::GetProperties, return_internal_reference<>())
+		.def("GetProperty", &RenderConfig::GetProperty)
 		.def("GetScene", &RenderConfig::GetScene, return_internal_reference<>())
 		.def("Parse", &RenderConfig::Parse)
+		.def("Delete", &RenderConfig::Delete)
+		.def("GetFilmSize", &RenderConfig_GetFilmSize)
+		.def("GetDefaultProperties", &RenderConfig::GetDefaultProperties, return_internal_reference<>()).staticmethod("GetDefaultProperties")
     ;
 
 	//--------------------------------------------------------------------------
@@ -857,6 +874,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetFilm", &RenderSession::GetFilm, return_internal_reference<>())
 		.def("UpdateStats", &RenderSession::UpdateStats)
 		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
+		.def("WaitNewFrame", &RenderSession::WaitNewFrame)
     ;
 }
 

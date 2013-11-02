@@ -30,6 +30,7 @@
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/format.hpp>
 
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/core/device.h"
@@ -37,13 +38,10 @@
 
 #include "smallluxgpu.h"
 #include "displayfunc.h"
-#include "slg/rendersession.h"
-#include "slg/engines/filesaver/filesaver.h"
-#include "slg/telnet/telnet.h"
 
 using namespace std;
 using namespace luxrays;
-using namespace slg;
+using namespace luxcore;
 
 RenderConfig *config = NULL;
 RenderSession *session = NULL;
@@ -65,27 +63,13 @@ float optRotateStep = 4.f;
 
 //------------------------------------------------------------------------------
 
-void LuxRaysDebugHandler(const char *msg) {
-	cerr << "[LuxRays] " << msg << endl;
-}
-
-void SDLDebugHandler(const char *msg) {
-	cerr << "[SDL] " << msg << endl;
-}
-
-void SLGDebugHandler(const char *msg) {
-	if (optUseLuxVRName)
-		cerr << "[LuxVR] " << msg << endl;
-	else
-		cerr << "[SLG] " << msg << endl;
-}
-
 #if defined(__GNUC__) && !defined(__CYGWIN__)
 #include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <typeinfo>
 #include <cxxabi.h>
+#include <boost/format/format_fwd.hpp>
 
 static string Demangle(const char *symbol) {
 	size_t size;
@@ -123,73 +107,47 @@ void SLGTerminate(void) {
 }
 #endif
 
-static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
-	printf("\n*** ");
-	if(fif != FIF_UNKNOWN)
-		printf("%s Format\n", FreeImage_GetFormatFromFIF(fif));
-
-	printf("%s", message);
-	printf(" ***\n");
-}
-
 static int BatchSimpleMode(const double haltTime, const u_int haltSpp, const float haltThreshold) {
-	RenderConfig *config = session->renderConfig;
-	RenderEngine *engine = session->renderEngine;
-
-	// Force the film update at 2.5secs (mostly used by PathOCL)
-	config->SetScreenRefreshInterval(2500);
-
 	// Start the rendering
 	session->Start();
 
-	const double startTime = WallClockTime();
-
-	double lastFilmUpdate = WallClockTime();
-	char buf[512];
+	const Properties &stats = session->GetStats();
 	for (;;) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
+		session->UpdateStats();
 
 		// Check if periodic save is enabled
 		if (session->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
-			session->SaveFilm();
-			lastFilmUpdate =  WallClockTime();
-		} else {
-			// Film update may be required by some render engine to
-			// update statistics, convergence test and more
-			if (WallClockTime() - lastFilmUpdate > 5.0) {
-				session->renderEngine->UpdateFilm();
-				lastFilmUpdate =  WallClockTime();
-			}
+			session->GetFilm().Save();
 		}
 
-		const double now = WallClockTime();
-		const double elapsedTime = now - startTime;
+		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
 		if ((haltTime > 0) && (elapsedTime >= haltTime))
 			break;
 
-		const u_int pass = engine->GetPass();
+		const u_int pass = stats.Get("stats.renderengine.pass").Get<u_int>();
 		if ((haltSpp > 0) && (pass >= haltSpp))
 			break;
 
 		// Convergence test is update inside UpdateFilm()
-		const float convergence = engine->GetConvergence();
+		const float convergence = stats.Get("stats.renderengine.convergence").Get<float>();
 		if ((haltThreshold >= 0.f) && (1.f - convergence <= haltThreshold))
 			break;
 
 		// Print some information about the rendering progress
-		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
-				int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence, engine->GetTotalSamplesSec() / 1000000.0,
-				config->scene->dataSet->GetTotalTriangleCount() / 1000.0);
+		LC_LOG(boost::str(boost::format("[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]") %
+				int(elapsedTime) % int(haltTime) % pass % haltSpp % (100.f * convergence) %
+				(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+				(stats.Get("stats.dataset.trianglecount").Get<size_t>() / 1000.0)));
 
-		SLG_LOG(buf);
 	}
 
 	// Stop the rendering
 	session->Stop();
 
 	// Save the rendered image
-	session->SaveFilm();
+	session->GetFilm().Save();
 
 	delete session;
 	SLG_LOG("Done.");
@@ -198,7 +156,7 @@ static int BatchSimpleMode(const double haltTime, const u_int haltSpp, const flo
 }
 
 void UpdateMoveStep() {
-	const BBox &worldBBox = session->renderConfig->scene->dataSet->GetBBox();
+	const BBox &worldBBox = config->GetScene().GetDataSet().GetBBox();
 	int maxExtent = worldBBox.MaximumExtent();
 
 	const float worldSize = Max(worldBBox.pMax[maxExtent] - worldBBox.pMin[maxExtent], .001f);
@@ -213,17 +171,12 @@ int main(int argc, char *argv[]) {
 	// This is required to run AMD GPU profiler
 	//XInitThreads();
 
-	LuxRays_DebugHandler = ::LuxRaysDebugHandler;
-	SLG_DebugHandler = ::SLGDebugHandler;
-	SLG_SDLDebugHandler = ::SDLDebugHandler;
-
 	try {
-		// Initialize FreeImage Library
-		FreeImage_Initialise(TRUE);
-		FreeImage_SetOutputMessage(FreeImageErrorHandler);
+		// initialize LuxCore
+		luxcore::Init();
 
 		bool batchMode = false;
-		bool telnetServerEnabled = false;
+//		bool telnetServerEnabled = false;
 		Properties cmdLineProp;
 		string configFileName;
 		for (int i = 1; i < argc; i++) {
@@ -237,7 +190,7 @@ int main(int argc, char *argv[]) {
 							" -w [window width]" << endl <<
 							" -e [window height]" << endl <<
 							" -t [halt time in secs]" << endl <<
-							" -T <enable the telnet server>" << endl <<
+//							" -T <enable the telnet server>" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
 							" -m Makes the mouse operations work in \"grab mode\"" << endl << 
@@ -261,7 +214,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 't') cmdLineProp.Set(Property("batch.halttime")(argv[++i]));
 
-				else if (argv[i][1] == 'T') telnetServerEnabled = true;
+//				else if (argv[i][1] == 'T') telnetServerEnabled = true;
 
 				else if (argv[i][1] == 'm') optMouseGrabMode = true;
 
@@ -298,17 +251,16 @@ int main(int argc, char *argv[]) {
 
 		config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
 
-		const u_int haltTime = config->cfg.Get(Property("batch.halttime")(0)).Get<u_int>();
-		const u_int haltSpp = config->cfg.Get(Property("batch.haltspp")(0)).Get<u_int>();
-		const float haltThreshold = config->cfg.Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
+		const Properties &cfgProps = config->GetProperties();
+		const u_int haltTime = cfgProps.Get(Property("batch.halttime")(0)).Get<u_int>();
+		const u_int haltSpp = cfgProps.Get(Property("batch.haltspp")(0)).Get<u_int>();
+		const float haltThreshold = cfgProps.Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
 		if ((haltTime > 0) || (haltSpp > 0) || (haltThreshold >= 0.f))
 			batchMode = true;
 		else
 			batchMode = false;
 
-		const bool fileSaverRenderEngine = (RenderEngine::String2RenderEngineType(
-			config->cfg.Get(Property("renderengine.type")("PATHOCL")).Get<string>()) == FILESAVER);
-
+		const bool fileSaverRenderEngine = (cfgProps.Get(Property("renderengine.type")("PATHOCL")).Get<string>() == "FILESAVER");
 		if (fileSaverRenderEngine) {
 			session = new RenderSession(config);
 
@@ -321,26 +273,30 @@ int main(int argc, char *argv[]) {
 
 			return EXIT_SUCCESS;
 		} else if (batchMode) {
+			// Force the film update at 2.5secs (mostly used by PathOCL)
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(2500)));
+
 			session = new RenderSession(config);
 
 			return BatchSimpleMode(haltTime, haltSpp, haltThreshold);
 		} else {
 			// It is important to initialize OpenGL before OpenCL
-			// (for OpenGL/OpenCL inter-operability)
+			// (require din case of OpenGL/OpenCL inter-operability)
 			u_int width, height;
-			config->GetScreenSize(&width, &height);
+			config->GetFilmSize(&width, &height, NULL);
 			InitGlut(argc, argv, width, height);
 
 			session = new RenderSession(config);
 
 			// Start the rendering
 			session->Start();
+			session->UpdateStats();
 			UpdateMoveStep();
 
-			if (telnetServerEnabled) {
-				TelnetServer telnetServer(18081, session);
-				RunGlut();
-			} else
+//			if (telnetServerEnabled) {
+//				slg::TelnetServer telnetServer(18081, session);
+//				RunGlut();
+//			} else
 				RunGlut();
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)

@@ -196,7 +196,7 @@ void RenderEngine::UpdateFilm() {
 
 			// Do not run the test if we don't have at least 16 new samples per pixel
 			if ((samplesCount  - lastConvergenceTestSamplesCount > pixelCount * 16) &&
-					((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetScreenRefreshInterval())) {
+					((now - lastConvergenceTestTime) * 1000.0 >= renderConfig->GetProperty("screen.refresh.interval").Get<u_int>())) {
 				convergence = 1.f - film->RunConvergenceTest() / (float)pixelCount;
 				lastConvergenceTestTime = now;
 				lastConvergenceTestSamplesCount = samplesCount;

@@ -34,24 +34,27 @@ public:
 	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
 	~RenderConfig();
 
-	void Parse(const luxrays::Properties &props);
+	const luxrays::Property GetProperty(const std::string &name) const;
 
-	void SetScreenRefreshInterval(const u_int t);
-	u_int GetScreenRefreshInterval() const;
+	void Parse(const luxrays::Properties &props);
+	void Delete(const std::string prefix);
+
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
-	void GetScreenSize(u_int *width, u_int *height) const;
 
 	Film *AllocFilm(FilmOutputs &filmOutputs) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
 		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
+	static const luxrays::Properties &GetDefaultProperties();
+
 	luxrays::Properties cfg;
 	Scene *scene;
 
 private:
-	u_int screenRefreshInterval;
+	static void InitDefaultProperties();
+	
 	bool allocatedScene;
 };
 

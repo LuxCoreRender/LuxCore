@@ -22,7 +22,10 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
 #include "slg/slg.h"
+#include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/biaspathocl/biaspathocl.h"
 #include "luxcore/luxcore.h"
+#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -32,44 +35,44 @@ using namespace luxcore;
 // Initialization and logging
 //------------------------------------------------------------------------------
 
-static void (*LuxCoreLogHandler)(const char *msg) = NULL;
+void (*luxcore::LuxCore_LogHandler)(const char *msg) = NULL;
 
 static void DefaultDebugHandler(const char *msg) {
 	cerr << msg << endl;
 }
 
 static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
-	if (LuxCoreLogHandler) {
+	if (LuxCore_LogHandler) {
 		stringstream ss;
 		ss << "[FreeImage] ";
 		if (fif != FIF_UNKNOWN)
 			ss << FreeImage_GetFormatFromFIF(fif) << " Format: ";
 		ss << message;
-		LuxCoreLogHandler(ss.str().c_str());
+		LuxCore_LogHandler(ss.str().c_str());
 	}
 }
 
 static void LuxRaysDebugHandler(const char *msg) {
-	if (LuxCoreLogHandler) {
+	if (LuxCore_LogHandler) {
 		stringstream ss;
 		ss << "[LuxRays] " << msg;
-		LuxCoreLogHandler(ss.str().c_str());
+		LuxCore_LogHandler(ss.str().c_str());
 	}
 }
 
 static void SDLDebugHandler(const char *msg) {
-	if (LuxCoreLogHandler) {
+	if (LuxCore_LogHandler) {
 		stringstream ss;
 		ss << "[SDL] " << msg;
-		LuxCoreLogHandler(ss.str().c_str());
+		LuxCore_LogHandler(ss.str().c_str());
 	}
 }
 
 static void SLGDebugHandler(const char *msg) {
-	if (LuxCoreLogHandler) {
+	if (LuxCore_LogHandler) {
 		stringstream ss;
 		ss << "[LuxCore] " << msg;
-		LuxCoreLogHandler(ss.str().c_str());
+		LuxCore_LogHandler(ss.str().c_str());
 	}
 }
 
@@ -91,10 +94,10 @@ void luxcore::Init(void (*LogHandler)(const char *)) {
 	// Set all debug handlers
 	if (LogHandler) {
 		// User provided handler
-		LuxCoreLogHandler = LogHandler;
+		LuxCore_LogHandler = LogHandler;
 	} else {
 		// Default handler
-		LuxCoreLogHandler = DefaultDebugHandler;
+		LuxCore_LogHandler = DefaultDebugHandler;
 	}
 
 	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
@@ -171,7 +174,7 @@ size_t Film::GetOutputSize(const FilmOutputType type) const {
 		case RAYCOUNT:
 			return pixelCount;
 		default:
-			throw std::runtime_error("Unknown FilmOutputType in Film::GetOutputSize()" + ToString(type));
+			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize()" + ToString(type));
 	}
 }
 
@@ -241,7 +244,7 @@ template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
 			renderSession.renderSession->film->GetOutput<float>(slg::FilmOutputs::RAYCOUNT, buffer, index);
 			break;
 		default:
-			throw std::runtime_error("Unknown FilmOutputType in Film::GetOutput<float>()" + ToString(type));
+			throw runtime_error("Unknown FilmOutputType in Film::GetOutput<float>()" + ToString(type));
 	}
 }
 
@@ -251,8 +254,14 @@ template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer,
 			renderSession.renderSession->film->GetOutput<u_int>(slg::FilmOutputs::MATERIAL_ID, buffer, index);
 			break;
 		default:
-			throw std::runtime_error("Unknown FilmOutputType in Film::GetOutput<u_int>()" + ToString(type));
+			throw runtime_error("Unknown FilmOutputType in Film::GetOutput<u_int>()" + ToString(type));
 	}
+}
+
+const float *Film::GetRGBToneMappedOutput() const {
+	renderSession.renderSession->film->UpdateChannel_RGB_TONEMAPPED();
+
+	return renderSession.renderSession->film->channel_RGB_TONEMAPPED->GetPixels();
 }
 
 //------------------------------------------------------------------------------
@@ -283,7 +292,11 @@ const Properties &Scene::GetProperties() const {
 	return scene->GetProperties();
 }
 
-void Scene::DefineImageMap(const std::string &imgMapName, float *cols, const float gamma,
+const luxrays::DataSet &Scene::GetDataSet() const {
+	return *(scene->dataSet);
+}
+
+void Scene::DefineImageMap(const string &imgMapName, float *cols, const float gamma,
 		const u_int channels, const u_int width, const u_int height) {
 	scene->DefineImageMap(imgMapName, cols, gamma, channels, width, height);
 }
@@ -292,11 +305,11 @@ void Scene::SetDeleteMeshData(const bool v) {
 	scene->extMeshCache.SetDeleteMeshData(v);
 }
 
-void Scene::DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh) {
+void Scene::DefineMesh(const string &meshName, luxrays::ExtTriangleMesh *mesh) {
 	scene->DefineMesh(meshName, mesh);
 }
 
-void Scene::DefineMesh(const std::string &meshName,
+void Scene::DefineMesh(const string &meshName,
 	const long plyNbVerts, const long plyNbTris,
 	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 	luxrays::Spectrum *cols, float *alphas) {
@@ -307,7 +320,7 @@ void Scene::Parse(const luxrays::Properties &props) {
 	scene->Parse(props);
 }
 
-void Scene::DeleteObject(const std::string &objName) {
+void Scene::DeleteObject(const string &objName) {
 	scene->DeleteObject(objName);
 }
 
@@ -353,12 +366,29 @@ const luxrays::Properties &RenderConfig::GetProperties() const {
 	return renderConfig->cfg;
 }
 
+const luxrays::Property RenderConfig::GetProperty(const std::string &name) const {
+	return renderConfig->GetProperty(name);
+}
+
 Scene &RenderConfig::GetScene() {
 	return *scene;
 }
 
 void RenderConfig::Parse(const luxrays::Properties &props) {
 	renderConfig->Parse(props);
+}
+
+void RenderConfig::Delete(const string prefix) {
+	renderConfig->Delete(prefix);
+}
+
+bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
+		u_int *filmSubRegion) const {
+	return renderConfig->GetFilmSize(filmFullWidth, filmFullHeight, filmSubRegion);
+}
+
+const luxrays::Properties &RenderConfig::GetDefaultProperties() {
+	return slg::RenderConfig::GetDefaultProperties();
 }
 
 //------------------------------------------------------------------------------
@@ -391,6 +421,10 @@ void RenderSession::BeginSceneEdit() {
 
 void RenderSession::EndSceneEdit() {
 	renderSession->EndSceneEdit();
+}
+
+void RenderSession::WaitNewFrame() {
+	renderSession->renderEngine->WaitNewFrame();
 }
 
 bool RenderSession::NeedPeriodicFilmSave() {
@@ -429,6 +463,7 @@ void RenderSession::UpdateStats() {
 
 	boost::unordered_map<string, u_int> devCounters;
 	Property devicesNames("stats.renderengine.devices");
+	double totalPerf = 0.0;
 	BOOST_FOREACH(IntersectionDevice *dev, realDevices) {
 		const string &devName = dev->GetName();
 
@@ -438,6 +473,7 @@ void RenderSession::UpdateStats() {
 		devicesNames.Add(uniqueName);
 
 		const string prefix = "stats.renderengine.devices." + uniqueName;
+		totalPerf += dev->GetTotalPerformance();
 		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
 		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
 		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
@@ -445,11 +481,88 @@ void RenderSession::UpdateStats() {
 		stats.Set(Property(prefix + ".memory.used")(dev->GetUsedMemory()));
 	}
 	stats.Set(devicesNames);
+	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));
 
 	// The explicit cast to size_t is required by VisualC++
 	stats.Set(Property("stats.dataset.trianglecount")((size_t)renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
+
+	// Some engine specific statistic
+	switch (renderSession->renderEngine->GetEngineType()) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		case slg::RTPATHOCL: {
+			slg::RTPathOCLRenderEngine *engine = (slg::RTPathOCLRenderEngine *)renderSession->renderEngine;
+			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));
+			break;
+		}
+		case slg::RTBIASPATHOCL: {
+			slg::RTBiasPathOCLRenderEngine *engine = (slg::RTBiasPathOCLRenderEngine *)renderSession->renderEngine;
+			stats.Set(Property("stats.rtbiaspathocl.frame.time")(engine->GetFrameTime()));
+			break;
+		}
+		case slg::BIASPATHOCL: {
+			slg::BiasPathOCLRenderEngine *engine = (slg::BiasPathOCLRenderEngine *)renderSession->renderEngine;
+			
+			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
+			vector<slg::TileRepository::Tile> tiles;
+			engine->GetPendingTiles(tiles);
+			stats.Set(Property("stats.biaspath.tiles.pending.count")(tiles.size()));
+			Property tileProp("stats.biaspath.tiles.pending.coords");
+			BOOST_FOREACH(const slg::TileRepository::Tile &tile, tiles)
+				tileProp.Add(tile.xStart).Add(tile.yStart);
+			stats.Set(tileProp);
+			break;
+		}
+#endif
+		case slg::BIASPATHCPU: {
+			slg::CPUTileRenderEngine *engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
+
+			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
+			vector<slg::TileRepository::Tile> tiles;
+			engine->GetPendingTiles(tiles);
+			stats.Set(Property("stats.biaspath.tiles.pending.count")(tiles.size()));
+			Property tileProp("stats.biaspath.tiles.pending.coords");
+			BOOST_FOREACH(const slg::TileRepository::Tile &tile, tiles)
+				tileProp.Add(tile.xStart).Add(tile.yStart);
+			stats.Set(tileProp);
+			break;
+		}
+		default:
+			break;
+	}
 }
 
 const Properties &RenderSession::GetStats() const {
 	return stats;
+}
+
+//------------------------------------------------------------------------------
+// Utility
+//------------------------------------------------------------------------------
+
+namespace luxcore {
+
+RenderEngineType String2RenderEngineType(const string &type) {
+	return slg::RenderEngine::String2RenderEngineType(type);
+}
+
+const string RenderEngineType2String(const RenderEngineType type) {
+	return slg::RenderEngine::RenderEngineType2String(type);
+}
+
+SamplerType String2SamplerType(const string &type) {
+	return slg::Sampler::String2SamplerType(type);
+}
+
+const string SamplerType2String(const SamplerType type) {
+	return slg::Sampler::SamplerType2String(type);
+}
+
+ToneMapType String2ToneMapType(const string &type) {
+	return slg::String2ToneMapType(type);
+}
+
+const string ToneMapType2String(const ToneMapType type) {
+	return slg::ToneMapType2String(type);
+}
+
 }
