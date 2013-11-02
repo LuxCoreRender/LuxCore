@@ -63,7 +63,7 @@ public:
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	void UpdateFilm();
-	virtual bool WaitNewFrame() { return false; };
+	virtual void WaitNewFrame() { }
 
 	virtual RenderEngineType GetEngineType() const = 0;
 

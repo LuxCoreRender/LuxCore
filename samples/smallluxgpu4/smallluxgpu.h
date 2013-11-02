@@ -36,15 +36,10 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/utils.h"
-#include "slg/sdl/scene.h"
-#include "slg/film/film.h"
-#include "slg/rendersession.h"
-#include "luxrays/utils/atomic.h"
+#include "luxcore/luxcore.h"
 
-#include "slg/slg.h"
-
-extern slg::RenderConfig *config;
-extern slg::RenderSession *session;
+extern luxcore::RenderConfig *config;
+extern luxcore::RenderSession *session;
 
 // Options
 extern bool optMouseGrabMode;

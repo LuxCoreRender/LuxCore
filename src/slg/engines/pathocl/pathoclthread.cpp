@@ -479,7 +479,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				gpuTaskStats);
 
 			// Decide the target refresh time based on screen refresh interval
-			const u_int screenRefreshInterval = engine->renderConfig->GetScreenRefreshInterval();
+			const u_int screenRefreshInterval = engine->renderConfig->GetProperty("screen.refresh.interval").Get<u_int>();
 			double targetTime;
 			if (screenRefreshInterval <= 100)
 				targetTime = 0.025; // 25 ms

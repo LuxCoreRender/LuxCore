@@ -19,15 +19,20 @@
 #ifndef _SLG_TONEMAPPING_H
 #define	_SLG_TONEMAPPING_H
 
+#include <string>
+
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Tonemapping
+// Tone mapping
 //------------------------------------------------------------------------------
 
 typedef enum {
-	TONEMAP_NONE, TONEMAP_LINEAR, TONEMAP_REINHARD02
+	TONEMAP_LINEAR, TONEMAP_REINHARD02
 } ToneMapType;
+
+extern std::string ToneMapType2String(const ToneMapType type);
+extern ToneMapType String2ToneMapType(const std::string &type);
 
 class ToneMapParams {
 public:

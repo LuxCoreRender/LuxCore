@@ -97,7 +97,7 @@ void RTPathOCLRenderEngine::UpdateFilmLockLess() {
 	// Nothing to do: the display thread is in charge to update the film
 }
 
-bool RTPathOCLRenderEngine::WaitNewFrame() {
+void RTPathOCLRenderEngine::WaitNewFrame() {
 	// Threads do the rendering
 	const double t0 = WallClockTime();
 	frameBarrier->wait();
@@ -106,7 +106,7 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 
 	// Re-balance threads
 	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");
-	const double targetFrameTime = renderConfig->GetScreenRefreshInterval() / 1000.0;
+	const double targetFrameTime = renderConfig->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		RTPathOCLRenderThread *t = (RTPathOCLRenderThread *)renderThreads[i];
 		if (t->GetFrameTime() > 0.0) {
@@ -134,8 +134,6 @@ bool RTPathOCLRenderEngine::WaitNewFrame() {
 	UpdateCounters();
 
 	frameTime = WallClockTime() - t0;
-
-	return true;
 }
 
 #endif
