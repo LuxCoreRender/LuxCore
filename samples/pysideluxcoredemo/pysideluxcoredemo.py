@@ -232,9 +232,7 @@ class RenderView(QMainWindow):
 		self.session.BeginSceneEdit()
 
 		# Edit the camera
-		self.cameraPos[0] += t
-		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.camera").
-			Set(pyluxcore.Property("scene.camera.lookat.orig", self.cameraPos)))
+		self.scene.GetCamera().TranslateRight(t);
 
 		# End scene editing
 		self.session.EndSceneEdit()

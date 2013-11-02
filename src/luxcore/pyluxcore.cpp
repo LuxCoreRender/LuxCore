@@ -487,6 +487,18 @@ static void Film_GetOutputUInt2(Film *film, const Film::FilmOutputType type,
 }
 
 //------------------------------------------------------------------------------
+// Glue for Camera class
+//------------------------------------------------------------------------------
+
+static void Camera_Translate(Camera *Camera, const boost::python::tuple t) {
+	Camera->Translate(luxrays::Vector(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2])));
+}
+
+static void Camera_Rotate(Camera *Camera, const float angle, const boost::python::tuple axis) {
+	Camera->Rotate(angle, luxrays::Vector(extract<float>(axis[0]), extract<float>(axis[1]), extract<float>(axis[2])));
+}
+
+//------------------------------------------------------------------------------
 // Glue for Scene class
 //------------------------------------------------------------------------------
 
@@ -830,6 +842,23 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     ;
 
 	//--------------------------------------------------------------------------
+	// Camera class
+	//--------------------------------------------------------------------------
+
+    class_<Camera>("Camera", no_init)
+		.def("Translate", &Camera_Translate)
+		.def("TranslateLeft", &Camera::TranslateLeft)
+		.def("TranslateRight", &Camera::TranslateRight)
+		.def("TranslateForward", &Camera::TranslateForward)
+		.def("TranslateBackward", &Camera::TranslateBackward)
+		.def("Rotate", &Camera_Rotate)
+		.def("RotateLeft", &Camera::RotateLeft)
+		.def("RotateRight", &Camera::RotateRight)
+		.def("RotateUp", &Camera::RotateUp)
+		.def("RotateDown", &Camera::RotateDown)
+    ;
+
+	//--------------------------------------------------------------------------
 	// Scene class
 	//--------------------------------------------------------------------------
 
@@ -844,6 +873,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("RemoveUnusedTextures", &Scene::RemoveUnusedTextures)
 		.def("RemoveUnusedMaterials", &Scene::RemoveUnusedMaterials)
 		.def("RemoveUnusedMeshes", &Scene::RemoveUnusedMeshes)
+		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())
     ;
 
 	//--------------------------------------------------------------------------
