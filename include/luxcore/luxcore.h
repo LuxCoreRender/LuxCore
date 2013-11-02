@@ -148,6 +148,91 @@ private:
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const;
 template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const;
 
+class Scene;
+
+/*!
+ * \brief Film stores all the outputs of a rendering. It can be obtained only
+ * from a RenderSession.
+ */
+class Camera {
+public:
+	~Camera();
+
+	/*!
+	 * \brief Translates by vector t. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 *
+	 * \param t is the translation vector.
+	 */
+	void Translate(const luxrays::Vector &t) const;
+	/*!
+	 * \brief Translates at left by t. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 * 
+	 * \param t is the left translation.
+	 */
+	void TranslateLeft(const float t) const;
+	/*!
+	 * \brief Translates at right by t. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 */
+	void TranslateRight(const float t) const;
+	/*!
+	 * \brief Translates forward by t. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 */
+	void TranslateForward(const float t) const;
+	/*!
+	 * \brief Translates backward by t. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 */
+	void TranslateBackward(const float t) const;
+
+	/*!
+	 * \brief Rotates by angle around the axis. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 * 
+	 * \param angle is rotation angle.
+	 * \param axis is rotation axis.
+	 */
+	void Rotate(const float angle, const luxrays::Vector &axis) const;
+	/*!
+	* \brief Rotates the left by angle. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 * 
+	 * \param angle is rotation angle.
+	 */
+	void RotateLeft(const float angle) const;
+	/*!
+	 * \brief Rotates the right by angle. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 * 
+	 * \param angle is rotation angle.
+	 */
+	void RotateRight(const float angle) const;
+	/*!
+	 * \brief Rotates the up by angle. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 * 
+	 * \param angle is rotation angle.
+	 */
+	void RotateUp(const float angle) const;
+	/*!
+	 * \brief Rotates the down by angle. This method can be used only when
+	 * the Scene is not in use by a RenderSession.
+	 * 
+	 * \param angle is rotation angle.
+	 */
+	void RotateDown(const float angle) const;
+
+	friend class Scene;
+
+private:
+	Camera(const Scene &scene);
+	
+	const Scene &scene;
+};
+
 /*!
  * \brief Scene stores textures, materials and objects definitions.
  */
@@ -181,6 +266,13 @@ public:
 	 * \return a reference to the Properties of this Scene.
 	 */
 	const luxrays::DataSet &GetDataSet() const;
+	/*!
+	 * \brief Returns the Camera of the scene.
+	 *
+	 * \return a reference to the Camera of this Scene. It is available only
+	 * during the rendering (i.e. after a RenderSession::Start()).
+	 */
+	const Camera &GetCamera() const;
 
 	/*!
 	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
@@ -266,11 +358,13 @@ public:
 	void RemoveUnusedMeshes();
 
 	friend class RenderConfig;
+	friend class Camera;
 
 private:
 	Scene(slg::Scene *scn);
 
 	slg::Scene *scene;
+	Camera camera;
 	bool allocatedScene;
 };
 

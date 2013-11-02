@@ -362,75 +362,11 @@ void Scene::ParseCamera(const Properties &props) {
 		return;
 	}
 
-	Point orig, target;
-	if (props.IsDefined("scene.camera.lookat")) {
-		SDL_LOG("WARNING: deprecated property scene.camera.lookat");
-
-		const Property &prop = props.Get("scene.camera.lookat");
-		orig.x = prop.Get<float>(0);
-		orig.y = prop.Get<float>(1);
-		orig.z = prop.Get<float>(2);
-		target.x = prop.Get<float>(3);
-		target.y = prop.Get<float>(4);
-		target.z = prop.Get<float>(5);
-	} else {
-		orig = props.Get(Property("scene.camera.lookat.orig")(0.f, 10.f, 0.f)).Get<Point>();
-		target = props.Get(Property("scene.camera.lookat.target")(0.f, 0.f, 0.f)).Get<Point>();
-	}
-
-	SDL_LOG("Camera position: " << orig);
-	SDL_LOG("Camera target: " << target);
-
-	const Vector up = props.Get(Property("scene.camera.up")(0.f, 0.f, 1.f)).Get<Vector>();
-
-	auto_ptr<PerspectiveCamera> newCamera;
-	if (props.IsDefined("scene.camera.screenwindow")) {
-		float screenWindow[4];
-
-		const Property &prop = props.Get(Property("scene.camera.screenwindow")(0.f, 1.f, 0.f, 1.f));
-		screenWindow[0] = prop.Get<float>(0);
-		screenWindow[1] = prop.Get<float>(1);
-		screenWindow[2] = prop.Get<float>(2);
-		screenWindow[3] = prop.Get<float>(3);
-
-		newCamera.reset(new PerspectiveCamera(orig, target, up, &screenWindow[0]));
-	} else
-		newCamera.reset(new PerspectiveCamera(orig, target, up));
-
-	newCamera->clipHither = props.Get(Property("scene.camera.cliphither")(1e-3f)).Get<float>();
-	newCamera->clipYon = props.Get(Property("scene.camera.clipyon")(1e30f)).Get<float>();
-	newCamera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
-	newCamera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
-	newCamera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
-
-	if (props.Get(Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>()) {
-		SDL_LOG("Camera horizontal stereo enabled");
-		newCamera->SetHorizontalStereo(true);
-
-		const float eyesDistance = props.Get(Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
-		SDL_LOG("Camera horizontal stereo eyes distance: " << eyesDistance);
-		newCamera->SetHorizontalStereoEyesDistance(eyesDistance);
-		const float lesnDistance = props.Get(Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
-		SDL_LOG("Camera horizontal stereo lens distance: " << lesnDistance);
-		newCamera->SetHorizontalStereoLensDistance(lesnDistance);
-
-		// Check if I have to enable Oculus Rift Barrel post-processing
-		if (props.Get(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(false)).Get<bool>()) {
-			SDL_LOG("Camera Oculus Rift Barrel post-processing enabled");
-			newCamera->SetOculusRiftBarrel(true);
-		} else {
-			SDL_LOG("Camera Oculus Rift Barrel post-processing disabled");
-			newCamera->SetOculusRiftBarrel(false);
-		}
-	} else {
-		SDL_LOG("Camera horizontal stereo disabled");
-		newCamera->SetHorizontalStereo(false);
-	}
+	Camera *newCamera = Camera::AllocCamera(props);
 
 	// Use the new camera
 	delete camera;
-	camera = newCamera.get();
-	newCamera.release();
+	camera = newCamera;
 
 	editActions.AddAction(CAMERA_EDIT);
 }

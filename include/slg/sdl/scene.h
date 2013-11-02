@@ -91,7 +91,7 @@ public:
 
 	//--------------------------------------------------------------------------
 
-	PerspectiveCamera *camera;
+	Camera *camera;
 
 	luxrays::ExtMeshCache extMeshCache; // Mesh objects cache
 	ImageMapCache imgMapCache; // Image maps cache

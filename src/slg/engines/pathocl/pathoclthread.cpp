@@ -251,7 +251,6 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 
 void PathOCLRenderThread::InitSampleDataBuffer() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
-	Scene *scene = engine->renderConfig->scene;
 	const u_int taskCount = engine->taskCount;
 	const bool hasPassThrough = engine->compiledScene->RequiresPassThrough();
 
@@ -261,7 +260,7 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 		// IDX_EYE_PASSTROUGHT
 		(hasPassThrough ? 1 : 0) +
 		// IDX_DOF_X, IDX_DOF_Y
-		((scene->camera->lensRadius > 0.f) ? 2 : 0);
+		((engine->compiledScene->camera.lensRadius > 0.f) ? 2 : 0);
 	const size_t PerPathVertexDimension =
 		// IDX_PASSTHROUGH,
 		(hasPassThrough ? 1 : 0) +

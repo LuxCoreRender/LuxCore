@@ -76,7 +76,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	PerspectiveCamera *camera = scene->camera;
+	Camera *camera = scene->camera;
 	Film *film = threadFilm;
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();
@@ -155,7 +155,7 @@ void LightCPURenderThread::RenderFunc() {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
-	PerspectiveCamera *camera = scene->camera;
+	Camera *camera = scene->camera;
 	Film *film = threadFilm;
 
 	// Setup the sampler

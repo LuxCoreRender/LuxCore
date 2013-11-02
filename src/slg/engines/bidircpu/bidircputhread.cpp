@@ -410,7 +410,7 @@ void BiDirCPURenderThread::RenderFunc() {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
-	PerspectiveCamera *camera = scene->camera;
+	Camera *camera = scene->camera;
 	Film *film = threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();

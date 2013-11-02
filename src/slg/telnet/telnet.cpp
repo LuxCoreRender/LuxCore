@@ -181,40 +181,40 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 							respStream << film->GetToneMapParams()->GetType() << "\n";
 							respStream << "OK\n";
 							boost::asio::write(socket, response);
-						} else if (property == "scene.camera.lookat") {
-							boost::asio::streambuf response;
-							std::ostream respStream(&response);
-							const Point &o = scene->camera->orig;
-							const Point &t = scene->camera->target;
-							respStream << o.x << " " << o.y << " " << o.z << " "
-									<< t.x << " " << t.y << " " << t.z << "\n";
-							respStream << "OK\n";
-							boost::asio::write(socket, response);
-						} else if (property == "scene.camera.up") {
-							boost::asio::streambuf response;
-							std::ostream respStream(&response);
-							const Vector &up = scene->camera->up;
-							respStream << up.x << " " << up.y << " " << up.z << "\n";
-							respStream << "OK\n";
-							boost::asio::write(socket, response);
-						} else if (property == "scene.camera.lensradius") {
-							boost::asio::streambuf response;
-							std::ostream respStream(&response);
-							respStream << scene->camera->lensRadius << "\n";
-							respStream << "OK\n";
-							boost::asio::write(socket, response);
-						} else if (property == "scene.camera.fieldofview") {
-							boost::asio::streambuf response;
-							std::ostream respStream(&response);
-							respStream << scene->camera->fieldOfView << "\n";
-							respStream << "OK\n";
-							boost::asio::write(socket, response);
-						} else if (property == "scene.camera.focaldistance") {
-							boost::asio::streambuf response;
-							std::ostream respStream(&response);
-							respStream << scene->camera->focalDistance << "\n";
-							respStream << "OK\n";
-							boost::asio::write(socket, response);
+//						} else if (property == "scene.camera.lookat") {
+//							boost::asio::streambuf response;
+//							std::ostream respStream(&response);
+//							const Point &o = scene->camera->orig;
+//							const Point &t = scene->camera->target;
+//							respStream << o.x << " " << o.y << " " << o.z << " "
+//									<< t.x << " " << t.y << " " << t.z << "\n";
+//							respStream << "OK\n";
+//							boost::asio::write(socket, response);
+//						} else if (property == "scene.camera.up") {
+//							boost::asio::streambuf response;
+//							std::ostream respStream(&response);
+//							const Vector &up = scene->camera->up;
+//							respStream << up.x << " " << up.y << " " << up.z << "\n";
+//							respStream << "OK\n";
+//							boost::asio::write(socket, response);
+//						} else if (property == "scene.camera.lensradius") {
+//							boost::asio::streambuf response;
+//							std::ostream respStream(&response);
+//							respStream << scene->camera->lensRadius << "\n";
+//							respStream << "OK\n";
+//							boost::asio::write(socket, response);
+//						} else if (property == "scene.camera.fieldofview") {
+//							boost::asio::streambuf response;
+//							std::ostream respStream(&response);
+//							respStream << scene->camera->fieldOfView << "\n";
+//							respStream << "OK\n";
+//							boost::asio::write(socket, response);
+//						} else if (property == "scene.camera.focaldistance") {
+//							boost::asio::streambuf response;
+//							std::ostream respStream(&response);
+//							respStream << scene->camera->focalDistance << "\n";
+//							respStream << "OK\n";
+//							boost::asio::write(socket, response);
 						} else if (property == "image.filename") {
 							boost::asio::streambuf response;
 							std::ostream respStream(&response);
@@ -760,73 +760,73 @@ void TelnetServer::ServerThreadImpl(TelnetServer *telnetServer) {
 									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 									SLG_LOG("[Telnet server] Wrong state: " << properties);
 								}
-							} else if (propertyName == "scene.camera.lookat") {
-								// Check if we are in the right state
-								if (state == EDIT) {
-									const Property prop = props.Get(Property(propertyName)(10.f, 0.f, 0.f)(0.f, 0.f, 0.f));
-									Point o(prop.Get<float>(0), prop.Get<float>(1), prop.Get<float>(2));
-									Point t(prop.Get<float>(3), prop.Get<float>(4), prop.Get<float>(5));
-
-									scene->camera->orig = o;
-									scene->camera->target = t;
-									scene->camera->Update(film->GetWidth(),
-											film->GetHeight());
-									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
-								} else {
-									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << properties);
-								}
-							} else if (propertyName == "scene.camera.up") {
-								// Check if we are in the right state
-								if (state == EDIT) {
-									Vector up(props.Get(Property(propertyName)(1.f, 1.f, 1.f)).Get<Vector>());
-
-									scene->camera->up = Normalize(up);
-									scene->camera->Update(film->GetWidth(),
-											film->GetHeight());
-									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
-								} else {
-									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << properties);
-								}
-							} else if (propertyName == "scene.camera.lensradius") {
-								// Check if we are in the right state
-								if (state == EDIT) {
-									scene->camera->lensRadius = props.Get(Property(propertyName)(0.f)).Get<float>();
-									scene->camera->Update(film->GetWidth(),
-											film->GetHeight());
-									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
-								} else {
-									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << properties);
-								}
-							} else if (propertyName == "scene.camera.fieldofview") {
-								// Check if we are in the right state
-								if (state == EDIT) {
-									scene->camera->fieldOfView = props.Get(Property(propertyName)(0.f)).Get<float>();
-									scene->camera->Update(film->GetWidth(),
-											film->GetHeight());
-									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
-								} else {
-									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << properties);
-								}
-							} else if (propertyName == "scene.camera.focaldistance") {
-								// Check if we are in the right state
-								if (state == EDIT) {
-									scene->camera->focalDistance = props.Get(Property(propertyName)(0.f)).Get<float>();
-									scene->camera->Update(film->GetWidth(),
-											film->GetHeight());
-									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
-								} else {
-									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
-									SLG_LOG("[Telnet server] Wrong state: " << properties);
-								}
+//							} else if (propertyName == "scene.camera.lookat") {
+//								// Check if we are in the right state
+//								if (state == EDIT) {
+//									const Property prop = props.Get(Property(propertyName)(10.f, 0.f, 0.f)(0.f, 0.f, 0.f));
+//									Point o(prop.Get<float>(0), prop.Get<float>(1), prop.Get<float>(2));
+//									Point t(prop.Get<float>(3), prop.Get<float>(4), prop.Get<float>(5));
+//
+//									scene->camera->orig = o;
+//									scene->camera->target = t;
+//									scene->camera->Update(film->GetWidth(),
+//											film->GetHeight());
+//									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+//								} else {
+//									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+//									SLG_LOG("[Telnet server] Wrong state: " << properties);
+//								}
+//							} else if (propertyName == "scene.camera.up") {
+//								// Check if we are in the right state
+//								if (state == EDIT) {
+//									Vector up(props.Get(Property(propertyName)(1.f, 1.f, 1.f)).Get<Vector>());
+//
+//									scene->camera->up = Normalize(up);
+//									scene->camera->Update(film->GetWidth(),
+//											film->GetHeight());
+//									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+//								} else {
+//									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+//									SLG_LOG("[Telnet server] Wrong state: " << properties);
+//								}
+//							} else if (propertyName == "scene.camera.lensradius") {
+//								// Check if we are in the right state
+//								if (state == EDIT) {
+//									scene->camera->lensRadius = props.Get(Property(propertyName)(0.f)).Get<float>();
+//									scene->camera->Update(film->GetWidth(),
+//											film->GetHeight());
+//									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+//								} else {
+//									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+//									SLG_LOG("[Telnet server] Wrong state: " << properties);
+//								}
+//							} else if (propertyName == "scene.camera.fieldofview") {
+//								// Check if we are in the right state
+//								if (state == EDIT) {
+//									scene->camera->fieldOfView = props.Get(Property(propertyName)(0.f)).Get<float>();
+//									scene->camera->Update(film->GetWidth(),
+//											film->GetHeight());
+//									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+//								} else {
+//									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+//									SLG_LOG("[Telnet server] Wrong state: " << properties);
+//								}
+//							} else if (propertyName == "scene.camera.focaldistance") {
+//								// Check if we are in the right state
+//								if (state == EDIT) {
+//									scene->camera->focalDistance = props.Get(Property(propertyName)(0.f)).Get<float>();
+//									scene->camera->Update(film->GetWidth(),
+//											film->GetHeight());
+//									session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//									boost::asio::write(socket, boost::asio::buffer("OK\n", 3));
+//								} else {
+//									boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
+//									SLG_LOG("[Telnet server] Wrong state: " << properties);
+//								}
 							} else {
 								boost::asio::write(socket, boost::asio::buffer("ERROR\n", 6));
 								SLG_LOG("[Telnet server] Unknown property: " << properties);

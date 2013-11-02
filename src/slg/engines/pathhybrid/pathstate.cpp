@@ -58,7 +58,7 @@ void PathHybridState::Init(const PathHybridRenderThread *thread) {
 	directLightRadiance = Spectrum();
 
 	// Initialize eye ray
-	PerspectiveCamera *camera = scene->camera;
+	Camera *camera = scene->camera;
 	Film *film = thread->threadFilm;
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();

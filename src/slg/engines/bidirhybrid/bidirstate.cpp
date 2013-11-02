@@ -422,7 +422,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 	BiDirHybridRenderThread *thread = (BiDirHybridRenderThread *)renderThread;
 	BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)thread->renderEngine;
 	Scene *scene = renderEngine->renderConfig->scene;
-	PerspectiveCamera *camera = scene->camera;
+	Camera *camera = scene->camera;
 	Film *film = thread->threadFilm;
 	const unsigned int filmWidth = film->GetWidth();
 	const unsigned int filmHeight = film->GetHeight();

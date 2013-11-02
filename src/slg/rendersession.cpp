@@ -95,7 +95,7 @@ void RenderSession::EndSceneEdit() {
 
 	// Make a copy of the edit actions
 	const EditActionList editActions = renderConfig->scene->editActions;
-
+	
 	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
 			(renderEngine->GetEngineType() != RTBIASPATHOCL)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
