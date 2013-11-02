@@ -51,7 +51,13 @@ void RenderConfig::InitDefaultProperties() {
 
 			defaultProperties->Set(Property("accelerator.instances.enable")(true));
 			defaultProperties->Set(Property("accelerator.type")("AUTO"));
-			// Film Filter
+
+			// Batch related Properties
+			defaultProperties->Set(Property("batch.halttime")(0u));
+			defaultProperties->Set(Property("batch.haltspp")(0u));
+			defaultProperties->Set(Property("batch.haltthreshold")(-1.f));
+
+			// Film Filter related Properties
 			defaultProperties->Set(Property("film.filter.type")("GAUSSIAN"));
 			defaultProperties->Set(Property("film.filter.width")(1.5f));
 			defaultProperties->Set(Property("film.filter.gaussian.alpha")(2.f));
@@ -59,7 +65,8 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("film.filter.mitchell.c")(1.f / 3.f));
 			defaultProperties->Set(Property("film.filter.mitchellss.b")(1.f / 3.f));
 			defaultProperties->Set(Property("film.filter.mitchellss.c")(1.f / 3.f));
-			// Film ToneMap
+
+			// Film ToneMap related Properties
 			defaultProperties->Set(Property("film.tonemap.type")("LINEAR"));
 			LinearToneMapParams toneMapLinear;
 			defaultProperties->Set(Property("film.tonemap.linear.scale")(toneMapLinear.scale));
@@ -72,7 +79,7 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("film.height")(480u));
 			defaultProperties->Set(Property("film.width")(640u));
 
-			// Sampler
+			// Sampler related Properties
 			defaultProperties->Set(Property("sampler.type")("RANDOM"));
 			defaultProperties->Set(Property("sampler.metropolis.largesteprate")(.4f));
 			defaultProperties->Set(Property("sampler.metropolis.maxconsecutivereject")(512));

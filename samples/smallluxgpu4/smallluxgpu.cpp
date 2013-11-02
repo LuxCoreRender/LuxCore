@@ -251,16 +251,15 @@ int main(int argc, char *argv[]) {
 
 		config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
 
-		const Properties &cfgProps = config->GetProperties();
-		const u_int haltTime = cfgProps.Get(Property("batch.halttime")(0)).Get<u_int>();
-		const u_int haltSpp = cfgProps.Get(Property("batch.haltspp")(0)).Get<u_int>();
-		const float haltThreshold = cfgProps.Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
+		const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
+		const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
+		const float haltThreshold = config->GetProperty("batch.haltthreshold").Get<float>();
 		if ((haltTime > 0) || (haltSpp > 0) || (haltThreshold >= 0.f))
 			batchMode = true;
 		else
 			batchMode = false;
 
-		const bool fileSaverRenderEngine = (cfgProps.Get(Property("renderengine.type")("PATHOCL")).Get<string>() == "FILESAVER");
+		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");
 		if (fileSaverRenderEngine) {
 			session = new RenderSession(config);
 
