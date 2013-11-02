@@ -699,12 +699,12 @@ static void motionFunc(int x, int y) {
 			session->BeginSceneEdit();
 
 			if (optMouseGrabMode) {
-				config->GetScene().GetCamera().RotateUp(0.04f * distY * optRotateStep);
-				config->GetScene().GetCamera().RotateLeft(0.04f * distX * optRotateStep);
+				config->GetScene().GetCamera().RotateUp(.04f * distY * optRotateStep);
+				config->GetScene().GetCamera().RotateLeft(.04f * distX * optRotateStep);
 			}
 			else {
-				config->GetScene().GetCamera().RotateDown(0.04f * distY * optRotateStep);
-				config->GetScene().GetCamera().RotateRight(0.04f * distX * optRotateStep);
+				config->GetScene().GetCamera().RotateDown(.04f * distY * optRotateStep);
+				config->GetScene().GetCamera().RotateRight(.04f * distX * optRotateStep);
 			};
 
 			session->EndSceneEdit();
@@ -725,12 +725,12 @@ static void motionFunc(int x, int y) {
 			session->BeginSceneEdit();
 
 			if (optMouseGrabMode) {
-				config->GetScene().GetCamera().TranslateLeft(0.04f * distX * optMoveStep);
-				config->GetScene().GetCamera().TranslateForward(0.04f * distY * optMoveStep);
+				config->GetScene().GetCamera().TranslateLeft(.04f * distX * optMoveStep);
+				config->GetScene().GetCamera().TranslateForward(.04f * distY * optMoveStep);
 			}
 			else {
-				config->GetScene().GetCamera().TranslateRight(0.04f * distX * optMoveStep);
-				config->GetScene().GetCamera().TranslateBackward(0.04f * distY * optMoveStep);
+				config->GetScene().GetCamera().TranslateRight(.04f * distX * optMoveStep);
+				config->GetScene().GetCamera().TranslateBackward(.04f * distY * optMoveStep);
 			}
 
 			session->EndSceneEdit();
