@@ -108,8 +108,8 @@ void PathOCLRenderEngine::StartLockLess() {
 			sampler->type = slg::ocl::RANDOM;
 			break;
 		case METROPOLIS: {
-			const float largeMutationProbability = cfg.Get(Property("sampler.largesteprate")(.4f)).Get<int>();
-			const float imageMutationRange = cfg.Get(Property("sampler.imagemutationrate")(.1f)).Get<int>();
+			const float largeMutationProbability = cfg.Get(Property("sampler.largesteprate")(.4f)).Get<float>();
+			const float imageMutationRange = cfg.Get(Property("sampler.imagemutationrate")(.1f)).Get<float>();
 			const u_int maxRejects = cfg.Get(Property("sampler.maxconsecutivereject")(512)).Get<u_int>();
 
 			sampler->type = slg::ocl::METROPOLIS;
