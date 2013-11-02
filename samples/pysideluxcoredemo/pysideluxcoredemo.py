@@ -344,10 +344,10 @@ class RenderView(QMainWindow):
 		
 		self.luxBallPos[0] += t
 		# Set the new LuxBall position (note: using the transpose matrix)
-		mat = [1.0, 0.0, 0.0, self.luxBallPos[0],
-			0.0, 1.0, 0.0, self.luxBallPos[1],
-			0.0, 0.0, 1.0, self.luxBallPos[2],
-			0.0, 0.0, 0.0, 1.0]
+		mat = [1.0, 0.0, 0.0, 0.0,
+			0.0, 1.0, 0.0, 0.0,
+			0.0, 0.0, 1.0, 0.0,
+			self.luxBallPos[0], self.luxBallPos[1], self.luxBallPos[2], 1.0]
 		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxtext").
 			Set(pyluxcore.Property("scene.objects.luxtext.transformation", mat)))
 		self.scene.Parse(self.scene.GetProperties().GetAllProperties("scene.objects.luxinner").
