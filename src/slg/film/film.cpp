@@ -18,6 +18,7 @@
 
 #include <limits>
 #include <algorithm>
+#include <exception>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
@@ -27,8 +28,33 @@
 #include "slg/editaction.h"
 #include "luxrays/utils/properties.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// Tone mapping
+//------------------------------------------------------------------------------
+
+string slg::ToneMapType2String(const ToneMapType type) {
+	switch (type) {		
+		case TONEMAP_LINEAR:
+			return "LINEAR";
+		case TONEMAP_REINHARD02:
+			return "REINHARD02";
+		default:
+			throw runtime_error("Unknown tone mapping type: " + boost::lexical_cast<string>(type));
+	}
+}
+
+ToneMapType slg::String2ToneMapType(const std::string &type) {
+	if ((type.compare("0") == 0) || (type.compare("LINEAR") == 0))
+		return TONEMAP_LINEAR;
+	if ((type.compare("1") == 0) || (type.compare("REINHARD02") == 0))
+		return TONEMAP_REINHARD02;
+
+	throw runtime_error("Unknown tone mapping type: " + type);
+}
 
 //------------------------------------------------------------------------------
 // FilmOutput
@@ -1182,13 +1208,6 @@ void Film::UpdateChannel_RGB_TONEMAPPED() {
 	}
 
 	switch (toneMapParams->GetType()) {
-		case TONEMAP_NONE: {
-			Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
-			std::vector<bool> frameBufferMask(pixelCount, false);
-
-			MergeSampleBuffers(p, frameBufferMask);
-			break;
-		}
 		case TONEMAP_LINEAR: {
 			const LinearToneMapParams &tm = (LinearToneMapParams &)(*toneMapParams);
 			Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();

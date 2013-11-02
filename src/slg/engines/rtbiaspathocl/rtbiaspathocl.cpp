@@ -99,7 +99,7 @@ void RTBiasPathOCLRenderEngine::UpdateFilmLockLess() {
 	// Nothing to do: the display thread is in charge to update the film
 }
 
-bool RTBiasPathOCLRenderEngine::WaitNewFrame() {
+void RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	// Threads do the rendering
 	const double t0 = WallClockTime();
 
@@ -116,8 +116,6 @@ bool RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	UpdateCounters();
 
 	frameTime = WallClockTime() - t0;
-
-	return true;
 }
 
 #endif

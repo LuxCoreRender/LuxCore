@@ -43,15 +43,6 @@ class RenderView(QMainWindow):
 		# Change the render engine to PATHCPU
 		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
 
-		self.filmWidth = props.Get("film.width").GetInt()
-		self.filmHeight = props.Get("film.height").GetInt()
-		self.setGeometry(0, 0, self.filmWidth, self.filmHeight)
-		self.setWindowTitle('LuxCore RenderView')
-		self.center()
-		
-		# Allocate the image for the rendering
-		self.allocateImageBuffers()
-
 		# Read the configuration and start the rendering
 		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
 			props.Get("images.scale", [1.0]).GetFloat())
@@ -59,8 +50,18 @@ class RenderView(QMainWindow):
 		# Save Camera position
 		self.cameraPos = sceneProps.Get("scene.camera.lookat.orig").GetFloats()
 		self.luxBallPos = [0.0, 0.0, 0.0]
+		
 		# Create the rendering configuration
 		self.config = pyluxcore.RenderConfig(props, self.scene)
+		self.filmWidth, self.filmHeight = self.config.GetFilmSize()[:2]
+	
+		# Allocate the image for the rendering
+		self.allocateImageBuffers()
+
+		self.setGeometry(0, 0, self.filmWidth, self.filmHeight)
+		self.setWindowTitle('LuxCore RenderView')
+		self.center()
+		
 		# Create the rendering session
 		self.session = pyluxcore.RenderSession(self.config)
 		# Start the rendering
@@ -442,18 +443,15 @@ class RenderView(QMainWindow):
 		self.session = None
 		
 		# Delete old channel outputs
-		props = self.config.GetProperties()
-		props.DeleteAll(props.GetAllNames("film.outputs"))
+		self.config.Delete("film.outputs")
 		
 		# Set the new channel outputs
-		props.Set(pyluxcore.Property("film.outputs.1.type", ["RGB_TONEMAPPED"])). \
-			Set(pyluxcore.Property("film.outputs.1.filename", ["luxball_RGB_TONEMAPPED.png"])). \
-			Set(pyluxcore.Property("film.outputs.2.type", [str(type)])). \
-			Set(pyluxcore.Property("film.outputs.2.filename", ["luxball_SELECTED_OUTPUT.exr"]))
+		self.config.Parse(pyluxcore.Properties().
+			Set(pyluxcore.Property("film.outputs.1.type", ["RGB_TONEMAPPED"])).
+			Set(pyluxcore.Property("film.outputs.1.filename", ["luxball_RGB_TONEMAPPED.png"])).
+			Set(pyluxcore.Property("film.outputs.2.type", [str(type)])).
+			Set(pyluxcore.Property("film.outputs.2.filename", ["luxball_SELECTED_OUTPUT.exr"])))
 		self.selectedFilmChannel = type
-		
-		# Create the new RenderConfig
-		self.config = pyluxcore.RenderConfig(props, self.scene)
 		
 		# Re-start the rendering
 		self.session = pyluxcore.RenderSession(self.config)
@@ -489,22 +487,22 @@ class RenderView(QMainWindow):
 		painter.drawImage(QPoint(0, 0), image)
 	
 	def resizeEvent(self, event):
-		# Stop the rendering
-		self.session.Stop()
-		self.session = None
-		
-		# Set the new size
-		self.filmWidth = int(event.size().width())
-		self.filmHeight = int(event.size().height())
-		self.config.Parse(
-			pyluxcore.Properties().
-			Set(pyluxcore.Property("film.width", [self.filmWidth])).
-			Set(pyluxcore.Property("film.height", [self.filmHeight])))
-		self.allocateImageBuffers()
-		
-		# Re-start the rendering
-		self.session = pyluxcore.RenderSession(self.config)
-		self.session.Start()
+		if (event.size().width() != self.filmWidth) or (event.size().height() != self.filmHeight):
+			# Stop the rendering
+			self.session.Stop()
+			self.session = None
+
+			# Set the new size
+			self.filmWidth = int(event.size().width())
+			self.filmHeight = int(event.size().height())
+			self.config.Parse(pyluxcore.Properties().
+				Set(pyluxcore.Property("film.width", [self.filmWidth])).
+				Set(pyluxcore.Property("film.height", [self.filmHeight])))
+			self.allocateImageBuffers()
+
+			# Re-start the rendering
+			self.session = pyluxcore.RenderSession(self.config)
+			self.session.Start()
 		
 		super(RenderView, self).resizeEvent(event)
 	

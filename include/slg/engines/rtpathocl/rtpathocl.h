@@ -103,7 +103,7 @@ public:
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
-	bool WaitNewFrame();
+	void WaitNewFrame();
 
 	friend class RTPathOCLRenderThread;
 

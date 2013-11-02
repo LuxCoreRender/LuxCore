@@ -25,6 +25,8 @@
 #endif
 #include <math.h>
 
+#include <boost/format.hpp>
+
 // Jens's patch for MacOS
 #if defined(__APPLE__)
 #include <GLUT/glut.h>
@@ -38,19 +40,9 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
 
-#include "slg/renderconfig.h"
-#include "slg/rendersession.h"
-#include "slg/film/film.h"
-#include "slg/engines/rtpathocl/rtpathocl.h"
-#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
-#include "slg/engines/biaspathcpu/biaspathcpu.h"
-#include "slg/engines/biaspathocl/biaspathocl.h"
-
 using namespace std;
 using namespace luxrays;
-using namespace slg;
-
-static char captionBuffer[512];
+using namespace luxcore;
 
 static void PrintString(void *font, const char *string) {
 	int len, i;
@@ -76,12 +68,12 @@ static void PrintHelpAndSettings() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.5f);
-	glRecti(10, 20, session->film->GetWidth() - 10, session->film->GetHeight() - 20);
+	glRecti(10, 20, session->GetFilm().GetWidth() - 10, session->GetFilm().GetHeight() - 20);
 	glDisable(GL_BLEND);
 
 	glColor3f(1.f, 1.f, 1.f);
-	int fontOffset = session->film->GetHeight() - 20 - 20;
-	glRasterPos2i((session->film->GetWidth() - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices")) / 2, fontOffset);
+	int fontOffset = session->GetFilm().GetHeight() - 20 - 20;
+	glRasterPos2i((session->GetFilm().GetWidth() - glutBitmapLength(GLUT_BITMAP_9_BY_15, (unsigned char *)"Help & Settings & Devices")) / 2, fontOffset);
 	PrintString(GLUT_BITMAP_9_BY_15, "Help & Settings & Devices");
 
 	// Help
@@ -119,94 +111,89 @@ static void PrintHelpAndSettings() {
 #endif
 
 	// Settings
-	char buf[512];
+	string buffer;
 	glColor3f(0.5f, 1.0f, 0.f);
 	fontOffset -= 15;
 	glRasterPos2i(15, fontOffset);
 	PrintString(GLUT_BITMAP_8_BY_13, "Settings:");
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
+
+	const Properties &stats = session->GetStats();
+	const string engineType = config->GetProperty("renderengine.type").Get<string>();
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (session->renderEngine->GetEngineType() == RTPATHOCL) {
+	if (engineType == "RTPATHOCL") {
 		static float fps = 0.f;
 		// This is a simple trick to smooth the fps counter
-		const double frameTime = ((RTPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
+		const double frameTime = stats.Get("stats.rtpathocl.frame.time").Get<double>();
 		const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
 		fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
-		sprintf(buf, "[Rendering time %dsecs][Screen refresh %d/%dms %.1ffps]",
-				int(session->renderEngine->GetRenderingTime()),
-				int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-				session->renderConfig->GetScreenRefreshInterval(),
+		buffer = boost::str(boost::format("[Rendering time %dsecs][Screen refresh %d/%dms %.1ffps]") %
+				int(stats.Get("stats.renderengine.time").Get<double>()) %
+				int((fps > 0.f) ? (1000.0 / fps) : 0.0) %
+				config->GetProperty("screen.refresh.interval").Get<u_int>() %
 				fps);
-	} else if (session->renderEngine->GetEngineType() == RTBIASPATHOCL) {
+	} else if (engineType == "RTBIASPATHOCL") {
 		static float fps = 0.f;
 		// This is a simple trick to smooth the fps counter
-		const double frameTime = ((RTBiasPathOCLRenderEngine *)session->renderEngine)->GetFrameTime();
+		const double frameTime = stats.Get("stats.rtbiaspathocl.frame.time").Get<double>();
 		const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
 		fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
-		sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms %.1ffps]",
-				int(session->renderEngine->GetRenderingTime()),
-				int((fps > 0.f) ? (1000.0 / fps) : 0.0),
+		buffer = boost::str(boost::format("[Rendering time %dsecs][Screen refresh %dms %.1ffps]") %
+				int(stats.Get("stats.renderengine.time").Get<double>()) %
+				int((fps > 0.f) ? (1000.0 / fps) : 0.0) %
 				fps);
 	} else
 #endif
-		sprintf(buf, "[Rendering time %dsecs][Screen refresh %dms]",
-				int(session->renderEngine->GetRenderingTime()),
-				session->renderConfig->GetScreenRefreshInterval());
-	PrintString(GLUT_BITMAP_8_BY_13, buf);
+		buffer = boost::str(boost::format("[Rendering time %dsecs][Screen refresh %dms]") %
+				(stats.Get("stats.renderengine.time").Get<double>()) %
+				config->GetProperty("screen.refresh.interval").Get<u_int>());
+	PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
+
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	const string samplerName = ((session->renderEngine->GetEngineType() == BIASPATHCPU) ||
-		(session->renderEngine->GetEngineType() == RTBIASPATHOCL)) ?
-			"N/A" : session->renderConfig->cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
-	sprintf(buf, "[Render engine %s][Sampler %s][Tone mapping %s]",
-			RenderEngine::RenderEngineType2String(session->renderEngine->GetEngineType()).c_str(),
-			samplerName.c_str(),
-			(session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) ? "LINEAR" : "REINHARD02");
-	PrintString(GLUT_BITMAP_8_BY_13, buf);
+	const string samplerName = ((engineType == "BIASPATHCPU") ||
+		(engineType == "RTBIASPATHOCL")) ?
+			"N/A" : config->GetProperty("sampler.type").Get<string>();
+	buffer = boost::str(boost::format("[Render engine %s][Sampler %s][Tone mapping %s]") %
+			engineType.c_str() % samplerName.c_str() %
+			ToneMapType2String(String2ToneMapType(config->GetProperty("film.tonemap.type").Get<string>())));
+	PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
 
 	// Intersection devices
-	const vector<IntersectionDevice *> &idevices = session->renderEngine->GetIntersectionDevices();
-
-	// Replace all virtual devices with real
-	vector<IntersectionDevice *> realDevices;
-	for (size_t i = 0; i < idevices.size(); ++i) {
-		VirtualIntersectionDevice *vdev = dynamic_cast<VirtualIntersectionDevice *>(idevices[i]);
-		if (vdev) {
-			const vector<IntersectionDevice *> &realDevs = vdev->GetRealDevices();
-			realDevices.insert(realDevices.end(), realDevs.begin(), realDevs.end());
-		} else
-			realDevices.push_back(idevices[i]);
-	}
-
-	double minPerf = realDevices[0]->GetTotalPerformance();
-	double totalPerf = realDevices[0]->GetTotalPerformance();
-	for (size_t i = 1; i < realDevices.size(); ++i) {
-		minPerf = min(minPerf, realDevices[i]->GetTotalPerformance());
-		totalPerf += realDevices[i]->GetTotalPerformance();
-	}
-
+	const Property &deviceNames = stats.Get("stats.renderengine.devices");
 	glColor3f(1.0f, 0.5f, 0.f);
 	int offset = 45;
-	size_t deviceCount = realDevices.size();
 
-	char buff[512];
-	for (size_t i = 0; i < deviceCount; ++i) {
-		sprintf(buff, "[%s][Rays/sec %dK (%dK + %dK)][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
-			realDevices[i]->GetName().c_str(),
-			int(realDevices[i]->GetTotalPerformance() / 1000.0),
-				int(realDevices[i]->GetSerialPerformance() / 1000.0),
-				int(realDevices[i]->GetDataParallelPerformance() / 1000.0),
-			realDevices[i]->GetTotalPerformance() / minPerf,
-			100.0 * realDevices[i]->GetTotalPerformance() / totalPerf,
-			int(realDevices[i]->GetUsedMemory() / (1024 * 1024)),
-			int(realDevices[i]->GetMaxMemory() / (1024 * 1024)));
+	double minPerf = 0.0;
+	double totalPerf = 0.0;
+	for (u_int i = 0; i < deviceNames.GetSize(); ++i) {
+		const string deviceName = deviceNames.Get<string>(i);
+
+		const double perf = stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>();
+		minPerf = Min(minPerf, perf);
+		totalPerf += perf;
+	}
+
+	for (u_int i = 0; i < deviceNames.GetSize(); ++i) {
+		const string deviceName = deviceNames.Get<string>(i);
+
+		buffer = boost::str(boost::format("[%s][Rays/sec %dK (%dK + %dK)][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]") %
+			deviceName.c_str() %
+			int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / 1000.0) %
+			int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.serial").Get<double>() / 1000.0) %
+			int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.dataparallel").Get<double>() / 1000.0) %
+			(stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / minPerf) %
+			(100.0 * stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / totalPerf) %
+			int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.used").Get<size_t>() / (1024 * 1024)) %
+			int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.total").Get<size_t>() / (1024 * 1024)));
+
 		glRasterPos2i(20, offset);
-		PrintString(GLUT_BITMAP_8_BY_13, buff);
+		PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
 		offset += 15;
 	}
 
@@ -218,80 +205,67 @@ static void PrintCaptions() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.8f);
-	glRecti(0, session->film->GetHeight() - 15,
-			session->film->GetWidth() - 1, session->film->GetHeight() - 1);
-	glRecti(0, 0, session->film->GetWidth() - 1, 18);
+	glRecti(0, session->GetFilm().GetHeight() - 15,
+			session->GetFilm().GetWidth() - 1, session->GetFilm().GetHeight() - 1);
+	glRecti(0, 0, session->GetFilm().GetWidth() - 1, 18);
 	glDisable(GL_BLEND);
 
 	// Draw the pending tiles for BIASPATHCPU or BIASPATHOCL
-	vector<TileRepository::Tile> tiles;
-	u_int tileSize = 0;
-	switch (session->renderEngine->GetEngineType()) {
-		case BIASPATHCPU: {
-			CPUTileRenderEngine *engine = (CPUTileRenderEngine *)session->renderEngine;
-			engine->GetPendingTiles(tiles);
-			tileSize = engine->GetTileSize();
-			break;
-		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		case BIASPATHOCL: {
-			BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)session->renderEngine;
-			engine->GetPendingTiles(tiles);
-			tileSize = engine->GetTileSize();
-			break;
-        }
-#endif
-		default:
-			break;
-	}
+	const Properties &stats = session->GetStats();
+	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
+		const u_int tileSize = stats.Get("stats.biaspath.tiles.size").Get<u_int>();
+		const u_int tileCount = stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>();
 
-	if (tiles.size() > 0) {
 		// Draw tiles borders
+		const Property &prop = stats.Get("stats.biaspath.tiles.pending.coords");
 		glColor3f(1.f, 1.f, 0.f);
-		BOOST_FOREACH(TileRepository::Tile &tile, tiles) {
+		for (u_int i = 0; i < tileCount; ++i) {
+			const u_int xStart = prop.Get<u_int>(i * 2);
+			const u_int yStart = prop.Get<u_int>(i * 2 + 1);
+
 			glBegin(GL_LINE_LOOP);
-			glVertex2i(tile.xStart, tile.yStart);
-			glVertex2i(tile.xStart + tileSize, tile.yStart);
-			glVertex2i(tile.xStart + tileSize, tile.yStart + tileSize);
-			glVertex2i(tile.xStart, tile.yStart + tileSize);
+			glVertex2i(xStart, yStart);
+			glVertex2i(xStart + tileSize, yStart);
+			glVertex2i(xStart + tileSize, yStart + tileSize);
+			glVertex2i(xStart, yStart + tileSize);
 			glEnd();
 		}
 	}
-	
+
+	const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]") %
+		stats.Get("stats.renderengine.pass").Get<int>() %
+		(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+		int(stats.Get("stats.renderengine.performance.total").Get<double>() / 1000.0) %
+		(stats.Get("stats.dataset.trianglecount").Get<size_t>() / 1000.0));
+
 	// Caption line 0
 	glColor3f(1.f, 1.f, 1.f);
 	glRasterPos2i(4, 5);
-	PrintString(GLUT_BITMAP_8_BY_13, captionBuffer);
+	PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
 
 	// Title
-	glRasterPos2i(4, session->film->GetHeight() - 10);
+	glRasterPos2i(4, session->GetFilm().GetHeight() - 10);
 	if (optUseLuxVRName)
-		PrintString(GLUT_BITMAP_8_BY_13, LUXVR_LABEL.c_str());
+		PrintString(GLUT_BITMAP_8_BY_13, slg::LUXVR_LABEL.c_str());
 	else
-		PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
+		PrintString(GLUT_BITMAP_8_BY_13, slg::SLG_LABEL.c_str());
 }
 
 void displayFunc(void) {
-	sprintf(captionBuffer, "[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]",
-		session->renderEngine->GetPass(),
-		session->renderEngine->GetTotalSamplesSec() / 1000000.0,
-		int(session->renderEngine->GetTotalRaysSec() / 1000.0),
-		session->renderConfig->scene->dataSet->GetTotalTriangleCount() / 1000.0);
-
-	if (!optRealTimeMode)
-		session->film->UpdateChannel_RGB_TONEMAPPED();
-	const float *pixels = session->film->channel_RGB_TONEMAPPED->GetPixels();
+	const float *pixels = session->GetFilm().GetRGBToneMappedOutput();
 
 	glRasterPos2i(0, 0);
-	glDrawPixels(session->film->GetWidth(), session->film->GetHeight(), GL_RGB, GL_FLOAT, pixels);
+	glDrawPixels(session->GetFilm().GetWidth(), session->GetFilm().GetHeight(), GL_RGB, GL_FLOAT, pixels);
 
+	session->UpdateStats();
 	PrintCaptions();
 
 	if (optOSDPrintHelp) {
 		glPushMatrix();
 		glLoadIdentity();
-		glOrtho(-0.5f, session->film->GetWidth() - 0.5f,
-				-0.5f, session->film->GetHeight() - 0.5f, -1.f, 1.f);
+		glOrtho(-.5f, session->GetFilm().GetWidth() - .5f,
+				-.5f, session->GetFilm().GetHeight() - .5f, -1.f, 1.f);
 
 		PrintHelpAndSettings();
 
@@ -302,14 +276,14 @@ void displayFunc(void) {
 }
 
 void idleFunc(void) {
-	session->renderEngine->WaitNewFrame();
+	session->WaitNewFrame();
 	displayFunc();
 }
 
 void reshapeFunc(int newWidth, int newHeight) {
 	// Check if width or height have really changed
-	if ((newWidth != (int)session->film->GetWidth()) ||
-			(newHeight != (int)session->film->GetHeight())) {
+	if ((newWidth != (int)session->GetFilm().GetWidth()) ||
+			(newHeight != (int)session->GetFilm().GetHeight())) {
 		glViewport(0, 0, newWidth, newHeight);
 		glLoadIdentity();
 		glOrtho(0.f, newWidth - 1.f, 0.f, newHeight - 1.f, -1.f, 1.f);
@@ -335,22 +309,19 @@ void reshapeFunc(int newWidth, int newHeight) {
 }
 
 void timerFunc(int value) {
-	// Need to update the Film
-	session->renderEngine->UpdateFilm();
-
 	// Check if periodic save is enabled
 	if (session->NeedPeriodicFilmSave()) {
 		// Time to save the image and film
-		session->SaveFilm();
+		session->GetFilm().Save();
 	}
 
 	glutPostRedisplay();
 	if (!optRealTimeMode)
-		glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+		glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 }
 
-static void SetRenderingEngineType(const RenderEngineType engineType) {
-	if (engineType != session->renderEngine->GetEngineType()) {
+static void SetRenderingEngineType(const string &engineType) {
+	if (engineType != config->GetProperty("renderengine.type").Get<string>()) {
 		// Stop the session
 		session->Stop();
 
@@ -361,7 +332,7 @@ static void SetRenderingEngineType(const RenderEngineType engineType) {
 		// Change the render engine
 		config->Parse(
 				Properties() <<
-				Property("renderengine.type")(RenderEngine::RenderEngineType2String(engineType)));
+				Property("renderengine.type")(engineType));
 		session = new RenderSession(config);
 
 		// Re-start the rendering
@@ -372,7 +343,7 @@ static void SetRenderingEngineType(const RenderEngineType engineType) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-			session->SaveFilm();
+			session->GetFilm().Save();
 			break;
 		}
 		case 27: { // Escape key
@@ -386,58 +357,58 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->Stop();
 			session->Start();
 			break;
-		case 'a': {
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->TranslateLeft(optMoveStep);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		}
-		case 'd': {
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->TranslateRight(optMoveStep);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		}
-		case 'w': {
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->TranslateForward(optMoveStep);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		}
-		case 's': {
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->TranslateBackward(optMoveStep);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		}
-		case 'r':
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, optMoveStep));
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		case 'f':
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, -optMoveStep));
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
+//		case 'a': {
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->TranslateLeft(optMoveStep);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		}
+//		case 'd': {
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->TranslateRight(optMoveStep);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		}
+//		case 'w': {
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->TranslateForward(optMoveStep);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		}
+//		case 's': {
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->TranslateBackward(optMoveStep);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		}
+//		case 'r':
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, optMoveStep));
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		case 'f':
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, -optMoveStep));
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
 		case 'h':
 			optOSDPrintHelp = (!optOSDPrintHelp);
 			break;
@@ -450,16 +421,19 @@ void keyFunc(unsigned char key, int x, int y) {
 			session = NULL;
 
 			// Change the Sampler
-			const string samplerName = config->cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+			const string samplerName = config->GetProperty("sampler.type").Get<string>();
 			if (samplerName == "RANDOM") {
-				config->cfg.Set(Property("sampler.type")("SOBOL"));
-				config->cfg.Set(Property("path.sampler.type")("SOBOL"));
+				config->Parse(
+						Property("sampler.type")("SOBOL") <<
+						Property("path.sampler.type")("SOBOL"));
 			} else if (samplerName == "SOBOL") {
-				config->cfg.Set(Property("sampler.type")("METROPOLIS"));
-				config->cfg.Set(Property("path.sampler.type")("METROPOLIS"));
+				config->Parse(
+						Property("sampler.type")("METROPOLIS") <<
+						Property("path.sampler.type")("METROPOLIS"));
 			} else {
-				config->cfg.Set(Property("sampler.type")("RANDOM"));
-				config->cfg.Set(Property("path.sampler.type")("RANDOM"));
+				config->Parse(
+						Property("sampler.type")("RANDOM") <<
+						Property("path.sampler.type")("RANDOM"));
 			}
 			session = new RenderSession(config);
 
@@ -468,34 +442,34 @@ void keyFunc(unsigned char key, int x, int y) {
 			break;
 		}
 		case 'n': {
-			const u_int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
+			const u_int screenRefreshInterval = config->GetProperty("screen.refresh.interval").Get<u_int>();
 			if (screenRefreshInterval > 1000)
-				session->renderConfig->SetScreenRefreshInterval(max(1000u, screenRefreshInterval - 1000));
+				config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(1000u, screenRefreshInterval - 1000))));
 			else if (screenRefreshInterval > 100)
-				session->renderConfig->SetScreenRefreshInterval(max(50u, screenRefreshInterval - 50));
+				config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(50u, screenRefreshInterval - 50))));
 			else
-				session->renderConfig->SetScreenRefreshInterval(max(10u, screenRefreshInterval - 5));
+				config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(10u, screenRefreshInterval - 5))));
 			break;
 		}
 		case 'm': {
-			const u_int screenRefreshInterval = session->renderConfig->GetScreenRefreshInterval();
+			const u_int screenRefreshInterval = config->GetProperty("screen.refresh.interval").Get<u_int>();
 			if (screenRefreshInterval >= 1000)
-				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 1000);
+				config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 1000)));
 			else if (screenRefreshInterval >= 100)
-				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 50);
+				config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 50)));
 			else
-				session->renderConfig->SetScreenRefreshInterval(screenRefreshInterval + 5);
+				config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 5)));
 			break;
 		}
-		case 't':
-			// Toggle tonemap type
-			if (session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
-				Reinhard02ToneMapParams params;
-				session->film->SetToneMapParams(params);
-			} else {
-				LinearToneMapParams params;
-				session->film->SetToneMapParams(params);
-			}
+//		case 't':
+//			// Toggle tonemap type
+//			if (session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
+//				Reinhard02ToneMapParams params;
+//				session->film->SetToneMapParams(params);
+//			} else {
+//				LinearToneMapParams params;
+//				session->film->SetToneMapParams(params);
+//			}
 			break;
 		case 'v':
 			optMoveScale = Max(.0125f, optMoveScale - ((optMoveScale>= 1.f) ? .25f : 0.0125f));
@@ -507,145 +481,145 @@ void keyFunc(unsigned char key, int x, int y) {
 			UpdateMoveStep();
 			SLG_LOG("Camera move scale: " << optMoveScale);
 			break;
-		case 'y': {
-			if (session->renderConfig->scene->camera->IsHorizontalStereoEnabled()) {
-				session->Stop();
-				session->renderConfig->scene->camera->SetOculusRiftBarrel(!session->renderConfig->scene->camera->IsOculusRiftBarrelEnabled());
-				session->renderConfig->scene->camera->Update(
-					session->film->GetWidth(), session->film->GetHeight());
-				session->Start();
-			}
-			break;
-		}
-		case 'u': {
-			session->Stop();
-			session->renderConfig->scene->camera->SetHorizontalStereo(!session->renderConfig->scene->camera->IsHorizontalStereoEnabled());
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->Start();
-			break;
-		}
-		case 'k': {
-			session->BeginSceneEdit();
-			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyesDistance();
-			const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
-			SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
-			session->renderConfig->scene->camera->SetHorizontalStereoEyesDistance(newEyeDistance);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		}
-		case 'l': {
-			session->BeginSceneEdit();
-			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyesDistance();
-			const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
-			SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
-			session->renderConfig->scene->camera->SetHorizontalStereoEyesDistance(newEyeDistance);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		}
-		case ',': {
-			session->BeginSceneEdit();
-			const float currentLenDistance = session->renderConfig->scene->camera->GetHorizontalStereoLensDistance();
-			const float newLensDistance = currentLenDistance + ((currentLenDistance == 0.f) ? .1f : (currentLenDistance * 0.05f));
-			SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
-			session->renderConfig->scene->camera->SetHorizontalStereoLensDistance(newLensDistance);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		}
-		case '.': {
-			session->BeginSceneEdit();
-			const float currentLensDistance = session->renderConfig->scene->camera->GetHorizontalStereoLensDistance();
-			const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
-			SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
-			session->renderConfig->scene->camera->SetHorizontalStereoLensDistance(newLensDistance);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		}
+//		case 'y': {
+//			if (session->renderConfig->scene->camera->IsHorizontalStereoEnabled()) {
+//				session->Stop();
+//				session->renderConfig->scene->camera->SetOculusRiftBarrel(!session->renderConfig->scene->camera->IsOculusRiftBarrelEnabled());
+//				session->renderConfig->scene->camera->Update(
+//					session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//				session->Start();
+//			}
+//			break;
+//		}
+//		case 'u': {
+//			session->Stop();
+//			session->renderConfig->scene->camera->SetHorizontalStereo(!session->renderConfig->scene->camera->IsHorizontalStereoEnabled());
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->Start();
+//			break;
+//		}
+//		case 'k': {
+//			session->BeginSceneEdit();
+//			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyesDistance();
+//			const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
+//			SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+//			session->renderConfig->scene->camera->SetHorizontalStereoEyesDistance(newEyeDistance);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		}
+//		case 'l': {
+//			session->BeginSceneEdit();
+//			const float currentEyeDistance = session->renderConfig->scene->camera->GetHorizontalStereoEyesDistance();
+//			const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
+//			SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+//			session->renderConfig->scene->camera->SetHorizontalStereoEyesDistance(newEyeDistance);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		}
+//		case ',': {
+//			session->BeginSceneEdit();
+//			const float currentLenDistance = session->renderConfig->scene->camera->GetHorizontalStereoLensDistance();
+//			const float newLensDistance = currentLenDistance + ((currentLenDistance == 0.f) ? .1f : (currentLenDistance * 0.05f));
+//			SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+//			session->renderConfig->scene->camera->SetHorizontalStereoLensDistance(newLensDistance);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		}
+//		case '.': {
+//			session->BeginSceneEdit();
+//			const float currentLensDistance = session->renderConfig->scene->camera->GetHorizontalStereoLensDistance();
+//			const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
+//			SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+//			session->renderConfig->scene->camera->SetHorizontalStereoLensDistance(newLensDistance);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		}
 		case '1':
-			SetRenderingEngineType(PATHOCL);
+			SetRenderingEngineType("PATHOCL");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '2':
-			SetRenderingEngineType(LIGHTCPU);
+			SetRenderingEngineType("LIGHTCPU");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '3':
-			SetRenderingEngineType(PATHCPU);
+			SetRenderingEngineType("PATHCPU");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '4':
-			SetRenderingEngineType(BIDIRCPU);
+			SetRenderingEngineType("BIDIRCPU");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '5':
-			SetRenderingEngineType(BIDIRHYBRID);
+			SetRenderingEngineType("BIDIRHYBRID");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '6':
-			SetRenderingEngineType(CBIDIRHYBRID);
+			SetRenderingEngineType("CBIDIRHYBRID");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '7':
-			SetRenderingEngineType(BIDIRVMCPU);
+			SetRenderingEngineType("BIDIRVMCPU");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '8':
-			SetRenderingEngineType(RTPATHOCL);
+			SetRenderingEngineType("RTPATHOCL");
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
-			if (session->renderConfig->GetScreenRefreshInterval() > 33)
-				session->renderConfig->SetScreenRefreshInterval(33);
+			if (config->GetProperty("screen.refresh.interval").Get<u_int>() > 25)
+				config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
 			break;
 #endif
 		case '9':
-			SetRenderingEngineType(PATHHYBRID);
+			SetRenderingEngineType("PATHHYBRID");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '0':
-			SetRenderingEngineType(BIASPATHCPU);
+			SetRenderingEngineType("BIASPATHCPU");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 		case '-':
-			SetRenderingEngineType(BIASPATHOCL);
+			SetRenderingEngineType("BIASPATHOCL");
 			glutIdleFunc(NULL);
-			glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case '=':
-			SetRenderingEngineType(RTBIASPATHOCL);
+			SetRenderingEngineType("RTBIASPATHOCL");
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
 			break;
@@ -654,9 +628,9 @@ void keyFunc(unsigned char key, int x, int y) {
 #if defined(WIN32)
 			std::wstring ws;
 			if (optUseLuxVRName)
-				ws.assign(LUXVR_LABEL.begin (), LUXVR_LABEL.end());
+				ws.assign(LUXVR_LABEL.begin (), slg::LUXVR_LABEL.end());
 			else
-				ws.assign(SLG_LABEL.begin (), SLG_LABEL.end());
+				ws.assign(SLG_LABEL.begin (), slg::SLG_LABEL.end());
 			HWND hWnd = FindWindowW(NULL, ws.c_str());
 			if (GetWindowLongPtr(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
 				SetWindowPos(hWnd, HWND_NOTOPMOST, NULL, NULL, NULL, NULL, SWP_NOMOVE | SWP_NOSIZE);
@@ -675,38 +649,38 @@ void keyFunc(unsigned char key, int x, int y) {
 
 void specialFunc(int key, int x, int y) {
 	switch (key) {
-		case GLUT_KEY_UP:
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->RotateUp(optRotateStep);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		case GLUT_KEY_DOWN:
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->RotateDown(optRotateStep);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		case GLUT_KEY_LEFT:
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->RotateLeft(optRotateStep);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
-		case GLUT_KEY_RIGHT:
-			session->BeginSceneEdit();
-			session->renderConfig->scene->camera->RotateRight(optRotateStep);
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-			session->EndSceneEdit();
-			break;
+//		case GLUT_KEY_UP:
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->RotateUp(optRotateStep);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		case GLUT_KEY_DOWN:
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->RotateDown(optRotateStep);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		case GLUT_KEY_LEFT:
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->RotateLeft(optRotateStep);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
+//		case GLUT_KEY_RIGHT:
+//			session->BeginSceneEdit();
+//			session->renderConfig->scene->camera->RotateRight(optRotateStep);
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			session->EndSceneEdit();
+//			break;
 		default:
 			break;
 	}
@@ -749,23 +723,23 @@ static void motionFunc(int x, int y) {
 	if (mouseButton0) {
 		// Check elapsed time since last update
 		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
-			const int distX = x - mouseGrabLastX;
-			const int distY = y - mouseGrabLastY;
+//			const int distX = x - mouseGrabLastX;
+//			const int distY = y - mouseGrabLastY;
 
 			session->BeginSceneEdit();
 
-			if (optMouseGrabMode) {
-				session->renderConfig->scene->camera->RotateUp(0.04f * distY * optRotateStep);
-				session->renderConfig->scene->camera->RotateLeft(0.04f * distX * optRotateStep);
-			}
-			else {
-				session->renderConfig->scene->camera->RotateDown(0.04f * distY * optRotateStep);
-				session->renderConfig->scene->camera->RotateRight(0.04f * distX * optRotateStep);
-			};
-
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			if (optMouseGrabMode) {
+//				session->renderConfig->scene->camera->RotateUp(0.04f * distY * optRotateStep);
+//				session->renderConfig->scene->camera->RotateLeft(0.04f * distX * optRotateStep);
+//			}
+//			else {
+//				session->renderConfig->scene->camera->RotateDown(0.04f * distY * optRotateStep);
+//				session->renderConfig->scene->camera->RotateRight(0.04f * distX * optRotateStep);
+//			};
+//
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 
 			mouseGrabLastX = x;
@@ -778,23 +752,23 @@ static void motionFunc(int x, int y) {
 	} else if (mouseButton2) {
 		// Check elapsed time since last update
 		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
-			const int distX = x - mouseGrabLastX;
-			const int distY = y - mouseGrabLastY;
+//			const int distX = x - mouseGrabLastX;
+//			const int distY = y - mouseGrabLastY;
 
 			session->BeginSceneEdit();
 
-			if (optMouseGrabMode) {
-				session->renderConfig->scene->camera->TranslateLeft(0.04f * distX * optMoveStep);
-				session->renderConfig->scene->camera->TranslateForward(0.04f * distY * optMoveStep);
-			}
-			else {
-				session->renderConfig->scene->camera->TranslateRight(0.04f * distX * optMoveStep);
-				session->renderConfig->scene->camera->TranslateBackward(0.04f * distY * optMoveStep);				
-			}
-
-			session->renderConfig->scene->camera->Update(
-				session->film->GetWidth(), session->film->GetHeight());
-			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+//			if (optMouseGrabMode) {
+//				session->renderConfig->scene->camera->TranslateLeft(0.04f * distX * optMoveStep);
+//				session->renderConfig->scene->camera->TranslateForward(0.04f * distY * optMoveStep);
+//			}
+//			else {
+//				session->renderConfig->scene->camera->TranslateRight(0.04f * distX * optMoveStep);
+//				session->renderConfig->scene->camera->TranslateBackward(0.04f * distY * optMoveStep);				
+//			}
+//
+//			session->renderConfig->scene->camera->Update(
+//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
 			session->EndSceneEdit();
 
 			mouseGrabLastX = x;
@@ -826,9 +800,9 @@ void InitGlut(int argc, char *argv[], const u_int width, const u_int height) {
 
 		glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 		if (optUseLuxVRName)
-			glutCreateWindow(LUXVR_LABEL.c_str());
+			glutCreateWindow(slg::LUXVR_LABEL.c_str());
 		else
-			glutCreateWindow(SLG_LABEL.c_str());
+			glutCreateWindow(slg::SLG_LABEL.c_str());
 	}
 }
 
@@ -840,22 +814,22 @@ void RunGlut() {
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if ((session->renderEngine->GetEngineType() == RTPATHOCL) ||
-		(session->renderEngine->GetEngineType() == RTBIASPATHOCL)) {
+	const string engineType = config->GetProperties().Get("renderengine.type").Get<string>();
+	if ((engineType == "RTPATHOCL") || (engineType == "RTBIASPATHOCL")) {
 		glutIdleFunc(idleFunc);
 		optRealTimeMode = true;
 	} else
 #endif
 	{
-		glutTimerFunc(session->renderConfig->GetScreenRefreshInterval(), timerFunc, 0);
+		glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 		optRealTimeMode = false;
 	}
 
 	glMatrixMode(GL_PROJECTION);
-	glViewport(0, 0, session->film->GetWidth(), session->film->GetHeight());
+	glViewport(0, 0, session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
 	glLoadIdentity();
-	glOrtho(0.f, session->film->GetWidth() - 1.f,
-			0.f, session->film->GetHeight() - 1.f, -1.f, 1.f);
+	glOrtho(0.f, session->GetFilm().GetWidth() - 1.f,
+			0.f, session->GetFilm().GetHeight() - 1.f, -1.f, 1.f);
 
 	glutMainLoop();
 }
