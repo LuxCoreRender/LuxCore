@@ -357,58 +357,40 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->Stop();
 			session->Start();
 			break;
-//		case 'a': {
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->TranslateLeft(optMoveStep);
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
-//		}
-//		case 'd': {
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->TranslateRight(optMoveStep);
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
-//		}
-//		case 'w': {
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->TranslateForward(optMoveStep);
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
-//		}
-//		case 's': {
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->TranslateBackward(optMoveStep);
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
-//		}
-//		case 'r':
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, optMoveStep));
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
-//		case 'f':
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->Translate(Vector(0.f, 0.f, -optMoveStep));
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
+		case 'a': {
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().TranslateLeft(optMoveStep);
+			session->EndSceneEdit();
+			break;
+		}
+		case 'd': {
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().TranslateRight(optMoveStep);
+			session->EndSceneEdit();
+			break;
+		}
+		case 'w': {
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().TranslateForward(optMoveStep);
+			session->EndSceneEdit();
+			break;
+		}
+		case 's': {
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().TranslateBackward(optMoveStep);
+			session->EndSceneEdit();
+			break;
+		}
+		case 'r':
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, optMoveStep));
+			session->EndSceneEdit();
+			break;
+		case 'f':
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, -optMoveStep));
+			session->EndSceneEdit();
+			break;
 		case 'h':
 			optOSDPrintHelp = (!optOSDPrintHelp);
 			break;
@@ -649,38 +631,26 @@ void keyFunc(unsigned char key, int x, int y) {
 
 void specialFunc(int key, int x, int y) {
 	switch (key) {
-//		case GLUT_KEY_UP:
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->RotateUp(optRotateStep);
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
-//		case GLUT_KEY_DOWN:
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->RotateDown(optRotateStep);
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
-//		case GLUT_KEY_LEFT:
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->RotateLeft(optRotateStep);
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
-//		case GLUT_KEY_RIGHT:
-//			session->BeginSceneEdit();
-//			session->renderConfig->scene->camera->RotateRight(optRotateStep);
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
-//			session->EndSceneEdit();
-//			break;
+		case GLUT_KEY_UP:
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().RotateUp(optRotateStep);
+			session->EndSceneEdit();
+			break;
+		case GLUT_KEY_DOWN:
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().RotateDown(optRotateStep);
+			session->EndSceneEdit();
+			break;
+		case GLUT_KEY_LEFT:
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().RotateLeft(optRotateStep);
+			session->EndSceneEdit();
+			break;
+		case GLUT_KEY_RIGHT:
+			session->BeginSceneEdit();
+			config->GetScene().GetCamera().RotateRight(optRotateStep);
+			session->EndSceneEdit();
+			break;
 		default:
 			break;
 	}
@@ -723,23 +693,20 @@ static void motionFunc(int x, int y) {
 	if (mouseButton0) {
 		// Check elapsed time since last update
 		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
-//			const int distX = x - mouseGrabLastX;
-//			const int distY = y - mouseGrabLastY;
+			const int distX = x - mouseGrabLastX;
+			const int distY = y - mouseGrabLastY;
 
 			session->BeginSceneEdit();
 
-//			if (optMouseGrabMode) {
-//				session->renderConfig->scene->camera->RotateUp(0.04f * distY * optRotateStep);
-//				session->renderConfig->scene->camera->RotateLeft(0.04f * distX * optRotateStep);
-//			}
-//			else {
-//				session->renderConfig->scene->camera->RotateDown(0.04f * distY * optRotateStep);
-//				session->renderConfig->scene->camera->RotateRight(0.04f * distX * optRotateStep);
-//			};
-//
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+			if (optMouseGrabMode) {
+				config->GetScene().GetCamera().RotateUp(0.04f * distY * optRotateStep);
+				config->GetScene().GetCamera().RotateLeft(0.04f * distX * optRotateStep);
+			}
+			else {
+				config->GetScene().GetCamera().RotateDown(0.04f * distY * optRotateStep);
+				config->GetScene().GetCamera().RotateRight(0.04f * distX * optRotateStep);
+			};
+
 			session->EndSceneEdit();
 
 			mouseGrabLastX = x;
@@ -752,23 +719,20 @@ static void motionFunc(int x, int y) {
 	} else if (mouseButton2) {
 		// Check elapsed time since last update
 		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
-//			const int distX = x - mouseGrabLastX;
-//			const int distY = y - mouseGrabLastY;
+			const int distX = x - mouseGrabLastX;
+			const int distY = y - mouseGrabLastY;
 
 			session->BeginSceneEdit();
 
-//			if (optMouseGrabMode) {
-//				session->renderConfig->scene->camera->TranslateLeft(0.04f * distX * optMoveStep);
-//				session->renderConfig->scene->camera->TranslateForward(0.04f * distY * optMoveStep);
-//			}
-//			else {
-//				session->renderConfig->scene->camera->TranslateRight(0.04f * distX * optMoveStep);
-//				session->renderConfig->scene->camera->TranslateBackward(0.04f * distY * optMoveStep);				
-//			}
-//
-//			session->renderConfig->scene->camera->Update(
-//				session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
-//			session->renderConfig->scene->editActions.AddAction(CAMERA_EDIT);
+			if (optMouseGrabMode) {
+				config->GetScene().GetCamera().TranslateLeft(0.04f * distX * optMoveStep);
+				config->GetScene().GetCamera().TranslateForward(0.04f * distY * optMoveStep);
+			}
+			else {
+				config->GetScene().GetCamera().TranslateRight(0.04f * distX * optMoveStep);
+				config->GetScene().GetCamera().TranslateBackward(0.04f * distY * optMoveStep);
+			}
+
 			session->EndSceneEdit();
 
 			mouseGrabLastX = x;

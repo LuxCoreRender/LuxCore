@@ -265,20 +265,80 @@ const float *Film::GetRGBToneMappedOutput() const {
 }
 
 //------------------------------------------------------------------------------
+// Camera
+//------------------------------------------------------------------------------
+
+Camera::Camera(const Scene &scn) : scene(scn) {
+}
+
+Camera::~Camera() {
+}
+
+void Camera::Translate(const Vector &t) const {
+	scene.scene->camera->Translate(t);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::TranslateLeft(const float t) const {
+	scene.scene->camera->TranslateLeft(t);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::TranslateRight(const float t) const {
+	scene.scene->camera->TranslateRight(t);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::TranslateForward(const float t) const {
+	scene.scene->camera->TranslateForward(t);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::TranslateBackward(const float t) const {
+	scene.scene->camera->TranslateBackward(t);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::Rotate(const float angle, const Vector &axis) const {
+	scene.scene->camera->Rotate(angle, axis);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::RotateLeft(const float angle) const {
+	scene.scene->camera->RotateLeft(angle);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::RotateRight(const float angle) const {
+	scene.scene->camera->RotateRight(angle);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::RotateUp(const float angle) const {
+	scene.scene->camera->RotateUp(angle);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+void Camera::RotateDown(const float angle) const {
+	scene.scene->camera->RotateDown(angle);
+	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+}
+
+//------------------------------------------------------------------------------
 // Scene
 //------------------------------------------------------------------------------
 
-Scene::Scene(const float imageScale) {
+Scene::Scene(const float imageScale) : camera(*this) {
 	scene = new slg::Scene(imageScale);
 	allocatedScene = true;
 }
 
-Scene::Scene(const string &fileName, const float imageScale) {
+Scene::Scene(const string &fileName, const float imageScale) : camera(*this) {
 	scene = new slg::Scene(fileName, imageScale);
 	allocatedScene = true;
 }
 
-Scene::Scene(slg::Scene *scn) {
+Scene::Scene(slg::Scene *scn) : camera(*this) {
 	scene = scn;
 	allocatedScene = false;
 }
@@ -292,8 +352,12 @@ const Properties &Scene::GetProperties() const {
 	return scene->GetProperties();
 }
 
-const luxrays::DataSet &Scene::GetDataSet() const {
+const DataSet &Scene::GetDataSet() const {
 	return *(scene->dataSet);
+}
+
+const Camera &Scene::GetCamera() const {
+	return camera;
 }
 
 void Scene::DefineImageMap(const string &imgMapName, float *cols, const float gamma,
@@ -305,18 +369,18 @@ void Scene::SetDeleteMeshData(const bool v) {
 	scene->extMeshCache.SetDeleteMeshData(v);
 }
 
-void Scene::DefineMesh(const string &meshName, luxrays::ExtTriangleMesh *mesh) {
+void Scene::DefineMesh(const string &meshName, ExtTriangleMesh *mesh) {
 	scene->DefineMesh(meshName, mesh);
 }
 
 void Scene::DefineMesh(const string &meshName,
 	const long plyNbVerts, const long plyNbTris,
-	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-	luxrays::Spectrum *cols, float *alphas) {
+	Point *p, Triangle *vi, Normal *n, UV *uv,
+	Spectrum *cols, float *alphas) {
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 }
 
-void Scene::Parse(const luxrays::Properties &props) {
+void Scene::Parse(const Properties &props) {
 	scene->Parse(props);
 }
 
@@ -344,7 +408,7 @@ void Scene::RemoveUnusedMeshes() {
 // RenderConfig
 //------------------------------------------------------------------------------
 
-RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) {
+RenderConfig::RenderConfig(const Properties &props, Scene *scn) {
 	if (scn) {
 		scene = scn;
 		allocatedScene = false;
@@ -362,11 +426,11 @@ RenderConfig::~RenderConfig() {
 		delete scene;
 }
 
-const luxrays::Properties &RenderConfig::GetProperties() const {
+const Properties &RenderConfig::GetProperties() const {
 	return renderConfig->cfg;
 }
 
-const luxrays::Property RenderConfig::GetProperty(const std::string &name) const {
+const Property RenderConfig::GetProperty(const std::string &name) const {
 	return renderConfig->GetProperty(name);
 }
 
@@ -374,7 +438,7 @@ Scene &RenderConfig::GetScene() {
 	return *scene;
 }
 
-void RenderConfig::Parse(const luxrays::Properties &props) {
+void RenderConfig::Parse(const Properties &props) {
 	renderConfig->Parse(props);
 }
 
@@ -387,7 +451,7 @@ bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 	return renderConfig->GetFilmSize(filmFullWidth, filmFullHeight, filmSubRegion);
 }
 
-const luxrays::Properties &RenderConfig::GetDefaultProperties() {
+const Properties &RenderConfig::GetDefaultProperties() {
 	return slg::RenderConfig::GetDefaultProperties();
 }
 

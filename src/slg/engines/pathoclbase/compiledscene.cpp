@@ -59,23 +59,32 @@ void CompiledScene::CompileCamera() {
 	// Camera definition
 	//--------------------------------------------------------------------------
 
-	camera.yon = scene->camera->clipYon;
-	camera.hither = scene->camera->clipHither;
-	camera.lensRadius = scene->camera->lensRadius;
-	camera.focalDistance = scene->camera->focalDistance;
+	switch (scene->camera->GetType()) {
+		case Camera::PERSPECTIVE: {
+			const PerspectiveCamera *perspCamera = (PerspectiveCamera *)scene->camera;
+			camera.yon = perspCamera->clipYon;
+			camera.hither = perspCamera->clipHither;
+			camera.lensRadius = perspCamera->lensRadius;
+			camera.focalDistance = perspCamera->focalDistance;
 
-	memcpy(camera.rasterToCamera[0].m.m, scene->camera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
-	memcpy(camera.cameraToWorld[0].m.m, scene->camera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
-	if (scene->camera->IsHorizontalStereoEnabled()) {
-		enableHorizStereo = true;
-		enableOculusRiftBarrel = scene->camera->IsOculusRiftBarrelEnabled();
+			memcpy(camera.rasterToCamera[0].m.m, perspCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
+			memcpy(camera.cameraToWorld[0].m.m, perspCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
+			if (perspCamera->IsHorizontalStereoEnabled()) {
+				enableHorizStereo = true;
+				enableOculusRiftBarrel = perspCamera->IsOculusRiftBarrelEnabled();
 
-		memcpy(camera.rasterToCamera[1].m.m, scene->camera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
-		memcpy(camera.cameraToWorld[1].m.m, scene->camera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));		
-	} else {
-		enableHorizStereo = false;
-		enableOculusRiftBarrel = false;
+				memcpy(camera.rasterToCamera[1].m.m, perspCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
+				memcpy(camera.cameraToWorld[1].m.m, perspCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));		
+			} else {
+				enableHorizStereo = false;
+				enableOculusRiftBarrel = false;
+			}
+			break;
+		}
+		default:
+			throw std::runtime_error("Unknown camera type: " + boost::lexical_cast<std::string>(scene->camera->GetType()));
 	}
+						
 }
 
 static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
@@ -102,7 +111,7 @@ void CompiledScene::CompileGeometry() {
 	// Translate geometry
 	//----------------------------------------------------------------------
 
-	std::map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
+	map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
 
 	slg::ocl::Mesh newMeshDesc;
 	newMeshDesc.vertsOffset = 0;
@@ -124,7 +133,7 @@ void CompiledScene::CompileGeometry() {
 			ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
 
 			// Check if is one of the already defined meshes
-			std::map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
+			map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
 			if (it == definedMeshs.end()) {
 				// It is a new one
 				currentMeshDesc = newMeshDesc;
@@ -257,7 +266,7 @@ static float GetTexConstantFloatValue(const Texture *tex) {
 	if (cf3t)
 		return cf3t->GetColor().Y();
 
-	return std::numeric_limits<float>::infinity();
+	return numeric_limits<float>::infinity();
 }
 
 void CompiledScene::CompileMaterials() {
@@ -447,8 +456,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			default:
-				throw std::runtime_error("Unknown material: " + boost::lexical_cast<std::string>(m->GetType()));
-				break;
+				throw runtime_error("Unknown material: " + boost::lexical_cast<string>(m->GetType()));
 		}
 	}
 
@@ -477,9 +485,9 @@ void CompiledScene::CompileAreaLights() {
 	const double tStart = WallClockTime();
 
 	// Used to speedup the TriangleLight lookup
-	std::map<const TriangleLight *, u_int> triLightByPtr;
+	map<const TriangleLight *, u_int> triLightByPtr;
 	for (u_int i = 0; i < scene->triLightDefs.size(); ++i)
-		triLightByPtr.insert(std::make_pair(scene->triLightDefs[i], i));
+		triLightByPtr.insert(make_pair(scene->triLightDefs[i], i));
 
 	const u_int areaLightCount = scene->triLightDefs.size();
 	triLightDefs.resize(areaLightCount);
@@ -529,7 +537,7 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 			break;
 		}
 		default:
-			throw std::runtime_error("Unknown 2D texture mapping: " + boost::lexical_cast<std::string>(m->GetType()));
+			throw runtime_error("Unknown 2D texture mapping: " + boost::lexical_cast<string>(m->GetType()));
 	}
 }
 
@@ -550,7 +558,7 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 			break;
 		}
 		default:
-			throw std::runtime_error("Unknown texture mapping: " + boost::lexical_cast<std::string>(m->GetType()));
+			throw runtime_error("Unknown texture mapping: " + boost::lexical_cast<string>(m->GetType()));
 	}
 }
 
@@ -652,9 +660,9 @@ float *CompiledScene::CompileDistribution1D(const Distribution1D *dist, u_int *s
 	float *compDist = new float[*size];
 
 	*((u_int *)&compDist[0]) = count;
-	std::copy(dist->GetFuncs(), dist->GetFuncs() + count,
+	copy(dist->GetFuncs(), dist->GetFuncs() + count,
 			compDist + 1);
-	std::copy(dist->GetCDFs(), dist->GetCDFs() + count + 1,
+	copy(dist->GetCDFs(), dist->GetCDFs() + count + 1,
 			compDist + 1 + count);
 
 	return compDist;
@@ -679,13 +687,13 @@ float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *s
 	*((u_int *)&compDist[1]) = dist->GetHeight();
 
 	float *ptr = &compDist[2];
-	std::copy(marginalDist, marginalDist + marginalSize, ptr);
+	copy(marginalDist, marginalDist + marginalSize, ptr);
 	ptr += marginalSize / 4;
 	delete[] marginalDist;
 
 	const u_int condSize4 = condSize / sizeof(float);
 	for (u_int i = 0; i < dist->GetHeight(); ++i) {
-		std::copy(condDists[i], condDists[i] + condSize4, ptr);
+		copy(condDists[i], condDists[i] + condSize4, ptr);
 		ptr += condSize4;
 		delete[] condDists[i];
 	}
@@ -1003,10 +1011,10 @@ void CompiledScene::CompileTextures() {
 				const Texture *amount = bt->GetAmountTexture();
 				tex->band.amountTexIndex = scene->texDefs.GetTextureIndex(amount);
 
-				const std::vector<float> &offsets = bt->GetOffsets();
-				const std::vector<Spectrum> &values = bt->GetValues();
+				const vector<float> &offsets = bt->GetOffsets();
+				const vector<Spectrum> &values = bt->GetValues();
 				if (offsets.size() > BAND_TEX_MAX_SIZE)
-					throw std::runtime_error("BandTexture with more than " + ToString(BAND_TEX_MAX_SIZE) + " are not supported");
+					throw runtime_error("BandTexture with more than " + ToString(BAND_TEX_MAX_SIZE) + " are not supported");
 				tex->band.size = offsets.size();
 				for (u_int i = 0; i < BAND_TEX_MAX_SIZE; ++i) {
 					if (i < offsets.size()) {
@@ -1037,7 +1045,7 @@ void CompiledScene::CompileTextures() {
 				break;
 			}
 			default:
-				throw std::runtime_error("Unknown texture: " + boost::lexical_cast<std::string>(t->GetType()));
+				throw runtime_error("Unknown texture: " + boost::lexical_cast<string>(t->GetType()));
 				break;
 		}
 	}
@@ -1058,7 +1066,7 @@ void CompiledScene::CompileImageMaps() {
 
 	const double tStart = WallClockTime();
 
-	std::vector<const ImageMap *> ims;
+	vector<const ImageMap *> ims;
 	scene->imgMapCache.GetImageMaps(ims);
 
 	imageMapDescs.resize(ims.size());
@@ -1070,7 +1078,7 @@ void CompiledScene::CompileImageMaps() {
 		const u_int memSize = pixelCount * im->GetChannelCount() * sizeof(float);
 
 		if (memSize > maxMemPageSize)
-			throw std::runtime_error("An image map is too big to fit in a single block of memory");
+			throw runtime_error("An image map is too big to fit in a single block of memory");
 
 		bool found = false;
 		u_int page;
@@ -1086,7 +1094,7 @@ void CompiledScene::CompileImageMaps() {
 		if (!found) {
 			// Check if I can add a new page
 			if (imageMapMemBlocks.size() > 8)
-				throw std::runtime_error("More than 8 blocks of memory are required for image maps");
+				throw runtime_error("More than 8 blocks of memory are required for image maps");
 
 			// Add a new page
 			imageMapMemBlocks.push_back(vector<float>());
