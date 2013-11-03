@@ -656,55 +656,6 @@ private:
 	luxrays::Properties stats;
 };
 
-/*!
- * \brief Types of render engines available.
- */
-typedef slg::RenderEngineType RenderEngineType;
-/*!
- * \brief Translates the name of a render engine in RenderEngineType.
- *
- * \param type is the name of the render engine.
- */
-extern RenderEngineType String2RenderEngineType(const std::string &type);
-/*!
- * \brief Translates a RenderEngineType in its name.
- *
- * \param type is the RenderEngineType to translate.
- */
-extern const std::string RenderEngineType2String(const RenderEngineType type);
-/*!
- * \brief Types of render engines available.
- */
-typedef slg::SamplerType SamplerType;
-/*!
- * \brief Translates the name of a sampler in SamplerType.
- *
- * \param type is the name of the render engine.
- */
-extern SamplerType String2SamplerType(const std::string &type);
-/*!
- * \brief Translates a SamplerType in its name.
- *
- * \param type is the SamplerType to translate.
- */
-extern const std::string SamplerType2String(const RenderEngineType type);
-/*!
- * \brief Types of render engines available.
- */
-typedef slg::ToneMapType ToneMapType;
-/*!
- * \brief Translates the name of a tone mapping in ToneMapType.
- *
- * \param type is the name of the render engine.
- */
-extern ToneMapType String2ToneMapType(const std::string &type);
-/*!
- * \brief Translates a ToneMapType in its name.
- *
- * \param type is the ToneMapType to translate.
- */
-extern const std::string ToneMapType2String(const RenderEngineType type);
-
 }
 
 #endif

@@ -148,7 +148,7 @@ static void PrintHelpAndSettings() {
 	} else
 #endif
 		buffer = boost::str(boost::format("[Rendering time %dsecs][Screen refresh %dms]") %
-				(stats.Get("stats.renderengine.time").Get<double>()) %
+				int(stats.Get("stats.renderengine.time").Get<double>()) %
 				config->GetProperty("screen.refresh.interval").Get<u_int>());
 	PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
 
@@ -159,7 +159,7 @@ static void PrintHelpAndSettings() {
 			"N/A" : config->GetProperty("sampler.type").Get<string>();
 	buffer = boost::str(boost::format("[Render engine %s][Sampler %s][Tone mapping %s]") %
 			engineType.c_str() % samplerName.c_str() %
-			ToneMapType2String(String2ToneMapType(config->GetProperty("film.tonemap.type").Get<string>())));
+			config->GetProperty("film.tonemap.type").Get<string>());
 	PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
@@ -443,16 +443,27 @@ void keyFunc(unsigned char key, int x, int y) {
 				config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 5)));
 			break;
 		}
-//		case 't':
-//			// Toggle tonemap type
-//			if (session->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
-//				Reinhard02ToneMapParams params;
-//				session->film->SetToneMapParams(params);
-//			} else {
-//				LinearToneMapParams params;
-//				session->film->SetToneMapParams(params);
-//			}
+		case 't': {
+			// Stop the session
+			session->Stop();
+
+			// Delete the session
+			delete session;
+			session = NULL;
+
+			// Change the Sampler
+			const string toenMapName = config->GetProperty("film.tonemap.type").Get<string>();
+			if (toenMapName == "LINEAR")
+				config->Parse(Properties() << Property("film.tonemap.type")("REINHARD02"));
+			else
+				config->Parse(Properties() << Property("film.tonemap.type")("LINEAR"));
+
+			session = new RenderSession(config);
+
+			// Re-start the rendering
+			session->Start();
 			break;
+		}
 		case 'v':
 			optMoveScale = Max(.0125f, optMoveScale - ((optMoveScale>= 1.f) ? .25f : 0.0125f));
 			UpdateMoveStep();

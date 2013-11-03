@@ -652,35 +652,3 @@ void RenderSession::UpdateStats() {
 const Properties &RenderSession::GetStats() const {
 	return stats;
 }
-
-//------------------------------------------------------------------------------
-// Utility
-//------------------------------------------------------------------------------
-
-namespace luxcore {
-
-RenderEngineType String2RenderEngineType(const string &type) {
-	return slg::RenderEngine::String2RenderEngineType(type);
-}
-
-const string RenderEngineType2String(const RenderEngineType type) {
-	return slg::RenderEngine::RenderEngineType2String(type);
-}
-
-SamplerType String2SamplerType(const string &type) {
-	return slg::Sampler::String2SamplerType(type);
-}
-
-const string SamplerType2String(const SamplerType type) {
-	return slg::Sampler::SamplerType2String(type);
-}
-
-ToneMapType String2ToneMapType(const string &type) {
-	return slg::String2ToneMapType(type);
-}
-
-const string ToneMapType2String(const ToneMapType type) {
-	return slg::ToneMapType2String(type);
-}
-
-}
