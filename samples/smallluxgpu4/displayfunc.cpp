@@ -778,7 +778,7 @@ void RunGlut() {
 	glutMouseFunc(mouseFunc);
 	glutMotionFunc(motionFunc);
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	const string engineType = config->GetProperties().Get("renderengine.type").Get<string>();
+	const string engineType = config->GetProperty("renderengine.type").Get<string>();
 	if ((engineType == "RTPATHOCL") || (engineType == "RTBIASPATHOCL")) {
 		glutIdleFunc(idleFunc);
 		optRealTimeMode = true;
