@@ -522,3 +522,7 @@ Properties &Properties::operator<<(const Properties &props) {
 Properties luxrays::operator<<(const Property &prop0, const Property &prop1) {
 	return Properties() << prop0 << prop1;
 }
+
+Properties luxrays::operator<<(const Property &prop0, const Properties &props) {
+	return Properties() << prop0 << props;
+}

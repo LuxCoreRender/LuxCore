@@ -44,7 +44,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	editMode = false;
 	GenerateNewSeed();
 
-	film->AddChannel(Film::TONEMAPPED_FRAMEBUFFER);
+	film->AddChannel(Film::RGB_TONEMAPPED);
 
 	// Create LuxRays context
 	const int oclPlatformIndex = renderConfig->cfg.Get(Property("opencl.platform.index")(-1)).Get<int>();
@@ -424,7 +424,7 @@ void CPUNoTileRenderThread::StartRenderThread() {
 
 	threadFilm = new Film(filmWidth, filmHeight);
 	threadFilm->CopyDynamicSettings(*(cpuNoTileEngine->film));
-	threadFilm->RemoveChannel(Film::TONEMAPPED_FRAMEBUFFER);
+	threadFilm->RemoveChannel(Film::RGB_TONEMAPPED);
 	threadFilm->Init();
 
 	CPURenderThread::StartRenderThread();
