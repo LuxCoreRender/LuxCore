@@ -50,7 +50,6 @@ public:
 
 	const luxrays::Properties &GetProperties() const { return sceneProperties; }
 
-	const u_int GetLightCount() const;
 	LightSource *GetLightByType(const LightSourceType lightType) const;
 	LightSource *GetLightByIndex(const u_int index) const;
 	LightSource *SampleAllLights(const float u, float *pdf) const;
@@ -83,6 +82,8 @@ public:
 
 	bool IsTextureDefined(const std::string &texName) const;
 	bool IsMaterialDefined(const std::string &matName) const;
+	const u_int GetLightCount() const;
+	const u_int GetObjectCount() const;
 
 	void Parse(const luxrays::Properties &props);
 	void DeleteObject(const std::string &objName);
