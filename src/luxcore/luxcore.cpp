@@ -149,6 +149,8 @@ size_t Film::GetOutputSize(const FilmOutputType type) const {
 			return 3 * pixelCount;
 		case OUTPUT_SHADING_NORMAL:
 			return 3 * pixelCount;
+		case OUTPUT_MATERIAL_ID:
+			return pixelCount;
 		case OUTPUT_DIRECT_DIFFUSE:
 			return 3 * pixelCount;
 		case OUTPUT_DIRECT_GLOSSY:
@@ -174,7 +176,7 @@ size_t Film::GetOutputSize(const FilmOutputType type) const {
 		case OUTPUT_RAYCOUNT:
 			return pixelCount;
 		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize()" + ToString(type));
+			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
 }
 
@@ -183,12 +185,53 @@ template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
 }
 
 template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const {
+	renderSession.renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+}
+
+u_int Film::GetChannelCount(const FilmChannelType type) const {
 	switch (type) {
-		case OUTPUT_MATERIAL_ID:
-			renderSession.renderSession->film->GetOutput<u_int>(slg::FilmOutputs::MATERIAL_ID, buffer, index);
-			break;
+		case CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED:
+			return renderSession.renderSession->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size();
+		case CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED:
+			return renderSession.renderSession->film->channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size();
+		case CHANNEL_ALPHA:
+			return renderSession.renderSession->film->channel_ALPHA ? 1 : 0;
+		case CHANNEL_RGB_TONEMAPPED:
+			return renderSession.renderSession->film->channel_RGB_TONEMAPPED ? 1 : 0;
+		case CHANNEL_DEPTH:
+			return renderSession.renderSession->film->channel_DEPTH ? 1 : 0;
+		case CHANNEL_POSITION:
+			return renderSession.renderSession->film->channel_POSITION ? 1 : 0;
+		case CHANNEL_GEOMETRY_NORMAL:
+			return renderSession.renderSession->film->channel_GEOMETRY_NORMAL ? 1 : 0;
+		case CHANNEL_SHADING_NORMAL:
+			return renderSession.renderSession->film->channel_SHADING_NORMAL ? 1 : 0;
+		case CHANNEL_MATERIAL_ID:
+			return renderSession.renderSession->film->channel_MATERIAL_ID ? 1 : 0;
+		case CHANNEL_DIRECT_DIFFUSE:
+			return renderSession.renderSession->film->channel_DIRECT_DIFFUSE ? 1 : 0;
+		case CHANNEL_DIRECT_GLOSSY:
+			return renderSession.renderSession->film->channel_DIRECT_GLOSSY ? 1 : 0;
+		case CHANNEL_EMISSION:
+			return renderSession.renderSession->film->channel_EMISSION ? 1 : 0;
+		case CHANNEL_INDIRECT_DIFFUSE:
+			return renderSession.renderSession->film->channel_INDIRECT_DIFFUSE ? 1 : 0;
+		case CHANNEL_INDIRECT_GLOSSY:
+			return renderSession.renderSession->film->channel_INDIRECT_GLOSSY ? 1 : 0;
+		case CHANNEL_INDIRECT_SPECULAR:
+			return renderSession.renderSession->film->channel_INDIRECT_SPECULAR ? 1 : 0;
+		case CHANNEL_MATERIAL_ID_MASK:
+			return renderSession.renderSession->film->channel_MATERIAL_ID_MASKs.size();
+		case CHANNEL_DIRECT_SHADOW_MASK:
+			return renderSession.renderSession->film->channel_DIRECT_SHADOW_MASK ? 1 : 0;
+		case CHANNEL_INDIRECT_SHADOW_MASK:
+			return renderSession.renderSession->film->channel_INDIRECT_SHADOW_MASK ? 1 : 0;
+		case CHANNEL_UV:
+			return renderSession.renderSession->film->channel_UV ? 1 : 0;
+		case CHANNEL_RAYCOUNT:
+			return renderSession.renderSession->film->channel_RAYCOUNT ? 1 : 0;
 		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetOutput<u_int>()" + ToString(type));
+			throw runtime_error("Unknown FilmOutputType in Film::GetChannelCount>(): " + ToString(type));
 	}
 }
 
@@ -234,7 +277,7 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 		case CHANNEL_RAYCOUNT:
 			return renderSession.renderSession->film->channel_RAYCOUNT->GetPixels();
 		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<float>()" + ToString(type));
+			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<float>(): " + ToString(type));
 	}
 }
 
@@ -243,7 +286,7 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 		case CHANNEL_MATERIAL_ID:
 			return renderSession.renderSession->film->channel_MATERIAL_ID->GetPixels();
 		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<u_int>()" + ToString(type));
+			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<u_int>(): " + ToString(type));
 	}
 }
 

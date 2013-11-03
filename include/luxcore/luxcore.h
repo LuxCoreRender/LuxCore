@@ -159,6 +159,8 @@ public:
 	 * \brief Returns the size (in float or u_int) of a Film output channel.
 	 *
 	 * \param type is the Film output channel to use.
+	 *
+	 * \return the size (in float or u_int) of a Film output channel.
 	 */
 	size_t GetOutputSize(const FilmOutputType type) const;
 	/*!
@@ -175,6 +177,14 @@ public:
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
+	/*!
+	 * \brief Returns the number of channels of the passed type.
+	 *
+	 * \param type is the Film output channel to use.
+	 *
+	 * \return the number of channels.
+	 */
+	u_int GetChannelCount(const FilmChannelType type) const;
 	/*!
 	 * \brief Returns a pointer to the type of channel requested. The channel is
 	 * not normalized (if it has a weight channel).
