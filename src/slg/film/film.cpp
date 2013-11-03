@@ -235,7 +235,7 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_ALPHA = new GenericFrameBuffer<2, 1, float>(width, height);
 		channel_ALPHA->Clear();
 	}
-	if (HasChannel(TONEMAPPED_FRAMEBUFFER)) {
+	if (HasChannel(RGB_TONEMAPPED)) {
 		channel_RGB_TONEMAPPED = new GenericFrameBuffer<3, 0, float>(width, height);
 		channel_RGB_TONEMAPPED->Clear();
 
@@ -1202,7 +1202,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 
 void Film::UpdateChannel_RGB_TONEMAPPED() {
 	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
-			!HasChannel(TONEMAPPED_FRAMEBUFFER)) {
+			!HasChannel(RGB_TONEMAPPED)) {
 		// Nothing to do
 		return;
 	}

@@ -82,13 +82,59 @@ class RenderSession;
  */
 class Film {
 public:
+	/*!
+	* \brief Types of Film channel  available.
+	*/
 	typedef enum {
-		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
-		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
-		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
-		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
-		RADIANCE_GROUP, UV, RAYCOUNT
+		OUTPUT_RGB = slg::FilmOutputs::RGB,
+		OUTPUT_RGBA = slg::FilmOutputs::RGBA,
+		OUTPUT_RGB_TONEMAPPED = slg::FilmOutputs::RGB_TONEMAPPED,
+		OUTPUT_RGBA_TONEMAPPED = slg::FilmOutputs::RGBA_TONEMAPPED,
+		OUTPUT_ALPHA = slg::FilmOutputs::ALPHA,
+		OUTPUT_DEPTH = slg::FilmOutputs::DEPTH,
+		OUTPUT_POSITION = slg::FilmOutputs::POSITION,
+		OUTPUT_GEOMETRY_NORMAL = slg::FilmOutputs::GEOMETRY_NORMAL,
+		OUTPUT_SHADING_NORMAL = slg::FilmOutputs::SHADING_NORMAL,
+		OUTPUT_MATERIAL_ID = slg::FilmOutputs::MATERIAL_ID,
+		OUTPUT_DIRECT_DIFFUSE = slg::FilmOutputs::DIRECT_DIFFUSE,
+		OUTPUT_DIRECT_GLOSSY = slg::FilmOutputs::DIRECT_GLOSSY,
+		OUTPUT_EMISSION = slg::FilmOutputs::EMISSION,
+		OUTPUT_INDIRECT_DIFFUSE = slg::FilmOutputs::INDIRECT_DIFFUSE,
+		OUTPUT_INDIRECT_GLOSSY = slg::FilmOutputs::INDIRECT_GLOSSY,
+		OUTPUT_INDIRECT_SPECULAR = slg::FilmOutputs::INDIRECT_SPECULAR,
+		OUTPUT_MATERIAL_ID_MASK = slg::FilmOutputs::MATERIAL_ID_MASK,
+		OUTPUT_DIRECT_SHADOW_MASK = slg::FilmOutputs::DIRECT_SHADOW_MASK,
+		OUTPUT_INDIRECT_SHADOW_MASK = slg::FilmOutputs::INDIRECT_SHADOW_MASK,
+		OUTPUT_RADIANCE_GROUP = slg::FilmOutputs::RADIANCE_GROUP,
+		OUTPUT_UV = slg::FilmOutputs::UV,
+		OUTPUT_RAYCOUNT
 	} FilmOutputType;
+
+	/*!
+	 * \brief Types of Film channel  available.
+	 */
+	typedef enum {
+		CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED = slg::Film::RADIANCE_PER_PIXEL_NORMALIZED,
+		CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED = slg::Film::RADIANCE_PER_SCREEN_NORMALIZED,
+		CHANNEL_ALPHA = slg::Film::ALPHA,
+		CHANNEL_RGB_TONEMAPPED = slg::Film::RGB_TONEMAPPED,
+		CHANNEL_DEPTH = slg::Film::DEPTH,
+		CHANNEL_POSITION = slg::Film::POSITION,
+		CHANNEL_GEOMETRY_NORMAL = slg::Film::GEOMETRY_NORMAL,
+		CHANNEL_SHADING_NORMAL = slg::Film::SHADING_NORMAL,
+		CHANNEL_MATERIAL_ID = slg::Film::MATERIAL_ID,
+		CHANNEL_DIRECT_DIFFUSE = slg::Film::DIRECT_DIFFUSE,
+		CHANNEL_DIRECT_GLOSSY = slg::Film::DIRECT_GLOSSY,
+		CHANNEL_EMISSION = slg::Film::EMISSION,
+		CHANNEL_INDIRECT_DIFFUSE = slg::Film::INDIRECT_DIFFUSE,
+		CHANNEL_INDIRECT_GLOSSY = slg::Film::INDIRECT_GLOSSY,
+		CHANNEL_INDIRECT_SPECULAR = slg::Film::INDIRECT_SPECULAR,
+		CHANNEL_MATERIAL_ID_MASK = slg::Film::MATERIAL_ID_MASK,
+		CHANNEL_DIRECT_SHADOW_MASK = slg::Film::DIRECT_SHADOW_MASK,
+		CHANNEL_INDIRECT_SHADOW_MASK = slg::Film::INDIRECT_SHADOW_MASK,
+		CHANNEL_UV = slg::Film::UV,
+		CHANNEL_RAYCOUNT = slg::Film::RAYCOUNT
+	} FilmChannelType;
 
 	~Film();
 
@@ -130,12 +176,20 @@ public:
 	}
 
 	/*!
-	 * \brief Returns a pointer to the RGB_TONEMAPPED buffer. This is a fast path
-	 * to avoid a buffer copy.
+	 * \brief Returns a pointer to the type of channel requested. The channel is
+	 * not normalized (if it has a weight channel).
 	 *
-	 * \return a pointer to a float array with RGB values.
+	 * \param type is the Film output channel to return. It must be one
+	 * of the enabled channels in RenderConfig. The supported template types are
+	 * float and unsigned int.
+	 * \param index of the buffer to use. Most of the times is 0 however, for instance,
+	 * if more than one light group is used, select the group to return.
+	 * 
+	 * \return a pointer to the requested raw buffer.
 	 */
-	const float *GetRGBToneMappedOutput() const;
+	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) const {
+		throw std::runtime_error("Called Film::GetChannel() with wrong type");
+	}
 
 	friend class RenderSession;
 
@@ -147,6 +201,8 @@ private:
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const;
 template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const;
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) const;
+template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) const;
 
 class Scene;
 

@@ -662,6 +662,7 @@ private:
 };
 
 Properties operator<<(const Property &prop0, const Property &prop1);
+Properties operator<<(const Property &prop0, const Properties &props);
 
 inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 	os << p.ToString();
