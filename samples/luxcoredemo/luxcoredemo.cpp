@@ -119,6 +119,11 @@ int main(int argc, char *argv[]) {
 			cout << "\n\n";
 
 			cout << props0.Get(Property("doesnt.exist.test")(0, 1, 2)) << "\n\n";
+
+			names0 = props0.GetAllNamesRE(".*\\.prop1\\..*");
+			BOOST_FOREACH(const string &n, names0)
+				cout << "[" << n << "]";
+			cout << "\n\n";
 		}
 
 		//----------------------------------------------------------------------
