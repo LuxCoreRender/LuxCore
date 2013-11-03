@@ -362,6 +362,12 @@ public:
 	 * \return the number of light sources in the Scene.
 	 */	
 	const u_int GetLightCount() const;
+	/*!
+	 * \brief Returns the number of objects in the Scene.
+	 *
+	 * \return the number of objects in the Scene.
+	 */	
+	const u_int GetObjectCount() const;
 
 	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects

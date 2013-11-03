@@ -1118,6 +1118,10 @@ const u_int Scene::GetLightCount() const {
 	return lightsSize;
 }
 
+const u_int Scene::GetObjectCount() const {
+	return objDefs.GetSize();
+}
+
 LightSource *Scene::GetLightByIndex(const u_int lightIndex) const {
 	const u_int lightsSize = GetLightCount();
 

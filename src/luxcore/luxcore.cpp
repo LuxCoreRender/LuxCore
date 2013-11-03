@@ -400,6 +400,10 @@ const u_int Scene::GetLightCount() const {
 	return scene->GetLightCount();
 }
 
+const u_int  Scene::GetObjectCount() const {
+	return scene->GetObjectCount();
+}
+
 void Scene::Parse(const Properties &props) {
 	scene->Parse(props);
 }
