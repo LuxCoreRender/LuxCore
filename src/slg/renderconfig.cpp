@@ -116,8 +116,10 @@ RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : scene
 		allocatedScene = false;
 	} else {
 		// Create the Scene
-		const string sceneFileName = GetProperty("scene.file").Get<string>();
-		const float imageScale = Max(.01f, GetProperty("images.scale").Get<float>());
+		const string defaultSceneName = GetDefaultProperties().Get("scene.file").Get<string>();
+		const string sceneFileName = props.Get(Property("scene.file")(defaultSceneName)).Get<string>();
+		const float defaultImageScale = GetDefaultProperties().Get("images.scale").Get<float>();
+		const float imageScale = Max(.01f, props.Get(Property("images.scale")(defaultImageScale)).Get<float>());
 
 		scene = new Scene(sceneFileName, imageScale);
 		allocatedScene = true;
