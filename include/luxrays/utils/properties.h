@@ -555,6 +555,15 @@ public:
 	 */
 	std::vector<std::string> GetAllNames(const std::string &prefix) const;
 	/*!
+	 * \brief Returns all Property unique names that match the passed regular
+	 * expression.
+	 *
+	 * \param regularExpression to use for the pattern matching.
+	 *
+	 * \return a vector of Property names.
+	 */
+	std::vector<std::string> GetAllNamesRE(const std::string &regularExpression) const;
+	/*!
 	 * \brief Returns all Property unique names that start with a specific prefix.
 	 *
 	 * For instance, given the the following names:
@@ -583,6 +592,15 @@ public:
 	 * \brief Returns all a copy of all Property with a name starting with a specific prefix.
 	 * 
 	 * \param prefix of the Property names to use.
+	 *
+	 * \return a copy of all Property matching the prefix.
+	 */
+	bool HaveNamesRE(const std::string &regularExpression) const;
+	/*!
+	 * \brief Returns all a copy of all Property with a name matching the passed
+	 * regular expression.
+	 * 
+	 * \param regularExpression to use for the pattern matching.
 	 *
 	 * \return a copy of all Property matching the prefix.
 	 */

@@ -29,6 +29,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/regex.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -390,6 +391,18 @@ vector<string> Properties::GetAllNames(const string &prefix) const {
 	return namesSubset;
 }
 
+vector<string> Properties::GetAllNamesRE(const string &regularExpression) const {
+	boost::regex re(regularExpression);
+	
+	vector<string> namesSubset;
+	BOOST_FOREACH(const string &name, names) {
+		if (boost::regex_match(name, re))
+			namesSubset.push_back(name);
+	}
+
+	return namesSubset;
+}
+
 vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
 	size_t fieldsCount = std::count(prefix.begin(), prefix.end(), '.') + 2;
 
@@ -413,6 +426,17 @@ vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
 bool Properties::HaveNames(const std::string &prefix) const {
 	BOOST_FOREACH(const string &name, names) {
 		if (name.find(prefix) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+bool Properties::HaveNamesRE(const std::string &regularExpression) const {
+	boost::regex re(regularExpression);
+
+	BOOST_FOREACH(const string &name, names) {
+		if (boost::regex_match(name, re))
 			return true;
 	}
 
