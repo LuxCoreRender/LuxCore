@@ -357,6 +357,13 @@ public:
 	 */
 	bool IsMaterialDefined(const std::string &matName) const;
 	/*!
+	 * \brief Returns the number of light sources in the Scene.
+	 *
+	 * \return the number of light sources in the Scene.
+	 */	
+	const u_int GetLightCount() const;
+
+	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects
 	 * based on the Properties defined.
 	 *
