@@ -333,6 +333,14 @@ bool Scene::IsMeshDefined(const std::string &meshName) const {
 	return extMeshCache.IsExtMeshDefined(meshName);
 }
 
+bool Scene::IsTextureDefined(const std::string &texName) const {
+	return texDefs.IsTextureDefined(texName);
+}
+
+bool Scene::IsMaterialDefined(const std::string &matName) const {
+	return matDefs.IsMaterialDefined(matName);
+}
+
 void Scene::Parse(const Properties &props) {
 	sceneProperties.Set(props);
 

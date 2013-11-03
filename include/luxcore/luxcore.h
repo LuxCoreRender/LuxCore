@@ -341,6 +341,22 @@ public:
 	 */
 	bool IsMeshDefined(const std::string &meshName) const;
 	/*!
+	 * \brief Check if a texture with the given name has been defined or not.
+	 *
+	 * \param texName is the name to check.
+	 *
+	 * \return true if the texture has been defined, false otherwise.
+	 */
+	bool IsTextureDefined(const std::string &texName) const;
+	/*!
+	 * \brief Check if a material with the given name has been defined or not.
+	 *
+	 * \param matName is the name to check.
+	 *
+	 * \return true if the material has been defined, false otherwise.
+	 */
+	bool IsMaterialDefined(const std::string &matName) const;
+	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects
 	 * based on the Properties defined.
 	 *
