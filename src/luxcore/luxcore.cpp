@@ -388,6 +388,14 @@ bool Scene::IsMeshDefined(const std::string &meshName) const {
 	return scene->IsMeshDefined(meshName);
 }
 
+bool Scene::IsTextureDefined(const std::string &texName) const {
+	return scene->IsTextureDefined(texName);
+}
+
+bool Scene::IsMaterialDefined(const std::string &matName) const {
+	return scene->IsMaterialDefined(matName);
+}
+
 void Scene::Parse(const Properties &props) {
 	scene->Parse(props);
 }

@@ -81,6 +81,9 @@ public:
 		luxrays::Spectrum *cols, float *alphas);
 	bool IsMeshDefined(const std::string &meshName) const;
 
+	bool IsTextureDefined(const std::string &texName) const;
+	bool IsMaterialDefined(const std::string &matName) const;
+
 	void Parse(const luxrays::Properties &props);
 	void DeleteObject(const std::string &objName);
 
