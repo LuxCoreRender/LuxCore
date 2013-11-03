@@ -45,6 +45,7 @@ public:
 		luxrays::Spectrum *cols, float *alphas);
 	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh);
 
+	bool IsExtMeshDefined(const std::string &name) const { return meshByName.find(name) != meshByName.end(); }
 	ExtMesh *GetExtMesh(const std::string &fileName, const Transform *trans = NULL);
 
 	// Note: before call to DeleteExtMesh, be sore to not have any instance referencing

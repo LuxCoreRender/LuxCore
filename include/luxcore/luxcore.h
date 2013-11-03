@@ -288,6 +288,14 @@ public:
 	void DefineImageMap(const std::string &imgMapName, float *cols, const float gamma,
 		const u_int channels, const u_int width, const u_int height);
 	/*!
+	 * \brief Check if an image map with the given name has been defined or not.
+	 *
+	 * \param imgMapName is the name to check.
+	 *
+	 * \return true if the image map has been defined, false otherwise.
+	 */
+	bool IsImageMapDefined(const std::string &imgMapName) const;
+	/*!
 	 * \brief Sets if the Scene class destructor has to delete all the arrays
 	 * pointed by the defined meshes or not.
 	 *
@@ -324,6 +332,14 @@ public:
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas);
+	/*!
+	 * \brief Check if a mesh with the given name has been defined or not.
+	 *
+	 * \param meshName is the name to check.
+	 *
+	 * \return true if the mesh has been defined, false otherwise.
+	 */
+	bool IsMeshDefined(const std::string &meshName) const;
 	/*!
 	 * \brief Edits or creates camera, textures, materials and/or objects
 	 * based on the Properties defined.

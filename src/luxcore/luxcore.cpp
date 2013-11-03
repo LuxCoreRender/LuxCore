@@ -365,6 +365,10 @@ void Scene::DefineImageMap(const string &imgMapName, float *cols, const float ga
 	scene->DefineImageMap(imgMapName, cols, gamma, channels, width, height);
 }
 
+bool Scene::IsImageMapDefined(const std::string &imgMapName) const {
+	return scene->IsImageMapDefined(imgMapName);
+}
+
 void Scene::SetDeleteMeshData(const bool v) {
 	scene->extMeshCache.SetDeleteMeshData(v);
 }
@@ -378,6 +382,10 @@ void Scene::DefineMesh(const string &meshName,
 	Point *p, Triangle *vi, Normal *n, UV *uv,
 	Spectrum *cols, float *alphas) {
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
+}
+
+bool Scene::IsMeshDefined(const std::string &meshName) const {
+	return scene->IsMeshDefined(meshName);
 }
 
 void Scene::Parse(const Properties &props) {
