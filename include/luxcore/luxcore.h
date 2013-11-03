@@ -156,6 +156,12 @@ public:
 	void Save() const;
 
 	/*!
+	 * \brief Returns the total sample count.
+	 *
+	 * \return the total sample count.
+	 */
+	double GetTotalSampleCount() const;
+	/*!
 	 * \brief Returns the size (in float or u_int) of a Film output channel.
 	 *
 	 * \param type is the Film output channel to use.

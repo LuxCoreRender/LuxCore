@@ -128,6 +128,10 @@ void Film::Save() const {
 	renderSession.renderSession->SaveFilm();
 }
 
+double Film::GetTotalSampleCount() const {
+	return renderSession.renderSession->film->GetTotalSampleCount(); 
+}
+
 size_t Film::GetOutputSize(const FilmOutputType type) const {
 	const u_int pixelCount = renderSession.renderSession->film->GetWidth() * renderSession.renderSession->film->GetHeight();
 	switch (type) {
