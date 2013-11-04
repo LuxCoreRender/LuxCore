@@ -44,6 +44,8 @@ extern std::string KernelSource_bsdf_funcs;
 extern std::string KernelSource_material_types;
 extern std::string KernelSource_materialdefs_funcs;
 extern std::string KernelSource_material_funcs;
+extern std::string KernelSource_texture_noise_funcs;
+extern std::string KernelSource_texture_blender_funcs;
 extern std::string KernelSource_texture_types;
 extern std::string KernelSource_texture_funcs;
 extern std::string KernelSource_light_types;
@@ -52,7 +54,6 @@ extern std::string KernelSource_scene_funcs;
 extern std::string KernelSource_mapping_types;
 extern std::string KernelSource_mapping_funcs;
 extern std::string KernelSource_hitpoint_types;
-
 } }
 
 #endif	/* _SLG_KERNELS_H */

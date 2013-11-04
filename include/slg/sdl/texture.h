@@ -59,7 +59,7 @@ typedef enum {
 	HITPOINTGREY,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
-	WRINKLED, UV_TEX, BAND_TEX
+	WRINKLED, UV_TEX, BAND_TEX, WOOD
 } TextureType;
 
 class ImageMap;
@@ -1085,6 +1085,48 @@ private:
 	u_int channel;
 };
 
+//------------------------------------------------------------------------------
+// Wood texture
+//------------------------------------------------------------------------------
+typedef enum {
+	BANDS, RINGS, BANDNOISE, RINGNOISE
+} WoodType;
+
+typedef enum {
+	TEX_SIN, TEX_SAW, TEX_TRI
+} NoiseBase;
+
+class WoodTexture : public Texture {
+public:
+	WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast);
+	virtual ~WoodTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return WOOD; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return .5f; }
+
+	virtual luxrays::UV GetDuDv() const;
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	WoodType GetWoodType() const { return type; }
+	NoiseBase GetNoiseBasis2() const { return noisebasis2; }
+	float GetNoiseSize() const { return noisesize; }
+	float GetTurbulence() const { return turbulence; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+	bool GetNoiseType() const { return hard; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	WoodType type;
+	NoiseBase noisebasis2;	
+	float noisesize, turbulence;
+	bool hard;
+	float bright, contrast;
+};
 }
 
 #endif	/* _SLG_TEXTURE_H */

@@ -152,6 +152,33 @@ static float Turbulence(const Point &P, const float omega, const int maxOctaves)
 	return sum;
 }
 
+/* creates a sine wave */
+static float tex_sin(float a) {
+    a = 0.5f + 0.5f * sinf(a);
+
+    return a;
+}
+
+/* creates a saw wave */
+static float tex_saw(float a) {
+    const float b = 2.0f * M_PI;
+
+    int n = (int) (a / b);
+    a -= n*b;
+    if (a < 0) a += b;
+    return a / b;
+}
+
+/* creates a triangle wave */
+static float tex_tri(float a) {
+    const float b = 2.0f * M_PI;
+    const float rmax = 1.0f;
+
+    a = rmax - 2.0f * fabs(floor((a * (1.0f / b)) + 0.5f) - (a * (1.0f / b)));
+
+    return a;
+}
+
 //------------------------------------------------------------------------------
 // TextureDefinitions
 //------------------------------------------------------------------------------
@@ -1587,6 +1614,132 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) c
 	props.Set(Property("scene.textures." + name + ".type")("hitpointgrey"));
 	props.Set(Property("scene.textures." + name + ".channel")(
 		((channel != 0) && (channel != 1) && (channel != 2)) ? -1 : ((int)channel)));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// Wood texture
+//------------------------------------------------------------------------------
+WoodTexture::WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast) : 
+						  mapping(mp), type(BANDS), noisebasis2(TEX_SIN),  noisesize(noisesize), turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
+	if(ptype == "bands") {
+		type = BANDS;
+	} else if(ptype == "rings") {
+		type = RINGS;
+	} else if(ptype == "bandnoise") {
+		type = BANDNOISE;
+	} else if(ptype == "ringnoise") {
+		type = RINGNOISE;
+	};
+
+	if(pnoise == "sin") {
+		noisebasis2 = TEX_SIN;
+	} else if(pnoise == "saw") {
+		noisebasis2 = TEX_SAW;
+	} else if(pnoise == "tri") {
+		noisebasis2 = TEX_TRI;
+	};
+}
+
+float WoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint));
+	float scale = 1.f;
+	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
+
+    float (*waveform[3])(float); /* create array of pointers to waveform functions */
+    waveform[0] = tex_sin; /* assign address of tex_sin() function to pointer array */
+    waveform[1] = tex_saw;
+    waveform[2] = tex_tri;
+
+	u_int wf = 0;
+	if(noisebasis2 == TEX_SAW) { 
+		wf = 1;
+	} else if(noisebasis2 == TEX_TRI) 
+		wf = 2;
+
+	float wood = 0.f;
+	switch(type) {
+		case BANDS:
+			wood = waveform[wf]((P.x + P.y + P.z) * 10.f);
+			break;
+		case RINGS:
+			wood = waveform[wf](sqrtf(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f);
+			break;
+		case BANDNOISE:
+			if(hard) wood = turbulence * fabs(2.f * Noise(scale*P) - 1.f);			
+			else wood = turbulence * Noise(scale*P);
+			wood = waveform[wf]((P.x + P.y + P.z) * 10.f + wood);
+			break;
+		case RINGNOISE:
+			if(hard) wood = turbulence * fabs(2.f * Noise(scale*P) - 1.f);			
+			else wood = turbulence * Noise(scale*P);
+			wood = waveform[wf](sqrtf(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f + wood);
+			break;
+	}
+    
+	wood = (wood - 0.5f) * contrast + bright - 0.5f;
+    if(wood < 0.f) wood = 0.f; 
+	else if(wood > 1.f) wood = 1.f;
+	
+    return wood;
+}
+
+Spectrum WoodTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+
+UV WoodTexture::GetDuDv() const {
+	return UV(DUDV_VALUE, DUDV_VALUE);
+}
+
+Properties WoodTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	std::string noise;
+	switch(noisebasis2) {
+		default:
+		case TEX_SIN:
+			noise = "sin";
+			break;
+		case TEX_SAW:
+			noise = "saw";
+			break;
+		case TEX_TRI:
+			noise = "tri";
+			break;
+	}
+	std::string woodtype;
+	switch(type) {
+		default:
+		case BANDS:
+			woodtype = "bands";
+			break;
+		case RINGS:
+			woodtype = "rings";
+			break;
+		case BANDNOISE:
+			woodtype = "bandnoise";
+			break;
+		case RINGNOISE:
+			woodtype = "ringnoise";
+			break;
+	}
+	std::string noisetype = "soft_noise";
+	if(hard) noisetype = "hard_noise";
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("wood"));
+	props.Set(Property("scene.textures." + name + ".woodtype")(woodtype));
+	props.Set(Property("scene.textures." + name + ".noisebasis2")(noise));
+	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
+	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

@@ -826,6 +826,16 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float variation = props.Get(Property(propName + ".variation")(.2f)).Get<float>();
 
 		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
+	} else if (texType == "wood") {
+		const std::string woodtype = props.Get(Property(propName + ".woodtype")("bands")).Get<string>();
+		const std::string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
+		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
+		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
+		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
+		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
+
+		return new WoodTexture(CreateTextureMapping3D(propName + ".mapping", props), woodtype, noisebasis2, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "dots") {
 		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
 		const Texture *outsideTex = GetTexture(props.Get(Property(propName + ".outside")(0.f)));
