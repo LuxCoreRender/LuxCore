@@ -553,7 +553,7 @@ public:
 	 * (followed by the vertical) begin and end of the Film region to
 	 * render (in pixels).
 	 *
-	 * \return True if there is a sub-region to render, false otherwise.
+	 * \return true if there is a sub-region to render, false otherwise.
 	 */
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
