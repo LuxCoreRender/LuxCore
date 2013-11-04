@@ -517,7 +517,7 @@ def LogHandler(msg):
 
 def main():
 	pyluxcore.Init(LogHandler)
-	print("LuxCore %s" % pyluxcore.version())
+	print("LuxCore %s" % pyluxcore.Version())
 	
 	app = QApplication(sys.argv)
 	rv = RenderView("scenes/luxball/luxball-hdr.cfg")

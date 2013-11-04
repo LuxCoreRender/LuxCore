@@ -24,7 +24,7 @@ import pyluxcore
 
 pyluxcore.Init()
 
-print("LuxCore %s\n" % pyluxcore.version())
+print("LuxCore %s\n" % pyluxcore.Version())
 
 ################################################################################
 ## Properties examples

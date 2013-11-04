@@ -710,7 +710,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	package.attr("__doc__") = "New LuxRender Python bindings\n\n"
 			"Provides access to the new LuxRender API in python\n\n";
 
-	def("version", LuxCoreVersion, "Returns the LuxCore version");
+	def("Version", LuxCoreVersion, "Returns the LuxCore version");
 
 	def("Init", &LuxCore_Init);
 	def("Init", &LuxCore_InitDefaultHandler);
@@ -896,6 +896,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	//--------------------------------------------------------------------------
 
     class_<RenderSession>("RenderSession", init<RenderConfig *>()[with_custodian_and_ward<1, 2>()])
+		.def("GetRenderConfig", &RenderSession::GetRenderConfig, return_internal_reference<>())
 		.def("Start", &RenderSession::Start)
 		.def("Stop", &RenderSession::Stop)
 		.def("BeginSceneEdit", &RenderSession::BeginSceneEdit)
