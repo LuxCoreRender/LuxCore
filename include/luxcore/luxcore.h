@@ -168,7 +168,21 @@ public:
 	 *
 	 * \return the size (in float or u_int) of a Film output channel.
 	 */
+	bool HasOutput(const FilmOutputType type) const;
+	/*!
+	 * \brief Returns if a film channel output is available or not.
+	 *
+	 * \param type is the Film output channel to use.
+	 *
+	 * \return true if the output is available, false otherwise.
+	 */
 	size_t GetOutputSize(const FilmOutputType type) const;
+	/*!
+	 * \brief Returns the number of radiance groups.
+	 *
+	 * \return the number of radiance groups.
+	 */
+	u_int GetRadianceGroupCount() const;
 	/*!
 	 * \brief Fills the buffer with a Film output channel.
 	 *
@@ -188,7 +202,7 @@ public:
 	 *
 	 * \param type is the Film output channel to use.
 	 *
-	 * \return the number of channels.
+	 * \return the number of channels. Returns 0 if the channel is not available.
 	 */
 	u_int GetChannelCount(const FilmChannelType type) const;
 	/*!

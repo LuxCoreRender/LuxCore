@@ -132,6 +132,10 @@ double Film::GetTotalSampleCount() const {
 	return renderSession.renderSession->film->GetTotalSampleCount(); 
 }
 
+bool Film::HasOutput(const FilmOutputType type) const {
+	return renderSession.renderSession->film->HasOutput((slg::FilmOutputs::FilmOutputType)type);
+}
+
 size_t Film::GetOutputSize(const FilmOutputType type) const {
 	const u_int pixelCount = renderSession.renderSession->film->GetWidth() * renderSession.renderSession->film->GetHeight();
 	switch (type) {
@@ -182,6 +186,10 @@ size_t Film::GetOutputSize(const FilmOutputType type) const {
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
+}
+
+u_int Film::GetRadianceGroupCount() const {
+	return renderSession.renderSession->film->GetRadianceGroupCount();
 }
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const {
