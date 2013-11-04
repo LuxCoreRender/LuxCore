@@ -654,6 +654,57 @@ void Film::AddFilm(const Film &film,
 	}
 }
 
+bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
+	switch (type) {
+		case FilmOutputs::RGB:
+			return HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) || HasChannel(RADIANCE_PER_SCREEN_NORMALIZED);
+		case FilmOutputs::RGB_TONEMAPPED:
+			return HasChannel(RGB_TONEMAPPED);
+		case FilmOutputs::RGBA:
+			return (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) || HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) && HasChannel(ALPHA);
+		case FilmOutputs::RGBA_TONEMAPPED:
+			return HasChannel(RGB_TONEMAPPED) && HasChannel(ALPHA);
+		case FilmOutputs::ALPHA:
+			return HasChannel(ALPHA);
+		case FilmOutputs::DEPTH:
+			return HasChannel(DEPTH);
+		case FilmOutputs::POSITION:
+			return HasChannel(POSITION);
+		case FilmOutputs::GEOMETRY_NORMAL:
+			return HasChannel(GEOMETRY_NORMAL);
+		case FilmOutputs::SHADING_NORMAL:
+			return HasChannel(SHADING_NORMAL);
+		case FilmOutputs::MATERIAL_ID:
+			return HasChannel(MATERIAL_ID);
+		case FilmOutputs::DIRECT_DIFFUSE:
+			return HasChannel(DIRECT_DIFFUSE);
+		case FilmOutputs::DIRECT_GLOSSY:
+			return HasChannel(DIRECT_GLOSSY);
+		case FilmOutputs::EMISSION:
+			return HasChannel(EMISSION);
+		case FilmOutputs::INDIRECT_DIFFUSE:
+			return HasChannel(INDIRECT_DIFFUSE);
+		case FilmOutputs::INDIRECT_GLOSSY:
+			return HasChannel(INDIRECT_GLOSSY);
+		case FilmOutputs::INDIRECT_SPECULAR:
+			return HasChannel(INDIRECT_SPECULAR);
+		case FilmOutputs::MATERIAL_ID_MASK:
+			return HasChannel(MATERIAL_ID_MASK);
+		case FilmOutputs::DIRECT_SHADOW_MASK:
+			return HasChannel(DIRECT_SHADOW_MASK);
+		case FilmOutputs::INDIRECT_SHADOW_MASK:
+			return HasChannel(INDIRECT_SHADOW_MASK);
+		case FilmOutputs::RADIANCE_GROUP:
+			return true;
+		case FilmOutputs::UV:
+			return HasChannel(UV);
+		case FilmOutputs::RAYCOUNT:
+			return HasChannel(RAYCOUNT);
+		default:
+			throw std::runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
+	}
+}
+
 void Film::Output(const FilmOutputs &filmOutputs) {
 	for (u_int i = 0; i < filmOutputs.GetCount(); ++i)
 		Output(filmOutputs.GetType(i), filmOutputs.GetFileName(i), &filmOutputs.GetProperties(i));
@@ -676,24 +727,29 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 	u_int radianceGroupIndex = 0;
 	switch (type) {
 		case FilmOutputs::RGB:
-			if (!hdrImage)
+			if (!hdrImage || (!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)))
 				return;
 			imageType = FIT_RGBF;
 			bitCount = 96;
 			break;
 		case FilmOutputs::RGB_TONEMAPPED:
+			if (!HasChannel(RGB_TONEMAPPED))
+				return;
 			UpdateChannel_RGB_TONEMAPPED();
 
 			imageType = hdrImage ? FIT_RGBF : FIT_BITMAP;
 			bitCount = hdrImage ? 96 : 24;
 			break;
 		case FilmOutputs::RGBA:
-			if (!hdrImage)
+			if (!hdrImage || (!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) &&
+					!HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) || !HasChannel(ALPHA))
 				return;
 			imageType = FIT_RGBAF;
 			bitCount = 128;
 			break;
 		case FilmOutputs::RGBA_TONEMAPPED:
+			if (!HasChannel(RGB_TONEMAPPED) || !HasChannel(ALPHA))
+				return;
 			UpdateChannel_RGB_TONEMAPPED();
 
 			imageType = hdrImage ? FIT_RGBAF : FIT_BITMAP;
@@ -829,14 +885,14 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				return;
 			break;
 		case FilmOutputs::UV:
-			if (hdrImage) {
+			if (hdrImage && HasChannel(UV)) {
 				imageType = FIT_RGBF;
 				bitCount = 96;
 			} else
 				return;
 			break;
 		case FilmOutputs::RAYCOUNT:
-			if (hdrImage) {
+			if (hdrImage && HasChannel(RAYCOUNT)) {
 				imageType = FIT_FLOAT;
 				bitCount = 32;
 			} else

@@ -171,6 +171,7 @@ public:
 		AddFilm(film, 0, 0, width, height, 0, 0);
 	}
 
+	bool HasOutput(const FilmOutputs::FilmOutputType type) const;
 	void Output(const FilmOutputs &filmOutputs);
 	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
 		const luxrays::Properties *props = NULL);

@@ -355,6 +355,16 @@ static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
 // Glue for Properties class
 //------------------------------------------------------------------------------
 
+static boost::python::list Properties_GetAllNamesRE(luxrays::Properties *props, const string &pattern) {
+	boost::python::list l;
+	const vector<string> &keys = props->GetAllNamesRE(pattern);
+	BOOST_FOREACH(const string &key, keys) {
+		l.append(key);
+	}
+
+	return l;
+}
+
 static boost::python::list Properties_GetAllNames1(luxrays::Properties *props) {
 	boost::python::list l;
 	const vector<string> &keys = props->GetAllNames();
@@ -428,9 +438,6 @@ void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list 
 // Glue for Film class
 //------------------------------------------------------------------------------
 
-static size_t Film_GetOutputSize(Film *film, const Film::FilmOutputType type) {
-	return film->GetOutputSize(type);
-}
 
 static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
@@ -786,10 +793,12 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("SetFromString", &luxrays::Properties::SetFromString, return_internal_reference<>())
 
 		.def("Clear", &luxrays::Properties::Clear, return_internal_reference<>())
+		.def("GetAllNamesRE", &Properties_GetAllNamesRE)
 		.def("GetAllNames", &Properties_GetAllNames1)
 		.def("GetAllNames", &Properties_GetAllNames2)
 		.def("GetAllUniqueSubNames", &Properties_GetAllUniqueSubNames)
 		.def("HaveNames", &luxrays::Properties::HaveNames)
+		.def("HaveNamesRE", &luxrays::Properties::HaveNamesRE)
 		.def("GetAllProperties", &luxrays::Properties::GetAllProperties)
 
 		.def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
@@ -833,8 +842,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	;
 
     class_<Film>("Film", no_init)
+		.def("GetWidth", &Film::GetWidth)
+		.def("GetHeight", &Film::GetHeight)
 		.def("Save", &Film::Save)
-		.def("GetOutputSize", &Film_GetOutputSize)
+		.def("GetRadianceGroupCount", &Film::GetRadianceGroupCount)
+		.def("GetOutputSize", &Film::GetOutputSize)
 		.def("GetOutputFloat", &Film_GetOutputFloat1)
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
@@ -865,15 +877,21 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<Scene>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
 		.def("GetProperties", &Scene::GetProperties, return_internal_reference<>())
+		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())
+		.def("GetLightCount", &Scene::GetLightCount)
+		.def("GetObjectCount", &Scene::GetObjectCount)
 		.def("DefineImageMap", &Scene_DefineImageMap)
+		.def("IsImageMapDefined", &Scene::IsImageMapDefined)
 		.def("DefineMesh", &Scene_DefineMesh)
+		.def("IsMeshDefined", &Scene::IsMeshDefined)
+		.def("IsTextureDefined", &Scene::IsTextureDefined)
+		.def("IsMaterialDefined", &Scene::IsMaterialDefined)
 		.def("Parse", &Scene::Parse)
 		.def("DeleteObject", &Scene::DeleteObject)
 		.def("RemoveUnusedImageMaps", &Scene::RemoveUnusedImageMaps)
 		.def("RemoveUnusedTextures", &Scene::RemoveUnusedTextures)
 		.def("RemoveUnusedMaterials", &Scene::RemoveUnusedMaterials)
 		.def("RemoveUnusedMeshes", &Scene::RemoveUnusedMeshes)
-		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())
     ;
 
 	//--------------------------------------------------------------------------
