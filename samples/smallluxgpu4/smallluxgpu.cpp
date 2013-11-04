@@ -176,7 +176,6 @@ int main(int argc, char *argv[]) {
 		luxcore::Init();
 
 		bool batchMode = false;
-//		bool telnetServerEnabled = false;
 		Properties cmdLineProp;
 		string configFileName;
 		for (int i = 1; i < argc; i++) {
@@ -190,7 +189,6 @@ int main(int argc, char *argv[]) {
 							" -w [window width]" << endl <<
 							" -e [window height]" << endl <<
 							" -t [halt time in secs]" << endl <<
-//							" -T <enable the telnet server>" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
 							" -m Makes the mouse operations work in \"grab mode\"" << endl << 
@@ -213,8 +211,6 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'f') cmdLineProp.Set(Property("scene.file")(argv[++i]));
 
 				else if (argv[i][1] == 't') cmdLineProp.Set(Property("batch.halttime")(argv[++i]));
-
-//				else if (argv[i][1] == 'T') telnetServerEnabled = true;
 
 				else if (argv[i][1] == 'm') optMouseGrabMode = true;
 
@@ -292,11 +288,7 @@ int main(int argc, char *argv[]) {
 			session->UpdateStats();
 			UpdateMoveStep();
 
-//			if (telnetServerEnabled) {
-//				slg::TelnetServer telnetServer(18081, session);
-//				RunGlut();
-//			} else
-				RunGlut();
+			RunGlut();
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
