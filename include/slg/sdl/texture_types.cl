@@ -26,7 +26,7 @@ typedef enum {
 	HITPOINTGREY,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
-	WRINKLED, UV_TEX, BAND_TEX
+	WRINKLED, UV_TEX, BAND_TEX, WOOD
 } TextureType;
 
 typedef struct {
@@ -118,6 +118,23 @@ typedef struct {
 	float omega;
 } WindyTexParam;
 
+typedef enum {
+	BANDS, RINGS, BANDNOISE, RINGNOISE
+} WoodType;
+
+typedef enum {
+	TEX_SIN, TEX_SAW, TEX_TRI
+} NoiseBase;
+
+typedef struct {
+	TextureMapping3D mapping;
+	WoodType type;
+	NoiseBase noisebasis2;
+	float noisesize, turbulence;
+	float bright, contrast;
+	bool hard;
+} WoodTexParam;
+
 typedef struct {
 	TextureMapping3D mapping;
 	int octaves;
@@ -159,6 +176,7 @@ typedef struct {
 		BrickTexParam brick;
 		AddTexParam addTex;
 		WindyTexParam windy;
+		WoodTexParam wood;
 		WrinkledTexParam wrinkled;
 		UVTexParam uvTex;
 		BandTexParam band;

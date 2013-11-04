@@ -703,6 +703,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_WINDY";
 	if (cscene->IsTextureCompiled(WRINKLED))
 		ss << " -D PARAM_ENABLE_WRINKLED";
+	if (cscene->IsTextureCompiled(WOOD))
+		ss << " -D PARAM_ENABLE_WOOD";
 	if (cscene->IsTextureCompiled(UV_TEX))
 		ss << " -D PARAM_ENABLE_TEX_UV";
 	if (cscene->IsTextureCompiled(BAND_TEX))
@@ -871,6 +873,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_triangle_funcs <<
 			slg::ocl::KernelSource_trianglemesh_funcs <<
 			slg::ocl::KernelSource_mapping_funcs <<
+			slg::ocl::KernelSource_texture_noise_funcs <<
+			slg::ocl::KernelSource_texture_blender_funcs <<
 			slg::ocl::KernelSource_texture_funcs <<
 			slg::ocl::KernelSource_materialdefs_funcs <<
 			slg::ocl::KernelSource_material_funcs <<

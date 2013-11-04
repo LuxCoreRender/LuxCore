@@ -997,6 +997,46 @@ void CompiledScene::CompileTextures() {
 				tex->wrinkled.omega = wt->GetOmega();
 				break;
 			}
+			case WOOD: {
+				WoodTexture *wt = static_cast<WoodTexture *>(t);
+
+				tex->type = slg::ocl::WOOD;
+				CompileTextureMapping3D(&tex->wood.mapping, wt->GetTextureMapping());				 
+				tex->wood.turbulence = wt->GetTurbulence();
+				tex->wood.bright = wt->GetBright();
+				tex->wood.contrast = wt->GetContrast();
+				tex->wood.hard = wt->GetNoiseType();
+				tex->wood.noisesize = wt->GetNoiseSize();
+				switch (wt->GetNoiseBasis2()) {
+					default:
+					case TEX_SIN:
+						tex->wood.noisebasis2 = slg::ocl::TEX_SIN;
+						break;
+					case TEX_SAW:
+						tex->wood.noisebasis2 = slg::ocl::TEX_SAW;
+						break;
+					case TEX_TRI:
+						tex->wood.noisebasis2 = slg::ocl::TEX_TRI;
+						break;
+				}
+				
+				switch (wt->GetWoodType()) {
+					default:
+					case BANDS:
+						tex->wood.type = slg::ocl::BANDS;
+						break;
+					case RINGS:
+						tex->wood.type = slg::ocl::RINGS;
+						break;
+					case BANDNOISE:
+						tex->wood.type = slg::ocl::BANDNOISE;
+						break;
+					case RINGNOISE:
+						tex->wood.type = slg::ocl::RINGNOISE;
+						break;
+				}
+				break;
+			}
 			case UV_TEX: {
 				UVTexture *uvt = static_cast<UVTexture *>(t);
 
