@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
 							" -t [halt time in secs]" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
-							" -m Makes the mouse operations work in \"grab mode\"" << endl << 
+							" -m <makes the mouse operations work in \"grab mode\">" << endl << 
 							" -R <use LuxVR name>" << endl <<
 							" -g <enable full screen mode>" << endl <<
 							" -h <display this help and exit>");
@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
 				}
 			} else {
 				string s = argv[i];
-				if ((s.length() >= 4) && (s.substr(s.length() - 4) == ".cfg")) {
+				if ((s.length() >= 4) && ((s.substr(s.length() - 4) == ".cfg") || (s.substr(s.length() - 4) == ".lxs"))) {
 					if (configFileName.compare("") != 0)
 						throw runtime_error("Used multiple configuration files");
 					configFileName = s;
@@ -241,9 +241,21 @@ int main(int argc, char *argv[]) {
 		}
 
 		// Load the Scene
-		
 		if (configFileName.compare("") == 0)
 			configFileName = "scenes/luxball/luxball.cfg";
+
+		// Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
+		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
+			// It is a LuxRender SDL file
+			SLG_LOG("Parsing LuxRender SDL file...");
+			Properties renderConfigProps, sceneProps;
+			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
+
+			SLG_LOG("RenderConfig: \n" << renderConfigProps);
+			SLG_LOG("Scene: \n" << sceneProps);
+
+			return EXIT_SUCCESS;
+		}
 
 		config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
 

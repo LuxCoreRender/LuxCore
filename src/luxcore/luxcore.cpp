@@ -110,6 +110,63 @@ void luxcore::Init(void (*LogHandler)(const char *)) {
 // Film
 //------------------------------------------------------------------------------
 
+extern FILE *yyin;
+extern int yyparse(void);
+extern void yyrestart( FILE *new_file );
+extern void IncludeClear();
+extern string currentFile;
+extern u_int lineNum;
+
+namespace luxcore { namespace parselxs {
+Properties *renderConfigProps = NULL;
+Properties *sceneProps = NULL;
+} }
+
+void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Properties &sceneProps) {
+	// Otherwise the code is not thread-safe
+	static boost::mutex parseLXSMutex;
+	boost::unique_lock<boost::mutex> lock(parseLXSMutex);
+
+	luxcore::parselxs::renderConfigProps = &renderConfigProps;
+	luxcore::parselxs::sceneProps = &sceneProps;
+
+	bool parseSuccess = false;
+
+	if (fileName == "-")
+		yyin = stdin;
+	else
+		yyin = fopen(fileName.c_str(), "r");
+
+	if (yyin != NULL) {
+		currentFile = fileName;
+		if (yyin == stdin)
+			currentFile = "<standard input>";
+		lineNum = 1;
+		// Make sure to flush any buffers before parsing
+		IncludeClear();
+		yyrestart(yyin);
+		try {
+			parseSuccess = (yyparse() == 0);
+		} catch (std::runtime_error& e) {
+			throw runtime_error("Exception during parsing (file '" + currentFile + "', line: " + ToString(lineNum) + "): " + e.what());
+		}
+		
+		if (yyin != stdin)
+			fclose(yyin);
+	} else
+		throw runtime_error("Unable to read scene file: " + fileName);
+
+	currentFile = "";
+	lineNum = 0;
+
+	if ((yyin == NULL) || !parseSuccess)
+		throw runtime_error("Parsing failed: " + fileName);
+}
+
+//------------------------------------------------------------------------------
+// Film
+//------------------------------------------------------------------------------
+
 Film::Film(const RenderSession &session) : renderSession(session) {
 }
 

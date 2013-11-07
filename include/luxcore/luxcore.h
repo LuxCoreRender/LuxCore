@@ -74,6 +74,15 @@ extern void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
  */
 extern void Init(void (*LogHandler)(const char *) = NULL);
 
+/*!
+ * \brief Parses a scene described using LuxRender SDL (Scene Description Language).
+ *
+ * \param fileName is the name of the file to parse.
+ * \param renderConfig is where the rendering configuration properties are returned.
+ * \param scene is where the scene properties are returned.
+ */
+extern void ParseLXS(const std::string &fileName, luxrays::Properties &renderConfig, luxrays::Properties &scene);
+
 class RenderSession;
 
 /*!

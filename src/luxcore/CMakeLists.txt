@@ -82,6 +82,28 @@ if(DOXYGEN_FOUND)
 	add_custom_target(apidoc_luxcore DEPENDS ${DOXYGEN_LUXCORE_OUTPUT})
 endif(DOXYGEN_FOUND)
 
+#############################################################################
+#
+# Custom Commnad
+#
+#############################################################################
+
+# Create custom command for bison/yacc
+BISON_TARGET(lux_parser ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp
+	COMPILE_FLAGS --defines="${LuxRays_SOURCE_DIR}/include/luxcore/luxparse.hpp")
+SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
+
+# Create custom command for flex/lex
+FLEX_TARGET(lux_lexer ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp)
+SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
+ADD_FLEX_BISON_DEPENDENCY(lux_lexer lux_parser)
+
+SET(LUX_PARSER_SRC
+	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y
+	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l
+)
+SOURCE_GROUP("Source Files\\Lux Parser" FILES ${LUX_PARSER_SRCS})	
+
 ################################################################################
 #
 # LuxCore library
@@ -90,6 +112,8 @@ endif(DOXYGEN_FOUND)
 
 set(LUXCORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxcore.cpp
+	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp
+	${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp
 )
 SOURCE_GROUP("Source Files\\LuxCore Library" FILES ${LUXCORE_LIB_SRCS})	
 
@@ -97,7 +121,7 @@ set(LUXCORE_LIB_SRCS
 	${LUXCORE_SRCS}
 )
 
-add_library(luxcore STATIC ${LUXCORE_LIB_SRCS})
+add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
