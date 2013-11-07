@@ -26,6 +26,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -201,7 +202,23 @@ template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &m) {
 //------------------------------------------------------------------------------
 
 std::string Property::ToString() const {
-	return name + " = " + GetValuesString();
+	stringstream ss;
+
+	ss << name + " = ";
+	for (u_int i = 0; i < values.size(); ++i) {
+		if (i != 0)
+			ss << " ";
+		
+		if (GetValueType(i) == typeid(string)) {
+			// Escape " char
+			string s = Get<string>(i);
+			boost::replace_all(s, "\"", "\\\"");
+			ss << "\"" << s << "\"";
+		} else
+			ss << Get<string>(i);
+	}
+
+	return ss.str();
 }
 
 string Property::ExtractField(const string &name, const u_int index) {
@@ -307,7 +324,12 @@ Properties &Properties::SetFromStream(istream &stream) {
 				bool found = false;
 				while (last < len) {
 					if ((value[last] == '"') || (value[last] == '\'')) {
-						prop.Add(value.substr(first, last - first));
+						// Replace any escaped " or '
+						string s = value.substr(first, last - first);
+						boost::replace_all(s,"\\\"", "\"");
+						boost::replace_all(s,"\\\'", "'");
+
+						prop.Add(s);
 						found = true;
 						++last;
 

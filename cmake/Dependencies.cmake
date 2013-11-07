@@ -109,3 +109,9 @@ find_package(OpenCL)
 if (OPENCL_FOUND)
 	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
 endif ()
+
+# Find BISON
+FIND_PACKAGE(BISON)
+
+# Find FLEX
+FIND_PACKAGE(FLEX)
