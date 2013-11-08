@@ -48,7 +48,6 @@ class GraphicsState {
 public:
 	GraphicsState() {
 		currentLightGroup = 0;
-		reverseOrientation = false;
 	}
 	~GraphicsState() {
 	}
@@ -57,7 +56,6 @@ public:
 	Properties areaLightProps, materialProps;
 
 	u_int currentLightGroup;
-	bool reverseOrientation;
 };
 
 // The GraphicsState stack
@@ -212,7 +210,7 @@ static void DefineMaterial(const string &name, const Properties &props) {
 				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
 				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props);
 	} else {
-		LC_LOG("LuxCore ParserLXS supports only Matte, Mirror, Glass, Metal, MatteTranslucent, Null, Mix, Glossy2, Metal2 and RoughGlass material (i.e. not " <<
+		LC_LOG("LuxCor::ParserLXS supports only Matte, Mirror, Glass, Metal, MatteTranslucent, Null, Mix, Glossy2, Metal2 and RoughGlass material (i.e. not " <<
 			type << "). Replacing an unsupported material with matte.");
 
 		*sceneProps <<
@@ -539,10 +537,14 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | ATTRIBUTEEND
 {
-	currentGraphicsState = graphicsStatesStack.back();
-	graphicsStatesStack.pop_back();
-	currentTransform = transformsStack.back();
-	transformsStack.pop_back();
+	if (!graphicsStatesStack.size()) {
+		LC_LOG("Unmatched AttributeEnd encountered. Ignoring it.");
+	} else {
+		currentGraphicsState = graphicsStatesStack.back();
+		graphicsStatesStack.pop_back();
+		currentTransform = transformsStack.back();
+		transformsStack.pop_back();
+	}
 }
 | CAMERA STRING paramlist
 {
@@ -677,7 +679,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | MATERIAL STRING paramlist
 {
-	currentGraphicsState.materialName = $2;
+	currentGraphicsState.materialName = "";
 	InitProperties(currentGraphicsState.materialProps, CPS, CP);
 
 	FreeArgs();
@@ -707,7 +709,11 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | NAMEDMATERIAL STRING
 {
-	//Context::GetActive()->NamedMaterial($2);
+	const string name($2);
+	if (!namedMaterials.count(name))
+		throw std::runtime_error("Named material '" + name + "' unknown");
+
+	currentGraphicsState.materialName = name;
 }
 | OBJECTBEGIN STRING
 {
@@ -723,17 +729,32 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | PORTALINSTANCE STRING
 {
-	//luxPortalInstance($2);
 }
 | MOTIONINSTANCE STRING NUM NUM STRING
 {
-	//luxMotionInstance($2, $3, $4, $5);
 }
 | PIXELFILTER STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->PixelFilter($2, params);
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	const string name($2);
+	if (name == "box") {
+		*sceneProps <<
+				Property("film.filter.type")("BOX");
+	} else if (name == "gaussian") {
+		*sceneProps <<
+				Property("film.filter.type")("GAUSSIAN");
+	} else if (name == "mitchell") {
+		const bool supersample = props.Get(Property("supersample")(false)).Get<bool>();
+		*sceneProps <<
+				Property("film.filter.type")(supersample ? "MITCHELL_SS" : "MITCHELL");
+	} else {
+		LC_LOG("LuxCore doesn't support the filter type " + name + ", using MITCHELL filter instead");
+		*sceneProps <<
+				Property("film.filter.type")("MITCHELL");
+	}
+
 	FreeArgs();
 }
 | RENDERER STRING paramlist
@@ -762,26 +783,45 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | REVERSEORIENTATION
 {
-	//luxReverseOrientation();
 }
 | ROTATE NUM NUM NUM NUM
 {
-	//luxRotate($2, $3, $4, $5);
+	Transform t(Rotate($2, Vector($3, $4, $5)));
+	currentTransform = currentTransform * t;
 }
 | SAMPLER STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Sampler($2, params);
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	const string name($2);
+	if (name == "metropolis") {
+		*sceneProps <<
+				Property("sampler.type")("METROPOLIS") <<
+				Property("sampler.metropolis.maxconsecutivereject")(Property("maxconsecrejects")(512).Get<u_int>()) <<
+				Property("sampler.metropolis.largesteprate")(Property("largemutationprob")(.4f).Get<float>()) <<
+				Property("sampler.metropolis.imagemutationrate")(Property("mutationrange")(.1f).Get<float>());
+	} else if ((name == "sobol") || (name == "lowdiscrepancy")) {
+		*sceneProps <<
+				Property("sampler.type")("SOBOL");
+	} else if (name == "random") {
+		*sceneProps <<
+				Property("sampler.type")("RANDOM");
+	} else {
+		LC_LOG("LuxCore doesn't support the sampler type " + name + ", falling back to random sampler");
+		*sceneProps <<
+				Property("sampler.type")("RANDOM");
+	}
+
 	FreeArgs();
 }
 | SCALE NUM NUM NUM
 {
-	//luxScale($2, $3, $4);
+	Transform t(Scale($2, $3, $4));
+	currentTransform = currentTransform * t;
 }
 | SEARCHPATH STRING
 {
-	//;//luxSearchPath($2);//FIXME - Unimplemented
 }
 | SHAPE STRING paramlist
 {
@@ -792,9 +832,6 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | PORTALSHAPE STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->PortalShape($2, params);
 	FreeArgs();
 }
 | SURFACEINTEGRATOR STRING paramlist
@@ -813,43 +850,49 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | TRANSFORMBEGIN
 {
-	//luxTransformBegin();
+	transformsStack.push_back(currentTransform);
 }
 | TRANSFORMEND
 {
-	//luxTransformEnd();
+	if (!(transformsStack.size() > graphicsStatesStack.size())) {
+		LC_LOG("Unmatched TransformEnd encountered. Ignoring it.");
+	} else {
+		currentTransform = transformsStack.back();
+		transformsStack.pop_back();
+	}
 }
 | TRANSFORM real_num_array
 {
-	//if (VerifyArrayLength($2, 16, "Transform"))
-	//	luxTransform(static_cast<float *>($2->array));
+	if (VerifyArrayLength($2, 16, "Transform")) {
+		const float *tr = static_cast<float *>($2->array);
+		Transform t(Matrix4x4(tr[0], tr[4], tr[8], tr[12],
+				tr[1], tr[5], tr[9], tr[13],
+				tr[2], tr[6], tr[10], tr[14],
+				tr[3], tr[7], tr[11], tr[15]));
+
+		currentTransform = t;
+	}
+
 	ArrayFree($2);
 }
 | TRANSLATE NUM NUM NUM
 {
-	//luxTranslate($2, $3, $4);
+	Transform t(Translate(Vector($2, $3, $4)));
+	currentTransform = currentTransform * t;
 }
 | VOLUMEINTEGRATOR STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->VolumeIntegrator($2, params);
 	FreeArgs();
 }
 | VOLUME STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Volume($2, params);
 	FreeArgs();
 }
 | WORLDBEGIN
 {
-	//luxWorldBegin();
 }
 | WORLDEND
 {
-	//luxWorldEnd();
 };
 %%
 
