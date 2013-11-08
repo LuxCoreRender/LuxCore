@@ -71,6 +71,7 @@
 
 #include <stdarg.h>
 #include <sstream>
+#include <vector>
 
 #include "luxcore/luxcore.h"
 
@@ -79,9 +80,62 @@ using namespace luxrays;
 using namespace luxcore;
 
 namespace luxcore { namespace parselxs {
-extern Properties *renderConfigProps;
-extern Properties *sceneProps;
+Properties *renderConfigProps = NULL;
+Properties *sceneProps = NULL;
+
+Properties overwriteProps;
+Transform worldToCamera;
+
+//------------------------------------------------------------------------------
+// RenderOptions
+//------------------------------------------------------------------------------
+
+class GraphicsState {
+public:
+	GraphicsState() {
+		currentLightGroup = 0;
+		reverseOrientation = false;
+	}
+	~GraphicsState() {
+	}
+
+	Properties areaLightProps;
+
+	u_int currentLightGroup;
+	bool reverseOrientation;
+};
+
+// The GraphicsState stack
+static vector<GraphicsState> graphicsStatesStack;
+static GraphicsState currentGraphicsState;
+// The transformations stack
+static vector<Transform> transformsStack;
+static Transform currentTransform;
+// The named coordinate systems
+static boost::unordered_map<string, Transform> namedCoordinateSystems;
+
+void ResetParser() {
+	overwriteProps.Clear();
+
+	*renderConfigProps <<
+			Property("opencl.platform.index")(-1) <<
+			Property("opencl.cpu.use")(true) <<
+			Property("opencl.gpu.use")(true) <<
+			Property("renderengine.type")("PATHOCL") <<
+			Property("sampler.type")("RANDOM") <<
+			Property("film.filter.type")("MITCHELL");
+
+	graphicsStatesStack.clear();
+	currentGraphicsState = GraphicsState();
+	transformsStack.clear();
+	currentTransform = Transform();
+}
+
 } }
+
+using namespace luxcore::parselxs;
+
+//------------------------------------------------------------------------------
 
 extern int yylex(void);
 u_int lineNum = 0;
@@ -180,7 +234,7 @@ void FreeArgs()
 	}
 }
 
-/*static bool VerifyArrayLength(ParamArray *arr, u_int required,
+static bool VerifyArrayLength(ParamArray *arr, u_int required,
 	const char *command)
 {
 	if (arr->nelems != required) {
@@ -188,7 +242,7 @@ void FreeArgs()
 		return false;
 	}
 	return true;
-}*/
+}
 
 static void InitProperties(Properties &props, const u_int count, const ParamListElem *list);
 
@@ -201,8 +255,9 @@ static void InitProperties(Properties &props, const u_int count, const ParamList
 }
 
 
+
 /* Line 268 of yacc.c  */
-#line 206 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
+#line 261 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -290,7 +345,7 @@ typedef union YYSTYPE
 {
 
 /* Line 293 of yacc.c  */
-#line 158 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 213 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
 
 char string[1024];
 float num;
@@ -299,7 +354,7 @@ ParamArray *ribarray;
 
 
 /* Line 293 of yacc.c  */
-#line 303 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
+#line 358 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -311,7 +366,7 @@ ParamArray *ribarray;
 
 
 /* Line 343 of yacc.c  */
-#line 315 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
+#line 370 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
 
 #ifdef short
 # undef short
@@ -631,14 +686,14 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   183,   183,   187,   195,   200,   205,   209,   214,   218,
-     224,   229,   233,   236,   240,   246,   250,   255,   260,   264,
-     267,   271,   277,   281,   286,   290,   293,   310,   313,   317,
-     324,   331,   335,   339,   346,   352,   356,   360,   364,   371,
-     375,   379,   386,   393,   397,   404,   411,   418,   423,   427,
-     431,   435,   439,   443,   447,   451,   458,   482,   486,   490,
-     497,   501,   505,   512,   519,   526,   533,   537,   541,   547,
-     551,   558,   565,   569
+       0,   238,   238,   242,   250,   255,   260,   264,   269,   273,
+     279,   284,   288,   291,   295,   301,   305,   310,   315,   319,
+     322,   326,   332,   336,   341,   345,   348,   365,   368,   372,
+     383,   388,   393,   400,   425,   438,   442,   451,   454,   465,
+     469,   472,   479,   486,   490,   497,   504,   511,   516,   520,
+     524,   528,   532,   536,   540,   544,   551,   575,   579,   583,
+     590,   594,   598,   605,   612,   619,   626,   630,   634,   640,
+     644,   651,   658,   662
 };
 #endif
 
@@ -1674,7 +1729,7 @@ yyreduce:
         case 2:
 
 /* Line 1806 of yacc.c  */
-#line 184 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 239 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1682,7 +1737,7 @@ yyreduce:
   case 3:
 
 /* Line 1806 of yacc.c  */
-#line 188 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 243 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	if (curArray)
 		ArrayFree(curArray);
@@ -1694,7 +1749,7 @@ yyreduce:
   case 4:
 
 /* Line 1806 of yacc.c  */
-#line 196 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 251 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	curArray->elementSize = sizeof(const char *);
 }
@@ -1703,7 +1758,7 @@ yyreduce:
   case 5:
 
 /* Line 1806 of yacc.c  */
-#line 201 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 256 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	curArray->elementSize = sizeof(float);
 }
@@ -1712,7 +1767,7 @@ yyreduce:
   case 6:
 
 /* Line 1806 of yacc.c  */
-#line 206 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 261 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = (yyvsp[(1) - (1)].ribarray);
 }
@@ -1721,7 +1776,7 @@ yyreduce:
   case 7:
 
 /* Line 1806 of yacc.c  */
-#line 210 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 265 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = (yyvsp[(1) - (1)].ribarray);
 }
@@ -1730,7 +1785,7 @@ yyreduce:
   case 8:
 
 /* Line 1806 of yacc.c  */
-#line 215 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 270 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = (yyvsp[(1) - (1)].ribarray);
 }
@@ -1739,7 +1794,7 @@ yyreduce:
   case 9:
 
 /* Line 1806 of yacc.c  */
-#line 219 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 274 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = ArrayDup(curArray);
 	arrayIsSingleString = true;
@@ -1749,7 +1804,7 @@ yyreduce:
   case 10:
 
 /* Line 1806 of yacc.c  */
-#line 225 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 280 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = ArrayDup(curArray);
 }
@@ -1758,7 +1813,7 @@ yyreduce:
   case 11:
 
 /* Line 1806 of yacc.c  */
-#line 230 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 285 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1766,7 +1821,7 @@ yyreduce:
   case 12:
 
 /* Line 1806 of yacc.c  */
-#line 234 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 289 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1774,7 +1829,7 @@ yyreduce:
   case 13:
 
 /* Line 1806 of yacc.c  */
-#line 237 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 292 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1782,7 +1837,7 @@ yyreduce:
   case 14:
 
 /* Line 1806 of yacc.c  */
-#line 241 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 296 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	char *toAdd = strdup((yyvsp[(2) - (2)].string));
 	AddArrayElement(&toAdd);
@@ -1792,7 +1847,7 @@ yyreduce:
   case 15:
 
 /* Line 1806 of yacc.c  */
-#line 247 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 302 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = (yyvsp[(1) - (1)].ribarray);
 }
@@ -1801,7 +1856,7 @@ yyreduce:
   case 16:
 
 /* Line 1806 of yacc.c  */
-#line 251 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 306 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = ArrayDup(curArray);
 }
@@ -1810,7 +1865,7 @@ yyreduce:
   case 17:
 
 /* Line 1806 of yacc.c  */
-#line 256 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 311 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	(yyval.ribarray) = ArrayDup(curArray);
 }
@@ -1819,7 +1874,7 @@ yyreduce:
   case 18:
 
 /* Line 1806 of yacc.c  */
-#line 261 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 316 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1827,7 +1882,7 @@ yyreduce:
   case 19:
 
 /* Line 1806 of yacc.c  */
-#line 265 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 320 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1835,7 +1890,7 @@ yyreduce:
   case 20:
 
 /* Line 1806 of yacc.c  */
-#line 268 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 323 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1843,7 +1898,7 @@ yyreduce:
   case 21:
 
 /* Line 1806 of yacc.c  */
-#line 272 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 327 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	float toAdd = (yyvsp[(2) - (2)].num);
 	AddArrayElement(&toAdd);
@@ -1853,7 +1908,7 @@ yyreduce:
   case 22:
 
 /* Line 1806 of yacc.c  */
-#line 278 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 333 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1861,7 +1916,7 @@ yyreduce:
   case 23:
 
 /* Line 1806 of yacc.c  */
-#line 282 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 337 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	CPS = 0;
 }
@@ -1870,7 +1925,7 @@ yyreduce:
   case 24:
 
 /* Line 1806 of yacc.c  */
-#line 287 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 342 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1878,7 +1933,7 @@ yyreduce:
   case 25:
 
 /* Line 1806 of yacc.c  */
-#line 290 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 345 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1886,7 +1941,7 @@ yyreduce:
   case 26:
 
 /* Line 1806 of yacc.c  */
-#line 294 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 349 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	void *arg = new char[(yyvsp[(2) - (2)].ribarray)->nelems * (yyvsp[(2) - (2)].ribarray)->elementSize];
 	memcpy(arg, (yyvsp[(2) - (2)].ribarray)->array, (yyvsp[(2) - (2)].ribarray)->nelems * (yyvsp[(2) - (2)].ribarray)->elementSize);
@@ -1907,7 +1962,7 @@ yyreduce:
   case 27:
 
 /* Line 1806 of yacc.c  */
-#line 311 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 366 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1915,7 +1970,7 @@ yyreduce:
   case 28:
 
 /* Line 1806 of yacc.c  */
-#line 314 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 369 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -1923,11 +1978,15 @@ yyreduce:
   case 29:
 
 /* Line 1806 of yacc.c  */
-#line 318 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 373 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Accelerator($2, params);
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	// Map kdtree and bvh to luxrays' bvh accel otherwise just use the default settings
+	if ((strcmp((yyvsp[(2) - (3)].string), "kdtree") == 0) || (strcmp((yyvsp[(2) - (3)].string), "bvh") == 0))
+		*renderConfigProps << Property("accelerator.type")("BVH");
+		
 	FreeArgs();
 }
     break;
@@ -1935,11 +1994,9 @@ yyreduce:
   case 30:
 
 /* Line 1806 of yacc.c  */
-#line 325 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 384 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->AreaLightSource($2, params);
+	InitProperties(currentGraphicsState.areaLightProps, CPS, CP);
 	FreeArgs();
 }
     break;
@@ -1947,29 +2004,51 @@ yyreduce:
   case 31:
 
 /* Line 1806 of yacc.c  */
-#line 332 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 389 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//luxAttributeBegin();
+	graphicsStatesStack.push_back(currentGraphicsState);
+	transformsStack.push_back(currentTransform);
 }
     break;
 
   case 32:
 
 /* Line 1806 of yacc.c  */
-#line 336 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 394 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//luxAttributeEnd();
+	currentGraphicsState = graphicsStatesStack.back();
+	graphicsStatesStack.pop_back();
+	currentTransform = transformsStack.back();
+	transformsStack.pop_back();
 }
     break;
 
   case 33:
 
 /* Line 1806 of yacc.c  */
-#line 340 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 401 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Camera($2, params);
+	if (strcmp((yyvsp[(2) - (3)].string), "perspective") != 0)
+		throw std::runtime_error("LuxCore supports only perspective camera");
+
+	Properties props;
+	InitProperties(props, CPS, CP);
+	
+	if (props.IsDefined("screenwindow")) {
+		Property prop = props.Get("screenwindow");
+		*sceneProps << Property("scene.camera.screenwindow")(
+			prop.Get<float>(0), prop.Get<float>(1), prop.Get<float>(2), prop.Get<float>(3));
+	}
+	
+	*sceneProps << Property("scene.camera.fieldofview")(props.Get(Property("fov")(90.f)).Get<float>()) <<
+		Property("scene.camera.lensradius")(props.Get(Property("lensradius")(0.00625f)).Get<float>()) <<
+		Property("scene.camera.focaldistance")(props.Get(Property("focaldistance")(1e30f)).Get<float>()) <<
+		Property("scene.camera.hither")(props.Get(Property("cliphither")(1e-3f)).Get<float>()) <<
+		Property("scene.camera.yon")(props.Get(Property("clipyon")(1e30f)).Get<float>());
+
+	worldToCamera = currentTransform;
+	namedCoordinateSystems["camera"] = currentTransform;
+
 	FreeArgs();
 }
     break;
@@ -1977,10 +2056,17 @@ yyreduce:
   case 34:
 
 /* Line 1806 of yacc.c  */
-#line 347 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 426 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//if (VerifyArrayLength($2, 16, "ConcatTransform"))
-	//	luxConcatTransform(static_cast<float *>($2->array));
+	if (VerifyArrayLength((yyvsp[(2) - (2)].ribarray), 16, "ConcatTransform")) {
+		const float *tr = static_cast<float *>((yyvsp[(2) - (2)].ribarray)->array);
+		Transform t(Matrix4x4(tr[0], tr[4], tr[8], tr[12],
+				tr[1], tr[5], tr[9], tr[13],
+				tr[2], tr[6], tr[10], tr[14],
+				tr[3], tr[7], tr[11], tr[15]));
+
+		currentTransform = currentTransform * t;
+	}
 	ArrayFree((yyvsp[(2) - (2)].ribarray));
 }
     break;
@@ -1988,38 +2074,46 @@ yyreduce:
   case 35:
 
 /* Line 1806 of yacc.c  */
-#line 353 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 439 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//luxCoordinateSystem($2);
+	namedCoordinateSystems[(yyvsp[(2) - (2)].string)] = currentTransform;
 }
     break;
 
   case 36:
 
 /* Line 1806 of yacc.c  */
-#line 357 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 443 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//luxCoordSysTransform($2);
+	string name((yyvsp[(2) - (2)].string));
+	if (namedCoordinateSystems.find(name) != namedCoordinateSystems.end())
+		currentTransform = namedCoordinateSystems[name];
+	else {
+		throw runtime_error("Coordinate system '" + name + "' unknown");
+	}
 }
     break;
 
   case 37:
 
 /* Line 1806 of yacc.c  */
-#line 361 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 452 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//Context::GetActive()->Exterior($2);
 }
     break;
 
   case 38:
 
 /* Line 1806 of yacc.c  */
-#line 365 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 455 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Film($2, params);
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	*renderConfigProps <<
+			Property("film.width")(props.Get(Property("xresoluton")(800)).Get<u_int>()) <<
+			Property("film.height")(props.Get(Property("yresoluton")(600)).Get<u_int>());
+
 	FreeArgs();
 }
     break;
@@ -2027,25 +2121,24 @@ yyreduce:
   case 39:
 
 /* Line 1806 of yacc.c  */
-#line 372 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 466 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//luxIdentity();
+	currentTransform = Transform();
 }
     break;
 
   case 40:
 
 /* Line 1806 of yacc.c  */
-#line 376 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 470 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
-	//Context::GetActive()->Interior($2);
 }
     break;
 
   case 41:
 
 /* Line 1806 of yacc.c  */
-#line 380 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 473 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2057,7 +2150,7 @@ yyreduce:
   case 42:
 
 /* Line 1806 of yacc.c  */
-#line 387 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 480 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2069,7 +2162,7 @@ yyreduce:
   case 43:
 
 /* Line 1806 of yacc.c  */
-#line 394 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 487 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxLookAt($2, $3, $4, $5, $6, $7, $8, $9, $10);
 }
@@ -2078,7 +2171,7 @@ yyreduce:
   case 44:
 
 /* Line 1806 of yacc.c  */
-#line 398 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 491 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2090,7 +2183,7 @@ yyreduce:
   case 45:
 
 /* Line 1806 of yacc.c  */
-#line 405 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 498 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2102,7 +2195,7 @@ yyreduce:
   case 46:
 
 /* Line 1806 of yacc.c  */
-#line 412 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 505 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2114,7 +2207,7 @@ yyreduce:
   case 47:
 
 /* Line 1806 of yacc.c  */
-#line 419 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 512 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxMotionBegin($2->nelems, static_cast<float *>($2->array));
 	ArrayFree((yyvsp[(2) - (2)].ribarray));
@@ -2124,7 +2217,7 @@ yyreduce:
   case 48:
 
 /* Line 1806 of yacc.c  */
-#line 424 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 517 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxMotionEnd();
 }
@@ -2133,7 +2226,7 @@ yyreduce:
   case 49:
 
 /* Line 1806 of yacc.c  */
-#line 428 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 521 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//Context::GetActive()->NamedMaterial($2);
 }
@@ -2142,7 +2235,7 @@ yyreduce:
   case 50:
 
 /* Line 1806 of yacc.c  */
-#line 432 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 525 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectBegin($2);
 }
@@ -2151,7 +2244,7 @@ yyreduce:
   case 51:
 
 /* Line 1806 of yacc.c  */
-#line 436 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 529 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectEnd();
 }
@@ -2160,7 +2253,7 @@ yyreduce:
   case 52:
 
 /* Line 1806 of yacc.c  */
-#line 440 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 533 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectInstance($2);
 }
@@ -2169,7 +2262,7 @@ yyreduce:
   case 53:
 
 /* Line 1806 of yacc.c  */
-#line 444 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 537 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxPortalInstance($2);
 }
@@ -2178,7 +2271,7 @@ yyreduce:
   case 54:
 
 /* Line 1806 of yacc.c  */
-#line 448 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 541 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxMotionInstance($2, $3, $4, $5);
 }
@@ -2187,7 +2280,7 @@ yyreduce:
   case 55:
 
 /* Line 1806 of yacc.c  */
-#line 452 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 545 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2199,7 +2292,7 @@ yyreduce:
   case 56:
 
 /* Line 1806 of yacc.c  */
-#line 459 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 552 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2212,12 +2305,12 @@ yyreduce:
 		if (props.IsDefined("config")) {
 			const Property &prop = props.Get("config");
 			for (u_int i = 0; i < prop.GetSize(); ++i)
-				luxcore::parselxs::renderConfigProps->SetFromString(prop.Get<string>(i));
+				luxcore::parselxs::overwriteProps.SetFromString(prop.Get<string>(i));
 		}
 
 		// Look for the localconfigfile parameter
 		if (props.IsDefined("localconfigfile")) {
-			luxcore::parselxs::renderConfigProps->SetFromFile(props.Get("localconfigfile").Get<string>());
+			luxcore::parselxs::overwriteProps.SetFromFile(props.Get("localconfigfile").Get<string>());
 		}
 	}
 
@@ -2228,7 +2321,7 @@ yyreduce:
   case 57:
 
 /* Line 1806 of yacc.c  */
-#line 483 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 576 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxReverseOrientation();
 }
@@ -2237,7 +2330,7 @@ yyreduce:
   case 58:
 
 /* Line 1806 of yacc.c  */
-#line 487 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 580 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxRotate($2, $3, $4, $5);
 }
@@ -2246,7 +2339,7 @@ yyreduce:
   case 59:
 
 /* Line 1806 of yacc.c  */
-#line 491 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 584 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2258,7 +2351,7 @@ yyreduce:
   case 60:
 
 /* Line 1806 of yacc.c  */
-#line 498 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 591 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxScale($2, $3, $4);
 }
@@ -2267,7 +2360,7 @@ yyreduce:
   case 61:
 
 /* Line 1806 of yacc.c  */
-#line 502 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 595 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//;//luxSearchPath($2);//FIXME - Unimplemented
 }
@@ -2276,7 +2369,7 @@ yyreduce:
   case 62:
 
 /* Line 1806 of yacc.c  */
-#line 506 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 599 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2288,7 +2381,7 @@ yyreduce:
   case 63:
 
 /* Line 1806 of yacc.c  */
-#line 513 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 606 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2300,7 +2393,7 @@ yyreduce:
   case 64:
 
 /* Line 1806 of yacc.c  */
-#line 520 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 613 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2312,7 +2405,7 @@ yyreduce:
   case 65:
 
 /* Line 1806 of yacc.c  */
-#line 527 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 620 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2324,7 +2417,7 @@ yyreduce:
   case 66:
 
 /* Line 1806 of yacc.c  */
-#line 534 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 627 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxTransformBegin();
 }
@@ -2333,7 +2426,7 @@ yyreduce:
   case 67:
 
 /* Line 1806 of yacc.c  */
-#line 538 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 631 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxTransformEnd();
 }
@@ -2342,7 +2435,7 @@ yyreduce:
   case 68:
 
 /* Line 1806 of yacc.c  */
-#line 542 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 635 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//if (VerifyArrayLength($2, 16, "Transform"))
 	//	luxTransform(static_cast<float *>($2->array));
@@ -2353,7 +2446,7 @@ yyreduce:
   case 69:
 
 /* Line 1806 of yacc.c  */
-#line 548 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 641 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxTranslate($2, $3, $4);
 }
@@ -2362,7 +2455,7 @@ yyreduce:
   case 70:
 
 /* Line 1806 of yacc.c  */
-#line 552 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 645 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2374,7 +2467,7 @@ yyreduce:
   case 71:
 
 /* Line 1806 of yacc.c  */
-#line 559 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 652 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//ParamSet params;
 	//InitParamSet(params, CPS, CP);
@@ -2386,7 +2479,7 @@ yyreduce:
   case 72:
 
 /* Line 1806 of yacc.c  */
-#line 566 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 659 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxWorldBegin();
 }
@@ -2395,7 +2488,7 @@ yyreduce:
   case 73:
 
 /* Line 1806 of yacc.c  */
-#line 570 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 663 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxWorldEnd();
 }
@@ -2404,7 +2497,7 @@ yyreduce:
 
 
 /* Line 1806 of yacc.c  */
-#line 2408 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
+#line 2501 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2635,7 +2728,7 @@ yyreturn:
 
 
 /* Line 2067 of yacc.c  */
-#line 573 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 666 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
 
 
 typedef enum {

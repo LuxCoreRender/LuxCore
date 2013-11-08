@@ -25,6 +25,7 @@
 
 #include <stdarg.h>
 #include <sstream>
+#include <vector>
 
 #include "luxcore/luxcore.h"
 
@@ -33,9 +34,62 @@ using namespace luxrays;
 using namespace luxcore;
 
 namespace luxcore { namespace parselxs {
-extern Properties *renderConfigProps;
-extern Properties *sceneProps;
+Properties *renderConfigProps = NULL;
+Properties *sceneProps = NULL;
+
+Properties overwriteProps;
+Transform worldToCamera;
+
+//------------------------------------------------------------------------------
+// RenderOptions
+//------------------------------------------------------------------------------
+
+class GraphicsState {
+public:
+	GraphicsState() {
+		currentLightGroup = 0;
+		reverseOrientation = false;
+	}
+	~GraphicsState() {
+	}
+
+	Properties areaLightProps;
+
+	u_int currentLightGroup;
+	bool reverseOrientation;
+};
+
+// The GraphicsState stack
+static vector<GraphicsState> graphicsStatesStack;
+static GraphicsState currentGraphicsState;
+// The transformations stack
+static vector<Transform> transformsStack;
+static Transform currentTransform;
+// The named coordinate systems
+static boost::unordered_map<string, Transform> namedCoordinateSystems;
+
+void ResetParser() {
+	overwriteProps.Clear();
+
+	*renderConfigProps <<
+			Property("opencl.platform.index")(-1) <<
+			Property("opencl.cpu.use")(true) <<
+			Property("opencl.gpu.use")(true) <<
+			Property("renderengine.type")("PATHOCL") <<
+			Property("sampler.type")("RANDOM") <<
+			Property("film.filter.type")("MITCHELL");
+
+	graphicsStatesStack.clear();
+	currentGraphicsState = GraphicsState();
+	transformsStack.clear();
+	currentTransform = Transform();
+}
+
 } }
+
+using namespace luxcore::parselxs;
+
+//------------------------------------------------------------------------------
 
 extern int yylex(void);
 u_int lineNum = 0;
@@ -134,7 +188,7 @@ void FreeArgs()
 	}
 }
 
-/*static bool VerifyArrayLength(ParamArray *arr, u_int required,
+static bool VerifyArrayLength(ParamArray *arr, u_int required,
 	const char *command)
 {
 	if (arr->nelems != required) {
@@ -142,7 +196,7 @@ void FreeArgs()
 		return false;
 	}
 	return true;
-}*/
+}
 
 static void InitProperties(Properties &props, const u_int count, const ParamListElem *list);
 
@@ -153,6 +207,7 @@ static void InitProperties(Properties &props, const u_int count, const ParamList
 	else if ((type) == NUM) \
 		fprintf((file), " %f", (value).num); \
 }
+
 %}
 
 %union {
@@ -316,65 +371,103 @@ ri_stmt_list: ri_stmt_list ri_stmt
 
 ri_stmt: ACCELERATOR STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Accelerator($2, params);
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	// Map kdtree and bvh to luxrays' bvh accel otherwise just use the default settings
+	if ((strcmp($2, "kdtree") == 0) || (strcmp($2, "bvh") == 0))
+		*renderConfigProps << Property("accelerator.type")("BVH");
+		
 	FreeArgs();
 }
 | AREALIGHTSOURCE STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->AreaLightSource($2, params);
+	InitProperties(currentGraphicsState.areaLightProps, CPS, CP);
 	FreeArgs();
 }
 | ATTRIBUTEBEGIN
 {
-	//luxAttributeBegin();
+	graphicsStatesStack.push_back(currentGraphicsState);
+	transformsStack.push_back(currentTransform);
 }
 | ATTRIBUTEEND
 {
-	//luxAttributeEnd();
+	currentGraphicsState = graphicsStatesStack.back();
+	graphicsStatesStack.pop_back();
+	currentTransform = transformsStack.back();
+	transformsStack.pop_back();
 }
 | CAMERA STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Camera($2, params);
+	if (strcmp($2, "perspective") != 0)
+		throw std::runtime_error("LuxCore supports only perspective camera");
+
+	Properties props;
+	InitProperties(props, CPS, CP);
+	
+	if (props.IsDefined("screenwindow")) {
+		Property prop = props.Get("screenwindow");
+		*sceneProps << Property("scene.camera.screenwindow")(
+			prop.Get<float>(0), prop.Get<float>(1), prop.Get<float>(2), prop.Get<float>(3));
+	}
+	
+	*sceneProps << Property("scene.camera.fieldofview")(props.Get(Property("fov")(90.f)).Get<float>()) <<
+		Property("scene.camera.lensradius")(props.Get(Property("lensradius")(0.00625f)).Get<float>()) <<
+		Property("scene.camera.focaldistance")(props.Get(Property("focaldistance")(1e30f)).Get<float>()) <<
+		Property("scene.camera.hither")(props.Get(Property("cliphither")(1e-3f)).Get<float>()) <<
+		Property("scene.camera.yon")(props.Get(Property("clipyon")(1e30f)).Get<float>());
+
+	worldToCamera = currentTransform;
+	namedCoordinateSystems["camera"] = currentTransform;
+
 	FreeArgs();
 }
 | CONCATTRANSFORM num_array
 {
-	//if (VerifyArrayLength($2, 16, "ConcatTransform"))
-	//	luxConcatTransform(static_cast<float *>($2->array));
+	if (VerifyArrayLength($2, 16, "ConcatTransform")) {
+		const float *tr = static_cast<float *>($2->array);
+		Transform t(Matrix4x4(tr[0], tr[4], tr[8], tr[12],
+				tr[1], tr[5], tr[9], tr[13],
+				tr[2], tr[6], tr[10], tr[14],
+				tr[3], tr[7], tr[11], tr[15]));
+
+		currentTransform = currentTransform * t;
+	}
 	ArrayFree($2);
 }
 | COORDINATESYSTEM STRING
 {
-	//luxCoordinateSystem($2);
+	namedCoordinateSystems[$2] = currentTransform;
 }
 | COORDSYSTRANSFORM STRING
 {
-	//luxCoordSysTransform($2);
+	string name($2);
+	if (namedCoordinateSystems.find(name) != namedCoordinateSystems.end())
+		currentTransform = namedCoordinateSystems[name];
+	else {
+		throw runtime_error("Coordinate system '" + name + "' unknown");
+	}
 }
 | EXTERIOR STRING
 {
-	//Context::GetActive()->Exterior($2);
 }
 | FILM STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Film($2, params);
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	*renderConfigProps <<
+			Property("film.width")(props.Get(Property("xresoluton")(800)).Get<u_int>()) <<
+			Property("film.height")(props.Get(Property("yresoluton")(600)).Get<u_int>());
+
 	FreeArgs();
 }
 | IDENTITY
 {
-	//luxIdentity();
+	currentTransform = Transform();
 }
 | INTERIOR STRING
 {
-	//Context::GetActive()->Interior($2);
 }
 | LIGHTGROUP STRING paramlist
 {
@@ -468,12 +561,12 @@ ri_stmt: ACCELERATOR STRING paramlist
 		if (props.IsDefined("config")) {
 			const Property &prop = props.Get("config");
 			for (u_int i = 0; i < prop.GetSize(); ++i)
-				luxcore::parselxs::renderConfigProps->SetFromString(prop.Get<string>(i));
+				luxcore::parselxs::overwriteProps.SetFromString(prop.Get<string>(i));
 		}
 
 		// Look for the localconfigfile parameter
 		if (props.IsDefined("localconfigfile")) {
-			luxcore::parselxs::renderConfigProps->SetFromFile(props.Get("localconfigfile").Get<string>());
+			luxcore::parselxs::overwriteProps.SetFromFile(props.Get("localconfigfile").Get<string>());
 		}
 	}
 

@@ -118,8 +118,12 @@ extern string currentFile;
 extern u_int lineNum;
 
 namespace luxcore { namespace parselxs {
-Properties *renderConfigProps = NULL;
-Properties *sceneProps = NULL;
+extern Properties overwriteProps;
+extern Properties *renderConfigProps;
+extern Properties *sceneProps;
+
+extern void ResetParser();
+
 } }
 
 void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Properties &sceneProps) {
@@ -129,6 +133,7 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 
 	luxcore::parselxs::renderConfigProps = &renderConfigProps;
 	luxcore::parselxs::sceneProps = &sceneProps;
+	luxcore::parselxs::ResetParser();
 
 	bool parseSuccess = false;
 
@@ -147,7 +152,11 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 		yyrestart(yyin);
 		try {
 			parseSuccess = (yyparse() == 0);
-		} catch (std::runtime_error& e) {
+
+			// Overwrite properties with Renderer command one
+			luxcore::parselxs::renderConfigProps->Set(luxcore::parselxs::overwriteProps);
+			luxcore::parselxs::sceneProps->Set(luxcore::parselxs::overwriteProps);
+		} catch (std::runtime_error &e) {
 			throw runtime_error("Exception during parsing (file '" + currentFile + "', line: " + ToString(lineNum) + "): " + e.what());
 		}
 		
