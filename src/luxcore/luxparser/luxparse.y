@@ -53,7 +53,8 @@ public:
 	~GraphicsState() {
 	}
 
-	Properties areaLightProps;
+	string areaLightName, materialName;
+	Properties areaLightProps, materialProps;
 
 	u_int currentLightGroup;
 	bool reverseOrientation;
@@ -70,6 +71,8 @@ static boost::unordered_map<string, Transform> namedCoordinateSystems;
 // The light groups
 static u_int freeLightGroupIndex;
 static boost::unordered_map<string, u_int> namedLightGroups;
+// The named Materials
+static boost::unordered_set<string> namedMaterials;
 
 void ResetParser() {
 	overwriteProps.Clear();
@@ -90,6 +93,140 @@ void ResetParser() {
 	namedCoordinateSystems.clear();
 	freeLightGroupIndex = 1;
 	namedLightGroups.clear();
+	namedMaterials.clear();
+	namedMaterials.insert("LUXCORE_PARSERLXS_DEFAULT_MATERIAL");
+
+	// Define the default material
+	*sceneProps <<
+			Property("scene.materials.LUXCORE_PARSERLXS_DEFAULT_MATERIAL.type")("matte") <<
+			Property("scene.materials.LUXCORE_PARSERLXS_DEFAULT_MATERIAL.kd")(Spectrum(.9f));
+}
+
+static Property GetTexture(const string &luxCoreName, const Property defaultProp, const Properties &props) {
+	Property prop = props.Get(defaultProp);
+	if (prop.GetValueType(0) == typeid(string)) {
+		// It is a texture name
+		return Property(luxCoreName)(prop.Get<string>());
+	} else
+		return prop.Renamed(luxCoreName);
+}
+
+static void DefineMaterial(const string &name, const Properties &props) {
+	const string prefix = "scene.materials." + name;
+
+	const string type = props.Get(Property("type")("matte")).Get<string>();
+	if (type == "matte") {
+		*sceneProps <<
+				Property(prefix + ".type")("matte") <<
+				GetTexture(prefix + ".kd", Property("Kd")(Spectrum(.9f)), props);
+	} else if (type == "mirror") {
+		*sceneProps <<
+				Property(prefix + ".type")("mirror") <<
+				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), props);
+	} else if (type == "glass") {
+		const bool isArchitectural = props.Get(Property("architectural")(false)).Get<bool>();
+
+		*sceneProps <<
+				Property(prefix + ".type")(isArchitectural ? "archglass" : "glass") <<
+				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), props) <<
+				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), props) <<
+				Property(prefix +".ioroutside")(1.f) <<
+				GetTexture(prefix + ".iorinside", Property("index")(1.5f), props);
+	} else if (type == "metal") {
+		Spectrum n, k;
+		string presetName = props.Get("name").Get<string>();
+		if (name == "amorphous carbon") {
+			n = Spectrum(2.94553471f, 2.22816062f, 1.98665321f);
+			k = Spectrum(0.876640677f, 0.799504995f, 0.821194172f);
+		} else if (name == "silver") {
+			n = Spectrum(0.155706137f, 0.115924977f, 0.138897374f);
+			k = Spectrum(4.88647795f, 3.12787175f, 2.17797375f);
+		} else if (name == "gold") {
+			n = Spectrum(0.117958963f, 0.354153246f, 1.4389739f);
+			k = Spectrum(4.03164577f, 2.39416027f, 1.61966884f);
+		} else if (name == "copper") {
+			n = Spectrum(0.134794354f, 0.928983212f, 1.10887861f);
+			k = Spectrum(3.98125982f, 2.440979f, 2.16473627f);
+		} else if (name == "aluminium") {
+			n = Spectrum(1.69700277f, 0.879832864f, 0.5301736f);
+			k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
+		} else {
+			LC_LOG("Unknown metal type '" << presetName << "'. Using default (aluminium).");
+
+			n = Spectrum(1.69700277f, 0.879832864f, 0.5301736f);
+			k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
+		}			
+
+		*sceneProps <<
+				Property(prefix + ".type")("metal2") <<
+				Property(prefix + ".n")(n) <<
+				Property(prefix + ".k")(k) <<
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props);
+	} else if (type == "mattetranslucent") {
+		*sceneProps <<
+				Property(prefix + ".type")("mattetranslucent") <<
+				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), props) <<
+				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), props);
+	} else if (type == "null") {
+		*sceneProps <<
+				Property(prefix + ".type")("null");
+	} else if (type == "mix") {
+		*sceneProps <<
+				Property(prefix + ".type")("mix") <<
+				GetTexture(prefix + ".amount", Property("amount")(.5f), props) <<
+				Property(prefix + ".material1")(props.Get(Property("namedmaterial1")("")).Get<string>()) <<
+				Property(prefix + ".material2")(props.Get(Property("namedmaterial2")("")).Get<string>());
+	} else if (type == "glossy") {
+		*sceneProps <<
+				Property(prefix + ".type")("glossy2") <<
+				GetTexture(prefix + ".kd", Property("Kd")(.5f), props) <<
+				GetTexture(prefix + ".ks", Property("Ks")(.5f), props) <<
+				GetTexture(prefix + ".ka", Property("Ks")(0.f), props) <<
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props) <<
+				GetTexture(prefix + ".d", Property("d")(0.f), props) <<
+				GetTexture(prefix + ".index", Property("index")(0.f), props) <<
+				Property(prefix +".multibounce")(props.Get(Property("multibounce")(false)).Get<bool>());
+	} else if (type == "metal2") {
+		const string colTexName = props.Get(Property("fresnel")(5.f)).Get<string>();
+		*sceneProps <<
+					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".type")("fresnelapproxn") <<
+					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".texture")(colTexName) <<
+					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".type")("fresnelapproxk") <<
+					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".texture")(colTexName);
+
+		*sceneProps <<
+				Property(prefix + ".type")("metal2") <<
+				Property(prefix + ".n")("LUXCORE_PARSERLXS_fresnelapproxn-" + name) <<
+				Property(prefix + ".k")("LUXCORE_PARSERLXS_fresnelapproxk-" + name) <<
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props);
+	} else if (type == "roughglass") {
+		*sceneProps <<
+				Property(prefix + ".type")("roughglass") <<
+				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), props) <<
+				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), props) <<
+				Property(prefix +".ioroutside")(1.f) <<
+				GetTexture(prefix + ".iorinside", Property("index")(1.5f), props) <<
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props);
+	} else {
+		LC_LOG("LuxCore ParserLXS supports only Matte, Mirror, Glass, Metal, MatteTranslucent, Null, Mix, Glossy2, Metal2 and RoughGlass material (i.e. not " <<
+			type << "). Replacing an unsupported material with matte.");
+
+		*sceneProps <<
+				Property(prefix + ".type")("matte") <<
+				Property(prefix + ".kd")(Spectrum(.9f));
+	}
+
+	if (props.IsDefined("bumpmap")) {
+		// TODO: check the kind of texture to understand if it is a bump map or a normal map
+		*sceneProps << Property(prefix + ".bumptex")(props.Get("bumpmap").Get<string>());
+		//*sceneProps << Property(prefix + ".normaltex")(props.Get("bumpmap").Get<string>());
+	}
+	
+	namedMaterials.insert(name);
 }
 
 } }
@@ -382,7 +519,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	InitProperties(props, CPS, CP);
 
 	// Map kdtree and bvh to luxrays' bvh accel otherwise just use the default settings
-	string name($2);
+	const string name($2);
 	if ((name =="kdtree") || (name =="bvh"))
 		*renderConfigProps << Property("accelerator.type")("BVH");
 		
@@ -390,7 +527,9 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | AREALIGHTSOURCE STRING paramlist
 {
+	currentGraphicsState.areaLightName = $2;
 	InitProperties(currentGraphicsState.areaLightProps, CPS, CP);
+
 	FreeArgs();
 }
 | ATTRIBUTEBEGIN
@@ -407,7 +546,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | CAMERA STRING paramlist
 {
-	string name($2);
+	const string name($2);
 	if (name != "perspective")
 		throw std::runtime_error("LuxCore supports only perspective camera");
 
@@ -451,7 +590,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | COORDSYSTRANSFORM STRING
 {
-	string name($2);
+	const string name($2);
 	if (namedCoordinateSystems.count(name))
 		currentTransform = namedCoordinateSystems[name];
 	else {
@@ -481,7 +620,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | LIGHTGROUP STRING paramlist
 {
-	string name($2);
+	const string name($2);
 	if (namedLightGroups.count(name))
 		currentGraphicsState.currentLightGroup = namedLightGroups[name];
 	else {
@@ -497,7 +636,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	Properties props;
 	InitProperties(props, CPS, CP);
 
-	string name($2);
+	const string name($2);
 	if ((name == "sunsky") || (name == "sunsky2")) {
 		// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is in LuxCore code
 		// for compatibility with past scene
@@ -538,33 +677,33 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | MATERIAL STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Material($2, params);
+	currentGraphicsState.materialName = $2;
+	InitProperties(currentGraphicsState.materialProps, CPS, CP);
+
 	FreeArgs();
 }
 | MAKENAMEDMATERIAL STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->MakeNamedMaterial($2, params);
+	const string name($2);
+	if (namedMaterials.count(name))
+		throw runtime_error("Named material '" + name + "' already defined");
+
+	Properties props;
+	InitProperties(props, CPS, CP);
+	DefineMaterial(name, props);
+
 	FreeArgs();
 }
 | MAKENAMEDVOLUME STRING STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->MakeNamedVolume($2, $3, params);
 	FreeArgs();
 }
 | MOTIONBEGIN num_array
 {
-	//luxMotionBegin($2->nelems, static_cast<float *>($2->array));
 	ArrayFree($2);
 }
 | MOTIONEND
 {
-	//luxMotionEnd();
 }
 | NAMEDMATERIAL STRING
 {
@@ -765,7 +904,7 @@ static void InitProperties(Properties &props, const u_int count, const ParamList
 		}
 		if (list[i].textureHelper && type != PARAM_TYPE_TEXTURE &&
 			type != PARAM_TYPE_STRING) {
-			LC_LOG("Bad type for " << name << ". Changing it to a texture.");
+			LC_LOG("Bad type for " << name << ". Changing it to a texture");
 			type = PARAM_TYPE_TEXTURE;
 		}
 
@@ -792,7 +931,7 @@ static void InitProperties(Properties &props, const u_int count, const ParamList
 				else if (s == "false")
 					bdata[j] = false;
 				else {
-					LC_LOG("Value '" << s << "' unknown for boolean parameter '" << list[i].token << "'. Using 'false'.");
+					LC_LOG("Value '" << s << "' unknown for boolean parameter '" << list[i].token << "'. Using 'false'");
 					bdata[j] = false;
 				}
 			}

@@ -261,7 +261,7 @@ Properties PerspectiveCamera::ToProperties() const {
 
 	props.Set(Property("scene.camera.lookat.orig")(orig));
 	props.Set(Property("scene.camera.lookat.target")(target));
-	props.Set(Property("scene.camera.up")(up.x));
+	props.Set(Property("scene.camera.up")(up));
 
 	if (!autoUpdateFilmRegion)
 		props.Set(Property("scene.camera.screenwindow")(filmRegion[0], filmRegion[1], filmRegion[2], filmRegion[3]));
