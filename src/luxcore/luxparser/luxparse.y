@@ -67,6 +67,9 @@ static vector<Transform> transformsStack;
 static Transform currentTransform;
 // The named coordinate systems
 static boost::unordered_map<string, Transform> namedCoordinateSystems;
+// The light groups
+static u_int freeLightGroupIndex;
+static boost::unordered_map<string, u_int> namedLightGroups;
 
 void ResetParser() {
 	overwriteProps.Clear();
@@ -83,6 +86,10 @@ void ResetParser() {
 	currentGraphicsState = GraphicsState();
 	transformsStack.clear();
 	currentTransform = Transform();
+
+	namedCoordinateSystems.clear();
+	freeLightGroupIndex = 1;
+	namedLightGroups.clear();
 }
 
 } }
@@ -375,7 +382,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 	InitProperties(props, CPS, CP);
 
 	// Map kdtree and bvh to luxrays' bvh accel otherwise just use the default settings
-	if ((strcmp($2, "kdtree") == 0) || (strcmp($2, "bvh") == 0))
+	string name($2);
+	if ((name =="kdtree") || (name =="bvh"))
 		*renderConfigProps << Property("accelerator.type")("BVH");
 		
 	FreeArgs();
@@ -399,7 +407,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | CAMERA STRING paramlist
 {
-	if (strcmp($2, "perspective") != 0)
+	string name($2);
+	if (name != "perspective")
 		throw std::runtime_error("LuxCore supports only perspective camera");
 
 	Properties props;
@@ -411,11 +420,12 @@ ri_stmt: ACCELERATOR STRING paramlist
 			prop.Get<float>(0), prop.Get<float>(1), prop.Get<float>(2), prop.Get<float>(3));
 	}
 	
-	*sceneProps << Property("scene.camera.fieldofview")(props.Get(Property("fov")(90.f)).Get<float>()) <<
-		Property("scene.camera.lensradius")(props.Get(Property("lensradius")(0.00625f)).Get<float>()) <<
-		Property("scene.camera.focaldistance")(props.Get(Property("focaldistance")(1e30f)).Get<float>()) <<
-		Property("scene.camera.hither")(props.Get(Property("cliphither")(1e-3f)).Get<float>()) <<
-		Property("scene.camera.yon")(props.Get(Property("clipyon")(1e30f)).Get<float>());
+	*sceneProps <<
+			Property("scene.camera.fieldofview")(props.Get(Property("fov")(90.f)).Get<float>()) <<
+			Property("scene.camera.lensradius")(props.Get(Property("lensradius")(0.00625f)).Get<float>()) <<
+			Property("scene.camera.focaldistance")(props.Get(Property("focaldistance")(1e30f)).Get<float>()) <<
+			Property("scene.camera.hither")(props.Get(Property("cliphither")(1e-3f)).Get<float>()) <<
+			Property("scene.camera.yon")(props.Get(Property("clipyon")(1e30f)).Get<float>());
 
 	worldToCamera = currentTransform;
 	namedCoordinateSystems["camera"] = currentTransform;
@@ -442,7 +452,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 | COORDSYSTRANSFORM STRING
 {
 	string name($2);
-	if (namedCoordinateSystems.find(name) != namedCoordinateSystems.end())
+	if (namedCoordinateSystems.count(name))
 		currentTransform = namedCoordinateSystems[name];
 	else {
 		throw runtime_error("Coordinate system '" + name + "' unknown");
@@ -471,21 +481,60 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | LIGHTGROUP STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->LightGroup($2, params);
+	string name($2);
+	if (namedLightGroups.count(name))
+		currentGraphicsState.currentLightGroup = namedLightGroups[name];
+	else {
+		// It is a new light group
+		currentGraphicsState.currentLightGroup = freeLightGroupIndex;
+		namedLightGroups[name] = freeLightGroupIndex++;
+	}
+
 	FreeArgs();
 }
 | LIGHTSOURCE STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->LightSource($2, params);
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	string name($2);
+	if ((name == "sunsky") || (name == "sunsky2")) {
+		// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is in LuxCore code
+		// for compatibility with past scene
+		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
+
+		*sceneProps <<
+				Property("scene.sunlight.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
+				Property("scene.sunlight.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property("scene.sunlight.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
+				Property("scene.sunlight.gain")(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor) <<
+				Property("scene.sunlight.transformation")(currentTransform.m) <<
+				Property("scene.sunlight.id")(currentGraphicsState.currentLightGroup);
+
+		*sceneProps <<
+				Property("scene.skylight.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
+				Property("scene.skylight.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property("scene.skylight.gain")(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor) <<
+				Property("scene.skylight.transformation")(currentTransform.m) <<
+				Property("scene.skylight.id")(currentGraphicsState.currentLightGroup);
+	} else if ((name == "infinite") || (name == "infinitesample")) {
+		*sceneProps <<
+				Property("scene.infinitelight.file")(props.Get(Property("mapname")("")).Get<string>()) <<
+				Property("scene.infinitelight.gamma")(props.Get(Property("gamma")(1.f)).Get<float>()) <<
+				Property("scene.infinitelight.gain")(props.Get(Property("gain")(1.f)).Get<float>() *
+					props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property("scene.infinitelight.transformation")(currentTransform.m) <<
+				Property("scene.infinitelight.id")(currentGraphicsState.currentLightGroup);
+	}
+
 	FreeArgs();
 }
 | LOOKAT NUM NUM NUM NUM NUM NUM NUM NUM NUM
 {
-	//luxLookAt($2, $3, $4, $5, $6, $7, $8, $9, $10);
+	*sceneProps <<
+			Property("scene.camera.lookat.orig")($2, $3, $4) <<
+			Property("scene.camera.lookat.target")($5, $6, $7) <<
+			Property("scene.camera.lookat.up")($8, $9, $10);
 }
 | MATERIAL STRING paramlist
 {
