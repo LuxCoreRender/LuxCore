@@ -110,19 +110,20 @@ void luxcore::Init(void (*LogHandler)(const char *)) {
 // Film
 //------------------------------------------------------------------------------
 
-extern FILE *yyin;
-extern int yyparse(void);
-extern void yyrestart( FILE *new_file );
+extern FILE *luxcore_parserlxs_yyin;
+extern int luxcore_parserlxs_yyparse(void);
+extern void luxcore_parserlxs_yyrestart(FILE *new_file);
+
+namespace luxcore { namespace parselxs {
 extern void IncludeClear();
+extern void ResetParser();
+
 extern string currentFile;
 extern u_int lineNum;
 
-namespace luxcore { namespace parselxs {
 extern Properties overwriteProps;
 extern Properties *renderConfigProps;
 extern Properties *sceneProps;
-
-extern void ResetParser();
 
 } }
 
@@ -138,37 +139,38 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 	bool parseSuccess = false;
 
 	if (fileName == "-")
-		yyin = stdin;
+		luxcore_parserlxs_yyin = stdin;
 	else
-		yyin = fopen(fileName.c_str(), "r");
+		luxcore_parserlxs_yyin = fopen(fileName.c_str(), "r");
 
-	if (yyin != NULL) {
-		currentFile = fileName;
-		if (yyin == stdin)
-			currentFile = "<standard input>";
-		lineNum = 1;
+	if (luxcore_parserlxs_yyin != NULL) {
+		luxcore::parselxs::currentFile = fileName;
+		if (luxcore_parserlxs_yyin == stdin)
+			luxcore::parselxs::currentFile = "<standard input>";
+		luxcore::parselxs::lineNum = 1;
 		// Make sure to flush any buffers before parsing
-		IncludeClear();
-		yyrestart(yyin);
+		luxcore::parselxs::IncludeClear();
+		luxcore_parserlxs_yyrestart(luxcore_parserlxs_yyin);
 		try {
-			parseSuccess = (yyparse() == 0);
+			parseSuccess = (luxcore_parserlxs_yyparse() == 0);
 
 			// Overwrite properties with Renderer command one
 			luxcore::parselxs::renderConfigProps->Set(luxcore::parselxs::overwriteProps);
 			luxcore::parselxs::sceneProps->Set(luxcore::parselxs::overwriteProps);
 		} catch (std::runtime_error &e) {
-			throw runtime_error("Exception during parsing (file '" + currentFile + "', line: " + ToString(lineNum) + "): " + e.what());
+			throw runtime_error("Exception during parsing (file '" + luxcore::parselxs::currentFile +
+					"', line: " + ToString(luxcore::parselxs::lineNum) + "): " + e.what());
 		}
 		
-		if (yyin != stdin)
-			fclose(yyin);
+		if (luxcore_parserlxs_yyin != stdin)
+			fclose(luxcore_parserlxs_yyin);
 	} else
 		throw runtime_error("Unable to read scene file: " + fileName);
 
-	currentFile = "";
-	lineNum = 0;
+	luxcore::parselxs::currentFile = "";
+	luxcore::parselxs::lineNum = 0;
 
-	if ((yyin == NULL) || !parseSuccess)
+	if ((luxcore_parserlxs_yyin == NULL) || !parseSuccess)
 		throw runtime_error("Parsing failed: " + fileName);
 }
 

@@ -16,7 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-/* state used for include file stuff */
+%option prefix="luxcore_parserlxs_yy"
+
 %{
 
 #define YY_MAIN 0
@@ -36,6 +37,8 @@ struct ParamArray; // This is used but not defined inside luxparse.hpp
 using namespace std;
 using namespace luxcore;
 
+namespace luxcore { namespace parselxs {
+	
 struct IncludeInfo {
 	string filename;
 	YY_BUFFER_STATE bufState;
@@ -53,8 +56,8 @@ void AddStringChar( char c )
 		LC_LOG("String is too long.");
 		++str_pos;
 	} else if (str_pos < 1023) {
-		yylval.string[str_pos++] = c;
-		yylval.string[str_pos] = '\0';
+		luxcore_parserlxs_yylval.string[str_pos++] = c;
+		luxcore_parserlxs_yylval.string[str_pos] = '\0';
 	}
 }
 
@@ -102,6 +105,10 @@ void IncludeClear()
 	}
 }
 
+} }
+
+using namespace luxcore::parselxs;
+
 %}
 
 %option nounput
@@ -119,7 +126,7 @@ Include { BEGIN(INCL); }
 <INCL_FILE>. {  LC_LOG("Illegal character in Include file name"); }
 <INCL_FILE>[^\n\"]+ {
 	BEGIN(INITIAL);
-	IncludePush(yytext);
+	luxcore::parselxs::IncludePush(yytext);
 }
 "#" { BEGIN COMMENT; }
 <COMMENT>. /* eat it up */
@@ -172,16 +179,16 @@ WorldEnd 		{ return WORLDEND;		}
 {WHITESPACE} /* do nothing */
 \n { lineNum++; }
 {NUMBER} {
-  yylval.num = static_cast<float>(atof(yytext));
+  luxcore_parserlxs_yylval.num = static_cast<float>(atof(yytext));
   return NUM;
 }
 {IDENT} {
-	strcpy( yylval.string, yytext );
+	strcpy(luxcore_parserlxs_yylval.string, yytext);
 	return ID;
 }
 "[" { return LBRACK; }
 "]" { return RBRACK; }
-\" { BEGIN STR; str_pos = 0; yylval.string[0] = '\0';
+\" { BEGIN STR; str_pos = 0; luxcore_parserlxs_yylval.string[0] = '\0';
 	/* I have to initialize the string as an empty one in order to handle empty strings (i.e. "") */ }
 <STR>\\n {AddStringChar('\n');}
 <STR>\\t {AddStringChar('\t');}
