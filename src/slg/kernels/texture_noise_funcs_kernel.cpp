@@ -25,9 +25,9 @@ std::string KernelSource_texture_noise_funcs =
 "#define M_PI 3.14159265358979323846f\n"
 "#endif\n"
 "\n"
-"//----------------------------------------------------------\n"
+"//------------------------------------------------------------------------------\n"
 "// Texture utility functions\n"
-"//----------------------------------------------------------\n"
+"//------------------------------------------------------------------------------\n"
 "\n"
 "// Perlin Noise Data\n"
 "#define NOISE_PERM_SIZE 256\n"
@@ -168,5 +168,4 @@ std::string KernelSource_texture_noise_funcs =
 "    a = rmax - 2.f * fabs(floor((a * (1.0 / b)) + 0.5f) - (a * (1.f / b)));\n"
 "    return a;\n"
 "}\n"
-"\n"
 ; } }

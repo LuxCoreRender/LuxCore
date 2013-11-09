@@ -245,19 +245,27 @@ int main(int argc, char *argv[]) {
 			configFileName = "scenes/luxball/luxball.cfg";
 
 		// Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
+		Scene *scene;
 		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
 			// It is a LuxRender SDL file
 			SLG_LOG("Parsing LuxRender SDL file...");
 			Properties renderConfigProps, sceneProps;
 			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
 
+			// For debugging
 			SLG_LOG("RenderConfig: \n" << renderConfigProps);
 			SLG_LOG("Scene: \n" << sceneProps);
 
-			return EXIT_SUCCESS;
-		}
+			renderConfigProps.Set(cmdLineProp);
+			scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			scene->Parse(sceneProps);
+			config = new RenderConfig(renderConfigProps.Set(cmdLineProp), scene);
 
-		config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
+		} else {
+			// It is a LuxCore SDL file
+			config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
+			scene = NULL;
+		}
 
 		const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
 		const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
@@ -302,6 +310,8 @@ int main(int argc, char *argv[]) {
 
 			RunGlut();
 		}
+		
+		delete scene;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
 		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");

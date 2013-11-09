@@ -89,8 +89,7 @@ endif(DOXYGEN_FOUND)
 #############################################################################
 
 # Create custom command for bison/yacc
-BISON_TARGET(lux_parser ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp
-	COMPILE_FLAGS --defines="${LuxRays_SOURCE_DIR}/include/luxcore/luxparse.hpp")
+BISON_TARGET(lux_parser ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp)
 SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
 
 # Create custom command for flex/lex

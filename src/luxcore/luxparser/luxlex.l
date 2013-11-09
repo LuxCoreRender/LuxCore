@@ -32,7 +32,9 @@
 #include "luxcore/luxcore.h"
 
 struct ParamArray; // This is used but not defined inside luxparse.hpp
-#include "luxcore/luxparse.hpp"
+// luxparse.hpp is under "src" directory and not "include" because otherwise
+// the parser sources are always recompiled (it is a bug in BISON_TARGET() cmake macro)
+#include "luxparse.hpp"
 
 using namespace std;
 using namespace luxcore;
