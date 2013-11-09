@@ -86,7 +86,8 @@ void ResetParser() {
 			Property("opencl.gpu.use")(true) <<
 			Property("renderengine.type")("PATHOCL") <<
 			Property("sampler.type")("RANDOM") <<
-			Property("film.filter.type")("MITCHELL");
+			Property("film.filter.type")("MITCHELL") <<
+			Property("accelerator.instances.enable")(false);
 
 	graphicsStatesStack.clear();
 	currentGraphicsState = GraphicsState();
@@ -810,14 +811,14 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property("scene.sunlight.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
 				Property("scene.sunlight.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
 				Property("scene.sunlight.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
-				Property("scene.sunlight.gain")(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor) <<
+				Property("scene.sunlight.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
 				Property("scene.sunlight.transformation")(currentTransform.m) <<
 				Property("scene.sunlight.id")(currentGraphicsState.currentLightGroup);
 
 		*sceneProps <<
 				Property("scene.skylight.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
 				Property("scene.skylight.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
-				Property("scene.skylight.gain")(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor) <<
+				Property("scene.skylight.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
 				Property("scene.skylight.transformation")(currentTransform.m) <<
 				Property("scene.skylight.id")(currentGraphicsState.currentLightGroup);
 	} else if ((name == "infinite") || (name == "infinitesample")) {

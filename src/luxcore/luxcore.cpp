@@ -156,7 +156,6 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 
 			// Overwrite properties with Renderer command one
 			luxcore::parselxs::renderConfigProps->Set(luxcore::parselxs::overwriteProps);
-			luxcore::parselxs::sceneProps->Set(luxcore::parselxs::overwriteProps);
 		} catch (std::runtime_error &e) {
 			throw runtime_error("Exception during parsing (file '" + luxcore::parselxs::currentFile +
 					"', line: " + ToString(luxcore::parselxs::lineNum) + "): " + e.what());
