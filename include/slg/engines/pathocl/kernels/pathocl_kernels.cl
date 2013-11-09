@@ -312,12 +312,7 @@ bool DirectLightSampling(
 	uint lightID;
 
 #if defined(PARAM_HAS_INFINITELIGHT)
-	const uint infiniteLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
-#if defined(PARAM_HAS_SUNLIGHT)
-		+ 1
-#endif
-	;
-
+	const uint infiniteLightIndex = PARAM_TRIANGLE_LIGHT_COUNT;
 	if (lightIndex == infiniteLightIndex) {
 		lightRadiance = InfiniteLight_Illuminate(
 			infiniteLight,
@@ -332,12 +327,7 @@ bool DirectLightSampling(
 #endif
 
 #if defined(PARAM_HAS_SKYLIGHT)
-	const uint skyLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
-#if defined(PARAM_HAS_SUNLIGHT)
-		+ 1
-#endif
-	;
-
+	const uint skyLightIndex = PARAM_TRIANGLE_LIGHT_COUNT;
 	if (lightIndex == skyLightIndex) {
 		lightRadiance = SkyLight_Illuminate(
 			skyLight,
@@ -350,7 +340,12 @@ bool DirectLightSampling(
 #endif
 
 #if defined(PARAM_HAS_SUNLIGHT)
-	const uint sunLightIndex = PARAM_TRIANGLE_LIGHT_COUNT;
+	const uint sunLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+		+ 1
+#endif
+	;
+
 	if (lightIndex == sunLightIndex) {
 		lightRadiance = SunLight_Illuminate(
 			sunLight,

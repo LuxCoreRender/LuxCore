@@ -224,21 +224,16 @@ float3 SunLight_Illuminate(__global SunLight *sunLight,
 }
 
 float3 SunLight_GetRadiance(__global SunLight *sunLight, const float3 dir, float *directPdfA) {
-	// Make the sun visible only if relsize has been changed (in order
-	// to avoid fireflies).
-	if (sunLight->relSize > 5.f) {
-		const float cosThetaMax = sunLight->cosThetaMax;
-		const float3 sunDir = VLOAD3F(&sunLight->sunDir.x);
+	const float cosThetaMax = sunLight->cosThetaMax;
+	const float3 sunDir = VLOAD3F(&sunLight->sunDir.x);
 
-		if ((cosThetaMax < 1.f) && (dot(-dir, sunDir) > cosThetaMax)) {
-			if (directPdfA)
-				*directPdfA = UniformConePdf(cosThetaMax);
+	if ((cosThetaMax < 1.f) && (dot(-dir, sunDir) > cosThetaMax)) {
+		if (directPdfA)
+			*directPdfA = UniformConePdf(cosThetaMax);
 
-			return VLOAD3F(&sunLight->sunColor.r);
-		}
-	}
-
-	return BLACK;
+		return VLOAD3F(&sunLight->sunColor.r);
+	} else
+		return BLACK;
 }
 
 #endif
