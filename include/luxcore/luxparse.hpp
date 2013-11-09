@@ -98,7 +98,7 @@ typedef union YYSTYPE
 {
 
 /* Line 2068 of yacc.c  */
-#line 389 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 517 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
 
 char string[1024];
 float num;
@@ -114,6 +114,6 @@ ParamArray *ribarray;
 # define YYSTYPE_IS_DECLARED 1
 #endif
 
-extern YYSTYPE yylval;
+extern YYSTYPE luxcore_parserlxs_yylval;
 
 

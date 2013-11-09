@@ -21,6 +21,8 @@
  *   Lux Renderer website : http://www.luxrender.net                       *
  ***************************************************************************/
 
+%name-prefix "luxcore_parserlxs_yy"
+
 %{
 
 #include <stdarg.h>
@@ -73,6 +75,7 @@ static boost::unordered_map<string, u_int> namedLightGroups;
 static boost::unordered_set<string> namedMaterials;
 // The named Textures
 static boost::unordered_set<string> namedTextures;
+static u_int freeObjectID;
 
 void ResetParser() {
 	overwriteProps.Clear();
@@ -96,6 +99,7 @@ void ResetParser() {
 	namedMaterials.clear();
 	namedMaterials.insert("LUXCORE_PARSERLXS_DEFAULT_MATERIAL");
 	namedTextures.clear();
+	freeObjectID = 0;
 
 	// Define the default material
 	*sceneProps <<
@@ -261,29 +265,8 @@ static void DefineMaterial(const string &name, const Properties &props) {
 	namedMaterials.insert(name);
 }
 
-} }
-
-using namespace luxcore::parselxs;
-
-//------------------------------------------------------------------------------
-
-extern int yylex(void);
 u_int lineNum = 0;
 string currentFile;
-
-#define YYMAXDEPTH 100000000
-
-void yyerror(const char *str)
-{
-	std::stringstream ss;
-	ss << "Parsing error";
-	if (currentFile != "")
-		ss << " in file '" << currentFile << "'";
-	if (lineNum > 0)
-		ss << " at line " << lineNum;
-	ss << ": " << str;
-	LC_LOG(ss.str().c_str());
-}
 
 class ParamListElem {
 public:
@@ -374,7 +357,152 @@ static bool VerifyArrayLength(ParamArray *arr, u_int required,
 	return true;
 }
 
-static void InitProperties(Properties &props, const u_int count, const ParamListElem *list);
+typedef enum {
+	PARAM_TYPE_INT, PARAM_TYPE_BOOL, PARAM_TYPE_FLOAT,
+	PARAM_TYPE_POINT, PARAM_TYPE_VECTOR, PARAM_TYPE_NORMAL,
+	PARAM_TYPE_COLOR, PARAM_TYPE_STRING, PARAM_TYPE_TEXTURE
+} ParamType;
+
+static bool LookupType(const char *token, ParamType *type, string &name) {
+	BOOST_ASSERT(token != NULL);
+	*type = ParamType(0);
+	const char *strp = token;
+	while (*strp && isspace(*strp))
+		++strp;
+	if (!*strp) {
+		LC_LOG("Parameter '" << token << "' doesn't have a type declaration ?!");
+		name = string(token);
+		return false;
+	}
+#define TRY_DECODING_TYPE(name, mask) \
+	if (strncmp(name, strp, strlen(name)) == 0) { \
+		*type = mask; strp += strlen(name); \
+	}
+	TRY_DECODING_TYPE("float", PARAM_TYPE_FLOAT)
+	else TRY_DECODING_TYPE("integer", PARAM_TYPE_INT)
+	else TRY_DECODING_TYPE("bool", PARAM_TYPE_BOOL)
+	else TRY_DECODING_TYPE("point", PARAM_TYPE_POINT)
+	else TRY_DECODING_TYPE("vector", PARAM_TYPE_VECTOR)
+	else TRY_DECODING_TYPE("normal", PARAM_TYPE_NORMAL)
+	else TRY_DECODING_TYPE("string", PARAM_TYPE_STRING)
+	else TRY_DECODING_TYPE("texture", PARAM_TYPE_TEXTURE)
+	else TRY_DECODING_TYPE("color", PARAM_TYPE_COLOR)
+	else {
+		LC_LOG("Unable to decode type for token '" << token << "'");
+		name = string(token);
+		return false;
+	}
+	while (*strp && isspace(*strp))
+		++strp;
+	name = string(strp);
+	return true;
+}
+
+static void InitProperties(Properties &props, const u_int count, const ParamListElem *list) {
+	for (u_int i = 0; i < count; ++i) {
+		ParamType type;
+		string name;
+		if (!LookupType(list[i].token, &type, name)) {
+			LC_LOG("Type of parameter '" << list[i].token << "' is unknown");
+			continue;
+		}
+		if (list[i].textureHelper && type != PARAM_TYPE_TEXTURE &&
+			type != PARAM_TYPE_STRING) {
+			LC_LOG("Bad type for " << name << ". Changing it to a texture");
+			type = PARAM_TYPE_TEXTURE;
+		}
+
+		Property prop(name);
+
+		void *data = list[i].arg;
+		u_int nItems = list[i].size;
+		if (type == PARAM_TYPE_INT) {
+			// parser doesn't handle ints, so convert from floats
+			int *idata = new int[nItems];
+			float *fdata = static_cast<float *>(data);
+			for (u_int j = 0; j < nItems; ++j)
+				idata[j] = static_cast<int>(fdata[j]);
+			for (u_int j = 0; j < nItems; ++j)
+				prop.Add(idata[j]);
+			delete[] idata;
+		} else if (type == PARAM_TYPE_BOOL) {
+			// strings -> bools
+			bool *bdata = new bool[nItems];
+			for (u_int j = 0; j < nItems; ++j) {
+				string s(*static_cast<const char **>(data));
+				if (s == "true")
+					bdata[j] = true;
+				else if (s == "false")
+					bdata[j] = false;
+				else {
+					LC_LOG("Value '" << s << "' unknown for boolean parameter '" << list[i].token << "'. Using 'false'");
+					bdata[j] = false;
+				}
+			}
+			for (u_int j = 0; j < nItems; ++j)
+				prop.Add(bdata[j]);
+			delete[] bdata;
+		} else if (type == PARAM_TYPE_FLOAT) {
+			const float *d = static_cast<float *>(data);
+			for (u_int j = 0; j < nItems; ++j)
+				prop.Add(d[j]);
+		} else if (type == PARAM_TYPE_POINT) {
+			const Point *d = static_cast<Point *>(data);
+			for (u_int j = 0; j < nItems / 3; ++j)
+				prop.Add(d[j]);
+		} else if (type == PARAM_TYPE_VECTOR) {
+			const Vector *d = static_cast<Vector *>(data);
+			for (u_int j = 0; j < nItems / 3; ++j)
+				prop.Add(d[j]);
+		} else if (type == PARAM_TYPE_NORMAL) {
+			const Normal *d = static_cast<Normal *>(data);
+			for (u_int j = 0; j < nItems / 3; ++j)
+				prop.Add(d[j]);
+		} else if (type == PARAM_TYPE_COLOR) {
+			const Spectrum *d = static_cast<Spectrum *>(data);
+			for (u_int j = 0; j < nItems / 3; ++j)
+				prop.Add(d[j]);
+		} else if (type == PARAM_TYPE_STRING) {
+			string *strings = new string[nItems];
+			for (u_int j = 0; j < nItems; ++j)
+				strings[j] = string(static_cast<const char **>(data)[j]);
+			for (u_int j = 0; j < nItems; ++j)
+				prop.Add(strings[j]);
+			delete[] strings;
+		} else if (type == PARAM_TYPE_TEXTURE) {
+			if (nItems == 1) {
+				string val(*static_cast<const char **>(data));
+				prop.Add(val);
+			} else {
+				LC_LOG("Only one string allowed for 'texture' parameter " << name);
+			}
+		}
+
+		props.Set(prop);
+	}
+}
+
+} }
+
+using namespace luxcore::parselxs;
+
+//------------------------------------------------------------------------------
+
+extern int yylex(void);
+
+#define YYMAXDEPTH 100000000
+
+void yyerror(const char *str)
+{
+	std::stringstream ss;
+	ss << "Parsing error";
+	if (currentFile != "")
+		ss << " in file '" << currentFile << "'";
+	if (lineNum > 0)
+		ss << " at line " << lineNum;
+	ss << ": " << str;
+	LC_LOG(ss.str().c_str());
+}
 
 #define YYPRINT(file, type, value)  \
 { \
@@ -774,18 +902,18 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 	const string name($2);
 	if (name == "box") {
-		*sceneProps <<
+		*renderConfigProps <<
 				Property("film.filter.type")("BOX");
 	} else if (name == "gaussian") {
-		*sceneProps <<
+		*renderConfigProps <<
 				Property("film.filter.type")("GAUSSIAN");
 	} else if (name == "mitchell") {
 		const bool supersample = props.Get(Property("supersample")(false)).Get<bool>();
-		*sceneProps <<
+		*renderConfigProps <<
 				Property("film.filter.type")(supersample ? "MITCHELL_SS" : "MITCHELL");
 	} else {
 		LC_LOG("LuxCore doesn't support the filter type " + name + ", using MITCHELL filter instead");
-		*sceneProps <<
+		*renderConfigProps <<
 				Property("film.filter.type")("MITCHELL");
 	}
 
@@ -830,20 +958,20 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 	const string name($2);
 	if (name == "metropolis") {
-		*sceneProps <<
+		*renderConfigProps <<
 				Property("sampler.type")("METROPOLIS") <<
 				Property("sampler.metropolis.maxconsecutivereject")(Property("maxconsecrejects")(512).Get<u_int>()) <<
 				Property("sampler.metropolis.largesteprate")(Property("largemutationprob")(.4f).Get<float>()) <<
 				Property("sampler.metropolis.imagemutationrate")(Property("mutationrange")(.1f).Get<float>());
 	} else if ((name == "sobol") || (name == "lowdiscrepancy")) {
-		*sceneProps <<
+		*renderConfigProps <<
 				Property("sampler.type")("SOBOL");
 	} else if (name == "random") {
-		*sceneProps <<
+		*renderConfigProps <<
 				Property("sampler.type")("RANDOM");
 	} else {
 		LC_LOG("LuxCore doesn't support the sampler type " + name + ", falling back to random sampler");
-		*sceneProps <<
+		*renderConfigProps <<
 				Property("sampler.type")("RANDOM");
 	}
 
@@ -859,9 +987,33 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | SHAPE STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->Shape($2, params);
+	const string name($2);
+	if (name == "plymesh") {
+		Properties props;
+		InitProperties(props, CPS, CP);
+
+		string objName;
+		if (props.IsDefined("name"))
+			objName = props.Get("name").Get<string>();
+		else
+			objName = "LUXCORE_OBJECT_" + ToString(freeObjectID++);
+		const string prefix = "scene.objects." + objName;
+
+		*sceneProps <<
+			Property(prefix + ".ply")(props.Get(Property("filename")("none")).Get<string>()) <<
+			Property(prefix + ".transformation")(currentTransform.m);
+		
+		if (currentGraphicsState.materialName == "") {
+			// Define the used material on-the-fly
+			DefineMaterial("LUXCORE_MATERIAL_" + objName, currentGraphicsState.materialProps);
+			*sceneProps <<
+				Property(prefix + ".material")("LUXCORE_MATERIAL_" + objName);
+		} else {
+			*sceneProps <<
+				Property(prefix + ".material")(currentGraphicsState.materialName);			
+		}
+	}
+
 	FreeArgs();
 }
 | PORTALSHAPE STRING paramlist
@@ -870,9 +1022,28 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | SURFACEINTEGRATOR STRING paramlist
 {
-	//ParamSet params;
-	//InitParamSet(params, CPS, CP);
-	//Context::GetActive()->SurfaceIntegrator($2, params);
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	const string name($2);
+	if (name == "path") {
+		// Path tracing
+		*renderConfigProps <<
+			Property("renderengine.type")("PATHOCL") <<
+			Property("path.maxdepth")(props.Get(Property("maxdepth")(16u)).Get<u_int>());
+	} else if (name == "bidirectional") {
+		// Bidirectional path tracing
+		*renderConfigProps <<
+			Property("renderengine.type")("BIDIRVMCPU") <<
+			Property("path.maxdepth")(props.Get(Property("eyedepth")(8u)).Get<u_int>()) <<
+			Property("light.maxdepth")(props.Get(Property("lightdepth")(8u)).Get<u_int>());
+	} else {
+		// Unmapped surface integrator, just use path tracing
+		LC_LOG("LuxCore doesn't support the SurfaceIntegrator, falling back to path tracing");
+		*renderConfigProps <<
+			Property("renderengine.type")("PATHOCL");
+	}
+
 	FreeArgs();
 }
 | TEXTURE STRING STRING STRING paramlist
@@ -1020,8 +1191,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 				"and hitpointgrey (i.e. not " << texType << ").");
 
 		*sceneProps <<
-				luxrays::Property(prefix + ".type ")("constfloat1") <<
-				luxrays::Property(prefix + ".value")(.7f);
+				Property(prefix + ".type ")("constfloat1") <<
+				Property(prefix + ".value")(.7f);
 	}
 
 	FreeArgs();
@@ -1073,128 +1244,3 @@ ri_stmt: ACCELERATOR STRING paramlist
 {
 };
 %%
-
-typedef enum {
-	PARAM_TYPE_INT, PARAM_TYPE_BOOL, PARAM_TYPE_FLOAT,
-	PARAM_TYPE_POINT, PARAM_TYPE_VECTOR, PARAM_TYPE_NORMAL,
-	PARAM_TYPE_COLOR, PARAM_TYPE_STRING, PARAM_TYPE_TEXTURE
-} ParamType;
-
-static bool LookupType(const char *token, ParamType *type, string &name) {
-	BOOST_ASSERT(token != NULL);
-	*type = ParamType(0);
-	const char *strp = token;
-	while (*strp && isspace(*strp))
-		++strp;
-	if (!*strp) {
-		LC_LOG("Parameter '" << token << "' doesn't have a type declaration ?!");
-		name = string(token);
-		return false;
-	}
-#define TRY_DECODING_TYPE(name, mask) \
-	if (strncmp(name, strp, strlen(name)) == 0) { \
-		*type = mask; strp += strlen(name); \
-	}
-	TRY_DECODING_TYPE("float", PARAM_TYPE_FLOAT)
-	else TRY_DECODING_TYPE("integer", PARAM_TYPE_INT)
-	else TRY_DECODING_TYPE("bool", PARAM_TYPE_BOOL)
-	else TRY_DECODING_TYPE("point", PARAM_TYPE_POINT)
-	else TRY_DECODING_TYPE("vector", PARAM_TYPE_VECTOR)
-	else TRY_DECODING_TYPE("normal", PARAM_TYPE_NORMAL)
-	else TRY_DECODING_TYPE("string", PARAM_TYPE_STRING)
-	else TRY_DECODING_TYPE("texture", PARAM_TYPE_TEXTURE)
-	else TRY_DECODING_TYPE("color", PARAM_TYPE_COLOR)
-	else {
-		LC_LOG("Unable to decode type for token '" << token << "'");
-		name = string(token);
-		return false;
-	}
-	while (*strp && isspace(*strp))
-		++strp;
-	name = string(strp);
-	return true;
-}
-
-static void InitProperties(Properties &props, const u_int count, const ParamListElem *list) {
-	for (u_int i = 0; i < count; ++i) {
-		ParamType type;
-		string name;
-		if (!LookupType(list[i].token, &type, name)) {
-			LC_LOG("Type of parameter '" << list[i].token << "' is unknown");
-			continue;
-		}
-		if (list[i].textureHelper && type != PARAM_TYPE_TEXTURE &&
-			type != PARAM_TYPE_STRING) {
-			LC_LOG("Bad type for " << name << ". Changing it to a texture");
-			type = PARAM_TYPE_TEXTURE;
-		}
-
-		Property prop(name);
-
-		void *data = list[i].arg;
-		u_int nItems = list[i].size;
-		if (type == PARAM_TYPE_INT) {
-			// parser doesn't handle ints, so convert from floats
-			int *idata = new int[nItems];
-			float *fdata = static_cast<float *>(data);
-			for (u_int j = 0; j < nItems; ++j)
-				idata[j] = static_cast<int>(fdata[j]);
-			for (u_int j = 0; j < nItems; ++j)
-				prop.Add(idata[j]);
-			delete[] idata;
-		} else if (type == PARAM_TYPE_BOOL) {
-			// strings -> bools
-			bool *bdata = new bool[nItems];
-			for (u_int j = 0; j < nItems; ++j) {
-				string s(*static_cast<const char **>(data));
-				if (s == "true")
-					bdata[j] = true;
-				else if (s == "false")
-					bdata[j] = false;
-				else {
-					LC_LOG("Value '" << s << "' unknown for boolean parameter '" << list[i].token << "'. Using 'false'");
-					bdata[j] = false;
-				}
-			}
-			for (u_int j = 0; j < nItems; ++j)
-				prop.Add(bdata[j]);
-			delete[] bdata;
-		} else if (type == PARAM_TYPE_FLOAT) {
-			const float *d = static_cast<float *>(data);
-			for (u_int j = 0; j < nItems; ++j)
-				prop.Add(d[j]);
-		} else if (type == PARAM_TYPE_POINT) {
-			const Point *d = static_cast<Point *>(data);
-			for (u_int j = 0; j < nItems / 3; ++j)
-				prop.Add(d[j]);
-		} else if (type == PARAM_TYPE_VECTOR) {
-			const Vector *d = static_cast<Vector *>(data);
-			for (u_int j = 0; j < nItems / 3; ++j)
-				prop.Add(d[j]);
-		} else if (type == PARAM_TYPE_NORMAL) {
-			const Normal *d = static_cast<Normal *>(data);
-			for (u_int j = 0; j < nItems / 3; ++j)
-				prop.Add(d[j]);
-		} else if (type == PARAM_TYPE_COLOR) {
-			const Spectrum *d = static_cast<Spectrum *>(data);
-			for (u_int j = 0; j < nItems / 3; ++j)
-				prop.Add(d[j]);
-		} else if (type == PARAM_TYPE_STRING) {
-			string *strings = new string[nItems];
-			for (u_int j = 0; j < nItems; ++j)
-				strings[j] = string(static_cast<const char **>(data)[j]);
-			for (u_int j = 0; j < nItems; ++j)
-				prop.Add(strings[j]);
-			delete[] strings;
-		} else if (type == PARAM_TYPE_TEXTURE) {
-			if (nItems == 1) {
-				string val(*static_cast<const char **>(data));
-				prop.Add(val);
-			} else {
-				LC_LOG("Only one string allowed for 'texture' parameter " << name);
-			}
-		}
-
-		props.Set(prop);
-	}
-}
