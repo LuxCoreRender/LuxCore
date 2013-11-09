@@ -771,8 +771,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 	InitProperties(props, CPS, CP);
 
 	*renderConfigProps <<
-			Property("film.width")(props.Get(Property("xresoluton")(800)).Get<u_int>()) <<
-			Property("film.height")(props.Get(Property("yresoluton")(600)).Get<u_int>());
+			Property("film.width")(props.Get(Property("xresolution")(800)).Get<u_int>()) <<
+			Property("film.height")(props.Get(Property("yresolution")(600)).Get<u_int>());
 
 	FreeArgs();
 }
