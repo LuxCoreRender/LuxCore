@@ -173,17 +173,31 @@ static int FaceCB(p_ply_argument argument) {
 	void *userData = NULL;
 	ply_get_argument_user_data(argument, &userData, NULL);
 
-	Triangle *verts = *static_cast<Triangle **> (userData);
-
-	long triIndex;
-	ply_get_argument_element(argument, NULL, &triIndex);
+	vector<Triangle> *tris = static_cast<vector<Triangle> *> (userData);
 
 	long length, valueIndex;
 	ply_get_argument_property(argument, NULL, &length, &valueIndex);
 
-	if (valueIndex >= 0 && valueIndex < 3) {
-		verts[triIndex].v[valueIndex] =
-				static_cast<u_int> (ply_get_argument_value(argument));
+	if (length == 3) {
+		if (valueIndex < 0)
+			tris->push_back(Triangle());
+		else if (valueIndex < 3)
+			tris->back().v[valueIndex] =
+					static_cast<u_int> (ply_get_argument_value(argument));
+	} else if (length == 4) {
+		// I have to split the quad in 2x triangles
+		if (valueIndex < 0) {
+			tris->push_back(Triangle());
+		} else if (valueIndex < 3)
+			tris->back().v[valueIndex] =
+					static_cast<u_int> (ply_get_argument_value(argument));
+		else if (valueIndex == 3) {
+			const u_int i0 = tris->back().v[0];
+			const u_int i1 = tris->back().v[2];
+			const u_int i2 = static_cast<u_int> (ply_get_argument_value(argument));
+
+			tris->push_back(Triangle(i0, i1, i2));
+		}
 	}
 
 	return 1;
@@ -213,11 +227,11 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		throw std::runtime_error(ss.str());
 	}
 
-	Triangle *vi;
-	long plyNbTris = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
-	if (plyNbTris <= 0) {
+	vector<Triangle> vi;
+	long plyNbFaces = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
+	if (plyNbFaces <= 0) {
 		std::stringstream ss;
-		ss << "No triangles found in '" << fileName << "'";
+		ss << "No faces found in '" << fileName << "'";
 		throw std::runtime_error(ss.str());
 	}
 
@@ -263,7 +277,6 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	}
 
 	p = new Point[plyNbVerts];
-	vi = new Triangle[plyNbTris];
 	if (plyNbNormals == 0)
 		n = NULL;
 	else
@@ -286,7 +299,6 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		ss << "Unable to parse PLY file '" << fileName << "'";
 
 		delete[] p;
-		delete[] vi;
 		delete[] n;
 		delete[] uv;
 		delete[] cols;
@@ -297,7 +309,11 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	ply_close(plyfile);
 
-	return CreateExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
+	// Copy triangle indices vector
+	Triangle *tris = new Triangle[vi.size()];
+	std::copy(vi.begin(), vi.end(), tris);
+
+	return CreateExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
 }
 
 ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(

@@ -253,8 +253,8 @@ int main(int argc, char *argv[]) {
 			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
 
 			// For debugging
-			SLG_LOG("RenderConfig: \n" << renderConfigProps);
-			SLG_LOG("Scene: \n" << sceneProps);
+			//SLG_LOG("RenderConfig: \n" << renderConfigProps);
+			//SLG_LOG("Scene: \n" << sceneProps);
 
 			renderConfigProps.Set(cmdLineProp);
 			scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
