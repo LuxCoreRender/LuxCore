@@ -244,7 +244,7 @@ float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global Hi
 		return BLACK;
 
 	return Texture_GetSpectrumValue(&texs[emitTexIndex], hitPoint
-			TEXTURES_PARAM);
+				TEXTURES_PARAM);
 }
 
 #if defined(PARAM_HAS_BUMPMAPS)
@@ -794,16 +794,20 @@ float3 Material_Sample(__global Material *material,	__global HitPoint *hitPoint,
 				TEXTURES_PARAM);
 }
 
-float3 Material_GetEmittedRadiance(__global Material *material, __global HitPoint *hitPoint
+float3 Material_GetEmittedRadiance(__global Material *material,
+		__global HitPoint *hitPoint, const float oneOverPrimitiveArea
 		MATERIALS_PARAM_DECL) {
+	float3 result;
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
-		return MixMaterial_GetEmittedRadiance(material, hitPoint
+		result = MixMaterial_GetEmittedRadiance(material, hitPoint
 				MATERIALS_PARAM);
 	else
 #endif
-		return Material_GetEmittedRadianceNoMix(material, hitPoint
+		result = Material_GetEmittedRadianceNoMix(material, hitPoint
 				TEXTURES_PARAM);
+
+	return 	material->emittedFactor * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;
 }
 
 #if defined(PARAM_HAS_BUMPMAPS)

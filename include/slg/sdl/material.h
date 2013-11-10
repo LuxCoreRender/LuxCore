@@ -55,8 +55,12 @@ typedef enum {
 class Material {
 public:
 	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
-		matID(0), lightID(0), samples(-1), emittedSamples(-1), emittedTex(emitted), bumpTex(bump), normalTex(normal),
-		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
+		matID(0), lightID(0), samples(-1), emittedSamples(-1),
+		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
+		emittedTex(emitted), bumpTex(bump), normalTex(normal),
+		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) {
+		UpdateEmittedFactor();
+	}
 	virtual ~Material() { }
 
 	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
@@ -64,6 +68,14 @@ public:
 	u_int GetLightID() const { return lightID; }
 	void SetID(const u_int id) { matID = id; }
 	u_int GetID() const { return matID; }
+	void SetEmittedGain(const float v) { emittedGain = v; UpdateEmittedFactor(); }
+	float GetEmittedGain() const { return emittedGain; }
+	void SetEmittedPower(const float v) { emittedPower = v; UpdateEmittedFactor(); }
+	float GetEmittedPower() const { return emittedPower; }
+	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
+	float GetEmittedEfficency() const { return emittedEfficency; }
+	float GetEmittedFactor() const { return emittedFactor; }
+	bool IsUsingPrimitiveArea() const { return usePrimitiveArea; }
 
 	virtual MaterialType GetType() const = 0;
 	virtual BSDFEvent GetEventTypes() const = 0;
@@ -92,10 +104,11 @@ public:
 		return luxrays::Spectrum(0.f);
 	}
 
-	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const {
-		if (emittedTex)
-			return emittedTex->GetSpectrumValue(hitPoint);
-		else
+	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
+		if (emittedTex) {
+			return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
+					emittedTex->GetSpectrumValue(hitPoint);
+		} else
 			return luxrays::Spectrum();
 	}
 	virtual float GetEmittedRadianceY() const {
@@ -104,40 +117,7 @@ public:
 		else
 			return 0.f;
 	}
-	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const {
-		if (bumpTex) {
-			const luxrays::UV &dudv = bumpTex->GetDuDv();
-
-			const float b0 = bumpTex->GetFloatValue(hitPoint);
-
-			float dbdu;
-			if (dudv.u > 0.f) {
-				// This is a simple trick. The correct code would require true differential information.
-				HitPoint tmpHitPoint = hitPoint;
-				tmpHitPoint.p.x += dudv.u;
-				tmpHitPoint.uv.u += dudv.u;
-				const float bu = bumpTex->GetFloatValue(tmpHitPoint);
-
-				dbdu = (bu - b0) / dudv.u;
-			} else
-				dbdu = 0.f;
-
-			float dbdv;
-			if (dudv.v > 0.f) {
-				// This is a simple trick. The correct code would require true differential information.
-				HitPoint tmpHitPoint = hitPoint;
-				tmpHitPoint.p.y += dudv.v;
-				tmpHitPoint.uv.v += dudv.v;
-				const float bv = bumpTex->GetFloatValue(tmpHitPoint);
-
-				dbdv = (bv - b0) / dudv.v;
-			} else
-				dbdv = 0.f;
-
-			return luxrays::UV(dbdu, dbdv);
-		} else
-			return luxrays::UV();
-	}
+	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetNormalTexValue(const HitPoint &hitPoint) const {
 		if (normalTex)
 			return normalTex->GetSpectrumValue(hitPoint);
@@ -195,14 +175,29 @@ public:
 	virtual luxrays::Properties ToProperties() const;
 
 protected:
+	void UpdateEmittedFactor() {
+		if (emittedTex) {
+			emittedFactor = emittedGain * emittedPower * emittedEfficency / (M_PI * emittedTex->Y());
+			if ((emittedFactor == 0.f) || isinf(emittedFactor) || isnan(emittedFactor)) {
+				emittedFactor = emittedGain;
+				usePrimitiveArea = false;
+			} else
+				usePrimitiveArea = true;
+		} else {
+			emittedFactor = emittedGain;
+			usePrimitiveArea = false;
+		}
+	}
+
 	u_int matID, lightID;
 
 	int samples, emittedSamples;
+	float emittedGain, emittedPower, emittedEfficency, emittedFactor;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
 	const Texture *normalTex;
 
-	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
+	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular, usePrimitiveArea;
 };
 
 //------------------------------------------------------------------------------
@@ -499,7 +494,8 @@ public:
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
 
 	virtual float GetEmittedRadianceY() const;
-	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
+		const float oneOverPrimitiveArea) const;
 	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetNormalTexValue(const HitPoint &hitPoint) const;
 

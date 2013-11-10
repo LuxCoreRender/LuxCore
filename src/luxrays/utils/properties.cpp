@@ -259,6 +259,10 @@ Properties::Properties(const string &fileName) {
 	SetFromFile(fileName);
 }
 
+u_int Properties::GetSize() const {
+	return names.size();
+}
+
 Properties &Properties::Set(const Properties &props) {
 	BOOST_FOREACH(const string &name, props.GetAllNames()) {
 		this->Set(props.Get(name));

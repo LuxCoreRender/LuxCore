@@ -49,6 +49,8 @@ Transform worldToCamera;
 class GraphicsState {
 public:
 	GraphicsState() {
+		areaLightName = "";
+		materialName = "";
 		currentLightGroup = 0;
 	}
 	~GraphicsState() {
@@ -72,7 +74,7 @@ static boost::unordered_map<string, Transform> namedCoordinateSystems;
 static u_int freeLightGroupIndex;
 static boost::unordered_map<string, u_int> namedLightGroups;
 // The named Materials
-static boost::unordered_set<string> namedMaterials;
+static boost::unordered_map<string, Properties> namedMaterials;
 // The named Textures
 static boost::unordered_set<string> namedTextures;
 static u_int freeObjectID;
@@ -98,14 +100,8 @@ void ResetParser() {
 	freeLightGroupIndex = 1;
 	namedLightGroups.clear();
 	namedMaterials.clear();
-	namedMaterials.insert("LUXCORE_PARSERLXS_DEFAULT_MATERIAL");
 	namedTextures.clear();
 	freeObjectID = 0;
-
-	// Define the default material
-	*sceneProps <<
-			Property("scene.materials.LUXCORE_PARSERLXS_DEFAULT_MATERIAL.type")("matte") <<
-			Property("scene.materials.LUXCORE_PARSERLXS_DEFAULT_MATERIAL.kd")(Spectrum(.9f));
 }
 
 static Properties GetTextureMapping2D(const string &prefix, const Properties &props) {
@@ -147,30 +143,34 @@ static Property GetTexture(const string &luxCoreName, const Property defaultProp
 		return prop.Renamed(luxCoreName);
 }
 
-static void DefineMaterial(const string &name, const Properties &props) {
+static void DefineMaterial(const string &name, const Properties &matProps, const Properties &lightProps) {
 	const string prefix = "scene.materials." + name;
 
-	const string type = props.Get(Property("type")("matte")).Get<string>();
+	//--------------------------------------------------------------------------
+	// Material definition
+	//--------------------------------------------------------------------------
+
+	const string type = matProps.Get(Property("type")("matte")).Get<string>();
 	if (type == "matte") {
 		*sceneProps <<
 				Property(prefix + ".type")("matte") <<
-				GetTexture(prefix + ".kd", Property("Kd")(Spectrum(.9f)), props);
+				GetTexture(prefix + ".kd", Property("Kd")(Spectrum(.9f)), matProps);
 	} else if (type == "mirror") {
 		*sceneProps <<
 				Property(prefix + ".type")("mirror") <<
-				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), props);
+				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), matProps);
 	} else if (type == "glass") {
-		const bool isArchitectural = props.Get(Property("architectural")(false)).Get<bool>();
+		const bool isArchitectural = matProps.Get(Property("architectural")(false)).Get<bool>();
 
 		*sceneProps <<
 				Property(prefix + ".type")(isArchitectural ? "archglass" : "glass") <<
-				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), props) <<
-				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), props) <<
+				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), matProps) <<
+				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), matProps) <<
 				Property(prefix +".ioroutside")(1.f) <<
-				GetTexture(prefix + ".iorinside", Property("index")(1.5f), props);
+				GetTexture(prefix + ".iorinside", Property("index")(1.5f), matProps);
 	} else if (type == "metal") {
 		Spectrum n, k;
-		string presetName = props.Get("name").Get<string>();
+		string presetName = matProps.Get("name").Get<string>();
 		if (presetName == "amorphous carbon") {
 			n = Spectrum(2.94553471f, 2.22816062f, 1.98665321f);
 			k = Spectrum(0.876640677f, 0.799504995f, 0.821194172f);
@@ -197,35 +197,35 @@ static void DefineMaterial(const string &name, const Properties &props) {
 				Property(prefix + ".type")("metal2") <<
 				Property(prefix + ".n")(n) <<
 				Property(prefix + ".k")(k) <<
-				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
-				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props);
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps);
 	} else if (type == "mattetranslucent") {
 		*sceneProps <<
 				Property(prefix + ".type")("mattetranslucent") <<
-				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), props) <<
-				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), props);
+				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), matProps) <<
+				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), matProps);
 	} else if (type == "null") {
 		*sceneProps <<
 				Property(prefix + ".type")("null");
 	} else if (type == "mix") {
 		*sceneProps <<
 				Property(prefix + ".type")("mix") <<
-				GetTexture(prefix + ".amount", Property("amount")(.5f), props) <<
-				Property(prefix + ".material1")(props.Get(Property("namedmaterial1")("")).Get<string>()) <<
-				Property(prefix + ".material2")(props.Get(Property("namedmaterial2")("")).Get<string>());
+				GetTexture(prefix + ".amount", Property("amount")(.5f), matProps) <<
+				Property(prefix + ".material1")(matProps.Get(Property("namedmaterial1")("")).Get<string>()) <<
+				Property(prefix + ".material2")(matProps.Get(Property("namedmaterial2")("")).Get<string>());
 	} else if (type == "glossy") {
 		*sceneProps <<
 				Property(prefix + ".type")("glossy2") <<
-				GetTexture(prefix + ".kd", Property("Kd")(.5f), props) <<
-				GetTexture(prefix + ".ks", Property("Ks")(.5f), props) <<
-				GetTexture(prefix + ".ka", Property("Ks")(0.f), props) <<
-				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
-				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props) <<
-				GetTexture(prefix + ".d", Property("d")(0.f), props) <<
-				GetTexture(prefix + ".index", Property("index")(0.f), props) <<
-				Property(prefix +".multibounce")(props.Get(Property("multibounce")(false)).Get<bool>());
+				GetTexture(prefix + ".kd", Property("Kd")(.5f), matProps) <<
+				GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
+				GetTexture(prefix + ".ka", Property("Ks")(0.f), matProps) <<
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
+				GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
+				Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
 	} else if (type == "metal2") {
-		const string colTexName = props.Get(Property("fresnel")(5.f)).Get<string>();
+		const string colTexName = matProps.Get(Property("fresnel")(5.f)).Get<string>();
 		*sceneProps <<
 					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".type")("fresnelapproxn") <<
 					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".texture")(colTexName) <<
@@ -236,17 +236,17 @@ static void DefineMaterial(const string &name, const Properties &props) {
 				Property(prefix + ".type")("metal2") <<
 				Property(prefix + ".n")("LUXCORE_PARSERLXS_fresnelapproxn-" + name) <<
 				Property(prefix + ".k")("LUXCORE_PARSERLXS_fresnelapproxk-" + name) <<
-				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
-				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props);
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps);
 	} else if (type == "roughglass") {
 		*sceneProps <<
 				Property(prefix + ".type")("roughglass") <<
-				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), props) <<
-				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), props) <<
+				GetTexture(prefix + ".kr", Property("Kr")(Spectrum(1.f)), matProps) <<
+				GetTexture(prefix + ".kt", Property("Kt")(Spectrum(1.f)), matProps) <<
 				Property(prefix +".ioroutside")(1.f) <<
-				GetTexture(prefix + ".iorinside", Property("index")(1.5f), props) <<
-				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), props) <<
-				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), props);
+				GetTexture(prefix + ".iorinside", Property("index")(1.5f), matProps) <<
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps);
 	} else {
 		LC_LOG("LuxCor::ParserLXS supports only Matte, Mirror, Glass, Metal, MatteTranslucent, Null, "
 				"Mix, Glossy2, Metal2 and RoughGlass material (i.e. not " <<
@@ -257,13 +257,28 @@ static void DefineMaterial(const string &name, const Properties &props) {
 				Property(prefix + ".kd")(Spectrum(.9f));
 	}
 
-	if (props.IsDefined("bumpmap")) {
+	//--------------------------------------------------------------------------
+	// Material bump mapping and normal mapping definition
+	//--------------------------------------------------------------------------
+
+	if (matProps.IsDefined("bumpmap")) {
 		// TODO: check the kind of texture to understand if it is a bump map or a normal map
-		*sceneProps << Property(prefix + ".bumptex")(props.Get("bumpmap").Get<string>());
+		*sceneProps << Property(prefix + ".bumptex")(matProps.Get("bumpmap").Get<string>());
 		//*sceneProps << Property(prefix + ".normaltex")(props.Get("bumpmap").Get<string>());
 	}
-	
-	namedMaterials.insert(name);
+
+	//--------------------------------------------------------------------------
+	// Material emission definition
+	//--------------------------------------------------------------------------
+
+	if (lightProps.GetSize() > 0) {
+		*sceneProps <<
+				GetTexture(prefix + ".emission", Property("L")(Spectrum(1.f)), lightProps) << 
+				Property(prefix + ".emission.gain")(matProps.Get(Property("gain")(1.f)).Get<float>()) <<
+				Property(prefix + ".emission.power")(matProps.Get(Property("power")(100.f)).Get<float>()) <<
+				Property(prefix + ".emission.efficency")(matProps.Get(Property("efficency")(17.f)).Get<float>()) <<
+				Property(prefix + ".emission.id")(currentGraphicsState.currentLightGroup);
+	}
 }
 
 u_int lineNum = 0;
@@ -855,7 +870,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 	Properties props;
 	InitProperties(props, CPS, CP);
-	DefineMaterial(name, props);
+	namedMaterials[name] = props;
+	DefineMaterial(name, props, Properties());
 
 	FreeArgs();
 }
@@ -877,6 +893,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 		throw std::runtime_error("Named material '" + name + "' unknown");
 
 	currentGraphicsState.materialName = name;
+	currentGraphicsState.materialProps = namedMaterials[name];
 }
 | OBJECTBEGIN STRING
 {
@@ -988,31 +1005,65 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | SHAPE STRING paramlist
 {
+	Properties props;
+	InitProperties(props, CPS, CP);
+
+	// Define object name
+	string objName;
+	if (props.IsDefined("name"))
+		objName = props.Get("name").Get<string>();
+	else
+		objName = "LUXCORE_OBJECT_" + ToString(freeObjectID++);
+	const string prefix = "scene.objects." + objName;
+
+	// Define object material
+	if (currentGraphicsState.materialName == "") {
+		// Define the used material on-the-fly
+		DefineMaterial("LUXCORE_MATERIAL_" + objName, currentGraphicsState.materialProps,
+				currentGraphicsState.areaLightProps);
+		*sceneProps <<
+			Property(prefix + ".material")("LUXCORE_MATERIAL_" + objName);
+	} else {
+		// It is a named material
+		if (currentGraphicsState.areaLightName == "") {
+			// I can use the already defined material without emission
+			*sceneProps <<
+				Property(prefix + ".material")(currentGraphicsState.materialName);
+		} else {
+			// I have to define a new material with emission
+			DefineMaterial("LUXCORE_MATERIAL_" + objName, currentGraphicsState.materialProps,
+				currentGraphicsState.areaLightProps);
+			*sceneProps <<
+				Property(prefix + ".material")("LUXCORE_MATERIAL_" + objName);
+		}
+	}
+
 	const string name($2);
 	if (name == "plymesh") {
-		Properties props;
-		InitProperties(props, CPS, CP);
-
-		string objName;
-		if (props.IsDefined("name"))
-			objName = props.Get("name").Get<string>();
-		else
-			objName = "LUXCORE_OBJECT_" + ToString(freeObjectID++);
-		const string prefix = "scene.objects." + objName;
-
 		*sceneProps <<
 			Property(prefix + ".ply")(props.Get(Property("filename")("none")).Get<string>()) <<
 			Property(prefix + ".transformation")(currentTransform.m);
-		
-		if (currentGraphicsState.materialName == "") {
-			// Define the used material on-the-fly
-			DefineMaterial("LUXCORE_MATERIAL_" + objName, currentGraphicsState.materialProps);
-			*sceneProps <<
-				Property(prefix + ".material")("LUXCORE_MATERIAL_" + objName);
-		} else {
-			*sceneProps <<
-				Property(prefix + ".material")(currentGraphicsState.materialName);			
-		}
+	} else 	if (name == "trianglemesh") {
+		if (!props.IsDefined("P"))
+			throw std::runtime_error("Missing P parameter in trianglemesh: " + objName);
+		Property pointsProp = props.Get("P");
+		if ((pointsProp.GetSize() == 0) || (pointsProp.GetSize() % 3 != 0))
+			throw runtime_error("Wrong trianglemesh point list length: " + objName);
+		// Copy all vertices
+		Property points = pointsProp.Renamed(prefix + ".vertices");
+
+		if (!props.IsDefined("indices"))
+			throw std::runtime_error("Missing indices parameter in trianglemesh: " + objName);
+		Property indicesProp = props.Get("indices");
+		if ((indicesProp.GetSize() == 0) || (indicesProp.GetSize() % 3 != 0))
+			throw runtime_error("Wrong trianglemesh indices list length: " + objName);
+		// Copy all indices
+		Property faces = indicesProp.Renamed(prefix + ".faces");
+
+		*sceneProps <<
+			points <<
+			faces <<
+			Property(prefix + ".transformation")(currentTransform.m);
 	}
 
 	FreeArgs();

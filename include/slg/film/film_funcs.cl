@@ -233,20 +233,17 @@ void Film_AddSampleResultColor(const uint x, const uint y,
 #if defined (PARAM_FILM_RADIANCE_GROUP_3)
 	Film_AddWeightedPixel4(&((filmRadianceGroup[3])[index4]), &sampleResult->radiancePerPixelNormalized[3].r, weight);
 #endif
-#if defined (PARAM_FILM_RADIANCE_GROUP_3)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[3])[index4]), &sampleResult->radiancePerPixelNormalized[4].r, weight);
-#endif
 #if defined (PARAM_FILM_RADIANCE_GROUP_4)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[4])[index4]), &sampleResult->radiancePerPixelNormalized[5].r, weight);
+	Film_AddWeightedPixel4(&((filmRadianceGroup[4])[index4]), &sampleResult->radiancePerPixelNormalized[4].r, weight);
 #endif
 #if defined (PARAM_FILM_RADIANCE_GROUP_5)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[5])[index4]), &sampleResult->radiancePerPixelNormalized[6].r, weight);
+	Film_AddWeightedPixel4(&((filmRadianceGroup[5])[index4]), &sampleResult->radiancePerPixelNormalized[5].r, weight);
 #endif
 #if defined (PARAM_FILM_RADIANCE_GROUP_6)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[6])[index4]), &sampleResult->radiancePerPixelNormalized[7].r, weight);
+	Film_AddWeightedPixel4(&((filmRadianceGroup[6])[index4]), &sampleResult->radiancePerPixelNormalized[6].r, weight);
 #endif
 #if defined (PARAM_FILM_RADIANCE_GROUP_7)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[7])[index4]), &sampleResult->radiancePerPixelNormalized[8].r, weight);
+	Film_AddWeightedPixel4(&((filmRadianceGroup[7])[index4]), &sampleResult->radiancePerPixelNormalized[7].r, weight);
 #endif
 #if defined (PARAM_FILM_CHANNELS_HAS_ALPHA)
 	Film_AddWeightedPixel2(&filmAlpha[index2], &sampleResult->alpha, weight);
