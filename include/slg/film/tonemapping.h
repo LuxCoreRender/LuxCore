@@ -43,8 +43,17 @@ public:
 
 class LinearToneMapParams : public ToneMapParams {
 public:
-	LinearToneMapParams(const float s = 1.f) {
+	LinearToneMapParams() {
+		scale = 1.f;
+	}
+
+	LinearToneMapParams(const float s) {
 		scale = s;
+	}
+
+	LinearToneMapParams(const float sensitivity, const float exposure,
+		const float fstop, const float gamma) {
+		scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, gamma);
 	}
 
 	ToneMapType GetType() const { return TONEMAP_LINEAR; }

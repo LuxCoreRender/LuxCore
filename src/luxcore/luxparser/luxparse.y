@@ -789,9 +789,23 @@ ri_stmt: ACCELERATOR STRING paramlist
 	Properties props;
 	InitProperties(props, CPS, CP);
 
+	// Image size
 	*renderConfigProps <<
 			Property("film.width")(props.Get(Property("xresolution")(800)).Get<u_int>()) <<
 			Property("film.height")(props.Get(Property("yresolution")(600)).Get<u_int>());
+
+	// Tone mapping
+//	const string toneMapType = props.Get(Property("tonemapkernel")("autolinear")).Get<string>();
+//	if (toneMapType == "linear") {
+//		*renderConfigProps <<
+//			Property("film.tonemap.type")("LINEAR") <<
+//			Property("film.tonemap.linear.sensitivity")(props.Get(Property("linear_sensitivity")(100.f)).Get<float>()) <<
+//			Property("film.tonemap.linear.exposure")(props.Get(Property("linear_exposure")(1.f / 1000.f)).Get<float>()) <<
+//			Property("film.tonemap.linear.fstop")(props.Get(Property("linear_fstop")(2.8f)).Get<float>()) <<
+//			Property("film.tonemap.linear.gamma")(props.Get(Property("linear_gamma")(2.2f)).Get<float>());
+//	} else {
+//		LC_LOG("LuxCore supports only linear tone mapping, ignoring tone mapping settings");
+//	}
 
 	FreeArgs();
 }
