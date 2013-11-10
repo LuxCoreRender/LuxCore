@@ -29,6 +29,41 @@ using namespace slg;
 // Material
 //------------------------------------------------------------------------------
 
+UV Material::GetBumpTexValue(const HitPoint &hitPoint) const {
+	if (bumpTex) {
+		const luxrays::UV &dudv = bumpTex->GetDuDv();
+
+		const float b0 = bumpTex->GetFloatValue(hitPoint);
+
+		float dbdu;
+		if (dudv.u > 0.f) {
+			// This is a simple trick. The correct code would require true differential information.
+			HitPoint tmpHitPoint = hitPoint;
+			tmpHitPoint.p.x += dudv.u;
+			tmpHitPoint.uv.u += dudv.u;
+			const float bu = bumpTex->GetFloatValue(tmpHitPoint);
+
+			dbdu = (bu - b0) / dudv.u;
+		} else
+			dbdu = 0.f;
+
+		float dbdv;
+		if (dudv.v > 0.f) {
+			// This is a simple trick. The correct code would require true differential information.
+			HitPoint tmpHitPoint = hitPoint;
+			tmpHitPoint.p.y += dudv.v;
+			tmpHitPoint.uv.v += dudv.v;
+			const float bv = bumpTex->GetFloatValue(tmpHitPoint);
+
+			dbdv = (bv - b0) / dudv.v;
+		} else
+			dbdv = 0.f;
+
+		return luxrays::UV(dbdu, dbdv);
+	} else
+		return luxrays::UV();
+}
+
 Properties Material::ToProperties() const {
 	luxrays::Properties props;
 
@@ -660,16 +695,16 @@ float MixMaterial::GetEmittedRadianceY() const {
 	return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(), matB->GetEmittedRadianceY());
 }
 
-Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint) const {
+Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	Spectrum result;
 
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	if (matA->IsLightSource() && (weight1 > 0.f))
-		result += weight1 * matA->GetEmittedRadiance(hitPoint);
+		result += weight1 * matA->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
 	if (matB->IsLightSource() && (weight2 > 0.f))
-		result += weight2 * matB->GetEmittedRadiance(hitPoint);
+		result += weight2 * matB->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
 
 	return result;
 }

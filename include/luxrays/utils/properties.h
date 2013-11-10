@@ -464,6 +464,13 @@ public:
 	Properties(const std::string &fileName);
 	~Properties() { }
 
+	/*!
+	 * \brief Returns the number of Property in this container.
+	 *
+	 * \return the number of Property.
+	 */
+	u_int GetSize() const;
+
 	// The following 2 methods perform the same action
 
 	/*!

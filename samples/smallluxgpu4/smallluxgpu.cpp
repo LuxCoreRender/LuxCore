@@ -253,8 +253,8 @@ int main(int argc, char *argv[]) {
 			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
 
 			// For debugging
-			//SLG_LOG("RenderConfig: \n" << renderConfigProps);
-			//SLG_LOG("Scene: \n" << sceneProps);
+			SLG_LOG("RenderConfig: \n" << renderConfigProps);
+			SLG_LOG("Scene: \n" << sceneProps);
 
 			renderConfigProps.Set(cmdLineProp);
 			// Delete scene.camera.screenwindow so window resize will

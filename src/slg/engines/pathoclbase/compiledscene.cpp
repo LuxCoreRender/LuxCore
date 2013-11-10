@@ -301,6 +301,8 @@ void CompiledScene::CompileMaterials() {
 			mat->emitTexIndex = scene->texDefs.GetTextureIndex(emitTex);
 		else
 			mat->emitTexIndex = NULL_INDEX;
+		mat->emittedFactor = m->GetEmittedFactor();
+		mat->usePrimitiveArea = m->IsUsingPrimitiveArea();
 
 		// Material bump mapping
 		const Texture *bumpTex = m->GetBumpTexture();

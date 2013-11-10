@@ -1056,11 +1056,14 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
-	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
-	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
-
 	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
+	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
+
+	mat->SetEmittedGain(Max(0.f, props.Get(Property(propName + ".emission.gain")(1.f)).Get<float>()));
+	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
+	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficency")(0.f)).Get<float>()));
 	mat->SetEmittedSamples(Max(-1, props.Get(Property(propName + ".emission.samples")(-1)).Get<int>()));
+	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 
 	mat->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 	mat->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
@@ -1078,19 +1081,72 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 		throw runtime_error("Syntax error in object material reference: " + objName);
 
 	// Build the object
-	const string plyFileName = props.Get(Property(propName + ".ply")("")).Get<string>();
-	if (plyFileName == "")
-		throw runtime_error("Syntax error in object .ply file name: " + objName);
-
-	// Check if I have to use an instance mesh or not
 	ExtMesh *mesh;
-	if (props.IsDefined(propName + ".transformation")) {
-		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-		const Transform trans(mat);
+	if (props.IsDefined(propName + ".ply")) {
+		// The mesh definition is in a PLY file
+		const string plyFileName = props.Get(Property(propName + ".ply")("")).Get<string>();
+		if (plyFileName == "")
+			throw runtime_error("Syntax error in object .ply file name: " + objName);
 
-		mesh = extMeshCache.GetExtMesh(plyFileName, &trans);
-	} else
-		mesh = extMeshCache.GetExtMesh(plyFileName);
+		// Check if I have to use an instance mesh or not
+		if (props.IsDefined(propName + ".transformation")) {
+			const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			const Transform trans(mat);
+
+			mesh = extMeshCache.GetExtMesh(plyFileName, &trans);
+		} else
+			mesh = extMeshCache.GetExtMesh(plyFileName);
+	} else {
+		// The mesh definition is in-lined
+		u_int pointsSize;
+		Point *points;
+		if (props.IsDefined(propName + ".vertices")) {
+			Property prop = props.Get(propName + ".vertices");
+			if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
+				throw runtime_error("Wrong object vertex list length: " + objName);
+
+			pointsSize = prop.GetSize() / 3;
+			points = new Point[pointsSize];
+			for (u_int i = 0; i < pointsSize; ++i) {
+				const u_int index = i * 3;
+				points[i] = Point(prop.Get<float>(index), prop.Get<float>(index + 1), prop.Get<float>(index + 2));
+			}
+		} else
+			throw runtime_error("Missing object vertex list: " + objName);
+
+		u_int trisSize;
+		Triangle *tris;
+		if (props.IsDefined(propName + ".faces")) {
+			Property prop = props.Get(propName + ".faces");
+			if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
+				throw runtime_error("Wrong object face list length: " + objName);
+			
+			trisSize = prop.GetSize() / 3;
+			tris = new Triangle[trisSize];
+			for (u_int i = 0; i < trisSize; ++i) {
+				const u_int index = i * 3;
+				tris[i] = Triangle(prop.Get<u_int>(index), prop.Get<u_int>(index + 1), prop.Get<u_int>(index + 2));
+			}
+		} else {
+			delete[] points;
+			throw runtime_error("Missing object face list: " + objName);
+		}
+
+		if (props.IsDefined(propName + ".transformation")) {
+			const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			const Transform trans(mat);
+
+			// Transform directly the vertices. This mesh is defined on-the-fly
+			// and can be used only once
+			for (u_int i = 0; i < pointsSize; ++i)
+				points[i] = trans * points[i];
+		}
+
+		extMeshCache.DefineExtMesh("InlinedMesh-" + objName, pointsSize, trisSize,
+				points, tris,
+				NULL, NULL, NULL, NULL);
+		mesh = extMeshCache.GetExtMesh("InlinedMesh-" + objName);
+	}
 
 	// Get the material
 	if (!matDefs.IsMaterialDefined(matName))

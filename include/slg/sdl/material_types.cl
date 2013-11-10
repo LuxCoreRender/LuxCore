@@ -87,6 +87,8 @@ typedef struct {
 typedef struct {
 	MaterialType type;
 	unsigned int matID, lightID;
+	float emittedFactor;
+	int usePrimitiveArea;
 	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;
 	union {
 		MatteParam matte;

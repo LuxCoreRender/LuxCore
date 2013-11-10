@@ -282,7 +282,8 @@ float3 TriangleLight_Illuminate(__global TriangleLight *triLight, __global HitPo
 	tmpHitPoint->passThroughEvent = passThroughEvent;
 #endif
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], tmpHitPoint
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex],
+			tmpHitPoint, triLight->invArea
 			MATERIALS_PARAM);
 }
 
@@ -298,6 +299,7 @@ float3 TriangleLight_GetRadiance(__global TriangleLight *triLight,
 	if (directPdfA)
 		*directPdfA = triLight->invArea;
 
-	return Material_GetEmittedRadiance(&mats[triLight->materialIndex], hitPoint
+	return Material_GetEmittedRadiance(&mats[triLight->materialIndex],
+			hitPoint, triLight->invArea
 			MATERIALS_PARAM);
 }
