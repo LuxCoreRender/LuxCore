@@ -29,6 +29,8 @@
 #include <sstream>
 #include <vector>
 
+#include <boost/algorithm/string/replace.hpp>
+	
 #include "luxcore/luxcore.h"
 
 using namespace std;
