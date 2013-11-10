@@ -29,6 +29,14 @@ using namespace slg;
 // Material
 //------------------------------------------------------------------------------
 
+Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
+	if (emittedTex) {
+		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
+				emittedTex->GetSpectrumValue(hitPoint);
+	} else
+		return luxrays::Spectrum();
+}
+
 UV Material::GetBumpTexValue(const HitPoint &hitPoint) const {
 	if (bumpTex) {
 		const luxrays::UV &dudv = bumpTex->GetDuDv();
