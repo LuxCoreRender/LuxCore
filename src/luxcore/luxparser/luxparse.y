@@ -138,7 +138,11 @@ static Property GetTexture(const string &luxCoreName, const Property defaultProp
 	Property prop = props.Get(defaultProp);
 	if (prop.GetValueType(0) == typeid(string)) {
 		// It is a texture name
-		return Property(luxCoreName)(prop.Get<string>());
+		string texName = prop.Get<string>();
+		// Replace any "." in the name with 2x"__"
+		boost::replace_all(texName, ".", "__");
+
+		return Property(luxCoreName)(texName);
 	} else
 		return prop.Renamed(luxCoreName);
 }
@@ -741,7 +745,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	
 	*sceneProps <<
 			Property("scene.camera.fieldofview")(props.Get(Property("fov")(90.f)).Get<float>()) <<
-			Property("scene.camera.lensradius")(props.Get(Property("lensradius")(0.00625f)).Get<float>()) <<
+			Property("scene.camera.lensradius")(props.Get(Property("lensradius")(0.f)).Get<float>()) <<
 			Property("scene.camera.focaldistance")(props.Get(Property("focaldistance")(1e30f)).Get<float>()) <<
 			Property("scene.camera.hither")(props.Get(Property("cliphither")(1e-3f)).Get<float>()) <<
 			Property("scene.camera.yon")(props.Get(Property("clipyon")(1e30f)).Get<float>());
@@ -864,7 +868,9 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | MAKENAMEDMATERIAL STRING paramlist
 {
-	const string name($2);
+	string name($2);
+	// Replace any "." in the name with 2x"__"
+	boost::replace_all(name, ".", "__");
 	if (namedMaterials.count(name))
 		throw runtime_error("Named material '" + name + "' already defined");
 
@@ -1014,6 +1020,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 		objName = props.Get("name").Get<string>();
 	else
 		objName = "LUXCORE_OBJECT_" + ToString(freeObjectID++);
+	// Replace any "." in the name with 2x"__"
+	boost::replace_all(objName, ".", "__");
 	const string prefix = "scene.objects." + objName;
 
 	// Define object material
@@ -1103,7 +1111,9 @@ ri_stmt: ACCELERATOR STRING paramlist
 	Properties props;
 	InitProperties(props, CPS, CP);
 
-	const string name($2);
+	string name($2);
+	// Replace any "." in the name with 2x"__"
+	boost::replace_all(name, ".", "__");
 	if (namedTextures.count(name)) {
 		LC_LOG("Texture '" << name << "' being redefined.");
 	}

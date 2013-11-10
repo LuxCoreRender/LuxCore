@@ -104,13 +104,8 @@ public:
 		return luxrays::Spectrum(0.f);
 	}
 
-	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
-		if (emittedTex) {
-			return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
-					emittedTex->GetSpectrumValue(hitPoint);
-		} else
-			return luxrays::Spectrum();
-	}
+	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
+		const float oneOverPrimitiveArea) const;
 	virtual float GetEmittedRadianceY() const {
 		if (emittedTex)
 			return emittedTex->Y();
