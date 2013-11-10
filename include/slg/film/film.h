@@ -127,7 +127,6 @@ public:
 	u_int GetMaskMaterialIDCount() const { return maskMaterialIDs.size(); }
 	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }
 	
-
 	void Init();
 	void Resize(const u_int w, const u_int h);
 	void SetGamma(const float gamma = 2.2f);

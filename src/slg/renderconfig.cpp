@@ -68,12 +68,15 @@ void RenderConfig::InitDefaultProperties() {
 
 			// Film ToneMap related Properties
 			defaultProperties->Set(Property("film.tonemap.type")("LINEAR"));
-			LinearToneMapParams toneMapLinear;
-			defaultProperties->Set(Property("film.tonemap.linear.scale")(toneMapLinear.scale));
-			Reinhard02ToneMapParams toneMapReinhard02;
-			defaultProperties->Set(Property("film.tonemap.reinhard02.prescale")(toneMapReinhard02.preScale));
-			defaultProperties->Set(Property("film.tonemap.reinhard02.postscale")(toneMapReinhard02.postScale));
-			defaultProperties->Set(Property("film.tonemap.reinhard02.burn")(toneMapReinhard02.burn));
+			defaultProperties->Set(Property("film.tonemap.linear.scale")(1.f));
+			defaultProperties->Set(Property("film.tonemap.linear.sensitivity")(100.f));
+			defaultProperties->Set(Property("film.tonemap.linear.exposure")(1.f / 1000.f));
+			defaultProperties->Set(Property("film.tonemap.linear.fstop")(2.8f));
+			defaultProperties->Set(Property("film.tonemap.linear.gamma")(2.2f));
+
+			defaultProperties->Set(Property("film.tonemap.reinhard02.prescale")(1.f));
+			defaultProperties->Set(Property("film.tonemap.reinhard02.postscale")(1.2f));
+			defaultProperties->Set(Property("film.tonemap.reinhard02.burn")(3.75f));
 
 			defaultProperties->Set(Property("film.gamma")(2.2f));
 			defaultProperties->Set(Property("film.height")(480u));
@@ -99,7 +102,6 @@ const Properties &RenderConfig::GetDefaultProperties() {
 	InitDefaultProperties();
 
 	return *defaultProperties;
-	
 }
 
 RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : scene(scn) {
@@ -276,9 +278,20 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	const ToneMapType toneMapType = String2ToneMapType(GetProperty("film.tonemap.type").Get<string>());
 	switch (toneMapType) {
 		case TONEMAP_LINEAR: {
-			LinearToneMapParams params;
-			params.scale = GetProperty("film.tonemap.linear.scale").Get<float>();
-			film->SetToneMapParams(params);
+			if (cfg.IsDefined("film.tonemap.linear.scale") ||
+					(!cfg.IsDefined("film.tonemap.linear.sensitivity") && !cfg.IsDefined("film.tonemap.linear.exposure") &&
+					!cfg.IsDefined("film.tonemap.linear.fstop") && !cfg.IsDefined("film.tonemap.linear.gamma"))) {
+				LinearToneMapParams params;
+				params.scale = GetProperty("film.tonemap.linear.scale").Get<float>();
+				film->SetToneMapParams(params);
+			} else {
+				LinearToneMapParams params(
+					GetProperty("film.tonemap.linear.sensitivity").Get<float>(),
+					GetProperty("film.tonemap.linear.exposure").Get<float>(),
+					GetProperty("film.tonemap.linear.fstop").Get<float>(),
+					GetProperty("film.tonemap.linear.gamma").Get<float>());
+				film->SetToneMapParams(params);
+			}
 			break;
 		}
 		case TONEMAP_REINHARD02: {
