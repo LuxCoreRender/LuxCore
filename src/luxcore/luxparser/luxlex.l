@@ -31,6 +31,11 @@
 
 #include "luxcore/luxcore.h"
 
+#ifdef WIN32
+#include <io.h>
+#define isatty _isatty
+#endif
+
 struct ParamArray; // This is used but not defined inside luxparse.hpp
 // luxparse.hpp is under "src" directory and not "include" because otherwise
 // the parser sources are always recompiled (it is a bug in BISON_TARGET() cmake macro)
