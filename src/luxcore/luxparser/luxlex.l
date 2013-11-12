@@ -32,6 +32,7 @@
 #include "luxcore/luxcore.h"
 
 #ifdef WIN32
+#define YY_NO_UNISTD_H
 #include <io.h>
 #define isatty _isatty
 #endif
