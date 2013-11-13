@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_PATHOCL_H
@@ -24,168 +21,80 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/engines/pathocl/ocldatatypes.h"
-#include "slg/engines/pathocl/compiledscene.h"
+#include <boost/thread/thread.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/ocl.h"
 
-#include <boost/thread/thread.hpp>
+#include "slg/slg.h"
+#include "slg/renderengine.h"
+#include "slg/engines/pathoclbase/pathoclbase.h"
+#include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/engines/pathocl/pathocl_datatypes.h"
 
 namespace slg {
 
 class PathOCLRenderEngine;
-class RTPathOCLRenderEngine;
-class RTPathOCLRenderThread;
 
 //------------------------------------------------------------------------------
 // Path Tracing GPU-only render threads
 //------------------------------------------------------------------------------
 
-class PathOCLRenderThread {
+class PathOCLRenderThread : public PathOCLBaseRenderThread {
 public:
 	PathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
 			PathOCLRenderEngine *re);
 	virtual ~PathOCLRenderThread();
 
-	virtual void Start();
-	virtual void Interrupt();
 	virtual void Stop();
 
-	virtual void BeginEdit();
-	virtual void EndEdit(const EditActionList &editActions);
-
 	friend class PathOCLRenderEngine;
-	friend class RTPathOCLRenderEngine;
-	friend class RTPathOCLRenderThread;
 
 protected:
 	virtual void RenderThreadImpl();
+	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight);
+	virtual void AdditionalInit();
+	virtual std::string AdditionalKernelOptions();
+	virtual std::string AdditionalKernelDefinitions();
+	virtual std::string AdditionalKernelSources();
+	virtual void SetAdditionalKernelArgs();
+	virtual void CompileAdditionalKernels(cl::Program *program);
 
-	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc);
-	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc);
-	void FreeOCLBuffer(cl::Buffer **buff);
-
-	void StartRenderThread();
-	void StopRenderThread();
-
-	virtual void InitRender();
-
-	void InitFrameBuffer();
-	void InitCamera();
-	void InitGeometry();
-	void InitImageMaps();
-	void InitTextures();
-	void InitMaterials();
-	void InitTriangleAreaLights();
-	void InitInfiniteLight();
-	void InitSunLight();
-	void InitSkyLight();
-	void InitKernels();
 	void InitGPUTaskBuffer();
-	void InitSampleBuffer();
-
-	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
-	virtual void SetKernelArgs();
-
-	luxrays::OpenCLIntersectionDevice *intersectionDevice;
+	void InitSamplesBuffer();
+	void InitSampleDataBuffer();
 
 	// OpenCL variables
-	std::string kernelsParameters;
 	cl::Kernel *initKernel;
 	size_t initWorkGroupSize;
-	cl::Kernel *initFBKernel;
-	size_t initFBWorkGroupSize;
-	cl::Kernel *samplerKernel;
-	size_t samplerWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
 	size_t advancePathsWorkGroupSize;
-
-	// The following kernels are used only by RTPathOCL
-	cl::Kernel *clearFBKernel;
-	size_t clearFBWorkGroupSize;
-	cl::Kernel *clearSBKernel;
-	size_t clearSBWorkGroupSize;
-	cl::Kernel *mergeFBKernel;
-	size_t mergeFBWorkGroupSize;
-	cl::Kernel *normalizeFBKernel;
-	size_t normalizeFBWorkGroupSize;
-	cl::Kernel *applyBlurFilterXR1Kernel;
-	size_t applyBlurFilterXR1WorkGroupSize;
-	cl::Kernel *applyBlurFilterYR1Kernel;
-	size_t applyBlurFilterYR1WorkGroupSize;
-	cl::Kernel *toneMapLinearKernel;
-	size_t toneMapLinearWorkGroupSize;
-	cl::Kernel *updateScreenBufferKernel;
-	size_t updateScreenBufferWorkGroupSize;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 	cl::Buffer *tasksBuff;
+	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;
-	cl::Buffer *frameBufferBuff;
-	cl::Buffer *alphaFrameBufferBuff;
-	cl::Buffer *materialsBuff;
-	cl::Buffer *texturesBuff;
-	cl::Buffer *meshIDBuff;
-	cl::Buffer *meshDescsBuff;
-	cl::Buffer *meshMatsBuff;
-	cl::Buffer *infiniteLightBuff;
-	cl::Buffer *sunLightBuff;
-	cl::Buffer *skyLightBuff;
-	cl::Buffer *vertsBuff;
-	cl::Buffer *normalsBuff;
-	cl::Buffer *uvsBuff;
-	cl::Buffer *colsBuff;
-	cl::Buffer *alphasBuff;
-	cl::Buffer *trianglesBuff;
-	cl::Buffer *cameraBuff;
-	cl::Buffer *triLightDefsBuff;
-	cl::Buffer *meshTriLightDefsOffsetBuff;
-	cl::Buffer *imageMapDescsBuff;
-	vector<cl::Buffer *> imageMapsBuff;
-
-	luxrays::oclKernelCache *kernelCache;
 
 	u_int sampleDimensions;
 
-	boost::thread *renderThread;
-
-	u_int threadIndex;
-	PathOCLRenderEngine *renderEngine;
-	slg::ocl::Pixel *frameBuffer;
-	slg::ocl::AlphaPixel *alphaFrameBuffer;
-	u_int frameBufferPixelCount;
-
-	bool started, editMode;
-
-	slg::ocl::GPUTaskStats *gpuTaskStats;
+	slg::ocl::pathocl::GPUTaskStats *gpuTaskStats;
 };
 
 //------------------------------------------------------------------------------
 // Path Tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
 
-class PathOCLRenderEngine : public OCLRenderEngine {
+class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	PathOCLRenderEngine(RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+			const bool realTime = false);
 	virtual ~PathOCLRenderEngine();
 
 	virtual RenderEngineType GetEngineType() const { return PATHOCL; }
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
-	virtual bool IsMaterialCompiled(const MaterialType type) const {
-		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
-	}
-
 	friend class PathOCLRenderThread;
-	friend class RTPathOCLRenderThread;
 
 	// Signed because of the delta parameter
 	int maxPathDepth;
@@ -194,26 +103,15 @@ public:
 	float rrImportanceCap;
 
 	u_int taskCount;
-	size_t maxMemPageSize;
 	bool usePixelAtomics;
 
 protected:
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
-	virtual void StopLockLess();
-
-	virtual void BeginEditLockLess();
-	virtual void EndEditLockLess(const EditActionList &editActions);
 
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
-
-	boost::mutex setKernelArgsMutex;
-
-	CompiledScene *compiledScene;
-
-	vector<PathOCLRenderThread *> renderThreads;
 
 	slg::ocl::Sampler *sampler;
 	slg::ocl::Filter *filter;

@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include <iostream>
@@ -176,23 +173,37 @@ static int FaceCB(p_ply_argument argument) {
 	void *userData = NULL;
 	ply_get_argument_user_data(argument, &userData, NULL);
 
-	Triangle *verts = *static_cast<Triangle **> (userData);
-
-	long triIndex;
-	ply_get_argument_element(argument, NULL, &triIndex);
+	vector<Triangle> *tris = static_cast<vector<Triangle> *> (userData);
 
 	long length, valueIndex;
 	ply_get_argument_property(argument, NULL, &length, &valueIndex);
 
-	if (valueIndex >= 0 && valueIndex < 3) {
-		verts[triIndex].v[valueIndex] =
-				static_cast<u_int> (ply_get_argument_value(argument));
+	if (length == 3) {
+		if (valueIndex < 0)
+			tris->push_back(Triangle());
+		else if (valueIndex < 3)
+			tris->back().v[valueIndex] =
+					static_cast<u_int> (ply_get_argument_value(argument));
+	} else if (length == 4) {
+		// I have to split the quad in 2x triangles
+		if (valueIndex < 0) {
+			tris->push_back(Triangle());
+		} else if (valueIndex < 3)
+			tris->back().v[valueIndex] =
+					static_cast<u_int> (ply_get_argument_value(argument));
+		else if (valueIndex == 3) {
+			const u_int i0 = tris->back().v[0];
+			const u_int i1 = tris->back().v[2];
+			const u_int i2 = static_cast<u_int> (ply_get_argument_value(argument));
+
+			tris->push_back(Triangle(i0, i1, i2));
+		}
 	}
 
 	return 1;
 }
 
-ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileName, const bool usePlyNormals) {
+ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileName) {
 	p_ply plyfile = ply_open(fileName.c_str(), NULL);
 	if (!plyfile) {
 		std::stringstream ss;
@@ -216,11 +227,11 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		throw std::runtime_error(ss.str());
 	}
 
-	Triangle *vi;
-	long plyNbTris = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
-	if (plyNbTris <= 0) {
+	vector<Triangle> vi;
+	long plyNbFaces = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
+	if (plyNbFaces <= 0) {
 		std::stringstream ss;
-		ss << "No triangles found in '" << fileName << "'";
+		ss << "No faces found in '" << fileName << "'";
 		throw std::runtime_error(ss.str());
 	}
 
@@ -229,7 +240,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
 	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n, 2);
-	if (((plyNbNormals > 0) || usePlyNormals) && (plyNbNormals != plyNbVerts)) {
+	if ((plyNbNormals > 0) && (plyNbNormals != plyNbVerts)) {
 		std::stringstream ss;
 		ss << "Wrong count of normals in '" << fileName << "'";
 		throw std::runtime_error(ss.str());
@@ -266,8 +277,10 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	}
 
 	p = new Point[plyNbVerts];
-	vi = new Triangle[plyNbTris];
-	n = new Normal[plyNbVerts];
+	if (plyNbNormals == 0)
+		n = NULL;
+	else
+		n = new Normal[plyNbNormals];
 	if (plyNbUVs == 0)
 		uv = NULL;
 	else
@@ -286,7 +299,6 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		ss << "Unable to parse PLY file '" << fileName << "'";
 
 		delete[] p;
-		delete[] vi;
 		delete[] n;
 		delete[] uv;
 		delete[] cols;
@@ -297,23 +309,17 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	ply_close(plyfile);
 
-	return CreateExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
+	// Copy triangle indices vector
+	Triangle *tris = new Triangle[vi.size()];
+	std::copy(vi.begin(), vi.end(), tris);
+
+	return CreateExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
 }
 
 ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
 	const long plyNbVerts, const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas,
-	const bool usePlyNormals) {
-	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
-
-	if (!usePlyNormals) {
-		// It looks like normals exported by Blender are bugged
-		mesh->ComputeNormals();
-	} else {
-		assert (n != NULL);
-	}
-
-	return mesh;
+	Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas) {
+	return new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 }
 
 //------------------------------------------------------------------------------
@@ -409,22 +415,6 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 		vertices[i] *= trans;
 }
 
-Properties ExtTriangleMesh::ToProperties(const std::string &matName,
-		const luxrays::ExtMeshCache &extMeshCache) const {
-	Properties props;
-
-	const std::string name = GetName();
-	props.SetString("scene.objects." + name + ".material", matName);
-	props.SetString("scene.objects." + name + ".ply",
-			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(this)).str() + ".ply");
-	if (HasNormals())
-		props.SetString("scene.objects." + name + ".useplynormals", "1");
-	else
-		props.SetString("scene.objects." + name + ".useplynormals", "0");
-
-	return props;
-}
-
 void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 	BOOST_OFSTREAM plyFile(fileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
 	if(!plyFile.is_open())
@@ -488,27 +478,4 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 		throw std::runtime_error("Unable to write PLY face data to: " + fileName);
 
 	plyFile.close();
-}
-
-Properties ExtInstanceTriangleMesh::ToProperties(const std::string &matName,
-		const luxrays::ExtMeshCache &extMeshCache) const {
-	Properties props;
-
-	const std::string name = GetName();
-	props.SetString("scene.objects." + name + ".material", matName);
-	props.SetString("scene.objects." + name + ".ply",
-			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(mesh)).str() + ".ply");
-	if (HasNormals())
-		props.SetString("scene.objects." + name + ".useplynormals", "1");
-	else
-		props.SetString("scene.objects." + name + ".useplynormals", "0");
-
-	props.SetString("scene.objects." + name + ".transformation",
-			ToString(trans.m.m[0][0]) + " " + ToString(trans.m.m[1][0]) + " " + ToString(trans.m.m[2][0]) + " " + ToString(trans.m.m[3][0]) + " " +
-			ToString(trans.m.m[0][1]) + " " + ToString(trans.m.m[1][1]) + " " + ToString(trans.m.m[2][1]) + " " + ToString(trans.m.m[3][1]) + " " +
-			ToString(trans.m.m[0][2]) + " " + ToString(trans.m.m[1][2]) + " " + ToString(trans.m.m[2][2]) + " " + ToString(trans.m.m[3][2]) + " " +
-			ToString(trans.m.m[0][3]) + " " + ToString(trans.m.m[1][3]) + " " + ToString(trans.m.m[2][3]) + " " + ToString(trans.m.m[3][3])
-		);
-
-	return props;
 }

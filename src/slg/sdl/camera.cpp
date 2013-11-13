@@ -1,34 +1,33 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include <cstddef>
 
 #include "slg/camera/camera.h"
 #include "slg/film/film.h"
+#include "slg/sdl/sdl.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
-		const luxrays::Vector &u, const float *region) :
+		const luxrays::Vector &u, const float *region) : Camera(PERSPECTIVE),
 		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
 		lensRadius(0.f), focalDistance(10.f) {
 	if (region) {
@@ -47,6 +46,9 @@ PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Poi
 }
 
 void PerspectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
+	filmWidth = width;
+	filmHeight = height;
+
 	// Used to move translate the camera
 	dir = target - orig;
 	dir = Normalize(dir);
@@ -58,16 +60,14 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 	y = Normalize(y);
 
 	// Initialize screen information
-	const float frame = float(width) / float(height);
+	const float frame = float(filmWidth) / float(filmHeight);
 	float screen[4];
 
-	filmWidth = width;
-	filmHeight = height;
 	u_int filmSubRegion[4];
 	filmSubRegion[0] = 0;
-	filmSubRegion[1] = width - 1;
+	filmSubRegion[1] = filmWidth - 1;
 	filmSubRegion[2] = 0;
-	filmSubRegion[3] = height - 1;
+	filmSubRegion[3] = filmHeight - 1;
 
 	if (autoUpdateFilmRegion) {
 		if (enableHorizStereo) {
@@ -104,7 +104,7 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 
 	if (subRegion) {
 		if (enableHorizStereo)
-			throw std::runtime_error("Can not enable horizontal stereo support with subregion rendering");
+			throw runtime_error("Can not enable horizontal stereo support with subregion rendering");
 
 		// I have to render a sub region of the image
 		filmSubRegion[0] = subRegion[0];
@@ -114,8 +114,8 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 		filmWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
 		filmHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 
-		const float halfW = width * .5f;
-		const float halfH = height * .5f;
+		const float halfW = filmWidth * .5f;
+		const float halfH = filmHeight * .5f;
 		if (frame < 1.f) {
 			screen[0] = -frame * (-halfW + filmSubRegion[0]) / (-halfW);
 			screen[1] = frame * (filmSubRegion[0] + filmWidth - halfW) / halfW;
@@ -259,24 +259,20 @@ bool PerspectiveCamera::SampleLens(const float u1, const float u2,
 Properties PerspectiveCamera::ToProperties() const {
 	Properties props;
 
-	props.SetString("scene.camera.lookat",
-			ToString(orig.x) + " " + ToString(orig.y) + " " + ToString(orig.z) + " " +
-			ToString(target.x) + " " + ToString(target.y) + " " + ToString(target.z));
-
-	props.SetString("scene.camera.up", ToString(up.x) + " " + ToString(up.y) + " " + ToString(up.z));
+	props.Set(Property("scene.camera.lookat.orig")(orig));
+	props.Set(Property("scene.camera.lookat.target")(target));
+	props.Set(Property("scene.camera.up")(up));
 
 	if (!autoUpdateFilmRegion)
-		props.SetString("scene.camera.screenwindow",
-			ToString(filmRegion[0]) + " " + ToString(filmRegion[1]) + " " + 
-			ToString(filmRegion[2]) + " " + ToString(filmRegion[3]));
+		props.Set(Property("scene.camera.screenwindow")(filmRegion[0], filmRegion[1], filmRegion[2], filmRegion[3]));
 
-	props.SetString("scene.camera.cliphither", ToString(clipHither));
-	props.SetString("scene.camera.clipyon", ToString(clipYon));
-	props.SetString("scene.camera.lensradius", ToString(lensRadius));
-	props.SetString("scene.camera.focaldistance", ToString(focalDistance));
-	props.SetString("scene.camera.fieldofview", ToString(fieldOfView));
-	props.SetString("scene.camera.horizontalstereo.enable", ToString(enableHorizStereo));
-	props.SetString("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable", ToString(enableOculusRiftBarrel));
+	props.Set(Property("scene.camera.cliphither")(clipHither));
+	props.Set(Property("scene.camera.clipyon")(clipYon));
+	props.Set(Property("scene.camera.lensradius")(lensRadius));
+	props.Set(Property("scene.camera.focaldistance")(focalDistance));
+	props.Set(Property("scene.camera.fieldofview")(fieldOfView));
+	props.Set(Property("scene.camera.horizontalstereo.enable")(enableHorizStereo));
+	props.Set(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
 
 	return props;
 }
@@ -332,4 +328,78 @@ void PerspectiveCamera::OculusRiftBarrelPostprocess(const float x, const float y
 		*barrelX = (ex + 1.f) * .25f + .5f;
 		*barrelY = (ey + 1.f) * .5f;
 	}
+}
+
+
+//------------------------------------------------------------------------------
+// Allocate a Camera
+//------------------------------------------------------------------------------
+
+Camera *Camera::AllocCamera(const luxrays::Properties &props) {
+	Point orig, target;
+	if (props.IsDefined("scene.camera.lookat")) {
+		SDL_LOG("WARNING: deprecated property scene.camera.lookat");
+
+		const Property &prop = props.Get("scene.camera.lookat");
+		orig.x = prop.Get<float>(0);
+		orig.y = prop.Get<float>(1);
+		orig.z = prop.Get<float>(2);
+		target.x = prop.Get<float>(3);
+		target.y = prop.Get<float>(4);
+		target.z = prop.Get<float>(5);
+	} else {
+		orig = props.Get(Property("scene.camera.lookat.orig")(0.f, 10.f, 0.f)).Get<Point>();
+		target = props.Get(Property("scene.camera.lookat.target")(0.f, 0.f, 0.f)).Get<Point>();
+	}
+
+	SDL_LOG("Camera position: " << orig);
+	SDL_LOG("Camera target: " << target);
+
+	const Vector up = props.Get(Property("scene.camera.up")(0.f, 0.f, 1.f)).Get<Vector>();
+
+	auto_ptr<PerspectiveCamera> camera;
+	if (props.IsDefined("scene.camera.screenwindow")) {
+		float screenWindow[4];
+
+		const Property &prop = props.Get(Property("scene.camera.screenwindow")(0.f, 1.f, 0.f, 1.f));
+		screenWindow[0] = prop.Get<float>(0);
+		screenWindow[1] = prop.Get<float>(1);
+		screenWindow[2] = prop.Get<float>(2);
+		screenWindow[3] = prop.Get<float>(3);
+
+		camera.reset(new PerspectiveCamera(orig, target, up, &screenWindow[0]));
+	} else
+		camera.reset(new PerspectiveCamera(orig, target, up));
+
+	camera->clipHither = props.Get(Property("scene.camera.cliphither")(1e-3f)).Get<float>();
+	camera->clipYon = props.Get(Property("scene.camera.clipyon")(1e30f)).Get<float>();
+	camera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
+	camera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
+	camera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
+
+	if (props.Get(Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>()) {
+		SDL_LOG("Camera horizontal stereo enabled");
+		camera->SetHorizontalStereo(true);
+
+		const float eyesDistance = props.Get(Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
+		SDL_LOG("Camera horizontal stereo eyes distance: " << eyesDistance);
+		camera->SetHorizontalStereoEyesDistance(eyesDistance);
+		const float lesnDistance = props.Get(Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
+		SDL_LOG("Camera horizontal stereo lens distance: " << lesnDistance);
+		camera->SetHorizontalStereoLensDistance(lesnDistance);
+
+		// Check if I have to enable Oculus Rift Barrel post-processing
+		if (props.Get(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(false)).Get<bool>()) {
+			SDL_LOG("Camera Oculus Rift Barrel post-processing enabled");
+			camera->SetOculusRiftBarrel(true);
+		} else {
+			SDL_LOG("Camera Oculus Rift Barrel post-processing disabled");
+			camera->SetOculusRiftBarrel(false);
+		}
+	} else {
+		SDL_LOG("Camera horizontal stereo disabled");
+		camera->SetHorizontalStereo(false);
+	}
+
+	return camera.release();
 }

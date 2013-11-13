@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_MATERIAL_H
@@ -26,6 +23,7 @@
 #include <set>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/properties.h"
@@ -57,10 +55,27 @@ typedef enum {
 class Material {
 public:
 	Material(const Texture *emitted, const Texture *bump, const Texture *normal) :
-		emittedTex(emitted), bumpTex(bump), normalTex(normal) { }
+		matID(0), lightID(0), samples(-1), emittedSamples(-1),
+		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
+		emittedTex(emitted), bumpTex(bump), normalTex(normal),
+		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) {
+		UpdateEmittedFactor();
+	}
 	virtual ~Material() { }
 
 	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
+	void SetLightID(const u_int id) { lightID = id; }
+	u_int GetLightID() const { return lightID; }
+	void SetID(const u_int id) { matID = id; }
+	u_int GetID() const { return matID; }
+	void SetEmittedGain(const float v) { emittedGain = v; UpdateEmittedFactor(); }
+	float GetEmittedGain() const { return emittedGain; }
+	void SetEmittedPower(const float v) { emittedPower = v; UpdateEmittedFactor(); }
+	float GetEmittedPower() const { return emittedPower; }
+	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
+	float GetEmittedEfficency() const { return emittedEfficency; }
+	float GetEmittedFactor() const { return emittedFactor; }
+	bool IsUsingPrimitiveArea() const { return usePrimitiveArea; }
 
 	virtual MaterialType GetType() const = 0;
 	virtual BSDFEvent GetEventTypes() const = 0;
@@ -75,6 +90,13 @@ public:
 		return (normalTex != NULL);
 	}
 
+	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
+	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
+	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
+	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
+	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
+	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
+
 	virtual bool IsDelta() const { return false; }
 	virtual bool IsPassThrough() const { return false; }
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
@@ -82,46 +104,15 @@ public:
 		return luxrays::Spectrum(0.f);
 	}
 
-	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const {
+	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
+		const float oneOverPrimitiveArea) const;
+	virtual float GetEmittedRadianceY() const {
 		if (emittedTex)
-			return emittedTex->GetSpectrumValue(hitPoint);
+			return emittedTex->Y();
 		else
-			return luxrays::Spectrum();
+			return 0.f;
 	}
-	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const {
-		if (bumpTex) {
-			const luxrays::UV &dudv = bumpTex->GetDuDv();
-
-			const float b0 = bumpTex->GetFloatValue(hitPoint);
-
-			float dbdu;
-			if (dudv.u > 0.f) {
-				// This is a simple trick. The correct code would require true differential information.
-				HitPoint tmpHitPoint = hitPoint;
-				tmpHitPoint.p.x += dudv.u;
-				tmpHitPoint.uv.u += dudv.u;
-				const float bu = bumpTex->GetFloatValue(tmpHitPoint);
-
-				dbdu = (bu - b0) / dudv.u;
-			} else
-				dbdu = 0.f;
-
-			float dbdv;
-			if (dudv.v > 0.f) {
-				// This is a simple trick. The correct code would require true differential information.
-				HitPoint tmpHitPoint = hitPoint;
-				tmpHitPoint.p.y += dudv.v;
-				tmpHitPoint.uv.v += dudv.v;
-				const float bv = bumpTex->GetFloatValue(tmpHitPoint);
-
-				dbdv = (bv - b0) / dudv.v;
-			} else
-				dbdv = 0.f;
-
-			return luxrays::UV(dbdu, dbdv);
-		} else
-			return luxrays::UV();
-	}
+	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetNormalTexValue(const HitPoint &hitPoint) const {
 		if (normalTex)
 			return normalTex->GetSpectrumValue(hitPoint);
@@ -129,6 +120,10 @@ public:
 			return luxrays::Spectrum();
 	}
 
+	const void SetSamples(const int sampleCount) { samples = sampleCount; }
+	const int GetSamples() const { return samples; }
+	const void SetEmittedSamples(const int sampleCount) { emittedSamples = sampleCount; }
+	const int GetEmittedSamples() const { return emittedSamples; }
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	const Texture *GetNormalTexture() const { return normalTex; }
@@ -140,20 +135,21 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const = 0;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent = ALL) const = 0;
 
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const = 0;
 
 	// Update any reference to oldMat with newMat (mostly used for updating Mix material)
-	virtual void UpdateMaterialReference(const Material *oldMat, const Material *newMat) { }
+	virtual void UpdateMaterialReferences(const Material *oldMat, const Material *newMat) { }
 	// Return true if the material is referencing the specified material
 	virtual bool IsReferencing(const Material *mat) const { return (this == mat); }
-	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const {
+	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 		referencedMats.insert(this);
 	}
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const {
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		if (emittedTex)
 			emittedTex->AddReferencedTextures(referencedTexs);
 		if (bumpTex)
@@ -161,25 +157,42 @@ public:
 		if (normalTex)
 			normalTex->AddReferencedTextures(referencedTexs);
 	}
-
-	virtual luxrays::Properties ToProperties() const {
-		luxrays::Properties props;
-
-		const std::string name = GetName();
-		if (emittedTex)
-			props.SetString("scene.materials." + name + ".emission", emittedTex->GetName());
-		if (bumpTex)
-			props.SetString("scene.materials." + name + ".bumptex", bumpTex->GetName());
-		if (normalTex)
-			props.SetString("scene.materials." + name + ".normaltex", normalTex->GetName());
-
-		return props;
+	// Update any reference to oldTex with newTex
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (emittedTex == oldTex)
+			emittedTex = newTex;
+		if (bumpTex == oldTex)
+			bumpTex = newTex;
+		if (normalTex == oldTex)
+			normalTex = newTex;
 	}
 
+	virtual luxrays::Properties ToProperties() const;
+
 protected:
+	void UpdateEmittedFactor() {
+		if (emittedTex) {
+			emittedFactor = emittedGain * emittedPower * emittedEfficency / (M_PI * emittedTex->Y());
+			if ((emittedFactor == 0.f) || isinf(emittedFactor) || isnan(emittedFactor)) {
+				emittedFactor = emittedGain;
+				usePrimitiveArea = false;
+			} else
+				usePrimitiveArea = true;
+		} else {
+			emittedFactor = emittedGain;
+			usePrimitiveArea = false;
+		}
+	}
+
+	u_int matID, lightID;
+
+	int samples, emittedSamples;
+	float emittedGain, emittedPower, emittedEfficency, emittedFactor;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
 	const Texture *normalTex;
+
+	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular, usePrimitiveArea;
 };
 
 //------------------------------------------------------------------------------
@@ -195,7 +208,8 @@ public:
 		return (matsByName.count(name) > 0);
 	}
 	void DefineMaterial(const std::string &name, Material *m);
-	void UpdateMaterial(const std::string &name, Material *m);
+
+	void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	Material *GetMaterial(const std::string &name);
 	Material *GetMaterial(const u_int index) {
@@ -232,12 +246,14 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -267,7 +283,8 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
@@ -277,7 +294,8 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -310,7 +328,8 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
@@ -320,7 +339,8 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -362,7 +382,8 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
@@ -372,7 +393,8 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -407,7 +429,8 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
@@ -417,7 +440,8 @@ public:
 			*reversePdfW = 0.f;
 	}
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -439,7 +463,7 @@ private:
 class MixMaterial : public Material {
 public:
 	MixMaterial(const Texture *bump, const Texture *normal,
-			const Material *mA, const Material *mB, const Texture *mix) :
+			Material *mA, Material *mB, const Texture *mix) :
 			Material(NULL, bump, normal), matA(mA), matB(mB), mixFactor(mix) { }
 
 	virtual MaterialType GetType() const { return MIX; }
@@ -464,7 +488,9 @@ public:
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
 
-	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint) const;
+	virtual float GetEmittedRadianceY() const;
+	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
+		const float oneOverPrimitiveArea) const;
 	virtual luxrays::UV GetBumpTexValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetNormalTexValue(const HitPoint &hitPoint) const;
 
@@ -474,15 +500,17 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void UpdateMaterialReference(const Material *oldMat,  const Material *newMat);
+	virtual void UpdateMaterialReferences(Material *oldMat, Material *newMat);
 	virtual bool IsReferencing(const Material *mat) const;
-	virtual void AddReferencedMaterials(std::set<const Material *> &referencedMats) const;
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -491,8 +519,8 @@ public:
 	const Texture *GetMixFactor() const { return mixFactor; }
 
 private:
-	const Material *matA;
-	const Material *matB;
+	Material *matA;
+	Material *matB;
 	const Texture *mixFactor;
 };
 
@@ -505,7 +533,7 @@ public:
 	NullMaterial() : Material(NULL, NULL, NULL) { }
 
 	virtual MaterialType GetType() const { return NULLMAT; }
-	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
+	virtual BSDFEvent GetEventTypes() const { return SPECULAR | TRANSMIT; };
 
 	virtual bool IsDelta() const { return true; }
 	virtual bool IsPassThrough() const { return true; }
@@ -518,7 +546,8 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
@@ -550,12 +579,14 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -580,7 +611,7 @@ public:
 			Ka(ka), depth(d), index(i), multibounce(mbounce) { }
 
 	virtual MaterialType GetType() const { return GLOSSY2; }
-	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
@@ -588,12 +619,14 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -647,12 +680,14 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -690,12 +725,14 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
 
-	virtual void AddReferencedTextures(std::set<const Texture *> &referencedTexs) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
 

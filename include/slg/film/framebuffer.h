@@ -1,267 +1,195 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_FRAMEBUFFER_H
 #define	_SLG_FRAMEBUFFER_H
 
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/utils.h"
 
 namespace slg {
 
-typedef struct {
-	luxrays::Spectrum radiance;
-	float weight;
-} SamplePixel;
-
-class SampleFrameBuffer {
+template<u_int CHANNELS, u_int WEIGHT_CHANNELS, class T> class GenericFrameBuffer {
 public:
-	SampleFrameBuffer(const unsigned int w, const unsigned int h)
+	GenericFrameBuffer(const u_int w, const u_int h)
 		: width(w), height(h) {
-		pixels = new SamplePixel[width * height];
+		pixels = new T[width * height * CHANNELS];
 
 		Clear();
 	}
-	~SampleFrameBuffer() {
+	~GenericFrameBuffer() {
 		delete[] pixels;
 	}
 
-	void Clear() {
-		for (unsigned int i = 0; i < width * height; ++i) {
-			pixels[i].radiance.r = 0.f;
-			pixels[i].radiance.g = 0.f;
-			pixels[i].radiance.b = 0.f;
-			pixels[i].weight = 0.f;
+	void Clear(const T value = 0) {
+		std::fill(pixels, pixels + width * height * CHANNELS, value);
+	};
+
+	T *GetPixels() const { return pixels; }
+
+	bool MinPixel(const u_int x, const u_int y, const T *v) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		bool write = false;
+		for (u_int i = 0; i < CHANNELS; ++i) {
+			if (v[i] < pixel[i]) {
+				pixel[i] = v[i];
+				write = true;
+			}
 		}
-	};
 
-	SamplePixel *GetPixels() const { return pixels; }
+		return write;
+	}
 
-	void AddPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum &r, const float w) {
+	void AddPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
 		assert (y < height);
 
-		SamplePixel *pixel = &pixels[x + y * width];
-		pixel->radiance += r;
-		pixel->weight += w;
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		for (u_int i = 0; i < CHANNELS; ++i)
+			pixel[i] += v[i];
 	}
 
-	void AddPixel(const unsigned int index, const luxrays::Spectrum &r, const float w) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index].radiance += r;
-		pixels[index].weight += w;
-	}
-
-	void SetPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum &r, const float w) {
+	void AddWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
 		assert (y < height);
 
-		SamplePixel *pixel = &pixels[x + y * width];
-		pixel->radiance = r;
-		pixel->weight = w;
-	}
-
-	void SetPixel(const unsigned int index, const luxrays::Spectrum &r, const float w) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index].radiance = r;
-		pixels[index].weight = w;
-	}
-
-	SamplePixel *GetPixel(const unsigned int x, const unsigned int y) const {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		return &pixels[x + y * width];
-	}
-
-	SamplePixel *GetPixel(const unsigned int index) const {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		return &pixels[index];
-	}
-
-	unsigned int GetWidth() const { return width; }
-	unsigned int GetHeight() const { return height; }
-
-private:
-	const unsigned int width, height;
-
-	SamplePixel *pixels;
-};
-
-typedef luxrays::Spectrum Pixel;
-
-class FrameBuffer {
-public:
-	FrameBuffer(const unsigned int w, const unsigned int h)
-			: width(w), height(h) {
-		pixels = new Pixel[width * height];
-
-		Clear();
-	}
-	~FrameBuffer() {
-		delete[] pixels;
-	}
-
-	void Clear() {
-		for (unsigned int i = 0; i < width * height; ++i) {
-			pixels[i].r = 0.f;
-			pixels[i].g = 0.f;
-			pixels[i].b = 0.f;
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				pixel[i] += v[i] * weight;			
+		} else {
+			for (u_int i = 0; i < CHANNELS - 1; ++i)
+				pixel[i] += v[i] * weight;
+			pixel[CHANNELS - 1] += weight;
 		}
-	};
+	}
 
-	Pixel *GetPixels() const { return pixels; }
-
-	void SetPixel(const unsigned int x, const unsigned int y, const luxrays::Spectrum& r) {
+	void SetPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
 		assert (y < height);
 
-		pixels[x + y * width] = r;
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		for (u_int i = 0; i < CHANNELS; ++i)
+			pixel[i] = v[i];
 	}
 
-	void SetPixel(const unsigned int index, const luxrays::Spectrum& r) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index] = r;
-	}
-
-	Pixel *GetPixel(const unsigned int x, const unsigned int y) const {
+	void SetWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
 		assert (y < height);
 
-		return &pixels[x + y * width];
+		T *pixel = &pixels[(x + y * width) * CHANNELS];
+		for (u_int i = 0; i < CHANNELS - 1; ++i)
+			pixel[i] = v[i];
+		pixel[CHANNELS - 1] = weight;
 	}
 
-	Pixel *GetPixel(const unsigned int index) const {
+	T *GetPixel(const u_int x, const u_int y) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		return &pixels[(x + y * width) * CHANNELS];
+	}
+
+	T *GetPixel(const u_int index) const {
 		assert (index >= 0);
 		assert (index < width * height);
 
-		return &pixels[index];
+		return &pixels[index * CHANNELS];
 	}
 
-	unsigned int GetWidth() const { return width; }
-	unsigned int GetHeight() const { return height; }
+	void GetWeightedPixel(const u_int x, const u_int y, T *dst) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		GetWeightedPixel(x + y * width, dst);
+	}
+
+	void GetWeightedPixel(const u_int index, T *dst) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		const T *src = GetPixel(index);
+
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				dst[i] = src[i];
+		} else {
+			if (src[CHANNELS - 1] == 0) {
+				for (u_int i = 0; i < CHANNELS; ++i)
+					dst[i] = 0;
+			} else {
+				const T k = 1.f / src[CHANNELS - 1];
+				for (u_int i = 0; i < CHANNELS; ++i)
+					dst[i] = src[i] * k;
+			}
+		}
+	}
+
+	void AccumulateWeightedPixel(const u_int x, const u_int y, T *dst) const {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		AccumulateWeightedPixel(x + y * width, dst);
+	}
+
+	void AccumulateWeightedPixel(const u_int index, T *dst) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		const T *src = GetPixel(index);
+
+		if (WEIGHT_CHANNELS == 0) {
+			for (u_int i = 0; i < CHANNELS; ++i)
+				dst[i] += src[i];
+		} else {
+			if (src[CHANNELS - 1] != 0) {
+				const T k = 1.f / src[CHANNELS - 1];
+				for (u_int i = 0; i < CHANNELS; ++i)
+					dst[i] += src[i] * k;
+			}
+		}
+	}
+
+	u_int GetWidth() const { return width; }
+	u_int GetHeight() const { return height; }
 
 private:
-	const unsigned int width, height;
+	const u_int width, height;
 
-	Pixel *pixels;
-};
-
-typedef struct {
-	float alpha;
-} AlphaPixel;
-
-class AlphaFrameBuffer {
-public:
-	AlphaFrameBuffer(const unsigned int w, const unsigned int h)
-		: width(w), height(h) {
-		pixels = new AlphaPixel[width * height];
-
-		Clear();
-	}
-	~AlphaFrameBuffer() {
-		delete[] pixels;
-	}
-
-	void Clear() {
-		for (unsigned int i = 0; i < width * height; ++i)
-			pixels[i].alpha = 0.f;
-	};
-
-	AlphaPixel *GetPixels() const { return pixels; }
-
-	void AddPixel(const unsigned int x, const unsigned int y, const float a) {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		AlphaPixel *pixel = &pixels[x + y * width];
-		pixel->alpha += a;
-	}
-
-	void AddPixel(const unsigned int index, const float a) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index].alpha += a;
-	}
-
-	void SetPixel(const unsigned int x, const unsigned int y, const float a) {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		AlphaPixel *pixel = &pixels[x + y * width];
-		pixel->alpha = a;
-	}
-
-	void SetPixel(const unsigned int index, const float a) {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		pixels[index].alpha = a;
-	}
-
-	AlphaPixel *GetPixel(const unsigned int x, const unsigned int y) const {
-		assert (x >= 0);
-		assert (x < width);
-		assert (y >= 0);
-		assert (y < height);
-
-		return &pixels[x + y * width];
-	}
-
-	AlphaPixel *GetPixel(const unsigned int index) const {
-		assert (index >= 0);
-		assert (index < width * height);
-
-		return &pixels[index];
-	}
-
-	unsigned int GetWidth() const { return width; }
-	unsigned int GetHeight() const { return height; }
-
-private:
-	const unsigned int width, height;
-
-	AlphaPixel *pixels;
+	T *pixels;
 };
 
 }

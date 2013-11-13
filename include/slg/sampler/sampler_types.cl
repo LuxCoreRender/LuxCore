@@ -1,24 +1,21 @@
 #line 2 "sampler_types.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
@@ -46,7 +43,7 @@
 #endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * VERTEX_SAMPLE_SIZE
-#if defined(PARAM_DIRECT_LIGHT_SAMPLING) && defined(PARAM_HAS_PASSTHROUGH)
+#if defined(PARAM_HAS_PASSTHROUGH)
 
 #define IDX_PASSTHROUGH 0
 #define IDX_BSDF_X 1
@@ -60,7 +57,7 @@
 
 #define VERTEX_SAMPLE_SIZE 9
 
-#elif defined(PARAM_DIRECT_LIGHT_SAMPLING)
+#else
 
 #define IDX_BSDF_X 0
 #define IDX_BSDF_Y 1
@@ -71,24 +68,6 @@
 #define IDX_RR 6
 
 #define VERTEX_SAMPLE_SIZE 7
-
-#elif defined(PARAM_HAS_PASSTHROUGH)
-
-#define IDX_PASSTHROUGH 0
-#define IDX_BSDF_X 1
-#define IDX_BSDF_Y 2
-#define IDX_RR 3
-
-#define VERTEX_SAMPLE_SIZE 4
-
-#else
-
-#define IDX_BSDF_X 0
-#define IDX_BSDF_Y 1
-#define IDX_RR 2
-
-#define VERTEX_SAMPLE_SIZE 3
-
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 0) || (PARAM_SAMPLER_TYPE == 2)
@@ -109,15 +88,11 @@
 #if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
-	Spectrum radiance;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	float alpha;
-#endif
+	SampleResult result;
 } RandomSample;
 
 typedef struct {
-	Spectrum radiance;
-	float alpha;
+	SampleResult result;
 
 	float totalI;
 
@@ -126,20 +101,14 @@ typedef struct {
 	unsigned int current, proposed, consecutiveRejects;
 
 	float weight;
-	Spectrum currentRadiance;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	float currentAlpha;
-#endif
+	SampleResult currentResult;
 } MetropolisSample;
 
 typedef struct {
 	float rng0, rng1;
 	unsigned int pixelIndex, pass;
 
-	Spectrum radiance;
-#if defined(PARAM_ENABLE_ALPHA_CHANNEL)
-	float alpha;
-#endif
+	SampleResult result;
 } SobolSample;
 
 #if (PARAM_SAMPLER_TYPE == 0)
