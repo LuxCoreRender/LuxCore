@@ -86,11 +86,9 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "p", "save image.png (or to image.filename property value)");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "t", "toggle tonemapping");
-	PrintHelpString(320, fontOffset, "n, m", "dec./inc. the screen refresh");
-	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "i", "switch sampler");
-	fontOffset -= 15;
+	PrintHelpString(320, fontOffset, "n, m", "dec./inc. the screen refresh");
+	fontOffset -= 15 * 2;
 	PrintHelpString(15, fontOffset, "1", "OpenCL path tracing");
 	PrintHelpString(320, fontOffset, "2", "CPU light tracing");
 	fontOffset -= 15;
