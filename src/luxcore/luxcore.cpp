@@ -323,7 +323,7 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 		case CHANNEL_ALPHA:
 			return renderSession.renderSession->film->channel_ALPHA->GetPixels();
 		case CHANNEL_RGB_TONEMAPPED:
-			renderSession.renderSession->film->UpdateChannel_RGB_TONEMAPPED();
+			renderSession.renderSession->film->ExecuteImagePipeline();
 			return renderSession.renderSession->film->channel_RGB_TONEMAPPED->GetPixels();
 		case CHANNEL_DEPTH:
 			return renderSession.renderSession->film->channel_DEPTH->GetPixels();

@@ -78,8 +78,15 @@ void AutoLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::
 	if (Y <= 0.f)
 		return;
 
+	float gamma = 2.2f;
+	const ImagePipeline *ip = film.GetImagePipeline();
+	if (ip) {
+		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
+		gamma = gc->gamma;
+	}
+	
 	// Substitute exposure, fstop and sensitivity cancel out; collect constants
-	const float scale = (1.25f / Y * powf(118.f / 255.f, film.GetGamma()));
+	const float scale = (1.25f / Y * powf(118.f / 255.f, gamma));
 
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])
@@ -107,7 +114,14 @@ void LinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vect
 void LuxLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
-	const float scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, film.GetGamma());
+	float gamma = 2.2f;
+	const ImagePipeline *ip = film.GetImagePipeline();
+	if (ip) {
+		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
+		gamma = gc->gamma;
+	}
+
+	const float scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, gamma);
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])
 			pixels[i] = scale * pixels[i];

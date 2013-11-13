@@ -79,17 +79,14 @@ Film::Film(const u_int w, const u_int h) {
 
 	enabledOverlappedScreenBufferUpdate = true;
 
+	imagePipeline = NULL;
 	filter = NULL;
 	filterLUTs = NULL;
 	SetFilter(new GaussianFilter(1.5f, 1.5f, 2.f));
-
-	toneMap = new LinearToneMap();
-
-	SetGamma();
 }
 
 Film::~Film() {
-	delete toneMap;
+	delete imagePipeline;
 
 	delete convTest;
 
@@ -305,15 +302,6 @@ void Film::Resize(const u_int w, const u_int h) {
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
-}
-
-void Film::SetGamma(const float g) {
-	gamma = g;
-
-	float x = 0.f;
-	const float dx = 1.f / GAMMA_TABLE_SIZE;
-	for (u_int i = 0; i < GAMMA_TABLE_SIZE; ++i, x += dx)
-		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / g);
 }
 
 void Film::SetFilter(Filter *flt) {
@@ -711,7 +699,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 		case FilmOutputs::RGB_TONEMAPPED:
 			if (!HasChannel(RGB_TONEMAPPED))
 				return;
-			UpdateChannel_RGB_TONEMAPPED();
+			ExecuteImagePipeline();
 
 			imageType = hdrImage ? FIT_RGBF : FIT_BITMAP;
 			bitCount = hdrImage ? 96 : 24;
@@ -726,7 +714,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 		case FilmOutputs::RGBA_TONEMAPPED:
 			if (!HasChannel(RGB_TONEMAPPED) || !HasChannel(ALPHA))
 				return;
-			UpdateChannel_RGB_TONEMAPPED();
+			ExecuteImagePipeline();
 
 			imageType = hdrImage ? FIT_RGBAF : FIT_BITMAP;
 			bitCount = hdrImage ? 128 : 32;
@@ -1091,7 +1079,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::RGB_TONEMAPPED:
-			UpdateChannel_RGB_TONEMAPPED();
+			ExecuteImagePipeline();
 
 			copy(channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetPixels() + pixelCount * 3, buffer);
 			break;
@@ -1104,7 +1092,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::RGBA_TONEMAPPED: {
-			UpdateChannel_RGB_TONEMAPPED();
+			ExecuteImagePipeline();
 
 			float *srcRGB = channel_RGB_TONEMAPPED->GetPixels();
 			float *dst = buffer;
@@ -1232,7 +1220,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 	}
 }
 
-void Film::UpdateChannel_RGB_TONEMAPPED() {
+void Film::ExecuteImagePipeline() {
 	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
 			!HasChannel(RGB_TONEMAPPED)) {
 		// Nothing to do
@@ -1245,14 +1233,9 @@ void Film::UpdateChannel_RGB_TONEMAPPED() {
 	vector<bool> frameBufferMask(pixelCount, false);
 	MergeSampleBuffers(p, frameBufferMask);
 
-	// Apply tone mapping
-	toneMap->Apply(*this, p, frameBufferMask);
-
-	// Gamma correction
-	for (u_int i = 0; i < pixelCount; ++i) {
-		if (frameBufferMask[i])
-			p[i] = Radiance2Pixel(p[i]);
-	}
+	// apply the image pipeline if I have one
+	if (imagePipeline)
+		imagePipeline->Apply(*this, p, frameBufferMask);
 }
 
 void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const {
@@ -1481,7 +1464,7 @@ void Film::ResetConvergenceTest() {
 
 u_int Film::RunConvergenceTest() {
 	// Required in order to have a valid convergence test
-	UpdateChannel_RGB_TONEMAPPED();
+	ExecuteImagePipeline();
 
 	return convTest->Test((const float *)channel_RGB_TONEMAPPED->GetPixels());
 }

@@ -23,6 +23,7 @@
 #include <string>
 
 #include "luxrays/luxrays.h"
+#include "slg/film/imagepipeline.h"
 
 namespace slg {
 
@@ -39,10 +40,10 @@ extern ToneMapType String2ToneMapType(const std::string &type);
 
 class Film;
 
-class ToneMap {
+class ToneMap : public ImagePipelinePlugin {
 public:
-	ToneMap () {}
-	virtual ~ToneMap () {}
+	ToneMap() {}
+	virtual ~ToneMap() {}
 
 	virtual ToneMapType GetType() const = 0;
 	virtual ToneMap *Copy() const = 0;

@@ -796,20 +796,26 @@ ri_stmt: ACCELERATOR STRING paramlist
 			Property("film.width")(props.Get(Property("xresolution")(800)).Get<u_int>()) <<
 			Property("film.height")(props.Get(Property("yresolution")(600)).Get<u_int>());
 
+	// Define the image pipeline
+
 	// Tone mapping
 	const string toneMapType = props.Get(Property("tonemapkernel")("autolinear")).Get<string>();
 	if (toneMapType == "autolinear") {
 		*renderConfigProps <<
-			Property("film.tonemap.type")("AUTOLINEAR");
+			Property("film.imagepipeline.0.type")("TONEMAP_AUTOLINEAR");
 	} else if (toneMapType == "linear") {
 		*renderConfigProps <<
-			Property("film.tonemap.type")("LUXLINEAR") <<
-			Property("film.tonemap.linear.sensitivity")(props.Get(Property("linear_sensitivity")(100.f)).Get<float>()) <<
-			Property("film.tonemap.linear.exposure")(props.Get(Property("linear_exposure")(1.f / 1000.f)).Get<float>()) <<
-			Property("film.tonemap.linear.fstop")(props.Get(Property("linear_fstop")(2.8f)).Get<float>());
+			Property("film.imagepipeline.0.type")("TONEMAP_LUXLINEAR") <<
+			Property("film.imagepipeline.0.sensitivity")(props.Get(Property("linear_sensitivity")(100.f)).Get<float>()) <<
+			Property("film.imagepipeline.0.exposure")(props.Get(Property("linear_exposure")(1.f / 1000.f)).Get<float>()) <<
+			Property("film.imagepipeline.0.fstop")(props.Get(Property("linear_fstop")(2.8f)).Get<float>());
 	} else {
 		LC_LOG("LuxCore supports only linear tone mapping, ignoring tone mapping settings");
 	}
+
+	*renderConfigProps <<
+		Property("film.imagepipeline.1.type")("GAMMA_CORRECTION") <<
+		Property("film.imagepipeline.1.value")(props.Get(Property("gamma")(2.2f)).Get<float>());
 
 	FreeArgs();
 }

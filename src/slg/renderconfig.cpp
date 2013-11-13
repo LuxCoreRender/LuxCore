@@ -66,19 +66,6 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("film.filter.mitchellss.b")(1.f / 3.f));
 			defaultProperties->Set(Property("film.filter.mitchellss.c")(1.f / 3.f));
 
-			// Film ToneMap related Properties
-			defaultProperties->Set(Property("film.tonemap.type")("AUTOLINEAR"));
-			defaultProperties->Set(Property("film.tonemap.linear.scale")(1.f));
-
-			defaultProperties->Set(Property("film.tonemap.luxlinear.sensitivity")(100.f));
-			defaultProperties->Set(Property("film.tonemap.luxlinear.exposure")(1.f / 1000.f));
-			defaultProperties->Set(Property("film.tonemap.luxlinear.fstop")(2.8f));
-
-			defaultProperties->Set(Property("film.tonemap.reinhard02.prescale")(1.f));
-			defaultProperties->Set(Property("film.tonemap.reinhard02.postscale")(1.2f));
-			defaultProperties->Set(Property("film.tonemap.reinhard02.burn")(3.75f));
-
-			defaultProperties->Set(Property("film.gamma")(2.2f));
 			defaultProperties->Set(Property("film.height")(480u));
 			defaultProperties->Set(Property("film.width")(640u));
 
@@ -265,6 +252,62 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	}
 
 	//--------------------------------------------------------------------------
+	// Create the image pipeline
+	//--------------------------------------------------------------------------
+
+	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
+	vector<string> imagePipelineKeys = cfg.GetAllUniqueSubNames("film.imagepipeline");
+	if (imagePipelineKeys.size() > 0) {
+		// Sort the entries
+		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
+
+		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
+			// Extract the plugin priority name
+			const string pluginPriority = Property::ExtractField(*imagePipelineKey, 2);
+			if (pluginPriority == "")
+				throw runtime_error("Syntax error in image pipeline plugin definition: " + *imagePipelineKey);
+			const string prefix = "film.imagepipeline." + pluginPriority;
+
+			const string type = cfg.Get(Property(prefix + ".type")("")).Get<string>();
+			if (type == "")
+				throw runtime_error("Syntax error in " + prefix + ".type");
+
+			if (type == "TONEMAP_LINEAR") {
+				imagePipeline->AddPlugin(new LinearToneMap(
+					cfg.Get(Property(prefix + ".scale")(1.f)).Get<float>()));
+			} else if (type == "TONEMAP_REINHARD02") {
+				imagePipeline->AddPlugin(new Reinhard02ToneMap(
+					cfg.Get(Property(prefix + ".prescale")(1.f)).Get<float>(),
+					cfg.Get(Property(prefix + ".postscale")(1.2f)).Get<float>(),
+					cfg.Get(Property(prefix + ".burn")(3.75f)).Get<float>()));
+			} else if (type == "TONEMAP_AUTOLINEAR") {
+				imagePipeline->AddPlugin(new AutoLinearToneMap());
+			} else if (type == "TONEMAP_LUXLINEAR") {
+				imagePipeline->AddPlugin(new LuxLinearToneMap(
+					cfg.Get(Property(prefix + ".sensitivity")(100.f)).Get<float>(),
+					cfg.Get(Property(prefix + ".exposure")(1.f / 1000.f)).Get<float>(),
+					cfg.Get(Property(prefix + ".fstop")(2.8f)).Get<float>()));
+			} else if (type == "NOP") {
+				imagePipeline->AddPlugin(new NopPlugin());
+			} else if (type == "GAMMA_CORRECTION") {
+				imagePipeline->AddPlugin(new GammaCorrectionPlugin(
+					cfg.Get(Property(prefix + ".value")(2.2f)).Get<float>(),
+					// 4096 => 12bit resolution
+					cfg.Get(Property(prefix + ".table.size")(4096u)).Get<u_int>()));
+			} else
+				throw runtime_error("Unknown image pipeline plugin type: " + type);
+		}
+	} else {
+		// The definition of image pipeline is missing, use the default
+		imagePipeline->AddPlugin(new AutoLinearToneMap());
+		imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f, 4096));
+	}
+
+	if (cfg.IsDefined("film.gamma")) {
+		SLG_LOG("WARNING: ignored deprecated property film.gamma");
+	}
+
+	//--------------------------------------------------------------------------
 	// Create the Film
 	//--------------------------------------------------------------------------
 
@@ -274,42 +317,7 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	SDL_LOG("Film resolution: " << filmFullWidth << "x" << filmFullHeight);
 	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight));
 	film->SetFilter(filter.release());
-
-	const ToneMapType toneMapType = String2ToneMapType(GetProperty("film.tonemap.type").Get<string>());
-	switch (toneMapType) {
-		case TONEMAP_LINEAR: {
-			LinearToneMap *tm = new LinearToneMap(
-				GetProperty("film.tonemap.linear.scale").Get<float>());
-			film->SetToneMap(tm);
-			break;
-		}
-		case TONEMAP_REINHARD02: {
-			Reinhard02ToneMap *tm = new Reinhard02ToneMap(
-					GetProperty("film.tonemap.reinhard02.prescale").Get<float>(),
-					GetProperty("film.tonemap.reinhard02.postscale").Get<float>(),
-					GetProperty("film.tonemap.reinhard02.burn").Get<float>());
-			film->SetToneMap(tm);
-			break;
-		}
-		case TONEMAP_AUTOLINEAR: {
-			film->SetToneMap(new AutoLinearToneMap());
-			break;
-		}
-		case TONEMAP_LUXLINEAR: {
-			LuxLinearToneMap *tm = new LuxLinearToneMap(
-				GetProperty("film.tonemap.luxlinear.sensitivity").Get<float>(),
-				GetProperty("film.tonemap.luxlinear.exposure").Get<float>(),
-				GetProperty("film.tonemap.luxlinear.fstop").Get<float>());
-			film->SetToneMap(tm);
-			break;
-		}
-		default:
-			throw runtime_error("Unknown tone mapping type: " + boost::lexical_cast<string>(toneMapType));
-	}
-
-	const float gamma = GetProperty("film.gamma").Get<float>();
-	if (gamma != 2.2f)
-		film->SetGamma(gamma);
+	film->SetImagePipeline(imagePipeline.release());
 
 	// For compatibility with the past
 	if (cfg.IsDefined("film.alphachannel.enable")) {
