@@ -92,60 +92,239 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	switch (type) {
-		case Film::RADIANCE_PER_PIXEL_NORMALIZED:
+		case Film::RADIANCE_PER_PIXEL_NORMALIZED: {
+			if (index >= film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size())
+				return;
+
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = v[2];
+				}
+			}
 			break;
-		case Film::RADIANCE_PER_SCREEN_NORMALIZED:
+		}
+		case Film::RADIANCE_PER_SCREEN_NORMALIZED: {
+			if (index >= film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size())
+				return;
+
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = v[2];
+				}
+			}
 			break;
+		}
 		case Film::ALPHA: {
 			for (u_int i = 0; i < pixelCount; ++i) {
-				float a;
-				film.channel_ALPHA->GetWeightedPixel(i, &a);
-				pixels[i].r = a;
-				pixels[i].g = a;
-				pixels[i].b = a;
+				if (pixelsMask[i]) {
+					float a;
+					film.channel_ALPHA->GetWeightedPixel(i, &a);
+					pixels[i].r = a;
+					pixels[i].g = a;
+					pixels[i].b = a;
+				}
 			}
 			break;
 		}
 		case Film::DEPTH: {
 			for (u_int i = 0; i < pixelCount; ++i) {
-				float d;
-				film.channel_DEPTH->GetWeightedPixel(i, &d);
-				pixels[i].r = d;
-				pixels[i].g = d;
-				pixels[i].b = d;
+				if (pixelsMask[i]) {
+					float d;
+					film.channel_DEPTH->GetWeightedPixel(i, &d);
+					pixels[i].r = d;
+					pixels[i].g = d;
+					pixels[i].b = d;
+				}
 			}
 			break;
 		}
-		case Film::POSITION:
+		case Film::POSITION: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float *v = film.channel_POSITION->GetPixel(i);
+					pixels[i].r = fabs(v[0]);
+					pixels[i].g = fabs(v[1]);
+					pixels[i].b = fabs(v[2]);
+				}
+			}
 			break;
-		case Film::GEOMETRY_NORMAL:
+		}
+		case Film::GEOMETRY_NORMAL: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float *v = film.channel_GEOMETRY_NORMAL->GetPixel(i);
+					pixels[i].r = fabs(v[0]);
+					pixels[i].g = fabs(v[1]);
+					pixels[i].b = fabs(v[2]);
+				}
+			}
 			break;
-		case Film::SHADING_NORMAL:
+		}
+		case Film::SHADING_NORMAL: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float *v = film.channel_SHADING_NORMAL->GetPixel(i);
+					pixels[i].r = fabs(v[0]);
+					pixels[i].g = fabs(v[1]);
+					pixels[i].b = fabs(v[2]);
+				}
+			}
 			break;
-		case Film::MATERIAL_ID:
+		}
+		case Film::MATERIAL_ID: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					u_int *v = film.channel_MATERIAL_ID->GetPixel(i);
+					pixels[i].r = (*v) & 0xff;
+					pixels[i].g = ((*v) & 0xff00) >> 8;
+					pixels[i].b = ((*v) & 0xff0000) >> 16;
+				}
+			}
 			break;
-		case Film::DIRECT_DIFFUSE:
+		}
+		case Film::DIRECT_DIFFUSE: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_DIRECT_DIFFUSE->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = v[2];
+				}
+			}
 			break;
-		case Film::DIRECT_GLOSSY:
+		}
+		case Film::DIRECT_GLOSSY: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_DIRECT_GLOSSY->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = v[2];
+				}
+			}
 			break;
-		case Film::EMISSION:
+		}
+		case Film::EMISSION: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_EMISSION->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = v[2];
+				}
+			}
 			break;
-		case Film::INDIRECT_DIFFUSE:
+		}
+		case Film::INDIRECT_DIFFUSE: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_INDIRECT_DIFFUSE->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = v[2];
+				}
+			}
 			break;
-		case Film::INDIRECT_GLOSSY:
+		}
+		case Film::INDIRECT_GLOSSY: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_INDIRECT_GLOSSY->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = v[2];
+				}
+			}
 			break;
-		case Film::INDIRECT_SPECULAR:
+		}
+		case Film::INDIRECT_SPECULAR: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_INDIRECT_SPECULAR->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = v[2];
+				}
+			}
 			break;
-		case Film::MATERIAL_ID_MASK:
+		}
+		case Film::MATERIAL_ID_MASK: {
+			if (index >= film.channel_MATERIAL_ID_MASKs.size())
+				return;
+
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v;
+					film.channel_MATERIAL_ID_MASKs[index]->GetWeightedPixel(i, &v);
+					pixels[i].r = v;
+					pixels[i].g = v;
+					pixels[i].b = v;
+				}
+			}
 			break;
-		case Film::DIRECT_SHADOW_MASK:
+		}
+		case Film::DIRECT_SHADOW_MASK: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v;
+					film.channel_DIRECT_SHADOW_MASK->GetWeightedPixel(i, &v);
+					pixels[i].r = v;
+					pixels[i].g = v;
+					pixels[i].b = v;
+				}
+			}
 			break;
-		case Film::INDIRECT_SHADOW_MASK:
+		}
+		case Film::INDIRECT_SHADOW_MASK: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v;
+					film.channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(i, &v);
+					pixels[i].r = v;
+					pixels[i].g = v;
+					pixels[i].b = v;
+				}
+			}
 			break;
-		case Film::UV:
+		}
+		case Film::UV: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[2];
+					film.channel_UV->GetWeightedPixel(i, v);
+					pixels[i].r = v[0];
+					pixels[i].g = v[1];
+					pixels[i].b = 0.f;
+				}
+			}
 			break;
-		case Film::RAYCOUNT:
+		}
+		case Film::RAYCOUNT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v;
+					film.channel_RAYCOUNT->GetWeightedPixel(i, &v);
+					pixels[i].r = v;
+					pixels[i].g = v;
+					pixels[i].b = v;
+				}
+			}
 			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in OutputSwitcherPlugin::Apply(): " + ToString(type));
 	}
