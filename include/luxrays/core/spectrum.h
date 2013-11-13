@@ -162,6 +162,22 @@ public:
 		return s;
 	}
 
+	Spectrum ToXYZ() const {
+		const float xyzR = 0.412453f * r + 0.357580f * g + 0.180423f * b;
+		const float xyzG = 0.212671f * r + 0.715160f * g + 0.072169f * b;
+		const float xyzB = 0.019334f * r + 0.119193f * g + 0.950227f * b;
+
+		return Spectrum(xyzR, xyzG, xyzB);
+	}
+
+	Spectrum ToRGB() const {
+		const float rgbR = 3.240479f * r - 1.537150f * g - 0.498535f * b;
+		const float rgbG = -0.969256f * r + 1.875991f * g + 0.041556f * b;
+		const float rgbB = 0.055648f * r - 0.204043f * g + 1.057311f * b;
+
+		return Spectrum(rgbR, rgbG, rgbB);
+	}
+
 	float r, g, b;
 };
 
