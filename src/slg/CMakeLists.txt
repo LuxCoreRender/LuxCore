@@ -164,6 +164,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipelineplugins.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/tonemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp

@@ -16,57 +16,72 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_IMAGEPIPELINE_H
-#define	_SLG_IMAGEPIPELINE_H
+#ifndef _SLG_IMAGEPIPELINE_PLUGINS_H
+#define	_SLG_IMAGEPIPELINE_PLUGINS_H
 
 #include <vector>
 #include <memory>
 #include <typeinfo> 
 
 #include "luxrays/luxrays.h"
+#include "slg/film/film.h"
 
 namespace slg {
 
 class Film;
-	
+
 //------------------------------------------------------------------------------
-// ImagePipelinePlugin
+// Gamma correction plugin
 //------------------------------------------------------------------------------
 
-class ImagePipelinePlugin {
+class GammaCorrectionPlugin : public ImagePipelinePlugin {
 public:
-	ImagePipelinePlugin() { }
-	virtual ~ImagePipelinePlugin() { }
+	GammaCorrectionPlugin(const float gamma, const u_int tableSize);
+	virtual ~GammaCorrectionPlugin() { }
 
-	virtual ImagePipelinePlugin *Copy() const = 0;
+	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const = 0;
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+
+	float gamma;
+
+private:
+	float Radiance2PixelFloat(const float x) const;
+
+	std::vector<float> gammaTable;
 };
 
 //------------------------------------------------------------------------------
-// ImagePipeline
+// Nop plugin
 //------------------------------------------------------------------------------
 
-class GammaCorrectionPlugin;
-
-class ImagePipeline {
+class NopPlugin : public ImagePipelinePlugin {
 public:
-	ImagePipeline() {}
-	virtual ~ImagePipeline();
+	NopPlugin() { }
+	virtual ~NopPlugin() { }
 
-	const std::vector<ImagePipelinePlugin *> &GetPlugins() const { return pipeline; }
-	// An utility method
-	const ImagePipelinePlugin *GetPlugin(const std::type_info &type) const;
+	virtual ImagePipelinePlugin *Copy() const;
 
-	ImagePipeline *Copy() const;
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+};
 
-	void AddPlugin(ImagePipelinePlugin *plugin);
-	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+//------------------------------------------------------------------------------
+// OutputSwitcher plugin
+//------------------------------------------------------------------------------
 
-private:
-	std::vector<ImagePipelinePlugin *> pipeline;
+class OutputSwitcherPlugin : public ImagePipelinePlugin {
+public:
+	OutputSwitcherPlugin(const Film::FilmChannelType t, const u_int i) : type(t), index(i) { }
+	virtual ~OutputSwitcherPlugin() { }
+
+	virtual ImagePipelinePlugin *Copy() const;
+
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+
+	Film::FilmChannelType type;
+	const u_int index;
 };
 
 }
 
-#endif	/*  _SLG_IMAGEPIPELINE_H */
+#endif	/*  _SLG_IMAGEPIPELINE_PLUGINS_H */
