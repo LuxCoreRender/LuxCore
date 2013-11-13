@@ -22,6 +22,8 @@
 
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
+#include "slg/film/tonemap.h"
+#include "slg/film/imagepipelineplugins.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/pathocl/pathocl_datatypes.h"
 

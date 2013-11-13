@@ -42,7 +42,7 @@
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/film/filter.h"
-#include "slg/film/tonemap.h"
+#include "slg/film/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/utils/convtest/convtest.h"
 
@@ -226,6 +226,9 @@ public:
 	GenericFrameBuffer<2, 1, float> *channel_INDIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, 0, float> *channel_UV;
 	GenericFrameBuffer<1, 0, float> *channel_RAYCOUNT;
+
+	static FilmChannelType String2FilmChannelType(const std::string &type);
+	static const std::string FilmChannelType2String(const FilmChannelType type);
 
 private:
 	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;

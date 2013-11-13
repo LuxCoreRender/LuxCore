@@ -1468,3 +1468,93 @@ u_int Film::RunConvergenceTest() {
 
 	return convTest->Test((const float *)channel_RGB_TONEMAPPED->GetPixels());
 }
+
+Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
+	if (type == "RADIANCE_PER_PIXEL_NORMALIZED")
+		return RADIANCE_PER_PIXEL_NORMALIZED;
+	else if (type == "RADIANCE_PER_SCREEN_NORMALIZED")
+		return RADIANCE_PER_SCREEN_NORMALIZED;
+	else if (type == "ALPHA")
+		return ALPHA;
+	else if (type == "DEPTH")
+		return DEPTH;
+	else if (type == "POSITION")
+		return POSITION;
+	else if (type == "GEOMETRY_NORMAL")
+		return GEOMETRY_NORMAL;
+	else if (type == "SHADING_NORMAL")
+		return SHADING_NORMAL;
+	else if (type == "MATERIAL_ID")
+		return MATERIAL_ID;
+	else if (type == "DIRECT_DIFFUSE")
+		return DIRECT_DIFFUSE;
+	else if (type == "DIRECT_GLOSSY")
+		return DIRECT_GLOSSY;
+	else if (type == "EMISSION")
+		return EMISSION;
+	else if (type == "INDIRECT_DIFFUSE")
+		return INDIRECT_DIFFUSE;
+	else if (type == "INDIRECT_GLOSSY")
+		return INDIRECT_GLOSSY;
+	else if (type == "INDIRECT_SPECULAR")
+		return INDIRECT_SPECULAR;
+	else if (type == "INDIRECT_SPECULAR")
+		return INDIRECT_SPECULAR;
+	else if (type == "MATERIAL_ID_MASK")
+		return MATERIAL_ID_MASK;
+	else if (type == "DIRECT_SHADOW_MASK")
+		return DIRECT_SHADOW_MASK;
+	else if (type == "INDIRECT_SHADOW_MASK")
+		return INDIRECT_SHADOW_MASK;
+	else if (type == "UV")
+		return UV;
+	else if (type == "RAYCOUNT")
+		return RAYCOUNT;
+	else
+		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
+}
+
+const std::string Film::FilmChannelType2String(const Film::FilmChannelType type) {
+	switch (type) {
+		case Film::RADIANCE_PER_PIXEL_NORMALIZED:
+			return "RADIANCE_PER_PIXEL_NORMALIZED";
+		case Film::RADIANCE_PER_SCREEN_NORMALIZED:
+			return "RADIANCE_PER_SCREEN_NORMALIZED";
+		case Film::ALPHA:
+			return "ALPHA";
+		case Film::DEPTH:
+			return "DEPTH";
+		case Film::POSITION:
+			return "POSITION";
+		case Film::GEOMETRY_NORMAL:
+			return "GEOMETRY_NORMAL";
+		case Film::SHADING_NORMAL:
+			return "SHADING_NORMAL";
+		case Film::MATERIAL_ID:
+			return "MATERIAL_ID";
+		case Film::DIRECT_DIFFUSE:
+			return "DIRECT_DIFFUSE";
+		case Film::DIRECT_GLOSSY:
+			return "DIRECT_GLOSSY";
+		case Film::EMISSION:
+			return "EMISSION";
+		case Film::INDIRECT_DIFFUSE:
+			return "INDIRECT_DIFFUSE";
+		case Film::INDIRECT_GLOSSY:
+			return "INDIRECT_GLOSSY";
+		case Film::INDIRECT_SPECULAR:
+			return "INDIRECT_SPECULAR";
+		case Film::MATERIAL_ID_MASK:
+			return "MATERIAL_ID_MASK";
+		case Film::DIRECT_SHADOW_MASK:
+			return "DIRECT_SHADOW_MASK";
+		case Film::INDIRECT_SHADOW_MASK:
+			return "INDIRECT_SHADOW_MASK";
+		case Film::UV:
+			return "UV";
+		case Film::RAYCOUNT:
+			return "RAYCOUNT";
+		default:
+			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
+	}
+}

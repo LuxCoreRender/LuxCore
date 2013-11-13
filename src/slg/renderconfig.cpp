@@ -22,6 +22,8 @@
 
 #include "slg/renderconfig.h"
 #include "slg/renderengine.h"
+#include "slg/film/tonemap.h"
+#include "slg/film/imagepipelineplugins.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/engines/lightcpu/lightcpu.h"
@@ -294,6 +296,10 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 					cfg.Get(Property(prefix + ".value")(2.2f)).Get<float>(),
 					// 4096 => 12bit resolution
 					cfg.Get(Property(prefix + ".table.size")(4096u)).Get<u_int>()));
+			} else if (type == "OUTPUT_SWITCHER") {
+				imagePipeline->AddPlugin(new OutputSwitcherPlugin(
+					Film::String2FilmChannelType(cfg.Get(Property(prefix + ".channel")("DEPTH")).Get<string>()),
+					cfg.Get(Property(prefix + ".index")(0u)).Get<float>()));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

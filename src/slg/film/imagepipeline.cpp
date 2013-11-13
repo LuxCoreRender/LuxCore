@@ -18,8 +18,7 @@
 
 #include <boost/foreach.hpp>
 
-#include "slg/film/imagepipeline.h"
-#include "slg/film/film.h"
+#include "slg/film/imagepipelineplugins.h"
 
 using namespace std;
 using namespace luxrays;
@@ -61,54 +60,4 @@ const ImagePipelinePlugin *ImagePipeline::GetPlugin(const std::type_info &type) 
 	}
 
 	return NULL;
-}
-
-//------------------------------------------------------------------------------
-// Gamma correction plugin
-//------------------------------------------------------------------------------
-
-GammaCorrectionPlugin::GammaCorrectionPlugin(const float g, const u_int tableSize) {
-	gamma = g;
-
-	gammaTable.resize(tableSize, 0.f);
-	float x = 0.f;
-	const float dx = 1.f / tableSize;
-	for (u_int i = 0; i < tableSize; ++i, x += dx)
-		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / g);
-}
-
-ImagePipelinePlugin *GammaCorrectionPlugin::Copy() const {
-	return new GammaCorrectionPlugin(gamma, gammaTable.size());
-}
-
-float GammaCorrectionPlugin::Radiance2PixelFloat(const float x) const {
-	// Very slow !
-	//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
-
-	const u_int tableSize = gammaTable.size();
-	const int index = Clamp<int>(luxrays::Floor2UInt(tableSize * x), 0, tableSize - 1);
-	return gammaTable[index];
-}
-
-void GammaCorrectionPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
-	const u_int pixelCount = film.GetWidth() * film.GetHeight();
-
-	for (u_int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i]) {
-			pixels[i].r = Radiance2PixelFloat(pixels[i].r);
-			pixels[i].g = Radiance2PixelFloat(pixels[i].g);
-			pixels[i].b = Radiance2PixelFloat(pixels[i].b);
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
-// Nop plugin
-//------------------------------------------------------------------------------
-
-ImagePipelinePlugin *NopPlugin::Copy() const {
-	return new NopPlugin();
-}
-
-void NopPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 }

@@ -20,6 +20,7 @@
 
 #include "luxrays/core/spectrum.h"
 #include "slg/film/tonemap.h"
+#include "slg/film/imagepipelineplugins.h"
 #include "slg/film/film.h"
 
 using namespace std;
@@ -67,11 +68,13 @@ void AutoLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::
 
 	float Y = 0.f;
 	for (u_int i = 0; i < pixelCount; ++i) {
-		const float y = pixels[i].Y();
-		if (y <= 0.f)
-			continue;
-		
-		Y += y;
+		if (pixelsMask[i]) {
+			const float y = pixels[i].Y();
+			if ((y <= 0.f) || isinf(y))
+				continue;
+
+			Y += y;
+		}
 	}
 	Y = Y / Max(1u, pixelCount);
 
@@ -140,7 +143,7 @@ void Reinhard02ToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::
 	float Ywa = 0.f;
 
 	for (u_int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i]) {
+		if (pixelsMask[i] && !pixels[i].IsInf()) {
 			// Convert to XYZ color space
 			pixels[i] = pixels[i].ToXYZ();
 
