@@ -79,8 +79,8 @@ string RTPathOCLRenderThread::AdditionalKernelOptions() {
 	ss << scientific <<
 			PathOCLRenderThread::AdditionalKernelOptions();
 
-	if (engine->film->GetToneMapParams()->GetType() == TONEMAP_LINEAR) {
-		const LinearToneMapParams *ltm = (const LinearToneMapParams *)engine->film->GetToneMapParams();
+	if (engine->film->GetToneMap()->GetType() == TONEMAP_LINEAR) {
+		const LinearToneMap *ltm = (const LinearToneMap *)engine->film->GetToneMap();
 		ss << " -D PARAM_TONEMAP_LINEAR_SCALE=" << ltm->scale << "f";
 	} else
 		ss << " -D PARAM_TONEMAP_LINEAR_SCALE=1.f";

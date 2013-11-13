@@ -281,25 +281,25 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			if (cfg.IsDefined("film.tonemap.linear.scale") ||
 					(!cfg.IsDefined("film.tonemap.linear.sensitivity") && !cfg.IsDefined("film.tonemap.linear.exposure") &&
 					!cfg.IsDefined("film.tonemap.linear.fstop") && !cfg.IsDefined("film.tonemap.linear.gamma"))) {
-				LinearToneMapParams params;
-				params.scale = GetProperty("film.tonemap.linear.scale").Get<float>();
-				film->SetToneMapParams(params);
+				const float scale = GetProperty("film.tonemap.linear.scale").Get<float>();
+
+				film->SetToneMap(new LinearToneMap(scale));
 			} else {
-				LinearToneMapParams params(
+				LinearToneMap *tm = new LinearToneMap(
 					GetProperty("film.tonemap.linear.sensitivity").Get<float>(),
 					GetProperty("film.tonemap.linear.exposure").Get<float>(),
 					GetProperty("film.tonemap.linear.fstop").Get<float>(),
 					GetProperty("film.tonemap.linear.gamma").Get<float>());
-				film->SetToneMapParams(params);
+				film->SetToneMap(tm);
 			}
 			break;
 		}
 		case TONEMAP_REINHARD02: {
-			Reinhard02ToneMapParams params;
-			params.preScale = GetProperty("film.tonemap.reinhard02.prescale").Get<float>();
-			params.postScale = GetProperty("film.tonemap.reinhard02.postscale").Get<float>();
-			params.burn = GetProperty("film.tonemap.reinhard02.burn").Get<float>();
-			film->SetToneMapParams(params);
+			Reinhard02ToneMap *tm = new Reinhard02ToneMap(
+					GetProperty("film.tonemap.reinhard02.prescale").Get<float>(),
+					GetProperty("film.tonemap.reinhard02.postscale").Get<float>(),
+					GetProperty("film.tonemap.reinhard02.burn").Get<float>());
+			film->SetToneMap(tm);
 			break;
 		}
 		default:

@@ -19,7 +19,10 @@
 #ifndef _SLG_TONEMAPPING_H
 #define	_SLG_TONEMAPPING_H
 
+#include <cmath>
 #include <string>
+
+#include "luxrays/luxrays.h"
 
 namespace slg {
 
@@ -34,40 +37,53 @@ typedef enum {
 extern std::string ToneMapType2String(const ToneMapType type);
 extern ToneMapType String2ToneMapType(const std::string &type);
 
-class ToneMapParams {
+class ToneMap {
 public:
+	ToneMap () {}
+	virtual ~ToneMap () {}
+
 	virtual ToneMapType GetType() const = 0;
-	virtual ToneMapParams *Copy() const = 0;
-	virtual ~ToneMapParams (){}; 
+	virtual ToneMap *Copy() const = 0;
+
+	virtual void Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask,
+		const u_int width, const u_int height) const = 0;
 };
 
-class LinearToneMapParams : public ToneMapParams {
+class LinearToneMap : public ToneMap {
 public:
-	LinearToneMapParams() {
+	LinearToneMap() {
 		scale = 1.f;
 	}
 
-	LinearToneMapParams(const float s) {
+	LinearToneMap(const float s) {
 		scale = s;
 	}
 
-	LinearToneMapParams(const float sensitivity, const float exposure,
+	LinearToneMap(const float sensitivity, const float exposure,
 		const float fstop, const float gamma) {
 		scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, gamma);
 	}
 
 	ToneMapType GetType() const { return TONEMAP_LINEAR; }
 
-	ToneMapParams *Copy() const {
-		return new LinearToneMapParams(scale);
+	ToneMap *Copy() const {
+		return new LinearToneMap(scale);
 	}
+
+	void Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask,
+		const u_int width, const u_int height) const;
 
 	float scale;
 };
 
-class Reinhard02ToneMapParams : public ToneMapParams {
+class Reinhard02ToneMap : public ToneMap {
 public:
-	Reinhard02ToneMapParams(const float preS = 1.f, const float postS = 1.2f,
+	Reinhard02ToneMap() {
+		preScale = 1.f;
+		postScale = 1.2f;
+		burn = 3.75f;
+	}
+	Reinhard02ToneMap(const float preS = 1.f, const float postS = 1.2f,
 			const float b = 3.75f) {
 		preScale = preS;
 		postScale = postS;
@@ -76,9 +92,12 @@ public:
 
 	ToneMapType GetType() const { return TONEMAP_REINHARD02; }
 
-	ToneMapParams *Copy() const {
-		return new Reinhard02ToneMapParams(preScale, postScale, burn);
+	ToneMap *Copy() const {
+		return new Reinhard02ToneMap(preScale, postScale, burn);
 	}
+
+	void Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask,
+		const u_int width, const u_int height) const;
 
 	float preScale, postScale, burn;
 };
