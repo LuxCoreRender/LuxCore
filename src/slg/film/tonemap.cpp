@@ -20,6 +20,7 @@
 
 #include "luxrays/core/spectrum.h"
 #include "slg/film/tonemap.h"
+#include "slg/film/film.h"
 
 using namespace std;
 using namespace luxrays;
@@ -35,6 +36,10 @@ string slg::ToneMapType2String(const ToneMapType type) {
 			return "LINEAR";
 		case TONEMAP_REINHARD02:
 			return "REINHARD02";
+		case TONEMAP_AUTOLINEAR:
+			return "AUTOLINEAR";
+		case TONEMAP_LUXLINEAR:
+			return "LUXLINEAR";
 		default:
 			throw runtime_error("Unknown tone mapping type: " + boost::lexical_cast<string>(type));
 	}
@@ -45,18 +50,64 @@ ToneMapType slg::String2ToneMapType(const std::string &type) {
 		return TONEMAP_LINEAR;
 	if ((type.compare("1") == 0) || (type.compare("REINHARD02") == 0))
 		return TONEMAP_REINHARD02;
+	if ((type.compare("2") == 0) || (type.compare("AUTOLINEAR") == 0))
+		return TONEMAP_AUTOLINEAR;
+	if ((type.compare("3") == 0) || (type.compare("LUXLINEAR") == 0))
+		return TONEMAP_LUXLINEAR;
 
 	throw runtime_error("Unknown tone mapping type: " + type);
+}
+
+//------------------------------------------------------------------------------
+// Auto-linear tone mapping
+//------------------------------------------------------------------------------
+
+void AutoLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+	const u_int pixelCount = film.GetWidth() * film.GetHeight();
+
+	float Y = 0.f;
+	for (u_int i = 0; i < pixelCount; ++i) {
+		const float y = pixels[i].Y();
+		if (y <= 0.f)
+			continue;
+		
+		Y += y;
+	}
+	Y = Y / Max(1u, pixelCount);
+
+	if (Y <= 0.f)
+		return;
+
+	// Substitute exposure, fstop and sensitivity cancel out; collect constants
+	const float scale = (1.25f / Y * powf(118.f / 255.f, film.GetGamma()));
+
+	for (u_int i = 0; i < pixelCount; ++i) {
+		if (pixelsMask[i])
+			pixels[i] = scale * pixels[i];
+	}
 }
 
 //------------------------------------------------------------------------------
 // Linear tone mapping
 //------------------------------------------------------------------------------
 
-void LinearToneMap::Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask,
-		const u_int width, const u_int height) const {
-	const u_int pixelCount = width * height;
+void LinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
+	for (u_int i = 0; i < pixelCount; ++i) {
+		if (pixelsMask[i])
+			pixels[i] = scale * pixels[i];
+	}
+}
+
+//------------------------------------------------------------------------------
+// LuxRender Linear tone mapping
+//------------------------------------------------------------------------------
+
+void LuxLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+	const u_int pixelCount = film.GetWidth() * film.GetHeight();
+
+	const float scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, film.GetGamma());
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])
 			pixels[i] = scale * pixels[i];
@@ -67,10 +118,9 @@ void LinearToneMap::Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMa
 // Reinhard02 tone mapping
 //------------------------------------------------------------------------------
 
-void Reinhard02ToneMap::Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask,
-		const u_int width, const u_int height) const {
+void Reinhard02ToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const float alpha = .1f;
-	const u_int pixelCount = width * height;
+	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	// Use the frame buffer as temporary storage and calculate the average luminance
 	float Ywa = 0.f;

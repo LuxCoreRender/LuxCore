@@ -1246,7 +1246,7 @@ void Film::UpdateChannel_RGB_TONEMAPPED() {
 	MergeSampleBuffers(p, frameBufferMask);
 
 	// Apply tone mapping
-	toneMap->Apply(p, frameBufferMask, width, height);
+	toneMap->Apply(*this, p, frameBufferMask);
 
 	// Gamma correction
 	for (u_int i = 0; i < pixelCount; ++i) {
