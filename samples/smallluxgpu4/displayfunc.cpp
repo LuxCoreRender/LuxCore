@@ -452,11 +452,15 @@ void keyFunc(unsigned char key, int x, int y) {
 			session = NULL;
 
 			// Change the Sampler
-			const string toenMapName = config->GetProperty("film.tonemap.type").Get<string>();
-			if (toenMapName == "LINEAR")
+			const string toneMapName = config->GetProperty("film.tonemap.type").Get<string>();
+			if (toneMapName == "AUTOLINEAR")
+				config->Parse(Properties() << Property("film.tonemap.type")("LINEAR"));
+			else if (toneMapName == "LINEAR")
+				config->Parse(Properties() << Property("film.tonemap.type")("LUXLINEAR"));
+			else if (toneMapName == "LUXLINEAR")
 				config->Parse(Properties() << Property("film.tonemap.type")("REINHARD02"));
 			else
-				config->Parse(Properties() << Property("film.tonemap.type")("LINEAR"));
+				config->Parse(Properties() << Property("film.tonemap.type")("AUTOLINEAR"));
 
 			session = new RenderSession(config);
 

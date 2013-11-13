@@ -42,7 +42,7 @@
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/film/filter.h"
-#include "slg/film/tonemapping.h"
+#include "slg/film/tonemap.h"
 #include "slg/film/framebuffer.h"
 #include "slg/utils/convtest/convtest.h"
 
@@ -144,11 +144,10 @@ public:
 	void SetFilter(Filter *flt);
 	const Filter *GetFilter() const { return filter; }
 
-	const ToneMapParams *GetToneMapParams() const { return toneMapParams; }
-	void SetToneMapParams(const ToneMapParams &params) {
-		delete toneMapParams;
-
-		toneMapParams = params.Copy();
+	const ToneMap *GetToneMap() const { return toneMap; }
+	void SetToneMap(ToneMap *tm) {
+		delete toneMap;
+		toneMap = tm;
 	}
 
 	void CopyDynamicSettings(const Film &film) {
@@ -156,7 +155,7 @@ public:
 		maskMaterialIDs = film.maskMaterialIDs;
 		radianceGroupCount = film.radianceGroupCount;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
-		SetToneMapParams(*(film.GetToneMapParams()));
+		SetToneMap(film.GetToneMap()->Copy());
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 	}
 
@@ -274,7 +273,7 @@ private:
 	float gamma;
 	float gammaTable[GAMMA_TABLE_SIZE];
 
-	ToneMapParams *toneMapParams;
+	ToneMap *toneMap;
 
 	ConvergenceTest *convTest;
 

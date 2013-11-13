@@ -33,34 +33,10 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Tone mapping
-//------------------------------------------------------------------------------
-
-string slg::ToneMapType2String(const ToneMapType type) {
-	switch (type) {		
-		case TONEMAP_LINEAR:
-			return "LINEAR";
-		case TONEMAP_REINHARD02:
-			return "REINHARD02";
-		default:
-			throw runtime_error("Unknown tone mapping type: " + boost::lexical_cast<string>(type));
-	}
-}
-
-ToneMapType slg::String2ToneMapType(const std::string &type) {
-	if ((type.compare("0") == 0) || (type.compare("LINEAR") == 0))
-		return TONEMAP_LINEAR;
-	if ((type.compare("1") == 0) || (type.compare("REINHARD02") == 0))
-		return TONEMAP_REINHARD02;
-
-	throw runtime_error("Unknown tone mapping type: " + type);
-}
-
-//------------------------------------------------------------------------------
 // FilmOutput
 //------------------------------------------------------------------------------
 
-void FilmOutputs::Add(const FilmOutputType type, const std::string &fileName,
+void FilmOutputs::Add(const FilmOutputType type, const string &fileName,
 		const luxrays::Properties *p) {
 	types.push_back(type);
 	fileNames.push_back(fileName);
@@ -107,13 +83,13 @@ Film::Film(const u_int w, const u_int h) {
 	filterLUTs = NULL;
 	SetFilter(new GaussianFilter(1.5f, 1.5f, 2.f));
 
-	toneMapParams = new LinearToneMapParams();
+	toneMap = new LinearToneMap();
 
 	SetGamma();
 }
 
 Film::~Film() {
-	delete toneMapParams;
+	delete toneMap;
 
 	delete convTest;
 
@@ -147,13 +123,13 @@ Film::~Film() {
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 	if (initialized)
-		throw std::runtime_error("it is possible to add a channel to a Film only before the initialization");
+		throw runtime_error("it is possible to add a channel to a Film only before the initialization");
 
 	channels.insert(type);
 	switch (type) {
 		case MATERIAL_ID_MASK: {
 			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
-			if (std::count(maskMaterialIDs.begin(), maskMaterialIDs.end(), id) == 0)
+			if (count(maskMaterialIDs.begin(), maskMaterialIDs.end(), id) == 0)
 				maskMaterialIDs.push_back(id);
 			break;
 		}
@@ -164,14 +140,14 @@ void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 
 void Film::RemoveChannel(const FilmChannelType type) {
 	if (initialized)
-		throw std::runtime_error("it is possible to remove a channel of a Film only before the initialization");
+		throw runtime_error("it is possible to remove a channel of a Film only before the initialization");
 
 	channels.erase(type);
 }
 
 void Film::Init() {
 	if (initialized)
-		throw std::runtime_error("A Film can not be initialized multiple times");
+		throw runtime_error("A Film can not be initialized multiple times");
 
 	initialized = true;
 
@@ -243,27 +219,27 @@ void Film::Resize(const u_int w, const u_int h) {
 	}
 	if (HasChannel(DEPTH)) {
 		channel_DEPTH = new GenericFrameBuffer<1, 0, float>(width, height);
-		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
+		channel_DEPTH->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(POSITION)) {
 		channel_POSITION = new GenericFrameBuffer<3, 0, float>(width, height);
-		channel_POSITION->Clear(std::numeric_limits<float>::infinity());
+		channel_POSITION->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(GEOMETRY_NORMAL)) {
 		channel_GEOMETRY_NORMAL = new GenericFrameBuffer<3, 0, float>(width, height);
-		channel_GEOMETRY_NORMAL->Clear(std::numeric_limits<float>::infinity());
+		channel_GEOMETRY_NORMAL->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(SHADING_NORMAL)) {
 		channel_SHADING_NORMAL = new GenericFrameBuffer<3, 0, float>(width, height);
-		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
+		channel_SHADING_NORMAL->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID)) {
 		channel_MATERIAL_ID = new GenericFrameBuffer<1, 0, u_int>(width, height);
-		channel_MATERIAL_ID->Clear(std::numeric_limits<u_int>::max());
+		channel_MATERIAL_ID->Clear(numeric_limits<u_int>::max());
 		hasDataChannel = true;
 	}
 	if (HasChannel(DIRECT_DIFFUSE)) {
@@ -316,7 +292,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	}
 	if (HasChannel(UV)) {
 		channel_UV = new GenericFrameBuffer<2, 0, float>(width, height);
-		channel_UV->Clear(std::numeric_limits<float>::infinity());
+		channel_UV->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
 	if (HasChannel(RAYCOUNT)) {
@@ -364,15 +340,15 @@ void Film::Reset() {
 	if (HasChannel(ALPHA))
 		channel_ALPHA->Clear();
 	if (HasChannel(DEPTH))
-		channel_DEPTH->Clear(std::numeric_limits<float>::infinity());
+		channel_DEPTH->Clear(numeric_limits<float>::infinity());
 	if (HasChannel(POSITION))
-		channel_POSITION->Clear(std::numeric_limits<float>::infinity());
+		channel_POSITION->Clear(numeric_limits<float>::infinity());
 	if (HasChannel(GEOMETRY_NORMAL))
-		channel_GEOMETRY_NORMAL->Clear(std::numeric_limits<float>::infinity());
+		channel_GEOMETRY_NORMAL->Clear(numeric_limits<float>::infinity());
 	if (HasChannel(SHADING_NORMAL))
-		channel_SHADING_NORMAL->Clear(std::numeric_limits<float>::infinity());
+		channel_SHADING_NORMAL->Clear(numeric_limits<float>::infinity());
 	if (HasChannel(MATERIAL_ID))
-		channel_MATERIAL_ID->Clear(std::numeric_limits<float>::max());
+		channel_MATERIAL_ID->Clear(numeric_limits<float>::max());
 	if (HasChannel(DIRECT_DIFFUSE))
 		channel_DIRECT_DIFFUSE->Clear();
 	if (HasChannel(DIRECT_GLOSSY))
@@ -701,7 +677,7 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 		case FilmOutputs::RAYCOUNT:
 			return HasChannel(RAYCOUNT);
 		default:
-			throw std::runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
+			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
 }
 
@@ -710,12 +686,12 @@ void Film::Output(const FilmOutputs &filmOutputs) {
 		Output(filmOutputs.GetType(i), filmOutputs.GetFileName(i), &filmOutputs.GetProperties(i));
 }
 
-void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
+void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName,
 		const Properties *props) {
 	// Image format
 	FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
 	if (fif == FIF_UNKNOWN)
-		throw std::runtime_error("Image type unknown");
+		throw runtime_error("Image type unknown");
 
 	// HDR image or not
 	const bool hdrImage = ((fif == FIF_HDR) || (fif == FIF_EXR));
@@ -899,13 +875,13 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 				return;
 			break;
 		default:
-			throw std::runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
+			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
 
 	// Allocate the image
 	FIBITMAP *dib = FreeImage_AllocateT(imageType, width, height, bitCount);
 	if (!dib)
-		throw std::runtime_error("Unable to allocate FreeImage image");
+		throw runtime_error("Unable to allocate FreeImage image");
 
 	// Build the image
 	u_int pitch = FreeImage_GetPitch(dib);
@@ -1093,7 +1069,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 					break;
 				}
 				default:
-					throw std::runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
+					throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 			}
 		}
 
@@ -1102,7 +1078,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const std::string &fil
 	}
 
 	if (!FREEIMAGE_SAVE(fif, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
-		throw std::runtime_error("Failed image save");
+		throw runtime_error("Failed image save");
 
 	FreeImage_Unload(dib);
 }
@@ -1117,7 +1093,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::RGB_TONEMAPPED:
 			UpdateChannel_RGB_TONEMAPPED();
 
-			std::copy(channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetPixels() + pixelCount * 3, buffer);
+			copy(channel_RGB_TONEMAPPED->GetPixels(), channel_RGB_TONEMAPPED->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::RGBA: {
 			for (u_int i = 0; i < pixelCount; ++i) {
@@ -1146,16 +1122,16 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::DEPTH:
-			std::copy(channel_DEPTH->GetPixels(), channel_DEPTH->GetPixels() + pixelCount, buffer);
+			copy(channel_DEPTH->GetPixels(), channel_DEPTH->GetPixels() + pixelCount, buffer);
 			break;
 		case FilmOutputs::POSITION:
-			std::copy(channel_POSITION->GetPixels(), channel_POSITION->GetPixels() + pixelCount * 3, buffer);
+			copy(channel_POSITION->GetPixels(), channel_POSITION->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::GEOMETRY_NORMAL:
-			std::copy(channel_GEOMETRY_NORMAL->GetPixels(), channel_GEOMETRY_NORMAL->GetPixels() + pixelCount * 3, buffer);
+			copy(channel_GEOMETRY_NORMAL->GetPixels(), channel_GEOMETRY_NORMAL->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::SHADING_NORMAL:
-			std::copy(channel_SHADING_NORMAL->GetPixels(), channel_SHADING_NORMAL->GetPixels() + pixelCount * 3, buffer);
+			copy(channel_SHADING_NORMAL->GetPixels(), channel_SHADING_NORMAL->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::DIRECT_DIFFUSE: {
 			for (u_int i = 0; i < pixelCount; ++i)
@@ -1216,23 +1192,23 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::UV:
-			std::copy(channel_UV->GetPixels(), channel_UV->GetPixels() + pixelCount * 2, buffer);
+			copy(channel_UV->GetPixels(), channel_UV->GetPixels() + pixelCount * 2, buffer);
 			break;
 		case FilmOutputs::RAYCOUNT:
-			std::copy(channel_RAYCOUNT->GetPixels(), channel_RAYCOUNT->GetPixels() + pixelCount, buffer);
+			copy(channel_RAYCOUNT->GetPixels(), channel_RAYCOUNT->GetPixels() + pixelCount, buffer);
 			break;
 		default:
-			throw std::runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
+			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
 	}
 }
 
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index) {
 	switch (type) {
 		case FilmOutputs::MATERIAL_ID:
-			std::copy(channel_MATERIAL_ID->GetPixels(), channel_MATERIAL_ID->GetPixels() + pixelCount, buffer);
+			copy(channel_MATERIAL_ID->GetPixels(), channel_MATERIAL_ID->GetPixels() + pixelCount, buffer);
 			break;
 		default:
-			throw std::runtime_error("Unknown film output type in Film::GetOutput<u_int>(): " + ToString(type));
+			throw runtime_error("Unknown film output type in Film::GetOutput<u_int>(): " + ToString(type));
 	}
 }
 
@@ -1263,88 +1239,23 @@ void Film::UpdateChannel_RGB_TONEMAPPED() {
 		return;
 	}
 
-	switch (toneMapParams->GetType()) {
-		case TONEMAP_LINEAR: {
-			const LinearToneMapParams &tm = (LinearToneMapParams &)(*toneMapParams);
-			Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
-			const u_int pixelCount = width * height;
-			std::vector<bool> frameBufferMask(pixelCount, false);
+	// Merge all buffers
+	Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
+	const u_int pixelCount = width * height;
+	vector<bool> frameBufferMask(pixelCount, false);
+	MergeSampleBuffers(p, frameBufferMask);
 
-			MergeSampleBuffers(p, frameBufferMask);
+	// Apply tone mapping
+	toneMap->Apply(*this, p, frameBufferMask);
 
-			// Gamma correction
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (frameBufferMask[i])
-					p[i] = Radiance2Pixel(tm.scale * p[i]);
-			}
-			break;
-		}
-		case TONEMAP_REINHARD02: {
-			const Reinhard02ToneMapParams &tm = (Reinhard02ToneMapParams &)(*toneMapParams);
-
-			const float alpha = .1f;
-			const float preScale = tm.preScale;
-			const float postScale = tm.postScale;
-			const float burn = tm.burn;
-
-			Spectrum *p = (Spectrum *)channel_RGB_TONEMAPPED->GetPixels();
-			const u_int pixelCount = width * height;
-
-			std::vector<bool> frameBufferMask(pixelCount, false);
-			MergeSampleBuffers(p, frameBufferMask);
-
-			// Use the frame buffer as temporary storage and calculate the average luminance
-			float Ywa = 0.f;
-
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (frameBufferMask[i]) {
-					// Convert to XYZ color space
-					Spectrum xyz;
-					xyz.r = 0.412453f * p[i].r + 0.357580f * p[i].g + 0.180423f * p[i].b;
-					xyz.g = 0.212671f * p[i].r + 0.715160f * p[i].g + 0.072169f * p[i].b;
-					xyz.b = 0.019334f * p[i].r + 0.119193f * p[i].g + 0.950227f * p[i].b;
-					p[i] = xyz;
-
-					Ywa += p[i].g;
-				}
-			}
-			Ywa /= pixelCount;
-
-			// Avoid division by zero
-			if (Ywa == 0.f)
-				Ywa = 1.f;
-
-			const float Yw = preScale * alpha * burn;
-			const float invY2 = 1.f / (Yw * Yw);
-			const float pScale = postScale * preScale * alpha / Ywa;
-
-			for (u_int i = 0; i < pixelCount; ++i) {
-				if (frameBufferMask[i]) {
-					Spectrum xyz = p[i];
-
-					const float ys = xyz.g;
-					xyz *= pScale * (1.f + ys * invY2) / (1.f + ys);
-
-					// Convert back to RGB color space
-					p[i].r =  3.240479f * xyz.r - 1.537150f * xyz.g - 0.498535f * xyz.b;
-					p[i].g = -0.969256f * xyz.r + 1.875991f * xyz.g + 0.041556f * xyz.b;
-					p[i].b =  0.055648f * xyz.r - 0.204043f * xyz.g + 1.057311f * xyz.b;
-
-					// Gamma correction
-					p[i].r = Radiance2PixelFloat(p[i].r);
-					p[i].g = Radiance2PixelFloat(p[i].g);
-					p[i].b = Radiance2PixelFloat(p[i].b);
-				}
-			}
-			break;
-		}
-		default:
-			assert (false);
-			break;
+	// Gamma correction
+	for (u_int i = 0; i < pixelCount; ++i) {
+		if (frameBufferMask[i])
+			p[i] = Radiance2Pixel(p[i]);
 	}
 }
 
-void Film::MergeSampleBuffers(Spectrum *p, std::vector<bool> &frameBufferMask) const {
+void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const {
 	const u_int pixelCount = width * height;
 
 	// Merge RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED buffers
