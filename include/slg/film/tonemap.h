@@ -31,11 +31,13 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	TONEMAP_LINEAR, TONEMAP_REINHARD02
+	TONEMAP_LINEAR, TONEMAP_REINHARD02, TONEMAP_AUTOLINEAR, TONEMAP_LUXLINEAR
 } ToneMapType;
 
 extern std::string ToneMapType2String(const ToneMapType type);
 extern ToneMapType String2ToneMapType(const std::string &type);
+
+class Film;
 
 class ToneMap {
 public:
@@ -45,9 +47,29 @@ public:
 	virtual ToneMapType GetType() const = 0;
 	virtual ToneMap *Copy() const = 0;
 
-	virtual void Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask,
-		const u_int width, const u_int height) const = 0;
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const = 0;
 };
+
+//------------------------------------------------------------------------------
+// Auto-linear tone mapping
+//------------------------------------------------------------------------------
+
+class AutoLinearToneMap : public ToneMap {
+public:
+	AutoLinearToneMap() { }
+
+	ToneMapType GetType() const { return TONEMAP_AUTOLINEAR; }
+
+	ToneMap *Copy() const {
+		return new AutoLinearToneMap();
+	}
+
+	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+};
+
+//------------------------------------------------------------------------------
+// Linear tone mapping
+//------------------------------------------------------------------------------
 
 class LinearToneMap : public ToneMap {
 public:
@@ -59,22 +81,49 @@ public:
 		scale = s;
 	}
 
-	LinearToneMap(const float sensitivity, const float exposure,
-		const float fstop, const float gamma) {
-		scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, gamma);
-	}
-
 	ToneMapType GetType() const { return TONEMAP_LINEAR; }
 
 	ToneMap *Copy() const {
 		return new LinearToneMap(scale);
 	}
 
-	void Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask,
-		const u_int width, const u_int height) const;
+	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
 	float scale;
 };
+
+//------------------------------------------------------------------------------
+// LuxRender Linear tone mapping
+//------------------------------------------------------------------------------
+
+class LuxLinearToneMap : public ToneMap {
+public:
+	LuxLinearToneMap() {
+		sensitivity = 100.f;
+		exposure = 1.f / 1000.f;
+		fstop = 2.8f;
+	}
+
+	LuxLinearToneMap(const float s, const float e, const float f) {
+		sensitivity = s;
+		exposure = e;
+		fstop = f;
+	}
+
+	ToneMapType GetType() const { return TONEMAP_LUXLINEAR; }
+
+	ToneMap *Copy() const {
+		return new LuxLinearToneMap(sensitivity, exposure, fstop);
+	}
+
+	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+
+	float sensitivity, exposure, fstop;
+};
+
+//------------------------------------------------------------------------------
+// Reinhard02 tone mapping
+//------------------------------------------------------------------------------
 
 class Reinhard02ToneMap : public ToneMap {
 public:
@@ -83,8 +132,7 @@ public:
 		postScale = 1.2f;
 		burn = 3.75f;
 	}
-	Reinhard02ToneMap(const float preS = 1.f, const float postS = 1.2f,
-			const float b = 3.75f) {
+	Reinhard02ToneMap(const float preS, const float postS, const float b) {
 		preScale = preS;
 		postScale = postS;
 		burn = b;
@@ -96,8 +144,7 @@ public:
 		return new Reinhard02ToneMap(preScale, postScale, burn);
 	}
 
-	void Apply(luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask,
-		const u_int width, const u_int height) const;
+	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
 	float preScale, postScale, burn;
 };

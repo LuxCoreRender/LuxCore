@@ -67,12 +67,12 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("film.filter.mitchellss.c")(1.f / 3.f));
 
 			// Film ToneMap related Properties
-			defaultProperties->Set(Property("film.tonemap.type")("LINEAR"));
+			defaultProperties->Set(Property("film.tonemap.type")("AUTOLINEAR"));
 			defaultProperties->Set(Property("film.tonemap.linear.scale")(1.f));
-			defaultProperties->Set(Property("film.tonemap.linear.sensitivity")(100.f));
-			defaultProperties->Set(Property("film.tonemap.linear.exposure")(1.f / 1000.f));
-			defaultProperties->Set(Property("film.tonemap.linear.fstop")(2.8f));
-			defaultProperties->Set(Property("film.tonemap.linear.gamma")(2.2f));
+
+			defaultProperties->Set(Property("film.tonemap.luxlinear.sensitivity")(100.f));
+			defaultProperties->Set(Property("film.tonemap.luxlinear.exposure")(1.f / 1000.f));
+			defaultProperties->Set(Property("film.tonemap.luxlinear.fstop")(2.8f));
 
 			defaultProperties->Set(Property("film.tonemap.reinhard02.prescale")(1.f));
 			defaultProperties->Set(Property("film.tonemap.reinhard02.postscale")(1.2f));
@@ -278,20 +278,9 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	const ToneMapType toneMapType = String2ToneMapType(GetProperty("film.tonemap.type").Get<string>());
 	switch (toneMapType) {
 		case TONEMAP_LINEAR: {
-			if (cfg.IsDefined("film.tonemap.linear.scale") ||
-					(!cfg.IsDefined("film.tonemap.linear.sensitivity") && !cfg.IsDefined("film.tonemap.linear.exposure") &&
-					!cfg.IsDefined("film.tonemap.linear.fstop") && !cfg.IsDefined("film.tonemap.linear.gamma"))) {
-				const float scale = GetProperty("film.tonemap.linear.scale").Get<float>();
-
-				film->SetToneMap(new LinearToneMap(scale));
-			} else {
-				LinearToneMap *tm = new LinearToneMap(
-					GetProperty("film.tonemap.linear.sensitivity").Get<float>(),
-					GetProperty("film.tonemap.linear.exposure").Get<float>(),
-					GetProperty("film.tonemap.linear.fstop").Get<float>(),
-					GetProperty("film.tonemap.linear.gamma").Get<float>());
-				film->SetToneMap(tm);
-			}
+			LinearToneMap *tm = new LinearToneMap(
+				GetProperty("film.tonemap.linear.scale").Get<float>());
+			film->SetToneMap(tm);
 			break;
 		}
 		case TONEMAP_REINHARD02: {
@@ -299,6 +288,18 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 					GetProperty("film.tonemap.reinhard02.prescale").Get<float>(),
 					GetProperty("film.tonemap.reinhard02.postscale").Get<float>(),
 					GetProperty("film.tonemap.reinhard02.burn").Get<float>());
+			film->SetToneMap(tm);
+			break;
+		}
+		case TONEMAP_AUTOLINEAR: {
+			film->SetToneMap(new AutoLinearToneMap());
+			break;
+		}
+		case TONEMAP_LUXLINEAR: {
+			LuxLinearToneMap *tm = new LuxLinearToneMap(
+				GetProperty("film.tonemap.luxlinear.sensitivity").Get<float>(),
+				GetProperty("film.tonemap.luxlinear.exposure").Get<float>(),
+				GetProperty("film.tonemap.luxlinear.fstop").Get<float>());
 			film->SetToneMap(tm);
 			break;
 		}
