@@ -75,13 +75,26 @@ string RTBiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss << scientific <<
 			BiasPathOCLRenderThread::AdditionalKernelOptions();
 
-	if (engine->film->GetToneMap()->GetType() == TONEMAP_LINEAR) {
-		const LinearToneMap *ltm = (const LinearToneMap *)engine->film->GetToneMap();
-		ss << " -D PARAM_TONEMAP_LINEAR_SCALE=" << ltm->scale << "f";
-	} else
-		ss << " -D PARAM_TONEMAP_LINEAR_SCALE=1.f";
+	float toneMapScale = 1.f;
+	float gamma = 2.2f;
 
-	ss << " -D PARAM_GAMMA=" << engine->film->GetGamma() << "f" <<
+	if (engine->film->GetImagePipeline()) {
+		const ImagePipeline *ip = engine->film->GetImagePipeline();
+		
+		const ToneMap *tm = (const ToneMap *)ip->GetPlugin(typeid(ToneMap));
+		if (tm->GetType() == TONEMAP_LINEAR) {
+			const LinearToneMap *ltm = (const LinearToneMap *)tm;
+			toneMapScale = ltm->scale;
+		}
+
+		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
+		if (gc)
+			gamma = gc->gamma;
+	}
+
+	ss <<
+			" -D PARAM_TONEMAP_LINEAR_SCALE=" << toneMapScale <<
+			" -D PARAM_GAMMA=" << gamma << "f" <<
 			" -D PARAM_GHOSTEFFECT_INTENSITY=" << engine->ghostEffect << "f";
 
 	return ss.str();

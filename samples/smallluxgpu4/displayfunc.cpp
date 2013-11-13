@@ -157,9 +157,8 @@ static void PrintHelpAndSettings() {
 	const string samplerName = ((engineType == "BIASPATHCPU") ||
 		(engineType == "RTBIASPATHOCL")) ?
 			"N/A" : config->GetProperty("sampler.type").Get<string>();
-	buffer = boost::str(boost::format("[Render engine %s][Sampler %s][Tone mapping %s]") %
-			engineType.c_str() % samplerName.c_str() %
-			config->GetProperty("film.tonemap.type").Get<string>());
+	buffer = boost::str(boost::format("[Render engine %s][Sampler %s]") %
+			engineType.c_str() % samplerName.c_str());
 	PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
@@ -441,31 +440,6 @@ void keyFunc(unsigned char key, int x, int y) {
 				config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 50)));
 			else
 				config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 5)));
-			break;
-		}
-		case 't': {
-			// Stop the session
-			session->Stop();
-
-			// Delete the session
-			delete session;
-			session = NULL;
-
-			// Change the Sampler
-			const string toneMapName = config->GetProperty("film.tonemap.type").Get<string>();
-			if (toneMapName == "AUTOLINEAR")
-				config->Parse(Properties() << Property("film.tonemap.type")("LINEAR"));
-			else if (toneMapName == "LINEAR")
-				config->Parse(Properties() << Property("film.tonemap.type")("LUXLINEAR"));
-			else if (toneMapName == "LUXLINEAR")
-				config->Parse(Properties() << Property("film.tonemap.type")("REINHARD02"));
-			else
-				config->Parse(Properties() << Property("film.tonemap.type")("AUTOLINEAR"));
-
-			session = new RenderSession(config);
-
-			// Re-start the rendering
-			session->Start();
 			break;
 		}
 		case 'v':

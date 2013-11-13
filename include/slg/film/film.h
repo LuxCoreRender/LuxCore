@@ -85,8 +85,6 @@ private:
 
 class SampleResult;
 
-#define GAMMA_TABLE_SIZE 1024
-
 class Film {
 public:
 	typedef enum {
@@ -129,7 +127,6 @@ public:
 	
 	void Init();
 	void Resize(const u_int w, const u_int h);
-	void SetGamma(const float gamma = 2.2f);
 	void Reset();
 
 	//--------------------------------------------------------------------------
@@ -144,18 +141,15 @@ public:
 	void SetFilter(Filter *flt);
 	const Filter *GetFilter() const { return filter; }
 
-	const ToneMap *GetToneMap() const { return toneMap; }
-	void SetToneMap(ToneMap *tm) {
-		delete toneMap;
-		toneMap = tm;
-	}
+	void SetImagePipeline(ImagePipeline *ip) { imagePipeline = ip; }
+	const ImagePipeline *GetImagePipeline() const { return imagePipeline; }
 
 	void CopyDynamicSettings(const Film &film) {
 		channels = film.channels;
 		maskMaterialIDs = film.maskMaterialIDs;
 		radianceGroupCount = film.radianceGroupCount;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
-		SetToneMap(film.GetToneMap()->Copy());
+		SetImagePipeline(film.GetImagePipeline()->Copy());
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 	}
 
@@ -178,11 +172,10 @@ public:
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
-	void UpdateChannel_RGB_TONEMAPPED();
+	void ExecuteImagePipeline();
 
 	//--------------------------------------------------------------------------
 
-	float GetGamma() const { return gamma; }
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
 	double GetTotalSampleCount() const {
@@ -241,21 +234,6 @@ private:
 		GetPixelFromMergedSampleBuffers(x + y * width, c);
 	}
 
-	float Radiance2PixelFloat(const float x) const {
-		// Very slow !
-		//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
-
-		const u_int index = luxrays::Clamp(luxrays::Floor2Int(GAMMA_TABLE_SIZE * x), 0, GAMMA_TABLE_SIZE - 1);
-		return gammaTable[index];
-	}
-
-	luxrays::Spectrum Radiance2Pixel(const luxrays::Spectrum &c) const {
-		return luxrays::Spectrum(
-				Radiance2PixelFloat(c.r),
-				Radiance2PixelFloat(c.g),
-				Radiance2PixelFloat(c.b));
-	}
-
 	void AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight);
 	void AddSampleResultData(const u_int x, const u_int y,
@@ -270,13 +248,8 @@ private:
 
 	double statsTotalSampleCount, statsStartSampleTime, statsAvgSampleSec;
 
-	float gamma;
-	float gammaTable[GAMMA_TABLE_SIZE];
-
-	ToneMap *toneMap;
-
+	ImagePipeline *imagePipeline;
 	ConvergenceTest *convTest;
-
 	Filter *filter;
 	FilterLUTs *filterLUTs;
 
