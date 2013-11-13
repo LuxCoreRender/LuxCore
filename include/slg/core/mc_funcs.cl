@@ -1,24 +1,21 @@
 #line 2 "mc_funcs.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 void ConcentricSampleDisk(const float u0, const float u1, float *dx, float *dy) {
@@ -82,6 +79,16 @@ float3 CosineSampleHemisphereWithPdf(const float u0, const float u1, float *pdfW
 	return (float3)(x, y, z);
 }
 
+float3 UniformSampleSphere(const float u1, const float u2) {
+	float z = 1.f - 2.f * u1;
+	float r = sqrt(max(0.f, 1.f - z * z));
+	float phi = 2.f * M_PI_F * u2;
+	float x = r * cos(phi);
+	float y = r * sin(phi);
+
+	return (float3)(x, y, z);
+}
+
 float3 UniformSampleCone(const float u0, const float u1, const float costhetamax,
 	const float3 x, const float3 y, const float3 z) {
 	const float costheta = mix(costhetamax, 1.f, u0);
@@ -114,4 +121,160 @@ float PdfWtoA(const float pdfW, const float dist, const float cosThere) {
 
 float PdfAtoW(const float pdfA, const float dist, const float cosThere) {
     return pdfA * dist * dist / fabs(cosThere);
+}
+
+//------------------------------------------------------------------------------
+// Distribution1D
+//------------------------------------------------------------------------------
+
+// Implementation of std::upper_bound()
+__global float *std_upper_bound(__global float *first, __global float *last, const float val) {
+	__global float *it;
+	uint count = last - first;
+	uint step;
+
+	while (count > 0) {
+		it = first;
+		step = count / 2;
+		it += step;
+
+		if (!(val < *it)) {
+			first = ++it;
+			count -= step + 1;
+		} else
+			count = step;
+	}
+
+	return first;
+}
+
+//__global float *std_upper_bound(__global float *first, __global float *last, const float val) {
+//	__global float *it = first;
+//
+//	while ((it <= last) && (*it <= val)) {
+//		it++;
+//	}
+//
+//	return it;
+//}
+
+float Distribution1D_SampleContinuous(__global float *distribution1D, const float u,
+		float *pdf, uint *off) {
+	const uint count = as_uint(distribution1D[0]);
+	__global float *func = &distribution1D[1];
+	__global float *cdf = &distribution1D[1 + count];
+
+	// Find surrounding CDF segments and _offset_
+	if (u <= cdf[0]) {
+		*pdf = func[0];
+		if (off)
+			*off = 0;
+		return 0.f;
+	}
+	if (u >= cdf[count]) {
+		*pdf = func[count - 1];
+		if (off)
+			*off = count - 1;
+		return 1.f;
+	}
+
+	__global float *ptr = std_upper_bound(cdf, cdf + count + 1, u);
+	const uint offset = ptr - cdf - 1;
+
+	// Compute offset along CDF segment
+	const float du = (u - cdf[offset]) /
+			(cdf[offset + 1] - cdf[offset]);
+
+	// Compute PDF for sampled offset
+	*pdf = func[offset];
+
+	// Save offset
+	if (off)
+		*off = offset;
+
+	return (offset + du) / count;
+}
+
+uint Distribution1D_SampleDiscrete(__global float *distribution1D, const float u, float *pdf) {
+	const uint count = as_uint(distribution1D[0]);
+	__global float *func = &distribution1D[1];
+	__global float *cdf = &distribution1D[1 + count];
+
+	// Find surrounding CDF segments and _offset_
+	if (u <= cdf[0]) {
+		*pdf = func[0] / count;
+		return 0;
+	}
+	if (u >= cdf[count]) {
+		*pdf = func[count - 1] / count;
+		return count - 1;
+	}
+
+	__global float *ptr = std_upper_bound(cdf, cdf + count + 1, u);
+	const uint offset = ptr - cdf - 1;
+
+	// Compute PDF for sampled offset
+	*pdf = func[offset] / count;
+
+	return offset;
+}
+
+uint Distribution1D_Offset(__global float *distribution1D, const float u) {
+	const uint count = as_uint(distribution1D[0]);
+
+	return min(count - 1, Floor2UInt(u * count));
+}
+
+float Distribution1D_Pdf_UINT(__global float *distribution1D, const uint offset) {
+	const uint count = as_uint(distribution1D[0]);
+	__global float *func = &distribution1D[1];
+
+	return func[offset] / count;
+}
+
+float Distribution1D_Pdf_FLOAT(__global float *distribution1D, const float u) {
+	const uint count = as_uint(distribution1D[0]);
+	__global float *func = &distribution1D[1];
+
+	return func[Distribution1D_Offset(distribution1D, u)] / count;
+}
+
+//------------------------------------------------------------------------------
+// Distribution2D
+//------------------------------------------------------------------------------
+
+void Distribution2D_SampleContinuous(__global float *distribution2D,
+		const float u0, const float u1, float2 *uv, float *pdf) {
+	const uint width = as_uint(distribution2D[0]);
+	const uint height = as_uint(distribution2D[1]);
+	__global float *marginal = &distribution2D[2];
+	// size of Distribution1Dsize of count + size of func + size of cdf
+	const uint marginalSize = 1 + height + height + 1;
+	// size of Distribution1Dsize of count + size of func + size of cdf
+	const uint conditionalSize = 1 + width + width + 1;
+
+	float pdf1;
+	uint index;
+	(*uv).s1 = Distribution1D_SampleContinuous(marginal, u1, &pdf1, &index);
+
+	float pdf0;
+	__global float *conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
+	(*uv).s0 = Distribution1D_SampleContinuous(conditional, u0, &pdf0, NULL);
+
+	*pdf = pdf0 * pdf1;
+}
+
+float Distribution2D_Pdf(__global float *distribution2D, const float u0, const float u1) {
+	const uint width = as_uint(distribution2D[0]);
+	const uint height = as_uint(distribution2D[1]);
+	__global float *marginal = &distribution2D[2];
+	// size of Distribution1Dsize of count + size of func + size of cdf
+	const uint marginalSize = 1 + height + height + 1;
+	// size of Distribution1Dsize of count + size of func + size of cdf
+	const uint conditionalSize = 1 + width + width + 1;
+
+	const uint index = Distribution1D_Offset(marginal, u1);
+	__global float *conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
+
+	return Distribution1D_Pdf_FLOAT(conditional, u0) * Distribution1D_Pdf_FLOAT(marginal, u1);
 }

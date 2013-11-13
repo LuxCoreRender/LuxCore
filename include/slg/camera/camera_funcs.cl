@@ -1,24 +1,21 @@
 #line 2 "camera_funcs.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
@@ -74,30 +71,30 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 
 void Camera_GenerateRay(
 		__global Camera *camera,
-		__global Ray *ray,
-		const float scrSampleX, const float scrSampleY
+		const uint filmWidth, const uint filmHeight,
+#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray,
+		const float filmX, const float filmY
 #if defined(PARAM_CAMERA_HAS_DOF)
 		, const float dofSampleX, const float dofSampleY
 #endif
 		) {
 #if defined(PARAM_CAMERA_ENABLE_HORIZ_STEREO)
 	// Left eye or right eye
-	const uint transIndex = (scrSampleX < .5f) ? 0 : 1;
+	const uint transIndex = (filmX < filmWidth * .5f) ? 0 : 1;
 #else
 	const uint transIndex = 0;
 #endif
 
-	float ssx, ssy;
 #if defined(PARAM_CAMERA_ENABLE_HORIZ_STEREO) && defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
-	Camera_OculusRiftBarrelPostprocess(scrSampleX, scrSampleY, &ssx, &ssy);
+	float ssx, ssy;
+	Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
+	float3 Pras = (float3)(min(ssx * filmWidth, (float)(filmWidth - 1)), min(ssy * filmHeight, (float)(filmHeight - 1)), 0.f);
 #else
-	ssx = scrSampleX;
-	ssy = scrSampleY;
+	float3 Pras = (float3)(filmX, filmHeight - filmY - 1.f, 0.f);
 #endif
-
-	const float screenX = min(ssx * PARAM_IMAGE_WIDTH, (float)(PARAM_IMAGE_WIDTH - 1));
-	const float screenY = min((1.f - ssy) * PARAM_IMAGE_HEIGHT, (float)(PARAM_IMAGE_HEIGHT - 1));
-	float3 Pras = (float3)(screenX, screenY, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera[transIndex], Pras);
 	float3 rayDir = rayOrig;
@@ -134,7 +131,11 @@ void Camera_GenerateRay(
 	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld[transIndex], rayOrig);
 	rayDir = Transform_ApplyVector(&camera->cameraToWorld[transIndex], rayDir);
 
+#if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+	Ray_Init3_Private(ray, rayOrig, rayDir, maxt);
+#else
 	Ray_Init3(ray, rayOrig, rayDir, maxt);
+#endif
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,

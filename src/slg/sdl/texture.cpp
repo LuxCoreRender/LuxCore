@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include <sstream>
@@ -27,6 +24,7 @@
 #include "slg/sdl/texture.h"
 #include "slg/sdl/bsdf.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -154,6 +152,33 @@ static float Turbulence(const Point &P, const float omega, const int maxOctaves)
 	return sum;
 }
 
+/* creates a sine wave */
+static float tex_sin(float a) {
+    a = 0.5f + 0.5f * sinf(a);
+
+    return a;
+}
+
+/* creates a saw wave */
+static float tex_saw(float a) {
+    const float b = 2.0f * M_PI;
+
+    int n = (int) (a / b);
+    a -= n*b;
+    if (a < 0) a += b;
+    return a / b;
+}
+
+/* creates a triangle wave */
+static float tex_tri(float a) {
+    const float b = 2.0f * M_PI;
+    const float rmax = 1.0f;
+
+    a = rmax - 2.0f * fabs(floor((a * (1.0f / b)) + 0.5f) - (a * (1.0f / b)));
+
+    return a;
+}
+
 //------------------------------------------------------------------------------
 // TextureDefinitions
 //------------------------------------------------------------------------------
@@ -161,35 +186,54 @@ static float Turbulence(const Point &P, const float omega, const int maxOctaves)
 TextureDefinitions::TextureDefinitions() { }
 
 TextureDefinitions::~TextureDefinitions() {
-	for (std::vector<Texture *>::const_iterator it = texs.begin(); it != texs.end(); ++it)
-		delete (*it);
+	BOOST_FOREACH(Texture *t, texs)
+		delete t;
 }
 
-void TextureDefinitions::DefineTexture(const std::string &name, Texture *t) {
-	texs.push_back(t);
-	texsByName.insert(std::make_pair(name, t));
+void TextureDefinitions::DefineTexture(const string &name, Texture *newTex) {
+	if (IsTextureDefined(name)) {
+		const Texture *oldTex = GetTexture(name);
+
+		// Update name/texture definition
+		const u_int index = GetTextureIndex(name);
+		texs[index] = newTex;
+		texsByName.erase(name);
+		texsByName.insert(std::make_pair(name, newTex));
+
+		// Update all references
+		BOOST_FOREACH(Texture *tex, texs)
+			tex->UpdateTextureReferences(oldTex, newTex);
+
+		// Delete the old texture definition
+		delete oldTex;
+	} else {
+		// Add the new texture
+		texs.push_back(newTex);
+		texsByName.insert(make_pair(name, newTex));
+	}
 }
 
-Texture *TextureDefinitions::GetTexture(const std::string &name) {
+Texture *TextureDefinitions::GetTexture(const string &name) {
 	// Check if the texture has been already defined
-	std::map<std::string, Texture *>::const_iterator it = texsByName.find(name);
+	boost::unordered_map<string, Texture *>::const_iterator it = texsByName.find(name);
 
 	if (it == texsByName.end())
-		throw std::runtime_error("Reference to an undefined texture: " + name);
+		throw runtime_error("Reference to an undefined texture: " + name);
 	else
 		return it->second;
 }
 
-std::vector<std::string> TextureDefinitions::GetTextureNames() const {
-	std::vector<std::string> names;
+vector<string> TextureDefinitions::GetTextureNames() const {
+	vector<string> names;
 	names.reserve(texs.size());
-	for (std::map<std::string, Texture *>::const_iterator it = texsByName.begin(); it != texsByName.end(); ++it)
+
+	for (boost::unordered_map<string, Texture *>::const_iterator it = texsByName.begin(); it != texsByName.end(); ++it)
 		names.push_back(it->first);
 
 	return names;
 }
 
-void TextureDefinitions::DeleteTexture(const std::string &name) {
+void TextureDefinitions::DeleteTexture(const string &name) {
 	const u_int index = GetTextureIndex(name);
 	texs.erase(texs.begin() + index);
 	texsByName.erase(name);
@@ -201,10 +245,10 @@ u_int TextureDefinitions::GetTextureIndex(const Texture *t) const {
 			return i;
 	}
 
-	throw std::runtime_error("Reference to an undefined texture: " + boost::lexical_cast<std::string>(t));
+	throw runtime_error("Reference to an undefined texture: " + boost::lexical_cast<string>(t));
 }
 
-u_int TextureDefinitions::GetTextureIndex(const std::string &name) {
+u_int TextureDefinitions::GetTextureIndex(const string &name) {
 	return GetTextureIndex(GetTexture(name));
 }
 
@@ -212,7 +256,7 @@ u_int TextureDefinitions::GetTextureIndex(const std::string &name) {
 // ImageMap
 //------------------------------------------------------------------------------
 
-ImageMap::ImageMap(const std::string &fileName, const float g) {
+ImageMap::ImageMap(const string &fileName, const float g) {
 	gamma = g;
 
 	SDL_LOG("Reading texture map: " << fileName);
@@ -225,13 +269,13 @@ ImageMap::ImageMap(const std::string &fileName, const float g) {
 		FIBITMAP *dib = FREEIMAGE_LOAD(fif, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0);
 
 		if (!dib)
-			throw std::runtime_error("Unable to read texture map: " + fileName);
+			throw runtime_error("Unable to read texture map: " + fileName);
 
 		Init(dib);
 
 		FreeImage_Unload(dib);
 	} else
-		throw std::runtime_error("Unknown image file format: " + fileName);
+		throw runtime_error("Unknown image file format: " + fileName);
 }
 
 ImageMap::ImageMap(float *p, const float g, const u_int count,
@@ -407,9 +451,9 @@ void ImageMap::Init(FIBITMAP *dib) {
 			bits += pitch;
 		}
 	} else {
-		std::stringstream msg;
+		stringstream msg;
 		msg << "Unsupported bitmap depth (" << bpp << ") in a texture map";
-		throw std::runtime_error(msg.str());
+		throw runtime_error(msg.str());
 	}
 }
 
@@ -458,7 +502,7 @@ FIBITMAP *ImageMap::GetFreeImageBitMap() const {
 
 			return dib;
 		} else
-			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+			throw runtime_error("Unable to allocate FreeImage HDR image");
 	} else if (channelCount == 3) {
 		// RGB image
 		FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
@@ -483,7 +527,7 @@ FIBITMAP *ImageMap::GetFreeImageBitMap() const {
 
 			return dib;
 		} else
-			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+			throw runtime_error("Unable to allocate FreeImage HDR image");
 	} else if (channelCount == 1) {
 		// Grey image
 		FIBITMAP *dib = FreeImage_AllocateT(FIT_FLOAT, width, height, 32);
@@ -506,18 +550,56 @@ FIBITMAP *ImageMap::GetFreeImageBitMap() const {
 
 			return dib;
 		} else
-			throw std::runtime_error("Unable to allocate FreeImage HDR image");
+			throw runtime_error("Unable to allocate FreeImage HDR image");
 	} else
-		throw std::runtime_error("Unknown channel count in ImageMap::GetFreeImageBitMap(): " + boost::lexical_cast<std::string>(channelCount));
+		throw runtime_error("Unknown channel count in ImageMap::GetFreeImageBitMap(): " + boost::lexical_cast<string>(channelCount));
 }
 
-void ImageMap::WriteImage(const std::string &fileName) const {
+void ImageMap::WriteImage(const string &fileName) const {
 	FIBITMAP *dib = GetFreeImageBitMap();
 
 	if (!FREEIMAGE_SAVE(FIF_EXR, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
-		throw std::runtime_error("Failed image save");
+		throw runtime_error("Failed image save");
 
 	FreeImage_Unload(dib);
+}
+
+float ImageMap::GetSpectrumMean() const {
+	float mean = 0.f;	
+	for (u_int y = 0; y < height; ++y) {
+		for (u_int x = 0; x < width; ++x) {
+			const u_int index = x + y * width;
+			
+			if (channelCount == 1) 
+				mean += pixels[index];
+			else {
+				// channelCount = (3 or 4)
+				const float *pixel = &pixels[index * channelCount];
+				mean += (pixel[0] + pixel[1] + pixel[2]) * (1.f / 3.f);
+			}
+		}
+	}
+
+	return mean / (width * height);
+}
+
+float ImageMap::GetSpectrumMeanY() const {
+	float mean = 0.f;	
+	for (u_int y = 0; y < height; ++y) {
+		for (u_int x = 0; x < width; ++x) {
+			const u_int index = x + y * width;
+			
+			if (channelCount == 1) 
+				mean += pixels[index];
+			else {
+				// channelCount = (3 or 4)
+				const float *pixel = &pixels[index * channelCount];
+				mean += Spectrum(pixel[0], pixel[1], pixel[2]).Y();
+			}
+		}
+	}
+
+	return mean / (width * height);
 }
 
 //------------------------------------------------------------------------------
@@ -533,9 +615,9 @@ ImageMapCache::~ImageMapCache() {
 		delete m;
 }
 
-ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float gamma) {
+ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma) {
 	// Check if the texture map has been already loaded
-	std::map<std::string, ImageMap *>::const_iterator it = mapByName.find(fileName);
+	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(fileName);
 
 	if (it == mapByName.end()) {
 		// I have yet to load the file
@@ -556,7 +638,7 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 			im->Resize(newWidth, newHeight);
 		}
 
-		mapByName.insert(std::make_pair(fileName, im));
+		mapByName.insert(make_pair(fileName, im));
 		maps.push_back(im);
 
 		return im;
@@ -564,15 +646,28 @@ ImageMap *ImageMapCache::GetImageMap(const std::string &fileName, const float ga
 		//SDL_LOG("Cached image map: " << fileName);
 		ImageMap *im = (it->second);
 		if (im->GetGamma() != gamma)
-			throw std::runtime_error("Image map: " + fileName + " can not be used with 2 different gamma");
+			throw runtime_error("Image map: " + fileName + " can not be used with 2 different gamma");
 		return im;
 	}
 }
 
-void ImageMapCache::DefineImgMap(const std::string &name, ImageMap *im) {
+void ImageMapCache::DefineImageMap(const string &name, ImageMap *im) {
 	SDL_LOG("Define ImageMap: " << name);
-	mapByName.insert(std::make_pair(name, im));
-	maps.push_back(im);
+
+	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(name);
+	if (it == mapByName.end()) {
+		// Add the new image definition
+		mapByName.insert(make_pair(name, im));
+		maps.push_back(im);
+	} else {
+		// Overwrite the existing image definition
+		mapByName.erase(name);
+		mapByName.insert(make_pair(name, im));
+
+		const u_int index = GetImageMapIndex(it->second);
+		delete maps[index];
+		maps[index] = im;
+	}
 }
 
 u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
@@ -581,12 +676,12 @@ u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
 			return i;
 	}
 
-	throw std::runtime_error("Unknown image map: " + boost::lexical_cast<std::string>(im));
+	throw runtime_error("Unknown image map: " + boost::lexical_cast<string>(im));
 }
 
-void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
+void ImageMapCache::GetImageMaps(vector<const ImageMap *> &ims) {
 	ims.reserve(maps.size());
-	
+
 	BOOST_FOREACH(ImageMap *im, maps)
 		ims.push_back(im);
 }
@@ -598,9 +693,9 @@ void ImageMapCache::GetImageMaps(std::vector<ImageMap *> &ims) {
 Properties ConstFloatTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "constfloat1");
-	props.SetString("scene.textures." + name + ".value", ToString(value));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("constfloat1"));
+	props.Set(Property("scene.textures." + name + ".value")(value));
 
 	return props;
 }
@@ -612,10 +707,9 @@ Properties ConstFloatTexture::ToProperties(const ImageMapCache &imgMapCache) con
 Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "constfloat3");
-	props.SetString("scene.textures." + name + ".value",
-			ToString(color.r) + " " + ToString(color.g) + " " + ToString(color.b));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("constfloat3"));
+	props.Set(Property("scene.textures." + name + ".value")(color));
 
 	return props;
 }
@@ -645,13 +739,13 @@ Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "imagemap");
-	props.SetString("scene.textures." + name + ".file", "imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr");
-	props.SetString("scene.textures." + name + ".gamma", "1.0");
-	props.SetString("scene.textures." + name + ".gain", ToString(gain));
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("imagemap"));
+	props.Set(Property("scene.textures." + name + ".file")("imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr"));
+	props.Set(Property("scene.textures." + name + ".gamma")("1.0"));
+	props.Set(Property("scene.textures." + name + ".gain")(gain));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -678,10 +772,10 @@ UV ScaleTexture::GetDuDv() const {
 Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "scale");
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("scale"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 
 	return props;
 }
@@ -726,6 +820,10 @@ Spectrum FresnelApproxNTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 	return FresnelApproxN(tex->GetSpectrumValue(hitPoint));
 }
 
+float FresnelApproxNTexture::Y() const {
+	return FresnelApproxN(tex->Y());
+}
+
 UV FresnelApproxNTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
@@ -738,6 +836,10 @@ Spectrum FresnelApproxKTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 	return FresnelApproxK(tex->GetSpectrumValue(hitPoint));
 }
 
+float FresnelApproxKTexture::Y() const {
+	return FresnelApproxK(tex->Y());
+}
+
 UV FresnelApproxKTexture::GetDuDv() const {
 	return tex->GetDuDv();
 }
@@ -745,9 +847,9 @@ UV FresnelApproxKTexture::GetDuDv() const {
 Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "fresnelapproxn");
-	props.SetString("scene.textures." + name + ".texture", tex->GetName());
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxn"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
 
 	return props;
 }
@@ -755,9 +857,9 @@ Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache)
 Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "fresnelapproxk");
-	props.SetString("scene.textures." + name + ".texture", tex->GetName());
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxk"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
 
 	return props;
 }
@@ -792,11 +894,11 @@ UV CheckerBoard2DTexture::GetDuDv() const {
 Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "checkerboard2d");
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("checkerboard2d"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -827,11 +929,11 @@ UV CheckerBoard3DTexture::GetDuDv() const {
 Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "checkerboard3d");
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("checkerboard3d"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -840,6 +942,9 @@ Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache)
 // Mix texture
 //------------------------------------------------------------------------------
 
+float MixTexture::Y() const {
+	return luxrays::Lerp(amount->Y(), tex1->Y(), tex2->Y());
+}
 float MixTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float value1 = tex1->GetFloatValue(hitPoint);
@@ -867,11 +972,11 @@ UV MixTexture::GetDuDv() const {
 Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "mix");
-	props.SetString("scene.textures." + name + ".amount", amount->GetName());
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("mix"));
+	props.Set(Property("scene.textures." + name + ".amount")(amount->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 
 	return props;
 }
@@ -898,11 +1003,11 @@ UV FBMTexture::GetDuDv() const {
 Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "fbm");
-	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
-	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("fbm"));
+	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props.Set(Property("scene.textures." + name + ".roughness")(omega));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -946,6 +1051,18 @@ Spectrum MarbleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return 1.5f * Lerp(t, s0, s1);
 }
 
+float MarbleTexture::Y() const {
+	static float c[][3] = { { .58f, .58f, .6f }, { .58f, .58f, .6f }, { .58f, .58f, .6f },
+		{ .5f, .5f, .5f }, { .6f, .59f, .58f }, { .58f, .58f, .6f },
+		{ .58f, .58f, .6f }, {.2f, .2f, .33f }, { .58f, .58f, .6f }, };
+	luxrays::Spectrum cs;
+#define NC  sizeof(c) / sizeof(c[0])
+	for (u_int i = 0; i < NC; ++i)
+		cs += luxrays::Spectrum(c[i]);
+	return cs.Y() / NC;
+#undef NC
+}
+
 float MarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return GetSpectrumValue(hitPoint).Y();
 }
@@ -957,13 +1074,13 @@ UV MarbleTexture::GetDuDv() const {
 Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "marble");
-	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
-	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
-	props.SetString("scene.textures." + name + ".scale", ToString(scale));
-	props.SetString("scene.textures." + name + ".variation", ToString(variation));
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("marble"));
+	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props.Set(Property("scene.textures." + name + ".roughness")(omega));
+	props.Set(Property("scene.textures." + name + ".scale")(scale));
+	props.Set(Property("scene.textures." + name + ".variation")(variation));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -1024,11 +1141,11 @@ UV DotsTexture::GetDuDv() const {
 Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "dots");
-	props.SetString("scene.textures." + name + ".inside", insideTex->GetName());
-	props.SetString("scene.textures." + name + ".outside", outsideTex->GetName());
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("dots"));
+	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetName()));
+	props.Set(Property("scene.textures." + name + ".outside")(outsideTex->GetName()));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -1040,7 +1157,7 @@ Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 BrickTexture::BrickTexture(const TextureMapping3D *mp, const Texture *t1,
 		const Texture *t2, const Texture *t3,
 		float brickw, float brickh, float brickd, float mortar,
-		float r, float bev, const std::string &b) :
+		float r, float bev, const string &b) :
 		mapping(mp), tex1(t1), tex2(t2), tex3(t3),
 		brickwidth(brickw), brickheight(brickh), brickdepth(brickd), mortarsize(mortar),
 		run(r), initialbrickwidth(brickw), initialbrickheight(brickh), initialbrickdepth(brickd) {
@@ -1232,19 +1349,19 @@ UV BrickTexture::GetDuDv() const {
 Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "brick");
-	props.SetString("scene.textures." + name + ".bricktex", tex1->GetName());
-	props.SetString("scene.textures." + name + ".mortartex", tex2->GetName());
-	props.SetString("scene.textures." + name + ".brickmodtex", tex3->GetName());
-	props.SetString("scene.textures." + name + ".brickwidth", ToString(brickwidth));
-	props.SetString("scene.textures." + name + ".brickheight", ToString(brickheight));
-	props.SetString("scene.textures." + name + ".brickdepth", ToString(brickdepth));
-	props.SetString("scene.textures." + name + ".mortarsize", ToString(mortarsize));
-	props.SetString("scene.textures." + name + ".brickrun", ToString(run));
-	props.SetString("scene.textures." + name + ".brickbevel", ToString(bevelwidth * brickwidth));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("brick"));
+	props.Set(Property("scene.textures." + name + ".bricktex")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".mortartex")(tex2->GetName()));
+	props.Set(Property("scene.textures." + name + ".brickmodtex")(tex3->GetName()));
+	props.Set(Property("scene.textures." + name + ".brickwidth")(brickwidth));
+	props.Set(Property("scene.textures." + name + ".brickheight")(brickheight));
+	props.Set(Property("scene.textures." + name + ".brickdepth")(brickdepth));
+	props.Set(Property("scene.textures." + name + ".mortarsize")(mortarsize));
+	props.Set(Property("scene.textures." + name + ".brickrun")(run));
+	props.Set(Property("scene.textures." + name + ".brickbevel")(bevelwidth * brickwidth));
 
-	std::string brickBondValue;
+	string brickBondValue;
 	switch (bond) {
 		case FLEMISH:
 			brickBondValue = "flemish";
@@ -1266,9 +1383,9 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 			brickBondValue = "stacked";
 			break;
 	}
-	props.SetString("scene.textures." + name + ".brickbond", brickBondValue);
+	props.Set(Property("scene.textures." + name + ".brickbond")(brickBondValue));
 
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -1295,10 +1412,10 @@ UV AddTexture::GetDuDv() const {
 Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "add");
-	props.SetString("scene.textures." + name + ".texture1", tex1->GetName());
-	props.SetString("scene.textures." + name + ".texture2", tex2->GetName());
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("add"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 
 	return props;
 }
@@ -1326,8 +1443,8 @@ UV WindyTexture::GetDuDv() const {
 Properties WindyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "windy");
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("windy"));
 
 	return props;
 }
@@ -1352,11 +1469,11 @@ UV WrinkledTexture::GetDuDv() const {
 Properties WrinkledTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "wrinkled");
-	props.SetString("scene.textures." + name + ".octaves", ToString(octaves));
-	props.SetString("scene.textures." + name + ".roughness", ToString(omega));
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("wrinkled"));
+	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props.Set(Property("scene.textures." + name + ".roughness")(omega));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -1382,9 +1499,9 @@ UV UVTexture::GetDuDv() const {
 Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "uv");
-	props.Load(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("uv"));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
@@ -1404,8 +1521,8 @@ Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		return values.front();
 	if (a >= offsets.back())
 		return values.back();
-	// std::upper_bound is not available on OpenCL
-	//const u_int p = std::upper_bound(offsets.begin(), offsets.end(), a) - offsets.begin();
+	// upper_bound is not available on OpenCL
+	//const u_int p = upper_bound(offsets.begin(), offsets.end(), a) - offsets.begin();
 	u_int p = 0;
 	for (; p < offsets.size(); ++p) {
 		if (a < offsets[p])
@@ -1423,14 +1540,13 @@ UV BandTexture::GetDuDv() const {
 Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "band");
-	props.SetString("scene.textures." + name + ".amount", amount->GetName());
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("band"));
+	props.Set(Property("scene.textures." + name + ".amount")(amount->GetName()));
 
 	for (u_int i = 0; i < offsets.size(); ++i) {
-		props.SetString("scene.textures." + name + ".offset" + ToString(i), ToString(offsets[i]));
-		props.SetString("scene.textures." + name + ".value" + ToString(i),
-				ToString(values[i].r) + " " + ToString(values[i].g) + " " + ToString(values[i].b));
+		props.Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));
+		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i].b));
 	}
 
 	return props;
@@ -1451,8 +1567,8 @@ Spectrum HitPointColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "hitpointcolor");
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("hitpointcolor"));
 
 	return props;
 }
@@ -1472,8 +1588,8 @@ Spectrum HitPointAlphaTexture::GetSpectrumValue(const HitPoint &hitPoint) const 
 Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "hitpointalpha");
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("hitpointalpha"));
 
 	return props;
 }
@@ -1494,10 +1610,136 @@ Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
-	const std::string name = GetName();
-	props.SetString("scene.textures." + name + ".type", "hitpointgrey");
-	props.SetString("scene.textures." + name + ".channel", ToString(
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("hitpointgrey"));
+	props.Set(Property("scene.textures." + name + ".channel")(
 		((channel != 0) && (channel != 1) && (channel != 2)) ? -1 : ((int)channel)));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// Wood texture
+//------------------------------------------------------------------------------
+WoodTexture::WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast) : 
+						  mapping(mp), type(BANDS), noisebasis2(TEX_SIN),  noisesize(noisesize), turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
+	if(ptype == "bands") {
+		type = BANDS;
+	} else if(ptype == "rings") {
+		type = RINGS;
+	} else if(ptype == "bandnoise") {
+		type = BANDNOISE;
+	} else if(ptype == "ringnoise") {
+		type = RINGNOISE;
+	};
+
+	if(pnoise == "sin") {
+		noisebasis2 = TEX_SIN;
+	} else if(pnoise == "saw") {
+		noisebasis2 = TEX_SAW;
+	} else if(pnoise == "tri") {
+		noisebasis2 = TEX_TRI;
+	};
+}
+
+float WoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint));
+	float scale = 1.f;
+	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
+
+    float (*waveform[3])(float); /* create array of pointers to waveform functions */
+    waveform[0] = tex_sin; /* assign address of tex_sin() function to pointer array */
+    waveform[1] = tex_saw;
+    waveform[2] = tex_tri;
+
+	u_int wf = 0;
+	if(noisebasis2 == TEX_SAW) { 
+		wf = 1;
+	} else if(noisebasis2 == TEX_TRI) 
+		wf = 2;
+
+	float wood = 0.f;
+	switch(type) {
+		case BANDS:
+			wood = waveform[wf]((P.x + P.y + P.z) * 10.f);
+			break;
+		case RINGS:
+			wood = waveform[wf](sqrtf(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f);
+			break;
+		case BANDNOISE:
+			if(hard) wood = turbulence * fabs(2.f * Noise(scale*P) - 1.f);			
+			else wood = turbulence * Noise(scale*P);
+			wood = waveform[wf]((P.x + P.y + P.z) * 10.f + wood);
+			break;
+		case RINGNOISE:
+			if(hard) wood = turbulence * fabs(2.f * Noise(scale*P) - 1.f);			
+			else wood = turbulence * Noise(scale*P);
+			wood = waveform[wf](sqrtf(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f + wood);
+			break;
+	}
+    
+	wood = (wood - 0.5f) * contrast + bright - 0.5f;
+    if(wood < 0.f) wood = 0.f; 
+	else if(wood > 1.f) wood = 1.f;
+	
+    return wood;
+}
+
+Spectrum WoodTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+
+UV WoodTexture::GetDuDv() const {
+	return UV(DUDV_VALUE, DUDV_VALUE);
+}
+
+Properties WoodTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	std::string noise;
+	switch(noisebasis2) {
+		default:
+		case TEX_SIN:
+			noise = "sin";
+			break;
+		case TEX_SAW:
+			noise = "saw";
+			break;
+		case TEX_TRI:
+			noise = "tri";
+			break;
+	}
+	std::string woodtype;
+	switch(type) {
+		default:
+		case BANDS:
+			woodtype = "bands";
+			break;
+		case RINGS:
+			woodtype = "rings";
+			break;
+		case BANDNOISE:
+			woodtype = "bandnoise";
+			break;
+		case RINGNOISE:
+			woodtype = "ringnoise";
+			break;
+	}
+	std::string noisetype = "soft_noise";
+	if(hard) noisetype = "hard_noise";
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("wood"));
+	props.Set(Property("scene.textures." + name + ".woodtype")(woodtype));
+	props.Set(Property("scene.textures." + name + ".noisebasis2")(noise));
+	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
+	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

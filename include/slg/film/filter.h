@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_FILTER_H
@@ -24,6 +21,7 @@
 
 #include "luxrays/core/spectrum.h"
 #include "luxrays/core/utils.h"
+#include "slg/core/mc.h"
 
 namespace slg {
 	
@@ -54,11 +52,29 @@ public:
 	virtual FilterType GetType() const = 0;
 	virtual float Evaluate(const float x, const float y) const = 0;
 
+	virtual Filter *Clone() const = 0;
+
 	static FilterType String2FilterType(const std::string &type);
 
 	// Filter Public Data
 	const float xWidth, yWidth;
 	const float invXWidth, invYWidth;
+};
+
+class FilterDistribution {
+public:
+	FilterDistribution(const Filter *filter, const u_int size);
+	~FilterDistribution();
+
+	void SampleContinuous(const float u0, const float u1, float *su0, float *su1) const;
+
+	const Distribution2D *GetDistribution2D() const { return distrib; }
+
+private:
+	const Filter *filter;
+	u_int size;
+
+	Distribution2D *distrib;
 };
 
 class BoxFilter : public Filter {
@@ -74,6 +90,8 @@ public:
 	float Evaluate(const float x, const float y) const {
 		return 1.f;
 	}
+
+	virtual Filter *Clone() const { return new BoxFilter(xWidth, yWidth); }
 };
 
 class GaussianFilter : public Filter {
@@ -93,9 +111,12 @@ public:
 		return Gaussian(x, expX) * Gaussian(y, expY);
 	}
 
+	virtual Filter *Clone() const { return new GaussianFilter(xWidth, yWidth, alpha); }
+
+	float alpha;
+
 private:
 	// GaussianFilter Private Data
-	float alpha;
 	float expX, expY;
 
 	// GaussianFilter Utility Functions
@@ -122,6 +143,10 @@ public:
 
 	}
 
+	virtual Filter *Clone() const { return new MitchellFilter(xWidth, yWidth, B, C); }
+
+	const float B, C;
+
 private:
 	float Mitchell1D(float x) const {
 		if (x >= 1.f)
@@ -135,8 +160,6 @@ private:
 				(-3.f + 2.f * B + C)) * x * x +
 				(1.f - B / 3.f);
 	}
-
-	const float B, C;
 };
 
 class MitchellFilterSS : public Filter {
@@ -160,6 +183,10 @@ public:
 			a1 * Mitchell1D(dist + 2.f / 3.f);
 	}
 
+	virtual Filter *Clone() const { return new MitchellFilterSS(xWidth, yWidth, B, C); }
+
+	const float B, C;
+
 private:
 	float Mitchell1D(float x) const {
 		if (x >= 1.f)
@@ -174,7 +201,7 @@ private:
 				(1.f - B / 3.f);
 	}
 
-	const float B, C, a0, a1;
+	const float a0, a1;
 };
 
 //------------------------------------------------------------------------------
@@ -183,34 +210,7 @@ private:
 
 class FilterLUT {
 public:
-	FilterLUT(const Filter &filter, const float offsetX, const float offsetY) {
-		const int x0 = luxrays::Ceil2Int(offsetX - filter.xWidth);
-		const int x1 = luxrays::Floor2Int(offsetX + filter.xWidth);
-		const int y0 = luxrays::Ceil2Int(offsetY - filter.yWidth);
-		const int y1 = luxrays::Floor2Int(offsetY + filter.yWidth);
-		lutWidth = x1 - x0 + 1;
-		lutHeight = y1 - y0 + 1;
-		lut = new float[lutWidth * lutHeight];
-
-		float filterNorm = 0.f;
-		unsigned int index = 0;
-		for (int iy = y0; iy <= y1; ++iy) {
-			for (int ix = x0; ix <= x1; ++ix) {
-				const float filterVal = filter.Evaluate(fabsf(ix - offsetX), fabsf(iy - offsetY));
-				filterNorm += filterVal;
-				lut[index++] = filterVal;
-			}
-		}
-
-		// Normalize LUT
-		filterNorm = 1.f / filterNorm;
-		index = 0;
-		for (int iy = y0; iy <= y1; ++iy) {
-			for (int ix = x0; ix <= x1; ++ix)
-				lut[index++] *= filterNorm;
-		}
-	}
-
+	FilterLUT(const Filter &filter, const float offsetX, const float offsetY);
 	~FilterLUT() {
 		delete[] lut;
 	}
@@ -249,34 +249,8 @@ inline std::ostream &operator<<(std::ostream &os, const FilterLUT &f) {
 
 class FilterLUTs {
 public:
-	FilterLUTs(const Filter &filter, const unsigned int size) {
-		lutsSize = size + 1;
-		step = 1.f / float(size);
-
-		luts = new FilterLUT*[lutsSize * lutsSize];
-
-		for (unsigned int iy = 0; iy < lutsSize; ++iy) {
-			for (unsigned int ix = 0; ix < lutsSize; ++ix) {
-				const float x = ix * step - 0.5f + step / 2.f;
-				const float y = iy * step - 0.5f + step / 2.f;
-
-				luts[ix + iy * lutsSize] = new FilterLUT(filter, x, y);
-				/*std::cout << "===============================================\n";
-				std::cout << ix << "," << iy << "\n";
-				std::cout << x << "," << y << "\n";
-				std::cout << *luts[ix + iy * lutsSize] << "\n";
-				std::cout << "===============================================\n";*/
-			}
-		}
-	}
-
-	~FilterLUTs() {
-		for (unsigned int iy = 0; iy < lutsSize; ++iy)
-			for (unsigned int ix = 0; ix < lutsSize; ++ix)
-				delete luts[ix + iy * lutsSize];
-
-		delete[] luts;
-	}
+	FilterLUTs(const Filter &filter, const unsigned int size);
+	~FilterLUTs() ;
 
 	const FilterLUT *GetLUT(const float x, const float y) const {
 		const int ix = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (x + 0.5f)), lutsSize - 1));

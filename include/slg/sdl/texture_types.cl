@@ -1,24 +1,21 @@
 #line 2 "texture_types.cl"
 
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #define DUDV_VALUE 0.001f
@@ -29,7 +26,7 @@ typedef enum {
 	HITPOINTGREY,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
-	WRINKLED, UV_TEX, BAND_TEX
+	WRINKLED, UV_TEX, BAND_TEX, WOOD
 } TextureType;
 
 typedef struct {
@@ -121,6 +118,23 @@ typedef struct {
 	float omega;
 } WindyTexParam;
 
+typedef enum {
+	BANDS, RINGS, BANDNOISE, RINGNOISE
+} WoodType;
+
+typedef enum {
+	TEX_SIN, TEX_SAW, TEX_TRI
+} NoiseBase;
+
+typedef struct {
+	TextureMapping3D mapping;
+	WoodType type;
+	NoiseBase noisebasis2;
+	float noisesize, turbulence;
+	float bright, contrast;
+	bool hard;
+} WoodTexParam;
+
 typedef struct {
 	TextureMapping3D mapping;
 	int octaves;
@@ -162,6 +176,7 @@ typedef struct {
 		BrickTexParam brick;
 		AddTexParam addTex;
 		WindyTexParam windy;
+		WoodTexParam wood;
 		WrinkledTexParam wrinkled;
 		UVTexParam uvTex;
 		BandTexParam band;
@@ -172,6 +187,8 @@ typedef struct {
 //------------------------------------------------------------------------------
 // Some macro trick in order to have more readable code
 //------------------------------------------------------------------------------
+
+#if defined(SLG_OPENCL_KERNEL)
 
 #if defined(PARAM_HAS_IMAGEMAPS)
 
@@ -187,3 +204,5 @@ typedef struct {
 
 #define TEXTURES_PARAM_DECL , __global Texture *texs IMAGEMAPS_PARAM_DECL
 #define TEXTURES_PARAM , texs IMAGEMAPS_PARAM
+
+#endif

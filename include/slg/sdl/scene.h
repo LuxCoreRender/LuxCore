@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #ifndef _SLG_SCENE_H
@@ -31,121 +28,116 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
 #include "slg/camera/camera.h"
+#include "slg/editaction.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/light.h"
-#include "slg/sdl/material.h"
 #include "slg/sdl/texture.h"
+#include "slg/sdl/material.h"
+#include "slg/sdl/sceneobject.h"
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/mapping.h"
+#include "slg/core/mc.h"
 
 namespace slg {
 
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods
-	Scene();
+	Scene(const float imageScale = 1.f);
 	// Constructor used to load a scene from file
 	Scene(const std::string &fileName, const float imageScale = 1.f);
 	~Scene();
 
+	const luxrays::Properties &GetProperties() const { return sceneProperties; }
+
 	LightSource *GetLightByType(const LightSourceType lightType) const;
+	LightSource *GetLightByIndex(const u_int index) const;
 	LightSource *SampleAllLights(const float u, float *pdf) const;
-	float PickLightPdf() const;
+	float SampleAllLightPdf(const LightSource *light) const;
+
 	bool Intersect(luxrays::IntersectionDevice *device, const bool fromLight,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
 
-	void Preprocess(luxrays::Context *ctx);
+	void UpdateLightGroupCount();
+	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight);
 
 	luxrays::Properties ToProperties(const std::string &directoryName);
 
 	//--------------------------------------------------------------------------
-	// Methods to build a scene from scratch
+	// Methods to build and edit scene
 	//--------------------------------------------------------------------------
 
-	void CreateCamera(const std::string &propsString);
-	void CreateCamera(const luxrays::Properties &props);
+	void DefineImageMap(const std::string &name, ImageMap *im);
+	void DefineImageMap(const std::string &name, float *cols, const float gamma,
+		const u_int channels, const u_int width, const u_int height);
+	bool IsImageMapDefined(const std::string &imgMapName) const;
 
-	void DefineImageMap(const std::string &name, ImageMap *im) {
-		imgMapCache.DefineImgMap(name, im);
-	}
-
-	void DefineTextures(const std::string &propsString);
-	void DefineTextures(const luxrays::Properties &props);
-
-	void DefineMaterials(const std::string &propsString);
-	void DefineMaterials(const luxrays::Properties &props);
-	void UpdateMaterial(const std::string &name, const std::string &propsString);
-	void UpdateMaterial(const std::string &name, const luxrays::Properties &props);
-
-	void DefineObject(const std::string &meshName, luxrays::ExtTriangleMesh *mesh,
-		const bool usePlyNormals = true) {
-		extMeshCache.DefineExtMesh(meshName, mesh, usePlyNormals);
-	}
-	void DefineObject(const std::string &meshName,
+	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
+	void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-		luxrays::Spectrum *cols, float *alphas,
-		const bool usePlyNormals) {
-		extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas, usePlyNormals);
-	}
+		luxrays::Spectrum *cols, float *alphas);
+	bool IsMeshDefined(const std::string &meshName) const;
 
-	void AddObject(const std::string &objName, const std::string &meshName, const std::string &propsString);
-	void AddObject(const std::string &objName, const luxrays::Properties &props);
+	bool IsTextureDefined(const std::string &texName) const;
+	bool IsMaterialDefined(const std::string &matName) const;
+	const u_int GetLightCount() const;
+	const u_int GetObjectCount() const;
+
+	void Parse(const luxrays::Properties &props);
+	void DeleteObject(const std::string &objName);
+
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 
-	void AddObjects(const std::string &propsString);
-	void AddObjects(const luxrays::Properties &props);
-
-	void AddInfiniteLight(const std::string &propsString);
-	void AddInfiniteLight(const luxrays::Properties &props);
-	void AddSkyLight(const std::string &propsString);
-	void AddSkyLight(const luxrays::Properties &props);
-	void AddSunLight(const std::string &propsString);
-	void AddSunLight(const luxrays::Properties &props);
-
-	void RemoveUnusedMaterials();
+	void RemoveUnusedImageMaps();
 	void RemoveUnusedTextures();
+	void RemoveUnusedMaterials();
+	void RemoveUnusedMeshes();
 
 	//--------------------------------------------------------------------------
 
-	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
-	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
-	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
-	Material *CreateMaterial(const std::string &matName, const luxrays::Properties &props);
+	Camera *camera;
 
-	PerspectiveCamera *camera;
+	luxrays::ExtMeshCache extMeshCache; // Mesh objects cache
+	ImageMapCache imgMapCache; // Image maps cache
 
 	TextureDefinitions texDefs; // Texture definitions
 	MaterialDefinitions matDefs; // Material definitions
-	luxrays::ExtMeshDefinitions meshDefs; // ExtMesh definitions
+	SceneObjectDefinitions objDefs; // SceneObject definitions
 
+	u_int lightGroupCount;
 	InfiniteLightBase *envLight; // A SLG scene can have only one infinite light
 	SunLight *sunLight;
 	std::vector<TriangleLight *> triLightDefs; // One for each light source (doesn't include sun/infinite light)
 	std::vector<u_int> meshTriLightDefsOffset; // One for each mesh
 
-	std::vector<Material *> objectMaterials; // One for each object
-
 	luxrays::DataSet *dataSet;
 	luxrays::AcceleratorType accelType;
 	bool enableInstanceSupport;
 
-	luxrays::ExtMeshCache extMeshCache; // Mesh objects
-	ImageMapCache imgMapCache; // Image maps
+	// Used for power based light sampling strategy
+	Distribution1D *lightsDistribution;
+
+	EditActionList editActions;
 
 protected:
-	static std::vector<std::string> GetStringParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
-	static std::vector<int> GetIntParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
-	static std::vector<float> GetFloatParameters(const luxrays::Properties &prop,
-		const std::string &paramName, const u_int paramCount,
-		const std::string &defaultValue);
+	void ParseCamera(const luxrays::Properties &props);
+	void ParseTextures(const luxrays::Properties &props);
+	void ParseMaterials(const luxrays::Properties &props);
+	void ParseObjects(const luxrays::Properties &props);
+	void ParseEnvLights(const luxrays::Properties &props);
 
-	Texture *GetTexture(const std::string &name);
+	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
+	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
+	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
+	Texture *GetTexture(const luxrays::Property &name);
+	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
+	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
+
+	void UpdateTriangleLightDefs();
+
+	luxrays::Properties sceneProperties;
 };
 
 }

@@ -1,26 +1,24 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include "luxrays/core/extmeshcache.h"
 
+using namespace std;
 using namespace luxrays;
 
 ExtMeshCache::ExtMeshCache() {
@@ -35,103 +33,88 @@ ExtMeshCache::~ExtMeshCache() {
 	}
 }
 
-void ExtMeshCache::DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh,
-		const bool usePlyNormals) {
-	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-	meshByName.insert(std::make_pair(key, mesh));
-	meshes.push_back(mesh);
-}
-
-void ExtMeshCache::DefineExtMesh(const std::string &fileName,
-		const u_int plyNbVerts, const u_int plyNbTris,
-		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas,
-		const bool usePlyNormals) {
-	ExtTriangleMesh *mesh = ExtTriangleMesh::CreateExtTriangleMesh(
-			plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas,
-			usePlyNormals);
-
-	DefineExtMesh(fileName, mesh, usePlyNormals);
-}
-
-void ExtMeshCache::DeleteExtMesh(const std::string &fileName, const bool usePlyNormals) {
-	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-
-	// Check if the mesh has been loaded
-	std::map<std::string, ExtTriangleMesh *>::iterator it = meshByName.find(key);
-
-	if (it != meshByName.end()) {
-		if (deleteMeshData)
-			it->second->Delete();
-		meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
-		meshByName.erase(it);
-	}
-}
-
-void ExtMeshCache::DeleteExtMesh(luxrays::ExtTriangleMesh *mesh) {
-	std::map<std::string, ExtTriangleMesh *>::iterator it = meshByName.begin();
-
-	while (it != meshByName.end()) {
-		if (it->second == mesh) {
-			if (deleteMeshData)
-				it->second->Delete();
-
-			meshes.erase(std::find(meshes.begin(), meshes.end(), it->second));
-			meshByName.erase(it);
-			return;
-		}
-		it++;
-	}
-}
-
-ExtMesh *ExtMeshCache::FindExtMesh(const std::string &fileName, const bool usePlyNormals) {
-	// Check if the mesh has been already loaded
-	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-	std::map<std::string, ExtTriangleMesh *>::const_iterator it = meshByName.find(key);
-	if (it == meshByName.end())
-		return NULL;
-	else
-		return it->second;
-}
-
-ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePlyNormals) {
-	std::string key = (usePlyNormals ? "1-" : "0-") + fileName;
-
-	// Check if the mesh has been already loaded
-	std::map<std::string, ExtTriangleMesh *>::const_iterator it = meshByName.find(key);
-
-	if (it == meshByName.end()) {
-		// I have yet to load the file
-		ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName, usePlyNormals);
-
-		meshByName.insert(std::make_pair(key, mesh));
+void ExtMeshCache::DefineExtMesh(const string &fileName, ExtTriangleMesh *mesh) {
+	if (meshByName.count(fileName) == 0) {
+		// It is a new mesh
+		meshByName.insert(make_pair(fileName, mesh));
 		meshes.push_back(mesh);
-
-		return mesh;
 	} else {
-		//SDL_LOG("Cached mesh object: " << fileName << " (use PLY normals: " << usePlyNormals << ")");
-		return it->second;
+		// Replace an old mesh
+		const u_int index = GetExtMeshIndex(fileName);
+		ExtMesh *oldMesh = meshes[index];
+
+		meshes[index] = mesh;
+		meshByName.erase(fileName);
+		meshByName.insert(make_pair(fileName, mesh));
+
+		if (deleteMeshData)
+			oldMesh->Delete();
+		delete oldMesh;
 	}
 }
 
-ExtMesh *ExtMeshCache::GetExtMesh(const std::string &fileName, const bool usePlyNormals,
-		const Transform &trans) {
-	ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName, usePlyNormals);
+void ExtMeshCache::DefineExtMesh(const string &fileName,
+		const u_int plyNbVerts, const u_int plyNbTris,
+		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas) {
+	ExtTriangleMesh *mesh = ExtTriangleMesh::CreateExtTriangleMesh(
+			plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 
-	ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(mesh, trans);
-	meshes.push_back(imesh);
+	DefineExtMesh(fileName, mesh);
+}
 
-	return imesh;
+void ExtMeshCache::DeleteExtMesh(const string &fileName) {
+	const u_int index = GetExtMeshIndex(fileName);
+
+	if (deleteMeshData)
+		meshes[index]->Delete();
+	delete meshes[index];
+
+	meshes.erase(meshes.begin() + index);
+	meshByName.erase(fileName);
+}
+
+ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName, const Transform *trans) {
+	if (trans) {
+		ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName);
+
+		ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(mesh, *trans);
+		meshes.push_back(imesh);
+
+		return imesh;
+	} else {
+		// Check if the mesh has been already loaded
+		boost::unordered_map<string, ExtTriangleMesh *>::const_iterator it = meshByName.find(fileName);
+
+		if (it == meshByName.end()) {
+			// I have yet to load the file
+			ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName);
+
+			meshByName.insert(make_pair(fileName, mesh));
+			meshes.push_back(mesh);
+
+			return mesh;
+		} else {
+			//SDL_LOG("Cached mesh object: " << fileName << ")");
+			return it->second;
+		}
+	}
+}
+
+u_int ExtMeshCache::GetExtMeshIndex(const string &fileName) const {
+	boost::unordered_map<string, ExtTriangleMesh *>::const_iterator it = meshByName.find(fileName);
+
+	return GetExtMeshIndex(it->second);
 }
 
 u_int ExtMeshCache::GetExtMeshIndex(const ExtMesh *m) const {
-	// TODO: use a std::map
+	// TODO: use a boost::unordered_map
 	u_int i = 0;
-	for (std::vector<ExtMesh *>::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
+	for (vector<ExtMesh *>::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
 		if (*it == m)
 			return i;
 		else
 			++i;
 	}
 
-	throw std::runtime_error("Unknown mesh: " + boost::lexical_cast<std::string>(m));
+	throw runtime_error("Unknown mesh: " + boost::lexical_cast<string>(m));
 }

@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
- *   This file is part of LuxRays.                                         *
+ *   This file is part of LuxRender.                                       *
  *                                                                         *
- *   LuxRays is free software; you can redistribute it and/or modify       *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 3 of the License, or     *
- *   (at your option) any later version.                                   *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
  *                                                                         *
- *   LuxRays is distributed in the hope that it will be useful,            *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
- *   GNU General Public License for more details.                          *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
  *                                                                         *
- *   You should have received a copy of the GNU General Public License     *
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
- *                                                                         *
- *   LuxRays website: http://www.luxrender.net                             *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include "slg/engines/lightcpu/lightcpu.h"
@@ -31,7 +28,7 @@ using namespace slg;
 
 LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
-		CPURenderThread(engine, index, device, true, true) {
+		CPUNoTileRenderThread(engine, index, device) {
 }
 
 void LightCPURenderThread::ConnectToEye(const float u0,
@@ -53,8 +50,8 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 				epsilon,
 				eyeDistance - epsilon);
 
-		float scrX, scrY;
-		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
+		float filmX, filmY;
+		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &filmX, &filmY)) {
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
@@ -70,9 +67,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 				const float fluxToRadianceFactor = cameraPdfA;
 
 				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
-
-				AddSampleResult(sampleResults, PER_SCREEN_NORMALIZED, scrX, scrY,
-						radiance, 1.f);
+				AddSampleResult(sampleResults, filmX, filmY, radiance);
 			}
 		}
 	}
@@ -81,7 +76,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	PerspectiveCamera *camera = scene->camera;
+	Camera *camera = scene->camera;
 	Film *film = threadFilm;
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();
@@ -91,9 +86,9 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 	const u_int sampleEyeStepSize = 3;
 
 	Ray eyeRay;
-	const float screenX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-	const float screenY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-	camera->GenerateRay(screenX, screenY, &eyeRay,
+	const float filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+	const float filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+	camera->GenerateRay(filmX, filmY, &eyeRay,
 		sampler->GetSample(10), sampler->GetSample(11));
 
 	Spectrum radiance, eyePathThroughput(1.f, 1.f, 1.f);
@@ -147,8 +142,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 
 	// Add a sample even if it is black in order to avoid aliasing problems
 	// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
-	AddSampleResult(*sampleResults, PER_PIXEL_NORMALIZED,
-			screenX, screenY, radiance, (depth == 1) ? 1.f : 0.f);
+	AddSampleResult(*sampleResults, filmX, filmY, radiance, (depth == 1) ? 1.f : 0.f);
 }
 
 void LightCPURenderThread::RenderFunc() {
@@ -161,7 +155,7 @@ void LightCPURenderThread::RenderFunc() {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
-	PerspectiveCamera *camera = scene->camera;
+	Camera *camera = scene->camera;
 	Film *film = threadFilm;
 
 	// Setup the sampler

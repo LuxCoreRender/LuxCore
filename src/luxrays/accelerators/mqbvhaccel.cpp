@@ -1,22 +1,19 @@
 /***************************************************************************
- *   Copyright (C) 2007 by Anthony Pajot   
- *   anthony.pajot@etu.enseeiht.fr
- *
- * This file is part of FlexRay
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ *                                                                         *
+ *   This file is part of LuxRender.                                       *
+ *                                                                         *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
+ *                                                                         *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
+ *                                                                         *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
  ***************************************************************************/
 
 #include "luxrays/accelerators/mqbvhaccel.h"
@@ -44,11 +41,17 @@ public:
 		cl::Context &oclContext = device->GetOpenCLContext();
 		cl::Device &oclDevice = device->GetOpenCLDevice();
 
-		// Compile sources
-		std::stringstream params;
-		params << "-D LUXRAYS_OPENCL_KERNEL"
+		//----------------------------------------------------------------------
+		// Compile kernel sources
+		//----------------------------------------------------------------------
+
+		std::stringstream opts;
+		opts << " -D LUXRAYS_OPENCL_KERNEL"
 				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
+		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compile options: \n" << opts.str());
+
+		intersectionKernelSource = luxrays::ocl::KernelSource_mqbvh;
 
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
@@ -59,14 +62,14 @@ public:
 			luxrays::ocl::KernelSource_ray_types +
 			luxrays::ocl::KernelSource_ray_funcs +
 			luxrays::ocl::KernelSource_bbox_types +
-			luxrays::ocl::KernelSource_matrix4x4_types);
-		code += luxrays::ocl::KernelSource_mqbvh;
+			luxrays::ocl::KernelSource_matrix4x4_types +
+			luxrays::ocl::KernelSource_mqbvh);
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
 		try {
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, params.str().c_str());
+			program.build(buildDevice, opts.str().c_str());
 		} catch (cl::Error err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
@@ -75,7 +78,7 @@ public:
 		}
 
 		for (u_int i = 0; i < kernelCount; ++i) {
-			kernels[i] = new cl::Kernel(program, "Intersect");
+			kernels[i] = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
 
 			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
 				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
@@ -119,6 +122,8 @@ public:
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
+	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex);
+
 protected:
 	const MQBVHAccel *mqbvh;
 
@@ -139,13 +144,8 @@ void OpenCLMQBVHKernels::SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
 	invTransBuff = t;
 
 	// Set arguments
-	BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-		kernel->setArg(2, *mqbvhBuff);
-		kernel->setArg(4, *memMapBuff);
-		kernel->setArg(5, *leafBuff);
-		kernel->setArg(6, *leafQuadTrisBuff);
-		kernel->setArg(7, *invTransBuff);
-	}
+	BOOST_FOREACH(cl::Kernel *kernel, kernels)
+		SetIntersectionKernelArgs(*kernel, 3);
 }
 
 void OpenCLMQBVHKernels::Update(const DataSet *newDataSet) {
@@ -182,7 +182,7 @@ void OpenCLMQBVHKernels::Update(const DataSet *newDataSet) {
 	device->AllocMemory(mqbvhBuff->getInfo<CL_MEM_SIZE>());
 
 	BOOST_FOREACH(cl::Kernel *kernel, kernels)
-		kernel->setArg(2, *mqbvhBuff);
+		SetIntersectionKernelArgs(*kernel, 3);
 }
 
 void OpenCLMQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
@@ -190,12 +190,23 @@ void OpenCLMQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_in
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 	kernels[kernelIndex]->setArg(0, rBuff);
 	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(3, rayCount);
+	kernels[kernelIndex]->setArg(2, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
 	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
 		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
 		event);
+}
+
+u_int OpenCLMQBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
+	u_int argIndex = index;
+	kernel.setArg(argIndex++, *mqbvhBuff);
+	kernel.setArg(argIndex++, *memMapBuff);
+	kernel.setArg(argIndex++, *leafBuff);
+	kernel.setArg(argIndex++, *leafQuadTrisBuff);
+	kernel.setArg(argIndex++, *invTransBuff);
+
+	return argIndex;
 }
 
 OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
