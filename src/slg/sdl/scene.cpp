@@ -128,6 +128,7 @@ void Scene::UpdateTriangleLightDefs() {
 
 			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
 				TriangleLight *tl = new TriangleLight(m, mesh, i, j);
+				tl->Preprocess();
 				newTriLights.push_back(tl);
 			}
 		} else
@@ -505,6 +506,7 @@ void Scene::ParseObjects(const Properties &props) {
 				meshTriLightDefsOffset.push_back(triLightDefs.size());
 				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 					TriangleLight *tl = new TriangleLight(mat, mesh, objDefs.GetSize() - 1, i);
+					tl->Preprocess();
 					triLightDefs.push_back(tl);
 				}
 			} else
@@ -624,7 +626,7 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 		// Have to update all light sources using this mesh
 		const u_int meshIndex = objDefs.GetSceneObjectIndex(objName);
 		for (u_int i = meshTriLightDefsOffset[meshIndex]; i < mesh->GetTotalTriangleCount(); ++i)
-			triLightDefs[i]->Init();
+			triLightDefs[i]->Preprocess();
 	}
 }
 
