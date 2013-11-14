@@ -149,6 +149,11 @@ public:
 		return gain;
 	}
 
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	}
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
+
 protected:
 	u_int id;
 
@@ -218,8 +223,6 @@ public:
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 };
 
 //------------------------------------------------------------------------------
@@ -251,6 +254,10 @@ public:
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		referencedImgMaps.insert(imageMap);
+	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
@@ -374,7 +381,7 @@ public:
 	luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
-	luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	luxrays::Vector sunDir;

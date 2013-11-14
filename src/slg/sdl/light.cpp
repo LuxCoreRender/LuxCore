@@ -558,7 +558,7 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 	return Spectrum();
 }
 
-Properties SunLight::ToProperties() const {
+Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	props.Set(Property("scene.sunlight.dir")(GetDir()));

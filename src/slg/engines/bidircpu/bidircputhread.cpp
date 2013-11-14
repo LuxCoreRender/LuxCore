@@ -254,13 +254,9 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
 		DirectHitLight(eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
-		if (scene->envLight) {
-			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
-		}
-		if (scene->sunLight) {
-			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+		BOOST_FOREACH(EnvLightSource *el, scene->envLightSources) {
+			const Spectrum lightRadiance = el->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
+			DirectHitLight(el, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
 }

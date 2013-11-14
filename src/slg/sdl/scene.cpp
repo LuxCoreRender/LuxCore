@@ -46,9 +46,6 @@ using namespace slg;
 Scene::Scene(const float imageScale) {
 	camera = NULL;
 
-	envLight = NULL;
-	sunLight = NULL;
-
 	dataSet = NULL;
 	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
@@ -63,9 +60,6 @@ Scene::Scene(const float imageScale) {
 Scene::Scene(const string &fileName, const float imageScale) {
 	// Just in case there is an unexpected exception during the scene loading
     camera = NULL;
-
-	envLight = NULL;
-	sunLight = NULL;
 
 	dataSet = NULL;
 	accelType = ACCEL_AUTO;
@@ -84,7 +78,7 @@ Scene::Scene(const string &fileName, const float imageScale) {
 	
 	//--------------------------------------------------------------------------
 
-	if (!envLight && !sunLight && (triLightDefs.size() == 0))
+	if (notIntersecableLightSources.size() + intersecableLightSources.size() == 0)
 		throw runtime_error("The scene doesn't include any light source");
 
 	UpdateLightGroupCount();
@@ -92,10 +86,10 @@ Scene::Scene(const string &fileName, const float imageScale) {
 
 Scene::~Scene() {
 	delete camera;
-	delete envLight;
-	delete sunLight;
 
-	for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
+	for (vector<TriangleLight *>::const_iterator l = intersecableLightSources.begin(); l != intersecableLightSources.end(); ++l)
+		delete *l;
+	for (vector<NotIntersecableLightSource *>::const_iterator l = notIntersecableLightSources.begin(); l != notIntersecableLightSources.end(); ++l)
 		delete *l;
 
 	delete dataSet;
@@ -104,16 +98,17 @@ Scene::~Scene() {
 
 void  Scene::UpdateLightGroupCount() {
 	// Update the count of light groups
-	if (envLight)
-		lightGroupCount = Max(lightGroupCount, envLight->GetID() + 1);
-	if (sunLight)
-		lightGroupCount = Max(lightGroupCount, sunLight->GetID() + 1);
-	BOOST_FOREACH(TriangleLight *tl, triLightDefs) {
-		lightGroupCount = Max(lightGroupCount, tl->GetID() + 1);
+
+	lightGroupCount = 0;
+	BOOST_FOREACH(TriangleLight *l, intersecableLightSources) {
+		lightGroupCount = Max(lightGroupCount, l->GetID() + 1);
+	}
+	BOOST_FOREACH(NotIntersecableLightSource *l, notIntersecableLightSources) {
+		lightGroupCount = Max(lightGroupCount, l->GetID() + 1);
 	}
 }
 
-void Scene::UpdateTriangleLightDefs() {
+void Scene::UpdateIntersecableLightSources() {
 	// I have to build a new version of lights and triangleLightSource
 	vector<TriangleLight *> newTriLights;
 	vector<u_int> newMeshTriLightOffset;
@@ -136,11 +131,11 @@ void Scene::UpdateTriangleLightDefs() {
 	}
 
 	// Delete all old TriangleLight
-	for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
+	for (vector<TriangleLight *>::const_iterator l = intersecableLightSources.begin(); l != intersecableLightSources.end(); ++l)
 		delete *l;
 
 	// Use the new versions
-	triLightDefs = newTriLights;
+	intersecableLightSources = newTriLights;
 	meshTriLightDefsOffset = newMeshTriLightOffset;
 }
 
@@ -177,7 +172,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 		UpdateLightGroupCount();
 
 		// Update triangle light definitions
-		UpdateTriangleLightDefs();
+		UpdateIntersecableLightSources();
 
 		// Rebuild the data to power based light sampling
 		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * dataSet->GetBSphere().rad * 1.01f;
@@ -213,17 +208,9 @@ Properties Scene::ToProperties(const string &directoryName) {
 		SDL_LOG("Saving camera information");
 		props.Set(camera->ToProperties());
 
-		if (envLight) {
-			// Write the infinitelight/skylight information
-			SDL_LOG("Saving infinitelight/skylight information");
-			props.Set(envLight->ToProperties(imgMapCache));
-		}
-		
-		if (sunLight) {
-			// Write the sunlight information
-			SDL_LOG("Saving sunlight information");
-			props.Set(sunLight->ToProperties());
-		}
+		// Save all not intersecable light sources
+		BOOST_FOREACH(NotIntersecableLightSource *l, notIntersecableLightSources)
+			props.Set(l->ToProperties(imgMapCache));
 
 		// Write the image map information
 		SDL_LOG("Saving image map information:");
@@ -503,11 +490,11 @@ void Scene::ParseObjects(const Properties &props) {
 				const ExtMesh *mesh = obj->GetExtMesh();
 				SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
 
-				meshTriLightDefsOffset.push_back(triLightDefs.size());
+				meshTriLightDefsOffset.push_back(intersecableLightSources.size());
 				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 					TriangleLight *tl = new TriangleLight(mat, mesh, objDefs.GetSize() - 1, i);
 					tl->Preprocess();
-					triLightDefs.push_back(tl);
+					intersecableLightSources.push_back(tl);
 				}
 			} else
 				meshTriLightDefsOffset.push_back(NULL_INDEX);
@@ -546,10 +533,8 @@ void Scene::ParseEnvLights(const Properties &props) {
 		sl->SetIndirectSpecularVisibility(props.Get(Property("scene.skylight.visibility.indirect.specular.enable")(true)).Get<bool>());
 		sl->Preprocess();
 
-		// Delete the old env. light
-		if (envLight)
-			delete envLight;
-		envLight = sl;
+		notIntersecableLightSources.push_back(sl);
+		envLightSources.push_back(sl);
 	}
 
 	//--------------------------------------------------------------------------
@@ -577,10 +562,8 @@ void Scene::ParseEnvLights(const Properties &props) {
 		il->SetIndirectSpecularVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.specular.enable")(true)).Get<bool>());
 		il->Preprocess();
 
-		// Delete the old env. light
-		if (envLight)
-			delete envLight;
-		envLight = il;
+		notIntersecableLightSources.push_back(il);
+		envLightSources.push_back(il);
 	}
 
 	//--------------------------------------------------------------------------
@@ -604,10 +587,8 @@ void Scene::ParseEnvLights(const Properties &props) {
 		sl->SetIndirectSpecularVisibility(props.Get(Property("scene.sunlight.visibility.indirect.specular.enable")(true)).Get<bool>());
 		sl->Preprocess();
 
-		// Delete the old sun light
-		if (sunLight)
-			delete sunLight;
-		sunLight = sl;
+		notIntersecableLightSources.push_back(sl);
+		envLightSources.push_back(sl);
 	}
 }
 
@@ -626,7 +607,7 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 		// Have to update all light sources using this mesh
 		const u_int meshIndex = objDefs.GetSceneObjectIndex(objName);
 		for (u_int i = meshTriLightDefsOffset[meshIndex]; i < mesh->GetTotalTriangleCount(); ++i)
-			triLightDefs[i]->Preprocess();
+			intersecableLightSources[i]->Preprocess();
 	}
 }
 
@@ -637,8 +618,8 @@ void Scene::RemoveUnusedImageMaps() {
 		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
 
 	// Add the infinite light image
-	if (envLight && (envLight->GetType() == TYPE_IL))
-		referencedImgMaps.insert(((InfiniteLight *)envLight)->GetImageMap());
+	BOOST_FOREACH(NotIntersecableLightSource *l, notIntersecableLightSources)
+		l->AddReferencedImageMaps(referencedImgMaps);
 
 	// Get the list of all defined image maps
 	std::vector<const ImageMap *> ims;
@@ -1161,29 +1142,20 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 //------------------------------------------------------------------------------
 
 LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
-	if (envLight && (lightType == envLight->GetType()))
-			return envLight;
-	if (sunLight && (lightType == TYPE_SUN))
-			return sunLight;
-
-	for (u_int i = 0; i < static_cast<u_int>(triLightDefs.size()); ++i) {
-		LightSource *ls = triLightDefs[i];
-		if (ls->GetType() == lightType)
-			return ls;
+	BOOST_FOREACH(NotIntersecableLightSource *l, notIntersecableLightSources) {
+		if (l->GetType() == lightType)
+			return l;
+	}
+	BOOST_FOREACH(IntersecableLightSource *l, intersecableLightSources) {
+		if (l->GetType() == lightType)
+			return l;
 	}
 
 	return NULL;
 }
 
 const u_int Scene::GetLightCount() const {
-	u_int lightsSize = static_cast<u_int>(triLightDefs.size());
-
-	if (envLight)
-		++lightsSize;
-	if (sunLight)
-		++lightsSize;
-
-	return lightsSize;
+	return intersecableLightSources.size() + notIntersecableLightSources.size();
 }
 
 const u_int Scene::GetObjectCount() const {
@@ -1191,31 +1163,10 @@ const u_int Scene::GetObjectCount() const {
 }
 
 LightSource *Scene::GetLightByIndex(const u_int lightIndex) const {
-	const u_int lightsSize = GetLightCount();
-
-	if (envLight) {
-		if (sunLight) {
-			if (lightIndex == lightsSize - 1)
-				return sunLight;
-			else if (lightIndex == lightsSize - 2)
-				return envLight;
-			else
-				return triLightDefs[lightIndex];
-		} else {
-			if (lightIndex == lightsSize - 1)
-				return envLight;
-			else
-				return triLightDefs[lightIndex];
-		}
-	} else {
-		if (sunLight) {
-			if (lightIndex == lightsSize - 1)
-				return sunLight;
-			else
-				return triLightDefs[lightIndex];
-		} else
-			return triLightDefs[lightIndex];
-	}
+	if (lightIndex < intersecableLightSources.size())
+		return intersecableLightSources[lightIndex];
+	else
+		return notIntersecableLightSources[lightIndex -  intersecableLightSources.size()];
 }
 
 LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
@@ -1234,7 +1185,7 @@ float Scene::SampleAllLightPdf(const LightSource *light) const {
 bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput) const {
-	*connectionThroughput = Spectrum(1.f, 1.f, 1.f);
+	*connectionThroughput = Spectrum(1.f);
 	for (;;) {
 		if (!device->TraceRay(ray, rayHit)) {
 			// Nothing was hit

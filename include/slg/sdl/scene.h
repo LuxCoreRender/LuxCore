@@ -107,10 +107,16 @@ public:
 	SceneObjectDefinitions objDefs; // SceneObject definitions
 
 	u_int lightGroupCount;
-	InfiniteLightBase *envLight; // A SLG scene can have only one infinite light
-	SunLight *sunLight;
-	std::vector<TriangleLight *> triLightDefs; // One for each light source (doesn't include sun/infinite light)
+
+	// One for each intersecable light source. In practice, only TriangleLight(s)
+	// are intersecable at the moment.
+	std::vector<TriangleLight *> intersecableLightSources; 
 	std::vector<u_int> meshTriLightDefsOffset; // One for each mesh
+	// One fore each not intersecable light source. It includes env. lights like
+	// sky, sun and infinite light.
+	std::vector<NotIntersecableLightSource *> notIntersecableLightSources;
+	// Only env. lights sources (i.e. sky, sun and infinite light)
+	std::vector<EnvLightSource *> envLightSources;
 
 	luxrays::DataSet *dataSet;
 	luxrays::AcceleratorType accelType;
@@ -135,7 +141,7 @@ protected:
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
 
-	void UpdateTriangleLightDefs();
+	void UpdateIntersecableLightSources();
 
 	luxrays::Properties sceneProperties;
 };

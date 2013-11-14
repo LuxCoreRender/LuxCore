@@ -75,28 +75,15 @@ void PathHybridState::Init(const PathHybridRenderThread *thread) {
 
 
 void PathHybridState::DirectHitInfiniteLight(const Scene *scene, const Vector &eyeDir) {
-	// Infinite light
-	float directPdfW;
-	if (scene->envLight) {
-		const Spectrum envRadiance = scene->envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
+	BOOST_FOREACH(EnvLightSource *el, scene->envLightSources) {
+		float directPdfW;
+		const Spectrum envRadiance = el->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!envRadiance.Black()) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
 				sampleResults[0].radiancePerPixelNormalized[0] += throuput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
 			} else
 				sampleResults[0].radiancePerPixelNormalized[0] += throuput * envRadiance;
-		}
-	}
-
-	// Sun light
-	if (scene->sunLight) {
-		const Spectrum sunRadiance = scene->sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!sunRadiance.Black()) {
-			if(!lastSpecular) {
-				// MIS between BSDF sampling and direct light sampling
-				sampleResults[0].radiancePerPixelNormalized[0] += throuput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
-			} else
-				sampleResults[0].radiancePerPixelNormalized[0] += throuput * sunRadiance;
 		}
 	}
 }
