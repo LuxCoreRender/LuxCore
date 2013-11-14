@@ -223,7 +223,7 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 	return false;
 }
 
-bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
+bool BiasPathCPURenderThread::DirectHitEnvLight(const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent, const BSDFEvent pathBSDFEvent,
 		const Spectrum &pathThroughput, const Vector &eyeDir, const float lastPdfW,
 		SampleResult *sampleResult) {
@@ -232,50 +232,30 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 
 	// Infinite light
 	bool illuminated = false;
-	float directPdfW;
-	const InfiniteLightBase *envLight = scene->envLight;
-	if (envLight && (firstPathVertex ||
-			(((pathBSDFEvent & DIFFUSE) && envLight->IsVisibleIndirectDiffuse()) ||
-			((pathBSDFEvent & GLOSSY) && envLight->IsVisibleIndirectGlossy()) ||
-			((pathBSDFEvent & SPECULAR) && envLight->IsVisibleIndirectSpecular())))) {
-		const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!envRadiance.Black()) {
-			float weight;
-			if(!(lastBSDFEvent & SPECULAR)) {
-				// This PDF used for MIS is correct because lastSpecular is always
-				// true when using DirectLightSamplingALL()
 
-				// MIS between BSDF sampling and direct light sampling
-				weight = PowerHeuristic(lastPdfW, directPdfW);
-			} else
-				weight = 1.f;
+	BOOST_FOREACH(EnvLightSource *envLight, scene->envLightSources) {
+		float directPdfW;
+		if (firstPathVertex ||
+				(((pathBSDFEvent & DIFFUSE) && envLight->IsVisibleIndirectDiffuse()) ||
+				((pathBSDFEvent & GLOSSY) && envLight->IsVisibleIndirectGlossy()) ||
+				((pathBSDFEvent & SPECULAR) && envLight->IsVisibleIndirectSpecular()))) {
+			const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
+			if (!envRadiance.Black()) {
+				float weight;
+				if(!(lastBSDFEvent & SPECULAR)) {
+					// This PDF used for MIS is correct because lastSpecular is always
+					// true when using DirectLightSamplingALL()
 
-			const Spectrum radiance = weight * pathThroughput * envRadiance;
-			AddEmission(firstPathVertex, pathBSDFEvent, envLight->GetID(), sampleResult, radiance);
-			
-			illuminated = true;
-		}
-	}
+					// MIS between BSDF sampling and direct light sampling
+					weight = PowerHeuristic(lastPdfW, directPdfW);
+				} else
+					weight = 1.f;
 
-	// Sun light
-	const SunLight *sunLight = scene->sunLight;
-	if (sunLight && (firstPathVertex ||
-			(((pathBSDFEvent & DIFFUSE) && sunLight->IsVisibleIndirectDiffuse()) ||
-			((pathBSDFEvent & GLOSSY) && sunLight->IsVisibleIndirectGlossy()) ||
-			((pathBSDFEvent & SPECULAR) && sunLight->IsVisibleIndirectSpecular())))) {
-		const Spectrum sunRadiance = sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!sunRadiance.Black()) {
-			float weight;
-			if(!(lastBSDFEvent & SPECULAR)) {
-				// MIS between BSDF sampling and direct light sampling
-				weight = PowerHeuristic(lastPdfW, directPdfW);
-			} else
-				weight = 1.f;
-				
-			const Spectrum radiance = weight * pathThroughput * sunRadiance;
-			AddEmission(firstPathVertex, pathBSDFEvent, sunLight->GetID(), sampleResult, radiance);
+				const Spectrum radiance = weight * pathThroughput * envRadiance;
+				AddEmission(firstPathVertex, pathBSDFEvent, envLight->GetID(), sampleResult, radiance);
 
-			illuminated = true;
+				illuminated = true;
+			}
 		}
 	}
 
@@ -298,7 +278,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		if (!scene->Intersect(device, false, rndGen->floatValue(),
 				&ray, &rayHit, &bsdf, &connectionThroughput)) {
 			// Nothing was hit, look for infinitelight
-			illuminated |= DirectHitInfiniteLight(false, lastBSDFEvent, pathBSDFEvent,
+			illuminated |= DirectHitEnvLight(false, lastBSDFEvent, pathBSDFEvent,
 					pathThroughput * connectionThroughput, ray.d,	lastPdfW, sampleResult);
 			break;
 		}
@@ -408,7 +388,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		// Nothing was hit, look for env. lights
 
 		// SPECULAR is required to avoid MIS
-		DirectHitInfiniteLight(true, SPECULAR, NONE, pathThroughput, eyeRay.d,
+		DirectHitEnvLight(true, SPECULAR, NONE, pathThroughput, eyeRay.d,
 				1.f, sampleResult);
 
 		sampleResult->alpha = 0.f;

@@ -104,10 +104,8 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 		if (!somethingWasHit) {
 			// Nothing was hit, check infinite lights (including sun)
 			const Spectrum throughput = eyePathThroughput * connectionThroughput;
-			if (scene->envLight)
-				radiance +=  throughput * scene->envLight->GetRadiance(*scene, -eyeRay.d);
-			if (scene->sunLight)
-				radiance +=  throughput * scene->sunLight->GetRadiance(*scene, -eyeRay.d);
+			BOOST_FOREACH(EnvLightSource *el, scene->envLightSources)
+				radiance +=  throughput * el->GetRadiance(*scene, -eyeRay.d);
 			break;
 		} else {
 			// Something was hit, check if it is a light source

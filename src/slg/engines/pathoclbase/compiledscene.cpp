@@ -488,14 +488,14 @@ void CompiledScene::CompileAreaLights() {
 
 	// Used to speedup the TriangleLight lookup
 	map<const TriangleLight *, u_int> triLightByPtr;
-	for (u_int i = 0; i < scene->triLightDefs.size(); ++i)
-		triLightByPtr.insert(make_pair(scene->triLightDefs[i], i));
+	for (u_int i = 0; i < scene->intersecableLightSources.size(); ++i)
+		triLightByPtr.insert(make_pair(scene->intersecableLightSources[i], i));
 
-	const u_int areaLightCount = scene->triLightDefs.size();
+	const u_int areaLightCount = scene->intersecableLightSources.size();
 	triLightDefs.resize(areaLightCount);
 	if (areaLightCount > 0) {
-		for (u_int i = 0; i < scene->triLightDefs.size(); ++i) {
-			const TriangleLight *tl = scene->triLightDefs[i];
+		for (u_int i = 0; i < scene->intersecableLightSources.size(); ++i) {
+			const TriangleLight *tl = scene->intersecableLightSources[i];
 			const ExtMesh *mesh = tl->GetMesh();
 			const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriangleIndex()]);
 
@@ -714,43 +714,53 @@ void CompiledScene::CompileLightsDistribution() {
 void CompiledScene::CompileLightSamples() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightSamples");
 
-	lightSamples.resize(scene->triLightDefs.size() + (scene->envLight ? 1 : 0) + (scene->sunLight ? 1 : 0));
+	lightSamples.resize(scene->GetLightCount());
 
 	u_int index = 0;
-	while (index < scene->triLightDefs.size()) {
-		lightSamples[index] =  scene->triLightDefs[index]->GetSamples();
+	while (index < scene->intersecableLightSources.size()) {
+		lightSamples[index] =  scene->intersecableLightSources[index]->GetSamples();
 		++index;
 	}
-	if (scene->envLight)
-		lightSamples[index++] = scene->envLight->GetSamples();
-	if (scene->sunLight)
-		lightSamples[index] = scene->sunLight->GetSamples();
+
+	const EnvLightSource *el = (EnvLightSource *)scene->GetLightByType(TYPE_IL);
+	el = el ? el : (EnvLightSource *)scene->GetLightByType(TYPE_IL_SKY);
+	if (el)
+		lightSamples[index++] = el->GetSamples();
+
+	el = (EnvLightSource *)scene->GetLightByType(TYPE_SUN);
+	if (el)
+		lightSamples[index] = el->GetSamples();
 }
 
 void CompiledScene::CompileLightVisibility() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightVisbility");
 
-	lightVisibility.resize(scene->triLightDefs.size() + (scene->envLight ? 1 : 0) + (scene->sunLight ? 1 : 0));
+	lightVisibility.resize(scene->GetLightCount());
 
 	u_int index = 0;
-	while (index < scene->triLightDefs.size()) {
+	while (index < scene->intersecableLightSources.size()) {
 		lightVisibility[index] = 
-				(scene->triLightDefs[index]->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(scene->triLightDefs[index]->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(scene->triLightDefs[index]->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+				(scene->intersecableLightSources[index]->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(scene->intersecableLightSources[index]->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(scene->intersecableLightSources[index]->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 		++index;
 	}
-	if (scene->envLight) {
+	
+	const EnvLightSource *el = (EnvLightSource *)scene->GetLightByType(TYPE_IL);
+	el = el ? el : (EnvLightSource *)scene->GetLightByType(TYPE_IL_SKY);
+	if (el) {
 		lightVisibility[index++] =
-				(scene->envLight->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(scene->envLight->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(scene->envLight->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+				(el->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(el->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(el->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 	}
-	if (scene->sunLight) {
-		lightVisibility[index] =
-				(scene->sunLight->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(scene->sunLight->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(scene->sunLight->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+
+	el = (EnvLightSource *)scene->GetLightByType(TYPE_SUN);
+	if (el) {
+		lightVisibility[index++] =
+				(el->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(el->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(el->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 	}
 }
 
