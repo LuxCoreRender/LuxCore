@@ -24,6 +24,7 @@
 #include "slg/sdl/light.h"
 #include "slg/sdl/scene.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -37,10 +38,6 @@ const float slg::LIGHT_WORLD_RADIUS_SCALE = 10.f;
 
 InfiniteLight::InfiniteLight(const Transform &l2w, const ImageMap *imgMap) :
 	InfiniteLightBase(l2w), imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
-	isVisibleIndirectDiffuse = true;
-	isVisibleIndirectGlossy = true;
-	isVisibleIndirectSpecular = true;
-
 	if (imageMap->GetChannelCount() == 1)
 		imageMapDistribution = new Distribution2D(imageMap->GetPixels(), imageMap->GetWidth(), imageMap->GetHeight());
 	else {
@@ -413,14 +410,9 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 
 SunLight::SunLight(const luxrays::Transform &l2w,
 		float turb, float size,	const Vector &sd) :
-		id(0), lightToWorld(l2w), samples(-1) {
-	isVisibleIndirectDiffuse = true;
-	isVisibleIndirectGlossy = true;
-	isVisibleIndirectSpecular = true;
-
+		EnvLightSource(l2w) {
 	turbidity = turb;
 	sunDir = Normalize(lightToWorld * sd);
-	gain = Spectrum(1.0f, 1.0f, 1.0f);
 	relSize = size;
 }
 
@@ -499,10 +491,6 @@ void SunLight::Preprocess() {
 	sunColor = gain * LSPD.ToRGB() / (1000000000.0f / (M_PI * 100.f * 100.f));
 }
 
-void SunLight::SetGain(const Spectrum &g) {
-	gain = g;
-}
-
 Spectrum SunLight::Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
 		Point *orig, Vector *dir,
@@ -537,7 +525,7 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 	if (cosAtLight <= cosThetaMax)
 		return Spectrum();
 
-	*distance = std::numeric_limits<float>::infinity();
+	*distance = numeric_limits<float>::infinity();
 	*directPdfW = UniformConePdf(cosThetaMax);
 
 	if (cosThetaAtLight)
@@ -591,20 +579,17 @@ Properties SunLight::ToProperties() const {
 //------------------------------------------------------------------------------
 
 TriangleLight::TriangleLight(const Material *mat, const ExtMesh *m,
-		const u_int mIndex, const unsigned int tIndex) {
-	lightMaterial = mat;
+		const u_int mIndex, const unsigned int tIndex) : IntersecableLightSource(mat) {
 	mesh = m;
 	meshIndex = mIndex;
 	triangleIndex = tIndex;
-
-	Init();
 }
 
 float TriangleLight::GetPower(const Scene &scene) const {
 	return area * M_PI * lightMaterial->GetEmittedRadianceY();
 }
 
-void TriangleLight::Init() {
+void TriangleLight::Preprocess() {
 	area = mesh->GetTriangleArea(triangleIndex);
 	invArea = 1.f / area;
 }
