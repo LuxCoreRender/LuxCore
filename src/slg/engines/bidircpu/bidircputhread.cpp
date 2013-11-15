@@ -172,7 +172,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.SampleAllLights(u0, &lightPickPdf);
 
 		Vector lightRayDir;
 		float distance, directPdfW, emissionPdfW, cosThetaAtLight;
@@ -234,7 +234,7 @@ void BiDirCPURenderThread::DirectHitLight(
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	const float lightPickPdf = scene->SampleAllLightPdf(light);
+	const float lightPickPdf = scene->lightDefs.SampleAllLightPdf(light);
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -254,7 +254,7 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
 		DirectHitLight(eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
-		BOOST_FOREACH(EnvLightSource *el, scene->envLightSources) {
+		BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
 			const Spectrum lightRadiance = el->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
 			DirectHitLight(el, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
@@ -270,7 +270,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 
 	// Select one light source
 	float lightPickPdf;
-	const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
+	const LightSource *light = scene->lightDefs.SampleAllLights(sampler->GetSample(2), &lightPickPdf);
 
 	// Initialize the light path
 	PathVertexVM lightVertex;

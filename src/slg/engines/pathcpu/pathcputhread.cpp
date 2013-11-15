@@ -44,7 +44,7 @@ void PathCPURenderThread::DirectLightSampling(
 	if (!bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.SampleAllLights(u0, &lightPickPdf);
 
 		Vector lightRayDir;
 		float distance, directPdfW;
@@ -139,7 +139,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -160,7 +160,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	BOOST_FOREACH(EnvLightSource *envLight, scene->envLightSources) {
+	BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
 		float directPdfW;
 		const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!envRadiance.Black()) {

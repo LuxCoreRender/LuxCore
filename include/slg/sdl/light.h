@@ -85,6 +85,75 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// LightSourceDefinitions
+//------------------------------------------------------------------------------
+
+class EnvLightSource;
+class TriangleLight;
+
+class LightSourceDefinitions {
+public:
+	LightSourceDefinitions();
+	~LightSourceDefinitions();
+
+	// Update lightGroupCount, envLightSources, intersecableLightSources,
+	// lightIndexByMeshIndex and lightsDistribution
+	void Preprocess(const Scene *scene);
+
+	bool IsLightSourceDefined(const std::string &name) const {
+		return (lightsByName.count(name) > 0);
+	}
+	void DefineLightSource(const std::string &name, LightSource *l);
+
+	const LightSource *GetLightSource(const std::string &name) const;
+	LightSource *GetLightSource(const std::string &name);
+	const LightSource *GetLightSource(const u_int index) const { return lights[index]; }
+	LightSource *GetLightSource(const u_int index) { return lights[index]; }
+	u_int GetLightSourceIndex(const std::string &name) const;
+	u_int GetLightSourceIndex(const LightSource *m) const;
+	const LightSource *GetLightByType(const LightSourceType type) const;
+	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
+
+	u_int GetSize() const { return static_cast<u_int>(lights.size()); }
+	std::vector<std::string> GetLightSourceNames() const;
+
+	// Update any reference to oldMat with newMat
+	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
+
+	void DeleteLightSource(const std::string &name);
+  
+	u_int GetLightGroupCount() const { return lightGroupCount; }
+	const std::vector<EnvLightSource *> &GetEnvLightSources() const {
+		return envLightSources;
+	}
+	const std::vector<TriangleLight *> &GetIntersecableLightSources() const {
+		return intersecableLightSources;
+	}
+	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
+	const Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
+
+	LightSource *SampleAllLights(const float u, float *pdf) const;
+	float SampleAllLightPdf(const LightSource *light) const;
+
+private:
+	std::vector<LightSource *> lights;
+	std::map<std::string, LightSource *> lightsByName;
+
+	u_int lightGroupCount;
+
+	std::vector<u_int> lightIndexByMeshIndex;
+
+	// Only intersecable light sources
+	std::vector<TriangleLight *> intersecableLightSources;
+	// Only env. lights sources (i.e. sky, sun and infinite light, etc.)
+	std::vector<EnvLightSource *> envLightSources;
+
+	// Used for power based light sampling strategy
+	Distribution1D *lightsDistribution;
+
+};
+
+//------------------------------------------------------------------------------
 // Intersecable LightSource interface
 //------------------------------------------------------------------------------
 
@@ -110,6 +179,11 @@ public:
 	virtual luxrays::Spectrum GetRadiance(const HitPoint &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const = 0;
+
+	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
+		if (lightMaterial == oldMat)
+			lightMaterial = newMat;
+	}
 
 protected:
 	const Material *lightMaterial;

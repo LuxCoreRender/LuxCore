@@ -75,7 +75,7 @@ void PathHybridState::Init(const PathHybridRenderThread *thread) {
 
 
 void PathHybridState::DirectHitInfiniteLight(const Scene *scene, const Vector &eyeDir) {
-	BOOST_FOREACH(EnvLightSource *el, scene->envLightSources) {
+	BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
 		float directPdfW;
 		const Spectrum envRadiance = el->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!envRadiance.Black()) {
@@ -95,7 +95,7 @@ void PathHybridState::DirectHitFiniteLight(const Scene *scene, const float dista
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!lastSpecular) {
-			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -117,7 +117,7 @@ void PathHybridState::DirectLightSampling(const PathHybridRenderThread *renderTh
 
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.SampleAllLights(u0, &lightPickPdf);
 
 		Vector lightRayDir;
 		float distance, directPdfW;

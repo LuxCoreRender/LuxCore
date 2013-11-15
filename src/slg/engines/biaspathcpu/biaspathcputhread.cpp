@@ -121,7 +121,7 @@ bool BiasPathCPURenderThread::DirectLightSamplingONE(
 
 	// Pick a light source to sample
 	float lightPickPdf;
-	const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightPickPdf);
+	const LightSource *light = scene->lightDefs.SampleAllLights(rndGen->floatValue(), &lightPickPdf);
 
 	const bool illuminated = DirectLightSampling(firstPathVertex, pathBSDFEvent,
 			light, lightPickPdf,
@@ -142,9 +142,9 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	const u_int lightsSize = scene->GetLightCount();
+	const u_int lightsSize = scene->lightDefs.GetSize();
 	for (u_int i = 0; i < lightsSize; ++i) {
-		const LightSource *light = scene->GetLightByIndex(i);
+		const LightSource *light = scene->lightDefs.GetLightSource(i);
 		const int samples = light->GetSamples();
 		const u_int samplesToDo = (samples < 0) ? engine->directLightSamples : ((u_int)samples);
 
@@ -205,7 +205,7 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 		if (!(lastBSDFEvent & SPECULAR)) {
 			// This PDF used for MIS is correct because lastSpecular is always
 			// true when using DirectLightSamplingALL()
-			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -233,7 +233,7 @@ bool BiasPathCPURenderThread::DirectHitEnvLight(const bool firstPathVertex,
 	// Infinite light
 	bool illuminated = false;
 
-	BOOST_FOREACH(EnvLightSource *envLight, scene->envLightSources) {
+	BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
 		float directPdfW;
 		if (firstPathVertex ||
 				(((pathBSDFEvent & DIFFUSE) && envLight->IsVisibleIndirectDiffuse()) ||

@@ -33,6 +33,164 @@ using namespace slg;
 const float slg::LIGHT_WORLD_RADIUS_SCALE = 10.f;
 
 //------------------------------------------------------------------------------
+// LightSourceDefinitions
+//------------------------------------------------------------------------------
+
+LightSourceDefinitions::LightSourceDefinitions() {
+	lightsDistribution = NULL;
+	lightGroupCount = 1;
+}
+
+LightSourceDefinitions::~LightSourceDefinitions() {
+	BOOST_FOREACH(LightSource *l, lights)
+		delete l;
+}
+
+void LightSourceDefinitions::DefineLightSource(const std::string &name, LightSource *newLight) {
+	if (IsLightSourceDefined(name)) {
+		const LightSource *oldLight = GetLightSource(name);
+
+		// Update name/LightSource definition
+		const u_int index = GetLightSourceIndex(name);
+		lights[index] = newLight;
+		lightsByName.erase(name);
+		lightsByName.insert(std::make_pair(name, newLight));
+
+		// Delete old LightSource
+		delete oldLight;
+	} else {
+		// Add the new LightSource
+		lights.push_back(newLight);
+		lightsByName.insert(std::make_pair(name, newLight));
+	}
+}
+
+const LightSource *LightSourceDefinitions::GetLightSource(const std::string &name) const {
+	// Check if the LightSource has been already defined
+	std::map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+
+	if (it == lightsByName.end())
+		throw std::runtime_error("Reference to an undefined LightSource: " + name);
+	else
+		return it->second;
+}
+
+LightSource *LightSourceDefinitions::GetLightSource(const std::string &name) {
+	// Check if the LightSource has been already defined
+	std::map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+
+	if (it == lightsByName.end())
+		throw std::runtime_error("Reference to an undefined LightSource: " + name);
+	else
+		return it->second;
+}
+
+u_int LightSourceDefinitions::GetLightSourceIndex(const std::string &name) const {
+	return GetLightSourceIndex(GetLightSource(name));
+}
+
+u_int LightSourceDefinitions::GetLightSourceIndex(const LightSource *m) const {
+	for (u_int i = 0; i < lights.size(); ++i) {
+		if (m == lights[i])
+			return i;
+	}
+
+	throw std::runtime_error("Reference to an undefined LightSource: " + boost::lexical_cast<std::string>(m));
+}
+
+const LightSource *LightSourceDefinitions::GetLightByType(const LightSourceType type) const {
+	BOOST_FOREACH(LightSource *l, lights) {
+		if (l->GetType() == type)
+			return l;
+	}
+
+	return NULL;
+}
+
+const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshIndex(const u_int index) const {
+	return (const TriangleLight *)lights[lightIndexByMeshIndex[index]];
+}
+
+std::vector<std::string> LightSourceDefinitions::GetLightSourceNames() const {
+	std::vector<std::string> names;
+	names.reserve(lights.size());
+	for (std::map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
+		names.push_back(it->first);
+
+	return names;
+}
+
+void LightSourceDefinitions::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
+	// Replace old material direct references with new one
+	BOOST_FOREACH(LightSource *l, lights) {
+		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
+		if (tl)
+			tl->UpdateMaterialReferences(oldMat, newMat);
+	}
+}
+
+void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
+	const u_int index = GetLightSourceIndex(name);
+	lights.erase(lights.begin() + index);
+	lightsByName.erase(name);
+}
+
+void LightSourceDefinitions::Preprocess(const Scene *scene) {
+	// Update lightGroupCount, envLightSources, intersecableLightSources,
+	// lightIndexByMeshIndex and lightsDistribution
+
+	lightGroupCount = 0;
+	intersecableLightSources.clear();
+	envLightSources.clear();
+
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene->dataSet->GetBSphere().rad * 1.01f;
+	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
+	vector<float> lightPower;
+	lightPower.reserve(lights.size());
+
+	lightIndexByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
+	for (u_int i = 0; i < lights.size(); ++i) {
+		LightSource *l = lights[i];
+		// Initialize the light source index
+		l->SetSceneIndex(i);
+
+		lightGroupCount = Max(lightGroupCount, l->GetID() + 1);
+
+		float power = l->GetPower(*scene);
+		// In order to avoid over-sampling of distant lights
+		if (l->IsEnvironmental()) {
+			power *= iWorldRadius2;			
+			envLightSources.push_back((EnvLightSource *)l);
+		}
+		lightPower.push_back(power);
+
+		// Build lightIndexByMeshIndex
+		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
+		if (tl) {
+			lightIndexByMeshIndex[tl->GetMeshIndex()] = i;
+			intersecableLightSources.push_back(tl);
+		}
+	}
+
+	// Build the data to power based light sampling
+	delete lightsDistribution;
+	lightsDistribution = new Distribution1D(&lightPower[0], lights.size());
+}
+
+LightSource *LightSourceDefinitions::SampleAllLights(const float u, float *pdf) const {
+	// Power based light strategy
+	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
+	assert ((lightIndex >= 0) && (lightIndex < GetLightCount()));
+
+	return lights[lightIndex];
+}
+
+float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const {
+	// Power based light strategy
+	return lightsDistribution->Pdf(light->GetSceneIndex());
+}
+
+//------------------------------------------------------------------------------
 // InfiniteLight
 //------------------------------------------------------------------------------
 

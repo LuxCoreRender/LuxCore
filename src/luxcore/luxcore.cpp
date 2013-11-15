@@ -502,11 +502,11 @@ bool Scene::IsMaterialDefined(const std::string &matName) const {
 }
 
 const u_int Scene::GetLightCount() const {
-	return scene->GetLightCount();
+	return scene->lightDefs.GetSize();
 }
 
 const u_int  Scene::GetObjectCount() const {
-	return scene->GetObjectCount();
+	return scene->objDefs.GetSize();
 }
 
 void Scene::Parse(const Properties &props) {
