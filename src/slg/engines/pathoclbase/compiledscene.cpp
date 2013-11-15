@@ -486,16 +486,13 @@ void CompiledScene::CompileAreaLights() {
 
 	const double tStart = WallClockTime();
 
-	// Used to speedup the TriangleLight lookup
-	map<const TriangleLight *, u_int> triLightByPtr;
-	for (u_int i = 0; i < scene->intersecableLightSources.size(); ++i)
-		triLightByPtr.insert(make_pair(scene->intersecableLightSources[i], i));
+	const std::vector<TriangleLight *> &intersecableLightSources = scene->lightDefs.GetIntersecableLightSources();
 
-	const u_int areaLightCount = scene->intersecableLightSources.size();
+	const u_int areaLightCount = intersecableLightSources.size();
 	triLightDefs.resize(areaLightCount);
 	if (areaLightCount > 0) {
-		for (u_int i = 0; i < scene->intersecableLightSources.size(); ++i) {
-			const TriangleLight *tl = scene->intersecableLightSources[i];
+		for (u_int i = 0; i < intersecableLightSources.size(); ++i) {
+			const TriangleLight *tl = intersecableLightSources[i];
 			const ExtMesh *mesh = tl->GetMesh();
 			const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriangleIndex()]);
 
@@ -519,7 +516,7 @@ void CompiledScene::CompileAreaLights() {
 			triLight->lightSceneIndex = tl->GetSceneIndex();
 		}
 
-		meshTriLightDefsOffset = scene->meshTriLightDefsOffset;
+		meshTriLightDefsOffset = scene->lightDefs.GetLightIndexByMeshIndex();
 	} else
 		meshTriLightDefsOffset.resize(0);
 
@@ -576,7 +573,7 @@ void CompiledScene::CompileInfiniteLight() {
 
 	const double tStart = WallClockTime();
 
-	InfiniteLight *il = (InfiniteLight *)scene->GetLightByType(TYPE_IL);
+	InfiniteLight *il = (InfiniteLight *)scene->lightDefs.GetLightByType(TYPE_IL);
 	if (il) {
 		infiniteLight = new slg::ocl::InfiniteLight();
 
@@ -609,7 +606,7 @@ void CompiledScene::CompileSunLight() {
 	// Check if there is an sun light source
 	//--------------------------------------------------------------------------
 
-	SunLight *sl = (SunLight *)scene->GetLightByType(TYPE_SUN);
+	SunLight *sl = (SunLight *)scene->lightDefs.GetLightByType(TYPE_SUN);
 	if (sl) {
 		sunLight = new slg::ocl::SunLight();
 
@@ -638,7 +635,7 @@ void CompiledScene::CompileSkyLight() {
 	// Check if there is an sky light source
 	//--------------------------------------------------------------------------
 
-	SkyLight *sl = (SkyLight *)scene->GetLightByType(TYPE_IL_SKY);
+	SkyLight *sl = (SkyLight *)scene->lightDefs.GetLightByType(TYPE_IL_SKY);
 	if (sl) {
 		skyLight = new slg::ocl::SkyLight();
 
@@ -708,26 +705,27 @@ void CompiledScene::CompileLightsDistribution() {
 
 	delete[] lightsDistribution;
 
-	lightsDistribution = CompileDistribution1D(scene->lightsDistribution, &lightsDistributionSize);
+	lightsDistribution = CompileDistribution1D(scene->lightDefs.GetLightsDistribution(), &lightsDistributionSize);
 }
 
 void CompiledScene::CompileLightSamples() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightSamples");
 
-	lightSamples.resize(scene->GetLightCount());
+	const std::vector<TriangleLight *> &intersecableLightSources = scene->lightDefs.GetIntersecableLightSources();
+	lightSamples.resize(scene->lightDefs.GetSize());
 
 	u_int index = 0;
-	while (index < scene->intersecableLightSources.size()) {
-		lightSamples[index] =  scene->intersecableLightSources[index]->GetSamples();
+	while (index < intersecableLightSources.size()) {
+		lightSamples[index] =  intersecableLightSources[index]->GetSamples();
 		++index;
 	}
 
-	const EnvLightSource *el = (EnvLightSource *)scene->GetLightByType(TYPE_IL);
-	el = el ? el : (EnvLightSource *)scene->GetLightByType(TYPE_IL_SKY);
+	const EnvLightSource *el = (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_IL);
+	el = el ? el : (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_IL_SKY);
 	if (el)
 		lightSamples[index++] = el->GetSamples();
 
-	el = (EnvLightSource *)scene->GetLightByType(TYPE_SUN);
+	el = (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_SUN);
 	if (el)
 		lightSamples[index] = el->GetSamples();
 }
@@ -735,19 +733,20 @@ void CompiledScene::CompileLightSamples() {
 void CompiledScene::CompileLightVisibility() {
 	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightVisbility");
 
-	lightVisibility.resize(scene->GetLightCount());
+	const std::vector<TriangleLight *> &intersecableLightSources = scene->lightDefs.GetIntersecableLightSources();
+	lightVisibility.resize(scene->lightDefs.GetSize());
 
 	u_int index = 0;
-	while (index < scene->intersecableLightSources.size()) {
+	while (index < intersecableLightSources.size()) {
 		lightVisibility[index] = 
-				(scene->intersecableLightSources[index]->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(scene->intersecableLightSources[index]->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(scene->intersecableLightSources[index]->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+				(intersecableLightSources[index]->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(intersecableLightSources[index]->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(intersecableLightSources[index]->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 		++index;
 	}
 	
-	const EnvLightSource *el = (EnvLightSource *)scene->GetLightByType(TYPE_IL);
-	el = el ? el : (EnvLightSource *)scene->GetLightByType(TYPE_IL_SKY);
+	const EnvLightSource *el = (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_IL);
+	el = el ? el : (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_IL_SKY);
 	if (el) {
 		lightVisibility[index++] =
 				(el->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
@@ -755,7 +754,7 @@ void CompiledScene::CompileLightVisibility() {
 				(el->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 	}
 
-	el = (EnvLightSource *)scene->GetLightByType(TYPE_SUN);
+	el = (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_SUN);
 	if (el) {
 		lightVisibility[index++] =
 				(el->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |

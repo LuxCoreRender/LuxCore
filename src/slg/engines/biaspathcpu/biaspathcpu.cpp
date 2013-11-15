@@ -34,7 +34,7 @@ BiasPathCPURenderEngine::BiasPathCPURenderEngine(const RenderConfig *rcfg, Film 
 
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
+	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
 

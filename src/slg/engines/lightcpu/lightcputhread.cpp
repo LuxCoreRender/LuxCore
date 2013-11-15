@@ -104,7 +104,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 		if (!somethingWasHit) {
 			// Nothing was hit, check infinite lights (including sun)
 			const Spectrum throughput = eyePathThroughput * connectionThroughput;
-			BOOST_FOREACH(EnvLightSource *el, scene->envLightSources)
+			BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources())
 				radiance +=  throughput * el->GetRadiance(*scene, -eyeRay.d);
 			break;
 		} else {
@@ -179,7 +179,7 @@ void LightCPURenderThread::RenderFunc() {
 
 		// Select one light source
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
+		const LightSource *light = scene->lightDefs.SampleAllLights(sampler->GetSample(2), &lightPickPdf);
 
 		// Initialize the light path
 		float lightEmitPdfW;

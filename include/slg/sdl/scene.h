@@ -50,16 +50,10 @@ public:
 
 	const luxrays::Properties &GetProperties() const { return sceneProperties; }
 
-	LightSource *GetLightByType(const LightSourceType lightType) const;
-	LightSource *GetLightByIndex(const u_int index) const;
-	LightSource *SampleAllLights(const float u, float *pdf) const;
-	float SampleAllLightPdf(const LightSource *light) const;
-
 	bool Intersect(luxrays::IntersectionDevice *device, const bool fromLight,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
 
-	void UpdateLightGroupCount();
 	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight);
 
 	luxrays::Properties ToProperties(const std::string &directoryName);
@@ -82,8 +76,6 @@ public:
 
 	bool IsTextureDefined(const std::string &texName) const;
 	bool IsMaterialDefined(const std::string &matName) const;
-	const u_int GetLightCount() const;
-	const u_int GetObjectCount() const;
 
 	void Parse(const luxrays::Properties &props);
 	void DeleteObject(const std::string &objName);
@@ -105,25 +97,11 @@ public:
 	TextureDefinitions texDefs; // Texture definitions
 	MaterialDefinitions matDefs; // Material definitions
 	SceneObjectDefinitions objDefs; // SceneObject definitions
-
-	u_int lightGroupCount;
-
-	// One for each intersecable light source. In practice, only TriangleLight(s)
-	// are intersecable at the moment.
-	std::vector<TriangleLight *> intersecableLightSources; 
-	std::vector<u_int> meshTriLightDefsOffset; // One for each mesh
-	// One fore each not intersecable light source. It includes env. lights like
-	// sky, sun and infinite light.
-	std::vector<NotIntersecableLightSource *> notIntersecableLightSources;
-	// Only env. lights sources (i.e. sky, sun and infinite light)
-	std::vector<EnvLightSource *> envLightSources;
+	LightSourceDefinitions lightDefs; // LightSource definitions
 
 	luxrays::DataSet *dataSet;
 	luxrays::AcceleratorType accelType;
 	bool enableInstanceSupport;
-
-	// Used for power based light sampling strategy
-	Distribution1D *lightsDistribution;
 
 	EditActionList editActions;
 
@@ -132,7 +110,7 @@ protected:
 	void ParseTextures(const luxrays::Properties &props);
 	void ParseMaterials(const luxrays::Properties &props);
 	void ParseObjects(const luxrays::Properties &props);
-	void ParseEnvLights(const luxrays::Properties &props);
+	void ParseLights(const luxrays::Properties &props);
 
 	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
 	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
@@ -140,8 +118,7 @@ protected:
 	Texture *GetTexture(const luxrays::Property &name);
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
-
-	void UpdateIntersecableLightSources();
+	//NotIntersecableLightSource *CreateNotIntersecableLightSource(const std::string &lightName, const luxrays::Properties &props);
 
 	luxrays::Properties sceneProperties;
 };
