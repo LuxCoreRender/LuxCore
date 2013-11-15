@@ -145,6 +145,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 
 	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene->dataSet->GetBSphere().rad * 1.01f;
 	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
+	float totalPower = 0.f;
 	vector<float> lightPower;
 	lightPower.reserve(lights.size());
 
@@ -163,6 +164,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 			envLightSources.push_back((EnvLightSource *)l);
 		}
 		lightPower.push_back(power);
+		totalPower += power;
 
 		// Build lightIndexByMeshIndex
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
@@ -174,20 +176,36 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 
 	// Build the data to power based light sampling
 	delete lightsDistribution;
-	lightsDistribution = new Distribution1D(&lightPower[0], lights.size());
+	if (totalPower == 0.f) {
+		// To handle a corner case
+		lightsDistribution = NULL;
+	} else
+		lightsDistribution = new Distribution1D(&lightPower[0], lights.size());
 }
 
 LightSource *LightSourceDefinitions::SampleAllLights(const float u, float *pdf) const {
-	// Power based light strategy
-	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-	assert ((lightIndex >= 0) && (lightIndex < GetLightCount()));
+	if (lightsDistribution) {
+		// Power based light strategy
+		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
+		assert ((lightIndex >= 0) && (lightIndex < GetSize()));
 
-	return lights[lightIndex];
+		return lights[lightIndex];
+	} else {
+		// All uniform light strategy
+		const u_int lightIndex = Min<u_int>(Floor2UInt(lights.size() * u), lights.size() - 1);
+
+		return lights[lightIndex];
+	}
 }
 
 float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const {
-	// Power based light strategy
-	return lightsDistribution->Pdf(light->GetSceneIndex());
+	if (lightsDistribution) {
+		// Power based light strategy
+		return lightsDistribution->Pdf(light->GetSceneIndex());
+	} else {
+		// All uniform light strategy
+		return 1.f /  GetSize();
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -195,7 +213,7 @@ float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const 
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight(const Transform &l2w, const ImageMap *imgMap) :
-	InfiniteLightBase(l2w), imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
+	EnvLightSource(l2w), imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
 	if (imageMap->GetChannelCount() == 1)
 		imageMapDistribution = new Distribution2D(imageMap->GetPixels(), imageMap->GetWidth(), imageMap->GetHeight());
 	else {
@@ -319,18 +337,18 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
 	Properties props;
 
-	props.Set(Property("scene.infinitelight.file")("imagemap-" + 
+	props.Set(Property(prefix + ".file")("imagemap-" + 
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
-	props.Set(Property("scene.infinitelight.gain")(gain));
-	props.Set(Property("scene.infinitelight.shift")(mapping.uDelta, mapping.vDelta));
-	props.Set(Property("scene.infinitelight.transformation")(lightToWorld.m));
-	props.Set(Property("scene.infinitelight.samples")(samples));
-	props.Set(Property("scene.infinitelight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
-	props.Set(Property("scene.infinitelight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
-	props.Set(Property("scene.infinitelight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
-
+	props.Set(Property(prefix + ".gain")(gain));
+	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
+	props.Set(Property(prefix + ".transformation")(lightToWorld.m));
+	props.Set(Property(prefix + ".samples")(samples));
+	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
+	props.Set(Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
+	props.Set(Property(prefix + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
 
 	return props;
 }
@@ -374,7 +392,7 @@ static void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 }
 
 SkyLight::SkyLight(const luxrays::Transform &l2w, float turb,
-		const Vector &sd) : InfiniteLightBase(l2w) {
+		const Vector &sd) : EnvLightSource(l2w) {
 	turbidity = turb;
 	sunDir = Normalize(lightToWorld * sd);
 }
@@ -548,16 +566,17 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 }
 
 Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
 	Properties props;
 
-	props.Set(Property("scene.skylight.dir")(GetSunDir()));
-	props.Set(Property("scene.skylight.gain")(gain));
-	props.Set(Property("scene.skylight.turbidity")(turbidity));
-	props.Set(Property("scene.skylight.transformation")(lightToWorld.m));
-	props.Set(Property("scene.skylight.samples")(samples));
-	props.Set(Property("scene.skylight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
-	props.Set(Property("scene.skylight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
-	props.Set(Property("scene.skylight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
+	props.Set(Property(prefix + ".dir")(GetSunDir()));
+	props.Set(Property(prefix + ".gain")(gain));
+	props.Set(Property(prefix + ".turbidity")(turbidity));
+	props.Set(Property(prefix + ".transformation")(lightToWorld.m));
+	props.Set(Property(prefix + ".samples")(samples));
+	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
+	props.Set(Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
+	props.Set(Property(prefix + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
 
 	return props;
 }
@@ -717,17 +736,18 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 }
 
 Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
 	Properties props;
 
-	props.Set(Property("scene.sunlight.dir")(GetDir()));
-	props.Set(Property("scene.sunlight.gain")(gain));
-	props.Set(Property("scene.sunlight.turbidity")(turbidity));
-	props.Set(Property("scene.sunlight.relsize")(relSize));
-	props.Set(Property("scene.sunlight.transformation")(lightToWorld.m));
-	props.Set(Property("scene.sunlight.samples")(samples));
-	props.Set(Property("scene.sunlight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
-	props.Set(Property("scene.sunlight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
-	props.Set(Property("scene.sunlight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
+	props.Set(Property(prefix + ".dir")(GetDir()));
+	props.Set(Property(prefix + ".gain")(gain));
+	props.Set(Property(prefix + ".turbidity")(turbidity));
+	props.Set(Property(prefix + ".relsize")(relSize));
+	props.Set(Property(prefix + ".transformation")(lightToWorld.m));
+	props.Set(Property(prefix + ".samples")(samples));
+	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
+	props.Set(Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
+	props.Set(Property(prefix + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
 
 	return props;
 }

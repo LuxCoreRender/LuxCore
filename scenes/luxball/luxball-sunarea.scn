@@ -1,4 +1,5 @@
-scene.camera.lookat = 1.1 -2.1 1.0 0.0 0.0 0.4
+scene.camera.lookat.orig = 1.1 -2.1 1.0
+scene.camera.lookat.target = 0.0 0.0 0.4
 scene.camera.lensradius = 0.005
 scene.camera.focaldistance = 2.0
 ################################################################################
@@ -37,8 +38,10 @@ scene.objects.l1.material = whitelight
 scene.objects.l2.ply = scenes/luxball/luxball-light2.ply
 scene.objects.l2.material = whitelight
 ################################################################################
-scene.infinitelight.file = scenes/simple-mat/sky.exr
-scene.infinitelight.gain = 0.9 0.9 0.9
-scene.sunlight.dir = 0.166974 -0.59908 0.783085
-scene.sunlight.turbidity = 2.2
-scene.sunlight.gain = 0.5 0.5 0.5
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.gain = 0.9 0.9 0.9
+scene.lights.sunlight.type = sun
+scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085
+scene.lights.sunlight.turbidity = 2.2
+scene.lights.sunlight.gain = 0.5 0.5 0.5
