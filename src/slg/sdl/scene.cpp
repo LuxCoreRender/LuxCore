@@ -434,80 +434,44 @@ void Scene::ParseObjects(const Properties &props) {
 
 void Scene::ParseLights(const Properties &props) {
 	// The following code is used only for compatibility with the past syntax
-
-	//--------------------------------------------------------------------------
-	// SkyLight
-	//--------------------------------------------------------------------------
-
 	if (props.HaveNames("scene.skylight")) {
-		const Matrix4x4 mat = props.Get(Property("scene.skylight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-		const Transform light2World(mat);
-
-		SkyLight *sl = new SkyLight(light2World,
-				props.Get(Property("scene.skylight.turbidity")(2.2f)).Get<float>(),
-				props.Get(Property("scene.skylight.dir")(0.f, 0.f, 1.f)).Get<Vector>());
-		sl->SetGain(props.Get(Property("scene.skylight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
-		sl->SetSamples(props.Get(Property("scene.skylight.samples")(-1)).Get<int>());
-		sl->SetID(props.Get(Property("scene.skylight.id")(0)).Get<int>());
-		sl->SetIndirectDiffuseVisibility(props.Get(Property("scene.skylight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
-		sl->SetIndirectGlossyVisibility(props.Get(Property("scene.skylight.visibility.indirect.glossy.enable")(true)).Get<bool>());
-		sl->SetIndirectSpecularVisibility(props.Get(Property("scene.skylight.visibility.indirect.specular.enable")(true)).Get<bool>());
-		sl->Preprocess();
-
-		lightDefs.DefineLightSource("skylight", sl);
+		// Parse all syntax
+		LightSource *newLight = CreateLightSource("scene.skylight", props);
+		lightDefs.DefineLightSource("skylight", newLight);
+		editActions.AddActions(SKYLIGHT_EDIT);
 	}
-
-	//--------------------------------------------------------------------------
-	// InfiniteLight
-	//--------------------------------------------------------------------------
-
 	if (props.HaveNames("scene.infinitelight")) {
-		const Matrix4x4 mat = props.Get(Property("scene.infinitelight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-		const Transform light2World(mat);
-
-		const string imageName = props.Get(Property("scene.infinitelight.file")("image.png")).Get<string>();
-		const float gamma = props.Get(Property("scene.infinitelight.gamma")(2.2f)).Get<float>();
-		ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
-		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
-
-		il->SetGain(props.Get(Property("scene.infinitelight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
-
-		const UV shift = props.Get(Property("scene.infinitelight.shift")(0.f, 0.f)).Get<UV>();
-		il->GetUVMapping()->uDelta = shift.u;
-		il->GetUVMapping()->vDelta = shift.v;
-		il->SetSamples(props.Get(Property("scene.infinitelight.samples")(-1)).Get<int>());
-		il->SetID(props.Get(Property("scene.infinitelight.id")(0)).Get<int>());
-		il->SetIndirectDiffuseVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
-		il->SetIndirectGlossyVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.glossy.enable")(true)).Get<bool>());
-		il->SetIndirectSpecularVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.specular.enable")(true)).Get<bool>());
-		il->Preprocess();
-
-		lightDefs.DefineLightSource("infinitelight", il);
+		// Parse all syntax
+		LightSource *newLight = CreateLightSource("scene.infinitelight", props);
+		lightDefs.DefineLightSource("infinitelight", newLight);
+		editActions.AddActions(INFINITELIGHT_EDIT);
 	}
-
-	//--------------------------------------------------------------------------
-	// SunLight
-	//--------------------------------------------------------------------------
-
 	if (props.HaveNames("scene.sunlight")) {
-		const Matrix4x4 mat = props.Get(Property("scene.sunlight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-		const Transform light2World(mat);
-
-		SunLight *sl = new SunLight(light2World,
-				props.Get(Property("scene.sunlight.turbidity")(2.2f)).Get<float>(),
-				props.Get(Property("scene.sunlight.relsize")(1.0f)).Get<float>(),
-				props.Get(Property("scene.sunlight.dir")(0.f, 0.f, 1.f)).Get<Vector>());
-
-		sl->SetGain(props.Get(Property("scene.sunlight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
-		sl->SetSamples(props.Get(Property("scene.sunlight.samples")(-1)).Get<int>());
-		sl->SetID(props.Get(Property("scene.sunlight.id")(0)).Get<int>());
-		sl->SetIndirectDiffuseVisibility(props.Get(Property("scene.sunlight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
-		sl->SetIndirectGlossyVisibility(props.Get(Property("scene.sunlight.visibility.indirect.glossy.enable")(true)).Get<bool>());
-		sl->SetIndirectSpecularVisibility(props.Get(Property("scene.sunlight.visibility.indirect.specular.enable")(true)).Get<bool>());
-		sl->Preprocess();
-
-		lightDefs.DefineLightSource("sunlight", sl);
+		// Parse all syntax
+		LightSource *newLight = CreateLightSource("scene.sunlight", props);
+		lightDefs.DefineLightSource("sunlight", newLight);
+		editActions.AddActions(SUNLIGHT_EDIT);
 	}
+
+	vector<string> lightKeys = props.GetAllUniqueSubNames("scene.lights");
+	if (lightKeys.size() == 0) {
+		// There are not light definitions
+		return;
+	}
+
+	BOOST_FOREACH(const string &key, lightKeys) {
+		// Extract the material name
+		const string lightName = Property::ExtractField(key, 2);
+		if (lightName == "")
+			throw runtime_error("Syntax error in light definition: " + lightName);
+
+		SDL_LOG("Light definition: " << lightName);
+
+		LightSource *newLight = CreateLightSource(lightName, props);
+		lightDefs.DefineLightSource(lightName, newLight);
+	}
+
+	editActions.AddActions(SUNLIGHT_EDIT | SKYLIGHT_EDIT | INFINITELIGHT_EDIT);
 }
 
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
@@ -1054,6 +1018,80 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 	const Material *mat = matDefs.GetMaterial(matName);
 
 	return new SceneObject(mesh, mat);
+}
+
+LightSource *Scene::CreateLightSource(const std::string &lightName, const luxrays::Properties &props) {
+	string propName, lightType;
+
+	// The following code is used only for compatibility with the past syntax
+	if (lightName == "scene.skylight") {
+		SLG_LOG("WARNING: deprecated property scene.skylight");
+
+		propName = "scene.skylight";
+		lightType = "skylight";
+	} else if (lightName == "scene.infinitelight") {
+		SLG_LOG("WARNING: deprecated property scene.infinitelight");
+
+		propName = "scene.infinitelight";
+		lightType = "infinitelight";
+	} else if (lightName == "scene.sunlight") {
+		SLG_LOG("WARNING: deprecated property scene.sunlight");
+
+		propName = "scene.sunlight";
+		lightType = "sunlight";
+	} else {
+		propName = "scene.lights." + lightName;
+		lightType = props.Get(Property(propName + ".type")("sky")).Get<string>();
+	}
+
+	NotIntersecableLightSource *lightSource = NULL;
+	if (lightType == "sky") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SkyLight *sl = new SkyLight(light2World,
+				props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>(),
+				props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+
+		lightSource = sl;
+	} else if (lightType == "infinite") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
+		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
+		ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
+		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
+
+		const UV shift = props.Get(Property(propName + ".shift")(0.f, 0.f)).Get<UV>();
+		il->GetUVMapping()->uDelta = shift.u;
+		il->GetUVMapping()->vDelta = shift.v;
+
+		lightSource = il;
+	} else if (lightType == "sun") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SunLight *sl = new SunLight(light2World,
+				props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>(),
+				props.Get(Property(propName + ".relsize")(1.0f)).Get<float>(),
+				props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+
+		sl->Preprocess();
+
+		lightSource = sl;
+	} else
+		throw runtime_error("Unknown light type: " + lightType);
+
+	lightSource->SetGain(props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>());
+	lightSource->SetSamples(props.Get(Property(propName + ".samples")(-1)).Get<int>());
+	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
+	lightSource->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+	lightSource->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+	lightSource->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+	lightSource->Preprocess();
+	
+	return lightSource;
 }
 
 //------------------------------------------------------------------------------

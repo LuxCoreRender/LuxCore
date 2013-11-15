@@ -52,6 +52,8 @@ public:
 	LightSource() : lightSceneIndex(0) { }
 	virtual ~LightSource() { }
 
+	std::string GetName() const { return "light-" + boost::lexical_cast<std::string>(this); }
+
 	virtual void Preprocess() = 0;
 
 	virtual LightSourceType GetType() const = 0;
@@ -110,7 +112,7 @@ public:
 	const LightSource *GetLightSource(const u_int index) const { return lights[index]; }
 	LightSource *GetLightSource(const u_int index) { return lights[index]; }
 	u_int GetLightSourceIndex(const std::string &name) const;
-	u_int GetLightSourceIndex(const LightSource *m) const;
+	u_int GetLightSourceIndex(const LightSource *l) const;
 	const LightSource *GetLightByType(const LightSourceType type) const;
 	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
 
@@ -250,51 +252,6 @@ public:
 
 	virtual bool IsEnvironmental() const { return true; }
 
-	virtual void SetID(const u_int lightID) { id = lightID; }
-	virtual u_int GetID() const { return id; }
-	void SetSamples(const int sampleCount) { samples = sampleCount; }
-	virtual int GetSamples() const { return samples; }
-
-	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
-	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
-	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
-	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
-	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
-	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
-
-	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
-
-	void SetGain(const luxrays::Spectrum &g) {
-		gain = g;
-	}
-	luxrays::Spectrum GetGain() const {
-		return gain;
-	}
-
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
-			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
-
-protected:
-	u_int id;
-
-	const luxrays::Transform lightToWorld;
-	luxrays::Spectrum gain;
-	int samples;
-
-	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
-};
-
-//------------------------------------------------------------------------------
-// InfiniteLightBase implementation
-//------------------------------------------------------------------------------
-
-class InfiniteLightBase : public EnvLightSource {
-public:
-	InfiniteLightBase(const luxrays::Transform &l2w) : EnvLightSource(l2w) { }
-	virtual ~InfiniteLightBase() { }
-
-	virtual bool IsEnvironmental() const { return true; }
-
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 };
@@ -303,7 +260,7 @@ public:
 // InfiniteLight implementation
 //------------------------------------------------------------------------------
 
-class InfiniteLight : public InfiniteLightBase {
+class InfiniteLight : public EnvLightSource {
 public:
 	InfiniteLight(const luxrays::Transform &l2w, const ImageMap *imgMap);
 	virtual ~InfiniteLight();
@@ -348,7 +305,7 @@ private:
 // Sky implementation
 //------------------------------------------------------------------------------
 
-class SkyLight : public InfiniteLightBase {
+class SkyLight : public EnvLightSource {
 public:
 	SkyLight(const luxrays::Transform &l2w, float turbidity, const luxrays::Vector &sundir);
 	virtual ~SkyLight() { }
