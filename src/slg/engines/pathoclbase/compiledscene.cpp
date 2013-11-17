@@ -494,6 +494,13 @@ void CompiledScene::CompileLights() {
 	for (u_int i = 0; i < lightSources.size(); ++i) {
 		const LightSource *l = lightSources[i];
 		slg::ocl::LightSource *oclLight = &lightDefs[i];
+		oclLight->lightSceneIndex = l->GetSceneIndex();
+		oclLight->lightID = l->GetID();
+		oclLight->samples = l->GetSamples();
+		oclLight->visibility = 
+				(l->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(l->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(l->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
 		switch (l->GetType()) {
 			case TYPE_TRIANGLE: {
@@ -504,9 +511,6 @@ void CompiledScene::CompileLights() {
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_TRIANGLE;
-				oclLight->lightSceneIndex = tl->GetSceneIndex();
-				oclLight->lightID = tl->GetMaterial()->GetLightID();
-				oclLight->samples = tl->GetMaterial()->GetEmittedSamples();
 
 				// TriangleLight data
 				ASSIGN_VECTOR(oclLight->triangle.v0, mesh->GetVertex(tri->v[0]));
@@ -532,18 +536,11 @@ void CompiledScene::CompileLights() {
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL;
-				oclLight->lightSceneIndex = il->GetSceneIndex();
-				oclLight->lightID = il->GetID();
-				oclLight->samples = il->GetSamples();
 
 				// NotIntersecableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &il->GetTransformation().m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &il->GetTransformation().mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, il->GetGain());
-				oclLight->notIntersecable.visibility = 
-						(il->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-						(il->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-						(il->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
 				// InfiniteLight data
 				CompileTextureMapping2D(&oclLight->notIntersecable.infinite.mapping, il->GetUVMapping());
@@ -571,18 +568,11 @@ void CompiledScene::CompileLights() {
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL_SKY;
-				oclLight->lightSceneIndex = sl->GetSceneIndex();
-				oclLight->lightID = sl->GetID();
-				oclLight->samples = sl->GetSamples();
 
 				// NotIntersecableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->GetGain());
-				oclLight->notIntersecable.visibility = 
-						(sl->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-						(sl->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-						(sl->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
 				// SkyLight data
 				sl->GetInitData(&oclLight->notIntersecable.sky.thetaS, &oclLight->notIntersecable.sky.phiS,
@@ -598,18 +588,11 @@ void CompiledScene::CompileLights() {
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_SUN;
-				oclLight->lightSceneIndex = sl->GetSceneIndex();
-				oclLight->lightID = sl->GetID();
-				oclLight->samples = sl->GetSamples();
 
 				// NotIntersecableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->GetGain());
-				oclLight->notIntersecable.visibility = 
-						(sl->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-						(sl->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-						(sl->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
 				// SunLight data
 				const Vector globalSunDir = Normalize(sl->GetTransformation() * sl->GetDir());

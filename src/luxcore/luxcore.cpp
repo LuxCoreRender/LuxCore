@@ -192,6 +192,7 @@ u_int Film::GetHeight() const {
 }
 
 void Film::Save() const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
 	renderSession.renderSession->SaveFilm();
 }
 
@@ -260,10 +261,12 @@ u_int Film::GetRadianceGroupCount() const {
 }
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
 	renderSession.renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
 template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
 	renderSession.renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
@@ -315,6 +318,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 }
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+
 	switch (type) {
 		case CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED:
 			return renderSession.renderSession->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixels();
@@ -322,9 +327,10 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return renderSession.renderSession->film->channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixels();
 		case CHANNEL_ALPHA:
 			return renderSession.renderSession->film->channel_ALPHA->GetPixels();
-		case CHANNEL_RGB_TONEMAPPED:
+		case CHANNEL_RGB_TONEMAPPED: {
 			renderSession.renderSession->film->ExecuteImagePipeline();
 			return renderSession.renderSession->film->channel_RGB_TONEMAPPED->GetPixels();
+		}
 		case CHANNEL_DEPTH:
 			return renderSession.renderSession->film->channel_DEPTH->GetPixels();
 		case CHANNEL_POSITION:
@@ -361,6 +367,8 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 }
 
 template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+
 	switch (type) {
 		case CHANNEL_MATERIAL_ID:
 			return renderSession.renderSession->film->channel_MATERIAL_ID->GetPixels();
