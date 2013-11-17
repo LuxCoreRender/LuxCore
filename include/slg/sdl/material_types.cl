@@ -90,6 +90,11 @@ typedef struct {
 	float emittedFactor;
 	int usePrimitiveArea;
 	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;
+	int samples;
+	// Type of indirect paths where a light source is visible with a direct hit. It is
+	// an OR of DIFFUSE, GLOSSY and SPECULAR.
+	BSDFEvent visibility;
+
 	union {
 		MatteParam matte;
 		MirrorParam mirror;

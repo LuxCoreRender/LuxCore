@@ -79,11 +79,7 @@ protected:
 	void InitImageMaps();
 	void InitTextures();
 	void InitMaterials();
-	void InitTriangleAreaLights();
-	void InitInfiniteLight();
-	void InitSunLight();
-	void InitSkyLight();
-	void InitLightsDistribution();
+	void InitLights();
 	void InitKernels();
 
 	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
@@ -130,11 +126,10 @@ protected:
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *meshDescsBuff;
 	cl::Buffer *meshMatsBuff;
-	cl::Buffer *infiniteLightBuff;
-	cl::Buffer *infiniteLightDistributionBuff;
-	cl::Buffer *sunLightBuff;
-	cl::Buffer *skyLightBuff;
+	cl::Buffer *lightsBuff;
+	cl::Buffer *envLightIndicesBuff;
 	cl::Buffer *lightsDistributionBuff;
+	cl::Buffer *infiniteLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
 	cl::Buffer *uvsBuff;

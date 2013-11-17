@@ -19,6 +19,8 @@
 #ifndef _SLG_LIGHT_H
 #define	_SLG_LIGHT_H
 
+#include <boost/unordered_map.hpp>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/core/geometry/transform.h"
@@ -38,7 +40,8 @@ namespace ocl {
 class Scene;
 
 typedef enum {
-	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
+	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE,
+	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
 extern const float LIGHT_WORLD_RADIUS_SCALE;
@@ -125,6 +128,12 @@ public:
 	void DeleteLightSource(const std::string &name);
   
 	u_int GetLightGroupCount() const { return lightGroupCount; }
+	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
+	const vector<u_int> &GetLightTypeCounts() const { return lightTypeCount; }
+
+	const std::vector<LightSource *> &GetLightSources() const {
+		return lights;
+	}
 	const std::vector<EnvLightSource *> &GetEnvLightSources() const {
 		return envLightSources;
 	}
@@ -139,9 +148,10 @@ public:
 
 private:
 	std::vector<LightSource *> lights;
-	std::map<std::string, LightSource *> lightsByName;
+	boost::unordered_map<std::string, LightSource *> lightsByName;
 
 	u_int lightGroupCount;
+	vector<u_int> lightTypeCount;
 
 	std::vector<u_int> lightIndexByMeshIndex;
 
@@ -271,6 +281,7 @@ public:
 	virtual float GetPower(const Scene &scene) const;
 
 	const ImageMap *GetImageMap() const { return imageMap; }
+	const UVMapping2D *GetUVMapping() const { return &mapping; }
 	UVMapping2D *GetUVMapping() { return &mapping; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
@@ -323,7 +334,7 @@ public:
 
 	void GetInitData(float *thetaSData, float *phiSData,
 		float *zenith_YData, float *zenith_xData, float *zenith_yData,
-		float *perez_YData, float *perez_xData, float *perez_yData) {
+		float *perez_YData, float *perez_xData, float *perez_yData) const {
 		*thetaSData = thetaS;
 		*phiSData = phiS;
 		*zenith_YData = zenith_Y;

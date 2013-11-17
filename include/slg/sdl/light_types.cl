@@ -23,34 +23,40 @@ typedef enum {
 } LightSourceType;
 
 typedef struct {
-	Transform light2World;
-	Spectrum gain;
 	TextureMapping2D mapping;
 	unsigned int imageMapIndex;
-	unsigned int lightSceneIndex, lightID;
-} InfiniteLight;
+	unsigned int distributionOffset;
+} InfiniteLightParam;
 
 typedef struct {
-	Transform light2World;
-	Spectrum gain;
 	float thetaS;
 	float phiS;
 	float zenith_Y, zenith_x, zenith_y;
 	float perez_Y[6], perez_x[6], perez_y[6];
-	unsigned int lightSceneIndex, lightID;
-} SkyLight;
+} SkyLightParam;
 
 typedef struct {
 	Vector sunDir;
-	Spectrum gain;
-	float turbidity;
-	float relSize;
+	float turbidity, relSize;
 	// XY Vectors for cone sampling
 	Vector x, y;
 	float cosThetaMax;
 	Spectrum sunColor;
-	unsigned int lightSceneIndex, lightID;
-} SunLight;
+} SunLightParam;
+
+typedef struct {
+	Transform light2World;
+	Spectrum gain;
+	// Type of indirect paths where a light source is visible with a direct hit. It is
+	// an OR of DIFFUSE, GLOSSY and SPECULAR.
+	BSDFEvent visibility;
+
+	union {
+		SunLightParam sun;
+		SkyLightParam sky;
+		InfiniteLightParam infinite;
+	};
+} NotIntersecableLightSource;
 
 typedef struct {
 	Vector v0, v1, v2;
@@ -59,4 +65,36 @@ typedef struct {
 
 	unsigned int materialIndex;
 	unsigned int lightSceneIndex;
-} TriangleLight;
+} TriangleLightParam;
+
+typedef struct {
+	LightSourceType type;
+	unsigned int lightSceneIndex;
+	unsigned int lightID;
+	int samples;
+	
+	union {
+		NotIntersecableLightSource notIntersecable;
+		TriangleLightParam triangle;
+	};
+} LightSource;
+
+
+//------------------------------------------------------------------------------
+// Some macro trick in order to have more readable code
+//------------------------------------------------------------------------------
+
+#if defined(SLG_OPENCL_KERNEL)
+
+#if defined(PARAM_HAS_INFINITELIGHT)
+#define LIGHTS_PARAM_DECL , __global LightSource *lights, __global uint *envLightIndices, const uint envLightCount, __global uint *meshTriLightDefsOffset, __global float *infiniteLightDistribution, __global float *lightsDistribution MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, infiniteLightDistribution, lightsDistribution MATERIALS_PARAM
+#elif defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#define LIGHTS_PARAM_DECL , __global LightSource *lights, __global uint *envLightIndices, const uint envLightCount, __global uint *meshTriLightDefsOffset, __global float *lightsDistribution MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, lightsDistribution MATERIALS_PARAM
+#else
+#define LIGHTS_PARAM_DECL , __global LightSource *lights, __global uint *meshTriLightDefsOffset, __global float *lightsDistribution MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, meshTriLightDefsOffset, lightsDistribution MATERIALS_PARAM
+#endif
+
+#endif

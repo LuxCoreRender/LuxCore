@@ -33,10 +33,6 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	film = flm;
 	maxMemPageSize = (u_int)Min<size_t>(maxMemPageS, 0xffffffffu);
 
-	infiniteLight = NULL;
-	infiniteLightDistribution = NULL;
-	sunLight = NULL;
-	skyLight = NULL;
 	lightsDistribution = NULL;
 
 	EditActionList editActions;
@@ -45,15 +41,11 @@ CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 }
 
 CompiledScene::~CompiledScene() {
-	delete infiniteLight;
-	delete[] infiniteLightDistribution;
-	delete sunLight;
-	delete skyLight;
 	delete[] lightsDistribution;
 }
 
 void CompiledScene::CompileCamera() {
-	//SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Camera");
+	//SLG_LOG("Compile Camera");
 
 	//--------------------------------------------------------------------------
 	// Camera definition
@@ -92,7 +84,7 @@ static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
 }
 
 void CompiledScene::CompileGeometry() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Geometry");
+	SLG_LOG("Compile Geometry");
 
 	const u_int objCount = scene->objDefs.GetSize();
 
@@ -249,7 +241,7 @@ void CompiledScene::CompileGeometry() {
 	worldBSphere = scene->dataSet->GetBSphere();
 
 	const double tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("Scene geometry compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 static bool IsTexConstant(const Texture *tex) {
@@ -270,7 +262,7 @@ static float GetTexConstantFloatValue(const Texture *tex) {
 }
 
 void CompiledScene::CompileMaterials() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Materials");
+	SLG_LOG("Compile Materials");
 
 	CompileTextures();
 
@@ -290,7 +282,7 @@ void CompiledScene::CompileMaterials() {
 	for (u_int i = 0; i < materialsCount; ++i) {
 		Material *m = scene->matDefs.GetMaterial(i);
 		slg::ocl::Material *mat = &mats[i];
-		//SLG_LOG("[PathOCLRenderThread::CompiledScene]  Type: " << m->GetType());
+		//SLG_LOG(" Type: " << m->GetType());
 
 		mat->matID = m->GetID();
 		mat->lightID = m->GetLightID();
@@ -311,6 +303,12 @@ void CompiledScene::CompileMaterials() {
 			useBumpMapping = true;
 		} else
 			mat->bumpTexIndex = NULL_INDEX;
+
+		mat->samples = m->GetSamples();
+		mat->visibility =
+				(m->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+				(m->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+				(m->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
 		// Material normal mapping
 		const Texture *normalTex = m->GetNormalTexture();
@@ -474,54 +472,173 @@ void CompiledScene::CompileMaterials() {
 	}
 
 	const double tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
-void CompiledScene::CompileAreaLights() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Triangle AreaLights");
+void CompiledScene::CompileLights() {
+	SLG_LOG("Compile Lights");
 
 	//--------------------------------------------------------------------------
-	// Translate area lights
+	// Translate lights
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
 
-	const std::vector<TriangleLight *> &intersecableLightSources = scene->lightDefs.GetIntersecableLightSources();
+	const std::vector<LightSource *> &lightSources = scene->lightDefs.GetLightSources();
 
-	const u_int areaLightCount = intersecableLightSources.size();
-	triLightDefs.resize(areaLightCount);
-	if (areaLightCount > 0) {
-		for (u_int i = 0; i < intersecableLightSources.size(); ++i) {
-			const TriangleLight *tl = intersecableLightSources[i];
-			const ExtMesh *mesh = tl->GetMesh();
-			const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriangleIndex()]);
+	const u_int lightCount = lightSources.size();
+	lightDefs.resize(lightCount);
+	envLightIndices.clear();
+	infiniteLightDistributions.clear();
 
-			slg::ocl::TriangleLight *triLight = &triLightDefs[i];
-			ASSIGN_VECTOR(triLight->v0, mesh->GetVertex(tri->v[0]));
-			ASSIGN_VECTOR(triLight->v1, mesh->GetVertex(tri->v[1]));
-			ASSIGN_VECTOR(triLight->v2, mesh->GetVertex(tri->v[2]));
-			if (mesh->HasUVs()) {
-				ASSIGN_UV(triLight->uv0, mesh->GetUV(tri->v[0]));
-				ASSIGN_UV(triLight->uv1, mesh->GetUV(tri->v[1]));
-				ASSIGN_UV(triLight->uv2, mesh->GetUV(tri->v[2]));
-			} else {
-				const UV zero;
-				ASSIGN_UV(triLight->uv0, zero);
-				ASSIGN_UV(triLight->uv1, zero);
-				ASSIGN_UV(triLight->uv2, zero);
+	for (u_int i = 0; i < lightSources.size(); ++i) {
+		const LightSource *l = lightSources[i];
+		slg::ocl::LightSource *oclLight = &lightDefs[i];
+
+		switch (l->GetType()) {
+			case TYPE_TRIANGLE: {
+				const TriangleLight *tl = (const TriangleLight *)l;
+
+				const ExtMesh *mesh = tl->GetMesh();
+				const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriangleIndex()]);
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_TRIANGLE;
+				oclLight->lightSceneIndex = tl->GetSceneIndex();
+				oclLight->lightID = tl->GetMaterial()->GetLightID();
+				oclLight->samples = tl->GetMaterial()->GetEmittedSamples();
+
+				// TriangleLight data
+				ASSIGN_VECTOR(oclLight->triangle.v0, mesh->GetVertex(tri->v[0]));
+				ASSIGN_VECTOR(oclLight->triangle.v1, mesh->GetVertex(tri->v[1]));
+				ASSIGN_VECTOR(oclLight->triangle.v2, mesh->GetVertex(tri->v[2]));
+				if (mesh->HasUVs()) {
+					ASSIGN_UV(oclLight->triangle.uv0, mesh->GetUV(tri->v[0]));
+					ASSIGN_UV(oclLight->triangle.uv1, mesh->GetUV(tri->v[1]));
+					ASSIGN_UV(oclLight->triangle.uv2, mesh->GetUV(tri->v[2]));
+				} else {
+					const UV zero;
+					ASSIGN_UV(oclLight->triangle.uv0, zero);
+					ASSIGN_UV(oclLight->triangle.uv1, zero);
+					ASSIGN_UV(oclLight->triangle.uv2, zero);
+				}
+				oclLight->triangle.invArea = 1.f / tl->GetArea();
+
+				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
+				break;
 			}
-			triLight->invArea = 1.f / tl->GetArea();
+			case TYPE_IL: {
+				const InfiniteLight *il = (const InfiniteLight *)l;
 
-			triLight->materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
-			triLight->lightSceneIndex = tl->GetSceneIndex();
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_IL;
+				oclLight->lightSceneIndex = il->GetSceneIndex();
+				oclLight->lightID = il->GetID();
+				oclLight->samples = il->GetSamples();
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &il->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &il->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, il->GetGain());
+				oclLight->notIntersecable.visibility = 
+						(il->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+						(il->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+						(il->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+
+				// InfiniteLight data
+				CompileTextureMapping2D(&oclLight->notIntersecable.infinite.mapping, il->GetUVMapping());
+				oclLight->notIntersecable.infinite.imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->GetImageMap());
+
+				// Compile the image map Distribution2D
+				u_int distributionSize;
+				const float *infiniteLightDistribution = CompileDistribution2D(il->GetDistribution2D(),
+						&distributionSize);
+
+				// Copy the Distribution2D data in the right place
+				const u_int size = infiniteLightDistributions.size();
+				infiniteLightDistributions.resize(size + distributionSize);
+				copy(infiniteLightDistribution, infiniteLightDistribution + distributionSize,
+						&infiniteLightDistributions[size]);
+				delete[] infiniteLightDistribution;
+
+				oclLight->notIntersecable.infinite.distributionOffset = size;
+				
+				envLightIndices.push_back(i);
+				break;
+			}
+			case TYPE_IL_SKY: {
+				const SkyLight *sl = (const SkyLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_IL_SKY;
+				oclLight->lightSceneIndex = sl->GetSceneIndex();
+				oclLight->lightID = sl->GetID();
+				oclLight->samples = sl->GetSamples();
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->GetGain());
+				oclLight->notIntersecable.visibility = 
+						(sl->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+						(sl->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+						(sl->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+
+				// SkyLight data
+				sl->GetInitData(&oclLight->notIntersecable.sky.thetaS, &oclLight->notIntersecable.sky.phiS,
+						&oclLight->notIntersecable.sky.zenith_Y, &oclLight->notIntersecable.sky.zenith_x,
+						&oclLight->notIntersecable.sky.zenith_y, oclLight->notIntersecable.sky.perez_Y,
+						oclLight->notIntersecable.sky.perez_x, oclLight->notIntersecable.sky.perez_y);
+				
+				envLightIndices.push_back(i);
+				break;
+			}
+			case TYPE_SUN: {
+				const SunLight *sl = (const SunLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_SUN;
+				oclLight->lightSceneIndex = sl->GetSceneIndex();
+				oclLight->lightID = sl->GetID();
+				oclLight->samples = sl->GetSamples();
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->GetGain());
+				oclLight->notIntersecable.visibility = 
+						(sl->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
+						(sl->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
+						(sl->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
+
+				// SunLight data
+				const Vector globalSunDir = Normalize(sl->GetTransformation() * sl->GetDir());
+				ASSIGN_VECTOR(oclLight->notIntersecable.sun.sunDir, globalSunDir);
+				oclLight->notIntersecable.sun.turbidity = sl->GetTubidity();
+				oclLight->notIntersecable.sun.relSize= sl->GetRelSize();
+				float tmp;
+				sl->GetInitData(reinterpret_cast<Vector *>(&oclLight->notIntersecable.sun.x),
+						reinterpret_cast<Vector *>(&oclLight->notIntersecable.sun.y), &tmp, &tmp, &tmp,
+						&oclLight->notIntersecable.sun.cosThetaMax, &tmp,
+						reinterpret_cast<Spectrum *>(&oclLight->notIntersecable.sun.sunColor));
+				
+				envLightIndices.push_back(i);
+				break;
+			}
+			default:
+				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}
+	}
 
-		meshTriLightDefsOffset = scene->lightDefs.GetLightIndexByMeshIndex();
-	} else
-		meshTriLightDefsOffset.resize(0);
+	lightTypeCounts = scene->lightDefs.GetLightTypeCounts();
+	meshTriLightDefsOffset = scene->lightDefs.GetLightIndexByMeshIndex();
+
+	// Compile LightDistribution
+	delete[] lightsDistribution;
+	lightsDistribution = CompileDistribution1D(scene->lightDefs.GetLightsDistribution(), &lightsDistributionSize);
 
 	const double tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Triangle area lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("Lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m) {
@@ -559,98 +676,6 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 		default:
 			throw runtime_error("Unknown texture mapping: " + boost::lexical_cast<string>(m->GetType()));
 	}
-}
-
-void CompiledScene::CompileInfiniteLight() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile InfiniteLight");
-
-	delete infiniteLight;
-	delete infiniteLightDistribution;
-
-	//--------------------------------------------------------------------------
-	// Check if there is an infinite light source
-	//--------------------------------------------------------------------------
-
-	const double tStart = WallClockTime();
-
-	InfiniteLight *il = (InfiniteLight *)scene->lightDefs.GetLightByType(TYPE_IL);
-	if (il) {
-		infiniteLight = new slg::ocl::InfiniteLight();
-
-		ASSIGN_SPECTRUM(infiniteLight->gain, il->GetGain());
-		CompileTextureMapping2D(&infiniteLight->mapping, il->GetUVMapping());
-		infiniteLight->imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->GetImageMap());
-
-		memcpy(&infiniteLight->light2World.m, &il->GetTransformation().m, sizeof(float[4][4]));
-		memcpy(&infiniteLight->light2World.mInv, &il->GetTransformation().mInv, sizeof(float[4][4]));
-
-		infiniteLight->lightSceneIndex = il->GetSceneIndex();
-		infiniteLight->lightID = il->GetID();
-
-		// Compile the image map Distribution2D
-		infiniteLightDistribution = CompileDistribution2D(il->GetDistribution2D(),
-				&infiniteLightDistributionSize);
-	} else
-		infiniteLight = NULL;
-
-	const double tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] InfiniteLight compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
-}
-
-void CompiledScene::CompileSunLight() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SunLight");
-
-	delete sunLight;
-
-	//--------------------------------------------------------------------------
-	// Check if there is an sun light source
-	//--------------------------------------------------------------------------
-
-	SunLight *sl = (SunLight *)scene->lightDefs.GetLightByType(TYPE_SUN);
-	if (sl) {
-		sunLight = new slg::ocl::SunLight();
-
-		const Vector globalSunDir = Normalize(sl->GetTransformation() * sl->GetDir());
-		ASSIGN_VECTOR(sunLight->sunDir, globalSunDir);
-		ASSIGN_SPECTRUM(sunLight->gain, sl->GetGain());
-		sunLight->turbidity = sl->GetTubidity();
-		sunLight->relSize= sl->GetRelSize();
-		float tmp;
-		sl->GetInitData(reinterpret_cast<Vector *>(&sunLight->x),
-				reinterpret_cast<Vector *>(&sunLight->y), &tmp, &tmp, &tmp,
-				&sunLight->cosThetaMax, &tmp, reinterpret_cast<Spectrum *>(&sunLight->sunColor));
-		
-		sunLight->lightSceneIndex = sl->GetSceneIndex();
-		sunLight->lightID = sl->GetID();
-	} else
-		sunLight = NULL;
-}
-
-void CompiledScene::CompileSkyLight() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile SkyLight");
-
-	delete skyLight;
-
-	//--------------------------------------------------------------------------
-	// Check if there is an sky light source
-	//--------------------------------------------------------------------------
-
-	SkyLight *sl = (SkyLight *)scene->lightDefs.GetLightByType(TYPE_IL_SKY);
-	if (sl) {
-		skyLight = new slg::ocl::SkyLight();
-
-		ASSIGN_SPECTRUM(skyLight->gain, sl->GetGain());
-		sl->GetInitData(&skyLight->thetaS, &skyLight->phiS,
-				&skyLight->zenith_Y, &skyLight->zenith_x, &skyLight->zenith_y,
-				skyLight->perez_Y, skyLight->perez_x, skyLight->perez_y);
-
-		memcpy(&skyLight->light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
-		memcpy(&skyLight->light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
-
-		skyLight->lightSceneIndex = sl->GetSceneIndex();
-		skyLight->lightID = sl->GetID();
-	} else
-		skyLight = NULL;
 }
 
 float *CompiledScene::CompileDistribution1D(const Distribution1D *dist, u_int *size) {
@@ -700,94 +725,9 @@ float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *s
 	return compDist;
 }
 
-void CompiledScene::CompileLightsDistribution() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightDistribution");
-
-	delete[] lightsDistribution;
-
-	lightsDistribution = CompileDistribution1D(scene->lightDefs.GetLightsDistribution(), &lightsDistributionSize);
-}
-
-void CompiledScene::CompileLightSamples() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightSamples");
-
-	const std::vector<TriangleLight *> &intersecableLightSources = scene->lightDefs.GetIntersecableLightSources();
-	lightSamples.resize(scene->lightDefs.GetSize());
-
-	u_int index = 0;
-	while (index < intersecableLightSources.size()) {
-		lightSamples[index] =  intersecableLightSources[index]->GetSamples();
-		++index;
-	}
-
-	const EnvLightSource *el = (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_IL);
-	el = el ? el : (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_IL_SKY);
-	if (el)
-		lightSamples[index++] = el->GetSamples();
-
-	el = (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_SUN);
-	if (el)
-		lightSamples[index] = el->GetSamples();
-}
-
-void CompiledScene::CompileLightVisibility() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile LightVisbility");
-
-	const std::vector<TriangleLight *> &intersecableLightSources = scene->lightDefs.GetIntersecableLightSources();
-	lightVisibility.resize(scene->lightDefs.GetSize());
-
-	u_int index = 0;
-	while (index < intersecableLightSources.size()) {
-		lightVisibility[index] = 
-				(intersecableLightSources[index]->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(intersecableLightSources[index]->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(intersecableLightSources[index]->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
-		++index;
-	}
-	
-	const EnvLightSource *el = (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_IL);
-	el = el ? el : (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_IL_SKY);
-	if (el) {
-		lightVisibility[index++] =
-				(el->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(el->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(el->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
-	}
-
-	el = (EnvLightSource *)scene->lightDefs.GetLightByType(TYPE_SUN);
-	if (el) {
-		lightVisibility[index++] =
-				(el->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(el->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(el->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
-	}
-}
-
-void CompiledScene::CompileMaterialSamples() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile MaterialSamples");
-
-	materialSamples.resize(scene->matDefs.GetSize());
-
-	for (u_int i = 0; i < materialSamples.size(); ++i)
-		materialSamples[i] =  scene->matDefs.GetMaterial(i)->GetSamples();
-}
-
-void CompiledScene::CompileMaterialVisibility() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile MaterialVisibility");
-
-	materialVisibility.resize(scene->matDefs.GetSize());
-
-	for (u_int i = 0; i < materialSamples.size(); ++i) {
-		materialVisibility[i] = 
-				(scene->matDefs.GetMaterial(i)->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
-				(scene->matDefs.GetMaterial(i)->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
-				(scene->matDefs.GetMaterial(i)->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
-	}
-}
-
 void CompiledScene::CompileTextures() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile Textures");
-	//SLG_LOG("[PathOCLRenderThread::CompiledScene]   Texture size: " << sizeof(slg::ocl::Texture));
+	SLG_LOG("Compile Textures");
+	//SLG_LOG("  Texture size: " << sizeof(slg::ocl::Texture));
 
 	//--------------------------------------------------------------------------
 	// Translate textures
@@ -1102,11 +1042,11 @@ void CompiledScene::CompileTextures() {
 	}
 		
 	const double tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Textures compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("Textures compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::CompileImageMaps() {
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Compile ImageMaps");
+	SLG_LOG("Compile ImageMaps");
 
 	imageMapDescs.resize(0);
 	imageMapMemBlocks.resize(0);
@@ -1161,12 +1101,12 @@ void CompiledScene::CompileImageMaps() {
 				im->GetPixels() + pixelCount * im->GetChannelCount());
 	}
 
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Image maps page count: " << imageMapMemBlocks.size());
+	SLG_LOG("Image maps page count: " << imageMapMemBlocks.size());
 	for (u_int i = 0; i < imageMapMemBlocks.size(); ++i)
-		SLG_LOG("[PathOCLRenderThread::CompiledScene]  RGB channel page " << i << " size: " << imageMapMemBlocks[i].size() * sizeof(float) / 1024 << "Kbytes");
+		SLG_LOG(" RGB channel page " << i << " size: " << imageMapMemBlocks[i].size() * sizeof(float) / 1024 << "Kbytes");
 
 	const double tEnd = WallClockTime();
-	SLG_LOG("[PathOCLRenderThread::CompiledScene] Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	SLG_LOG("Texture maps compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 void CompiledScene::Recompile(const EditActionList &editActions) {
@@ -1174,27 +1114,10 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileCamera();
 	if (editActions.Has(GEOMETRY_EDIT))
 		CompileGeometry();
-	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileMaterials();
-		CompileMaterialSamples();
-		CompileMaterialVisibility();
-	}
-	if (editActions.Has(AREALIGHTS_EDIT))
-		CompileAreaLights();
-	if (editActions.Has(INFINITELIGHT_EDIT))
-		CompileInfiniteLight();
-	if (editActions.Has(SUNLIGHT_EDIT))
-		CompileSunLight();
-	if (editActions.Has(SKYLIGHT_EDIT))
-		CompileSkyLight();
-	if (editActions.Has(AREALIGHTS_EDIT) ||
-			editActions.Has(INFINITELIGHT_EDIT) ||
-			editActions.Has(SUNLIGHT_EDIT) ||
-			editActions.Has(SKYLIGHT_EDIT)) {
-		CompileLightsDistribution();
-		CompileLightSamples();
-		CompileLightVisibility();
-	}
+	if (editActions.Has(LIGHTS_EDIT))
+		CompileLights();
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
 }
