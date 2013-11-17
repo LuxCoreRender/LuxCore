@@ -69,11 +69,6 @@ Scene::Scene(const string &fileName, const float imageScale) {
 
 	Properties scnProp(fileName);
 	Parse(scnProp);
-	
-	//--------------------------------------------------------------------------
-
-	if (lightDefs.GetSize() == 0)
-		throw runtime_error("The scene doesn't include any light source");
 }
 
 Scene::~Scene() {
@@ -83,6 +78,9 @@ Scene::~Scene() {
 }
 
 void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight) {
+	if (lightDefs.GetSize() == 0)
+		throw runtime_error("The scene doesn't include any light source");
+
 	// Check if I have to update the camera
 	if (editActions.Has(CAMERA_EDIT))
 		camera->Update(filmWidth, filmHeight);
@@ -106,10 +104,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	if (editActions.Has(GEOMETRY_EDIT) ||
 			editActions.Has(MATERIALS_EDIT) ||
 			editActions.Has(MATERIAL_TYPES_EDIT) ||
-			editActions.Has(AREALIGHTS_EDIT) ||
-			editActions.Has(INFINITELIGHT_EDIT) ||
-			editActions.Has(SUNLIGHT_EDIT) ||
-			editActions.Has(SKYLIGHT_EDIT) ||
+			editActions.Has(LIGHTS_EDIT) ||
 			editActions.Has(IMAGEMAPS_EDIT)) {
 		lightDefs.Preprocess(this);
 	}
@@ -363,7 +358,7 @@ void Scene::ParseMaterials(const Properties &props) {
 
 			// Check if the old and/or the new material were/is light sources
 			if (wasLightSource || newMat->IsLightSource())
-				editActions.AddAction(AREALIGHTS_EDIT);
+				editActions.AddAction(LIGHTS_EDIT);
 		} else {
 			// Only a new Material
 			matDefs.DefineMaterial(matName, newMat);
@@ -399,7 +394,7 @@ void Scene::ParseObjects(const Properties &props) {
 
 			// Check if the old and/or the new object were/is light sources
 			if (wasLightSource || obj->GetMaterial()->IsLightSource())
-				editActions.AddAction(AREALIGHTS_EDIT);
+				editActions.AddAction(LIGHTS_EDIT);
 		} else {
 			// Only a new object
 			objDefs.DefineSceneObject(objName, obj);
@@ -438,19 +433,19 @@ void Scene::ParseLights(const Properties &props) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.skylight", props);
 		lightDefs.DefineLightSource("skylight", newLight);
-		editActions.AddActions(SKYLIGHT_EDIT);
+		editActions.AddActions(LIGHTS_EDIT);
 	}
 	if (props.HaveNames("scene.infinitelight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.infinitelight", props);
 		lightDefs.DefineLightSource("infinitelight", newLight);
-		editActions.AddActions(INFINITELIGHT_EDIT);
+		editActions.AddActions(LIGHTS_EDIT);
 	}
 	if (props.HaveNames("scene.sunlight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.sunlight", props);
 		lightDefs.DefineLightSource("sunlight", newLight);
-		editActions.AddActions(SUNLIGHT_EDIT);
+		editActions.AddActions(LIGHTS_EDIT);
 	}
 
 	vector<string> lightKeys = props.GetAllUniqueSubNames("scene.lights");
@@ -471,7 +466,7 @@ void Scene::ParseLights(const Properties &props) {
 		lightDefs.DefineLightSource(lightName, newLight);
 	}
 
-	editActions.AddActions(SUNLIGHT_EDIT | SKYLIGHT_EDIT | INFINITELIGHT_EDIT);
+	editActions.AddActions(LIGHTS_EDIT);
 }
 
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
@@ -579,7 +574,7 @@ void Scene::RemoveUnusedMeshes() {
 void Scene::DeleteObject(const std::string &objName) {
 	if (objDefs.IsSceneObjectDefined(objName)) {
 		if (objDefs.GetSceneObject(objName)->GetMaterial()->IsLightSource())
-			editActions.AddAction(AREALIGHTS_EDIT);
+			editActions.AddAction(LIGHTS_EDIT);
 
 		objDefs.DeleteSceneObject(objName);
 		
@@ -1028,17 +1023,17 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		SLG_LOG("WARNING: deprecated property scene.skylight");
 
 		propName = "scene.skylight";
-		lightType = "skylight";
+		lightType = "sky";
 	} else if (lightName == "scene.infinitelight") {
 		SLG_LOG("WARNING: deprecated property scene.infinitelight");
 
 		propName = "scene.infinitelight";
-		lightType = "infinitelight";
+		lightType = "infinite";
 	} else if (lightName == "scene.sunlight") {
 		SLG_LOG("WARNING: deprecated property scene.sunlight");
 
 		propName = "scene.sunlight";
-		lightType = "sunlight";
+		lightType = "sun";
 	} else {
 		propName = "scene.lights." + lightName;
 		lightType = props.Get(Property(propName + ".type")("sky")).Get<string>();

@@ -76,10 +76,10 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	texturesBuff = NULL;
 	meshDescsBuff = NULL;
 	meshMatsBuff = NULL;
-	infiniteLightBuff = NULL;
-	infiniteLightDistributionBuff = NULL;
-	sunLightBuff = NULL;
-	skyLightBuff = NULL;
+	lightsBuff = NULL;
+	envLightIndicesBuff = NULL;
+	lightsDistributionBuff = NULL;
+	infiniteLightDistributionsBuff = NULL;
 	lightsDistributionBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
@@ -179,8 +179,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	// Add PathStateBase.BSDF.materialIndex memory size
 	bsdfSize += sizeof(u_int);
 	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
-	if (renderEngine->compiledScene->triLightDefs.size() > 0)
-		bsdfSize += sizeof(u_int);
+	bsdfSize += sizeof(u_int);
 	// Add PathStateBase.BSDF.Frame memory size
 	bsdfSize += sizeof(slg::ocl::Frame);
 
@@ -490,56 +489,25 @@ void PathOCLBaseRenderThread::InitTextures() {
 			sizeof(slg::ocl::Texture) * texturesCount, "Textures");
 }
 
-void PathOCLBaseRenderThread::InitTriangleAreaLights() {
+void PathOCLBaseRenderThread::InitLights() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	if (cscene->triLightDefs.size() > 0) {
-		AllocOCLBufferRO(&triLightDefsBuff, &cscene->triLightDefs[0],
-			sizeof(slg::ocl::TriangleLight) * cscene->triLightDefs.size(), "Triangle AreaLights");
-		AllocOCLBufferRO(&meshTriLightDefsOffsetBuff, &cscene->meshTriLightDefsOffset[0],
-			sizeof(u_int) * cscene->meshTriLightDefsOffset.size(), "Triangle AreaLights offsets");
-	} else {
-		FreeOCLBuffer(&triLightDefsBuff);
-		FreeOCLBuffer(&meshTriLightDefsOffsetBuff);
-	}
-}
+	AllocOCLBufferRO(&lightsBuff, &cscene->lightDefs[0],
+		sizeof(slg::ocl::LightSource) * cscene->lightDefs.size(), "Lights");
+	if (cscene->envLightIndices.size() > 0) {
+		AllocOCLBufferRO(&envLightIndicesBuff, &cscene->envLightIndices[0],
+				sizeof(slg::ocl::LightSource) * cscene->envLightIndices.size(), "Env. light indices");
+	} else
+		FreeOCLBuffer(&envLightIndicesBuff);
 
-void PathOCLBaseRenderThread::InitInfiniteLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
+	AllocOCLBufferRO(&meshTriLightDefsOffsetBuff, &cscene->meshTriLightDefsOffset[0],
+		sizeof(u_int) * cscene->meshTriLightDefsOffset.size(), "Light offsets");
 
-	if (cscene->infiniteLight) {
-		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
-			sizeof(slg::ocl::InfiniteLight), "InfiniteLight");
-		AllocOCLBufferRO(&infiniteLightDistributionBuff, cscene->infiniteLightDistribution,
-			cscene->infiniteLightDistributionSize, "InfiniteLight Distribution");
-	} else {
-		FreeOCLBuffer(&infiniteLightBuff);
-		FreeOCLBuffer(&infiniteLightDistributionBuff);
-	}
-}
-
-void PathOCLBaseRenderThread::InitSunLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if (cscene->sunLight)
-		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
-			sizeof(slg::ocl::SunLight), "SunLight");
-	else
-		FreeOCLBuffer(&sunLightBuff);
-}
-
-void PathOCLBaseRenderThread::InitSkyLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if (cscene->skyLight)
-		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
-			sizeof(slg::ocl::SkyLight), "SkyLight");
-	else
-		FreeOCLBuffer(&skyLightBuff);
-}
-
-void PathOCLBaseRenderThread::InitLightsDistribution() {
-	CompiledScene *cscene = renderEngine->compiledScene;
+	if (cscene->infiniteLightDistributions.size() > 0) {
+		AllocOCLBufferRO(&infiniteLightDistributionsBuff, &cscene->infiniteLightDistributions[0],
+			sizeof(float) * cscene->infiniteLightDistributions.size(), "InfiniteLight distributions");
+	} else
+		FreeOCLBuffer(&infiniteLightDistributionsBuff);
 
 	AllocOCLBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
 		cscene->lightsDistributionSize, "LightsDistribution");
@@ -550,7 +518,7 @@ void PathOCLBaseRenderThread::InitImageMaps() {
 
 	if (cscene->imageMapDescs.size() > 0) {
 		AllocOCLBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
-				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMaps description");
+				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
 
 		// Free unused pages
 		for (u_int i = cscene->imageMapMemBlocks.size(); i < imageMapsBuff.size(); ++i)
@@ -767,29 +735,17 @@ void PathOCLBaseRenderThread::InitKernels() {
 			ss << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
 	}
 
-	u_int totalLightCount = 0;
-	if (infiniteLightBuff) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0)
 		ss << " -D PARAM_HAS_INFINITELIGHT";
-		++totalLightCount;
-	}
 
-	if (skyLightBuff) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0)
 		ss << " -D PARAM_HAS_SKYLIGHT";
-		++totalLightCount;
-	}
 
-	if (sunLightBuff) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SUN] > 0)
 		ss << " -D PARAM_HAS_SUNLIGHT";
-		++totalLightCount;
-	}
 
-	if (triLightDefsBuff) {
-		ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->triLightDefs.size();
-		totalLightCount += renderEngine->compiledScene->triLightDefs.size();
-	} else
-		ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=0";
-
-	ss << " -D PARAM_LIGHT_COUNT=" << totalLightCount;
+	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
+	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
 
 	if (imageMapDescsBuff) {
 		ss << " -D PARAM_HAS_IMAGEMAPS";
@@ -860,8 +816,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_hitpoint_types <<
 			slg::ocl::KernelSource_mapping_types <<
 			slg::ocl::KernelSource_texture_types <<
-			slg::ocl::KernelSource_material_types <<
 			slg::ocl::KernelSource_bsdf_types <<
+			slg::ocl::KernelSource_material_types <<
 			slg::ocl::KernelSource_film_types <<
 			slg::ocl::KernelSource_filter_types <<
 			slg::ocl::KernelSource_sampler_types <<
@@ -974,34 +930,10 @@ void PathOCLBaseRenderThread::InitRender() {
 	InitMaterials();
 
 	//--------------------------------------------------------------------------
-	// Translate triangle area lights
+	// Light definitions
 	//--------------------------------------------------------------------------
 
-	InitTriangleAreaLights();
-
-	//--------------------------------------------------------------------------
-	// Check if there is an infinite light source
-	//--------------------------------------------------------------------------
-
-	InitInfiniteLight();
-
-	//--------------------------------------------------------------------------
-	// Check if there is an sun light source
-	//--------------------------------------------------------------------------
-
-	InitSunLight();
-
-	//--------------------------------------------------------------------------
-	// Check if there is an sky light source
-	//--------------------------------------------------------------------------
-
-	InitSkyLight();
-	
-	InitLightsDistribution();
-
-	const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
-	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (triAreaLightCount == 0))
-		throw runtime_error("There are no light sources supported by PathOCL in the scene");
+	InitLights();
 
 	AdditionalInit();
 
@@ -1100,10 +1032,10 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&alphasBuff);
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&vertsBuff);
-	FreeOCLBuffer(&infiniteLightBuff);
-	FreeOCLBuffer(&infiniteLightDistributionBuff);
-	FreeOCLBuffer(&sunLightBuff);
-	FreeOCLBuffer(&skyLightBuff);
+	FreeOCLBuffer(&lightsBuff);
+	FreeOCLBuffer(&envLightIndicesBuff);
+	FreeOCLBuffer(&lightsDistributionBuff);
+	FreeOCLBuffer(&infiniteLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&triLightDefsBuff);
 	FreeOCLBuffer(&meshTriLightDefsOffsetBuff);
@@ -1162,37 +1094,9 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 		InitMaterials();
 	}
 
-	if  (editActions.Has(AREALIGHTS_EDIT)) {
-		// Update Scene Area Lights
-		InitTriangleAreaLights();
-	}
-
-	if  (editActions.Has(INFINITELIGHT_EDIT)) {
-		// Update Scene Infinite Light
-		InitInfiniteLight();
-	}
-
-	if  (editActions.Has(SUNLIGHT_EDIT)) {
-		// Update Scene Sun Light
-		InitSunLight();
-	}
-
-	if  (editActions.Has(SKYLIGHT_EDIT)) {
-		// Update Scene Sun Light
-		InitSkyLight();
-	}
-
-	if (editActions.Has(GEOMETRY_EDIT) ||
-			editActions.Has(AREALIGHTS_EDIT) ||
-			editActions.Has(SUNLIGHT_EDIT) ||
-			editActions.Has(SKYLIGHT_EDIT) ||
-			editActions.Has(INFINITELIGHT_EDIT)) {
-		// Update Scene light power distribution for direct light sampling
-		InitLightsDistribution();
-
-		const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
-		if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (triAreaLightCount == 0))
-			throw runtime_error("There are no light sources supported by PathOCL in the scene");
+	if  (editActions.Has(LIGHTS_EDIT)) {
+		// Update Scene Lights
+		InitLights();
 	}
 
 	// A material types edit can enable/disable PARAM_HAS_PASSTHROUGH parameter

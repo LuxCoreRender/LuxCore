@@ -36,7 +36,7 @@ const float slg::LIGHT_WORLD_RADIUS_SCALE = 10.f;
 // LightSourceDefinitions
 //------------------------------------------------------------------------------
 
-LightSourceDefinitions::LightSourceDefinitions() {
+LightSourceDefinitions::LightSourceDefinitions() : lightTypeCount(LIGHT_SOURCE_TYPE_COUNT, 0) {
 	lightsDistribution = NULL;
 	lightGroupCount = 1;
 }
@@ -54,7 +54,9 @@ void LightSourceDefinitions::DefineLightSource(const std::string &name, LightSou
 		const u_int index = GetLightSourceIndex(name);
 		lights[index] = newLight;
 		lightsByName.erase(name);
+		--lightTypeCount[oldLight->GetType()];
 		lightsByName.insert(std::make_pair(name, newLight));
+		++lightTypeCount[newLight->GetType()];
 
 		// Delete old LightSource
 		delete oldLight;
@@ -62,12 +64,13 @@ void LightSourceDefinitions::DefineLightSource(const std::string &name, LightSou
 		// Add the new LightSource
 		lights.push_back(newLight);
 		lightsByName.insert(std::make_pair(name, newLight));
+		++lightTypeCount[newLight->GetType()];
 	}
 }
 
 const LightSource *LightSourceDefinitions::GetLightSource(const std::string &name) const {
 	// Check if the LightSource has been already defined
-	std::map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
 
 	if (it == lightsByName.end())
 		throw std::runtime_error("Reference to an undefined LightSource: " + name);
@@ -77,7 +80,7 @@ const LightSource *LightSourceDefinitions::GetLightSource(const std::string &nam
 
 LightSource *LightSourceDefinitions::GetLightSource(const std::string &name) {
 	// Check if the LightSource has been already defined
-	std::map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
 
 	if (it == lightsByName.end())
 		throw std::runtime_error("Reference to an undefined LightSource: " + name);
@@ -114,7 +117,7 @@ const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshIndex(const u_i
 std::vector<std::string> LightSourceDefinitions::GetLightSourceNames() const {
 	std::vector<std::string> names;
 	names.reserve(lights.size());
-	for (std::map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
+	for (boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
 		names.push_back(it->first);
 
 	return names;
@@ -131,6 +134,7 @@ void LightSourceDefinitions::UpdateMaterialReferences(const Material *oldMat, co
 
 void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
 	const u_int index = GetLightSourceIndex(name);
+	--lightTypeCount[lights[index]->GetType()];
 	lights.erase(lights.begin() + index);
 	lightsByName.erase(name);
 }

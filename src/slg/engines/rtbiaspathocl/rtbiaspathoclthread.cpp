@@ -243,24 +243,9 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateAct
 		InitMaterials();
 	}
 
-	if (updateActions.Has(AREALIGHTS_EDIT)) {
-		// Update Scene Area Lights
-		InitTriangleAreaLights();
-	}
-
-	if (updateActions.Has(INFINITELIGHT_EDIT)) {
-		// Update Scene Infinite Light
-		InitInfiniteLight();
-	}
-
-	if (updateActions.Has(SUNLIGHT_EDIT)) {
-		// Update Scene Sun Light
-		InitSunLight();
-	}
-
-	if (updateActions.Has(SKYLIGHT_EDIT)) {
-		// Update Scene Sun Light
-		InitSkyLight();
+	if (updateActions.Has(LIGHTS_EDIT)) {
+		// Update Scene Lights
+		InitLights();
 	}
 
 	//--------------------------------------------------------------------------

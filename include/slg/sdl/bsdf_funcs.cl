@@ -317,16 +317,15 @@ bool BSDF_IsLightSource(__global BSDF *bsdf) {
 	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
 }
 
-float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
-		__global TriangleLight *triLightDefs, float *directPdfA
-		MATERIALS_PARAM_DECL) {
+float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *directPdfA
+		LIGHTS_PARAM_DECL) {
 	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
 	if (triangleLightSourceIndex == NULL_INDEX)
 		return BLACK;
 	else
-		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex],
+		return IntersecableLight_GetRadiance(&lights[triangleLightSourceIndex],
 				&bsdf->hitPoint, directPdfA
-				MATERIALS_PARAM);
+				LIGHTS_PARAM);
 }
 #endif
 
