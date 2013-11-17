@@ -103,10 +103,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		__global GPUTaskStats *taskStats,
 		__global SampleResult *taskResults,
 		__global float *pixelFilterDistribution,
-		__global int *lightSamples,
-		__global BSDFEvent *lightVisibility,
-		__global int *materialSamples,
-		__global BSDFEvent *materialVisibility,
 		// Film parameters
 		const uint filmWidth, const uint filmHeight
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
@@ -209,21 +205,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 		__global Triangle *triangles,
 		__global Camera *camera,
-		__global float *lightsDistribution
+		// Lights
+		__global LightSource *lights,
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT)
+		__global uint *envLightIndices,
+		const uint envLightCount,
+#endif
+		__global uint *meshTriLightDefsOffset,
 #if defined(PARAM_HAS_INFINITELIGHT)
-		, __global InfiniteLight *infiniteLight
-		, __global float *infiniteLightDistribution
+		__global float *infiniteLightDistribution,
 #endif
-#if defined(PARAM_HAS_SUNLIGHT)
-		, __global SunLight *sunLight
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		, __global SkyLight *skyLight
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		, __global TriangleLight *triLightDefs
-		, __global uint *meshTriLightDefsOffset
-#endif
+		__global float *lightsDistribution
+		// Images
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
 		, __global ImageMap *imageMapDescs, __global float *imageMapBuff0
 #endif
@@ -478,16 +471,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 				}
 
-				if (firstPathVertex || (materialVisibility[currentBSDF->materialIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+				if (firstPathVertex || (mats[currentBSDF->materialIndex].visibility & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 					// Check if it is a light source (note: I can hit only triangle area light sources)
 					if (BSDF_IsLightSource(currentBSDF) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
 						DirectHitFiniteLight(firstPathVertex, lastBSDFEvent,
-								pathBSDFEvent, lightVisibility, lightsDistribution,
-								triLightDefs, currentThroughput,
+								pathBSDFEvent,
+								currentThroughput,
 								rayHit.t, currentBSDF, lastPdfW,
 								sampleResult
-								MATERIALS_PARAM);
+								LIGHTS_PARAM);
 					}
 #endif
 					// Before Direct Lighting in order to have a correct MIS
@@ -514,22 +507,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 						firstPathVertex,
 						lastBSDFEvent,
 						pathBSDFEvent,
-						lightVisibility, 
-						lightsDistribution,
-#if defined(PARAM_HAS_INFINITELIGHT)
-						infiniteLight,
-						infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-						sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-						skyLight,
-#endif
 						currentThroughput,
 						-rayDir, lastPdfW,
 						sampleResult
-						IMAGEMAPS_PARAM);
+						LIGHTS_PARAM);
 #endif
 
 				if (firstPathVertex) {
@@ -680,54 +661,29 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-						infiniteLight,
-						infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-						sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-						skyLight,
-#endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-						triLightDefs,
 						&taskDirectLight->directLightHitPoint,
 #endif
-						lightsDistribution,
 						firstPathVertex ? &task->throughputPathVertex1 : &taskPathVertexN->throughputPathVertexN,
 						firstPathVertex ? &task->bsdfPathVertex1 : &taskPathVertexN->bsdfPathVertexN,
 						sampleResult,
 						&ray, &taskDirectLight->lightRadiance, &taskDirectLight->lightID
-						MATERIALS_PARAM)
+						LIGHTS_PARAM)
 #if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 				: DirectLightSampling_ALL(
 						&taskDirectLight->lightIndex,
 						&taskDirectLight->lightSampleIndex,
-						lightSamples,
 						&seed,
 #if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-						infiniteLight,
-						infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-						sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-						skyLight,
-#endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-						triLightDefs,
 						&taskDirectLight->directLightHitPoint,
 #endif
-						lightsDistribution,
 						&task->throughputPathVertex1, &task->bsdfPathVertex1,
 						sampleResult,
 						&ray, &taskDirectLight->lightRadiance, &taskDirectLight->lightID
-						MATERIALS_PARAM)
+						LIGHTS_PARAM)
 #endif
 				;
 				
@@ -816,7 +772,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				MATERIALS_PARAM);
 
 			for (;;) {
-				const int matSamplesCount = materialSamples[task->bsdfPathVertex1.materialIndex];
+				const int matSamplesCount = mats[task->bsdfPathVertex1.materialIndex].visibility;
 				const uint globalMatSamplesCount = ((vertex1SampleComponent == DIFFUSE) ? PARAM_DIFFUSE_SAMPLES :
 					((vertex1SampleComponent == GLOSSY) ? PARAM_GLOSSY_SAMPLES :
 						PARAM_SPECULAR_SAMPLES));

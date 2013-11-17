@@ -47,9 +47,6 @@ typedef struct {
 typedef struct {
 	Transform light2World;
 	Spectrum gain;
-	// Type of indirect paths where a light source is visible with a direct hit. It is
-	// an OR of DIFFUSE, GLOSSY and SPECULAR.
-	BSDFEvent visibility;
 
 	union {
 		SunLightParam sun;
@@ -72,6 +69,9 @@ typedef struct {
 	unsigned int lightSceneIndex;
 	unsigned int lightID;
 	int samples;
+	// Type of indirect paths where a light source is visible with a direct hit. It is
+	// an OR of DIFFUSE, GLOSSY and SPECULAR.
+	BSDFEvent visibility;
 	
 	union {
 		NotIntersecableLightSource notIntersecable;

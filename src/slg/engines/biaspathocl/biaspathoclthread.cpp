@@ -303,8 +303,10 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, *cameraBuff);
 	// Lights
 	renderSampleKernel->setArg(argIndex++, *lightsBuff);
-	if (envLightIndicesBuff)
+	if (envLightIndicesBuff) {
 		renderSampleKernel->setArg(argIndex++, *envLightIndicesBuff);
+		renderSampleKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
+	}
 	renderSampleKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
 	if (infiniteLightDistributionsBuff)
 		renderSampleKernel->setArg(argIndex++, *infiniteLightDistributionsBuff);
