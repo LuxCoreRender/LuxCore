@@ -141,6 +141,8 @@ public:
 	void SetFilter(Filter *flt);
 	const Filter *GetFilter() const { return filter; }
 
+	// Note: used mostly for RT modes
+	void SetRGBTonemapUpdateFlag(const bool v) { rgbTonemapUpdate = v; }
 	void SetImagePipeline(ImagePipeline *ip) { imagePipeline = ip; }
 	const ImagePipeline *GetImagePipeline() const { return imagePipeline; }
 
@@ -149,6 +151,7 @@ public:
 		maskMaterialIDs = film.maskMaterialIDs;
 		radianceGroupCount = film.radianceGroupCount;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
+		SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
 		SetImagePipeline(film.GetImagePipeline()->Copy());
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 	}
@@ -256,7 +259,7 @@ private:
 	Filter *filter;
 	FilterLUTs *filterLUTs;
 
-	bool initialized, enabledOverlappedScreenBufferUpdate;
+	bool initialized, enabledOverlappedScreenBufferUpdate, rgbTonemapUpdate;
 };
 
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index);

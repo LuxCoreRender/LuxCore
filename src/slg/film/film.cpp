@@ -78,6 +78,7 @@ Film::Film(const u_int w, const u_int h) {
 	convTest = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
+	rgbTonemapUpdate = true;
 
 	imagePipeline = NULL;
 	filter = NULL;
@@ -1221,7 +1222,8 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 }
 
 void Film::ExecuteImagePipeline() {
-	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
+	if (!rgbTonemapUpdate ||
+			(!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
 			!HasChannel(RGB_TONEMAPPED)) {
 		// Nothing to do
 		return;

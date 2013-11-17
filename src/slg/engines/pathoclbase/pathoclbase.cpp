@@ -55,6 +55,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	if (realTime) {
 		film->SetRadianceGroupCount(1);
+		film->SetRGBTonemapUpdateFlag(false);
 
 		// Remove all Film channels
 		film->RemoveChannel(Film::ALPHA);
