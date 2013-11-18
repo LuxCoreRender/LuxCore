@@ -79,7 +79,7 @@ static boost::unordered_map<string, u_int> namedLightGroups;
 static boost::unordered_map<string, Properties> namedMaterials;
 // The named Textures
 static boost::unordered_set<string> namedTextures;
-static u_int freeObjectID;
+static u_int freeObjectID, freeLightID;
 
 void ResetParser() {
 	overwriteProps.Clear();
@@ -104,6 +104,7 @@ void ResetParser() {
 	namedMaterials.clear();
 	namedTextures.clear();
 	freeObjectID = 0;
+	freeLightID = 0;
 }
 
 static Properties GetTextureMapping2D(const string &prefix, const Properties &props) {
@@ -844,6 +845,14 @@ ri_stmt: ACCELERATOR STRING paramlist
 	Properties props;
 	InitProperties(props, CPS, CP);
 
+	// Define light name
+	string lightName;
+	if (props.IsDefined("name"))
+		lightName = props.Get("name").Get<string>();
+	else
+		lightName = "LUXCORE_LIGHT_" + ToString(freeLightID++);
+	const string prefix = "scene.lights." + lightName;
+
 	const string name($2);
 	if ((name == "sunsky") || (name == "sunsky2")) {
 		// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is in LuxCore code
@@ -851,27 +860,27 @@ ri_stmt: ACCELERATOR STRING paramlist
 		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
 
 		*sceneProps <<
-				Property("scene.sunlight.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
-				Property("scene.sunlight.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
-				Property("scene.sunlight.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
-				Property("scene.sunlight.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
-				Property("scene.sunlight.transformation")(currentTransform.m) <<
-				Property("scene.sunlight.id")(currentGraphicsState.currentLightGroup);
+				Property(prefix + "_SUN.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
+				Property(prefix + "_SUN.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + "_SUN.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
+				Property(prefix + "_SUN.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
+				Property(prefix + "_SUN.transformation")(currentTransform.m) <<
+				Property(prefix + "_SUN.id")(currentGraphicsState.currentLightGroup);
 
 		*sceneProps <<
-				Property("scene.skylight.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
-				Property("scene.skylight.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
-				Property("scene.skylight.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
-				Property("scene.skylight.transformation")(currentTransform.m) <<
-				Property("scene.skylight.id")(currentGraphicsState.currentLightGroup);
+				Property(prefix + "_SKY.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
+				Property(prefix + "_SKY.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + "_SKY.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
+				Property(prefix + "_SKY.transformation")(currentTransform.m) <<
+				Property(prefix + "_SKY.id")(currentGraphicsState.currentLightGroup);
 	} else if ((name == "infinite") || (name == "infinitesample")) {
 		*sceneProps <<
-				Property("scene.infinitelight.file")(props.Get(Property("mapname")("")).Get<string>()) <<
-				Property("scene.infinitelight.gamma")(props.Get(Property("gamma")(1.f)).Get<float>()) <<
-				Property("scene.infinitelight.gain")(props.Get(Property("gain")(1.f)).Get<float>() *
+				Property(prefix + ".file")(props.Get(Property("mapname")("")).Get<string>()) <<
+				Property(prefix + ".gamma")(props.Get(Property("gamma")(1.f)).Get<float>()) <<
+				Property(prefix + ".gain")(props.Get(Property("gain")(1.f)).Get<float>() *
 					props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
-				Property("scene.infinitelight.transformation")(currentTransform.m) <<
-				Property("scene.infinitelight.id")(currentGraphicsState.currentLightGroup);
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	}
 
 	FreeArgs();
