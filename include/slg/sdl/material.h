@@ -74,7 +74,7 @@ public:
 	float GetEmittedPower() const { return emittedPower; }
 	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
 	float GetEmittedEfficency() const { return emittedEfficency; }
-	luxrays::Spectrum GetEmittedFactor() const { return emittedFactor; }
+	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
 	bool IsUsingPrimitiveArea() const { return usePrimitiveArea; }
 
 	virtual MaterialType GetType() const = 0;
