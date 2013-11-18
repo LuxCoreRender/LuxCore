@@ -860,6 +860,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
 
 		*sceneProps <<
+				Property(prefix + "_SUN.type")("sun") <<
 				Property(prefix + "_SUN.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
 				Property(prefix + "_SUN.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
 				Property(prefix + "_SUN.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
@@ -868,6 +869,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + "_SUN.id")(currentGraphicsState.currentLightGroup);
 
 		*sceneProps <<
+				Property(prefix + "_SKY.type")("sky") <<
 				Property(prefix + "_SKY.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
 				Property(prefix + "_SKY.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
 				Property(prefix + "_SKY.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
@@ -875,10 +877,21 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + "_SKY.id")(currentGraphicsState.currentLightGroup);
 	} else if ((name == "infinite") || (name == "infinitesample")) {
 		*sceneProps <<
+				Property(prefix + ".type")("infinite") <<
 				Property(prefix + ".file")(props.Get(Property("mapname")("")).Get<string>()) <<
 				Property(prefix + ".gamma")(props.Get(Property("gamma")(1.f)).Get<float>()) <<
 				Property(prefix + ".gain")(props.Get(Property("gain")(1.f)).Get<float>() *
 					props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "point") {
+		*sceneProps <<
+				Property(prefix + ".type")("point") <<
+				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
+				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
 				Property(prefix + ".transformation")(currentTransform.m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	}
