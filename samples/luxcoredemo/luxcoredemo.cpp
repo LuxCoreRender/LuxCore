@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
 						(int)stats.Get("stats.renderengine.time").Get<double>() %
 						stats.Get("stats.renderengine.pass").Get<u_int>() %
 						(stats.Get("stats.renderengine.total.samplesec").Get<double>()  / 1000000.0) %
-						(stats.Get("stats.dataset.trianglecount").Get<float>() / 1000.0);
+						(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0);
 
 				if (elapsedTime > 5.0) {
 					// Time to stop the rendering

@@ -79,6 +79,8 @@ std::string Property::GetValuesString() const {
 // Get basic types
 //------------------------------------------------------------------------------
 
+namespace luxrays {
+
 template<> bool Property::Get<bool>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
@@ -109,16 +111,18 @@ template<> double Property::Get<double>() const {
 	return Get<double>(0);
 }
 
-template<> size_t Property::Get<size_t>() const {
+template<> u_longlong Property::Get<u_longlong>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
-	return Get<size_t>(0);
+	return Get<u_longlong>(0);
 }
 
 template<> string Property::Get<string>() const {
 	if (values.size() != 1)
 		throw std::runtime_error("Wrong number of values in property: " + name);
 	return Get<string>(0);
+}
+
 }
 
 //------------------------------------------------------------------------------

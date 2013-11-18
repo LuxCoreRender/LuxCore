@@ -678,14 +678,14 @@ void RenderSession::UpdateStats() {
 		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
 		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
 		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
-		stats.Set(Property(prefix + ".memory.total")(dev->GetMaxMemory()));
-		stats.Set(Property(prefix + ".memory.used")(dev->GetUsedMemory()));
+		stats.Set(Property(prefix + ".memory.total")((u_longlong)dev->GetMaxMemory()));
+		stats.Set(Property(prefix + ".memory.used")((u_longlong)dev->GetUsedMemory()));
 	}
 	stats.Set(devicesNames);
 	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));
 
 	// The explicit cast to size_t is required by VisualC++
-	stats.Set(Property("stats.dataset.trianglecount")((size_t)renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
+	stats.Set(Property("stats.dataset.trianglecount")(renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
 
 	// Some engine specific statistic
 	switch (renderSession->renderEngine->GetEngineType()) {
@@ -706,7 +706,7 @@ void RenderSession::UpdateStats() {
 			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
 			vector<slg::TileRepository::Tile> tiles;
 			engine->GetPendingTiles(tiles);
-			stats.Set(Property("stats.biaspath.tiles.pending.count")(tiles.size()));
+			stats.Set(Property("stats.biaspath.tiles.pending.count")((u_int)tiles.size()));
 			Property tileProp("stats.biaspath.tiles.pending.coords");
 			BOOST_FOREACH(const slg::TileRepository::Tile &tile, tiles)
 				tileProp.Add(tile.xStart).Add(tile.yStart);
@@ -720,7 +720,7 @@ void RenderSession::UpdateStats() {
 			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
 			vector<slg::TileRepository::Tile> tiles;
 			engine->GetPendingTiles(tiles);
-			stats.Set(Property("stats.biaspath.tiles.pending.count")(tiles.size()));
+			stats.Set(Property("stats.biaspath.tiles.pending.count")((u_int)tiles.size()));
 			Property tileProp("stats.biaspath.tiles.pending.coords");
 			BOOST_FOREACH(const slg::TileRepository::Tile &tile, tiles)
 				tileProp.Add(tile.xStart).Add(tile.yStart);
