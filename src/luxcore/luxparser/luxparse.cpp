@@ -333,7 +333,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 	if (lightProps.GetSize() > 0) {
 		*sceneProps <<
 				GetTexture(prefix + ".emission", Property("L")(Spectrum(1.f)), lightProps) << 
-				Property(prefix + ".emission.gain")(matProps.Get(Property("gain")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".emission.gain")(matProps.Get(Property("gain")(1.f)).Get<float>()) <<
 				Property(prefix + ".emission.power")(matProps.Get(Property("power")(100.f)).Get<float>()) <<
 				Property(prefix + ".emission.efficency")(matProps.Get(Property("efficency")(17.f)).Get<float>()) <<
 				Property(prefix + ".emission.id")(currentGraphicsState.currentLightGroup);
@@ -1023,10 +1023,10 @@ static const yytype_uint16 yyrline[] =
      606,   611,   615,   618,   622,   628,   632,   637,   642,   646,
      649,   653,   659,   663,   668,   672,   675,   692,   695,   699,
      711,   718,   723,   734,   761,   774,   778,   787,   790,   823,
-     827,   830,   843,   888,   895,   902,   917,   921,   925,   928,
-     937,   941,   945,   949,   952,   955,   979,  1003,  1006,  1011,
-    1037,  1042,  1045,  1112,  1116,  1142,  1295,  1299,  1308,  1322,
-    1327,  1331,  1335,  1338
+     827,   830,   843,   901,   908,   915,   930,   934,   938,   941,
+     950,   954,   958,   962,   965,   968,   992,  1016,  1019,  1024,
+    1050,  1055,  1058,  1125,  1129,  1155,  1308,  1312,  1321,  1335,
+    1340,  1344,  1348,  1351
 };
 #endif
 
@@ -2540,6 +2540,7 @@ yyreduce:
 		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
 
 		*sceneProps <<
+				Property(prefix + "_SUN.type")("sun") <<
 				Property(prefix + "_SUN.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
 				Property(prefix + "_SUN.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
 				Property(prefix + "_SUN.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
@@ -2548,6 +2549,7 @@ yyreduce:
 				Property(prefix + "_SUN.id")(currentGraphicsState.currentLightGroup);
 
 		*sceneProps <<
+				Property(prefix + "_SKY.type")("sky") <<
 				Property(prefix + "_SKY.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
 				Property(prefix + "_SKY.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
 				Property(prefix + "_SKY.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
@@ -2555,10 +2557,21 @@ yyreduce:
 				Property(prefix + "_SKY.id")(currentGraphicsState.currentLightGroup);
 	} else if ((name == "infinite") || (name == "infinitesample")) {
 		*sceneProps <<
+				Property(prefix + ".type")("infinite") <<
 				Property(prefix + ".file")(props.Get(Property("mapname")("")).Get<string>()) <<
 				Property(prefix + ".gamma")(props.Get(Property("gamma")(1.f)).Get<float>()) <<
 				Property(prefix + ".gain")(props.Get(Property("gain")(1.f)).Get<float>() *
 					props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "point") {
+		*sceneProps <<
+				Property(prefix + ".type")("point") <<
+				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
+				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
 				Property(prefix + ".transformation")(currentTransform.m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	}
@@ -2570,7 +2583,7 @@ yyreduce:
   case 43:
 
 /* Line 1806 of yacc.c  */
-#line 889 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 902 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	*sceneProps <<
 			Property("scene.camera.lookat.orig")((yyvsp[(2) - (10)].num), (yyvsp[(3) - (10)].num), (yyvsp[(4) - (10)].num)) <<
@@ -2582,7 +2595,7 @@ yyreduce:
   case 44:
 
 /* Line 1806 of yacc.c  */
-#line 896 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 909 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	currentGraphicsState.materialName = "";
 	InitProperties(currentGraphicsState.materialProps, CPS, CP);
@@ -2594,7 +2607,7 @@ yyreduce:
   case 45:
 
 /* Line 1806 of yacc.c  */
-#line 903 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 916 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	string name((yyvsp[(2) - (3)].string));
 	// Replace any "." in the name with 2x"__"
@@ -2614,7 +2627,7 @@ yyreduce:
   case 46:
 
 /* Line 1806 of yacc.c  */
-#line 918 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 931 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	FreeArgs();
 }
@@ -2623,7 +2636,7 @@ yyreduce:
   case 47:
 
 /* Line 1806 of yacc.c  */
-#line 922 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 935 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	ArrayFree((yyvsp[(2) - (2)].ribarray));
 }
@@ -2632,7 +2645,7 @@ yyreduce:
   case 48:
 
 /* Line 1806 of yacc.c  */
-#line 926 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 939 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -2640,7 +2653,7 @@ yyreduce:
   case 49:
 
 /* Line 1806 of yacc.c  */
-#line 929 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 942 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	const string name((yyvsp[(2) - (2)].string));
 	if (!namedMaterials.count(name))
@@ -2654,7 +2667,7 @@ yyreduce:
   case 50:
 
 /* Line 1806 of yacc.c  */
-#line 938 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 951 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectBegin($2);
 }
@@ -2663,7 +2676,7 @@ yyreduce:
   case 51:
 
 /* Line 1806 of yacc.c  */
-#line 942 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 955 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectEnd();
 }
@@ -2672,7 +2685,7 @@ yyreduce:
   case 52:
 
 /* Line 1806 of yacc.c  */
-#line 946 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 959 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	//luxObjectInstance($2);
 }
@@ -2681,7 +2694,7 @@ yyreduce:
   case 53:
 
 /* Line 1806 of yacc.c  */
-#line 950 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 963 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -2689,7 +2702,7 @@ yyreduce:
   case 54:
 
 /* Line 1806 of yacc.c  */
-#line 953 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 966 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -2697,7 +2710,7 @@ yyreduce:
   case 55:
 
 /* Line 1806 of yacc.c  */
-#line 956 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 969 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2726,7 +2739,7 @@ yyreduce:
   case 56:
 
 /* Line 1806 of yacc.c  */
-#line 980 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 993 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2755,7 +2768,7 @@ yyreduce:
   case 57:
 
 /* Line 1806 of yacc.c  */
-#line 1004 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1017 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -2763,7 +2776,7 @@ yyreduce:
   case 58:
 
 /* Line 1806 of yacc.c  */
-#line 1007 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1020 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Transform t(Rotate((yyvsp[(2) - (5)].num), Vector((yyvsp[(3) - (5)].num), (yyvsp[(4) - (5)].num), (yyvsp[(5) - (5)].num))));
 	currentTransform = currentTransform * t;
@@ -2773,7 +2786,7 @@ yyreduce:
   case 59:
 
 /* Line 1806 of yacc.c  */
-#line 1012 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1025 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2804,7 +2817,7 @@ yyreduce:
   case 60:
 
 /* Line 1806 of yacc.c  */
-#line 1038 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1051 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Transform t(Scale((yyvsp[(2) - (4)].num), (yyvsp[(3) - (4)].num), (yyvsp[(4) - (4)].num)));
 	currentTransform = currentTransform * t;
@@ -2814,7 +2827,7 @@ yyreduce:
   case 61:
 
 /* Line 1806 of yacc.c  */
-#line 1043 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1056 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -2822,7 +2835,7 @@ yyreduce:
   case 62:
 
 /* Line 1806 of yacc.c  */
-#line 1046 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1059 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2894,7 +2907,7 @@ yyreduce:
   case 63:
 
 /* Line 1806 of yacc.c  */
-#line 1113 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1126 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	FreeArgs();
 }
@@ -2903,7 +2916,7 @@ yyreduce:
   case 64:
 
 /* Line 1806 of yacc.c  */
-#line 1117 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1130 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2934,7 +2947,7 @@ yyreduce:
   case 65:
 
 /* Line 1806 of yacc.c  */
-#line 1143 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1156 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -3092,7 +3105,7 @@ yyreduce:
   case 66:
 
 /* Line 1806 of yacc.c  */
-#line 1296 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1309 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	transformsStack.push_back(currentTransform);
 }
@@ -3101,7 +3114,7 @@ yyreduce:
   case 67:
 
 /* Line 1806 of yacc.c  */
-#line 1300 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1313 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	if (!(transformsStack.size() > graphicsStatesStack.size())) {
 		LC_LOG("Unmatched TransformEnd encountered. Ignoring it.");
@@ -3115,7 +3128,7 @@ yyreduce:
   case 68:
 
 /* Line 1806 of yacc.c  */
-#line 1309 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1322 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	if (VerifyArrayLength((yyvsp[(2) - (2)].ribarray), 16, "Transform")) {
 		const float *tr = static_cast<float *>((yyvsp[(2) - (2)].ribarray)->array);
@@ -3134,7 +3147,7 @@ yyreduce:
   case 69:
 
 /* Line 1806 of yacc.c  */
-#line 1323 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1336 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	Transform t(Translate(Vector((yyvsp[(2) - (4)].num), (yyvsp[(3) - (4)].num), (yyvsp[(4) - (4)].num))));
 	currentTransform = currentTransform * t;
@@ -3144,7 +3157,7 @@ yyreduce:
   case 70:
 
 /* Line 1806 of yacc.c  */
-#line 1328 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1341 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	FreeArgs();
 }
@@ -3153,7 +3166,7 @@ yyreduce:
   case 71:
 
 /* Line 1806 of yacc.c  */
-#line 1332 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1345 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 	FreeArgs();
 }
@@ -3162,7 +3175,7 @@ yyreduce:
   case 72:
 
 /* Line 1806 of yacc.c  */
-#line 1336 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1349 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -3170,7 +3183,7 @@ yyreduce:
   case 73:
 
 /* Line 1806 of yacc.c  */
-#line 1339 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1352 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
     {
 }
     break;
@@ -3178,7 +3191,7 @@ yyreduce:
 
 
 /* Line 1806 of yacc.c  */
-#line 3182 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
+#line 3195 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -3409,6 +3422,6 @@ yyreturn:
 
 
 /* Line 2067 of yacc.c  */
-#line 1341 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
+#line 1354 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
 
 
