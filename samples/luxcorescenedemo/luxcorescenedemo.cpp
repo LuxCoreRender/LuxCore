@@ -161,7 +161,7 @@ static void DoRendering(RenderSession *session) {
 		sprintf(buf, "[Elapsed time: %3d/%dsec][Samples %4d/%d][Convergence %f%%][Avg. samples/sec % 3.2fM on %.1fK tris]",
 				int(elapsedTime), int(haltTime), pass, haltSpp, 100.f * convergence,
 				stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0,
-				stats.Get("stats.dataset.trianglecount").Get<size_t>() / 1000.0);
+				stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0);
 
 		SLG_LOG(buf);
 	}

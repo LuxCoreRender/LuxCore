@@ -335,7 +335,7 @@ void CPURenderThread::EndSceneEdit(const EditActionList &editActions) {
 CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
 	const size_t renderThreadCount =  cfg->cfg.Get(Property("native.threads.count",
-			boost::thread::hardware_concurrency())).Get<size_t>();
+			boost::thread::hardware_concurrency())).Get<u_longlong>();
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -1026,7 +1026,7 @@ HybridRenderEngine::HybridRenderEngine(const RenderConfig *rcfg, Film *flm,
 	// Check if I have to set max. QBVH stack size
 	const bool enableImageStorage = renderConfig->cfg.Get(Property("accelerator.imagestorage.enable")(true)).Get<bool>();
 	const size_t qbvhStackSize = renderConfig->cfg.Get(Property("accelerator.qbvh.stacksize.max")(
-			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<size_t>();
+			(u_longlong)OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<u_longlong>();
 	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
 		intersectionDevices[i]->SetEnableImageStorage(enableImageStorage);
 		intersectionDevices[i]->SetMaxStackSize(qbvhStackSize);

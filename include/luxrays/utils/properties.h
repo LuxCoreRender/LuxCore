@@ -51,13 +51,13 @@ namespace luxrays {
  * The current list of allowed data types is:
  * - bool
  * - int
- * - unsigned int
+ * - u_int
  * - float
  * - double
- * - size_t
+ * - u_longlong
  * - string
  */
-typedef boost::variant<bool, int, u_int, float, double, size_t, std::string> PropertyValue;
+typedef boost::variant<bool, int, u_int, float, double, u_longlong, std::string> PropertyValue;
 
 /*!
  * \brief A vector of values that can be stored in a Property.
@@ -195,10 +195,10 @@ public:
 	 * luxrays::Normal, etc. The current list of supported data types is:
 	 * - bool
 	 * - int
-	 * - unsigned int
+	 * - u_int
 	 * - float
 	 * - double
-	 * - size_t
+	 * - u_longlong
 	 * - string
 	 * - luxrays::UV
 	 * - luxrays::Vector
@@ -400,7 +400,7 @@ private:
 			return boost::lexical_cast<T>(v);
 		}
 
-		T operator()(const size_t v) const {
+		T operator()(const u_longlong v) const {
 			return boost::lexical_cast<T>(v);
 		}
 
@@ -419,7 +419,7 @@ template<> int Property::Get<int>() const;
 template<> u_int Property::Get<u_int>() const;
 template<> float Property::Get<float>() const;
 template<> double Property::Get<double>() const;
-template<> size_t Property::Get<size_t>() const;
+template<> u_longlong Property::Get<u_longlong>() const;
 template<> std::string Property::Get<std::string>() const;
 // Get LuxRays types
 template<> UV Property::Get<UV>() const;
