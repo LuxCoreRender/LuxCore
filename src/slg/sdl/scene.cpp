@@ -918,7 +918,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
 
-	mat->SetEmittedGain(Max(0.f, props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>()));
+	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
 	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficency")(0.f)).Get<float>()));
 	mat->SetEmittedSamples(Max(-1, props.Get(Property(propName + ".emission.samples")(-1)).Get<int>()));
@@ -1048,6 +1048,10 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 				props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>(),
 				props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
+		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
 		lightSource = sl;
 	} else if (lightType == "infinite") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
@@ -1062,6 +1066,10 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		il->GetUVMapping()->uDelta = shift.u;
 		il->GetUVMapping()->vDelta = shift.v;
 
+		il->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		il->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		il->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
 		lightSource = il;
 	} else if (lightType == "sun") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
@@ -1072,18 +1080,29 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 				props.Get(Property(propName + ".relsize")(1.0f)).Get<float>(),
 				props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
-		sl->Preprocess();
+		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
 		lightSource = sl;
+	} else if (lightType == "point") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		PointLight *pl = new PointLight(light2World,
+				props.Get(Property(propName + ".position")(Point())).Get<Point>());
+		pl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
+
+		pl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
+		pl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
+
+		lightSource = pl;
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
 	lightSource->SetGain(props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>());
 	lightSource->SetSamples(props.Get(Property(propName + ".samples")(-1)).Get<int>());
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
-	lightSource->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
-	lightSource->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
-	lightSource->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 	lightSource->Preprocess();
 	
 	return lightSource;

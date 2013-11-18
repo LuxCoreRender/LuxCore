@@ -179,9 +179,9 @@ public:
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
 	virtual int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
 
-	bool IsVisibleIndirectDiffuse() const { return lightMaterial->IsVisibleIndirectDiffuse(); }
-	bool IsVisibleIndirectGlossy() const { return lightMaterial->IsVisibleIndirectGlossy(); }
-	bool IsVisibleIndirectSpecular() const { return lightMaterial->IsVisibleIndirectSpecular(); }
+	virtual bool IsVisibleIndirectDiffuse() const { return lightMaterial->IsVisibleIndirectDiffuse(); }
+	virtual bool IsVisibleIndirectGlossy() const { return lightMaterial->IsVisibleIndirectGlossy(); }
+	virtual bool IsVisibleIndirectSpecular() const { return lightMaterial->IsVisibleIndirectSpecular(); }
 
 	void SetMaterial(const Material *mat) { lightMaterial = mat; }
 	const Material *GetMaterial() const { return lightMaterial; }
@@ -209,22 +209,17 @@ protected:
 class NotIntersecableLightSource : public LightSource {
 public:
 	NotIntersecableLightSource(const luxrays::Transform &l2w) :
-		id(0), lightToWorld(l2w), gain(1.f), samples(-1),
-		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true),
-		isVisibleIndirectSpecular(true) { }
+		id(0), lightToWorld(l2w), gain(1.f), samples(-1) { }
 	virtual ~NotIntersecableLightSource() { }
+
+	virtual bool IsVisibleIndirectDiffuse() const { return false; }
+	virtual bool IsVisibleIndirectGlossy() const { return false; }
+	virtual bool IsVisibleIndirectSpecular() const { return false; }
 
 	virtual void SetID(const u_int lightID) { id = lightID; }
 	virtual u_int GetID() const { return id; }
 	void SetSamples(const int sampleCount) { samples = sampleCount; }
 	virtual int GetSamples() const { return samples; }
-
-	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
-	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
-	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
-	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
-	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
-	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
 
 	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
@@ -234,7 +229,7 @@ public:
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	}
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 protected:
 	u_int id;
@@ -242,8 +237,6 @@ protected:
 	const luxrays::Transform lightToWorld;
 	luxrays::Spectrum gain;
 	int samples;
-
-	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
 };
 
 //------------------------------------------------------------------------------
@@ -253,13 +246,27 @@ protected:
 class EnvLightSource : public NotIntersecableLightSource {
 public:
 	EnvLightSource(const luxrays::Transform &l2w) :
-		NotIntersecableLightSource(l2w) { }
+		NotIntersecableLightSource(l2w), isVisibleIndirectDiffuse(true),
+		isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
 	virtual ~EnvLightSource() { }
 
 	virtual bool IsEnvironmental() const { return true; }
 
+	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
+	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
+	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
+
+	virtual bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
+	virtual bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
+	virtual bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
+
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+protected:
+	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
 };
 
 //------------------------------------------------------------------------------
@@ -268,31 +275,45 @@ public:
 // Note: the light source is always placed in the origin of local coord. space
 //------------------------------------------------------------------------------
 
-//class PointLight : public NotIntersecableLightSource {
-//public:
-//	PointLight(const luxrays::Transform &l2w);
-//	virtual ~PointLight();
-//
-//	virtual void Preprocess() { }
-//
-//	virtual LightSourceType GetType() const { return TYPE_POINT; }
-//	virtual float GetPower(const Scene &scene) const;
-//
-//	virtual luxrays::Spectrum Emit(const Scene &scene,
-//		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-//		luxrays::Point *pos, luxrays::Vector *dir,
-//		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
-//
-//    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
-//		const float u0, const float u1, const float passThroughEvent,
-//        luxrays::Vector *dir, float *distance, float *directPdfW,
-//		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
-//
-//	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
-//			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
-//
-//	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-//};
+class PointLight : public NotIntersecableLightSource {
+public:
+	PointLight(const luxrays::Transform &l2w, const luxrays::Point &pos);
+	virtual ~PointLight();
+
+	virtual void Preprocess();
+
+	virtual LightSourceType GetType() const { return TYPE_POINT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	void SetColor(const luxrays::Spectrum &v) { color = v; }
+	luxrays::Spectrum GetColor() const { return color; }
+	void SetPower(const float v) { power = v;}
+	float GetPower() const { return power; }
+	void SetEfficency(const float v) { efficency = v;}
+	float GetEfficency() const { return efficency; }
+	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
+	const luxrays::Point &GetLocalPosition() const { return localPos; }
+	const luxrays::Point &GetAbsolutePosition() const { return absolutePos; }
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	luxrays::Spectrum color;
+	float power, efficency;
+	luxrays::Spectrum emittedFactor;
+
+	luxrays::Point localPos, absolutePos;
+};
 
 //------------------------------------------------------------------------------
 // InfiniteLight implementation
