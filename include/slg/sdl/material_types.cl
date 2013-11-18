@@ -87,7 +87,7 @@ typedef struct {
 typedef struct {
 	MaterialType type;
 	unsigned int matID, lightID;
-	float emittedFactor;
+	Spectrum emittedFactor;
 	int usePrimitiveArea;
 	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;
 	int samples;

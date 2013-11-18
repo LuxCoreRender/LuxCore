@@ -68,13 +68,13 @@ public:
 	u_int GetLightID() const { return lightID; }
 	void SetID(const u_int id) { matID = id; }
 	u_int GetID() const { return matID; }
-	void SetEmittedGain(const float v) { emittedGain = v; UpdateEmittedFactor(); }
-	float GetEmittedGain() const { return emittedGain; }
+	void SetEmittedGain(const luxrays::Spectrum &v) { emittedGain = v; UpdateEmittedFactor(); }
+	luxrays::Spectrum GetEmittedGain() const { return emittedGain; }
 	void SetEmittedPower(const float v) { emittedPower = v; UpdateEmittedFactor(); }
 	float GetEmittedPower() const { return emittedPower; }
 	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
 	float GetEmittedEfficency() const { return emittedEfficency; }
-	float GetEmittedFactor() const { return emittedFactor; }
+	luxrays::Spectrum GetEmittedFactor() const { return emittedFactor; }
 	bool IsUsingPrimitiveArea() const { return usePrimitiveArea; }
 
 	virtual MaterialType GetType() const = 0;
@@ -170,24 +170,13 @@ public:
 	virtual luxrays::Properties ToProperties() const;
 
 protected:
-	void UpdateEmittedFactor() {
-		if (emittedTex) {
-			emittedFactor = emittedGain * emittedPower * emittedEfficency / (M_PI * emittedTex->Y());
-			if ((emittedFactor == 0.f) || isinf(emittedFactor) || isnan(emittedFactor)) {
-				emittedFactor = emittedGain;
-				usePrimitiveArea = false;
-			} else
-				usePrimitiveArea = true;
-		} else {
-			emittedFactor = emittedGain;
-			usePrimitiveArea = false;
-		}
-	}
+	void UpdateEmittedFactor();
 
 	u_int matID, lightID;
 
 	int samples, emittedSamples;
-	float emittedGain, emittedPower, emittedEfficency, emittedFactor;
+	luxrays::Spectrum emittedGain, emittedFactor;
+	float emittedPower, emittedEfficency;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
 	const Texture *normalTex;

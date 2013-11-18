@@ -90,7 +90,7 @@ std::string KernelSource_material_types =
 "typedef struct {\n"
 "	MaterialType type;\n"
 "	unsigned int matID, lightID;\n"
-"	float emittedFactor;\n"
+"	Spectrum emittedFactor;\n"
 "	int usePrimitiveArea;\n"
 "	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;\n"
 "	int samples;\n"
