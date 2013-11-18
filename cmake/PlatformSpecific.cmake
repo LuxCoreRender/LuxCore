@@ -130,21 +130,43 @@ IF(APPLE)
 
 	########## OS and hardware detection ###########
 
+	execute_process(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
+
+	if(${MAC_SYS} MATCHES 14)
+		set(OSX_SYSTEM 10.10)
+	elseif(${MAC_SYS} MATCHES 13)
+		set(OSX_SYSTEM 10.9)
+	elseif(${MAC_SYS} MATCHES 12)
+		set(OSX_SYSTEM 10.8)
+	elseif(${MAC_SYS} MATCHES 11)
+		set(OSX_SYSTEM 10.7)
+	elseif(${MAC_SYS} MATCHES 10)
+		set(OSX_SYSTEM 10.6)
+	else()
+		set(OSX_SYSTEM unsupported)
+	endif()
+
 	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # unix makefile generator does not fill XCODE_VERSION var ! 
 		execute_process(COMMAND xcodebuild -version OUTPUT_VARIABLE XCODE_VERS_BUILDNR )
 		STRING(SUBSTRING ${XCODE_VERS_BUILDNR} 6 3 XCODE_VERSION) # truncate away build-nr
 	endif()	
 
 	set(CMAKE_OSX_DEPLOYMENT_TARGET 10.6) # keep this @ 10.6 to archieve bw-compatibility by weak-linking !
-	if(CMAKE_VERSION VERSION_LESS 2.8.1)
-		SET(CMAKE_OSX_ARCHITECTURES i386;x86_64)
-	else(CMAKE_VERSION VERSION_LESS 2.8.1)
-		SET(CMAKE_XCODE_ATTRIBUTE_ARCHS i386\ x86_64)
-	endif(CMAKE_VERSION VERSION_LESS 2.8.1)
+
+    if(${CMAKE_GENERATOR} MATCHES "Xcode" AND ${XCODE_VERSION} VERSION_LESS 5.0)
+        if(CMAKE_VERSION VERSION_LESS 2.8.1)
+            SET(CMAKE_OSX_ARCHITECTURES i386;x86_64)
+        else(CMAKE_VERSION VERSION_LESS 2.8.1)
+            SET(CMAKE_XCODE_ATTRIBUTE_ARCHS i386\ x86_64)
+        endif(CMAKE_VERSION VERSION_LESS 2.8.1)
+    else()
+        SET(CMAKE_XCODE_ATTRIBUTE_ARCHS $(NATIVE_ARCH_ACTUAL))
+    endif()
+
 	if(${XCODE_VERSION} VERSION_LESS 4.3)
 		SET(CMAKE_OSX_SYSROOT /Developer/SDKs/MacOSX10.6.sdk)
 	elseif(${XCODE_VERSION} VERSION_GREATER 4.3)
-		set(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx10.8) # xcode 4.4-style
+		set(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # xcode 4.4-style, gets alway latest available
 	else()
 		SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.6.sdk)
 	endif()	
@@ -171,13 +193,18 @@ IF(APPLE)
 	MESSAGE(STATUS "")
 	MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
 	MESSAGE(STATUS "")
+    MESSAGE(STATUS "Detected system-version: " ${OSX_SYSTEM})
 	MESSAGE(STATUS "OSX_DEPLOYMENT_TARGET : " ${CMAKE_OSX_DEPLOYMENT_TARGET})
 	IF(CMAKE_VERSION VERSION_LESS 2.8.1)
 		MESSAGE(STATUS "Setting CMAKE_OSX_ARCHITECTURES ( cmake lower 2.8 method ): " ${CMAKE_OSX_ARCHITECTURES})
 	ELSE(CMAKE_VERSION VERSION_LESS 2.8.1)
 		MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS ( cmake 2.8 or higher method ): " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
 	ENDIF(CMAKE_VERSION VERSION_LESS 2.8.1)
-	MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_OSX_SYSROOT})
+    if(${XCODE_VERSION} VERSION_GREATER 4.3)
+        MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
+    else()
+        MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_OSX_SYSROOT})
+    endif()
 	MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERSION})
 	if(${CMAKE_GENERATOR} MATCHES "Xcode")
 		MESSAGE(STATUS "BUILD_TYPE : Please set in Xcode ALL_BUILD target to aimed type")
