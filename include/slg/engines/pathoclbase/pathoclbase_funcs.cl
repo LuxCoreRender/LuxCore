@@ -77,12 +77,9 @@
 
 // (optional)
 //  PARAM_HAS_INFINITELIGHT
-
-// (optional)
 //  PARAM_HAS_SUNLIGHT
-
-// (optional)
 //  PARAM_HAS_SKYLIGHT
+//  PARAM_HAS_POINTLIGHT
 
 // (optional)
 //  PARAM_HAS_NORMALS_BUFFER

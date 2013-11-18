@@ -733,7 +733,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	// To: GENERATE_NEXT_VERTEX_RAY
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	if (pathState == RT_DL) {
 		pathState = GENERATE_NEXT_VERTEX_RAY;
 
@@ -820,7 +819,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		}
 #endif
 	}
-#endif
 
 	//--------------------------------------------------------------------------
 	// Evaluation of the Path finite state machine.

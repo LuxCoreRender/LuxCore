@@ -737,13 +737,12 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0)
 		ss << " -D PARAM_HAS_INFINITELIGHT";
-
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0)
 		ss << " -D PARAM_HAS_SKYLIGHT";
-
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SUN] > 0)
 		ss << " -D PARAM_HAS_SUNLIGHT";
-
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_POINT] > 0)
+		ss << " -D PARAM_HAS_POINTLIGHT";
 	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
 	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
 

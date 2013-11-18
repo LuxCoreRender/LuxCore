@@ -287,14 +287,14 @@ Spectrum PointLight::Illuminate(const Scene &scene, const Point &p,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Vector toLight(absolutePos - p);
-	const float distance2 = toLight.LengthSquared();
-	*distance = sqrtf(distance2);
+	const float distanceSquared = toLight.LengthSquared();
+	*distance = sqrtf(distanceSquared);
 	*dir = toLight / *distance;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	*directPdfW = distance2;
+	*directPdfW = distanceSquared;
 
 	if (emissionPdfW)
 		*emissionPdfW = 1.f / (4.f * M_PI);
