@@ -810,7 +810,7 @@ std::string KernelSource_material_funcs =
 "		result = Material_GetEmittedRadianceNoMix(material, hitPoint\n"
 "				TEXTURES_PARAM);\n"
 "\n"
-"	return 	material->emittedFactor * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;\n"
+"	return 	VLOAD3F(&material->emittedFactor.r) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;\n"
 "}\n"
 "\n"
 "#if defined(PARAM_HAS_BUMPMAPS)\n"

@@ -213,6 +213,130 @@ float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const 
 }
 
 //------------------------------------------------------------------------------
+// PointLight
+//------------------------------------------------------------------------------
+
+//PointLight::PointLight(const Transform &l2w) : NotIntersecableLightSource(l2w) {
+//	
+//}
+//
+//PointLight::~PointLight() {
+//}
+//
+//float InfiniteLight::GetPower(const Scene &scene) const {
+//	return gain.Y() * 4.f * M_PI;
+//}
+//
+//Spectrum InfiniteLight::GetRadiance(const Scene &scene,
+//		const Vector &dir,
+//		float *directPdfA,
+//		float *emissionPdfW) const {
+//	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
+//	const UV uv(SphericalPhi(localDir) * INV_TWOPI, SphericalTheta(localDir) * INV_PI);
+//
+//	const float distPdf = imageMapDistribution->Pdf(uv.u, uv.v);
+//	if (directPdfA)
+//		*directPdfA = distPdf / (4.f * M_PI);
+//
+//	if (emissionPdfW) {
+//		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+//		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+//	}
+//
+//	return gain * imageMap->GetSpectrum(mapping.Map(uv));
+//}
+//
+//Spectrum InfiniteLight::Emit(const Scene &scene,
+//		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+//		Point *orig, Vector *dir,
+//		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+//	const Point worldCenter = scene.dataSet->GetBSphere().center;
+//	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+//
+//	// Choose p2 on scene bounding sphere according importance sampling
+//	float uv[2];
+//	float distPdf;
+//	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+//
+//	const float phi = uv[0] * 2.f * M_PI;
+//	const float theta = uv[1] * M_PI;
+//	Point p1 = worldCenter + worldRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
+//
+//	// Choose p2 on scene bounding sphere
+//	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+//
+//	// Construct ray between p1 and p2
+//	*orig = p1;
+//	*dir = Normalize(lightToWorld * (p2 - p1));
+//
+//	// Compute InfiniteAreaLight ray weight
+//	*emissionPdfW = distPdf / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+//
+//	if (directPdfA)
+//		*directPdfA = distPdf / (4.f * M_PI);
+//
+//	if (cosThetaAtLight)
+//		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+//
+//	return GetRadiance(scene, *dir);
+//}
+//
+//Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
+//		const float u0, const float u1, const float passThroughEvent,
+//        Vector *dir, float *distance, float *directPdfW,
+//		float *emissionPdfW, float *cosThetaAtLight) const {
+//	float uv[2];
+//	float distPdf;
+//	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+//
+//	const float phi = uv[0] * 2.f * M_PI;
+//	const float theta = uv[1] * M_PI;
+//	*dir = Normalize(lightToWorld * SphericalDirection(sinf(theta), cosf(theta), phi));
+//
+//	const Point worldCenter = scene.dataSet->GetBSphere().center;
+//	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+//
+//	const Vector toCenter(worldCenter - p);
+//	const float centerDistance = Dot(toCenter, toCenter);
+//	const float approach = Dot(toCenter, *dir);
+//	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+//		centerDistance + approach * approach));
+//
+//	const Point emisPoint(p + (*distance) * (*dir));
+//	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+//
+//	const float cosAtLight = Dot(emisNormal, -(*dir));
+//	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+//		return Spectrum();
+//	if (cosThetaAtLight)
+//		*cosThetaAtLight = cosAtLight;
+//
+//	*directPdfW = distPdf / (4.f * M_PI);
+//
+//	if (emissionPdfW)
+//		*emissionPdfW = distPdf / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+//
+//	return gain * imageMap->GetSpectrum(mapping.Map(UV(uv[0], uv[1])));
+//}
+//
+//Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
+//	const string prefix = "scene." + GetName();
+//	Properties props;
+//
+//	props.Set(Property(prefix + ".file")("imagemap-" + 
+//		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+//	props.Set(Property(prefix + ".gain")(gain));
+//	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
+//	props.Set(Property(prefix + ".transformation")(lightToWorld.m));
+//	props.Set(Property(prefix + ".samples")(samples));
+//	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
+//	props.Set(Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
+//	props.Set(Property(prefix + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
+//
+//	return props;
+//}
+
+//------------------------------------------------------------------------------
 // InfiniteLight
 //------------------------------------------------------------------------------
 

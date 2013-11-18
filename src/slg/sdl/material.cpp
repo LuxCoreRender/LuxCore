@@ -76,6 +76,9 @@ Properties Material::ToProperties() const {
 	luxrays::Properties props;
 
 	const std::string name = GetName();
+	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
+	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
+	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
 	props.Set(Property("scene.materials." + name + ".emission.samples")(emittedSamples));
 	if (emittedTex)
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
@@ -89,6 +92,20 @@ Properties Material::ToProperties() const {
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
 
 	return props;
+}
+
+void Material::UpdateEmittedFactor() {
+	if (emittedTex) {
+		emittedFactor = emittedGain * (emittedPower * emittedEfficency / (M_PI * emittedTex->Y()));
+		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
+			emittedFactor = emittedGain;
+			usePrimitiveArea = false;
+		} else
+			usePrimitiveArea = true;
+	} else {
+		emittedFactor = emittedGain;
+		usePrimitiveArea = false;
+	}
 }
 
 //------------------------------------------------------------------------------

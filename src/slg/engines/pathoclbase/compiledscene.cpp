@@ -293,7 +293,7 @@ void CompiledScene::CompileMaterials() {
 			mat->emitTexIndex = scene->texDefs.GetTextureIndex(emitTex);
 		else
 			mat->emitTexIndex = NULL_INDEX;
-		mat->emittedFactor = m->GetEmittedFactor();
+		ASSIGN_SPECTRUM(mat->emittedFactor, m->GetEmittedFactor());
 		mat->usePrimitiveArea = m->IsUsingPrimitiveArea();
 
 		// Material bump mapping

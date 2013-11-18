@@ -40,7 +40,7 @@ namespace ocl {
 class Scene;
 
 typedef enum {
-	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE,
+	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -228,12 +228,8 @@ public:
 
 	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
 
-	void SetGain(const luxrays::Spectrum &g) {
-		gain = g;
-	}
-	luxrays::Spectrum GetGain() const {
-		return gain;
-	}
+	void SetGain(const luxrays::Spectrum &g) { gain = g; }
+	luxrays::Spectrum GetGain() const { return gain; }
 
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	}
@@ -265,6 +261,38 @@ public:
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 };
+
+//------------------------------------------------------------------------------
+// PointLight implementation
+//
+// Note: the light source is always placed in the origin of local coord. space
+//------------------------------------------------------------------------------
+
+//class PointLight : public NotIntersecableLightSource {
+//public:
+//	PointLight(const luxrays::Transform &l2w);
+//	virtual ~PointLight();
+//
+//	virtual void Preprocess() { }
+//
+//	virtual LightSourceType GetType() const { return TYPE_POINT; }
+//	virtual float GetPower(const Scene &scene) const;
+//
+//	virtual luxrays::Spectrum Emit(const Scene &scene,
+//		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+//		luxrays::Point *pos, luxrays::Vector *dir,
+//		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+//
+//    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+//		const float u0, const float u1, const float passThroughEvent,
+//        luxrays::Vector *dir, float *distance, float *directPdfW,
+//		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+//
+//	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+//			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+//
+//	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+//};
 
 //------------------------------------------------------------------------------
 // InfiniteLight implementation
