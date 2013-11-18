@@ -608,6 +608,22 @@ void CompiledScene::CompileLights() {
 				envLightIndices.push_back(i);
 				break;
 			}
+			case TYPE_POINT: {
+				const PointLight *pl = (const PointLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_POINT;
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &pl->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &pl->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, pl->GetGain());
+
+				// PointLight data
+				ASSIGN_VECTOR(oclLight->notIntersecable.point.absolutePos, pl->GetAbsolutePosition());
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.point.emittedFactor, pl->GetEmittedFactor());
+				break;
+			}
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}

@@ -260,7 +260,7 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 	const float3 p1 = VLOAD3F(&triLight->triangle.v1.x);
 	const float3 p2 = VLOAD3F(&triLight->triangle.v2.x);
 	float b0, b1, b2;
-	float3 samplePoint = Triangle_Sample(
+	const float3 samplePoint = Triangle_Sample(
 			p0, p1, p2,
 			u0, u1,
 			&b0, &b1, &b2);
@@ -312,6 +312,26 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 	return Material_GetEmittedRadiance(&mats[triLight->triangle.materialIndex],
 			hitPoint, triLight->triangle.invArea
 			MATERIALS_PARAM);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// PointLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_POINTLIGHT)
+
+float3 PointLight_Illuminate(__global LightSource *pointLight,
+		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
+	const float3 toLight = VLOAD3F(&pointLight->notIntersecable.point.absolutePos.x) - p;
+	const float distanceSquared = dot(toLight, toLight);
+	*distance = sqrt(distanceSquared);
+	*dir = toLight / *distance;
+
+	*directPdfW = distanceSquared;
+
+	return VLOAD3F(&pointLight->notIntersecable.point.emittedFactor.r);
 }
 
 #endif
@@ -412,6 +432,12 @@ float3 Light_Illuminate(
 #endif
 					lightRayDir, distance, directPdfW
 					MATERIALS_PARAM);
+#endif
+#if defined(PARAM_HAS_POINTLIGHT)
+		case TYPE_POINT:
+			return PointLight_Illuminate(
+					light, point,
+					lightRayDir, distance, directPdfW);
 #endif
 		default:
 			return BLACK;
