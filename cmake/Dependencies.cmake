@@ -112,7 +112,7 @@ endif ()
 
 # Find BISON
 IF (NOT BISON_NOT_AVAILABLE)
-	FIND_PACKAGE(BISON REQUIRED)
+	FIND_PACKAGE(BISON)
 	IF (NOT BISON_FOUND)
 		MESSAGE(WARNING "bison not found - try compilation using already generated files")
 		SET(BISON_NOT_AVAILABLE 1)
@@ -121,7 +121,7 @@ ENDIF (NOT BISON_NOT_AVAILABLE)
 
 # Find BISON
 IF (NOT FLEX_NOT_AVAILABLE)
-	FIND_PACKAGE(FLEX REQUIRED)
+	FIND_PACKAGE(FLEX)
 	IF (NOT FLEX_FOUND)
 		MESSAGE(WARNING "flex not found - try compilation using already generated files")
 		SET(FLEX_NOT_AVAILABLE 1)
