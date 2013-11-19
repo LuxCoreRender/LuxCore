@@ -192,7 +192,6 @@ u_int Film::GetHeight() const {
 }
 
 void Film::Save() const {
-	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
 	renderSession.renderSession->SaveFilm();
 }
 
