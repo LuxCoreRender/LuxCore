@@ -29,7 +29,7 @@ set(FreeImage_LIB_SEARCH_PATH "${FREEIMAGE_SEARCH_PATH}/Dist")
 set(FREEIMAGE_ROOT_DIR "${FREEIMAGE_SEARCH_PATH}/Dist")
 
 #set(Boost_DEBUG 1)
-set(BOOST_SEARCH_PATH         "E:/projects/luxrays-64bit/boost_1_48_0")
+set(BOOST_SEARCH_PATH         "E:/projects/luxrays-64bit/boost_1_48_0-python26")
 set(BOOST_LIBRARYDIR          "${BOOST_SEARCH_PATH}/stage/lib")
 
 set(OPENCL_SEARCH_PATH        "C:/Program Files (x86)/AMD APP")
