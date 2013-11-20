@@ -22,6 +22,7 @@
 #include "slg/sdl/material.h"
 #include "slg/sdl/bsdf.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -75,7 +76,7 @@ UV Material::GetBumpTexValue(const HitPoint &hitPoint) const {
 Properties Material::ToProperties() const {
 	luxrays::Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
@@ -119,7 +120,7 @@ MaterialDefinitions::~MaterialDefinitions() {
 		delete m;
 }
 
-void MaterialDefinitions::DefineMaterial(const std::string &name, Material *newMat) {
+void MaterialDefinitions::DefineMaterial(const string &name, Material *newMat) {
 	if (IsMaterialDefined(name)) {
 		const Material *oldMat = GetMaterial(name);
 
@@ -127,7 +128,7 @@ void MaterialDefinitions::DefineMaterial(const std::string &name, Material *newM
 		const u_int index = GetMaterialIndex(name);
 		mats[index] = newMat;
 		matsByName.erase(name);
-		matsByName.insert(std::make_pair(name, newMat));
+		matsByName.insert(make_pair(name, newMat));
 
 		// Update all possible reference to old material with the new one
 		BOOST_FOREACH(Material *mat, mats)
@@ -138,7 +139,7 @@ void MaterialDefinitions::DefineMaterial(const std::string &name, Material *newM
 	} else {
 		// Add the new material
 		mats.push_back(newMat);
-		matsByName.insert(std::make_pair(name, newMat));
+		matsByName.insert(make_pair(name, newMat));
 	}
 }
 
@@ -147,17 +148,17 @@ void MaterialDefinitions::UpdateTextureReferences(const Texture *oldTex, const T
 		mat->UpdateTextureReferences(oldTex, newTex);
 }
 
-Material *MaterialDefinitions::GetMaterial(const std::string &name) {
+Material *MaterialDefinitions::GetMaterial(const string &name) {
 	// Check if the material has been already defined
-	std::map<std::string, Material *>::const_iterator it = matsByName.find(name);
+	boost::unordered_map<string, Material *>::const_iterator it = matsByName.find(name);
 
 	if (it == matsByName.end())
-		throw std::runtime_error("Reference to an undefined material: " + name);
+		throw runtime_error("Reference to an undefined material: " + name);
 	else
 		return it->second;
 }
 
-u_int MaterialDefinitions::GetMaterialIndex(const std::string &name) {
+u_int MaterialDefinitions::GetMaterialIndex(const string &name) {
 	return GetMaterialIndex(GetMaterial(name));
 }
 
@@ -167,19 +168,19 @@ u_int MaterialDefinitions::GetMaterialIndex(const Material *m) const {
 			return i;
 	}
 
-	throw std::runtime_error("Reference to an undefined material: " + boost::lexical_cast<std::string>(m));
+	throw runtime_error("Reference to an undefined material: " + boost::lexical_cast<string>(m));
 }
 
-std::vector<std::string> MaterialDefinitions::GetMaterialNames() const {
-	std::vector<std::string> names;
+vector<string> MaterialDefinitions::GetMaterialNames() const {
+	vector<string> names;
 	names.reserve(mats.size());
-	for (std::map<std::string, Material *>::const_iterator it = matsByName.begin(); it != matsByName.end(); ++it)
+	for (boost::unordered_map<string, Material *>::const_iterator it = matsByName.begin(); it != matsByName.end(); ++it)
 		names.push_back(it->first);
 
 	return names;
 }
 
-void MaterialDefinitions::DeleteMaterial(const std::string &name) {
+void MaterialDefinitions::DeleteMaterial(const string &name) {
 	const u_int index = GetMaterialIndex(name);
 	mats.erase(mats.begin() + index);
 	matsByName.erase(name);
@@ -247,7 +248,7 @@ void MatteMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 Properties MatteMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("matte"));
 	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
 	props.Set(Material::ToProperties());
@@ -299,7 +300,7 @@ void MirrorMaterial::UpdateTextureReferences(const Texture *oldTex, const Textur
 Properties MirrorMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("mirror"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Material::ToProperties());
@@ -420,7 +421,7 @@ void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 Properties GlassMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("glass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
@@ -606,7 +607,7 @@ void ArchGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Tex
 Properties ArchGlassMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("archglass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
@@ -692,7 +693,7 @@ void MetalMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 Properties MetalMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("metal"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".exp")(exponent->GetName()));
@@ -926,7 +927,7 @@ void MixMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *
 Properties MixMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("mix"));
 	props.Set(Property("scene.materials." + name + ".material1")(matA->GetName()));
 	props.Set(Property("scene.materials." + name + ".material2")(matB->GetName()));
@@ -954,7 +955,7 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
 		return Spectrum();
 
-	//throw std::runtime_error("Internal error, called NullMaterial::Sample()");
+	//throw runtime_error("Internal error, called NullMaterial::Sample()");
 
 	*localSampledDir = -localFixedDir;
 	*absCosSampledDir = 1.f;
@@ -967,7 +968,7 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 Properties NullMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("null"));
 	props.Set(Material::ToProperties());
 
@@ -1081,7 +1082,7 @@ void MatteTranslucentMaterial::UpdateTextureReferences(const Texture *oldTex, co
 Properties MatteTranslucentMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("mattetranslucent"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
@@ -1432,7 +1433,7 @@ void Glossy2Material::UpdateTextureReferences(const Texture *oldTex, const Textu
 Properties Glossy2Material::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("glossy2"));
 	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
 	props.Set(Property("scene.materials." + name + ".ks")(Ks->GetName()));
@@ -1594,7 +1595,7 @@ void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Textur
 Properties Metal2Material::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("metal2"));
 	props.Set(Property("scene.materials." + name + ".n")(n->GetName()));
 	props.Set(Property("scene.materials." + name + ".k")(k->GetName()));
@@ -1942,7 +1943,7 @@ void RoughGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Te
 Properties RoughGlassMaterial::ToProperties() const  {
 	Properties props;
 
-	const std::string name = GetName();
+	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("roughglass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));

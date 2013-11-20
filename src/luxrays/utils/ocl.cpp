@@ -189,7 +189,7 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 		const std::string &kernelsParameters, const std::string &kernelSource,
 		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
-	std::map<std::string, cl::Program::Binaries>::iterator it = kernelCache.find(kernelsParameters);
+	boost::unordered_map<std::string, cl::Program::Binaries>::iterator it = kernelCache.find(kernelsParameters);
 
 	if (it == kernelCache.end()) {
 		// It isn't available, compile the source

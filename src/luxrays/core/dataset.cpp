@@ -54,7 +54,7 @@ DataSet::DataSet(const Context *luxRaysContext) {
 }
 
 DataSet::~DataSet() {
-	for (std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it)
+	for (boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it)
 		delete it->second;
 }
 
@@ -91,7 +91,7 @@ void DataSet::Preprocess() {
 }
 
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
-	std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
+	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
 	if (it == accels.end()) {
 		LR_LOG(context, "Adding DataSet accelerator: " << Accelerator::AcceleratorType2String(accelType));
 		LR_LOG(context, "Total vertex count: " << totalVertexCount);
@@ -153,7 +153,7 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 }
 
 bool DataSet::DoesAllAcceleratorsSupportUpdate() const {
-	for (std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+	for (boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
 		if (!it->second->DoesSupportUpdate())
 			return false;
 	}
@@ -162,7 +162,7 @@ bool DataSet::DoesAllAcceleratorsSupportUpdate() const {
 }
 
 const void DataSet::Update() {
-	for (std::map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
+	for (boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
 		assert(it->second->DoesSupportUpdate());
 		it->second->Update();
 	}

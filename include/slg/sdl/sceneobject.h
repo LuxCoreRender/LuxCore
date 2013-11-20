@@ -99,7 +99,7 @@ public:
   
 private:
 	std::vector<SceneObject *> objs;
-	std::map<std::string, SceneObject *> objsByName;
+	boost::unordered_map<std::string, SceneObject *> objsByName;
 };
 
 }
