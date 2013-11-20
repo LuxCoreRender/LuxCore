@@ -723,6 +723,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	def("Init", &LuxCore_Init);
 	def("Init", &LuxCore_InitDefaultHandler);
+	def("ParseLXS", &ParseLXS);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &ConvertFilmChannelOutput_3xFloat_To_4xUChar);
 	def("ConvertFilmChannelOutput_3xFloat_To_3xFloatList", &ConvertFilmChannelOutput_3xFloat_To_3xFloatList);
 
