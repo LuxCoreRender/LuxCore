@@ -20,7 +20,7 @@
 #define	_LUXRAYS_OPENCL_H
 
 #include <string>
-#include <map>
+#include <boost/unordered_map.hpp>
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -79,7 +79,7 @@ public:
 		bool *cached, cl::STRING_CLASS *error);
 
 private:
-	std::map<std::string, cl::Program::Binaries> kernelCache;
+	boost::unordered_map<std::string, cl::Program::Binaries> kernelCache;
 	std::vector<char *> kernels;
 };
 

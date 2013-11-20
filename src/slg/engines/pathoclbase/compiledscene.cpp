@@ -103,6 +103,7 @@ void CompiledScene::CompileGeometry() {
 	// Translate geometry
 	//----------------------------------------------------------------------
 
+	// Not using boost::unordered_map because because the key is a ExtMesh pointer
 	map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
 
 	slg::ocl::Mesh newMeshDesc;

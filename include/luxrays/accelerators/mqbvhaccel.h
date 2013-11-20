@@ -21,6 +21,7 @@
 
 #include <string.h>
 #include <xmmintrin.h>
+
 #include <boost/cstdint.hpp>
 
 #include "luxrays/luxrays.h"
@@ -78,6 +79,7 @@ private:
 	u_int skipFactor;
 
 	u_int nLeafs;
+	// Not using boost::unordered_map because because the key is a Mesh pointer
 	std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)> accels;
 	QBVHAccel **leafs;
 	const Transform **leafsTransform;

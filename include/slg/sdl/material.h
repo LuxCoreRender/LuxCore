@@ -23,6 +23,7 @@
 #include <set>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
@@ -214,7 +215,7 @@ public:
   
 private:
 	std::vector<Material *> mats;
-	std::map<std::string, Material *> matsByName;
+	boost::unordered_map<std::string, Material *> matsByName;
 };
 
 //------------------------------------------------------------------------------
