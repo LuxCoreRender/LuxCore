@@ -18,6 +18,7 @@
 
 import time
 import sys
+from array import *
 sys.path.append("./lib")
 
 import pyluxcore
@@ -121,6 +122,81 @@ session.Stop()
 
 # Save the rendered image
 session.GetFilm().Save()
+
+print("Done.")
+
+################################################################################
+## Film getOutput() examples
+################################################################################
+
+print("Film getOutput() example (requires scenes directory)...")
+
+# Load the configuration from file
+props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
+
+# Change the render engine to PATHCPU
+props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+
+config = pyluxcore.RenderConfig(props)
+session = pyluxcore.RenderSession(config)
+
+# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 3.3, 2.7 and 2.6
+filmWidth, filmHeight = config.GetFilmSize()[:2]
+if sys.version_info < (2,7,0):
+	imageBufferFloat = bytearray(filmWidth * filmHeight * 3 * 4)
+	imageBufferUChar = bytearray(filmWidth * filmHeight * 4)
+elif sys.version_info < (3,0,0):
+	imageBufferFloat = buffer(array('f', [0.0] * (filmWidth * filmHeight * 3)))
+	imageBufferUChar = buffer(array('b', [0] * (filmWidth * filmHeight * 4)))
+else:
+	imageBufferFloat = array('f', [0.0] * (filmWidth * filmHeight * 3))
+	imageBufferUChar = array('b', [0] * (filmWidth * filmHeight * 4))
+
+session.Start()
+
+startTime = time.time()
+imageIndex = 0
+while True:
+	time.sleep(1)
+
+	elapsedTime = time.time() - startTime
+
+	# Print some information about the rendering progress
+
+	# Update statistics
+	session.UpdateStats()
+
+	stats = session.GetStats();
+	print("[Elapsed time: %3d/5sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+			stats.Get("stats.renderengine.time").GetFloat(),
+			stats.Get("stats.renderengine.pass").GetInt(),
+			(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
+			(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+
+	# This is mostlyfor testing the PyLuxCore functionality, save an image every second
+	
+	# Update the image
+	session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)
+	pyluxcore.ConvertFilmChannelOutput_3xFloat_To_4xUChar(filmWidth, filmHeight,
+		imageBufferFloat, imageBufferUChar, False)
+	
+	# Save the imageBufferUChar buffer to a PPM file
+	imageFileName = "image" + str(imageIndex) + ".ppm"
+	print("Saving image file: " + imageFileName)
+	f = open(imageFileName, "w")
+	f.write("P3\n")
+	f.write(str(filmWidth) + " " + str(filmHeight) + "\n")
+	f.write("255\n")
+	for i in range(0, len(imageBufferUChar), 4):
+		f.write(str(imageBufferUChar[i + 2]) + " " + str(imageBufferUChar[i + 1]) + " " + str(imageBufferUChar[i]) + "\n")
+	f.close()
+	imageIndex += 1
+	
+	if elapsedTime > 5.0:
+		# Time to stop the rendering
+		break
+
+session.Stop()
 
 print("Done.")
 
