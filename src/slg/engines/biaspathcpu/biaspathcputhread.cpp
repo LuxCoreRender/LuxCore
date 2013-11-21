@@ -17,8 +17,6 @@
  ***************************************************************************/
 
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
-#include "slg/core/mc.h"
-#include "luxrays/core/randomgen.h"
 
 using namespace std;
 using namespace luxrays;

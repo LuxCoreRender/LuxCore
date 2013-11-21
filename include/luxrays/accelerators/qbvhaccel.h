@@ -25,6 +25,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
+#include "luxrays/utils/memory.h"
 
 using boost::int32_t;
 

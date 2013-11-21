@@ -25,7 +25,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/spectrum.h"
-#include "slg/core/mc.h"
+#include "luxrays/utils/mc.h"
 
 namespace slg {
 

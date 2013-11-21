@@ -21,7 +21,8 @@
 
 #include "luxrays/core/spectrum.h"
 #include "luxrays/core/utils.h"
-#include "slg/core/mc.h"
+#include "luxrays/utils/mc.h"
+#include "luxrays/utils/mcdistribution.h"
 
 namespace slg {
 	
@@ -68,13 +69,13 @@ public:
 
 	void SampleContinuous(const float u0, const float u1, float *su0, float *su1) const;
 
-	const Distribution2D *GetDistribution2D() const { return distrib; }
+	const luxrays::Distribution2D *GetDistribution2D() const { return distrib; }
 
 private:
 	const Filter *filter;
 	u_int size;
 
-	Distribution2D *distrib;
+	luxrays::Distribution2D *distrib;
 };
 
 class BoxFilter : public Filter {

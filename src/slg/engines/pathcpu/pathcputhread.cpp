@@ -17,7 +17,6 @@
  ***************************************************************************/
 
 #include "slg/engines/pathcpu/pathcpu.h"
-#include "slg/core/mc.h"
 
 using namespace std;
 using namespace luxrays;

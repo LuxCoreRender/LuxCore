@@ -27,6 +27,8 @@
 #include "luxrays/core/extmeshcache.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
+#include "luxrays/utils/mc.h"
+#include "luxrays/utils/mcdistribution.h"
 #include "slg/camera/camera.h"
 #include "slg/editaction.h"
 #include "slg/sdl/sdl.h"
@@ -36,7 +38,6 @@
 #include "slg/sdl/sceneobject.h"
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/mapping.h"
-#include "slg/core/mc.h"
 
 namespace slg {
 
