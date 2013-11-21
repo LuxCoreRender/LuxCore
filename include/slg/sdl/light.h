@@ -26,6 +26,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/spectrum.h"
+#include "luxrays/utils/mcdistribution.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/mapping.h"
@@ -141,7 +142,7 @@ public:
 		return intersecableLightSources;
 	}
 	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
-	const Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
+	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
 
 	LightSource *SampleAllLights(const float u, float *pdf) const;
 	float SampleAllLightPdf(const LightSource *light) const;
@@ -161,7 +162,7 @@ private:
 	std::vector<EnvLightSource *> envLightSources;
 
 	// Used for power based light sampling strategy
-	Distribution1D *lightsDistribution;
+	luxrays::Distribution1D *lightsDistribution;
 
 };
 
@@ -352,13 +353,13 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-	const Distribution2D *GetDistribution2D() const { return imageMapDistribution; }
+	const luxrays::Distribution2D *GetDistribution2D() const { return imageMapDistribution; }
 
 private:
 	const ImageMap *imageMap;
 	UVMapping2D mapping;
 
-	Distribution2D *imageMapDistribution;
+	luxrays::Distribution2D *imageMapDistribution;
 };
 
 //------------------------------------------------------------------------------

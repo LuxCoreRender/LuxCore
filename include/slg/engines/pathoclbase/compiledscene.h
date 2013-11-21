@@ -50,8 +50,8 @@ public:
 				IsMaterialCompiled(ROUGHGLASS));
 	}
 
-	static float *CompileDistribution1D(const Distribution1D *dist, u_int *size);
-	static float *CompileDistribution2D(const Distribution2D *dist, u_int *size);
+	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
+	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
 
 	Scene *scene;
 	Film *film;

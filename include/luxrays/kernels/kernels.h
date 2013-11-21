@@ -58,6 +58,9 @@ extern std::string KernelSource_utils_funcs;
 extern std::string KernelSource_spectrum_types;
 extern std::string KernelSource_spectrum_funcs;
 
+// Util kernel functions
+extern std::string KernelSource_mc_funcs;
+
 } }
 
 #endif	/* _LUXRAYS_KERNELS_H */

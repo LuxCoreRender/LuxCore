@@ -27,8 +27,8 @@
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/spectrum.h"
+#include "luxrays/utils/mc.h"
 #include "slg/sdl/bsdfevents.h"
-#include "slg/core/mc.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/hitpoint.h"
 

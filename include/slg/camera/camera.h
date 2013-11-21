@@ -21,7 +21,8 @@
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/transform.h"
-#include "slg/core/mc.h"
+#include "luxrays/utils/mc.h"
+
 #include "slg/film/film.h"
 
 namespace slg {

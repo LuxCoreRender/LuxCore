@@ -120,6 +120,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/luxrays/kernels luxrays ${LUXRAYS_KERNELS})
@@ -148,8 +149,9 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/openclidevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/nativeidevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/virtualidevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/utils/mc.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ocl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/properties.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
@@ -185,6 +187,7 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/spectrum_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/spectrum_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/uv_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mc_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/utils_funcs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_SRCS_KERNELS})

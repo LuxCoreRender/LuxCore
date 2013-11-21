@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/spectrum.h"
+#include "luxrays/utils/memory.h"
 #include "slg/core/spd.h"
 #include "slg/core/data/xyzbasis.h"
 

@@ -89,7 +89,6 @@ endif(DOXYGEN_FOUND)
 ###########################################################################
 
 set(SLG_KERNELS
-	${LuxRays_SOURCE_DIR}/include/slg/core/mc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/pathoclbase_funcs.cl
