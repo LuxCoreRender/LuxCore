@@ -40,6 +40,7 @@ using std::isnan;
 
 #if defined(__APPLE__)
 #include <string>
+typedef unsigned int u_int;
 #endif
 
 #if defined(WIN32)
