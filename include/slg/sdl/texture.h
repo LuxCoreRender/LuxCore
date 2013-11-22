@@ -249,6 +249,8 @@ public:
 	float GetSpectrumMean() const;
 	float GetSpectrumMeanY() const;
 
+	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels);
+	
 private:
 	void Init(FIBITMAP *dib);
 	FIBITMAP *GetFreeImageBitMap() const;
