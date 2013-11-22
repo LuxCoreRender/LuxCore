@@ -26,7 +26,16 @@ using namespace slg;
 // IESSphericalFunction
 //------------------------------------------------------------------------------
 
-IESSphericalFunction::IESSphericalFunction(const PhotometricDataIES& data, const bool flipZ) {
+IESSphericalFunction::IESSphericalFunction(const PhotometricDataIES &data, const bool flipZ) {
+	SetImageMap(IES2ImageMap(data, flipZ));
+}
+
+IESSphericalFunction::~IESSphericalFunction() {
+	delete imgMap;
+}
+
+ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, const bool flipZ) {
+	// This should be a warning by I have no way to emit that kind of information here
 	if (data.m_PhotometricType != PhotometricDataIES::PHOTOMETRIC_TYPE_C)
 		throw runtime_error("Unsupported photometric type IES file: " + ToString(data.m_PhotometricType));
 
@@ -89,7 +98,6 @@ IESSphericalFunction::IESSphericalFunction(const PhotometricDataIES& data, const
  			if ((360. - horizAngles.back()) !=
 				(horizAngles.back() - horizAngles[horizAngles.size() - 2])) {
 				throw runtime_error("Unsupported horizontal angles in IES file: " + ToString(horizAngles.back()));
-				return;
 			}
 			horizAngles.push_back(360.);
 			vector<double> tmpVals = values[0];
@@ -148,9 +156,5 @@ IESSphericalFunction::IESSphericalFunction(const PhotometricDataIES& data, const
 		delete vFuncs[i];
 	delete[] vFuncs;
 
-	SetImageMap(new ImageMap(img, 1.f, 1, xRes, yRes));
-}
-
-IESSphericalFunction::~IESSphericalFunction() {
-	delete imgMap;
+	return new ImageMap(img, 1.f, 1, xRes, yRes);
 }

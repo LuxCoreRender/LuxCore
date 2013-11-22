@@ -87,6 +87,8 @@ public:
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
 
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
+
 private:
 	u_int lightSceneIndex;
 };
@@ -228,9 +230,6 @@ public:
 	void SetGain(const luxrays::Spectrum &g) { gain = g; }
 	luxrays::Spectrum GetGain() const { return gain; }
 
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-	}
-
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 protected:
@@ -339,6 +338,10 @@ public:
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		referencedImgMaps.insert(imgMap);
+	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
