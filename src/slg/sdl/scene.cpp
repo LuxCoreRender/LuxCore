@@ -39,7 +39,6 @@
 #include "slg/sampler/sampler.h"
 #include "slg/sdl/scene.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
-#include "slg/core/sphericalfunction/sphericalfunctionies.h"
 
 using namespace std;
 using namespace luxrays;
@@ -1104,8 +1103,10 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 
 		const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 		const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
+		const u_int width = props.Get(Property(propName + ".width")(0)).Get<u_int>();
+		const u_int height = props.Get(Property(propName + ".height")(0)).Get<u_int>();
 
-		ImageMap *map;
+		ImageMap *map = NULL;
 		if ((imgMapName != "") && (iesName != "")) {
 			ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, 1.f);
 
@@ -1113,22 +1114,46 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 			PhotometricDataIES data(iesName.c_str());
 			if (data.IsValid()) {
 				const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
-				iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ);
+				iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ,
+						Max(imgMap->GetWidth(), Max(512u, width)),
+						Max(imgMap->GetHeight(), Max(256u, height)));
 			} else
 				throw runtime_error("Invalid IES file: " + iesName);
 			
 			// Merge the 2 maps
 			map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
+			delete iesMap;
+
+			if ((width > 0) || (height > 0)) {
+				// I have to resample the image
+				ImageMap *resampledMap = ImageMap::Resample(map, map->GetChannelCount(),
+						(width > 0) ? width: map->GetWidth(),
+						(height > 0) ? height : map->GetHeight());
+				delete map;
+				map = resampledMap;
+			}
 			
 			// Add the image map to the cache
 			imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_MERGEDMAP_" + lightName, map);
 		} else if (imgMapName != "") {
 			map = imgMapCache.GetImageMap(imgMapName, 1.f);
+			
+			if ((width > 0) || (height > 0)) {
+				// I have to resample the image
+				map = ImageMap::Resample(map, map->GetChannelCount(),
+						(width > 0) ? width: map->GetWidth(),
+						(height > 0) ? height : map->GetHeight());
+
+				// Add the image map to the cache
+				imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_RESAMPLED_" + lightName, map);
+			}
 		} else if (iesName != "") {
 			PhotometricDataIES data(iesName.c_str());
 			if (data.IsValid()) {
 				const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
-				ImageMap *iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ);
+				ImageMap *iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ,
+						(width > 0) ? width : 512,
+						(height > 0) ? height : 256);
 
 				// Add the image map to the cache
 				imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_IES2IMAGEMAP_" + lightName, map);
@@ -1137,7 +1162,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 				throw runtime_error("Invalid IES file: " + iesName);
 		} else
 			throw runtime_error("MapPoint light source (" + propName + ") is missing mapfile or iesfile property");
-		
+
 		MapPointLight *mpl = new MapPointLight(light2World,
 				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
 				map);
