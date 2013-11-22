@@ -39,6 +39,7 @@
 #include "slg/sampler/sampler.h"
 #include "slg/sdl/scene.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
+#include "slg/core/sphericalfunction/sphericalfunctionies.h"
 
 using namespace std;
 using namespace luxrays;
@@ -495,7 +496,7 @@ void Scene::RemoveUnusedImageMaps() {
 		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
 
 	// Add the infinite light image
-	BOOST_FOREACH(EnvLightSource *l, lightDefs.GetEnvLightSources())
+	BOOST_FOREACH(LightSource *l, lightDefs.GetLightSources())
 		l->AddReferencedImageMaps(referencedImgMaps);
 
 	// Get the list of all defined image maps
@@ -1102,10 +1103,31 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const Transform light2World(mat);
 
 		const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
+		const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
+
+		const ImageMap *imgMap = NULL;
+		if ((imgMapName != "") && (iesName != "")) {
+			// TODO
+			throw runtime_error("Can not use mapfile and iesfile property at the same time in a MapPoint light source");
+		} else if (imgMapName != "") {
+			imgMap = imgMapCache.GetImageMap(imgMapName, 1.f);
+		} else if (iesName != "") {
+			PhotometricDataIES data(iesName.c_str());
+			if (data.IsValid()) {
+				const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
+				ImageMap *map = IESSphericalFunction::IES2ImageMap(data, flipZ);
+
+				// Add the image map to the cache
+				imgMapCache.DefineImageMap("LUXCORE_IES2IMAGEMAP_" + lightName, map);
+				imgMap = map;
+			} else
+				throw runtime_error("Invalid IES file: " + iesName);
+		} else
+			throw runtime_error("MapPoint light source (" + propName + ") is missing mapfile or iesfile property");
 		
 		MapPointLight *mpl = new MapPointLight(light2World,
 				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
-				imgMapCache.GetImageMap(imgMapName, 1.f));
+				imgMap);
 		mpl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
 		mpl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
 		mpl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));

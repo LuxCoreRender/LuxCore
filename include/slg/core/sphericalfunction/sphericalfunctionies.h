@@ -31,6 +31,8 @@ class IESSphericalFunction : public ImageMapSphericalFunction {
 public:
 	IESSphericalFunction(const PhotometricDataIES &data, const bool flipZ);
 	~IESSphericalFunction();
+
+	static ImageMap *IES2ImageMap(const PhotometricDataIES &data, const bool flipZ);
 };
 
 }
