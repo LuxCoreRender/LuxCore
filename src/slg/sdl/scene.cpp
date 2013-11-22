@@ -34,10 +34,11 @@
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
+#include "slg/editaction.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sampler/sampler.h"
 #include "slg/sdl/scene.h"
-#include "slg/editaction.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;
 using namespace luxrays;
@@ -1092,11 +1093,24 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		PointLight *pl = new PointLight(light2World,
 				props.Get(Property(propName + ".position")(Point())).Get<Point>());
 		pl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
-
 		pl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
 		pl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
 
 		lightSource = pl;
+	} else if (lightType == "mappoint") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
+		
+		MapPointLight *mpl = new MapPointLight(light2World,
+				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
+				imgMapCache.GetImageMap(imgMapName, 1.f));
+		mpl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
+		mpl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
+		mpl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
+
+		lightSource = mpl;
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
