@@ -1105,21 +1105,34 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 		const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
 
-		const ImageMap *imgMap = NULL;
+		ImageMap *map;
 		if ((imgMapName != "") && (iesName != "")) {
-			// TODO
-			throw runtime_error("Can not use mapfile and iesfile property at the same time in a MapPoint light source");
+			ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, 1.f);
+
+			ImageMap *iesMap;
+			PhotometricDataIES data(iesName.c_str());
+			if (data.IsValid()) {
+				const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
+				iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ);
+			} else
+				throw runtime_error("Invalid IES file: " + iesName);
+			
+			// Merge the 2 maps
+			map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
+			
+			// Add the image map to the cache
+			imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_MERGEDMAP_" + lightName, map);
 		} else if (imgMapName != "") {
-			imgMap = imgMapCache.GetImageMap(imgMapName, 1.f);
+			map = imgMapCache.GetImageMap(imgMapName, 1.f);
 		} else if (iesName != "") {
 			PhotometricDataIES data(iesName.c_str());
 			if (data.IsValid()) {
 				const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
-				ImageMap *map = IESSphericalFunction::IES2ImageMap(data, flipZ);
+				ImageMap *iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ);
 
 				// Add the image map to the cache
-				imgMapCache.DefineImageMap("LUXCORE_IES2IMAGEMAP_" + lightName, map);
-				imgMap = map;
+				imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_IES2IMAGEMAP_" + lightName, map);
+				map = iesMap;
 			} else
 				throw runtime_error("Invalid IES file: " + iesName);
 		} else
@@ -1127,7 +1140,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		
 		MapPointLight *mpl = new MapPointLight(light2World,
 				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
-				imgMap);
+				map);
 		mpl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
 		mpl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
 		mpl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));

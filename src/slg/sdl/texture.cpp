@@ -602,6 +602,42 @@ float ImageMap::GetSpectrumMeanY() const {
 	return mean / (width * height);
 }
 
+ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels) {
+	const u_int width = Max(map0->GetWidth(), map1->GetWidth());
+	const u_int height = Max(map0->GetHeight(), map1->GetHeight());
+
+	if (channels == 1) {
+		float *mergedImg = new float[width * height];
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				mergedImg[x + y * width] = .5f * map0->GetFloat(uv) * map1->GetFloat(uv);
+			}
+		}
+
+		return new ImageMap(mergedImg, 1.f, 1, width, height);
+	} else if (channels == 3) {
+		float *mergedImg = new float[width * height * 3];
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				const Spectrum c = .5f * map0->GetSpectrum(uv) * map1->GetSpectrum(uv);
+
+				const u_int index = (x + y * width) * 3;
+				mergedImg[index] = c.r;
+				mergedImg[index + 1] = c.g;
+				mergedImg[index + 2] = c.b;
+			}
+		}
+
+		return new ImageMap(mergedImg, 1.f, 3, width, height);
+	} else
+		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
+		
+}
+
 //------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------

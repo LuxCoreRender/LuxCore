@@ -31,6 +31,6 @@ scene.objects.red.ply = scenes/bigmonkey/bigmonkey.ply
 scene.lights.l1.type = mappoint
 scene.lights.l1.position = -3.0 -5.0 6.0
 scene.lights.l1.gain = 1.0 1.0 1.0
-#scene.lights.l1.mapfile = scenes/bump/map.png
+scene.lights.l1.mapfile = scenes/bump/map.png
 scene.lights.l1.iesfile = scenes/bigmonkey/ASA_15M_R2.ies
 scene.lights.l1.flipz = 1
