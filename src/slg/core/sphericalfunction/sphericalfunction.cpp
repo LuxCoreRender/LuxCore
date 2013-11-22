@@ -18,8 +18,6 @@
 
 #include "luxrays/utils/mcdistribution.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
-#include "slg/core/sphericalfunction/sphericalfunctionies.h"
-#include "slg/core/sphericalfunction/photometricdataies.h"
 
 using namespace std;
 using namespace luxrays;
@@ -116,43 +114,138 @@ float SampleableSphericalFunction::Average() const {
 }
 
 //------------------------------------------------------------------------------
-// CreateSphericalFunction
+// IESSphericalFunction
 //------------------------------------------------------------------------------
 
-SphericalFunction *slg::CreateSphericalFunction(ImageMapCache &imgMapCache,
-		const string &prefix, const Properties &props) {
-	const bool flipZ = props.Get(Property(prefix + ".flipz")(false)).Get<bool>();
-	const string imgMapName = props.Get(Property(prefix + ".mapname")("")).Get<string>();
-	const string iesName = props.Get(Property(prefix + ".iesname")("")).Get<string>();
+IESSphericalFunction::IESSphericalFunction(const PhotometricDataIES &data, const bool flipZ,
+		const u_int xRes, const u_int yRes) {
+	SetImageMap(IES2ImageMap(data, flipZ));
+}
 
-	// Create ImageMap distribution
-	SphericalFunction *imgMapFunc = NULL;
-	if (imgMapName.length() > 0) {
-		const ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, 1.f);
-		imgMapFunc = new ImageMapSphericalFunction(imgMap);
+IESSphericalFunction::~IESSphericalFunction() {
+	delete imgMap;
+}
+
+ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, const bool flipZ,
+			const u_int xRes, const u_int yRes) {
+	// This should be a warning by I have no way to emit that kind of information here
+	if (data.m_PhotometricType != PhotometricDataIES::PHOTOMETRIC_TYPE_C)
+		throw runtime_error("Unsupported photometric type IES file: " + ToString(data.m_PhotometricType));
+
+	vector<double> vertAngles = data.m_VerticalAngles;
+	vector<double> horizAngles = data.m_HorizontalAngles;
+	vector<vector<double> > values = data.m_CandelaValues;
+
+	// Add a begin/end vertical angle with 0 emission if necessary
+	if (vertAngles[0] < 0.) {
+		for (u_int i = 0; i < vertAngles.size(); ++i)
+			vertAngles[i] = vertAngles[i] + 90.;
 	}
-
-	// Create IES distribution
-	SphericalFunction *iesFunc = NULL;
-	if (iesName.length() > 0) {
-		PhotometricDataIES data(iesName.c_str());
-
-		if (data.IsValid())
-			iesFunc = new IESSphericalFunction(data, flipZ);
-		else
-			throw runtime_error("Invalid IES file: " + iesName);
+	if (vertAngles[0] > 0.) {
+		vertAngles.insert(vertAngles.begin(), max(0., vertAngles[0] - 1e-3));
+		for (u_int i = 0; i < horizAngles.size(); ++i)
+			values[i].insert(values[i].begin(), 0.);
+		if (vertAngles[0] > 0.) {
+			vertAngles.insert(vertAngles.begin(), 0.);
+			for (u_int i = 0; i < horizAngles.size(); ++i)
+				values[i].insert(values[i].begin(), 0.);
+		}
 	}
-
-	if (iesFunc && imgMapFunc) {
-		CompositeSphericalFunction *compositeFunc = new CompositeSphericalFunction();
-		compositeFunc->Add(imgMapFunc);
-		compositeFunc->Add(iesFunc);
-
-		return compositeFunc;
-	} else if (imgMapFunc)
-		return imgMapFunc;
-	else if (iesFunc) {
-		return iesFunc;
+	if (vertAngles.back() < 180.) {
+		vertAngles.push_back(min(180., vertAngles.back() + 1e-3));
+		for (u_int i = 0; i < horizAngles.size(); ++i)
+			values[i].push_back(0.);
+		if (vertAngles.back() < 180.) {
+			vertAngles.push_back(180.);
+			for (u_int i = 0; i < horizAngles.size(); ++i)
+				values[i].push_back(0.);
+		}
+	}
+	// Generate missing horizontal angles
+	if (horizAngles[0] == 90. || horizAngles[0] == -90.) {
+		const double offset = horizAngles[0];
+		for (u_int i = 0; i < horizAngles.size(); ++i)
+			horizAngles[i] -= offset;
+	}
+	if (horizAngles[0] == 0.) {
+		if (horizAngles.size() == 1) {
+			horizAngles.push_back(90.);
+			vector<double> tmpVals = values[0];
+			values.push_back(tmpVals);
+		}
+		if (horizAngles.back() == 90.) {
+			for (int i = horizAngles.size() - 2; i >= 0; --i) {
+				horizAngles.push_back(180. - horizAngles[i]);
+				vector<double> tmpVals = values[i]; // copy before adding!
+				values.push_back(tmpVals);
+			}
+		}
+		if (horizAngles.back() == 180.) {
+			for (int i = horizAngles.size() - 2; i >= 0; --i) {
+				horizAngles.push_back(360. - horizAngles[i]);
+				vector<double> tmpVals = values[i]; // copy before adding!
+				values.push_back(tmpVals);
+			}
+		}
+		if (horizAngles.back() != 360.) {
+ 			if ((360. - horizAngles.back()) !=
+				(horizAngles.back() - horizAngles[horizAngles.size() - 2])) {
+				throw runtime_error("Unsupported horizontal angles in IES file: " + ToString(horizAngles.back()));
+			}
+			horizAngles.push_back(360.);
+			vector<double> tmpVals = values[0];
+			values.push_back(tmpVals);
+		}
 	} else
-		return NULL;
+		throw runtime_error("Invalid horizontal angles in IES file: " + ToString(horizAngles[0]));
+
+	// Initialize irregular functions
+	float valueScale = data.m_CandelaMultiplier * 
+		   data.BallastFactor * 
+		   data.BallastLampPhotometricFactor;
+	u_int nVFuncs = horizAngles.size();
+	IrregularFunction1D** vFuncs = new IrregularFunction1D*[nVFuncs];
+	u_int vFuncLength = vertAngles.size();
+	float* vFuncX = new float[vFuncLength];
+	float* vFuncY = new float[vFuncLength];
+	float* uFuncX = new float[nVFuncs];
+	float* uFuncY = new float[nVFuncs];
+	for (u_int i = 0; i < nVFuncs; ++i) {
+		for (u_int j = 0; j < vFuncLength; ++j) {
+			vFuncX[j] = Clamp(Radians(vertAngles[j]) * INV_PI, 0.f, 1.f);
+			vFuncY[j] = values[i][j] * valueScale;
+		}
+
+		vFuncs[i] = new IrregularFunction1D(vFuncX, vFuncY, vFuncLength);
+
+		uFuncX[i] = Clamp(Radians(horizAngles[i] ) * INV_TWOPI, 0.f, 1.f);
+		uFuncY[i] = i;
+	}
+	delete[] vFuncX;
+	delete[] vFuncY;
+
+	IrregularFunction1D* uFunc = new IrregularFunction1D(uFuncX, uFuncY, nVFuncs);
+	delete[] uFuncX;
+	delete[] uFuncY;
+
+	// Resample the irregular functions
+	float *img = new float[xRes * yRes];
+	for (u_int y = 0; y < yRes; ++y) {
+		const float t = (y + .5f) / yRes;
+		for (u_int x = 0; x < xRes; ++x) {
+			const float s = (x + .5f) / xRes;
+			const float u = uFunc->Eval(s);
+			const u_int u1 = Floor2UInt(u);
+			const u_int u2 = min(nVFuncs - 1, u1 + 1);
+			const float du = u - u1;
+			const u_int tgtY = flipZ ? (yRes - 1) - y : y;
+			img[x + tgtY * xRes] = Lerp(du, vFuncs[u1]->Eval(t), vFuncs[u2]->Eval(t));
+		}
+	}
+	delete uFunc;
+	for (u_int i = 0; i < nVFuncs; ++i)
+		delete vFuncs[i];
+	delete[] vFuncs;
+
+	return new ImageMap(img, 1.f, 1, xRes, yRes);
 }

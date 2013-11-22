@@ -602,28 +602,27 @@ float ImageMap::GetSpectrumMeanY() const {
 	return mean / (width * height);
 }
 
-ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels) {
-	const u_int width = Max(map0->GetWidth(), map1->GetWidth());
-	const u_int height = Max(map0->GetHeight(), map1->GetHeight());
-
+ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
+		const u_int width, const u_int height) {
 	if (channels == 1) {
 		float *mergedImg = new float[width * height];
 
 		for (u_int y = 0; y < height; ++y) {
 			for (u_int x = 0; x < width; ++x) {
 				const UV uv((x + .5f) / width, (y + .5f) / height);
-				mergedImg[x + y * width] = .5f * map0->GetFloat(uv) * map1->GetFloat(uv);
+				mergedImg[x + y * width] = map0->GetFloat(uv) * map1->GetFloat(uv);
 			}
 		}
 
-		return new ImageMap(mergedImg, 1.f, 1, width, height);
+		// I assume the image have the same gamma
+		return new ImageMap(mergedImg, map0->GetGamma(), 1, width, height);
 	} else if (channels == 3) {
 		float *mergedImg = new float[width * height * 3];
 
 		for (u_int y = 0; y < height; ++y) {
 			for (u_int x = 0; x < width; ++x) {
 				const UV uv((x + .5f) / width, (y + .5f) / height);
-				const Spectrum c = .5f * map0->GetSpectrum(uv) * map1->GetSpectrum(uv);
+				const Spectrum c = map0->GetSpectrum(uv) * map1->GetSpectrum(uv);
 
 				const u_int index = (x + y * width) * 3;
 				mergedImg[index] = c.r;
@@ -632,10 +631,50 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 			}
 		}
 
-		return new ImageMap(mergedImg, 1.f, 3, width, height);
+		// I assume the image have the same gamma
+		return new ImageMap(mergedImg, map0->GetGamma(), 3, width, height);
 	} else
 		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
-		
+}
+
+ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels) {
+	const u_int width = Max(map0->GetWidth(), map1->GetWidth());
+	const u_int height = Max(map0->GetHeight(), map1->GetHeight());
+
+	return ImageMap::Merge(map0, map1, channels, width, height);
+}
+
+ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
+		const u_int width, const u_int height) {
+	if (channels == 1) {
+		float *newImg = new float[width * height];
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				newImg[x + y * width] = map->GetFloat(uv);
+			}
+		}
+
+		return new ImageMap(newImg, map->GetGamma(), 1, width, height);
+	} else if (channels == 3) {
+		float *newImg = new float[width * height * 3];
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				const Spectrum c = map->GetSpectrum(uv);
+
+				const u_int index = (x + y * width) * 3;
+				newImg[index] = c.r;
+				newImg[index + 1] = c.g;
+				newImg[index + 2] = c.b;
+			}
+		}
+
+		return new ImageMap(newImg, map->GetGamma(), 3, width, height);
+	} else
+		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
 }
 
 //------------------------------------------------------------------------------

@@ -20,6 +20,7 @@
 #define _SLG_SPHERICALFUNCTION_H
 
 #include "luxrays/utils/mcdistribution.h"
+#include "slg/core/sphericalfunction/photometricdataies.h"
 #include "slg/sdl/texture.h"
 
 namespace slg {
@@ -154,8 +155,18 @@ private:
 	float average;
 };
 
-extern SphericalFunction *CreateSphericalFunction(ImageMapCache &imgMapCache,
-		const string &prefix, const luxrays::Properties &props);
+/**
+ * A spherical function based on measured IES data.
+ */
+class IESSphericalFunction : public ImageMapSphericalFunction {
+public:
+	IESSphericalFunction(const PhotometricDataIES &data, const bool flipZ,
+			const u_int xRes = 512, const u_int yRes = 256);
+	~IESSphericalFunction();
+
+	static ImageMap *IES2ImageMap(const PhotometricDataIES &data, const bool flipZ,
+			const u_int xRes = 512, const u_int yRes = 256);
+};
 
 }
 
