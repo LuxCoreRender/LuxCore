@@ -885,8 +885,20 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".transformation")(currentTransform.m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	} else if (name == "point") {
+		// Check if it is a point or mappoint light source
+		if (props.IsDefined("mapname") || props.IsDefined("iesname")) {
+			*sceneProps << Property(prefix + ".type")("mappoint");
+			if (props.IsDefined("mapname"))
+				*sceneProps << Property(prefix + ".mapfile")(props.Get(Property("mapname")("")).Get<string>());
+			if (props.IsDefined("iesname")) {
+				*sceneProps <<
+						Property(prefix + ".iesfile")(props.Get(Property("iesname")("")).Get<string>()) <<
+						Property(prefix + ".flipz")(props.Get(Property("flipz")(false)).Get<bool>());
+			}
+		} else
+			*sceneProps << Property(prefix + ".type")("point");
+		
 		*sceneProps <<
-				Property(prefix + ".type")("point") <<
 				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
 				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
 				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<

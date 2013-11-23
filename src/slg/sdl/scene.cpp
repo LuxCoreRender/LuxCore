@@ -1151,13 +1151,12 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 			PhotometricDataIES data(iesName.c_str());
 			if (data.IsValid()) {
 				const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
-				ImageMap *iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ,
+				map = IESSphericalFunction::IES2ImageMap(data, flipZ,
 						(width > 0) ? width : 512,
 						(height > 0) ? height : 256);
 
 				// Add the image map to the cache
 				imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_IES2IMAGEMAP_" + lightName, map);
-				map = iesMap;
 			} else
 				throw runtime_error("Invalid IES file: " + iesName);
 		} else
