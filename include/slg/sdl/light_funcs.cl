@@ -85,7 +85,7 @@ float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
 
 	*directPdfW = distPdf / (4.f * M_PI_F);
 
-	// InfiniteLight_GetRadiance  is expended here
+	// InfiniteLight_GetRadiance is expended here
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersecable.infinite.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
@@ -337,6 +337,40 @@ float3 PointLight_Illuminate(__global LightSource *pointLight,
 #endif
 
 //------------------------------------------------------------------------------
+// MapPointLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_MAPPOINTLIGHT)
+
+float3 MapPointLight_Illuminate(__global LightSource *mapPointLight,
+		const float3 p,	float3 *dir, float *distance, float *directPdfW
+		IMAGEMAPS_PARAM_DECL) {
+	const float3 toLight = VLOAD3F(&mapPointLight->notIntersecable.mapPoint.absolutePos.x) - p;
+	const float distanceSquared = dot(toLight, toLight);
+	*distance = sqrt(distanceSquared);
+	*dir = toLight / *distance;
+
+	*directPdfW = distanceSquared;
+
+	// Retrieve the image map information
+	__global ImageMap *imageMap = &imageMapDescs[mapPointLight->notIntersecable.mapPoint.imageMapIndex];
+	__global float *pixels = ImageMap_GetPixelsAddress(
+			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+
+	const float3 localFromLight = normalize(Transform_InvApplyVector(&mapPointLight->notIntersecable.light2World, p) - 
+		VLOAD3F(&mapPointLight->notIntersecable.mapPoint.localPos.x));
+	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
+	const float3 c = ImageMap_GetSpectrum(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			uv.s0, uv.s1) / mapPointLight->notIntersecable.mapPoint.avarage;
+
+	return VLOAD3F(&mapPointLight->notIntersecable.mapPoint.emittedFactor.r) * c;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic light functions
 //------------------------------------------------------------------------------
 
@@ -438,6 +472,13 @@ float3 Light_Illuminate(
 			return PointLight_Illuminate(
 					light, point,
 					lightRayDir, distance, directPdfW);
+#endif
+#if defined(PARAM_HAS_MAPPOINTLIGHT)
+		case TYPE_MAPPOINT:
+			return MapPointLight_Illuminate(
+					light, point,
+					lightRayDir, distance, directPdfW
+					IMAGEMAPS_PARAM);
 #endif
 		default:
 			return BLACK;

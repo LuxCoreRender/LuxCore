@@ -30,6 +30,7 @@
 #include "slg/sdl/texture.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/mapping.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 
 namespace slg {
 
@@ -41,7 +42,7 @@ namespace ocl {
 class Scene;
 
 typedef enum {
-	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT,
+	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -85,6 +86,8 @@ public:
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
+
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
 
 private:
 	u_int lightSceneIndex;
@@ -227,9 +230,6 @@ public:
 	void SetGain(const luxrays::Spectrum &g) { gain = g; }
 	luxrays::Spectrum GetGain() const { return gain; }
 
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-	}
-
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 protected:
@@ -272,8 +272,6 @@ protected:
 
 //------------------------------------------------------------------------------
 // PointLight implementation
-//
-// Note: the light source is always placed in the origin of local coord. space
 //------------------------------------------------------------------------------
 
 class PointLight : public NotIntersecableLightSource {
@@ -308,12 +306,52 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-private:
+protected:
 	luxrays::Spectrum color;
 	float power, efficency;
 	luxrays::Spectrum emittedFactor;
 
 	luxrays::Point localPos, absolutePos;
+};
+
+//------------------------------------------------------------------------------
+// MapPointLight implementation
+//------------------------------------------------------------------------------
+
+class MapPointLight : public PointLight {
+public:
+	MapPointLight(const luxrays::Transform &l2w, const luxrays::Point &pos,
+	const ImageMap *map);
+	virtual ~MapPointLight();
+
+	virtual void Preprocess();
+
+	virtual LightSourceType GetType() const { return TYPE_MAPPOINT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		referencedImgMaps.insert(imgMap);
+	}
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	const ImageMap *GetImageMap() const { return imgMap; }
+	const SampleableSphericalFunction *GetFunc() const { return func; }
+
+private:
+	const ImageMap *imgMap;
+
+	SampleableSphericalFunction *func;
 };
 
 //------------------------------------------------------------------------------
