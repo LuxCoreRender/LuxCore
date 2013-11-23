@@ -363,7 +363,7 @@ float3 MapPointLight_Illuminate(__global LightSource *mapPointLight,
 	const float3 c = ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
-			uv.s0, uv.s1);
+			uv.s0, uv.s1) / mapPointLight->notIntersecable.mapPoint.avarage;
 
 	return VLOAD3F(&mapPointLight->notIntersecable.mapPoint.emittedFactor.r) * c;
 }
