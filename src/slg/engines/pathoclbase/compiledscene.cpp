@@ -625,6 +625,25 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.point.emittedFactor, pl->GetEmittedFactor());
 				break;
 			}
+			case TYPE_MAPPOINT: {
+				const MapPointLight *mpl = (const MapPointLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_MAPPOINT;
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &mpl->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &mpl->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, mpl->GetGain());
+
+				// MapPointLight data
+				ASSIGN_VECTOR(oclLight->notIntersecable.mapPoint.absolutePos, mpl->GetAbsolutePosition());
+				ASSIGN_VECTOR(oclLight->notIntersecable.mapPoint.localPos, mpl->GetLocalPosition());
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.mapPoint.emittedFactor, mpl->GetEmittedFactor());
+				oclLight->notIntersecable.mapPoint.avarage = mpl->GetFunc()->Average();
+				oclLight->notIntersecable.mapPoint.imageMapIndex = scene->imgMapCache.GetImageMapIndex(mpl->GetImageMap());
+				break;
+			}
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}

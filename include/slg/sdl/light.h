@@ -345,6 +345,9 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
+	const ImageMap *GetImageMap() const { return imgMap; }
+	const SampleableSphericalFunction *GetFunc() const { return func; }
+
 private:
 	const ImageMap *imgMap;
 
