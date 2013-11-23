@@ -23,6 +23,7 @@
 #include "slg/core/data/sun_spect.h"
 #include "slg/sdl/light.h"
 #include "slg/sdl/scene.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;
 using namespace luxrays;
@@ -306,10 +307,91 @@ Properties PointLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene." + GetName();
 	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
 
+	props.Set(Property(prefix + ".type")("point"));
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".power")(power));
 	props.Set(Property(prefix + ".efficency")(efficency));
 	props.Set(Property(prefix + ".position")(localPos));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// MapPointLight
+//------------------------------------------------------------------------------
+
+MapPointLight::MapPointLight(const Transform &l2w, const Point &pos,
+	const ImageMap *map) : PointLight(l2w, pos), imgMap(map), func(NULL) {
+}
+
+MapPointLight::~MapPointLight() {
+	delete func;
+}
+
+void MapPointLight::Preprocess() {
+	PointLight::Preprocess();
+
+	delete func;
+	func = new SampleableSphericalFunction(new ImageMapSphericalFunction(imgMap));
+}
+
+float MapPointLight::GetPower(const Scene &scene) const {
+	return imgMap->GetSpectrumMeanY() * PointLight::GetPower(scene);
+}
+
+Spectrum MapPointLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*orig = absolutePos;
+
+	Vector localFromLight;
+	func->Sample(u0, u1, &localFromLight, emissionPdfW);
+	if (*emissionPdfW == 0.f)
+		return Spectrum();
+
+	*dir = Normalize(lightToWorld * localFromLight);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
+}
+
+Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * p - localPos);
+	const float funcPdf = func->Pdf(localFromLight);
+	if (funcPdf == 0.f)
+		return Spectrum();
+
+	const Vector toLight(absolutePos - p);
+	const float distanceSquared = toLight.LengthSquared();
+	*distance = sqrtf(distanceSquared);
+	*dir = toLight / *distance;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	*directPdfW = distanceSquared;
+
+	if (emissionPdfW)
+		*emissionPdfW = funcPdf / (4.f * M_PI);
+
+	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
+}
+
+Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = PointLight::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("mappoint"));
+	props.Set(Property(prefix + ".mapfile")("imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr"));
 
 	return props;
 }
@@ -446,6 +528,7 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
+	props.Set(Property(prefix + ".type")("infinite"));
 	props.Set(Property(prefix + ".file")("imagemap-" + 
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
 	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
@@ -669,6 +752,7 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
+	props.Set(Property(prefix + ".type")("sky"));
 	props.Set(Property(prefix + ".dir")(GetSunDir()));
 	props.Set(Property(prefix + ".turbidity")(turbidity));
 
@@ -833,6 +917,7 @@ Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
+	props.Set(Property(prefix + ".type")("sun"));
 	props.Set(Property(prefix + ".dir")(GetDir()));
 	props.Set(Property(prefix + ".turbidity")(turbidity));
 	props.Set(Property(prefix + ".relsize")(relSize));

@@ -34,10 +34,11 @@
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
+#include "slg/editaction.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sampler/sampler.h"
 #include "slg/sdl/scene.h"
-#include "slg/editaction.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;
 using namespace luxrays;
@@ -494,7 +495,7 @@ void Scene::RemoveUnusedImageMaps() {
 		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
 
 	// Add the infinite light image
-	BOOST_FOREACH(EnvLightSource *l, lightDefs.GetEnvLightSources())
+	BOOST_FOREACH(LightSource *l, lightDefs.GetLightSources())
 		l->AddReferencedImageMaps(referencedImgMaps);
 
 	// Get the list of all defined image maps
@@ -1092,11 +1093,83 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		PointLight *pl = new PointLight(light2World,
 				props.Get(Property(propName + ".position")(Point())).Get<Point>());
 		pl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
-
 		pl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
 		pl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
 
 		lightSource = pl;
+	} else if (lightType == "mappoint") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
+		const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
+		const u_int width = props.Get(Property(propName + ".width")(0)).Get<u_int>();
+		const u_int height = props.Get(Property(propName + ".height")(0)).Get<u_int>();
+
+		ImageMap *map = NULL;
+		if ((imgMapName != "") && (iesName != "")) {
+			ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, 1.f);
+
+			ImageMap *iesMap;
+			PhotometricDataIES data(iesName.c_str());
+			if (data.IsValid()) {
+				const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
+				iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ,
+						Max(imgMap->GetWidth(), Max(512u, width)),
+						Max(imgMap->GetHeight(), Max(256u, height)));
+			} else
+				throw runtime_error("Invalid IES file: " + iesName);
+			
+			// Merge the 2 maps
+			map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
+			delete iesMap;
+
+			if ((width > 0) || (height > 0)) {
+				// I have to resample the image
+				ImageMap *resampledMap = ImageMap::Resample(map, map->GetChannelCount(),
+						(width > 0) ? width: map->GetWidth(),
+						(height > 0) ? height : map->GetHeight());
+				delete map;
+				map = resampledMap;
+			}
+			
+			// Add the image map to the cache
+			imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_MERGEDMAP_" + lightName, map);
+		} else if (imgMapName != "") {
+			map = imgMapCache.GetImageMap(imgMapName, 1.f);
+			
+			if ((width > 0) || (height > 0)) {
+				// I have to resample the image
+				map = ImageMap::Resample(map, map->GetChannelCount(),
+						(width > 0) ? width: map->GetWidth(),
+						(height > 0) ? height : map->GetHeight());
+
+				// Add the image map to the cache
+				imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_RESAMPLED_" + lightName, map);
+			}
+		} else if (iesName != "") {
+			PhotometricDataIES data(iesName.c_str());
+			if (data.IsValid()) {
+				const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
+				map = IESSphericalFunction::IES2ImageMap(data, flipZ,
+						(width > 0) ? width : 512,
+						(height > 0) ? height : 256);
+
+				// Add the image map to the cache
+				imgMapCache.DefineImageMap("LUXCORE_MAPPOINT_IES2IMAGEMAP_" + lightName, map);
+			} else
+				throw runtime_error("Invalid IES file: " + iesName);
+		} else
+			throw runtime_error("MapPoint light source (" + propName + ") is missing mapfile or iesfile property");
+
+		MapPointLight *mpl = new MapPointLight(light2World,
+				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
+				map);
+		mpl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
+		mpl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
+		mpl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
+
+		lightSource = mpl;
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
