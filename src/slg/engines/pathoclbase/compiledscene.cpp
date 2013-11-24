@@ -530,6 +530,17 @@ void CompiledScene::CompileLights() {
 				oclLight->triangle.invArea = 1.f / tl->GetArea();
 
 				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
+
+				const SampleableSphericalFunction *emissionFunc = tl->GetMaterial()->GetEmissionFunc();
+				if (emissionFunc) {
+					oclLight->triangle.avarage = emissionFunc->Average();
+					oclLight->triangle.imageMapIndex = scene->imgMapCache.GetImageMapIndex(
+							// I use only ImageMapSphericalFunction
+							((const ImageMapSphericalFunction *)(emissionFunc->GetFunc()))->GetImageMap());
+				} else {
+					oclLight->triangle.avarage = 0.f;
+					oclLight->triangle.imageMapIndex = NULL_INDEX;
+				}
 				break;
 			}
 			case TYPE_IL: {

@@ -1025,15 +1025,14 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 			*emissionPdfW = emissionFuncPdf * invArea;
 		}
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
+		
+		*directPdfW = invArea * distanceSquared;
 	} else {
 		if (emissionPdfW)
 			*emissionPdfW = invArea * cosAtLight * INV_PI;
+
+		*directPdfW = invArea * distanceSquared / cosAtLight;
 	}
-
-	*directPdfW = invArea * distanceSquared / cosAtLight;
-
-	if (emissionPdfW)
-		*emissionPdfW = invArea * cosAtLight * INV_PI;
 
 	const UV triUV = mesh->InterpolateTriUV(triangleIndex, b1, b2);
 	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, sampleN, sampleN, passThroughEvent, false };

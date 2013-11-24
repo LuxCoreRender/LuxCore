@@ -1042,13 +1042,15 @@ ImageMap *Scene::CreateEmissionMap(const std::string &propName, const luxrays::P
 		if (data.IsValid()) {
 			const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
 			iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ,
-					Max(imgMap->GetWidth(), Max(512u, width)),
-					Max(imgMap->GetHeight(), Max(256u, height)));
+					(width > 0) ? width : 512,
+					(height > 0) ? height : 256);
 		} else
 			throw runtime_error("Invalid IES file in property " + propName + ": " + iesName);
 
 		// Merge the 2 maps
-		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
+		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount(),
+				(width > 0) ? width: Max(imgMap->GetWidth(), iesMap->GetWidth()),
+				(height > 0) ? height : Max(imgMap->GetHeight(), iesMap->GetHeight()));
 		delete iesMap;
 
 		if ((width > 0) || (height > 0)) {
