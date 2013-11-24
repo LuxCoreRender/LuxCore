@@ -957,9 +957,17 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
 	Frame frame(N);
 
-	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+	Spectrum emissionColor(1.f);
+	Vector localDirOut;
+	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	if (emissionFunc) {
+		emissionFunc->Sample(u2, u3, &localDirOut, emissionPdfW);
+		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localDirOut) / emissionFunc->Average();
+	} else
+		localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+
 	if (*emissionPdfW == 0.f)
-		return Spectrum();
+			return Spectrum();
 	*emissionPdfW *= invArea;
 
 	// Cannot really not emit the particle, so just bias it to the correct angle
@@ -1001,6 +1009,27 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
+	Spectrum emissionColor(1.f);
+	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	if (emissionFunc) {
+		// Build the local frame
+		const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
+		Frame frame(N);
+
+		const Vector localFromLight = frame.ToLocal(-(*dir));
+		
+		if (emissionPdfW) {
+			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
+			if (emissionFuncPdf == 0.f)
+				return Spectrum();
+			*emissionPdfW = emissionFuncPdf * invArea;
+		}
+		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
+	} else {
+		if (emissionPdfW)
+			*emissionPdfW = invArea * cosAtLight * INV_PI;
+	}
+
 	*directPdfW = invArea * distanceSquared / cosAtLight;
 
 	if (emissionPdfW)
@@ -1009,7 +1038,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	const UV triUV = mesh->InterpolateTriUV(triangleIndex, b1, b2);
 	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, sampleN, sampleN, passThroughEvent, false };
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invArea);
+	return lightMaterial->GetEmittedRadiance(hitPoint, invArea) * emissionColor;
 }
 
 Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
@@ -1022,8 +1051,26 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 	if (directPdfA)
 		*directPdfA = invArea;
 
-	if (emissionPdfW)
-		*emissionPdfW = cosOutLight * INV_PI * invArea;
+	Spectrum emissionColor(1.f);
+	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	if (emissionFunc) {
+		// Build the local frame
+		const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
+		Frame frame(N);
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invArea);
+		const Vector localFromLight = frame.ToLocal(hitPoint.fixedDir);
+		
+		if (emissionPdfW) {
+			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
+			if (emissionFuncPdf == 0.f)
+				return Spectrum();
+			*emissionPdfW = emissionFuncPdf * invArea;
+		}
+		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
+	} else {
+		if (emissionPdfW)
+			*emissionPdfW = invArea * cosOutLight * INV_PI;
+	}
+
+	return lightMaterial->GetEmittedRadiance(hitPoint, invArea) * emissionColor;
 }

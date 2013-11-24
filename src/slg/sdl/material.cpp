@@ -30,6 +30,15 @@ using namespace slg;
 // Material
 //------------------------------------------------------------------------------
 
+void Material::SetEmissionMap(const ImageMap *map) {
+	emissionMap = map;
+	delete emissionFunc;
+	if (emissionMap)
+		emissionFunc = new SampleableSphericalFunction(new ImageMapSphericalFunction(emissionMap));
+	else
+		emissionFunc = NULL;
+}
+
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	if (emittedTex) {
 		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *

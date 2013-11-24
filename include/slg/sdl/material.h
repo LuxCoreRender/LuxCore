@@ -30,6 +30,7 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/spectrum.h"
 #include "luxrays/utils/mc.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/bsdfevents.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/hitpoint.h"
@@ -59,10 +60,13 @@ public:
 		matID(0), lightID(0), samples(-1), emittedSamples(-1),
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		emittedTex(emitted), bumpTex(bump), normalTex(normal),
+		emissionMap(NULL), emissionFunc(NULL),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) {
 		UpdateEmittedFactor();
 	}
-	virtual ~Material() { }
+	virtual ~Material() {
+		delete emissionFunc;
+	}
 
 	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
 	void SetLightID(const u_int id) { lightID = id; }
@@ -128,6 +132,9 @@ public:
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	const Texture *GetNormalTexture() const { return normalTex; }
+	void SetEmissionMap(const ImageMap *map);
+	const ImageMap *GetEmissionMap() const { return emissionMap; }
+	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
@@ -158,6 +165,10 @@ public:
 		if (normalTex)
 			normalTex->AddReferencedTextures(referencedTexs);
 	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		if (emissionMap)
+			referencedImgMaps.insert(emissionMap);
+	}
 	// Update any reference to oldTex with newTex
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 		if (emittedTex == oldTex)
@@ -167,7 +178,7 @@ public:
 		if (normalTex == oldTex)
 			normalTex = newTex;
 	}
-
+	
 	virtual luxrays::Properties ToProperties() const;
 
 protected:
@@ -181,6 +192,9 @@ protected:
 	const Texture *emittedTex;
 	const Texture *bumpTex;
 	const Texture *normalTex;
+
+	const ImageMap *emissionMap;
+	SampleableSphericalFunction *emissionFunc;
 
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular, usePrimitiveArea;
 };
@@ -207,6 +221,9 @@ public:
 	}
 	u_int GetMaterialIndex(const std::string &name);
 	u_int GetMaterialIndex(const Material *m) const;
+	const std::vector<Material *> &GetMaterials() const {
+		return mats;
+	}
 
 	u_int GetSize() const { return static_cast<u_int>(mats.size()); }
 	std::vector<std::string> GetMaterialNames() const;
