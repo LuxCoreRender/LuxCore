@@ -77,6 +77,10 @@ typedef struct {
 
 	unsigned int materialIndex;
 	unsigned int lightSceneIndex;
+
+	// Used for image map and/or IES map
+	float avarage;
+	unsigned int imageMapIndex;
 } TriangleLightParam;
 
 typedef struct {

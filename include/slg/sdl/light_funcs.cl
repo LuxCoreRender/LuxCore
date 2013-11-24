@@ -276,7 +276,27 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	*directPdfW = triLight->triangle.invArea * distanceSquared / cosAtLight;
+	float3 emissionColor = WHITE;
+	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
+		// Build the local frame
+		float3 X, Y;
+		CoordinateSystem(sampleN, &X, &Y);
+
+		const float3 localFromLight = ToLocal(X, Y, sampleN, -(*dir));
+
+		// Retrieve the image map information
+		__global ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
+		__global float *pixels = ImageMap_GetPixelsAddress(
+				imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+		const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
+		emissionColor = ImageMap_GetSpectrum(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			uv.s0, uv.s1) / triLight->triangle.avarage;
+
+		*directPdfW = triLight->triangle.invArea * distanceSquared ;
+	} else
+		*directPdfW = triLight->triangle.invArea * distanceSquared / cosAtLight;
 
 	const float2 uv0 = VLOAD2F(&triLight->triangle.uv0.u);
 	const float2 uv1 = VLOAD2F(&triLight->triangle.uv1.u);
@@ -294,7 +314,7 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 
 	return Material_GetEmittedRadiance(&mats[triLight->triangle.materialIndex],
 			tmpHitPoint, triLight->triangle.invArea
-			MATERIALS_PARAM);
+			MATERIALS_PARAM) * emissionColor;
 }
 
 float3 TriangleLight_GetRadiance(__global LightSource *triLight,
@@ -309,9 +329,28 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 	if (directPdfA)
 		*directPdfA = triLight->triangle.invArea;
 
+	float3 emissionColor = WHITE;
+	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
+		// Build the local frame
+		float3 X, Y;
+		CoordinateSystem(hitPointNormal, &X, &Y);
+
+		const float3 localFromLight = ToLocal(X, Y, hitPointNormal, dir);
+
+		// Retrieve the image map information
+		__global ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
+		__global float *pixels = ImageMap_GetPixelsAddress(
+				imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+		const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
+		emissionColor = ImageMap_GetSpectrum(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			uv.s0, uv.s1) / triLight->triangle.avarage;
+	}
+
 	return Material_GetEmittedRadiance(&mats[triLight->triangle.materialIndex],
 			hitPoint, triLight->triangle.invArea
-			MATERIALS_PARAM);
+			MATERIALS_PARAM) * emissionColor;
 }
 
 #endif
@@ -360,12 +399,12 @@ float3 MapPointLight_Illuminate(__global LightSource *mapPointLight,
 	const float3 localFromLight = normalize(Transform_InvApplyVector(&mapPointLight->notIntersecable.light2World, p) - 
 		VLOAD3F(&mapPointLight->notIntersecable.mapPoint.localPos.x));
 	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
-	const float3 c = ImageMap_GetSpectrum(
+	const float3 emissionColor = ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			uv.s0, uv.s1) / mapPointLight->notIntersecable.mapPoint.avarage;
 
-	return VLOAD3F(&mapPointLight->notIntersecable.mapPoint.emittedFactor.r) * c;
+	return VLOAD3F(&mapPointLight->notIntersecable.mapPoint.emittedFactor.r) * emissionColor;
 }
 
 #endif

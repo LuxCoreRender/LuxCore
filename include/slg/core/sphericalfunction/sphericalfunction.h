@@ -73,6 +73,7 @@ public:
 	ImageMapSphericalFunction(const ImageMap *imgMap);
 
 	void SetImageMap(const ImageMap *imgMap);
+	const ImageMap *GetImageMap() const { return imgMap; }
 	
 	virtual luxrays::Spectrum Evaluate(const float phi, const float theta) const;
 
@@ -147,6 +148,7 @@ public:
 	 */
 	float Average() const;
 
+	const SphericalFunction *GetFunc() const { return func; }
 	const luxrays::Distribution2D *GetDistribution2D() const { return uvDistrib; }
 
 private:
