@@ -277,6 +277,7 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 		return BLACK;
 
 	float3 emissionColor = WHITE;
+#if defined(PARAM_HAS_IMAGEMAPS)
 	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
 		// Build the local frame
 		float3 X, Y;
@@ -296,6 +297,7 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 
 		*directPdfW = triLight->triangle.invArea * distanceSquared ;
 	} else
+#endif
 		*directPdfW = triLight->triangle.invArea * distanceSquared / cosAtLight;
 
 	const float2 uv0 = VLOAD2F(&triLight->triangle.uv0.u);
@@ -330,6 +332,7 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 		*directPdfA = triLight->triangle.invArea;
 
 	float3 emissionColor = WHITE;
+#if defined(PARAM_HAS_IMAGEMAPS)
 	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
 		// Build the local frame
 		float3 X, Y;
@@ -347,6 +350,7 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			uv.s0, uv.s1) / triLight->triangle.avarage;
 	}
+#endif
 
 	return Material_GetEmittedRadiance(&mats[triLight->triangle.materialIndex],
 			hitPoint, triLight->triangle.invArea
