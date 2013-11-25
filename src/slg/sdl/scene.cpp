@@ -934,7 +934,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
 	// Check if there is a image or IES map
-	const ImageMap *emissionMap = CreateEmissionMap(propName, props);
+	const ImageMap *emissionMap = CreateEmissionMap(propName + ".emission", props);
 	if (emissionMap) {
 		// There is one
 		mat->SetEmissionMap(emissionMap);
@@ -1030,8 +1030,8 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 ImageMap *Scene::CreateEmissionMap(const std::string &propName, const luxrays::Properties &props) {
 	const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 	const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
-	const u_int width = props.Get(Property(propName + ".emissionmap.width")(0)).Get<u_int>();
-	const u_int height = props.Get(Property(propName + ".emissionmap.height")(0)).Get<u_int>();
+	const u_int width = props.Get(Property(propName + ".map.width")(0)).Get<u_int>();
+	const u_int height = props.Get(Property(propName + ".map.height")(0)).Get<u_int>();
 
 	ImageMap *map = NULL;
 	if ((imgMapName != "") && (iesName != "")) {

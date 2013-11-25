@@ -34,5 +34,5 @@ scene.lights.l1.gain = 1.0 1.0 1.0
 scene.lights.l1.mapfile = scenes/bump/map.png
 scene.lights.l1.iesfile = scenes/bigmonkey/ASA_15M_R2.ies
 scene.lights.l1.flipz = 1
-#scene.lights.l1.emissionmap.width = 256
-#scene.lights.l1.emissionmap.height = 128
+#scene.lights.l1.map.width = 256
+#scene.lights.l1.map.height = 128
