@@ -1696,8 +1696,11 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) c
 //------------------------------------------------------------------------------
 // Wood texture
 //------------------------------------------------------------------------------
-WoodTexture::WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast) : 
-						  mapping(mp), type(BANDS), noisebasis2(TEX_SIN),  noisesize(noisesize), turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
+
+WoodTexture::WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise,
+		const float noisesize, float turb, bool hard, float bright, float contrast) : 
+		mapping(mp), type(BANDS), noisebasis2(TEX_SIN),  noisesize(noisesize),
+		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
 	if(ptype == "bands") {
 		type = BANDS;
 	} else if(ptype == "rings") {
