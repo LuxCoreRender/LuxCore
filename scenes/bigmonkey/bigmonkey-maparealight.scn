@@ -25,11 +25,11 @@ scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.maplight.type = matte
 scene.materials.maplight.kd = 0.75 0.75 0.75
 scene.materials.maplight.emission = 10 10 10
-#scene.materials.maplight.mapfile = scenes/bump/map.png
-scene.materials.maplight.iesfile = scenes/bigmonkey/ASA_15M_R2.ies
-#scene.materials.maplight.flipz = 1
-#scene.materials.maplight.emissionmap.width = 256
-#scene.materials.maplight.emissionmap.height = 128
+#scene.materials.maplight.emission.mapfile = scenes/bump/map.png
+scene.materials.maplight.emission.iesfile = scenes/bigmonkey/ASA_15M_R2.ies
+#scene.materials.maplight.emission.flipz = 1
+#scene.materials.maplight.emission.map.width = 256
+#scene.materials.maplight.emission.map.height = 128
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply
