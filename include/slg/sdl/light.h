@@ -43,6 +43,7 @@ class Scene;
 
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
+	TYPE_SPOT,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -352,6 +353,59 @@ private:
 	const ImageMap *imgMap;
 
 	SampleableSphericalFunction *func;
+};
+
+//------------------------------------------------------------------------------
+// SpotLight implementation
+//------------------------------------------------------------------------------
+
+class SpotLight : public NotIntersecableLightSource {
+public:
+	SpotLight(const luxrays::Transform &l2w, const luxrays::Point &pos,
+			const luxrays::Point &target);
+	virtual ~SpotLight();
+
+	virtual void Preprocess();
+
+	virtual LightSourceType GetType() const { return TYPE_SPOT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	void SetColor(const luxrays::Spectrum &v) { color = v; }
+	luxrays::Spectrum GetColor() const { return color; }
+	void SetPower(const float v) { power = v;}
+	float GetPower() const { return power; }
+	void SetEfficency(const float v) { efficency = v;}
+	float GetEfficency() const { return efficency; }
+	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
+	const luxrays::Point &GetLocalPosition() const { return localPos; }
+	const luxrays::Point &GetLocalTarget() const { return localTarget; }
+	const float GetConeAngle() const { return coneAngle; }
+	const void SetConeAngle(const float v) { coneAngle = v; }
+	const float GetConeDeltaAngle() const { return coneDeltaAngle; }
+	const void SetConeDeltaAngle(const float v) { coneDeltaAngle = v; }
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+protected:
+	luxrays::Spectrum color;
+	float power, efficency;
+	luxrays::Spectrum emittedFactor;
+
+	float coneAngle, coneDeltaAngle;
+	luxrays::Point localPos, localTarget, absolutePos;
+
+	float cosTotalWidth, cosFalloffStart;
+	luxrays::Transform alignedLight2world;
 };
 
 //------------------------------------------------------------------------------

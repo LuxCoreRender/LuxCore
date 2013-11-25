@@ -249,7 +249,7 @@ Properties EnvLightSource::ToProperties(const ImageMapCache &imgMapCache) const 
 //------------------------------------------------------------------------------
 
 PointLight::PointLight(const Transform &l2w, const Point &pos) :
-	NotIntersecableLightSource(l2w), localPos(pos) {
+	NotIntersecableLightSource(l2w), color(1.f), localPos(pos) {
 }
 
 PointLight::~PointLight() {
@@ -392,6 +392,115 @@ Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property(prefix + ".type")("mappoint"));
 	props.Set(Property(prefix + ".mapfile")("imagemap-" + 
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() + ".exr"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// SpotLight
+//------------------------------------------------------------------------------
+
+SpotLight::SpotLight(const Transform &l2w, const Point &pos, const Point &target) :
+	NotIntersecableLightSource(l2w), color(1.f), localPos(pos), localTarget(target) {
+	coneAngle = 30.f;
+	coneDeltaAngle = 5.f;
+}
+
+SpotLight::~SpotLight() {
+}
+
+void SpotLight::Preprocess() {
+	emittedFactor = gain * color * (power * efficency / (4.f * M_PI * color.Y()));
+	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
+		emittedFactor = gain * color;
+
+	absolutePos = lightToWorld * localPos;
+
+	cosTotalWidth = cosf(Radians(coneAngle));
+	cosFalloffStart = cosf(Radians(coneDeltaAngle));
+
+	const Vector dir = Normalize(localTarget - localPos);
+	Vector du, dv;
+	CoordinateSystem(dir, &du, &dv);
+	const Transform dirToZ(Matrix4x4(
+			du.x, du.y, du.z, 0.f,
+			dv.x, dv.y, dv.z, 0.f,
+			dir.x, dir.y, dir.z, 0.f,
+			0.f, 0.f, 0.f, 1.f));
+	alignedLight2world = lightToWorld *
+			Translate(Vector(localPos.x, localPos.y, localPos.z)) /
+			dirToZ;
+}
+
+float SpotLight::GetPower(const Scene &scene) const {
+	return emittedFactor.Y() * 2.f * M_PI * (1.f - .5f * (cosFalloffStart + cosTotalWidth));
+}
+
+static float LocalFalloff(const Vector &w, const float cosTotalWidth, const float cosFalloffStart) {
+	if (CosTheta(w) < cosTotalWidth)
+		return 0.f;
+ 	if (CosTheta(w) > cosFalloffStart)
+		return 1.f;
+
+	// Compute falloff inside spotlight cone
+	const float delta = (CosTheta(w) - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
+	return powf(delta, 4);
+}
+
+Spectrum SpotLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*orig = absolutePos;
+	const Vector  localFromLight= UniformSampleCone(u0, u1, cosTotalWidth);
+	*dir = alignedLight2world * localFromLight;
+	*emissionPdfW = UniformConePdf(cosTotalWidth);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = CosTheta(localFromLight);
+
+	return emittedFactor * (LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart) / fabsf(CosTheta(localFromLight)));
+}
+
+Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Vector toLight(absolutePos - p);
+	const float distanceSquared = toLight.LengthSquared();
+	*distance = sqrtf(distanceSquared);
+	*dir = toLight / *distance;
+
+	const Vector localFromLight = Inverse(alignedLight2world) * (-(*dir));
+	const float falloff = LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart);
+	if (falloff == 0.f)
+		return Spectrum();
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = CosTheta(localFromLight);
+
+	*directPdfW = distanceSquared;
+
+	if (emissionPdfW)
+		*emissionPdfW = UniformConePdf(cosTotalWidth);
+
+	return emittedFactor * (falloff / fabsf(CosTheta(localFromLight)));
+}
+
+Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("spot"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".power")(power));
+	props.Set(Property(prefix + ".efficency")(efficency));
+	props.Set(Property(prefix + ".position")(localPos));
+	props.Set(Property(prefix + ".target")(localTarget));
+	props.Set(Property(prefix + ".coneangle")(coneAngle));
+	props.Set(Property(prefix + ".conedeltaangle")(coneDeltaAngle));
 
 	return props;
 }

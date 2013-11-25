@@ -642,7 +642,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const float gain = props.Get(Property(propName + ".gain")(1.0f)).Get<float>();
+		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma);
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
@@ -1190,6 +1190,19 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		mpl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
 
 		lightSource = mpl;
+	} else if (lightType == "spot") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SpotLight *sl = new SpotLight(light2World,
+				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
+				props.Get(Property(propName + ".target")(Point())).Get<Point>());
+		sl->SetConeAngle(Max(0.f, props.Get(Property(propName + ".coneangle")(30.f)).Get<float>()));
+		sl->SetConeDeltaAngle(Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>()));
+		sl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
+		sl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
+
+		lightSource = sl;
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
