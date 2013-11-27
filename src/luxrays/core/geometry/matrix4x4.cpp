@@ -131,7 +131,7 @@ Matrix4x4 Matrix4x4::Inverse() const {
 							icol = k;
 						}
 					} else if (ipiv[k] > 1)
-						throw std::runtime_error("Singular matrix in MatrixInvert");
+						throw std::runtime_error("Singular matrix in MatrixInvert: " + ToString(*this));
 				}
 			}
 		}
@@ -143,8 +143,8 @@ Matrix4x4 Matrix4x4::Inverse() const {
 		}
 		indxr[i] = irow;
 		indxc[i] = icol;
-		if (minv[icol][icol] == 0.)
-			throw std::runtime_error("Singular matrix in MatrixInvert");
+		if (minv[icol][icol] == 0.f)
+			throw std::runtime_error("Singular matrix in MatrixInvert: " + ToString(*this));
 		// Set $m[icol][icol]$ to one by scaling row _icol_ appropriately
 		float pivinv = 1.f / minv[icol][icol];
 		minv[icol][icol] = 1.f;

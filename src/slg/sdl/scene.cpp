@@ -1196,7 +1196,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 
 		SpotLight *sl = new SpotLight(light2World,
 				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
-				props.Get(Property(propName + ".target")(Point())).Get<Point>());
+				props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>());
 		sl->SetConeAngle(Max(0.f, props.Get(Property(propName + ".coneangle")(30.f)).Get<float>()));
 		sl->SetConeDeltaAngle(Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>()));
 		sl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
