@@ -18,6 +18,7 @@
 
 import os
 import gc
+import resource
 import time
 import sys
 from array import *
@@ -100,7 +101,9 @@ def PropertiesTest():
 		gc.collect()
 		endMemory = MemoryUsage()
 		if (i % 10 == 0):
-			print("Step", i, " memory usage:", endMemory / 1024, "Kbytes [Delta:", str (endMemory - startMemory) + "]")
+			print("Step", i, " memory usage:", endMemory / 1024, "Kbytes [Delta:", str(endMemory - startMemory) + "]")
+	
+	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
 def SceneTest():
 	print("-------------------------------------------------------------------------------------")
@@ -115,7 +118,9 @@ def SceneTest():
 		gc.collect()
 		endMemory = MemoryUsage()
 		if (i % 10 == 0):
-			print("Step", i, " memory usage:", endMemory / 1024, "Kbytes [Delta:", str (endMemory - startMemory) + "]")
+			print("Step", i, " memory usage:", endMemory / 1024, "Kbytes [Delta:", str(endMemory - startMemory) + "]")
+	
+	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
 def RenderConfigTest():
 	print("-------------------------------------------------------------------------------------")
@@ -130,7 +135,9 @@ def RenderConfigTest():
 		gc.collect()
 		endMemory = MemoryUsage()
 		if (i % 10 == 0):
-			print("Step", i, " memory usage:", endMemory / 1024, "Kbytes [Delta:", str (endMemory - startMemory) + "]")
+			print("Step", i, " memory usage:", endMemory / 1024, "Kbytes [Delta:", str(endMemory - startMemory) + "]")
+	
+	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
 
 def SimpleRenderTest():
 	print("-------------------------------------------------------------------------------------")
@@ -140,11 +147,14 @@ def SimpleRenderTest():
 	startMemory = MemoryUsage()
 	print("Start memory usage:", startMemory / 1024, "Kbytes")
 
-	for i in range(1, 100):
+	for i in range(1, 51):
 		SimpleRender()
 		gc.collect()
 		endMemory = MemoryUsage()
-		print("Step", i, " memory usage:", endMemory / 1024, "Kbytes [Delta:", str (endMemory - startMemory) + "]")
+		print("Step", i, " memory usage:", endMemory / 1024, "Kbytes [Delta:", str(endMemory - startMemory) + "]")
+		
+		print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+
 
 ################################################################################
 
@@ -157,9 +167,9 @@ def main():
 
 	print("LuxCore %s" % pyluxcore.Version())
 
-	#PropertiesTest()
-	#SceneTest()
-	#RenderConfigTest()
+	PropertiesTest()
+	SceneTest()
+	RenderConfigTest()
 	SimpleRenderTest()
 
 if __name__ == '__main__':
