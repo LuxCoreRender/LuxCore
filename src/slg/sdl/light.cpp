@@ -417,7 +417,7 @@ void SpotLight::Preprocess() {
 	absolutePos = lightToWorld * localPos;
 
 	cosTotalWidth = cosf(Radians(coneAngle));
-	cosFalloffStart = cosf(Radians(coneDeltaAngle));
+	cosFalloffStart = cosf(Radians(coneAngle - coneDeltaAngle));
 
 	const Vector dir = Normalize(localTarget - localPos);
 	Vector du, dv;
