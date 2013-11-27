@@ -377,12 +377,16 @@ public:
 	void SetEfficency(const float v) { efficency = v;}
 	float GetEfficency() const { return efficency; }
 	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
+	const luxrays::Point &GetAbsolutePosition() const { return absolutePos; }
 	const luxrays::Point &GetLocalPosition() const { return localPos; }
 	const luxrays::Point &GetLocalTarget() const { return localTarget; }
 	const float GetConeAngle() const { return coneAngle; }
 	const void SetConeAngle(const float v) { coneAngle = v; }
 	const float GetConeDeltaAngle() const { return coneDeltaAngle; }
 	const void SetConeDeltaAngle(const float v) { coneDeltaAngle = v; }
+	const float GetCosTotalWidth() const { return cosTotalWidth; }
+	const float GetCosFalloffStart() const { return cosFalloffStart; }
+	const luxrays::Transform &GetAlignedLight2world() const { return alignedLight2world; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,

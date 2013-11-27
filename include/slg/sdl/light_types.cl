@@ -20,6 +20,7 @@
 
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
+	TYPE_SPOT,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -58,6 +59,13 @@ typedef struct {
 } MapPointLightParam;
 
 typedef struct {
+	Vector absolutePos;
+	Spectrum emittedFactor;
+	float cosTotalWidth, cosFalloffStart;
+	Matrix4x4 alignedWorld2Light;
+} SpotLightParam;
+
+typedef struct {
 	Transform light2World;
 	Spectrum gain;
 
@@ -67,6 +75,7 @@ typedef struct {
 		InfiniteLightParam infinite;
 		PointLightParam point;
 		MapPointLightParam mapPoint;
+		SpotLightParam spot;
 	};
 } NotIntersecableLightSource;
 

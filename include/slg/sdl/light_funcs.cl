@@ -414,6 +414,46 @@ float3 MapPointLight_Illuminate(__global LightSource *mapPointLight,
 #endif
 
 //------------------------------------------------------------------------------
+// SpotLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_SPOTLIGHT)
+
+float SpotLight_LocalFalloff(const float3 w, const float cosTotalWidth, const float cosFalloffStart) {
+	if (CosTheta(w) < cosTotalWidth)
+		return 0.f;
+ 	if (CosTheta(w) > cosFalloffStart)
+		return 1.f;
+
+	// Compute falloff inside spotlight cone
+	const float delta = (CosTheta(w) - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
+	return pow(delta, 4);
+}
+
+float3 SpotLight_Illuminate(__global LightSource *spotLight,
+		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
+	const float3 toLight = VLOAD3F(&spotLight->notIntersecable.spot.absolutePos.x) - p;
+	const float distanceSquared = dot(toLight, toLight);
+	*distance = sqrt(distanceSquared);
+	*dir = toLight / *distance;
+
+	const float3 localFromLight = normalize(Matrix4x4_ApplyVector(
+			&spotLight->notIntersecable.spot.alignedWorld2Light, -(*dir)));
+	const float falloff = SpotLight_LocalFalloff(localFromLight,
+			spotLight->notIntersecable.spot.cosTotalWidth,
+			spotLight->notIntersecable.spot.cosFalloffStart);
+	if (falloff == 0.f)
+		return BLACK;
+
+	*directPdfW = distanceSquared;
+
+	return VLOAD3F(&spotLight->notIntersecable.spot.emittedFactor.r) *
+			(falloff / fabs(CosTheta(localFromLight)));
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic light functions
 //------------------------------------------------------------------------------
 
@@ -522,6 +562,12 @@ float3 Light_Illuminate(
 					light, point,
 					lightRayDir, distance, directPdfW
 					IMAGEMAPS_PARAM);
+#endif
+#if defined(PARAM_HAS_SPOTLIGHT)
+		case TYPE_SPOT:
+			return SpotLight_Illuminate(
+					light, point,
+					lightRayDir, distance, directPdfW);
 #endif
 		default:
 			return BLACK;

@@ -33,4 +33,4 @@ scene.lights.l1.position = -3.0 -5.0 6.0
 scene.lights.l1.target = -3.0 -5.0 0.0
 scene.lights.l1.gain = 500.0 500.0 500.0
 scene.lights.l1.coneangle = 60.0
-scene.lights.l1.conedeltaangle = 30.0
+scene.lights.l1.conedeltaangle = 50.0
