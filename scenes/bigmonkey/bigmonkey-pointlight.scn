@@ -30,4 +30,4 @@ scene.objects.red.ply = scenes/bigmonkey/bigmonkey.ply
 ################################################################################
 scene.lights.l1.type = point
 scene.lights.l1.position = -3.0 -5.0 7.0
-scene.lights.l1.gain = 50.0 50.0 50.0
+scene.lights.l1.gain = 150.0 150.0 150.0
