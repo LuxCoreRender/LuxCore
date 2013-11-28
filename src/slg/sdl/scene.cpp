@@ -1208,13 +1208,10 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		const string imageName = props.Get(Property(propName + ".mapfile")("image.png")).Get<string>();
+		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
-		ProjectionLight *pl = new ProjectionLight(light2World,
-				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
-				props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>(),
-				imgMap);
+		const ImageMap *imgMap = (imageName == "") ? NULL : imgMapCache.GetImageMap(imageName, gamma);
+		ProjectionLight *pl = new ProjectionLight(light2World, imgMap);
 		pl->SetFOV(Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>()));
 
 		lightSource = pl;
