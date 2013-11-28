@@ -430,6 +430,12 @@ public:
 	luxrays::Spectrum GetColor() const { return color; }
 	void SetFOV(const float v) { fov = v;}
 	float GetFOV() const { return fov; }
+	const luxrays::Point &GetAbsolutePosition() const { return absolutePos; }
+	const luxrays::Normal &GetNormal() const { return lightNormal; }
+	float GetScreenX0() const { return screenX0; }
+	float GetScreenX1() const { return screenX1; }
+	float GetScreenY0() const { return screenY0; }
+	float GetScreenY1() const { return screenY1; }
 	const ImageMap *GetImageMap() const { return imageMap; }
 	const luxrays::Transform &GetLightProjection() const { return lightProjection; }
 

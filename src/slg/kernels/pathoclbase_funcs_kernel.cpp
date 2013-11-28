@@ -85,6 +85,7 @@ std::string KernelSource_pathoclbase_funcs =
 "//  PARAM_HAS_POINTLIGHT\n"
 "//  PARAM_HAS_MAPPOINTLIGHT\n"
 "//  PARAM_HAS_SPOTLIGHT\n"
+"//  PARAM_HAS_PROJECTIONLIGHT\n"
 "\n"
 "// (optional)\n"
 "//  PARAM_HAS_NORMALS_BUFFER\n"
