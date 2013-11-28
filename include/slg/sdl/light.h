@@ -43,7 +43,7 @@ class Scene;
 
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
-	TYPE_SPOT,
+	TYPE_SPOT, TYPE_PROJECTION,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -386,7 +386,7 @@ public:
 	const void SetConeDeltaAngle(const float v) { coneDeltaAngle = v; }
 	const float GetCosTotalWidth() const { return cosTotalWidth; }
 	const float GetCosFalloffStart() const { return cosFalloffStart; }
-	const luxrays::Transform &GetAlignedLight2world() const { return alignedLight2world; }
+	const luxrays::Transform &GetAlignedLight2World() const { return alignedLight2world; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -410,6 +410,55 @@ protected:
 
 	float cosTotalWidth, cosFalloffStart;
 	luxrays::Transform alignedLight2world;
+};
+
+//------------------------------------------------------------------------------
+// ProjectionLight implementation
+//------------------------------------------------------------------------------
+
+class ProjectionLight : public NotIntersecableLightSource {
+public:
+	ProjectionLight(const luxrays::Transform &l2w, const luxrays::Point &pos,
+			const luxrays::Point &target, const ImageMap *map);
+	virtual ~ProjectionLight();
+
+	virtual void Preprocess();
+
+	virtual LightSourceType GetType() const { return TYPE_PROJECTION; }
+	virtual float GetPower(const Scene &scene) const;
+
+	void SetColor(const luxrays::Spectrum &v) { color = v; }
+	luxrays::Spectrum GetColor() const { return color; }
+	const luxrays::Point &GetAbsolutePosition() const { return absolutePos; }
+	const luxrays::Point &GetLocalPosition() const { return localPos; }
+	const luxrays::Point &GetLocalTarget() const { return localTarget; }
+	void SetFOV(const float v) { fov = v;}
+	float GetFOV() const { return fov; }
+	const ImageMap *GetImageMap() const { return imageMap; }
+	const luxrays::Transform &GetLightProjection() const { return lightProjection; }
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+protected:
+	luxrays::Spectrum color;
+
+	luxrays::Point localPos, localTarget, absolutePos;
+	luxrays::Normal normal;
+	float screenX0, screenX1, screenY0, screenY1, area;
+	float fov, cosTotalWidth;
+
+	const ImageMap *imageMap;
+	luxrays::Transform lightProjection;
 };
 
 //------------------------------------------------------------------------------

@@ -671,7 +671,7 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.spot.emittedFactor, sl->GetEmittedFactor());
 				oclLight->notIntersecable.spot.cosTotalWidth = sl->GetCosTotalWidth();
 				oclLight->notIntersecable.spot.cosFalloffStart = sl->GetCosFalloffStart();
-				memcpy(&oclLight->notIntersecable.spot.alignedWorld2Light.m, &sl->GetAlignedLight2world().mInv, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.spot.alignedWorld2Light.m, &sl->GetAlignedLight2World().mInv, sizeof(float[4][4]));
 				break;
 			}
 			default:
