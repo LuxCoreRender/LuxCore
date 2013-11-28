@@ -871,9 +871,9 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));
 		Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
-		Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f)));
+		Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
 		Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
-		Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f)));
+		Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f, 0.f, 0.f)));
 		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
 
 		mat = new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
@@ -1030,12 +1030,13 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 ImageMap *Scene::CreateEmissionMap(const std::string &propName, const luxrays::Properties &props) {
 	const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 	const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
+	const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
 	const u_int width = props.Get(Property(propName + ".map.width")(0)).Get<u_int>();
 	const u_int height = props.Get(Property(propName + ".map.height")(0)).Get<u_int>();
 
 	ImageMap *map = NULL;
 	if ((imgMapName != "") && (iesName != "")) {
-		ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, 1.f);
+		ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, gamma);
 
 		ImageMap *iesMap;
 		PhotometricDataIES data(iesName.c_str());
@@ -1065,7 +1066,7 @@ ImageMap *Scene::CreateEmissionMap(const std::string &propName, const luxrays::P
 		// Add the image map to the cache
 		imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName, map);
 	} else if (imgMapName != "") {
-		map = imgMapCache.GetImageMap(imgMapName, 1.f);
+		map = imgMapCache.GetImageMap(imgMapName, gamma);
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
@@ -1137,7 +1138,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
+		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
 		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
 
 		const UV shift = props.Get(Property(propName + ".shift")(0.f, 0.f)).Get<UV>();
@@ -1203,6 +1204,20 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		sl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
 
 		lightSource = sl;
+	} else if (lightType == "projection") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		const string imageName = props.Get(Property(propName + ".mapfile")("image.png")).Get<string>();
+		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
+		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
+		ProjectionLight *pl = new ProjectionLight(light2World,
+				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
+				props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>(),
+				imgMap);
+		pl->SetFOV(Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>()));
+
+		lightSource = pl;
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 

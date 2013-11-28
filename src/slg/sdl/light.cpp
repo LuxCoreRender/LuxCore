@@ -410,14 +410,15 @@ SpotLight::~SpotLight() {
 }
 
 void SpotLight::Preprocess() {
-	emittedFactor = gain * color * (power * efficency / (4.f * M_PI * color.Y()));
+	cosTotalWidth = cosf(Radians(coneAngle));
+	cosFalloffStart = cosf(Radians(coneAngle - coneDeltaAngle));
+
+	emittedFactor = gain * color * (power * efficency /
+			(2.f * M_PI * color.Y() * (1.f - .5f * (cosFalloffStart + cosTotalWidth))));
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
 		emittedFactor = gain * color;
 
 	absolutePos = lightToWorld * localPos;
-
-	cosTotalWidth = cosf(Radians(coneAngle));
-	cosFalloffStart = cosf(Radians(coneAngle - coneDeltaAngle));
 
 	const Vector dir = Normalize(localTarget - localPos);
 	Vector du, dv;
@@ -452,8 +453,8 @@ Spectrum SpotLight::Emit(const Scene &scene,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	*orig = absolutePos;
-	const Vector  localFromLight= UniformSampleCone(u0, u1, cosTotalWidth);
-	*dir = alignedLight2world * localFromLight;
+	const Vector localFromLight = UniformSampleCone(u0, u1, cosTotalWidth);
+	*dir = Normalize(alignedLight2world * localFromLight);
 	*emissionPdfW = UniformConePdf(cosTotalWidth);
 
 	if (directPdfA)
@@ -473,7 +474,7 @@ Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
 	*distance = sqrtf(distanceSquared);
 	*dir = toLight / *distance;
 
-	const Vector localFromLight = Inverse(alignedLight2world) * (-(*dir));
+	const Vector localFromLight = Normalize(Inverse(alignedLight2world) * (-(*dir)));
 	const float falloff = LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart);
 	if (falloff == 0.f)
 		return Spectrum();
@@ -501,6 +502,128 @@ Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property(prefix + ".target")(localTarget));
 	props.Set(Property(prefix + ".coneangle")(coneAngle));
 	props.Set(Property(prefix + ".conedeltaangle")(coneDeltaAngle));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// ProjectionLight
+//------------------------------------------------------------------------------
+
+ProjectionLight::ProjectionLight(const Transform &l2w, const Point &pos, const Point &target,
+		const ImageMap *map) :	NotIntersecableLightSource(l2w), color(1.f),
+		localPos(pos), localTarget(target), imageMap(map) {
+	fov = 45.f;
+}
+
+ProjectionLight::~ProjectionLight() {
+}
+
+void ProjectionLight::Preprocess() {
+	absolutePos = lightToWorld * localPos;
+	const Point absoluteTarget = lightToWorld * localTarget;
+	normal = Normal(Normalize(absoluteTarget - absolutePos));
+
+	const float aspect = imageMap->GetWidth() / (float)imageMap->GetHeight();
+	if (aspect > 1.f)  {
+		screenX0 = -aspect;
+		screenX1 = aspect;
+		screenY0 = -1.f;
+		screenY1 = 1.f;
+	} else {
+		screenX0 = -1.f;
+		screenX1 = 1.f;
+		screenY0 = -1.f / aspect;
+		screenY1 = 1.f / aspect;
+	}
+
+	const Vector dir = Normalize(localTarget - localPos);
+	Vector du, dv;
+	CoordinateSystem(dir, &du, &dv);
+	const Transform dirToZ(Matrix4x4(
+			du.x, du.y, du.z, 0.f,
+			dv.x, dv.y, dv.z, 0.f,
+			dir.x, dir.y, dir.z, 0.f,
+			0.f, 0.f, 0.f, 1.f));
+
+	const float hither = DEFAULT_EPSILON_STATIC;
+	const float yon = 1e30f;
+	lightProjection = Perspective(fov, hither, yon) * dirToZ;
+
+	// Compute cosine of cone surrounding projection directions
+	const float opposite = tanf(Radians(fov) / 2.f);
+	const float tanDiag = opposite * sqrtf(1.f + 1.f / (aspect * aspect));
+	cosTotalWidth = cosf(atanf(tanDiag));
+	area = 4.f * opposite * opposite / aspect;
+}
+
+float ProjectionLight::GetPower(const Scene &scene) const {
+	return gain.Y() * color.Y() * imageMap->GetSpectrumMeanY() *
+			2.f * M_PI * (1.f - cosTotalWidth);
+}
+
+Spectrum ProjectionLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*orig = absolutePos;
+	const Point ps = lightToWorld * Inverse(lightProjection) *
+		Point(u0 * (screenX1 - screenX0) + screenX0, u1 * (screenY1 - screenY0) + screenY0, 0.f);
+	*dir = Normalize(Vector(ps.x, ps.y, ps.z));
+	const float cos = Dot(*dir, normal);
+	const float cos2 = cos * cos;
+	*emissionPdfW = 1.f / (area * cos2 * cos);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	return gain * color * imageMap->GetSpectrum(UV(u0, u1));
+}
+
+Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Vector toLight(absolutePos - p);
+	const float distanceSquared = toLight.LengthSquared();
+	*distance = sqrtf(distanceSquared);
+	*dir = toLight / *distance;
+
+	// Check the side
+	if (Dot(-(*dir), normal) < 0.f)
+		return Spectrum();
+
+	// Check if the point is inside the image plane
+	const Point p0 = lightProjection * Point(-dir->x, -dir->y, -dir->z);
+	if ((p0.x < screenX0) || (p0.x >= screenX1) || (p0.y < screenY0) || (p0.y >= screenY1))
+		return Spectrum();
+
+	*directPdfW = distanceSquared;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	if (emissionPdfW)
+		*emissionPdfW = 0.f;
+
+	const float u = (p0.x - screenX0) / (screenX1 - screenX0);
+	const float v = (p0.y - screenY0) / (screenY1 - screenY0);
+	return gain * color * imageMap->GetSpectrum(UV(u, v));
+}
+
+Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("projection"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".position")(localPos));
+	props.Set(Property(prefix + ".target")(localTarget));
+	props.Set(Property(prefix + ".fov")(fov));
+	props.Set(Property(prefix + ".mapfile")("imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
 
 	return props;
 }
@@ -1125,7 +1248,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
 		Frame frame(N);
 
-		const Vector localFromLight = frame.ToLocal(-(*dir));
+		const Vector localFromLight = Normalize(frame.ToLocal(-(*dir)));
 		
 		if (emissionPdfW) {
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
@@ -1166,7 +1289,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
 		Frame frame(N);
 
-		const Vector localFromLight = frame.ToLocal(hitPoint.fixedDir);
+		const Vector localFromLight = Normalize(frame.ToLocal(hitPoint.fixedDir));
 		
 		if (emissionPdfW) {
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
