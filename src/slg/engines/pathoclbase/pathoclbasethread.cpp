@@ -747,6 +747,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_MAPPOINTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SPOT] > 0)
 		ss << " -D PARAM_HAS_SPOTLIGHT";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_PROJECTION] > 0)
+		ss << " -D PARAM_HAS_PROJECTIONLIGHT";
 	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
 	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
 

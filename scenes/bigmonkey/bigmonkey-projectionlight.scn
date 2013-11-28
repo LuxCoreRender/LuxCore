@@ -31,6 +31,6 @@ scene.objects.red.ply = scenes/bigmonkey/bigmonkey.ply
 scene.lights.l1.type = projection
 scene.lights.l1.transformation = 1 0 0 0  0 1 0 0  0 0 -1 0  0 -2 6 1
 scene.lights.l1.fov = 60.0
-scene.lights.l1.gain = 100.0 100.0 100.0
+scene.lights.l1.gain = 300.0 300.0 300.0
 #scene.lights.l1.mapfile = scenes/bump/map.png
 scene.lights.l1.mapfile = scenes/simple-mat/sky.exr

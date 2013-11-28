@@ -674,6 +674,28 @@ void CompiledScene::CompileLights() {
 				memcpy(&oclLight->notIntersecable.spot.alignedWorld2Light.m, &sl->GetAlignedLight2World().mInv, sizeof(float[4][4]));
 				break;
 			}
+			case TYPE_PROJECTION: {
+				const ProjectionLight *pl = (const ProjectionLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_PROJECTION;
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &pl->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &pl->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, pl->GetGain());
+
+				// ProjectionLight data
+				ASSIGN_VECTOR(oclLight->notIntersecable.projection.absolutePos, pl->GetAbsolutePosition());
+				ASSIGN_VECTOR(oclLight->notIntersecable.projection.lightNormal, pl->GetNormal());
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.projection.color, pl->GetColor());
+				oclLight->notIntersecable.projection.screenX0 = pl->GetScreenX0();
+				oclLight->notIntersecable.projection.screenX1 = pl->GetScreenX1();
+				oclLight->notIntersecable.projection.screenY0 = pl->GetScreenY0();
+				oclLight->notIntersecable.projection.screenY1 = pl->GetScreenY1();
+				memcpy(&oclLight->notIntersecable.projection.lightProjection.m, &pl->GetLightProjection().m, sizeof(float[4][4]));
+				break;
+			}
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}

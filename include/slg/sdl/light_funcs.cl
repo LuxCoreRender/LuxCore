@@ -454,6 +454,61 @@ float3 SpotLight_Illuminate(__global LightSource *spotLight,
 #endif
 
 //------------------------------------------------------------------------------
+// ProjectionLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_PROJECTIONLIGHT)
+
+float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
+		const float3 p,	float3 *dir, float *distance, float *directPdfW
+		IMAGEMAPS_PARAM_DECL) {
+	const float3 toLight = VLOAD3F(&projectionLight->notIntersecable.projection.absolutePos.x) - p;
+	const float distanceSquared = dot(toLight, toLight);
+	*distance = sqrt(distanceSquared);
+	*dir = toLight / *distance;
+
+	// Check the side
+	if (dot(-(*dir), VLOAD3F(&projectionLight->notIntersecable.projection.lightNormal.x)) < 0.f)
+		return BLACK;
+
+	// Check if the point is inside the image plane
+	const float3 localFromLight = normalize(Matrix4x4_ApplyVector(
+			&projectionLight->notIntersecable.light2World.mInv, -(*dir)));
+	const float3 p0 = Matrix4x4_ApplyPoint(
+			&projectionLight->notIntersecable.projection.lightProjection, localFromLight);
+
+	const float screenX0 = projectionLight->notIntersecable.projection.screenX0;
+	const float screenX1 = projectionLight->notIntersecable.projection.screenX1;
+	const float screenY0 = projectionLight->notIntersecable.projection.screenY0;
+	const float screenY1 = projectionLight->notIntersecable.projection.screenY1;
+	if ((p0.x < screenX0) || (p0.x >= screenX1) || (p0.y < screenY0) || (p0.y >= screenY1))
+		return BLACK;
+
+	*directPdfW = distanceSquared;
+
+	float3 c = VLOAD3F(&projectionLight->notIntersecable.gain.r) * VLOAD3F(&projectionLight->notIntersecable.projection.color.r);
+	const uint imageMapIndex = projectionLight->notIntersecable.projection.imageMapIndex;
+	if (imageMapIndex != NULL_INDEX) {
+		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
+		const float v = (p0.y - screenY0) / (screenY1 - screenY0);
+		
+		// Retrieve the image map information
+		__global ImageMap *imageMap = &imageMapDescs[imageMapIndex];
+		__global float *pixels = ImageMap_GetPixelsAddress(
+				imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+
+		c *= ImageMap_GetSpectrum(
+				pixels,
+				imageMap->width, imageMap->height, imageMap->channelCount,
+				u, v);
+	}
+
+	return c;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic light functions
 //------------------------------------------------------------------------------
 
@@ -569,6 +624,13 @@ float3 Light_Illuminate(
 					light, point,
 					lightRayDir, distance, directPdfW);
 #endif
+#if defined(PARAM_HAS_PROJECTIONLIGHT)
+		case TYPE_PROJECTION:
+			return ProjectionLight_Illuminate(
+					light, point,
+					lightRayDir, distance, directPdfW
+					IMAGEMAPS_PARAM);
+#endif			
 		default:
 			return BLACK;
 	}
