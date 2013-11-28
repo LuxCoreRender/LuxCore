@@ -915,11 +915,22 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".coneangle")(props.Get(Property("coneangle")(30.f)).Get<float>()) <<
 				Property(prefix + ".conedeltaangle")(props.Get(Property("conedeltaangle")(5.f)).Get<float>()) <<
 				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
-				Property(prefix + ".target")(props.Get(Property("to")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".target")(props.Get(Property("to")(Point(0.f, 0.f, 1.f))).Get<Point>()) <<
 				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
 				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
 				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "projection") {
+		*sceneProps <<
+				Property(prefix + ".type")("projection") <<
+				Property(prefix + ".mapfile")(props.Get(Property("mapname")("")).Get<string>()) <<
+				Property(prefix + ".fov")(props.Get(Property("fov")(45.f)).Get<float>()) <<
+				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".target")(props.Get(Property("to")(Point(0.f, 0.f, 1.f))).Get<Point>()) <<
+				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".transformation")(currentTransform.m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	}

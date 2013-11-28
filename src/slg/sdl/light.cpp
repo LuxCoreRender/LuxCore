@@ -428,7 +428,7 @@ void SpotLight::Preprocess() {
 			dv.x, dv.y, dv.z, 0.f,
 			dir.x, dir.y, dir.z, 0.f,
 			0.f, 0.f, 0.f, 1.f));
-	alignedLight2world = lightToWorld *
+	alignedLight2World = lightToWorld *
 			Translate(Vector(localPos.x, localPos.y, localPos.z)) /
 			dirToZ;
 }
@@ -454,7 +454,7 @@ Spectrum SpotLight::Emit(const Scene &scene,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	*orig = absolutePos;
 	const Vector localFromLight = UniformSampleCone(u0, u1, cosTotalWidth);
-	*dir = Normalize(alignedLight2world * localFromLight);
+	*dir = Normalize(alignedLight2World * localFromLight);
 	*emissionPdfW = UniformConePdf(cosTotalWidth);
 
 	if (directPdfA)
@@ -474,7 +474,7 @@ Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
 	*distance = sqrtf(distanceSquared);
 	*dir = toLight / *distance;
 
-	const Vector localFromLight = Normalize(Inverse(alignedLight2world) * (-(*dir)));
+	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-(*dir)));
 	const float falloff = LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart);
 	if (falloff == 0.f)
 		return Spectrum();
@@ -510,9 +510,8 @@ Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache) const {
 // ProjectionLight
 //------------------------------------------------------------------------------
 
-ProjectionLight::ProjectionLight(const Transform &l2w, const Point &pos, const Point &target,
-		const ImageMap *map) :	NotIntersecableLightSource(l2w), color(1.f),
-		localPos(pos), localTarget(target), imageMap(map) {
+ProjectionLight::ProjectionLight(const Transform &l2w, const ImageMap *map) :
+		NotIntersecableLightSource(l2w), color(1.f), imageMap(map) {
 	fov = 45.f;
 }
 
@@ -520,11 +519,10 @@ ProjectionLight::~ProjectionLight() {
 }
 
 void ProjectionLight::Preprocess() {
-	absolutePos = lightToWorld * localPos;
-	const Point absoluteTarget = lightToWorld * localTarget;
-	normal = Normal(Normalize(absoluteTarget - absolutePos));
+	absolutePos = lightToWorld * Point();
+	lightNormal = Normalize(lightToWorld * Normal(0.f, 0.f, 1.f));
 
-	const float aspect = imageMap->GetWidth() / (float)imageMap->GetHeight();
+	const float aspect = imageMap ? (imageMap->GetWidth() / (float)imageMap->GetHeight()) : 1.f;
 	if (aspect > 1.f)  {
 		screenX0 = -aspect;
 		screenX1 = aspect;
@@ -537,28 +535,23 @@ void ProjectionLight::Preprocess() {
 		screenY1 = 1.f / aspect;
 	}
 
-	const Vector dir = Normalize(localTarget - localPos);
-	Vector du, dv;
-	CoordinateSystem(dir, &du, &dv);
-	const Transform dirToZ(Matrix4x4(
-			du.x, du.y, du.z, 0.f,
-			dv.x, dv.y, dv.z, 0.f,
-			dir.x, dir.y, dir.z, 0.f,
-			0.f, 0.f, 0.f, 1.f));
-
 	const float hither = DEFAULT_EPSILON_STATIC;
 	const float yon = 1e30f;
-	lightProjection = Perspective(fov, hither, yon) * dirToZ;
+	lightProjection = Perspective(fov, hither, yon);
 
 	// Compute cosine of cone surrounding projection directions
 	const float opposite = tanf(Radians(fov) / 2.f);
 	const float tanDiag = opposite * sqrtf(1.f + 1.f / (aspect * aspect));
 	cosTotalWidth = cosf(atanf(tanDiag));
-	area = 4.f * opposite * opposite / aspect;
+	if (aspect <= 1.f)
+		area = 4.f * opposite * opposite / aspect;
+	else
+		area = 4.f * opposite * opposite * aspect;
 }
 
 float ProjectionLight::GetPower(const Scene &scene) const {
-	return gain.Y() * color.Y() * imageMap->GetSpectrumMeanY() *
+	return gain.Y() * color.Y() *
+			(imageMap ? imageMap->GetSpectrumMeanY() : 1.f) *
 			2.f * M_PI * (1.f - cosTotalWidth);
 }
 
@@ -567,10 +560,10 @@ Spectrum ProjectionLight::Emit(const Scene &scene,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	*orig = absolutePos;
-	const Point ps = lightToWorld * Inverse(lightProjection) *
+	const Point ps = Inverse(lightProjection) *
 		Point(u0 * (screenX1 - screenX0) + screenX0, u1 * (screenY1 - screenY0) + screenY0, 0.f);
-	*dir = Normalize(Vector(ps.x, ps.y, ps.z));
-	const float cos = Dot(*dir, normal);
+	*dir = Normalize(lightToWorld * Vector(ps.x, ps.y, ps.z));
+	const float cos = Dot(*dir, lightNormal);
 	const float cos2 = cos * cos;
 	*emissionPdfW = 1.f / (area * cos2 * cos);
 
@@ -579,7 +572,11 @@ Spectrum ProjectionLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	return gain * color * imageMap->GetSpectrum(UV(u0, u1));
+	Spectrum c = gain * color;
+	if (imageMap)
+		c *= imageMap->GetSpectrum(UV(u0, u1));
+
+	return c;
 }
 
 Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
@@ -592,11 +589,12 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
 	*dir = toLight / *distance;
 
 	// Check the side
-	if (Dot(-(*dir), normal) < 0.f)
+	if (Dot(-(*dir), lightNormal) < 0.f)
 		return Spectrum();
 
 	// Check if the point is inside the image plane
-	const Point p0 = lightProjection * Point(-dir->x, -dir->y, -dir->z);
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * (-(*dir)));
+	const Point p0 = lightProjection * Point(localFromLight.x, localFromLight.y, localFromLight.z);
 	if ((p0.x < screenX0) || (p0.x >= screenX1) || (p0.y < screenY0) || (p0.y >= screenY1))
 		return Spectrum();
 
@@ -608,9 +606,14 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = 0.f;
 
-	const float u = (p0.x - screenX0) / (screenX1 - screenX0);
-	const float v = (p0.y - screenY0) / (screenY1 - screenY0);
-	return gain * color * imageMap->GetSpectrum(UV(u, v));
+	Spectrum c = gain * color;
+	if (imageMap) {
+		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
+		const float v = (p0.y - screenY0) / (screenY1 - screenY0);
+		c *= imageMap->GetSpectrum(UV(u, v));
+	}
+
+	return c;
 }
 
 Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -619,8 +622,6 @@ Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const
 
 	props.Set(Property(prefix + ".type")("projection"));
 	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".position")(localPos));
-	props.Set(Property(prefix + ".target")(localTarget));
 	props.Set(Property(prefix + ".fov")(fov));
 	props.Set(Property(prefix + ".mapfile")("imagemap-" + 
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));

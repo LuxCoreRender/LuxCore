@@ -386,7 +386,7 @@ public:
 	const void SetConeDeltaAngle(const float v) { coneDeltaAngle = v; }
 	const float GetCosTotalWidth() const { return cosTotalWidth; }
 	const float GetCosFalloffStart() const { return cosFalloffStart; }
-	const luxrays::Transform &GetAlignedLight2World() const { return alignedLight2world; }
+	const luxrays::Transform &GetAlignedLight2World() const { return alignedLight2World; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -409,7 +409,7 @@ protected:
 	luxrays::Point localPos, localTarget, absolutePos;
 
 	float cosTotalWidth, cosFalloffStart;
-	luxrays::Transform alignedLight2world;
+	luxrays::Transform alignedLight2World;
 };
 
 //------------------------------------------------------------------------------
@@ -418,8 +418,7 @@ protected:
 
 class ProjectionLight : public NotIntersecableLightSource {
 public:
-	ProjectionLight(const luxrays::Transform &l2w, const luxrays::Point &pos,
-			const luxrays::Point &target, const ImageMap *map);
+	ProjectionLight(const luxrays::Transform &l2w, const ImageMap *map);
 	virtual ~ProjectionLight();
 
 	virtual void Preprocess();
@@ -429,9 +428,6 @@ public:
 
 	void SetColor(const luxrays::Spectrum &v) { color = v; }
 	luxrays::Spectrum GetColor() const { return color; }
-	const luxrays::Point &GetAbsolutePosition() const { return absolutePos; }
-	const luxrays::Point &GetLocalPosition() const { return localPos; }
-	const luxrays::Point &GetLocalTarget() const { return localTarget; }
 	void SetFOV(const float v) { fov = v;}
 	float GetFOV() const { return fov; }
 	const ImageMap *GetImageMap() const { return imageMap; }
@@ -451,9 +447,8 @@ public:
 
 protected:
 	luxrays::Spectrum color;
-
-	luxrays::Point localPos, localTarget, absolutePos;
-	luxrays::Normal normal;
+	luxrays::Point absolutePos;
+	luxrays::Normal lightNormal;
 	float screenX0, screenX1, screenY0, screenY1, area;
 	float fov, cosTotalWidth;
 
