@@ -43,7 +43,7 @@ class Scene;
 
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
-	TYPE_SPOT, TYPE_PROJECTION,
+	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -460,6 +460,41 @@ protected:
 
 	const ImageMap *imageMap;
 	luxrays::Transform lightProjection;
+};
+
+//------------------------------------------------------------------------------
+// ConstantInfiniteLight implementation
+//------------------------------------------------------------------------------
+
+class ConstantInfiniteLight : public EnvLightSource {
+public:
+	ConstantInfiniteLight(const luxrays::Spectrum &color);
+	virtual ~ConstantInfiniteLight();
+
+	virtual void Preprocess() { }
+
+	virtual LightSourceType GetType() const { return TYPE_IL_CONSTANT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	const luxrays::Spectrum &GetColor() const { return color; }
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	luxrays::Spectrum color;
 };
 
 //------------------------------------------------------------------------------

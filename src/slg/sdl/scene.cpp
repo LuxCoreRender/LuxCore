@@ -1215,6 +1215,15 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		pl->SetFOV(Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>()));
 
 		lightSource = pl;
+	} else if (lightType == "constantinfinite") {
+		const Spectrum color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		ConstantInfiniteLight *cil = new ConstantInfiniteLight(color);
+
+		cil->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		cil->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		cil->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+		lightSource = cil;
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
