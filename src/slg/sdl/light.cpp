@@ -630,6 +630,219 @@ Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const
 }
 
 //------------------------------------------------------------------------------
+// SharpDistantLight
+//------------------------------------------------------------------------------
+
+SharpDistantLight::SharpDistantLight(const Transform &l2w) :
+		NotIntersecableLightSource(l2w), color(1.f), localLightDir(0.f, 0.f, 1.f) {
+}
+
+SharpDistantLight::~SharpDistantLight() {
+}
+
+void SharpDistantLight::Preprocess() {
+	absoluteLightDir = lightToWorld * localLightDir;
+	CoordinateSystem(absoluteLightDir, &x, &y);
+}
+
+void SharpDistantLight::GetPreprocessedData(float *absoluteLightDirData,
+		float *xData, float *yData) const {
+	if (absoluteLightDirData) {
+		absoluteLightDirData[0] = absoluteLightDir.x;
+		absoluteLightDirData[1] = absoluteLightDir.y;
+		absoluteLightDirData[2] = absoluteLightDir.z;
+	}
+
+	if (xData) {
+		xData[0] = x.x;
+		xData[1] = x.y;
+		xData[2] = x.z;
+	}
+
+	if (yData) {
+		yData[0] = y.x;
+		yData[1] = y.y;
+		yData[2] = y.z;
+	}
+}
+
+float SharpDistantLight::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return gain.Y() * color.Y() * M_PI * worldRadius * worldRadius;
+}
+
+Spectrum SharpDistantLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*dir = absoluteLightDir;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	float d1, d2;
+	ConcentricSampleDisk(u0, u1, &d1, &d2);
+	*orig = worldCenter - worldRadius * (absoluteLightDir + d1 * x + d2 * y);
+
+	*emissionPdfW = 1.f / (M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+
+	return gain * color;
+}
+
+Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	*dir = -absoluteLightDir;
+
+	*distance = numeric_limits<float>::infinity();
+	*directPdfW = 1.f;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = 1.f / (M_PI * worldRadius * worldRadius);
+	}
+
+	return gain * color;
+}
+
+Properties SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("sharpdistant"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".direction")(localLightDir));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// DistantLight
+//------------------------------------------------------------------------------
+
+DistantLight::DistantLight(const Transform &l2w) :
+		NotIntersecableLightSource(l2w), color(1.f), localLightDir(0.f, 0.f, 1.f) {
+}
+
+DistantLight::~DistantLight() {
+}
+
+void DistantLight::Preprocess() {
+	if (theta == 0.f) {
+		sin2ThetaMax = 2.f * MachineEpsilon::E(1.f);
+		cosThetaMax = 1.f - MachineEpsilon::E(1.f);
+	} else {
+		const float radTheta = Radians(theta);
+		sin2ThetaMax = sinf( Radians(radTheta)) * sinf(radTheta);
+		cosThetaMax = cosf(radTheta);
+	}
+
+	absoluteLightDir = lightToWorld * localLightDir;
+	CoordinateSystem(absoluteLightDir, &x, &y);
+}
+
+void DistantLight::GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData,
+		float *sin2ThetaMaxData, float *cosThetaMaxData) const {
+	if (absoluteLightDirData) {
+		absoluteLightDirData[0] = absoluteLightDir.x;
+		absoluteLightDirData[1] = absoluteLightDir.y;
+		absoluteLightDirData[2] = absoluteLightDir.z;
+	}
+	
+	if (xData) {
+		xData[0] = x.x;
+		xData[1] = x.y;
+		xData[2] = x.z;
+	}
+
+	if (yData) {
+		yData[0] = y.x;
+		yData[1] = y.y;
+		yData[2] = y.z;
+	}
+
+	if (sin2ThetaMaxData)
+		*sin2ThetaMaxData = sin2ThetaMax;
+	if (cosThetaMaxData)
+		*cosThetaMaxData = cosThetaMax;
+}
+
+float DistantLight::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return gain.Y() * color.Y() * M_PI * worldRadius * worldRadius;
+}
+
+Spectrum DistantLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(*dir, absoluteLightDir);
+
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	float d1, d2;
+	ConcentricSampleDisk(u2, u3, &d1, &d2);
+	*orig = worldCenter - worldRadius * (absoluteLightDir + d1 * x + d2 * y);
+
+	*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = uniformConePdf;
+
+	return gain * color;
+}
+
+Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
+	*distance = numeric_limits<float>::infinity();
+
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	*directPdfW = uniformConePdf;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(-absoluteLightDir, *dir);
+
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+		*emissionPdfW =  uniformConePdf / (M_PI * worldRadius * worldRadius);
+	}
+
+	return gain * color;
+}
+
+Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("distant"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".direction")(localLightDir));
+	props.Set(Property(prefix + ".theta")(10.f));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // InfiniteLight
 //------------------------------------------------------------------------------
 
@@ -661,8 +874,8 @@ InfiniteLight::~InfiniteLight() {
 float InfiniteLight::GetPower(const Scene &scene) const {
 	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
 
-	return gain.Y() * (4.f * M_PI * M_PI * worldRadius * worldRadius) *
-		imageMap->GetSpectrumMeanY();
+	return gain.Y() * imageMap->GetSpectrumMeanY() *
+			(4.f * M_PI * M_PI * worldRadius * worldRadius);
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,

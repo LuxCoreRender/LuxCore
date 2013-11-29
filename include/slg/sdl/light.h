@@ -43,7 +43,7 @@ class Scene;
 
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
-	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT,
+	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -460,6 +460,79 @@ protected:
 
 	const ImageMap *imageMap;
 	luxrays::Transform lightProjection;
+};
+
+//------------------------------------------------------------------------------
+// SharpDistantLight implementation
+//------------------------------------------------------------------------------
+
+class SharpDistantLight : public NotIntersecableLightSource {
+public:
+	SharpDistantLight(const luxrays::Transform &l2w);
+	virtual ~SharpDistantLight();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData) const;
+
+	virtual LightSourceType GetType() const { return TYPE_SHARPDISTANT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
+	luxrays::Vector localLightDir;
+
+protected:
+	luxrays::Vector absoluteLightDir;
+	luxrays::Vector x, y;
+};
+
+//------------------------------------------------------------------------------
+// DistantLight implementation
+//------------------------------------------------------------------------------
+
+class DistantLight : public NotIntersecableLightSource {
+public:
+	DistantLight(const luxrays::Transform &l2w);
+	virtual ~DistantLight();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData,
+		float *sin2ThetaMaxData, float *cosThetaMaxData) const;
+
+	virtual LightSourceType GetType() const { return TYPE_DISTANT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
+	luxrays::Vector localLightDir;
+	float theta;
+
+protected:
+	luxrays::Vector absoluteLightDir;
+	luxrays::Vector x, y;
+	float sin2ThetaMax, cosThetaMax;
 };
 
 //------------------------------------------------------------------------------
