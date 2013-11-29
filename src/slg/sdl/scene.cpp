@@ -1224,6 +1224,25 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		cil->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
 		lightSource = cil;
+	} else if (lightType == "sharpdistant") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SharpDistantLight *sdl = new SharpDistantLight(light2World);
+		sdl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		sdl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
+
+		lightSource = sdl;
+	} else if (lightType == "distant") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		DistantLight *dl = new DistantLight(light2World);
+		dl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		dl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
+		dl->theta = props.Get(Property(propName + ".theta")(10.f)).Get<float>();
+
+		lightSource = dl;
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
