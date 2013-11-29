@@ -20,7 +20,7 @@
 
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
-	TYPE_SPOT, TYPE_PROJECTION,
+	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -74,6 +74,10 @@ typedef struct {
 } ProjectionLightParam;
 
 typedef struct {
+	Spectrum color;
+} ConstantInfiniteLightParam;
+
+typedef struct {
 	Transform light2World;
 	Spectrum gain;
 
@@ -85,6 +89,7 @@ typedef struct {
 		MapPointLightParam mapPoint;
 		SpotLightParam spot;
 		ProjectionLightParam projection;
+		ConstantInfiniteLightParam constantInfinite;
 	};
 } NotIntersecableLightSource;
 
@@ -126,7 +131,7 @@ typedef struct {
 #if defined(PARAM_HAS_INFINITELIGHT)
 #define LIGHTS_PARAM_DECL , __global LightSource *lights, __global uint *envLightIndices, const uint envLightCount, __global uint *meshTriLightDefsOffset, __global float *infiniteLightDistribution, __global float *lightsDistribution MATERIALS_PARAM_DECL
 #define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, infiniteLightDistribution, lightsDistribution MATERIALS_PARAM
-#elif defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#elif defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 #define LIGHTS_PARAM_DECL , __global LightSource *lights, __global uint *envLightIndices, const uint envLightCount, __global uint *meshTriLightDefsOffset, __global float *lightsDistribution MATERIALS_PARAM_DECL
 #define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, lightsDistribution MATERIALS_PARAM
 #else

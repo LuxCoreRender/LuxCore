@@ -19,6 +19,53 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
+// ConstantInfiniteLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
+
+float3 ConstantInfiniteLight_GetRadiance(__global LightSource *constantInfiniteLight,
+		const float3 dir, float *directPdfA) {
+	*directPdfA = 1.f / (4.f * M_PI_F);
+
+	return VLOAD3F(&constantInfiniteLight->notIntersecable.gain.r) *
+			VLOAD3F(&constantInfiniteLight->notIntersecable.constantInfinite.color.r);
+}
+
+float3 ConstantInfiniteLight_Illuminate(__global LightSource *constantInfiniteLight,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		const float u0, const float u1, const float3 p,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float phi = u0 * 2.f * M_PI_F;
+	const float theta = u1 * M_PI_F;
+	*dir = SphericalDirection(sin(theta), cos(theta), phi);
+
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	*directPdfW = 1.f / (4.f * M_PI_F);
+
+	return VLOAD3F(&constantInfiniteLight->notIntersecable.gain.r) *
+			VLOAD3F(&constantInfiniteLight->notIntersecable.constantInfinite.color.r);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // InfiniteLight
 //------------------------------------------------------------------------------
 
@@ -515,6 +562,11 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 float3 EnvLight_GetRadiance(__global LightSource *light, const float3 dir, float *directPdfA
 				LIGHTS_PARAM_DECL) {
 	switch (light->type) {
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
+		case TYPE_IL_CONSTANT:
+			return ConstantInfiniteLight_GetRadiance(light,
+					dir, directPdfA);
+#endif
 #if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
 			return InfiniteLight_GetRadiance(light,
@@ -553,7 +605,7 @@ float3 Light_Illuminate(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float u3,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -565,6 +617,15 @@ float3 Light_Illuminate(
 		float3 *lightRayDir, float *distance, float *directPdfW
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
+		case TYPE_IL_CONSTANT:
+			return ConstantInfiniteLight_Illuminate(
+				light,
+				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				u0, u1,
+				point,
+				lightRayDir, distance, directPdfW);
+#endif
 #if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
 			return InfiniteLight_Illuminate(

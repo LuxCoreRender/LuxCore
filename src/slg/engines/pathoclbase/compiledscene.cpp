@@ -696,6 +696,23 @@ void CompiledScene::CompileLights() {
 				memcpy(&oclLight->notIntersecable.projection.lightProjection.m, &pl->GetLightProjection().m, sizeof(float[4][4]));
 				break;
 			}
+			case TYPE_IL_CONSTANT: {
+				const ConstantInfiniteLight *cil = (const ConstantInfiniteLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_IL_CONSTANT;
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &cil->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &cil->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, cil->GetGain());
+
+				// ConstantInfiniteLight data
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.constantInfinite.color, cil->GetColor());
+				
+				envLightIndices.push_back(i);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}
