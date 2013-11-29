@@ -879,14 +879,23 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + "_SKY.transformation")(currentTransform.m) <<
 				Property(prefix + "_SKY.id")(currentGraphicsState.currentLightGroup);
 	} else if ((name == "infinite") || (name == "infinitesample")) {
-		*sceneProps <<
-				Property(prefix + ".type")("infinite") <<
-				Property(prefix + ".file")(props.Get(Property("mapname")("")).Get<string>()) <<
-				Property(prefix + ".gamma")(props.Get(Property("gamma")(1.f)).Get<float>()) <<
-				Property(prefix + ".gain")(props.Get(Property("gain")(1.f)).Get<float>() *
-					props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
-				Property(prefix + ".transformation")(currentTransform.m) <<
-				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+		// Check if i have to use infiniete or constantinfinite
+		if (props.Get(Property("mapname")("")).Get<string>() == "") {
+			*sceneProps <<
+					Property(prefix + ".type")("constantinfinite") <<
+					Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+					Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+					Property(prefix + ".id")(currentGraphicsState.currentLightGroup);			
+		} else {
+			*sceneProps <<
+					Property(prefix + ".type")("infinite") <<
+					Property(prefix + ".file")(props.Get(Property("mapname")("")).Get<string>()) <<
+					Property(prefix + ".gamma")(props.Get(Property("gamma")(2.2f)).Get<float>()) <<
+					Property(prefix + ".gain")(props.Get(Property("gain")(1.f)).Get<float>() *
+						props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+					Property(prefix + ".transformation")(currentTransform.m) <<
+					Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+		}
 	} else if (name == "point") {
 		// Check if it is a point or mappoint light source
 		if (props.IsDefined("mapname") || props.IsDefined("iesname")) {
@@ -1208,7 +1217,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	const string prefix = "scene.textures." + name;
 
 	if (texType == "imagemap") {
-		const float gamma = props.Get(Property("gamma")(1.f)).Get<float>();
+		const float gamma = props.Get(Property("gamma")(2.2f)).Get<float>();
 		const float gain = props.Get(Property("gain")(1.f)).Get<float>();
 		*sceneProps <<
 				Property(prefix + ".type")("imagemap") <<
