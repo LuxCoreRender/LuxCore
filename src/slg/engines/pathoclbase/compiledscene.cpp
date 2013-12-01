@@ -713,6 +713,43 @@ void CompiledScene::CompileLights() {
 				envLightIndices.push_back(i);
 				break;
 			}
+		case TYPE_SHARPDISTANT: {
+				const SharpDistantLight *sdl = (const SharpDistantLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_SHARPDISTANT;
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &sdl->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &sdl->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sdl->GetGain());
+
+				// SharpDistantLight data
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.sharpDistant.color, sdl->color);
+				sdl->GetPreprocessedData(&(oclLight->notIntersecable.sharpDistant.absoluteLightDir.x), NULL, NULL);
+				break;
+			}
+			case TYPE_DISTANT: {
+				const DistantLight *dl = (const DistantLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_DISTANT;
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &dl->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &dl->GetTransformation().mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, dl->GetGain());
+
+				// DistantLight data
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.sharpDistant.color, dl->color);
+				dl->GetPreprocessedData(
+					&(oclLight->notIntersecable.distant.absoluteLightDir.x),
+					&(oclLight->notIntersecable.distant.x.x),
+					&(oclLight->notIntersecable.distant.y.x),
+					NULL,
+					&(oclLight->notIntersecable.distant.cosThetaMax));
+				break;
+			}
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}

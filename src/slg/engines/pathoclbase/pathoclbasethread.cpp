@@ -751,6 +751,10 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_PROJECTIONLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0)
 		ss << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0)
+		ss << " -D PARAM_HAS_SHARPDISTANTLIGHT";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0)
+		ss << " -D PARAM_HAS_DISTANTLIGHT";
 	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
 	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
 
