@@ -164,7 +164,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 
 		float power = l->GetPower(*scene);
 		// In order to avoid over-sampling of distant lights
-		if (l->IsEnvironmental()) {
+		if (l->IsInfinite()) {
 			power *= iWorldRadius2;			
 			envLightSources.push_back((EnvLightSource *)l);
 		}

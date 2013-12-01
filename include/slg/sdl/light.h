@@ -67,6 +67,7 @@ public:
 	virtual u_int GetSceneIndex() const { return lightSceneIndex; }
 
 	virtual bool IsEnvironmental() const { return false; }
+	virtual bool IsInfinite() const { return false; }
 	virtual bool IsIntersecable() const { return false; }
 
 	virtual u_int GetID() const = 0;
@@ -256,6 +257,7 @@ public:
 	virtual ~EnvLightSource() { }
 
 	virtual bool IsEnvironmental() const { return true; }
+	virtual bool IsInfinite() const { return true; }
 
 	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
 	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
@@ -474,6 +476,8 @@ public:
 	SharpDistantLight(const luxrays::Transform &l2w);
 	virtual ~SharpDistantLight();
 
+	virtual bool IsInfinite() const { return true; }
+
 	virtual void Preprocess();
 	void GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData) const;
 
@@ -508,6 +512,8 @@ class DistantLight : public NotIntersecableLightSource {
 public:
 	DistantLight(const luxrays::Transform &l2w);
 	virtual ~DistantLight();
+
+	virtual bool IsInfinite() const { return true; }
 
 	virtual void Preprocess();
 	void GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData,
