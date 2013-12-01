@@ -20,7 +20,7 @@
 
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
-	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT,
+	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -78,6 +78,17 @@ typedef struct {
 } ConstantInfiniteLightParam;
 
 typedef struct {
+	Spectrum color;
+	Vector absoluteLightDir;
+} SharpDistantLightParam;
+
+typedef struct {
+	Spectrum color;
+	Vector absoluteLightDir, x, y;
+	float cosThetaMax;
+} DistantLightParam;
+
+typedef struct {
 	Transform light2World;
 	Spectrum gain;
 
@@ -90,6 +101,8 @@ typedef struct {
 		SpotLightParam spot;
 		ProjectionLightParam projection;
 		ConstantInfiniteLightParam constantInfinite;
+		SharpDistantLightParam sharpDistant;
+		DistantLightParam distant;
 	};
 } NotIntersecableLightSource;
 

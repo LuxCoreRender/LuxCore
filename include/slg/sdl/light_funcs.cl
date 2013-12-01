@@ -533,7 +533,8 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 
 	*directPdfW = distanceSquared;
 
-	float3 c = VLOAD3F(&projectionLight->notIntersecable.gain.r) * VLOAD3F(&projectionLight->notIntersecable.projection.color.r);
+	float3 c = VLOAD3F(&projectionLight->notIntersecable.gain.r) *
+			VLOAD3F(&projectionLight->notIntersecable.projection.color.r);
 	const uint imageMapIndex = projectionLight->notIntersecable.projection.imageMapIndex;
 	if (imageMapIndex != NULL_INDEX) {
 		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
@@ -551,6 +552,50 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 	}
 
 	return c;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// SharpDistantLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
+
+float3 SharpDistantLight_Illuminate(__global LightSource *sharpDistantLight,
+		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
+	*dir = -VLOAD3F(&sharpDistantLight->notIntersecable.sharpDistant.absoluteLightDir.x);
+
+	*distance = INFINITY;
+	*directPdfW = 1.f;
+
+	return VLOAD3F(&sharpDistantLight->notIntersecable.gain.r) *
+			VLOAD3F(&sharpDistantLight->notIntersecable.sharpDistant.color.r);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// DistantLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_DISTANTLIGHT)
+
+float3 DistantLight_Illuminate(__global LightSource *distantLight,
+		const float3 p,	const float u0, const float u1,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 absoluteLightDir = VLOAD3F(&distantLight->notIntersecable.distant.absoluteLightDir.x);
+	const float3 x = VLOAD3F(&distantLight->notIntersecable.distant.x.x);
+	const float3 y = VLOAD3F(&distantLight->notIntersecable.distant.y.x);
+	const float cosThetaMax = distantLight->notIntersecable.distant.cosThetaMax;
+	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
+	*distance = INFINITY;
+
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	*directPdfW = uniformConePdf;
+
+	return VLOAD3F(&distantLight->notIntersecable.gain.r) *
+			VLOAD3F(&distantLight->notIntersecable.sharpDistant.color.r);
 }
 
 #endif
@@ -691,7 +736,20 @@ float3 Light_Illuminate(
 					light, point,
 					lightRayDir, distance, directPdfW
 					IMAGEMAPS_PARAM);
-#endif			
+#endif
+#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
+		case TYPE_SHARPDISTANT:
+			return SharpDistantLight_Illuminate(
+				light, point,
+				lightRayDir, distance, directPdfW);
+#endif
+#if defined(PARAM_HAS_DISTANTLIGHT)
+		case TYPE_DISTANT:
+			return DistantLight_Illuminate(
+				light, point,
+				u0, u1,
+				lightRayDir, distance, directPdfW);
+#endif
 		default:
 			return BLACK;
 	}
