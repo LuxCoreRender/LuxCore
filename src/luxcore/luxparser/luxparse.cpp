@@ -2632,9 +2632,9 @@ yyreduce:
 					Property(prefix + ".type")("distant") <<
 					Property(prefix + ".theta")(theta) ;
 		}
-		
+
 		const Point from = props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>();
-		const Point to = props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>();
+		const Point to = props.Get(Property("to")(Point(0.f, 0.f, 1.f))).Get<Point>();
 		
 		*sceneProps <<
 				Property(prefix + ".direction")(Normalize(to - from)) <<

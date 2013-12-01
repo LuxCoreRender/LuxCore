@@ -31,19 +31,19 @@ typedef struct {
 } InfiniteLightParam;
 
 typedef struct {
-	float thetaS;
-	float phiS;
+	float absoluteTheta;
+	float absolutePhi;
 	float zenith_Y, zenith_x, zenith_y;
 	float perez_Y[6], perez_x[6], perez_y[6];
 } SkyLightParam;
 
 typedef struct {
-	Vector sunDir;
+	Vector absoluteDir;
 	float turbidity, relSize;
 	// XY Vectors for cone sampling
 	Vector x, y;
 	float cosThetaMax;
-	Spectrum sunColor;
+	Spectrum color;
 } SunLightParam;
 
 typedef struct {
@@ -62,12 +62,11 @@ typedef struct {
 	Vector absolutePos;
 	Spectrum emittedFactor;
 	float cosTotalWidth, cosFalloffStart;
-	Matrix4x4 alignedWorld2Light;
 } SpotLightParam;
 
 typedef struct {
 	Vector absolutePos, lightNormal;
-	Spectrum color;
+	Spectrum emittedFactor;
 	Matrix4x4 lightProjection;
 	float screenX0, screenX1, screenY0, screenY1;
 	unsigned int imageMapIndex;

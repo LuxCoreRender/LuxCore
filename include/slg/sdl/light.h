@@ -63,11 +63,12 @@ public:
 	virtual void Preprocess() = 0;
 
 	virtual LightSourceType GetType() const = 0;
-	virtual void SetSceneIndex(const u_int index) { lightSceneIndex = index; }
-	virtual u_int GetSceneIndex() const { return lightSceneIndex; }
 
+	// If emit light on rays intersecting nothing
 	virtual bool IsEnvironmental() const { return false; }
+	// If the emitted power is based on scene radius
 	virtual bool IsInfinite() const { return false; }
+	// If it can be directly interescted by a ray
 	virtual bool IsIntersecable() const { return false; }
 
 	virtual u_int GetID() const = 0;
@@ -92,7 +93,6 @@ public:
 
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
 
-private:
 	u_int lightSceneIndex;
 };
 
@@ -178,8 +178,7 @@ private:
 
 class IntersecableLightSource : public LightSource {
 public:
-	IntersecableLightSource(const Material *mat) : lightMaterial(mat),
-			area(0.f), invArea(0.f) { }
+	IntersecableLightSource() : lightMaterial(NULL), area(0.f), invArea(0.f) { }
 	virtual ~IntersecableLightSource() { }
 
 	virtual bool IsIntersecable() const { return true; }
@@ -192,9 +191,6 @@ public:
 	virtual bool IsVisibleIndirectGlossy() const { return lightMaterial->IsVisibleIndirectGlossy(); }
 	virtual bool IsVisibleIndirectSpecular() const { return lightMaterial->IsVisibleIndirectSpecular(); }
 
-	void SetMaterial(const Material *mat) { lightMaterial = mat; }
-	const Material *GetMaterial() const { return lightMaterial; }
-
 	float GetArea() const { return area; }
 
 	virtual luxrays::Spectrum GetRadiance(const HitPoint &hitPoint,
@@ -206,8 +202,9 @@ public:
 			lightMaterial = newMat;
 	}
 
-protected:
 	const Material *lightMaterial;
+	
+protected:
 	float area, invArea;
 };
 
@@ -217,31 +214,26 @@ protected:
 
 class NotIntersecableLightSource : public LightSource {
 public:
-	NotIntersecableLightSource(const luxrays::Transform &l2w) :
-		id(0), lightToWorld(l2w), gain(1.f), samples(-1) { }
+	NotIntersecableLightSource() :
+		gain(1.f), id(0), samples(-1) { }
 	virtual ~NotIntersecableLightSource() { }
 
 	virtual bool IsVisibleIndirectDiffuse() const { return false; }
 	virtual bool IsVisibleIndirectGlossy() const { return false; }
 	virtual bool IsVisibleIndirectSpecular() const { return false; }
-
+	
 	virtual void SetID(const u_int lightID) { id = lightID; }
 	virtual u_int GetID() const { return id; }
 	void SetSamples(const int sampleCount) { samples = sampleCount; }
 	virtual int GetSamples() const { return samples; }
 
-	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
-
-	void SetGain(const luxrays::Spectrum &g) { gain = g; }
-	luxrays::Spectrum GetGain() const { return gain; }
-
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Transform lightToWorld;
+	luxrays::Spectrum gain;
 
 protected:
 	u_int id;
-
-	const luxrays::Transform lightToWorld;
-	luxrays::Spectrum gain;
 	int samples;
 };
 
@@ -251,8 +243,7 @@ protected:
 
 class EnvLightSource : public NotIntersecableLightSource {
 public:
-	EnvLightSource(const luxrays::Transform &l2w) :
-		NotIntersecableLightSource(l2w), isVisibleIndirectDiffuse(true),
+	EnvLightSource() : isVisibleIndirectDiffuse(true),
 		isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
 	virtual ~EnvLightSource() { }
 
@@ -282,23 +273,14 @@ protected:
 
 class PointLight : public NotIntersecableLightSource {
 public:
-	PointLight(const luxrays::Transform &l2w, const luxrays::Point &pos);
+	PointLight();
 	virtual ~PointLight();
 
 	virtual void Preprocess();
+	void GetPreprocessedData(float *localPos, float *absolutePos, float *emittedFactor) const;
 
 	virtual LightSourceType GetType() const { return TYPE_POINT; }
 	virtual float GetPower(const Scene &scene) const;
-
-	void SetColor(const luxrays::Spectrum &v) { color = v; }
-	luxrays::Spectrum GetColor() const { return color; }
-	void SetPower(const float v) { power = v;}
-	float GetPower() const { return power; }
-	void SetEfficency(const float v) { efficency = v;}
-	float GetEfficency() const { return efficency; }
-	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
-	const luxrays::Point &GetLocalPosition() const { return localPos; }
-	const luxrays::Point &GetAbsolutePosition() const { return absolutePos; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -312,12 +294,13 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-protected:
+	luxrays::Point localPos;
 	luxrays::Spectrum color;
 	float power, efficency;
-	luxrays::Spectrum emittedFactor;
 
-	luxrays::Point localPos, absolutePos;
+protected:
+	luxrays::Spectrum emittedFactor;
+	luxrays::Point absolutePos;
 };
 
 //------------------------------------------------------------------------------
@@ -326,11 +309,12 @@ protected:
 
 class MapPointLight : public PointLight {
 public:
-	MapPointLight(const luxrays::Transform &l2w, const luxrays::Point &pos,
-	const ImageMap *map);
+	MapPointLight();
 	virtual ~MapPointLight();
 
 	virtual void Preprocess();
+	void GetPreprocessedData(float *localPos, float *absolutePos, float *emittedFactor,
+		const SampleableSphericalFunction **funcData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_MAPPOINT; }
 	virtual float GetPower(const Scene &scene) const;
@@ -346,17 +330,14 @@ public:
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		referencedImgMaps.insert(imgMap);
+		referencedImgMaps.insert(imageMap);
 	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-	const ImageMap *GetImageMap() const { return imgMap; }
-	const SampleableSphericalFunction *GetFunc() const { return func; }
+	const ImageMap *imageMap;
 
 private:
-	const ImageMap *imgMap;
-
 	SampleableSphericalFunction *func;
 };
 
@@ -366,32 +347,16 @@ private:
 
 class SpotLight : public NotIntersecableLightSource {
 public:
-	SpotLight(const luxrays::Transform &l2w, const luxrays::Point &pos,
-			const luxrays::Point &target);
+	SpotLight();
 	virtual ~SpotLight();
 
 	virtual void Preprocess();
+	void GetPreprocessedData(float *emittedFactor, float *absolutePos,
+		float *cosTotalWidth, float *cosFalloffStart,
+		const luxrays::Transform **alignedLight2World) const;
 
 	virtual LightSourceType GetType() const { return TYPE_SPOT; }
 	virtual float GetPower(const Scene &scene) const;
-
-	void SetColor(const luxrays::Spectrum &v) { color = v; }
-	luxrays::Spectrum GetColor() const { return color; }
-	void SetPower(const float v) { power = v;}
-	float GetPower() const { return power; }
-	void SetEfficency(const float v) { efficency = v;}
-	float GetEfficency() const { return efficency; }
-	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
-	const luxrays::Point &GetAbsolutePosition() const { return absolutePos; }
-	const luxrays::Point &GetLocalPosition() const { return localPos; }
-	const luxrays::Point &GetLocalTarget() const { return localTarget; }
-	const float GetConeAngle() const { return coneAngle; }
-	const void SetConeAngle(const float v) { coneAngle = v; }
-	const float GetConeDeltaAngle() const { return coneDeltaAngle; }
-	const void SetConeDeltaAngle(const float v) { coneDeltaAngle = v; }
-	const float GetCosTotalWidth() const { return cosTotalWidth; }
-	const float GetCosFalloffStart() const { return cosFalloffStart; }
-	const luxrays::Transform &GetAlignedLight2World() const { return alignedLight2World; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -405,14 +370,15 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-protected:
 	luxrays::Spectrum color;
 	float power, efficency;
-	luxrays::Spectrum emittedFactor;
 
+	luxrays::Point localPos, localTarget;
 	float coneAngle, coneDeltaAngle;
-	luxrays::Point localPos, localTarget, absolutePos;
 
+protected:
+	luxrays::Spectrum emittedFactor;
+	luxrays::Point absolutePos;
 	float cosTotalWidth, cosFalloffStart;
 	luxrays::Transform alignedLight2World;
 };
@@ -423,26 +389,16 @@ protected:
 
 class ProjectionLight : public NotIntersecableLightSource {
 public:
-	ProjectionLight(const luxrays::Transform &l2w, const ImageMap *map);
+	ProjectionLight();
 	virtual ~ProjectionLight();
 
 	virtual void Preprocess();
+	void GetPreprocessedData(float *emittedFactor, float *absolutePos, float *lightNormal,
+		float *screenX0, float *screenX1, float *screenY0, float *screenY1,
+		const luxrays::Transform **alignedLight2World, const luxrays::Transform **lightProjection) const;
 
 	virtual LightSourceType GetType() const { return TYPE_PROJECTION; }
 	virtual float GetPower(const Scene &scene) const;
-
-	void SetColor(const luxrays::Spectrum &v) { color = v; }
-	luxrays::Spectrum GetColor() const { return color; }
-	void SetFOV(const float v) { fov = v;}
-	float GetFOV() const { return fov; }
-	const luxrays::Point &GetAbsolutePosition() const { return absolutePos; }
-	const luxrays::Normal &GetNormal() const { return lightNormal; }
-	float GetScreenX0() const { return screenX0; }
-	float GetScreenX1() const { return screenX1; }
-	float GetScreenY0() const { return screenY0; }
-	float GetScreenY1() const { return screenY1; }
-	const ImageMap *GetImageMap() const { return imageMap; }
-	const luxrays::Transform &GetLightProjection() const { return lightProjection; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -456,15 +412,21 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-protected:
 	luxrays::Spectrum color;
+	float power, efficency;
+
+	luxrays::Point localPos, localTarget;
+
+	float fov;
+	const ImageMap *imageMap;
+
+protected:
+	luxrays::Spectrum emittedFactor;
 	luxrays::Point absolutePos;
 	luxrays::Normal lightNormal;
 	float screenX0, screenX1, screenY0, screenY1, area;
-	float fov, cosTotalWidth;
-
-	const ImageMap *imageMap;
-	luxrays::Transform lightProjection;
+	float cosTotalWidth;
+	luxrays::Transform alignedLight2World, lightProjection;
 };
 
 //------------------------------------------------------------------------------
@@ -473,7 +435,7 @@ protected:
 
 class SharpDistantLight : public NotIntersecableLightSource {
 public:
-	SharpDistantLight(const luxrays::Transform &l2w);
+	SharpDistantLight();
 	virtual ~SharpDistantLight();
 
 	virtual bool IsInfinite() const { return true; }
@@ -510,7 +472,7 @@ protected:
 
 class DistantLight : public NotIntersecableLightSource {
 public:
-	DistantLight(const luxrays::Transform &l2w);
+	DistantLight();
 	virtual ~DistantLight();
 
 	virtual bool IsInfinite() const { return true; }
@@ -550,15 +512,13 @@ protected:
 
 class ConstantInfiniteLight : public EnvLightSource {
 public:
-	ConstantInfiniteLight(const luxrays::Spectrum &color);
+	ConstantInfiniteLight();
 	virtual ~ConstantInfiniteLight();
 
 	virtual void Preprocess() { }
 
 	virtual LightSourceType GetType() const { return TYPE_IL_CONSTANT; }
 	virtual float GetPower(const Scene &scene) const;
-
-	const luxrays::Spectrum &GetColor() const { return color; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -575,7 +535,6 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-private:
 	luxrays::Spectrum color;
 };
 
@@ -585,17 +544,14 @@ private:
 
 class InfiniteLight : public EnvLightSource {
 public:
-	InfiniteLight(const luxrays::Transform &l2w, const ImageMap *imgMap);
+	InfiniteLight();
 	virtual ~InfiniteLight();
 
-	virtual void Preprocess() { }
+	virtual void Preprocess();
+	void GetPreprocessedData(const luxrays::Distribution2D **imageMapDistribution) const;
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
 	virtual float GetPower(const Scene &scene) const;
-
-	const ImageMap *GetImageMap() const { return imageMap; }
-	const UVMapping2D *GetUVMapping() const { return &mapping; }
-	UVMapping2D *GetUVMapping() { return &mapping; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -616,12 +572,10 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-	const luxrays::Distribution2D *GetDistribution2D() const { return imageMapDistribution; }
-
-private:
 	const ImageMap *imageMap;
 	UVMapping2D mapping;
 
+private:	
 	luxrays::Distribution2D *imageMapDistribution;
 };
 
@@ -631,34 +585,17 @@ private:
 
 class SkyLight : public EnvLightSource {
 public:
-	SkyLight(const luxrays::Transform &l2w, float turbidity, const luxrays::Vector &sundir);
+	SkyLight();
 	virtual ~SkyLight() { }
 
 	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteDirData,
+		float *absoluteThetaData, float *absolutePhiData,
+		float *zenith_YData, float *zenith_xData, float *zenith_yData,
+		float *perez_YData, float *perez_xData, float *perez_yData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY; }
 	virtual float GetPower(const Scene &scene) const;
-
-	void SetTurbidity(const float t) { turbidity = t; }
-	float GetTubidity() const { return turbidity; }
-
-	const luxrays::Vector GetSunDir() const { return Normalize(luxrays::Inverse(lightToWorld) * sunDir); }
-	void SetSunDir(const luxrays::Vector &dir) { sunDir = Normalize(lightToWorld * dir); }
-
-	void GetInitData(float *thetaSData, float *phiSData,
-		float *zenith_YData, float *zenith_xData, float *zenith_yData,
-		float *perez_YData, float *perez_xData, float *perez_yData) const {
-		*thetaSData = thetaS;
-		*phiSData = phiS;
-		*zenith_YData = zenith_Y;
-		*zenith_xData = zenith_x;
-		*zenith_yData = zenith_y;
-		for (size_t i = 0; i < 6; ++i) {
-			perez_YData[i] = perez_Y[i];
-			perez_xData[i] = perez_x[i];
-			perez_yData[i] = perez_y[i];
-		}
-	}
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -675,13 +612,14 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
+	luxrays::Vector localDir;
+	float turbidity;
+
 private:
 	void GetSkySpectralRadiance(const float theta, const float phi, luxrays::Spectrum * const spect) const;
 
-	luxrays::Vector sunDir;
-	float turbidity;
-	float thetaS;
-	float phiS;
+	luxrays::Vector absoluteDir;
+	float absoluteTheta, absolutePhi;
 	float zenith_Y, zenith_x, zenith_y;
 	float perez_Y[6], perez_x[6], perez_y[6];
 };
@@ -692,36 +630,17 @@ private:
 
 class SunLight : public EnvLightSource {
 public:
-	SunLight(const luxrays::Transform &l2w, float turbidity, float relSize, const luxrays::Vector &sunDir);
+	SunLight();
 	virtual ~SunLight() { }
 
 	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteDirData,
+		float *xData, float *yData,
+		float *absoluteThetaData, float *absolutePhiData,
+		float *VData, float *cosThetaMaxData, float *sin2ThetaMaxData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_SUN; }
 	virtual float GetPower(const Scene &scene) const;
-
-	void SetTurbidity(const float t) { turbidity = t; }
-	float GetTubidity() const { return turbidity; }
-
-	void SetRelSize(const float s) { relSize = s; }
-	float GetRelSize() const { return relSize; }
-
-	const luxrays::Vector GetDir() const { return Normalize(luxrays::Inverse(lightToWorld) * sunDir); }
-	void SetDir(const luxrays::Vector &dir) { sunDir = Normalize(lightToWorld * dir); }
-
-	void GetInitData(luxrays::Vector *xData, luxrays::Vector *yData,
-		float *thetaSData, float *phiSData, float *VData,
-		float *cosThetaMaxData, float *sin2ThetaMaxData,
-		luxrays::Spectrum *suncolorData) const {
-		*xData = x;
-		*yData = y;
-		*thetaSData = thetaS;
-		*phiSData = phiS;
-		*VData = V;
-		*cosThetaMaxData = cosThetaMax;
-		*sin2ThetaMaxData = sin2ThetaMax;
-		*suncolorData = sunColor;
-	}
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -738,15 +657,16 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
+	luxrays::Spectrum color;
+	luxrays::Vector localDir;
+	float turbidity, relSize;
+
 private:
-	luxrays::Vector sunDir;
-	float turbidity;
-	float relSize;
+	luxrays::Vector absoluteDir;
 	// XY Vectors for cone sampling
 	luxrays::Vector x, y;
-	float thetaS, phiS, V;
-	float cosThetaMax, sin2ThetaMax;
-	luxrays::Spectrum sunColor;
+	float absoluteTheta, absolutePhi;
+	float V, cosThetaMax, sin2ThetaMax;
 };
 
 //------------------------------------------------------------------------------
@@ -755,19 +675,14 @@ private:
 
 class TriangleLight : public IntersecableLightSource {
 public:
-	TriangleLight(const Material *mat, const luxrays::ExtMesh *mesh,
-		const u_int meshIndex, const u_int triangleIndex);
-	virtual ~TriangleLight() { }
+	TriangleLight();
+	virtual ~TriangleLight();
 
 	virtual void Preprocess();
 
 	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
 	virtual float GetPower(const Scene &scene) const;
-
-	const luxrays::ExtMesh *GetMesh() const { return mesh; }
-	u_int GetMeshIndex() const { return meshIndex; }
-	u_int GetTriangleIndex() const { return triangleIndex; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -783,7 +698,6 @@ public:
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 
-private:
 	const luxrays::ExtMesh *mesh;
 	u_int meshIndex, triangleIndex;
 };

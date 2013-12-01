@@ -495,7 +495,7 @@ void CompiledScene::CompileLights() {
 	for (u_int i = 0; i < lightSources.size(); ++i) {
 		const LightSource *l = lightSources[i];
 		slg::ocl::LightSource *oclLight = &lightDefs[i];
-		oclLight->lightSceneIndex = l->GetSceneIndex();
+		oclLight->lightSceneIndex = l->lightSceneIndex;
 		oclLight->lightID = l->GetID();
 		oclLight->samples = l->GetSamples();
 		oclLight->visibility = 
@@ -507,8 +507,8 @@ void CompiledScene::CompileLights() {
 			case TYPE_TRIANGLE: {
 				const TriangleLight *tl = (const TriangleLight *)l;
 
-				const ExtMesh *mesh = tl->GetMesh();
-				const Triangle *tri = &(mesh->GetTriangles()[tl->GetTriangleIndex()]);
+				const ExtMesh *mesh = tl->mesh;
+				const Triangle *tri = &(mesh->GetTriangles()[tl->triangleIndex]);
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_TRIANGLE;
@@ -529,9 +529,9 @@ void CompiledScene::CompileLights() {
 				}
 				oclLight->triangle.invArea = 1.f / tl->GetArea();
 
-				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->GetMaterial());
+				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->lightMaterial);
 
-				const SampleableSphericalFunction *emissionFunc = tl->GetMaterial()->GetEmissionFunc();
+				const SampleableSphericalFunction *emissionFunc = tl->lightMaterial->GetEmissionFunc();
 				if (emissionFunc) {
 					oclLight->triangle.avarage = emissionFunc->Average();
 					oclLight->triangle.imageMapIndex = scene->imgMapCache.GetImageMapIndex(
@@ -550,17 +550,19 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_IL;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &il->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &il->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, il->GetGain());
+				memcpy(&oclLight->notIntersecable.light2World.m, &il->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &il->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, il->gain);
 
 				// InfiniteLight data
-				CompileTextureMapping2D(&oclLight->notIntersecable.infinite.mapping, il->GetUVMapping());
-				oclLight->notIntersecable.infinite.imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->GetImageMap());
+				CompileTextureMapping2D(&oclLight->notIntersecable.infinite.mapping, &il->mapping);
+				oclLight->notIntersecable.infinite.imageMapIndex = scene->imgMapCache.GetImageMapIndex(il->imageMap);
 
 				// Compile the image map Distribution2D
+				const Distribution2D *dist;
+				il->GetPreprocessedData(&dist);
 				u_int distributionSize;
-				const float *infiniteLightDistribution = CompileDistribution2D(il->GetDistribution2D(),
+				const float *infiniteLightDistribution = CompileDistribution2D(dist,
 						&distributionSize);
 
 				// Copy the Distribution2D data in the right place
@@ -582,12 +584,14 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_IL_SKY;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->GetGain());
+				memcpy(&oclLight->notIntersecable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->gain);
 
 				// SkyLight data
-				sl->GetInitData(&oclLight->notIntersecable.sky.thetaS, &oclLight->notIntersecable.sky.phiS,
+				sl->GetPreprocessedData(
+						NULL,
+						&oclLight->notIntersecable.sky.absoluteTheta, &oclLight->notIntersecable.sky.absolutePhi,
 						&oclLight->notIntersecable.sky.zenith_Y, &oclLight->notIntersecable.sky.zenith_x,
 						&oclLight->notIntersecable.sky.zenith_y, oclLight->notIntersecable.sky.perez_Y,
 						oclLight->notIntersecable.sky.perez_x, oclLight->notIntersecable.sky.perez_y);
@@ -602,20 +606,20 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_SUN;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->GetGain());
+				memcpy(&oclLight->notIntersecable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->gain);
 
 				// SunLight data
-				const Vector globalSunDir = Normalize(sl->GetTransformation() * sl->GetDir());
-				ASSIGN_VECTOR(oclLight->notIntersecable.sun.sunDir, globalSunDir);
-				oclLight->notIntersecable.sun.turbidity = sl->GetTubidity();
-				oclLight->notIntersecable.sun.relSize= sl->GetRelSize();
-				float tmp;
-				sl->GetInitData(reinterpret_cast<Vector *>(&oclLight->notIntersecable.sun.x),
-						reinterpret_cast<Vector *>(&oclLight->notIntersecable.sun.y), &tmp, &tmp, &tmp,
-						&oclLight->notIntersecable.sun.cosThetaMax, &tmp,
-						reinterpret_cast<Spectrum *>(&oclLight->notIntersecable.sun.sunColor));
+				sl->GetPreprocessedData(
+						&oclLight->notIntersecable.sun.absoluteDir.x,
+						&oclLight->notIntersecable.sun.x.x,
+						&oclLight->notIntersecable.sun.y.x,
+						NULL, NULL, NULL,
+						&oclLight->notIntersecable.sun.cosThetaMax, NULL);
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.sun.color, sl->color);
+				oclLight->notIntersecable.sun.turbidity = sl->turbidity;
+				oclLight->notIntersecable.sun.relSize= sl->relSize;
 				
 				envLightIndices.push_back(i);
 				break;
@@ -627,13 +631,15 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_POINT;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &pl->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &pl->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, pl->GetGain());
+				memcpy(&oclLight->notIntersecable.light2World.m, &pl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &pl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, pl->gain);
 
 				// PointLight data
-				ASSIGN_VECTOR(oclLight->notIntersecable.point.absolutePos, pl->GetAbsolutePosition());
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.point.emittedFactor, pl->GetEmittedFactor());
+				pl->GetPreprocessedData(
+					NULL,
+					&(oclLight->notIntersecable.point.absolutePos.x),
+					&(oclLight->notIntersecable.point.emittedFactor.r));
 				break;
 			}
 			case TYPE_MAPPOINT: {
@@ -643,16 +649,19 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_MAPPOINT;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &mpl->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &mpl->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, mpl->GetGain());
+				memcpy(&oclLight->notIntersecable.light2World.m, &mpl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &mpl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, mpl->gain);
 
 				// MapPointLight data
-				ASSIGN_VECTOR(oclLight->notIntersecable.mapPoint.absolutePos, mpl->GetAbsolutePosition());
-				ASSIGN_VECTOR(oclLight->notIntersecable.mapPoint.localPos, mpl->GetLocalPosition());
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.mapPoint.emittedFactor, mpl->GetEmittedFactor());
-				oclLight->notIntersecable.mapPoint.avarage = mpl->GetFunc()->Average();
-				oclLight->notIntersecable.mapPoint.imageMapIndex = scene->imgMapCache.GetImageMapIndex(mpl->GetImageMap());
+				const SampleableSphericalFunction *funcData;
+				mpl->GetPreprocessedData(
+					&(oclLight->notIntersecable.mapPoint.localPos.x),
+					&(oclLight->notIntersecable.mapPoint.absolutePos.x),
+					&(oclLight->notIntersecable.mapPoint.emittedFactor.r),
+					&funcData);
+				oclLight->notIntersecable.mapPoint.avarage = funcData->Average();
+				oclLight->notIntersecable.mapPoint.imageMapIndex = scene->imgMapCache.GetImageMapIndex(mpl->imageMap);
 				break;
 			}
 			case TYPE_SPOT: {
@@ -662,16 +671,21 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_SPOT;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &sl->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->GetGain());
+				//memcpy(&oclLight->notIntersecable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
+				//memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->gain);
 
 				// SpotLight data
-				ASSIGN_VECTOR(oclLight->notIntersecable.spot.absolutePos, sl->GetAbsolutePosition());
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.spot.emittedFactor, sl->GetEmittedFactor());
-				oclLight->notIntersecable.spot.cosTotalWidth = sl->GetCosTotalWidth();
-				oclLight->notIntersecable.spot.cosFalloffStart = sl->GetCosFalloffStart();
-				memcpy(&oclLight->notIntersecable.spot.alignedWorld2Light.m, &sl->GetAlignedLight2World().mInv, sizeof(float[4][4]));
+				const Transform *alignedWorld2Light;
+				sl->GetPreprocessedData(
+					&(oclLight->notIntersecable.spot.emittedFactor.r),
+					&(oclLight->notIntersecable.spot.absolutePos.x),
+					&oclLight->notIntersecable.spot.cosTotalWidth,
+					&oclLight->notIntersecable.spot.cosFalloffStart,
+					&alignedWorld2Light);
+				
+				memcpy(&oclLight->notIntersecable.light2World.m, &alignedWorld2Light->m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &alignedWorld2Light->mInv, sizeof(float[4][4]));
 				break;
 			}
 			case TYPE_PROJECTION: {
@@ -681,19 +695,27 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_PROJECTION;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &pl->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &pl->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, pl->GetGain());
+				//memcpy(&oclLight->notIntersecable.light2World.m, &pl->lightToWorld.m, sizeof(float[4][4]));
+				//memcpy(&oclLight->notIntersecable.light2World.mInv, &pl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, pl->gain);
 
 				// ProjectionLight data
-				ASSIGN_VECTOR(oclLight->notIntersecable.projection.absolutePos, pl->GetAbsolutePosition());
-				ASSIGN_VECTOR(oclLight->notIntersecable.projection.lightNormal, pl->GetNormal());
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.projection.color, pl->GetColor());
-				oclLight->notIntersecable.projection.screenX0 = pl->GetScreenX0();
-				oclLight->notIntersecable.projection.screenX1 = pl->GetScreenX1();
-				oclLight->notIntersecable.projection.screenY0 = pl->GetScreenY0();
-				oclLight->notIntersecable.projection.screenY1 = pl->GetScreenY1();
-				memcpy(&oclLight->notIntersecable.projection.lightProjection.m, &pl->GetLightProjection().m, sizeof(float[4][4]));
+				oclLight->notIntersecable.projection.imageMapIndex = scene->imgMapCache.GetImageMapIndex(pl->imageMap);
+				const Transform *alignedWorld2Light, *lightProjection;
+				pl->GetPreprocessedData(
+					&(oclLight->notIntersecable.projection.emittedFactor.r),
+					&(oclLight->notIntersecable.projection.absolutePos.x),
+					&(oclLight->notIntersecable.projection.lightNormal.x),
+					&oclLight->notIntersecable.projection.screenX0,
+					&oclLight->notIntersecable.projection.screenX1,
+					&oclLight->notIntersecable.projection.screenY0,
+					&oclLight->notIntersecable.projection.screenY1,
+					&alignedWorld2Light, &lightProjection);
+
+				memcpy(&oclLight->notIntersecable.light2World.m, &alignedWorld2Light->m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &alignedWorld2Light->mInv, sizeof(float[4][4]));
+
+				memcpy(&oclLight->notIntersecable.projection.lightProjection.m, &lightProjection->m, sizeof(float[4][4]));
 				break;
 			}
 			case TYPE_IL_CONSTANT: {
@@ -703,13 +725,13 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_IL_CONSTANT;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &cil->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &cil->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, cil->GetGain());
+				memcpy(&oclLight->notIntersecable.light2World.m, &cil->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &cil->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, cil->gain);
 
 				// ConstantInfiniteLight data
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.constantInfinite.color, cil->GetColor());
-				
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.constantInfinite.color, cil->color);
+
 				envLightIndices.push_back(i);
 				break;
 			}
@@ -720,9 +742,9 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_SHARPDISTANT;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &sdl->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &sdl->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sdl->GetGain());
+				memcpy(&oclLight->notIntersecable.light2World.m, &sdl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &sdl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sdl->gain);
 
 				// SharpDistantLight data
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.sharpDistant.color, sdl->color);
@@ -736,9 +758,9 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_DISTANT;
 
 				// NotIntersecableLightSource data
-				memcpy(&oclLight->notIntersecable.light2World.m, &dl->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&oclLight->notIntersecable.light2World.mInv, &dl->GetTransformation().mInv, sizeof(float[4][4]));
-				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, dl->GetGain());
+				memcpy(&oclLight->notIntersecable.light2World.m, &dl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &dl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, dl->gain);
 
 				// DistantLight data
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.sharpDistant.color, dl->color);

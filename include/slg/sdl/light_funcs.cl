@@ -196,7 +196,7 @@ float3 SkyLight_GetSkySpectralRadiance(__global LightSource *skyLight,
 	// Add bottom half of hemisphere with horizon colour
 	const float theta_fin = fmin(theta, (M_PI_F * .5f) - .001f);
 	const float gamma = SkyLight_RiAngleBetween(theta, phi, 
-			skyLight->notIntersecable.sky.thetaS, skyLight->notIntersecable.sky.phiS);
+			skyLight->notIntersecable.sky.absoluteTheta, skyLight->notIntersecable.sky.absolutePhi);
 
 	// Compute xyY values
 	const float x = skyLight->notIntersecable.sky.zenith_x * SkyLight_PerezBase(
@@ -260,7 +260,7 @@ float3 SunLight_Illuminate(__global LightSource *sunLight,
 		const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float cosThetaMax = sunLight->notIntersecable.sun.cosThetaMax;
-	const float3 sunDir = VLOAD3F(&sunLight->notIntersecable.sun.sunDir.x);
+	const float3 sunDir = VLOAD3F(&sunLight->notIntersecable.sun.absoluteDir.x);
 	*dir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sunLight->notIntersecable.sun.x.x), VLOAD3F(&sunLight->notIntersecable.sun.y.x), sunDir);
 
 	// Check if the point can be inside the sun cone of light
@@ -271,18 +271,18 @@ float3 SunLight_Illuminate(__global LightSource *sunLight,
 	*distance = INFINITY;
 	*directPdfW = UniformConePdf(cosThetaMax);
 
-	return VLOAD3F(&sunLight->notIntersecable.sun.sunColor.r);
+	return VLOAD3F(&sunLight->notIntersecable.sun.color.r);
 }
 
 float3 SunLight_GetRadiance(__global LightSource *sunLight, const float3 dir, float *directPdfA) {
 	const float cosThetaMax = sunLight->notIntersecable.sun.cosThetaMax;
-	const float3 sunDir = VLOAD3F(&sunLight->notIntersecable.sun.sunDir.x);
+	const float3 sunDir = VLOAD3F(&sunLight->notIntersecable.sun.absoluteDir.x);
 
 	if ((cosThetaMax < 1.f) && (dot(-dir, sunDir) > cosThetaMax)) {
 		if (directPdfA)
 			*directPdfA = UniformConePdf(cosThetaMax);
 
-		return VLOAD3F(&sunLight->notIntersecable.sun.sunColor.r);
+		return VLOAD3F(&sunLight->notIntersecable.sun.color.r);
 	} else
 		return BLACK;
 }
@@ -484,8 +484,8 @@ float3 SpotLight_Illuminate(__global LightSource *spotLight,
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
 
-	const float3 localFromLight = normalize(Matrix4x4_ApplyVector(
-			&spotLight->notIntersecable.spot.alignedWorld2Light, -(*dir)));
+	const float3 localFromLight = normalize(Transform_InvApplyVector(
+			&spotLight->notIntersecable.light2World, -(*dir)));
 	const float falloff = SpotLight_LocalFalloff(localFromLight,
 			spotLight->notIntersecable.spot.cosTotalWidth,
 			spotLight->notIntersecable.spot.cosFalloffStart);
@@ -519,8 +519,8 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 		return BLACK;
 
 	// Check if the point is inside the image plane
-	const float3 localFromLight = normalize(Matrix4x4_ApplyVector(
-			&projectionLight->notIntersecable.light2World.mInv, -(*dir)));
+	const float3 localFromLight = normalize(Transform_InvApplyVector(
+			&projectionLight->notIntersecable.light2World, -(*dir)));
 	const float3 p0 = Matrix4x4_ApplyPoint(
 			&projectionLight->notIntersecable.projection.lightProjection, localFromLight);
 
@@ -533,8 +533,7 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 
 	*directPdfW = distanceSquared;
 
-	float3 c = VLOAD3F(&projectionLight->notIntersecable.gain.r) *
-			VLOAD3F(&projectionLight->notIntersecable.projection.color.r);
+	float3 c = VLOAD3F(&projectionLight->notIntersecable.projection.emittedFactor.r);
 	const uint imageMapIndex = projectionLight->notIntersecable.projection.imageMapIndex;
 	if (imageMapIndex != NULL_INDEX) {
 		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
