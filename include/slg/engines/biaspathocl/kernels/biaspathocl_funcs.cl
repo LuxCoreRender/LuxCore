@@ -461,7 +461,8 @@ bool DirectLightSampling(
 			const float factor = cosThetaToLight / directLightSamplingPdfW;
 
 			// MIS between direct light sampling and BSDF sampling
-			const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+			const float weight = Light_IsEnvOrIntersecable(light) ?
+				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, &radiance->r);
 			*ID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);

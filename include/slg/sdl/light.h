@@ -67,6 +67,7 @@ public:
 	virtual u_int GetSceneIndex() const { return lightSceneIndex; }
 
 	virtual bool IsEnvironmental() const { return false; }
+	virtual bool IsIntersecable() const { return false; }
 
 	virtual u_int GetID() const = 0;
 	virtual float GetPower(const Scene &scene) const = 0;
@@ -179,6 +180,8 @@ public:
 	IntersecableLightSource(const Material *mat) : lightMaterial(mat),
 			area(0.f), invArea(0.f) { }
 	virtual ~IntersecableLightSource() { }
+
+	virtual bool IsIntersecable() const { return true; }
 
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }

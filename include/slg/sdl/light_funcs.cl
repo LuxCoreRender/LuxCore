@@ -754,3 +754,51 @@ float3 Light_Illuminate(
 			return BLACK;
 	}
 }
+
+bool Light_IsEnvOrIntersecable(__global LightSource *light) {
+	switch (light->type) {
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
+		case TYPE_IL_CONSTANT:
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+		case TYPE_IL:
+#endif
+#if defined(PARAM_HAS_SKYLIGHT)
+		case TYPE_IL_SKY:
+#endif
+#if defined(PARAM_HAS_SUNLIGHT)
+		case TYPE_SUN:
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		case TYPE_TRIANGLE:
+#endif
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+			return true;
+#endif
+
+#if defined(PARAM_HAS_POINTLIGHT)
+		case TYPE_POINT:
+#endif
+#if defined(PARAM_HAS_MAPPOINTLIGHT)
+		case TYPE_MAPPOINT:
+#endif
+#if defined(PARAM_HAS_SPOTLIGHT)
+		case TYPE_SPOT:
+#endif
+#if defined(PARAM_HAS_PROJECTIONLIGHT)
+		case TYPE_PROJECTION:
+#endif
+#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
+		case TYPE_SHARPDISTANT:
+#endif
+#if defined(PARAM_HAS_DISTANTLIGHT)
+		case TYPE_DISTANT:
+#endif
+#if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT)
+			return false;
+#endif
+
+		default:
+			return false;
+	}
+}
