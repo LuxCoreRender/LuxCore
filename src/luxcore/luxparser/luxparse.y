@@ -942,6 +942,26 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".transformation")(currentTransform.m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "distant") {
+		const float theta = props.Get(Property("theta")(0.f)).Get<float>();
+		if (theta == 0.f) {
+			*sceneProps <<
+					Property(prefix + ".type")("sharpdistant");
+		} else {
+			*sceneProps <<
+					Property(prefix + ".type")("distant") <<
+					Property(prefix + ".theta")(theta) ;
+		}
+
+		const Point from = props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>();
+		const Point to = props.Get(Property("to")(Point(0.f, 0.f, 1.f))).Get<Point>();
+		
+		*sceneProps <<
+				Property(prefix + ".direction")(Normalize(to - from)) <<
+				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	}
 
 	FreeArgs();
