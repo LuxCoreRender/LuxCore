@@ -254,9 +254,17 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				GetTexture(prefix + ".iorinside", Property("index")(1.5f), matProps) <<
 				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
 				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps);
+	} else if (type == "velvet") {
+		*sceneProps <<
+				Property(prefix + ".type")("velvet") <<
+				GetTexture(prefix + ".kd", Property("Kd")(Spectrum(1.f)), matProps) <<
+				GetTexture(prefix + ".p1", Property("p1")(2.0f), matProps) <<
+				GetTexture(prefix + ".p2", Property("p2")(20.0f), matProps) <<
+				GetTexture(prefix + ".p3", Property("p3")(-2.0f), matProps);
+				GetTexture(prefix + ".thickness", Property("thickness")(.1f), matProps);
 	} else {
 		LC_LOG("LuxCor::ParserLXS supports only Matte, Mirror, Glass, Metal, MatteTranslucent, Null, "
-				"Mix, Glossy2, Metal2 and RoughGlass material (i.e. not " <<
+				"Mix, Glossy2, Metal2, RoughGlass and Velvet material (i.e. not " <<
 				type << "). Replacing an unsupported material with matte.");
 
 		*sceneProps <<

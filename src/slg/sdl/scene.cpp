@@ -921,6 +921,14 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
 
 		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
+	} else if (matType == "velvet") {
+		Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
+		Texture *p1 = GetTexture(props.Get(Property(propName + ".p1")(-2.0f)));
+		Texture *p2 = GetTexture(props.Get(Property(propName + ".p2")(20.0f)));
+		Texture *p3 = GetTexture(props.Get(Property(propName + ".p3")(2.0f)));
+		Texture *thickness = GetTexture(props.Get(Property(propName + ".thickness")(0.1f)));
+
+		mat = new VelvetMaterial(emissionTex, bumpTex, normalTex, kd, p1, p2, p3, thickness);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
