@@ -46,7 +46,7 @@ class Scene;
 
 typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2, ROUGHGLASS,
+	GLOSSY2, METAL2, ROUGHGLASS, VELVET,
 
 	// The following types are used (in PATHOCL CompiledScene class) only to
 	// recognize the usage of some specific material option
@@ -757,6 +757,49 @@ private:
 	const Texture *ior;
 	const Texture *nu;
 	const Texture *nv;
+};
+
+//------------------------------------------------------------------------------
+// Velvet material
+//------------------------------------------------------------------------------
+
+class VelvetMaterial : public Material {
+public:
+	VelvetMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *kd, const Texture *p1, const Texture *p2, const Texture *p3, const Texture *thickness) : Material(emitted, bump, normal), Kd(kd), P1(p1), P2(p2), P3(p3), Thickness(thickness) { }
+
+	virtual MaterialType GetType() const { return VELVET; }
+	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
+
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+
+	virtual luxrays::Properties ToProperties() const;
+
+	const Texture *GetKd() const { return Kd; }
+	const Texture *GetP1() const { return P1; }
+	const Texture *GetP2() const { return P2; }
+	const Texture *GetP3() const { return P3; }
+	const Texture *GetThickness() const { return Thickness; }
+
+private:
+	const Texture *Kd;
+	const Texture *P1;
+	const Texture *P2;
+	const Texture *P3;
+	const Texture *Thickness;
 };
 
 //------------------------------------------------------------------------------

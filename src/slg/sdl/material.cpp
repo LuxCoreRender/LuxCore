@@ -1966,6 +1966,138 @@ Properties RoughGlassMaterial::ToProperties() const  {
 }
 
 //------------------------------------------------------------------------------
+// Velvet material
+//------------------------------------------------------------------------------
+
+Spectrum VelvetMaterial::Evaluate(const HitPoint &hitPoint,
+	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
+
+	if (reversePdfW)
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
+
+	*event = DIFFUSE | REFLECT;
+	
+	float A1 = P1->GetFloatValue(hitPoint);
+	float A2 = P2->GetFloatValue(hitPoint);
+	float A3 = P3->GetFloatValue(hitPoint);
+	float delta = Thickness->GetFloatValue(hitPoint);
+	
+	float costheta = Dot(-localEyeDir, localLightDir);
+
+	// Compute phase function
+
+	float B = 3.0f * costheta;
+
+	float p = 1.0f + A1 * costheta + A2 * 0.5f * (B * costheta - 1.0f) + A3 * 0.5 * (5.0f * costheta * costheta * costheta - B);
+	p = p / (4.0f * M_PI);
+ 
+	p = (p * delta) / fabsf(CosTheta(localLightDir));
+
+	// Clamp the BRDF (page 7)
+	if (p > 1.0f)
+		p = 1.0f;
+	else if (p < 0.0f)
+		p = 0.0f;
+
+	return Kd->GetSpectrumValue(hitPoint).Clamp() * p;
+}
+
+Spectrum VelvetMaterial::Sample(const HitPoint &hitPoint,
+	const Vector &localFixedDir, Vector *localSampledDir,
+	const float u0, const float u1, const float passThroughEvent,
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+		return Spectrum();
+
+	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
+
+	*absCosSampledDir = fabsf(localSampledDir->z);
+	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+
+	*event = DIFFUSE | REFLECT;
+	
+	float A1 = P1->GetFloatValue(hitPoint);
+	float A2 = P2->GetFloatValue(hitPoint);
+	float A3 = P3->GetFloatValue(hitPoint);
+	float delta = Thickness->GetFloatValue(hitPoint);
+	
+	float costheta = *absCosSampledDir;
+
+	// Compute phase function
+
+	float B = 3.0f * costheta;
+
+	float p = 1.0f + A1 * costheta + A2 * 0.5f * (B * costheta - 1.0f) + A3 * 0.5 * (5.0f * costheta * costheta * costheta - B);
+	p = p / (4.0f * M_PI);
+ 
+	p = (p * delta) / costheta;
+
+	// Clamp the BRDF (page 7)
+	if (p > 1.0f)
+		p = 1.0f;
+	else if (p < 0.0f)
+		p = 0.0f;
+
+	return Kd->GetSpectrumValue(hitPoint).Clamp() * p;
+}
+
+void VelvetMaterial::Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
+
+	if (reversePdfW)
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
+}
+
+void VelvetMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	Kd->AddReferencedTextures(referencedTexs);
+	P1->AddReferencedTextures(referencedTexs);
+	P2->AddReferencedTextures(referencedTexs);
+	P3->AddReferencedTextures(referencedTexs);
+	Thickness->AddReferencedTextures(referencedTexs);
+}
+
+void VelvetMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Kd == oldTex)
+		Kd = newTex;
+	if (P1 == oldTex)
+		P1 = newTex;
+	if (P2 == oldTex)
+		P2 = newTex;
+	if (P3 == oldTex)
+		P3 = newTex;
+	if (Thickness == oldTex)
+		Thickness = newTex;
+}
+
+Properties VelvetMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.Set(Property("scene.materials." + name + ".type")("velvet"));
+	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
+	props.Set(Property("scene.materials." + name + ".p1")(P1->GetName()));
+	props.Set(Property("scene.materials." + name + ".p2")(P2->GetName()));
+	props.Set(Property("scene.materials." + name + ".p3")(P3->GetName()));
+	props.Set(Property("scene.materials." + name + ".thickness")(Thickness->GetName()));
+	props.Set(Material::ToProperties());
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // SchlickDistribution
 //------------------------------------------------------------------------------
 
