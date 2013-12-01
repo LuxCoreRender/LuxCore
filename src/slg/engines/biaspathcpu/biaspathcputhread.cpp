@@ -69,7 +69,8 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 		const float factor = cosThetaToLight / directLightSamplingPdfW;
 
 		// MIS between direct light sampling and BSDF sampling
-		const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+		const float weight = (light->IsEnvironmental() || light->IsIntersecable()) ? 
+						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 		const Spectrum illumRadiance = (weight * factor) * pathThroughput * lightRadiance * bsdfEval;
 
