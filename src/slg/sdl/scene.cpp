@@ -407,7 +407,11 @@ void Scene::ParseObjects(const Properties &props) {
 				SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
 
 				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-					TriangleLight *tl = new TriangleLight(mat, mesh, objDefs.GetSize() - 1, i);
+					TriangleLight *tl = new TriangleLight();
+					tl->lightMaterial = mat;
+					tl->mesh = mesh;
+					tl->meshIndex = objDefs.GetSize() - 1;
+					tl->triangleIndex = i;
 					tl->Preprocess();
 
 					lightDefs.DefineLightSource(objName + "_triangle_light_" + ToString(i), tl);
@@ -1123,9 +1127,10 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		SkyLight *sl = new SkyLight(light2World,
-				props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>(),
-				props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+		SkyLight *sl = new SkyLight();
+		sl->lightToWorld = light2World;
+		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
+		sl->localDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
 		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
@@ -1139,11 +1144,14 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
 		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
-		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
+
+		InfiniteLight *il = new InfiniteLight();
+		il->lightToWorld = light2World;
+		il->imageMap = imgMap;
 
 		const UV shift = props.Get(Property(propName + ".shift")(0.f, 0.f)).Get<UV>();
-		il->GetUVMapping()->uDelta = shift.u;
-		il->GetUVMapping()->vDelta = shift.v;
+		il->mapping.uDelta = shift.u;
+		il->mapping.vDelta = shift.v;
 
 		il->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		il->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
@@ -1154,10 +1162,11 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		SunLight *sl = new SunLight(light2World,
-				props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>(),
-				props.Get(Property(propName + ".relsize")(1.0f)).Get<float>(),
-				props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+		SunLight *sl = new SunLight();
+		sl->lightToWorld = light2World;
+		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
+		sl->relSize = Max(0.f, props.Get(Property(propName + ".relsize")(1.0f)).Get<float>());
+		sl->localDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
 		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
@@ -1168,11 +1177,12 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		PointLight *pl = new PointLight(light2World,
-				props.Get(Property(propName + ".position")(Point())).Get<Point>());
-		pl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
-		pl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
-		pl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
+		PointLight *pl = new PointLight();
+		pl->lightToWorld = light2World;
+		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		pl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = pl;
 	} else if (lightType == "mappoint") {
@@ -1183,25 +1193,27 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		if (!map)
 			throw runtime_error("MapPoint light source (" + propName + ") is missing mapfile or iesfile property");
 
-		MapPointLight *mpl = new MapPointLight(light2World,
-				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
-				map);
-		mpl->SetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>());
-		mpl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
-		mpl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
+		MapPointLight *mpl = new MapPointLight();
+		mpl->lightToWorld = light2World;
+		mpl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		mpl->imageMap = map;
+		mpl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		mpl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = mpl;
 	} else if (lightType == "spot") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		SpotLight *sl = new SpotLight(light2World,
-				props.Get(Property(propName + ".position")(Point())).Get<Point>(),
-				props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>());
-		sl->SetConeAngle(Max(0.f, props.Get(Property(propName + ".coneangle")(30.f)).Get<float>()));
-		sl->SetConeDeltaAngle(Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>()));
-		sl->SetPower(Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>()));
-		sl->SetEfficency(Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>()));
+		SpotLight *sl = new SpotLight();
+		sl->lightToWorld = light2World;
+		sl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		sl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
+		sl->coneAngle = Max(0.f, props.Get(Property(propName + ".coneangle")(30.f)).Get<float>());
+		sl->coneDeltaAngle = Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>());
+		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = sl;
 	} else if (lightType == "projection") {
@@ -1211,14 +1223,21 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
 		const ImageMap *imgMap = (imageName == "") ? NULL : imgMapCache.GetImageMap(imageName, gamma);
-		ProjectionLight *pl = new ProjectionLight(light2World, imgMap);
-		pl->SetFOV(Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>()));
+
+		ProjectionLight *pl = new ProjectionLight();
+		pl->lightToWorld = light2World;
+		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		pl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
+		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		pl->imageMap = imgMap;
+		pl->fov = Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>());
 
 		lightSource = pl;
 	} else if (lightType == "constantinfinite") {
-		const Spectrum color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
-		ConstantInfiniteLight *cil = new ConstantInfiniteLight(color);
+		ConstantInfiniteLight *cil = new ConstantInfiniteLight();
 
+		cil->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		cil->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		cil->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		cil->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
@@ -1228,7 +1247,8 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		SharpDistantLight *sdl = new SharpDistantLight(light2World);
+		SharpDistantLight *sdl = new SharpDistantLight();
+		sdl->lightToWorld = light2World;
 		sdl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		sdl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
 
@@ -1237,7 +1257,8 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
 
-		DistantLight *dl = new DistantLight(light2World);
+		DistantLight *dl = new DistantLight();
+		dl->lightToWorld = light2World;
 		dl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		dl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
 		dl->theta = props.Get(Property(propName + ".theta")(10.f)).Get<float>();
@@ -1246,7 +1267,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 	} else
 		throw runtime_error("Unknown light type: " + lightType);
 
-	lightSource->SetGain(props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>());
+	lightSource->gain = props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>();
 	lightSource->SetSamples(props.Get(Property(propName + ".samples")(-1)).Get<int>());
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
 	lightSource->Preprocess();
