@@ -27,10 +27,11 @@
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/spectrum.h"
 #include "luxrays/utils/mcdistribution.h"
+#include "slg/core/spd.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/mapping.h"
-#include "slg/core/sphericalfunction/sphericalfunction.h"
 
 namespace slg {
 
@@ -44,6 +45,7 @@ class Scene;
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
+	TYPE_IL_SKY2,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -586,10 +588,10 @@ private:
 class SkyLight : public EnvLightSource {
 public:
 	SkyLight();
-	virtual ~SkyLight() { }
+	virtual ~SkyLight();
 
 	virtual void Preprocess();
-	void GetPreprocessedData(float *absoluteDirData,
+	void GetPreprocessedData(float *absoluteSunDirData,
 		float *absoluteThetaData, float *absolutePhiData,
 		float *zenith_YData, float *zenith_xData, float *zenith_yData,
 		float *perez_YData, float *perez_xData, float *perez_yData) const;
@@ -612,16 +614,61 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-	luxrays::Vector localDir;
+	luxrays::Vector localSunDir;
 	float turbidity;
 
 private:
 	void GetSkySpectralRadiance(const float theta, const float phi, luxrays::Spectrum * const spect) const;
 
-	luxrays::Vector absoluteDir;
+	luxrays::Vector absoluteSunDir;
 	float absoluteTheta, absolutePhi;
 	float zenith_Y, zenith_x, zenith_y;
 	float perez_Y[6], perez_x[6], perez_y[6];
+};
+
+//------------------------------------------------------------------------------
+// Sky2 implementation
+//------------------------------------------------------------------------------
+
+class SkyLight2 : public EnvLightSource {
+public:
+	SkyLight2();
+	virtual ~SkyLight2();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteDirData) const;
+
+	virtual LightSourceType GetType() const { return TYPE_IL_SKY2; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Vector localSunDir;
+	float turbidity;
+
+private:
+	luxrays::Spectrum ComputeRadiance(const luxrays::Vector &w) const;
+	float ComputeY(const luxrays::Vector &w) const;
+
+	luxrays::Vector absoluteSunDir;
+	slg::RegularSPD *model[10];
+	luxrays::Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
+		gTerm, hTerm, iTerm, radianceTerm;
+	float aFilter, bFilter, cFilter, dFilter, eFilter, fFilter,
+		gFilter, hFilter, iFilter, radianceY;
 };
 
 //------------------------------------------------------------------------------
@@ -634,7 +681,7 @@ public:
 	virtual ~SunLight() { }
 
 	virtual void Preprocess();
-	void GetPreprocessedData(float *absoluteDirData,
+	void GetPreprocessedData(float *absoluteSunDirData,
 		float *xData, float *yData,
 		float *absoluteThetaData, float *absolutePhiData,
 		float *VData, float *cosThetaMaxData, float *sin2ThetaMaxData) const;
@@ -658,11 +705,11 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 	luxrays::Spectrum color;
-	luxrays::Vector localDir;
+	luxrays::Vector localSunDir;
 	float turbidity, relSize;
 
 private:
-	luxrays::Vector absoluteDir;
+	luxrays::Vector absoluteSunDir;
 	// XY Vectors for cone sampling
 	luxrays::Vector x, y;
 	float absoluteTheta, absolutePhi;

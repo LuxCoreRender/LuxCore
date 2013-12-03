@@ -38,7 +38,7 @@ public:
 	}
 	virtual ~SPD() { FreeSamples(); }
 
-	// samples the SPD by performing a linear interpolation on the data
+	// Samples the SPD by performing a linear interpolation on the data
 	inline float sample(const float lambda) const {
 		if (nSamples <= 1 || lambda < lambdaMin || lambda > lambdaMax)
 			return 0.f;
@@ -68,15 +68,44 @@ public:
 		}
 	}
 
+	// Get offsets for fast sampling
+	inline void Offsets(u_int n, const float lambda[], int *bins, float *offsets) const {
+		for (u_int i = 0; i < n; ++i) {
+			if (nSamples <= 1 || lambda[i] < lambdaMin ||
+				lambda[i] > lambdaMax) {
+				bins[i] = -1;
+				continue;
+			}
+
+			const float x = (lambda[i] - lambdaMin) * invDelta;
+			bins[i] = luxrays::Floor2UInt(x);
+			offsets[i] = x - bins[i];
+		}
+	}
+
+	// Fast sampling
+	inline void Sample(u_int n, const int bins[], const float offsets[], float *p) const {
+		for (u_int i = 0; i < n; ++i) {
+			if (bins[i] < 0 || bins[i] >= static_cast<int>(nSamples - 1)) {
+				p[i] = 0.f;
+				continue;
+			}
+			p[i] = luxrays::Lerp(offsets[i], samples[bins[i]], samples[bins[i] + 1]);
+		}
+	}
+
 	float Y() const;
 	float Filter() const;
+	luxrays::Spectrum ToXYZ() const;
+	luxrays::Spectrum ToNormalizedXYZ() const;
+
 	void AllocateSamples(unsigned int n);
 	void FreeSamples();
+
 	void Normalize();
 	void Clamp();
 	void Scale(float s);
 	void Whitepoint(float temp);
-	luxrays::Spectrum ToRGB();
 
 protected:
 	unsigned int nSamples;

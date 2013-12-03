@@ -11,10 +11,11 @@ scene.objects.Matte.ply = scenes/sky/Matte.ply
 scene.objects.Mirror.material = Mirror
 scene.objects.Mirror.ply = scenes/sky/Mirror.ply
 ################################################################################
-scene.lights.skylight.type = sky
+scene.lights.skylight.type = sky2
 scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+#scene.lights.skylight.dir = 0.0 0.0 1.0
 scene.lights.skylight.turbidity = 2.2
-scene.lights.skylight.gain = 1. 1. 1.
+scene.lights.skylight.gain = 0.000000001 0.000000001 0.000000001
 scene.lights.sunlight.type = sun
 scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085
 scene.lights.sunlight.turbidity = 2.2

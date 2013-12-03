@@ -1138,7 +1138,21 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		SkyLight *sl = new SkyLight();
 		sl->lightToWorld = light2World;
 		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
-		sl->localDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+
+		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+		lightSource = sl;
+	} else if (lightType == "sky2") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SkyLight2 *sl = new SkyLight2();
+		sl->lightToWorld = light2World;
+		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
+		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
 		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
@@ -1157,6 +1171,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		il->lightToWorld = light2World;
 		il->imageMap = imgMap;
 
+		// An old parameter kept only for compatibility
 		const UV shift = props.Get(Property(propName + ".shift")(0.f, 0.f)).Get<UV>();
 		il->mapping.uDelta = shift.u;
 		il->mapping.vDelta = shift.v;
@@ -1174,7 +1189,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		sl->lightToWorld = light2World;
 		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
 		sl->relSize = Max(0.f, props.Get(Property(propName + ".relsize")(1.0f)).Get<float>());
-		sl->localDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
 		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());

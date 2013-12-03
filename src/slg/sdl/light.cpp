@@ -19,11 +19,12 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/geometry/frame.h"
-#include "slg/core/spd.h"
 #include "slg/core/data/sun_spect.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/light.h"
 #include "slg/sdl/scene.h"
-#include "slg/core/sphericalfunction/sphericalfunction.h"
+#include "slg/sdl/lightdata/ArHosekSkyModelData.h"
+
 
 using namespace std;
 using namespace luxrays;
@@ -1248,11 +1249,14 @@ static void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 SkyLight::SkyLight() {
 }
 
-void SkyLight::Preprocess() {
-	absoluteDir = Normalize(lightToWorld * localDir);
+SkyLight::~SkyLight() {
+}
 
-	absoluteTheta = SphericalTheta(absoluteDir);
-	absolutePhi = SphericalPhi(absoluteDir);
+void SkyLight::Preprocess() {
+	absoluteSunDir = Normalize(lightToWorld * localSunDir);
+
+	absoluteTheta = SphericalTheta(absoluteSunDir);
+	absolutePhi = SphericalPhi(absoluteSunDir);
 
 	float aconst = 1.f;
 	float bconst = 1.f;
@@ -1302,14 +1306,14 @@ void SkyLight::Preprocess() {
 	zenith_y /= PerezBase(perez_y, 0, absoluteTheta);
 }
 
-void SkyLight::GetPreprocessedData(float *absoluteDirData,
+void SkyLight::GetPreprocessedData(float *absoluteSunDirData,
 	float *absoluteThetaData, float *absolutePhiData,
 	float *zenith_YData, float *zenith_xData, float *zenith_yData,
 	float *perez_YData, float *perez_xData, float *perez_yData) const {
-	if (absoluteDirData) {
-		absoluteDirData[0] = absoluteDir.x;
-		absoluteDirData[1] = absoluteDir.y;
-		absoluteDirData[2] = absoluteDir.z;
+	if (absoluteSunDirData) {
+		absoluteSunDirData[0] = absoluteSunDir.x;
+		absoluteSunDirData[1] = absoluteSunDir.y;
+		absoluteSunDirData[2] = absoluteSunDir.z;
 	}
 
 	if (absoluteThetaData)
@@ -1388,7 +1392,7 @@ Spectrum SkyLight::Emit(const Scene &scene,
 	*orig = p1;
 	*dir = Normalize(lightToWorld * (p2 - p1));
 
-	// Compute InfiniteAreaLight ray weight
+	// Compute SkyLight ray weight
 	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
@@ -1458,7 +1462,311 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("sky"));
-	props.Set(Property(prefix + ".dir")(localDir));
+	props.Set(Property(prefix + ".dir")(localSunDir));
+	props.Set(Property(prefix + ".turbidity")(turbidity));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// SkyLight2
+//------------------------------------------------------------------------------
+
+/*
+This source is published under the following 3-clause BSD license.
+
+Copyright (c) 2012, Lukas Hosek and Alexander Wilkie
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without 
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * None of the names of the contributors may be used to endorse or promote 
+      products derived from this software without specific prior written 
+      permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/* ============================================================================
+
+This file is part of a sample implementation of the analytical skylight model
+presented in the SIGGRAPH 2012 paper
+
+
+           "An Analytic Model for Full Spectral Sky-Dome Radiance"
+
+                                    by 
+
+                       Lukas Hosek and Alexander Wilkie
+                Charles University in Prague, Czech Republic
+
+
+                        Version: 1.1, July 4th, 2012
+                        
+Version history:
+
+1.1  The coefficients of the spectral model are now scaled so that the output 
+     is given in physical units: W / (m^-2 * sr * nm). Also, the output of the   
+     XYZ model is now no longer scaled to the range [0...1]. Instead, it is
+     the result of a simple conversion from spectral data via the CIE 2 degree
+     standard observer matching functions. Therefore, after multiplication 
+     with 683 lm / W, the Y channel now corresponds to luminance in lm.
+     
+1.0  Initial release (May 11th, 2012).
+
+
+Please visit http://cgg.mff.cuni.cz/projects/SkylightModelling/ to check if
+an updated version of this code has been published!
+
+============================================================================ */
+
+static float RiCosBetween(const Vector &w1, const Vector &w2) {
+	return Clamp(Dot(w1, w2), -1.f, 1.f);
+}
+
+static float ComputeCoefficient(const float elevation[6],
+	const float parameters[6]) {
+	return elevation[0] * parameters[0] +
+		5.f * elevation[1] * parameters[1] +
+		10.f * elevation[2] * parameters[2] +
+		10.f * elevation[3] * parameters[3] +
+		5.f * elevation[4] * parameters[4] +
+		elevation[5] * parameters[5];
+}
+
+static float ComputeInterpolatedCoefficient(u_int index, u_int wavelength,
+	float turbidity, float albedo, const float elevation[6]) {
+	const u_int lowTurbidity = Floor2UInt(Clamp(turbidity - 1.f, 0.f, 9.f));
+	const u_int highTurbidity = min(lowTurbidity + 1U, 9U);
+	const float turbidityLerp = Clamp(turbidity - highTurbidity, 0.f, 1.f);
+
+	return Lerp(Clamp(albedo, 0.f, 1.f),
+		Lerp(turbidityLerp,
+			ComputeCoefficient(elevation, datasets[wavelength][0][lowTurbidity][index]),
+			ComputeCoefficient(elevation, datasets[wavelength][0][highTurbidity][index])),
+		Lerp(turbidityLerp,
+			ComputeCoefficient(elevation, datasets[wavelength][1][lowTurbidity][index]),
+			ComputeCoefficient(elevation, datasets[wavelength][1][highTurbidity][index])));
+}
+
+static void ComputeModel(float turbidity, float albedo[11], float elevation,
+	RegularSPD *skyModel[10]) {
+	const float normalizedElevation = powf(Max(0.f, elevation) * 2.f * INV_PI, 1.f / 3.f);
+
+	const float elevations[6] = {
+		powf(1.f - normalizedElevation, 5.f),
+		powf(1.f - normalizedElevation, 4.f) * normalizedElevation,
+		powf(1.f - normalizedElevation, 3.f) * powf(normalizedElevation, 2.f),
+		powf(1.f - normalizedElevation, 2.f) * powf(normalizedElevation, 3.f),
+		(1.f - normalizedElevation) * powf(normalizedElevation, 4.f),
+		powf(normalizedElevation, 5.f)
+	};
+
+	float values[11];
+	for (u_int i = 0; i < 10; ++i) {
+		for (u_int wl = 0; wl < 11; ++wl)
+			values[wl] = ComputeInterpolatedCoefficient(i, wl, turbidity, albedo[wl], elevations);
+		skyModel[i] = new RegularSPD(values, 320.f, 720.f, 11);
+	}
+}
+
+SkyLight2::SkyLight2() {
+	for (u_int i = 0; i < 10; ++i)
+		model[i] = NULL;
+}
+
+SkyLight2::~SkyLight2() {
+	for (u_int i = 0; i < 10; ++i)
+		delete model[i];
+}
+
+Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
+	const float cosG = RiCosBetween(w, localSunDir);
+	const float cosG2 = cosG * cosG;
+	const float gamma = acosf(cosG);
+	const float cosT = max(0.f, CosTheta(w));
+
+	const Spectrum expTerm(dTerm * Exp(eTerm * gamma));
+	const Spectrum rayleighTerm(fTerm * cosG2);
+	const Spectrum mieTerm(gTerm * (1.f + cosG2) /
+		Pow(Spectrum(1.f) + iTerm * (iTerm - Spectrum(2.f * cosG)), 1.5f));
+	const Spectrum zenithTerm(hTerm * sqrtf(cosT));
+
+	return (Spectrum(1.f) + aTerm * Exp(bTerm / (cosT + .01f))) *
+		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
+}
+
+float SkyLight2::ComputeY(const Vector &w) const {
+	const float cosG = RiCosBetween(w, localSunDir);
+
+	const float cosG2 = cosG * cosG;
+	const float gamma = acosf(cosG);
+	const float cosT = max(0.f, CosTheta(w));
+
+	const float expTerm = dFilter* expf(eFilter * gamma);
+	const float rayleighTerm = fFilter * cosG2;
+	const float mieTerm = gFilter * (1.f + cosG2) /
+		powf(1.f + iFilter * (iFilter - 2.f * cosG), 1.5f);
+	const float zenithTerm = hFilter * sqrtf(cosT);
+
+	return (1.f + aFilter * expf(bFilter / (cosT + .01f))) *
+		(cFilter + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceY;
+}
+
+void SkyLight2::Preprocess() {
+	absoluteSunDir = Normalize(lightToWorld * localSunDir);
+
+	float albedo[11] = { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f };
+	for (u_int i = 0; i < 10; ++i) {
+		delete model[i];
+		model[i] = NULL;
+	}
+
+	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(localSunDir), model);
+
+	aTerm = model[0]->ToXYZ().ToRGB();
+	bTerm = model[1]->ToXYZ().ToRGB();
+	cTerm = model[2]->ToXYZ().ToRGB();
+	dTerm = model[3]->ToXYZ().ToRGB();
+	eTerm = model[4]->ToXYZ().ToRGB();
+	fTerm = model[5]->ToXYZ().ToRGB();
+	gTerm = model[6]->ToXYZ().ToRGB();
+	hTerm = model[7]->ToXYZ().ToRGB();
+	iTerm = model[8]->ToXYZ().ToRGB();
+	radianceTerm = model[9]->ToXYZ().ToRGB();
+
+	aFilter = model[0]->Filter();
+	bFilter = model[1]->Filter();
+	cFilter = model[2]->Filter();
+	dFilter = model[3]->Filter();
+	eFilter = model[4]->Filter();
+	fFilter = model[5]->Filter();
+	gFilter = model[6]->Filter();
+	hFilter = model[7]->Filter();
+	iFilter = model[8]->Filter();
+	radianceY = model[9]->Y();
+}
+
+void SkyLight2::GetPreprocessedData(float *absoluteSunDirData) const {
+	if (absoluteSunDirData) {
+		absoluteSunDirData[0] = absoluteSunDir.x;
+		absoluteSunDirData[1] = absoluteSunDir.y;
+		absoluteSunDirData[2] = absoluteSunDir.z;
+	}
+}
+
+float SkyLight2::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	
+	const u_int steps = 100;
+	const float deltaStep = 1.f / steps;
+	float power = 0.f;
+	for (u_int i = 0; i < steps; ++i) {
+		for (u_int j = 0; j < steps; ++j)
+			power += ComputeY(UniformSampleSphere(i * deltaStep + deltaStep / 2.f,
+					j * deltaStep + deltaStep / 2.f));
+	}
+	power /= steps * steps;
+
+	return power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
+}
+
+Spectrum SkyLight2::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	// Choose two points p1 and p2 on scene bounding sphere
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
+	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+
+	// Construct ray between p1 and p2
+	*orig = p1;
+	*dir = Normalize(lightToWorld * (p2 - p1));
+
+	// Compute SkyLight2 ray weight
+	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = 1.f / (4.f * M_PI);
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+
+	return GetRadiance(scene, *dir);
+}
+
+Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	*dir = Normalize(lightToWorld * UniformSampleSphere(u0, u1));
+
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const Point emisPoint(p + (*distance) * (*dir));
+	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+
+	const float cosAtLight = Dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+	if (cosThetaAtLight)
+		*cosThetaAtLight = cosAtLight;
+
+	*directPdfW = 1.f / (4.f * M_PI);
+
+	if (emissionPdfW)
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	return GetRadiance(scene, -(*dir));
+}
+
+Spectrum SkyLight2::GetRadiance(const Scene &scene,
+		const Vector &dir,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	if (directPdfA)
+		*directPdfA = 1.f / (4.f * M_PI);
+
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	}
+
+	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
+	return gain * ComputeRadiance(localDir);
+}
+
+Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = EnvLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("sky2"));
+	props.Set(Property(prefix + ".dir")(localSunDir));
 	props.Set(Property(prefix + ".turbidity")(turbidity));
 
 	return props;
@@ -1472,8 +1780,8 @@ SunLight::SunLight() {
 }
 
 void SunLight::Preprocess() {
-	absoluteDir = Normalize(lightToWorld * localDir);
-	CoordinateSystem(absoluteDir, &x, &y);
+	absoluteSunDir = Normalize(lightToWorld * localSunDir);
+	CoordinateSystem(absoluteSunDir, &x, &y);
 
 	// Values from NASA Solar System Exploration page
 	// http://solarsystem.nasa.gov/planets/profile.cfm?Object=Sun&Display=Facts&System=Metric
@@ -1490,7 +1798,7 @@ void SunLight::Preprocess() {
 		sin2ThetaMax = 1.f;
 	}
 
-	Vector wh = Normalize(absoluteDir);
+	Vector wh = Normalize(absoluteSunDir);
 	absoluteTheta = SphericalTheta(wh);
 	absolutePhi = SphericalPhi(wh);
 
@@ -1538,17 +1846,17 @@ void SunLight::Preprocess() {
 
 	RegularSPD LSPD(Ldata, 350, 800, 91);
 	// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is for compatibility with past scene
-	color = gain * LSPD.ToRGB() / (1000000000.0f / (M_PI * 100.f * 100.f));
+	color = gain * LSPD.ToXYZ() / (1000000000.0f / (M_PI * 100.f * 100.f));
 }
 
-void SunLight::GetPreprocessedData(float *absoluteDirData,
+void SunLight::GetPreprocessedData(float *absoluteSunDirData,
 		float *xData, float *yData,
 		float *absoluteThetaData, float *absolutePhiData,
 		float *VData, float *cosThetaMaxData, float *sin2ThetaMaxData) const {
-	if (absoluteDirData) {
-		absoluteDirData[0] = absoluteDir.x;
-		absoluteDirData[1] = absoluteDir.y;
-		absoluteDirData[2] = absoluteDir.z;
+	if (absoluteSunDirData) {
+		absoluteSunDirData[0] = absoluteSunDir.x;
+		absoluteSunDirData[1] = absoluteSunDir.y;
+		absoluteSunDirData[2] = absoluteSunDir.z;
 	}
 
 	if (xData) {
@@ -1595,15 +1903,15 @@ Spectrum SunLight::Emit(const Scene &scene,
 	// Set ray origin and direction for infinite light ray
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	*orig = worldCenter + worldRadius * (absoluteDir + d1 * x + d2 * y);
-	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteDir);
+	*orig = worldCenter + worldRadius * (absoluteSunDir + d1 * x + d2 * y);
+	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
 	*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
 		*directPdfA = UniformConePdf(cosThetaMax);
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(absoluteDir, -(*dir));
+		*cosThetaAtLight = Dot(absoluteSunDir, -(*dir));
 
 	return color;
 }
@@ -1612,10 +1920,10 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteDir);
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteSunDir);
 
 	// Check if the point can be inside the sun cone of light
-	const float cosAtLight = Dot(absoluteDir, *dir);
+	const float cosAtLight = Dot(absoluteSunDir, *dir);
 	if (cosAtLight <= cosThetaMax)
 		return Spectrum();
 
@@ -1637,7 +1945,7 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	if ((cosThetaMax < 1.f) && (Dot(-dir, absoluteDir) > cosThetaMax)) {
+	if ((cosThetaMax < 1.f) && (Dot(-dir, absoluteSunDir) > cosThetaMax)) {
 		if (directPdfA)
 			*directPdfA = UniformConePdf(cosThetaMax);
 
@@ -1657,7 +1965,7 @@ Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("sun"));
-	props.Set(Property(prefix + ".dir")(localDir));
+	props.Set(Property(prefix + ".dir")(localSunDir));
 	props.Set(Property(prefix + ".turbidity")(turbidity));
 	props.Set(Property(prefix + ".relsize")(relSize));
 

@@ -194,6 +194,10 @@ inline Spectrum Exp(const Spectrum &s) {
 	return Spectrum(expf(s.r), expf(s.g), expf(s.b));
 }
 
+inline Spectrum Pow(const Spectrum &s, const float e) {
+	return Spectrum(powf(s.r, e), powf(s.g, e), powf(s.b, e));
+}
+
 inline Spectrum Sqrt(const Spectrum &s) {
 	return Spectrum(sqrtf(s.r), sqrtf(s.g), sqrtf(s.b));
 }
