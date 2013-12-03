@@ -865,14 +865,47 @@ ri_stmt: ACCELERATOR STRING paramlist
 	const string prefix = "scene.lights." + lightName;
 
 	const string name($2);
-	if ((name == "sunsky") || (name == "sunsky2")) {
+	if (name == "sun") {
+		// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is in LuxCore code
+		// for compatibility with past scene
+		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
+
+		*sceneProps <<
+				Property(prefix + ".type")("sun") <<
+				Property(prefix + ".dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + ".turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + ".relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "sky") {
+		// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is in LuxCore code
+		// for compatibility with past scene
+		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
+
+		*sceneProps <<
+				Property(prefix + ".type")("sky") <<
+				Property(prefix + ".dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + ".turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "sky2") {
+		*sceneProps <<
+				Property(prefix + ".type")("sky2") <<
+				Property(prefix + ".dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + ".turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "sunsky") {
 		// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is in LuxCore code
 		// for compatibility with past scene
 		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
 
 		*sceneProps <<
 				Property(prefix + "_SUN.type")("sun") <<
-				Property(prefix + "_SUN.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
+				Property(prefix + "_SUN.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
 				Property(prefix + "_SUN.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
 				Property(prefix + "_SUN.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
 				Property(prefix + "_SUN.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
@@ -881,11 +914,32 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 		*sceneProps <<
 				Property(prefix + "_SKY.type")("sky") <<
-				Property(prefix + "_SKY.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
+				Property(prefix + "_SKY.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
 				Property(prefix + "_SKY.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
 				Property(prefix + "_SKY.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
 				Property(prefix + "_SKY.transformation")(currentTransform.m) <<
 				Property(prefix + "_SKY.id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "sunsky2") {
+		// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is in LuxCore code
+		// for compatibility with past scene
+		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
+
+		*sceneProps <<
+				Property(prefix + "_SUN2.type")("sun") <<
+				Property(prefix + "_SUN2.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + "_SUN2.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + "_SUN2.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
+				Property(prefix + "_SUN2.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
+				Property(prefix + "_SUN2.transformation")(currentTransform.m) <<
+				Property(prefix + "_SUN2.id")(currentGraphicsState.currentLightGroup);
+
+		*sceneProps <<
+				Property(prefix + "_SKY2.type")("sky2") <<
+				Property(prefix + "_SKY2.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + "_SKY2.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + "_SKY2.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + "_SKY2.transformation")(currentTransform.m) <<
+				Property(prefix + "_SKY2.id")(currentGraphicsState.currentLightGroup);
 	} else if ((name == "infinite") || (name == "infinitesample")) {
 		// Check if i have to use infiniete or constantinfinite
 		if (props.Get(Property("mapname")("")).Get<string>() == "") {
