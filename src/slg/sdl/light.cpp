@@ -1906,8 +1906,7 @@ void SunLight::Preprocess() {
 	}
 
 	RegularSPD LSPD(Ldata, 350, 800, 91);
-	// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is for compatibility with past scene
-	color = gain * LSPD.ToXYZ() / (1000000000.0f / (M_PI * 100.f * 100.f));
+	color = gain * LSPD.ToNormalizedXYZ().ToRGB();
 }
 
 void SunLight::GetPreprocessedData(float *absoluteSunDirData,
