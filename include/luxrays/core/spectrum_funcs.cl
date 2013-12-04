@@ -42,6 +42,10 @@ float3 Spectrum_Exp(const float3 s) {
 	return (float3)(exp(s.x), exp(s.y), exp(s.z));
 }
 
+float3 Spectrum_Pow(const float3 s, const float e) {
+	return (float3)(pow(s.x, e), pow(s.y, e), pow(s.z, e));
+}
+
 float3 Spectrum_Sqrt(const float3 s) {
 	return (float3)(sqrt(s.x), sqrt(s.y), sqrt(s.z));
 }

@@ -1440,9 +1440,8 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
-	const float theta = SphericalTheta(localDir);
-	const float phi = SphericalPhi(localDir);
+	const float theta = SphericalTheta(-dir);
+	const float phi = SphericalPhi(-dir);
 	Spectrum s;
 	GetSkySpectralRadiance(theta, phi, &s);
 
@@ -1596,7 +1595,7 @@ SkyLight2::~SkyLight2() {
 }
 
 Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
-	const float cosG = RiCosBetween(w, localSunDir);
+	const float cosG = RiCosBetween(w, absoluteSunDir);
 	const float cosG2 = cosG * cosG;
 	const float gamma = acosf(cosG);
 	const float cosT = max(0.f, CosTheta(w));
@@ -1612,7 +1611,7 @@ Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
 }
 
 float SkyLight2::ComputeY(const Vector &w) const {
-	const float cosG = RiCosBetween(w, localSunDir);
+	const float cosG = RiCosBetween(w, absoluteSunDir);
 
 	const float cosG2 = cosG * cosG;
 	const float gamma = acosf(cosG);
@@ -1637,7 +1636,7 @@ void SkyLight2::Preprocess() {
 		model[i] = NULL;
 	}
 
-	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(localSunDir), model);
+	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
 	aTerm = model[0]->ToXYZ().ToRGB();
 	bTerm = model[1]->ToXYZ().ToRGB();
@@ -1662,11 +1661,74 @@ void SkyLight2::Preprocess() {
 	radianceY = model[9]->Y();
 }
 
-void SkyLight2::GetPreprocessedData(float *absoluteSunDirData) const {
+void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
+		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
+		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
+		float *iTermData, float *radianceTermData) const {
 	if (absoluteSunDirData) {
 		absoluteSunDirData[0] = absoluteSunDir.x;
 		absoluteSunDirData[1] = absoluteSunDir.y;
 		absoluteSunDirData[2] = absoluteSunDir.z;
+	}
+
+	if (aTermData) {
+		aTermData[0] = aTerm.r;
+		aTermData[1] = aTerm.g;
+		aTermData[2] = aTerm.b;
+	}
+
+	if (bTermData) {
+		bTermData[0] = bTerm.r;
+		bTermData[1] = bTerm.g;
+		bTermData[2] = bTerm.b;
+	}
+
+	if (cTermData) {
+		cTermData[0] = cTerm.r;
+		cTermData[1] = cTerm.g;
+		cTermData[2] = cTerm.b;
+	}
+
+	if (dTermData) {
+		dTermData[0] = dTerm.r;
+		dTermData[1] = dTerm.g;
+		dTermData[2] = dTerm.b;
+	}
+
+	if (eTermData) {
+		eTermData[0] = eTerm.r;
+		eTermData[1] = eTerm.g;
+		eTermData[2] = eTerm.b;
+	}
+	
+	if (fTermData) {
+		fTermData[0] = fTerm.r;
+		fTermData[1] = fTerm.g;
+		fTermData[2] = fTerm.b;
+	}
+	
+	if (gTermData) {
+		gTermData[0] = gTerm.r;
+		gTermData[1] = gTerm.g;
+		gTermData[2] = gTerm.b;
+	}
+
+	if (hTermData) {
+		hTermData[0] = hTerm.r;
+		hTermData[1] = hTerm.g;
+		hTermData[2] = hTerm.b;
+	}
+
+	if (iTermData) {
+		iTermData[0] = iTerm.r;
+		iTermData[1] = iTerm.g;
+		iTermData[2] = iTerm.b;
+	}
+
+	if (radianceTermData) {
+		radianceTermData[0] = radianceTerm.r;
+		radianceTermData[1] = radianceTerm.g;
+		radianceTermData[2] = radianceTerm.b;
 	}
 }
 
@@ -1757,8 +1819,7 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 	}
 
-	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
-	return gain * ComputeRadiance(localDir);
+	return gain * ComputeRadiance(-dir);
 }
 
 Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {

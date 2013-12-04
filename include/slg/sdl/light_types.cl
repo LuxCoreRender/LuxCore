@@ -21,6 +21,7 @@
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
+	TYPE_IL_SKY2,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -36,6 +37,12 @@ typedef struct {
 	float zenith_Y, zenith_x, zenith_y;
 	float perez_Y[6], perez_x[6], perez_y[6];
 } SkyLightParam;
+
+typedef struct {
+	Vector absoluteSunDir;
+	Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
+		gTerm, hTerm, iTerm, radianceTerm;
+} SkyLight2Param;
 
 typedef struct {
 	Vector absoluteDir;
@@ -94,6 +101,7 @@ typedef struct {
 	union {
 		SunLightParam sun;
 		SkyLightParam sky;
+		SkyLight2Param sky2;
 		InfiniteLightParam infinite;
 		PointLightParam point;
 		MapPointLightParam mapPoint;
@@ -143,7 +151,7 @@ typedef struct {
 #if defined(PARAM_HAS_INFINITELIGHT)
 #define LIGHTS_PARAM_DECL , __global LightSource *lights, __global uint *envLightIndices, const uint envLightCount, __global uint *meshTriLightDefsOffset, __global float *infiniteLightDistribution, __global float *lightsDistribution MATERIALS_PARAM_DECL
 #define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, infiniteLightDistribution, lightsDistribution MATERIALS_PARAM
-#elif defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT)
+#elif defined(PARAM_HAS_ENVLIGHTS)
 #define LIGHTS_PARAM_DECL , __global LightSource *lights, __global uint *envLightIndices, const uint envLightCount, __global uint *meshTriLightDefsOffset, __global float *lightsDistribution MATERIALS_PARAM_DECL
 #define LIGHTS_PARAM , lights, envLightIndices, envLightCount, meshTriLightDefsOffset, lightsDistribution MATERIALS_PARAM
 #else
