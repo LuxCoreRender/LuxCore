@@ -1638,16 +1638,16 @@ void SkyLight2::Preprocess() {
 
 	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
-	aTerm = model[0]->ToXYZ().ToRGB();
-	bTerm = model[1]->ToXYZ().ToRGB();
-	cTerm = model[2]->ToXYZ().ToRGB();
-	dTerm = model[3]->ToXYZ().ToRGB();
-	eTerm = model[4]->ToXYZ().ToRGB();
-	fTerm = model[5]->ToXYZ().ToRGB();
-	gTerm = model[6]->ToXYZ().ToRGB();
-	hTerm = model[7]->ToXYZ().ToRGB();
-	iTerm = model[8]->ToXYZ().ToRGB();
-	radianceTerm = model[9]->ToXYZ().ToRGB();
+	aTerm = model[0]->ToNormalizedXYZ().ToRGB();
+	bTerm = model[1]->ToNormalizedXYZ().ToRGB();
+	cTerm = model[2]->ToNormalizedXYZ().ToRGB();
+	dTerm = model[3]->ToNormalizedXYZ().ToRGB();
+	eTerm = model[4]->ToNormalizedXYZ().ToRGB();
+	fTerm = model[5]->ToNormalizedXYZ().ToRGB();
+	gTerm = model[6]->ToNormalizedXYZ().ToRGB();
+	hTerm = model[7]->ToNormalizedXYZ().ToRGB();
+	iTerm = model[8]->ToNormalizedXYZ().ToRGB();
+	radianceTerm = model[9]->ToNormalizedXYZ().ToRGB();
 
 	aFilter = model[0]->Filter();
 	bFilter = model[1]->Filter();
