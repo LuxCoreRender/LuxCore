@@ -161,7 +161,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 // AdvancePaths Kernel
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
 		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
@@ -232,7 +232,7 @@ float RussianRouletteProb(const float3 color) {
 bool DirectLightSampling(
 		__global LightSource *light,
 		const float lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -259,7 +259,7 @@ bool DirectLightSampling(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			u3,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
@@ -310,7 +310,7 @@ bool DirectLightSampling(
 }
 
 bool DirectLightSampling_ONE(
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -335,7 +335,7 @@ bool DirectLightSampling_ONE(
 	return DirectLightSampling(
 		&lights[lightIndex],
 		lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		worldCenterX,
 		worldCenterY,
 		worldCenterZ,
@@ -466,7 +466,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global Camera *camera,
 		// Lights
 		__global LightSource *lights,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		__global uint *envLightIndices,
 		const uint envLightCount,
 #endif
@@ -675,7 +675,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			// Nothing was hit, add environmental lights radiance
 			//------------------------------------------------------------------
 
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 			DirectHitInfiniteLight(
 					(depth == 1),
 					task->directLightState.lastBSDFEvent,
@@ -843,7 +843,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 			} else {
 				if (DirectLightSampling_ONE(
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)

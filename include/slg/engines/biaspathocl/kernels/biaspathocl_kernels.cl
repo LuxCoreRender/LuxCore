@@ -207,7 +207,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		__global Camera *camera,
 		// Lights
 		__global LightSource *lights,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		__global uint *envLightIndices,
 		const uint envLightCount,
 #endif
@@ -501,7 +501,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				// Nothing was hit, add environmental lights radiance
 				//--------------------------------------------------------------
 
-#if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
 				const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
 				DirectHitInfiniteLight(
 						firstPathVertex,
@@ -658,7 +658,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					DirectLightSampling_ONE(
 						firstPathVertex,
 						&seed,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
@@ -674,7 +674,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 						&taskDirectLight->lightIndex,
 						&taskDirectLight->lightSampleIndex,
 						&seed,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)

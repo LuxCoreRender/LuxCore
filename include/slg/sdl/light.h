@@ -636,7 +636,10 @@ public:
 	virtual ~SkyLight2();
 
 	virtual void Preprocess();
-	void GetPreprocessedData(float *absoluteDirData) const;
+	void GetPreprocessedData(float *absoluteDirData,
+		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
+		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
+		float *iTermData,float *radianceTermData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY2; }
 	virtual float GetPower(const Scene &scene) const;

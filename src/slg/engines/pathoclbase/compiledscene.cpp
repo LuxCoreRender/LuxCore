@@ -599,6 +599,34 @@ void CompiledScene::CompileLights() {
 				envLightIndices.push_back(i);
 				break;
 			}
+			case TYPE_IL_SKY2: {
+				const SkyLight2 *sl = (const SkyLight2 *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_IL_SKY2;
+
+				// NotIntersecableLightSource data
+				memcpy(&oclLight->notIntersecable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->gain);
+
+				// SkyLight2 data
+				sl->GetPreprocessedData(
+						&oclLight->notIntersecable.sky2.absoluteSunDir.x,
+						&oclLight->notIntersecable.sky2.aTerm.r,
+						&oclLight->notIntersecable.sky2.bTerm.r,
+						&oclLight->notIntersecable.sky2.cTerm.r,
+						&oclLight->notIntersecable.sky2.dTerm.r,
+						&oclLight->notIntersecable.sky2.eTerm.r,
+						&oclLight->notIntersecable.sky2.fTerm.r,
+						&oclLight->notIntersecable.sky2.gTerm.r,
+						&oclLight->notIntersecable.sky2.hTerm.r,
+						&oclLight->notIntersecable.sky2.iTerm.r,
+						&oclLight->notIntersecable.sky2.radianceTerm.r);
+				
+				envLightIndices.push_back(i);
+				break;
+			}
 			case TYPE_SUN: {
 				const SunLight *sl = (const SunLight *)l;
 

@@ -153,7 +153,7 @@ float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
 #endif
 
 //------------------------------------------------------------------------------
-// SktLight
+// SkyLight
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_SKYLIGHT)
@@ -213,9 +213,8 @@ float3 SkyLight_GetRadiance(__global LightSource *skyLight, const float3 dir,
 		float *directPdfA) {
 	*directPdfA = 1.f / (4.f * M_PI_F);
 
-	const float3 localDir = normalize(Transform_InvApplyVector(&skyLight->notIntersecable.light2World, -dir));
-	const float theta = SphericalTheta(localDir);
-	const float phi = SphericalPhi(localDir);
+	const float theta = SphericalTheta(-dir);
+	const float phi = SphericalPhi(-dir);
 	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
 
 	return VLOAD3F(&skyLight->notIntersecable.gain.r) * s;
@@ -246,6 +245,81 @@ float3 SkyLight_Illuminate(__global LightSource *skyLight,
 		return BLACK;
 
 	return SkyLight_GetRadiance(skyLight, -(*dir), directPdfW);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Sky2Light
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_SKYLIGHT2)
+
+float RiCosBetween(const float3 w1, const float3 w2) {
+	return clamp(dot(w1, w2), -1.f, 1.f);
+}
+
+float3 SkyLight2_ComputeRadiance(__global LightSource *skyLight2, const float3 w) {
+	const float3 absoluteSunDir = VLOAD3F(&skyLight2->notIntersecable.sky2.absoluteSunDir.x);
+	const float cosG = RiCosBetween(w, absoluteSunDir);
+	const float cosG2 = cosG * cosG;
+	const float gamma = acos(cosG);
+	const float cosT = fmax(0.f, CosTheta(w));
+
+	const float3 aTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.aTerm.r);
+	const float3 bTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.bTerm.r);
+	const float3 cTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.cTerm.r);
+	const float3 dTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.dTerm.r);
+	const float3 eTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.eTerm.r);
+	const float3 fTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.fTerm.r);
+	const float3 gTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.gTerm.r);
+	const float3 hTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.hTerm.r);
+	const float3 iTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.iTerm.r);
+	const float3 radianceTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.radianceTerm.r);
+	
+	const float3 expTerm = dTerm * Spectrum_Exp(eTerm * gamma);
+	const float3 rayleighTerm = fTerm * cosG2;
+	const float3 mieTerm = gTerm * (1.f + cosG2) /
+		Spectrum_Pow(1.f + iTerm * (iTerm - (2.f * cosG)), 1.5f);
+	const float3 zenithTerm = hTerm * sqrt(cosT);
+
+	return (1.f + aTerm * Spectrum_Exp(bTerm / (cosT + .01f))) *
+		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
+}
+
+float3 SkyLight2_GetRadiance(__global LightSource *skyLight2, const float3 dir,
+		float *directPdfA) {
+	*directPdfA = 1.f / (4.f * M_PI_F);
+	const float3 s = SkyLight2_ComputeRadiance(skyLight2, -dir);
+
+	return VLOAD3F(&skyLight2->notIntersecable.gain.r) * s;
+}
+
+float3 SkyLight2_Illuminate(__global LightSource *skyLight2,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		const float u0, const float u1, const float3 p,
+		float3 *dir, float *distance, float *directPdfW) {
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+
+	const float3 localDir = normalize(Transform_ApplyVector(&skyLight2->notIntersecable.light2World, -(*dir)));
+	*dir = normalize(Transform_ApplyVector(&skyLight2->notIntersecable.light2World,  UniformSampleSphere(u0, u1)));
+
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const float3 emisPoint = p + (*distance) * (*dir);
+	const float3 emisNormal = normalize(worldCenter - emisPoint);
+
+	const float cosAtLight = dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	return SkyLight2_GetRadiance(skyLight2, -(*dir), directPdfW);
 }
 
 #endif
@@ -623,6 +697,11 @@ float3 EnvLight_GetRadiance(__global LightSource *light, const float3 dir, float
 			return SkyLight_GetRadiance(light,
 					dir, directPdfA);
 #endif
+#if defined(PARAM_HAS_SKYLIGHT2)
+		case TYPE_IL_SKY2:
+			return SkyLight2_GetRadiance(light,
+					dir, directPdfA);
+#endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
 			return SunLight_GetRadiance(light,
@@ -649,7 +728,7 @@ float3 Light_Illuminate(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float u3,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -684,6 +763,15 @@ float3 Light_Illuminate(
 #if defined(PARAM_HAS_SKYLIGHT)
 		case TYPE_IL_SKY:
 			return SkyLight_Illuminate(
+				light,
+				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				u0, u1,
+				point,
+				lightRayDir, distance, directPdfW);
+#endif
+#if defined(PARAM_HAS_SKYLIGHT2)
+		case TYPE_IL_SKY2:
+			return SkyLight2_Illuminate(
 				light,
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				u0, u1,
@@ -765,13 +853,16 @@ bool Light_IsEnvOrIntersecable(__global LightSource *light) {
 #if defined(PARAM_HAS_SKYLIGHT)
 		case TYPE_IL_SKY:
 #endif
+#if defined(PARAM_HAS_SKYLIGHT2)
+		case TYPE_IL_SKY2:
+#endif
 #if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		case TYPE_TRIANGLE:
 #endif
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SUNLIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			return true;
 #endif
 
