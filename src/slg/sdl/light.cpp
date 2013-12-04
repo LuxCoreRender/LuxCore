@@ -1906,7 +1906,7 @@ void SunLight::Preprocess() {
 	}
 
 	RegularSPD LSPD(Ldata, 350, 800, 91);
-	color = gain * LSPD.ToNormalizedXYZ().ToRGB();
+	color = gain * LSPD.ToNormalizedXYZ().ToRGB() / (relSize * relSize);
 }
 
 void SunLight::GetPreprocessedData(float *absoluteSunDirData,
