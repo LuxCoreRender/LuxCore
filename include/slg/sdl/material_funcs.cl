@@ -44,6 +44,10 @@ bool Material_IsDeltaNoMix(__global Material *material) {
 		case MATTE:
 			return false;
 #endif
+#if defined (PARAM_ENABLE_MAT_VELVET)
+		case VELVET:
+			return false;
+#endif
 		// Specular materials
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
@@ -69,6 +73,10 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 	switch (mat->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
+			return DIFFUSE | REFLECT;
+#endif
+#if defined (PARAM_ENABLE_MAT_VELVET)
+		case VELVET:
 			return DIFFUSE | REFLECT;
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
@@ -125,6 +133,12 @@ float3 Material_SampleNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return MatteMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
+					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_VELVET)
+		case VELVET:
+			return VelvetMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
 					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
@@ -195,6 +209,11 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return MatteMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_VELVET)
+		case VELVET:
+			return VelvetMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)

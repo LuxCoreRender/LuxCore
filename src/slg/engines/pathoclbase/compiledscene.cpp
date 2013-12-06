@@ -456,6 +456,17 @@ void CompiledScene::CompileMaterials() {
 					usedMaterialTypes.insert(ROUGHGLASS_ANISOTROPIC);
 				break;
 			}
+			case VELVET: {
+				VelvetMaterial *vm = static_cast<VelvetMaterial *>(m);
+
+				mat->type = slg::ocl::VELVET;
+				mat->velvet.kdTexIndex = scene->texDefs.GetTextureIndex(vm->GetKd());
+				mat->velvet.p1TexIndex = scene->texDefs.GetTextureIndex(vm->GetP1());
+				mat->velvet.p2TexIndex = scene->texDefs.GetTextureIndex(vm->GetP2());
+				mat->velvet.p3TexIndex = scene->texDefs.GetTextureIndex(vm->GetP3());
+				mat->velvet.thicknessTexIndex = scene->texDefs.GetTextureIndex(vm->GetThickness());
+				break;
+			}
 			default:
 				throw runtime_error("Unknown material: " + boost::lexical_cast<string>(m->GetType()));
 		}
