@@ -20,7 +20,7 @@
 
 typedef enum {
 	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2, ROUGHGLASS
+	GLOSSY2, METAL2, ROUGHGLASS, VELVET
 } MaterialType;
 
 typedef struct {
@@ -85,6 +85,14 @@ typedef struct {
 } RoughGlassParam;
 
 typedef struct {
+    unsigned int kdTexIndex;
+	unsigned int p1TexIndex;
+	unsigned int p2TexIndex;
+	unsigned int p3TexIndex;
+	unsigned int thicknessTexIndex;
+} VelvetParam;
+
+typedef struct {
 	MaterialType type;
 	unsigned int matID, lightID;
 	Spectrum emittedFactor;
@@ -107,6 +115,7 @@ typedef struct {
 		Glossy2Param glossy2;
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
+		VelvetParam velvet;
 	};
 } Material;
 
