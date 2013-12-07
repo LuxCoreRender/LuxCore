@@ -69,6 +69,7 @@ scene.materials.small_tiles.kd = 0.394299 0.328256 0.463319
 scene.materials.small_tiles_bump.kd = 0.136278 0.113598 0.15998
 scene.materials.tiles_metal_brushed.kd = 0.592632 0.592632 0.592632
 scene.materials.tiles_wall.kd = 0.033472 0.033472 0.033472
+scene.materials.tiles_wall.id = 100
 scene.materials.tiles_wall_low.kd = 0.28 0.279972 0.279972
 scene.materials.wall_beige.kd = 0.877436 0.844132 0.775518
 scene.materials.wall_green.kd = 0.74868 0.920042 0.803907

@@ -276,7 +276,7 @@ void Film::Resize(const u_int w, const u_int h) {
 			buf->Clear();
 			channel_MATERIAL_ID_MASKs.push_back(buf);
 		}
-		hasDataChannel = true;
+		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_SHADOW_MASK)) {
 		channel_DIRECT_SHADOW_MASK = new GenericFrameBuffer<2, 1, float>(width, height);
