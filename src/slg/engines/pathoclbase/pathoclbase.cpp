@@ -75,6 +75,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 		film->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
 		film->RemoveChannel(Film::UV);
 		film->RemoveChannel(Film::RAYCOUNT);
+		film->RemoveChannel(Film::BY_MATERIAL_ID);
 	} else
 		film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
 	film->Init();

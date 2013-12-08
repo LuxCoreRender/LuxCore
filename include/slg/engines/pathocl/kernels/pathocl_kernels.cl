@@ -439,6 +439,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 		, __global float *filmRayCount
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+		, __global float *filmByMaterialID
+#endif
 		,
 		// Scene parameters
 		const float worldCenterX,

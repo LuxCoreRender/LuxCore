@@ -59,7 +59,7 @@ public:
 		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
 		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
 		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
-		RADIANCE_GROUP, UV, RAYCOUNT
+		RADIANCE_GROUP, UV, RAYCOUNT, BY_MATERIAL_ID
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -107,7 +107,8 @@ public:
 		DIRECT_SHADOW_MASK = 1<<16,
 		INDIRECT_SHADOW_MASK = 1<<17,
 		UV = 1<<18,
-		RAYCOUNT = 1<<19
+		RAYCOUNT = 1<<19,
+		BY_MATERIAL_ID = 1<<20
 	} FilmChannelType;
 
 	Film(const u_int w, const u_int h);
@@ -124,6 +125,8 @@ public:
 	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
 	u_int GetMaskMaterialIDCount() const { return maskMaterialIDs.size(); }
 	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }
+	u_int GetByMaterialIDCount() const { return byMaterialIDs.size(); }
+	u_int GetByMaterialID(const u_int index) const { return byMaterialIDs[index]; }
 	
 	void Init();
 	void Resize(const u_int w, const u_int h);
@@ -149,6 +152,7 @@ public:
 	void CopyDynamicSettings(const Film &film) {
 		channels = film.channels;
 		maskMaterialIDs = film.maskMaterialIDs;
+		byMaterialIDs = film.byMaterialIDs;
 		radianceGroupCount = film.radianceGroupCount;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
@@ -229,6 +233,7 @@ public:
 	GenericFrameBuffer<2, 1, float> *channel_INDIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, 0, float> *channel_UV;
 	GenericFrameBuffer<1, 0, float> *channel_RAYCOUNT;
+	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_MATERIAL_IDs;
 
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
@@ -247,7 +252,7 @@ private:
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
-	std::vector<u_int> maskMaterialIDs;
+	std::vector<u_int> maskMaterialIDs, byMaterialIDs;
 
 	// Used to speedup sample splatting, initialized inside Init()
 	bool hasDataChannel, hasComposingChannel;

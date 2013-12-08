@@ -299,7 +299,7 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			} else if (type == "OUTPUT_SWITCHER") {
 				imagePipeline->AddPlugin(new OutputSwitcherPlugin(
 					Film::String2FilmChannelType(cfg.Get(Property(prefix + ".channel")("DEPTH")).Get<string>()),
-					cfg.Get(Property(prefix + ".index")(0u)).Get<float>()));
+					cfg.Get(Property(prefix + ".index")(0u)).Get<u_int>()));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
@@ -485,6 +485,14 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 		} else if (type == "RAYCOUNT") {
 			film->AddChannel(Film::RAYCOUNT);
 			filmOutputs.Add(FilmOutputs::RAYCOUNT, fileName);
+		} else if (type == "BY_MATERIAL_ID") {
+			const u_int materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255)).Get<u_int>();
+			Properties prop;
+			prop.Set(Property("id")(materialID));
+
+			film->AddChannel(Film::MATERIAL_ID);
+			film->AddChannel(Film::BY_MATERIAL_ID, &prop);
+			filmOutputs.Add(FilmOutputs::BY_MATERIAL_ID, fileName, &prop);
 		} else
 			throw runtime_error("Unknown type in film output: " + type);
 	}

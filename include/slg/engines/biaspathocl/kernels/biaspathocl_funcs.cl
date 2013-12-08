@@ -164,7 +164,7 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 		dst->shadingNormal = src->shadingNormal;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-		// Note: MATERIAL_ID_MASK is calculated starting from materialID field
+		// Note: MATERIAL_ID_MASK and BY_MATERIAL_ID are calculated starting from materialID field
 		dst->materialID = src->materialID;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)

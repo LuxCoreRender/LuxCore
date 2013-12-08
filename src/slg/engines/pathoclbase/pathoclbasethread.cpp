@@ -70,6 +70,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	channel_INDIRECT_SHADOW_MASK_Buff = NULL;
 	channel_UV_Buff = NULL;
 	channel_RAYCOUNT_Buff = NULL;
+	channel_BY_MATERIAL_ID_Buff = NULL;
 
 	// Scene buffers
 	materialsBuff = NULL;
@@ -155,6 +156,8 @@ u_int PathOCLBaseRenderThread::SetFilmKernelArgs(cl::Kernel &kernel, u_int argIn
 		kernel.setArg(argIndex++, *channel_UV_Buff);
 	if (threadFilm->HasChannel(Film::RAYCOUNT))
 		kernel.setArg(argIndex++, *channel_RAYCOUNT_Buff);
+	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID))
+		kernel.setArg(argIndex++, *channel_BY_MATERIAL_ID_Buff);
 
 	return argIndex;
 }
@@ -429,6 +432,15 @@ void PathOCLBaseRenderThread::InitFilm() {
 		AllocOCLBufferRW(&channel_RAYCOUNT_Buff, sizeof(float) * filmPixelCount, "RAYCOUNT");
 	else
 		FreeOCLBuffer(&channel_RAYCOUNT_Buff);
+	//--------------------------------------------------------------------------
+	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID)) {
+		if (threadFilm->GetByMaterialIDCount() > 1)
+			throw runtime_error("PathOCL supports only 1 BY_MATERIAL_ID");
+		else
+			AllocOCLBufferRW(&channel_BY_MATERIAL_ID_Buff,
+					sizeof(float[4]) * filmPixelCount, "BY_MATERIAL_ID");
+	} else
+		FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
 }
 
 void PathOCLBaseRenderThread::InitCamera() {
@@ -629,6 +641,10 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_FILM_CHANNELS_HAS_UV";
 	if (threadFilm->HasChannel(Film::RAYCOUNT))
 		ss << " -D PARAM_FILM_CHANNELS_HAS_RAYCOUNT";
+	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID)) {
+		ss << " -D PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID" <<
+				" -D PARAM_FILM_BY_MATERIAL_ID=" << threadFilm->GetByMaterialID(0);
+	}
 
 	if (normalsBuff)
 		ss << " -D PARAM_HAS_NORMALS_BUFFER";
@@ -1046,6 +1062,7 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
 	FreeOCLBuffer(&channel_UV_Buff);
 	FreeOCLBuffer(&channel_RAYCOUNT_Buff);
+	FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
 
 	// Scene buffers
 	FreeOCLBuffer(&materialsBuff);
@@ -1316,6 +1333,14 @@ void PathOCLBaseRenderThread::TransferFilm(cl::CommandQueue &oclQueue) {
 			0,
 			channel_RAYCOUNT_Buff->getInfo<CL_MEM_SIZE>(),
 			threadFilm->channel_RAYCOUNT->GetPixels());
+	}
+	if (channel_BY_MATERIAL_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_BY_MATERIAL_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_BY_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			threadFilm->channel_BY_MATERIAL_IDs[0]->GetPixels());
 	}
 }
 
