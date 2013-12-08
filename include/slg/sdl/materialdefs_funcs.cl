@@ -211,7 +211,7 @@ float3 VelvetMaterial_Evaluate(__global Material *material,
 		*directPdfW = fabs(lightDir.z * M_1_PI_F);
 
 	*event = DIFFUSE | REFLECT;
-	
+
 	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->velvet.kdTexIndex], hitPoint
 			TEXTURES_PARAM));
 
@@ -227,16 +227,16 @@ float3 VelvetMaterial_Evaluate(__global Material *material,
 	const float delta = Texture_GetFloatValue(&texs[material->velvet.thicknessTexIndex], hitPoint
 			TEXTURES_PARAM);
 
-	const float costheta = dot(-eyeDir, lightDir);
+	const float cosv = dot(-lightDir, eyeDir);
 
 	// Compute phase function
 
-	const float B = 3.0f * costheta;
+	const float B = 3.0f * cosv;
 
-	float p = 1.0f + A1 * costheta + A2 * 0.5f * (B * costheta - 1.0f) + A3 * 0.5 * (5.0f * costheta * costheta * costheta - B);
+	float p = 1.0f + A1 * cosv + A2 * 0.5f * (B * cosv - 1.0f) + A3 * 0.5 * (5.0f * cosv * cosv * cosv - B);
 	p = p / (4.0f * M_PI);
  
-	p = (p * delta) / fabs(CosTheta(lightDir));
+	p = (p * delta) / (fabs(lightDir.z) * fabs(eyeDir.z));
 
 	// Clamp the BRDF (page 7)
 	if (p > 1.0f)
@@ -244,7 +244,7 @@ float3 VelvetMaterial_Evaluate(__global Material *material,
 	else if (p < 0.0f)
 		p = 0.0f;
 
-	return p * kd;		
+	return p * kd;
 }
 
 float3 VelvetMaterial_Sample(__global Material *material,
@@ -265,7 +265,6 @@ float3 VelvetMaterial_Sample(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-	
 	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->velvet.kdTexIndex], hitPoint
 			TEXTURES_PARAM));
 
@@ -281,16 +280,16 @@ float3 VelvetMaterial_Sample(__global Material *material,
 	const float delta = Texture_GetFloatValue(&texs[material->velvet.thicknessTexIndex], hitPoint
 			TEXTURES_PARAM);
 
-	const float costheta = *cosSampledDir;
+	const float cosv = dot(-fixedDir, *sampledDir);;
 
 	// Compute phase function
 
-	const float B = 3.0f * costheta;
+	const float B = 3.0f * cosv;
 
-	float p = 1.0f + A1 * costheta + A2 * 0.5f * (B * costheta - 1.0f) + A3 * 0.5 * (5.0f * costheta * costheta * costheta - B);
+	float p = 1.0f + A1 * cosv + A2 * 0.5f * (B * cosv - 1.0f) + A3 * 0.5 * (5.0f * cosv * cosv * cosv - B);
 	p = p / (4.0f * M_PI);
  
-	p = (p * delta) / costheta;
+	p = *pdfW * (p * delta) / (fabs(fixedDir.z) * fabs((*sampledDir).z));
 
 	// Clamp the BRDF (page 7)
 	if (p > 1.0f)

@@ -1972,6 +1972,8 @@ Properties RoughGlassMaterial::ToProperties() const  {
 Spectrum VelvetMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
+
+
 	if (directPdfW)
 		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
 
@@ -1980,21 +1982,21 @@ Spectrum VelvetMaterial::Evaluate(const HitPoint &hitPoint,
 
 	*event = DIFFUSE | REFLECT;
 	
-	float A1 = P1->GetFloatValue(hitPoint);
-	float A2 = P2->GetFloatValue(hitPoint);
-	float A3 = P3->GetFloatValue(hitPoint);
-	float delta = Thickness->GetFloatValue(hitPoint);
+	const float A1 = P1->GetFloatValue(hitPoint);
+	const float A2 = P2->GetFloatValue(hitPoint);
+	const float A3 = P3->GetFloatValue(hitPoint);
+	const float delta = Thickness->GetFloatValue(hitPoint);
 	
-	float costheta = Dot(-localEyeDir, localLightDir);
+	const float cosv = Dot(-localLightDir, localEyeDir);
 
 	// Compute phase function
 
-	float B = 3.0f * costheta;
+	const float B = 3.0f * cosv;
 
-	float p = 1.0f + A1 * costheta + A2 * 0.5f * (B * costheta - 1.0f) + A3 * 0.5 * (5.0f * costheta * costheta * costheta - B);
+	float p = 1.0f + A1 * cosv + A2 * 0.5f * (B * cosv - 1.0f) + A3 * 0.5 * (5.0f * cosv * cosv * cosv - B);
 	p = p / (4.0f * M_PI);
  
-	p = (p * delta) / fabsf(CosTheta(localLightDir));
+	p = (p * delta) / (fabsf(localLightDir.z) * fabsf(localEyeDir.z));
 
 	// Clamp the BRDF (page 7)
 	if (p > 1.0f)
@@ -2010,6 +2012,7 @@ Spectrum VelvetMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
+
 	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
 			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
@@ -2027,23 +2030,23 @@ Spectrum VelvetMaterial::Sample(const HitPoint &hitPoint,
 	float A3 = P3->GetFloatValue(hitPoint);
 	float delta = Thickness->GetFloatValue(hitPoint);
 	
-	float costheta = *absCosSampledDir;
+	const float cosv = Dot(-localFixedDir, *localSampledDir);
 
 	// Compute phase function
 
-	float B = 3.0f * costheta;
+	const float B = 3.0f * cosv;
 
-	float p = 1.0f + A1 * costheta + A2 * 0.5f * (B * costheta - 1.0f) + A3 * 0.5 * (5.0f * costheta * costheta * costheta - B);
+	float p = 1.0f + A1 * cosv + A2 * 0.5f * (B * cosv - 1.0f) + A3 * 0.5 * (5.0f * cosv * cosv * cosv - B);
 	p = p / (4.0f * M_PI);
  
-	p = (p * delta) / costheta;
-
+	p = *pdfW * (p * delta) / (fabsf(localFixedDir.z) * fabsf(localSampledDir->z));
+	
 	// Clamp the BRDF (page 7)
 	if (p > 1.0f)
 		p = 1.0f;
 	else if (p < 0.0f)
 		p = 0.0f;
-
+	
 	return Kd->GetSpectrumValue(hitPoint).Clamp() * p;
 }
 
