@@ -905,9 +905,9 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 				return;
 			break;
 		case FilmOutputs::BY_MATERIAL_ID:
-			if (HasChannel(BY_MATERIAL_ID) && props) {
-				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
-				bitCount = hdrImage ? 32 : 8;
+			if (hdrImage && HasChannel(BY_MATERIAL_ID) && props) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
 
 				// Look for the material mask ID index
 				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
@@ -1119,16 +1119,8 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 					break;
 				}
 				case FilmOutputs::BY_MATERIAL_ID: {
-					if (hdrImage) {
-						float *dst = (float *)bits;
-						channel_BY_MATERIAL_IDs[byMaterialIDsIndex]->GetWeightedPixel(x, y, &dst[x]);
-					} else {
-						BYTE *dst = &bits[x];
-
-						float maskData;
-						channel_BY_MATERIAL_IDs[byMaterialIDsIndex]->GetWeightedPixel(x, y, &maskData);
-						*dst = (BYTE)(maskData * 255.f + .5f);
-					}
+					FIRGBF *dst = (FIRGBF *)bits;
+					channel_BY_MATERIAL_IDs[byMaterialIDsIndex]->GetWeightedPixel(x, y, &dst[x].red);
 					break;
 				}
 				default:
