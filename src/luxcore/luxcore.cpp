@@ -311,6 +311,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return renderSession.renderSession->film->channel_UV ? 1 : 0;
 		case CHANNEL_RAYCOUNT:
 			return renderSession.renderSession->film->channel_RAYCOUNT ? 1 : 0;
+		case CHANNEL_BY_MATERIAL_ID:
+			return renderSession.renderSession->film->channel_BY_MATERIAL_IDs.size();
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetChannelCount>(): " + ToString(type));
 	}
@@ -360,6 +362,8 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return renderSession.renderSession->film->channel_UV->GetPixels();
 		case CHANNEL_RAYCOUNT:
 			return renderSession.renderSession->film->channel_RAYCOUNT->GetPixels();
+		case CHANNEL_BY_MATERIAL_ID:
+			return renderSession.renderSession->film->channel_BY_MATERIAL_IDs[index]->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<float>(): " + ToString(type));
 	}

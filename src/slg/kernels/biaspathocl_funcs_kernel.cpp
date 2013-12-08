@@ -167,7 +167,7 @@ std::string KernelSource_biaspathocl_funcs =
 "		dst->shadingNormal = src->shadingNormal;\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)\n"
-"		// Note: MATERIAL_ID_MASK is calculated starting from materialID field\n"
+"		// Note: MATERIAL_ID_MASK and BY_MATERIAL_ID are calculated starting from materialID field\n"
 "		dst->materialID = src->materialID;\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_UV)\n"

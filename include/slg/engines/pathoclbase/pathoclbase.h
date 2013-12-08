@@ -119,6 +119,7 @@ protected:
 	cl::Buffer *channel_INDIRECT_SHADOW_MASK_Buff;
 	cl::Buffer *channel_UV_Buff;
 	cl::Buffer *channel_RAYCOUNT_Buff;
+	cl::Buffer *channel_BY_MATERIAL_ID_Buff;
 
 	// Scene buffers
 	cl::Buffer *materialsBuff;

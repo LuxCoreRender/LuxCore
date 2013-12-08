@@ -180,6 +180,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 		, __global float *filmRayCount
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+		, __global float *filmByMaterialID
+#endif
 		,
 		// Scene parameters
 		const float worldCenterX,
@@ -991,6 +994,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 		, __global float *filmRayCount
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+		, __global float *filmByMaterialID
 #endif
 		) {
 	const size_t gid = get_global_id(0);
