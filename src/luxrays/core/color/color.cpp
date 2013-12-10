@@ -296,6 +296,8 @@ RGBColor ColorSystem::Limit(const RGBColor &rgb, int method) const {
 	return rgb;
 }
 
+const ColorSystem ColorSystem::DefaultColorSystem;
+
 static const float bradford[3][3] = {
 	{0.8951f, 0.2664f, -0.1614f},
 	{-0.7502f, 1.7135f, 0.0367f},
