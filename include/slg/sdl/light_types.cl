@@ -49,7 +49,7 @@ typedef struct {
 	float turbidity, relSize;
 	// XY Vectors for cone sampling
 	Vector x, y;
-	float cosThetaMax;
+	float cosThetaMax, sin2ThetaMax;
 	Spectrum color;
 } SunLightParam;
 

@@ -350,15 +350,21 @@ float3 SunLight_Illuminate(__global LightSource *sunLight,
 
 float3 SunLight_GetRadiance(__global LightSource *sunLight, const float3 dir, float *directPdfA) {
 	const float cosThetaMax = sunLight->notIntersecable.sun.cosThetaMax;
-	const float3 sunDir = VLOAD3F(&sunLight->notIntersecable.sun.absoluteDir.x);
+	const float sin2ThetaMax = sunLight->notIntersecable.sun.sin2ThetaMax;
+	const float3 x = VLOAD3F(&sunLight->notIntersecable.sun.x.x);
+	const float3 y = VLOAD3F(&sunLight->notIntersecable.sun.y.x);
+	const float3 absoluteSunDir = VLOAD3F(&sunLight->notIntersecable.sun.absoluteDir.x);
 
-	if ((cosThetaMax < 1.f) && (dot(-dir, sunDir) > cosThetaMax)) {
-		if (directPdfA)
-			*directPdfA = UniformConePdf(cosThetaMax);
-
-		return VLOAD3F(sunLight->notIntersecable.sun.color.c);
-	} else
+	const float xD = dot(-dir, x);
+	const float yD = dot(-dir, y);
+	const float zD = dot(-dir, absoluteSunDir);
+	if ((cosThetaMax == 1.f) || (zD < 0.f) || ((xD * xD + yD * yD) > sin2ThetaMax))
 		return BLACK;
+
+	if (directPdfA)
+		*directPdfA = UniformConePdf(cosThetaMax);
+
+	return VLOAD3F(sunLight->notIntersecable.sun.color.c);
 }
 
 #endif

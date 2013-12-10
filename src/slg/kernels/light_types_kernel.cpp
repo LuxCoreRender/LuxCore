@@ -52,7 +52,7 @@ std::string KernelSource_light_types =
 "	float turbidity, relSize;\n"
 "	// XY Vectors for cone sampling\n"
 "	Vector x, y;\n"
-"	float cosThetaMax;\n"
+"	float cosThetaMax, sin2ThetaMax;\n"
 "	Spectrum color;\n"
 "} SunLightParam;\n"
 "\n"
