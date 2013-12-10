@@ -350,7 +350,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 	__global BSDF *currentBSDF = &task->bsdfPathVertex1;
 	__global Spectrum *currentThroughput = &task->throughputPathVertex1;
-	VSTORE3F(WHITE, &task->throughputPathVertex1.r);
+	VSTORE3F(WHITE, task->throughputPathVertex1.c);
 #if defined(PARAM_HAS_PASSTHROUGH)
 	// This is a bit tricky. I store the passThroughEvent in the BSDF
 	// before of the initialization because it can be used during the
@@ -416,8 +416,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(currentBSDF
 					MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
-				const float3 pathThroughput = VLOAD3F(&currentThroughput->r) * passThroughTrans;
-				VSTORE3F(pathThroughput, &currentThroughput->r);
+				const float3 pathThroughput = VLOAD3F(currentThroughput->c) * passThroughTrans;
+				VSTORE3F(pathThroughput, currentThroughput->c);
 
 				// It is a pass through point, continue to trace the ray
 				ray.mint = rayHit.t + MachineEpsilon_E(rayHit.t);
@@ -568,9 +568,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				//--------------------------------------------------------------
 
 				// currentThroughput contains the shadow ray throughput
-				const float3 lightRadiance = VLOAD3F(&currentThroughput->r) * VLOAD3F(&taskDirectLight->lightRadiance.r);
+				const float3 lightRadiance = VLOAD3F(currentThroughput->c) * VLOAD3F(taskDirectLight->lightRadiance.c);
 				const uint lightID = taskDirectLight->lightID;
-				VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, lightRadiance);
+				VADD3F(sampleResult->radiancePerPixelNormalized[lightID].c, lightRadiance);
 
 				//if (get_global_id(0) == 0)
 				//	printf("DIRECT_LIGHT_TRACE_RAY => lightRadiance: %f %f %f [%d]\n", lightRadiance.s0, lightRadiance.s1, lightRadiance.s2, lightID);
@@ -593,15 +593,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 					if (pathBSDFEvent & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-						VADD3F(&sampleResult->indirectDiffuse.r, lightRadiance);
+						VADD3F(sampleResult->indirectDiffuse.c, lightRadiance);
 #endif
 					} else if (pathBSDFEvent & GLOSSY) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-						VADD3F(&sampleResult->indirectGlossy.r, lightRadiance);
+						VADD3F(sampleResult->indirectGlossy.c, lightRadiance);
 #endif
 					} else if (pathBSDFEvent & SPECULAR) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-						VADD3F(&sampleResult->indirectSpecular.r, lightRadiance);
+						VADD3F(sampleResult->indirectSpecular.c, lightRadiance);
 #endif
 					}
 				}
@@ -694,7 +694,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					// Trace the shadow ray
 					currentBSDF = &taskDirectLight->directLightBSDF;
 					currentThroughput = &taskDirectLight->directLightThroughput;
-					VSTORE3F(WHITE, &currentThroughput->r);
+					VSTORE3F(WHITE, currentThroughput->c);
 #if defined(PARAM_HAS_PASSTHROUGH)
 					// This is a bit tricky. I store the passThroughEvent in the BSDF
 					// before of the initialization because it can be use during the
@@ -735,9 +735,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			PathDepthInfo_IncDepths(&depthInfo, event);
 
 			if (!Spectrum_IsBlack(bsdfSample)) {
-				float3 throughput = VLOAD3F(&taskPathVertexN->throughputPathVertexN.r);
+				float3 throughput = VLOAD3F(taskPathVertexN->throughputPathVertexN.c);
 				throughput *= bsdfSample * (cosSampledDir / ((event & SPECULAR) ? lastPdfW : max(PARAM_PDF_CLAMP_VALUE, lastPdfW)));
-				VSTORE3F(throughput, &taskPathVertexN->throughputPathVertexN.r);
+				VSTORE3F(throughput, taskPathVertexN->throughputPathVertexN.c);
 
 				Ray_Init2_Private(&ray, VLOAD3F(&taskPathVertexN->bsdfPathVertexN.hitPoint.p.x), sampledDir);
 
@@ -825,9 +825,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 					if (!Spectrum_IsBlack(bsdfSample)) {
 						const float scaleFactor = 1.f / sampleCount2;
-						float3 throughput = VLOAD3F(&task->throughputPathVertex1.r);
+						float3 throughput = VLOAD3F(task->throughputPathVertex1.c);
 						throughput *= bsdfSample * (scaleFactor * cosSampledDir / ((event & SPECULAR) ? lastPdfW : max(PARAM_PDF_CLAMP_VALUE, lastPdfW)));
-						VSTORE3F(throughput, &taskPathVertexN->throughputPathVertexN.r);
+						VSTORE3F(throughput, taskPathVertexN->throughputPathVertexN.c);
 
 						Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertex1.hitPoint.p.x), sampledDir);
 

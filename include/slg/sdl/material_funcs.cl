@@ -826,7 +826,7 @@ float3 Material_GetEmittedRadiance(__global Material *material,
 		result = Material_GetEmittedRadianceNoMix(material, hitPoint
 				TEXTURES_PARAM);
 
-	return 	VLOAD3F(&material->emittedFactor.r) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;
+	return 	VLOAD3F(material->emittedFactor.c) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;
 }
 
 #if defined(PARAM_HAS_BUMPMAPS)

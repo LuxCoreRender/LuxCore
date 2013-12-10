@@ -55,8 +55,8 @@ extern std::string KernelSource_triangle_types;
 extern std::string KernelSource_triangle_funcs;
 extern std::string KernelSource_uv_types;
 extern std::string KernelSource_utils_funcs;
-extern std::string KernelSource_spectrum_types;
-extern std::string KernelSource_spectrum_funcs;
+extern std::string KernelSource_color_types;
+extern std::string KernelSource_color_funcs;
 
 // Util kernel functions
 extern std::string KernelSource_mc_funcs;

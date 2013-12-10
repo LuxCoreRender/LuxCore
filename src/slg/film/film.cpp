@@ -1237,12 +1237,12 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			float *dst = buffer;
 			for (u_int i = 0; i < pixelCount; ++i) {
 				Spectrum c;
-				channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->AccumulateWeightedPixel(i, &c.r);
-				channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, &c.r);
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
+				channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
 
-				*dst++ = c.r;
-				*dst++ = c.g;
-				*dst++ = c.b;
+				*dst++ = c.c[0];
+				*dst++ = c.c[1];
+				*dst++ = c.c[2];
 			}
 			break;
 		}
@@ -1352,11 +1352,8 @@ void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const 
 
 	if (!enabledOverlappedScreenBufferUpdate) {
 		for (u_int i = 0; i < pixelCount; ++i) {
-			if (!frameBufferMask[i]) {
-				p[i].r = 0.f;
-				p[i].g = 0.f;
-				p[i].b = 0.f;
-			}
+			if (!frameBufferMask[i])
+				p[i] = Spectrum();
 		}
 	}
 }
@@ -1368,7 +1365,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 			if (sampleResult.radiancePerPixelNormalized[i].IsNaN() || sampleResult.radiancePerPixelNormalized[i].IsInf())
 				continue;
 
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddWeightedPixel(x, y, &sampleResult.radiancePerPixelNormalized[i].r, weight);
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiancePerPixelNormalized[i].c, weight);
 		}
 	}
 
@@ -1378,7 +1375,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 			if (sampleResult.radiancePerScreenNormalized[i].IsNaN() || sampleResult.radiancePerScreenNormalized[i].IsInf())
 				continue;
 
-			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddWeightedPixel(x, y, &sampleResult.radiancePerScreenNormalized[i].r, weight);
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiancePerScreenNormalized[i].c, weight);
 		}
 	}
 
@@ -1389,27 +1386,27 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 	if (hasComposingChannel) {
 		// Faster than HasChannel(DIRECT_DIFFUSE)
 		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE))
-			channel_DIRECT_DIFFUSE->AddWeightedPixel(x, y, &sampleResult.directDiffuse.r, weight);
+			channel_DIRECT_DIFFUSE->AddWeightedPixel(x, y, sampleResult.directDiffuse.c, weight);
 
 		// Faster than HasChannel(DIRECT_GLOSSY)
 		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY))
-			channel_DIRECT_GLOSSY->AddWeightedPixel(x, y, &sampleResult.directGlossy.r, weight);
+			channel_DIRECT_GLOSSY->AddWeightedPixel(x, y, sampleResult.directGlossy.c, weight);
 
 		// Faster than HasChannel(EMISSION)
 		if (channel_EMISSION && sampleResult.HasChannel(EMISSION))
-			channel_EMISSION->AddWeightedPixel(x, y, &sampleResult.emission.r, weight);
+			channel_EMISSION->AddWeightedPixel(x, y, sampleResult.emission.c, weight);
 
 		// Faster than HasChannel(INDIRECT_DIFFUSE)
 		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE))
-			channel_INDIRECT_DIFFUSE->AddWeightedPixel(x, y, &sampleResult.indirectDiffuse.r, weight);
+			channel_INDIRECT_DIFFUSE->AddWeightedPixel(x, y, sampleResult.indirectDiffuse.c, weight);
 
 		// Faster than HasChannel(INDIRECT_GLOSSY)
 		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY))
-			channel_INDIRECT_GLOSSY->AddWeightedPixel(x, y, &sampleResult.indirectGlossy.r, weight);
+			channel_INDIRECT_GLOSSY->AddWeightedPixel(x, y, sampleResult.indirectGlossy.c, weight);
 
 		// Faster than HasChannel(INDIRECT_SPECULAR)
 		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR))
-			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, &sampleResult.indirectSpecular.r, weight);
+			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, sampleResult.indirectSpecular.c, weight);
 
 		// This is MATERIAL_ID_MASK and BY_MATERIAL_MASK
 		if (sampleResult.HasChannel(MATERIAL_ID)) {
@@ -1436,7 +1433,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 						}
 					}
 
-					channel_BY_MATERIAL_IDs[index]->AddWeightedPixel(x, y, &c.r, weight);
+					channel_BY_MATERIAL_IDs[index]->AddWeightedPixel(x, y, c.c, weight);
 				}
 			}
 		}

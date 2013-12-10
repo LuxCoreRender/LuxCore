@@ -624,16 +624,16 @@ void CompiledScene::CompileLights() {
 				// SkyLight2 data
 				sl->GetPreprocessedData(
 						&oclLight->notIntersecable.sky2.absoluteSunDir.x,
-						&oclLight->notIntersecable.sky2.aTerm.r,
-						&oclLight->notIntersecable.sky2.bTerm.r,
-						&oclLight->notIntersecable.sky2.cTerm.r,
-						&oclLight->notIntersecable.sky2.dTerm.r,
-						&oclLight->notIntersecable.sky2.eTerm.r,
-						&oclLight->notIntersecable.sky2.fTerm.r,
-						&oclLight->notIntersecable.sky2.gTerm.r,
-						&oclLight->notIntersecable.sky2.hTerm.r,
-						&oclLight->notIntersecable.sky2.iTerm.r,
-						&oclLight->notIntersecable.sky2.radianceTerm.r);
+						oclLight->notIntersecable.sky2.aTerm.c,
+						oclLight->notIntersecable.sky2.bTerm.c,
+						oclLight->notIntersecable.sky2.cTerm.c,
+						oclLight->notIntersecable.sky2.dTerm.c,
+						oclLight->notIntersecable.sky2.eTerm.c,
+						oclLight->notIntersecable.sky2.fTerm.c,
+						oclLight->notIntersecable.sky2.gTerm.c,
+						oclLight->notIntersecable.sky2.hTerm.c,
+						oclLight->notIntersecable.sky2.iTerm.c,
+						oclLight->notIntersecable.sky2.radianceTerm.c);
 				
 				envLightIndices.push_back(i);
 				break;
@@ -677,8 +677,8 @@ void CompiledScene::CompileLights() {
 				// PointLight data
 				pl->GetPreprocessedData(
 					NULL,
-					&(oclLight->notIntersecable.point.absolutePos.x),
-					&(oclLight->notIntersecable.point.emittedFactor.r));
+					&oclLight->notIntersecable.point.absolutePos.x,
+					oclLight->notIntersecable.point.emittedFactor.c);
 				break;
 			}
 			case TYPE_MAPPOINT: {
@@ -695,9 +695,9 @@ void CompiledScene::CompileLights() {
 				// MapPointLight data
 				const SampleableSphericalFunction *funcData;
 				mpl->GetPreprocessedData(
-					&(oclLight->notIntersecable.mapPoint.localPos.x),
-					&(oclLight->notIntersecable.mapPoint.absolutePos.x),
-					&(oclLight->notIntersecable.mapPoint.emittedFactor.r),
+					&oclLight->notIntersecable.mapPoint.localPos.x,
+					&oclLight->notIntersecable.mapPoint.absolutePos.x,
+					oclLight->notIntersecable.mapPoint.emittedFactor.c,
 					&funcData);
 				oclLight->notIntersecable.mapPoint.avarage = funcData->Average();
 				oclLight->notIntersecable.mapPoint.imageMapIndex = scene->imgMapCache.GetImageMapIndex(mpl->imageMap);
@@ -717,8 +717,8 @@ void CompiledScene::CompileLights() {
 				// SpotLight data
 				const Transform *alignedWorld2Light;
 				sl->GetPreprocessedData(
-					&(oclLight->notIntersecable.spot.emittedFactor.r),
-					&(oclLight->notIntersecable.spot.absolutePos.x),
+					oclLight->notIntersecable.spot.emittedFactor.c,
+					&oclLight->notIntersecable.spot.absolutePos.x,
 					&oclLight->notIntersecable.spot.cosTotalWidth,
 					&oclLight->notIntersecable.spot.cosFalloffStart,
 					&alignedWorld2Light);
@@ -742,7 +742,7 @@ void CompiledScene::CompileLights() {
 				oclLight->notIntersecable.projection.imageMapIndex = scene->imgMapCache.GetImageMapIndex(pl->imageMap);
 				const Transform *alignedWorld2Light, *lightProjection;
 				pl->GetPreprocessedData(
-					&(oclLight->notIntersecable.projection.emittedFactor.r),
+					oclLight->notIntersecable.projection.emittedFactor.c,
 					&(oclLight->notIntersecable.projection.absolutePos.x),
 					&(oclLight->notIntersecable.projection.lightNormal.x),
 					&oclLight->notIntersecable.projection.screenX0,
@@ -1199,9 +1199,9 @@ void CompiledScene::CompileTextures() {
 						ASSIGN_SPECTRUM(tex->band.values[i], values[i]);
 					} else {
 						tex->band.offsets[i] = 1.f;
-						tex->band.values[i].r = 0.f;
-						tex->band.values[i].g = 0.f;
-						tex->band.values[i].b = 0.f;
+						tex->band.values[i].c[0] = 0.f;
+						tex->band.values[i].c[1] = 0.f;
+						tex->band.values[i].c[2] = 0.f;
 					}
 				}
 				break;

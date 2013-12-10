@@ -100,7 +100,7 @@ void GenerateCameraPath(
 	// Initialize the path state
 	task->pathStateBase.state = RT_NEXT_VERTEX;
 	task->pathStateBase.depth = 1;
-	VSTORE3F(WHITE, &task->pathStateBase.throughput.r);
+	VSTORE3F(WHITE, task->pathStateBase.throughput.c);
 	task->directLightState.pathBSDFEvent = NONE;
 	task->directLightState.lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	task->directLightState.lastPdfW = 1.f;
@@ -170,7 +170,7 @@ void DirectHitInfiniteLight(
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
-	const float3 throughput = VLOAD3F(&pathThroughput->r);
+	const float3 throughput = VLOAD3F(pathThroughput->c);
 
 	for (uint i = 0; i < envLightCount; ++i) {
 		__global LightSource *light = &lights[envLightIndices[i]];
@@ -216,7 +216,7 @@ void DirectHitFiniteLight(
 			// MIS between BSDF sampling and direct light sampling
 			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 		}
-		const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->r) * emittedRadiance;
+		const float3 lightRadiance = weight * VLOAD3F(pathThroughput->c) * emittedRadiance;
 
 		const uint lightID =  min(BSDF_GetLightID(bsdf
 				MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
@@ -288,7 +288,7 @@ bool DirectLightSampling(
 			const float weight = Light_IsEnvOrIntersecable(light) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, &radiance->r);
+			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);
 			*ID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 #if defined(PARAM_HAS_PASSTHROUGH)
 			*shadowPassThrought = u3;
@@ -622,8 +622,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
 					MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
-				const float3 pathThroughput = VLOAD3F(&task->pathStateBase.throughput.r) * passThroughTrans;
-				VSTORE3F(pathThroughput, &task->pathStateBase.throughput.r);
+				const float3 pathThroughput = VLOAD3F(task->pathStateBase.throughput.c) * passThroughTrans;
+				VSTORE3F(pathThroughput, task->pathStateBase.throughput.c);
 
 				// It is a pass through point, continue to trace the ray
 				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
@@ -742,10 +742,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 		if (rayMiss) {
 			// Nothing was hit, the light source is visible
-			const float3 lightRadiance = VLOAD3F(&task->directLightState.lightRadiance.r);
+			const float3 lightRadiance = VLOAD3F(task->directLightState.lightRadiance.c);
 
 			const uint lightID = task->directLightState.lightID;
-			VADD3F(&sample->result.radiancePerPixelNormalized[lightID].r, lightRadiance);
+			VADD3F(sample->result.radiancePerPixelNormalized[lightID].c, lightRadiance);
 
 			if (depth == 1) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
@@ -754,11 +754,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				if (BSDF_GetEventTypes(bsdf
 						MATERIALS_PARAM) & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-					VADD3F(&sample->result.directDiffuse.r, lightRadiance);
+					VADD3F(sample->result.directDiffuse.c, lightRadiance);
 #endif
 				} else {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-					VADD3F(&sample->result.directGlossy.r, lightRadiance);
+					VADD3F(sample->result.directGlossy.c, lightRadiance);
 #endif
 				}
 			} else {
@@ -769,15 +769,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				const BSDFEvent pathBSDFEvent = task->directLightState.pathBSDFEvent;
 				if (pathBSDFEvent & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-					VADD3F(&sample->result.indirectDiffuse.r, lightRadiance);
+					VADD3F(sample->result.indirectDiffuse.c, lightRadiance);
 #endif
 				} else if (pathBSDFEvent & GLOSSY) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-					VADD3F(&sample->result.indirectGlossy.r, lightRadiance);
+					VADD3F(sample->result.indirectGlossy.c, lightRadiance);
 #endif
 				} else if (pathBSDFEvent & SPECULAR) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-					VADD3F(&sample->result.indirectSpecular.r, lightRadiance);
+					VADD3F(sample->result.indirectSpecular.c, lightRadiance);
 #endif
 				}
 			}
@@ -813,8 +813,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
 					MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passthroughTrans)) {
-				const float3 lightRadiance = VLOAD3F(&task->directLightState.lightRadiance.r) * passthroughTrans;
-				VSTORE3F(lightRadiance, &task->directLightState.lightRadiance.r);
+				const float3 lightRadiance = VLOAD3F(task->directLightState.lightRadiance.c) * passthroughTrans;
+				VSTORE3F(lightRadiance, task->directLightState.lightRadiance.c);
 
 				// It is a pass through point, continue to trace the ray
 				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
@@ -901,9 +901,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			if (rrEnabled)
 				lastPdfW *= rrProb; // Russian Roulette
 
-			float3 throughput = VLOAD3F(&task->pathStateBase.throughput.r);
+			float3 throughput = VLOAD3F(task->pathStateBase.throughput.c);
 			throughput *= bsdfSample * (cosSampledDir / lastPdfW);
-			VSTORE3F(throughput, &task->pathStateBase.throughput.r);
+			VSTORE3F(throughput, task->pathStateBase.throughput.c);
 
 			Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir);
 

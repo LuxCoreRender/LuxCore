@@ -28,8 +28,8 @@ float3 ConstantInfiniteLight_GetRadiance(__global LightSource *constantInfiniteL
 		const float3 dir, float *directPdfA) {
 	*directPdfA = 1.f / (4.f * M_PI_F);
 
-	return VLOAD3F(&constantInfiniteLight->notIntersecable.gain.r) *
-			VLOAD3F(&constantInfiniteLight->notIntersecable.constantInfinite.color.r);
+	return VLOAD3F(constantInfiniteLight->notIntersecable.gain.c) *
+			VLOAD3F(constantInfiniteLight->notIntersecable.constantInfinite.color.c);
 }
 
 float3 ConstantInfiniteLight_Illuminate(__global LightSource *constantInfiniteLight,
@@ -59,8 +59,8 @@ float3 ConstantInfiniteLight_Illuminate(__global LightSource *constantInfiniteLi
 
 	*directPdfW = 1.f / (4.f * M_PI_F);
 
-	return VLOAD3F(&constantInfiniteLight->notIntersecable.gain.r) *
-			VLOAD3F(&constantInfiniteLight->notIntersecable.constantInfinite.color.r);
+	return VLOAD3F(constantInfiniteLight->notIntersecable.gain.c) *
+			VLOAD3F(constantInfiniteLight->notIntersecable.constantInfinite.color.c);
 }
 
 #endif
@@ -92,7 +92,7 @@ float3 InfiniteLight_GetRadiance(__global LightSource *infiniteLight,
 	const float distPdf = Distribution2D_Pdf(infiniteLightDistirbution, mapUV.s0, mapUV.s1);
 	*directPdfA = distPdf / (4.f * M_PI_F);
 
-	return VLOAD3F(&infiniteLight->notIntersecable.gain.r) * ImageMap_GetSpectrum(
+	return VLOAD3F(infiniteLight->notIntersecable.gain.c) * ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			mapUV.s0, mapUV.s1);
@@ -144,7 +144,7 @@ float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
 	const float2 delta = VLOAD2F(&infiniteLight->notIntersecable.infinite.mapping.uvMapping2D.uDelta);
 	const float2 mapUV = uv * scale + delta;
 	
-	return VLOAD3F(&infiniteLight->notIntersecable.gain.r) * ImageMap_GetSpectrum(
+	return VLOAD3F(infiniteLight->notIntersecable.gain.c) * ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			mapUV.s0, mapUV.s1);
@@ -217,7 +217,7 @@ float3 SkyLight_GetRadiance(__global LightSource *skyLight, const float3 dir,
 	const float phi = SphericalPhi(-dir);
 	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
 
-	return VLOAD3F(&skyLight->notIntersecable.gain.r) * s;
+	return VLOAD3F(skyLight->notIntersecable.gain.c) * s;
 }
 
 float3 SkyLight_Illuminate(__global LightSource *skyLight,
@@ -266,16 +266,16 @@ float3 SkyLight2_ComputeRadiance(__global LightSource *skyLight2, const float3 w
 	const float gamma = acos(cosG);
 	const float cosT = fmax(0.f, CosTheta(w));
 
-	const float3 aTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.aTerm.r);
-	const float3 bTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.bTerm.r);
-	const float3 cTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.cTerm.r);
-	const float3 dTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.dTerm.r);
-	const float3 eTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.eTerm.r);
-	const float3 fTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.fTerm.r);
-	const float3 gTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.gTerm.r);
-	const float3 hTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.hTerm.r);
-	const float3 iTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.iTerm.r);
-	const float3 radianceTerm = VLOAD3F(&skyLight2->notIntersecable.sky2.radianceTerm.r);
+	const float3 aTerm = VLOAD3F(skyLight2->notIntersecable.sky2.aTerm.c);
+	const float3 bTerm = VLOAD3F(skyLight2->notIntersecable.sky2.bTerm.c);
+	const float3 cTerm = VLOAD3F(skyLight2->notIntersecable.sky2.cTerm.c);
+	const float3 dTerm = VLOAD3F(skyLight2->notIntersecable.sky2.dTerm.c);
+	const float3 eTerm = VLOAD3F(skyLight2->notIntersecable.sky2.eTerm.c);
+	const float3 fTerm = VLOAD3F(skyLight2->notIntersecable.sky2.fTerm.c);
+	const float3 gTerm = VLOAD3F(skyLight2->notIntersecable.sky2.gTerm.c);
+	const float3 hTerm = VLOAD3F(skyLight2->notIntersecable.sky2.hTerm.c);
+	const float3 iTerm = VLOAD3F(skyLight2->notIntersecable.sky2.iTerm.c);
+	const float3 radianceTerm = VLOAD3F(skyLight2->notIntersecable.sky2.radianceTerm.c);
 	
 	const float3 expTerm = dTerm * Spectrum_Exp(eTerm * gamma);
 	const float3 rayleighTerm = fTerm * cosG2;
@@ -292,7 +292,7 @@ float3 SkyLight2_GetRadiance(__global LightSource *skyLight2, const float3 dir,
 	*directPdfA = 1.f / (4.f * M_PI_F);
 	const float3 s = SkyLight2_ComputeRadiance(skyLight2, -dir);
 
-	return VLOAD3F(&skyLight2->notIntersecable.gain.r) * s;
+	return VLOAD3F(skyLight2->notIntersecable.gain.c) * s;
 }
 
 float3 SkyLight2_Illuminate(__global LightSource *skyLight2,
@@ -345,7 +345,7 @@ float3 SunLight_Illuminate(__global LightSource *sunLight,
 	*distance = INFINITY;
 	*directPdfW = UniformConePdf(cosThetaMax);
 
-	return VLOAD3F(&sunLight->notIntersecable.sun.color.r);
+	return VLOAD3F(sunLight->notIntersecable.sun.color.c);
 }
 
 float3 SunLight_GetRadiance(__global LightSource *sunLight, const float3 dir, float *directPdfA) {
@@ -356,7 +356,7 @@ float3 SunLight_GetRadiance(__global LightSource *sunLight, const float3 dir, fl
 		if (directPdfA)
 			*directPdfA = UniformConePdf(cosThetaMax);
 
-		return VLOAD3F(&sunLight->notIntersecable.sun.color.r);
+		return VLOAD3F(sunLight->notIntersecable.sun.color.c);
 	} else
 		return BLACK;
 }
@@ -495,7 +495,7 @@ float3 PointLight_Illuminate(__global LightSource *pointLight,
 
 	*directPdfW = distanceSquared;
 
-	return VLOAD3F(&pointLight->notIntersecable.point.emittedFactor.r);
+	return VLOAD3F(pointLight->notIntersecable.point.emittedFactor.c);
 }
 
 #endif
@@ -529,7 +529,7 @@ float3 MapPointLight_Illuminate(__global LightSource *mapPointLight,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			uv.s0, uv.s1) / mapPointLight->notIntersecable.mapPoint.avarage;
 
-	return VLOAD3F(&mapPointLight->notIntersecable.mapPoint.emittedFactor.r) * emissionColor;
+	return VLOAD3F(mapPointLight->notIntersecable.mapPoint.emittedFactor.c) * emissionColor;
 }
 
 #endif
@@ -568,7 +568,7 @@ float3 SpotLight_Illuminate(__global LightSource *spotLight,
 
 	*directPdfW = distanceSquared;
 
-	return VLOAD3F(&spotLight->notIntersecable.spot.emittedFactor.r) *
+	return VLOAD3F(spotLight->notIntersecable.spot.emittedFactor.c) *
 			(falloff / fabs(CosTheta(localFromLight)));
 }
 
@@ -607,7 +607,7 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 
 	*directPdfW = distanceSquared;
 
-	float3 c = VLOAD3F(&projectionLight->notIntersecable.projection.emittedFactor.r);
+	float3 c = VLOAD3F(projectionLight->notIntersecable.projection.emittedFactor.c);
 	const uint imageMapIndex = projectionLight->notIntersecable.projection.imageMapIndex;
 	if (imageMapIndex != NULL_INDEX) {
 		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
@@ -642,8 +642,8 @@ float3 SharpDistantLight_Illuminate(__global LightSource *sharpDistantLight,
 	*distance = INFINITY;
 	*directPdfW = 1.f;
 
-	return VLOAD3F(&sharpDistantLight->notIntersecable.gain.r) *
-			VLOAD3F(&sharpDistantLight->notIntersecable.sharpDistant.color.r);
+	return VLOAD3F(sharpDistantLight->notIntersecable.gain.c) *
+			VLOAD3F(sharpDistantLight->notIntersecable.sharpDistant.color.c);
 }
 
 #endif
@@ -667,8 +667,8 @@ float3 DistantLight_Illuminate(__global LightSource *distantLight,
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 	*directPdfW = uniformConePdf;
 
-	return VLOAD3F(&distantLight->notIntersecable.gain.r) *
-			VLOAD3F(&distantLight->notIntersecable.sharpDistant.color.r);
+	return VLOAD3F(distantLight->notIntersecable.gain.c) *
+			VLOAD3F(distantLight->notIntersecable.sharpDistant.color.c);
 }
 
 #endif

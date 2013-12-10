@@ -37,7 +37,7 @@
 #include <luxrays/core/geometry/normal.h>
 #include <luxrays/core/geometry/point.h>
 #include <luxrays/core/geometry/matrix4x4.h>
-#include <luxrays/core/spectrum.h>
+#include <luxrays/core/color/color.h>
 
 namespace luxrays {
 

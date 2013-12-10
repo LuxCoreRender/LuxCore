@@ -37,7 +37,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/uv.h"
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
 #include "slg/sdl/mapping.h"
 #include "slg/sdl/hitpoint.h"
 

@@ -949,12 +949,14 @@ ri_stmt: ACCELERATOR STRING paramlist
 					Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
 					Property(prefix + ".id")(currentGraphicsState.currentLightGroup);			
 		} else {
+			const float gain = props.Get(Property("gain")(1.f)).Get<float>();
+			const Spectrum L = props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>();
+			const Spectrum combinedGain = gain * L;
 			*sceneProps <<
 					Property(prefix + ".type")("infinite") <<
 					Property(prefix + ".file")(props.Get(Property("mapname")("")).Get<string>()) <<
 					Property(prefix + ".gamma")(props.Get(Property("gamma")(2.2f)).Get<float>()) <<
-					Property(prefix + ".gain")(props.Get(Property("gain")(1.f)).Get<float>() *
-						props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+					Property(prefix + ".gain")(combinedGain) <<
 					Property(prefix + ".transformation")(currentTransform.m) <<
 					Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 		}

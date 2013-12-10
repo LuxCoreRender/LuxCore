@@ -60,9 +60,9 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		// Apply normal mapping
 		const Spectrum color = material->GetNormalTexValue(hitPoint);
 
-		const float x = 2.f * color.r - 1.f;
-		const float y = 2.f * color.g - 1.f;
-		const float z = 2.f * color.b - 1.f;
+		const float x = 2.f * color.c[0] - 1.f;
+		const float y = 2.f * color.c[1] - 1.f;
+		const float z = 2.f * color.c[2] - 1.f;
 
 		Vector v1, v2;
 		CoordinateSystem(Vector(hitPoint.shadeN), &v1, &v2);

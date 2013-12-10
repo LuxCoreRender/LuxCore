@@ -22,7 +22,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/geometry/frame.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
 #include "slg/sdl/bsdfevents.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/light.h"

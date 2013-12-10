@@ -19,12 +19,12 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/geometry/frame.h"
-#include "slg/core/data/sun_spect.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/light.h"
 #include "slg/sdl/scene.h"
 #include "slg/sdl/lightdata/ArHosekSkyModelData.h"
 
+#include "slg/core/data/sun_spect.h"
 
 using namespace std;
 using namespace luxrays;
@@ -278,9 +278,9 @@ void PointLight::GetPreprocessedData(float *localPosData, float *absolutePosData
 	}
 
 	if (emittedFactorData) {
-		emittedFactorData[0] = emittedFactor.r;
-		emittedFactorData[1] = emittedFactor.g;
-		emittedFactorData[2] = emittedFactor.b;
+		emittedFactorData[0] = emittedFactor.c[0];
+		emittedFactorData[1] = emittedFactor.c[1];
+		emittedFactorData[2] = emittedFactor.c[2];
 	}
 }
 
@@ -465,9 +465,9 @@ void SpotLight::GetPreprocessedData(float *emittedFactorData, float *absolutePos
 		float *cosTotalWidthData, float *cosFalloffStartData,
 		const luxrays::Transform **alignedLight2WorldData) const {
 	if (emittedFactorData) {
-		emittedFactorData[0] = emittedFactor.r;
-		emittedFactorData[1] = emittedFactor.g;
-		emittedFactorData[2] = emittedFactor.b;
+		emittedFactorData[0] = emittedFactor.c[0];
+		emittedFactorData[1] = emittedFactor.c[1];
+		emittedFactorData[2] = emittedFactor.c[2];
 	}
 
 	if (absolutePosData) {
@@ -623,9 +623,9 @@ void ProjectionLight::GetPreprocessedData(float *emittedFactorData, float *absol
 		float *screenX0Data, float *screenX1Data, float *screenY0Data, float *screenY1Data,
 		const luxrays::Transform **alignedLight2WorldData, const luxrays::Transform **lightProjectionData) const {
 	if (emittedFactorData) {
-		emittedFactorData[0] = emittedFactor.r;
-		emittedFactorData[1] = emittedFactor.g;
-		emittedFactorData[2] = emittedFactor.b;
+		emittedFactorData[0] = emittedFactor.c[0];
+		emittedFactorData[1] = emittedFactor.c[1];
+		emittedFactorData[2] = emittedFactor.c[2];
 	}
 
 	if (absolutePosData) {
@@ -1241,9 +1241,9 @@ static void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 		Z = 0.f;
 
 	// Assuming sRGB (D65 illuminant)
-	s->r =  3.2410f * X - 1.5374f * Y - 0.4986f * Z;
-	s->g = -0.9692f * X + 1.8760f * Y + 0.0416f * Z;
-	s->b =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
+	s->c[0] =  3.2410f * X - 1.5374f * Y - 0.4986f * Z;
+	s->c[1] = -0.9692f * X + 1.8760f * Y + 0.0416f * Z;
+	s->c[2] =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
 }
 
 SkyLight::SkyLight() {
@@ -1638,16 +1638,17 @@ void SkyLight2::Preprocess() {
 
 	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
-	aTerm = model[0]->ToNormalizedXYZ().ToRGB();
-	bTerm = model[1]->ToNormalizedXYZ().ToRGB();
-	cTerm = model[2]->ToNormalizedXYZ().ToRGB();
-	dTerm = model[3]->ToNormalizedXYZ().ToRGB();
-	eTerm = model[4]->ToNormalizedXYZ().ToRGB();
-	fTerm = model[5]->ToNormalizedXYZ().ToRGB();
-	gTerm = model[6]->ToNormalizedXYZ().ToRGB();
-	hTerm = model[7]->ToNormalizedXYZ().ToRGB();
-	iTerm = model[8]->ToNormalizedXYZ().ToRGB();
-	radianceTerm = model[9]->ToNormalizedXYZ().ToRGB();
+	const ColorSystem colorSystem;
+	aTerm = colorSystem.ToRGBConstrained(model[0]->ToNormalizedXYZ());
+	bTerm = colorSystem.ToRGBConstrained(model[1]->ToNormalizedXYZ());
+	cTerm = colorSystem.ToRGBConstrained(model[2]->ToNormalizedXYZ());
+	dTerm = colorSystem.ToRGBConstrained(model[3]->ToNormalizedXYZ());
+	eTerm = colorSystem.ToRGBConstrained(model[4]->ToNormalizedXYZ());
+	fTerm = colorSystem.ToRGBConstrained(model[5]->ToNormalizedXYZ());
+	gTerm = colorSystem.ToRGBConstrained(model[6]->ToNormalizedXYZ());
+	hTerm = colorSystem.ToRGBConstrained(model[7]->ToNormalizedXYZ());
+	iTerm = colorSystem.ToRGBConstrained(model[8]->ToNormalizedXYZ());
+	radianceTerm = colorSystem.ToRGBConstrained(model[9]->ToNormalizedXYZ());
 
 	aFilter = model[0]->Filter();
 	bFilter = model[1]->Filter();
@@ -1672,63 +1673,63 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
 	}
 
 	if (aTermData) {
-		aTermData[0] = aTerm.r;
-		aTermData[1] = aTerm.g;
-		aTermData[2] = aTerm.b;
+		aTermData[0] = aTerm.c[0];
+		aTermData[1] = aTerm.c[1];
+		aTermData[2] = aTerm.c[2];
 	}
 
 	if (bTermData) {
-		bTermData[0] = bTerm.r;
-		bTermData[1] = bTerm.g;
-		bTermData[2] = bTerm.b;
+		bTermData[0] = bTerm.c[0];
+		bTermData[1] = bTerm.c[1];
+		bTermData[2] = bTerm.c[2];
 	}
 
 	if (cTermData) {
-		cTermData[0] = cTerm.r;
-		cTermData[1] = cTerm.g;
-		cTermData[2] = cTerm.b;
+		cTermData[0] = cTerm.c[0];
+		cTermData[1] = cTerm.c[1];
+		cTermData[2] = cTerm.c[2];
 	}
 
 	if (dTermData) {
-		dTermData[0] = dTerm.r;
-		dTermData[1] = dTerm.g;
-		dTermData[2] = dTerm.b;
+		dTermData[0] = dTerm.c[0];
+		dTermData[1] = dTerm.c[1];
+		dTermData[2] = dTerm.c[2];
 	}
 
 	if (eTermData) {
-		eTermData[0] = eTerm.r;
-		eTermData[1] = eTerm.g;
-		eTermData[2] = eTerm.b;
+		eTermData[0] = eTerm.c[0];
+		eTermData[1] = eTerm.c[1];
+		eTermData[2] = eTerm.c[2];
 	}
 	
 	if (fTermData) {
-		fTermData[0] = fTerm.r;
-		fTermData[1] = fTerm.g;
-		fTermData[2] = fTerm.b;
+		fTermData[0] = fTerm.c[0];
+		fTermData[1] = fTerm.c[1];
+		fTermData[2] = fTerm.c[2];
 	}
 	
 	if (gTermData) {
-		gTermData[0] = gTerm.r;
-		gTermData[1] = gTerm.g;
-		gTermData[2] = gTerm.b;
+		gTermData[0] = gTerm.c[0];
+		gTermData[1] = gTerm.c[1];
+		gTermData[2] = gTerm.c[2];
 	}
 
 	if (hTermData) {
-		hTermData[0] = hTerm.r;
-		hTermData[1] = hTerm.g;
-		hTermData[2] = hTerm.b;
+		hTermData[0] = hTerm.c[0];
+		hTermData[1] = hTerm.c[1];
+		hTermData[2] = hTerm.c[2];
 	}
 
 	if (iTermData) {
-		iTermData[0] = iTerm.r;
-		iTermData[1] = iTerm.g;
-		iTermData[2] = iTerm.b;
+		iTermData[0] = iTerm.c[0];
+		iTermData[1] = iTerm.c[1];
+		iTermData[2] = iTerm.c[2];
 	}
 
 	if (radianceTermData) {
-		radianceTermData[0] = radianceTerm.r;
-		radianceTermData[1] = radianceTerm.g;
-		radianceTermData[2] = radianceTerm.b;
+		radianceTermData[0] = radianceTerm.c[0];
+		radianceTermData[1] = radianceTerm.c[1];
+		radianceTermData[2] = radianceTerm.c[2];
 	}
 }
 
@@ -1891,22 +1892,23 @@ void SunLight::Preprocess() {
 			// Attenuation due to ozone absorption
 			// lOzone - amount of ozone in cm(NTP)
 		const float lOzone = .35f;
-		tauO = expf(-m * k_oCurve.sample(lambda) * lOzone);
+		tauO = expf(-m * k_oCurve.Sample(lambda) * lOzone);
 			// Attenuation due to mixed gases absorption
-		tauG = expf(-1.41f * k_gCurve.sample(lambda) * m / powf(1.f +
-			118.93f * k_gCurve.sample(lambda) * m, 0.45f));
+		tauG = expf(-1.41f * k_gCurve.Sample(lambda) * m / powf(1.f +
+			118.93f * k_gCurve.Sample(lambda) * m, 0.45f));
 			// Attenuation due to water vapor absorbtion
 			// w - precipitable water vapor in centimeters (standard = 2)
 		const float w = 2.0f;
-		tauWA = expf(-0.2385f * k_waCurve.sample(lambda) * w * m /
-		powf(1.f + 20.07f * k_waCurve.sample(lambda) * w * m, 0.45f));
+		tauWA = expf(-0.2385f * k_waCurve.Sample(lambda) * w * m /
+		powf(1.f + 20.07f * k_waCurve.Sample(lambda) * w * m, 0.45f));
 
-		Ldata[i] = (solCurve.sample(lambda) *
-			tauR * tauA * tauO * tauG * tauWA);
+		Ldata[i] = (solCurve.Sample(lambda) * tauR * tauA * tauO * tauG * tauWA);
 	}
 
 	RegularSPD LSPD(Ldata, 350, 800, 91);
-	color = gain * LSPD.ToNormalizedXYZ().ToRGB() / (relSize * relSize);
+
+	const ColorSystem colorSystem;
+	color = gain * colorSystem.ToRGBConstrained(LSPD.ToNormalizedXYZ()) / (relSize * relSize);
 }
 
 void SunLight::GetPreprocessedData(float *absoluteSunDirData,

@@ -19,7 +19,7 @@
 #ifndef _SLG_FILTER_H
 #define	_SLG_FILTER_H
 
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
 #include "luxrays/core/utils.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"

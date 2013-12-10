@@ -146,7 +146,7 @@ std::string KernelSource_bsdf_funcs =
 "	} else\n"
 "#endif\n"
 "		hitPointColor = WHITE;\n"
-"	VSTORE3F(hitPointColor, &bsdf->hitPoint.color.r);\n"
+"	VSTORE3F(hitPointColor, bsdf->hitPoint.color.c);\n"
 "#endif\n"
 "\n"
 "	//--------------------------------------------------------------------------\n"

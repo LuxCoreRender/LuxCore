@@ -2220,7 +2220,7 @@ static Spectrum FrFull(const float cosi, const Spectrum &cost, const Spectrum &e
 	const Spectrum tmp = (eta * eta + k * k) * (cosi * cosi) + (cost * cost);
 	const Spectrum Rparl2 = (tmp - (2.f * cosi * cost) * eta) /
 		(tmp + (2.f * cosi * cost) * eta);
-	const Spectrum tmp_f = (eta * eta + k * k) * (cost * cost) + (cosi * cosi);
+	const Spectrum tmp_f = (eta * eta + k * k) * (cost * cost) + Spectrum(cosi * cosi);
 	const Spectrum Rperp2 = (tmp_f - (2.f * cosi * cost) * eta) /
 		(tmp_f + (2.f * cosi * cost) * eta);
 	return (Rparl2 + Rperp2) * .5f;
@@ -2258,5 +2258,5 @@ Spectrum slg::FresnelCauchy_Evaluate(const float eta, const float cosi) {
 		return Spectrum(1.f);
 	else
 		return FrDiel2(fabsf(cosi), Spectrum(sqrtf(Max(0.f, 1.f - sint2))),
-			entering ? eta : Spectrum(1.f) / eta);
+			entering ? eta : Spectrum(1.f / eta));
 }

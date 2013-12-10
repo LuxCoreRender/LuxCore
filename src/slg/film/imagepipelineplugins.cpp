@@ -57,9 +57,9 @@ void GammaCorrectionPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, s
 
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i]) {
-			pixels[i].r = Radiance2PixelFloat(pixels[i].r);
-			pixels[i].g = Radiance2PixelFloat(pixels[i].g);
-			pixels[i].b = Radiance2PixelFloat(pixels[i].b);
+			pixels[i].c[0] = Radiance2PixelFloat(pixels[i].c[0]);
+			pixels[i].c[1] = Radiance2PixelFloat(pixels[i].c[1]);
+			pixels[i].c[2] = Radiance2PixelFloat(pixels[i].c[2]);
 		}
 	}
 }
@@ -100,9 +100,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float v[3];
 					film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetWeightedPixel(i, v);
-					pixels[i].r = v[0];
-					pixels[i].g = v[1];
-					pixels[i].b = v[2];
+					pixels[i] = Spectrum(v);
 				}
 			}
 			break;
@@ -115,9 +113,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float v[3];
 					film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetWeightedPixel(i, v);
-					pixels[i].r = v[0];
-					pixels[i].g = v[1];
-					pixels[i].b = v[2];
+					pixels[i] = Spectrum(v);
 				}
 			}
 			break;
@@ -127,9 +123,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float a;
 					film.channel_ALPHA->GetWeightedPixel(i, &a);
-					pixels[i].r = a;
-					pixels[i].g = a;
-					pixels[i].b = a;
+					pixels[i] = Spectrum(a);
 				}
 			}
 			break;
@@ -139,9 +133,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float d;
 					film.channel_DEPTH->GetWeightedPixel(i, &d);
-					pixels[i].r = d;
-					pixels[i].g = d;
-					pixels[i].b = d;
+					pixels[i] = Spectrum(d);
 				}
 			}
 			break;
@@ -150,9 +142,9 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i]) {
 					float *v = film.channel_POSITION->GetPixel(i);
-					pixels[i].r = fabs(v[0]);
-					pixels[i].g = fabs(v[1]);
-					pixels[i].b = fabs(v[2]);
+					pixels[i].c[0] = fabs(v[0]);
+					pixels[i].c[1] = fabs(v[1]);
+					pixels[i].c[2] = fabs(v[2]);
 				}
 			}
 			break;
@@ -161,9 +153,9 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i]) {
 					float *v = film.channel_GEOMETRY_NORMAL->GetPixel(i);
-					pixels[i].r = fabs(v[0]);
-					pixels[i].g = fabs(v[1]);
-					pixels[i].b = fabs(v[2]);
+					pixels[i].c[0] = fabs(v[0]);
+					pixels[i].c[1] = fabs(v[1]);
+					pixels[i].c[2] = fabs(v[2]);
 				}
 			}
 			break;
@@ -172,9 +164,9 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i]) {
 					float *v = film.channel_SHADING_NORMAL->GetPixel(i);
-					pixels[i].r = fabs(v[0]);
-					pixels[i].g = fabs(v[1]);
-					pixels[i].b = fabs(v[2]);
+					pixels[i].c[0] = fabs(v[0]);
+					pixels[i].c[1] = fabs(v[1]);
+					pixels[i].c[2] = fabs(v[2]);
 				}
 			}
 			break;
@@ -183,9 +175,9 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i]) {
 					u_int *v = film.channel_MATERIAL_ID->GetPixel(i);
-					pixels[i].r = (*v) & 0xff;
-					pixels[i].g = ((*v) & 0xff00) >> 8;
-					pixels[i].b = ((*v) & 0xff0000) >> 16;
+					pixels[i].c[0] = (*v) & 0xff;
+					pixels[i].c[1] = ((*v) & 0xff00) >> 8;
+					pixels[i].c[2] = ((*v) & 0xff0000) >> 16;
 				}
 			}
 			break;
@@ -193,42 +185,42 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 		case Film::DIRECT_DIFFUSE: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i])
-					film.channel_DIRECT_DIFFUSE->GetWeightedPixel(i, &pixels[i].r);
+					film.channel_DIRECT_DIFFUSE->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}
 		case Film::DIRECT_GLOSSY: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i])
-					film.channel_DIRECT_GLOSSY->GetWeightedPixel(i, &pixels[i].r);
+					film.channel_DIRECT_GLOSSY->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}
 		case Film::EMISSION: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i])
-					film.channel_EMISSION->GetWeightedPixel(i, &pixels[i].r);
+					film.channel_EMISSION->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}
 		case Film::INDIRECT_DIFFUSE: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i])
-					film.channel_INDIRECT_DIFFUSE->GetWeightedPixel(i, &pixels[i].r);
+					film.channel_INDIRECT_DIFFUSE->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}
 		case Film::INDIRECT_GLOSSY: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i])
-					film.channel_INDIRECT_GLOSSY->GetWeightedPixel(i, &pixels[i].r);
+					film.channel_INDIRECT_GLOSSY->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}
 		case Film::INDIRECT_SPECULAR: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i])
-					film.channel_INDIRECT_SPECULAR->GetWeightedPixel(i, &pixels[i].r);
+					film.channel_INDIRECT_SPECULAR->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}
@@ -240,9 +232,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float v;
 					film.channel_MATERIAL_ID_MASKs[index]->GetWeightedPixel(i, &v);
-					pixels[i].r = v;
-					pixels[i].g = v;
-					pixels[i].b = v;
+					pixels[i] = Spectrum(v);
 				}
 			}
 			break;
@@ -252,9 +242,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float v;
 					film.channel_DIRECT_SHADOW_MASK->GetWeightedPixel(i, &v);
-					pixels[i].r = v;
-					pixels[i].g = v;
-					pixels[i].b = v;
+					pixels[i] = Spectrum(v);
 				}
 			}
 			break;
@@ -264,9 +252,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float v;
 					film.channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(i, &v);
-					pixels[i].r = v;
-					pixels[i].g = v;
-					pixels[i].b = v;
+					pixels[i] = Spectrum(v);
 				}
 			}
 			break;
@@ -276,9 +262,9 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float v[2];
 					film.channel_UV->GetWeightedPixel(i, v);
-					pixels[i].r = v[0];
-					pixels[i].g = v[1];
-					pixels[i].b = 0.f;
+					pixels[i].c[0] = v[0];
+					pixels[i].c[1] = v[1];
+					pixels[i].c[2] = 0.f;
 				}
 			}
 			break;
@@ -288,9 +274,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 				if (pixelsMask[i]) {
 					float v;
 					film.channel_RAYCOUNT->GetWeightedPixel(i, &v);
-					pixels[i].r = v;
-					pixels[i].g = v;
-					pixels[i].b = v;
+					pixels[i] = Spectrum(v);
 				}
 			}
 			break;
@@ -301,7 +285,7 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i])
-					film.channel_BY_MATERIAL_IDs[index]->GetWeightedPixel(i, &pixels[i].r);
+					film.channel_BY_MATERIAL_IDs[index]->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}
