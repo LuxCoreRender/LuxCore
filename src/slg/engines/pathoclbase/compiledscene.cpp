@@ -655,7 +655,7 @@ void CompiledScene::CompileLights() {
 						&oclLight->notIntersecable.sun.x.x,
 						&oclLight->notIntersecable.sun.y.x,
 						NULL, NULL, NULL,
-						&oclLight->notIntersecable.sun.cosThetaMax, NULL);
+						&oclLight->notIntersecable.sun.cosThetaMax, &oclLight->notIntersecable.sun.sin2ThetaMax);
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.sun.color, sl->color);
 				oclLight->notIntersecable.sun.turbidity = sl->turbidity;
 				oclLight->notIntersecable.sun.relSize= sl->relSize;

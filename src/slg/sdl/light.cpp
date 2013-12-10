@@ -1967,10 +1967,12 @@ Spectrum SunLight::Emit(const Scene &scene,
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
 	*orig = worldCenter + worldRadius * (absoluteSunDir + d1 * x + d2 * y);
 	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
-	*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
-		*directPdfA = UniformConePdf(cosThetaMax);
+		*directPdfA = uniformConePdf;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(absoluteSunDir, -(*dir));
@@ -1990,14 +1992,15 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 		return Spectrum();
 
 	*distance = numeric_limits<float>::infinity();
-	*directPdfW = UniformConePdf(cosThetaMax);
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	*directPdfW = uniformConePdf;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
 	if (emissionPdfW) {
 		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
-		*emissionPdfW =  UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+		*emissionPdfW =  uniformConePdf / (M_PI * worldRadius * worldRadius);
 	}
 	
 	return color;
@@ -2007,19 +2010,22 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	if ((cosThetaMax < 1.f) && (Dot(-dir, absoluteSunDir) > cosThetaMax)) {
-		if (directPdfA)
-			*directPdfA = UniformConePdf(cosThetaMax);
+	const float xD = Dot(-dir, x);
+	const float yD = Dot(-dir, y);
+	const float zD = Dot(-dir, absoluteSunDir);
+	if ((cosThetaMax == 1.f) || (zD < 0.f) || ((xD * xD + yD * yD) > sin2ThetaMax))
+		return Spectrum();
 
-		if (emissionPdfW) {
-			const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
-			*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
-		}
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	if (directPdfA)
+		*directPdfA = uniformConePdf;
 
-		return color;
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+		*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
 	}
 
-	return Spectrum();
+	return color;
 }
 
 Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
