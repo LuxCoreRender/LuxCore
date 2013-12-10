@@ -838,7 +838,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_ray_types <<
 			luxrays::ocl::KernelSource_bbox_types <<
 			luxrays::ocl::KernelSource_epsilon_types <<
-			luxrays::ocl::KernelSource_spectrum_types <<
+			luxrays::ocl::KernelSource_color_types <<
 			luxrays::ocl::KernelSource_frame_types <<
 			luxrays::ocl::KernelSource_matrix4x4_types <<
 			luxrays::ocl::KernelSource_transform_types <<
@@ -848,7 +848,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_vector_funcs <<
 			luxrays::ocl::KernelSource_ray_funcs <<
 			luxrays::ocl::KernelSource_bbox_funcs <<
-			luxrays::ocl::KernelSource_spectrum_funcs <<
+			luxrays::ocl::KernelSource_color_funcs <<
 			luxrays::ocl::KernelSource_frame_funcs <<
 			luxrays::ocl::KernelSource_matrix4x4_funcs <<
 			luxrays::ocl::KernelSource_transform_funcs <<

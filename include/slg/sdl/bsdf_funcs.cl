@@ -143,7 +143,7 @@ void BSDF_Init(
 	} else
 #endif
 		hitPointColor = WHITE;
-	VSTORE3F(hitPointColor, &bsdf->hitPoint.color.r);
+	VSTORE3F(hitPointColor, bsdf->hitPoint.color.c);
 #endif
 
 	//--------------------------------------------------------------------------

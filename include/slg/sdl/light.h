@@ -25,9 +25,11 @@
 #include "luxrays/core/randomgen.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
 #include "luxrays/utils/mcdistribution.h"
-#include "slg/core/spd.h"
+#include "luxrays/core/color/color.h"
+#include "luxrays/core/color/spds/regular.h"
+#include "luxrays/core/color/spds/irregular.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/material.h"
@@ -667,7 +669,7 @@ private:
 	float ComputeY(const luxrays::Vector &w) const;
 
 	luxrays::Vector absoluteSunDir;
-	slg::RegularSPD *model[10];
+	luxrays::RegularSPD *model[10];
 	luxrays::Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
 		gTerm, hTerm, iTerm, radianceTerm;
 	float aFilter, bFilter, cFilter, dFilter, eFilter, fFilter,

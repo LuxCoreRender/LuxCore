@@ -16,10 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-namespace slg {
-
 // 32 bin RGB spectra for smits RGB->RGBColor conversion using E whitepoint (for reflectances)
 // generated with matlab by karlvb - added by radiance
+
+namespace luxrays {
 
 static const unsigned int refrgb2spect_bins  = 32;
 static const float refrgb2spect_start = 380.f;
@@ -144,5 +144,15 @@ static float refrgb2spect_blue[] =			{ 9.9209771469720676e-01,   9.8876426059369
 											4.9814819505812249e-02,   3.9840911064978023e-02,
 											3.0501024937233868e-02,   2.1243054765241080e-02,
 											6.9596532104356399e-03,   4.1733649330980525e-03 };
+
+
+// Original 11 bin representation from smits paper (obsolete)
+//static float refrgb2spect_white[] =	{ 1.0000, 1.0000, 0.9999, 0.9993, 0.9992, 0.9998, 1.0000, 1.0000, 1.0000, 1.0000 };
+//static float refrgb2spect_cyan[] =	{ 0.9710, 0.9426, 1.0007, 1.0007, 1.0007, 1.0007, 0.1564, 0.0000, 0.0000, 0.0000 };
+//static float refrgb2spect_magenta[] =	{ 1.0000, 1.0000, 0.9685, 0.2229, 0.0000, 0.0458, 0.8369, 1.0000, 1.0000, 0.9959 };
+//static float refrgb2spect_yellow[] =	{ 0.0001, 0.0000, 0.1088, 0.6651, 1.0000, 1.0000, 0.9996, 0.9586, 0.9685, 0.9840 };
+//static float refrgb2spect_red[] =		{ 0.1012, 0.0515, 0.0000, 0.0000, 0.0000, 0.0000, 0.8325, 1.0149, 1.0149, 1.0149 };
+//static float refrgb2spect_green[] =	{ 0.0000, 0.0000, 0.0273, 0.7937, 1.0000, 0.9418, 0.1719, 0.0000, 0.0000, 0.0025 };
+//static float refrgb2spect_blue[] =	{ 1.0000, 1.0000, 0.8916, 0.3323, 0.0000, 0.0000, 0.0003, 0.0369, 0.0483, 0.0496 };
 
 }

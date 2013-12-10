@@ -190,7 +190,7 @@ template<> Property &Property::Add<Point>(const Point &v) {
 }
 
 template<> Property &Property::Add<Spectrum>(const Spectrum &v) {
-	return Add(v.r).Add(v.g).Add(v.b);
+	return Add(v.c[0]).Add(v.c[1]).Add(v.c[2]);
 }
 
 template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &m) {

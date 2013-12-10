@@ -625,9 +625,9 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 				const Spectrum c = map0->GetSpectrum(uv) * map1->GetSpectrum(uv);
 
 				const u_int index = (x + y * width) * 3;
-				mergedImg[index] = c.r;
-				mergedImg[index + 1] = c.g;
-				mergedImg[index + 2] = c.b;
+				mergedImg[index] = c.c[0];
+				mergedImg[index + 1] = c.c[1];
+				mergedImg[index + 2] = c.c[2];
 			}
 		}
 
@@ -666,9 +666,9 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 				const Spectrum c = map->GetSpectrum(uv);
 
 				const u_int index = (x + y * width) * 3;
-				newImg[index] = c.r;
-				newImg[index + 1] = c.g;
-				newImg[index + 2] = c.b;
+				newImg[index] = c.c[0];
+				newImg[index + 1] = c.c[1];
+				newImg[index + 2] = c.c[2];
 			}
 		}
 
@@ -867,7 +867,7 @@ float FresnelApproxN(const float Fr) {
 }
 
 Spectrum FresnelApproxN(const Spectrum &Fr) {
-	const Spectrum sqrtReflectance = Sqrt(Fr.Clamp(0.f, .999f));
+	const Spectrum sqrtReflectance = Fr.Clamp(0.f, .999f).Sqrt();
 
 	return (Spectrum(1.f) + sqrtReflectance) /
 		(Spectrum(1.f) - sqrtReflectance);
@@ -1621,7 +1621,7 @@ Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 
 	for (u_int i = 0; i < offsets.size(); ++i) {
 		props.Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));
-		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i].b));
+		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i]));
 	}
 
 	return props;
@@ -1674,11 +1674,11 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) 
 //------------------------------------------------------------------------------
 
 float HitPointGreyTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return (channel > 2) ? hitPoint.color.Y() : hitPoint.color[channel];
+	return (channel > 2) ? hitPoint.color.Y() : hitPoint.color.c[channel];
 }
 
 Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float v = (channel > 2) ? hitPoint.color.Y() : hitPoint.color[channel];
+	const float v = (channel > 2) ? hitPoint.color.Y() : hitPoint.color.c[channel];
 	return Spectrum(v);
 }
 

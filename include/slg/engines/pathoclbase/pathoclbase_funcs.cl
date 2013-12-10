@@ -98,11 +98,11 @@
 
 void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent, const uint lightID,
 		__global SampleResult *sampleResult, const float3 emission) {
-	VADD3F(&sampleResult->radiancePerPixelNormalized[lightID].r, emission);
+	VADD3F(sampleResult->radiancePerPixelNormalized[lightID].c, emission);
 
 	if (firstPathVertex) {
 #if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-		VADD3F(&sampleResult->emission.r, emission);
+		VADD3F(sampleResult->emission.c, emission);
 #endif
 	} else {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
@@ -110,15 +110,15 @@ void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent, cons
 #endif
 		if (pathBSDFEvent & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-			VADD3F(&sampleResult->indirectDiffuse.r, emission);
+			VADD3F(sampleResult->indirectDiffuse.c, emission);
 #endif
 		} else if (pathBSDFEvent & GLOSSY) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-			VADD3F(&sampleResult->indirectGlossy.r, emission);
+			VADD3F(sampleResult->indirectGlossy.c, emission);
 #endif
 		} else if (pathBSDFEvent & SPECULAR) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-			VADD3F(&sampleResult->indirectSpecular.r, emission);
+			VADD3F(sampleResult->indirectSpecular.c, emission);
 #endif
 		}
 	}

@@ -16,43 +16,40 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-/* SPD classes are from luxrender */
-
-#ifndef _SLG_SPD_H
-#define	_SLG_SPD_H
-
-#include <cstddef>
+#ifndef _LUXRAYS_SPD_H
+#define _LUXRAYS_SPD_H
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/spectrum.h"
-#include "luxrays/utils/mc.h"
+#include "luxrays/core/utils.h"
 
-namespace slg {
+namespace luxrays {
+
+class XYZColor;
 
 class SPD {
 public:
-	SPD() {
-		nSamples = 0U;
+	SPD() { 
+		nSamples = 0U; 
 		lambdaMin = lambdaMax = delta = invDelta = 0.f;
 		samples = NULL;
 	}
 	virtual ~SPD() { FreeSamples(); }
 
-	// Samples the SPD by performing a linear interpolation on the data
-	inline float sample(const float lambda) const {
+	// samples the SPD by performing a linear interpolation on the data
+	inline float Sample(const float lambda) const {
 		if (nSamples <= 1 || lambda < lambdaMin || lambda > lambdaMax)
 			return 0.f;
 
 		// interpolate the two closest samples linearly
 		const float x = (lambda - lambdaMin) * invDelta;
-		const unsigned int b0 = luxrays::Floor2UInt(x);
-		const unsigned int b1 = luxrays::Min(b0 + 1, nSamples - 1);
+		const u_int b0 = luxrays::Floor2UInt(x);
+		const u_int b1 = Min(b0 + 1, nSamples - 1);
 		const float dx = x - b0;
 		return luxrays::Lerp(dx, samples[b0], samples[b1]);
 	}
 
-	inline void sample(unsigned int n, const float lambda[], float *p) const {
-		for (unsigned int i = 0; i < n; ++i) {
+	inline void Sample(u_int n, const float lambda[], float *p) const {
+		for (u_int i = 0; i < n; ++i) {
 			if (nSamples <= 1 || lambda[i] < lambdaMin ||
 				lambda[i] > lambdaMax) {
 				p[i] = 0.f;
@@ -61,8 +58,8 @@ public:
 
 			// interpolate the two closest samples linearly
 			const float x = (lambda[i] - lambdaMin) * invDelta;
-			const unsigned int b0 = luxrays::Floor2UInt(x);
-			const unsigned int b1 = luxrays::Min(b0 + 1, nSamples - 1);
+			const u_int b0 = luxrays::Floor2UInt(x);
+			const u_int b1 = Min(b0 + 1, nSamples - 1);
 			const float dx = x - b0;
 			p[i] = luxrays::Lerp(dx, samples[b0], samples[b1]);
 		}
@@ -96,77 +93,23 @@ public:
 
 	float Y() const;
 	float Filter() const;
-	luxrays::Spectrum ToXYZ() const;
-	luxrays::Spectrum ToNormalizedXYZ() const;
-
-	void AllocateSamples(unsigned int n);
+	XYZColor ToXYZ() const;
+	XYZColor ToNormalizedXYZ() const;
+	void AllocateSamples(u_int n);
 	void FreeSamples();
-
 	void Normalize();
 	void Clamp();
 	void Scale(float s);
 	void Whitepoint(float temp);
 
 protected:
-	unsigned int nSamples;
+	u_int nSamples;
 	float lambdaMin, lambdaMax;
 	float delta, invDelta;
 	float *samples;
 
 };
 
-// regularly sampled SPD, reconstructed using linear interpolation
-class RegularSPD : public SPD {
-public:
-	RegularSPD() : SPD() {}
-
-	//  creates a regularly sampled SPD
-	//  samples    array of sample values
-	//  lambdaMin  wavelength (nm) of first sample
-	//  lambdaMax  wavelength (nm) of last sample
-	//  n          number of samples
-	RegularSPD(const float* const s, float lMin, float lMax, unsigned int n) : SPD() {
-		init(lMin, lMax, s, n);
-	}
-
-	virtual ~RegularSPD() {}
-
-protected:
-	void init(float lMin, float lMax, const float* const s, unsigned int n);
-};
-
-// only use spline for regular data
-typedef enum { Linear, Spline } SPDResamplingMethod;
-
-// Irregularly sampled SPD
-// Resampled to a fixed resolution (at construction)
-// using cubic spline interpolation
-class IrregularSPD : public SPD {
-public:
-
-	IrregularSPD() : SPD() {}
-
-	// creates an irregularly sampled SPD
-	// may "truncate" the edges to fit the new resolution
-	//  wavelengths   array containing the wavelength of each sample
-	//  samples       array of sample values at the given wavelengths
-	//  n             number of samples
-	//  resolution    resampling resolution (in nm)
-	IrregularSPD(const float* const wavelengths, const float* const samples,
-		unsigned int n, float resolution = 5, SPDResamplingMethod resamplignMethod = Linear);
-
-	virtual ~IrregularSPD() {}
-
-protected:
-	  void init(float lMin, float lMax, const float* const s, unsigned int n);
-
-private:
-	// computes data for natural spline interpolation
-	// from Numerical Recipes in C
-	void calc_spline_data(const float* const wavelengths,
-	const float* const amplitudes, unsigned int n, float *spline_data);
-};
-
 }
 
-#endif	/* _SLG_SPD_H */
+#endif // _LUXRAYS_SPD_H

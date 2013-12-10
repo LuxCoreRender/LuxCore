@@ -18,7 +18,7 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
 #include "slg/film/tonemap.h"
 #include "slg/film/imagepipelineplugins.h"
 #include "slg/film/film.h"
@@ -63,7 +63,7 @@ ToneMapType slg::String2ToneMapType(const std::string &type) {
 // Auto-linear tone mapping
 //------------------------------------------------------------------------------
 
-void AutoLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	float Y = 0.f;
@@ -101,7 +101,7 @@ void AutoLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::
 // Linear tone mapping
 //------------------------------------------------------------------------------
 
-void LinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void LinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	for (u_int i = 0; i < pixelCount; ++i) {
@@ -114,7 +114,7 @@ void LinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vect
 // LuxRender Linear tone mapping
 //------------------------------------------------------------------------------
 
-void LuxLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	float gamma = 2.2f;
@@ -135,19 +135,23 @@ void LuxLinearToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::v
 // Reinhard02 tone mapping
 //------------------------------------------------------------------------------
 
-void Reinhard02ToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool> &pixelsMask) const {
+	RGBColor *rgbPixels = (RGBColor *)pxls;
+	XYZColor *xyzPixels = (XYZColor *)pxls;
+
 	const float alpha = .1f;
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	// Use the frame buffer as temporary storage and calculate the average luminance
 	float Ywa = 0.f;
-
+	const ColorSystem colorSystem;
 	for (u_int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i] && !pixels[i].IsInf()) {
+		if (pixelsMask[i] && !rgbPixels[i].IsInf()) {
 			// Convert to XYZ color space
-			pixels[i] = pixels[i].ToXYZ();
+			const XYZColor xyz = colorSystem.ToXYZ(rgbPixels[i]);
+			xyzPixels[i] = xyz;
 
-			Ywa += pixels[i].g;
+			Ywa += xyzPixels[i].Y();
 		}
 	}
 	Ywa /= pixelCount;
@@ -162,13 +166,12 @@ void Reinhard02ToneMap::Apply(const Film &film, luxrays::Spectrum *pixels, std::
 
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i]) {
-			Spectrum xyz = pixels[i];
-
-			const float ys = xyz.g;
-			xyz *= pScale * (1.f + ys * invY2) / (1.f + ys);
+			const float ys = xyzPixels[i].Y();
+			xyzPixels[i] *= pScale * (1.f + ys * invY2) / (1.f + ys);
 
 			// Convert back to RGB color space
-			pixels[i] = pixels[i].ToRGB();
+			const RGBColor rgb = colorSystem.ToRGBConstrained(xyzPixels[i]);
+			rgbPixels[i] = rgb;
 		}
 	}
 }
