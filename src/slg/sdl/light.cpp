@@ -1270,8 +1270,8 @@ void SkyLight::Preprocess() {
 	float T2 = T * T;
 
 	float chi = (4.f / 9.f - T / 120.f) * (M_PI - 2.0f * absoluteTheta);
-	zenith_Y = (4.0453f * T - 4.9710f) * tan(chi) - 0.2155f * T + 2.4192f;
-	zenith_Y *= 0.06f;
+	zenith_Y = (4.0453f * T - 4.9710f) * tanf(chi) - 0.2155f * T + 2.4192f;
+	zenith_Y *= 1000;  // conversion from kcd/m^2 to cd/m^2
 
 	zenith_x =
 	(0.00166f * theta3 - 0.00375f * theta2 + 0.00209f * absoluteTheta) * T2 +
@@ -1638,17 +1638,16 @@ void SkyLight2::Preprocess() {
 
 	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
-	const ColorSystem colorSystem;
-	aTerm = colorSystem.ToRGBConstrained(model[0]->ToNormalizedXYZ());
-	bTerm = colorSystem.ToRGBConstrained(model[1]->ToNormalizedXYZ());
-	cTerm = colorSystem.ToRGBConstrained(model[2]->ToNormalizedXYZ());
-	dTerm = colorSystem.ToRGBConstrained(model[3]->ToNormalizedXYZ());
-	eTerm = colorSystem.ToRGBConstrained(model[4]->ToNormalizedXYZ());
-	fTerm = colorSystem.ToRGBConstrained(model[5]->ToNormalizedXYZ());
-	gTerm = colorSystem.ToRGBConstrained(model[6]->ToNormalizedXYZ());
-	hTerm = colorSystem.ToRGBConstrained(model[7]->ToNormalizedXYZ());
-	iTerm = colorSystem.ToRGBConstrained(model[8]->ToNormalizedXYZ());
-	radianceTerm = colorSystem.ToRGBConstrained(model[9]->ToNormalizedXYZ());
+	aTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[0]->ToXYZ()).Clamp();
+	bTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[1]->ToXYZ()).Clamp();
+	cTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[2]->ToXYZ()).Clamp();
+	dTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[3]->ToXYZ()).Clamp();
+	eTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[4]->ToXYZ()).Clamp();
+	fTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[5]->ToXYZ()).Clamp();
+	gTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[6]->ToXYZ()).Clamp();
+	hTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[7]->ToXYZ()).Clamp();
+	iTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[8]->ToXYZ()).Clamp();
+	radianceTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[9]->ToXYZ()).Clamp();
 
 	aFilter = model[0]->Filter();
 	bFilter = model[1]->Filter();
@@ -1906,9 +1905,8 @@ void SunLight::Preprocess() {
 	}
 
 	RegularSPD LSPD(Ldata, 350, 800, 91);
-
-	const ColorSystem colorSystem;
-	color = gain * colorSystem.ToRGBConstrained(LSPD.ToNormalizedXYZ()) / (relSize * relSize);
+	color = (gain / (relSize * relSize)) *
+			ColorSystem::DefaultColorSystem.ToRGBConstrained(LSPD.ToXYZ()).Clamp();
 }
 
 void SunLight::GetPreprocessedData(float *absoluteSunDirData,

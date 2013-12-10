@@ -271,6 +271,9 @@ public:
 	XYZColor(float v) {
 			c[0] = v; c[1] = v; c[2] = v;
 	}
+	XYZColor(float x, float y, float z) {
+		c[0] = x; c[1] = y; c[2] = z;
+	}
 	XYZColor(float cs[3]) {
 			c[0] = cs[0]; c[1] = cs[1]; c[2] = cs[2];
 	}
@@ -348,6 +351,9 @@ public:
 //protected:
 	bool Constrain(const XYZColor &xyz, RGBColor &rgb) const;
 	RGBColor Limit(const RGBColor &rgb, int method) const;
+
+	static const ColorSystem DefaultColorSystem;
+
 	float xRed, yRed; //!<Red coordinates
 	float xGreen, yGreen; //!<Green coordinates
 	float xBlue, yBlue; //!<Blue coordinates
