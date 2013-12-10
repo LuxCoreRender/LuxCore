@@ -40,12 +40,13 @@
 #include <cstddef>
 #include <string>
 
+#include <luxcore/cfg.h>
 #include <luxrays/utils/properties.h>
+#include <luxrays/utils/exportdefs.h>
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
 #include <slg/sdl/scene.h>
 #include <slg/film/film.h>
-#include <luxcore/cfg.h>
 
 /*! \mainpage LuxCore
  *
@@ -61,7 +62,7 @@
  */
 namespace luxcore {
 
-extern void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
+CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
 
 #define LC_LOG(a) { if (luxcore::LuxCore_LogHandler) { std::stringstream _LUXCORE_LOG_LOCAL_SS; _LUXCORE_LOG_LOCAL_SS << a; luxcore::LuxCore_LogHandler(_LUXCORE_LOG_LOCAL_SS.str().c_str()); } }
 
@@ -72,7 +73,7 @@ extern void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
  *
  * \param LogHandler is a pointer to a function receiving all LuxCore log messages.
  */
-extern void Init(void (*LogHandler)(const char *) = NULL);
+CPP_EXPORT CPP_API void Init(void (*LogHandler)(const char *) = NULL);
 
 /*!
  * \brief Parses a scene described using LuxRender SDL (Scene Description Language).
@@ -81,7 +82,7 @@ extern void Init(void (*LogHandler)(const char *) = NULL);
  * \param renderConfig is where the rendering configuration properties are returned.
  * \param scene is where the scene properties are returned.
  */
-extern void ParseLXS(const std::string &fileName, luxrays::Properties &renderConfig, luxrays::Properties &scene);
+CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Properties &renderConfig, luxrays::Properties &scene);
 
 class RenderSession;
 
@@ -89,7 +90,7 @@ class RenderSession;
  * \brief Film stores all the outputs of a rendering. It can be obtained only
  * from a RenderSession.
  */
-class Film {
+CPP_EXPORT class CPP_API Film {
 public:
 	/*!
 	* \brief Types of Film channel  available.
@@ -251,7 +252,7 @@ class Scene;
  * \brief Film stores all the outputs of a rendering. It can be obtained only
  * from a RenderSession.
  */
-class Camera {
+CPP_EXPORT class CPP_API Camera {
 public:
 	~Camera();
 
@@ -333,7 +334,7 @@ private:
 /*!
  * \brief Scene stores textures, materials and objects definitions.
  */
-class Scene {
+CPP_EXPORT class CPP_API Scene {
 public:
 	/*!
 	 * \brief Constructs a new empty Scene.
@@ -514,7 +515,7 @@ private:
  * \brief RenderConfig stores all the configuration settings used to render a
  * scene.
  */
-class RenderConfig {
+CPP_EXPORT class CPP_API RenderConfig {
 public:
 	/*!
 	 * \brief Constructs a new RenderConfig using the provided Properties and
@@ -602,7 +603,7 @@ private:
 /*!
  * \brief RenderSession execute a rendering based on the RenderConfig provided.
  */
-class RenderSession {
+CPP_EXPORT class CPP_API RenderSession {
 public:
 	/*!
 	 * \brief Constructs a new RenderSession using the provided RenderConfig.
