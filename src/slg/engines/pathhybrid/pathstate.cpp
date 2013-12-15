@@ -134,9 +134,8 @@ void PathHybridState::DirectLightSampling(const PathHybridRenderThread *renderTh
 				directLightRay = Ray(bsdf.hitPoint.p, lightRayDir,
 						epsilon, distance - epsilon);
 
-				const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
 				const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-				const float factor = cosThetaToLight / directLightSamplingPdfW;
+				const float factor = 1.f / directLightSamplingPdfW;
 
 				if (depth >= renderEngine->rrDepth) {
 					// Russian Roulette
@@ -294,7 +293,7 @@ double PathHybridState::CollectResults(HybridRenderThread *renderThread) {
 				SplatSample(thread);
 				return 1.0;
 			} else {
-				throuput *= bsdfSample * (cosSampledDir / lastPdfW);
+				throuput *= bsdfSample;
 				assert (!throuput.IsNaN() && !throuput.IsInf());
 
 				nextPathVertexRay = Ray(bsdf.hitPoint.p, sampledDir);
