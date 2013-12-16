@@ -132,10 +132,8 @@ void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 		BSDFEvent eyeEvent;
 		/* Trick to have proper shading normal adaption */
 		/* lightVertex can't be used directly because of texture variations */
-		const_cast<PathVertexVM &>(eyeVertex).bsdf.hitPoint.fromLight = true;
 		const Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(lightVertex->bsdf.hitPoint.fixedDir,
-				&eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW) / AbsDot(eyeVertex.bsdf.hitPoint.fixedDir, eyeVertex.bsdf.hitPoint.shadeN);
-		const_cast<PathVertexVM &>(eyeVertex).bsdf.hitPoint.fromLight = false;
+				&eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW) / AbsDot(lightVertex->bsdf.hitPoint.fixedDir, eyeVertex.bsdf.hitPoint.geometryN);
 		if(eyeBsdfEval.Black())
 			return;
 
