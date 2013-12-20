@@ -458,7 +458,7 @@ bool DirectLightSampling(
 
 		if (!Spectrum_IsBlack(bsdfEval)) {
 			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-			const float factor = cosThetaToLight / directLightSamplingPdfW;
+			const float factor = 1.f / directLightSamplingPdfW;
 
 			// MIS between direct light sampling and BSDF sampling
 			const float weight = Light_IsEnvOrIntersecable(light) ?
