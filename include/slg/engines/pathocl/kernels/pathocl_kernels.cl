@@ -279,7 +279,7 @@ bool DirectLightSampling(
 		if (!Spectrum_IsBlack(bsdfEval)) {
 			const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
 			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-			const float factor = cosThetaToLight / directLightSamplingPdfW;
+			const float factor = 1.f / directLightSamplingPdfW;
 
 			// Russian Roulette
 			bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
@@ -898,11 +898,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 		const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath;
 		if (continuePath) {
-			if (rrEnabled)
-				lastPdfW *= rrProb; // Russian Roulette
-
 			float3 throughput = VLOAD3F(task->pathStateBase.throughput.c);
-			throughput *= bsdfSample * (cosSampledDir / lastPdfW);
+			throughput *= bsdfSample;
+			if (rrEnabled)
+				throughput /= rrProb; // Russian Roulette
+
 			VSTORE3F(throughput, task->pathStateBase.throughput.c);
 
 			Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir);

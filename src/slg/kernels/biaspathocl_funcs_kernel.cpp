@@ -461,7 +461,7 @@ std::string KernelSource_biaspathocl_funcs =
 "\n"
 "		if (!Spectrum_IsBlack(bsdfEval)) {\n"
 "			const float directLightSamplingPdfW = directPdfW * lightPickPdf;\n"
-"			const float factor = cosThetaToLight / directLightSamplingPdfW;\n"
+"			const float factor = 1.f / directLightSamplingPdfW;\n"
 "\n"
 "			// MIS between direct light sampling and BSDF sampling\n"
 "			const float weight = Light_IsEnvOrIntersecable(light) ?\n"
