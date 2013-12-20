@@ -209,7 +209,7 @@ Spectrum MatteMaterial::Evaluate(const HitPoint &hitPoint,
 		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
 
 	*event = DIFFUSE | REFLECT;
-	return Kd->GetSpectrumValue(hitPoint).Clamp() * INV_PI * fabsf(localLightDir.z);
+	return Kd->GetSpectrumValue(hitPoint).Clamp() * (INV_PI * fabsf(localLightDir.z));
 }
 
 Spectrum MatteMaterial::Sample(const HitPoint &hitPoint,
@@ -292,7 +292,6 @@ Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	*pdfW = 1.f;
 
 	*absCosSampledDir = fabsf(localSampledDir->z);
-	// The absCosSampledDir is used to compensate the other one used inside the integrator
 	return Kr->GetSpectrumValue(hitPoint).Clamp();
 }
 
@@ -913,11 +912,34 @@ Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		// Energy conservation
 		(Spectrum(1.f) - r);
 
+	const bool isKrBlack = r.Black();
+	const bool isKtBlack = t.Black();
+
+	// Decide to transmit or reflect
+	float threshold;
+	if (!isKrBlack) {
+		if (!isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if (!isKtBlack)
+			threshold = 1.f;
+		else {
+			if (directPdfW)
+				*directPdfW = 0.f;
+			if (reversePdfW)
+				*reversePdfW = 0.f;
+			return Spectrum();
+		}
+	}
+	const float weight = (localLightDir.z * localEyeDir.z > 0.f) ?
+		threshold : (1.f - threshold);
 	if (directPdfW)
-		*directPdfW = .5f * fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (.5f * INV_PI));
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (weight * INV_PI));
 
 	if (reversePdfW)
-		*reversePdfW = .5f * fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (.5f * INV_PI));
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (weight * INV_PI));
 
 	if (localLightDir.z * localEyeDir.z > 0.f) {
 		*event = DIFFUSE | REFLECT;
@@ -1141,7 +1163,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 		if (reversePdfW)
 			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
 
-		*event = GLOSSY | REFLECT;
+		*event = DIFFUSE | REFLECT;
 		return baseF;
 	}
 
@@ -1203,8 +1225,9 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if ((!(requestedEvent & (GLOSSY | REFLECT)) && localFixedDir.z > 0.f) ||
+		(!(requestedEvent & (DIFFUSE | REFLECT)) && localFixedDir.z <= 0.f) ||
+		(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
 	if (localFixedDir.z <= 0.f) {
@@ -1937,7 +1960,7 @@ Spectrum VelvetMaterial::Sample(const HitPoint &hitPoint,
 	else if (p < 0.0f)
 		p = 0.0f;
 	
-	return Kd->GetSpectrumValue(hitPoint).Clamp() * p / *pdfW;
+	return Kd->GetSpectrumValue(hitPoint).Clamp() * (p / *pdfW);
 }
 
 void VelvetMaterial::Pdf(const HitPoint &hitPoint,
