@@ -77,8 +77,8 @@ if (NOT Boost_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
 endif()
 
-if (NOT FreeImage_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required FreeImage files - Please check ${FREEIMAGE_SEARCH_PATH}")
+if (NOT OPENIMAGEIO_FOUND)
+	MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
 endif()
 
 if (NOT OPENCL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)

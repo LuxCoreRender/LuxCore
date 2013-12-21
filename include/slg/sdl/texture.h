@@ -23,7 +23,8 @@
 #include <windows.h>
 #endif
 
-#include <FreeImage.h>
+#include <OpenImageIO/imageio.h>
+OIIO_NAMESPACE_USING
 
 #include <string>
 #include <vector>
@@ -256,8 +257,7 @@ public:
 		const u_int width, const u_int height);
 	
 private:
-	void Init(FIBITMAP *dib);
-	FIBITMAP *GetFreeImageBitMap() const;
+	void ReverseGammaCorrection();
 
 	float GetFloatTexel(const int s, const int t) const {
 		const u_int u = luxrays::Mod<int>(s, width);

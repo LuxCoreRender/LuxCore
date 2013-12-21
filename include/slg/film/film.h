@@ -32,8 +32,6 @@
 #include <windows.h>
 #endif
 
-#include <FreeImage.h>
-
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/core/geometry/point.h"
