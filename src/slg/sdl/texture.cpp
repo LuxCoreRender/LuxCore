@@ -20,6 +20,9 @@
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
 
+#include <OpenImageIO/imagebufalgo.h>
+#include <OpenImageIO/imagebuf.h>
+
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/bsdf.h"
@@ -261,21 +264,25 @@ ImageMap::ImageMap(const string &fileName, const float g) {
 
 	SDL_LOG("Reading texture map: " << fileName);
 
-	FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFILETYPE(FREEIMAGE_CONVFILENAME(fileName).c_str(), 0);
-	if(fif == FIF_UNKNOWN)
-		fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
+	ImageInput *in = ImageInput::open(fileName);
+	
+	if (in) {
+	  const ImageSpec &spec = in->spec();
 
-	if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif)) {
-		FIBITMAP *dib = FREEIMAGE_LOAD(fif, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0);
-
-		if (!dib)
-			throw runtime_error("Unable to read texture map: " + fileName);
-
-		Init(dib);
-
-		FreeImage_Unload(dib);
-	} else
-		throw runtime_error("Unknown image file format: " + fileName);
+	  width = spec.width;
+	  height = spec.height;
+	  channelCount = spec.nchannels;
+	  
+	  pixels = new float[width * height * channelCount];
+	  
+	  in->read_image(TypeDesc::FLOAT, &pixels[0]);
+	  in->close();
+	  delete in;
+	}
+	else
+	  throw runtime_error("Unknown image file format: " + fileName);
+	
+	ReverseGammaCorrection();
 }
 
 ImageMap::ImageMap(float *p, const float g, const u_int count,
@@ -293,167 +300,19 @@ ImageMap::~ImageMap() {
 	delete[] pixels;
 }
 
-void ImageMap::Init(FIBITMAP *dib) {
-	width = FreeImage_GetWidth(dib);
-	height = FreeImage_GetHeight(dib);
-
-	u_int pitch = FreeImage_GetPitch(dib);
-	FREE_IMAGE_TYPE imageType = FreeImage_GetImageType(dib);
-	u_int bpp = FreeImage_GetBPP(dib);
-	BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-
-	if ((imageType == FIT_RGBAF) && (bpp == 128)) {
-		channelCount = 3;
-		SDL_LOG("HDR RGB (128bit) texture map size: " << width << "x" << height << " (" <<
-				width * height * sizeof(float) * channelCount / 1024 << "Kbytes)");
-		pixels = new float[width * height * channelCount];
-
-		for (u_int y = 0; y < height; ++y) {
-			FIRGBAF *pixel = (FIRGBAF *)bits;
-			for (u_int x = 0; x < width; ++x) {
-				const u_int offset = (x + (height - y - 1) * width) * channelCount;
-
-				if (gamma == 1.f) {
-					pixels[offset] = pixel[x].red;
-					pixels[offset + 1] = pixel[x].green;
-					pixels[offset + 2] = pixel[x].blue;
-				} else {
-					// Apply reverse gamma correction
-					pixels[offset] = powf(pixel[x].red, gamma);
-					pixels[offset + 1] = powf(pixel[x].green, gamma);
-					pixels[offset + 2] = powf(pixel[x].blue, gamma);
-				}
-			}
-
-			// Next line
-			bits += pitch;
+void ImageMap::ReverseGammaCorrection() {
+	if (gamma != 1.0) {
+		if (channelCount < 4) {
+			for (u_longlong i=0; i<(width * height * channelCount); i++)
+				pixels[i] = powf(pixels[i], gamma);
 		}
-	} else if ((imageType == FIT_RGBF) && (bpp == 96)) {
-		channelCount = 3;
-		SDL_LOG("HDR RGB (96bit) texture map size: " << width << "x" << height << " (" <<
-				width * height * sizeof(float) * channelCount / 1024 << "Kbytes)");
-		pixels = new float[width * height * channelCount];
-
-		for (u_int y = 0; y < height; ++y) {
-			FIRGBF *pixel = (FIRGBF *)bits;
-			for (u_int x = 0; x < width; ++x) {
-				const u_int offset = (x + (height - y - 1) * width) * channelCount;
-
-				if (gamma == 1.f) {
-					pixels[offset] = pixel[x].red;
-					pixels[offset + 1] = pixel[x].green;
-					pixels[offset + 2] = pixel[x].blue;
-				} else {
-					// Apply reverse gamma correction
-					pixels[offset] = powf(pixel[x].red, gamma);
-					pixels[offset + 1] = powf(pixel[x].green, gamma);
-					pixels[offset + 2] = powf(pixel[x].blue, gamma);
-				}
+		else {
+			for (u_longlong i=0; i<(width * height * channelCount); i+=4) {
+				pixels[i] = powf(pixels[i], gamma);
+				pixels[i+1] = powf(pixels[i+1], gamma);
+				pixels[i+2] = powf(pixels[i+2], gamma);
 			}
-
-			// Next line
-			bits += pitch;
 		}
-	} else if ((imageType == FIT_FLOAT) && (bpp == 32)) {
-		channelCount = 1;
-		SDL_LOG("HDR FLOAT (32bit) texture map size: " << width << "x" << height << " (" <<
-				width * height * sizeof(float) * channelCount / 1024 << "Kbytes)");
-		pixels = new float[width * height * channelCount];
-
-		for (u_int y = 0; y < height; ++y) {
-			float *pixel = (float *)bits;
-			for (u_int x = 0; x < width; ++x) {
-				const u_int offset = (x + (height - y - 1) * width) * channelCount;
-
-				if (gamma == 1.f)
-					pixels[offset] = pixel[x];
-				else {
-					// Apply reverse gamma correction
-					pixels[offset] = powf(pixel[x], gamma);
-				}
-			}
-
-			// Next line
-			bits += pitch;
-		}
-	} else if ((imageType == FIT_BITMAP) && (bpp == 32)) {
-		channelCount = 4;
-		SDL_LOG("RGBA texture map size: " << width << "x" << height << " (" <<
-				width * height * sizeof(float) * channelCount / 1024 << "Kbytes)");
-		pixels = new float[width * height * channelCount];
-
-		for (u_int y = 0; y < height; ++y) {
-			BYTE *pixel = (BYTE *)bits;
-			for (u_int x = 0; x < width; ++x) {
-				const u_int offset = (x + (height - y - 1) * width) * channelCount;
-
-				if (gamma == 1.f) {
-					pixels[offset] = pixel[FI_RGBA_RED] / 255.f;
-					pixels[offset + 1] = pixel[FI_RGBA_GREEN] / 255.f;
-					pixels[offset + 2] = pixel[FI_RGBA_BLUE] / 255.f;
-				} else {
-					pixels[offset] = powf(pixel[FI_RGBA_RED] / 255.f, gamma);
-					pixels[offset + 1] = powf(pixel[FI_RGBA_GREEN] / 255.f, gamma);
-					pixels[offset + 2] = powf(pixel[FI_RGBA_BLUE] / 255.f, gamma);
-				}
-				pixels[offset + 3] = pixel[FI_RGBA_ALPHA] / 255.f;
-				pixel += 4;
-			}
-
-			// Next line
-			bits += pitch;
-		}
-	} else if (bpp == 24) {
-		channelCount = 3;
-		SDL_LOG("RGB texture map size: " << width << "x" << height << " (" <<
-				width * height * sizeof(float) * channelCount / 1024 << "Kbytes)");
-		pixels = new float[width * height * channelCount];
-
-		for (u_int y = 0; y < height; ++y) {
-			BYTE *pixel = (BYTE *)bits;
-			for (u_int x = 0; x < width; ++x) {
-				const u_int offset = (x + (height - y - 1) * width) * channelCount;
-
-				if (gamma == 1.f) {
-					pixels[offset] = pixel[FI_RGBA_RED] / 255.f;
-					pixels[offset + 1] = pixel[FI_RGBA_GREEN] / 255.f;
-					pixels[offset + 2] = pixel[FI_RGBA_BLUE] / 255.f;
-				} else {
-					pixels[offset] = powf(pixel[FI_RGBA_RED] / 255.f, gamma);
-					pixels[offset + 1] = powf(pixel[FI_RGBA_GREEN] / 255.f, gamma);
-					pixels[offset + 2] = powf(pixel[FI_RGBA_BLUE] / 255.f, gamma);
-				}
-				pixel += 3;
-			}
-
-			// Next line
-			bits += pitch;
-		}
-	} else if (bpp == 8) {
-		channelCount = 1;
-		SDL_LOG("Grey texture map size: " << width << "x" << height << " (" <<
-				width * height * sizeof(float) * channelCount / 1024 << "Kbytes)");
-		pixels = new float[width * height];
-
-		for (u_int y = 0; y < height; ++y) {
-			BYTE pixel;
-			for (u_int x = 0; x < width; ++x) {
-				FreeImage_GetPixelIndex(dib, x, y, &pixel);
-				const u_int offset = (x + (height - y - 1) * width) * channelCount;
-
-				if (gamma == 1.f)
-					pixels[offset] = pixel / 255.f;
-				else
-					pixels[offset] = powf(pixel / 255.f, gamma);
-			}
-
-			// Next line
-			bits += pitch;
-		}
-	} else {
-		stringstream msg;
-		msg << "Unsupported bitmap depth (" << bpp << ") in a texture map";
-		throw runtime_error(msg.str());
 	}
 }
 
@@ -461,107 +320,36 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	if ((width == newHeight) && (height == newHeight))
 		return;
 
-	// Convert the image in FreeImage format
-	FIBITMAP *dib = GetFreeImageBitMap();
-
+	ImageSpec spec(width, height, channelCount, TypeDesc::FLOAT);
+	
+	ImageBuf source(spec, (void *)pixels);
+	ImageBuf dest;
+	
+	ROI roi(0,newWidth, 0,newHeight, 0, 1, 0, source.nchannels());
+	ImageBufAlgo::resize(dest,source,"",0,roi);
+	
 	// I can delete the current image
 	delete[] pixels;
-	pixels = NULL;
 
-	FIBITMAP *scaleDib = FreeImage_Rescale(dib, newWidth, newHeight, FILTER_CATMULLROM);
-	FreeImage_Unload(dib);
-
-	Init(scaleDib);
+	width = newWidth;
+	height = newHeight;
 	
-	FreeImage_Unload(scaleDib);
-}
-
-FIBITMAP *ImageMap::GetFreeImageBitMap() const {
-	if (channelCount == 4) {
-		// RGBA image
-		FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBAF, width, height, 128);
-
-		if (dib) {
-			unsigned int pitch = FreeImage_GetPitch(dib);
-			BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-
-			for (unsigned int y = 0; y < height; ++y) {
-				FIRGBAF *pixel = (FIRGBAF *)bits;
-				for (unsigned int x = 0; x < width; ++x) {
-					const unsigned int ridx = (height - y - 1) * width + x;
-
-					pixel[x].red = pixels[ridx * channelCount];
-					pixel[x].green = pixels[ridx * channelCount + 1];
-					pixel[x].blue = pixels[ridx * channelCount + 2];
-					pixel[x].alpha = pixels[ridx * channelCount + 3];
-				}
-
-				// Next line
-				bits += pitch;
-			}
-
-			return dib;
-		} else
-			throw runtime_error("Unable to allocate FreeImage HDR image");
-	} else if (channelCount == 3) {
-		// RGB image
-		FIBITMAP *dib = FreeImage_AllocateT(FIT_RGBF, width, height, 96);
-
-		if (dib) {
-			unsigned int pitch = FreeImage_GetPitch(dib);
-			BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-
-			for (unsigned int y = 0; y < height; ++y) {
-				FIRGBF *pixel = (FIRGBF *)bits;
-				for (unsigned int x = 0; x < width; ++x) {
-					const unsigned int ridx = (height - y - 1) * width + x;
-
-					pixel[x].red = pixels[ridx * channelCount];
-					pixel[x].green = pixels[ridx * channelCount + 1];
-					pixel[x].blue = pixels[ridx * channelCount + 2];
-				}
-
-				// Next line
-				bits += pitch;
-			}
-
-			return dib;
-		} else
-			throw runtime_error("Unable to allocate FreeImage HDR image");
-	} else if (channelCount == 1) {
-		// Grey image
-		FIBITMAP *dib = FreeImage_AllocateT(FIT_FLOAT, width, height, 32);
-
-		if (dib) {
-			unsigned int pitch = FreeImage_GetPitch(dib);
-			BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-
-			for (unsigned int y = 0; y < height; ++y) {
-				float *pixel = (float *)bits;
-				for (unsigned int x = 0; x < width; ++x) {
-					const unsigned int ridx = (height - y - 1) * width + x;
-
-					pixel[x] = pixels[ridx * channelCount];
-				}
-
-				// Next line
-				bits += pitch;
-			}
-
-			return dib;
-		} else
-			throw runtime_error("Unable to allocate FreeImage HDR image");
-	} else
-		throw runtime_error("Unknown channel count in ImageMap::GetFreeImageBitMap(): " + boost::lexical_cast<string>(channelCount));
+	pixels = new float[width * height * channelCount];
+	
+	dest.get_pixels(0,width, 0,height, 0,1, TypeDesc::FLOAT, pixels);
 }
 
 void ImageMap::WriteImage(const string &fileName) const {
-	FIBITMAP *dib = GetFreeImageBitMap();
-
-	if (!FREEIMAGE_SAVE(FIF_EXR, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
+	ImageOutput *out = ImageOutput::create(fileName);
+	if (out) {
+		ImageSpec spec(width, height, channelCount, TypeDesc::HALF);
+		out->open(fileName, spec);
+		out->write_image(TypeDesc::FLOAT, pixels);
+		out->close();
+		delete out;
+	}
+	else
 		throw runtime_error("Failed image save");
-
-	FreeImage_Unload(dib);
 }
 
 float ImageMap::GetSpectrumMean() const {

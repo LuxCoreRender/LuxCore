@@ -41,17 +41,6 @@ static void DefaultDebugHandler(const char *msg) {
 	cerr << msg << endl;
 }
 
-static void FreeImageErrorHandler(FREE_IMAGE_FORMAT fif, const char *message) {
-	if (LuxCore_LogHandler) {
-		stringstream ss;
-		ss << "[FreeImage] ";
-		if (fif != FIF_UNKNOWN)
-			ss << FreeImage_GetFormatFromFIF(fif) << " Format: ";
-		ss << message;
-		LuxCore_LogHandler(ss.str().c_str());
-	}
-}
-
 static void LuxRaysDebugHandler(const char *msg) {
 	if (LuxCore_LogHandler) {
 		stringstream ss;
@@ -76,17 +65,7 @@ static void SLGDebugHandler(const char *msg) {
 	}
 }
 
-static void InitFreeImage() {
-	// Initialize FreeImage Library
-	FreeImage_Initialise(TRUE);
-}
-
 void luxcore::Init(void (*LogHandler)(const char *)) {
-	static boost::once_flag initFreeImageOnce = BOOST_ONCE_INIT;
-
-	// Run the FreeImage initialization only once
-	boost::call_once(initFreeImageOnce, &InitFreeImage);
-
 	// To be thread safe
 	static boost::mutex initMutex;
 	boost::unique_lock<boost::mutex> lock(initMutex);
@@ -103,7 +82,6 @@ void luxcore::Init(void (*LogHandler)(const char *)) {
 	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
 	slg::SLG_DebugHandler = ::SLGDebugHandler;
 	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;	
-	FreeImage_SetOutputMessage(FreeImageErrorHandler);
 }
 
 //------------------------------------------------------------------------------

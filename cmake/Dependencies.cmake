@@ -28,12 +28,7 @@ getenv_path(LuxRays_DEPENDENCIES_DIR)
 # Find threading library
 FIND_PACKAGE(Threads REQUIRED)
 
-# Find FreeImage
-find_package(FreeImage)
-
-if (FreeImage_FOUND)
-	include_directories(SYSTEM ${FreeImage_INCLUDE_DIRS})
-endif ()
+find_package(OpenImageIO REQUIRED)
 
 if(NOT APPLE)
 	# Find Python Libraries
