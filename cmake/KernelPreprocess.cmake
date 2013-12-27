@@ -42,7 +42,7 @@ FUNCTION(PreprocessOCLKernel NAMESPACE KERNEL SRC DST)
 			COMMAND echo \"\#include <string>\" > ${DST}
 			COMMAND echo namespace ${NAMESPACE} \"{ namespace ocl {\" >> ${DST}
 			COMMAND echo "std::string KernelSource_${KERNEL} = " >> ${DST}
-			COMMAND cat ${SRC} | sed 's/\\r//g' | sed 's/\\\\/\\\\\\\\/g' | sed 's/\"/\\\\\"/g' | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${DST}
+			COMMAND cat ${SRC} | sed 's/\r//g' | sed 's/\\\\/\\\\\\\\/g' | sed 's/\"/\\\\\"/g' | awk '{ printf \(\"\\"%s\\\\n\\"\\n\", $$0\) }' >> ${DST}
 			COMMAND echo "\; } }" >> ${DST}
 			MAIN_DEPENDENCY ${SRC}
 		)
