@@ -45,7 +45,7 @@ namespace ocl {
 class Scene;
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
+	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET,
 
 	// The following types are used (in PATHOCL CompiledScene class) only to
@@ -415,52 +415,6 @@ private:
 	const Texture *Kt;
 	const Texture *ousideIor;
 	const Texture *ior;
-};
-
-//------------------------------------------------------------------------------
-// Metal material
-//------------------------------------------------------------------------------
-
-class MetalMaterial : public Material {
-public:
-	MetalMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *refl, const Texture *exp) : Material(emitted, bump, normal),
-			Kr(refl), exponent(exp) { }
-
-	virtual MaterialType GetType() const { return METAL; }
-	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
-
-	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
-		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
-		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
-		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent) const;
-	virtual void Pdf(const HitPoint &hitPoint,
-		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
-		float *directPdfW, float *reversePdfW) const {
-		if (directPdfW)
-			*directPdfW = 0.f;
-		if (reversePdfW)
-			*reversePdfW = 0.f;
-	}
-
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
-
-	virtual luxrays::Properties ToProperties() const;
-
-	const Texture *GetKr() const { return Kr; }
-	const Texture *GetExp() const { return exponent; }
-
-private:
-	static luxrays::Vector GlossyReflection(const luxrays::Vector &localFixedDir, const float exponent,
-			const float u0, const float u1);
-
-	const Texture *Kr;
-	const Texture *exponent;
 };
 
 //------------------------------------------------------------------------------

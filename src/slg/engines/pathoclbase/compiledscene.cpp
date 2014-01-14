@@ -346,14 +346,6 @@ void CompiledScene::CompileMaterials() {
 				mat->glass.iorTexIndex = scene->texDefs.GetTextureIndex(gm->GetIOR());
 				break;
 			}
-			case METAL: {
-				MetalMaterial *mm = static_cast<MetalMaterial *>(m);
-
-				mat->type = slg::ocl::METAL;
-				mat->metal.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
-				mat->metal.expTexIndex = scene->texDefs.GetTextureIndex(mm->GetExp());
-				break;
-			}
 			case ARCHGLASS: {
 				ArchGlassMaterial *am = static_cast<ArchGlassMaterial *>(m);
 

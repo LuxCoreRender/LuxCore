@@ -66,7 +66,7 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 		Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
 		const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-		const float factor = cosThetaToLight / directLightSamplingPdfW;
+		const float factor = 1.f / directLightSamplingPdfW;
 
 		// MIS between direct light sampling and BSDF sampling
 		const float weight = (light->IsEnvironmental() || light->IsIntersecable()) ? 
@@ -326,7 +326,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Check if I have to stop because of path depth
 		depthInfo.IncDepths(lastBSDFEvent);
 
-		pathThroughput *= bsdfSample * (cosSampledDir / ((lastBSDFEvent & SPECULAR) ? lastPdfW : max(engine->pdfClampValue, lastPdfW)));
+		pathThroughput *= bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
 		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 		ray = Ray(bsdf.hitPoint.p, sampledDir);
@@ -360,7 +360,7 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			PathDepthInfo depthInfo;
 			depthInfo.IncDepths(event);
 
-			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / ((event & SPECULAR) ? pdfW : max(engine->pdfClampValue, pdfW)));
+			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * scaleFactor * min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
 			assert (!continuepathThroughput.IsNaN() && !continuepathThroughput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);

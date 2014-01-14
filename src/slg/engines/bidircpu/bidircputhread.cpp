@@ -54,13 +54,13 @@ void BiDirCPURenderThread::ConnectVertices(
 		// Check light vertex BSDF
 		float lightBsdfPdfW, lightBsdfRevPdfW;
 		BSDFEvent lightEvent;
-		Spectrum lightBsdfEval = eyeVertex.bsdf.Evaluate(eyeDir, &lightEvent, &lightBsdfPdfW, &lightBsdfRevPdfW);
+		Spectrum lightBsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &lightEvent, &lightBsdfPdfW, &lightBsdfRevPdfW);
 
 		if (!lightBsdfEval.Black()) {
 			// Check the 2 surfaces can see each other
 			const float cosThetaAtCamera = Dot(eyeVertex.bsdf.hitPoint.shadeN, eyeDir);
 			const float cosThetaAtLight = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
-			const float geometryTerm = cosThetaAtLight * cosThetaAtLight / eyeDistance2;
+			const float geometryTerm = 1.f / eyeDistance2;
 			if (geometryTerm <= 0.f)
 				return;
 
@@ -147,7 +147,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 					scene->camera->GetPixelArea());
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-				const float fluxToRadianceFactor = cameraPdfA;
+				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
 				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
@@ -211,7 +211,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 						(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
 					const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
 
-					const float factor = cosThetaToLight / directLightSamplingPdfW;
+					const float factor = 1.f / directLightSamplingPdfW;
 
 					*radiance += (misWeight * factor) * eyeVertex.throughput * connectionThroughput * lightRadiance * bsdfEval;
 				}
@@ -374,7 +374,7 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 			return false;
 	}
 
-	pathVertex->throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
+	pathVertex->throughput *= bsdfSample;
 	assert (!pathVertex->throughput.IsNaN() && !pathVertex->throughput.IsInf());
 
 	// New MIS weights

@@ -22,7 +22,7 @@ std::string KernelSource_material_types =
 " ***************************************************************************/\n"
 "\n"
 "typedef enum {\n"
-"	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,\n"
+"	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,\n"
 "	GLOSSY2, METAL2, ROUGHGLASS, VELVET\n"
 "} MaterialType;\n"
 "\n"

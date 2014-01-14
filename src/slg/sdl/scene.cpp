@@ -837,11 +837,6 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
 
 		mat = new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
-	} else if (matType == "metal") {
-		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
-		Texture *exp = GetTexture(props.Get(Property(propName + ".exp")(10.f)));
-
-		mat = new MetalMaterial(emissionTex, bumpTex, normalTex, kr, exp);
 	} else if (matType == "archglass") {
 		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));

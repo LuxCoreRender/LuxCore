@@ -66,9 +66,8 @@ void PathCPURenderThread::DirectLightSampling(
 				// Check if the light source is visible
 				if (!scene->Intersect(device, false, u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-					const float factor = cosThetaToLight / directLightSamplingPdfW;
+					const float factor = 1.f / directLightSamplingPdfW;
 
 					if (depth >= engine->rrDepth) {
 						// Russian Roulette
@@ -343,7 +342,7 @@ void PathCPURenderThread::RenderFunc() {
 					break;
 			}
 
-			pathThroughput *= bsdfSample * (cosSampledDir / lastPdfW);
+			pathThroughput *= bsdfSample;
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
