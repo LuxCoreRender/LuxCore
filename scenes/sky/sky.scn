@@ -19,4 +19,4 @@ scene.lights.sunlight.type = sun
 scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085
 scene.lights.sunlight.turbidity = 2.2
 scene.lights.sunlight.gain = .00005 .00005 .00005
-#scene.lights.sunlight.relsize = 32
+scene.lights.sunlight.relsize = 32

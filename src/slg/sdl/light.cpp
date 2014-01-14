@@ -169,6 +169,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 			power *= iWorldRadius2;			
 			envLightSources.push_back((EnvLightSource *)l);
 		}
+std::cout<<"==="<<l->GetType()<<"=="<<power<<"\n";
 		lightPower.push_back(power);
 		totalPower += power;
 
@@ -1950,7 +1951,7 @@ void SunLight::GetPreprocessedData(float *absoluteSunDirData,
 float SunLight::GetPower(const Scene &scene) const {
 	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
 
-	return color.Y() * (M_PI * worldRadius * worldRadius) * 2.f * M_PI * sin2ThetaMax / (relSize * relSize);
+	return color.Y() * (M_PI * worldRadius * worldRadius) * 2.f * M_PI * sin2ThetaMax;
 }
 
 Spectrum SunLight::Emit(const Scene &scene,
