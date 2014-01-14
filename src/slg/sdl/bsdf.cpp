@@ -113,11 +113,9 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 			event, directPdfW, reversePdfW);
 
 	// Adjoint BSDF
-	if (hitPoint.fromLight) {
-		const float absDotLightDirNS = AbsDot(lightDir, hitPoint.shadeN);
-		const float absDotEyeDirNS = AbsDot(eyeDir, hitPoint.shadeN);
-		return result * ((absDotLightDirNS * absDotEyeDirNG) / (absDotEyeDirNS * absDotLightDirNG));
-	} else
+	if (hitPoint.fromLight)
+		return result * (absDotEyeDirNG / absDotLightDirNG);
+	else
 		return result;
 }
 
@@ -138,11 +136,9 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 
 	// Adjoint BSDF
 	if (hitPoint.fromLight) {
-		const float absDotFixedDirNS = fabsf(localFixedDir.z);
-		const float absDotSampledDirNS = fabsf(localSampledDir.z);
 		const float absDotFixedDirNG = AbsDot(hitPoint.fixedDir, hitPoint.geometryN);
 		const float absDotSampledDirNG = AbsDot(*sampledDir, hitPoint.geometryN);
-		return result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
+		return result * (absDotSampledDirNG / absDotFixedDirNG);
 	} else
 		return result;
 }

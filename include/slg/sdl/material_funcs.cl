@@ -55,9 +55,6 @@ bool Material_IsDeltaNoMix(__global Material *material) {
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
 #endif
-#if defined (PARAM_ENABLE_MAT_METAL)
-		case METAL:
-#endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
 #endif
@@ -87,10 +84,6 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 		case GLASS:
 			return SPECULAR | REFLECT | TRANSMIT;
 #endif
-#if defined (PARAM_ENABLE_MAT_METAL)
-		case METAL:
-			return GLOSSY | REFLECT;
-#endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
 			return SPECULAR | REFLECT | TRANSMIT;
@@ -105,7 +98,7 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
-			return GLOSSY | REFLECT;
+			return DIFFUSE | GLOSSY | REFLECT;
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
@@ -152,12 +145,6 @@ float3 Material_SampleNoMix(__global Material *material,
 		case GLASS:
 			return GlassMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
 					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
-					TEXTURES_PARAM);
-#endif
-#if defined (PARAM_ENABLE_MAT_METAL)
-		case METAL:
-			return MetalMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
@@ -241,9 +228,6 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
-#endif
-#if defined (PARAM_ENABLE_MAT_METAL)
-		case METAL:
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -543,7 +527,7 @@ float3 MixMaterial_Sample(__global Material *material,
 
 			const float weight = parentWeight * weightFirst;
 			*pdfW += weight * pdfWMatFirst;
-			result += weight * sampleResult;
+			result += weight * sampleResult * pdfWMatFirst;
 
 			// I can stop now
 			break;
@@ -576,7 +560,7 @@ float3 MixMaterial_Sample(__global Material *material,
 		}
 	}
 
-	return result;
+	return result / *pdfW;
 }
 
 float3 MixMaterial_GetEmittedRadiance(__global Material *material, __global HitPoint *hitPoint
