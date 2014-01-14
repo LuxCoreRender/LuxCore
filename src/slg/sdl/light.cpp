@@ -1361,7 +1361,7 @@ float SkyLight::GetPower(const Scene &scene) const {
 	}
 	power /= steps * steps;
 
-	return power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
+	return gain.Y() * power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
 }
 
 void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const {
@@ -1745,7 +1745,7 @@ float SkyLight2::GetPower(const Scene &scene) const {
 	}
 	power /= steps * steps;
 
-	return power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
+	return gain.Y() * power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
 }
 
 Spectrum SkyLight2::Emit(const Scene &scene,
