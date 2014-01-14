@@ -169,7 +169,6 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 			power *= iWorldRadius2;			
 			envLightSources.push_back((EnvLightSource *)l);
 		}
-std::cout<<"==="<<l->GetType()<<"=="<<power<<"\n";
 		lightPower.push_back(power);
 		totalPower += power;
 
@@ -1607,25 +1606,9 @@ Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
 		Pow(Spectrum(1.f) + iTerm * (iTerm - Spectrum(2.f * cosG)), 1.5f));
 	const Spectrum zenithTerm(hTerm * sqrtf(cosT));
 
-	return (Spectrum(1.f) + aTerm * Exp(bTerm / (cosT + .01f))) *
+	// 0.00001f is an arbitrary scale factor to match LuxRender intensity output
+	return 0.00001f * (Spectrum(1.f) + aTerm * Exp(bTerm / (cosT + .01f))) *
 		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
-}
-
-float SkyLight2::ComputeY(const Vector &w) const {
-	const float cosG = RiCosBetween(w, absoluteSunDir);
-
-	const float cosG2 = cosG * cosG;
-	const float gamma = acosf(cosG);
-	const float cosT = max(0.f, CosTheta(w));
-
-	const float expTerm = dFilter* expf(eFilter * gamma);
-	const float rayleighTerm = fFilter * cosG2;
-	const float mieTerm = gFilter * (1.f + cosG2) /
-		powf(1.f + iFilter * (iFilter - 2.f * cosG), 1.5f);
-	const float zenithTerm = hFilter * sqrtf(cosT);
-
-	return (1.f + aFilter * expf(bFilter / (cosT + .01f))) *
-		(cFilter + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceY;
 }
 
 void SkyLight2::Preprocess() {
@@ -1639,27 +1622,16 @@ void SkyLight2::Preprocess() {
 
 	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
-	aTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[0]->ToXYZ()).Clamp();
-	bTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[1]->ToXYZ()).Clamp();
-	cTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[2]->ToXYZ()).Clamp();
-	dTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[3]->ToXYZ()).Clamp();
-	eTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[4]->ToXYZ()).Clamp();
-	fTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[5]->ToXYZ()).Clamp();
-	gTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[6]->ToXYZ()).Clamp();
-	hTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[7]->ToXYZ()).Clamp();
-	iTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[8]->ToXYZ()).Clamp();
-	radianceTerm = ColorSystem::DefaultColorSystem.ToRGBConstrained(model[9]->ToXYZ()).Clamp();
-
-	aFilter = model[0]->Filter();
-	bFilter = model[1]->Filter();
-	cFilter = model[2]->Filter();
-	dFilter = model[3]->Filter();
-	eFilter = model[4]->Filter();
-	fFilter = model[5]->Filter();
-	gFilter = model[6]->Filter();
-	hFilter = model[7]->Filter();
-	iFilter = model[8]->Filter();
-	radianceY = model[9]->Y();
+	aTerm = ColorSystem::DefaultColorSystem.ToRGB(model[0]->ToXYZ());
+	bTerm = ColorSystem::DefaultColorSystem.ToRGB(model[1]->ToXYZ());
+	cTerm = ColorSystem::DefaultColorSystem.ToRGB(model[2]->ToXYZ());
+	dTerm = ColorSystem::DefaultColorSystem.ToRGB(model[3]->ToXYZ());
+	eTerm = ColorSystem::DefaultColorSystem.ToRGB(model[4]->ToXYZ());
+	fTerm = ColorSystem::DefaultColorSystem.ToRGB(model[5]->ToXYZ());
+	gTerm = ColorSystem::DefaultColorSystem.ToRGB(model[6]->ToXYZ());
+	hTerm = ColorSystem::DefaultColorSystem.ToRGB(model[7]->ToXYZ());
+	iTerm = ColorSystem::DefaultColorSystem.ToRGB(model[8]->ToXYZ());
+	radianceTerm = ColorSystem::DefaultColorSystem.ToRGB(model[9]->ToXYZ());
 }
 
 void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
@@ -1741,8 +1713,8 @@ float SkyLight2::GetPower(const Scene &scene) const {
 	float power = 0.f;
 	for (u_int i = 0; i < steps; ++i) {
 		for (u_int j = 0; j < steps; ++j)
-			power += ComputeY(UniformSampleSphere(i * deltaStep + deltaStep / 2.f,
-					j * deltaStep + deltaStep / 2.f));
+			power += ComputeRadiance(UniformSampleSphere(i * deltaStep + deltaStep / 2.f,
+					j * deltaStep + deltaStep / 2.f)).Y();
 	}
 	power /= steps * steps;
 

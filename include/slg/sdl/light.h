@@ -672,8 +672,6 @@ private:
 	luxrays::RegularSPD *model[10];
 	luxrays::Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
 		gTerm, hTerm, iTerm, radianceTerm;
-	float aFilter, bFilter, cFilter, dFilter, eFilter, fFilter,
-		gFilter, hFilter, iFilter, radianceY;
 };
 
 //------------------------------------------------------------------------------
