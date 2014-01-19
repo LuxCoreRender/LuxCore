@@ -924,6 +924,33 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *thickness = GetTexture(props.Get(Property(propName + ".thickness")(0.1f)));
 
 		mat = new VelvetMaterial(emissionTex, bumpTex, normalTex, kd, p1, p2, p3, thickness);
+	} else if (matType == "cloth") {
+		ClothPreset preset = DENIM;
+		
+		if (props.IsDefined(propName + ".preset")) {
+			const string type = props.Get(Property(propName + ".preset")("denim")).Get<string>();
+			
+			if (type == "denim")
+				preset = DENIM;
+			else if (type == "silk_charmeuse")
+				preset = SILKCHARMEUSE;  
+			else if (type == "silk_shantung")
+				preset = SILKSHANTUNG;  
+			else if (type == "cotton_twill")
+				preset = COTTONTWILL;  
+			else if (type == "wool_garbardine")
+				preset = WOOLGARBARDINE;  
+			else if (type == "polyester_lining_cloth")
+				preset = POLYESTER;  
+		}
+		Texture *weft_kd = GetTexture(props.Get(Property(propName + ".weft_kd")(.5f, .5f, .5f)));
+		Texture *weft_ks = GetTexture(props.Get(Property(propName + ".weft_ks")(.5f, .5f, .5f)));
+		Texture *warp_kd = GetTexture(props.Get(Property(propName + ".warp_ks")(.5f, .5f, .5f)));
+		Texture *warp_ks = GetTexture(props.Get(Property(propName + ".warp_kd")(.5f, .5f, .5f)));
+		float repeat_u = props.Get(Property(propName + ".repeat_u")(100.0f)).Get<float>();
+		float repeat_v = props.Get(Property(propName + ".repeat_v")(100.0f)).Get<float>();
+
+		mat = new ClothMaterial(emissionTex, bumpTex, normalTex, preset, weft_kd, weft_ks, warp_kd, warp_ks, repeat_u, repeat_v);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 

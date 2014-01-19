@@ -78,7 +78,7 @@ static float NoiseWeight(float t) {
 	return 6.f * t4 * t - 15.f * t4 + 10.f * t3;
 }
 
-static float Noise(float x, float y = .5f, float z = .5f) {
+float Noise(float x, float y = .5f, float z = .5f) {
 	// Compute noise cell coordinates and offsets
 	int ix = Floor2Int(x);
 	int iy = Floor2Int(y);
@@ -109,7 +109,7 @@ static float Noise(float x, float y = .5f, float z = .5f) {
 	return Lerp(wz, y0, y1);
 }
 
-static float Noise(const Point &P) {
+float Noise(const Point &P) {
 	return Noise(P.x, P.y, P.z);
 }
 

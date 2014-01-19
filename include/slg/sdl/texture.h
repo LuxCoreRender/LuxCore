@@ -37,6 +37,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/uv.h"
+#include "luxrays/core/geometry/point.h"
 #include "luxrays/core/color/color.h"
 #include "slg/sdl/mapping.h"
 #include "slg/sdl/hitpoint.h"
@@ -1134,5 +1135,7 @@ private:
 	float bright, contrast;
 };
 }
+
+extern float Noise(float x, float y, float z);
 
 #endif	/* _SLG_TEXTURE_H */
