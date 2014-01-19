@@ -21,7 +21,7 @@ FIND_PATH(JPEG_INCLUDE_DIR
     ${_jpeg_SEARCH_DIRS}
   PATH_SUFFIXES
     include
-    include/jpeg-1.5
+    include/jpeg
 )
 
 FIND_LIBRARY(JPEG_LIBRARY
