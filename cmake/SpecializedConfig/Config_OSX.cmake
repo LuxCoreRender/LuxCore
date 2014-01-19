@@ -29,7 +29,7 @@ set(GLUT_SEARCH_PATH          "${CMAKE_OSX_SYSROOT}/System/Library/Frameworks/gl
 set(GLUT_INCLUDE_PATH 		"${GLUT_SEARCH_PATH}/Headers")
 #set(GLUT_LIBRARYDIR           "${GLUT_SEARCH_PATH}")
 
-SET(OPENEXR_ROOT "/Volumes/Workdata/Blender/Development/lib/darwin-9.x.universal/openexr")
-SET(TIFF_ROOT "/Volumes/Workdata/Blender/Development/lib/darwin-9.x.universal/tiff")
-SET(JPEG_ROOT "/Volumes/Workdata/Blender/Development/lib/darwin-9.x.universal/jpeg")
-SET(PNG_ROOT "/Volumes/Workdata/Blender/Development/lib/darwin-9.x.universal/png")
+SET(OPENEXR_ROOT "${OSX_SEARCH_PATH}")
+SET(TIFF_ROOT "${OSX_SEARCH_PATH}")
+SET(JPEG_ROOT "${OSX_SEARCH_PATH}")
+SET(PNG_ROOT "${OSX_SEARCH_PATH}")
