@@ -26,9 +26,18 @@ getenv_path(LuxRays_DEPENDENCIES_DIR)
 ################################################################################
 
 # Find threading library
-FIND_PACKAGE(Threads REQUIRED)
+find_package(Threads REQUIRED)
 
 find_package(OpenImageIO REQUIRED)
+
+find_package(OpenEXR REQUIRED)
+
+find_package(Tiff REQUIRED)
+set(TIFF_LIBRARIES ${TIFF_LIBRARY})
+
+find_package(Jpeg REQUIRED)
+
+find_package(Png REQUIRED)
 
 if(NOT APPLE)
 	# Find Python Libraries
@@ -107,7 +116,7 @@ endif ()
 
 # Find BISON
 IF (NOT BISON_NOT_AVAILABLE)
-	FIND_PACKAGE(BISON)
+	find_package(BISON)
 	IF (NOT BISON_FOUND)
 		MESSAGE(WARNING "bison not found - try compilation using already generated files")
 		SET(BISON_NOT_AVAILABLE 1)
@@ -116,7 +125,7 @@ ENDIF (NOT BISON_NOT_AVAILABLE)
 
 # Find FLEX
 IF (NOT FLEX_NOT_AVAILABLE)
-	FIND_PACKAGE(FLEX)
+	find_package(FLEX)
 	IF (NOT FLEX_FOUND)
 		MESSAGE(WARNING "flex not found - try compilation using already generated files")
 		SET(FLEX_NOT_AVAILABLE 1)
