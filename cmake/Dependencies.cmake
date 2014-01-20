@@ -30,19 +30,16 @@ find_package(Threads REQUIRED)
 
 find_package(OpenImageIO REQUIRED)
 find_package(OpenEXR REQUIRED)
-find_package(TIFF REQUIRED)
-find_package(JPEG REQUIRED)
-find_package(PNG REQUIRED)
 
 if(NOT APPLE)
+    # Apple has these available macos repo
+    find_package(TIFF REQUIRED)
+    find_package(JPEG REQUIRED)
+    find_package(PNG REQUIRED)
 	# Find Python Libraries
 	find_package(PythonLibs)
-else(not APPLE)
-	# use Blender python libs for static compiling !
-	SET(PYTHON_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py33_uni_intel/libbf_python_ext.a ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py33_uni_intel/libbf_python.a)
-	SET(PYTHON_INCLUDE_DIRS ${OSX_DEPENDENCY_ROOT}/include/Python3.3m)
-	SET(PYTHONLIBS_FOUND ON)
 endif()
+
 include_directories (${PYTHON_INCLUDE_DIRS})
 
 # Find Boost
