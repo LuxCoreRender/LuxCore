@@ -2082,11 +2082,11 @@ static Yarn SilkCharmeuseYarn[14] = {
     {0, 40, 2, 1, 9, 0.7, 0.25, WARP},
     {0, 40, 2, 1, 9, 0.9, 0.85, WARP},
     {0, 40, 2, 1, 9, 0.9, -0.15, WARP},
-    {0, 40, 2, 1, 9, 0.1, 0.95, WEFT},
-    {0, 40, 2, 1, 9, 0.3, 0.55, WEFT},
-    {0, 40, 2, 1, 9, 0.5, 0.15, WEFT},
-    {0, 40, 2, 1, 9, 0.7, 0.75, WEFT},
-    {0, 40, 2, 1, 9, 0.9, 0.35, WEFT},
+    {0, 60, 0, 1, 1, 0.1, 0.95, WEFT},
+    {0, 60, 0, 1, 1, 0.3, 0.55, WEFT},
+    {0, 60, 0, 1, 1, 0.5, 0.15, WEFT},
+    {0, 60, 0, 1, 1, 0.7, 0.75, WEFT},
+    {0, 60, 0, 1, 1, 0.9, 0.35, WEFT},
 };
 
 static WeaveConfig CottonTwillWeave = {
@@ -2217,8 +2217,7 @@ static float seeliger(float cos_th1, float cos_th2, float sg_a, float sg_s)
 Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-
-
+	  
 	if (directPdfW)
 		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
 
@@ -2231,12 +2230,12 @@ Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
 	float umax, scale = specularNormalization;
 	const Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
 	
-	scale = scale * EvalSpecular(yarn, uv, umax, localEyeDir, localLightDir);
+	scale = scale * EvalSpecular(yarn, uv, umax, localLightDir, localEyeDir);
 	
 	const Texture *ks = yarn->yarn_type == WARP ? Warp_Ks :  Weft_Ks;
 	const Texture *kd = yarn->yarn_type == WARP ? Warp_Kd :  Weft_Kd;
-	
-	return (kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale * fabsf(localEyeDir.z)) * INV_PI;
+
+	return (kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale) * INV_PI * fabsf(localLightDir.z);
 }
 
 Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
@@ -2259,14 +2258,18 @@ Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
 	
 	UV uv;
 	float umax, scale = specularNormalization;
+
 	const Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
 	
-	scale = scale * EvalSpecular(yarn, uv, umax, *localSampledDir, localFixedDir);
+	if (!hitPoint.fromLight)
+	    scale = scale * EvalSpecular(yarn, uv, umax, localFixedDir, *localSampledDir);
+	else
+	    scale = scale * EvalSpecular(yarn, uv, umax, *localSampledDir, localFixedDir);
 
 	const Texture *ks = yarn->yarn_type == WARP ? Warp_Ks :  Weft_Ks;
 	const Texture *kd = yarn->yarn_type == WARP ? Warp_Kd :  Weft_Kd;
 	
-	return (kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale) * INV_PI;
+	return kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale;
 }
 
 void ClothMaterial::Pdf(const HitPoint &hitPoint,
@@ -2282,10 +2285,10 @@ void ClothMaterial::Pdf(const HitPoint &hitPoint,
 void ClothMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
-	Weft_Kd->AddReferencedTextures(referencedTexs);
-	Weft_Ks->AddReferencedTextures(referencedTexs);
-	Warp_Kd->AddReferencedTextures(referencedTexs);
 	Warp_Ks->AddReferencedTextures(referencedTexs);
+	Weft_Ks->AddReferencedTextures(referencedTexs);
+	Weft_Kd->AddReferencedTextures(referencedTexs);
+	Warp_Kd->AddReferencedTextures(referencedTexs);
 }
 
 void ClothMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -2643,7 +2646,7 @@ void ClothMaterial::SetPreset() {
 	  default:
 	    break;
 	}
-	
+
 	// Calibrate scale factor
 	
 	RandomGenerator random(1);
@@ -2662,12 +2665,12 @@ void ClothMaterial::SetPreset() {
 		
 		result += EvalSpecular(yarn, uv, umax, wo, wi) * scale;
 	}
-	
 
 	if (result > 0.f)
 		specularNormalization = nSamples / result;
 	else
 		specularNormalization = 0;
+//	printf("********************** specularNormalization = %f\n", specularNormalization);
 }
 
 //------------------------------------------------------------------------------

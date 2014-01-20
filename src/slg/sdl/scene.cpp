@@ -945,8 +945,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		}
 		Texture *weft_kd = GetTexture(props.Get(Property(propName + ".weft_kd")(.5f, .5f, .5f)));
 		Texture *weft_ks = GetTexture(props.Get(Property(propName + ".weft_ks")(.5f, .5f, .5f)));
-		Texture *warp_kd = GetTexture(props.Get(Property(propName + ".warp_ks")(.5f, .5f, .5f)));
-		Texture *warp_ks = GetTexture(props.Get(Property(propName + ".warp_kd")(.5f, .5f, .5f)));
+		Texture *warp_kd = GetTexture(props.Get(Property(propName + ".warp_kd")(.5f, .5f, .5f)));
+		Texture *warp_ks = GetTexture(props.Get(Property(propName + ".warp_ks")(.5f, .5f, .5f)));
 		float repeat_u = props.Get(Property(propName + ".repeat_u")(100.0f)).Get<float>();
 		float repeat_v = props.Get(Property(propName + ".repeat_v")(100.0f)).Get<float>();
 
