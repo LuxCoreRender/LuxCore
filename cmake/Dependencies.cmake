@@ -32,7 +32,7 @@ find_package(OpenImageIO REQUIRED)
 find_package(OpenEXR REQUIRED)
 
 if(NOT APPLE)
-    # Apple has these available macos repo
+    # Apple has these available hardcoded and matched in macos repo, see Config_OSX.cmake
     find_package(TIFF REQUIRED)
     find_package(JPEG REQUIRED)
     find_package(PNG REQUIRED)
