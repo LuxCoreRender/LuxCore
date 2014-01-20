@@ -36,6 +36,8 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+typedef unsigned char BYTE;
+
 //------------------------------------------------------------------------------
 // FilmOutput
 //------------------------------------------------------------------------------
