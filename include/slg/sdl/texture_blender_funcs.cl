@@ -28,10 +28,10 @@
 
 #if defined (PARAM_ENABLE_WOOD)
 
-void WoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint){
+float WoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint){
 	const float3 P = TextureMapping3D_Map(&texture->wood.mapping, hitPoint);
 	float scale = 1.f;
-	if(fabs(texture->wood.noisesize) > 0.00001f) scale = (1.f/texture->wood.noisesize);	
+	if(fabs(texture->wood.noisesize) > 0.00001f) scale = (1.f/texture->wood.noisesize);
 
 	const NoiseBase noise = texture->wood.noisebasis2;
 	float wood = 0.0f;
@@ -41,7 +41,7 @@ void WoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint
 		case BANDS:
 			if(noise == TEX_SIN) {
 				wood = tex_sin((P.x + P.y + P.z) * 10.f);
-			} else if(noise == TEX_SAW) {\n"
+			} else if(noise == TEX_SAW) {
 				wood = tex_saw((P.x + P.y + P.z) * 10.f);
 			} else {
 				wood = tex_tri((P.x + P.y + P.z) * 10.f);
@@ -99,7 +99,8 @@ void WoodTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hit
 
 void WoodTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = WoodTexture_Evaluate(texture, hitPoint);
+		float wood = WoodTexture_Evaluate(texture, hitPoint);
+	texValues[(*texValuesSize)++] = (float3)(wood, wood, wood);
 }
 
 void WoodTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
