@@ -1140,6 +1140,9 @@ uint Texture_AddSubTexture(__global Texture *texture,
 #if defined (PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
 #endif
+#if defined (PARAM_ENABLE_WOOD)
+		case WOOD:
+#endif
 #if defined (PARAM_ENABLE_WINDY)
 		case WINDY:
 #endif
@@ -1245,6 +1248,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_WINDY)
 		case WINDY:
 			WindyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_WOOD)
+		case WOOD:
+			WoodTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_WRINKLED)
@@ -1415,6 +1423,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			WindyTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined (PARAM_ENABLE_WOOD)
+		case WOOD:
+			WoodTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 #if defined(PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
 			WrinkledTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
@@ -1580,6 +1593,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_WINDY)
 		case WINDY:
 			WindyTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_WOOD)
+		case WOOD:
+			WoodTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_WRINKLED)
