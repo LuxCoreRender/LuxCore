@@ -756,6 +756,10 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_INFINITELIGHT";
 		hasEnvLights = true;
 	}
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0) {
+		ss << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
+		hasEnvLights = true;
+	}
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0) {
 		ss << " -D PARAM_HAS_SKYLIGHT";
 		hasEnvLights = true;
@@ -778,8 +782,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_SPOTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_PROJECTION] > 0)
 		ss << " -D PARAM_HAS_PROJECTIONLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0)
-		ss << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0)
 		ss << " -D PARAM_HAS_SHARPDISTANTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0)
