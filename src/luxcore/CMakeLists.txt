@@ -123,7 +123,7 @@ set(LUXCORE_LIB_SRCS
 )
 
 add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-SET_TARGET_PROPERTIES(luxcore PROPERTIES DEFINE_SYMBOL CPP_API_EXPORTS) # for controlling visibility
+add_definitions(-DCPP_API_EXPORTS) # for controlling visibility
 
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
