@@ -350,7 +350,7 @@ void DirectHitInfiniteLight(
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
-	const float3 throughput = VLOAD3F(&pathThroughput->r);
+	const float3 throughput = VLOAD3F(&pathThroughput->c[0]);
 
 	for (uint i = 0; i < envLightCount; ++i) {
 		__global LightSource *light = &lights[envLightIndices[i]];
@@ -399,7 +399,7 @@ void DirectHitFiniteLight(
 				// MIS between BSDF sampling and direct light sampling
 				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 			}
-			const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->r) * emittedRadiance;
+			const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->c[0]) * emittedRadiance;
 
 			const uint lightID =  min(BSDF_GetLightID(bsdf
 					MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
@@ -464,7 +464,7 @@ bool DirectLightSampling(
 			const float weight = Light_IsEnvOrIntersecable(light) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, &radiance->r);
+			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->c[0]) * bsdfEval * lightRadiance, &radiance->c[0]);
 			*ID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 
 			// Setup the shadow ray
@@ -584,7 +584,7 @@ bool DirectLightSampling_ALL(
 				LIGHTS_PARAM);
 
 			if (illuminated) {
-				VSTORE3F(scaleFactor * VLOAD3F(&radiance->r), &radiance->r);
+				VSTORE3F(scaleFactor * VLOAD3F(&radiance->c[0]), &radiance->c[0]);
 				return true;
 			}
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
