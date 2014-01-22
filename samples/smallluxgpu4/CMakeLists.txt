@@ -35,7 +35,7 @@ TARGET_LINK_LIBRARIES(slg4 luxcore smallluxgpu luxrays ${OPENGL_LIBRARIES} ${GLE
 SET_TARGET_PROPERTIES(slg4 PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)
 
 IF(APPLE)
-    SET_TARGET_PROPERTIES(slg4 PROPERTIES XCODE_ATTRIBUTE_UNEXPORTED_SYMBOLS_FILE "include/luxrays/utils/osx_locals.map") # mapfile located relative to xcode project
+    SET_TARGET_PROPERTIES(slg4 PROPERTIES XCODE_ATTRIBUTE_EXPORTED_SYMBOLS_FILE "include/luxrays/utils/osx_exports.map") # mapfile located relative to xcode project
 ENDIF()
 
 IF(OSX_UPDATE_LUXRAYS_REPO)
