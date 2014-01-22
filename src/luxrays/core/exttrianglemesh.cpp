@@ -435,13 +435,13 @@ void ExtTriangleMesh::GetTriangleFrame(const u_int index, const Normal &normal,
 	const float du2 = uv1.u - uv2.u;
 	const float dv1 = uv0.v - uv2.v;
 	const float dv2 = uv1.v - uv2.v;
-	const Vector dp1 = p1 - p3;
-    const Vector dp2 = p2 - p3;
 	const float determinant = du1 * dv2 - dv1 * du2;
 	if (determinant == 0.f) {
 		// Handle 0 determinant for triangle partial derivative matrix
         frame.SetFromZ(normal);
 	} else {
+        const Vector dp1 = p1 - p3;
+        const Vector dp2 = p2 - p3;
 		const Vector dpdu = (dv2 * dp1 - dv1 * dp2) / determinant;
 
         const Vector sn = Normalize(dpdu);
@@ -476,13 +476,13 @@ void ExtInstanceTriangleMesh::GetTriangleFrame(const u_int index, const Normal &
 	const float du2 = uv1.u - uv2.u;
 	const float dv1 = uv0.v - uv2.v;
 	const float dv2 = uv1.v - uv2.v;
-	const Vector dp1 = p1 - p3;
-    const Vector dp2 = p2 - p3;
 	const float determinant = du1 * dv2 - dv1 * du2;
 	if (determinant == 0.f) {
 		// Handle 0 determinant for triangle partial derivative matrix
         frame.SetFromZ(normal);
 	} else {
+        const Vector dp1 = p1 - p3;
+        const Vector dp2 = p2 - p3;
 		const Vector dpdu = (dv2 * dp1 - dv1 * dp2) / determinant;
 
         // Move also to global coordinate system. Any computation after this
