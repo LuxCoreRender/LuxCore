@@ -211,7 +211,60 @@ void BSDF_Init(
 #endif
 #endif
 
-	Frame_SetFromZ(&bsdf->frame, shadeN);
+    //--------------------------------------------------------------------------
+	// Build the local reference system
+	//--------------------------------------------------------------------------
+
+   	//Frame_SetFromZ(&bsdf->frame, shadeN);
+    
+#if defined(PARAM_HAS_UVS_BUFFER)
+    if (meshDesc->uvsOffset != NULL_INDEX) {
+        // Ok, UV coordinates are available, use them to build the reference
+        // system around the shading normal.
+
+        // Compute triangle partial derivatives
+        __global Triangle *tri = &iTriangles[triangleIndex];
+        const uint vi0 = tri->v[0];
+        const uint vi1 = tri->v[1];
+        const uint vi2 = tri->v[2];
+
+    	const float3 p1 = VLOAD3F(&iVertices[vi0].x);
+        const float3 p2 = VLOAD3F(&iVertices[vi1].x);
+    	const float3 p3 = VLOAD3F(&iVertices[vi2].x);
+        
+        __global UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
+        const float2 uv0 = VLOAD2F(&iVertUVs[vi0].u);
+        const float2 uv1 = VLOAD2F(&iVertUVs[vi1].u);
+        const float2 uv2 = VLOAD2F(&iVertUVs[vi2].u);
+
+        // Compute deltas for triangle partial derivatives
+        const float du1 = uv0.s0 - uv2.s0;
+        const float du2 = uv1.s0 - uv2.s0;
+        const float dv1 = uv0.s1 - uv2.s1;
+        const float dv2 = uv1.s1 - uv2.s1;
+        const float determinant = du1 * dv2 - dv1 * du2;
+        if (determinant == 0.f) {
+            // Handle 0 determinant for triangle partial derivative matrix
+            Frame_SetFromZ(&bsdf->frame, shadeN);
+        } else {
+            const float3 dp1 = p1 - p3;
+            const float3 dp2 = p2 - p3;
+            const float3 dpdu = (dv2 * dp1 - dv1 * dp2) / determinant;
+
+            // Move also to global coordinate system. Any computation after this
+            // point is relative to the global coordinate system.
+            const float3 sn = normalize(Transform_InvApplyVector(&meshDesc->trans, dpdu));
+            const float3 tn = cross(shadeN, sn);
+
+            VSTORE3F(sn, &bsdf->frame.X.x);
+            VSTORE3F(tn, &bsdf->frame.Y.x);
+            VSTORE3F(shadeN, &bsdf->frame.Z.x);
+        }
+    } else
+        Frame_SetFromZ(&bsdf->frame, shadeN);
+#else
+    Frame_SetFromZ(&bsdf->frame, shadeN);
+#endif
 
 	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
 }
