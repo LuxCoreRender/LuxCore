@@ -28,7 +28,7 @@ set(LUXCORELIBDEMO_SRCS
 
 add_executable(luxcoredemo ${LUXCORELIBDEMO_SRCS})
 
-TARGET_LINK_LIBRARIES(luxcoredemo luxcore smallluxgpu luxrays ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES} ${Boost_LIBRARIES})
+TARGET_LINK_LIBRARIES(luxcoredemo luxcore smallluxgpu luxrays ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 
 IF(APPLE)
 SET_TARGET_PROPERTIES(luxcoredemo PROPERTIES XCODE_ATTRIBUTE_UNEXPORTED_SYMBOLS_FILE "include/luxrays/utils/osx_locals.map") # mapfile located relative to xcode project
