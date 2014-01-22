@@ -410,6 +410,90 @@ BBox ExtTriangleMesh::GetBBox() const {
 	return bbox;
 }
 
+void ExtTriangleMesh::GetTriangleFrame(const u_int index, const Normal &normal,
+        Frame &frame) const {
+    // Build the local reference system
+
+    // Compute triangle partial derivatives
+    const Triangle &tri = tris[index];
+    const Point &p1 = vertices[tri.v[0]];
+    const Point &p2 = vertices[tri.v[1]];
+    const Point &p3 = vertices[tri.v[2]];
+    UV uv0, uv1, uv2;
+    if (HasUVs()) {
+        uv0 = uvs[tri.v[0]];
+        uv1 = uvs[tri.v[1]];
+        uv2 = uvs[tri.v[2]];
+    } else {
+        uv0 = UV(.5f, .5f);
+        uv1 = UV(.5f, .5f);
+        uv2 = UV(.5f, .5f);
+    }
+
+    // Compute deltas for triangle partial derivatives
+	const float du1 = uv0.u - uv2.u;
+	const float du2 = uv1.u - uv2.u;
+	const float dv1 = uv0.v - uv2.v;
+	const float dv2 = uv1.v - uv2.v;
+	const Vector dp1 = p1 - p3;
+    const Vector dp2 = p2 - p3;
+	const float determinant = du1 * dv2 - dv1 * du2;
+	if (determinant == 0.f) {
+		// Handle 0 determinant for triangle partial derivative matrix
+        frame.SetFromZ(normal);
+	} else {
+		const Vector dpdu = (dv2 * dp1 - dv1 * dp2) / determinant;
+
+        const Vector sn = Normalize(dpdu);
+        const Vector tn = Cross(normal, sn);
+
+        frame = Frame(sn, tn, Vector(normal));
+	}
+ }
+
+void ExtInstanceTriangleMesh::GetTriangleFrame(const u_int index, const Normal &normal,
+        Frame &frame) const {
+    // Build the local reference system
+
+    // Compute triangle partial derivatives
+    const Triangle &tri = mesh->GetTriangles()[index];
+    const Point &p1 = mesh->GetVertex(tri.v[0]);
+    const Point &p2 = mesh->GetVertex(tri.v[1]);
+    const Point &p3 = mesh->GetVertex(tri.v[2]);
+    UV uv0, uv1, uv2;
+    if (HasUVs()) {
+        uv0 = mesh->GetUV(tri.v[0]);
+        uv1 = mesh->GetUV(tri.v[1]);
+        uv2 = mesh->GetUV(tri.v[2]);
+    } else {
+        uv0 = UV(.5f, .5f);
+        uv1 = UV(.5f, .5f);
+        uv2 = UV(.5f, .5f);
+    }
+
+    // Compute deltas for triangle partial derivatives
+	const float du1 = uv0.u - uv2.u;
+	const float du2 = uv1.u - uv2.u;
+	const float dv1 = uv0.v - uv2.v;
+	const float dv2 = uv1.v - uv2.v;
+	const Vector dp1 = p1 - p3;
+    const Vector dp2 = p2 - p3;
+	const float determinant = du1 * dv2 - dv1 * du2;
+	if (determinant == 0.f) {
+		// Handle 0 determinant for triangle partial derivative matrix
+        frame.SetFromZ(normal);
+	} else {
+		const Vector dpdu = (dv2 * dp1 - dv1 * dp2) / determinant;
+
+        // Move also to global coordinate system. Any computation after this
+        // point is relative to the global coordinate system.
+        const Vector sn = Normalize(trans * dpdu);
+        const Vector tn = Cross(normal, sn);
+
+        frame = Frame(sn, tn, Vector(normal));
+	}
+}
+
 void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	for (u_int i = 0; i < vertCount; ++i)
 		vertices[i] *= trans;
