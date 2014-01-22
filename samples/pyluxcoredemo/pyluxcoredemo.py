@@ -142,7 +142,7 @@ def getOutputTest():
 	config = pyluxcore.RenderConfig(props)
 	session = pyluxcore.RenderSession(config)
 
-	# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 3.3, 2.7 and 2.6
+	# NOTICE THE DIFFERENT BEHAVIOR REQUIRED BY PYTHON 3.3, 2.7 and 2.6
 	filmWidth, filmHeight = config.GetFilmSize()[:2]
 	if sys.version_info < (2,7,0):
 		imageBufferFloat = bytearray(filmWidth * filmHeight * 3 * 4)
@@ -175,7 +175,7 @@ def getOutputTest():
 				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
 				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
 
-		# This is mostlyfor testing the PyLuxCore functionality, save an image every second
+		# This is mostly for testing the PyLuxCore functionality, save an image every second
 
 		# Update the image
 		session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)

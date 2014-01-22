@@ -60,7 +60,7 @@ class RenderView(QMainWindow):
 	
 	def allocateImageBuffers(self):
 		########################################################################
-		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
+		# NOTICE THE DIFFERENT BEHAVIOR REQUIRED BY PYTHON 2.7
 		########################################################################
 		if sys.version_info<(3,0,0):
 			self.imageBufferFloat = buffer(array('f', [0.0] * (self.filmWidth * self.filmHeight * 3)))
