@@ -85,7 +85,8 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 				v1.z * uv.u + v2.z * uv.v + hitPoint.shadeN.z));
 	}
 
-	frame.SetFromZ(hitPoint.shadeN);
+    // Build the local reference system
+    mesh->GetTriangleFrame(rayHit.triangleIndex, hitPoint.shadeN, frame);
 }
 
 Spectrum BSDF::Evaluate(const Vector &generatedDir,
