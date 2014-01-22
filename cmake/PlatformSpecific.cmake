@@ -192,6 +192,7 @@ IF(APPLE)
 	set(CMAKE_CXX_FLAGS_DEBUG "-fvisibility=hidden -fvisibility-inlines-hidden -fPIC -O0 -g -msse -msse2 -msse3 -mssse3")
 	
 	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
+	SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES) #  -dead_strip
 
 	MESSAGE(STATUS "")
 	MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
