@@ -217,8 +217,6 @@ std::string KernelSource_bsdf_funcs =
 "    //--------------------------------------------------------------------------\n"
 "	// Build the local reference system\n"
 "	//--------------------------------------------------------------------------\n"
-"\n"
-"   	//Frame_SetFromZ(&bsdf->frame, shadeN);\n"
 "    \n"
 "#if defined(PARAM_HAS_UVS_BUFFER)\n"
 "    if (meshDesc->uvsOffset != NULL_INDEX) {\n"

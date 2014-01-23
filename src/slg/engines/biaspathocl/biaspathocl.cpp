@@ -87,7 +87,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	pdfClampValue = Max(0.f, cfg.Get(Property("biaspath.clamping.pdf.value")(0.f)).Get<float>());
 
 	// Light settings
-	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(.0001f)).Get<float>());
+	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(0.f)).Get<float>());
 	nearStartLight = Max(0.f, cfg.Get(Property("biaspath.lights.nearstart")(.001f)).Get<float>());
 
 	string lightStratType = cfg.Get(Property("biaspath.lights.samplingstrategy.type")("ALL")).Get<string>();

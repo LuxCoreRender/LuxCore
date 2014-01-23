@@ -214,8 +214,6 @@ void BSDF_Init(
     //--------------------------------------------------------------------------
 	// Build the local reference system
 	//--------------------------------------------------------------------------
-
-   	//Frame_SetFromZ(&bsdf->frame, shadeN);
     
 #if defined(PARAM_HAS_UVS_BUFFER)
     if (meshDesc->uvsOffset != NULL_INDEX) {
