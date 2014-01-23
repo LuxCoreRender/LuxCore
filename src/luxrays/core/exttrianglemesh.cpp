@@ -28,6 +28,53 @@
 
 using namespace luxrays;
 
+void ExtMesh::GetTriangleFrame(const u_int index, const Normal &normal,
+        Frame &frame) const {
+    // Build the local reference system
+
+    // Compute triangle partial derivatives
+    const Triangle &tri = GetTriangles()[index];
+    UV uv0, uv1, uv2;
+    if (HasUVs()) {
+        uv0 = GetUV(tri.v[0]);
+        uv1 = GetUV(tri.v[1]);
+        uv2 = GetUV(tri.v[2]);
+    } else {
+        uv0 = UV(.5f, .5f);
+        uv1 = UV(.5f, .5f);
+        uv2 = UV(.5f, .5f);
+    }
+
+    // Compute deltas for triangle partial derivatives
+	const float du1 = uv0.u - uv2.u;
+	const float du2 = uv1.u - uv2.u;
+	const float dv1 = uv0.v - uv2.v;
+	const float dv2 = uv1.v - uv2.v;
+	const float determinant = du1 * dv2 - dv1 * du2;
+	if (determinant == 0.f) {
+		// Handle 0 determinant for triangle partial derivative matrix
+        frame.SetFromZ(normal);
+	} else {
+        // Using GetVertex() in order to do all computation relative to
+        // the global coordinate system.
+        const Point p0 = GetVertex(tri.v[0]);
+        const Point p1 = GetVertex(tri.v[1]);
+        const Point p2 = GetVertex(tri.v[2]);
+
+        const Vector dp1 = p0 - p2;
+        const Vector dp2 = p1 - p2;
+		const float invdet = 1.f / determinant;
+		const Vector dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		const Vector dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
+
+        Vector ts = Normalize(Cross(normal, dpdu));
+		Vector ss = Cross(ts, normal);
+		ts *= (Dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
+
+        frame = Frame(ss, ts, Vector(normal));
+	}
+}
+
 // rply vertex callback
 static int VertexCB(p_ply_argument argument) {
 	long userIndex = 0;
@@ -408,90 +455,6 @@ BBox ExtTriangleMesh::GetBBox() const {
 		bbox = Union(bbox, vertices[i]);
 
 	return bbox;
-}
-
-void ExtTriangleMesh::GetTriangleFrame(const u_int index, const Normal &normal,
-        Frame &frame) const {
-    // Build the local reference system
-
-    // Compute triangle partial derivatives
-    const Triangle &tri = tris[index];
-    const Point &p1 = vertices[tri.v[0]];
-    const Point &p2 = vertices[tri.v[1]];
-    const Point &p3 = vertices[tri.v[2]];
-    UV uv0, uv1, uv2;
-    if (HasUVs()) {
-        uv0 = uvs[tri.v[0]];
-        uv1 = uvs[tri.v[1]];
-        uv2 = uvs[tri.v[2]];
-    } else {
-        uv0 = UV(.5f, .5f);
-        uv1 = UV(.5f, .5f);
-        uv2 = UV(.5f, .5f);
-    }
-
-    // Compute deltas for triangle partial derivatives
-	const float du1 = uv0.u - uv2.u;
-	const float du2 = uv1.u - uv2.u;
-	const float dv1 = uv0.v - uv2.v;
-	const float dv2 = uv1.v - uv2.v;
-	const float determinant = du1 * dv2 - dv1 * du2;
-	if (determinant == 0.f) {
-		// Handle 0 determinant for triangle partial derivative matrix
-        frame.SetFromZ(normal);
-	} else {
-        const Vector dp1 = p1 - p3;
-        const Vector dp2 = p2 - p3;
-		const Vector dpdu = (dv2 * dp1 - dv1 * dp2) / determinant;
-
-        const Vector sn = Normalize(dpdu);
-        const Vector tn = Cross(normal, sn);
-
-        frame = Frame(sn, tn, Vector(normal));
-	}
- }
-
-void ExtInstanceTriangleMesh::GetTriangleFrame(const u_int index, const Normal &normal,
-        Frame &frame) const {
-    // Build the local reference system
-
-    // Compute triangle partial derivatives
-    const Triangle &tri = mesh->GetTriangles()[index];
-    const Point &p1 = mesh->GetVertex(tri.v[0]);
-    const Point &p2 = mesh->GetVertex(tri.v[1]);
-    const Point &p3 = mesh->GetVertex(tri.v[2]);
-    UV uv0, uv1, uv2;
-    if (HasUVs()) {
-        uv0 = mesh->GetUV(tri.v[0]);
-        uv1 = mesh->GetUV(tri.v[1]);
-        uv2 = mesh->GetUV(tri.v[2]);
-    } else {
-        uv0 = UV(.5f, .5f);
-        uv1 = UV(.5f, .5f);
-        uv2 = UV(.5f, .5f);
-    }
-
-    // Compute deltas for triangle partial derivatives
-	const float du1 = uv0.u - uv2.u;
-	const float du2 = uv1.u - uv2.u;
-	const float dv1 = uv0.v - uv2.v;
-	const float dv2 = uv1.v - uv2.v;
-	const float determinant = du1 * dv2 - dv1 * du2;
-	if (determinant == 0.f) {
-		// Handle 0 determinant for triangle partial derivative matrix
-        frame.SetFromZ(normal);
-	} else {
-        const Vector dp1 = p1 - p3;
-        const Vector dp2 = p2 - p3;
-		const Vector dpdu = (dv2 * dp1 - dv1 * dp2) / determinant;
-
-        // Move also to global coordinate system. Any computation after this
-        // point is relative to the global coordinate system.
-        const Vector sn = Normalize(trans * dpdu);
-        const Vector tn = Cross(normal, sn);
-
-        frame = Frame(sn, tn, Vector(normal));
-	}
 }
 
 void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
