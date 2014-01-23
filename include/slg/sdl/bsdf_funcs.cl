@@ -226,10 +226,6 @@ void BSDF_Init(
         const uint vi1 = tri->v[1];
         const uint vi2 = tri->v[2];
 
-    	const float3 p1 = VLOAD3F(&iVertices[vi0].x);
-        const float3 p2 = VLOAD3F(&iVertices[vi1].x);
-    	const float3 p3 = VLOAD3F(&iVertices[vi2].x);
-        
         __global UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
         const float2 uv0 = VLOAD2F(&iVertUVs[vi0].u);
         const float2 uv1 = VLOAD2F(&iVertUVs[vi1].u);
@@ -245,17 +241,22 @@ void BSDF_Init(
             // Handle 0 determinant for triangle partial derivative matrix
             Frame_SetFromZ(&bsdf->frame, shadeN);
         } else {
-            const float3 dp1 = p1 - p3;
-            const float3 dp2 = p2 - p3;
-            const float3 dpdu = (dv2 * dp1 - dv1 * dp2) / determinant;
+            const float3 p0 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi0].x));
+            const float3 p1 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi1].x));
+            const float3 p2 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi2].x));
+            const float3 dp1 = p0 - p2;
+            const float3 dp2 = p1 - p2;
 
-            // Move also to global coordinate system. Any computation after this
-            // point is relative to the global coordinate system.
-            const float3 sn = normalize(Transform_InvApplyVector(&meshDesc->trans, dpdu));
-            const float3 tn = cross(shadeN, sn);
+            const float invdet = 1.f / determinant;
+            const float3 dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+            const float3 dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-            VSTORE3F(sn, &bsdf->frame.X.x);
-            VSTORE3F(tn, &bsdf->frame.Y.x);
+            float3 ts = normalize(cross(shadeN, dpdu));
+            float3 ss = cross(ts, shadeN);
+            ts *= (dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
+
+            VSTORE3F(ss, &bsdf->frame.X.x);
+            VSTORE3F(ts, &bsdf->frame.Y.x);
             VSTORE3F(shadeN, &bsdf->frame.Z.x);
         }
     } else

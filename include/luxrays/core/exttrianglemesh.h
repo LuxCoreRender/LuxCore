@@ -43,6 +43,7 @@ public:
 	virtual ~ExtMesh() { }
 
 	std::string GetName() const { return "extmesh-" + boost::lexical_cast<std::string>(this); }
+	virtual Triangle *GetTriangles() const = 0;
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs() const = 0;
@@ -65,7 +66,7 @@ public:
 
 	virtual void Sample(const u_int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const = 0;
 
-    virtual void GetTriangleFrame(const u_int index, const Normal &normal, Frame &frame) const = 0;
+    virtual void GetTriangleFrame(const u_int index, const Normal &normal, Frame &frame) const;
 
 	virtual void Delete() = 0;
 	virtual void WritePly(const std::string &fileName) const = 0;
@@ -94,6 +95,7 @@ public:
 	u_int GetTotalVertexCount() const { return vertCount; }
 	u_int GetTotalTriangleCount() const { return triCount; }
 	BBox GetBBox() const;
+	virtual Triangle *GetTriangles() const { return tris; }
 
 	bool HasNormals() const { return normals != NULL; }
 	bool HasUVs() const { return uvs != NULL; }
@@ -155,11 +157,8 @@ public:
 		const Triangle &tri = tris[index];
 		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
 	}
-   
-    void GetTriangleFrame(const u_int index, const Normal &normal, Frame &frame) const;
 
 	Point *GetVertices() const { return vertices; }
-	Triangle *GetTriangles() const { return tris; }
 
 	virtual void ApplyTransform(const Transform &trans);
 
@@ -209,6 +208,7 @@ public:
 	BBox GetBBox() const {
 		return trans * mesh->GetBBox();
 	}
+	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 
 	bool HasNormals() const { return mesh->HasNormals(); }
 	bool HasUVs() const { return mesh->HasUVs(); }
@@ -255,8 +255,6 @@ public:
 		*p *= trans;
 	}
 
-    void GetTriangleFrame(const u_int index, const Normal &normal, Frame &frame) const;
-
 	virtual void ApplyTransform(const Transform &t) { trans = trans * t; }
 
 	const Transform &GetTransformation() const { return trans; }
@@ -264,7 +262,6 @@ public:
 		trans = t;
 	}
 	Point *GetVertices() const { return mesh->GetVertices(); }
-	Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
 
 	virtual void WritePly(const std::string &fileName) const { mesh->WritePly(fileName); }
