@@ -2115,10 +2115,10 @@ static Yarn CottonTwillYarn[10] = {
 };
 
 static WeaveConfig WoolGarbardineWeave = {
-  4, 8,
+  6, 9,
   0.01f, 4.0f,
   0.0f, 0.5f, 
-  6.0f, 2.0f, 4.0f,
+  12.0f, 6.0f, 0.0f,
   0.0f, 0.0f, 0.0f, 0.0f,
   0.0f
 };
