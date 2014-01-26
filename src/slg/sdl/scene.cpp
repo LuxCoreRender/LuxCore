@@ -951,6 +951,47 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		float repeat_v = props.Get(Property(propName + ".repeat_v")(100.0f)).Get<float>();
 
 		mat = new ClothMaterial(emissionTex, bumpTex, normalTex, preset, weft_kd, weft_ks, warp_kd, warp_ks, repeat_u, repeat_v);
+	} else if (matType == "carpaint") {
+		Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
+		Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
+		string preset = props.Get(Property(propName + ".preset")("")).Get<string>();
+		if (preset != "") {
+			const int numPaints = CarpaintMaterial::NbPresets();
+			int i;
+			for (i = 0; i < numPaints; ++i) {
+				if (preset == CarpaintMaterial::data[i].name)
+					break;
+			}
+			if (i == numPaints)
+				preset = "";
+			else {
+				Texture *kd = GetTexture(Property("Implicit-" + preset + "-kd")(CarpaintMaterial::data[i].kd[0], CarpaintMaterial::data[i].kd[1], CarpaintMaterial::data[i].kd[2]));
+				Texture *ks1 = GetTexture(Property("Implicit-" + preset + "-ks1")(CarpaintMaterial::data[i].ks1[0], CarpaintMaterial::data[i].ks1[1], CarpaintMaterial::data[i].ks1[2]));
+				Texture *ks2 = GetTexture(Property("Implicit-" + preset + "-ks2")(CarpaintMaterial::data[i].ks2[0], CarpaintMaterial::data[i].ks2[1], CarpaintMaterial::data[i].ks2[2]));
+				Texture *ks3 = GetTexture(Property("Implicit-" + preset + "-ks3")(CarpaintMaterial::data[i].ks3[0], CarpaintMaterial::data[i].ks3[1], CarpaintMaterial::data[i].ks3[2]));
+				Texture *r1 = GetTexture(Property("Implicit-" + preset + "-r1")(CarpaintMaterial::data[i].r1));
+				Texture *r2 = GetTexture(Property("Implicit-" + preset + "-r2")(CarpaintMaterial::data[i].r2));
+				Texture *r3 = GetTexture(Property("Implicit-" + preset + "-r3")(CarpaintMaterial::data[i].r3));
+				Texture *m1 = GetTexture(Property("Implicit-" + preset + "-m1")(CarpaintMaterial::data[i].m1));
+				Texture *m2 = GetTexture(Property("Implicit-" + preset + "-m2")(CarpaintMaterial::data[i].m2));
+				Texture *m3 = GetTexture(Property("Implicit-" + preset + "-m3")(CarpaintMaterial::data[i].m3));
+				mat = new CarpaintMaterial(emissionTex, bumpTex, normalTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
+			}
+		}
+		// preset can be reset above if the name is not found
+		if (preset == "") {
+			Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(CarpaintMaterial::data[0].kd[0], CarpaintMaterial::data[0].kd[1], CarpaintMaterial::data[0].kd[2])));
+			Texture *ks1 = GetTexture(props.Get(Property(propName + ".ks1")(CarpaintMaterial::data[0].ks1[0], CarpaintMaterial::data[0].ks1[1], CarpaintMaterial::data[0].ks1[2])));
+			Texture *ks2 = GetTexture(props.Get(Property(propName + ".ks2")(CarpaintMaterial::data[0].ks2[0], CarpaintMaterial::data[0].ks2[1], CarpaintMaterial::data[0].ks2[2])));
+			Texture *ks3 = GetTexture(props.Get(Property(propName + ".ks3")(CarpaintMaterial::data[0].ks3[0], CarpaintMaterial::data[0].ks3[1], CarpaintMaterial::data[0].ks3[2])));
+			Texture *r1 = GetTexture(props.Get(Property(propName + ".r1")(CarpaintMaterial::data[0].r1)));
+			Texture *r2 = GetTexture(props.Get(Property(propName + ".r2")(CarpaintMaterial::data[0].r2)));
+			Texture *r3 = GetTexture(props.Get(Property(propName + ".r3")(CarpaintMaterial::data[0].r3)));
+			Texture *m1 = GetTexture(props.Get(Property(propName + ".m1")(CarpaintMaterial::data[0].m1)));
+			Texture *m2 = GetTexture(props.Get(Property(propName + ".m2")(CarpaintMaterial::data[0].m2)));
+			Texture *m3 = GetTexture(props.Get(Property(propName + ".m3")(CarpaintMaterial::data[0].m3)));
+			mat = new CarpaintMaterial(emissionTex, bumpTex, normalTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
+		}
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
