@@ -47,7 +47,7 @@ class Scene;
 
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH,
+	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT,
 
 	// The following types are used (in PATHOCL CompiledScene class) only to
 	// recognize the usage of some specific material option
@@ -610,8 +610,6 @@ private:
 		float u0, float u1, float *pdf) const;
 	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 		const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
-		const luxrays::Spectrum &alpha, const float depth) const;
 
 	const Texture *Kd;
 	const Texture *Ks;
@@ -881,6 +879,92 @@ private:
 
 
 //------------------------------------------------------------------------------
+// Carpaint material
+//------------------------------------------------------------------------------
+
+class CarpaintMaterial : public Material {
+public:
+	CarpaintMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *kd, const Texture *ks1, const Texture *ks2, const Texture *ks3, const Texture *m1, const Texture *m2, const Texture *m3,
+			const Texture *r1, const Texture *r2, const Texture *r3, const Texture *ka, const Texture *d) :
+			Material(emitted, bump, normal), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3), R1(r1), R2(r2), R3(r3),
+			Ka(ka), depth(d) { }
+
+	virtual MaterialType GetType() const { return CARPAINT; }
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
+
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+
+	virtual luxrays::Properties ToProperties() const;
+
+/*	const Texture *GetKd() const { return Kd; }
+	const Texture *GetKs() const { return Ks; }
+	const Texture *GetNu() const { return nu; }
+	const Texture *GetNv() const { return nv; }
+	const Texture *GetKa() const { return Ka; }
+	const Texture *GetDepth() const { return depth; }
+	const Texture *GetIndex() const { return index; }
+	const bool IsMultibounce() const { return multibounce; }
+
+private:
+	float SchlickBSDF_CoatingWeight(const luxrays::Spectrum &ks, const luxrays::Vector &localFixedDir) const;
+	luxrays::Spectrum SchlickBSDF_CoatingF(const bool fromLight, const luxrays::Spectrum &ks, const float roughness, const float anisotropy,
+		const luxrays::Vector &localFixedDir,	const luxrays::Vector &localSampledDir) const;
+	luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const luxrays::Spectrum ks,
+		const float roughness, const float anisotropy, const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		float u0, float u1, float *pdf) const;
+	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
+		const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir) const;
+	luxrays::Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
+		const luxrays::Spectrum &alpha, const float depth) const;*/
+
+	struct CarpaintData {
+		string name;
+		float kd[COLOR_SAMPLES];
+		float ks1[COLOR_SAMPLES];
+		float ks2[COLOR_SAMPLES];
+		float ks3[COLOR_SAMPLES];
+		float r1, r2, r3;
+		float m1, m2, m3;
+	};
+	static struct CarpaintData data[8];
+	static int NbPresets() { return 8; }
+
+	const Texture *Kd;
+	const Texture *Ks1;
+	const Texture *Ks2;
+	const Texture *Ks3;
+	const Texture *M1;
+	const Texture *M2;
+	const Texture *M3;
+	const Texture *R1;
+	const Texture *R2;
+	const Texture *R3;
+	const Texture *Ka;
+	const Texture *depth;
+};
+
+//------------------------------------------------------------------------------
+// Coating absorption
+//------------------------------------------------------------------------------
+
+extern luxrays::Spectrum CoatingAbsorption(const float cosi, const float coso,
+	const luxrays::Spectrum &alpha, const float depth);
+
+//------------------------------------------------------------------------------
 // SchlickDistribution related functions
 //------------------------------------------------------------------------------
 
@@ -898,7 +982,7 @@ extern float SchlickDistribution_G(const float roughness, const luxrays::Vector 
 // Fresnel related functions
 //------------------------------------------------------------------------------
 
-extern luxrays::Spectrum FresnelSlick_Evaluate(const luxrays::Spectrum &ks, const float cosi);
+extern luxrays::Spectrum FresnelSchlick_Evaluate(const luxrays::Spectrum &ks, const float cosi);
 extern luxrays::Spectrum FresnelGeneral_Evaluate(const luxrays::Spectrum &eta, const luxrays::Spectrum &k, const float cosi);
 extern luxrays::Spectrum FresnelCauchy_Evaluate(const float eta, const float cosi);
 
