@@ -1,25 +1,33 @@
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ *   Copyright (C) 1998-2013 by authors (see AUTHORS.txt)                  *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
- * Licensed under the Apache License, Version 2.0 (the "License");         *
- * you may not use this file except in compliance with the License.        *
- * You may obtain a copy of the License at                                 *
+ *   Lux Renderer is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 3 of the License, or     *
+ *   (at your option) any later version.                                   *
  *                                                                         *
- *     http://www.apache.org/licenses/LICENSE-2.0                          *
+ *   Lux Renderer is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
  *                                                                         *
- * Unless required by applicable law or agreed to in writing, software     *
- * distributed under the License is distributed on an "AS IS" BASIS,       *
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
- * See the License for the specific language governing permissions and     *
- * limitations under the License.                                          *
- ***************************************************************************/
-
-namespace slg {
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
+ *                                                                         *
+ *   This project is based on PBRT ; see http://www.pbrt.org               *
+ *   Lux Renderer website : http://www.luxrender.org                       *
+ ***************************************************************************/  
 
 // 32 bin RGB spectra for smits RGB->RGBColor conversion using D65 whitepoint (for illuminants)
 // generated with matlab by karlvb - added by radiance
+
+#ifndef LUX_RGBD65_32_H
+#define LUX_RGBD65_32_H
+
+namespace lux
+{
 
 static const unsigned int illumrgb2spect_bins  = 32;
 static const float illumrgb2spect_start = 380.f;
@@ -145,4 +153,6 @@ static float illumrgb2spect_blue[] =	  { 1.0570490759328752e+00,   1.05384669128
 											1.6624255403475907e-01,   1.6997613960634927e-01,
 											1.5769743995852967e-01,   1.9069090525482305e-01 };
 
-}
+}//namespace lux
+
+#endif // LUX_RGBD65_32_H

@@ -90,8 +90,8 @@ endif(DOXYGEN_FOUND)
 
 set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/luxrays_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/spectrum_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/spectrum_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/qbvh.cl
@@ -120,6 +120,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/luxrays/kernels luxrays ${LUXRAYS_KERNELS})
@@ -135,6 +136,18 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mqbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/qbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/color.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spd.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/blackbodyspd.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/equalspd.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/frequencyspd.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/gaussianspd.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/irregular.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/regular.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/rgbillum.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/rgbrefl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spectrumwavelengths.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/swcspectrum.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/accelerator.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/context.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/dataset.cpp
@@ -148,8 +161,9 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/openclidevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/nativeidevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/virtualidevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/utils/mc.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ocl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/properties.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
@@ -182,9 +196,10 @@ set(LUXRAYS_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/bbox_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/triangle_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/triangle_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/spectrum_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/spectrum_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/color_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/color_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/uv_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/mc_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/kernels/utils_funcs_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_SRCS_KERNELS})

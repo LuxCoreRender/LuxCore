@@ -46,10 +46,6 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	taskStatsBuff = NULL;
 	taskResultsBuff = NULL;
 	pixelFilterBuff = NULL;
-	lightSamplesBuff = NULL;
-	lightVisibilityBuff = NULL;
-	materialSamplesBuff = NULL;
-	materialVisibilityBuff = NULL;
 	
 	gpuTaskStats = NULL;
 }
@@ -77,10 +73,6 @@ void BiasPathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&taskResultsBuff);
 	FreeOCLBuffer(&pixelFilterBuff);
-	FreeOCLBuffer(&lightSamplesBuff);
-	FreeOCLBuffer(&lightVisibilityBuff);
-	FreeOCLBuffer(&materialSamplesBuff);
-	FreeOCLBuffer(&materialVisibilityBuff);
 }
 
 void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
@@ -199,7 +191,7 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 		// BSDF (directLightBSDF) size
 		GetOpenCLBSDFSize() +
 		// HitPoint (directLightHitPoint) size
-		((engine->compiledScene->triLightDefs.size() > 0) ? GetOpenCLHitPointSize() : 0) +
+		GetOpenCLHitPointSize() +
 
 		// Spectrum (lightRadiance) size
 		sizeof(slg::ocl::Spectrum) +
@@ -242,34 +234,6 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 
 	AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
 			sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU light samples count
-	//--------------------------------------------------------------------------
-
-	AllocOCLBufferRO(&lightSamplesBuff, &engine->compiledScene->lightSamples[0],
-			sizeof(int) * engine->compiledScene->lightSamples.size(), "Light Samples");
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU light visibility with indirect paths
-	//--------------------------------------------------------------------------
-
-	AllocOCLBufferRO(&lightVisibilityBuff, &engine->compiledScene->lightVisibility[0],
-			sizeof(BSDFEvent) * engine->compiledScene->lightVisibility.size(), "Light Visibility");
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU material samples count
-	//--------------------------------------------------------------------------
-
-	AllocOCLBufferRO(&materialSamplesBuff, &engine->compiledScene->materialSamples[0],
-			sizeof(int) * engine->compiledScene->materialSamples.size(), "Material Samples");
-
-	//--------------------------------------------------------------------------
-	// Allocate GPU material visibility with indirect paths
-	//--------------------------------------------------------------------------
-
-	AllocOCLBufferRO(&materialVisibilityBuff, &engine->compiledScene->materialVisibility[0],
-			sizeof(BSDFEvent) * engine->compiledScene->materialVisibility.size(), "Material Visibility");
 }
 
 void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
@@ -313,10 +277,6 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	renderSampleKernel->setArg(argIndex++, *taskStatsBuff);
 	renderSampleKernel->setArg(argIndex++, *taskResultsBuff);
 	renderSampleKernel->setArg(argIndex++, *pixelFilterBuff);
-	renderSampleKernel->setArg(argIndex++, *lightSamplesBuff);
-	renderSampleKernel->setArg(argIndex++, *lightVisibilityBuff);
-	renderSampleKernel->setArg(argIndex++, *materialSamplesBuff);
-	renderSampleKernel->setArg(argIndex++, *materialVisibilityBuff);
 
 	// Film parameters
 	argIndex = SetFilmKernelArgs(*renderSampleKernel, argIndex);
@@ -341,19 +301,17 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 		renderSampleKernel->setArg(argIndex++, *alphasBuff);
 	renderSampleKernel->setArg(argIndex++, *trianglesBuff);
 	renderSampleKernel->setArg(argIndex++, *cameraBuff);
+	// Lights
+	renderSampleKernel->setArg(argIndex++, *lightsBuff);
+	if (envLightIndicesBuff) {
+		renderSampleKernel->setArg(argIndex++, *envLightIndicesBuff);
+		renderSampleKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
+	}
+	renderSampleKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
+	if (infiniteLightDistributionsBuff)
+		renderSampleKernel->setArg(argIndex++, *infiniteLightDistributionsBuff);
 	renderSampleKernel->setArg(argIndex++, *lightsDistributionBuff);
-	if (infiniteLightBuff) {
-		renderSampleKernel->setArg(argIndex++, *infiniteLightBuff);
-		renderSampleKernel->setArg(argIndex++, *infiniteLightDistributionBuff);
-	}
-	if (sunLightBuff)
-		renderSampleKernel->setArg(argIndex++, *sunLightBuff);
-	if (skyLightBuff)
-		renderSampleKernel->setArg(argIndex++, *skyLightBuff);
-	if (triLightDefsBuff) {
-		renderSampleKernel->setArg(argIndex++, *triLightDefsBuff);
-		renderSampleKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
-	}
+	// Images
 	if (imageMapDescsBuff) {
 		renderSampleKernel->setArg(argIndex++, *imageMapDescsBuff);
 

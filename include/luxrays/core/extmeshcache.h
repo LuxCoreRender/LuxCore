@@ -25,7 +25,7 @@
 
 #include <boost/unordered_map.hpp>
 
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"

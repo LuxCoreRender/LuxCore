@@ -54,13 +54,13 @@ void BiDirCPURenderThread::ConnectVertices(
 		// Check light vertex BSDF
 		float lightBsdfPdfW, lightBsdfRevPdfW;
 		BSDFEvent lightEvent;
-		Spectrum lightBsdfEval = eyeVertex.bsdf.Evaluate(eyeDir, &lightEvent, &lightBsdfPdfW, &lightBsdfRevPdfW);
+		Spectrum lightBsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &lightEvent, &lightBsdfPdfW, &lightBsdfRevPdfW);
 
 		if (!lightBsdfEval.Black()) {
 			// Check the 2 surfaces can see each other
 			const float cosThetaAtCamera = Dot(eyeVertex.bsdf.hitPoint.shadeN, eyeDir);
 			const float cosThetaAtLight = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
-			const float geometryTerm = cosThetaAtLight * cosThetaAtLight / eyeDistance2;
+			const float geometryTerm = 1.f / eyeDistance2;
 			if (geometryTerm <= 0.f)
 				return;
 
@@ -147,7 +147,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 					scene->camera->GetPixelArea());
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-				const float fluxToRadianceFactor = cameraPdfA;
+				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
 				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
@@ -172,7 +172,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.SampleAllLights(u0, &lightPickPdf);
 
 		Vector lightRayDir;
 		float distance, directPdfW, emissionPdfW, cosThetaAtLight;
@@ -211,7 +211,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 						(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
 					const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
 
-					const float factor = cosThetaToLight / directLightSamplingPdfW;
+					const float factor = 1.f / directLightSamplingPdfW;
 
 					*radiance += (misWeight * factor) * eyeVertex.throughput * connectionThroughput * lightRadiance * bsdfEval;
 				}
@@ -234,7 +234,7 @@ void BiDirCPURenderThread::DirectHitLight(
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	const float lightPickPdf = scene->SampleAllLightPdf(light);
+	const float lightPickPdf = scene->lightDefs.SampleAllLightPdf(light);
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -254,13 +254,9 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
 		DirectHitLight(eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 	} else {
-		if (scene->envLight) {
-			const Spectrum lightRadiance = scene->envLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
-		}
-		if (scene->sunLight) {
-			const Spectrum lightRadiance = scene->sunLight->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
-			DirectHitLight(scene->envLight, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
+		BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
+			const Spectrum lightRadiance = el->GetRadiance(*scene, eyeVertex.bsdf.hitPoint.fixedDir, &directPdfA, &emissionPdfW);
+			DirectHitLight(el, lightRadiance, directPdfA, emissionPdfW, eyeVertex, radiance);
 		}
 	}
 }
@@ -274,7 +270,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 
 	// Select one light source
 	float lightPickPdf;
-	const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
+	const LightSource *light = scene->lightDefs.SampleAllLights(sampler->GetSample(2), &lightPickPdf);
 
 	// Initialize the light path
 	PathVertexVM lightVertex;
@@ -378,7 +374,7 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 			return false;
 	}
 
-	pathVertex->throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
+	pathVertex->throughput *= bsdfSample;
 	assert (!pathVertex->throughput.IsNaN() && !pathVertex->throughput.IsInf());
 
 	// New MIS weights

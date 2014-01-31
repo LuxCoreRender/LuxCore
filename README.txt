@@ -43,4 +43,4 @@ A special thanks goes to:
 - FreeImage open source image library. See http://freeimage.sourceforge.net for details;
 - Tomas Davidovic (http://www.davidovic.cz and http://www.smallvcm.com) for SmallVCM, an endless source of hints
 
-This software is released under   Apache License Version 2.0 (see COPYING.txt file).
+This software is released under Apache License Version 2.0 (see COPYING.txt file).

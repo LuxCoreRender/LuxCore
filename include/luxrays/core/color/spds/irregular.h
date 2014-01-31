@@ -1,5 +1,3 @@
-#line 2 "spectrum_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,13 +16,43 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(SLG_OPENCL_KERNEL)
-#define BLACK ((float3)(0.f, 0.f, 0.f))
-#define WHITE ((float3)(1.f, 1.f, 1.f))
-#endif
+#ifndef _LUXRAYS_IRREGULARSPD_H
+#define _LUXRAYS_IRREGULARSPD_H
 
-#define ASSIGN_SPECTRUM(c0, c1) { (c0).r = (c1).r; (c0).g = (c1).g; (c0).b = (c1).b; }
+#include "luxrays/core/color/spd.h"
 
-typedef struct {
-	float r, g, b;
-} Spectrum;
+namespace luxrays {
+// only use spline for regular data
+enum SPDResamplingMethod { Linear, Spline };
+
+// Irregularly sampled SPD
+// Resampled to a fixed resolution (at construction)
+// using cubic spline interpolation
+class IrregularSPD : public SPD {
+public:
+	IrregularSPD() : SPD() {}
+
+	// creates an irregularly sampled SPD
+	// may "truncate" the edges to fit the new resolution
+	//  wavelengths   array containing the wavelength of each sample
+	//  samples       array of sample values at the given wavelengths
+	//  n             number of samples
+	//  resolution    resampling resolution (in nm)
+	IrregularSPD(const float* const wavelengths, const float* const samples,
+		u_int n, float resolution = 5, SPDResamplingMethod resamplignMethod = Linear);
+
+	virtual ~IrregularSPD() {}
+
+protected:
+	  void init(float lMin, float lMax, const float* const s, u_int n);
+
+private:
+	// computes data for natural spline interpolation
+	// from Numerical Recipes in C
+	void calc_spline_data(const float* const wavelengths,
+		const float* const amplitudes, u_int n, float *spline_data);
+};
+
+}
+
+#endif // _LUXRAYS_IRREGULARSPD_H

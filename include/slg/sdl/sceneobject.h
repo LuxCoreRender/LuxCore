@@ -26,9 +26,9 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/properties.h"
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
+#include "luxrays/utils/mc.h"
 #include "slg/sdl/bsdfevents.h"
-#include "slg/core/mc.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/hitpoint.h"
 
@@ -99,7 +99,7 @@ public:
   
 private:
 	std::vector<SceneObject *> objs;
-	std::map<std::string, SceneObject *> objsByName;
+	boost::unordered_map<std::string, SceneObject *> objsByName;
 };
 
 }

@@ -50,8 +50,8 @@ public:
 				IsMaterialCompiled(ROUGHGLASS));
 	}
 
-	static float *CompileDistribution1D(const Distribution1D *dist, u_int *size);
-	static float *CompileDistribution2D(const Distribution2D *dist, u_int *size);
+	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
+	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
 
 	Scene *scene;
 	Film *film;
@@ -71,34 +71,17 @@ public:
 	vector<luxrays::ocl::Mesh> meshDescs;
 	luxrays::BSphere worldBSphere;
 
-	// Compiled AreaLights
-	vector<slg::ocl::TriangleLight> triLightDefs;
+	// Compiled Lights
+	vector<slg::ocl::LightSource> lightDefs;
+	// Additional light related information
+	vector<u_int> lightTypeCounts;
+	vector<u_int> envLightIndices;
 	vector<u_int> meshTriLightDefsOffset;
-
-	// Compiled InfiniteLights
-	slg::ocl::InfiniteLight *infiniteLight;
-	float *infiniteLightDistribution;
-	u_int infiniteLightDistributionSize;
-
-	// Compiled SunLight
-	slg::ocl::SunLight *sunLight;
-	// Compiled SkyLight
-	slg::ocl::SkyLight *skyLight;
-
+	// Infinite light Distribution2Ds
+	vector<float> infiniteLightDistributions;
 	// Compiled power based light sampling strategy
 	float *lightsDistribution;
 	u_int lightsDistributionSize;
-
-	// Number of samples to take for each light (optional)
-	vector<int> lightSamples;
-	// Number of samples to take for each material (optional)
-	vector<int> materialSamples;
-	// Type of indirect paths where a light source is visible with a direct hit. It is
-	// and OR of DIFFUSE, GLOSSY and SPECULAR.
-	vector<BSDFEvent> lightVisibility;
-	// Type of indirect paths where a material is visible. It is
-	// and OR of DIFFUSE, GLOSSY and SPECULAR.
-	vector<BSDFEvent> materialVisibility;
 
 	// Compiled Materials
 	std::set<MaterialType> usedMaterialTypes;
@@ -122,15 +105,7 @@ private:
 	void CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);
 	void CompileTextures();
 	void CompileImageMaps();
-	void CompileAreaLights();
-	void CompileInfiniteLight();
-	void CompileSunLight();
-	void CompileSkyLight();
-	void CompileLightsDistribution();
-	void CompileLightSamples();
-	void CompileLightVisibility();
-	void CompileMaterialSamples();
-	void CompileMaterialVisibility();
+	void CompileLights();
 };
 
 }

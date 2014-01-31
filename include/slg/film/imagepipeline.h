@@ -24,6 +24,7 @@
 #include <typeinfo> 
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/color/color.h"
 
 namespace slg {
 

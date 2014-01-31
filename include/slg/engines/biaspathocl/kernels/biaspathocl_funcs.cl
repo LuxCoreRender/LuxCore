@@ -22,121 +22,121 @@ void SR_RadianceClamp(__global SampleResult *sampleResult) {
 	// Initialize only Spectrum fields
 
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	sampleResult->radiancePerPixelNormalized[0].r = clamp(sampleResult->radiancePerPixelNormalized[0].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[0].g = clamp(sampleResult->radiancePerPixelNormalized[0].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[0].b = clamp(sampleResult->radiancePerPixelNormalized[0].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[0].c[0] = clamp(sampleResult->radiancePerPixelNormalized[0].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[0].c[1] = clamp(sampleResult->radiancePerPixelNormalized[0].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[0].c[2] = clamp(sampleResult->radiancePerPixelNormalized[0].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	sampleResult->radiancePerPixelNormalized[1].r = clamp(sampleResult->radiancePerPixelNormalized[1].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[1].g = clamp(sampleResult->radiancePerPixelNormalized[1].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[1].b = clamp(sampleResult->radiancePerPixelNormalized[1].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[1].c[0] = clamp(sampleResult->radiancePerPixelNormalized[1].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[1].c[1] = clamp(sampleResult->radiancePerPixelNormalized[1].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[1].c[2] = clamp(sampleResult->radiancePerPixelNormalized[1].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	sampleResult->radiancePerPixelNormalized[2].r = clamp(sampleResult->radiancePerPixelNormalized[2].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[2].g = clamp(sampleResult->radiancePerPixelNormalized[2].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[2].b = clamp(sampleResult->radiancePerPixelNormalized[2].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[2].c[0] = clamp(sampleResult->radiancePerPixelNormalized[2].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[2].c[1] = clamp(sampleResult->radiancePerPixelNormalized[2].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[2].c[2] = clamp(sampleResult->radiancePerPixelNormalized[2].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	sampleResult->radiancePerPixelNormalized[3].r = clamp(sampleResult->radiancePerPixelNormalized[3].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[3].g = clamp(sampleResult->radiancePerPixelNormalized[3].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[3].b = clamp(sampleResult->radiancePerPixelNormalized[3].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[3].c[0] = clamp(sampleResult->radiancePerPixelNormalized[3].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[3].c[1] = clamp(sampleResult->radiancePerPixelNormalized[3].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[3].c[2] = clamp(sampleResult->radiancePerPixelNormalized[3].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	sampleResult->radiancePerPixelNormalized[4].r = clamp(sampleResult->radiancePerPixelNormalized[4].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[4].g = clamp(sampleResult->radiancePerPixelNormalized[4].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[4].b = clamp(sampleResult->radiancePerPixelNormalized[4].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[4].c[0] = clamp(sampleResult->radiancePerPixelNormalized[4].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[4].c[1] = clamp(sampleResult->radiancePerPixelNormalized[4].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[4].c[2] = clamp(sampleResult->radiancePerPixelNormalized[4].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	sampleResult->radiancePerPixelNormalized[5].r = clamp(sampleResult->radiancePerPixelNormalized[5].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[5].g = clamp(sampleResult->radiancePerPixelNormalized[5].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[5].b = clamp(sampleResult->radiancePerPixelNormalized[5].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[5].c[0] = clamp(sampleResult->radiancePerPixelNormalized[5].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[5].c[1] = clamp(sampleResult->radiancePerPixelNormalized[5].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[5].c[2] = clamp(sampleResult->radiancePerPixelNormalized[5].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	sampleResult->radiancePerPixelNormalized[6].r = clamp(sampleResult->radiancePerPixelNormalized[6].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[6].g = clamp(sampleResult->radiancePerPixelNormalized[6].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[6].b = clamp(sampleResult->radiancePerPixelNormalized[6].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[6].c[0] = clamp(sampleResult->radiancePerPixelNormalized[6].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[6].c[1] = clamp(sampleResult->radiancePerPixelNormalized[6].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[6].c[2] = clamp(sampleResult->radiancePerPixelNormalized[6].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	sampleResult->radiancePerPixelNormalized[7].r = clamp(sampleResult->radiancePerPixelNormalized[7].r, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[7].g = clamp(sampleResult->radiancePerPixelNormalized[7].g, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[7].b = clamp(sampleResult->radiancePerPixelNormalized[7].b, 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[7].c[0] = clamp(sampleResult->radiancePerPixelNormalized[7].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[7].c[1] = clamp(sampleResult->radiancePerPixelNormalized[7].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	sampleResult->radiancePerPixelNormalized[7].c[2] = clamp(sampleResult->radiancePerPixelNormalized[7].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
 #endif
 }
 
 void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	dst->radiancePerPixelNormalized[0].r += src->radiancePerPixelNormalized[0].r;
-	dst->radiancePerPixelNormalized[0].g += src->radiancePerPixelNormalized[0].g;
-	dst->radiancePerPixelNormalized[0].b += src->radiancePerPixelNormalized[0].b;
+	dst->radiancePerPixelNormalized[0].c[0] += src->radiancePerPixelNormalized[0].c[0];
+	dst->radiancePerPixelNormalized[0].c[1] += src->radiancePerPixelNormalized[0].c[1];
+	dst->radiancePerPixelNormalized[0].c[2] += src->radiancePerPixelNormalized[0].c[2];
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	dst->radiancePerPixelNormalized[1].r += src->radiancePerPixelNormalized[1].r;
-	dst->radiancePerPixelNormalized[1].g += src->radiancePerPixelNormalized[1].g;
-	dst->radiancePerPixelNormalized[1].b += src->radiancePerPixelNormalized[1].b;
+	dst->radiancePerPixelNormalized[1].c[0] += src->radiancePerPixelNormalized[1].c[0];
+	dst->radiancePerPixelNormalized[1].c[1] += src->radiancePerPixelNormalized[1].c[1];
+	dst->radiancePerPixelNormalized[1].c[2] += src->radiancePerPixelNormalized[1].c[2];
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	dst->radiancePerPixelNormalized[2].r += src->radiancePerPixelNormalized[2].r;
-	dst->radiancePerPixelNormalized[2].g += src->radiancePerPixelNormalized[2].g;
-	dst->radiancePerPixelNormalized[2].b += src->radiancePerPixelNormalized[2].b;
+	dst->radiancePerPixelNormalized[2].c[0] += src->radiancePerPixelNormalized[2].c[0];
+	dst->radiancePerPixelNormalized[2].c[1] += src->radiancePerPixelNormalized[2].c[1];
+	dst->radiancePerPixelNormalized[2].c[2] += src->radiancePerPixelNormalized[2].c[2];
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	dst->radiancePerPixelNormalized[3].r += src->radiancePerPixelNormalized[3].r;
-	dst->radiancePerPixelNormalized[3].g += src->radiancePerPixelNormalized[3].g;
-	dst->radiancePerPixelNormalized[3].b += src->radiancePerPixelNormalized[3].b;
+	dst->radiancePerPixelNormalized[3].c[0] += src->radiancePerPixelNormalized[3].c[0];
+	dst->radiancePerPixelNormalized[3].c[1] += src->radiancePerPixelNormalized[3].c[1];
+	dst->radiancePerPixelNormalized[3].c[2] += src->radiancePerPixelNormalized[3].c[2];
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	dst->radiancePerPixelNormalized[4].r += src->radiancePerPixelNormalized[4].r;
-	dst->radiancePerPixelNormalized[4].g += src->radiancePerPixelNormalized[4].g;
-	dst->radiancePerPixelNormalized[4].b += src->radiancePerPixelNormalized[4].b;
+	dst->radiancePerPixelNormalized[4].c[0] += src->radiancePerPixelNormalized[4].c[0];
+	dst->radiancePerPixelNormalized[4].c[1] += src->radiancePerPixelNormalized[4].c[1];
+	dst->radiancePerPixelNormalized[4].c[2] += src->radiancePerPixelNormalized[4].c[2];
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	dst->radiancePerPixelNormalized[5].r += src->radiancePerPixelNormalized[5].r;
-	dst->radiancePerPixelNormalized[5].g += src->radiancePerPixelNormalized[5].g;
-	dst->radiancePerPixelNormalized[5].b += src->radiancePerPixelNormalized[5].b;
+	dst->radiancePerPixelNormalized[5].c[0] += src->radiancePerPixelNormalized[5].c[0];
+	dst->radiancePerPixelNormalized[5].c[1] += src->radiancePerPixelNormalized[5].c[1];
+	dst->radiancePerPixelNormalized[5].c[2] += src->radiancePerPixelNormalized[5].c[2];
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	dst->radiancePerPixelNormalized[6].r += src->radiancePerPixelNormalized[6].r;
-	dst->radiancePerPixelNormalized[6].g += src->radiancePerPixelNormalized[6].g;
-	dst->radiancePerPixelNormalized[6].b += src->radiancePerPixelNormalized[6].b;
+	dst->radiancePerPixelNormalized[6].c[0] += src->radiancePerPixelNormalized[6].c[0];
+	dst->radiancePerPixelNormalized[6].c[1] += src->radiancePerPixelNormalized[6].c[1];
+	dst->radiancePerPixelNormalized[6].c[2] += src->radiancePerPixelNormalized[6].c[2];
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	dst->radiancePerPixelNormalized[7].r += src->radiancePerPixelNormalized[7].r;
-	dst->radiancePerPixelNormalized[7].g += src->radiancePerPixelNormalized[7].g;
-	dst->radiancePerPixelNormalized[7].b += src->radiancePerPixelNormalized[7].b;
+	dst->radiancePerPixelNormalized[7].c[0] += src->radiancePerPixelNormalized[7].c[0];
+	dst->radiancePerPixelNormalized[7].c[1] += src->radiancePerPixelNormalized[7].c[1];
+	dst->radiancePerPixelNormalized[7].c[2] += src->radiancePerPixelNormalized[7].c[2];
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 	dst->alpha += dst->alpha + src->alpha;
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-	dst->directDiffuse.r += src->directDiffuse.r;
-	dst->directDiffuse.g += src->directDiffuse.g;
-	dst->directDiffuse.b += src->directDiffuse.b;
+	dst->directDiffuse.c[0] += src->directDiffuse.c[0];
+	dst->directDiffuse.c[1] += src->directDiffuse.c[1];
+	dst->directDiffuse.c[2] += src->directDiffuse.c[2];
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-	dst->directGlossy.r += src->directGlossy.r;
-	dst->directGlossy.g += src->directGlossy.g;
-	dst->directGlossy.b += src->directGlossy.b;
+	dst->directGlossy.c[0] += src->directGlossy.c[0];
+	dst->directGlossy.c[1] += src->directGlossy.c[1];
+	dst->directGlossy.c[2] += src->directGlossy.c[2];
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-	dst->emission.r += src->emission.r;
-	dst->emission.g += src->emission.g;
-	dst->emission.b += src->emission.b;
+	dst->emission.c[0] += src->emission.c[0];
+	dst->emission.c[1] += src->emission.c[1];
+	dst->emission.c[2] += src->emission.c[2];
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-	dst->indirectDiffuse.r += src->indirectDiffuse.r;
-	dst->indirectDiffuse.g += src->indirectDiffuse.g;
-	dst->indirectDiffuse.b += src->indirectDiffuse.b;
+	dst->indirectDiffuse.c[0] += src->indirectDiffuse.c[0];
+	dst->indirectDiffuse.c[1] += src->indirectDiffuse.c[1];
+	dst->indirectDiffuse.c[2] += src->indirectDiffuse.c[2];
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-	dst->indirectGlossy.r += src->indirectGlossy.r;
-	dst->indirectGlossy.g += src->indirectGlossy.g;
-	dst->indirectGlossy.b += src->indirectGlossy.b;
+	dst->indirectGlossy.c[0] += src->indirectGlossy.c[0];
+	dst->indirectGlossy.c[1] += src->indirectGlossy.c[1];
+	dst->indirectGlossy.c[2] += src->indirectGlossy.c[2];
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-	dst->indirectSpecular.r += src->indirectSpecular.r;
-	dst->indirectSpecular.g += src->indirectSpecular.g;
-	dst->indirectSpecular.b += src->indirectSpecular.b;
+	dst->indirectSpecular.c[0] += src->indirectSpecular.c[0];
+	dst->indirectSpecular.c[1] += src->indirectSpecular.c[1];
+	dst->indirectSpecular.c[2] += src->indirectSpecular.c[2];
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 	dst->directShadowMask += src->directShadowMask;
@@ -164,7 +164,7 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 		dst->shadingNormal = src->shadingNormal;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-		// Note: MATERIAL_ID_MASK is calculated starting from materialID field
+		// Note: MATERIAL_ID_MASK and BY_MATERIAL_ID are calculated starting from materialID field
 		dst->materialID = src->materialID;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
@@ -179,78 +179,78 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 
 void SR_Normalize(SampleResult *dst, const float k) {
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	dst->radiancePerPixelNormalized[0].r *= k;
-	dst->radiancePerPixelNormalized[0].g *= k;
-	dst->radiancePerPixelNormalized[0].b *= k;
+	dst->radiancePerPixelNormalized[0].c[0] *= k;
+	dst->radiancePerPixelNormalized[0].c[1] *= k;
+	dst->radiancePerPixelNormalized[0].c[2] *= k;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	dst->radiancePerPixelNormalized[1].r *= k;
-	dst->radiancePerPixelNormalized[1].g *= k;
-	dst->radiancePerPixelNormalized[1].b *= k;
+	dst->radiancePerPixelNormalized[1].c[0] *= k;
+	dst->radiancePerPixelNormalized[1].c[1] *= k;
+	dst->radiancePerPixelNormalized[1].c[2] *= k;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	dst->radiancePerPixelNormalized[2].r *= k;
-	dst->radiancePerPixelNormalized[2].g *= k;
-	dst->radiancePerPixelNormalized[2].b *= k;
+	dst->radiancePerPixelNormalized[2].c[0] *= k;
+	dst->radiancePerPixelNormalized[2].c[1] *= k;
+	dst->radiancePerPixelNormalized[2].c[2] *= k;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	dst->radiancePerPixelNormalized[3].r *= k;
-	dst->radiancePerPixelNormalized[3].g *= k;
-	dst->radiancePerPixelNormalized[3].b *= k;
+	dst->radiancePerPixelNormalized[3].c[0] *= k;
+	dst->radiancePerPixelNormalized[3].c[1] *= k;
+	dst->radiancePerPixelNormalized[3].c[2] *= k;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	dst->radiancePerPixelNormalized[4].r *= k;
-	dst->radiancePerPixelNormalized[4].g *= k;
-	dst->radiancePerPixelNormalized[4].b *= k;
+	dst->radiancePerPixelNormalized[4].c[0] *= k;
+	dst->radiancePerPixelNormalized[4].c[1] *= k;
+	dst->radiancePerPixelNormalized[4].c[2] *= k;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	dst->radiancePerPixelNormalized[5].r *= k;
-	dst->radiancePerPixelNormalized[5].g *= k;
-	dst->radiancePerPixelNormalized[5].b *= k;
+	dst->radiancePerPixelNormalized[5].c[0] *= k;
+	dst->radiancePerPixelNormalized[5].c[1] *= k;
+	dst->radiancePerPixelNormalized[5].c[2] *= k;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	dst->radiancePerPixelNormalized[6].r *= k;
-	dst->radiancePerPixelNormalized[6].g *= k;
-	dst->radiancePerPixelNormalized[6].b *= k;
+	dst->radiancePerPixelNormalized[6].c[0] *= k;
+	dst->radiancePerPixelNormalized[6].c[1] *= k;
+	dst->radiancePerPixelNormalized[6].c[2] *= k;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	dst->radiancePerPixelNormalized[7].r *= k;
-	dst->radiancePerPixelNormalized[7].g *= k;
-	dst->radiancePerPixelNormalized[7].b *= k;
+	dst->radiancePerPixelNormalized[7].c[0] *= k;
+	dst->radiancePerPixelNormalized[7].c[1] *= k;
+	dst->radiancePerPixelNormalized[7].c[2] *= k;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 	dst->alpha *= k;
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-	dst->directDiffuse.r *= k;
-	dst->directDiffuse.g *= k;
-	dst->directDiffuse.b *= k;
+	dst->directDiffuse.c[0] *= k;
+	dst->directDiffuse.c[1] *= k;
+	dst->directDiffuse.c[2] *= k;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-	dst->directGlossy.r *= k;
-	dst->directGlossy.g *= k;
-	dst->directGlossy.b *= k;
+	dst->directGlossy.c[0] *= k;
+	dst->directGlossy.c[1] *= k;
+	dst->directGlossy.c[2] *= k;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-	dst->emission.r *= k;
-	dst->emission.g *= k;
-	dst->emission.b *= k;
+	dst->emission.c[0] *= k;
+	dst->emission.c[1] *= k;
+	dst->emission.c[2] *= k;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-	dst->indirectDiffuse.r *= k;
-	dst->indirectDiffuse.g *= k;
-	dst->indirectDiffuse.b *= k;
+	dst->indirectDiffuse.c[0] *= k;
+	dst->indirectDiffuse.c[1] *= k;
+	dst->indirectDiffuse.c[2] *= k;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-	dst->indirectGlossy.r *= k;
-	dst->indirectGlossy.g *= k;
-	dst->indirectGlossy.b *= k;
+	dst->indirectGlossy.c[0] *= k;
+	dst->indirectGlossy.c[1] *= k;
+	dst->indirectGlossy.c[2] *= k;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-	dst->indirectSpecular.r *= k;
-	dst->indirectSpecular.g *= k;
-	dst->indirectSpecular.b *= k;
+	dst->indirectSpecular.c[0] *= k;
+	dst->indirectSpecular.c[1] *= k;
+	dst->indirectSpecular.c[2] *= k;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 	dst->directShadowMask *= k;
@@ -341,96 +341,36 @@ void GenerateCameraRay(
 			);	
 }
 
-#if defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
 		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
 		const BSDFEvent pathBSDFEvent,
-		__global BSDFEvent *lightVisibility,
-		__global float *lightsDistribution,
-#if defined(PARAM_HAS_INFINITELIGHT)
-		__global InfiniteLight *infiniteLight,
-		__global float *infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-		__global SunLight *sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		__global SkyLight *skyLight,
-#endif
 		__global const Spectrum *pathThroughput,
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
-		IMAGEMAPS_PARAM_DECL) {
-	const float3 throughput = VLOAD3F(&pathThroughput->r);
+		LIGHTS_PARAM_DECL) {
+	const float3 throughput = VLOAD3F(&pathThroughput->c[0]);
 
-#if defined(PARAM_HAS_INFINITELIGHT)
-	{
-		const uint infiniteLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
-#if defined(PARAM_HAS_SUNLIGHT)
-			+ 1
-#endif
-		;
+	for (uint i = 0; i < envLightCount; ++i) {
+		__global LightSource *light = &lights[envLightIndices[i]];
 
-		if (firstPathVertex || (lightVisibility[infiniteLightIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+		if (firstPathVertex || (light->visibility & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 			float directPdfW;
-			const float3 infiniteLightRadiance = InfiniteLight_GetRadiance(infiniteLight,
-					infiniteLightDistribution, eyeDir, &directPdfW
-					IMAGEMAPS_PARAM);
-			if (!Spectrum_IsBlack(infiniteLightRadiance)) {
-				// MIS between BSDF sampling and direct light sampling
-				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, infiniteLight->lightSceneIndex);
-				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-				const float3 lightRadiance = weight * throughput * infiniteLightRadiance;
+			const float3 lightRadiance = EnvLight_GetRadiance(light, eyeDir, &directPdfW
+					LIGHTS_PARAM);
 
-				const uint lightID = min(infiniteLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-				AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+			if (!Spectrum_IsBlack(lightRadiance)) {
+				// MIS between BSDF sampling and direct light sampling
+				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, light->lightSceneIndex);
+				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+				const float3 radiance = weight * throughput * lightRadiance;
+
+				const uint lightID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+				AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, radiance);
 			}
 		}
 	}
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-	{
-		const uint skyLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
-#if defined(PARAM_HAS_SUNLIGHT)
-			+ 1
-#endif
-		;
-
-		if (firstPathVertex || (lightVisibility[skyLightIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
-			float directPdfW;
-			const float3 skyRadiance = SkyLight_GetRadiance(skyLight, eyeDir, &directPdfW);
-			if (!Spectrum_IsBlack(skyRadiance)) {
-				// MIS between BSDF sampling and direct light sampling
-				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, skyLight->lightSceneIndex);
-				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-				const float3 lightRadiance = weight * throughput * skyRadiance;
-
-				const uint lightID = min(skyLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-				AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
-			}
-		}
-	}
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-	{
-		const uint sunLightIndex = PARAM_TRIANGLE_LIGHT_COUNT;
-
-		if (firstPathVertex || (lightVisibility[sunLightIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
-			float directPdfW;
-			const float3 sunRadiance = SunLight_GetRadiance(sunLight, eyeDir, &directPdfW);
-			if (!Spectrum_IsBlack(sunRadiance)) {
-				// MIS between BSDF sampling and direct light sampling
-				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, sunLight->lightSceneIndex);
-				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-				const float3 lightRadiance = weight * throughput * sunRadiance;
-
-				const uint lightID = min(sunLight->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-				AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
-			}
-		}
-	}
-#endif
 }
 #endif
 
@@ -439,31 +379,27 @@ void DirectHitFiniteLight(
 		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
 		const BSDFEvent pathBSDFEvent,
-		__global BSDFEvent *lightVisibility,
-		__global float *lightsDistribution,
-		__global TriangleLight *triLightDefs,
 		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
-		MATERIALS_PARAM_DECL) {
-	if (firstPathVertex || (lightVisibility[bsdf->triangleLightSourceIndex] & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+		LIGHTS_PARAM_DECL) {
+	if (firstPathVertex || (lights[bsdf->triangleLightSourceIndex].visibility & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 		float directPdfA;
-		const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf,
-				triLightDefs, &directPdfA
-				MATERIALS_PARAM);
+		const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, &directPdfA
+				LIGHTS_PARAM);
 
 		if (!Spectrum_IsBlack(emittedRadiance)) {
 			// Add emitted radiance
 			float weight = 1.f;
 			if (!(lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,
-						triLightDefs[bsdf->triangleLightSourceIndex].lightSceneIndex);
+						lights[bsdf->triangleLightSourceIndex].lightSceneIndex);
 				const float directPdfW = PdfAtoW(directPdfA, distance,
 					fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
 
 				// MIS between BSDF sampling and direct light sampling
 				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 			}
-			const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->r) * emittedRadiance;
+			const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->c[0]) * emittedRadiance;
 
 			const uint lightID =  min(BSDF_GetLightID(bsdf
 					MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
@@ -474,98 +410,41 @@ void DirectHitFiniteLight(
 #endif
 
 bool DirectLightSampling(
-		const uint lightIndex,
+		__global LightSource *light,
 		const float lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-		__global InfiniteLight *infiniteLight,
-		__global float *infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-		__global SunLight *sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		__global SkyLight *skyLight,
-#endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		__global TriangleLight *triLightDefs,
-		__global HitPoint *directLightHitPoint,
+		__global HitPoint *tmpHitPoint,
 #endif
-		__global float *lightsDistribution,
 		const float u0, const float u1, const float u2,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float u3,
+#endif
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
-		MATERIALS_PARAM_DECL) {
+		LIGHTS_PARAM_DECL) {
 	float3 lightRayDir;
 	float distance, directPdfW;
-	float3 lightRadiance;
-	uint lightID;
-
-#if defined(PARAM_HAS_INFINITELIGHT)
-	const uint infiniteLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
-#if defined(PARAM_HAS_SUNLIGHT)
-		+ 1
-#endif
-	;
-
-	if (lightIndex == infiniteLightIndex) {
-		lightRadiance = InfiniteLight_Illuminate(
-			infiniteLight,
-			infiniteLightDistribution,
-			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-			u0, u1,
-			VLOAD3F(&bsdf->hitPoint.p.x),
-			&lightRayDir, &distance, &directPdfW
-			IMAGEMAPS_PARAM);
-		lightID = infiniteLight->lightID;
-	}
-#endif
-
-#if defined(PARAM_HAS_SKYLIGHT)
-	const uint skyLightIndex = PARAM_TRIANGLE_LIGHT_COUNT
-#if defined(PARAM_HAS_SUNLIGHT)
-		+ 1
-#endif
-	;
-
-	if (lightIndex == skyLightIndex) {
-		lightRadiance = SkyLight_Illuminate(
-			skyLight,
-			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-			u0, u1,
-			VLOAD3F(&bsdf->hitPoint.p.x),
-			&lightRayDir, &distance, &directPdfW);
-		lightID = skyLight->lightID;
-	}
-#endif
-
-#if defined(PARAM_HAS_SUNLIGHT)
-	const uint sunLightIndex = PARAM_TRIANGLE_LIGHT_COUNT;
-	if (lightIndex == sunLightIndex) {
-		lightRadiance = SunLight_Illuminate(
-			sunLight,
-			u0, u1,
-			&lightRayDir, &distance, &directPdfW);
-		lightID = sunLight->lightID;
-	}
-#endif
-
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-	if (lightIndex < PARAM_TRIANGLE_LIGHT_COUNT) {
-		lightRadiance = TriangleLight_Illuminate(
-			&triLightDefs[lightIndex], directLightHitPoint,
+	const float3 lightRadiance = Light_Illuminate(
+			light,
 			VLOAD3F(&bsdf->hitPoint.p.x),
 			u0, u1, u2,
-			&lightRayDir, &distance, &directPdfW
-			MATERIALS_PARAM);
-		lightID = mats[triLightDefs[lightIndex].materialIndex].lightID;
-	}
+#if defined(PARAM_HAS_PASSTHROUGH)
+			u3,
 #endif
+#if defined(PARAM_HAS_ENVLIGHTS)
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+			tmpHitPoint,
+#endif		
+			&lightRayDir, &distance, &directPdfW
+			LIGHTS_PARAM);
 
 	// Setup the shadow ray
 	const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
@@ -579,13 +458,14 @@ bool DirectLightSampling(
 
 		if (!Spectrum_IsBlack(bsdfEval)) {
 			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-			const float factor = cosThetaToLight / directLightSamplingPdfW;
+			const float factor = 1.f / directLightSamplingPdfW;
 
 			// MIS between direct light sampling and BSDF sampling
-			const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+			const float weight = Light_IsEnvOrIntersecable(light) ?
+				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->r) * bsdfEval * lightRadiance, &radiance->r);
-			*ID = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->c[0]) * bsdfEval * lightRadiance, &radiance->c[0]);
+			*ID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
 
 			// Setup the shadow ray
 			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
@@ -605,63 +485,42 @@ bool DirectLightSampling(
 bool DirectLightSampling_ONE(
 		const bool firstPathVertex,
 		Seed *seed,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-		__global InfiniteLight *infiniteLight,
-		__global float *infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-		__global SunLight *sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		__global SkyLight *skyLight,
-#endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		__global TriangleLight *triLightDefs,
-		__global HitPoint *directLightHitPoint,
+		__global HitPoint *tmpHitPoint,
 #endif
-		__global float *lightsDistribution,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global SampleResult *sampleResult,
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
-		MATERIALS_PARAM_DECL) {
+		LIGHTS_PARAM_DECL) {
 	// Pick a light source to sample
 	float lightPickPdf;
 	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
 
 	const bool illuminated = DirectLightSampling(
-		lightIndex,
+		&lights[lightIndex],
 		lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		worldCenterX,
 		worldCenterY,
 		worldCenterZ,
 		worldRadius,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-		infiniteLight,
-		infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-		sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		skyLight,
-#endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		triLightDefs,
-		directLightHitPoint,
+		tmpHitPoint,
 #endif
-		lightsDistribution,
 		Rnd_FloatValue(seed), Rnd_FloatValue(seed), Rnd_FloatValue(seed),
+#if defined(PARAM_HAS_PASSTHROUGH)
+		Rnd_FloatValue(seed),
+#endif
 		pathThroughput, bsdf,
 		shadowRay, radiance, ID
-		MATERIALS_PARAM);
+		LIGHTS_PARAM);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 	if (firstPathVertex && !illuminated)
@@ -675,35 +534,22 @@ bool DirectLightSampling_ONE(
 bool DirectLightSampling_ALL(
 		__global uint *currentLightIndex,
 		__global uint *currentLightSampleIndex,
-		__global int *lightSamples,
 		Seed *seed,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-		__global InfiniteLight *infiniteLight,
-		__global float *infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-		__global SunLight *sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-		__global SkyLight *skyLight,
-#endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		__global TriangleLight *triLightDefs,
-		__global HitPoint *directLightHitPoint,
+		__global HitPoint *tmpHitPoint,
 #endif
-		__global float *lightsDistribution,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global SampleResult *sampleResult,
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
-		MATERIALS_PARAM_DECL) {
+		LIGHTS_PARAM_DECL) {
 	for (; *currentLightIndex < PARAM_LIGHT_COUNT; ++(*currentLightIndex)) {
-		const int lightSamplesCount = lightSamples[*currentLightIndex];
+		const int lightSamplesCount = lights[*currentLightIndex].samples;
 		const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
 		const uint sampleCount2 = sampleCount * sampleCount;
 
@@ -718,36 +564,27 @@ bool DirectLightSampling_ALL(
 
 			const float scaleFactor = 1.f / sampleCount2;
 			const bool illuminated = DirectLightSampling(
-				*currentLightIndex,
+				&lights[*currentLightIndex],
 				1.f,
-#if defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 				worldCenterX,
 				worldCenterY,
 				worldCenterZ,
 				worldRadius,
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT)
-				infiniteLight,
-				infiniteLightDistribution,
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
-				sunLight,
-#endif
-#if defined(PARAM_HAS_SKYLIGHT)
-				skyLight,
-#endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-				triLightDefs,
-				directLightHitPoint,
+				tmpHitPoint,
 #endif
-				lightsDistribution,
 				u0, u1, Rnd_FloatValue(seed),
+#if defined(PARAM_HAS_PASSTHROUGH)
+				Rnd_FloatValue(seed),
+#endif
 				pathThroughput, bsdf,
 				shadowRay, radiance, ID
-				MATERIALS_PARAM);
+				LIGHTS_PARAM);
 
 			if (illuminated) {
-				VSTORE3F(scaleFactor * VLOAD3F(&radiance->r), &radiance->r);
+				VSTORE3F(scaleFactor * VLOAD3F(&radiance->c[0]), &radiance->c[0]);
 				return true;
 			}
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)

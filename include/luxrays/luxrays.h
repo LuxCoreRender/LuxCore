@@ -74,7 +74,7 @@ typedef unsigned char u_char;
 typedef unsigned short u_short;
 typedef unsigned int u_int;
 typedef unsigned long u_long;
-typedef unsigned long u_longlong;
+typedef unsigned long long u_longlong;
 
 /*!
  * \namespace luxrays
@@ -101,8 +101,7 @@ class RayBuffer;
 class RayBufferQueue;
 class RayBufferQueueO2O;
 class RayHit;
-class SampleBuffer;
-class Spectrum;
+class RGBColor;
 class Triangle;
 class TriangleMesh;
 class UV;

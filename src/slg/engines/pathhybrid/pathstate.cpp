@@ -75,28 +75,15 @@ void PathHybridState::Init(const PathHybridRenderThread *thread) {
 
 
 void PathHybridState::DirectHitInfiniteLight(const Scene *scene, const Vector &eyeDir) {
-	// Infinite light
-	float directPdfW;
-	if (scene->envLight) {
-		const Spectrum envRadiance = scene->envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
+	BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
+		float directPdfW;
+		const Spectrum envRadiance = el->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!envRadiance.Black()) {
 			if(!lastSpecular) {
 				// MIS between BSDF sampling and direct light sampling
 				sampleResults[0].radiancePerPixelNormalized[0] += throuput * PowerHeuristic(lastPdfW, directPdfW) * envRadiance;
 			} else
 				sampleResults[0].radiancePerPixelNormalized[0] += throuput * envRadiance;
-		}
-	}
-
-	// Sun light
-	if (scene->sunLight) {
-		const Spectrum sunRadiance = scene->sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!sunRadiance.Black()) {
-			if(!lastSpecular) {
-				// MIS between BSDF sampling and direct light sampling
-				sampleResults[0].radiancePerPixelNormalized[0] += throuput * PowerHeuristic(lastPdfW, directPdfW) * sunRadiance;
-			} else
-				sampleResults[0].radiancePerPixelNormalized[0] += throuput * sunRadiance;
 		}
 	}
 }
@@ -108,7 +95,7 @@ void PathHybridState::DirectHitFiniteLight(const Scene *scene, const float dista
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!lastSpecular) {
-			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -130,7 +117,7 @@ void PathHybridState::DirectLightSampling(const PathHybridRenderThread *renderTh
 
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.SampleAllLights(u0, &lightPickPdf);
 
 		Vector lightRayDir;
 		float distance, directPdfW;
@@ -147,9 +134,8 @@ void PathHybridState::DirectLightSampling(const PathHybridRenderThread *renderTh
 				directLightRay = Ray(bsdf.hitPoint.p, lightRayDir,
 						epsilon, distance - epsilon);
 
-				const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
 				const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-				const float factor = cosThetaToLight / directLightSamplingPdfW;
+				const float factor = 1.f / directLightSamplingPdfW;
 
 				if (depth >= renderEngine->rrDepth) {
 					// Russian Roulette
@@ -307,7 +293,7 @@ double PathHybridState::CollectResults(HybridRenderThread *renderThread) {
 				SplatSample(thread);
 				return 1.0;
 			} else {
-				throuput *= bsdfSample * (cosSampledDir / lastPdfW);
+				throuput *= bsdfSample;
 				assert (!throuput.IsNaN() && !throuput.IsInf());
 
 				nextPathVertexRay = Ray(bsdf.hitPoint.p, sampledDir);

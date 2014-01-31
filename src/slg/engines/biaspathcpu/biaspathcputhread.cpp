@@ -17,8 +17,6 @@
  ***************************************************************************/
 
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
-#include "slg/core/mc.h"
-#include "luxrays/core/randomgen.h"
 
 using namespace std;
 using namespace luxrays;
@@ -68,10 +66,11 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 		Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
 		const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-		const float factor = cosThetaToLight / directLightSamplingPdfW;
+		const float factor = 1.f / directLightSamplingPdfW;
 
 		// MIS between direct light sampling and BSDF sampling
-		const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+		const float weight = (light->IsEnvironmental() || light->IsIntersecable()) ? 
+						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 		const Spectrum illumRadiance = (weight * factor) * pathThroughput * lightRadiance * bsdfEval;
 
@@ -121,7 +120,7 @@ bool BiasPathCPURenderThread::DirectLightSamplingONE(
 
 	// Pick a light source to sample
 	float lightPickPdf;
-	const LightSource *light = scene->SampleAllLights(rndGen->floatValue(), &lightPickPdf);
+	const LightSource *light = scene->lightDefs.SampleAllLights(rndGen->floatValue(), &lightPickPdf);
 
 	const bool illuminated = DirectLightSampling(firstPathVertex, pathBSDFEvent,
 			light, lightPickPdf,
@@ -142,9 +141,9 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	const u_int lightsSize = scene->GetLightCount();
+	const u_int lightsSize = scene->lightDefs.GetSize();
 	for (u_int i = 0; i < lightsSize; ++i) {
-		const LightSource *light = scene->GetLightByIndex(i);
+		const LightSource *light = scene->lightDefs.GetLightSource(i);
 		const int samples = light->GetSamples();
 		const u_int samplesToDo = (samples < 0) ? engine->directLightSamples : ((u_int)samples);
 
@@ -205,7 +204,7 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 		if (!(lastBSDFEvent & SPECULAR)) {
 			// This PDF used for MIS is correct because lastSpecular is always
 			// true when using DirectLightSamplingALL()
-			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -223,7 +222,7 @@ bool BiasPathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 	return false;
 }
 
-bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
+bool BiasPathCPURenderThread::DirectHitEnvLight(const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent, const BSDFEvent pathBSDFEvent,
 		const Spectrum &pathThroughput, const Vector &eyeDir, const float lastPdfW,
 		SampleResult *sampleResult) {
@@ -232,50 +231,30 @@ bool BiasPathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 
 	// Infinite light
 	bool illuminated = false;
-	float directPdfW;
-	const InfiniteLightBase *envLight = scene->envLight;
-	if (envLight && (firstPathVertex ||
-			(((pathBSDFEvent & DIFFUSE) && envLight->IsVisibleIndirectDiffuse()) ||
-			((pathBSDFEvent & GLOSSY) && envLight->IsVisibleIndirectGlossy()) ||
-			((pathBSDFEvent & SPECULAR) && envLight->IsVisibleIndirectSpecular())))) {
-		const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!envRadiance.Black()) {
-			float weight;
-			if(!(lastBSDFEvent & SPECULAR)) {
-				// This PDF used for MIS is correct because lastSpecular is always
-				// true when using DirectLightSamplingALL()
 
-				// MIS between BSDF sampling and direct light sampling
-				weight = PowerHeuristic(lastPdfW, directPdfW);
-			} else
-				weight = 1.f;
+	BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
+		float directPdfW;
+		if (firstPathVertex ||
+				(((pathBSDFEvent & DIFFUSE) && envLight->IsVisibleIndirectDiffuse()) ||
+				((pathBSDFEvent & GLOSSY) && envLight->IsVisibleIndirectGlossy()) ||
+				((pathBSDFEvent & SPECULAR) && envLight->IsVisibleIndirectSpecular()))) {
+			const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
+			if (!envRadiance.Black()) {
+				float weight;
+				if(!(lastBSDFEvent & SPECULAR)) {
+					// This PDF used for MIS is correct because lastSpecular is always
+					// true when using DirectLightSamplingALL()
 
-			const Spectrum radiance = weight * pathThroughput * envRadiance;
-			AddEmission(firstPathVertex, pathBSDFEvent, envLight->GetID(), sampleResult, radiance);
-			
-			illuminated = true;
-		}
-	}
+					// MIS between BSDF sampling and direct light sampling
+					weight = PowerHeuristic(lastPdfW, directPdfW);
+				} else
+					weight = 1.f;
 
-	// Sun light
-	const SunLight *sunLight = scene->sunLight;
-	if (sunLight && (firstPathVertex ||
-			(((pathBSDFEvent & DIFFUSE) && sunLight->IsVisibleIndirectDiffuse()) ||
-			((pathBSDFEvent & GLOSSY) && sunLight->IsVisibleIndirectGlossy()) ||
-			((pathBSDFEvent & SPECULAR) && sunLight->IsVisibleIndirectSpecular())))) {
-		const Spectrum sunRadiance = sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!sunRadiance.Black()) {
-			float weight;
-			if(!(lastBSDFEvent & SPECULAR)) {
-				// MIS between BSDF sampling and direct light sampling
-				weight = PowerHeuristic(lastPdfW, directPdfW);
-			} else
-				weight = 1.f;
-				
-			const Spectrum radiance = weight * pathThroughput * sunRadiance;
-			AddEmission(firstPathVertex, pathBSDFEvent, sunLight->GetID(), sampleResult, radiance);
+				const Spectrum radiance = weight * pathThroughput * envRadiance;
+				AddEmission(firstPathVertex, pathBSDFEvent, envLight->GetID(), sampleResult, radiance);
 
-			illuminated = true;
+				illuminated = true;
+			}
 		}
 	}
 
@@ -298,7 +277,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		if (!scene->Intersect(device, false, rndGen->floatValue(),
 				&ray, &rayHit, &bsdf, &connectionThroughput)) {
 			// Nothing was hit, look for infinitelight
-			illuminated |= DirectHitInfiniteLight(false, lastBSDFEvent, pathBSDFEvent,
+			illuminated |= DirectHitEnvLight(false, lastBSDFEvent, pathBSDFEvent,
 					pathThroughput * connectionThroughput, ray.d,	lastPdfW, sampleResult);
 			break;
 		}
@@ -347,7 +326,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Check if I have to stop because of path depth
 		depthInfo.IncDepths(lastBSDFEvent);
 
-		pathThroughput *= bsdfSample * (cosSampledDir / ((lastBSDFEvent & SPECULAR) ? lastPdfW : max(engine->pdfClampValue, lastPdfW)));
+		pathThroughput *= bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
 		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 		ray = Ray(bsdf.hitPoint.p, sampledDir);
@@ -381,7 +360,7 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			PathDepthInfo depthInfo;
 			depthInfo.IncDepths(event);
 
-			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * (scaleFactor * cosSampledDir / ((event & SPECULAR) ? pdfW : max(engine->pdfClampValue, pdfW)));
+			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * scaleFactor * min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
 			assert (!continuepathThroughput.IsNaN() && !continuepathThroughput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);
@@ -408,7 +387,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		// Nothing was hit, look for env. lights
 
 		// SPECULAR is required to avoid MIS
-		DirectHitInfiniteLight(true, SPECULAR, NONE, pathThroughput, eyeRay.d,
+		DirectHitEnvLight(true, SPECULAR, NONE, pathThroughput, eyeRay.d,
 				1.f, sampleResult);
 
 		sampleResult->alpha = 0.f;

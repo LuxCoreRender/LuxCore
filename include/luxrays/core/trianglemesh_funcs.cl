@@ -53,9 +53,9 @@ float2 Mesh_InterpolateUV(__global UV *vertUVs, __global Triangle *triangles,
 float3 Mesh_InterpolateColor(__global Spectrum *vertCols, __global Triangle *triangles,
 		const uint triIndex, const float b1, const float b2) {
 	__global Triangle *tri = &triangles[triIndex];
-	const float3 rgb0 = VLOAD3F(&vertCols[tri->v[0]].r);
-	const float3 rgb1 = VLOAD3F(&vertCols[tri->v[1]].r);
-	const float3 rgb2 = VLOAD3F(&vertCols[tri->v[2]].r);
+	const float3 rgb0 = VLOAD3F(vertCols[tri->v[0]].c);
+	const float3 rgb1 = VLOAD3F(vertCols[tri->v[1]].c);
+	const float3 rgb2 = VLOAD3F(vertCols[tri->v[2]].c);
 
 	const float b0 = 1.f - b1 - b2;
 	return Triangle_InterpolateColor(rgb0, rgb1, rgb2, b0, b1, b2);

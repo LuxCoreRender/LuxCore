@@ -31,11 +31,8 @@ typedef enum {
 	INSTANCE_TRANS_EDIT = 1 << 2, // Use this for any instance transformation related editing
 	MATERIALS_EDIT      = 1 << 3, // Use this for any Material related editing
 	MATERIAL_TYPES_EDIT = 1 << 4, // Use this if the kind of materials used changes
-	AREALIGHTS_EDIT     = 1 << 5, // Use this for any AreaLight related editing
-	INFINITELIGHT_EDIT  = 1 << 6, // Use this for any InfiniteLight related editing
-	SUNLIGHT_EDIT       = 1 << 7, // Use this for any SunLight related editing
-	SKYLIGHT_EDIT       = 1 << 8, // Use this for any SkyLight related editing
-	IMAGEMAPS_EDIT      = 1 << 9  // Use this for any ImageMaps related editing
+	LIGHTS_EDIT         = 1 << 5, // Use this for any Light related editing
+	IMAGEMAPS_EDIT      = 1 << 6  // Use this for any ImageMaps related editing
 } EditAction;
 
 class EditActionList {
@@ -50,10 +47,7 @@ public:
 		AddAction(INSTANCE_TRANS_EDIT);
 		AddAction(MATERIALS_EDIT);
 		AddAction(MATERIAL_TYPES_EDIT);
-		AddAction(AREALIGHTS_EDIT);
-		AddAction(INFINITELIGHT_EDIT);
-		AddAction(SUNLIGHT_EDIT);
-		AddAction(SKYLIGHT_EDIT);
+		AddAction(LIGHTS_EDIT);
 		AddAction(IMAGEMAPS_EDIT);
 	}
 	void AddActions(const u_int a) { actions |= a; };
@@ -96,21 +90,9 @@ inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
         SHOW_SEP;
 		os << "MATERIAL_TYPES_EDIT";
     }
-	if (eal.Has(AREALIGHTS_EDIT)) {
+	if (eal.Has(LIGHTS_EDIT)) {
         SHOW_SEP;
-		os << "AREALIGHTS_EDIT";
-    }
-	if (eal.Has(INFINITELIGHT_EDIT)) {
-        SHOW_SEP;
-		os << "INFINITELIGHT_EDIT";
-    }
-	if (eal.Has(SUNLIGHT_EDIT)) {
-        SHOW_SEP;
-		os << "SUNLIGHT_EDIT";
-    }
-	if (eal.Has(SKYLIGHT_EDIT)) {
-        SHOW_SEP;
-		os << "SKYLIGHT_EDIT";
+		os << "LIGHTS_EDIT";
     }
 	if (eal.Has(IMAGEMAPS_EDIT)) {
         SHOW_SEP;

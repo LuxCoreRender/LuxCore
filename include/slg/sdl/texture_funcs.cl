@@ -144,12 +144,12 @@ void ConstFloatTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint
 
 void ConstFloat3Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&texture->constFloat3.color.r));
+	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(texture->constFloat3.color.c));
 }
 
 void ConstFloat3Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = VLOAD3F(&texture->constFloat3.color.r);
+	texValues[(*texValuesSize)++] = VLOAD3F(texture->constFloat3.color.c);
 }
 
 void ConstFloat3Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
@@ -904,9 +904,9 @@ void BandTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hit
 
 	const uint last = texture->band.size - 1;
 	if (a < texture->band.offsets[0])
-		texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&texture->band.values[0].r));
+		texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(texture->band.values[0].c));
 	else if (a >= texture->band.offsets[last])
-		texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&texture->band.values[last].r));
+		texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(texture->band.values[last].c));
 	else {
 		uint p = 0;
 		for (; p <= last; ++p) {
@@ -914,8 +914,8 @@ void BandTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hit
 				break;
 		}
 
-		const float p1 = Spectrum_Y(VLOAD3F(&texture->band.values[p - 1].r));
-		const float p0 = Spectrum_Y(VLOAD3F(&texture->band.values[p].r));
+		const float p1 = Spectrum_Y(VLOAD3F(texture->band.values[p - 1].c));
+		const float p0 = Spectrum_Y(VLOAD3F(texture->band.values[p].c));
 		const float o1 = texture->band.offsets[p - 1];
 		const float o0 = texture->band.offsets[p];
 		texValues[(*texValuesSize)++] = Lerp((a - o1) / (o0 - o1), p1, p0);
@@ -928,9 +928,9 @@ void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 
 	const uint last = texture->band.size - 1;
 	if (a < texture->band.offsets[0])
-		texValues[(*texValuesSize)++] = VLOAD3F(&texture->band.values[0].r);
+		texValues[(*texValuesSize)++] = VLOAD3F(texture->band.values[0].c);
 	else if (a >= texture->band.offsets[last])
-		texValues[(*texValuesSize)++] = VLOAD3F(&texture->band.values[last].r);
+		texValues[(*texValuesSize)++] = VLOAD3F(texture->band.values[last].c);
 	else {
 		uint p = 0;
 		for (; p <= last; ++p) {
@@ -938,8 +938,8 @@ void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 				break;
 		}
 
-		const float3 p1 = VLOAD3F(&texture->band.values[p - 1].r);
-		const float3 p0 = VLOAD3F(&texture->band.values[p].r);
+		const float3 p1 = VLOAD3F(texture->band.values[p - 1].c);
+		const float3 p0 = VLOAD3F(texture->band.values[p].c);
 		const float o1 = texture->band.offsets[p - 1];
 		const float o0 = texture->band.offsets[p];
 		texValues[(*texValuesSize)++] = Lerp3((a - o1) / (o0 - o1), p1, p0);
@@ -963,12 +963,12 @@ void BandTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitP
 
 void HitPointColorTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(&hitPoint->color.r));
+	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(hitPoint->color.c));
 }
 
 void HitPointColorTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = VLOAD3F(&hitPoint->color.r);
+	texValues[(*texValuesSize)++] = VLOAD3F(hitPoint->color.c);
 }
 
 void HitPointColorTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
@@ -1013,16 +1013,16 @@ void HitPointGreyTexture_EvaluateFloat(__global Texture *texture, __global HitPo
 	const uint channel = texture->hitPointGrey.channel;
 	switch (channel) {
 		case 0:
-			texValues[*texValuesSize] = hitPoint->color.r;
+			texValues[*texValuesSize] = hitPoint->color.c[0];
 			break;
 		case 1:
-			texValues[*texValuesSize] = hitPoint->color.g;
+			texValues[*texValuesSize] = hitPoint->color.c[1];
 			break;
 		case 2:
-			texValues[*texValuesSize] = hitPoint->color.b;
+			texValues[*texValuesSize] = hitPoint->color.c[2];
 			break;
 		default:
-			texValues[*texValuesSize] = Spectrum_Y(VLOAD3F(&hitPoint->color.r));
+			texValues[*texValuesSize] = Spectrum_Y(VLOAD3F(hitPoint->color.c));
 			break;
 	}
 
@@ -1035,16 +1035,16 @@ void HitPointGreyTexture_EvaluateSpectrum(__global Texture *texture, __global Hi
 	float v;
 	switch (channel) {
 		case 0:
-			v = hitPoint->color.r;
+			v = hitPoint->color.c[0];
 			break;
 		case 1:
-			v = hitPoint->color.g;
+			v = hitPoint->color.c[1];
 			break;
 		case 2:
-			v = hitPoint->color.b;
+			v = hitPoint->color.c[2];
 			break;
 		default:
-			v = Spectrum_Y(VLOAD3F(&hitPoint->color.r));
+			v = Spectrum_Y(VLOAD3F(hitPoint->color.c));
 			break;
 	}
 
@@ -1139,6 +1139,9 @@ uint Texture_AddSubTexture(__global Texture *texture,
 #endif
 #if defined (PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
+#endif
+#if defined (PARAM_ENABLE_WOOD)
+		case WOOD:
 #endif
 #if defined (PARAM_ENABLE_WINDY)
 		case WINDY:
@@ -1245,6 +1248,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_WINDY)
 		case WINDY:
 			WindyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_WOOD)
+		case WOOD:
+			WoodTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_WRINKLED)
@@ -1415,6 +1423,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			WindyTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined (PARAM_ENABLE_WOOD)
+		case WOOD:
+			WoodTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 #if defined(PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
 			WrinkledTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
@@ -1580,6 +1593,11 @@ void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint
 #if defined(PARAM_ENABLE_WINDY)
 		case WINDY:
 			WindyTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_WOOD)
+		case WOOD:
+			WoodTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_WRINKLED)

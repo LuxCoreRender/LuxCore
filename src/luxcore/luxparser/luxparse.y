@@ -79,7 +79,7 @@ static boost::unordered_map<string, u_int> namedLightGroups;
 static boost::unordered_map<string, Properties> namedMaterials;
 // The named Textures
 static boost::unordered_set<string> namedTextures;
-static u_int freeObjectID;
+static u_int freeObjectID, freeLightID;
 
 void ResetParser() {
 	overwriteProps.Clear();
@@ -104,6 +104,7 @@ void ResetParser() {
 	namedMaterials.clear();
 	namedTextures.clear();
 	freeObjectID = 0;
+	freeLightID = 0;
 }
 
 static Properties GetTextureMapping2D(const string &prefix, const Properties &props) {
@@ -253,9 +254,17 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				GetTexture(prefix + ".iorinside", Property("index")(1.5f), matProps) <<
 				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
 				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps);
+	} else if (type == "velvet") {
+		*sceneProps <<
+				Property(prefix + ".type")("velvet") <<
+				GetTexture(prefix + ".kd", Property("Kd")(Spectrum(1.f)), matProps) <<
+				GetTexture(prefix + ".p1", Property("p1")(2.0f), matProps) <<
+				GetTexture(prefix + ".p2", Property("p2")(20.0f), matProps) <<
+				GetTexture(prefix + ".p3", Property("p3")(-2.0f), matProps);
+				GetTexture(prefix + ".thickness", Property("thickness")(.1f), matProps);
 	} else {
 		LC_LOG("LuxCor::ParserLXS supports only Matte, Mirror, Glass, Metal, MatteTranslucent, Null, "
-				"Mix, Glossy2, Metal2 and RoughGlass material (i.e. not " <<
+				"Mix, Glossy2, Metal2, RoughGlass and Velvet material (i.e. not " <<
 				type << "). Replacing an unsupported material with matte.");
 
 		*sceneProps <<
@@ -280,10 +289,13 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 	if (lightProps.GetSize() > 0) {
 		*sceneProps <<
 				GetTexture(prefix + ".emission", Property("L")(Spectrum(1.f)), lightProps) << 
-				Property(prefix + ".emission.gain")(matProps.Get(Property("gain")(1.f)).Get<float>()) <<
-				Property(prefix + ".emission.power")(matProps.Get(Property("power")(100.f)).Get<float>()) <<
-				Property(prefix + ".emission.efficency")(matProps.Get(Property("efficency")(17.f)).Get<float>()) <<
-				Property(prefix + ".emission.id")(currentGraphicsState.currentLightGroup);
+				Property(prefix + ".emission.gain")(Spectrum(lightProps.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".emission.power")(lightProps.Get(Property("power")(100.f)).Get<float>()) <<
+				Property(prefix + ".emission.efficency")(lightProps.Get(Property("efficency")(17.f)).Get<float>()) <<
+				Property(prefix + ".emission.id")(currentGraphicsState.currentLightGroup) <<
+				Property(prefix + ".emission.mapfile")(lightProps.Get(Property("mapname")("")).Get<string>()) <<
+				Property(prefix + ".emission.iesfile")(lightProps.Get(Property("iesname")("")).Get<string>()) <<
+				Property(prefix + ".emission.flipz")(lightProps.Get(Property("flipz")(false)).Get<bool>());
 	}
 }
 
@@ -844,34 +856,160 @@ ri_stmt: ACCELERATOR STRING paramlist
 	Properties props;
 	InitProperties(props, CPS, CP);
 
+	// Define light name
+	string lightName;
+	if (props.IsDefined("name"))
+		lightName = props.Get("name").Get<string>();
+	else
+		lightName = "LUXCORE_LIGHT_" + ToString(freeLightID++);
+	const string prefix = "scene.lights." + lightName;
+
 	const string name($2);
-	if ((name == "sunsky") || (name == "sunsky2")) {
-		// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is in LuxCore code
-		// for compatibility with past scene
-		const float gainAdjustFactor = (1000000000.0f / (M_PI * 100.f * 100.f)) * INV_PI;
+	if (name == "sun") {
+		*sceneProps <<
+				Property(prefix + ".type")("sun") <<
+				Property(prefix + ".dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + ".turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + ".relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "sky") {
+		*sceneProps <<
+				Property(prefix + ".type")("sky") <<
+				Property(prefix + ".dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + ".turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "sky2") {
+		*sceneProps <<
+				Property(prefix + ".type")("sky2") <<
+				Property(prefix + ".dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + ".turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "sunsky") {
+		*sceneProps <<
+				Property(prefix + "_SUN.type")("sun") <<
+				Property(prefix + "_SUN.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + "_SUN.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + "_SUN.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
+				Property(prefix + "_SUN.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + "_SUN.transformation")(currentTransform.m) <<
+				Property(prefix + "_SUN.id")(currentGraphicsState.currentLightGroup);
 
 		*sceneProps <<
-				Property("scene.sunlight.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
-				Property("scene.sunlight.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
-				Property("scene.sunlight.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
-				Property("scene.sunlight.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
-				Property("scene.sunlight.transformation")(currentTransform.m) <<
-				Property("scene.sunlight.id")(currentGraphicsState.currentLightGroup);
+				Property(prefix + "_SKY.type")("sky") <<
+				Property(prefix + "_SKY.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + "_SKY.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + "_SKY.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + "_SKY.transformation")(currentTransform.m) <<
+				Property(prefix + "_SKY.id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "sunsky2") {
+		*sceneProps <<
+				Property(prefix + "_SUN2.type")("sun") <<
+				Property(prefix + "_SUN2.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + "_SUN2.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + "_SUN2.relsize")(props.Get(Property("relsize")(1.f)).Get<float>()) <<
+				Property(prefix + "_SUN2.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + "_SUN2.transformation")(currentTransform.m) <<
+				Property(prefix + "_SUN2.id")(currentGraphicsState.currentLightGroup);
 
 		*sceneProps <<
-				Property("scene.skylight.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , -1.f))).Get<Vector>()) <<
-				Property("scene.skylight.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
-				Property("scene.skylight.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>() * gainAdjustFactor)) <<
-				Property("scene.skylight.transformation")(currentTransform.m) <<
-				Property("scene.skylight.id")(currentGraphicsState.currentLightGroup);
+				Property(prefix + "_SKY2.type")("sky2") <<
+				Property(prefix + "_SKY2.dir")(props.Get(Property("sundir")(Vector(0.f, 0.f , 1.f))).Get<Vector>()) <<
+				Property(prefix + "_SKY2.turbidity")(props.Get(Property("turbidity")(2.f)).Get<float>()) <<
+				Property(prefix + "_SKY2.gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + "_SKY2.transformation")(currentTransform.m) <<
+				Property(prefix + "_SKY2.id")(currentGraphicsState.currentLightGroup);
 	} else if ((name == "infinite") || (name == "infinitesample")) {
+		// Check if i have to use infiniete or constantinfinite
+		if (props.Get(Property("mapname")("")).Get<string>() == "") {
+			*sceneProps <<
+					Property(prefix + ".type")("constantinfinite") <<
+					Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+					Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+					Property(prefix + ".id")(currentGraphicsState.currentLightGroup);			
+		} else {
+			const float gain = props.Get(Property("gain")(1.f)).Get<float>();
+			const Spectrum L = props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>();
+			const Spectrum combinedGain = gain * L;
+			*sceneProps <<
+					Property(prefix + ".type")("infinite") <<
+					Property(prefix + ".file")(props.Get(Property("mapname")("")).Get<string>()) <<
+					Property(prefix + ".gamma")(props.Get(Property("gamma")(2.2f)).Get<float>()) <<
+					Property(prefix + ".gain")(combinedGain) <<
+					Property(prefix + ".transformation")(currentTransform.m) <<
+					Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+		}
+	} else if (name == "point") {
+		// Check if it is a point or mappoint light source
+		if (props.IsDefined("mapname") || props.IsDefined("iesname")) {
+			*sceneProps << Property(prefix + ".type")("mappoint");
+			if (props.IsDefined("mapname"))
+				*sceneProps << Property(prefix + ".mapfile")(props.Get(Property("mapname")("")).Get<string>());
+			if (props.IsDefined("iesname")) {
+				*sceneProps <<
+						Property(prefix + ".iesfile")(props.Get(Property("iesname")("")).Get<string>()) <<
+						Property(prefix + ".flipz")(props.Get(Property("flipz")(false)).Get<bool>());
+			}
+		} else
+			*sceneProps << Property(prefix + ".type")("point");
+		
 		*sceneProps <<
-				Property("scene.infinitelight.file")(props.Get(Property("mapname")("")).Get<string>()) <<
-				Property("scene.infinitelight.gamma")(props.Get(Property("gamma")(1.f)).Get<float>()) <<
-				Property("scene.infinitelight.gain")(props.Get(Property("gain")(1.f)).Get<float>() *
-					props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
-				Property("scene.infinitelight.transformation")(currentTransform.m) <<
-				Property("scene.infinitelight.id")(currentGraphicsState.currentLightGroup);
+				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
+				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "spot") {
+		*sceneProps <<
+				Property(prefix + ".type")("spot") <<
+				Property(prefix + ".coneangle")(props.Get(Property("coneangle")(30.f)).Get<float>()) <<
+				Property(prefix + ".conedeltaangle")(props.Get(Property("conedeltaangle")(5.f)).Get<float>()) <<
+				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".target")(props.Get(Property("to")(Point(0.f, 0.f, 1.f))).Get<Point>()) <<
+				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
+				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "projection") {
+		*sceneProps <<
+				Property(prefix + ".type")("projection") <<
+				Property(prefix + ".mapfile")(props.Get(Property("mapname")("")).Get<string>()) <<
+				Property(prefix + ".fov")(props.Get(Property("fov")(45.f)).Get<float>()) <<
+				Property(prefix + ".position")(props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>()) <<
+				Property(prefix + ".target")(props.Get(Property("to")(Point(0.f, 0.f, 1.f))).Get<Point>()) <<
+				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
+	} else if (name == "distant") {
+		const float theta = props.Get(Property("theta")(0.f)).Get<float>();
+		if (theta == 0.f) {
+			*sceneProps <<
+					Property(prefix + ".type")("sharpdistant");
+		} else {
+			*sceneProps <<
+					Property(prefix + ".type")("distant") <<
+					Property(prefix + ".theta")(theta) ;
+		}
+
+		const Point from = props.Get(Property("from")(Point(0.f, 0.f, 0.f))).Get<Point>();
+		const Point to = props.Get(Property("to")(Point(0.f, 0.f, 1.f))).Get<Point>();
+		
+		*sceneProps <<
+				Property(prefix + ".direction")(Normalize(to - from)) <<
+				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
+				Property(prefix + ".transformation")(currentTransform.m) <<
+				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	}
 
 	FreeArgs();
@@ -1147,7 +1285,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	const string prefix = "scene.textures." + name;
 
 	if (texType == "imagemap") {
-		const float gamma = props.Get(Property("gamma")(1.f)).Get<float>();
+		const float gamma = props.Get(Property("gamma")(2.2f)).Get<float>();
 		const float gain = props.Get(Property("gain")(1.f)).Get<float>();
 		*sceneProps <<
 				Property(prefix + ".type")("imagemap") <<

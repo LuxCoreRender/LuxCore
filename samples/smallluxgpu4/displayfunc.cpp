@@ -86,11 +86,9 @@ static void PrintHelpAndSettings() {
 	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "p", "save image.png (or to image.filename property value)");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "t", "toggle tonemapping");
-	PrintHelpString(320, fontOffset, "n, m", "dec./inc. the screen refresh");
-	fontOffset -= 15;
 	PrintHelpString(15, fontOffset, "i", "switch sampler");
-	fontOffset -= 15;
+	PrintHelpString(320, fontOffset, "n, m", "dec./inc. the screen refresh");
+	fontOffset -= 15 * 2;
 	PrintHelpString(15, fontOffset, "1", "OpenCL path tracing");
 	PrintHelpString(320, fontOffset, "2", "CPU light tracing");
 	fontOffset -= 15;
@@ -188,8 +186,8 @@ static void PrintHelpAndSettings() {
 			int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.dataparallel").Get<double>() / 1000.0) %
 			(stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / minPerf) %
 			(100.0 * stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / totalPerf) %
-			int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.used").Get<size_t>() / (1024 * 1024)) %
-			int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.total").Get<size_t>() / (1024 * 1024)));
+			int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.used").Get<double>() / (1024 * 1024)) %
+			int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.total").Get<double>() / (1024 * 1024)));
 
 		glRasterPos2i(20, offset);
 		PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
@@ -236,7 +234,7 @@ static void PrintCaptions() {
 		stats.Get("stats.renderengine.pass").Get<int>() %
 		(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
 		int(stats.Get("stats.renderengine.performance.total").Get<double>() / 1000.0) %
-		(stats.Get("stats.dataset.trianglecount").Get<size_t>() / 1000.0));
+		(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0));
 
 	// Caption line 0
 	glColor3f(1.f, 1.f, 1.f);

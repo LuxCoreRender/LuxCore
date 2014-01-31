@@ -32,7 +32,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ClearFrameBuffer(
 	if (gid >= filmWidth * filmHeight)
 		return;
 
-	VSTORE4F(0.f, &frameBuffer[gid].c.r);
+	VSTORE4F(0.f, frameBuffer[gid].c.c);
 }
 
 //------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ClearScreenBuffer(
 	if (gid >= filmWidth * filmHeight)
 		return;
 
-	VSTORE3F(0.f, &screenBuffer[gid].r);
+	VSTORE3F(0.f, screenBuffer[gid].c);
 }
 
 //------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void NormalizeFrameBuff
 	if (gid >= filmWidth * filmHeight)
 		return;
 
-	float4 rgbc = VLOAD4F(&frameBuffer[gid].c.r);
+	float4 rgbc = VLOAD4F(frameBuffer[gid].c.c);
 
 	if (rgbc.w > 0.f) {
 		const float k = 1.f / rgbc.w;
@@ -68,9 +68,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void NormalizeFrameBuff
 		rgbc.s1 *= k;
 		rgbc.s2 *= k;
 
-		VSTORE4F(rgbc, &frameBuffer[gid].c.r);
+		VSTORE4F(rgbc, frameBuffer[gid].c.c);
 	} else
-		VSTORE4F(0.f, &frameBuffer[gid].c.r);
+		VSTORE4F(0.f, frameBuffer[gid].c.c);
 }
 
 //------------------------------------------------------------------------------
@@ -85,11 +85,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergeFrameBuffer(
 	if (gid >= filmWidth * filmHeight)
 		return;
 
-	float4 srcRGBC = VLOAD4F(&srcFrameBuffer[gid].c.r);
+	float4 srcRGBC = VLOAD4F(srcFrameBuffer[gid].c.c);
 
 	if (srcRGBC.w > 0.f) {
-		const float4 dstRGBC = VLOAD4F(&dstFrameBuffer[gid].c.r);
-		VSTORE4F(srcRGBC + dstRGBC, &dstFrameBuffer[gid].c.r);
+		const float4 dstRGBC = VLOAD4F(dstFrameBuffer[gid].c.c);
+		VSTORE4F(srcRGBC + dstRGBC, dstFrameBuffer[gid].c.c);
 	}
 }
 
@@ -107,13 +107,13 @@ void ApplyBlurFilterXR1(
 		) {
 	// Do left edge
 	float3 a;
-	float3 b = VLOAD3F(&src[0].r);
-	float3 c = VLOAD3F(&src[1].r);
+	float3 b = VLOAD3F(src[0].c);
+	float3 c = VLOAD3F(src[1].c);
 
 	const float leftTotF = bF + cF;
 	const float3 bLeftK = bF / leftTotF;
 	const float3 cLeftK = cF / leftTotF;
-	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].r);
+	VSTORE3F(bLeftK  * b + cLeftK * c, dst[0].c);
 
     // Main loop
 	const float totF = aF + bF + cF;
@@ -124,9 +124,9 @@ void ApplyBlurFilterXR1(
 	for (unsigned int x = 1; x < filmWidth - 1; ++x) {
 		a = b;
 		b = c;
-		c = VLOAD3F(&src[x + 1].r);
+		c = VLOAD3F(src[x + 1].c);
 
-		VSTORE3F(aK * a + bK  * b + cK * c, &dst[x].r);
+		VSTORE3F(aK * a + bK  * b + cK * c, dst[x].c);
     }
 
     // Do right edge
@@ -135,7 +135,7 @@ void ApplyBlurFilterXR1(
 	const float3 bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	VSTORE3F(aRightK  * a + bRightK * b, &dst[filmWidth - 1].r);
+	VSTORE3F(aRightK  * a + bRightK * b, dst[filmWidth - 1].c);
 }
 
 void ApplyBlurFilterYR1(
@@ -148,13 +148,13 @@ void ApplyBlurFilterYR1(
 		) {
 	// Do left edge
 	float3 a;
-	float3 b = VLOAD3F(&src[0].r);
-	float3 c = VLOAD3F(&src[filmWidth].r);
+	float3 b = VLOAD3F(src[0].c);
+	float3 c = VLOAD3F(src[filmWidth].c);
 
 	const float leftTotF = bF + cF;
 	const float3 bLeftK = bF / leftTotF;
 	const float3 cLeftK = cF / leftTotF;
-	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0].r);
+	VSTORE3F(bLeftK  * b + cLeftK * c, dst[0].c);
 
     // Main loop
 	const float totF = aF + bF + cF;
@@ -167,9 +167,9 @@ void ApplyBlurFilterYR1(
 
 		a = b;
 		b = c;
-		c = VLOAD3F(&src[index + filmWidth].r);
+		c = VLOAD3F(src[index + filmWidth].c);
 
-		VSTORE3F(aK * a + bK  * b + cK * c, &dst[index].r);
+		VSTORE3F(aK * a + bK  * b + cK * c, dst[index].c);
     }
 
     // Do right edge
@@ -178,7 +178,7 @@ void ApplyBlurFilterYR1(
 	const float3 bRightK = bF / rightTotF;
 	a = b;
 	b = c;
-	VSTORE3F(aRightK  * a + bRightK * b, &dst[(filmHeight - 1) * filmWidth].r);
+	VSTORE3F(aRightK  * a + bRightK * b, dst[(filmHeight - 1) * filmWidth].c);
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyGaussianBlurFilterXR1(
@@ -233,9 +233,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ToneMapLinear(
 		return;
 
 	const float4 k = (float4)(PARAM_TONEMAP_LINEAR_SCALE, PARAM_TONEMAP_LINEAR_SCALE, PARAM_TONEMAP_LINEAR_SCALE, 1.f);
-	const float4 sp = VLOAD4F(&pixels[gid].c.r);
+	const float4 sp = VLOAD4F(pixels[gid].c.c);
 
-	VSTORE4F(k * sp, &pixels[gid].c.r);
+	VSTORE4F(k * sp, pixels[gid].c.c);
 }
 
 //------------------------------------------------------------------------------
@@ -257,7 +257,7 @@ __kernel void UpdateScreenBuffer(
 	const int x = gid % filmWidth;
 	const int y = gid / filmWidth;
 
-	float4 newRgbc = VLOAD4F(&srcFrameBuffer[gid].c.r);
+	float4 newRgbc = VLOAD4F(srcFrameBuffer[gid].c.c);
 
 	if (newRgbc.s3 > 0.f) {
 		float3 newRgb = (float3)(
@@ -265,9 +265,9 @@ __kernel void UpdateScreenBuffer(
 				newRgb.s1 = Radiance2PixelFloat(newRgbc.s1),
 				newRgb.s2 = Radiance2PixelFloat(newRgbc.s2));
 
-		const float3 oldRgb = VLOAD3F(&screenBuffer[(x + y * filmWidth)].r);
+		const float3 oldRgb = VLOAD3F(screenBuffer[(x + y * filmWidth)].c);
 
 		// Blend old and new RGB value in for ghost effect
-		VSTORE3F(mix(oldRgb, newRgb, PARAM_GHOSTEFFECT_INTENSITY), &screenBuffer[(x + y * filmWidth)].r);
+		VSTORE3F(mix(oldRgb, newRgb, PARAM_GHOSTEFFECT_INTENSITY), screenBuffer[(x + y * filmWidth)].c);
 	}
 }

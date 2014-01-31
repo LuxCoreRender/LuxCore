@@ -31,7 +31,7 @@
 float WoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint){
 	const float3 P = TextureMapping3D_Map(&texture->wood.mapping, hitPoint);
 	float scale = 1.f;
-	if(fabs(texture->wood.noisesize) > 0.00001f) scale = (1.f/texture->wood.noisesize);	
+	if(fabs(texture->wood.noisesize) > 0.00001f) scale = (1.f/texture->wood.noisesize);
 
 	const NoiseBase noise = texture->wood.noisebasis2;
 	float wood = 0.0f;
@@ -98,9 +98,10 @@ void WoodTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hit
 }
 
 void WoodTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-		float wood = WoodTexture_Evaluate(texture, hitPoint);
-	texValues[(*texValuesSize)++] = (float3)(wood, wood, wood);
+	float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+    float wood = WoodTexture_Evaluate(texture, hitPoint);
+
+    texValues[(*texValuesSize)++] = (float3)(wood, wood, wood);
 }
 
 void WoodTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,

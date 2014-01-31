@@ -22,6 +22,8 @@
 #include <deque>
 #include <vector>
 
+#include <boost/unordered_map.hpp>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
 #include "luxrays/core/trianglemesh.h"
@@ -73,7 +75,7 @@ private:
 	BBox bbox;
 	BSphere bsphere;
 
-	std::map<AcceleratorType, Accelerator *> accels;
+	boost::unordered_map<AcceleratorType, Accelerator *> accels;
 
 	AcceleratorType accelType;
 	bool preprocessed, hasInstances, enableInstanceSupport;

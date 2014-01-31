@@ -194,7 +194,6 @@ void PathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 void PathOCLRenderThread::InitGPUTaskBuffer() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
-	const u_int triAreaLightCount = engine->compiledScene->triLightDefs.size();
 	const bool hasPassThrough = engine->compiledScene->RequiresPassThrough();
 
 	// Add Seed memory size
@@ -208,9 +207,10 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 
 	// Add PathStateDirectLight memory size
 	gpuTaksSize += sizeof(Spectrum) + sizeof(u_int) + 2 * sizeof(BSDFEvent) + sizeof(float);
-	// Add PathStateDirectLight.tmpHitPoint memory size
-	if (triAreaLightCount > 0)
+	if (engine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0) {
+		// Add PathStateDirectLight.tmpHitPoint memory size
 		gpuTaksSize += GetOpenCLHitPointSize();
+	}
 
 	// Add PathStateDirectLightPassThrough memory size
 	if (hasPassThrough)
@@ -383,19 +383,17 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 		advancePathsKernel->setArg(argIndex++, *alphasBuff);
 	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, *cameraBuff);
+	// Lights
+	advancePathsKernel->setArg(argIndex++, *lightsBuff);
+	if (envLightIndicesBuff) {
+		advancePathsKernel->setArg(argIndex++, *envLightIndicesBuff);
+		advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
+	}
+	advancePathsKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
+	if (infiniteLightDistributionsBuff)
+		advancePathsKernel->setArg(argIndex++, *infiniteLightDistributionsBuff);
 	advancePathsKernel->setArg(argIndex++, *lightsDistributionBuff);
-	if (infiniteLightBuff) {
-		advancePathsKernel->setArg(argIndex++, *infiniteLightBuff);
-		advancePathsKernel->setArg(argIndex++, *infiniteLightDistributionBuff);
-	}
-	if (sunLightBuff)
-		advancePathsKernel->setArg(argIndex++, *sunLightBuff);
-	if (skyLightBuff)
-		advancePathsKernel->setArg(argIndex++, *skyLightBuff);
-	if (triLightDefsBuff) {
-		advancePathsKernel->setArg(argIndex++, *triLightDefsBuff);
-		advancePathsKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
-	}
+	// Images
 	if (imageMapDescsBuff) {
 		advancePathsKernel->setArg(argIndex++, *imageMapDescsBuff);
 

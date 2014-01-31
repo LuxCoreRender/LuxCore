@@ -260,10 +260,12 @@ u_int Film::GetRadianceGroupCount() const {
 }
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
 	renderSession.renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
 template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
 	renderSession.renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
@@ -309,12 +311,16 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return renderSession.renderSession->film->channel_UV ? 1 : 0;
 		case CHANNEL_RAYCOUNT:
 			return renderSession.renderSession->film->channel_RAYCOUNT ? 1 : 0;
+		case CHANNEL_BY_MATERIAL_ID:
+			return renderSession.renderSession->film->channel_BY_MATERIAL_IDs.size();
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetChannelCount>(): " + ToString(type));
 	}
 }
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+
 	switch (type) {
 		case CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED:
 			return renderSession.renderSession->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixels();
@@ -322,9 +328,10 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return renderSession.renderSession->film->channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixels();
 		case CHANNEL_ALPHA:
 			return renderSession.renderSession->film->channel_ALPHA->GetPixels();
-		case CHANNEL_RGB_TONEMAPPED:
+		case CHANNEL_RGB_TONEMAPPED: {
 			renderSession.renderSession->film->ExecuteImagePipeline();
 			return renderSession.renderSession->film->channel_RGB_TONEMAPPED->GetPixels();
+		}
 		case CHANNEL_DEPTH:
 			return renderSession.renderSession->film->channel_DEPTH->GetPixels();
 		case CHANNEL_POSITION:
@@ -355,12 +362,16 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return renderSession.renderSession->film->channel_UV->GetPixels();
 		case CHANNEL_RAYCOUNT:
 			return renderSession.renderSession->film->channel_RAYCOUNT->GetPixels();
+		case CHANNEL_BY_MATERIAL_ID:
+			return renderSession.renderSession->film->channel_BY_MATERIAL_IDs[index]->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<float>(): " + ToString(type));
 	}
 }
 
 template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) const {
+	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+
 	switch (type) {
 		case CHANNEL_MATERIAL_ID:
 			return renderSession.renderSession->film->channel_MATERIAL_ID->GetPixels();
@@ -502,11 +513,11 @@ bool Scene::IsMaterialDefined(const std::string &matName) const {
 }
 
 const u_int Scene::GetLightCount() const {
-	return scene->GetLightCount();
+	return scene->lightDefs.GetSize();
 }
 
 const u_int  Scene::GetObjectCount() const {
-	return scene->GetObjectCount();
+	return scene->objDefs.GetSize();
 }
 
 void Scene::Parse(const Properties &props) {
@@ -670,14 +681,14 @@ void RenderSession::UpdateStats() {
 		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
 		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
 		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
-		stats.Set(Property(prefix + ".memory.total")(dev->GetMaxMemory()));
-		stats.Set(Property(prefix + ".memory.used")(dev->GetUsedMemory()));
+		stats.Set(Property(prefix + ".memory.total")((u_longlong)dev->GetMaxMemory()));
+		stats.Set(Property(prefix + ".memory.used")((u_longlong)dev->GetUsedMemory()));
 	}
 	stats.Set(devicesNames);
 	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));
 
 	// The explicit cast to size_t is required by VisualC++
-	stats.Set(Property("stats.dataset.trianglecount")((size_t)renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
+	stats.Set(Property("stats.dataset.trianglecount")(renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
 
 	// Some engine specific statistic
 	switch (renderSession->renderEngine->GetEngineType()) {
@@ -698,7 +709,7 @@ void RenderSession::UpdateStats() {
 			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
 			vector<slg::TileRepository::Tile> tiles;
 			engine->GetPendingTiles(tiles);
-			stats.Set(Property("stats.biaspath.tiles.pending.count")(tiles.size()));
+			stats.Set(Property("stats.biaspath.tiles.pending.count")((u_int)tiles.size()));
 			Property tileProp("stats.biaspath.tiles.pending.coords");
 			BOOST_FOREACH(const slg::TileRepository::Tile &tile, tiles)
 				tileProp.Add(tile.xStart).Add(tile.yStart);
@@ -712,7 +723,7 @@ void RenderSession::UpdateStats() {
 			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
 			vector<slg::TileRepository::Tile> tiles;
 			engine->GetPendingTiles(tiles);
-			stats.Set(Property("stats.biaspath.tiles.pending.count")(tiles.size()));
+			stats.Set(Property("stats.biaspath.tiles.pending.count")((u_int)tiles.size()));
 			Property tileProp("stats.biaspath.tiles.pending.coords");
 			BOOST_FOREACH(const slg::TileRepository::Tile &tile, tiles)
 				tileProp.Add(tile.xStart).Add(tile.yStart);

@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_spectrum_types = 
-"#line 2 \"spectrum_types.cl\"\n"
+std::string KernelSource_color_types = 
+"#line 2 \"color_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *\n"
@@ -26,9 +26,11 @@ std::string KernelSource_spectrum_types =
 "#define WHITE ((float3)(1.f, 1.f, 1.f))\n"
 "#endif\n"
 "\n"
-"#define ASSIGN_SPECTRUM(c0, c1) { (c0).r = (c1).r; (c0).g = (c1).g; (c0).b = (c1).b; }\n"
+"#define ASSIGN_SPECTRUM(c0, c1) { (c0).c[0] = (c1).c[0]; (c0).c[1] = (c1).c[1]; (c0).c[2] = (c1).c[2]; }\n"
 "\n"
 "typedef struct {\n"
-"	float r, g, b;\n"
-"} Spectrum;\n"
+"	float c[3];\n"
+"} RGBColor;\n"
+"\n"
+"typedef RGBColor Spectrum;\n"
 ; } }

@@ -14,34 +14,35 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
- ***************************************************************************/
+ ***************************************************************************/  
 
-#ifndef _SLG_TELNET_H
-#define	_SLG_TELNET_H
+#ifndef _LUXRAYS_RGBREFLSPD_H
+#define _LUXRAYS_RGBREFLSPD_H
 
-#include "slg/slg.h"
-#include "slg/rendersession.h"
+#include "luxrays/core/color/color.h"
+#include "luxrays/core/color/spd.h"
 
-namespace slg {
+namespace luxrays {
 
-class TelnetServer {
+// reflectant SPD, from RGB color, using smits conversion, reconstructed using linear interpolation
+class RGBReflSPD : public SPD {
 public:
-	TelnetServer(const unsigned int serverPort, RenderSession *renderSession);
-	~TelnetServer();
+	RGBReflSPD() : SPD() { init(RGBColor(1.f)); }
 
-private:
-	typedef enum {
-		RUN, EDIT
-	} ServerState;
+	RGBReflSPD(const RGBColor &s) : SPD() { init(s); }
 
-	static void ServerThreadImpl(TelnetServer *telnetServer);
+	virtual ~RGBReflSPD() {}
 
-	const unsigned int port;
-	boost::thread *serverThread;
+protected:
+	void AddWeighted(float w, float *c) {
+		for (u_int i = 0; i < nSamples; ++i) {
+			samples[i] += c[i] * w;
+		}
+	}
 
-	RenderSession *session;
+	void init(const RGBColor &s);
 };
 
 }
 
-#endif	/* _SLG_TELNET_H */
+#endif // _LUXRAYS_RGBREFLSPD_H

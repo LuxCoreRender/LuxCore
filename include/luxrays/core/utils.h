@@ -110,8 +110,18 @@ inline double WallClockTime() {
 #endif
 }
 
+template<class T> inline T Lerp(float t, T v1, T v2) {
+	return v1 + t * (v2 - v1);
+}
+
 template<class T> inline T Clamp(T val, T low, T high) {
 	return val > low ? (val < high ? val : high) : low;
+}
+
+template<class T> inline void Swap(T &a, T &b) {
+	const T tmp = a;
+	a = b;
+	b = tmp;
 }
 
 template<class T> inline T Max(T a, T b) {
@@ -122,10 +132,28 @@ template<class T> inline T Min(T a, T b) {
 	return a < b ? a : b;
 }
 
-template<class T> inline void Swap(T &a, T &b) {
-	const T tmp = a;
-	a = b;
-	b = tmp;
+inline float Sgn(float a) {
+	return a < 0.f ? -1.f : 1.f;
+}
+
+inline int Sgn(int a) {
+	return a < 0 ? -1 : 1;
+}
+
+inline int Round2Int(double val) {
+	return static_cast<int>(val > 0. ? val + .5 : val - .5);
+}
+
+inline int Round2Int(float val) {
+	return static_cast<int>(val > 0.f ? val + .5f : val - .5f);
+}
+
+inline u_int Round2UInt(double val) {
+	return static_cast<u_int>(val > 0. ? val + .5 : 0.);
+}
+
+inline u_int Round2UInt(float val) {
+	return static_cast<u_int>(val > 0.f ? val + .5f : 0.f);
 }
 
 template<class T> inline T Mod(T a, T b) {
@@ -139,15 +167,6 @@ template<class T> inline T Mod(T a, T b) {
 	return a;
 }
 
-inline unsigned int Mod(unsigned int a, unsigned int b) {
-	if (b == 0)
-		b = 1;
-		
-	a %= b;
-	
-	return a;
-}	
-	
 inline float Radians(float deg) {
 	return (M_PI / 180.f) * deg;
 }
@@ -156,87 +175,12 @@ inline float Degrees(float rad) {
 	return (180.f / M_PI) * rad;
 }
 
-inline float Sgn(float a) {
-	return a < 0.f ? -1.f : 1.f;
+inline float Log2(float x) {
+	return logf(x) / logf(2.f);
 }
 
-inline int Sgn(int a) {
-	return a < 0 ? -1 : 1;
-}
-
-template<class T> inline T Lerp(float t, T v1, T v2) {
-	return v1 + t * (v2 - v1);
-}
-
-inline float SmoothStep(const float min, const float max, const float value) {
-	const float v = Clamp((value - min) / (max - min), 0.f, 1.f);
-	return v * v * (-2.f * v  + 3.f);
-}
-
-template<class T> inline int Float2Int(T val) {
-	return static_cast<int> (val);
-}
-
-template<class T> inline unsigned int Float2UInt(T val) {
-	return val >= 0 ? static_cast<unsigned int> (val) : 0;
-}
-
-inline int Floor2Int(double val) {
-	return static_cast<int> (floor(val));
-}
-
-inline int Floor2Int(float val) {
-	return static_cast<int> (floorf(val));
-}
-
-inline unsigned int Floor2UInt(double val) {
-	return val > 0. ? static_cast<unsigned int> (floor(val)) : 0;
-}
-
-inline unsigned int Floor2UInt(float val) {
-	return val > 0.f ? static_cast<unsigned int> (floorf(val)) : 0;
-}
-
-inline int Ceil2Int(double val) {
-	return static_cast<int> (ceil(val));
-}
-
-inline int Ceil2Int(float val) {
-	return static_cast<int> (ceilf(val));
-}
-
-inline unsigned int Ceil2UInt(double val) {
-	return val > 0. ? static_cast<unsigned int> (ceil(val)) : 0;
-}
-
-inline unsigned int Ceil2UInt(float val) {
-	return val > 0.f ? static_cast<unsigned int> (ceilf(val)) : 0;
-}
-
-template <class T> inline std::string ToString(const T& t) {
-	std::ostringstream ss;
-	ss << t;
-	return ss.str();
-}
-
-inline std::string ToString(const float t) {
-	std::ostringstream ss;
-	ss << std::setprecision(24) << t;
-	return ss.str();
-}
-
-inline std::string ToString(const Matrix4x4 &m) {
-	std::ostringstream ss;
-	ss << std::setprecision(24);
-
-	for (int i = 0; i < 4; ++i) {
-		for (int j = 0; j < 4; ++j) {
-			if ((i != 0) || (j != 0))
-				ss << " ";
-			ss << m.m[j][i];
-		}
-	}
-	return ss.str();
+inline int Log2Int(float v) {
+	return Round2Int(Log2(v));
 }
 
 inline bool IsPowerOf2(int v) {
@@ -265,6 +209,111 @@ template <class T> inline T RoundUpPow2(T v) {
 	v |= v >> 16;
 
 	return v+1;
+}
+
+inline u_int RoundUpPow2(u_int v) {
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	return v+1;
+}
+
+template<class T> inline int Float2Int(T val) {
+	return static_cast<int>(val);
+}
+
+template<class T> inline u_int Float2UInt(T val) {
+	return val >= 0 ? static_cast<u_int>(val) : 0;
+}
+
+inline int Floor2Int(double val) {
+	return static_cast<int>(floor(val));
+}
+
+inline int Floor2Int(float val) {
+	return static_cast<int>(floorf(val));
+}
+
+inline u_int Floor2UInt(double val) {
+	return val > 0. ? static_cast<u_int>(floor(val)) : 0;
+}
+
+inline u_int Floor2UInt(float val) {
+	return val > 0.f ? static_cast<u_int>(floorf(val)) : 0;
+}
+
+inline int Ceil2Int(double val) {
+	return static_cast<int>(ceil(val));
+}
+
+inline int Ceil2Int(float val) {
+	return static_cast<int>(ceilf(val));
+}
+
+inline u_int Ceil2UInt(double val) {
+	return val > 0. ? static_cast<u_int>(ceil(val)) : 0;
+}
+
+inline u_int Ceil2UInt(float val) {
+	return val > 0.f ? static_cast<u_int>(ceilf(val)) : 0;
+}
+
+inline bool Quadratic(float A, float B, float C, float *t0, float *t1) {
+	// Find quadratic discriminant
+	float discrim = B * B - 4.f * A * C;
+	if (discrim < 0.f)
+		return false;
+	float rootDiscrim = sqrtf(discrim);
+	// Compute quadratic _t_ values
+	float q;
+	if (B < 0)
+		q = -.5f * (B - rootDiscrim);
+	else
+		q = -.5f * (B + rootDiscrim);
+	*t0 = q / A;
+	*t1 = C / q;
+	if (*t0 > *t1)
+		Swap(*t0, *t1);
+	return true;
+}
+
+inline float SmoothStep(float min, float max, float value) {
+	float v = Clamp((value - min) / (max - min), 0.f, 1.f);
+	return v * v * (-2.f * v  + 3.f);
+}
+
+template <class T> int SignOf(T x)
+{
+	return (x > 0) - (x < 0);
+}
+
+template <class T> inline std::string ToString(const T& t) {
+	std::ostringstream ss;
+	ss << t;
+	return ss.str();
+}
+
+inline std::string ToString(const float t) {
+	std::ostringstream ss;
+	ss << std::setprecision(24) << t;
+	return ss.str();
+}
+
+inline std::string ToString(const Matrix4x4 &m) {
+	std::ostringstream ss;
+	ss << std::setprecision(24);
+
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			if ((i != 0) || (j != 0))
+				ss << " ";
+			ss << m.m[j][i];
+		}
+	}
+	return ss.str();
 }
 
 inline unsigned int UIntLog2(unsigned int value) {
@@ -299,121 +348,7 @@ inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
 			return true;*/
 	}
 #endif
-	}
-
-//------------------------------------------------------------------------------
-// Memory
-//------------------------------------------------------------------------------
-
-#ifndef L1_CACHE_LINE_SIZE
-#define L1_CACHE_LINE_SIZE 64
-#endif
-
-template<class T> inline T *AllocAligned(size_t size, std::size_t N = L1_CACHE_LINE_SIZE) {
-	return static_cast<T *> (memalign(N, size * sizeof (T)));
 }
-
-template<class T> inline void FreeAligned(T *ptr) {
-#if defined(WIN32) && !defined(__CYGWIN__) // NOBOOK
-	_aligned_free(ptr);
-#else // NOBOOK
-	free(ptr);
-#endif // NOBOOK
-}
-
-template <typename T, std::size_t N = 16 > class AlignedAllocator {
-public:
-	typedef T value_type;
-	typedef std::size_t size_type;
-	typedef std::ptrdiff_t difference_type;
-
-	typedef T *pointer;
-	typedef const T *const_pointer;
-
-	typedef T &reference;
-	typedef const T &const_reference;
-
-public:
-
-	inline AlignedAllocator() throw () {
-	}
-
-	template <typename T2> inline AlignedAllocator(const AlignedAllocator<T2, N> &) throw () {
-	}
-
-	inline ~AlignedAllocator() throw () {
-	}
-
-	inline pointer adress(reference r) {
-		return &r;
-	}
-
-	inline const_pointer adress(const_reference r) const {
-		return &r;
-	}
-
-	inline pointer allocate(size_type n) {
-		return AllocAligned<value_type > (n, N);
-	}
-
-	inline void deallocate(pointer p, size_type) {
-		FreeAligned(p);
-	}
-
-	inline void construct(pointer p, const value_type &wert) {
-		new (p) value_type(wert);
-	}
-
-	inline void destroy(pointer p) {
-		p->~value_type();
-	}
-
-	inline size_type max_size() const throw () {
-		return size_type(-1) / sizeof (value_type);
-	}
-
-	template <typename T2> struct rebind {
-		typedef AlignedAllocator<T2, N> other;
-	};
-};
-
-#define P_CLASS_ATTR __attribute__
-#define P_CLASS_ATTR __attribute__
-
-#if defined(WIN32) && !defined(__CYGWIN__) // NOBOOK
-
-class __declspec(align(16)) Aligned16 {
-#else // NOBOOK
-
-class Aligned16 {
-#endif // NOBOOK
-public:
-
-	/*
-	Aligned16(){
-		if(((int)this & 15) != 0){
-			printf("bad alloc\n");
-			assert(0);
-		}
-	}
-	 */
-
-	void *operator new(size_t s) {
-		return AllocAligned<char>(s, 16);
-	}
-
-	void *operator new (size_t s, void *q) {
-		return q;
-	}
-
-	void operator delete(void *p) {
-		FreeAligned(p);
-	}
-#if defined(WIN32) && !defined(__CYGWIN__) // NOBOOK
-};
-#else // NOBOOK
-} __attribute__((aligned(16)));
-#endif // NOBOOK
 
 }
 

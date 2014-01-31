@@ -37,7 +37,8 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/uv.h"
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/geometry/point.h"
+#include "luxrays/core/color/color.h"
 #include "slg/sdl/mapping.h"
 #include "slg/sdl/hitpoint.h"
 
@@ -249,6 +250,12 @@ public:
 	float GetSpectrumMean() const;
 	float GetSpectrumMeanY() const;
 
+	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels);
+	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
+		const u_int width, const u_int height);
+	static ImageMap *Resample(const ImageMap *map, const u_int channels,
+		const u_int width, const u_int height);
+	
 private:
 	void Init(FIBITMAP *dib);
 	FIBITMAP *GetFreeImageBitMap() const;
@@ -1128,5 +1135,7 @@ private:
 	float bright, contrast;
 };
 }
+
+extern float Noise(float x, float y, float z);
 
 #endif	/* _SLG_TEXTURE_H */

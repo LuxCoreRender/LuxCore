@@ -89,7 +89,6 @@ endif(DOXYGEN_FOUND)
 ###########################################################################
 
 set(SLG_KERNELS
-	${LuxRays_SOURCE_DIR}/include/slg/core/mc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/camera/camera_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/pathoclbase_funcs.cl
@@ -131,6 +130,8 @@ PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
 #############################################################################
 
 set(SLG_SRCS
+	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/sphericalfunction.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/photometricdataies.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirhybrid/bidirhybrid.cpp
@@ -179,7 +180,6 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/spd.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp

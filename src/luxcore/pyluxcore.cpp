@@ -139,13 +139,13 @@ static boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const
 		boost::python::object &objSrc) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
 	}
 	
 	Py_buffer srcView;
 	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
+		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
 	}	
 
 	const float *src = (float *)srcView.buf;
@@ -438,7 +438,6 @@ void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list 
 // Glue for Film class
 //------------------------------------------------------------------------------
 
-
 static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index) {
 	if (PyObject_CheckBuffer(obj.ptr())) {
@@ -448,6 +447,9 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 				float *buffer = (float *)view.buf;
 
 				film->GetOutput<float>(type, buffer, index);
+				buffer[0] = 0.f;
+				buffer[1] = .5f;
+				buffer[2] = 1.f;
 			} else
 				throw std::runtime_error("Not enough space in the buffer of Film.GetOutputFloat() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float)));
@@ -455,7 +457,7 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw std::runtime_error("Unable to get a data view in Film.GetOutputFloat() method: " + objType);
 		}
-	}	else {
+	} else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 		throw std::runtime_error("Unsupported data type Film.GetOutputFloat() method: " + objType);
 	}
@@ -721,6 +723,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 	def("Init", &LuxCore_Init);
 	def("Init", &LuxCore_InitDefaultHandler);
+	def("ParseLXS", &ParseLXS);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &ConvertFilmChannelOutput_3xFloat_To_4xUChar);
 	def("ConvertFilmChannelOutput_3xFloat_To_3xFloatList", &ConvertFilmChannelOutput_3xFloat_To_3xFloatList);
 
@@ -839,6 +842,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("RADIANCE_GROUP", Film::OUTPUT_RADIANCE_GROUP)
 		.value("UV", Film::OUTPUT_UV)
 		.value("RAYCOUNT", Film::OUTPUT_RAYCOUNT)
+		.value("BY_MATERIAL_ID", Film::BY_MATERIAL_ID)
 	;
 
     class_<Film>("Film", no_init)
