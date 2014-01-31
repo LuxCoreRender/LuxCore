@@ -19,8 +19,8 @@
  ***************************************************************************/
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2, ROUGHGLASS
+	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
+	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT
 } MaterialType;
 
 typedef struct {
@@ -85,11 +85,24 @@ typedef struct {
 } RoughGlassParam;
 
 typedef struct {
+    unsigned int kdTexIndex;
+	unsigned int p1TexIndex;
+	unsigned int p2TexIndex;
+	unsigned int p3TexIndex;
+	unsigned int thicknessTexIndex;
+} VelvetParam;
+
+typedef struct {
 	MaterialType type;
 	unsigned int matID, lightID;
-	float emittedFactor;
+	Spectrum emittedFactor;
 	int usePrimitiveArea;
 	unsigned int emitTexIndex, bumpTexIndex, normalTexIndex;
+	int samples;
+	// Type of indirect paths where a light source is visible with a direct hit. It is
+	// an OR of DIFFUSE, GLOSSY and SPECULAR.
+	BSDFEvent visibility;
+
 	union {
 		MatteParam matte;
 		MirrorParam mirror;
@@ -102,6 +115,7 @@ typedef struct {
 		Glossy2Param glossy2;
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
+		VelvetParam velvet;
 	};
 } Material;
 

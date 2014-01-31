@@ -143,7 +143,7 @@ void BSDF_Init(
 	} else
 #endif
 		hitPointColor = WHITE;
-	VSTORE3F(hitPointColor, &bsdf->hitPoint.color.r);
+	VSTORE3F(hitPointColor, bsdf->hitPoint.color.c);
 #endif
 
 	//--------------------------------------------------------------------------
@@ -211,7 +211,59 @@ void BSDF_Init(
 #endif
 #endif
 
-	Frame_SetFromZ(&bsdf->frame, shadeN);
+    //--------------------------------------------------------------------------
+	// Build the local reference system
+	//--------------------------------------------------------------------------
+    
+#if defined(PARAM_HAS_UVS_BUFFER)
+    if (meshDesc->uvsOffset != NULL_INDEX) {
+        // Ok, UV coordinates are available, use them to build the reference
+        // system around the shading normal.
+
+        // Compute triangle partial derivatives
+        __global Triangle *tri = &iTriangles[triangleIndex];
+        const uint vi0 = tri->v[0];
+        const uint vi1 = tri->v[1];
+        const uint vi2 = tri->v[2];
+
+        __global UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
+        const float2 uv0 = VLOAD2F(&iVertUVs[vi0].u);
+        const float2 uv1 = VLOAD2F(&iVertUVs[vi1].u);
+        const float2 uv2 = VLOAD2F(&iVertUVs[vi2].u);
+
+        // Compute deltas for triangle partial derivatives
+        const float du1 = uv0.s0 - uv2.s0;
+        const float du2 = uv1.s0 - uv2.s0;
+        const float dv1 = uv0.s1 - uv2.s1;
+        const float dv2 = uv1.s1 - uv2.s1;
+        const float determinant = du1 * dv2 - dv1 * du2;
+        if (determinant == 0.f) {
+            // Handle 0 determinant for triangle partial derivative matrix
+            Frame_SetFromZ(&bsdf->frame, shadeN);
+        } else {
+            const float3 p0 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi0].x));
+            const float3 p1 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi1].x));
+            const float3 p2 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi2].x));
+            const float3 dp1 = p0 - p2;
+            const float3 dp2 = p1 - p2;
+
+            const float invdet = 1.f / determinant;
+            const float3 dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+            const float3 dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
+
+            float3 ts = normalize(cross(shadeN, dpdu));
+            float3 ss = cross(ts, shadeN);
+            ts *= (dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
+
+            VSTORE3F(ss, &bsdf->frame.X.x);
+            VSTORE3F(ts, &bsdf->frame.Y.x);
+            VSTORE3F(shadeN, &bsdf->frame.Z.x);
+        }
+    } else
+        Frame_SetFromZ(&bsdf->frame, shadeN);
+#else
+    Frame_SetFromZ(&bsdf->frame, shadeN);
+#endif
 
 	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
 }
@@ -317,16 +369,15 @@ bool BSDF_IsLightSource(__global BSDF *bsdf) {
 	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
 }
 
-float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf,
-		__global TriangleLight *triLightDefs, float *directPdfA
-		MATERIALS_PARAM_DECL) {
+float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *directPdfA
+		LIGHTS_PARAM_DECL) {
 	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
 	if (triangleLightSourceIndex == NULL_INDEX)
 		return BLACK;
 	else
-		return TriangleLight_GetRadiance(&triLightDefs[triangleLightSourceIndex],
+		return IntersecableLight_GetRadiance(&lights[triangleLightSourceIndex],
 				&bsdf->hitPoint, directPdfA
-				MATERIALS_PARAM);
+				LIGHTS_PARAM);
 }
 #endif
 

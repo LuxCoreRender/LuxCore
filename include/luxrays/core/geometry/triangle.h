@@ -25,18 +25,13 @@
 #include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/geometry/ray.h"
 #include "luxrays/core/geometry/bbox.h"
+#include "luxrays/utils/mc.h"
 
 namespace luxrays {
 
 // OpenCL data types
 namespace ocl {
 #include "luxrays/core/geometry/triangle_types.cl"
-}
-
-inline void UniformSampleTriangle(const float u0, const float u1, float *u, float *v) {
-	const float su1 = sqrtf(u0);
-	*u = 1.f - su1;
-	*v = u1 * su1;
 }
 
 class Triangle {

@@ -70,16 +70,17 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	channel_INDIRECT_SHADOW_MASK_Buff = NULL;
 	channel_UV_Buff = NULL;
 	channel_RAYCOUNT_Buff = NULL;
+	channel_BY_MATERIAL_ID_Buff = NULL;
 
 	// Scene buffers
 	materialsBuff = NULL;
 	texturesBuff = NULL;
 	meshDescsBuff = NULL;
 	meshMatsBuff = NULL;
-	infiniteLightBuff = NULL;
-	infiniteLightDistributionBuff = NULL;
-	sunLightBuff = NULL;
-	skyLightBuff = NULL;
+	lightsBuff = NULL;
+	envLightIndicesBuff = NULL;
+	lightsDistributionBuff = NULL;
+	infiniteLightDistributionsBuff = NULL;
 	lightsDistributionBuff = NULL;
 	vertsBuff = NULL;
 	normalsBuff = NULL;
@@ -155,6 +156,8 @@ u_int PathOCLBaseRenderThread::SetFilmKernelArgs(cl::Kernel &kernel, u_int argIn
 		kernel.setArg(argIndex++, *channel_UV_Buff);
 	if (threadFilm->HasChannel(Film::RAYCOUNT))
 		kernel.setArg(argIndex++, *channel_RAYCOUNT_Buff);
+	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID))
+		kernel.setArg(argIndex++, *channel_BY_MATERIAL_ID_Buff);
 
 	return argIndex;
 }
@@ -179,8 +182,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	// Add PathStateBase.BSDF.materialIndex memory size
 	bsdfSize += sizeof(u_int);
 	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
-	if (renderEngine->compiledScene->triLightDefs.size() > 0)
-		bsdfSize += sizeof(u_int);
+	bsdfSize += sizeof(u_int);
 	// Add PathStateBase.BSDF.Frame memory size
 	bsdfSize += sizeof(slg::ocl::Frame);
 
@@ -430,6 +432,15 @@ void PathOCLBaseRenderThread::InitFilm() {
 		AllocOCLBufferRW(&channel_RAYCOUNT_Buff, sizeof(float) * filmPixelCount, "RAYCOUNT");
 	else
 		FreeOCLBuffer(&channel_RAYCOUNT_Buff);
+	//--------------------------------------------------------------------------
+	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID)) {
+		if (threadFilm->GetByMaterialIDCount() > 1)
+			throw runtime_error("PathOCL supports only 1 BY_MATERIAL_ID");
+		else
+			AllocOCLBufferRW(&channel_BY_MATERIAL_ID_Buff,
+					sizeof(float[4]) * filmPixelCount, "BY_MATERIAL_ID");
+	} else
+		FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
 }
 
 void PathOCLBaseRenderThread::InitCamera() {
@@ -490,56 +501,25 @@ void PathOCLBaseRenderThread::InitTextures() {
 			sizeof(slg::ocl::Texture) * texturesCount, "Textures");
 }
 
-void PathOCLBaseRenderThread::InitTriangleAreaLights() {
+void PathOCLBaseRenderThread::InitLights() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	if (cscene->triLightDefs.size() > 0) {
-		AllocOCLBufferRO(&triLightDefsBuff, &cscene->triLightDefs[0],
-			sizeof(slg::ocl::TriangleLight) * cscene->triLightDefs.size(), "Triangle AreaLights");
-		AllocOCLBufferRO(&meshTriLightDefsOffsetBuff, &cscene->meshTriLightDefsOffset[0],
-			sizeof(u_int) * cscene->meshTriLightDefsOffset.size(), "Triangle AreaLights offsets");
-	} else {
-		FreeOCLBuffer(&triLightDefsBuff);
-		FreeOCLBuffer(&meshTriLightDefsOffsetBuff);
-	}
-}
+	AllocOCLBufferRO(&lightsBuff, &cscene->lightDefs[0],
+		sizeof(slg::ocl::LightSource) * cscene->lightDefs.size(), "Lights");
+	if (cscene->envLightIndices.size() > 0) {
+		AllocOCLBufferRO(&envLightIndicesBuff, &cscene->envLightIndices[0],
+				sizeof(slg::ocl::LightSource) * cscene->envLightIndices.size(), "Env. light indices");
+	} else
+		FreeOCLBuffer(&envLightIndicesBuff);
 
-void PathOCLBaseRenderThread::InitInfiniteLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
+	AllocOCLBufferRO(&meshTriLightDefsOffsetBuff, &cscene->meshTriLightDefsOffset[0],
+		sizeof(u_int) * cscene->meshTriLightDefsOffset.size(), "Light offsets");
 
-	if (cscene->infiniteLight) {
-		AllocOCLBufferRO(&infiniteLightBuff, cscene->infiniteLight,
-			sizeof(slg::ocl::InfiniteLight), "InfiniteLight");
-		AllocOCLBufferRO(&infiniteLightDistributionBuff, cscene->infiniteLightDistribution,
-			cscene->infiniteLightDistributionSize, "InfiniteLight Distribution");
-	} else {
-		FreeOCLBuffer(&infiniteLightBuff);
-		FreeOCLBuffer(&infiniteLightDistributionBuff);
-	}
-}
-
-void PathOCLBaseRenderThread::InitSunLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if (cscene->sunLight)
-		AllocOCLBufferRO(&sunLightBuff, cscene->sunLight,
-			sizeof(slg::ocl::SunLight), "SunLight");
-	else
-		FreeOCLBuffer(&sunLightBuff);
-}
-
-void PathOCLBaseRenderThread::InitSkyLight() {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
-	if (cscene->skyLight)
-		AllocOCLBufferRO(&skyLightBuff, cscene->skyLight,
-			sizeof(slg::ocl::SkyLight), "SkyLight");
-	else
-		FreeOCLBuffer(&skyLightBuff);
-}
-
-void PathOCLBaseRenderThread::InitLightsDistribution() {
-	CompiledScene *cscene = renderEngine->compiledScene;
+	if (cscene->infiniteLightDistributions.size() > 0) {
+		AllocOCLBufferRO(&infiniteLightDistributionsBuff, &cscene->infiniteLightDistributions[0],
+			sizeof(float) * cscene->infiniteLightDistributions.size(), "InfiniteLight distributions");
+	} else
+		FreeOCLBuffer(&infiniteLightDistributionsBuff);
 
 	AllocOCLBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
 		cscene->lightsDistributionSize, "LightsDistribution");
@@ -550,7 +530,7 @@ void PathOCLBaseRenderThread::InitImageMaps() {
 
 	if (cscene->imageMapDescs.size() > 0) {
 		AllocOCLBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
-				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMaps description");
+				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
 
 		// Free unused pages
 		for (u_int i = cscene->imageMapMemBlocks.size(); i < imageMapsBuff.size(); ++i)
@@ -661,6 +641,10 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_FILM_CHANNELS_HAS_UV";
 	if (threadFilm->HasChannel(Film::RAYCOUNT))
 		ss << " -D PARAM_FILM_CHANNELS_HAS_RAYCOUNT";
+	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID)) {
+		ss << " -D PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID" <<
+				" -D PARAM_FILM_BY_MATERIAL_ID=" << threadFilm->GetByMaterialID(0);
+	}
 
 	if (normalsBuff)
 		ss << " -D PARAM_HAS_NORMALS_BUFFER";
@@ -718,12 +702,12 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
+	if (cscene->IsMaterialCompiled(VELVET))
+		ss << " -D PARAM_ENABLE_MAT_VELVET";
 	if (cscene->IsMaterialCompiled(MIRROR))
 		ss << " -D PARAM_ENABLE_MAT_MIRROR";
 	if (cscene->IsMaterialCompiled(GLASS))
 		ss << " -D PARAM_ENABLE_MAT_GLASS";
-	if (cscene->IsMaterialCompiled(METAL))
-		ss << " -D PARAM_ENABLE_MAT_METAL";
 	if (cscene->IsMaterialCompiled(ARCHGLASS))
 		ss << " -D PARAM_ENABLE_MAT_ARCHGLASS";
 	if (cscene->IsMaterialCompiled(MIX))
@@ -767,29 +751,43 @@ void PathOCLBaseRenderThread::InitKernels() {
 			ss << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
 	}
 
-	u_int totalLightCount = 0;
-	if (infiniteLightBuff) {
+	bool hasEnvLights = false;
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0) {
 		ss << " -D PARAM_HAS_INFINITELIGHT";
-		++totalLightCount;
+		hasEnvLights = true;
 	}
-
-	if (skyLightBuff) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0) {
+		ss << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
+		hasEnvLights = true;
+	}
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0) {
 		ss << " -D PARAM_HAS_SKYLIGHT";
-		++totalLightCount;
+		hasEnvLights = true;
 	}
-
-	if (sunLightBuff) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY2] > 0) {
+		ss << " -D PARAM_HAS_SKYLIGHT2";
+		hasEnvLights = true;
+	}
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SUN] > 0) {
 		ss << " -D PARAM_HAS_SUNLIGHT";
-		++totalLightCount;
+		hasEnvLights = true;
 	}
-
-	if (triLightDefsBuff) {
-		ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->triLightDefs.size();
-		totalLightCount += renderEngine->compiledScene->triLightDefs.size();
-	} else
-		ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=0";
-
-	ss << " -D PARAM_LIGHT_COUNT=" << totalLightCount;
+	if (hasEnvLights)
+		ss << " -D PARAM_HAS_ENVLIGHTS";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_POINT] > 0)
+		ss << " -D PARAM_HAS_POINTLIGHT";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_MAPPOINT] > 0)
+		ss << " -D PARAM_HAS_MAPPOINTLIGHT";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SPOT] > 0)
+		ss << " -D PARAM_HAS_SPOTLIGHT";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_PROJECTION] > 0)
+		ss << " -D PARAM_HAS_PROJECTIONLIGHT";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0)
+		ss << " -D PARAM_HAS_SHARPDISTANTLIGHT";
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0)
+		ss << " -D PARAM_HAS_DISTANTLIGHT";
+	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
+	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
 
 	if (imageMapDescsBuff) {
 		ss << " -D PARAM_HAS_IMAGEMAPS";
@@ -840,7 +838,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_ray_types <<
 			luxrays::ocl::KernelSource_bbox_types <<
 			luxrays::ocl::KernelSource_epsilon_types <<
-			luxrays::ocl::KernelSource_spectrum_types <<
+			luxrays::ocl::KernelSource_color_types <<
 			luxrays::ocl::KernelSource_frame_types <<
 			luxrays::ocl::KernelSource_matrix4x4_types <<
 			luxrays::ocl::KernelSource_transform_types <<
@@ -850,7 +848,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_vector_funcs <<
 			luxrays::ocl::KernelSource_ray_funcs <<
 			luxrays::ocl::KernelSource_bbox_funcs <<
-			luxrays::ocl::KernelSource_spectrum_funcs <<
+			luxrays::ocl::KernelSource_color_funcs <<
 			luxrays::ocl::KernelSource_frame_funcs <<
 			luxrays::ocl::KernelSource_matrix4x4_funcs <<
 			luxrays::ocl::KernelSource_transform_funcs <<
@@ -860,8 +858,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_hitpoint_types <<
 			slg::ocl::KernelSource_mapping_types <<
 			slg::ocl::KernelSource_texture_types <<
-			slg::ocl::KernelSource_material_types <<
 			slg::ocl::KernelSource_bsdf_types <<
+			slg::ocl::KernelSource_material_types <<
 			slg::ocl::KernelSource_film_types <<
 			slg::ocl::KernelSource_filter_types <<
 			slg::ocl::KernelSource_sampler_types <<
@@ -974,34 +972,10 @@ void PathOCLBaseRenderThread::InitRender() {
 	InitMaterials();
 
 	//--------------------------------------------------------------------------
-	// Translate triangle area lights
+	// Light definitions
 	//--------------------------------------------------------------------------
 
-	InitTriangleAreaLights();
-
-	//--------------------------------------------------------------------------
-	// Check if there is an infinite light source
-	//--------------------------------------------------------------------------
-
-	InitInfiniteLight();
-
-	//--------------------------------------------------------------------------
-	// Check if there is an sun light source
-	//--------------------------------------------------------------------------
-
-	InitSunLight();
-
-	//--------------------------------------------------------------------------
-	// Check if there is an sky light source
-	//--------------------------------------------------------------------------
-
-	InitSkyLight();
-	
-	InitLightsDistribution();
-
-	const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
-	if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (triAreaLightCount == 0))
-		throw runtime_error("There are no light sources supported by PathOCL in the scene");
+	InitLights();
 
 	AdditionalInit();
 
@@ -1088,6 +1062,7 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
 	FreeOCLBuffer(&channel_UV_Buff);
 	FreeOCLBuffer(&channel_RAYCOUNT_Buff);
+	FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
 
 	// Scene buffers
 	FreeOCLBuffer(&materialsBuff);
@@ -1100,10 +1075,10 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&alphasBuff);
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&vertsBuff);
-	FreeOCLBuffer(&infiniteLightBuff);
-	FreeOCLBuffer(&infiniteLightDistributionBuff);
-	FreeOCLBuffer(&sunLightBuff);
-	FreeOCLBuffer(&skyLightBuff);
+	FreeOCLBuffer(&lightsBuff);
+	FreeOCLBuffer(&envLightIndicesBuff);
+	FreeOCLBuffer(&lightsDistributionBuff);
+	FreeOCLBuffer(&infiniteLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);
 	FreeOCLBuffer(&triLightDefsBuff);
 	FreeOCLBuffer(&meshTriLightDefsOffsetBuff);
@@ -1162,37 +1137,9 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 		InitMaterials();
 	}
 
-	if  (editActions.Has(AREALIGHTS_EDIT)) {
-		// Update Scene Area Lights
-		InitTriangleAreaLights();
-	}
-
-	if  (editActions.Has(INFINITELIGHT_EDIT)) {
-		// Update Scene Infinite Light
-		InitInfiniteLight();
-	}
-
-	if  (editActions.Has(SUNLIGHT_EDIT)) {
-		// Update Scene Sun Light
-		InitSunLight();
-	}
-
-	if  (editActions.Has(SKYLIGHT_EDIT)) {
-		// Update Scene Sun Light
-		InitSkyLight();
-	}
-
-	if (editActions.Has(GEOMETRY_EDIT) ||
-			editActions.Has(AREALIGHTS_EDIT) ||
-			editActions.Has(SUNLIGHT_EDIT) ||
-			editActions.Has(SKYLIGHT_EDIT) ||
-			editActions.Has(INFINITELIGHT_EDIT)) {
-		// Update Scene light power distribution for direct light sampling
-		InitLightsDistribution();
-
-		const u_int triAreaLightCount = renderEngine->compiledScene->triLightDefs.size();
-		if (!skyLightBuff && !sunLightBuff && !infiniteLightBuff && (triAreaLightCount == 0))
-			throw runtime_error("There are no light sources supported by PathOCL in the scene");
+	if  (editActions.Has(LIGHTS_EDIT)) {
+		// Update Scene Lights
+		InitLights();
 	}
 
 	// A material types edit can enable/disable PARAM_HAS_PASSTHROUGH parameter
@@ -1386,6 +1333,14 @@ void PathOCLBaseRenderThread::TransferFilm(cl::CommandQueue &oclQueue) {
 			0,
 			channel_RAYCOUNT_Buff->getInfo<CL_MEM_SIZE>(),
 			threadFilm->channel_RAYCOUNT->GetPixels());
+	}
+	if (channel_BY_MATERIAL_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_BY_MATERIAL_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_BY_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			threadFilm->channel_BY_MATERIAL_IDs[0]->GetPixels());
 	}
 }
 

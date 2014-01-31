@@ -78,6 +78,7 @@ Film::Film(const u_int w, const u_int h) {
 	convTest = NULL;
 
 	enabledOverlappedScreenBufferUpdate = true;
+	rgbTonemapUpdate = true;
 
 	imagePipeline = NULL;
 	filter = NULL;
@@ -113,6 +114,8 @@ Film::~Film() {
 	delete channel_INDIRECT_SHADOW_MASK;
 	delete channel_UV;
 	delete channel_RAYCOUNT;
+	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
+		delete channel_BY_MATERIAL_IDs[i];
 
 	delete filterLUTs;
 	delete filter;
@@ -128,6 +131,12 @@ void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
 			if (count(maskMaterialIDs.begin(), maskMaterialIDs.end(), id) == 0)
 				maskMaterialIDs.push_back(id);
+			break;
+		}
+		case BY_MATERIAL_ID: {
+			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
+			if (count(byMaterialIDs.begin(), byMaterialIDs.end(), id) == 0)
+				byMaterialIDs.push_back(id);
 			break;
 		}
 		default:
@@ -186,6 +195,9 @@ void Film::Resize(const u_int w, const u_int h) {
 	delete channel_INDIRECT_SHADOW_MASK;
 	delete channel_UV;
 	delete channel_RAYCOUNT;
+	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
+		delete channel_BY_MATERIAL_IDs[i];
+	channel_BY_MATERIAL_IDs.clear();
 
 	// Allocate all required channels
 	hasDataChannel = false;
@@ -275,7 +287,7 @@ void Film::Resize(const u_int w, const u_int h) {
 			buf->Clear();
 			channel_MATERIAL_ID_MASKs.push_back(buf);
 		}
-		hasDataChannel = true;
+		hasComposingChannel = true;
 	}
 	if (HasChannel(DIRECT_SHADOW_MASK)) {
 		channel_DIRECT_SHADOW_MASK = new GenericFrameBuffer<2, 1, float>(width, height);
@@ -296,6 +308,14 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_RAYCOUNT = new GenericFrameBuffer<1, 0, float>(width, height);
 		channel_RAYCOUNT->Clear();
 		hasDataChannel = true;
+	}
+	if (HasChannel(BY_MATERIAL_ID)) {
+		for (u_int i = 0; i < byMaterialIDs.size(); ++i) {
+			GenericFrameBuffer<4, 1, float> *buf = new GenericFrameBuffer<4, 1, float>(width, height);
+			buf->Clear();
+			channel_BY_MATERIAL_IDs.push_back(buf);
+		}
+		hasComposingChannel = true;
 	}
 
 	// Initialize the stats
@@ -361,6 +381,10 @@ void Film::Reset() {
 		channel_UV->Clear();
 	if (HasChannel(RAYCOUNT))
 		channel_RAYCOUNT->Clear();
+	if (HasChannel(BY_MATERIAL_ID)) {
+		for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
+			channel_BY_MATERIAL_IDs[i]->Clear();
+	}
 
 	// convTest has to be reseted explicitely
 
@@ -607,6 +631,21 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(BY_MATERIAL_ID) && film.HasChannel(BY_MATERIAL_ID)) {
+		for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i) {
+			for (u_int j = 0; j < film.byMaterialIDs.size(); ++j) {
+				if (byMaterialIDs[i] == film.byMaterialIDs[j]) {
+					for (u_int y = 0; y < srcHeight; ++y) {
+						for (u_int x = 0; x < srcWidth; ++x) {
+							const float *srcPixel = film.channel_BY_MATERIAL_IDs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+							channel_BY_MATERIAL_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel as last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -664,6 +703,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(UV);
 		case FilmOutputs::RAYCOUNT:
 			return HasChannel(RAYCOUNT);
+		case FilmOutputs::BY_MATERIAL_ID:
+			return HasChannel(BY_MATERIAL_ID);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -688,6 +729,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 	FREE_IMAGE_TYPE imageType;
 	u_int bitCount;
 	u_int maskMaterialIDsIndex = 0;
+	u_int byMaterialIDsIndex = 0;
 	u_int radianceGroupIndex = 0;
 	switch (type) {
 		case FilmOutputs::RGB:
@@ -859,6 +901,26 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 			if (hdrImage && HasChannel(RAYCOUNT)) {
 				imageType = FIT_FLOAT;
 				bitCount = 32;
+			} else
+				return;
+			break;
+		case FilmOutputs::BY_MATERIAL_ID:
+			if (hdrImage && HasChannel(BY_MATERIAL_ID) && props) {
+				imageType = FIT_RGBF;
+				bitCount = 96;
+
+				// Look for the material mask ID index
+				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
+				bool found = false;
+				for (u_int i = 0; i < byMaterialIDs.size(); ++i) {
+					if (byMaterialIDs[i] == id) {
+						byMaterialIDsIndex = i;
+						found = true;
+						break;
+					}
+				}
+				if (!found)
+					return;
 			} else
 				return;
 			break;
@@ -1056,6 +1118,11 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 					channel_RAYCOUNT->GetWeightedPixel(x, y, &dst[x]);
 					break;
 				}
+				case FilmOutputs::BY_MATERIAL_ID: {
+					FIRGBF *dst = (FIRGBF *)bits;
+					channel_BY_MATERIAL_IDs[byMaterialIDsIndex]->GetWeightedPixel(x, y, &dst[x].red);
+					break;
+				}
 				default:
 					throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 			}
@@ -1170,12 +1237,12 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			float *dst = buffer;
 			for (u_int i = 0; i < pixelCount; ++i) {
 				Spectrum c;
-				channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->AccumulateWeightedPixel(i, &c.r);
-				channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, &c.r);
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
+				channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
 
-				*dst++ = c.r;
-				*dst++ = c.g;
-				*dst++ = c.b;
+				*dst++ = c.c[0];
+				*dst++ = c.c[1];
+				*dst++ = c.c[2];
 			}
 			break;
 		}
@@ -1185,6 +1252,11 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::RAYCOUNT:
 			copy(channel_RAYCOUNT->GetPixels(), channel_RAYCOUNT->GetPixels() + pixelCount, buffer);
 			break;
+		case FilmOutputs::BY_MATERIAL_ID: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_BY_MATERIAL_IDs[index]->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
 	}
@@ -1221,7 +1293,8 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 }
 
 void Film::ExecuteImagePipeline() {
-	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
+	if (!rgbTonemapUpdate ||
+			(!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
 			!HasChannel(RGB_TONEMAPPED)) {
 		// Nothing to do
 		return;
@@ -1279,11 +1352,8 @@ void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const 
 
 	if (!enabledOverlappedScreenBufferUpdate) {
 		for (u_int i = 0; i < pixelCount; ++i) {
-			if (!frameBufferMask[i]) {
-				p[i].r = 0.f;
-				p[i].g = 0.f;
-				p[i].b = 0.f;
-			}
+			if (!frameBufferMask[i])
+				p[i] = Spectrum();
 		}
 	}
 }
@@ -1295,7 +1365,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 			if (sampleResult.radiancePerPixelNormalized[i].IsNaN() || sampleResult.radiancePerPixelNormalized[i].IsInf())
 				continue;
 
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddWeightedPixel(x, y, &sampleResult.radiancePerPixelNormalized[i].r, weight);
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiancePerPixelNormalized[i].c, weight);
 		}
 	}
 
@@ -1305,7 +1375,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 			if (sampleResult.radiancePerScreenNormalized[i].IsNaN() || sampleResult.radiancePerScreenNormalized[i].IsInf())
 				continue;
 
-			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddWeightedPixel(x, y, &sampleResult.radiancePerScreenNormalized[i].r, weight);
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiancePerScreenNormalized[i].c, weight);
 		}
 	}
 
@@ -1316,35 +1386,55 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 	if (hasComposingChannel) {
 		// Faster than HasChannel(DIRECT_DIFFUSE)
 		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE))
-			channel_DIRECT_DIFFUSE->AddWeightedPixel(x, y, &sampleResult.directDiffuse.r, weight);
+			channel_DIRECT_DIFFUSE->AddWeightedPixel(x, y, sampleResult.directDiffuse.c, weight);
 
 		// Faster than HasChannel(DIRECT_GLOSSY)
 		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY))
-			channel_DIRECT_GLOSSY->AddWeightedPixel(x, y, &sampleResult.directGlossy.r, weight);
+			channel_DIRECT_GLOSSY->AddWeightedPixel(x, y, sampleResult.directGlossy.c, weight);
 
 		// Faster than HasChannel(EMISSION)
 		if (channel_EMISSION && sampleResult.HasChannel(EMISSION))
-			channel_EMISSION->AddWeightedPixel(x, y, &sampleResult.emission.r, weight);
+			channel_EMISSION->AddWeightedPixel(x, y, sampleResult.emission.c, weight);
 
 		// Faster than HasChannel(INDIRECT_DIFFUSE)
 		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE))
-			channel_INDIRECT_DIFFUSE->AddWeightedPixel(x, y, &sampleResult.indirectDiffuse.r, weight);
+			channel_INDIRECT_DIFFUSE->AddWeightedPixel(x, y, sampleResult.indirectDiffuse.c, weight);
 
 		// Faster than HasChannel(INDIRECT_GLOSSY)
 		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY))
-			channel_INDIRECT_GLOSSY->AddWeightedPixel(x, y, &sampleResult.indirectGlossy.r, weight);
+			channel_INDIRECT_GLOSSY->AddWeightedPixel(x, y, sampleResult.indirectGlossy.c, weight);
 
 		// Faster than HasChannel(INDIRECT_SPECULAR)
 		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR))
-			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, &sampleResult.indirectSpecular.r, weight);
+			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, sampleResult.indirectSpecular.c, weight);
 
-		// This is MATERIAL_ID_MASK
+		// This is MATERIAL_ID_MASK and BY_MATERIAL_MASK
 		if (sampleResult.HasChannel(MATERIAL_ID)) {
+			// MATERIAL_ID_MASK
 			for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
 				float pixel[2];
 				pixel[0] = (sampleResult.materialID == maskMaterialIDs[i]) ? weight : 0.f;
 				pixel[1] = weight;
 				channel_MATERIAL_ID_MASKs[i]->AddPixel(x, y, pixel);
+			}
+
+			// BY_MATERIAL_MASK
+			if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+				for (u_int index = 0; index < byMaterialIDs.size(); ++index) {
+					Spectrum c;
+
+					if (sampleResult.materialID == byMaterialIDs[index]) {
+						// Merge all radiance groups
+						for (u_int i = 0; i < Min(sampleResult.radiancePerPixelNormalized.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+							if (sampleResult.radiancePerPixelNormalized[i].IsNaN() || sampleResult.radiancePerPixelNormalized[i].IsInf())
+								continue;
+
+							c += sampleResult.radiancePerPixelNormalized[i];
+						}
+					}
+
+					channel_BY_MATERIAL_IDs[index]->AddWeightedPixel(x, y, c.c, weight);
+				}
 			}
 		}
 
@@ -1510,6 +1600,8 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return UV;
 	else if (type == "RAYCOUNT")
 		return RAYCOUNT;
+	else if (type == "BY_MATERIAL_ID")
+		return BY_MATERIAL_ID;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -1554,6 +1646,8 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "UV";
 		case Film::RAYCOUNT:
 			return "RAYCOUNT";
+		case Film::BY_MATERIAL_ID:
+			return "BY_MATERIAL_ID";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}

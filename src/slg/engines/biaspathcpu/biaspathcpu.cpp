@@ -34,7 +34,7 @@ BiasPathCPURenderEngine::BiasPathCPURenderEngine(const RenderConfig *rcfg, Film 
 
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
-	film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
+	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
 
@@ -73,7 +73,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	pdfClampValue = Max(0.f, cfg.Get(Property("biaspath.clamping.pdf.value")(0.f)).Get<float>());
 
 	// Light settings
-	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(.001f)).Get<float>());
+	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(0.f)).Get<float>());
 	nearStartLight = Max(0.f, cfg.Get(Property("biaspath.lights.nearstart")(.001f)).Get<float>());
 
 	string lightStratType = cfg.Get(Property("biaspath.lights.samplingstrategy.type")("ALL")).Get<string>();

@@ -74,7 +74,7 @@ class RenderView(QMainWindow):
 		########################################################################
 		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
 		########################################################################
-		if sys.version_info<(3,0,0):
+		if sys.version_info < (3,0,0):
 			self.imageBufferFloat = buffer(array('f', [0.0] * (self.filmWidth * self.filmHeight * 3)))
 			self.imageBufferUChar = buffer(array('b', [0] * (self.filmWidth * self.filmHeight * 4)))
 		else:
@@ -315,7 +315,7 @@ class RenderView(QMainWindow):
 		########################################################################
 		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
 		########################################################################
-		self.scene.DefineImageMap("check_map", buffer(imageMap) if sys.version_info<(3,0,0) else imageMap, 2.2, 3, 128, 128)
+		self.scene.DefineImageMap("check_map", buffer(imageMap) if sys.version_info < (3,0,0) else imageMap, 2.2, 3, 128, 128)
 
 		# Edit the material
 		self.scene.Parse(pyluxcore.Properties().

@@ -58,13 +58,11 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				const float cosToCamera = Dot(bsdf.hitPoint.shadeN, -eyeDir);
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 					scene->camera->GetPixelArea());
-				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-				const float fluxToRadianceFactor = cameraPdfA;
+				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
 				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
 				AddSampleResult(sampleResults, filmX, filmY, radiance);
@@ -104,10 +102,8 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 		if (!somethingWasHit) {
 			// Nothing was hit, check infinite lights (including sun)
 			const Spectrum throughput = eyePathThroughput * connectionThroughput;
-			if (scene->envLight)
-				radiance +=  throughput * scene->envLight->GetRadiance(*scene, -eyeRay.d);
-			if (scene->sunLight)
-				radiance +=  throughput * scene->sunLight->GetRadiance(*scene, -eyeRay.d);
+			BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources())
+				radiance +=  throughput * el->GetRadiance(*scene, -eyeRay.d);
 			break;
 		} else {
 			// Something was hit, check if it is a light source
@@ -130,7 +126,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 				// If depth = 1 and it is a specular bounce, I continue to trace the
 				// eye path looking for a light source
 
-				eyePathThroughput *= connectionThroughput * bsdfSample * (cosSampleDir / bsdfPdf);
+				eyePathThroughput *= connectionThroughput * bsdfSample;
 				assert (!eyePathThroughput.IsNaN() && !eyePathThroughput.IsInf());
 
 				eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
@@ -181,7 +177,7 @@ void LightCPURenderThread::RenderFunc() {
 
 		// Select one light source
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(sampler->GetSample(2), &lightPickPdf);
+		const LightSource *light = scene->lightDefs.SampleAllLights(sampler->GetSample(2), &lightPickPdf);
 
 		// Initialize the light path
 		float lightEmitPdfW;
@@ -266,7 +262,7 @@ void LightCPURenderThread::RenderFunc() {
 						break;
 				}
 
-				lightPathFlux *= bsdfSample * (cosSampleDir / bsdfPdf);
+				lightPathFlux *= bsdfSample;
 				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 				nextEventRay = Ray(bsdf.hitPoint.p, sampledDir);

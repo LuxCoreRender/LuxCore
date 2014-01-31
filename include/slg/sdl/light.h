@@ -19,11 +19,18 @@
 #ifndef _SLG_LIGHT_H
 #define	_SLG_LIGHT_H
 
+#include <boost/unordered_map.hpp>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
+#include "luxrays/utils/mcdistribution.h"
+#include "luxrays/core/color/color.h"
+#include "luxrays/core/color/spds/regular.h"
+#include "luxrays/core/color/spds/irregular.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/mapping.h"
@@ -38,25 +45,35 @@ namespace ocl {
 class Scene;
 
 typedef enum {
-	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE
+	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
+	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
+	TYPE_IL_SKY2,
+	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
 extern const float LIGHT_WORLD_RADIUS_SCALE;
 
 //------------------------------------------------------------------------------
-// LightSource implementation
+// Generic LightSource interface
 //------------------------------------------------------------------------------
 
 class LightSource {
 public:
-	LightSource() { }
+	LightSource() : lightSceneIndex(0) { }
 	virtual ~LightSource() { }
 
-	virtual LightSourceType GetType() const = 0;
-	virtual void SetSceneIndex(const u_int index) { lightSceneIndex = index; }
-	virtual u_int GetSceneIndex() const { return lightSceneIndex; }
+	std::string GetName() const { return "light-" + boost::lexical_cast<std::string>(this); }
 
+	virtual void Preprocess() = 0;
+
+	virtual LightSourceType GetType() const = 0;
+
+	// If emit light on rays intersecting nothing
 	virtual bool IsEnvironmental() const { return false; }
+	// If the emitted power is based on scene radius
+	virtual bool IsInfinite() const { return false; }
+	// If it can be directly interescted by a ray
+	virtual bool IsIntersecable() const { return false; }
 
 	virtual u_int GetID() const = 0;
 	virtual float GetPower(const Scene &scene) const = 0;
@@ -78,74 +95,467 @@ public:
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
 
-private:
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
+
 	u_int lightSceneIndex;
 };
 
 //------------------------------------------------------------------------------
-// InfiniteLightBase implementation
+// LightSourceDefinitions
 //------------------------------------------------------------------------------
 
-class InfiniteLightBase : public LightSource {
+class EnvLightSource;
+class TriangleLight;
+
+class LightSourceDefinitions {
 public:
-	InfiniteLightBase(const luxrays::Transform &l2w) :
-		id(0), lightToWorld(l2w), gain(1.f, 1.f, 1.f), samples(-1) { }
-	virtual ~InfiniteLightBase() { }
+	LightSourceDefinitions();
+	~LightSourceDefinitions();
 
-	virtual void Preprocess() { }
+	// Update lightGroupCount, envLightSources, intersecableLightSources,
+	// lightIndexByMeshIndex and lightsDistribution
+	void Preprocess(const Scene *scene);
 
-	virtual bool IsEnvironmental() const { return true; }
+	bool IsLightSourceDefined(const std::string &name) const {
+		return (lightsByName.count(name) > 0);
+	}
+	void DefineLightSource(const std::string &name, LightSource *l);
 
+	const LightSource *GetLightSource(const std::string &name) const;
+	LightSource *GetLightSource(const std::string &name);
+	const LightSource *GetLightSource(const u_int index) const { return lights[index]; }
+	LightSource *GetLightSource(const u_int index) { return lights[index]; }
+	u_int GetLightSourceIndex(const std::string &name) const;
+	u_int GetLightSourceIndex(const LightSource *l) const;
+	const LightSource *GetLightByType(const LightSourceType type) const;
+	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
+
+	u_int GetSize() const { return static_cast<u_int>(lights.size()); }
+	std::vector<std::string> GetLightSourceNames() const;
+
+	// Update any reference to oldMat with newMat
+	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
+
+	void DeleteLightSource(const std::string &name);
+  
+	u_int GetLightGroupCount() const { return lightGroupCount; }
+	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
+	const vector<u_int> &GetLightTypeCounts() const { return lightTypeCount; }
+
+	const std::vector<LightSource *> &GetLightSources() const {
+		return lights;
+	}
+	const std::vector<EnvLightSource *> &GetEnvLightSources() const {
+		return envLightSources;
+	}
+	const std::vector<TriangleLight *> &GetIntersecableLightSources() const {
+		return intersecableLightSources;
+	}
+	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
+	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
+
+	LightSource *SampleAllLights(const float u, float *pdf) const;
+	float SampleAllLightPdf(const LightSource *light) const;
+
+private:
+	std::vector<LightSource *> lights;
+	boost::unordered_map<std::string, LightSource *> lightsByName;
+
+	u_int lightGroupCount;
+	vector<u_int> lightTypeCount;
+
+	std::vector<u_int> lightIndexByMeshIndex;
+
+	// Only intersecable light sources
+	std::vector<TriangleLight *> intersecableLightSources;
+	// Only env. lights sources (i.e. sky, sun and infinite light, etc.)
+	std::vector<EnvLightSource *> envLightSources;
+
+	// Used for power based light sampling strategy
+	luxrays::Distribution1D *lightsDistribution;
+
+};
+
+//------------------------------------------------------------------------------
+// Intersecable LightSource interface
+//------------------------------------------------------------------------------
+
+class IntersecableLightSource : public LightSource {
+public:
+	IntersecableLightSource() : lightMaterial(NULL), area(0.f), invArea(0.f) { }
+	virtual ~IntersecableLightSource() { }
+
+	virtual bool IsIntersecable() const { return true; }
+
+	virtual float GetPower(const Scene &scene) const = 0;
+	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
+	virtual int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
+
+	virtual bool IsVisibleIndirectDiffuse() const { return lightMaterial->IsVisibleIndirectDiffuse(); }
+	virtual bool IsVisibleIndirectGlossy() const { return lightMaterial->IsVisibleIndirectGlossy(); }
+	virtual bool IsVisibleIndirectSpecular() const { return lightMaterial->IsVisibleIndirectSpecular(); }
+
+	float GetArea() const { return area; }
+
+	virtual luxrays::Spectrum GetRadiance(const HitPoint &hitPoint,
+			float *directPdfA = NULL,
+			float *emissionPdfW = NULL) const = 0;
+
+	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
+		if (lightMaterial == oldMat)
+			lightMaterial = newMat;
+	}
+
+	const Material *lightMaterial;
+	
+protected:
+	float area, invArea;
+};
+
+//------------------------------------------------------------------------------
+// Not interescable LightSource interface
+//------------------------------------------------------------------------------
+
+class NotIntersecableLightSource : public LightSource {
+public:
+	NotIntersecableLightSource() :
+		gain(1.f), id(0), samples(-1) { }
+	virtual ~NotIntersecableLightSource() { }
+
+	virtual bool IsVisibleIndirectDiffuse() const { return false; }
+	virtual bool IsVisibleIndirectGlossy() const { return false; }
+	virtual bool IsVisibleIndirectSpecular() const { return false; }
+	
 	virtual void SetID(const u_int lightID) { id = lightID; }
 	virtual u_int GetID() const { return id; }
 	void SetSamples(const int sampleCount) { samples = sampleCount; }
 	virtual int GetSamples() const { return samples; }
 
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Transform lightToWorld;
+	luxrays::Spectrum gain;
+
+protected:
+	u_int id;
+	int samples;
+};
+
+//------------------------------------------------------------------------------
+// Env. LightSource interface
+//------------------------------------------------------------------------------
+
+class EnvLightSource : public NotIntersecableLightSource {
+public:
+	EnvLightSource() : isVisibleIndirectDiffuse(true),
+		isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
+	virtual ~EnvLightSource() { }
+
+	virtual bool IsEnvironmental() const { return true; }
+	virtual bool IsInfinite() const { return true; }
+
 	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
-	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
 	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
-	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
 	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
-	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
 
-	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
-
-	void SetGain(const luxrays::Spectrum &g) {
-		gain = g;
-	}
-	luxrays::Spectrum GetGain() const {
-		return gain;
-	}
+	virtual bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
+	virtual bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
+	virtual bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
 
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 protected:
-	u_int id;
-
-	const luxrays::Transform lightToWorld;
-	luxrays::Spectrum gain;
-	int samples;
-
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
+};
+
+//------------------------------------------------------------------------------
+// PointLight implementation
+//------------------------------------------------------------------------------
+
+class PointLight : public NotIntersecableLightSource {
+public:
+	PointLight();
+	virtual ~PointLight();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *localPos, float *absolutePos, float *emittedFactor) const;
+
+	virtual LightSourceType GetType() const { return TYPE_POINT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Point localPos;
+	luxrays::Spectrum color;
+	float power, efficency;
+
+protected:
+	luxrays::Spectrum emittedFactor;
+	luxrays::Point absolutePos;
+};
+
+//------------------------------------------------------------------------------
+// MapPointLight implementation
+//------------------------------------------------------------------------------
+
+class MapPointLight : public PointLight {
+public:
+	MapPointLight();
+	virtual ~MapPointLight();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *localPos, float *absolutePos, float *emittedFactor,
+		const SampleableSphericalFunction **funcData) const;
+
+	virtual LightSourceType GetType() const { return TYPE_MAPPOINT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		referencedImgMaps.insert(imageMap);
+	}
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	const ImageMap *imageMap;
+
+private:
+	SampleableSphericalFunction *func;
+};
+
+//------------------------------------------------------------------------------
+// SpotLight implementation
+//------------------------------------------------------------------------------
+
+class SpotLight : public NotIntersecableLightSource {
+public:
+	SpotLight();
+	virtual ~SpotLight();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *emittedFactor, float *absolutePos,
+		float *cosTotalWidth, float *cosFalloffStart,
+		const luxrays::Transform **alignedLight2World) const;
+
+	virtual LightSourceType GetType() const { return TYPE_SPOT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
+	float power, efficency;
+
+	luxrays::Point localPos, localTarget;
+	float coneAngle, coneDeltaAngle;
+
+protected:
+	luxrays::Spectrum emittedFactor;
+	luxrays::Point absolutePos;
+	float cosTotalWidth, cosFalloffStart;
+	luxrays::Transform alignedLight2World;
+};
+
+//------------------------------------------------------------------------------
+// ProjectionLight implementation
+//------------------------------------------------------------------------------
+
+class ProjectionLight : public NotIntersecableLightSource {
+public:
+	ProjectionLight();
+	virtual ~ProjectionLight();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *emittedFactor, float *absolutePos, float *lightNormal,
+		float *screenX0, float *screenX1, float *screenY0, float *screenY1,
+		const luxrays::Transform **alignedLight2World, const luxrays::Transform **lightProjection) const;
+
+	virtual LightSourceType GetType() const { return TYPE_PROJECTION; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
+	float power, efficency;
+
+	luxrays::Point localPos, localTarget;
+
+	float fov;
+	const ImageMap *imageMap;
+
+protected:
+	luxrays::Spectrum emittedFactor;
+	luxrays::Point absolutePos;
+	luxrays::Normal lightNormal;
+	float screenX0, screenX1, screenY0, screenY1, area;
+	float cosTotalWidth;
+	luxrays::Transform alignedLight2World, lightProjection;
+};
+
+//------------------------------------------------------------------------------
+// SharpDistantLight implementation
+//------------------------------------------------------------------------------
+
+class SharpDistantLight : public NotIntersecableLightSource {
+public:
+	SharpDistantLight();
+	virtual ~SharpDistantLight();
+
+	virtual bool IsInfinite() const { return true; }
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData) const;
+
+	virtual LightSourceType GetType() const { return TYPE_SHARPDISTANT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
+	luxrays::Vector localLightDir;
+
+protected:
+	luxrays::Vector absoluteLightDir;
+	luxrays::Vector x, y;
+};
+
+//------------------------------------------------------------------------------
+// DistantLight implementation
+//------------------------------------------------------------------------------
+
+class DistantLight : public NotIntersecableLightSource {
+public:
+	DistantLight();
+	virtual ~DistantLight();
+
+	virtual bool IsInfinite() const { return true; }
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData,
+		float *sin2ThetaMaxData, float *cosThetaMaxData) const;
+
+	virtual LightSourceType GetType() const { return TYPE_DISTANT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
+	luxrays::Vector localLightDir;
+	float theta;
+
+protected:
+	luxrays::Vector absoluteLightDir;
+	luxrays::Vector x, y;
+	float sin2ThetaMax, cosThetaMax;
+};
+
+//------------------------------------------------------------------------------
+// ConstantInfiniteLight implementation
+//------------------------------------------------------------------------------
+
+class ConstantInfiniteLight : public EnvLightSource {
+public:
+	ConstantInfiniteLight();
+	virtual ~ConstantInfiniteLight();
+
+	virtual void Preprocess() { }
+
+	virtual LightSourceType GetType() const { return TYPE_IL_CONSTANT; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
 };
 
 //------------------------------------------------------------------------------
 // InfiniteLight implementation
 //------------------------------------------------------------------------------
 
-class InfiniteLight : public InfiniteLightBase {
+class InfiniteLight : public EnvLightSource {
 public:
-	InfiniteLight(const luxrays::Transform &l2w, const ImageMap *imgMap);
+	InfiniteLight();
 	virtual ~InfiniteLight();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(const luxrays::Distribution2D **imageMapDistribution) const;
 
 	virtual LightSourceType GetType() const { return TYPE_IL; }
 	virtual float GetPower(const Scene &scene) const;
-
-	const ImageMap *GetImageMap() const { return imageMap; }
-	UVMapping2D *GetUVMapping() { return &mapping; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -160,51 +570,36 @@ public:
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		referencedImgMaps.insert(imageMap);
+	}
+
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-	const Distribution2D *GetDistribution2D() const { return imageMapDistribution; }
-
-private:
 	const ImageMap *imageMap;
 	UVMapping2D mapping;
 
-	Distribution2D *imageMapDistribution;
+private:	
+	luxrays::Distribution2D *imageMapDistribution;
 };
 
 //------------------------------------------------------------------------------
 // Sky implementation
 //------------------------------------------------------------------------------
 
-class SkyLight : public InfiniteLightBase {
+class SkyLight : public EnvLightSource {
 public:
-	SkyLight(const luxrays::Transform &l2w, float turbidity, const luxrays::Vector &sundir);
-	virtual ~SkyLight() { }
+	SkyLight();
+	virtual ~SkyLight();
 
 	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteSunDirData,
+		float *absoluteThetaData, float *absolutePhiData,
+		float *zenith_YData, float *zenith_xData, float *zenith_yData,
+		float *perez_YData, float *perez_xData, float *perez_yData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_IL_SKY; }
 	virtual float GetPower(const Scene &scene) const;
-
-	void SetTurbidity(const float t) { turbidity = t; }
-	float GetTubidity() const { return turbidity; }
-
-	const luxrays::Vector GetSunDir() const { return Normalize(luxrays::Inverse(lightToWorld) * sunDir); }
-	void SetSunDir(const luxrays::Vector &dir) { sunDir = Normalize(lightToWorld * dir); }
-
-	void GetInitData(float *thetaSData, float *phiSData,
-		float *zenith_YData, float *zenith_xData, float *zenith_yData,
-		float *perez_YData, float *perez_xData, float *perez_yData) {
-		*thetaSData = thetaS;
-		*phiSData = phiS;
-		*zenith_YData = zenith_Y;
-		*zenith_xData = zenith_x;
-		*zenith_yData = zenith_y;
-		for (size_t i = 0; i < 6; ++i) {
-			perez_YData[i] = perez_Y[i];
-			perez_xData[i] = perez_x[i];
-			perez_yData[i] = perez_y[i];
-		}
-	}
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -221,66 +616,81 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
+	luxrays::Vector localSunDir;
+	float turbidity;
+
 private:
 	void GetSkySpectralRadiance(const float theta, const float phi, luxrays::Spectrum * const spect) const;
 
-	luxrays::Vector sunDir;
-	float turbidity;
-	float thetaS;
-	float phiS;
+	luxrays::Vector absoluteSunDir;
+	float absoluteTheta, absolutePhi;
 	float zenith_Y, zenith_x, zenith_y;
 	float perez_Y[6], perez_x[6], perez_y[6];
 };
 
-class SunLight : public LightSource {
+//------------------------------------------------------------------------------
+// Sky2 implementation
+//------------------------------------------------------------------------------
+
+class SkyLight2 : public EnvLightSource {
 public:
-	SunLight(const luxrays::Transform &l2w, float turbidity, float relSize, const luxrays::Vector &sunDir);
+	SkyLight2();
+	virtual ~SkyLight2();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteDirData,
+		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
+		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
+		float *iTermData,float *radianceTermData) const;
+
+	virtual LightSourceType GetType() const { return TYPE_IL_SKY2; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Vector localSunDir;
+	float turbidity;
+
+private:
+	luxrays::Spectrum ComputeRadiance(const luxrays::Vector &w) const;
+	float ComputeY(const luxrays::Vector &w) const;
+
+	luxrays::Vector absoluteSunDir;
+	luxrays::RegularSPD *model[10];
+	luxrays::Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
+		gTerm, hTerm, iTerm, radianceTerm;
+};
+
+//------------------------------------------------------------------------------
+// Sun implementation
+//------------------------------------------------------------------------------
+
+class SunLight : public EnvLightSource {
+public:
+	SunLight();
 	virtual ~SunLight() { }
 
 	virtual void Preprocess();
+	void GetPreprocessedData(float *absoluteSunDirData,
+		float *xData, float *yData,
+		float *absoluteThetaData, float *absolutePhiData,
+		float *VData, float *cosThetaMaxData, float *sin2ThetaMaxData) const;
 
 	virtual LightSourceType GetType() const { return TYPE_SUN; }
 	virtual float GetPower(const Scene &scene) const;
-
-	virtual void SetID(const u_int lightID) { id = lightID; }
-	virtual u_int GetID() const { return id; }
-	void SetSamples(const int sampleCount) { samples = sampleCount; }
-	virtual int GetSamples() const { return samples; }
-
-	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
-	bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
-	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
-	bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
-	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
-	bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
-
-	const luxrays::Transform &GetTransformation() const { return lightToWorld; }
-
-	void SetTurbidity(const float t) { turbidity = t; }
-	float GetTubidity() const { return turbidity; }
-
-	void SetRelSize(const float s) { relSize = s; }
-	float GetRelSize() const { return relSize; }
-
-	const luxrays::Vector GetDir() const { return Normalize(luxrays::Inverse(lightToWorld) * sunDir); }
-	void SetDir(const luxrays::Vector &dir) { sunDir = Normalize(lightToWorld * dir); }
-
-	void SetGain(const luxrays::Spectrum &g);
-	const luxrays::Spectrum GetGain() const { return gain; }
-
-	void GetInitData(luxrays::Vector *xData, luxrays::Vector *yData,
-		float *thetaSData, float *phiSData, float *VData,
-		float *cosThetaMaxData, float *sin2ThetaMaxData,
-		luxrays::Spectrum *suncolorData) const {
-		*xData = x;
-		*yData = y;
-		*thetaSData = thetaS;
-		*phiSData = phiS;
-		*VData = V;
-		*cosThetaMaxData = cosThetaMax;
-		*sin2ThetaMaxData = sin2ThetaMax;
-		*suncolorData = sunColor;
-	}
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -295,54 +705,34 @@ public:
 	luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const;
 
-	luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
+	luxrays::Vector localSunDir;
+	float turbidity, relSize;
 
 private:
-	u_int id;
-	const luxrays::Transform lightToWorld;
-
-	luxrays::Vector sunDir;
-	luxrays::Spectrum gain;
-	float turbidity;
-	float relSize;
+	luxrays::Vector absoluteSunDir;
 	// XY Vectors for cone sampling
 	luxrays::Vector x, y;
-	float thetaS, phiS, V;
-	float cosThetaMax, sin2ThetaMax;
-	luxrays::Spectrum sunColor;
-
-	int samples;
-	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
+	float absoluteTheta, absolutePhi;
+	float V, cosThetaMax, sin2ThetaMax;
 };
 
 //------------------------------------------------------------------------------
 // TriangleLight implementation
 //------------------------------------------------------------------------------
 
-class TriangleLight : public LightSource {
+class TriangleLight : public IntersecableLightSource {
 public:
-	TriangleLight(const Material *mat, const luxrays::ExtMesh *mesh,
-		const u_int meshIndex, const u_int triangleIndex);
-	virtual ~TriangleLight() { }
+	TriangleLight();
+	virtual ~TriangleLight();
+
+	virtual void Preprocess();
 
 	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
 	virtual float GetPower(const Scene &scene) const;
-	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
-	virtual int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
-
-	bool IsVisibleIndirectDiffuse() const { return lightMaterial->IsVisibleIndirectDiffuse(); }
-	bool IsVisibleIndirectGlossy() const { return lightMaterial->IsVisibleIndirectGlossy(); }
-	bool IsVisibleIndirectSpecular() const { return lightMaterial->IsVisibleIndirectSpecular(); }
-
-	void SetMaterial(const Material *mat) { lightMaterial = mat; }
-	const Material *GetMaterial() const { return lightMaterial; }
-
-	void Init();
-	const luxrays::ExtMesh *GetMesh() const { return mesh; }
-	u_int GetMeshIndex() const { return meshIndex; }
-	u_int GetTriangleIndex() const { return triangleIndex; }
-	float GetArea() const { return area; }
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
@@ -354,15 +744,12 @@ public:
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
-	luxrays::Spectrum GetRadiance(const HitPoint &hitPoint,
+	virtual luxrays::Spectrum GetRadiance(const HitPoint &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 
-private:
-	const Material *lightMaterial;
 	const luxrays::ExtMesh *mesh;
 	u_int meshIndex, triangleIndex;
-	float area, invArea;
 };
 
 }

@@ -48,7 +48,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 
 	// Check if it is a light source
 	if (material->IsLightSource())
-		triangleLightSource = scene.triLightDefs[scene.meshTriLightDefsOffset[rayHit.meshIndex]];
+		triangleLightSource = scene.lightDefs.GetLightSourceByMeshIndex(rayHit.meshIndex);
 	else
 		triangleLightSource = NULL;
 
@@ -60,9 +60,9 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		// Apply normal mapping
 		const Spectrum color = material->GetNormalTexValue(hitPoint);
 
-		const float x = 2.f * color.r - 1.f;
-		const float y = 2.f * color.g - 1.f;
-		const float z = 2.f * color.b - 1.f;
+		const float x = 2.f * color.c[0] - 1.f;
+		const float y = 2.f * color.c[1] - 1.f;
+		const float z = 2.f * color.c[2] - 1.f;
 
 		Vector v1, v2;
 		CoordinateSystem(Vector(hitPoint.shadeN), &v1, &v2);
@@ -85,7 +85,8 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 				v1.z * uv.u + v2.z * uv.v + hitPoint.shadeN.z));
 	}
 
-	frame.SetFromZ(hitPoint.shadeN);
+    // Build the local reference system
+    mesh->GetTriangleFrame(rayHit.triangleIndex, hitPoint.shadeN, frame);
 }
 
 Spectrum BSDF::Evaluate(const Vector &generatedDir,
@@ -113,11 +114,9 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 			event, directPdfW, reversePdfW);
 
 	// Adjoint BSDF
-	if (hitPoint.fromLight) {
-		const float absDotLightDirNS = AbsDot(lightDir, hitPoint.shadeN);
-		const float absDotEyeDirNS = AbsDot(eyeDir, hitPoint.shadeN);
-		return result * ((absDotLightDirNS * absDotEyeDirNG) / (absDotEyeDirNS * absDotLightDirNG));
-	} else
+	if (hitPoint.fromLight)
+		return result * (absDotEyeDirNG / absDotLightDirNG);
+	else
 		return result;
 }
 
@@ -138,11 +137,9 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 
 	// Adjoint BSDF
 	if (hitPoint.fromLight) {
-		const float absDotFixedDirNS = fabsf(localFixedDir.z);
-		const float absDotSampledDirNS = fabsf(localSampledDir.z);
 		const float absDotFixedDirNG = AbsDot(hitPoint.fixedDir, hitPoint.geometryN);
 		const float absDotSampledDirNG = AbsDot(*sampledDir, hitPoint.geometryN);
-		return result * ((absDotFixedDirNS * absDotSampledDirNG) / (absDotSampledDirNS * absDotFixedDirNG));
+		return result * (absDotSampledDirNG / absDotFixedDirNG);
 	} else
 		return result;
 }

@@ -17,7 +17,6 @@
  ***************************************************************************/
 
 #include "slg/engines/pathcpu/pathcpu.h"
-#include "slg/core/mc.h"
 
 using namespace std;
 using namespace luxrays;
@@ -44,7 +43,7 @@ void PathCPURenderThread::DirectLightSampling(
 	if (!bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->SampleAllLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.SampleAllLights(u0, &lightPickPdf);
 
 		Vector lightRayDir;
 		float distance, directPdfW;
@@ -67,9 +66,8 @@ void PathCPURenderThread::DirectLightSampling(
 				// Check if the light source is visible
 				if (!scene->Intersect(device, false, u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
-					const float cosThetaToLight = AbsDot(lightRayDir, bsdf.hitPoint.shadeN);
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-					const float factor = cosThetaToLight / directLightSamplingPdfW;
+					const float factor = 1.f / directLightSamplingPdfW;
 
 					if (depth >= engine->rrDepth) {
 						// Russian Roulette
@@ -77,7 +75,8 @@ void PathCPURenderThread::DirectLightSampling(
 					}
 
 					// MIS between direct light sampling and BSDF sampling
-					const float weight = PowerHeuristic(directLightSamplingPdfW, bsdfPdfW);
+					const float weight = (light->IsEnvironmental() || light->IsIntersecable()) ? 
+						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 					const Spectrum radiance = (weight * factor) * pathThroughput * connectionThroughput * lightRadiance * bsdfEval;
 					sampleResult->radiancePerPixelNormalized[light->GetID()] += radiance;
@@ -139,7 +138,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 	if (!emittedRadiance.Black()) {
 		float weight;
 		if (!(lastBSDFEvent & SPECULAR)) {
-			const float lightPickProb = scene->SampleAllLightPdf(bsdf.GetLightSource());
+			const float lightPickProb = scene->lightDefs.SampleAllLightPdf(bsdf.GetLightSource());
 			const float directPdfW = PdfAtoW(directPdfA, distance,
 				AbsDot(bsdf.hitPoint.fixedDir, bsdf.hitPoint.shadeN));
 
@@ -160,10 +159,9 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	// Infinite light or Sky light
-	float directPdfW;
-	if (scene->envLight) {
-		const Spectrum envRadiance = scene->envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
+	BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
+		float directPdfW;
+		const Spectrum envRadiance = envLight->GetRadiance(*scene, -eyeDir, &directPdfW);
 		if (!envRadiance.Black()) {
 			float weight;
 			if(!(lastBSDFEvent & SPECULAR)) {
@@ -173,23 +171,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 
 			const Spectrum radiance = weight * pathThroughput * envRadiance;
-			AddEmission(firstPathVertex, pathBSDFEvent, scene->envLight->GetID(), sampleResult, radiance);
-		}
-	}
-
-	// Sun light
-	if (scene->sunLight) {
-		const Spectrum sunRadiance = scene->sunLight->GetRadiance(*scene, -eyeDir, &directPdfW);
-		if (!sunRadiance.Black()) {
-			float weight;
-			if(!(lastBSDFEvent & SPECULAR)) {
-				// MIS between BSDF sampling and direct light sampling
-				weight = PowerHeuristic(lastPdfW, directPdfW);
-			} else
-				weight = 1.f;
-				
-			const Spectrum radiance = weight * pathThroughput * sunRadiance;
-			AddEmission(firstPathVertex, pathBSDFEvent, scene->sunLight->GetID(), sampleResult, radiance);
+			AddEmission(firstPathVertex, pathBSDFEvent, envLight->GetID(), sampleResult, radiance);
 		}
 	}
 }
@@ -360,7 +342,7 @@ void PathCPURenderThread::RenderFunc() {
 					break;
 			}
 
-			pathThroughput *= bsdfSample * (cosSampledDir / lastPdfW);
+			pathThroughput *= bsdfSample;
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);

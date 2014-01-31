@@ -23,8 +23,11 @@
 //------------------------------------------------------------------------------
 
 float SchlickDistribution_SchlickZ(const float roughness, float cosNH) {
-	const float d = 1.f + (roughness - 1.f) * cosNH * cosNH;
-	return (roughness > 0.f) ? (roughness / (d * d)) : INFINITY;
+	const float cosNH2 = cosNH * cosNH;
+	// expanded for increased numerical stability
+	const float d = cosNH2 * roughness + (1.f - cosNH2);
+	// use double division to avoid overflow in d*d product
+	return (roughness / d) / d;
 }
 
 float SchlickDistribution_SchlickA(const float3 H, const float anisotropy) {
@@ -168,7 +171,7 @@ float3 MatteMaterial_Evaluate(__global Material *material,
 
 	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matte.kdTexIndex], hitPoint
 			TEXTURES_PARAM));
-	return M_1_PI_F * kd;
+	return kd * fabs(lightDir.z * M_1_PI_F);
 }
 
 float3 MatteMaterial_Sample(__global Material *material,
@@ -191,9 +194,114 @@ float3 MatteMaterial_Sample(__global Material *material,
 
 	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matte.kdTexIndex], hitPoint
 			TEXTURES_PARAM));
-	return M_1_PI_F * kd;
+	return kd;
 }
 
+#endif
+
+//------------------------------------------------------------------------------
+// Velvet material
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_VELVET)
+
+float3 VelvetMaterial_Evaluate(__global Material *material,
+		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+		
+	if (directPdfW)
+		*directPdfW = fabs(lightDir.z * M_1_PI_F);
+
+	*event = DIFFUSE | REFLECT;
+
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->velvet.kdTexIndex], hitPoint
+			TEXTURES_PARAM));
+
+	const float A1 = Texture_GetFloatValue(&texs[material->velvet.p1TexIndex], hitPoint
+			TEXTURES_PARAM);
+
+	const float A2 = Texture_GetFloatValue(&texs[material->velvet.p2TexIndex], hitPoint
+			TEXTURES_PARAM);
+
+	const float A3 = Texture_GetFloatValue(&texs[material->velvet.p3TexIndex], hitPoint
+			TEXTURES_PARAM);
+
+	const float delta = Texture_GetFloatValue(&texs[material->velvet.thicknessTexIndex], hitPoint
+			TEXTURES_PARAM);
+
+	const float cosv = -dot(lightDir, eyeDir);
+
+	// Compute phase function
+
+	const float B = 3.0f * cosv;
+
+	float p = 1.0f + A1 * cosv + A2 * 0.5f * (B * cosv - 1.0f) + A3 * 0.5 * (5.0f * cosv * cosv * cosv - B);
+	p = p / (4.0f * M_PI);
+ 
+	p = (p * delta) / fabs(eyeDir.z);
+
+	// Clamp the BRDF (page 7)
+	if (p > 1.0f)
+		p = 1.0f;
+	else if (p < 0.0f)
+		p = 0.0f;
+
+	return p * kd;
+}
+
+float3 VelvetMaterial_Sample(__global Material *material,
+		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1, 
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
+		TEXTURES_PARAM_DECL) {
+	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
+			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+		return BLACK;
+
+	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
+
+	*cosSampledDir = fabs((*sampledDir).z);
+	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	*event = DIFFUSE | REFLECT;
+
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->velvet.kdTexIndex], hitPoint
+			TEXTURES_PARAM));
+
+	const float A1 = Texture_GetFloatValue(&texs[material->velvet.p1TexIndex], hitPoint
+			TEXTURES_PARAM);
+
+	const float A2 = Texture_GetFloatValue(&texs[material->velvet.p2TexIndex], hitPoint
+			TEXTURES_PARAM);
+
+	const float A3 = Texture_GetFloatValue(&texs[material->velvet.p3TexIndex], hitPoint
+			TEXTURES_PARAM);
+
+	const float delta = Texture_GetFloatValue(&texs[material->velvet.thicknessTexIndex], hitPoint
+			TEXTURES_PARAM);
+
+	const float cosv = dot(-fixedDir, *sampledDir);;
+
+	// Compute phase function
+
+	const float B = 3.0f * cosv;
+
+	float p = 1.0f + A1 * cosv + A2 * 0.5f * (B * cosv - 1.0f) + A3 * 0.5 * (5.0f * cosv * cosv * cosv - B);
+	p = p / (4.0f * M_PI);
+ 
+	p = (p * delta) / fabs(fixedDir.z);
+
+	// Clamp the BRDF (page 7)
+	if (p > 1.0f)
+		p = 1.0f;
+	else if (p < 0.0f)
+		p = 0.0f;
+
+	return kd * (p / *pdfW);
+}
 #endif
 
 //------------------------------------------------------------------------------
@@ -219,8 +327,7 @@ float3 MirrorMaterial_Sample(__global Material *material,
 	*cosSampledDir = fabs((*sampledDir).z);
 	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->mirror.krTexIndex], hitPoint
 			TEXTURES_PARAM));
-	// The cosSampledDir is used to compensate the other one used inside the integrator
-	return kr / (*cosSampledDir);
+	return kr;
 }
 
 #endif
@@ -310,8 +417,7 @@ float3 GlassMaterial_Sample(__global Material *material,
 		result = kr * FresnelCauchy_Evaluate(ntc, costheta);
 	}
 
-	// The absCosSampledDir is used to compensate the other one used inside the integrator
-	return result / (*absCosSampledDir);
+	return result / *pdfW;
 }
 
 #endif
@@ -412,8 +518,7 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 		result = kr * FresnelCauchy_Evaluate(ntc, costheta);
 	}
 
-	// The absCosSampledDir is used to compensate the other one used inside the integrator
-	return result / (*absCosSampledDir);
+	return result / *pdfW;
 }
 
 float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
@@ -475,65 +580,6 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 #endif
 
 //------------------------------------------------------------------------------
-// Metal material
-//------------------------------------------------------------------------------
-
-#if defined (PARAM_ENABLE_MAT_METAL)
-
-float3 GlossyReflection(const float3 fixedDir, const float exponent,
-		const float u0, const float u1) {
-	// Ray from outside going in ?
-	const bool into = (fixedDir.z > 0.f);
-	const float3 shadeN = (float3)(0.f, 0.f, into ? 1.f : -1.f);
-
-	const float phi = 2.f * M_PI_F * u0;
-	const float cosTheta = pow(1.f - u1, exponent);
-	const float sinTheta = sqrt(fmax(0.f, 1.f - cosTheta * cosTheta));
-	const float x = cos(phi) * sinTheta;
-	const float y = sin(phi) * sinTheta;
-	const float z = cosTheta;
-
-	const float3 dir = -fixedDir;
-	const float dp = dot(shadeN, dir);
-	const float3 w = dir - (2.f * dp) * shadeN;
-
-	const float3 u = normalize(cross(
-			(fabs(shadeN.x) > .1f) ? ((float3)(0.f, 1.f, 0.f)) : ((float3)(1.f, 0.f, 0.f)),
-			w));
-	const float3 v = cross(w, u);
-
-	return x * u + y * v + z * w;
-}
-
-float3 MetalMaterial_Sample(__global Material *material,
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
-	if (!(requestedEvent & (GLOSSY | REFLECT)))
-		return BLACK;
-
-	const float e = 1.f / (Texture_GetFloatValue(&texs[material->metal.expTexIndex], hitPoint
-				TEXTURES_PARAM) + 1.f);
-	*sampledDir = GlossyReflection(fixedDir, e, u0, u1);
-
-	if ((*sampledDir).z * fixedDir.z > 0.f) {
-		*event = GLOSSY | REFLECT;
-		*pdfW = 1.f;
-		*cosSampledDir = fabs((*sampledDir).z);
-
-		const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->metal.krTexIndex], hitPoint
-				TEXTURES_PARAM));
-		// The cosSampledDir is used to compensate the other one used inside the integrator
-		return kt / (*cosSampledDir);
-	} else
-		return BLACK;
-}
-
-#endif
-
-//------------------------------------------------------------------------------
 // NULL material
 //------------------------------------------------------------------------------
 
@@ -568,8 +614,6 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		TEXTURES_PARAM_DECL) {
-	const float cosSampledDir = dot(lightDir, eyeDir);
-
 	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
 			TEXTURES_PARAM));
 	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
@@ -577,15 +621,36 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 		// Energy conservation
 		(1.f - r);
 
-	if (directPdfW)
-		*directPdfW = .5f * fabs(lightDir.z * M_1_PI_F);
+	const bool isKtBlack = Spectrum_IsBlack(t);
+	const bool isKrBlack = Spectrum_IsBlack(r);
 
-	if (cosSampledDir > 0.f) {
+	// Decide to transmit or reflect
+	float threshold;
+	if (!isKrBlack) {
+		if (!isKtBlack)
+			threshold = .5f;
+		else
+			threshold = 0.f;
+	} else {
+		if (!isKtBlack)
+			threshold = 1.f;
+		else {
+			if (directPdfW)
+				*directPdfW = 0.f;
+			return BLACK;
+		}
+	}
+	const float weight = (lightDir.z * eyeDir.z > 0.f) ?
+		threshold : (1.f - threshold);
+	if (directPdfW)
+		*directPdfW = weight * fabs(lightDir.z * M_1_PI_F);
+
+	if (lightDir.z * eyeDir.z > 0.f) {
 		*event = DIFFUSE | REFLECT;
-		return r * M_1_PI_F;
+		return r * fabs(lightDir.z * M_1_PI_F);
 	} else {
 		*event = DIFFUSE | TRANSMIT;
-		return t * M_1_PI_F;
+		return t * fabs(lightDir.z * M_1_PI_F);
 	}
 }
 
@@ -636,13 +701,13 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 		*event = DIFFUSE | REFLECT;
 		*pdfW *= threshold;
 
-		return kr * M_1_PI_F;
+		return kr / threshold;
 	} else {
 		*sampledDir *= -(signbit(fixedDir.z) ? -1.f : 1.f);
 		*event = DIFFUSE | TRANSMIT;
 		*pdfW *= (1.f - threshold);
 
-		return kt * M_1_PI_F;
+		return kt / (1.f - threshold);
 	}
 }
 
@@ -694,8 +759,6 @@ float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
 	//	factor = factor / (4.f * cosi) + 
 	//			(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
 
-	// The cosi is used to compensate the other one used inside the integrator
-	factor /= cosi;
 	return factor * S;
 }
 
@@ -738,11 +801,10 @@ float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 
 	//CoatingF(sw, *wi, wo, f_);
-	S *= d * G / (4.f * coso) + 
+	S *= (d / *pdf) * G / (4.f * coso) + 
 			(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
 
-	// The cosi is used to compensate the other one used inside the integrator
-	return S / cosi;
+	return S;
 }
 
 float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
@@ -763,7 +825,7 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	const float3 sampledDir = lightDir;
 
 	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
-			TEXTURES_PARAM)) * M_1_PI_F;
+			TEXTURES_PARAM)) * M_1_PI_F * fabs(lightDir.z);
 	if (eyeDir.z <= 0.f) {
 		// Back face: no coating
 
@@ -815,7 +877,7 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
 			TEXTURES_PARAM));
 	const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
@@ -850,9 +912,21 @@ float3 Glossy2Material_Sample(__global Material *material,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if ((!(requestedEvent & (GLOSSY | REFLECT)) && fixedDir.z > 0.f) ||
+		(!(requestedEvent & (DIFFUSE | REFLECT)) && fixedDir.z <= 0.f) ||
+		(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
+
+	if (fixedDir.z <= 0.f) {
+		// Back Face
+		*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
+		*cosSampledDir = fabs((*sampledDir).z);
+		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+			return BLACK;
+		*event = DIFFUSE | REFLECT;
+		return Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
+			TEXTURES_PARAM));
+	}
 
 	float3 ks = Texture_GetSpectrumValue(&texs[material->glossy2.ksTexIndex], hitPoint
 			TEXTURES_PARAM);
@@ -881,7 +955,7 @@ float3 Glossy2Material_Sample(__global Material *material,
 #endif
 
 	// Coating is used only on the front face
-	const float wCoating = (fixedDir.z <= 0.f) ? 0.f : SchlickBSDF_CoatingWeight(ks, fixedDir);
+	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
 	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
@@ -908,7 +982,7 @@ float3 Glossy2Material_Sample(__global Material *material,
 				fixedDir, *sampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, *sampledDir);
 
-		*event = DIFFUSE | REFLECT;
+		*event = GLOSSY | REFLECT;
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(ks, roughness, anisotropy,
@@ -920,43 +994,38 @@ float3 Glossy2Material_Sample(__global Material *material,
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 
+		coatingF *= coatingPdf;
+
 		// Evaluate base BSDF (Matte BSDF)
-		basePdf = fabs((*sampledDir).z * M_1_PI_F);
+		basePdf = *cosSampledDir * M_1_PI_F;
 
 		*event = GLOSSY | REFLECT;
 	}
 
 	*pdfW = coatingPdf * wCoating + basePdf * wBase;
-	if (fixedDir.z > 0.f) {
-		// Front face reflection: coating+base
 
-		// Absorption
-		const float cosi = fabs((*sampledDir).z);
-		const float coso = fabs(fixedDir.z);
+	// Absorption
+	const float cosi = fabs((*sampledDir).z);
+	const float coso = fabs(fixedDir.z);
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
-			TEXTURES_PARAM));
-		const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
-			TEXTURES_PARAM);
-		const float3 absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
+	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
+		TEXTURES_PARAM));
+	const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
+		TEXTURES_PARAM);
+	const float3 absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
 #else
-		const float3 absorption = WHITE;
+	const float3 absorption = WHITE;
 #endif
 
-		// Coating fresnel factor
-		const float3 H = normalize(fixedDir + *sampledDir);
-		const float3 S = FresnelSlick_Evaluate(ks, fabs(dot(*sampledDir, H)));
+	// Coating fresnel factor
+	const float3 H = normalize(fixedDir + *sampledDir);
+	const float3 S = FresnelSlick_Evaluate(ks, fabs(dot(*sampledDir, H)));
 
-		// Blend in base layer Schlick style
-		// coatingF already takes fresnel factor S into account
+	// Blend in base layer Schlick style
+	// coatingF already takes fresnel factor S into account
 
-		return coatingF + absorption * (WHITE - S) * baseF;
-	} else {
-		// Back face reflection: base
-
-		return baseF;
-	}
+	return (coatingF + absorption * (WHITE - S) * baseF * *cosSampledDir) / *pdfW;
 }
 
 #endif
@@ -973,9 +1042,6 @@ float3 Metal2Material_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		TEXTURES_PARAM_DECL) {
-	const float3 fixedDir = eyeDir;
-	const float3 sampledDir = lightDir;
-
 	const float u = clamp(Texture_GetFloatValue(&texs[material->metal2.nuTexIndex], hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
@@ -990,11 +1056,11 @@ float3 Metal2Material_Evaluate(__global Material *material,
 	const float roughness = u * u;
 #endif
 
-	const float3 wh = normalize(fixedDir + sampledDir);
-	const float cosWH = dot(fixedDir, wh);
+	const float3 wh = normalize(lightDir + eyeDir);
+	const float cosWH = dot(lightDir, wh);
 
 	if (directPdfW)
-		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
+		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
 
 	const float3 nVal = Texture_GetSpectrumValue(&texs[material->metal2.nTexIndex], hitPoint
 			TEXTURES_PARAM);
@@ -1003,21 +1069,10 @@ float3 Metal2Material_Evaluate(__global Material *material,
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
-	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
-
-	const float coso = fabs(fixedDir.z);
-	const float cosi = fabs(sampledDir.z);
-	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
-	//if (!hitPoint.fromLight)
-		factor /= 4.f * coso;
-	//else
-	//	factor /= 4.f * cosi;
+	const float G = SchlickDistribution_G(roughness, lightDir, eyeDir);
 
 	*event = GLOSSY | REFLECT;
-
-	// The cosi is used to compensate the other one used inside the integrator
-	factor /= cosi;
-	return factor * F;
+	return SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z)) * F;
 }
 
 float3 Metal2Material_Sample(__global Material *material,
@@ -1056,7 +1111,7 @@ float3 Metal2Material_Sample(__global Material *material,
 	if ((*cosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
 		return BLACK;
 
-	*pdfW = specPdf / (4.f * cosWH);
+	*pdfW = specPdf / (4.f * fabs(cosWH));
 	if (*pdfW <= 0.f)
 		return BLACK;
 
@@ -1068,7 +1123,7 @@ float3 Metal2Material_Sample(__global Material *material,
 			TEXTURES_PARAM);
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
-	float factor = d * G;
+	float factor = (d / *pdfW) * G * fabs(cosWH);
 	//if (!fromLight)
 		factor /= 4.f * coso;
 	//else
@@ -1076,8 +1131,6 @@ float3 Metal2Material_Sample(__global Material *material,
 
 	*event = GLOSSY | REFLECT;
 
-	// The cosi is used to compensate the other one used inside the integrator
-	factor /= cosi;
 	return factor * F;
 }
 
@@ -1103,11 +1156,6 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 	if (isKtBlack && isKrBlack)
 		return BLACK;
 	
-	//const float3 localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
-	//const float3 localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
-	const float3 localFixedDir = localEyeDir;
-	const float3 localSampledDir = localLightDir;
-
 	const float nc = Texture_GetFloatValue(&texs[material->roughglass.ousideIorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float nt = Texture_GetFloatValue(&texs[material->roughglass.iorTexIndex], hitPoint
@@ -1129,51 +1177,47 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 #endif
 
 	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
-	if (dot(localFixedDir, localSampledDir) < 0.f) {
+	if (localLightDir.z * localEyeDir.z < 0.f) {
 		// Transmit
 
-		const bool entering = (CosTheta(localFixedDir) > 0.f);
+		const bool entering = (CosTheta(localLightDir) > 0.f);
 		const float eta = entering ? (nc / nt) : ntc;
 
-		float3 wh = eta * localFixedDir + localSampledDir;
+		float3 wh = eta * localLightDir + localEyeDir;
 		if (wh.z < 0.f)
 			wh = -wh;
 
-		//const float lengthSquared = wh.LengthSquared();
 		const float lengthSquared = dot(wh, wh);
 		if (!(lengthSquared > 0.f))
 			return BLACK;
 		wh /= sqrt(lengthSquared);
-		const float cosThetaI = fabs(CosTheta(localSampledDir));
-		const float cosThetaIH = fabs(dot(localSampledDir, wh));
-		const float cosThetaOH = dot(localFixedDir, wh);
+		const float cosThetaI = fabs(CosTheta(localEyeDir));
+		const float cosThetaIH = fabs(dot(localEyeDir, wh));
+		const float cosThetaOH = dot(localLightDir, wh);
 
 		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
-		const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
+		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
 		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
 
 		if (directPdfW)
-			*directPdfW = threshold * specPdf * fabs(cosThetaOH) / lengthSquared;
+			*directPdfW = threshold * specPdf * (fabs(cosThetaOH) * eta * eta) / lengthSquared;
 
 		//if (reversePdfW)
-		//	*reversePdfW = threshold * specPdf * cosThetaIH * eta * eta / lengthSquared;
+		//	*reversePdfW = threshold * specPdf * cosThetaIH / lengthSquared;
 
 		float3 result = (fabs(cosThetaOH) * cosThetaIH * D *
 			G / (cosThetaI * lengthSquared)) *
 			kt * (1.f - F);
 
-		// This is a porting of LuxRender code and there, the result is multiplied
-		// by Dot(ns, wl). So I have to remove that term.
-		result /= fabs(CosTheta(localLightDir));
 		return result;
 	} else {
 		// Reflect
-		const float cosThetaO = fabs(CosTheta(localFixedDir));
-		const float cosThetaI = fabs(CosTheta(localSampledDir));
+		const float cosThetaO = fabs(CosTheta(localLightDir));
+		const float cosThetaI = fabs(CosTheta(localEyeDir));
 		if (cosThetaO == 0.f || cosThetaI == 0.f)
 			return BLACK;
-		float3 wh = localFixedDir + localSampledDir;
+		float3 wh = localLightDir + localEyeDir;
 		if (all(isequal(wh, BLACK)))
 			return BLACK;
 		wh = normalize(wh);
@@ -1182,21 +1226,18 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 
 		float cosThetaH = dot(localEyeDir, wh);
 		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
-		const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
+		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
 		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaH);
 
 		if (directPdfW)
-			*directPdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(localFixedDir, wh)));
+			*directPdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(localLightDir, wh)));
 
 		//if (reversePdfW)
-		//	*reversePdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(localSampledDir, wh));
+		//	*reversePdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(localLightDir, wh));
 
 		float3 result = (D * G / (4.f * cosThetaI)) * kr * F;
 
-		// This is a porting of LuxRender code and there, the result is multiplied
-		// by Dot(ns, wl). So I have to remove that term.
-		result /= fabs(CosTheta(localLightDir));
 		return result;
 	}
 }
@@ -1251,7 +1292,6 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 	const float coso = fabs(localFixedDir.z);
 
 	// Decide to transmit or reflect
-	// Decide to transmit or reflect
 	float threshold;
 	if ((requestedEvent & REFLECT) && !isKrBlack) {
 		if ((requestedEvent & TRANSMIT) && !isKtBlack)
@@ -1290,7 +1330,7 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 		*absCosSampledDir = cosi;
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
-		float factor = d * G * fabs(cosThetaOH) / specPdf;
+		float factor = (d / specPdf) * G * fabs(cosThetaOH) / threshold;
 
 		//if (!hitPoint.fromLight) {
 			const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaIH);
@@ -1300,11 +1340,6 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 		//	result = (factor / cosi) * kt * (Spectrum(1.f) - F);
 		//}
 
-		// This is a porting of LuxRender code and there, the result is multiplied
-		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
-		// So I have to remove that terms.
-		//result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
-			result *= *pdfW / cosi;
 		*pdfW *= threshold;
 		*event = GLOSSY | TRANSMIT;
 	} else {
@@ -1321,18 +1356,13 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 			return BLACK;
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
-		float factor = d * G * fabs(cosThetaOH) / specPdf;
+		float factor = (d / specPdf) * G * fabs(cosThetaOH) / (1.f - threshold);
 
 		const float3 F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
 		//factor /= (!hitPoint.fromLight) ? coso : cosi;
 		factor /= coso;
 		result = factor * F * kr;
 
-		// This is a porting of LuxRender code and there, the result is multiplied
-		// by Dot(ns, wi)/pdf if reverse==true and by Dot(ns. wo)/pdf if reverse==false.
-		// So I have to remove that terms.
-		//result *= *pdfW / ((!hitPoint.fromLight) ? cosi : coso);
-		result *= *pdfW / cosi;
 		*pdfW *= (1.f - threshold);
 		*event = GLOSSY | REFLECT;
 	}

@@ -87,7 +87,7 @@ void SceneObjectDefinitions::DefineSceneObject(const std::string &name, SceneObj
 
 const SceneObject *SceneObjectDefinitions::GetSceneObject(const std::string &name) const {
 	// Check if the SceneObject has been already defined
-	std::map<std::string, SceneObject *>::const_iterator it = objsByName.find(name);
+	boost::unordered_map<std::string, SceneObject *>::const_iterator it = objsByName.find(name);
 
 	if (it == objsByName.end())
 		throw std::runtime_error("Reference to an undefined SceneObject: " + name);
@@ -97,7 +97,7 @@ const SceneObject *SceneObjectDefinitions::GetSceneObject(const std::string &nam
 
 SceneObject *SceneObjectDefinitions::GetSceneObject(const std::string &name) {
 	// Check if the SceneObject has been already defined
-	std::map<std::string, SceneObject *>::const_iterator it = objsByName.find(name);
+	boost::unordered_map<std::string, SceneObject *>::const_iterator it = objsByName.find(name);
 
 	if (it == objsByName.end())
 		throw std::runtime_error("Reference to an undefined SceneObject: " + name);
@@ -121,7 +121,7 @@ u_int SceneObjectDefinitions::GetSceneObjectIndex(const SceneObject *m) const {
 std::vector<std::string> SceneObjectDefinitions::GetSceneObjectNames() const {
 	std::vector<std::string> names;
 	names.reserve(objs.size());
-	for (std::map<std::string, SceneObject *>::const_iterator it = objsByName.begin(); it != objsByName.end(); ++it)
+	for (boost::unordered_map<std::string, SceneObject *>::const_iterator it = objsByName.begin(); it != objsByName.end(); ++it)
 		names.push_back(it->first);
 
 	return names;

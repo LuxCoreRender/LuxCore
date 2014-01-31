@@ -55,6 +55,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	if (realTime) {
 		film->SetRadianceGroupCount(1);
+		film->SetRGBTonemapUpdateFlag(false);
 
 		// Remove all Film channels
 		film->RemoveChannel(Film::ALPHA);
@@ -74,8 +75,9 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 		film->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
 		film->RemoveChannel(Film::UV);
 		film->RemoveChannel(Film::RAYCOUNT);
+		film->RemoveChannel(Film::BY_MATERIAL_ID);
 	} else
-		film->SetRadianceGroupCount(rcfg->scene->lightGroupCount);
+		film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 
 	const Properties &cfg = renderConfig->cfg;
@@ -90,7 +92,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	// Check if I have to disable image storage and set max. QBVH stack size
 	const bool enableImageStorage = cfg.Get(Property("accelerator.imagestorage.enable")(true)).Get<bool>();
 	const size_t qbvhStackSize = cfg.Get(Property("accelerator.qbvh.stacksize.max")(
-			OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<size_t>();
+			(u_longlong)OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<u_longlong>();
 	SLG_LOG("OpenCL Devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
 		SLG_LOG("[" << devs[i]->GetName() << "]");
@@ -143,7 +145,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	if (cfg.IsDefined("opencl.memory.maxpagesize"))
-		maxMemPageSize = cfg.Get(Property("opencl.memory.maxpagesize")(512 * 1024 * 1024)).Get<size_t>();
+		maxMemPageSize = cfg.Get(Property("opencl.memory.maxpagesize")(512 * 1024 * 1024)).Get<u_longlong>();
 	else {
 		// Look for the max. page size allowed
 		maxMemPageSize = ((OpenCLIntersectionDevice *)(intersectionDevices[0]))->GetDeviceDesc()->GetMaxMemoryAllocSize();

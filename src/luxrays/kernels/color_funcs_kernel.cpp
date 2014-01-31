@@ -1,6 +1,6 @@
 #include <string>
 namespace luxrays { namespace ocl {
-std::string KernelSource_spectrum_funcs = 
+std::string KernelSource_color_funcs = 
 "#line 2 \"specturm_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
@@ -43,6 +43,10 @@ std::string KernelSource_spectrum_funcs =
 "\n"
 "float3 Spectrum_Exp(const float3 s) {\n"
 "	return (float3)(exp(s.x), exp(s.y), exp(s.z));\n"
+"}\n"
+"\n"
+"float3 Spectrum_Pow(const float3 s, const float e) {\n"
+"	return (float3)(pow(s.x, e), pow(s.y, e), pow(s.z, e));\n"
 "}\n"
 "\n"
 "float3 Spectrum_Sqrt(const float3 s) {\n"

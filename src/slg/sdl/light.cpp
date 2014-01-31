@@ -19,11 +19,14 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/geometry/frame.h"
-#include "slg/core/spd.h"
-#include "slg/core/data/sun_spect.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/light.h"
 #include "slg/sdl/scene.h"
+#include "slg/sdl/lightdata/ArHosekSkyModelData.h"
 
+#include "slg/core/data/sun_spect.h"
+
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -32,15 +35,1043 @@ using namespace slg;
 const float slg::LIGHT_WORLD_RADIUS_SCALE = 10.f;
 
 //------------------------------------------------------------------------------
+// LightSourceDefinitions
+//------------------------------------------------------------------------------
+
+LightSourceDefinitions::LightSourceDefinitions() : lightTypeCount(LIGHT_SOURCE_TYPE_COUNT, 0) {
+	lightsDistribution = NULL;
+	lightGroupCount = 1;
+}
+
+LightSourceDefinitions::~LightSourceDefinitions() {
+	BOOST_FOREACH(LightSource *l, lights)
+		delete l;
+}
+
+void LightSourceDefinitions::DefineLightSource(const std::string &name, LightSource *newLight) {
+	if (IsLightSourceDefined(name)) {
+		const LightSource *oldLight = GetLightSource(name);
+
+		// Update name/LightSource definition
+		const u_int index = GetLightSourceIndex(name);
+		lights[index] = newLight;
+		lightsByName.erase(name);
+		--lightTypeCount[oldLight->GetType()];
+		lightsByName.insert(std::make_pair(name, newLight));
+		++lightTypeCount[newLight->GetType()];
+
+		// Delete old LightSource
+		delete oldLight;
+	} else {
+		// Add the new LightSource
+		lights.push_back(newLight);
+		lightsByName.insert(std::make_pair(name, newLight));
+		++lightTypeCount[newLight->GetType()];
+	}
+}
+
+const LightSource *LightSourceDefinitions::GetLightSource(const std::string &name) const {
+	// Check if the LightSource has been already defined
+	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+
+	if (it == lightsByName.end())
+		throw std::runtime_error("Reference to an undefined LightSource: " + name);
+	else
+		return it->second;
+}
+
+LightSource *LightSourceDefinitions::GetLightSource(const std::string &name) {
+	// Check if the LightSource has been already defined
+	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+
+	if (it == lightsByName.end())
+		throw std::runtime_error("Reference to an undefined LightSource: " + name);
+	else
+		return it->second;
+}
+
+u_int LightSourceDefinitions::GetLightSourceIndex(const std::string &name) const {
+	return GetLightSourceIndex(GetLightSource(name));
+}
+
+u_int LightSourceDefinitions::GetLightSourceIndex(const LightSource *m) const {
+	for (u_int i = 0; i < lights.size(); ++i) {
+		if (m == lights[i])
+			return i;
+	}
+
+	throw std::runtime_error("Reference to an undefined LightSource: " + boost::lexical_cast<std::string>(m));
+}
+
+const LightSource *LightSourceDefinitions::GetLightByType(const LightSourceType type) const {
+	BOOST_FOREACH(LightSource *l, lights) {
+		if (l->GetType() == type)
+			return l;
+	}
+
+	return NULL;
+}
+
+const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshIndex(const u_int index) const {
+	return (const TriangleLight *)lights[lightIndexByMeshIndex[index]];
+}
+
+std::vector<std::string> LightSourceDefinitions::GetLightSourceNames() const {
+	std::vector<std::string> names;
+	names.reserve(lights.size());
+	for (boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
+		names.push_back(it->first);
+
+	return names;
+}
+
+void LightSourceDefinitions::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
+	// Replace old material direct references with new one
+	BOOST_FOREACH(LightSource *l, lights) {
+		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
+		if (tl)
+			tl->UpdateMaterialReferences(oldMat, newMat);
+	}
+}
+
+void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
+	const u_int index = GetLightSourceIndex(name);
+	--lightTypeCount[lights[index]->GetType()];
+	lights.erase(lights.begin() + index);
+	lightsByName.erase(name);
+}
+
+void LightSourceDefinitions::Preprocess(const Scene *scene) {
+	// Update lightGroupCount, envLightSources, intersecableLightSources,
+	// lightIndexByMeshIndex and lightsDistribution
+
+	lightGroupCount = 0;
+	intersecableLightSources.clear();
+	envLightSources.clear();
+
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene->dataSet->GetBSphere().rad * 1.01f;
+	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
+	float totalPower = 0.f;
+	vector<float> lightPower;
+	lightPower.reserve(lights.size());
+
+	lightIndexByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
+	for (u_int i = 0; i < lights.size(); ++i) {
+		LightSource *l = lights[i];
+		// Initialize the light source index
+		l->lightSceneIndex = i;
+
+		lightGroupCount = Max(lightGroupCount, l->GetID() + 1);
+
+		float power = l->GetPower(*scene);
+		// In order to avoid over-sampling of distant lights
+		if (l->IsInfinite()) {
+			power *= iWorldRadius2;			
+			envLightSources.push_back((EnvLightSource *)l);
+		}
+		lightPower.push_back(power);
+		totalPower += power;
+
+		// Build lightIndexByMeshIndex
+		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
+		if (tl) {
+			lightIndexByMeshIndex[tl->meshIndex] = i;
+			intersecableLightSources.push_back(tl);
+		}
+	}
+
+	// Build the data to power based light sampling
+	delete lightsDistribution;
+	if (totalPower == 0.f) {
+		// To handle a corner case
+		lightsDistribution = NULL;
+	} else
+		lightsDistribution = new Distribution1D(&lightPower[0], lights.size());
+}
+
+LightSource *LightSourceDefinitions::SampleAllLights(const float u, float *pdf) const {
+	if (lightsDistribution) {
+		// Power based light strategy
+		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
+		assert ((lightIndex >= 0) && (lightIndex < GetSize()));
+
+		return lights[lightIndex];
+	} else {
+		// All uniform light strategy
+		const u_int lightIndex = Min<u_int>(Floor2UInt(lights.size() * u), lights.size() - 1);
+
+		return lights[lightIndex];
+	}
+}
+
+float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const {
+	if (lightsDistribution) {
+		// Power based light strategy
+		return lightsDistribution->Pdf(light->lightSceneIndex);
+	} else {
+		// All uniform light strategy
+		return 1.f /  GetSize();
+	}
+}
+
+//------------------------------------------------------------------------------
+// NotIntersecableLightSource
+//------------------------------------------------------------------------------
+
+Properties NotIntersecableLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props;
+
+	props.Set(Property(prefix + ".gain")(gain));
+	props.Set(Property(prefix + ".transformation")(lightToWorld.m));
+	props.Set(Property(prefix + ".samples")(samples));
+	props.Set(Property(prefix + ".id")(id));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// EnvLightSource
+//------------------------------------------------------------------------------
+
+Properties EnvLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
+	props.Set(Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
+	props.Set(Property(prefix + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// PointLight
+//------------------------------------------------------------------------------
+
+PointLight::PointLight() : localPos(0.f), color(1.f), power(0.f), efficency(0.f) {
+}
+
+PointLight::~PointLight() {
+}
+
+void PointLight::Preprocess() {
+	emittedFactor = gain * color * (power * efficency / (4.f * M_PI * color.Y()));
+	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
+		emittedFactor = gain * color;
+
+	absolutePos = lightToWorld * localPos;
+}
+
+void PointLight::GetPreprocessedData(float *localPosData, float *absolutePosData,
+		float *emittedFactorData) const {
+	if (localPosData) {
+		localPosData[0] = localPos.x;
+		localPosData[1] = localPos.y;
+		localPosData[2] = localPos.z;
+	}
+
+	if (absolutePosData) {
+		absolutePosData[0] = absolutePos.x;
+		absolutePosData[1] = absolutePos.y;
+		absolutePosData[2] = absolutePos.z;
+	}
+
+	if (emittedFactorData) {
+		emittedFactorData[0] = emittedFactor.c[0];
+		emittedFactorData[1] = emittedFactor.c[1];
+		emittedFactorData[2] = emittedFactor.c[2];
+	}
+}
+
+float PointLight::GetPower(const Scene &scene) const {
+	return emittedFactor.Y() * 4.f * M_PI;
+}
+
+Spectrum PointLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*orig = absolutePos;
+	*dir = UniformSampleSphere(u0, u1);
+	*emissionPdfW = 1.f / (4.f * M_PI);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	return emittedFactor;
+}
+
+Spectrum PointLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Vector toLight(absolutePos - p);
+	const float distanceSquared = toLight.LengthSquared();
+	*distance = sqrtf(distanceSquared);
+	*dir = toLight / *distance;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	*directPdfW = distanceSquared;
+
+	if (emissionPdfW)
+		*emissionPdfW = 1.f / (4.f * M_PI);
+
+	return emittedFactor;
+}
+
+Properties PointLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("point"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".power")(power));
+	props.Set(Property(prefix + ".efficency")(efficency));
+	props.Set(Property(prefix + ".position")(localPos));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// MapPointLight
+//------------------------------------------------------------------------------
+
+MapPointLight::MapPointLight() : imageMap(NULL), func(NULL) {
+}
+
+MapPointLight::~MapPointLight() {
+	delete func;
+}
+
+void MapPointLight::Preprocess() {
+	PointLight::Preprocess();
+
+	delete func;
+	func = new SampleableSphericalFunction(new ImageMapSphericalFunction(imageMap));
+}
+
+void MapPointLight::GetPreprocessedData(float *localPosData, float *absolutePosData,
+		float *emittedFactorData, const SampleableSphericalFunction **funcData) const {
+	PointLight::GetPreprocessedData(localPosData, absolutePosData, emittedFactorData);
+
+	if (funcData)
+		*funcData = func;
+}
+
+float MapPointLight::GetPower(const Scene &scene) const {
+	return imageMap->GetSpectrumMeanY() * PointLight::GetPower(scene);
+}
+
+Spectrum MapPointLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*orig = absolutePos;
+
+	Vector localFromLight;
+	func->Sample(u0, u1, &localFromLight, emissionPdfW);
+	if (*emissionPdfW == 0.f)
+		return Spectrum();
+
+	*dir = Normalize(lightToWorld * localFromLight);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
+}
+
+Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * p - localPos);
+	const float funcPdf = func->Pdf(localFromLight);
+	if (funcPdf == 0.f)
+		return Spectrum();
+
+	const Vector toLight(absolutePos - p);
+	const float distanceSquared = toLight.LengthSquared();
+	*distance = sqrtf(distanceSquared);
+	*dir = toLight / *distance;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	*directPdfW = distanceSquared;
+
+	if (emissionPdfW)
+		*emissionPdfW = funcPdf / (4.f * M_PI);
+
+	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) / func->Average();
+}
+
+Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = PointLight::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("mappoint"));
+	props.Set(Property(prefix + ".mapfile")("imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// SpotLight
+//------------------------------------------------------------------------------
+
+SpotLight::SpotLight() :
+	color(1.f), power(0.f), efficency(0.f),
+	localPos(Point()), localTarget(Point(0.f, 0.f, 1.f)),
+	coneAngle(30.f), coneDeltaAngle(5.f) {
+}
+
+SpotLight::~SpotLight() {
+}
+
+void SpotLight::Preprocess() {
+	cosTotalWidth = cosf(Radians(coneAngle));
+	cosFalloffStart = cosf(Radians(coneAngle - coneDeltaAngle));
+
+	emittedFactor = gain * color * (power * efficency /
+			(2.f * M_PI * color.Y() * (1.f - .5f * (cosFalloffStart + cosTotalWidth))));
+	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
+		emittedFactor = gain * color;
+
+	absolutePos = lightToWorld * localPos;
+
+	const Vector dir = Normalize(localTarget - localPos);
+	Vector du, dv;
+	CoordinateSystem(dir, &du, &dv);
+	const Transform dirToZ(Matrix4x4(
+			du.x, du.y, du.z, 0.f,
+			dv.x, dv.y, dv.z, 0.f,
+			dir.x, dir.y, dir.z, 0.f,
+			0.f, 0.f, 0.f, 1.f));
+	alignedLight2World = lightToWorld *
+			Translate(Vector(localPos.x, localPos.y, localPos.z)) /
+			dirToZ;
+}
+
+void SpotLight::GetPreprocessedData(float *emittedFactorData, float *absolutePosData,
+		float *cosTotalWidthData, float *cosFalloffStartData,
+		const luxrays::Transform **alignedLight2WorldData) const {
+	if (emittedFactorData) {
+		emittedFactorData[0] = emittedFactor.c[0];
+		emittedFactorData[1] = emittedFactor.c[1];
+		emittedFactorData[2] = emittedFactor.c[2];
+	}
+
+	if (absolutePosData) {
+		absolutePosData[0] = absolutePos.x;
+		absolutePosData[1] = absolutePos.y;
+		absolutePosData[2] = absolutePos.z;
+	}
+
+	if (cosTotalWidthData)
+		*cosTotalWidthData = cosTotalWidth;
+	if (cosFalloffStartData)
+		*cosFalloffStartData = cosFalloffStart;
+
+	if (alignedLight2WorldData)
+		*alignedLight2WorldData = &alignedLight2World;
+}
+
+float SpotLight::GetPower(const Scene &scene) const {
+	return emittedFactor.Y() * 2.f * M_PI * (1.f - .5f * (cosFalloffStart + cosTotalWidth));
+}
+
+static float LocalFalloff(const Vector &w, const float cosTotalWidth, const float cosFalloffStart) {
+	if (CosTheta(w) < cosTotalWidth)
+		return 0.f;
+ 	if (CosTheta(w) > cosFalloffStart)
+		return 1.f;
+
+	// Compute falloff inside spotlight cone
+	const float delta = (CosTheta(w) - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
+	return powf(delta, 4);
+}
+
+Spectrum SpotLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*orig = absolutePos;
+	const Vector localFromLight = UniformSampleCone(u0, u1, cosTotalWidth);
+	*dir = Normalize(alignedLight2World * localFromLight);
+	*emissionPdfW = UniformConePdf(cosTotalWidth);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = CosTheta(localFromLight);
+
+	return emittedFactor * (LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart) / fabsf(CosTheta(localFromLight)));
+}
+
+Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Vector toLight(absolutePos - p);
+	const float distanceSquared = toLight.LengthSquared();
+	*distance = sqrtf(distanceSquared);
+	*dir = toLight / *distance;
+
+	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-(*dir)));
+	const float falloff = LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart);
+	if (falloff == 0.f)
+		return Spectrum();
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = CosTheta(localFromLight);
+
+	*directPdfW = distanceSquared;
+
+	if (emissionPdfW)
+		*emissionPdfW = UniformConePdf(cosTotalWidth);
+
+	return emittedFactor * (falloff / fabsf(CosTheta(localFromLight)));
+}
+
+Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("spot"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".power")(power));
+	props.Set(Property(prefix + ".efficency")(efficency));
+	props.Set(Property(prefix + ".position")(localPos));
+	props.Set(Property(prefix + ".target")(localTarget));
+	props.Set(Property(prefix + ".coneangle")(coneAngle));
+	props.Set(Property(prefix + ".conedeltaangle")(coneDeltaAngle));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// ProjectionLight
+//------------------------------------------------------------------------------
+
+ProjectionLight::ProjectionLight() : color(1.f), power(0.f), efficency(0.f),
+		localPos(Point()), localTarget(Point(0.f, 0.f, 1.f)),
+		fov(45.f), imageMap(NULL) {
+}
+
+ProjectionLight::~ProjectionLight() {
+}
+
+void ProjectionLight::Preprocess() {
+	const Vector dir = Normalize(localTarget - localPos);
+	Vector du, dv;
+	CoordinateSystem(dir, &du, &dv);
+	const Transform dirToZ(Matrix4x4(
+			du.x, du.y, du.z, 0.f,
+			dv.x, dv.y, dv.z, 0.f,
+			dir.x, dir.y, dir.z, 0.f,
+			0.f, 0.f, 0.f, 1.f));
+	alignedLight2World = lightToWorld *
+			Translate(Vector(localPos.x, localPos.y, localPos.z)) /
+			dirToZ;
+
+	absolutePos = alignedLight2World * Point();
+	lightNormal = Normalize(alignedLight2World * Normal(0.f, 0.f, 1.f));
+
+	emittedFactor = gain * color * (power * efficency /
+			(2.f * M_PI * (imageMap ? imageMap->GetSpectrumMeanY() : 1.f) *
+				(1.f - .5f * (1.f - cosTotalWidth))));
+	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
+		emittedFactor = gain * color;
+
+	const float aspect = imageMap ? (imageMap->GetWidth() / (float)imageMap->GetHeight()) : 1.f;
+	if (aspect > 1.f)  {
+		screenX0 = -aspect;
+		screenX1 = aspect;
+		screenY0 = -1.f;
+		screenY1 = 1.f;
+	} else {
+		screenX0 = -1.f;
+		screenX1 = 1.f;
+		screenY0 = -1.f / aspect;
+		screenY1 = 1.f / aspect;
+	}
+
+	const float hither = DEFAULT_EPSILON_STATIC;
+	const float yon = 1e30f;
+	lightProjection = Perspective(fov, hither, yon);
+
+	// Compute cosine of cone surrounding projection directions
+	const float opposite = tanf(Radians(fov) / 2.f);
+	const float tanDiag = opposite * sqrtf(1.f + 1.f / (aspect * aspect));
+	cosTotalWidth = cosf(atanf(tanDiag));
+	if (aspect <= 1.f)
+		area = 4.f * opposite * opposite / aspect;
+	else
+		area = 4.f * opposite * opposite * aspect;
+}
+
+void ProjectionLight::GetPreprocessedData(float *emittedFactorData, float *absolutePosData, float *lightNormalData,
+		float *screenX0Data, float *screenX1Data, float *screenY0Data, float *screenY1Data,
+		const luxrays::Transform **alignedLight2WorldData, const luxrays::Transform **lightProjectionData) const {
+	if (emittedFactorData) {
+		emittedFactorData[0] = emittedFactor.c[0];
+		emittedFactorData[1] = emittedFactor.c[1];
+		emittedFactorData[2] = emittedFactor.c[2];
+	}
+
+	if (absolutePosData) {
+		absolutePosData[0] = absolutePos.x;
+		absolutePosData[1] = absolutePos.y;
+		absolutePosData[2] = absolutePos.z;
+	}
+
+	if (lightNormalData) {
+		lightNormalData[0] = lightNormal.x;
+		lightNormalData[1] = lightNormal.y;
+		lightNormalData[2] = lightNormal.z;
+	}
+
+	if (screenX0Data)
+		*screenX0Data = screenX0;
+	if (screenX1Data)
+		*screenX1Data = screenX1;
+	if (screenY0Data)
+		*screenY0Data = screenY0;
+	if (screenY1Data)
+		*screenY1Data = screenY1;
+
+	if (alignedLight2WorldData)
+		*alignedLight2WorldData = &alignedLight2World;
+	if (lightProjectionData)
+		*lightProjectionData = &lightProjection;
+}
+
+float ProjectionLight::GetPower(const Scene &scene) const {
+	return gain.Y() * color.Y() *
+			(imageMap ? imageMap->GetSpectrumMeanY() : 1.f) *
+			2.f * M_PI * (1.f - cosTotalWidth);
+}
+
+Spectrum ProjectionLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*orig = absolutePos;
+	const Point ps = Inverse(lightProjection) *
+		Point(u0 * (screenX1 - screenX0) + screenX0, u1 * (screenY1 - screenY0) + screenY0, 0.f);
+	*dir = Normalize(alignedLight2World * Vector(ps.x, ps.y, ps.z));
+	const float cos = Dot(*dir, lightNormal);
+	const float cos2 = cos * cos;
+	*emissionPdfW = 1.f / (area * cos2 * cos);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	Spectrum c = gain * color;
+	if (imageMap)
+		c *= imageMap->GetSpectrum(UV(u0, u1));
+
+	return c;
+}
+
+Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Vector toLight(absolutePos - p);
+	const float distanceSquared = toLight.LengthSquared();
+	*distance = sqrtf(distanceSquared);
+	*dir = toLight / *distance;
+
+	// Check the side
+	if (Dot(-(*dir), lightNormal) < 0.f)
+		return Spectrum();
+
+	// Check if the point is inside the image plane
+	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-(*dir)));
+	const Point p0 = lightProjection * Point(localFromLight.x, localFromLight.y, localFromLight.z);
+	if ((p0.x < screenX0) || (p0.x >= screenX1) || (p0.y < screenY0) || (p0.y >= screenY1))
+		return Spectrum();
+
+	*directPdfW = distanceSquared;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	if (emissionPdfW)
+		*emissionPdfW = 0.f;
+
+	Spectrum c = gain * color;
+	if (imageMap) {
+		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
+		const float v = (p0.y - screenY0) / (screenY1 - screenY0);
+		c *= imageMap->GetSpectrum(UV(u, v));
+	}
+
+	return c;
+}
+
+Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("projection"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".power")(power));
+	props.Set(Property(prefix + ".efficency")(efficency));
+	props.Set(Property(prefix + ".position")(localPos));
+	props.Set(Property(prefix + ".target")(localTarget));
+	props.Set(Property(prefix + ".fov")(fov));
+	props.Set(Property(prefix + ".mapfile")("imagemap-" + 
+		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// SharpDistantLight
+//------------------------------------------------------------------------------
+
+SharpDistantLight::SharpDistantLight() :
+		color(1.f), localLightDir(0.f, 0.f, 1.f) {
+}
+
+SharpDistantLight::~SharpDistantLight() {
+}
+
+void SharpDistantLight::Preprocess() {
+	absoluteLightDir = Normalize(lightToWorld * localLightDir);
+	CoordinateSystem(absoluteLightDir, &x, &y);
+}
+
+void SharpDistantLight::GetPreprocessedData(float *absoluteLightDirData,
+		float *xData, float *yData) const {
+	if (absoluteLightDirData) {
+		absoluteLightDirData[0] = absoluteLightDir.x;
+		absoluteLightDirData[1] = absoluteLightDir.y;
+		absoluteLightDirData[2] = absoluteLightDir.z;
+	}
+
+	if (xData) {
+		xData[0] = x.x;
+		xData[1] = x.y;
+		xData[2] = x.z;
+	}
+
+	if (yData) {
+		yData[0] = y.x;
+		yData[1] = y.y;
+		yData[2] = y.z;
+	}
+}
+
+float SharpDistantLight::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return gain.Y() * color.Y() * M_PI * worldRadius * worldRadius;
+}
+
+Spectrum SharpDistantLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*dir = absoluteLightDir;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	float d1, d2;
+	ConcentricSampleDisk(u0, u1, &d1, &d2);
+	*orig = worldCenter - worldRadius * (absoluteLightDir + d1 * x + d2 * y);
+
+	*emissionPdfW = 1.f / (M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = 1.f;
+
+	return gain * color;
+}
+
+Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	*dir = -absoluteLightDir;
+
+	*distance = numeric_limits<float>::infinity();
+	*directPdfW = 1.f;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = 1.f;
+
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = 1.f / (M_PI * worldRadius * worldRadius);
+	}
+
+	return gain * color;
+}
+
+Properties SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("sharpdistant"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".direction")(localLightDir));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// DistantLight
+//------------------------------------------------------------------------------
+
+DistantLight::DistantLight() :
+		color(1.f), localLightDir(0.f, 0.f, 1.f) {
+}
+
+DistantLight::~DistantLight() {
+}
+
+void DistantLight::Preprocess() {
+	if (theta == 0.f) {
+		sin2ThetaMax = 2.f * MachineEpsilon::E(1.f);
+		cosThetaMax = 1.f - MachineEpsilon::E(1.f);
+	} else {
+		const float radTheta = Radians(theta);
+		sin2ThetaMax = sinf( Radians(radTheta)) * sinf(radTheta);
+		cosThetaMax = cosf(radTheta);
+	}
+
+	absoluteLightDir = Normalize(lightToWorld * localLightDir);
+	CoordinateSystem(absoluteLightDir, &x, &y);
+}
+
+void DistantLight::GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData,
+		float *sin2ThetaMaxData, float *cosThetaMaxData) const {
+	if (absoluteLightDirData) {
+		absoluteLightDirData[0] = absoluteLightDir.x;
+		absoluteLightDirData[1] = absoluteLightDir.y;
+		absoluteLightDirData[2] = absoluteLightDir.z;
+	}
+	
+	if (xData) {
+		xData[0] = x.x;
+		xData[1] = x.y;
+		xData[2] = x.z;
+	}
+
+	if (yData) {
+		yData[0] = y.x;
+		yData[1] = y.y;
+		yData[2] = y.z;
+	}
+
+	if (sin2ThetaMaxData)
+		*sin2ThetaMaxData = sin2ThetaMax;
+	if (cosThetaMaxData)
+		*cosThetaMaxData = cosThetaMax;
+}
+
+float DistantLight::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return gain.Y() * color.Y() * M_PI * worldRadius * worldRadius;
+}
+
+Spectrum DistantLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(*dir, absoluteLightDir);
+
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	float d1, d2;
+	ConcentricSampleDisk(u2, u3, &d1, &d2);
+	*orig = worldCenter - worldRadius * (absoluteLightDir + d1 * x + d2 * y);
+
+	*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = uniformConePdf;
+
+	return gain * color;
+}
+
+Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
+	*distance = numeric_limits<float>::infinity();
+
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	*directPdfW = uniformConePdf;
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(-absoluteLightDir, *dir);
+
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+		*emissionPdfW =  uniformConePdf / (M_PI * worldRadius * worldRadius);
+	}
+
+	return gain * color;
+}
+
+Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("distant"));
+	props.Set(Property(prefix + ".color")(color));
+	props.Set(Property(prefix + ".direction")(localLightDir));
+	props.Set(Property(prefix + ".theta")(10.f));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// ConstantInfiniteLight
+//------------------------------------------------------------------------------
+
+ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f) {
+}
+
+ConstantInfiniteLight::~ConstantInfiniteLight() {
+}
+
+float ConstantInfiniteLight::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return gain.Y() * (4.f * M_PI * M_PI * worldRadius * worldRadius) *
+		color.Y();
+}
+
+Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
+		const Vector &dir,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	if (directPdfA)
+		*directPdfA = 1.f / (4.f * M_PI);
+
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	}
+
+	return gain * color;
+}
+
+Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	// Choose p2 on scene bounding sphere
+	const float phi = u0 * 2.f * M_PI;
+	const float theta = u1 * M_PI;
+	Point p1 = worldCenter + worldRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
+
+	// Choose p2 on scene bounding sphere
+	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+
+	// Construct ray between p1 and p2
+	*orig = p1;
+	*dir = Normalize((p2 - p1));
+
+	// Compute InfiniteAreaLight ray weight
+	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = 1.f / (4.f * M_PI);
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+
+	return GetRadiance(scene, *dir);
+}
+
+Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const float phi = u0 * 2.f * M_PI;
+	const float theta = u1 * M_PI;
+	*dir = Normalize(SphericalDirection(sinf(theta), cosf(theta), phi));
+
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const Point emisPoint(p + (*distance) * (*dir));
+	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+
+	const float cosAtLight = Dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+	if (cosThetaAtLight)
+		*cosThetaAtLight = cosAtLight;
+
+	*directPdfW = 1.f / (4.f * M_PI);
+
+	if (emissionPdfW)
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	return gain * color;
+}
+
+Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = EnvLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("constantinfinite"));
+	props.Set(Property(prefix + ".color")(color));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // InfiniteLight
 //------------------------------------------------------------------------------
 
-InfiniteLight::InfiniteLight(const Transform &l2w, const ImageMap *imgMap) :
-	InfiniteLightBase(l2w), imageMap(imgMap), mapping(1.f, 1.f, 0.f, 0.f) {
-	isVisibleIndirectDiffuse = true;
-	isVisibleIndirectGlossy = true;
-	isVisibleIndirectSpecular = true;
+InfiniteLight::InfiniteLight() :
+	imageMap(NULL), mapping(1.f, 1.f, 0.f, 0.f) {
+}
 
+InfiniteLight::~InfiniteLight() {
+	delete imageMapDistribution;
+}
+
+void InfiniteLight::Preprocess() {
 	if (imageMap->GetChannelCount() == 1)
 		imageMapDistribution = new Distribution2D(imageMap->GetPixels(), imageMap->GetWidth(), imageMap->GetHeight());
 	else {
@@ -60,15 +1091,17 @@ InfiniteLight::InfiniteLight(const Transform &l2w, const ImageMap *imgMap) :
 	}
 }
 
-InfiniteLight::~InfiniteLight() {
-	delete imageMapDistribution;
+void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistributionData) const {
+	if (imageMapDistributionData)
+		*imageMapDistributionData = imageMapDistribution;
+	
 }
 
 float InfiniteLight::GetPower(const Scene &scene) const {
 	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
 
-	return gain.Y() * (4.f * M_PI * M_PI * worldRadius * worldRadius) *
-		imageMap->GetSpectrumMeanY();
+	return gain.Y() * imageMap->GetSpectrumMeanY() *
+			(4.f * M_PI * M_PI * worldRadius * worldRadius);
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
@@ -164,18 +1197,13 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
+	const string prefix = "scene." + GetName();
+	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
-	props.Set(Property("scene.infinitelight.file")("imagemap-" + 
+	props.Set(Property(prefix + ".type")("infinite"));
+	props.Set(Property(prefix + ".file")("imagemap-" + 
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
-	props.Set(Property("scene.infinitelight.gain")(gain));
-	props.Set(Property("scene.infinitelight.shift")(mapping.uDelta, mapping.vDelta));
-	props.Set(Property("scene.infinitelight.transformation")(lightToWorld.m));
-	props.Set(Property("scene.infinitelight.samples")(samples));
-	props.Set(Property("scene.infinitelight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
-	props.Set(Property("scene.infinitelight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
-	props.Set(Property("scene.infinitelight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
-
+	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
 
 	return props;
 }
@@ -213,68 +1241,47 @@ static void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 		Z = 0.f;
 
 	// Assuming sRGB (D65 illuminant)
-	s->r =  3.2410f * X - 1.5374f * Y - 0.4986f * Z;
-	s->g = -0.9692f * X + 1.8760f * Y + 0.0416f * Z;
-	s->b =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
+	s->c[0] =  3.2410f * X - 1.5374f * Y - 0.4986f * Z;
+	s->c[1] = -0.9692f * X + 1.8760f * Y + 0.0416f * Z;
+	s->c[2] =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
 }
 
-SkyLight::SkyLight(const luxrays::Transform &l2w, float turb,
-		const Vector &sd) : InfiniteLightBase(l2w) {
-	turbidity = turb;
-	sunDir = Normalize(lightToWorld * sd);
+SkyLight::SkyLight() {
 }
 
-float SkyLight::GetPower(const Scene &scene) const {
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
-	
-	const u_int steps = 100;
-	const float deltaStep = 2.f / steps;
-	float phi = 0.f, power = 0.f;
-	for (u_int i = 0; i < steps; ++i) {
-		float cosTheta = -1.f;
-		for (u_int j = 0; j < steps; ++j) {
-			float theta = acosf(cosTheta);
-			float gamma = RiAngleBetween(theta, phi, thetaS, phiS);
-			theta = Min<float>(theta, M_PI * .5f - .001f);
-			power += zenith_Y * PerezBase(perez_Y, theta, gamma);
-			cosTheta += deltaStep;
-		}
-
-		phi += deltaStep * M_PI;
-	}
-	power /= steps * steps;
-
-	return power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
+SkyLight::~SkyLight() {
 }
 
 void SkyLight::Preprocess() {
-	thetaS = SphericalTheta(sunDir);
-	phiS = SphericalPhi(sunDir);
+	absoluteSunDir = Normalize(lightToWorld * localSunDir);
 
-	float aconst = 1.0f;
-	float bconst = 1.0f;
-	float cconst = 1.0f;
-	float dconst = 1.0f;
-	float econst = 1.0f;
+	absoluteTheta = SphericalTheta(absoluteSunDir);
+	absolutePhi = SphericalPhi(absoluteSunDir);
 
-	float theta2 = thetaS*thetaS;
-	float theta3 = theta2*thetaS;
+	float aconst = 1.f;
+	float bconst = 1.f;
+	float cconst = 1.f;
+	float dconst = 1.f;
+	float econst = 1.f;
+
+	float theta2 = absoluteTheta * absoluteTheta;
+	float theta3 = theta2 * absoluteTheta;
 	float T = turbidity;
 	float T2 = T * T;
 
-	float chi = (4.f / 9.f - T / 120.f) * (M_PI - 2.0f * thetaS);
-	zenith_Y = (4.0453f * T - 4.9710f) * tan(chi) - 0.2155f * T + 2.4192f;
-	zenith_Y *= 0.06f;
+	float chi = (4.f / 9.f - T / 120.f) * (M_PI - 2.0f * absoluteTheta);
+	zenith_Y = (4.0453f * T - 4.9710f) * tanf(chi) - 0.2155f * T + 2.4192f;
+	zenith_Y *= 1000;  // conversion from kcd/m^2 to cd/m^2
 
 	zenith_x =
-	(0.00166f * theta3 - 0.00375f * theta2 + 0.00209f * thetaS) * T2 +
-	(-0.02903f * theta3 + 0.06377f * theta2 - 0.03202f * thetaS + 0.00394f) * T +
-	(0.11693f * theta3 - 0.21196f * theta2 + 0.06052f * thetaS + 0.25886f);
+	(0.00166f * theta3 - 0.00375f * theta2 + 0.00209f * absoluteTheta) * T2 +
+	(-0.02903f * theta3 + 0.06377f * theta2 - 0.03202f * absoluteTheta + 0.00394f) * T +
+	(0.11693f * theta3 - 0.21196f * theta2 + 0.06052f * absoluteTheta + 0.25886f);
 
 	zenith_y =
-	(0.00275f * theta3 - 0.00610f * theta2 + 0.00317f * thetaS) * T2 +
-	(-0.04214f * theta3 + 0.08970f * theta2 - 0.04153f * thetaS  + 0.00516f) * T +
-	(0.15346f * theta3 - 0.26756f * theta2 + 0.06670f * thetaS  + 0.26688f);
+	(0.00275f * theta3 - 0.00610f * theta2 + 0.00317f * absoluteTheta) * T2 +
+	(-0.04214f * theta3 + 0.08970f * theta2 - 0.04153f * absoluteTheta  + 0.00516f) * T +
+	(0.15346f * theta3 - 0.26756f * theta2 + 0.06670f * absoluteTheta  + 0.26688f);
 
 	perez_Y[1] = (0.1787f * T  - 1.4630f) * aconst;
 	perez_Y[2] = (-0.3554f * T  + 0.4275f) * bconst;
@@ -294,15 +1301,73 @@ void SkyLight::Preprocess() {
 	perez_y[4] = (-0.0441f * T  - 1.6537f) * dconst;
 	perez_y[5] = (-0.0109f * T  + 0.0529f) * econst;
 
-	zenith_Y /= PerezBase(perez_Y, 0, thetaS);
-	zenith_x /= PerezBase(perez_x, 0, thetaS);
-	zenith_y /= PerezBase(perez_y, 0, thetaS);
+	zenith_Y /= PerezBase(perez_Y, 0, absoluteTheta);
+	zenith_x /= PerezBase(perez_x, 0, absoluteTheta);
+	zenith_y /= PerezBase(perez_y, 0, absoluteTheta);
+}
+
+void SkyLight::GetPreprocessedData(float *absoluteSunDirData,
+	float *absoluteThetaData, float *absolutePhiData,
+	float *zenith_YData, float *zenith_xData, float *zenith_yData,
+	float *perez_YData, float *perez_xData, float *perez_yData) const {
+	if (absoluteSunDirData) {
+		absoluteSunDirData[0] = absoluteSunDir.x;
+		absoluteSunDirData[1] = absoluteSunDir.y;
+		absoluteSunDirData[2] = absoluteSunDir.z;
+	}
+
+	if (absoluteThetaData)
+		*absoluteThetaData = absoluteTheta;
+
+	if (absolutePhiData)
+		*absolutePhiData = absolutePhi;
+
+	if (zenith_YData)
+		*zenith_YData = zenith_Y;
+
+	if (zenith_xData)
+		*zenith_xData = zenith_x;
+
+	if (zenith_yData)
+		*zenith_yData = zenith_y;
+
+	for (size_t i = 0; i < 6; ++i) {
+		if (perez_YData)
+			perez_YData[i] = perez_Y[i];
+		if (perez_xData)
+			perez_xData[i] = perez_x[i];
+		if (perez_yData)
+			perez_yData[i] = perez_y[i];
+	}
+}
+
+float SkyLight::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	
+	const u_int steps = 100;
+	const float deltaStep = 2.f / steps;
+	float phi = 0.f, power = 0.f;
+	for (u_int i = 0; i < steps; ++i) {
+		float cosTheta = -1.f;
+		for (u_int j = 0; j < steps; ++j) {
+			float theta = acosf(cosTheta);
+			float gamma = RiAngleBetween(theta, phi, absoluteTheta, absolutePhi);
+			theta = Min<float>(theta, M_PI * .5f - .001f);
+			power += zenith_Y * PerezBase(perez_Y, theta, gamma);
+			cosTheta += deltaStep;
+		}
+
+		phi += deltaStep * M_PI;
+	}
+	power /= steps * steps;
+
+	return gain.Y() * power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
 }
 
 void SkyLight::GetSkySpectralRadiance(const float theta, const float phi, Spectrum * const spect) const {
 	// Add bottom half of hemisphere with horizon colour
 	const float theta_fin = Min<float>(theta, (M_PI * .5f) - .001f);
-	const float gamma = RiAngleBetween(theta, phi, thetaS, phiS);
+	const float gamma = RiAngleBetween(theta, phi, absoluteTheta, absolutePhi);
 
 	// Compute xyY values
 	const float x = zenith_x * PerezBase(perez_x, theta_fin, gamma);
@@ -327,7 +1392,7 @@ Spectrum SkyLight::Emit(const Scene &scene,
 	*orig = p1;
 	*dir = Normalize(lightToWorld * (p2 - p1));
 
-	// Compute InfiniteAreaLight ray weight
+	// Compute SkyLight ray weight
 	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
@@ -375,9 +1440,8 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
-	const float theta = SphericalTheta(localDir);
-	const float phi = SphericalPhi(localDir);
+	const float theta = SphericalTheta(-dir);
+	const float phi = SphericalPhi(-dir);
 	Spectrum s;
 	GetSkySpectralRadiance(theta, phi, &s);
 
@@ -393,16 +1457,351 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 }
 
 Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
+	const string prefix = "scene." + GetName();
+	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
-	props.Set(Property("scene.skylight.dir")(GetSunDir()));
-	props.Set(Property("scene.skylight.gain")(gain));
-	props.Set(Property("scene.skylight.turbidity")(turbidity));
-	props.Set(Property("scene.skylight.transformation")(lightToWorld.m));
-	props.Set(Property("scene.skylight.samples")(samples));
-	props.Set(Property("scene.skylight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
-	props.Set(Property("scene.skylight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
-	props.Set(Property("scene.skylight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
+	props.Set(Property(prefix + ".type")("sky"));
+	props.Set(Property(prefix + ".dir")(localSunDir));
+	props.Set(Property(prefix + ".turbidity")(turbidity));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// SkyLight2
+//------------------------------------------------------------------------------
+
+/*
+This source is published under the following 3-clause BSD license.
+
+Copyright (c) 2012, Lukas Hosek and Alexander Wilkie
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without 
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * None of the names of the contributors may be used to endorse or promote 
+      products derived from this software without specific prior written 
+      permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+/* ============================================================================
+
+This file is part of a sample implementation of the analytical skylight model
+presented in the SIGGRAPH 2012 paper
+
+
+           "An Analytic Model for Full Spectral Sky-Dome Radiance"
+
+                                    by 
+
+                       Lukas Hosek and Alexander Wilkie
+                Charles University in Prague, Czech Republic
+
+
+                        Version: 1.1, July 4th, 2012
+                        
+Version history:
+
+1.1  The coefficients of the spectral model are now scaled so that the output 
+     is given in physical units: W / (m^-2 * sr * nm). Also, the output of the   
+     XYZ model is now no longer scaled to the range [0...1]. Instead, it is
+     the result of a simple conversion from spectral data via the CIE 2 degree
+     standard observer matching functions. Therefore, after multiplication 
+     with 683 lm / W, the Y channel now corresponds to luminance in lm.
+     
+1.0  Initial release (May 11th, 2012).
+
+
+Please visit http://cgg.mff.cuni.cz/projects/SkylightModelling/ to check if
+an updated version of this code has been published!
+
+============================================================================ */
+
+static float RiCosBetween(const Vector &w1, const Vector &w2) {
+	return Clamp(Dot(w1, w2), -1.f, 1.f);
+}
+
+static float ComputeCoefficient(const float elevation[6],
+	const float parameters[6]) {
+	return elevation[0] * parameters[0] +
+		5.f * elevation[1] * parameters[1] +
+		10.f * elevation[2] * parameters[2] +
+		10.f * elevation[3] * parameters[3] +
+		5.f * elevation[4] * parameters[4] +
+		elevation[5] * parameters[5];
+}
+
+static float ComputeInterpolatedCoefficient(u_int index, u_int wavelength,
+	float turbidity, float albedo, const float elevation[6]) {
+	const u_int lowTurbidity = Floor2UInt(Clamp(turbidity - 1.f, 0.f, 9.f));
+	const u_int highTurbidity = min(lowTurbidity + 1U, 9U);
+	const float turbidityLerp = Clamp(turbidity - highTurbidity, 0.f, 1.f);
+
+	return Lerp(Clamp(albedo, 0.f, 1.f),
+		Lerp(turbidityLerp,
+			ComputeCoefficient(elevation, datasets[wavelength][0][lowTurbidity][index]),
+			ComputeCoefficient(elevation, datasets[wavelength][0][highTurbidity][index])),
+		Lerp(turbidityLerp,
+			ComputeCoefficient(elevation, datasets[wavelength][1][lowTurbidity][index]),
+			ComputeCoefficient(elevation, datasets[wavelength][1][highTurbidity][index])));
+}
+
+static void ComputeModel(float turbidity, float albedo[11], float elevation,
+	RegularSPD *skyModel[10]) {
+	const float normalizedElevation = powf(Max(0.f, elevation) * 2.f * INV_PI, 1.f / 3.f);
+
+	const float elevations[6] = {
+		powf(1.f - normalizedElevation, 5.f),
+		powf(1.f - normalizedElevation, 4.f) * normalizedElevation,
+		powf(1.f - normalizedElevation, 3.f) * powf(normalizedElevation, 2.f),
+		powf(1.f - normalizedElevation, 2.f) * powf(normalizedElevation, 3.f),
+		(1.f - normalizedElevation) * powf(normalizedElevation, 4.f),
+		powf(normalizedElevation, 5.f)
+	};
+
+	float values[11];
+	for (u_int i = 0; i < 10; ++i) {
+		for (u_int wl = 0; wl < 11; ++wl)
+			values[wl] = ComputeInterpolatedCoefficient(i, wl, turbidity, albedo[wl], elevations);
+		skyModel[i] = new RegularSPD(values, 320.f, 720.f, 11);
+	}
+}
+
+SkyLight2::SkyLight2() {
+	for (u_int i = 0; i < 10; ++i)
+		model[i] = NULL;
+}
+
+SkyLight2::~SkyLight2() {
+	for (u_int i = 0; i < 10; ++i)
+		delete model[i];
+}
+
+Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
+	const float cosG = RiCosBetween(w, absoluteSunDir);
+	const float cosG2 = cosG * cosG;
+	const float gamma = acosf(cosG);
+	const float cosT = max(0.f, CosTheta(w));
+
+	const Spectrum expTerm(dTerm * Exp(eTerm * gamma));
+	const Spectrum rayleighTerm(fTerm * cosG2);
+	const Spectrum mieTerm(gTerm * (1.f + cosG2) /
+		Pow(Spectrum(1.f) + iTerm * (iTerm - Spectrum(2.f * cosG)), 1.5f));
+	const Spectrum zenithTerm(hTerm * sqrtf(cosT));
+
+	// 0.00001f is an arbitrary scale factor to match LuxRender intensity output
+	return 0.00001f * (Spectrum(1.f) + aTerm * Exp(bTerm / (cosT + .01f))) *
+		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
+}
+
+void SkyLight2::Preprocess() {
+	absoluteSunDir = Normalize(lightToWorld * localSunDir);
+
+	float albedo[11] = { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f };
+	for (u_int i = 0; i < 10; ++i) {
+		delete model[i];
+		model[i] = NULL;
+	}
+
+	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
+
+	aTerm = ColorSystem::DefaultColorSystem.ToRGB(model[0]->ToXYZ());
+	bTerm = ColorSystem::DefaultColorSystem.ToRGB(model[1]->ToXYZ());
+	cTerm = ColorSystem::DefaultColorSystem.ToRGB(model[2]->ToXYZ());
+	dTerm = ColorSystem::DefaultColorSystem.ToRGB(model[3]->ToXYZ());
+	eTerm = ColorSystem::DefaultColorSystem.ToRGB(model[4]->ToXYZ());
+	fTerm = ColorSystem::DefaultColorSystem.ToRGB(model[5]->ToXYZ());
+	gTerm = ColorSystem::DefaultColorSystem.ToRGB(model[6]->ToXYZ());
+	hTerm = ColorSystem::DefaultColorSystem.ToRGB(model[7]->ToXYZ());
+	iTerm = ColorSystem::DefaultColorSystem.ToRGB(model[8]->ToXYZ());
+	radianceTerm = ColorSystem::DefaultColorSystem.ToRGB(model[9]->ToXYZ());
+}
+
+void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
+		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
+		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
+		float *iTermData, float *radianceTermData) const {
+	if (absoluteSunDirData) {
+		absoluteSunDirData[0] = absoluteSunDir.x;
+		absoluteSunDirData[1] = absoluteSunDir.y;
+		absoluteSunDirData[2] = absoluteSunDir.z;
+	}
+
+	if (aTermData) {
+		aTermData[0] = aTerm.c[0];
+		aTermData[1] = aTerm.c[1];
+		aTermData[2] = aTerm.c[2];
+	}
+
+	if (bTermData) {
+		bTermData[0] = bTerm.c[0];
+		bTermData[1] = bTerm.c[1];
+		bTermData[2] = bTerm.c[2];
+	}
+
+	if (cTermData) {
+		cTermData[0] = cTerm.c[0];
+		cTermData[1] = cTerm.c[1];
+		cTermData[2] = cTerm.c[2];
+	}
+
+	if (dTermData) {
+		dTermData[0] = dTerm.c[0];
+		dTermData[1] = dTerm.c[1];
+		dTermData[2] = dTerm.c[2];
+	}
+
+	if (eTermData) {
+		eTermData[0] = eTerm.c[0];
+		eTermData[1] = eTerm.c[1];
+		eTermData[2] = eTerm.c[2];
+	}
+	
+	if (fTermData) {
+		fTermData[0] = fTerm.c[0];
+		fTermData[1] = fTerm.c[1];
+		fTermData[2] = fTerm.c[2];
+	}
+	
+	if (gTermData) {
+		gTermData[0] = gTerm.c[0];
+		gTermData[1] = gTerm.c[1];
+		gTermData[2] = gTerm.c[2];
+	}
+
+	if (hTermData) {
+		hTermData[0] = hTerm.c[0];
+		hTermData[1] = hTerm.c[1];
+		hTermData[2] = hTerm.c[2];
+	}
+
+	if (iTermData) {
+		iTermData[0] = iTerm.c[0];
+		iTermData[1] = iTerm.c[1];
+		iTermData[2] = iTerm.c[2];
+	}
+
+	if (radianceTermData) {
+		radianceTermData[0] = radianceTerm.c[0];
+		radianceTermData[1] = radianceTerm.c[1];
+		radianceTermData[2] = radianceTerm.c[2];
+	}
+}
+
+float SkyLight2::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	
+	const u_int steps = 100;
+	const float deltaStep = 1.f / steps;
+	float power = 0.f;
+	for (u_int i = 0; i < steps; ++i) {
+		for (u_int j = 0; j < steps; ++j)
+			power += ComputeRadiance(UniformSampleSphere(i * deltaStep + deltaStep / 2.f,
+					j * deltaStep + deltaStep / 2.f)).Y();
+	}
+	power /= steps * steps;
+
+	return gain.Y() * power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
+}
+
+Spectrum SkyLight2::Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		Point *orig, Vector *dir,
+		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+	// Choose two points p1 and p2 on scene bounding sphere
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
+	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+
+	// Construct ray between p1 and p2
+	*orig = p1;
+	*dir = Normalize(lightToWorld * (p2 - p1));
+
+	// Compute SkyLight2 ray weight
+	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	if (directPdfA)
+		*directPdfA = 1.f / (4.f * M_PI);
+
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+
+	return GetRadiance(scene, *dir);
+}
+
+Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW, float *cosThetaAtLight) const {
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	*dir = Normalize(lightToWorld * UniformSampleSphere(u0, u1));
+
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
+	const Point emisPoint(p + (*distance) * (*dir));
+	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+
+	const float cosAtLight = Dot(emisNormal, -(*dir));
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+	if (cosThetaAtLight)
+		*cosThetaAtLight = cosAtLight;
+
+	*directPdfW = 1.f / (4.f * M_PI);
+
+	if (emissionPdfW)
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+
+	return GetRadiance(scene, -(*dir));
+}
+
+Spectrum SkyLight2::GetRadiance(const Scene &scene,
+		const Vector &dir,
+		float *directPdfA,
+		float *emissionPdfW) const {
+	if (directPdfA)
+		*directPdfA = 1.f / (4.f * M_PI);
+
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	}
+
+	return gain * ComputeRadiance(-dir);
+}
+
+Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = EnvLightSource::ToProperties(imgMapCache);
+
+	props.Set(Property(prefix + ".type")("sky2"));
+	props.Set(Property(prefix + ".dir")(localSunDir));
+	props.Set(Property(prefix + ".turbidity")(turbidity));
 
 	return props;
 }
@@ -411,27 +1810,12 @@ Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
 // SunLight
 //------------------------------------------------------------------------------
 
-SunLight::SunLight(const luxrays::Transform &l2w,
-		float turb, float size,	const Vector &sd) :
-		id(0), lightToWorld(l2w), samples(-1) {
-	isVisibleIndirectDiffuse = true;
-	isVisibleIndirectGlossy = true;
-	isVisibleIndirectSpecular = true;
-
-	turbidity = turb;
-	sunDir = Normalize(lightToWorld * sd);
-	gain = Spectrum(1.0f, 1.0f, 1.0f);
-	relSize = size;
-}
-
-float SunLight::GetPower(const Scene &scene) const {
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
-
-	return sunColor.Y() * (M_PI * worldRadius * worldRadius) * 2.f * M_PI * sin2ThetaMax / (relSize * relSize);
+SunLight::SunLight() {
 }
 
 void SunLight::Preprocess() {
-	CoordinateSystem(sunDir, &x, &y);
+	absoluteSunDir = Normalize(lightToWorld * localSunDir);
+	CoordinateSystem(absoluteSunDir, &x, &y);
 
 	// Values from NASA Solar System Exploration page
 	// http://solarsystem.nasa.gov/planets/profile.cfm?Object=Sun&Display=Facts&System=Metric
@@ -448,9 +1832,9 @@ void SunLight::Preprocess() {
 		sin2ThetaMax = 1.f;
 	}
 
-	Vector wh = Normalize(sunDir);
-	phiS = SphericalPhi(wh);
-	thetaS = SphericalTheta(wh);
+	Vector wh = Normalize(absoluteSunDir);
+	absoluteTheta = SphericalTheta(wh);
+	absolutePhi = SphericalPhi(wh);
 
 	// NOTE - lordcrc - sun_k_oWavelengths contains 64 elements, while sun_k_oAmplitudes contains 65?!?
 	IrregularSPD k_oCurve(sun_k_oWavelengths, sun_k_oAmplitudes, 64);
@@ -462,7 +1846,7 @@ void SunLight::Preprocess() {
 	float beta = 0.04608365822050f * turbidity - 0.04586025928522f;
 	float tauR, tauA, tauO, tauG, tauWA;
 
-	float m = 1.f / (cosf(thetaS) + 0.00094f * powf(1.6386f - thetaS, 
+	float m = 1.f / (cosf(absoluteTheta) + 0.00094f * powf(1.6386f - absoluteTheta, 
 		-1.253f));  // Relative Optical Mass
 
 	int i;
@@ -480,27 +1864,66 @@ void SunLight::Preprocess() {
 			// Attenuation due to ozone absorption
 			// lOzone - amount of ozone in cm(NTP)
 		const float lOzone = .35f;
-		tauO = expf(-m * k_oCurve.sample(lambda) * lOzone);
+		tauO = expf(-m * k_oCurve.Sample(lambda) * lOzone);
 			// Attenuation due to mixed gases absorption
-		tauG = expf(-1.41f * k_gCurve.sample(lambda) * m / powf(1.f +
-			118.93f * k_gCurve.sample(lambda) * m, 0.45f));
+		tauG = expf(-1.41f * k_gCurve.Sample(lambda) * m / powf(1.f +
+			118.93f * k_gCurve.Sample(lambda) * m, 0.45f));
 			// Attenuation due to water vapor absorbtion
 			// w - precipitable water vapor in centimeters (standard = 2)
 		const float w = 2.0f;
-		tauWA = expf(-0.2385f * k_waCurve.sample(lambda) * w * m /
-		powf(1.f + 20.07f * k_waCurve.sample(lambda) * w * m, 0.45f));
+		tauWA = expf(-0.2385f * k_waCurve.Sample(lambda) * w * m /
+		powf(1.f + 20.07f * k_waCurve.Sample(lambda) * w * m, 0.45f));
 
-		Ldata[i] = (solCurve.sample(lambda) *
-			tauR * tauA * tauO * tauG * tauWA);
+		Ldata[i] = (solCurve.Sample(lambda) * tauR * tauA * tauO * tauG * tauWA);
 	}
 
 	RegularSPD LSPD(Ldata, 350, 800, 91);
-	// Note: (1000000000.0f / (M_PI * 100.f * 100.f)) is for compatibility with past scene
-	sunColor = gain * LSPD.ToRGB() / (1000000000.0f / (M_PI * 100.f * 100.f));
+	color = (gain / (relSize * relSize)) *
+			ColorSystem::DefaultColorSystem.ToRGBConstrained(LSPD.ToXYZ()).Clamp();
 }
 
-void SunLight::SetGain(const Spectrum &g) {
-	gain = g;
+void SunLight::GetPreprocessedData(float *absoluteSunDirData,
+		float *xData, float *yData,
+		float *absoluteThetaData, float *absolutePhiData,
+		float *VData, float *cosThetaMaxData, float *sin2ThetaMaxData) const {
+	if (absoluteSunDirData) {
+		absoluteSunDirData[0] = absoluteSunDir.x;
+		absoluteSunDirData[1] = absoluteSunDir.y;
+		absoluteSunDirData[2] = absoluteSunDir.z;
+	}
+
+	if (xData) {
+		xData[0] = x.x;
+		xData[1] = x.y;
+		xData[2] = x.z;
+	}
+
+	if (yData) {
+		yData[0] = y.x;
+		yData[1] = y.y;
+		yData[2] = y.z;
+	}
+
+	if (absoluteThetaData)
+		*absoluteThetaData = absoluteTheta;
+
+	if (absolutePhiData)
+		*absolutePhiData = absolutePhi;
+
+	if (VData)
+		*VData = V;
+
+	if (cosThetaMaxData)
+		*cosThetaMaxData = cosThetaMax;
+
+	if (sin2ThetaMaxData)
+		*sin2ThetaMaxData = sin2ThetaMax;
+}
+
+float SunLight::GetPower(const Scene &scene) const {
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	return color.Y() * (M_PI * worldRadius * worldRadius) * 2.f * M_PI * sin2ThetaMax;
 }
 
 Spectrum SunLight::Emit(const Scene &scene,
@@ -513,75 +1936,77 @@ Spectrum SunLight::Emit(const Scene &scene,
 	// Set ray origin and direction for infinite light ray
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	*orig = worldCenter + worldRadius * (sunDir + d1 * x + d2 * y);
-	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, sunDir);
-	*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+	*orig = worldCenter + worldRadius * (absoluteSunDir + d1 * x + d2 * y);
+	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
+
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
-		*directPdfA = UniformConePdf(cosThetaMax);
+		*directPdfA = uniformConePdf;
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(sunDir, -(*dir));
+		*cosThetaAtLight = Dot(absoluteSunDir, -(*dir));
 
-	return sunColor;
+	return color;
 }
 
 Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 		const float u0, const float u1, const float passThroughEvent,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, sunDir);
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteSunDir);
 
 	// Check if the point can be inside the sun cone of light
-	const float cosAtLight = Dot(sunDir, *dir);
+	const float cosAtLight = Dot(absoluteSunDir, *dir);
 	if (cosAtLight <= cosThetaMax)
 		return Spectrum();
 
-	*distance = std::numeric_limits<float>::infinity();
-	*directPdfW = UniformConePdf(cosThetaMax);
+	*distance = numeric_limits<float>::infinity();
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	*directPdfW = uniformConePdf;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
 	if (emissionPdfW) {
 		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
-		*emissionPdfW =  UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
+		*emissionPdfW =  uniformConePdf / (M_PI * worldRadius * worldRadius);
 	}
 	
-	return sunColor;
+	return color;
 }
 
 Spectrum SunLight::GetRadiance(const Scene &scene,
 		const Vector &dir,
 		float *directPdfA,
 		float *emissionPdfW) const {
-	if ((cosThetaMax < 1.f) && (Dot(-dir, sunDir) > cosThetaMax)) {
-		if (directPdfA)
-			*directPdfA = UniformConePdf(cosThetaMax);
+	const float xD = Dot(-dir, x);
+	const float yD = Dot(-dir, y);
+	const float zD = Dot(-dir, absoluteSunDir);
+	if ((cosThetaMax == 1.f) || (zD < 0.f) || ((xD * xD + yD * yD) > sin2ThetaMax))
+		return Spectrum();
 
-		if (emissionPdfW) {
-			const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
-			*emissionPdfW = UniformConePdf(cosThetaMax) / (M_PI * worldRadius * worldRadius);
-		}
+	const float uniformConePdf = UniformConePdf(cosThetaMax);
+	if (directPdfA)
+		*directPdfA = uniformConePdf;
 
-		return sunColor;
+	if (emissionPdfW) {
+		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+		*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
 	}
 
-	return Spectrum();
+	return color;
 }
 
-Properties SunLight::ToProperties() const {
-	Properties props;
+Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
+	const string prefix = "scene." + GetName();
+	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
-	props.Set(Property("scene.sunlight.dir")(GetDir()));
-	props.Set(Property("scene.sunlight.gain")(gain));
-	props.Set(Property("scene.sunlight.turbidity")(turbidity));
-	props.Set(Property("scene.sunlight.relsize")(relSize));
-	props.Set(Property("scene.sunlight.transformation")(lightToWorld.m));
-	props.Set(Property("scene.sunlight.samples")(samples));
-	props.Set(Property("scene.sunlight.visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
-	props.Set(Property("scene.sunlight.visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
-	props.Set(Property("scene.sunlight.visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
+	props.Set(Property(prefix + ".type")("sun"));
+	props.Set(Property(prefix + ".dir")(localSunDir));
+	props.Set(Property(prefix + ".turbidity")(turbidity));
+	props.Set(Property(prefix + ".relsize")(relSize));
 
 	return props;
 }
@@ -590,21 +2015,18 @@ Properties SunLight::ToProperties() const {
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight(const Material *mat, const ExtMesh *m,
-		const u_int mIndex, const unsigned int tIndex) {
-	lightMaterial = mat;
-	mesh = m;
-	meshIndex = mIndex;
-	triangleIndex = tIndex;
+TriangleLight::TriangleLight() : mesh(NULL), meshIndex(NULL_INDEX), triangleIndex(NULL_INDEX) {
+}
 
-	Init();
+TriangleLight::~TriangleLight() {
+	
 }
 
 float TriangleLight::GetPower(const Scene &scene) const {
 	return area * M_PI * lightMaterial->GetEmittedRadianceY();
 }
 
-void TriangleLight::Init() {
+void TriangleLight::Preprocess() {
 	area = mesh->GetTriangleArea(triangleIndex);
 	invArea = 1.f / area;
 }
@@ -621,9 +2043,17 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
 	Frame frame(N);
 
-	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+	Spectrum emissionColor(1.f);
+	Vector localDirOut;
+	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	if (emissionFunc) {
+		emissionFunc->Sample(u2, u3, &localDirOut, emissionPdfW);
+		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localDirOut) / emissionFunc->Average();
+	} else
+		localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+
 	if (*emissionPdfW == 0.f)
-		return Spectrum();
+			return Spectrum();
 	*emissionPdfW *= invArea;
 
 	// Cannot really not emit the particle, so just bias it to the correct angle
@@ -665,15 +2095,35 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	*directPdfW = invArea * distanceSquared / cosAtLight;
+	Spectrum emissionColor(1.f);
+	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	if (emissionFunc) {
+		// Build the local frame
+		const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
+		Frame frame(N);
 
-	if (emissionPdfW)
-		*emissionPdfW = invArea * cosAtLight * INV_PI;
+		const Vector localFromLight = Normalize(frame.ToLocal(-(*dir)));
+		
+		if (emissionPdfW) {
+			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
+			if (emissionFuncPdf == 0.f)
+				return Spectrum();
+			*emissionPdfW = emissionFuncPdf * invArea;
+		}
+		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
+		
+		*directPdfW = invArea * distanceSquared;
+	} else {
+		if (emissionPdfW)
+			*emissionPdfW = invArea * cosAtLight * INV_PI;
+
+		*directPdfW = invArea * distanceSquared / cosAtLight;
+	}
 
 	const UV triUV = mesh->InterpolateTriUV(triangleIndex, b1, b2);
 	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, sampleN, sampleN, passThroughEvent, false };
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invArea);
+	return lightMaterial->GetEmittedRadiance(hitPoint, invArea) * emissionColor;
 }
 
 Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
@@ -686,8 +2136,26 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 	if (directPdfA)
 		*directPdfA = invArea;
 
-	if (emissionPdfW)
-		*emissionPdfW = cosOutLight * INV_PI * invArea;
+	Spectrum emissionColor(1.f);
+	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
+	if (emissionFunc) {
+		// Build the local frame
+		const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
+		Frame frame(N);
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invArea);
+		const Vector localFromLight = Normalize(frame.ToLocal(hitPoint.fixedDir));
+		
+		if (emissionPdfW) {
+			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
+			if (emissionFuncPdf == 0.f)
+				return Spectrum();
+			*emissionPdfW = emissionFuncPdf * invArea;
+		}
+		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
+	} else {
+		if (emissionPdfW)
+			*emissionPdfW = invArea * cosOutLight * INV_PI;
+	}
+
+	return lightMaterial->GetEmittedRadiance(hitPoint, invArea) * emissionColor;
 }

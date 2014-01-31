@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/spectrum.h"
+#include "luxrays/utils/memory.h"
 #include "slg/core/spd.h"
 #include "slg/core/data/xyzbasis.h"
 
@@ -90,7 +91,7 @@ float SPD::Y() const
 	return y * 683.f;
 }
 
-Spectrum SPD::ToRGB() {
+Spectrum SPD::ToXYZ() const {
 	Spectrum c;
 	for (u_int i = 0; i < nCIE; ++i) {
 		const float v = sample(i + CIEstart);
@@ -100,6 +101,21 @@ Spectrum SPD::ToRGB() {
 	}
 
 	return c * 683.f;
+}
+
+Spectrum SPD::ToNormalizedXYZ() const {
+	Spectrum c;
+	float yint  = 0.f;
+	for (u_int i = 0; i < nCIE; ++i) {
+		yint += CIE_Y[i];
+
+		const float v = sample(i + CIEstart);
+		c.r += v * CIE_X[i];
+		c.g += v * CIE_Y[i];
+		c.b += v * CIE_Z[i];
+	}
+
+	return c / yint;
 }
 
 float SPD::Filter() const

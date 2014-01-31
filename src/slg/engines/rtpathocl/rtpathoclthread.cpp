@@ -84,11 +84,10 @@ string RTPathOCLRenderThread::AdditionalKernelOptions() {
 	float toneMapScale = 1.f;
 	float gamma = 2.2f;
 
-	if (engine->film->GetImagePipeline()) {
-		const ImagePipeline *ip = engine->film->GetImagePipeline();
-		
+	const ImagePipeline *ip = engine->film->GetImagePipeline();
+	if (ip) {
 		const ToneMap *tm = (const ToneMap *)ip->GetPlugin(typeid(ToneMap));
-		if (tm->GetType() == TONEMAP_LINEAR) {
+		if (tm && (tm->GetType() == TONEMAP_LINEAR)) {
 			const LinearToneMap *ltm = (const LinearToneMap *)tm;
 			toneMapScale = ltm->scale;
 		}
@@ -255,24 +254,9 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 		InitMaterials();
 	}
 
-	if (updateActions.Has(AREALIGHTS_EDIT)) {
-		// Update Scene Area Lights
-		InitTriangleAreaLights();
-	}
-
-	if (updateActions.Has(INFINITELIGHT_EDIT)) {
-		// Update Scene Infinite Light
-		InitInfiniteLight();
-	}
-
-	if (updateActions.Has(SUNLIGHT_EDIT)) {
-		// Update Scene Sun Light
-		InitSunLight();
-	}
-
-	if (updateActions.Has(SKYLIGHT_EDIT)) {
-		// Update Scene Sun Light
-		InitSkyLight();
+	if (updateActions.Has(LIGHTS_EDIT)) {
+		// Update Scene Lights
+		InitLights();
 	}
 
 	//--------------------------------------------------------------------------

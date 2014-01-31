@@ -82,7 +82,7 @@ private:
 		const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,
 		const float distance, const BSDF &bsdf, const float lastPdfW,
 		SampleResult *sampleResult);
-	bool DirectHitInfiniteLight(const bool firstPathVertex, const BSDFEvent lastBSDFEvent,
+	bool DirectHitEnvLight(const bool firstPathVertex, const BSDFEvent lastBSDFEvent,
 		const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,
 		const luxrays::Vector &eyeDir, const float lastPdfW,
 		SampleResult *sampleResult);

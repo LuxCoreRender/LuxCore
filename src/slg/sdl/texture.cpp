@@ -78,7 +78,7 @@ static float NoiseWeight(float t) {
 	return 6.f * t4 * t - 15.f * t4 + 10.f * t3;
 }
 
-static float Noise(float x, float y = .5f, float z = .5f) {
+float Noise(float x, float y = .5f, float z = .5f) {
 	// Compute noise cell coordinates and offsets
 	int ix = Floor2Int(x);
 	int iy = Floor2Int(y);
@@ -109,7 +109,7 @@ static float Noise(float x, float y = .5f, float z = .5f) {
 	return Lerp(wz, y0, y1);
 }
 
-static float Noise(const Point &P) {
+float Noise(const Point &P) {
 	return Noise(P.x, P.y, P.z);
 }
 
@@ -602,6 +602,81 @@ float ImageMap::GetSpectrumMeanY() const {
 	return mean / (width * height);
 }
 
+ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
+		const u_int width, const u_int height) {
+	if (channels == 1) {
+		float *mergedImg = new float[width * height];
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				mergedImg[x + y * width] = map0->GetFloat(uv) * map1->GetFloat(uv);
+			}
+		}
+
+		// I assume the image have the same gamma
+		return new ImageMap(mergedImg, map0->GetGamma(), 1, width, height);
+	} else if (channels == 3) {
+		float *mergedImg = new float[width * height * 3];
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				const Spectrum c = map0->GetSpectrum(uv) * map1->GetSpectrum(uv);
+
+				const u_int index = (x + y * width) * 3;
+				mergedImg[index] = c.c[0];
+				mergedImg[index + 1] = c.c[1];
+				mergedImg[index + 2] = c.c[2];
+			}
+		}
+
+		// I assume the image have the same gamma
+		return new ImageMap(mergedImg, map0->GetGamma(), 3, width, height);
+	} else
+		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
+}
+
+ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels) {
+	const u_int width = Max(map0->GetWidth(), map1->GetWidth());
+	const u_int height = Max(map0->GetHeight(), map1->GetHeight());
+
+	return ImageMap::Merge(map0, map1, channels, width, height);
+}
+
+ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
+		const u_int width, const u_int height) {
+	if (channels == 1) {
+		float *newImg = new float[width * height];
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				newImg[x + y * width] = map->GetFloat(uv);
+			}
+		}
+
+		return new ImageMap(newImg, map->GetGamma(), 1, width, height);
+	} else if (channels == 3) {
+		float *newImg = new float[width * height * 3];
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				const Spectrum c = map->GetSpectrum(uv);
+
+				const u_int index = (x + y * width) * 3;
+				newImg[index] = c.c[0];
+				newImg[index + 1] = c.c[1];
+				newImg[index + 2] = c.c[2];
+			}
+		}
+
+		return new ImageMap(newImg, map->GetGamma(), 3, width, height);
+	} else
+		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
+}
+
 //------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------
@@ -792,7 +867,7 @@ float FresnelApproxN(const float Fr) {
 }
 
 Spectrum FresnelApproxN(const Spectrum &Fr) {
-	const Spectrum sqrtReflectance = Sqrt(Fr.Clamp(0.f, .999f));
+	const Spectrum sqrtReflectance = Fr.Clamp(0.f, .999f).Sqrt();
 
 	return (Spectrum(1.f) + sqrtReflectance) /
 		(Spectrum(1.f) - sqrtReflectance);
@@ -1546,7 +1621,7 @@ Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 
 	for (u_int i = 0; i < offsets.size(); ++i) {
 		props.Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));
-		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i].b));
+		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i]));
 	}
 
 	return props;
@@ -1599,11 +1674,11 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache) 
 //------------------------------------------------------------------------------
 
 float HitPointGreyTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return (channel > 2) ? hitPoint.color.Y() : hitPoint.color[channel];
+	return (channel > 2) ? hitPoint.color.Y() : hitPoint.color.c[channel];
 }
 
 Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float v = (channel > 2) ? hitPoint.color.Y() : hitPoint.color[channel];
+	const float v = (channel > 2) ? hitPoint.color.Y() : hitPoint.color.c[channel];
 	return Spectrum(v);
 }
 
@@ -1621,8 +1696,11 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) c
 //------------------------------------------------------------------------------
 // Wood texture
 //------------------------------------------------------------------------------
-WoodTexture::WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast) : 
-						  mapping(mp), type(BANDS), noisebasis2(TEX_SIN),  noisesize(noisesize), turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
+
+WoodTexture::WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise,
+		const float noisesize, float turb, bool hard, float bright, float contrast) : 
+		mapping(mp), type(BANDS), noisebasis2(TEX_SIN),  noisesize(noisesize),
+		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
 	if(ptype == "bands") {
 		type = BANDS;
 	} else if(ptype == "rings") {

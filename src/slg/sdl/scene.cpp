@@ -34,10 +34,11 @@
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
+#include "slg/editaction.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sampler/sampler.h"
 #include "slg/sdl/scene.h"
-#include "slg/editaction.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;
 using namespace luxrays;
@@ -46,15 +47,9 @@ using namespace slg;
 Scene::Scene(const float imageScale) {
 	camera = NULL;
 
-	envLight = NULL;
-	sunLight = NULL;
-
 	dataSet = NULL;
 	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
-
-	lightsDistribution = NULL;
-	lightGroupCount = 1;
 
 	editActions.AddAllAction();
 	imgMapCache.SetImageResize(imageScale);
@@ -64,15 +59,9 @@ Scene::Scene(const string &fileName, const float imageScale) {
 	// Just in case there is an unexpected exception during the scene loading
     camera = NULL;
 
-	envLight = NULL;
-	sunLight = NULL;
-
 	dataSet = NULL;
 	accelType = ACCEL_AUTO;
 	enableInstanceSupport = true;
-
-	lightsDistribution = NULL;
-	lightGroupCount = 1;
 
 	editActions.AddAllAction();
 	imgMapCache.SetImageResize(imageScale);
@@ -81,69 +70,18 @@ Scene::Scene(const string &fileName, const float imageScale) {
 
 	Properties scnProp(fileName);
 	Parse(scnProp);
-	
-	//--------------------------------------------------------------------------
-
-	if (!envLight && !sunLight && (triLightDefs.size() == 0))
-		throw runtime_error("The scene doesn't include any light source");
-
-	UpdateLightGroupCount();
 }
 
 Scene::~Scene() {
 	delete camera;
-	delete envLight;
-	delete sunLight;
-
-	for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
-		delete *l;
 
 	delete dataSet;
-	delete lightsDistribution;
-}
-
-void  Scene::UpdateLightGroupCount() {
-	// Update the count of light groups
-	if (envLight)
-		lightGroupCount = Max(lightGroupCount, envLight->GetID() + 1);
-	if (sunLight)
-		lightGroupCount = Max(lightGroupCount, sunLight->GetID() + 1);
-	BOOST_FOREACH(TriangleLight *tl, triLightDefs) {
-		lightGroupCount = Max(lightGroupCount, tl->GetID() + 1);
-	}
-}
-
-void Scene::UpdateTriangleLightDefs() {
-	// I have to build a new version of lights and triangleLightSource
-	vector<TriangleLight *> newTriLights;
-	vector<u_int> newMeshTriLightOffset;
-
-	for (u_int i = 0; i < objDefs.GetSize(); ++i) {
-		const SceneObject *obj = objDefs.GetSceneObject(i);
-		const ExtMesh *mesh = obj->GetExtMesh();
-		const Material *m = obj->GetMaterial();
-
-		if (m->IsLightSource()) {
-			newMeshTriLightOffset.push_back(newTriLights.size());
-
-			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j) {
-				TriangleLight *tl = new TriangleLight(m, mesh, i, j);
-				newTriLights.push_back(tl);
-			}
-		} else
-			newMeshTriLightOffset.push_back(NULL_INDEX);
-	}
-
-	// Delete all old TriangleLight
-	for (vector<TriangleLight *>::const_iterator l = triLightDefs.begin(); l != triLightDefs.end(); ++l)
-		delete *l;
-
-	// Use the new versions
-	triLightDefs = newTriLights;
-	meshTriLightDefsOffset = newMeshTriLightOffset;
 }
 
 void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight) {
+	if (lightDefs.GetSize() == 0)
+		throw runtime_error("The scene doesn't include any light source");
+
 	// Check if I have to update the camera
 	if (editActions.Has(CAMERA_EDIT))
 		camera->Update(filmWidth, filmHeight);
@@ -167,39 +105,9 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	if (editActions.Has(GEOMETRY_EDIT) ||
 			editActions.Has(MATERIALS_EDIT) ||
 			editActions.Has(MATERIAL_TYPES_EDIT) ||
-			editActions.Has(AREALIGHTS_EDIT) ||
-			editActions.Has(INFINITELIGHT_EDIT) ||
-			editActions.Has(SUNLIGHT_EDIT) ||
-			editActions.Has(SKYLIGHT_EDIT) ||
+			editActions.Has(LIGHTS_EDIT) ||
 			editActions.Has(IMAGEMAPS_EDIT)) {
-		// Update the count of light groups
-		UpdateLightGroupCount();
-
-		// Update triangle light definitions
-		UpdateTriangleLightDefs();
-
-		// Rebuild the data to power based light sampling
-		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * dataSet->GetBSphere().rad * 1.01f;
-		const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
-		const u_int lightCount = GetLightCount();
-		float *lightPower = new float[lightCount];
-		for (u_int i = 0; i < lightCount; ++i) {
-			const LightSource *l = GetLightByIndex(i);
-			lightPower[i] = l->GetPower(*this);
-
-			// In order to avoid over-sampling of distant lights
-			if ((l->GetType() == TYPE_IL) ||
-					(l->GetType() == TYPE_IL_SKY) ||
-					(l->GetType() == TYPE_SUN))
-				lightPower[i] *= iWorldRadius2;
-		}
-
-		lightsDistribution = new Distribution1D(lightPower, lightCount);
-		delete lightPower;
-
-		// Initialize the light source indices
-		for (u_int i = 0; i < lightCount; ++i)
-			GetLightByIndex(i)->SetSceneIndex(i);
+		lightDefs.Preprocess(this);
 	}
 
 	editActions.Reset();
@@ -212,16 +120,11 @@ Properties Scene::ToProperties(const string &directoryName) {
 		SDL_LOG("Saving camera information");
 		props.Set(camera->ToProperties());
 
-		if (envLight) {
-			// Write the infinitelight/skylight information
-			SDL_LOG("Saving infinitelight/skylight information");
-			props.Set(envLight->ToProperties(imgMapCache));
-		}
-		
-		if (sunLight) {
-			// Write the sunlight information
-			SDL_LOG("Saving sunlight information");
-			props.Set(sunLight->ToProperties());
+		// Save all not intersecable light sources
+		for (u_int i = 0; i < lightDefs.GetSize(); ++i) {
+			const LightSource *l = lightDefs.GetLightSource(i);
+			if (dynamic_cast<const NotIntersecableLightSource *>(l))
+				props.Set(((const NotIntersecableLightSource *)l)->ToProperties(imgMapCache));
 		}
 
 		// Write the image map information
@@ -372,7 +275,7 @@ void Scene::Parse(const Properties &props) {
 	// Read all env. lights
 	//--------------------------------------------------------------------------
 
-	ParseEnvLights(props);
+	ParseLights(props);
 }
 
 void Scene::ParseCamera(const Properties &props) {
@@ -452,10 +355,11 @@ void Scene::ParseMaterials(const Properties &props) {
 
 			// Replace old material direct references with new one
 			objDefs.UpdateMaterialReferences(oldMat, newMat);
+			lightDefs.UpdateMaterialReferences(oldMat, newMat);
 
 			// Check if the old and/or the new material were/is light sources
 			if (wasLightSource || newMat->IsLightSource())
-				editActions.AddAction(AREALIGHTS_EDIT);
+				editActions.AddAction(LIGHTS_EDIT);
 		} else {
 			// Only a new Material
 			matDefs.DefineMaterial(matName, newMat);
@@ -491,7 +395,7 @@ void Scene::ParseObjects(const Properties &props) {
 
 			// Check if the old and/or the new object were/is light sources
 			if (wasLightSource || obj->GetMaterial()->IsLightSource())
-				editActions.AddAction(AREALIGHTS_EDIT);
+				editActions.AddAction(LIGHTS_EDIT);
 		} else {
 			// Only a new object
 			objDefs.DefineSceneObject(objName, obj);
@@ -502,13 +406,17 @@ void Scene::ParseObjects(const Properties &props) {
 				const ExtMesh *mesh = obj->GetExtMesh();
 				SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
 
-				meshTriLightDefsOffset.push_back(triLightDefs.size());
 				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-					TriangleLight *tl = new TriangleLight(mat, mesh, objDefs.GetSize() - 1, i);
-					triLightDefs.push_back(tl);
+					TriangleLight *tl = new TriangleLight();
+					tl->lightMaterial = mat;
+					tl->mesh = mesh;
+					tl->meshIndex = objDefs.GetSize() - 1;
+					tl->triangleIndex = i;
+					tl->Preprocess();
+
+					lightDefs.DefineLightSource(objName + "_triangle_light_" + ToString(i), tl);
 				}
-			} else
-				meshTriLightDefsOffset.push_back(NULL_INDEX);
+			}
 		}
 
 		++objCount;
@@ -524,89 +432,46 @@ void Scene::ParseObjects(const Properties &props) {
 	editActions.AddActions(GEOMETRY_EDIT);
 }
 
-void Scene::ParseEnvLights(const Properties &props) {
-	//--------------------------------------------------------------------------
-	// SkyLight
-	//--------------------------------------------------------------------------
-
+void Scene::ParseLights(const Properties &props) {
+	// The following code is used only for compatibility with the past syntax
 	if (props.HaveNames("scene.skylight")) {
-		const Matrix4x4 mat = props.Get(Property("scene.skylight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-		const Transform light2World(mat);
-
-		SkyLight *sl = new SkyLight(light2World,
-				props.Get(Property("scene.skylight.turbidity")(2.2f)).Get<float>(),
-				props.Get(Property("scene.skylight.dir")(0.f, 0.f, 1.f)).Get<Vector>());
-		sl->SetGain(props.Get(Property("scene.skylight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
-		sl->SetSamples(props.Get(Property("scene.skylight.samples")(-1)).Get<int>());
-		sl->SetID(props.Get(Property("scene.skylight.id")(0)).Get<int>());
-		sl->SetIndirectDiffuseVisibility(props.Get(Property("scene.skylight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
-		sl->SetIndirectGlossyVisibility(props.Get(Property("scene.skylight.visibility.indirect.glossy.enable")(true)).Get<bool>());
-		sl->SetIndirectSpecularVisibility(props.Get(Property("scene.skylight.visibility.indirect.specular.enable")(true)).Get<bool>());
-		sl->Preprocess();
-
-		// Delete the old env. light
-		if (envLight)
-			delete envLight;
-		envLight = sl;
+		// Parse all syntax
+		LightSource *newLight = CreateLightSource("scene.skylight", props);
+		lightDefs.DefineLightSource("skylight", newLight);
+		editActions.AddActions(LIGHTS_EDIT);
 	}
-
-	//--------------------------------------------------------------------------
-	// InfiniteLight
-	//--------------------------------------------------------------------------
-
 	if (props.HaveNames("scene.infinitelight")) {
-		const Matrix4x4 mat = props.Get(Property("scene.infinitelight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-		const Transform light2World(mat);
-
-		const string imageName = props.Get(Property("scene.infinitelight.file")("image.png")).Get<string>();
-		const float gamma = props.Get(Property("scene.infinitelight.gamma")(2.2f)).Get<float>();
-		ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
-		InfiniteLight *il = new InfiniteLight(light2World, imgMap);
-
-		il->SetGain(props.Get(Property("scene.infinitelight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
-
-		const UV shift = props.Get(Property("scene.infinitelight.shift")(0.f, 0.f)).Get<UV>();
-		il->GetUVMapping()->uDelta = shift.u;
-		il->GetUVMapping()->vDelta = shift.v;
-		il->SetSamples(props.Get(Property("scene.infinitelight.samples")(-1)).Get<int>());
-		il->SetID(props.Get(Property("scene.infinitelight.id")(0)).Get<int>());
-		il->SetIndirectDiffuseVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
-		il->SetIndirectGlossyVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.glossy.enable")(true)).Get<bool>());
-		il->SetIndirectSpecularVisibility(props.Get(Property("scene.infinitelight.visibility.indirect.specular.enable")(true)).Get<bool>());
-		il->Preprocess();
-
-		// Delete the old env. light
-		if (envLight)
-			delete envLight;
-		envLight = il;
+		// Parse all syntax
+		LightSource *newLight = CreateLightSource("scene.infinitelight", props);
+		lightDefs.DefineLightSource("infinitelight", newLight);
+		editActions.AddActions(LIGHTS_EDIT);
 	}
-
-	//--------------------------------------------------------------------------
-	// SunLight
-	//--------------------------------------------------------------------------
-
 	if (props.HaveNames("scene.sunlight")) {
-		const Matrix4x4 mat = props.Get(Property("scene.sunlight.transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-		const Transform light2World(mat);
-
-		SunLight *sl = new SunLight(light2World,
-				props.Get(Property("scene.sunlight.turbidity")(2.2f)).Get<float>(),
-				props.Get(Property("scene.sunlight.relsize")(1.0f)).Get<float>(),
-				props.Get(Property("scene.sunlight.dir")(0.f, 0.f, 1.f)).Get<Vector>());
-
-		sl->SetGain(props.Get(Property("scene.sunlight.gain")(1.f, 1.f, 1.f)).Get<Spectrum>());
-		sl->SetSamples(props.Get(Property("scene.sunlight.samples")(-1)).Get<int>());
-		sl->SetID(props.Get(Property("scene.sunlight.id")(0)).Get<int>());
-		sl->SetIndirectDiffuseVisibility(props.Get(Property("scene.sunlight.visibility.indirect.diffuse.enable")(true)).Get<bool>());
-		sl->SetIndirectGlossyVisibility(props.Get(Property("scene.sunlight.visibility.indirect.glossy.enable")(true)).Get<bool>());
-		sl->SetIndirectSpecularVisibility(props.Get(Property("scene.sunlight.visibility.indirect.specular.enable")(true)).Get<bool>());
-		sl->Preprocess();
-
-		// Delete the old sun light
-		if (sunLight)
-			delete sunLight;
-		sunLight = sl;
+		// Parse all syntax
+		LightSource *newLight = CreateLightSource("scene.sunlight", props);
+		lightDefs.DefineLightSource("sunlight", newLight);
+		editActions.AddActions(LIGHTS_EDIT);
 	}
+
+	vector<string> lightKeys = props.GetAllUniqueSubNames("scene.lights");
+	if (lightKeys.size() == 0) {
+		// There are not light definitions
+		return;
+	}
+
+	BOOST_FOREACH(const string &key, lightKeys) {
+		// Extract the material name
+		const string lightName = Property::ExtractField(key, 2);
+		if (lightName == "")
+			throw runtime_error("Syntax error in light definition: " + lightName);
+
+		SDL_LOG("Light definition: " << lightName);
+
+		LightSource *newLight = CreateLightSource(lightName, props);
+		lightDefs.DefineLightSource(lightName, newLight);
+	}
+
+	editActions.AddActions(LIGHTS_EDIT);
 }
 
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
@@ -622,9 +487,8 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 	// Check if it is a light source
 	if (obj->GetMaterial()->IsLightSource()) {
 		// Have to update all light sources using this mesh
-		const u_int meshIndex = objDefs.GetSceneObjectIndex(objName);
-		for (u_int i = meshTriLightDefsOffset[meshIndex]; i < mesh->GetTotalTriangleCount(); ++i)
-			triLightDefs[i]->Init();
+		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
+			lightDefs.GetLightSource(objName + "_triangle_light_" + ToString(i))->Preprocess();
 	}
 }
 
@@ -634,9 +498,13 @@ void Scene::RemoveUnusedImageMaps() {
 	for (u_int i = 0; i < texDefs.GetSize(); ++i)
 		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
 
-	// Add the infinite light image
-	if (envLight && (envLight->GetType() == TYPE_IL))
-		referencedImgMaps.insert(((InfiniteLight *)envLight)->GetImageMap());
+	// Add the light image maps
+	BOOST_FOREACH(LightSource *l, lightDefs.GetLightSources())
+		l->AddReferencedImageMaps(referencedImgMaps);
+
+	// Add the material image maps
+	BOOST_FOREACH(Material *m, matDefs.GetMaterials())
+		m->AddReferencedImageMaps(referencedImgMaps);
 
 	// Get the list of all defined image maps
 	std::vector<const ImageMap *> ims;
@@ -715,7 +583,7 @@ void Scene::RemoveUnusedMeshes() {
 void Scene::DeleteObject(const std::string &objName) {
 	if (objDefs.IsSceneObjectDefined(objName)) {
 		if (objDefs.GetSceneObject(objName)->GetMaterial()->IsLightSource())
-			editActions.AddAction(AREALIGHTS_EDIT);
+			editActions.AddAction(LIGHTS_EDIT);
 
 		objDefs.DeleteSceneObject(objName);
 		
@@ -778,7 +646,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const float gain = props.Get(Property(propName + ".gain")(1.0f)).Get<float>();
+		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma);
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
@@ -969,11 +837,6 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
 
 		mat = new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
-	} else if (matType == "metal") {
-		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
-		Texture *exp = GetTexture(props.Get(Property(propName + ".exp")(10.f)));
-
-		mat = new MetalMaterial(emissionTex, bumpTex, normalTex, kr, exp);
 	} else if (matType == "archglass") {
 		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
@@ -1007,9 +870,9 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));
 		Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
-		Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f)));
+		Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
 		Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
-		Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f)));
+		Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f, 0.f, 0.f)));
 		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
 
 		mat = new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
@@ -1053,13 +916,89 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
 
 		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
+	} else if (matType == "velvet") {
+		Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
+		Texture *p1 = GetTexture(props.Get(Property(propName + ".p1")(-2.0f)));
+		Texture *p2 = GetTexture(props.Get(Property(propName + ".p2")(20.0f)));
+		Texture *p3 = GetTexture(props.Get(Property(propName + ".p3")(2.0f)));
+		Texture *thickness = GetTexture(props.Get(Property(propName + ".thickness")(0.1f)));
+
+		mat = new VelvetMaterial(emissionTex, bumpTex, normalTex, kd, p1, p2, p3, thickness);
+	} else if (matType == "cloth") {
+		ClothPreset preset = DENIM;
+		
+		if (props.IsDefined(propName + ".preset")) {
+			const string type = props.Get(Property(propName + ".preset")("denim")).Get<string>();
+			
+			if (type == "denim")
+				preset = DENIM;
+			else if (type == "silk_charmeuse")
+				preset = SILKCHARMEUSE;  
+			else if (type == "silk_shantung")
+				preset = SILKSHANTUNG;  
+			else if (type == "cotton_twill")
+				preset = COTTONTWILL;  
+			else if (type == "wool_garbardine")
+				preset = WOOLGARBARDINE;  
+			else if (type == "polyester_lining_cloth")
+				preset = POLYESTER;  
+		}
+		Texture *weft_kd = GetTexture(props.Get(Property(propName + ".weft_kd")(.5f, .5f, .5f)));
+		Texture *weft_ks = GetTexture(props.Get(Property(propName + ".weft_ks")(.5f, .5f, .5f)));
+		Texture *warp_kd = GetTexture(props.Get(Property(propName + ".warp_kd")(.5f, .5f, .5f)));
+		Texture *warp_ks = GetTexture(props.Get(Property(propName + ".warp_ks")(.5f, .5f, .5f)));
+		float repeat_u = props.Get(Property(propName + ".repeat_u")(100.0f)).Get<float>();
+		float repeat_v = props.Get(Property(propName + ".repeat_v")(100.0f)).Get<float>();
+
+		mat = new ClothMaterial(emissionTex, bumpTex, normalTex, preset, weft_kd, weft_ks, warp_kd, warp_ks, repeat_u, repeat_v);
+	} else if (matType == "carpaint") {
+		Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
+		Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
+		string preset = props.Get(Property(propName + ".preset")("")).Get<string>();
+		if (preset != "") {
+			const int numPaints = CarpaintMaterial::NbPresets();
+			int i;
+			for (i = 0; i < numPaints; ++i) {
+				if (preset == CarpaintMaterial::data[i].name)
+					break;
+			}
+			if (i == numPaints)
+				preset = "";
+			else {
+				Texture *kd = GetTexture(Property("Implicit-" + preset + "-kd")(CarpaintMaterial::data[i].kd[0], CarpaintMaterial::data[i].kd[1], CarpaintMaterial::data[i].kd[2]));
+				Texture *ks1 = GetTexture(Property("Implicit-" + preset + "-ks1")(CarpaintMaterial::data[i].ks1[0], CarpaintMaterial::data[i].ks1[1], CarpaintMaterial::data[i].ks1[2]));
+				Texture *ks2 = GetTexture(Property("Implicit-" + preset + "-ks2")(CarpaintMaterial::data[i].ks2[0], CarpaintMaterial::data[i].ks2[1], CarpaintMaterial::data[i].ks2[2]));
+				Texture *ks3 = GetTexture(Property("Implicit-" + preset + "-ks3")(CarpaintMaterial::data[i].ks3[0], CarpaintMaterial::data[i].ks3[1], CarpaintMaterial::data[i].ks3[2]));
+				Texture *r1 = GetTexture(Property("Implicit-" + preset + "-r1")(CarpaintMaterial::data[i].r1));
+				Texture *r2 = GetTexture(Property("Implicit-" + preset + "-r2")(CarpaintMaterial::data[i].r2));
+				Texture *r3 = GetTexture(Property("Implicit-" + preset + "-r3")(CarpaintMaterial::data[i].r3));
+				Texture *m1 = GetTexture(Property("Implicit-" + preset + "-m1")(CarpaintMaterial::data[i].m1));
+				Texture *m2 = GetTexture(Property("Implicit-" + preset + "-m2")(CarpaintMaterial::data[i].m2));
+				Texture *m3 = GetTexture(Property("Implicit-" + preset + "-m3")(CarpaintMaterial::data[i].m3));
+				mat = new CarpaintMaterial(emissionTex, bumpTex, normalTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
+			}
+		}
+		// preset can be reset above if the name is not found
+		if (preset == "") {
+			Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(CarpaintMaterial::data[0].kd[0], CarpaintMaterial::data[0].kd[1], CarpaintMaterial::data[0].kd[2])));
+			Texture *ks1 = GetTexture(props.Get(Property(propName + ".ks1")(CarpaintMaterial::data[0].ks1[0], CarpaintMaterial::data[0].ks1[1], CarpaintMaterial::data[0].ks1[2])));
+			Texture *ks2 = GetTexture(props.Get(Property(propName + ".ks2")(CarpaintMaterial::data[0].ks2[0], CarpaintMaterial::data[0].ks2[1], CarpaintMaterial::data[0].ks2[2])));
+			Texture *ks3 = GetTexture(props.Get(Property(propName + ".ks3")(CarpaintMaterial::data[0].ks3[0], CarpaintMaterial::data[0].ks3[1], CarpaintMaterial::data[0].ks3[2])));
+			Texture *r1 = GetTexture(props.Get(Property(propName + ".r1")(CarpaintMaterial::data[0].r1)));
+			Texture *r2 = GetTexture(props.Get(Property(propName + ".r2")(CarpaintMaterial::data[0].r2)));
+			Texture *r3 = GetTexture(props.Get(Property(propName + ".r3")(CarpaintMaterial::data[0].r3)));
+			Texture *m1 = GetTexture(props.Get(Property(propName + ".m1")(CarpaintMaterial::data[0].m1)));
+			Texture *m2 = GetTexture(props.Get(Property(propName + ".m2")(CarpaintMaterial::data[0].m2)));
+			Texture *m3 = GetTexture(props.Get(Property(propName + ".m3")(CarpaintMaterial::data[0].m3)));
+			mat = new CarpaintMaterial(emissionTex, bumpTex, normalTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
+		}
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
 	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
 
-	mat->SetEmittedGain(Max(0.f, props.Get(Property(propName + ".emission.gain")(1.f)).Get<float>()));
+	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
 	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficency")(0.f)).Get<float>()));
 	mat->SetEmittedSamples(Max(-1, props.Get(Property(propName + ".emission.samples")(-1)).Get<int>()));
@@ -1068,6 +1007,13 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 	mat->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 	mat->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+	// Check if there is a image or IES map
+	const ImageMap *emissionMap = CreateEmissionMap(propName + ".emission", props);
+	if (emissionMap) {
+		// There is one
+		mat->SetEmissionMap(emissionMap);
+	}
 
 	return mat;
 }
@@ -1156,83 +1102,271 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 	return new SceneObject(mesh, mat);
 }
 
-//------------------------------------------------------------------------------
+ImageMap *Scene::CreateEmissionMap(const std::string &propName, const luxrays::Properties &props) {
+	const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
+	const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
+	const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
+	const u_int width = props.Get(Property(propName + ".map.width")(0)).Get<u_int>();
+	const u_int height = props.Get(Property(propName + ".map.height")(0)).Get<u_int>();
 
-LightSource *Scene::GetLightByType(const LightSourceType lightType) const {
-	if (envLight && (lightType == envLight->GetType()))
-			return envLight;
-	if (sunLight && (lightType == TYPE_SUN))
-			return sunLight;
+	ImageMap *map = NULL;
+	if ((imgMapName != "") && (iesName != "")) {
+		ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, gamma);
 
-	for (u_int i = 0; i < static_cast<u_int>(triLightDefs.size()); ++i) {
-		LightSource *ls = triLightDefs[i];
-		if (ls->GetType() == lightType)
-			return ls;
-	}
-
-	return NULL;
-}
-
-const u_int Scene::GetLightCount() const {
-	u_int lightsSize = static_cast<u_int>(triLightDefs.size());
-
-	if (envLight)
-		++lightsSize;
-	if (sunLight)
-		++lightsSize;
-
-	return lightsSize;
-}
-
-const u_int Scene::GetObjectCount() const {
-	return objDefs.GetSize();
-}
-
-LightSource *Scene::GetLightByIndex(const u_int lightIndex) const {
-	const u_int lightsSize = GetLightCount();
-
-	if (envLight) {
-		if (sunLight) {
-			if (lightIndex == lightsSize - 1)
-				return sunLight;
-			else if (lightIndex == lightsSize - 2)
-				return envLight;
-			else
-				return triLightDefs[lightIndex];
-		} else {
-			if (lightIndex == lightsSize - 1)
-				return envLight;
-			else
-				return triLightDefs[lightIndex];
-		}
-	} else {
-		if (sunLight) {
-			if (lightIndex == lightsSize - 1)
-				return sunLight;
-			else
-				return triLightDefs[lightIndex];
+		ImageMap *iesMap;
+		PhotometricDataIES data(iesName.c_str());
+		if (data.IsValid()) {
+			const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
+			iesMap = IESSphericalFunction::IES2ImageMap(data, flipZ,
+					(width > 0) ? width : 512,
+					(height > 0) ? height : 256);
 		} else
-			return triLightDefs[lightIndex];
+			throw runtime_error("Invalid IES file in property " + propName + ": " + iesName);
+
+		// Merge the 2 maps
+		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount(),
+				(width > 0) ? width: Max(imgMap->GetWidth(), iesMap->GetWidth()),
+				(height > 0) ? height : Max(imgMap->GetHeight(), iesMap->GetHeight()));
+		delete iesMap;
+
+		if ((width > 0) || (height > 0)) {
+			// I have to resample the image
+			ImageMap *resampledMap = ImageMap::Resample(map, map->GetChannelCount(),
+					(width > 0) ? width: map->GetWidth(),
+					(height > 0) ? height : map->GetHeight());
+			delete map;
+			map = resampledMap;
+		}
+
+		// Add the image map to the cache
+		imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName, map);
+	} else if (imgMapName != "") {
+		map = imgMapCache.GetImageMap(imgMapName, gamma);
+
+		if ((width > 0) || (height > 0)) {
+			// I have to resample the image
+			map = ImageMap::Resample(map, map->GetChannelCount(),
+					(width > 0) ? width: map->GetWidth(),
+					(height > 0) ? height : map->GetHeight());
+
+			// Add the image map to the cache
+			imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_RESAMPLED_" + propName, map);
+		}
+	} else if (iesName != "") {
+		PhotometricDataIES data(iesName.c_str());
+		if (data.IsValid()) {
+			const bool flipZ = props.Get(Property(propName + ".flipz")(false)).Get<bool>();
+			map = IESSphericalFunction::IES2ImageMap(data, flipZ,
+					(width > 0) ? width : 512,
+					(height > 0) ? height : 256);
+
+			// Add the image map to the cache
+			imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_IES2IMAGEMAP_" + propName, map);
+		} else
+			throw runtime_error("Invalid IES file in property " + propName + ": " + iesName);
 	}
+
+	return map;
 }
 
-LightSource *Scene::SampleAllLights(const float u, float *pdf) const {
-	// Power based light strategy
-	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-	assert ((lightIndex >= 0) && (lightIndex < GetLightCount()));
+LightSource *Scene::CreateLightSource(const std::string &lightName, const luxrays::Properties &props) {
+	string propName, lightType;
 
-	return GetLightByIndex(lightIndex);
+	// The following code is used only for compatibility with the past syntax
+	if (lightName == "scene.skylight") {
+		SLG_LOG("WARNING: deprecated property scene.skylight");
+
+		propName = "scene.skylight";
+		lightType = "sky";
+	} else if (lightName == "scene.infinitelight") {
+		SLG_LOG("WARNING: deprecated property scene.infinitelight");
+
+		propName = "scene.infinitelight";
+		lightType = "infinite";
+	} else if (lightName == "scene.sunlight") {
+		SLG_LOG("WARNING: deprecated property scene.sunlight");
+
+		propName = "scene.sunlight";
+		lightType = "sun";
+	} else {
+		propName = "scene.lights." + lightName;
+		lightType = props.Get(Property(propName + ".type")("sky")).Get<string>();
+	}
+
+	NotIntersecableLightSource *lightSource = NULL;
+	if (lightType == "sky") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SkyLight *sl = new SkyLight();
+		sl->lightToWorld = light2World;
+		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
+		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+
+		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+		lightSource = sl;
+	} else if (lightType == "sky2") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SkyLight2 *sl = new SkyLight2();
+		sl->lightToWorld = light2World;
+		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
+		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+
+		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+		lightSource = sl;
+	} else if (lightType == "infinite") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
+		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
+		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma);
+
+		InfiniteLight *il = new InfiniteLight();
+		il->lightToWorld = light2World;
+		il->imageMap = imgMap;
+
+		// An old parameter kept only for compatibility
+		const UV shift = props.Get(Property(propName + ".shift")(0.f, 0.f)).Get<UV>();
+		il->mapping.uDelta = shift.u;
+		il->mapping.vDelta = shift.v;
+
+		il->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		il->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		il->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+		lightSource = il;
+	} else if (lightType == "sun") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SunLight *sl = new SunLight();
+		sl->lightToWorld = light2World;
+		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
+		sl->relSize = Max(0.f, props.Get(Property(propName + ".relsize")(1.0f)).Get<float>());
+		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
+
+		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		sl->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+		lightSource = sl;
+	} else if (lightType == "point") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		PointLight *pl = new PointLight();
+		pl->lightToWorld = light2World;
+		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		pl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+
+		lightSource = pl;
+	} else if (lightType == "mappoint") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		ImageMap *map = CreateEmissionMap(propName, props);
+		if (!map)
+			throw runtime_error("MapPoint light source (" + propName + ") is missing mapfile or iesfile property");
+
+		MapPointLight *mpl = new MapPointLight();
+		mpl->lightToWorld = light2World;
+		mpl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		mpl->imageMap = map;
+		mpl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		mpl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+
+		lightSource = mpl;
+	} else if (lightType == "spot") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SpotLight *sl = new SpotLight();
+		sl->lightToWorld = light2World;
+		sl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		sl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
+		sl->coneAngle = Max(0.f, props.Get(Property(propName + ".coneangle")(30.f)).Get<float>());
+		sl->coneDeltaAngle = Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>());
+		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+
+		lightSource = sl;
+	} else if (lightType == "projection") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
+		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
+		const ImageMap *imgMap = (imageName == "") ? NULL : imgMapCache.GetImageMap(imageName, gamma);
+
+		ProjectionLight *pl = new ProjectionLight();
+		pl->lightToWorld = light2World;
+		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
+		pl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
+		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		pl->imageMap = imgMap;
+		pl->fov = Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>());
+
+		lightSource = pl;
+	} else if (lightType == "constantinfinite") {
+		ConstantInfiniteLight *cil = new ConstantInfiniteLight();
+
+		cil->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		cil->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
+		cil->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
+		cil->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+
+		lightSource = cil;
+	} else if (lightType == "sharpdistant") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		SharpDistantLight *sdl = new SharpDistantLight();
+		sdl->lightToWorld = light2World;
+		sdl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		sdl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
+
+		lightSource = sdl;
+	} else if (lightType == "distant") {
+		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform light2World(mat);
+
+		DistantLight *dl = new DistantLight();
+		dl->lightToWorld = light2World;
+		dl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		dl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
+		dl->theta = props.Get(Property(propName + ".theta")(10.f)).Get<float>();
+
+		lightSource = dl;
+	} else
+		throw runtime_error("Unknown light type: " + lightType);
+
+	lightSource->gain = props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>();
+	lightSource->SetSamples(props.Get(Property(propName + ".samples")(-1)).Get<int>());
+	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
+	lightSource->Preprocess();
+	
+	return lightSource;
 }
 
-float Scene::SampleAllLightPdf(const LightSource *light) const {
-	// Power based light strategy
-	return lightsDistribution->Pdf(light->GetSceneIndex());
-}
+//------------------------------------------------------------------------------
 
 bool Scene::Intersect(IntersectionDevice *device, const bool fromLight,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput) const {
-	*connectionThroughput = Spectrum(1.f, 1.f, 1.f);
+	*connectionThroughput = Spectrum(1.f);
 	for (;;) {
 		if (!device->TraceRay(ray, rayHit)) {
 			// Nothing was hit

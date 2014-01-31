@@ -175,7 +175,7 @@ Transform Perspective(float fov, float n, float f) {
 	float inv_denom = 1.f / (1.f - n / f);
 	Matrix4x4 persp(1, 0, 0, 0,
 			0, 1, 0, 0,
-			0, 0, inv_denom, -n*inv_denom,
+			0, 0, inv_denom, -n * inv_denom,
 			0, 0, 1, 0);
 	// Scale to canonical viewing volume
 	float invTanAng = 1.f / tanf(Radians(fov) / 2.f);

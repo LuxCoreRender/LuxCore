@@ -1,5 +1,3 @@
-#line 2 "specturm_funcs.cl"
-
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,30 +16,38 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-bool Spectrum_IsEqual(const float3 a, const float3 b) {
-	return all(isequal(a, b));
+#ifndef _LUXRAYS_GAUSSIANSPD_H
+#define _LUXRAYS_GAUSSIANSPD_H
+
+#include "luxrays/core/color/spd.h"
+
+// Peak + fallof SPD using gaussian distribution
+
+#define GAUSS_CACHE_START   380.f // precomputed cache starts at wavelength,
+#define GAUSS_CACHE_END     720.f // and ends at wavelength
+#define GAUSS_CACHE_SAMPLES 512  // total number of cache samples 
+
+namespace luxrays {
+
+class GaussianSPD : public SPD {
+public:
+  GaussianSPD() : SPD() {
+	  init(550.0f, 50.0f, 1.f);
+  }
+
+  GaussianSPD(float mean, float width, float refl) : SPD() {
+	  init(mean, width, refl);
+  }
+
+  virtual ~GaussianSPD() {
+  }
+
+  void init(float mean, float width, float refl);
+
+protected:
+  float mu, wd, r0;
+};
+
 }
 
-bool Spectrum_IsBlack(const float3 a) {
-	return Spectrum_IsEqual(a, BLACK);
-}
-
-float Spectrum_Filter(const float3 s)  {
-	return fmax(s.s0, fmax(s.s1, s.s2));
-}
-
-float Spectrum_Y(const float3 s) {
-	return 0.212671f * s.s0 + 0.715160f * s.s1 + 0.072169f * s.s2;
-}
-
-float3 Spectrum_Clamp(const float3 s) {
-	return clamp(s, BLACK, WHITE);
-}
-
-float3 Spectrum_Exp(const float3 s) {
-	return (float3)(exp(s.x), exp(s.y), exp(s.z));
-}
-
-float3 Spectrum_Sqrt(const float3 s) {
-	return (float3)(sqrt(s.x), sqrt(s.y), sqrt(s.z));
-}
+#endif // _LUXRAYS_GAUSSIANSPD_H

@@ -30,4 +30,3 @@ scene.infinitelight.file = scenes/simple-mat/arch.exr
 scene.infinitelight.gamma = 1.0
 scene.infinitelight.gain = 3.0 3.0 3.0
 #scene.infinitelight.shift = 0.25 0.0
-scene.infinitelight.usebruteforce = 1

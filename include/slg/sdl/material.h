@@ -23,13 +23,16 @@
 #include <set>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/properties.h"
-#include "luxrays/core/spectrum.h"
+#include "luxrays/core/color/color.h"
+#include "luxrays/utils/mc.h"
+#include "luxrays/core/geometry/point.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/bsdfevents.h"
-#include "slg/core/mc.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/hitpoint.h"
 
@@ -43,8 +46,8 @@ namespace ocl {
 class Scene;
 
 typedef enum {
-	MATTE, MIRROR, GLASS, METAL, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2, ROUGHGLASS,
+	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
+	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT,
 
 	// The following types are used (in PATHOCL CompiledScene class) only to
 	// recognize the usage of some specific material option
@@ -58,23 +61,26 @@ public:
 		matID(0), lightID(0), samples(-1), emittedSamples(-1),
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		emittedTex(emitted), bumpTex(bump), normalTex(normal),
+		emissionMap(NULL), emissionFunc(NULL),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) {
 		UpdateEmittedFactor();
 	}
-	virtual ~Material() { }
+	virtual ~Material() {
+		delete emissionFunc;
+	}
 
 	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
 	void SetLightID(const u_int id) { lightID = id; }
 	u_int GetLightID() const { return lightID; }
 	void SetID(const u_int id) { matID = id; }
 	u_int GetID() const { return matID; }
-	void SetEmittedGain(const float v) { emittedGain = v; UpdateEmittedFactor(); }
-	float GetEmittedGain() const { return emittedGain; }
+	void SetEmittedGain(const luxrays::Spectrum &v) { emittedGain = v; UpdateEmittedFactor(); }
+	luxrays::Spectrum GetEmittedGain() const { return emittedGain; }
 	void SetEmittedPower(const float v) { emittedPower = v; UpdateEmittedFactor(); }
 	float GetEmittedPower() const { return emittedPower; }
 	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
 	float GetEmittedEfficency() const { return emittedEfficency; }
-	float GetEmittedFactor() const { return emittedFactor; }
+	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
 	bool IsUsingPrimitiveArea() const { return usePrimitiveArea; }
 
 	virtual MaterialType GetType() const = 0;
@@ -127,6 +133,9 @@ public:
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	const Texture *GetNormalTexture() const { return normalTex; }
+	void SetEmissionMap(const ImageMap *map);
+	const ImageMap *GetEmissionMap() const { return emissionMap; }
+	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
@@ -157,6 +166,10 @@ public:
 		if (normalTex)
 			normalTex->AddReferencedTextures(referencedTexs);
 	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		if (emissionMap)
+			referencedImgMaps.insert(emissionMap);
+	}
 	// Update any reference to oldTex with newTex
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 		if (emittedTex == oldTex)
@@ -166,31 +179,23 @@ public:
 		if (normalTex == oldTex)
 			normalTex = newTex;
 	}
-
+	
 	virtual luxrays::Properties ToProperties() const;
 
 protected:
-	void UpdateEmittedFactor() {
-		if (emittedTex) {
-			emittedFactor = emittedGain * emittedPower * emittedEfficency / (M_PI * emittedTex->Y());
-			if ((emittedFactor == 0.f) || isinf(emittedFactor) || isnan(emittedFactor)) {
-				emittedFactor = emittedGain;
-				usePrimitiveArea = false;
-			} else
-				usePrimitiveArea = true;
-		} else {
-			emittedFactor = emittedGain;
-			usePrimitiveArea = false;
-		}
-	}
+	void UpdateEmittedFactor();
 
 	u_int matID, lightID;
 
 	int samples, emittedSamples;
-	float emittedGain, emittedPower, emittedEfficency, emittedFactor;
+	luxrays::Spectrum emittedGain, emittedFactor;
+	float emittedPower, emittedEfficency;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
 	const Texture *normalTex;
+
+	const ImageMap *emissionMap;
+	SampleableSphericalFunction *emissionFunc;
 
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular, usePrimitiveArea;
 };
@@ -217,6 +222,9 @@ public:
 	}
 	u_int GetMaterialIndex(const std::string &name);
 	u_int GetMaterialIndex(const Material *m) const;
+	const std::vector<Material *> &GetMaterials() const {
+		return mats;
+	}
 
 	u_int GetSize() const { return static_cast<u_int>(mats.size()); }
 	std::vector<std::string> GetMaterialNames() const;
@@ -225,7 +233,7 @@ public:
   
 private:
 	std::vector<Material *> mats;
-	std::map<std::string, Material *> matsByName;
+	boost::unordered_map<std::string, Material *> matsByName;
 };
 
 //------------------------------------------------------------------------------
@@ -408,52 +416,6 @@ private:
 	const Texture *Kt;
 	const Texture *ousideIor;
 	const Texture *ior;
-};
-
-//------------------------------------------------------------------------------
-// Metal material
-//------------------------------------------------------------------------------
-
-class MetalMaterial : public Material {
-public:
-	MetalMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
-			const Texture *refl, const Texture *exp) : Material(emitted, bump, normal),
-			Kr(refl), exponent(exp) { }
-
-	virtual MaterialType GetType() const { return METAL; }
-	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
-
-	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
-		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
-		float *directPdfW = NULL, float *reversePdfW = NULL) const;
-	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
-		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
-		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent) const;
-	virtual void Pdf(const HitPoint &hitPoint,
-		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
-		float *directPdfW, float *reversePdfW) const {
-		if (directPdfW)
-			*directPdfW = 0.f;
-		if (reversePdfW)
-			*reversePdfW = 0.f;
-	}
-
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
-
-	virtual luxrays::Properties ToProperties() const;
-
-	const Texture *GetKr() const { return Kr; }
-	const Texture *GetExp() const { return exponent; }
-
-private:
-	static luxrays::Vector GlossyReflection(const luxrays::Vector &localFixedDir, const float exponent,
-			const float u0, const float u1);
-
-	const Texture *Kr;
-	const Texture *exponent;
 };
 
 //------------------------------------------------------------------------------
@@ -648,8 +610,6 @@ private:
 		float u0, float u1, float *pdf) const;
 	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 		const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
-		const luxrays::Spectrum &alpha, const float depth) const;
 
 	const Texture *Kd;
 	const Texture *Ks;
@@ -753,6 +713,258 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// Velvet material
+//------------------------------------------------------------------------------
+
+class VelvetMaterial : public Material {
+public:
+	VelvetMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *kd, const Texture *p1, const Texture *p2, const Texture *p3, const Texture *thickness) : Material(emitted, bump, normal), Kd(kd), P1(p1), P2(p2), P3(p3), Thickness(thickness) { }
+
+	virtual MaterialType GetType() const { return VELVET; }
+	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
+
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+
+	virtual luxrays::Properties ToProperties() const;
+
+	const Texture *GetKd() const { return Kd; }
+	const Texture *GetP1() const { return P1; }
+	const Texture *GetP2() const { return P2; }
+	const Texture *GetP3() const { return P3; }
+	const Texture *GetThickness() const { return Thickness; }
+
+private:
+	const Texture *Kd;
+	const Texture *P1;
+	const Texture *P2;
+	const Texture *P3;
+	const Texture *Thickness;
+};
+
+//------------------------------------------------------------------------------
+// Cloth material
+//------------------------------------------------------------------------------
+
+typedef enum {
+	DENIM, SILKCHARMEUSE, COTTONTWILL, WOOLGARBARDINE, SILKSHANTUNG, POLYESTER
+} ClothPreset;
+
+typedef enum {
+	WARP, WEFT
+} YarnType;
+
+// Data structure describing the properties of a single yarn
+typedef struct {
+	// Fiber twist angle
+	float psi;
+	// Maximum inclination angle
+	float umax;
+	// Spine curvature
+	float kappa;
+	// Width of segment rectangle
+	float width;
+	// Length of segment rectangle
+	float length;
+	/*! u coordinate of the yarn segment center,
+	 * assumes that the tile covers 0 <= u, v <= 1.
+	 * (0, 0) is lower left corner of the weave pattern
+	 */
+	float centerU;
+	// v coordinate of the yarn segment center
+	float centerV;
+
+	// Weft/Warp flag
+	YarnType yarn_type;
+} Yarn;
+
+typedef struct  {
+	// Size of the weave pattern
+	u_int tileWidth, tileHeight;
+	
+	// Uniform scattering parameter
+	float alpha;
+	// Forward scattering parameter
+	float beta;
+	// Filament smoothing
+	float ss;
+	// Highlight width
+	float hWidth;
+	// Combined area taken up by the warp & weft
+	float warpArea, weftArea;
+
+	// Noise-related parameters
+	float fineness;
+
+	float dWarpUmaxOverDWarp;
+	float dWarpUmaxOverDWeft;
+	float dWeftUmaxOverDWarp;
+	float dWeftUmaxOverDWeft;
+	float period;
+} WeaveConfig;
+
+class ClothMaterial : public Material {
+public:
+	ClothMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+		      const ClothPreset preset, const Texture *weft_kd, const Texture *weft_ks, const Texture *warp_kd, const Texture *warp_ks, const float repeat_u, const float repeat_v) : Material(emitted, bump, normal), Preset(preset), Weft_Kd(weft_kd), Weft_Ks(weft_ks), Warp_Kd(warp_kd), Warp_Ks(warp_ks), Repeat_U(repeat_u), Repeat_V(repeat_v) { SetPreset();}
+
+	virtual MaterialType GetType() const { return CLOTH; }
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
+
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+
+	virtual luxrays::Properties ToProperties() const;
+
+	const Texture *GetWeftKd() const { return Weft_Kd; }
+	const Texture *GetWeftKs() const { return Weft_Ks; }
+	const Texture *GetWarpKd() const { return Warp_Kd; }
+	const Texture *GetWarpKs() const { return Warp_Ks; }
+	const float GetRepeatU() const { return Repeat_U; }
+	const float GetRepeatV() const { return Repeat_V; }
+
+private:
+	void SetPreset();
+
+	const Yarn *GetYarn(const float u_i, const float v_i, luxrays::UV *uv, float *umax, float *scale) const;
+	void GetYarnUV(const Yarn *yarn, const luxrays::Point &center, const luxrays::Point &xy, luxrays::UV *uv, float *umaxMod) const;
+	
+	float RadiusOfCurvature(const Yarn *yarn, float u, float umaxMod) const;
+	float EvalSpecular(const Yarn *yarn, const luxrays::UV &uv, float umax, const luxrays::Vector &wo, const luxrays::Vector &vi) const;
+	float EvalIntegrand(const Yarn *yarn, const luxrays::UV &uv, float umaxMod, luxrays::Vector &om_i, luxrays::Vector &om_r) const;
+	float EvalFilamentIntegrand(const Yarn *yarn, const luxrays::Vector &om_i, const luxrays::Vector &om_r, float u, float v, float umaxMod) const;
+	float EvalStapleIntegrand(const Yarn *yarn, const luxrays::Vector &om_i, const luxrays::Vector &om_r, float u, float v, float umaxMod) const;
+
+	const ClothPreset Preset;
+	const Texture *Weft_Kd;
+	const Texture *Weft_Ks;
+	const Texture *Warp_Kd;
+	const Texture *Warp_Ks;
+	const float Repeat_U;
+	const float Repeat_V;
+	const Yarn *Yarns;
+	const int *Pattern;
+	const WeaveConfig *Weave;
+	float specularNormalization;
+};
+
+//------------------------------------------------------------------------------
+// Irawan related functions and classes
+//------------------------------------------------------------------------------
+
+
+//------------------------------------------------------------------------------
+// Carpaint material
+//------------------------------------------------------------------------------
+
+class CarpaintMaterial : public Material {
+public:
+	CarpaintMaterial(const Texture *emitted, const Texture *bump, const Texture *normal,
+			const Texture *kd, const Texture *ks1, const Texture *ks2, const Texture *ks3, const Texture *m1, const Texture *m2, const Texture *m3,
+			const Texture *r1, const Texture *r2, const Texture *r3, const Texture *ka, const Texture *d) :
+			Material(emitted, bump, normal), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3), R1(r1), R2(r2), R3(r3),
+			Ka(ka), depth(d) { }
+
+	virtual MaterialType GetType() const { return CARPAINT; }
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
+
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+
+	virtual luxrays::Properties ToProperties() const;
+
+/*	const Texture *GetKd() const { return Kd; }
+	const Texture *GetKs() const { return Ks; }
+	const Texture *GetNu() const { return nu; }
+	const Texture *GetNv() const { return nv; }
+	const Texture *GetKa() const { return Ka; }
+	const Texture *GetDepth() const { return depth; }
+	const Texture *GetIndex() const { return index; }
+	const bool IsMultibounce() const { return multibounce; }
+
+private:
+	float SchlickBSDF_CoatingWeight(const luxrays::Spectrum &ks, const luxrays::Vector &localFixedDir) const;
+	luxrays::Spectrum SchlickBSDF_CoatingF(const bool fromLight, const luxrays::Spectrum &ks, const float roughness, const float anisotropy,
+		const luxrays::Vector &localFixedDir,	const luxrays::Vector &localSampledDir) const;
+	luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const luxrays::Spectrum ks,
+		const float roughness, const float anisotropy, const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		float u0, float u1, float *pdf) const;
+	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
+		const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir) const;
+	luxrays::Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
+		const luxrays::Spectrum &alpha, const float depth) const;*/
+
+	struct CarpaintData {
+		string name;
+		float kd[COLOR_SAMPLES];
+		float ks1[COLOR_SAMPLES];
+		float ks2[COLOR_SAMPLES];
+		float ks3[COLOR_SAMPLES];
+		float r1, r2, r3;
+		float m1, m2, m3;
+	};
+	static struct CarpaintData data[8];
+	static int NbPresets() { return 8; }
+
+	const Texture *Kd;
+	const Texture *Ks1;
+	const Texture *Ks2;
+	const Texture *Ks3;
+	const Texture *M1;
+	const Texture *M2;
+	const Texture *M3;
+	const Texture *R1;
+	const Texture *R2;
+	const Texture *R3;
+	const Texture *Ka;
+	const Texture *depth;
+};
+
+//------------------------------------------------------------------------------
+// Coating absorption
+//------------------------------------------------------------------------------
+
+extern luxrays::Spectrum CoatingAbsorption(const float cosi, const float coso,
+	const luxrays::Spectrum &alpha, const float depth);
+
+//------------------------------------------------------------------------------
 // SchlickDistribution related functions
 //------------------------------------------------------------------------------
 
@@ -770,7 +982,7 @@ extern float SchlickDistribution_G(const float roughness, const luxrays::Vector 
 // Fresnel related functions
 //------------------------------------------------------------------------------
 
-extern luxrays::Spectrum FresnelSlick_Evaluate(const luxrays::Spectrum &ks, const float cosi);
+extern luxrays::Spectrum FresnelSchlick_Evaluate(const luxrays::Spectrum &ks, const float cosi);
 extern luxrays::Spectrum FresnelGeneral_Evaluate(const luxrays::Spectrum &eta, const luxrays::Spectrum &k, const float cosi);
 extern luxrays::Spectrum FresnelCauchy_Evaluate(const float eta, const float cosi);
 

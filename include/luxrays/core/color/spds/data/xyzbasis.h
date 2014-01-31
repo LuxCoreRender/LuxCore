@@ -16,10 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-namespace slg {
-
 // XYZ Basis matching functions - 360nm to 830nm @ 1nm
 // Source: PBRT v1.03
+
+namespace luxrays {
 
 static const unsigned int CIEstart = 360;
 static const unsigned int CIEend = 830;
