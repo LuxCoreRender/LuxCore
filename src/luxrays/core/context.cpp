@@ -58,7 +58,7 @@ Context::Context(LuxRaysDebugHandler handler, const int openclPlatformIndex) {
 			LR_LOG(this, "No OpenCL platform available");
 	} else {
 		if ((platforms.size() == 0) || (openclPlatformIndex >= (int)platforms.size()))
-			throw std::runtime_error("Unable to find an appropiate OpenCL platform");
+			throw std::runtime_error("Unable to find an appropriate OpenCL platform");
 		else {
 			OpenCLDeviceDescription::AddDeviceDescs(
 				platforms[openclPlatformIndex],
