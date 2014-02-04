@@ -57,16 +57,18 @@ public:
 	virtual Spectrum GetColor(const u_int vertIndex) const = 0;
 	virtual float GetAlpha(const u_int vertIndex) const = 0;
 
-	virtual bool GetTriBaryCoords(const u_int index, const Point &hitPoint, float *b1, float *b2) const = 0;
+	virtual bool GetTriBaryCoords(const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
+    bool GetDifferentials(const u_int triIndex,
+        Vector *dpdu, Vector *dpdv,
+        Normal *dndu, Normal *dndv) const;
+    void GetFrame(const Normal &normal, const Vector &dpdu, const Vector &dpdv, Frame &frame) const;
 
-	virtual Normal InterpolateTriNormal(const u_int index, const float b1, const float b2) const = 0;
-	virtual UV InterpolateTriUV(const u_int index, const float b1, const float b2) const = 0;
-	virtual Spectrum InterpolateTriColor(const u_int index, const float b1, const float b2) const = 0;
-	virtual float InterpolateTriAlpha(const u_int index, const float b1, const float b2) const = 0;
+	virtual Normal InterpolateTriNormal(const u_int triIndex, const float b1, const float b2) const = 0;
+	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const = 0;
+	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const = 0;
+	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const = 0;
 
-	virtual void Sample(const u_int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const = 0;
-
-    virtual void GetTriangleFrame(const u_int index, const Normal &normal, Frame &frame) const;
+	virtual void Sample(const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const = 0;
 
 	virtual void Delete() = 0;
 	virtual void WritePly(const std::string &fileName) const = 0;
@@ -113,48 +115,48 @@ public:
 	Spectrum GetColor(const u_int vertIndex) const { return cols[vertIndex]; }
 	float GetAlpha(const u_int vertIndex) const { return alphas[vertIndex]; }
 
-	bool GetTriBaryCoords(const u_int index, const Point &hitPoint, float *b1, float *b2) const {
-		const Triangle &tri = tris[index];
+	bool GetTriBaryCoords(const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
+		const Triangle &tri = tris[triIndex];
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
 	
-	Normal InterpolateTriNormal(const u_int index, const float b1, const float b2) const {
+	Normal InterpolateTriNormal(const u_int triIndex, const float b1, const float b2) const {
 		if (!normals)
-			return GetGeometryNormal(index);
-		const Triangle &tri = tris[index];
+			return GetGeometryNormal(triIndex);
+		const Triangle &tri = tris[triIndex];
 		const float b0 = 1.f - b1 - b2;
 		return Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
 	}
 
-	UV InterpolateTriUV(const u_int index, const float b1, const float b2) const {
+	UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const {
 		if (uvs) {
-			const Triangle &tri = tris[index];
+			const Triangle &tri = tris[triIndex];
 			const float b0 = 1.f - b1 - b2;
 			return b0 * uvs[tri.v[0]] + b1 * uvs[tri.v[1]] + b2 * uvs[tri.v[2]];
 		} else
 			return UV(0.f, 0.f);
 	}
 
-	Spectrum InterpolateTriColor(const u_int index, const float b1, const float b2) const {
+	Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const {
 		if (cols) {
-			const Triangle &tri = tris[index];
+			const Triangle &tri = tris[triIndex];
 			const float b0 = 1.f - b1 - b2;
 			return b0 * cols[tri.v[0]] + b1 * cols[tri.v[1]] + b2 * cols[tri.v[2]];
 		} else
 			return Spectrum(1.f);
 	}
 
-	float InterpolateTriAlpha(const u_int index, const float b1, const float b2) const {
+	float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const {
 		if (alphas) {
-			const Triangle &tri = tris[index];
+			const Triangle &tri = tris[triIndex];
 			const float b0 = 1.f - b1 - b2;
 			return b0 * alphas[tri.v[0]] + b1 * alphas[tri.v[1]] + b2 * alphas[tri.v[2]];
 		} else
 			return 1.f;
 	}
 
-	void Sample(const u_int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
-		const Triangle &tri = tris[index];
+	void Sample(const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
+		const Triangle &tri = tris[triIndex];
 		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
 	}
 
@@ -224,34 +226,34 @@ public:
 	Normal GetShadeNormal(const u_int triIndex, const u_int vertIndex) const {
 		return Normalize(trans * mesh->GetShadeNormal(triIndex, vertIndex));
 	}
-	UV GetUV(const unsigned index) const { return mesh->GetUV(index); }
-	Spectrum GetColor(const unsigned index) const { return mesh->GetColor(index); }
-	float GetAlpha(const unsigned index) const { return mesh->GetAlpha(index); }
+	UV GetUV(const unsigned vertIndex) const { return mesh->GetUV(vertIndex); }
+	Spectrum GetColor(const unsigned vertIndex) const { return mesh->GetColor(vertIndex); }
+	float GetAlpha(const unsigned vertIndex) const { return mesh->GetAlpha(vertIndex); }
 
-	bool GetTriBaryCoords(const u_int index, const Point &hitPoint, float *b1, float *b2) const {
-		const Triangle &tri = mesh->GetTriangles()[index];
+	bool GetTriBaryCoords(const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
+		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
 		return Triangle::GetBaryCoords(GetVertex(tri.v[0]), GetVertex(tri.v[1]), GetVertex(tri.v[2]), hitPoint, b1, b2);
 	}
 
-	Normal InterpolateTriNormal(const u_int index, const float b1, const float b2) const {
-		return Normalize(trans * mesh->InterpolateTriNormal(index, b1, b2));
+	Normal InterpolateTriNormal(const u_int triIndex, const float b1, const float b2) const {
+		return Normalize(trans * mesh->InterpolateTriNormal(triIndex, b1, b2));
 	}
 
-	UV InterpolateTriUV(const u_int index, const float b1, const float b2) const {
-		return mesh->InterpolateTriUV(index, b1, b2);
+	UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const {
+		return mesh->InterpolateTriUV(triIndex, b1, b2);
 	}
 	
-	Spectrum InterpolateTriColor(const u_int index, const float b1, const float b2) const {
-		return mesh->InterpolateTriColor(index, b1, b2);
+	Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const {
+		return mesh->InterpolateTriColor(triIndex, b1, b2);
 	}
 	
-	float InterpolateTriAlpha(const u_int index, const float b1, const float b2) const {
-		return mesh->InterpolateTriAlpha(index, b1, b2);
+	float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const {
+		return mesh->InterpolateTriAlpha(triIndex, b1, b2);
 	}
 
-	void Sample(const u_int index, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
-		mesh->Sample(index, u0, u1, p , b0, b1, b2);
+	void Sample(const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
+		mesh->Sample(triIndex, u0, u1, p , b0, b1, b2);
 		*p *= trans;
 	}
 

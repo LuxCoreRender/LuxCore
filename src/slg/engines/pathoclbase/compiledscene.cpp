@@ -312,7 +312,7 @@ void CompiledScene::CompileMaterials() {
 				(m->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
 		// Material normal mapping
-		const Texture *normalTex = m->GetNormalTexture();
+		const Texture *normalTex = NULL;
 		if (normalTex) {
 			mat->normalTexIndex = scene->texDefs.GetTextureIndex(normalTex);
 			useNormalMapping = true;
@@ -945,8 +945,8 @@ void CompiledScene::CompileTextures() {
 				const ImageMap *im = imt->GetImageMap();
 				tex->imageMapTex.gain = imt->GetGain();
 				CompileTextureMapping2D(&tex->imageMapTex.mapping, imt->GetTextureMapping());
-				tex->imageMapTex.Du = imt->GetDuDv().u;
-				tex->imageMapTex.Dv = imt->GetDuDv().v;
+//				tex->imageMapTex.Du = imt->GetDuDv().u;
+//				tex->imageMapTex.Dv = imt->GetDuDv().v;
 				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
 				break;
 			}

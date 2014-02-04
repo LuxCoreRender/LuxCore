@@ -55,38 +55,28 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	// Interpolate UV coordinates
 	hitPoint.uv = mesh->InterpolateTriUV(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 
-	// Check if I have to apply normal mapping
-	if (material->HasNormalTex()) {
-		// Apply normal mapping
-		const Spectrum color = material->GetNormalTexValue(hitPoint);
+    // Compute geometry differentials
+    Vector geometryDpdu, geometryDpdv;
+    Normal geometryDndu, geometryDndv;
+    const bool hasDPDUV = mesh->GetDifferentials(rayHit.triangleIndex,
+            &geometryDpdu, &geometryDpdv,
+            &geometryDndu, &geometryDndv);
 
-		const float x = 2.f * color.c[0] - 1.f;
-		const float y = 2.f * color.c[1] - 1.f;
-		const float z = 2.f * color.c[2] - 1.f;
+    if (hasDPDUV) {
+        // Initialize shading differential
+        Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, geometryDpdu));
+		Vector shadeDpdu = Cross(shadeDpdv, hitPoint.shadeN);
+		shadeDpdv *= (Dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
 
-		Vector v1, v2;
-		CoordinateSystem(Vector(hitPoint.shadeN), &v1, &v2);
-		hitPoint.shadeN = Normalize(Normal(
-				v1.x * x + v2.x * y + hitPoint.shadeN.x * z,
-				v1.y * x + v2.y * y + hitPoint.shadeN.y * z,
-				v1.z * x + v2.z * y + hitPoint.shadeN.z * z));
-	}
+        // Apply bump or normal mapping
+        material->Bump(&hitPoint, shadeDpdu, shadeDpdv, geometryDndu, geometryDndu, 1.f);
 
-	// Check if I have to apply bump mapping
-	if (material->HasBumpTex()) {
-		// Apply bump mapping
-		const UV uv = material->GetBumpTexValue(hitPoint);
-
-		Vector v1, v2;
-		CoordinateSystem(Vector(hitPoint.shadeN), &v1, &v2);
-		hitPoint.shadeN = Normalize(Normal(
-				v1.x * uv.u + v2.x * uv.v + hitPoint.shadeN.x,
-				v1.y * uv.u + v2.y * uv.v + hitPoint.shadeN.y,
-				v1.z * uv.u + v2.z * uv.v + hitPoint.shadeN.z));
-	}
-
-    // Build the local reference system
-    mesh->GetTriangleFrame(rayHit.triangleIndex, hitPoint.shadeN, frame);
+        // Build the local reference system
+        mesh->GetFrame(hitPoint.shadeN, geometryDpdu, geometryDpdv, frame);
+    } else {
+        // Build the local reference system
+        frame.SetFromZ(hitPoint.shadeN);
+    }
 }
 
 Spectrum BSDF::Evaluate(const Vector &generatedDir,

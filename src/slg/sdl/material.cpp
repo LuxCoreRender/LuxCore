@@ -48,39 +48,23 @@ Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneO
 		return luxrays::Spectrum();
 }
 
-UV Material::GetBumpTexValue(const HitPoint &hitPoint) const {
-	if (bumpTex) {
-		const luxrays::UV &dudv = bumpTex->GetDuDv();
+void Material::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,
+        const Normal &dndu, const Normal &dndv, const float weight) const {
+    if (bumpTex && (weight > 0.f)) {
+        const UV duv = weight * bumpTex->GetDuv(*hitPoint, dpdu, dpdv, dndu, dndv,
+                bumpSampleDistance);
 
-		const float b0 = bumpTex->GetFloatValue(hitPoint);
+        const Vector bumpDpdu = dpdu + duv.u * Vector(hitPoint->shadeN);
+        const Vector bumpDpdv = dpdv + duv.v * Vector(hitPoint->shadeN);
 
-		float dbdu;
-		if (dudv.u > 0.f) {
-			// This is a simple trick. The correct code would require true differential information.
-			HitPoint tmpHitPoint = hitPoint;
-			tmpHitPoint.p.x += dudv.u;
-			tmpHitPoint.uv.u += dudv.u;
-			const float bu = bumpTex->GetFloatValue(tmpHitPoint);
+        const Normal oldShadeN = hitPoint->shadeN;
+        hitPoint->shadeN = Normal(Normalize(Cross(bumpDpdu, bumpDpdv)));
 
-			dbdu = (bu - b0) / dudv.u;
-		} else
-			dbdu = 0.f;
-
-		float dbdv;
-		if (dudv.v > 0.f) {
-			// This is a simple trick. The correct code would require true differential information.
-			HitPoint tmpHitPoint = hitPoint;
-			tmpHitPoint.p.y += dudv.v;
-			tmpHitPoint.uv.v += dudv.v;
-			const float bv = bumpTex->GetFloatValue(tmpHitPoint);
-
-			dbdv = (bv - b0) / dudv.v;
-		} else
-			dbdv = 0.f;
-
-		return luxrays::UV(dbdu, dbdv);
-	} else
-		return luxrays::UV();
+        // The above transform keeps the normal in the original normal
+        // hemisphere. If they are opposed, it means UVN was indirect and
+        // the normal needs to be reversed
+        hitPoint->shadeN *= (Dot(oldShadeN, hitPoint->shadeN) < 0.f) ? -1.f : 1.f;
+    }
 }
 
 Properties Material::ToProperties() const {
@@ -95,8 +79,6 @@ Properties Material::ToProperties() const {
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
 	if (bumpTex)
 		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetName()));
-	if (normalTex)
-		props.Set(Property("scene.materials." + name + ".normaltex")(normalTex->GetName()));
 
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
@@ -661,32 +643,22 @@ Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float o
 	return result;
 }
 
-UV MixMaterial::GetBumpTexValue(const HitPoint &hitPoint) const {
-	UV result;
+void MixMaterial::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,
+        const Normal &dndu, const Normal &dndv, const float weight) const {
+    if (weight == 0.f)
+        return;
 
-	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
-	const float weight1 = 1.f - weight2;
+    if (bumpTex) {
+        // Use this mix node bump mapping
+        Material::Bump(hitPoint, dpdu, dpdv, dndu, dndv, weight);
+    } else {
+        // Mix the child bump mapping
+        const float weight2 = Clamp(mixFactor->GetFloatValue(*hitPoint), 0.f, 1.f);
+        const float weight1 = 1.f - weight2;
 
-	if (matA->HasBumpTex() && (weight1 > 0.f))
-		result += weight1 * matA->GetBumpTexValue(hitPoint);
-	if (matB->HasBumpTex() && (weight2 > 0.f))
-		result += weight2 * matB->GetBumpTexValue(hitPoint);
-
-	return result;	
-}
-
-Spectrum MixMaterial::GetNormalTexValue(const HitPoint &hitPoint) const {
-	Spectrum result;
-
-	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
-	const float weight1 = 1.f - weight2;
-
-	if (matA->HasNormalTex() && (weight1 > 0.f))
-		result += weight1 * matA->GetNormalTexValue(hitPoint);
-	if (matB->HasNormalTex() && (weight2 > 0.f))
-		result += weight2 * matB->GetNormalTexValue(hitPoint);
-
-	return result;
+        matA->Bump(hitPoint, dpdu, dpdv, dndu, dndv, weight * weight1);
+        matB->Bump(hitPoint, dpdu, dpdv, dndu, dndv, weight * weight2);
+    }
 }
 
 Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
