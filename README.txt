@@ -6,16 +6,16 @@ process by using GPUs. You can find more information about the ongoing effort of
 integrating OpenCL support in LuxRender at http://www.luxrender.net/wiki/index.php?title=Luxrender_and_OpenCL
 and at http://www.luxrender.net/wiki/index.php?title=LuxRays
 
-SLG (SmallLuxGPU)
-=================
-
-SmallLuxGPU is a LuxRays demo and was a LuxRender v0.8 "proof of concept". You can find
-more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
-
 LuxCore
 =======
 
 LuxCore is the new LuxRender C++ and Python API.
+
+SLG (SmallLuxGPU)
+=================
+
+SmallLuxGPU is a LuxCore/LuxRays demo and was a LuxRender v0.8 "proof of concept". You can find
+more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
 
 Authors
 =======

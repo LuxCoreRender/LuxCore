@@ -818,38 +818,47 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
 		GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : NULL;
-	Texture *normalTex =props.IsDefined(propName + ".normaltex") ? 
-		GetTexture(props.Get(Property(propName + ".normaltex")(1.f))) : NULL;
+    if (!bumpTex) {
+        Texture *normalTex =props.IsDefined(propName + ".normaltex") ? 
+            GetTexture(props.Get(Property(propName + ".normaltex")(1.f))) : NULL;
+
+        if (normalTex) {
+            bumpTex = new NormalMapTexture(normalTex);
+            texDefs.DefineTexture("Implicit-NormalMapTexture-" + boost::lexical_cast<string>(bumpTex), bumpTex);
+        }
+    }
+
+    const float bumpSampleDistance = props.Get(Property(propName + ".bumpsamplingdistance")(.001f)).Get<float>();
 
 	Material *mat;
 	if (matType == "matte") {
 		Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.75f, .75f, .75f)));
 
-		mat = new MatteMaterial(emissionTex, bumpTex, normalTex, kd);
+		mat = new MatteMaterial(emissionTex, bumpTex, kd);
 	} else if (matType == "mirror") {
 		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 
-		mat = new MirrorMaterial(emissionTex, bumpTex, normalTex, kr);
+		mat = new MirrorMaterial(emissionTex, bumpTex, kr);
 	} else if (matType == "glass") {
 		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
 		Texture *ioroutside = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
 		Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
 
-		mat = new GlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
+		mat = new GlassMaterial(emissionTex, bumpTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "archglass") {
 		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
 		Texture *ioroutside = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
 		Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.f)));
 
-		mat = new ArchGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside);
+		mat = new ArchGlassMaterial(emissionTex, bumpTex, kr, kt, ioroutside, iorinside);
 	} else if (matType == "mix") {
 		Material *matA = matDefs.GetMaterial(props.Get(Property(propName + ".material1")("mat1")).Get<string>());
 		Material *matB = matDefs.GetMaterial(props.Get(Property(propName + ".material2")("mat2")).Get<string>());
 		Texture *mix = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
-		MixMaterial *mixMat = new MixMaterial(bumpTex, normalTex, matA, matB, mix);
+		MixMaterial *mixMat = new MixMaterial(bumpTex, matA, matB, mix);
 
 		// Check if there is a loop in Mix material definition
 		// (Note: this can not really happen at the moment because forward
@@ -864,7 +873,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(.5f, .5f, .5f)));
 		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(.5f, .5f, .5f)));
 
-		mat = new MatteTranslucentMaterial(emissionTex, bumpTex, normalTex, kr, kt);
+		mat = new MatteTranslucentMaterial(emissionTex, bumpTex, kr, kt);
 	} else if (matType == "glossy2") {
 		Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
 		Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));
@@ -875,7 +884,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f, 0.f, 0.f)));
 		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
 
-		mat = new Glossy2Material(emissionTex, bumpTex, normalTex, kd, ks, nu, nv, ka, d, index, multibounce);
+		mat = new Glossy2Material(emissionTex, bumpTex, kd, ks, nu, nv, ka, d, index, multibounce);
 	} else if (matType == "metal2") {
 		Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
@@ -906,7 +915,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			k = GetTexture(props.Get(Property(propName + ".k")(.5f, .5f, .5f)));
 		}
 
-		mat = new Metal2Material(emissionTex, bumpTex, normalTex, eta, k, nu, nv);
+		mat = new Metal2Material(emissionTex, bumpTex, eta, k, nu, nv);
 	} else if (matType == "roughglass") {
 		Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
@@ -915,7 +924,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
 
-		mat = new RoughGlassMaterial(emissionTex, bumpTex, normalTex, kr, kt, ioroutside, iorinside, nu, nv);
+		mat = new RoughGlassMaterial(emissionTex, bumpTex, kr, kt, ioroutside, iorinside, nu, nv);
 	} else if (matType == "velvet") {
 		Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
 		Texture *p1 = GetTexture(props.Get(Property(propName + ".p1")(-2.0f)));
@@ -923,7 +932,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Texture *p3 = GetTexture(props.Get(Property(propName + ".p3")(2.0f)));
 		Texture *thickness = GetTexture(props.Get(Property(propName + ".thickness")(0.1f)));
 
-		mat = new VelvetMaterial(emissionTex, bumpTex, normalTex, kd, p1, p2, p3, thickness);
+		mat = new VelvetMaterial(emissionTex, bumpTex, kd, p1, p2, p3, thickness);
 	} else if (matType == "cloth") {
 		ClothPreset preset = DENIM;
 		
@@ -950,10 +959,12 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		float repeat_u = props.Get(Property(propName + ".repeat_u")(100.0f)).Get<float>();
 		float repeat_v = props.Get(Property(propName + ".repeat_v")(100.0f)).Get<float>();
 
-		mat = new ClothMaterial(emissionTex, bumpTex, normalTex, preset, weft_kd, weft_ks, warp_kd, warp_ks, repeat_u, repeat_v);
+		mat = new ClothMaterial(emissionTex, bumpTex, preset, weft_kd, weft_ks, warp_kd, warp_ks, repeat_u, repeat_v);
 	} else if (matType == "carpaint") {
 		Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
 		Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
+
+        mat = NULL; // To remove a GCC warning
 		string preset = props.Get(Property(propName + ".preset")("")).Get<string>();
 		if (preset != "") {
 			const int numPaints = CarpaintMaterial::NbPresets();
@@ -962,6 +973,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 				if (preset == CarpaintMaterial::data[i].name)
 					break;
 			}
+
 			if (i == numPaints)
 				preset = "";
 			else {
@@ -975,9 +987,10 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 				Texture *m1 = GetTexture(Property("Implicit-" + preset + "-m1")(CarpaintMaterial::data[i].m1));
 				Texture *m2 = GetTexture(Property("Implicit-" + preset + "-m2")(CarpaintMaterial::data[i].m2));
 				Texture *m3 = GetTexture(Property("Implicit-" + preset + "-m3")(CarpaintMaterial::data[i].m3));
-				mat = new CarpaintMaterial(emissionTex, bumpTex, normalTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
+				mat = new CarpaintMaterial(emissionTex, bumpTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
 			}
 		}
+
 		// preset can be reset above if the name is not found
 		if (preset == "") {
 			Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(CarpaintMaterial::data[0].kd[0], CarpaintMaterial::data[0].kd[1], CarpaintMaterial::data[0].kd[2])));
@@ -990,13 +1003,14 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			Texture *m1 = GetTexture(props.Get(Property(propName + ".m1")(CarpaintMaterial::data[0].m1)));
 			Texture *m2 = GetTexture(props.Get(Property(propName + ".m2")(CarpaintMaterial::data[0].m2)));
 			Texture *m3 = GetTexture(props.Get(Property(propName + ".m3")(CarpaintMaterial::data[0].m3)));
-			mat = new CarpaintMaterial(emissionTex, bumpTex, normalTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
+			mat = new CarpaintMaterial(emissionTex, bumpTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
 		}
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
 	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
+    mat->SetBumpSampleDistance(bumpSampleDistance);
 
 	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));

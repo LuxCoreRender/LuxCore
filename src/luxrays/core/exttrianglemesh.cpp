@@ -28,22 +28,18 @@
 
 using namespace luxrays;
 
-void ExtMesh::GetTriangleFrame(const u_int index, const Normal &normal,
-        Frame &frame) const {
-    // Build the local reference system
-
+bool ExtMesh::GetDifferentials(const u_int triIndex,
+        Vector *dpdu, Vector *dpdv,
+        Normal *dndu, Normal *dndv) const {
     // Compute triangle partial derivatives
-    const Triangle &tri = GetTriangles()[index];
+    const Triangle &tri = GetTriangles()[triIndex];
     UV uv0, uv1, uv2;
     if (HasUVs()) {
         uv0 = GetUV(tri.v[0]);
         uv1 = GetUV(tri.v[1]);
         uv2 = GetUV(tri.v[2]);
-    } else {
-        uv0 = UV(.5f, .5f);
-        uv1 = UV(.5f, .5f);
-        uv2 = UV(.5f, .5f);
-    }
+    } else
+        return false;
 
     // Compute deltas for triangle partial derivatives
 	const float du1 = uv0.u - uv2.u;
@@ -51,10 +47,11 @@ void ExtMesh::GetTriangleFrame(const u_int index, const Normal &normal,
 	const float dv1 = uv0.v - uv2.v;
 	const float dv2 = uv1.v - uv2.v;
 	const float determinant = du1 * dv2 - dv1 * du2;
-	if (determinant == 0.f) {
-		// Handle 0 determinant for triangle partial derivative matrix
-        frame.SetFromZ(normal);
-	} else {
+	if (determinant == 0.f)
+        return false;
+	else {
+		const float invdet = 1.f / determinant;
+
         // Using GetVertex() in order to do all computation relative to
         // the global coordinate system.
         const Point p0 = GetVertex(tri.v[0]);
@@ -63,16 +60,38 @@ void ExtMesh::GetTriangleFrame(const u_int index, const Normal &normal,
 
         const Vector dp1 = p0 - p2;
         const Vector dp2 = p1 - p2;
-		const float invdet = 1.f / determinant;
-		const Vector dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		const Vector dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
+		*dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		*dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-        Vector ts = Normalize(Cross(normal, dpdu));
-		Vector ss = Cross(ts, normal);
-		ts *= (Dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
+        if (HasNormals()) {
+            // Using GetNormal() in order to do all computation relative to
+            // the global coordinate system.
+            const Normal n0 = GetShadeNormal(tri.v[0]);
+            const Normal n1 = GetShadeNormal(tri.v[1]);
+            const Normal n2 = GetShadeNormal(tri.v[2]);
 
-        frame = Frame(ss, ts, Vector(normal));
+            const Normal dn1 = n0 - n2;
+            const Normal dn2 = n1 - n2;
+            *dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
+            *dndv = (-du2 * dn1 + du1 * dn2) * invdet;
+        } else {
+            *dndu = Normal();
+            *dndv = Normal();
+        }
+
+        return true;
 	}
+}
+
+void ExtMesh::GetFrame(const Normal &normal, const Vector &dpdu, const Vector &dpdv,
+        Frame &frame) const {
+    // Build the local reference system
+
+    Vector ts = Normalize(Cross(normal, dpdu));
+    Vector ss = Cross(ts, normal);
+    ts *= (Dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
+
+    frame = Frame(ss, ts, Vector(normal));
 }
 
 // rply vertex callback

@@ -17,18 +17,19 @@ scene.textures.checktex.texture2 = 0.0
 scene.textures.checktex.mapping.uvscale =  5 5
 ################################################################################
 scene.materials.mat_light.type = matte
-scene.materials.mat_light.emission = 16. 16. 16.
+scene.materials.mat_light.emission = 20. 20. 20.
 scene.materials.mat_light.kd = 0.0 0.0 0.0
 scene.materials.mat_red.type = matte
 scene.materials.mat_red.kd = 0.8 0.0 0.0
 scene.materials.mat_red.bumptex = scaled_bumpmap
 scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.8 0.8 0.8
-scene.materials.mat_white.normaltex = normalmap
+#scene.materials.mat_white.normaltex = normalmap
 scene.materials.mat_mix.type = mix
 scene.materials.mat_mix.material1 = mat_red
 scene.materials.mat_mix.material2 = mat_white
 scene.materials.mat_mix.amount = checktex
+#scene.materials.mat_mix.bumptex = scaled_bumpmap
 ################################################################################
 scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light

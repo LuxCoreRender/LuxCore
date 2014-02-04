@@ -29,6 +29,44 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// Texture
+//------------------------------------------------------------------------------
+
+// The generic implementation
+UV Texture::GetDuv(const HitPoint &hitPoint,
+        const Vector &dpdu, const Vector &dpdv,
+        const Normal &dndu, const Normal &dndv,
+        const float sampleDistance) const {
+    // Calculate bump map value at intersection point
+    const float base = GetFloatValue(hitPoint);
+
+    // Compute offset positions and evaluate displacement texture
+    const Point origP = hitPoint.p;
+    const Normal origN = hitPoint.shadeN;
+    const float origU = hitPoint.uv.u;
+
+    UV duv;
+    HitPoint hitPointTmp = hitPoint;
+
+    // Shift hitPointTmp.du in the u direction and calculate value
+    const float uu = sampleDistance / dpdu.Length();
+    hitPointTmp.p += uu * dpdu;
+    hitPointTmp.uv.u += uu;
+    hitPointTmp.shadeN = Normalize(origN + uu * dndu);
+    duv.u = (GetFloatValue(hitPointTmp) - base) / uu;
+
+    // Shift _hitPointTmp_ _dv_ in the $v$ direction and calculate value
+    const float vv = sampleDistance / dpdv.Length();
+    hitPointTmp.p = origP + vv * dpdv;
+    hitPointTmp.uv.u = origU;
+    hitPointTmp.uv.v += vv;
+    hitPointTmp.shadeN = Normalize(origN + vv * dndv);
+    duv.v = (GetFloatValue(hitPointTmp) - base) / vv;
+
+    return duv;
+}
+
+//------------------------------------------------------------------------------
 // Texture utility functions
 //------------------------------------------------------------------------------
 
@@ -78,7 +116,7 @@ static float NoiseWeight(float t) {
 	return 6.f * t4 * t - 15.f * t4 + 10.f * t3;
 }
 
-float Noise(float x, float y = .5f, float z = .5f) {
+float slg::Noise(float x, float y, float z) {
 	// Compute noise cell coordinates and offsets
 	int ix = Floor2Int(x);
 	int iy = Floor2Int(y);
@@ -107,10 +145,6 @@ float Noise(float x, float y = .5f, float z = .5f) {
 	const float y0 = Lerp(wy, x00, x10);
 	const float y1 = Lerp(wy, x01, x11);
 	return Lerp(wz, y0, y1);
-}
-
-float Noise(const Point &P) {
-	return Noise(P.x, P.y, P.z);
 }
 
 static float FBm(const Point &P, const float omega, const int maxOctaves) {
@@ -837,13 +871,6 @@ Spectrum ScaleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return tex1->GetSpectrumValue(hitPoint) * tex2->GetSpectrumValue(hitPoint);
 }
 
-UV ScaleTexture::GetDuDv() const {
-	const UV uv1 = tex1->GetDuDv();
-	const UV uv2 = tex2->GetDuDv();
-
-	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
-}
-
 Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
@@ -899,10 +926,6 @@ float FresnelApproxNTexture::Y() const {
 	return FresnelApproxN(tex->Y());
 }
 
-UV FresnelApproxNTexture::GetDuDv() const {
-	return tex->GetDuDv();
-}
-
 float FresnelApproxKTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return FresnelApproxK(tex->GetFloatValue(hitPoint));
 }
@@ -913,10 +936,6 @@ Spectrum FresnelApproxKTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 
 float FresnelApproxKTexture::Y() const {
 	return FresnelApproxK(tex->Y());
-}
-
-UV FresnelApproxKTexture::GetDuDv() const {
-	return tex->GetDuDv();
 }
 
 Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -959,13 +978,6 @@ Spectrum CheckerBoard2DTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 		return tex2->GetSpectrumValue(hitPoint);
 }
 
-UV CheckerBoard2DTexture::GetDuDv() const {
-	const UV uv1 = tex1->GetDuDv();
-	const UV uv2 = tex2->GetDuDv();
-
-	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
-}
-
 Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
@@ -992,13 +1004,6 @@ Spectrum CheckerBoard3DTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 		return tex1->GetSpectrumValue(hitPoint);
 	else
 		return tex2->GetSpectrumValue(hitPoint);
-}
-
-UV CheckerBoard3DTexture::GetDuDv() const {
-	const UV uv1 = tex1->GetDuDv();
-	const UV uv2 = tex2->GetDuDv();
-
-	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
 }
 
 Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -1036,14 +1041,6 @@ Spectrum MixTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Lerp(amt, value1, value2);
 }
 
-UV MixTexture::GetDuDv() const {
-	const UV uv1 = amount->GetDuDv();
-	const UV uv2 = tex1->GetDuDv();
-	const UV uv3 = tex2->GetDuDv();
-
-	return UV(Max(Max(uv1.u, uv2.u), uv3.u), Max(Max(uv1.v, uv2.v), uv3.v));
-}
-
 Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
@@ -1069,10 +1066,6 @@ float FBMTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
 Spectrum FBMTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
-}
-
-UV FBMTexture::GetDuDv() const {
-	return UV(DUDV_VALUE, DUDV_VALUE);
 }
 
 Properties FBMTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -1142,10 +1135,6 @@ float MarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return GetSpectrumValue(hitPoint).Y();
 }
 
-UV MarbleTexture::GetDuDv() const {
-	return UV(DUDV_VALUE, DUDV_VALUE);
-}
-
 Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
@@ -1204,13 +1193,6 @@ Spectrum DotsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	}
 
 	return outsideTex->GetSpectrumValue(hitPoint);
-}
-
-UV DotsTexture::GetDuDv() const {
-	const UV uv1 = insideTex->GetDuDv();
-	const UV uv2 = outsideTex->GetDuDv();
-
-	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
 }
 
 Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -1412,15 +1394,6 @@ Spectrum BrickTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 #undef BRICK_EPSILON
 }
 
-
-UV BrickTexture::GetDuDv() const {
-	const UV uv1 = tex1->GetDuDv();
-	const UV uv2 = tex2->GetDuDv();
-	const UV uv3 = tex3->GetDuDv();
-
-	return UV(Max(Max(uv1.u, uv2.u), uv3.u), Max(Max(uv1.v, uv2.v), uv3.v));
-}
-
 Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
@@ -1477,13 +1450,6 @@ Spectrum AddTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return tex1->GetSpectrumValue(hitPoint) + tex2->GetSpectrumValue(hitPoint);
 }
 
-UV AddTexture::GetDuDv() const {
-	const UV uv1 = tex1->GetDuDv();
-	const UV uv2 = tex2->GetDuDv();
-
-	return UV(Max(uv1.u, uv2.u), Max(uv1.v, uv2.v));
-}
-
 Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
@@ -1511,10 +1477,6 @@ Spectrum WindyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-UV WindyTexture::GetDuDv() const {
-	return UV(DUDV_VALUE, DUDV_VALUE);
-}
-
 Properties WindyTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
@@ -1535,10 +1497,6 @@ float WrinkledTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
 Spectrum WrinkledTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
-}
-
-UV WrinkledTexture::GetDuDv() const {
-	return UV(DUDV_VALUE, DUDV_VALUE);
 }
 
 Properties WrinkledTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -1565,10 +1523,6 @@ Spectrum UVTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const UV uv = mapping->Map(hitPoint);
 	
 	return Spectrum(uv.u - Floor2Int(uv.u), uv.v - Floor2Int(uv.v), 0.f);
-}
-
-UV UVTexture::GetDuDv() const {
-	return UV(DUDV_VALUE, DUDV_VALUE);
 }
 
 Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -1606,10 +1560,6 @@ Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 
 	return Lerp((a - offsets[p - 1]) / (offsets[p] - offsets[p - 1]),
 			values[p - 1], values[p]);
-}
-
-UV BandTexture::GetDuDv() const {
-	return amount->GetDuDv();
 }
 
 Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -1767,11 +1717,6 @@ Spectrum WoodTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-
-UV WoodTexture::GetDuDv() const {
-	return UV(DUDV_VALUE, DUDV_VALUE);
-}
-
 Properties WoodTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
@@ -1818,6 +1763,75 @@ Properties WoodTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property("scene.textures." + name + ".bright")(bright));
 	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// NormalMap textures
+//------------------------------------------------------------------------------
+
+luxrays::UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
+        const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
+        const luxrays::Normal &dndu, const luxrays::Normal &dndv,
+        const float sampleDistance) const {
+    Spectrum rgb = tex->GetSpectrumValue(hitPoint);
+    rgb.Clamp(-1.f, 1.f);
+
+	// Normal from normal map
+	Vector n(rgb.c[0], rgb.c[1], rgb.c[2]);
+	n = 2.f * n - Vector(1.f, 1.f, 1.f);
+
+	const Vector k = Vector(hitPoint.shadeN);
+
+	// Transform n from tangent to object space
+	const Vector &t1 = dpdu;
+	const Vector &t2 = dpdv;
+    const float btsign = (Dot(dpdv, hitPoint.shadeN) > 0.f ? 1.f : -1.f);
+
+	// Magnitude of btsign is the magnitude of the interpolated normal
+	const Vector kk = k * fabsf(btsign);
+
+	// tangent -> object
+	n = Normalize(n.x * t1 + n.y * btsign * t2 + n.z * kk);	
+
+	// Since n is stored normalized in the normal map
+	// we need to recover the original length (lambda).
+	// We do this by solving 
+	//   lambda*n = dp/du x dp/dv
+	// where 
+	//   p(u,v) = base(u,v) + h(u,v) * k
+	// and
+	//   k = dbase/du x dbase/dv
+	//
+	// We recover lambda by dotting the above with k
+	//   k . lambda*n = k . (dp/du x dp/dv)
+	//   lambda = (k . k) / (k . n)
+	// 
+	// We then recover dh/du by dotting the first eq by dp/du
+	//   dp/du . lambda*n = dp/du . (dp/du x dp/dv)
+	//   dp/du . lambda*n = dh/du * [dbase/du . (k x dbase/dv)]
+	//
+	// The term "dbase/du . (k x dbase/dv)" reduces to "-(k . k)", so we get
+	//   dp/du . lambda*n = dh/du * -(k . k)
+	//   dp/du . [(k . k) / (k . n)*n] = dh/du * -(k . k)
+	//   dp/du . [-n / (k . n)] = dh/du
+	// and similar for dh/dv
+	// 
+	// Since the recovered dh/du will be in units of ||k||, we must divide
+	// by ||k|| to get normalized results. Using dg.nn as k in the last eq 
+	// yields the same result.
+	const Vector nn = (-1.f / Dot(k, n)) * n;
+
+	return UV(Dot(dpdu, nn), Dot(dpdv, nn));
+}
+
+Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("normalmap"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
 
 	return props;
 }
