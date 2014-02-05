@@ -42,7 +42,7 @@ UV Texture::GetDuv(const HitPoint &hitPoint,
 
     // Compute offset positions and evaluate displacement texture
     const Point origP = hitPoint.p;
-    const Normal origN = hitPoint.shadeN;
+    const Normal origShadeN = hitPoint.shadeN;
     const float origU = hitPoint.uv.u;
 
     UV duv;
@@ -52,15 +52,15 @@ UV Texture::GetDuv(const HitPoint &hitPoint,
     const float uu = sampleDistance / dpdu.Length();
     hitPointTmp.p += uu * dpdu;
     hitPointTmp.uv.u += uu;
-    hitPointTmp.shadeN = Normalize(origN + uu * dndu);
+    hitPointTmp.shadeN = Normalize(origShadeN + uu * dndu);
     duv.u = (GetFloatValue(hitPointTmp) - base) / uu;
 
-    // Shift _hitPointTmp_ _dv_ in the $v$ direction and calculate value
+    // Shift hitPointTmp.dv in the v direction and calculate value
     const float vv = sampleDistance / dpdv.Length();
     hitPointTmp.p = origP + vv * dpdv;
     hitPointTmp.uv.u = origU;
     hitPointTmp.uv.v += vv;
-    hitPointTmp.shadeN = Normalize(origN + vv * dndv);
+    hitPointTmp.shadeN = Normalize(origShadeN + vv * dndv);
     duv.v = (GetFloatValue(hitPointTmp) - base) / vv;
 
     return duv;
@@ -829,12 +829,6 @@ Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) co
 
 ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping2D *mp, const float g) :
 	imgMap(im), mapping(mp), gain(g) {
-	const UV o = mapping->Map(UV(0.f, 0.f));
-	const UV i = mapping->Map(UV(imgMap->GetWidth(), imgMap->GetHeight()));
-	const UV io = i - o;
-
-	DuDv.u = 1.f / io.u;
-	DuDv.v = 1.f / io.v;
 }
 
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -1787,7 +1781,7 @@ luxrays::UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
 	// Transform n from tangent to object space
 	const Vector &t1 = dpdu;
 	const Vector &t2 = dpdv;
-    const float btsign = (Dot(dpdv, hitPoint.shadeN) > 0.f ? 1.f : -1.f);
+    const float btsign = (Dot(dpdv, hitPoint.shadeN) > 0.f) ? 1.f : -1.f;
 
 	// Magnitude of btsign is the magnitude of the interpolated normal
 	const Vector kk = k * fabsf(btsign);

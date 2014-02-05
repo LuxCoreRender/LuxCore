@@ -613,7 +613,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_PASSTHROUGH)
 					, task->pathStateBase.bsdf.hitPoint.passThroughEvent
 #endif
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+#if defined(PARAM_HAS_BUMPMAPS)
 					MATERIALS_PARAM
 #endif
 					);
@@ -805,7 +805,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 					triangles, ray, rayHit,
 					task->passThroughState.passThroughEvent
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+#if defined(PARAM_HAS_BUMPMAPS)
 					MATERIALS_PARAM
 #endif
 					);

@@ -699,6 +699,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_HITPOINTALPHA";
 	if (cscene->IsTextureCompiled(HITPOINTGREY))
 		ss << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
+	if (cscene->IsTextureCompiled(NORMALMAP_TEX))
+		ss << " -D PARAM_ENABLE_TEX_NORMALMAP";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -800,8 +802,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	if (renderEngine->compiledScene->useBumpMapping)
 		ss << " -D PARAM_HAS_BUMPMAPS";
-	if (renderEngine->compiledScene->useNormalMapping)
-		ss << " -D PARAM_HAS_NORMALMAPS";
 
 	// Some information about our place in the universe...
 	ss << " -D PARAM_DEVICE_INDEX=" << threadIndex;

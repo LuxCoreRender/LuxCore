@@ -57,7 +57,7 @@ void BSDF_Init(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float u0
 #endif
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+#if defined(PARAM_HAS_BUMPMAPS)
 		MATERIALS_PARAM_DECL
 #endif
 		) {
@@ -114,7 +114,7 @@ void BSDF_Init(
 	} else
 #endif
 		shadeN = geometryN;
-	// Shade normal can not yet be stored because of normal and bump mapping
+    VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
 
 	//--------------------------------------------------------------------------
 	// Get UV coordinate
@@ -169,52 +169,10 @@ void BSDF_Init(
 	bsdf->triangleLightSourceIndex = meshTriLightDefsOffset[meshIndex];
 #endif
 
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
-	__global Material *mat = &mats[matIndex];
-
-#if defined(PARAM_HAS_NORMALMAPS)
-	//--------------------------------------------------------------------------
-	// Check if I have to apply normal mapping
-	//--------------------------------------------------------------------------
-
-	const float3 normalColor = Material_GetNormalTexValue(mat, &bsdf->hitPoint
-		MATERIALS_PARAM);
-
-	if (!Spectrum_IsBlack(normalColor)) {
-		const float3 xyz = 2.f * normalColor - 1.f;
-
-		float3 v1, v2;
-		CoordinateSystem(shadeN, &v1, &v2);
-		shadeN = normalize((float3)(
-				v1.x * xyz.x + v2.x * xyz.y + shadeN.x * xyz.z,
-				v1.y * xyz.x + v2.y * xyz.y + shadeN.y * xyz.z,
-				v1.z * xyz.x + v2.z * xyz.y + shadeN.z * xyz.z));
-	}
-#endif
-
-#if defined(PARAM_HAS_BUMPMAPS)
-	//--------------------------------------------------------------------------
-	// Check if I have to apply bump mapping
-	//--------------------------------------------------------------------------
-
-	const float2 bumpUV = Material_GetBumpTexValue(mat, &bsdf->hitPoint
-		MATERIALS_PARAM);
-
-	if ((bumpUV.s0 != 0.f) || (bumpUV.s1 != 0.f)) {
-		float3 v1, v2;
-		CoordinateSystem(shadeN, &v1, &v2);
-		shadeN = normalize((float3)(
-				v1.x * bumpUV.s0 + v2.x * bumpUV.s1 + shadeN.x,
-				v1.y * bumpUV.s0 + v2.y * bumpUV.s1 + shadeN.y,
-				v1.z * bumpUV.s0 + v2.z * bumpUV.s1 + shadeN.z));
-	}
-#endif
-#endif
-
     //--------------------------------------------------------------------------
 	// Build the local reference system
 	//--------------------------------------------------------------------------
-    
+
 #if defined(PARAM_HAS_UVS_BUFFER)
     if (meshDesc->uvsOffset != NULL_INDEX) {
         // Ok, UV coordinates are available, use them to build the reference
@@ -241,31 +199,87 @@ void BSDF_Init(
             // Handle 0 determinant for triangle partial derivative matrix
             Frame_SetFromZ(&bsdf->frame, shadeN);
         } else {
-            const float3 p0 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi0].x));
-            const float3 p1 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi1].x));
-            const float3 p2 = Transform_InvApplyPoint(&meshDesc->trans, VLOAD3F(&iVertices[vi2].x));
+            const float invdet = 1.f / determinant;
+
+            //------------------------------------------------------------------
+            // Compute geometryDpdu and geometryDpdv
+            //------------------------------------------------------------------
+
+            const float3 p0 = VLOAD3F(&iVertices[vi0].x);
+            const float3 p1 = VLOAD3F(&iVertices[vi1].x);
+            const float3 p2 = VLOAD3F(&iVertices[vi2].x);
             const float3 dp1 = p0 - p2;
             const float3 dp2 = p1 - p2;
 
-            const float invdet = 1.f / determinant;
-            const float3 dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-            const float3 dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
+            float3 geometryDpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+            float3 geometryDpdv = (-du2 * dp1 + du1 * dp2) * invdet;
+            // Transform to global coordinates
+            geometryDpdu = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryDpdu));
+            geometryDpdv = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryDpdv));
 
-            float3 ts = normalize(cross(shadeN, dpdu));
-            float3 ss = cross(ts, shadeN);
-            ts *= (dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
+            //------------------------------------------------------------------
+            // Compute shadeDpdu and shadeDpdv
+            //------------------------------------------------------------------
 
-            VSTORE3F(ss, &bsdf->frame.X.x);
-            VSTORE3F(ts, &bsdf->frame.Y.x);
-            VSTORE3F(shadeN, &bsdf->frame.Z.x);
-        }
-    } else
-        Frame_SetFromZ(&bsdf->frame, shadeN);
-#else
-    Frame_SetFromZ(&bsdf->frame, shadeN);
+            float3 shadeDpdv = normalize(cross(shadeN, geometryDpdu));
+            float3 shadeDpdu = cross(shadeDpdv, shadeN);
+            shadeDpdv *= (dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
+
+            //------------------------------------------------------------------
+            // Compute geometryDndu and geometryDndv
+            //------------------------------------------------------------------
+
+            float3 geometryDndu, geometryDndv;
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+            if (meshDesc->normalsOffset != NULL_INDEX) {
+                __global Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
+                // Shading normals expressed in local coordinates
+                const float3 n0 = VLOAD3F(&iVertNormals[tri->v[0]].x);
+                const float3 n1 = VLOAD3F(&iVertNormals[tri->v[1]].x);
+                const float3 n2 = VLOAD3F(&iVertNormals[tri->v[2]].x);
+                const float3 dn1 = n0 - n2;
+                const float3 dn2 = n1 - n2;
+
+                geometryDndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
+                geometryDndv = (-du2 * dn1 + du1 * dn2) * invdet;
+                // Transform to global coordinates
+                geometryDndu = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryDndu));
+                geometryDndv = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryDndv));
+            } else {
+#endif
+        		geometryDndu = ZERO;
+                geometryDndv = ZERO;
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+            }
 #endif
 
-	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
+            //------------------------------------------------------------------
+            // Apply bump or normal mapping
+            //------------------------------------------------------------------
+
+#if defined(PARAM_HAS_BUMPMAPS)
+            Material_Bump(&mats[matIndex],
+                    &bsdf->hitPoint, shadeDpdu, shadeDpdv,
+                    geometryDndu, geometryDndu, 1.f
+                    MATERIALS_PARAM);
+            // Re-read the shadeN modified by Material_Bump()
+            shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
+#endif
+
+            //------------------------------------------------------------------
+            // Build the local reference system
+            //------------------------------------------------------------------
+
+            VSTORE3F(shadeDpdu, &bsdf->frame.X.x);
+            VSTORE3F(shadeDpdv, &bsdf->frame.Y.x);
+            VSTORE3F(shadeN, &bsdf->frame.Z.x);
+        }
+    } else {
+#endif
+        Frame_SetFromZ(&bsdf->frame, shadeN);
+#if defined(PARAM_HAS_UVS_BUFFER)
+    }
+#endif
 }
 
 float3 BSDF_Evaluate(__global BSDF *bsdf,

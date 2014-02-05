@@ -410,7 +410,7 @@ std::string KernelSource_biaspathocl_kernels =
 "#if defined(PARAM_HAS_PASSTHROUGH)\n"
 "					, currentBSDF->hitPoint.passThroughEvent\n"
 "#endif\n"
-"#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)\n"
+"#if defined(PARAM_HAS_BUMPMAPS)\n"
 "					MATERIALS_PARAM\n"
 "#endif\n"
 "					);\n"

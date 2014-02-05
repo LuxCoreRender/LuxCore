@@ -23,7 +23,7 @@
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
-	HITPOINTGREY, NORMALMAP_TEXTURE,
+	HITPOINTGREY, NORMALMAP_TEX,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
 	WRINKLED, UV_TEX, BAND_TEX, WOOD
@@ -44,7 +44,7 @@ typedef struct {
 
 typedef struct {
 	TextureMapping2D mapping;
-	float gain, Du, Dv;
+	float gain;
 
 	unsigned int imageMapIndex;
 } ImageMapTexParam;
@@ -159,6 +159,10 @@ typedef struct {
 } HitPointGreyTexParam;
 
 typedef struct {
+	unsigned int texIndex;
+} NormalMapTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		ConstFloatParam constFloat;
@@ -181,6 +185,7 @@ typedef struct {
 		UVTexParam uvTex;
 		BandTexParam band;
 		HitPointGreyTexParam hitPointGrey;
+        NormalMapTexParam normalMap;
 	};
 } Texture;
 

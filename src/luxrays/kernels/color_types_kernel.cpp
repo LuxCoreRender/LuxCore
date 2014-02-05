@@ -24,6 +24,7 @@ std::string KernelSource_color_types =
 "#if defined(SLG_OPENCL_KERNEL)\n"
 "#define BLACK ((float3)(0.f, 0.f, 0.f))\n"
 "#define WHITE ((float3)(1.f, 1.f, 1.f))\n"
+"#define ZERO BLACK\n"
 "#endif\n"
 "\n"
 "#define ASSIGN_SPECTRUM(c0, c1) { (c0).c[0] = (c1).c[0]; (c0).c[1] = (c1).c[1]; (c0).c[2] = (c1).c[2]; }\n"

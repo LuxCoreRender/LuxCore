@@ -63,7 +63,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
             &geometryDndu, &geometryDndv);
 
     if (hasDPDUV) {
-        // Initialize shading differential
+        // Initialize shading differentials
         Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, geometryDpdu));
 		Vector shadeDpdu = Cross(shadeDpdv, hitPoint.shadeN);
 		shadeDpdv *= (Dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
