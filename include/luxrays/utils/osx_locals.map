@@ -1,4 +1,4 @@
 ## The symbols will be treated as if they were marked as __private_extern__
 ## (aka visibility=hidden) and will not be global in the output file
-## we use this for our bianries to supress direct acces warning from ld atm.
+## We use this for our binaries to suppress direct acces warning from ld atm.
 *Imf_2_1*
