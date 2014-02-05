@@ -1,6 +1,0 @@
-## Symbols not listed will be treated as if they were marked as __private_extern__
-## (aka visibility=hidden) and will not be global in the output file
-## We use this for our bianries to supress direct acces warning from ld atm.
-## No exports for now
-
-
