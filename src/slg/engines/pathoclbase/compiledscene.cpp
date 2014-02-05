@@ -278,7 +278,6 @@ void CompiledScene::CompileMaterials() {
 	const u_int materialsCount = scene->matDefs.GetSize();
 	mats.resize(materialsCount);
 	useBumpMapping = false;
-	useNormalMapping = false;
 
 	for (u_int i = 0; i < materialsCount; ++i) {
 		Material *m = scene->matDefs.GetMaterial(i);
@@ -287,6 +286,7 @@ void CompiledScene::CompileMaterials() {
 
 		mat->matID = m->GetID();
 		mat->lightID = m->GetLightID();
+        mat->bumpSampleDistance = m->GetBumpSampleDistance();
 
 		// Material emission
 		const Texture *emitTex = m->GetEmitTexture();
@@ -310,14 +310,6 @@ void CompiledScene::CompileMaterials() {
 				(m->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
 				(m->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
 				(m->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
-
-		// Material normal mapping
-		const Texture *normalTex = NULL;
-		if (normalTex) {
-			mat->normalTexIndex = scene->texDefs.GetTextureIndex(normalTex);
-			useNormalMapping = true;
-		} else
-			mat->normalTexIndex = NULL_INDEX;
 
 		// Material specific parameters
 		usedMaterialTypes.insert(m->GetType());
@@ -945,8 +937,6 @@ void CompiledScene::CompileTextures() {
 				const ImageMap *im = imt->GetImageMap();
 				tex->imageMapTex.gain = imt->GetGain();
 				CompileTextureMapping2D(&tex->imageMapTex.mapping, imt->GetTextureMapping());
-//				tex->imageMapTex.Du = imt->GetDuDv().u;
-//				tex->imageMapTex.Dv = imt->GetDuDv().v;
 				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
 				break;
 			}
@@ -1213,6 +1203,14 @@ void CompiledScene::CompileTextures() {
 				tex->hitPointGrey.channel = hpg->GetChannel();
 				break;
 			}
+            case NORMALMAP_TEX: {
+                NormalMapTexture *nmt = static_cast<NormalMapTexture *>(t);
+
+                tex->type = slg::ocl::NORMALMAP_TEX;
+                const Texture *normalTex = nmt->GetTexture();
+				tex->normalMap.texIndex = scene->texDefs.GetTextureIndex(normalTex);
+				break;
+            }
 			default:
 				throw runtime_error("Unknown texture: " + boost::lexical_cast<string>(t->GetType()));
 				break;

@@ -407,7 +407,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 					, currentBSDF->hitPoint.passThroughEvent
 #endif
-#if defined(PARAM_HAS_BUMPMAPS) || defined(PARAM_HAS_NORMALMAPS)
+#if defined(PARAM_HAS_BUMPMAPS)
 					MATERIALS_PARAM
 #endif
 					);

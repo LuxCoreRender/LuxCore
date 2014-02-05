@@ -129,11 +129,6 @@ void ConstFloatTexture_EvaluateSpectrum(__global Texture *texture, __global HitP
 	texValues[(*texValuesSize)++] = texture->constFloat.value;
 }
 
-void ConstFloatTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = 0.f;
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -150,11 +145,6 @@ void ConstFloat3Texture_EvaluateFloat(__global Texture *texture, __global HitPoi
 void ConstFloat3Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	texValues[(*texValuesSize)++] = VLOAD3F(texture->constFloat3.color.c);
-}
-
-void ConstFloat3Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = 0.f;
 }
 
 #endif
@@ -197,11 +187,6 @@ void ImageMapTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoi
 			mapUV.s0, mapUV.s1);
 }
 
-void ImageMapTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = VLOAD2F(&texture->imageMapTex.Du);
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -222,14 +207,6 @@ void ScaleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 	const float3 value = texValues[--(*texValuesSize)] * texValues[--(*texValuesSize)];
 
 	texValues[(*texValuesSize)++] = value;
-}
-
-void ScaleTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float2 dudv1 = texValues[--(*texValuesSize)];
-	const float2 dudv2 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
 }
 
 #endif
@@ -268,11 +245,6 @@ void FresnelApproxNTexture_EvaluateSpectrum(__global Texture *texture, __global 
 	texValues[(*texValuesSize)++] = FresnelApproxN3(value);
 }
 
-void FresnelApproxNTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = texValues[--(*texValuesSize)];
-}
-
 #endif
 
 #if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
@@ -305,11 +277,6 @@ void FresnelApproxKTexture_EvaluateSpectrum(__global Texture *texture, __global 
 	texValues[(*texValuesSize)++] = FresnelApproxK3(value);
 }
 
-void FresnelApproxKTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = texValues[--(*texValuesSize)];
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -340,14 +307,6 @@ void CheckerBoard2DTexture_EvaluateSpectrum(__global Texture *texture, __global 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
 
-void CheckerBoard2DTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float2 dudv1 = texValues[--(*texValuesSize)];
-	const float2 dudv2 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
-}
-
 #endif
 
 #if defined (PARAM_ENABLE_CHECKERBOARD3D)
@@ -370,14 +329,6 @@ void CheckerBoard3DTexture_EvaluateSpectrum(__global Texture *texture, __global 
 	const float3 mapP = TextureMapping3D_Map(&texture->checkerBoard3D.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
-}
-
-void CheckerBoard3DTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float2 dudv1 = texValues[--(*texValuesSize)];
-	const float2 dudv2 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
 }
 
 #endif
@@ -406,15 +357,6 @@ void MixTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *h
 	texValues[(*texValuesSize)++] = mix(value1, value2, amt);
 }
 
-void MixTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float2 dudv1 = texValues[--(*texValuesSize)];
-	const float2 dudv2 = texValues[--(*texValuesSize)];
-	const float2 dudv3 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = fmax(fmax(dudv1, dudv2), dudv3);
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -435,11 +377,6 @@ void FBMTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *h
 	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
-}
-
-void FBMTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
 }
 
 #endif
@@ -498,11 +435,6 @@ void MarbleTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *h
 void MarbleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	texValues[(*texValuesSize)++] = MarbleTexture_Evaluate(texture, hitPoint);
-}
-
-void MarbleTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
 }
 
 #endif
@@ -565,14 +497,6 @@ void DotsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 	}
 
 	texValues[(*texValuesSize)++] = value2;
-}
-
-void DotsTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float2 dudv1 = texValues[--(*texValuesSize)];
-	const float2 dudv2 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
 }
 
 #endif
@@ -764,15 +688,6 @@ void BrickTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 		texValues[(*texValuesSize)++] = value2;
 }
 
-void BrickTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float2 dudv1 = texValues[--(*texValuesSize)];
-	const float2 dudv2 = texValues[--(*texValuesSize)];
-	const float2 dudv3 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = fmax(fmax(dudv1, dudv2), dudv3);
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -793,14 +708,6 @@ void AddTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *h
 	const float3 value = texValues[--(*texValuesSize)] + texValues[--(*texValuesSize)];
 
 	texValues[(*texValuesSize)++] = value;
-}
-
-void AddTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float2 dudv1 = texValues[--(*texValuesSize)];
-	const float2 dudv2 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = fmax(dudv1, dudv2);
 }
 
 #endif
@@ -831,11 +738,6 @@ void WindyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 	texValues[(*texValuesSize)++] = fabs(windStrength) * waveHeight;
 }
 
-void WindyTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -858,11 +760,6 @@ void WrinkledTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoi
 	texValues[(*texValuesSize)++] = Turbulence(mapP, texture->wrinkled.omega, texture->wrinkled.octaves);
 }
 
-void WrinkledTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -883,11 +780,6 @@ void UVTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hi
 	const float2 uv = TextureMapping2D_Map(&texture->uvTex.mapping, hitPoint);
 
 	texValues[(*texValuesSize)++] = (float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f);
-}
-
-void UVTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
 }
 
 #endif
@@ -946,13 +838,6 @@ void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 	}
 }
 
-void BandTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	// Nothing to do:
-	//const float2 dudv = texValues[--(*texValuesSize)];
-	//texValues[(*texValuesSize)++] = dudv;
-}
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -969,11 +854,6 @@ void HitPointColorTexture_EvaluateFloat(__global Texture *texture, __global HitP
 void HitPointColorTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	texValues[(*texValuesSize)++] = VLOAD3F(hitPoint->color.c);
-}
-
-void HitPointColorTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = 0.f;
 }
 
 #endif
@@ -993,11 +873,6 @@ void HitPointAlphaTexture_EvaluateSpectrum(__global Texture *texture, __global H
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float alpha = hitPoint->alpha;
 	texValues[(*texValuesSize)++] = (float3)(alpha, alpha, alpha);
-}
-
-void HitPointAlphaTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = 0.f;
 }
 
 #endif
@@ -1051,9 +926,23 @@ void HitPointGreyTexture_EvaluateSpectrum(__global Texture *texture, __global Hi
 	texValues[(*texValuesSize)++] = (float3)(v, v, v);
 }
 
-void HitPointGreyTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = 0.f;
+#endif
+
+//------------------------------------------------------------------------------
+// NormalMap texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_TEX_NORMALMAP)
+
+void NormalMapTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+    texValues[*texValuesSize] = 0.f;
+	++(*texValuesSize);
+}
+
+void NormalMapTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = (float3)(0.f, 0.f, 0.f);
 }
 
 #endif
@@ -1124,6 +1013,9 @@ uint Texture_AddSubTexture(__global Texture *texture,
 		case BAND_TEX:
 			todoTex[(*todoTexSize)++] = &texs[texture->band.amountTexIndex];
 			return 1;
+#endif
+#if defined (PARAM_ENABLE_TEX_NORMALMAP)
+		case NORMALMAP_TEX:
 #endif
 #if defined (PARAM_ENABLE_TEX_HITPOINTGREY)
 		case HITPOINTGREY:
@@ -1283,6 +1175,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
 		case HITPOINTGREY:
 			HitPointGreyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_NORMALMAP)
+		case NORMALMAP_TEX:
+			NormalMapTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1458,6 +1355,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			HitPointGreyTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined(PARAM_ENABLE_TEX_NORMALMAP)
+		case NORMALMAP_TEX:
+			NormalMapTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1513,173 +1415,111 @@ float3 Texture_GetSpectrumValue(__global Texture *texture, __global HitPoint *hi
 }
 
 //------------------------------------------------------------------------------
-// DuDv texture information
+// Duv texture information
 //------------------------------------------------------------------------------
 
-void Texture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
-		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
-		IMAGEMAPS_PARAM_DECL) {
-	switch (texture->type) {
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
-		case CONST_FLOAT:
-			ConstFloatTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
-		case CONST_FLOAT3:
-			ConstFloat3Texture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
-		case IMAGEMAP:
-			ImageMapTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_SCALE)
-		case SCALE_TEX:
-			ScaleTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
-		case FRESNEL_APPROX_N:
-			FresnelApproxNTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
-		case FRESNEL_APPROX_K:
-			FresnelApproxKTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_CHECKERBOARD2D)
-		case CHECKERBOARD2D:
-			CheckerBoard2DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_CHECKERBOARD3D)
-		case CHECKERBOARD3D:
-			CheckerBoard3DTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_TEX_MIX)
-		case MIX_TEX:
-			MixTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_FBM_TEX)
-		case FBM_TEX:
-			FBMTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_MARBLE)
-		case MARBLE:
-			MarbleTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_DOTS)
-		case DOTS:
-			DotsTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_BRICK)
-		case BRICK:
-			BrickTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_ADD)
-		case ADD_TEX:
-			AddTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_WINDY)
-		case WINDY:
-			WindyTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined (PARAM_ENABLE_WOOD)
-		case WOOD:
-			WoodTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_WRINKLED)
-		case WRINKLED:
-			WrinkledTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_UV)
-		case UV_TEX:
-			UVTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_BAND)
-		case BAND_TEX:
-			BandTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
-		case HITPOINTCOLOR:
-			HitPointColorTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-		case HITPOINTALPHA:
-			HitPointAlphaTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
-		case HITPOINTGREY:
-			HitPointGreyTexture_EvaluateDuDv(texture, hitPoint, texValues, texValuesSize);
-			break;
-#endif
-		default:
-			// Do nothing
-			break;
-	}
-}
-
-float2 Texture_GetDuDv(__global Texture *texture, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global Texture *todoTex[TEXTURE_STACK_SIZE];
-	uint todoTexSize = 0;
-
-	__global Texture *pendingTex[TEXTURE_STACK_SIZE];
-	uint targetTexCount[TEXTURE_STACK_SIZE];
-	uint pendingTexSize = 0;
-
-	float2 texValues[TEXTURE_STACK_SIZE];
-	uint texValuesSize = 0;
-
-	const uint subTexCount = Texture_AddSubTexture(texture, todoTex, &todoTexSize
+#if defined(PARAM_HAS_BUMPMAPS)
+float2 Texture_GetDuv(
+        __global Texture *texture,
+        __global HitPoint *hitPoint,
+        const float3 dpdu, const float3 dpdv,
+        const float3 dndu, const float3 dndv,
+        const float sampleDistance
+        TEXTURES_PARAM_DECL) {
+    // Calculate bump map value at intersection point
+    const float base = Texture_GetFloatValue(texture, hitPoint
 			TEXTURES_PARAM);
-	if (subTexCount == 0) {
-		// A fast path for evaluating non recursive textures
-		Texture_EvaluateDuDv(texture, hitPoint, texValues, &texValuesSize
-			IMAGEMAPS_PARAM);
-	} else {
-		// Normal complex path for evaluating non recursive textures
-		pendingTex[pendingTexSize] = texture;
-		targetTexCount[pendingTexSize++] = subTexCount;
-		do {
-			if ((pendingTexSize > 0) && (texValuesSize == targetTexCount[pendingTexSize - 1])) {
-				// Pop the a texture to do
-				__global Texture *tex = pendingTex[--pendingTexSize];
 
-				Texture_EvaluateDuDv(tex, hitPoint, texValues, &texValuesSize
-						IMAGEMAPS_PARAM);
-				continue;
-			}
+    // Compute offset positions and evaluate displacement texture
+    const float3 origP = VLOAD3F(&hitPoint->p.x);
+    const float3 origShadeN = VLOAD3F(&hitPoint->shadeN.x);
+    const float2 origUV = VLOAD2F(&hitPoint->uv.u);
 
-			if (todoTexSize > 0) {
-				// Pop the a texture to do
-				__global Texture *tex = todoTex[--todoTexSize];
+    float2 duv;
 
-				// Add this texture to the list of pending one
-				const uint subTexCount = Texture_AddSubTexture(tex, todoTex, &todoTexSize
-						TEXTURES_PARAM);
-				pendingTex[pendingTexSize] = tex;
-				targetTexCount[pendingTexSize++] = subTexCount + texValuesSize;
-			}
-		} while ((todoTexSize > 0) || (pendingTexSize > 0));
-	}
+    // Shift hitPointTmp.du in the u direction and calculate value
+    const float uu = sampleDistance / length(dpdu);
+    VSTORE3F(origP + uu * dpdu, &hitPoint->p.x);
+    hitPoint->uv.u += uu;
+    VSTORE3F(normalize(origShadeN + uu * dndu), &hitPoint->shadeN.x);
+    const float duValue = Texture_GetFloatValue(texture, hitPoint
+			TEXTURES_PARAM);
+    duv.s0 = (duValue - base) / uu;
 
-	return texValues[0];
+    // Shift hitPointTmp.dv in the v direction and calculate value
+    const float vv = sampleDistance / length(dpdv);
+    VSTORE3F(origP + vv * dpdv, &hitPoint->p.x);
+    hitPoint->uv.u = origUV.s0;
+    hitPoint->uv.v += vv;
+    VSTORE3F(normalize(origShadeN + vv * dndv), &hitPoint->shadeN.x);
+    const float dvValue = Texture_GetFloatValue(texture, hitPoint
+			TEXTURES_PARAM);
+    duv.s1 = (dvValue - base) / vv;
+
+    // Restore HitPoint
+    VSTORE3F(origP, &hitPoint->p.x);
+    VSTORE2F(origUV, &hitPoint->uv.u);
+    VSTORE3F(origShadeN, &hitPoint->shadeN.x);
+
+    return duv;
 }
+
+#if defined (PARAM_ENABLE_TEX_NORMALMAP)
+float2 NormalMapTexture_GetDuv(
+        __global Texture *texture,
+        __global HitPoint *hitPoint,
+        const float3 dpdu, const float3 dpdv,
+        const float3 dndu, const float3 dndv,
+        const float sampleDistance
+        TEXTURES_PARAM_DECL) {
+    float3 rgb = Texture_GetSpectrumValue(&texs[texture->normalMap.texIndex], hitPoint
+			TEXTURES_PARAM);
+    rgb = clamp(rgb, -1.f, 1.f);
+
+	// Normal from normal map
+	float3 n = 2.f * rgb - (float3)(1.f, 1.f, 1.f);
+
+	const float3 k = VLOAD3F(&hitPoint->shadeN.x);
+
+	// Transform n from tangent to object space
+    const float btsign = (dot(dpdv, k) > 0.f) ? 1.f : -1.f;
+
+	// Magnitude of btsign is the magnitude of the interpolated normal
+	const float3 kk = k * fabs(btsign);
+
+	// tangent -> object
+	n = normalize(n.x * dpdu + n.y * btsign * dpdv + n.z * kk);	
+
+	// Since n is stored normalized in the normal map
+	// we need to recover the original length (lambda).
+	// We do this by solving 
+	//   lambda*n = dp/du x dp/dv
+	// where 
+	//   p(u,v) = base(u,v) + h(u,v) * k
+	// and
+	//   k = dbase/du x dbase/dv
+	//
+	// We recover lambda by dotting the above with k
+	//   k . lambda*n = k . (dp/du x dp/dv)
+	//   lambda = (k . k) / (k . n)
+	// 
+	// We then recover dh/du by dotting the first eq by dp/du
+	//   dp/du . lambda*n = dp/du . (dp/du x dp/dv)
+	//   dp/du . lambda*n = dh/du * [dbase/du . (k x dbase/dv)]
+	//
+	// The term "dbase/du . (k x dbase/dv)" reduces to "-(k . k)", so we get
+	//   dp/du . lambda*n = dh/du * -(k . k)
+	//   dp/du . [(k . k) / (k . n)*n] = dh/du * -(k . k)
+	//   dp/du . [-n / (k . n)] = dh/du
+	// and similar for dh/dv
+	// 
+	// Since the recovered dh/du will be in units of ||k||, we must divide
+	// by ||k|| to get normalized results. Using dg.nn as k in the last eq 
+	// yields the same result.
+	const float3 nn = (-1.f / dot(k, n)) * n;
+
+	return (float2)(dot(dpdu, nn), dot(dpdv, nn));
+}
+#endif
+
+#endif

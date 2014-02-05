@@ -87,7 +87,7 @@ public:
 	std::set<MaterialType> usedMaterialTypes;
 	vector<slg::ocl::Material> mats;
 	vector<u_int> meshMats;
-	bool useBumpMapping, useNormalMapping;
+	bool useBumpMapping;
 
 	// Compiled Textures
 	std::set<TextureType> usedTextureTypes;

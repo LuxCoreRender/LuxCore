@@ -21,6 +21,7 @@
 #if defined(SLG_OPENCL_KERNEL)
 #define BLACK ((float3)(0.f, 0.f, 0.f))
 #define WHITE ((float3)(1.f, 1.f, 1.f))
+#define ZERO BLACK
 #endif
 
 #define ASSIGN_SPECTRUM(c0, c1) { (c0).c[0] = (c1).c[0]; (c0).c[1] = (c1).c[1]; (c0).c[2] = (c1).c[2]; }

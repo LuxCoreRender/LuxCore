@@ -57,7 +57,7 @@ using luxrays::ocl::Spectrum;
 typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
-	HITPOINTGREY, NORMALMAP_TEXTURE,
+	HITPOINTGREY, NORMALMAP_TEX,
 	// Procedural textures
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
 	WRINKLED, UV_TEX, BAND_TEX, WOOD
@@ -387,7 +387,6 @@ private:
 	const ImageMap *imgMap;
 	const TextureMapping2D *mapping;
 	float gain;
-	luxrays::UV DuDv;
 };
 
 //------------------------------------------------------------------------------
@@ -1106,7 +1105,7 @@ public:
 	NormalMapTexture(const Texture *t) : tex(t) { }
 	virtual ~NormalMapTexture() { }
 
-	virtual TextureType GetType() const { return NORMALMAP_TEXTURE; }
+	virtual TextureType GetType() const { return NORMALMAP_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return 0.f; }
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return luxrays::Spectrum(); }
 	virtual float Y() const { return 0.f; }
