@@ -103,6 +103,7 @@ void BlenderWoodTexture_EvaluateSpectrum(__global Texture *texture, __global Hit
 
     texValues[(*texValuesSize)++] = (float3)(wood, wood, wood);
 }
+#endif
 
 //------------------------------------------------------------------------------
 // Blender clouds texture

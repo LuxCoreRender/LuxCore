@@ -173,7 +173,7 @@ typedef struct {
 typedef struct {
 	TextureType type;
 	union {
-		BlenderCloudsWoodTexParam blenderClouds;
+		BlenderCloudsTexParam blenderClouds;
 		BlenderWoodTexParam blenderWood;
 		ConstFloatParam constFloat;
 		ConstFloat3Param constFloat3;

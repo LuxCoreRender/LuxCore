@@ -711,7 +711,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new WoodTexture(CreateTextureMapping3D(propName + ".mapping", props), woodtype, noisebasis2, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
+		return new BlenderWoodTexture(CreateTextureMapping3D(propName + ".mapping", props), woodtype, noisebasis2, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "dots") {
 		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
 		const Texture *outsideTex = GetTexture(props.Get(Property(propName + ".outside")(0.f)));

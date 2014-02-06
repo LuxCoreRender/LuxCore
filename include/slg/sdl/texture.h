@@ -1091,8 +1091,8 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
-	WoodType type;
-	NoiseBase noisebasis2;	
+	BlenderWoodType type;
+	BlenderWoodNoiseBase noisebasis2;	
 	float noisesize, turbulence;
 	bool hard;
 	float bright, contrast;
