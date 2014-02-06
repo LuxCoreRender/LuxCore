@@ -106,6 +106,7 @@ std::string KernelSource_texture_blender_funcs =
 "\n"
 "    texValues[(*texValuesSize)++] = (float3)(wood, wood, wood);\n"
 "}\n"
+"#endif\n"
 "\n"
 "//------------------------------------------------------------------------------\n"
 "// Blender clouds texture\n"
