@@ -23,20 +23,20 @@
 #endif
 
 //------------------------------------------------------------------------------
-// Wood texture
+// Blender wood texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_WOOD)
+#if defined (PARAM_ENABLE_BLENDER_WOOD)
 
-float WoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint){
-	const float3 P = TextureMapping3D_Map(&texture->wood.mapping, hitPoint);
+float BlenderWoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint){
+	const float3 P = TextureMapping3D_Map(&texture->blenderWood.mapping, hitPoint);
 	float scale = 1.f;
-	if(fabs(texture->wood.noisesize) > 0.00001f) scale = (1.f/texture->wood.noisesize);
+	if(fabs(texture->blenderWood.noisesize) > 0.00001f) scale = (1.f/texture->blenderWood.noisesize);
 
-	const NoiseBase noise = texture->wood.noisebasis2;
-	float wood = 0.0f;
+	const BlenderWoodNoiseBase noise = texture->blenderWood.noisebasis2;
+	float wood = 0.f;
 
-	switch(texture->wood.type) {
+	switch(texture->blenderWood.type) {
 		default:
 		case BANDS:
 			if(noise == TEX_SIN) {
@@ -57,10 +57,10 @@ float WoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoin
 			}
 			break;
 		case BANDNOISE:			
-			if(texture->wood.hard)	
-				wood = texture->wood.turbulence * fabs(2.f * Noise3(scale*P) - 1.f);
+			if(texture->blenderWood.hard)	
+				wood = texture->blenderWood.turbulence * fabs(2.f * Noise3(scale*P) - 1.f);
 			else
-				wood = texture->wood.turbulence * Noise3(scale*P);
+				wood = texture->blenderWood.turbulence * Noise3(scale*P);
 
 			if(noise == TEX_SIN) {
 				wood = tex_sin((P.x + P.y + P.z) * 10.f + wood);
@@ -71,10 +71,10 @@ float WoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoin
 			}
 			break;
 		case RINGNOISE:
-			if(texture->wood.hard)	
-				wood = texture->wood.turbulence * fabs(2.f * Noise3(scale*P) - 1.f);
+			if(texture->blenderWood.hard)	
+				wood = texture->blenderWood.turbulence * fabs(2.f * Noise3(scale*P) - 1.f);
 			else
-				wood = texture->wood.turbulence * Noise3(scale*P);
+				wood = texture->blenderWood.turbulence * Noise3(scale*P);
 
 			if(noise == TEX_SIN) {
 				wood = tex_sin(sqrt(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f + wood);
@@ -85,26 +85,57 @@ float WoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoin
 			}
 			break;
 	}
-	wood = (wood - 0.5f) * texture->wood.contrast + texture->wood.bright - 0.5f;
+	wood = (wood - 0.5f) * texture->blenderWood.contrast + texture->blenderWood.bright - 0.5f;
 	if(wood < 0.f) wood = 0.f;
 	else if(wood > 1.f) wood = 1.f;
 
 	return wood;
 }
 
-void WoodTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+void BlenderWoodTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = WoodTexture_Evaluate(texture, hitPoint);
+	texValues[(*texValuesSize)++] = BlenderWoodTexture_Evaluate(texture, hitPoint);
 }
 
-void WoodTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+void BlenderWoodTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 	float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-    float wood = WoodTexture_Evaluate(texture, hitPoint);
+    float wood = BlenderWoodTexture_Evaluate(texture, hitPoint);
 
     texValues[(*texValuesSize)++] = (float3)(wood, wood, wood);
 }
 
-void WoodTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
+//------------------------------------------------------------------------------
+// Blender clouds texture
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_BLENDER_CLOUDS)
+
+float BlenderCloudsTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint){
+	const float3 P = TextureMapping3D_Map(&texture->blenderClouds.mapping, hitPoint);
+	float scale = 1.f;
+	if(fabs(texture->blenderClouds.noisesize) > 0.00001f) scale = (1.f/texture->blenderClouds.noisesize);
+
+	float clouds = Turbulence(scale*P, texture->blenderClouds.noisesize, texture->blenderClouds.noisedepth);
+
+	clouds = (clouds - 0.5f) * texture->blenderClouds.contrast + texture->blenderClouds.bright - 0.5f;
+	if(clouds < 0.f) clouds = 0.f;
+	else if(clouds > 1.f) clouds = 1.f;
+
+	return clouds;
+}
+
+void BlenderCloudsTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = BlenderCloudsTexture_Evaluate(texture, hitPoint);
+}
+
+void BlenderCloudsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+		float clouds = BlenderCloudsTexture_Evaluate(texture, hitPoint);
+	texValues[(*texValuesSize)++] = (float3)(clouds, clouds, clouds);
+}
+
+void BlenderCloudsTexture_EvaluateDuDv(__global Texture *texture, __global HitPoint *hitPoint,
 		float2 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	texValues[(*texValuesSize)++] = (float2)(DUDV_VALUE, DUDV_VALUE);
 }

@@ -1116,42 +1116,54 @@ void CompiledScene::CompileTextures() {
 				tex->wrinkled.omega = wt->GetOmega();
 				break;
 			}
-			case WOOD: {
-				WoodTexture *wt = static_cast<WoodTexture *>(t);
+			case BLENDER_CLOUDS: {
+				BlenderCloudsTexture *wt = static_cast<BlenderCloudsTexture *>(t);
+				tex->type = slg::ocl::BLENDER_CLOUDS;
+				CompileTextureMapping3D(&tex->blenderClouds.mapping, wt->GetTextureMapping());				 
+				tex->blenderClouds.noisesize = wt->GetNoiseSize();
+				tex->blenderClouds.noisedepth = wt->GetNoiseDepth();
+				tex->blenderClouds.bright = wt->GetBright();
+				tex->blenderClouds.contrast = wt->GetContrast();
+				tex->blenderClouds.hard = wt->GetNoiseType();
 
-				tex->type = slg::ocl::WOOD;
-				CompileTextureMapping3D(&tex->wood.mapping, wt->GetTextureMapping());				 
-				tex->wood.turbulence = wt->GetTurbulence();
-				tex->wood.bright = wt->GetBright();
-				tex->wood.contrast = wt->GetContrast();
-				tex->wood.hard = wt->GetNoiseType();
-				tex->wood.noisesize = wt->GetNoiseSize();
+				break;
+			}
+			case BLENDER_WOOD: {
+				BlenderWoodTexture *wt = static_cast<BlenderWoodTexture *>(t);
+
+				tex->type = slg::ocl::BLENDER_WOOD;
+				CompileTextureMapping3D(&tex->blenderWood.mapping, wt->GetTextureMapping());				 
+				tex->blenderWood.turbulence = wt->GetTurbulence();
+				tex->blenderWood.bright = wt->GetBright();
+				tex->blenderWood.contrast = wt->GetContrast();
+				tex->blenderWood.hard = wt->GetNoiseType();
+				tex->blenderWood.noisesize = wt->GetNoiseSize();
 				switch (wt->GetNoiseBasis2()) {
 					default:
 					case TEX_SIN:
-						tex->wood.noisebasis2 = slg::ocl::TEX_SIN;
+						tex->blenderWood.noisebasis2 = slg::ocl::TEX_SIN;
 						break;
 					case TEX_SAW:
-						tex->wood.noisebasis2 = slg::ocl::TEX_SAW;
+						tex->blenderWood.noisebasis2 = slg::ocl::TEX_SAW;
 						break;
 					case TEX_TRI:
-						tex->wood.noisebasis2 = slg::ocl::TEX_TRI;
+						tex->blenderWood.noisebasis2 = slg::ocl::TEX_TRI;
 						break;
 				}
 				
 				switch (wt->GetWoodType()) {
 					default:
 					case BANDS:
-						tex->wood.type = slg::ocl::BANDS;
+						tex->blenderWood.type = slg::ocl::BANDS;
 						break;
 					case RINGS:
-						tex->wood.type = slg::ocl::RINGS;
+						tex->blenderWood.type = slg::ocl::RINGS;
 						break;
 					case BANDNOISE:
-						tex->wood.type = slg::ocl::BANDNOISE;
+						tex->blenderWood.type = slg::ocl::BANDNOISE;
 						break;
 					case RINGNOISE:
-						tex->wood.type = slg::ocl::RINGNOISE;
+						tex->blenderWood.type = slg::ocl::RINGNOISE;
 						break;
 				}
 				break;

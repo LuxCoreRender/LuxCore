@@ -1638,10 +1638,10 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) c
 }
 
 //------------------------------------------------------------------------------
-// Wood texture
+// Blender wood texture
 //------------------------------------------------------------------------------
 
-WoodTexture::WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise,
+BlenderWoodTexture::BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise,
 		const float noisesize, float turb, bool hard, float bright, float contrast) : 
 		mapping(mp), type(BANDS), noisebasis2(TEX_SIN),  noisesize(noisesize),
 		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
@@ -1664,7 +1664,7 @@ WoodTexture::WoodTexture(const TextureMapping3D *mp, const std::string &ptype, c
 	};
 }
 
-float WoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
+float BlenderWoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	Point P(mapping->Map(hitPoint));
 	float scale = 1.f;
 	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
@@ -1707,11 +1707,11 @@ float WoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
     return wood;
 }
 
-Spectrum WoodTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+Spectrum BlenderWoodTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Spectrum(GetFloatValue(hitPoint));
 }
 
-Properties WoodTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
 	std::string noise;
@@ -1748,12 +1748,57 @@ Properties WoodTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 
 	const std::string name = GetName();
 
-	props.Set(Property("scene.textures." + name + ".type")("wood"));
+	props.Set(Property("scene.textures." + name + ".type")("blender_wood"));
 	props.Set(Property("scene.textures." + name + ".woodtype")(woodtype));
 	props.Set(Property("scene.textures." + name + ".noisebasis2")(noise));
 	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
 	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
 	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// Blender clouds texture
+//------------------------------------------------------------------------------
+
+BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, 
+		bool hard, float bright, float contrast) : 
+		mapping(mp), noisesize(noisesize), noisedepth(noisedepth), hard(hard), bright(bright), contrast(contrast) {
+}
+
+float BlenderCloudsTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint));
+	float scale = 1.f;
+	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
+
+	float clouds = Turbulence(scale*P, noisesize, noisedepth);
+
+	clouds = (clouds - 0.5f) * contrast + bright - 0.5f;
+    if(clouds < 0.f) clouds = 0.f; 
+	else if(clouds > 1.f) clouds = 1.f;
+	
+    return clouds;
+}
+
+Spectrum BlenderCloudsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	std::string noisetype = "soft_noise";
+	if(hard) noisetype = "hard_noise";
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_clouds"));
+	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
 	props.Set(Property("scene.textures." + name + ".bright")(bright));
 	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));

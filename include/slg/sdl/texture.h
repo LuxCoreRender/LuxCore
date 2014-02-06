@@ -59,8 +59,8 @@ typedef enum {
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
 	HITPOINTGREY, NORMALMAP_TEX,
 	// Procedural textures
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY,
-	WRINKLED, UV_TEX, BAND_TEX, WOOD
+	BLENDER_WOOD, BLENDER_CLOUDS, CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX,
+	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX
 } TextureType;
 
 class ImageMap;
@@ -1056,29 +1056,31 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// Wood texture
+// Blender wood texture
 //------------------------------------------------------------------------------
 typedef enum {
 	BANDS, RINGS, BANDNOISE, RINGNOISE
-} WoodType;
+} BlenderWoodType;
 
 typedef enum {
 	TEX_SIN, TEX_SAW, TEX_TRI
-} NoiseBase;
+} BlenderWoodNoiseBase;
 
-class WoodTexture : public Texture {
+class BlenderWoodTexture : public Texture {
 public:
-	WoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast);
-	virtual ~WoodTexture() { delete mapping; }
+	BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast);
+	virtual ~BlenderWoodTexture() { delete mapping; }
 
-	virtual TextureType GetType() const { return WOOD; }
+	virtual TextureType GetType() const { return BLENDER_WOOD; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
 	virtual float Y() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	WoodType GetWoodType() const { return type; }
-	NoiseBase GetNoiseBasis2() const { return noisebasis2; }
+	BlenderWoodType GetWoodType() const { return type; }
+	BlenderWoodNoiseBase GetNoiseBasis2() const { return noisebasis2; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetTurbulence() const { return turbulence; }
 	float GetBright() const { return bright; }
@@ -1092,6 +1094,39 @@ private:
 	WoodType type;
 	NoiseBase noisebasis2;	
 	float noisesize, turbulence;
+	bool hard;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
+// Blender clouds texture
+//------------------------------------------------------------------------------
+
+class BlenderCloudsTexture : public Texture {
+public:
+	BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, bool hard, float bright, float contrast);
+	virtual ~BlenderCloudsTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_CLOUDS; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+	int GetNoiseSize() const { return noisesize; }
+	int GetNoiseDepth() const { return noisedepth; }
+	bool GetNoiseType() const { return hard; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	int noisedepth;	
+	float noisesize;	
 	bool hard;
 	float bright, contrast;
 };

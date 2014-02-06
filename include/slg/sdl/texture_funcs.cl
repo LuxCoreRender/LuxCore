@@ -1032,8 +1032,11 @@ uint Texture_AddSubTexture(__global Texture *texture,
 #if defined (PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
 #endif
-#if defined (PARAM_ENABLE_WOOD)
-		case WOOD:
+#if defined (PARAM_ENABLE_BLENDER_WOOD)
+		case BLENDER_WOOD:
+#endif
+#if defined (PARAM_ENABLE_BLENDER_CLOUDS)
+		case BLENDER_CLOUDS:
 #endif
 #if defined (PARAM_ENABLE_WINDY)
 		case WINDY:
@@ -1142,9 +1145,14 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 			WindyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_WOOD)
-		case WOOD:
-			WoodTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+#if defined (PARAM_ENABLE_BLENDER_CLOUDS)
+		case BLENDER_CLOUDS:
+			BlenderCloudsTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_BLENDER_WOOD)
+		case BLENDER_WOOD:
+			BlenderWoodTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_WRINKLED)
@@ -1320,9 +1328,14 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			WindyTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_WOOD)
-		case WOOD:
-			WoodTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+#if defined (PARAM_ENABLE_BLENDER_CLOUDS)
+		case BLENDER_CLOUDS:
+			BlenderCloudsTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined (PARAM_ENABLE_BLENDER_WOOD)
+		case BLENDER_WOOD:
+			BlenderWoodTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_WRINKLED)

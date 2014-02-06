@@ -687,8 +687,10 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_WINDY";
 	if (cscene->IsTextureCompiled(WRINKLED))
 		ss << " -D PARAM_ENABLE_WRINKLED";
-	if (cscene->IsTextureCompiled(WOOD))
-		ss << " -D PARAM_ENABLE_WOOD";
+	if (cscene->IsTextureCompiled(BLENDER_CLOUDS))
+		ss << " -D PARAM_ENABLE_BLENDER_CLOUDS";
+	if (cscene->IsTextureCompiled(BLENDER_WOOD))
+		ss << " -D PARAM_ENABLE_BLENDER_WOOD";
 	if (cscene->IsTextureCompiled(UV_TEX))
 		ss << " -D PARAM_ENABLE_TEX_UV";
 	if (cscene->IsTextureCompiled(BAND_TEX))
