@@ -169,8 +169,10 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 	boost::unique_lock<boost::mutex> lock(*filmMutex);
 
 	film->Reset();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilm));
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+        if (renderThreads[i])
+            film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilm));
+    }
 }
 
 void PathOCLRenderEngine::UpdateCounters() {
