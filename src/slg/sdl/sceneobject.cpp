@@ -43,14 +43,17 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache) const {
 	Properties props;
 
 	const std::string name = GetName();
-	props.Set(Property("scene.objects." + name + ".material")(mat->GetName()));
-	props.Set(Property("scene.objects." + name + ".ply")(
-			"mesh-" + (boost::format("%05d") % extMeshCache.GetExtMeshIndex(mesh)).str() + ".ply"));
+    props.Set(Property("scene.objects." + name + ".material")(mat->GetName()));
 
-	if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+    u_int meshIndex;
+    if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;
 		props << Property("scene.objects." + name + ".transformation")(inst->GetTransformation().m);
-	}
+        meshIndex = extMeshCache.GetExtMeshIndex(inst->GetExtTriangleMesh());
+    } else
+        meshIndex = extMeshCache.GetExtMeshIndex(mesh);
+	props.Set(Property("scene.objects." + name + ".ply")(
+			"mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply"));
 
 	return props;
 }
