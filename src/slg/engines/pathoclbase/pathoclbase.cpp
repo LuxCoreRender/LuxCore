@@ -178,10 +178,14 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 }
 
 void PathOCLBaseRenderEngine::StopLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+        if (renderThreads[i])
+            renderThreads[i]->Interrupt();
+    }
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+        if (renderThreads[i])
+            renderThreads[i]->Stop();
+    }
 
 	delete compiledScene;
 	compiledScene = NULL;
