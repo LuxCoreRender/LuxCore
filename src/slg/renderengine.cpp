@@ -93,7 +93,7 @@ void RenderEngine::Start() {
 	film->ResetConvergenceTest();
 	convergence = 0.f;
 	lastConvergenceTestTime = startTime;
-	lastConvergenceTestSamplesCount = 0;	
+	lastConvergenceTestSamplesCount = 0;
 }
 
 void RenderEngine::Stop() {

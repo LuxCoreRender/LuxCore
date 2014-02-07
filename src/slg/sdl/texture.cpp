@@ -1767,7 +1767,7 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) co
 
 BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, 
 		bool hard, float bright, float contrast) : 
-		mapping(mp), noisesize(noisesize), noisedepth(noisedepth), hard(hard), bright(bright), contrast(contrast) {
+		mapping(mp), noisedepth(noisedepth), noisesize(noisesize), hard(hard), bright(bright), contrast(contrast) {
 }
 
 float BlenderCloudsTexture::GetFloatValue(const HitPoint &hitPoint) const {
