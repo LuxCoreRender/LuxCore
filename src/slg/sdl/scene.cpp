@@ -121,6 +121,7 @@ Properties Scene::ToProperties(const string &directoryName) {
 		props.Set(camera->ToProperties());
 
 		// Save all not intersecable light sources
+        SDL_LOG("Saving Not intersecable light sources:");
 		for (u_int i = 0; i < lightDefs.GetSize(); ++i) {
 			const LightSource *l = lightDefs.GetLightSource(i);
 			if (dynamic_cast<const NotIntersecableLightSource *>(l))

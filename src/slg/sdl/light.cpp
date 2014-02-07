@@ -219,7 +219,7 @@ float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const 
 //------------------------------------------------------------------------------
 
 Properties NotIntersecableLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props;
 
 	props.Set(Property(prefix + ".gain")(gain));
@@ -235,7 +235,7 @@ Properties NotIntersecableLightSource::ToProperties(const ImageMapCache &imgMapC
 //------------------------------------------------------------------------------
 
 Properties EnvLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
@@ -325,7 +325,7 @@ Spectrum PointLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties PointLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("point"));
@@ -414,7 +414,7 @@ Spectrum MapPointLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = PointLight::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("mappoint"));
@@ -543,7 +543,7 @@ Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("spot"));
@@ -723,7 +723,7 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("projection"));
@@ -827,7 +827,7 @@ Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("sharpdistant"));
@@ -941,7 +941,7 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("distant"));
@@ -1050,7 +1050,7 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("constantinfinite"));
@@ -1197,7 +1197,7 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 }
 
 Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("infinite"));
@@ -1457,7 +1457,7 @@ Spectrum SkyLight::GetRadiance(const Scene &scene,
 }
 
 Properties SkyLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("sky"));
@@ -1796,7 +1796,7 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 }
 
 Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("sky2"));
@@ -2000,7 +2000,7 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 }
 
 Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
-	const string prefix = "scene." + GetName();
+	const string prefix = "scene.lights." + GetName();
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("sun"));
