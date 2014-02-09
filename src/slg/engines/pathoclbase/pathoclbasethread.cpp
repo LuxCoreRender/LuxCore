@@ -742,6 +742,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		if (cscene->IsMaterialCompiled(ROUGHGLASS_ANISOTROPIC))
 			ss << " -D PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC";
 	}
+	if (cscene->IsMaterialCompiled(CLOTH))
+		ss << " -D PARAM_ENABLE_MAT_CLOTH";
 
 	if (cscene->RequiresPassThrough())
 		ss << " -D PARAM_HAS_PASSTHROUGH";

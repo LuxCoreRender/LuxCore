@@ -1980,145 +1980,165 @@ Properties VelvetMaterial::ToProperties() const  {
 // Cloth material
 //------------------------------------------------------------------------------
 
-static WeaveConfig DenimWeave = {
-  3, 6,
-  0.01f, 4.0f,
-  0.0f, 0.5f, 
-  5.0f, 1.0f, 3.0f,
-  0.0f, 0.0f, 0.0f, 0.0f,
-  0.0f
+static slg::ocl::WeaveConfig ClothWeaves[] = {
+    // DenimWeave
+    {
+        3, 6,
+        0.01f, 4.0f,
+        0.0f, 0.5f,
+        5.0f, 1.0f, 3.0f,
+        0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f
+    },
+    // SilkShantungWeave
+    {
+        6, 8,
+        0.02f, 1.5f,
+        0.5f, 0.5f, 
+        8.0f, 16.0f, 0.0f,
+        20.0f, 20.0f, 10.0f, 10.0f,
+        500.0f
+    },
+    // SilkCharmeuseWeave
+    {
+        5, 10,
+        0.02f, 7.3f,
+        0.5f, 0.5f, 
+        9.0f, 1.0f, 3.0f,
+        0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f
+    },
+    // CottonTwillWeave
+    {
+        4, 8,
+        0.01f, 4.0f,
+        0.0f, 0.5f, 
+        6.0f, 2.0f, 4.0f,
+        0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f
+    },
+    // WoolGarbardineWeave
+    {
+        6, 9,
+        0.01f, 4.0f,
+        0.0f, 0.5f, 
+        12.0f, 6.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f
+    },
+    // PolyesterWeave
+    {
+        2, 2,
+        0.015f, 4.0f,
+        0.5f, 0.5f,
+        1.0f, 1.0f, 0.0f, 
+        8.0f, 8.0f, 6.0f, 6.0f,
+        50.0f
+    }
 };
 
-static int DenimPattern[3*6] = {1, 3, 8,  1, 3, 5,  1, 7, 5,  1, 4, 5,  6, 4, 5,  2, 4, 5};
-
-static Yarn DenimYarn[8] = {
-    {-30, 12, 0, 1, 5, 0.1667, 0.75, WARP},
-    {-30, 12, 0, 1, 5, 0.1667, -0.25, WARP},
-    {-30, 12, 0, 1, 5, 0.5, 1.0833, WARP},
-    {-30, 12, 0, 1, 5, 0.5, 0.0833, WARP},
-    {-30, 12, 0, 1, 5, 0.8333, 0.4167, WARP},
-    {-30, 38, 0, 1, 1, 0.1667, 0.25, WEFT},
-    {-30, 38, 0, 1, 1, 0.5, 0.5833, WEFT},
-    {-30, 38, 0, 1, 1, 0.8333, 0.9167, WEFT},
+static slg::ocl::Yarn ClothYarns[][14] = {
+    // DenimYarn[8]
+    {
+        {-30, 12, 0, 1, 5, 0.1667f, 0.75f, slg::ocl::WARP},
+        {-30, 12, 0, 1, 5, 0.1667f, -0.25f, slg::ocl::WARP},
+        {-30, 12, 0, 1, 5, 0.5f, 1.0833f, slg::ocl::WARP},
+        {-30, 12, 0, 1, 5, 0.5f, 0.0833f, slg::ocl::WARP},
+        {-30, 12, 0, 1, 5, 0.8333f, 0.4167f, slg::ocl::WARP},
+        {-30, 38, 0, 1, 1, 0.1667f, 0.25f, slg::ocl::WEFT},
+        {-30, 38, 0, 1, 1, 0.5f, 0.5833f, slg::ocl::WEFT},
+        {-30, 38, 0, 1, 1, 0.8333f, 0.9167f, slg::ocl::WEFT}
+    },
+    // SilkShantungYarn[5]
+    {
+        {0, 50, -0.5, 2, 4,  0.3333f, 0.25f, slg::ocl::WARP},
+        {0, 50, -0.5, 2, 4,  0.8333f, 0.75f, slg::ocl::WARP},
+        {0, 23, -0.3, 4, 4,  0.3333f, 0.75f, slg::ocl::WEFT},
+        {0, 23, -0.3, 4, 4, -0.1667f, 0.25f, slg::ocl::WEFT},
+        {0, 23, -0.3, 4, 4,  0.8333f, 0.25f, slg::ocl::WEFT}
+    },
+    // SilkCharmeuseYarn[14]
+    {
+        {0, 40, 2, 1, 9, 0.1, 0.45, slg::ocl::WARP},
+        {0, 40, 2, 1, 9, 0.3, 1.05, slg::ocl::WARP},
+        {0, 40, 2, 1, 9, 0.3, 0.05, slg::ocl::WARP},
+        {0, 40, 2, 1, 9, 0.5, 0.65, slg::ocl::WARP},
+        {0, 40, 2, 1, 9, 0.5, -0.35, slg::ocl::WARP},
+        {0, 40, 2, 1, 9, 0.7, 1.25, slg::ocl::WARP},
+        {0, 40, 2, 1, 9, 0.7, 0.25, slg::ocl::WARP},
+        {0, 40, 2, 1, 9, 0.9, 0.85, slg::ocl::WARP},
+        {0, 40, 2, 1, 9, 0.9, -0.15, slg::ocl::WARP},
+        {0, 60, 0, 1, 1, 0.1, 0.95, slg::ocl::WEFT},
+        {0, 60, 0, 1, 1, 0.3, 0.55, slg::ocl::WEFT},
+        {0, 60, 0, 1, 1, 0.5, 0.15, slg::ocl::WEFT},
+        {0, 60, 0, 1, 1, 0.7, 0.75, slg::ocl::WEFT},
+        {0, 60, 0, 1, 1, 0.9, 0.35, slg::ocl::WEFT}
+    },
+    // CottonTwillYarn[10]
+    {
+        {-30, 24, 0, 1, 6, 0.125,  0.375, slg::ocl::WARP},
+        {-30, 24, 0, 1, 6, 0.375,  1.125, slg::ocl::WARP},
+        {-30, 24, 0, 1, 6, 0.375,  0.125, slg::ocl::WARP},
+        {-30, 24, 0, 1, 6, 0.625,  0.875, slg::ocl::WARP},
+        {-30, 24, 0, 1, 6, 0.625, -0.125, slg::ocl::WARP},
+        {-30, 24, 0, 1, 6, 0.875,  0.625, slg::ocl::WARP},
+        {-30, 36, 0, 2, 1, 0.125,  0.875, slg::ocl::WEFT},
+        {-30, 36, 0, 2, 1, 0.375,  0.625, slg::ocl::WEFT},
+        {-30, 36, 0, 2, 1, 0.625,  0.375, slg::ocl::WEFT},
+        {-30, 36, 0, 2, 1, 0.875,  0.125, slg::ocl::WEFT}
+    },
+    // WoolGarbardineYarn[7]
+    {
+        {30, 30, 0, 2, 6, 0.167, 0.667, slg::ocl::WARP},
+        {30, 30, 0, 2, 6, 0.500, 1.000, slg::ocl::WARP},
+        {30, 30, 0, 2, 6, 0.500, 0.000, slg::ocl::WARP},
+        {30, 30, 0, 2, 6, 0.833, 0.333, slg::ocl::WARP},
+        {30, 30, 0, 3, 2, 0.167, 0.167, slg::ocl::WEFT},
+        {30, 30, 0, 3, 2, 0.500, 0.500, slg::ocl::WEFT},
+        {30, 30, 0, 3, 2, 0.833, 0.833, slg::ocl::WEFT}
+    },
+    // PolyesterYarn[4]
+    {
+        {0, 22, -0.7, 1, 1, 0.25, 0.25, slg::ocl::WARP},
+        {0, 22, -0.7, 1, 1, 0.75, 0.75, slg::ocl::WARP},
+        {0, 16, -0.7, 1, 1, 0.25, 0.75, slg::ocl::WEFT},
+        {0, 16, -0.7, 1, 1, 0.75, 0.25, slg::ocl::WEFT}
+    }
 };
 
-static WeaveConfig SilkShantungWeave = {
-  6, 8,
-  0.02f, 1.5f,
-  0.5f, 0.5f, 
-  8.0f, 16.0f, 0.0f,
-  20.0f, 20.0f, 10.0f, 10.0f,
-  500.0f
+static int ClothPatterns[][6 * 9] = {
+    // DenimPattern[3 * 6]
+    {
+        1, 3, 8,  1, 3, 5,  1, 7, 5,  1, 4, 5,  6, 4, 5,  2, 4, 5
+    },
+    // SilkShantungPattern[6 * 8]
+    {
+        3, 3, 3, 3, 2, 2,  3, 3, 3, 3, 2, 2,  3, 3, 3, 3, 2, 2,  3, 3, 3, 3, 2, 2,
+        4, 1, 1, 5, 5, 5,  4, 1, 1, 5, 5, 5,  4, 1, 1, 5, 5, 5,  4, 1, 1, 5, 5, 5
+    },
+    // SilkCharmeusePattern[5 * 10]
+    {
+        10, 2, 4, 6, 8,   1, 2, 4, 6,  8,  1, 2, 4, 13, 8,  1, 2,  4, 7, 8,  1, 11, 4, 7, 8,
+        1, 3, 4, 7, 8,   1, 3, 4, 7, 14,  1, 3, 4,  7, 9,  1, 3, 12, 7, 9,  1,  3, 5, 7, 9
+    },
+    // CottonTwillPattern[4 * 8]
+    {
+        7, 2, 4, 6,  7, 2, 4, 6,  1, 8, 4,  6,  1, 8, 4,  6,
+        1, 3, 9, 6,  1, 3, 9, 6,  1, 3, 5, 10,  1, 3, 5, 10
+    },
+    // WoolGarbardinePattern[6 * 9]
+    {
+        1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,
+        1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,
+        5, 5, 3, 3, 4, 4,  5, 5, 3, 3, 4, 4,  5, 5, 3, 3, 4, 4
+    },
+    // PolyesterPattern[2 * 2]
+    {
+        3, 2, 1, 4
+    }
 };
 
-static int SilkShantungPattern[6*8] = {3, 3, 3, 3, 2, 2,  3, 3, 3, 3, 2, 2,  3, 3, 3, 3, 2, 2,  3, 3, 3, 3, 2, 2,
-                                       4, 1, 1, 5, 5, 5,  4, 1, 1, 5, 5, 5,  4, 1, 1, 5, 5, 5,  4, 1, 1, 5, 5, 5
-};
-
-static Yarn SilkShantungYarn[5] = {
-    {0, 50, -0.5, 2, 4,  0.3333, 0.25, WARP},
-    {0, 50, -0.5, 2, 4,  0.8333, 0.75, WARP},
-    {0, 23, -0.3, 4, 4,  0.3333, 0.75, WEFT},
-    {0, 23, -0.3, 4, 4, -0.1667, 0.25, WEFT},
-    {0, 23, -0.3, 4, 4,  0.8333, 0.25, WEFT},
-};
-
-static WeaveConfig SilkCharmeuseWeave = {
-  5, 10,
-  0.02f, 7.3f,
-  0.5f, 0.5f, 
-  9.0f, 1.0f, 3.0f,
-  0.0f, 0.0f, 0.0f, 0.0f,
-  0.0f
-};
-
-static int SilkCharmeusePattern[5*10] = {10, 2, 4, 6, 8,   1, 2, 4, 6,  8,  1, 2, 4, 13, 8,  1, 2,  4, 7, 8,  1, 11, 4, 7, 8,
-                                          1, 3, 4, 7, 8,   1, 3, 4, 7, 14,  1, 3, 4,  7, 9,  1, 3, 12, 7, 9,  1,  3, 5, 7, 9};
-static Yarn SilkCharmeuseYarn[14] = {
-    {0, 40, 2, 1, 9, 0.1, 0.45, WARP},
-    {0, 40, 2, 1, 9, 0.3, 1.05, WARP},
-    {0, 40, 2, 1, 9, 0.3, 0.05, WARP},
-    {0, 40, 2, 1, 9, 0.5, 0.65, WARP},
-    {0, 40, 2, 1, 9, 0.5, -0.35, WARP},
-    {0, 40, 2, 1, 9, 0.7, 1.25, WARP},
-    {0, 40, 2, 1, 9, 0.7, 0.25, WARP},
-    {0, 40, 2, 1, 9, 0.9, 0.85, WARP},
-    {0, 40, 2, 1, 9, 0.9, -0.15, WARP},
-    {0, 60, 0, 1, 1, 0.1, 0.95, WEFT},
-    {0, 60, 0, 1, 1, 0.3, 0.55, WEFT},
-    {0, 60, 0, 1, 1, 0.5, 0.15, WEFT},
-    {0, 60, 0, 1, 1, 0.7, 0.75, WEFT},
-    {0, 60, 0, 1, 1, 0.9, 0.35, WEFT},
-};
-
-static WeaveConfig CottonTwillWeave = {
-  4, 8,
-  0.01f, 4.0f,
-  0.0f, 0.5f, 
-  6.0f, 2.0f, 4.0f,
-  0.0f, 0.0f, 0.0f, 0.0f,
-  0.0f
-};
-
-static int CottonTwillPattern[4*8] = {7, 2, 4, 6,  7, 2, 4, 6,  1, 8, 4,  6,  1, 8, 4,  6,
-                                      1, 3, 9, 6,  1, 3, 9, 6,  1, 3, 5, 10,  1, 3, 5, 10};
-
-static Yarn CottonTwillYarn[10] = {
-    {-30, 24, 0, 1, 6, 0.125,  0.375, WARP},
-    {-30, 24, 0, 1, 6, 0.375,  1.125, WARP},
-    {-30, 24, 0, 1, 6, 0.375,  0.125, WARP},
-    {-30, 24, 0, 1, 6, 0.625,  0.875, WARP},
-    {-30, 24, 0, 1, 6, 0.625, -0.125, WARP},
-    {-30, 24, 0, 1, 6, 0.875,  0.625, WARP},
-    {-30, 36, 0, 2, 1, 0.125,  0.875, WEFT},
-    {-30, 36, 0, 2, 1, 0.375,  0.625, WEFT},
-    {-30, 36, 0, 2, 1, 0.625,  0.375, WEFT},
-    {-30, 36, 0, 2, 1, 0.875,  0.125, WEFT},
-};
-
-static WeaveConfig WoolGarbardineWeave = {
-  6, 9,
-  0.01f, 4.0f,
-  0.0f, 0.5f, 
-  12.0f, 6.0f, 0.0f,
-  0.0f, 0.0f, 0.0f, 0.0f,
-  0.0f
-};
-
-static int WoolGarbardinePattern[6*9] = {1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,  1, 1, 2, 2, 7, 7,
-                                         1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,  1, 1, 6, 6, 4, 4,
-					 5, 5, 3, 3, 4, 4,  5, 5, 3, 3, 4, 4,  5, 5, 3, 3, 4, 4
-};
-
-static Yarn WoolGarbardineYarn[7] = {
-    {30, 30, 0, 2, 6, 0.167, 0.667, WARP},
-    {30, 30, 0, 2, 6, 0.500, 1.000, WARP},
-    {30, 30, 0, 2, 6, 0.500, 0.000, WARP},
-    {30, 30, 0, 2, 6, 0.833, 0.333, WARP},
-    {30, 30, 0, 3, 2, 0.167, 0.167, WEFT},
-    {30, 30, 0, 3, 2, 0.500, 0.500, WEFT},
-    {30, 30, 0, 3, 2, 0.833, 0.833, WEFT},
-};
-
-static WeaveConfig PolyesterWeave = {
-  2, 2,
-  0.015f, 4.0f,
-  0.5f, 0.5f,
-  1.0f, 1.0f, 0.0f, 
-  8.0f, 8.0f, 6.0f, 6.0f,
-  50.0f
-};
-
-static int PolyesterPattern[2*2] = {3, 2, 1, 4};
-static Yarn PolyesterYarn[4] = {
-    {0, 22, -0.7, 1, 1, 0.25, 0.25, WARP},
-    {0, 22, -0.7, 1, 1, 0.75, 0.75, WARP},
-    {0, 16, -0.7, 1, 1, 0.25, 0.75, WEFT},
-    {0, 16, -0.7, 1, 1, 0.75, 0.25, WEFT}
-};
-
-static uint64_t sampleTEA(uint32_t v0, uint32_t v1, u_int rounds = 4)
-{
+static uint64_t sampleTEA(uint32_t v0, uint32_t v1, u_int rounds = 4) {
 	uint32_t sum = 0;
 
 	for (u_int i = 0; i < rounds; ++i) {
@@ -2130,8 +2150,7 @@ static uint64_t sampleTEA(uint32_t v0, uint32_t v1, u_int rounds = 4)
 	return ((uint64_t) v1 << 32) + v0;
 }
 
-static float sampleTEAfloat(uint32_t v0, uint32_t v1, u_int rounds = 4)
-{
+static float sampleTEAfloat(uint32_t v0, uint32_t v1, u_int rounds = 4) {
 	/* Trick from MTGP: generate an uniformly distributed
 	   single precision number in [1,2) and subtract 1. */
 	union {
@@ -2143,8 +2162,7 @@ static float sampleTEAfloat(uint32_t v0, uint32_t v1, u_int rounds = 4)
 }
 
 // von Mises Distribution
-static float vonMises(float cos_x, float b)
-{
+static float vonMises(float cos_x, float b) {
 	// assumes a = 0, b > 0 is a concentration parameter.
 
 	const float factor = expf(b * cos_x) * INV_TWOPI;
@@ -2166,8 +2184,7 @@ static float vonMises(float cos_x, float b)
 }
 
 // Attenuation term
-static float seeliger(float cos_th1, float cos_th2, float sg_a, float sg_s)
-{
+static float seeliger(float cos_th1, float cos_th2, float sg_a, float sg_s) {
 	const float al = sg_s / (sg_a + sg_s); // albedo
 	const float c1 = max(0.f, cos_th1);
 	const float c2 = max(0.f, cos_th2);
@@ -2176,123 +2193,9 @@ static float seeliger(float cos_th1, float cos_th2, float sg_a, float sg_s)
 	return al * INV_TWOPI * .5f * c1 * c2 / (c1 + c2);
 }
 
-Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
-	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
-	float *directPdfW, float *reversePdfW) const {
-	  
-	if (directPdfW)
-		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
+void ClothMaterial::GetYarnUV(const slg::ocl::Yarn *yarn, const Point &center, const Point &xy, UV *uv, float *umaxMod) const {
+    const slg::ocl::WeaveConfig *Weave = &ClothWeaves[Preset];
 
-	if (reversePdfW)
-		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
-
-	*event = GLOSSY | REFLECT;
-
-	UV uv;
-	float umax, scale = specularNormalization;
-	const Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
-	
-	scale = scale * EvalSpecular(yarn, uv, umax, localLightDir, localEyeDir);
-	
-	const Texture *ks = yarn->yarn_type == WARP ? Warp_Ks :  Weft_Ks;
-	const Texture *kd = yarn->yarn_type == WARP ? Warp_Kd :  Weft_Kd;
-
-	return (kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale) * INV_PI * fabsf(localLightDir.z);
-}
-
-Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
-	const Vector &localFixedDir, Vector *localSampledDir,
-	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent) const {
-
-	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
-			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
-		return Spectrum();
-
-	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
-
-	*absCosSampledDir = fabsf(localSampledDir->z);
-	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
-		return Spectrum();
-
-	*event = GLOSSY | REFLECT;
-	
-	UV uv;
-	float umax, scale = specularNormalization;
-
-	const Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
-	
-	if (!hitPoint.fromLight)
-	    scale = scale * EvalSpecular(yarn, uv, umax, localFixedDir, *localSampledDir);
-	else
-	    scale = scale * EvalSpecular(yarn, uv, umax, *localSampledDir, localFixedDir);
-
-	const Texture *ks = yarn->yarn_type == WARP ? Warp_Ks :  Weft_Ks;
-	const Texture *kd = yarn->yarn_type == WARP ? Warp_Kd :  Weft_Kd;
-	
-	return kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale;
-}
-
-void ClothMaterial::Pdf(const HitPoint &hitPoint,
-		const Vector &localLightDir, const Vector &localEyeDir,
-		float *directPdfW, float *reversePdfW) const {
-	if (directPdfW)
-		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
-
-	if (reversePdfW)
-		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
-}
-
-void ClothMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
-	Material::AddReferencedTextures(referencedTexs);
-
-	Warp_Ks->AddReferencedTextures(referencedTexs);
-	Weft_Ks->AddReferencedTextures(referencedTexs);
-	Weft_Kd->AddReferencedTextures(referencedTexs);
-	Warp_Kd->AddReferencedTextures(referencedTexs);
-}
-
-void ClothMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	Material::UpdateTextureReferences(oldTex, newTex);
-
-	if (Weft_Kd == oldTex)
-		Weft_Kd = newTex;
-	if (Weft_Ks == oldTex)
-		Weft_Ks = newTex;
-	if (Warp_Kd == oldTex)
-		Warp_Kd = newTex;
-	if (Warp_Ks == oldTex)
-		Warp_Ks = newTex;
-}
-
-Properties ClothMaterial::ToProperties() const  {
-	Properties props;
-
-	const std::string name = GetName();
-	props.Set(Property("scene.materials." + name + ".type")("cloth"));
-	
-	switch (Preset) {
-	  case DENIM:
-		props.Set(Property("scene.materials." + name + ".preset")("denim"));
-		break;
-	  default:
-	    break;
-	}
-	
-	props.Set(Property("scene.materials." + name + ".weft_kd")(Weft_Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".weft_ks")(Weft_Ks->GetName()));
-	props.Set(Property("scene.materials." + name + ".warp_kd")(Warp_Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetName()));
-	props.Set(Property("scene.materials." + name + ".repeat_u")(Repeat_U));
-	props.Set(Property("scene.materials." + name + ".repeat_v")(Repeat_V));
-	props.Set(Material::ToProperties());
-
-	return props;
-}
-
-void ClothMaterial::GetYarnUV(const Yarn *yarn, const Point &center, const Point &xy, UV *uv, float *umaxMod) const
-{
 	*umaxMod = luxrays::Radians(yarn->umax);
 	if (Weave->period > 0.f) {
 		/* Number of TEA iterations (the more, the better the
@@ -2310,7 +2213,7 @@ void ClothMaterial::GetYarnUV(const Yarn *yarn, const Point &center, const Point
 			sampleTEAfloat(center.x, 2.f * center.y + 1.f,
 			teaIterations)) + center.x) / Weave->period, 0.0, 0.0);
 		
-		if (yarn->yarn_type == WARP)
+		if (yarn->yarn_type == slg::ocl::WARP)
 	  		*umaxMod += random1 * luxrays::Radians(Weave->dWarpUmaxOverDWarp) +
 				random2 * luxrays::Radians(Weave->dWarpUmaxOverDWeft);
 		else
@@ -2322,19 +2225,20 @@ void ClothMaterial::GetYarnUV(const Yarn *yarn, const Point &center, const Point
 	// Compute u and v.
 	// See Chapter 6.
 	// Rotate pi/2 radians around z axis
-	if (yarn->yarn_type == WARP) {
+	if (yarn->yarn_type == slg::ocl::WARP) {
 		uv->u = xy.y * 2.f * *umaxMod / yarn->length;
 		uv->v = xy.x * M_PI / yarn->width;
-	}
-	else {
+	} else {
 		uv->u = xy.x * 2.f * *umaxMod / yarn->length;
 		uv->v = -xy.y * M_PI / yarn->width;
 	}
 }
 
 
-const Yarn *ClothMaterial::GetYarn(const float u_i, const float v_i, UV *uv, float *umax, float *scale) const
-{
+const slg::ocl::Yarn *ClothMaterial::GetYarn(const float u_i, const float v_i,
+        UV *uv, float *umax, float *scale) const {
+    const slg::ocl::WeaveConfig *Weave = &ClothWeaves[Preset];
+
 	const float u = u_i * Repeat_U;
 	const int bu = Floor2Int(u);
 	const float ou = u - bu;
@@ -2345,9 +2249,8 @@ const Yarn *ClothMaterial::GetYarn(const float u_i, const float v_i, UV *uv, flo
 	const u_int ly = Weave->tileHeight - 1 -
 		min(Weave->tileHeight - 1, Floor2UInt(ov * Weave->tileHeight));
 
-	const int yarnID = Pattern[lx + Weave->tileWidth * ly] - 1;
-
-	const Yarn *yarn = &Yarns[yarnID];
+	const int yarnID = ClothPatterns[Preset][lx + Weave->tileWidth * ly] - 1;
+	const slg::ocl::Yarn *yarn = &ClothYarns[Preset][yarnID];
 
 	const Point center((bu + yarn->centerU) * Weave->tileWidth,
 		(bv + yarn->centerV) * Weave->tileHeight);
@@ -2375,8 +2278,41 @@ const Yarn *ClothMaterial::GetYarn(const float u_i, const float v_i, UV *uv, flo
 	return yarn;
 }
 
-float ClothMaterial::EvalFilamentIntegrand(const Yarn *yarn, const Vector &om_i, const Vector &om_r, float u, float v, float umaxMod) const
-{
+float ClothMaterial::RadiusOfCurvature(const slg::ocl::Yarn *yarn, float u, float umaxMod) const {
+	// rhat determines whether the spine is a segment
+	// of an ellipse, a parabole, or a hyperbola.
+	// See Section 5.3.
+	const float rhat = 1.0f + yarn->kappa * (1.0f + 1.0f / tanf(umaxMod));
+	const float a = 0.5f * yarn->width;
+	
+	if (rhat == 1.0f) { // circle; see Subsection 5.3.1.
+		return 0.5f * yarn->length / sinf(umaxMod) - a;
+	} else if (rhat > 0.0f) { // ellipsis
+		const float tmax = atanf(rhat * tanf(umaxMod));
+		const float bhat = (0.5f * yarn->length - a * sinf(umaxMod)) / sinf(tmax);
+		const float ahat = bhat / rhat;
+		const float t = atanf(rhat * tanf(u));
+		return powf(bhat * bhat * cosf(t) * cosf(t) +
+			ahat * ahat * sinf(t) * sinf(t), 1.5f) / (ahat * bhat);
+	} else if (rhat < 0.0f) { // hyperbola; see Subsection 5.3.3.
+		const float tmax = -atanhf(rhat * tanf(umaxMod));
+		const float bhat = (0.5f * yarn->length - a * sinf(umaxMod)) / sinhf(tmax);
+		const float ahat = bhat / rhat;
+		const float t = -atanhf(rhat * tanf(u));
+		return -powf(bhat * bhat * coshf(t) * coshf(t) +
+			ahat * ahat * sinhf(t) * sinhf(t), 1.5f) / (ahat * bhat);
+	} else { // rhat == 0  // parabola; see Subsection 5.3.2.
+		const float tmax = tanf(umaxMod);
+		const float ahat = (0.5f * yarn->length - a * sinf(umaxMod)) / (2.f * tmax);
+		const float t = tanf(u);
+		return 2.f * ahat * powf(1.f + t * t, 1.5f);
+	}
+}
+
+float ClothMaterial::EvalFilamentIntegrand(const slg::ocl::Yarn *yarn, const Vector &om_i,
+        const Vector &om_r, float u, float v, float umaxMod) const {
+    const slg::ocl::WeaveConfig *Weave = &ClothWeaves[Preset];
+
 	// 0 <= ss < 1.0
 	if (Weave->ss < 0.0f || Weave->ss >= 1.0f)
 		return 0.0f;
@@ -2441,40 +2377,9 @@ float ClothMaterial::EvalFilamentIntegrand(const Yarn *yarn, const Vector &om_i,
 	return fs * M_PI / Weave->hWidth;
 }
 
-float ClothMaterial::RadiusOfCurvature(const Yarn *yarn, float u, float umaxMod) const
-{
-	// rhat determines whether the spine is a segment
-	// of an ellipse, a parabole, or a hyperbola.
-	// See Section 5.3.
-	const float rhat = 1.0f + yarn->kappa * (1.0f + 1.0f / tanf(umaxMod));
-	const float a = 0.5f * yarn->width;
-	
-	if (rhat == 1.0f) { // circle; see Subsection 5.3.1.
-		return 0.5f * yarn->length / sinf(umaxMod) - a;
-	} else if (rhat > 0.0f) { // ellipsis
-		const float tmax = atanf(rhat * tanf(umaxMod));
-		const float bhat = (0.5f * yarn->length - a * sinf(umaxMod)) / sinf(tmax);
-		const float ahat = bhat / rhat;
-		const float t = atanf(rhat * tanf(u));
-		return powf(bhat * bhat * cosf(t) * cosf(t) +
-			ahat * ahat * sinf(t) * sinf(t), 1.5f) / (ahat * bhat);
-	} else if (rhat < 0.0f) { // hyperbola; see Subsection 5.3.3.
-		const float tmax = -atanhf(rhat * tanf(umaxMod));
-		const float bhat = (0.5f * yarn->length - a * sinf(umaxMod)) / sinhf(tmax);
-		const float ahat = bhat / rhat;
-		const float t = -atanhf(rhat * tanf(u));
-		return -powf(bhat * bhat * coshf(t) * coshf(t) +
-			ahat * ahat * sinhf(t) * sinhf(t), 1.5f) / (ahat * bhat);
-	} else { // rhat == 0  // parabola; see Subsection 5.3.2.
-		const float tmax = tanf(umaxMod);
-		const float ahat = (0.5f * yarn->length - a * sinf(umaxMod)) / (2.f * tmax);
-		const float t = tanf(u);
-		return 2.f * ahat * powf(1.f + t * t, 1.5f);
-	}
-}
+float ClothMaterial::EvalStapleIntegrand(const slg::ocl::Yarn *yarn, const Vector &om_i, const Vector &om_r, float u, float v, float umaxMod) const {
+    const slg::ocl::WeaveConfig *Weave = &ClothWeaves[Preset];
 
-float ClothMaterial::EvalStapleIntegrand(const Yarn *yarn, const Vector &om_i, const Vector &om_r, float u, float v, float umaxMod) const
-{
 	// w * sin(umax) < l
 	if (yarn->width * sinf(umaxMod) >= yarn->length)
 		return 0.0f;
@@ -2528,9 +2433,10 @@ float ClothMaterial::EvalStapleIntegrand(const Yarn *yarn, const Vector &om_i, c
 	return fs * 2.0f * umaxMod / Weave->hWidth;
 }
 
-float ClothMaterial::EvalIntegrand(const Yarn *yarn, const UV &uv, float umaxMod, Vector &om_i, Vector &om_r) const
-{
-	if (yarn->yarn_type == WARP) {
+float ClothMaterial::EvalIntegrand(const slg::ocl::Yarn *yarn, const UV &uv, float umaxMod, Vector &om_i, Vector &om_r) const {
+    const slg::ocl::WeaveConfig *Weave = &ClothWeaves[Preset];
+
+	if (yarn->yarn_type == slg::ocl::WARP) {
 		if (luxrays::Radians(yarn->psi != 0.0f))
 			return EvalStapleIntegrand(yarn, om_i, om_r, uv.u, uv.v,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
@@ -2539,8 +2445,7 @@ float ClothMaterial::EvalIntegrand(const Yarn *yarn, const UV &uv, float umaxMod
 			return EvalFilamentIntegrand(yarn, om_i, om_r, uv.u, uv.v,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->warpArea;
-	}
-	else {
+	} else {
 		// Rotate pi/2 radians around z axis
 		swap(om_i.x, om_i.y);
 		om_i.x = -om_i.x;
@@ -2559,8 +2464,8 @@ float ClothMaterial::EvalIntegrand(const Yarn *yarn, const UV &uv, float umaxMod
 }
 
 
-float ClothMaterial::EvalSpecular(const Yarn *yarn,const UV &uv, float umax, const Vector &wo, const Vector &wi) const
-{
+float ClothMaterial::EvalSpecular(const slg::ocl::Yarn *yarn,const UV &uv, float umax,
+        const Vector &wo, const Vector &wi) const {
 	// Get incident and exitant directions.
 	Vector om_i(wi);
 	if (om_i.z < 0.f)
@@ -2573,42 +2478,136 @@ float ClothMaterial::EvalSpecular(const Yarn *yarn,const UV &uv, float umax, con
 	return EvalIntegrand(yarn, uv, umax, om_i, om_r);
 }
 
-void ClothMaterial::SetPreset() {
+Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
+	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
+	float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
+
+	if (reversePdfW)
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
+
+	*event = GLOSSY | REFLECT;
+
+	UV uv;
+	float umax, scale = specularNormalization;
+	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
+	
+	scale = scale * EvalSpecular(yarn, uv, umax, localLightDir, localEyeDir);
+	
+	const Texture *ks = yarn->yarn_type == slg::ocl::WARP ? Warp_Ks :  Weft_Ks;
+	const Texture *kd = yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd;
+
+	return (kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale) * INV_PI * fabsf(localLightDir.z);
+}
+
+Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
+	const Vector &localFixedDir, Vector *localSampledDir,
+	const float u0, const float u1, const float passThroughEvent,
+	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent) const {
+	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
+			(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+		return Spectrum();
+
+	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
+
+	*absCosSampledDir = fabsf(localSampledDir->z);
+	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+
+	*event = GLOSSY | REFLECT;
+	
+	UV uv;
+	float umax, scale = specularNormalization;
+
+	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
+	
+	if (!hitPoint.fromLight)
+	    scale = scale * EvalSpecular(yarn, uv, umax, localFixedDir, *localSampledDir);
+	else
+	    scale = scale * EvalSpecular(yarn, uv, umax, *localSampledDir, localFixedDir);
+
+	const Texture *ks = yarn->yarn_type == slg::ocl::WARP ? Warp_Ks :  Weft_Ks;
+	const Texture *kd = yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd;
+	
+	return kd->GetSpectrumValue(hitPoint).Clamp() + ks->GetSpectrumValue(hitPoint).Clamp() * scale;
+}
+
+void ClothMaterial::Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * INV_PI);
+
+	if (reversePdfW)
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * INV_PI);
+}
+
+void ClothMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	Warp_Ks->AddReferencedTextures(referencedTexs);
+	Weft_Ks->AddReferencedTextures(referencedTexs);
+	Weft_Kd->AddReferencedTextures(referencedTexs);
+	Warp_Kd->AddReferencedTextures(referencedTexs);
+}
+
+void ClothMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (Weft_Kd == oldTex)
+		Weft_Kd = newTex;
+	if (Weft_Ks == oldTex)
+		Weft_Ks = newTex;
+	if (Warp_Kd == oldTex)
+		Warp_Kd = newTex;
+	if (Warp_Ks == oldTex)
+		Warp_Ks = newTex;
+}
+
+Properties ClothMaterial::ToProperties() const  {
+	Properties props;
+
+	const std::string name = GetName();
+	props.Set(Property("scene.materials." + name + ".type")("cloth"));
+	
 	switch (Preset) {
-	  case DENIM:
-		Yarns = DenimYarn;
-		Pattern = DenimPattern;
-		Weave = &DenimWeave;
+	  case slg::ocl::DENIM:
+		props.Set(Property("scene.materials." + name + ".preset")("denim"));
 		break;
-	  case SILKCHARMEUSE:
-		Yarns = SilkCharmeuseYarn;
-		Pattern = SilkCharmeusePattern;
-		Weave = &SilkCharmeuseWeave;
+	  case slg::ocl::SILKCHARMEUSE:
+		props.Set(Property("scene.materials." + name + ".preset")("silk_charmeuse"));
 		break;
-	  case SILKSHANTUNG:
-		Yarns = SilkShantungYarn;
-		Pattern = SilkShantungPattern;
-		Weave = &SilkShantungWeave;
+	  case slg::ocl::SILKSHANTUNG:
+		props.Set(Property("scene.materials." + name + ".preset")("silk_shantung"));
 		break;
-	  case COTTONTWILL:
-		Yarns = CottonTwillYarn;
-		Pattern = CottonTwillPattern;
-		Weave = &CottonTwillWeave;
+	  case slg::ocl::COTTONTWILL:
+		props.Set(Property("scene.materials." + name + ".preset")("cotton_twill"));
 		break;
-	  case WOOLGARBARDINE:
-		Yarns = WoolGarbardineYarn;
-		Pattern = WoolGarbardinePattern;
-		Weave = &WoolGarbardineWeave;
+	  case slg::ocl::WOOLGARBARDINE:
+		props.Set(Property("scene.materials." + name + ".preset")("wool_garbardine"));
 		break;
-	  case POLYESTER:
-		Yarns = PolyesterYarn;
-		Pattern = PolyesterPattern;
-		Weave = &PolyesterWeave;
+	  case slg::ocl::POLYESTER:
+		props.Set(Property("scene.materials." + name + ".preset")("polyester_lining_cloth"));
 		break;
 	  default:
+          throw runtime_error("Unknown preset in ClothMaterial::ToProperties(): " + ToString(Preset));
 	    break;
 	}
 
+	props.Set(Property("scene.materials." + name + ".weft_kd")(Weft_Kd->GetName()));
+	props.Set(Property("scene.materials." + name + ".weft_ks")(Weft_Ks->GetName()));
+	props.Set(Property("scene.materials." + name + ".warp_kd")(Warp_Kd->GetName()));
+	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetName()));
+	props.Set(Property("scene.materials." + name + ".repeat_u")(Repeat_U));
+	props.Set(Property("scene.materials." + name + ".repeat_v")(Repeat_V));
+	props.Set(Material::ToProperties());
+
+	return props;
+}
+
+void ClothMaterial::SetPreset() {
 	// Calibrate scale factor
 	
 	RandomGenerator random(1);
@@ -2623,7 +2622,7 @@ void ClothMaterial::SetPreset() {
 		UV uv;
 		float umax, scale = 1.f;
 		
-		const Yarn *yarn = GetYarn(random.floatValue(), random.floatValue(), &uv, &umax, &scale);
+		const slg::ocl::Yarn *yarn = GetYarn(random.floatValue(), random.floatValue(), &uv, &umax, &scale);
 		
 		result += EvalSpecular(yarn, uv, umax, wo, wi) * scale;
 	}

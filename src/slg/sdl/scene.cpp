@@ -943,23 +943,23 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 		mat = new VelvetMaterial(emissionTex, bumpTex, kd, p1, p2, p3, thickness);
 	} else if (matType == "cloth") {
-		ClothPreset preset = DENIM;
+		slg::ocl::ClothPreset preset = slg::ocl::DENIM;
 		
 		if (props.IsDefined(propName + ".preset")) {
 			const string type = props.Get(Property(propName + ".preset")("denim")).Get<string>();
 			
 			if (type == "denim")
-				preset = DENIM;
+				preset = slg::ocl::DENIM;
 			else if (type == "silk_charmeuse")
-				preset = SILKCHARMEUSE;  
+				preset = slg::ocl::SILKCHARMEUSE;  
 			else if (type == "silk_shantung")
-				preset = SILKSHANTUNG;  
+				preset = slg::ocl::SILKSHANTUNG;  
 			else if (type == "cotton_twill")
-				preset = COTTONTWILL;  
+				preset = slg::ocl::COTTONTWILL;  
 			else if (type == "wool_garbardine")
-				preset = WOOLGARBARDINE;  
+				preset = slg::ocl::WOOLGARBARDINE;  
 			else if (type == "polyester_lining_cloth")
-				preset = POLYESTER;  
+				preset = slg::ocl::POLYESTER;
 		}
 		Texture *weft_kd = GetTexture(props.Get(Property(propName + ".weft_kd")(.5f, .5f, .5f)));
 		Texture *weft_ks = GetTexture(props.Get(Property(propName + ".weft_ks")(.5f, .5f, .5f)));

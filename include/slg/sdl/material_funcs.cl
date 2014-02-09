@@ -28,6 +28,9 @@
 bool Material_IsDeltaNoMix(__global Material *material) {
 	switch (material->type) {
 		// Non Specular materials
+#if defined (PARAM_ENABLE_MAT_CLOTH)
+		case CLOTH:
+#endif
 #if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
 		case ROUGHGLASS:
 #endif
@@ -108,6 +111,10 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 		case ROUGHGLASS:
 			return GLOSSY | REFLECT | TRANSMIT;
 #endif
+#if defined (PARAM_ENABLE_MAT_CLOTH)
+		case CLOTH:
+			return GLOSSY | REFLECT;
+#endif
 		default:
 			return NONE;
 	}
@@ -183,6 +190,12 @@ float3 Material_SampleNoMix(__global Material *material,
 					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
+#if defined (PARAM_ENABLE_MAT_CLOTH)
+		case CLOTH:
+			return ClothMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
+					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
+					TEXTURES_PARAM);
+#endif
 		default:
 			return BLACK;
 	}
@@ -221,6 +234,11 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
 		case ROUGHGLASS:
 			return RoughGlassMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_CLOTH)
+		case CLOTH:
+			return ClothMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)

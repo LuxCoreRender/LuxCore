@@ -86,11 +86,79 @@ typedef struct {
 
 typedef struct {
     unsigned int kdTexIndex;
-	unsigned int p1TexIndex;
+	unsigned int  p1TexIndex;
 	unsigned int p2TexIndex;
 	unsigned int p3TexIndex;
 	unsigned int thicknessTexIndex;
 } VelvetParam;
+
+typedef enum {
+	DENIM, SILKSHANTUNG, SILKCHARMEUSE, COTTONTWILL, WOOLGARBARDINE, POLYESTER
+} ClothPreset;
+
+typedef enum {
+	WARP, WEFT
+} YarnType;
+
+// Data structure describing the properties of a single yarn
+typedef struct {
+	// Fiber twist angle
+	float psi;
+	// Maximum inclination angle
+	float umax;
+	// Spine curvature
+	float kappa;
+	// Width of segment rectangle
+	float width;
+	// Length of segment rectangle
+	float length;
+	/*! u coordinate of the yarn segment center,
+	 * assumes that the tile covers 0 <= u, v <= 1.
+	 * (0, 0) is lower left corner of the weave pattern
+	 */
+	float centerU;
+	// v coordinate of the yarn segment center
+	float centerV;
+
+	// Weft/Warp flag
+	YarnType yarn_type;
+} Yarn;
+
+typedef struct  {
+	// Size of the weave pattern
+	unsigned int tileWidth, tileHeight;
+	
+	// Uniform scattering parameter
+	float alpha;
+	// Forward scattering parameter
+	float beta;
+	// Filament smoothing
+	float ss;
+	// Highlight width
+	float hWidth;
+	// Combined area taken up by the warp & weft
+	float warpArea, weftArea;
+
+	// Noise-related parameters
+	float fineness;
+
+	float dWarpUmaxOverDWarp;
+	float dWarpUmaxOverDWeft;
+	float dWeftUmaxOverDWarp;
+	float dWeftUmaxOverDWeft;
+	float period;
+} WeaveConfig;
+
+typedef struct {
+    ClothPreset Preset;
+	unsigned int Weft_KdIndex;
+	unsigned int Weft_KsIndex;
+	unsigned int Warp_KdIndex;
+	unsigned int Warp_KsIndex;
+	float Repeat_U;
+	float Repeat_V;
+	float specularNormalization;
+} ClothParam;
 
 typedef struct {
 	MaterialType type;
@@ -117,6 +185,7 @@ typedef struct {
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
 		VelvetParam velvet;
+        ClothParam cloth;
 	};
 } Material;
 
