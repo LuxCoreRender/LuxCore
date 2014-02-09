@@ -451,6 +451,20 @@ void CompiledScene::CompileMaterials() {
 				mat->velvet.thicknessTexIndex = scene->texDefs.GetTextureIndex(vm->GetThickness());
 				break;
 			}
+            case CLOTH: {
+                ClothMaterial *cm = static_cast<ClothMaterial *>(m);
+
+				mat->type = slg::ocl::CLOTH;
+                mat->cloth.Preset = cm->GetPreset();
+                mat->cloth.Weft_KdIndex = scene->texDefs.GetTextureIndex(cm->GetWeftKd());
+                mat->cloth.Weft_KsIndex = scene->texDefs.GetTextureIndex(cm->GetWeftKs());
+                mat->cloth.Warp_KdIndex = scene->texDefs.GetTextureIndex(cm->GetWarpKd());
+                mat->cloth.Warp_KsIndex = scene->texDefs.GetTextureIndex(cm->GetWarpKs());
+                mat->cloth.Repeat_U = cm->GetRepeatU();
+                mat->cloth.Repeat_V = cm->GetRepeatV();
+                mat->cloth.specularNormalization = cm->GetSpecularNormalization();
+                break;
+            }
 			default:
 				throw runtime_error("Unknown material: " + boost::lexical_cast<string>(m->GetType()));
 		}

@@ -753,67 +753,10 @@ private:
 // Cloth material
 //------------------------------------------------------------------------------
 
-typedef enum {
-	DENIM, SILKCHARMEUSE, COTTONTWILL, WOOLGARBARDINE, SILKSHANTUNG, POLYESTER
-} ClothPreset;
-
-typedef enum {
-	WARP, WEFT
-} YarnType;
-
-// Data structure describing the properties of a single yarn
-typedef struct {
-	// Fiber twist angle
-	float psi;
-	// Maximum inclination angle
-	float umax;
-	// Spine curvature
-	float kappa;
-	// Width of segment rectangle
-	float width;
-	// Length of segment rectangle
-	float length;
-	/*! u coordinate of the yarn segment center,
-	 * assumes that the tile covers 0 <= u, v <= 1.
-	 * (0, 0) is lower left corner of the weave pattern
-	 */
-	float centerU;
-	// v coordinate of the yarn segment center
-	float centerV;
-
-	// Weft/Warp flag
-	YarnType yarn_type;
-} Yarn;
-
-typedef struct  {
-	// Size of the weave pattern
-	u_int tileWidth, tileHeight;
-	
-	// Uniform scattering parameter
-	float alpha;
-	// Forward scattering parameter
-	float beta;
-	// Filament smoothing
-	float ss;
-	// Highlight width
-	float hWidth;
-	// Combined area taken up by the warp & weft
-	float warpArea, weftArea;
-
-	// Noise-related parameters
-	float fineness;
-
-	float dWarpUmaxOverDWarp;
-	float dWarpUmaxOverDWeft;
-	float dWeftUmaxOverDWarp;
-	float dWeftUmaxOverDWeft;
-	float period;
-} WeaveConfig;
-
 class ClothMaterial : public Material {
 public:
 	ClothMaterial(const Texture *emitted, const Texture *bump,
-            const ClothPreset preset, const Texture *weft_kd, const Texture *weft_ks,
+            const slg::ocl::ClothPreset preset, const Texture *weft_kd, const Texture *weft_ks,
             const Texture *warp_kd, const Texture *warp_ks, const float repeat_u, const float repeat_v) :
     Material(emitted, bump), Preset(preset), Weft_Kd(weft_kd), Weft_Ks(weft_ks),
             Warp_Kd(warp_kd), Warp_Ks(warp_ks), Repeat_U(repeat_u), Repeat_V(repeat_v) {
@@ -840,35 +783,38 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
+    slg::ocl::ClothPreset GetPreset() const { return Preset; }
 	const Texture *GetWeftKd() const { return Weft_Kd; }
 	const Texture *GetWeftKs() const { return Weft_Ks; }
 	const Texture *GetWarpKd() const { return Warp_Kd; }
 	const Texture *GetWarpKs() const { return Warp_Ks; }
 	const float GetRepeatU() const { return Repeat_U; }
 	const float GetRepeatV() const { return Repeat_V; }
+    const float GetSpecularNormalization() const { return specularNormalization; }
 
 private:
 	void SetPreset();
 
-	const Yarn *GetYarn(const float u_i, const float v_i, luxrays::UV *uv, float *umax, float *scale) const;
-	void GetYarnUV(const Yarn *yarn, const luxrays::Point &center, const luxrays::Point &xy, luxrays::UV *uv, float *umaxMod) const;
+	const slg::ocl::Yarn *GetYarn(const float u_i, const float v_i, luxrays::UV *uv, float *umax, float *scale) const;
+	void GetYarnUV(const slg::ocl::Yarn *yarn, const luxrays::Point &center, const luxrays::Point &xy, luxrays::UV *uv, float *umaxMod) const;
 	
-	float RadiusOfCurvature(const Yarn *yarn, float u, float umaxMod) const;
-	float EvalSpecular(const Yarn *yarn, const luxrays::UV &uv, float umax, const luxrays::Vector &wo, const luxrays::Vector &vi) const;
-	float EvalIntegrand(const Yarn *yarn, const luxrays::UV &uv, float umaxMod, luxrays::Vector &om_i, luxrays::Vector &om_r) const;
-	float EvalFilamentIntegrand(const Yarn *yarn, const luxrays::Vector &om_i, const luxrays::Vector &om_r, float u, float v, float umaxMod) const;
-	float EvalStapleIntegrand(const Yarn *yarn, const luxrays::Vector &om_i, const luxrays::Vector &om_r, float u, float v, float umaxMod) const;
+	float RadiusOfCurvature(const slg::ocl::Yarn *yarn, float u, float umaxMod) const;
+	float EvalSpecular(const slg::ocl::Yarn *yarn, const luxrays::UV &uv,
+        float umax, const luxrays::Vector &wo, const luxrays::Vector &vi) const;
+	float EvalIntegrand(const slg::ocl::Yarn *yarn, const luxrays::UV &uv,
+        float umaxMod, luxrays::Vector &om_i, luxrays::Vector &om_r) const;
+	float EvalFilamentIntegrand(const slg::ocl::Yarn *yarn, const luxrays::Vector &om_i,
+        const luxrays::Vector &om_r, float u, float v, float umaxMod) const;
+	float EvalStapleIntegrand(const slg::ocl::Yarn *yarn, const luxrays::Vector &om_i,
+        const luxrays::Vector &om_r, float u, float v, float umaxMod) const;
 
-	const ClothPreset Preset;
+	const slg::ocl::ClothPreset Preset;
 	const Texture *Weft_Kd;
 	const Texture *Weft_Ks;
 	const Texture *Warp_Kd;
 	const Texture *Warp_Ks;
 	const float Repeat_U;
 	const float Repeat_V;
-	const Yarn *Yarns;
-	const int *Pattern;
-	const WeaveConfig *Weave;
 	float specularNormalization;
 };
 

@@ -29,6 +29,14 @@ int Mod(int a, int b) {
 	return a;
 }
 
+float Radians(float deg) {
+	return (M_PI_F / 180.f) * deg;
+}
+
+float Degrees(float rad) {
+	return (180.f / M_PI_F) * rad;
+}
+
 int Ceil2Int(float val) {
 	return (int)ceil(val);
 }

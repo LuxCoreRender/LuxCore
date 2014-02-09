@@ -18,10 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846f
-#endif
-
 //------------------------------------------------------------------------------
 // Texture utility functions
 //------------------------------------------------------------------------------
@@ -146,21 +142,21 @@ float Turbulence(const float3 P, const float omega, const int maxOctaves) {
 	return sum;
 }
 
-static float tex_sin(float a) {
+float tex_sin(float a) {
     a = 0.5f + 0.5f * sin(a);
     return a;
 }
 
-static float tex_saw(float a) {
-    const float b = 2.f * M_PI;
+float tex_saw(float a) {
+    const float b = 2.f * M_PI_F;
     int n = (int) (a / b);
     a -= n*b;
     if (a < 0.f) a += b;
     return a / b;
 }
 
-static float tex_tri(float a) {
-    const float b = 2.f * M_PI;
+float tex_tri(float a) {
+    const float b = 2.f * M_PI_F;
     const float rmax = 1.f;
     a = rmax - 2.f * fabs(floor((a * (1.0 / b)) + 0.5f) - (a * (1.f / b)));
     return a;
