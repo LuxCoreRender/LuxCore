@@ -26,24 +26,26 @@ getenv_path(LuxRays_DEPENDENCIES_DIR)
 ################################################################################
 
 # Find threading library
-FIND_PACKAGE(Threads REQUIRED)
+find_package(Threads REQUIRED)
 
-# Find FreeImage
-find_package(FreeImage)
-
-if (FreeImage_FOUND)
-	include_directories(SYSTEM ${FreeImage_INCLUDE_DIRS})
-endif ()
+find_package(OpenImageIO REQUIRED)
+include_directories(SYSTEM ${OPENIMAGEIO_INCLUDE_DIR})
+find_package(OpenEXR REQUIRED)
 
 if(NOT APPLE)
+    # Apple has these available hardcoded and matched in macos repo, see Config_OSX.cmake
+
+    include_directories(SYSTEM ${OPENEXR_INCLUDE_DIRS})
+    find_package(TIFF REQUIRED)
+    include_directories(SYSTEM ${TIFF_INCLUDE_DIR})
+    find_package(JPEG REQUIRED)
+    include_directories(SYSTEM ${JPEG_INCLUDE_DIR})
+    find_package(PNG REQUIRED)
+    include_directories(SYSTEM ${PNG_PNG_INCLUDE_DIR})
 	# Find Python Libraries
 	find_package(PythonLibs)
-else(not APPLE)
-	# use Blender python libs for static compiling !
-	SET(PYTHON_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py33_uni_intel/libbf_python_ext.a ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py33_uni_intel/libbf_python.a)
-	SET(PYTHON_INCLUDE_DIRS ${OSX_DEPENDENCY_ROOT}/include/Python3.3m)
-	SET(PYTHONLIBS_FOUND ON)
 endif()
+
 include_directories (${PYTHON_INCLUDE_DIRS})
 
 # Find Boost
@@ -112,7 +114,7 @@ endif ()
 
 # Find BISON
 IF (NOT BISON_NOT_AVAILABLE)
-	FIND_PACKAGE(BISON)
+	find_package(BISON)
 	IF (NOT BISON_FOUND)
 		MESSAGE(WARNING "bison not found - try compilation using already generated files")
 		SET(BISON_NOT_AVAILABLE 1)
@@ -121,7 +123,7 @@ ENDIF (NOT BISON_NOT_AVAILABLE)
 
 # Find FLEX
 IF (NOT FLEX_NOT_AVAILABLE)
-	FIND_PACKAGE(FLEX)
+	find_package(FLEX)
 	IF (NOT FLEX_FOUND)
 		MESSAGE(WARNING "flex not found - try compilation using already generated files")
 		SET(FLEX_NOT_AVAILABLE 1)

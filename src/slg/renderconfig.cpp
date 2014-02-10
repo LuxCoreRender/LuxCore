@@ -19,6 +19,8 @@
 #include <memory>
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp> 
+#include <boost/filesystem.hpp>
 
 #include "slg/renderconfig.h"
 #include "slg/renderengine.h"
@@ -361,13 +363,18 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 
 		SDL_LOG("Film output definition: " << type << " [" << fileName << "]");
 
-		// Check if it is a supported file format
-		FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
-		if (fif == FIF_UNKNOWN)
-			throw runtime_error("Unknown image format in film output: " + outputName);
+//		// Check if it is a supported file format
+//		FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
+//		if (fif == FIF_UNKNOWN)
+//			throw runtime_error("Unknown image format in film output: " + outputName);
 
 		// HDR image or not
-		const bool hdrImage = ((fif == FIF_HDR) || (fif == FIF_EXR));
+		bool hdrImage = false;
+		string lowerFileName = boost::algorithm::to_lower_copy(fileName);
+		string file_extension  = boost::filesystem::path(lowerFileName).extension().native();
+		
+		if (file_extension == ".exr" || file_extension == ".hdr")
+			hdrImage = true;
 
 		if (type == "RGB") {
 			if (hdrImage)

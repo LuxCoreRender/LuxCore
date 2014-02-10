@@ -48,26 +48,6 @@
 
 #endif
 
-// According Masol Lee's test FreeImage unicode support works only on Windows. FreeImage
-// documentation seems to confirm that unicode functions are supported only on Windows.
-#if defined(ENABLE_UNICODE_SUPPORT) && defined(WIN32)
-
-#define FREEIMAGE_CONVFILENAME(a)  boost::locale::conv::utf_to_utf<wchar_t>(a)
-#define FREEIMAGE_GETFILETYPE  FreeImage_GetFileTypeU
-#define FREEIMAGE_GETFIFFROMFILENAME FreeImage_GetFIFFromFilenameU
-#define FREEIMAGE_LOAD FreeImage_LoadU
-#define FREEIMAGE_SAVE FreeImage_SaveU
-
-#else
-
-#define FREEIMAGE_CONVFILENAME(a)  (a)
-#define FREEIMAGE_GETFILETYPE  FreeImage_GetFileType
-#define FREEIMAGE_GETFIFFROMFILENAME FreeImage_GetFIFFromFilename
-#define FREEIMAGE_LOAD FreeImage_Load
-#define FREEIMAGE_SAVE FreeImage_Save
-
-#endif
-
 //------------------------------------------------------------------------------
 
 typedef unsigned char u_char;
