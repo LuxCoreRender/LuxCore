@@ -72,7 +72,7 @@ class RenderView(QMainWindow):
 	
 	def allocateImageBuffers(self):
 		########################################################################
-		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
+		# NOTICE THE DIFFERENT BEHAVIOR REQUIRED BY PYTHON 2.7
 		########################################################################
 		if sys.version_info < (3,0,0):
 			self.imageBufferFloat = buffer(array('f', [0.0] * (self.filmWidth * self.filmHeight * 3)))
@@ -313,7 +313,7 @@ class RenderView(QMainWindow):
 					imageMap[offset] = 0.0
 					imageMap[offset] = 0.0
 		########################################################################
-		# NOTICE THE DIFFERENT BEAHVIOR REQUIRED BY PYTHON 2.7
+		# NOTICE THE DIFFERENT BEHAVIOR REQUIRED BY PYTHON 2.7
 		########################################################################
 		self.scene.DefineImageMap("check_map", buffer(imageMap) if sys.version_info < (3,0,0) else imageMap, 2.2, 3, 128, 128)
 

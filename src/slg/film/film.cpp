@@ -23,6 +23,10 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
+OIIO_NAMESPACE_USING
+
 #include "slg/film/film.h"
 #include "luxrays/core/geometry/point.h"
 #include "slg/editaction.h"
@@ -31,6 +35,8 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+typedef unsigned char BYTE;
 
 //------------------------------------------------------------------------------
 // FilmOutput
@@ -716,140 +722,86 @@ void Film::Output(const FilmOutputs &filmOutputs) {
 }
 
 void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName,
-		const Properties *props) {
-	// Image format
-	FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
-	if (fif == FIF_UNKNOWN)
-		throw runtime_error("Image type unknown");
-
-	// HDR image or not
-	const bool hdrImage = ((fif == FIF_HDR) || (fif == FIF_EXR));
-
-	// Image type and bit count
-	FREE_IMAGE_TYPE imageType;
-	u_int bitCount;
+		const Properties *props) { 
 	u_int maskMaterialIDsIndex = 0;
 	u_int byMaterialIDsIndex = 0;
 	u_int radianceGroupIndex = 0;
+	u_int channelCount = 3;
+
 	switch (type) {
 		case FilmOutputs::RGB:
-			if (!hdrImage || (!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)))
+			if (!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED))
 				return;
-			imageType = FIT_RGBF;
-			bitCount = 96;
 			break;
 		case FilmOutputs::RGB_TONEMAPPED:
 			if (!HasChannel(RGB_TONEMAPPED))
 				return;
 			ExecuteImagePipeline();
-
-			imageType = hdrImage ? FIT_RGBF : FIT_BITMAP;
-			bitCount = hdrImage ? 96 : 24;
 			break;
 		case FilmOutputs::RGBA:
-			if (!hdrImage || (!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) &&
-					!HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) || !HasChannel(ALPHA))
+			if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) || !HasChannel(ALPHA))
 				return;
-			imageType = FIT_RGBAF;
-			bitCount = 128;
+			channelCount = 4;
 			break;
 		case FilmOutputs::RGBA_TONEMAPPED:
 			if (!HasChannel(RGB_TONEMAPPED) || !HasChannel(ALPHA))
 				return;
 			ExecuteImagePipeline();
-
-			imageType = hdrImage ? FIT_RGBAF : FIT_BITMAP;
-			bitCount = hdrImage ? 128 : 32;
+			channelCount = 4;
 			break;
 		case FilmOutputs::ALPHA:
-			if (HasChannel(ALPHA)) {
-				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
-				bitCount = hdrImage ? 32 : 8;
-			} else
+			if (!HasChannel(ALPHA))
 				return;
+			channelCount = 1;
 			break;
 		case FilmOutputs::DEPTH:
-			if (HasChannel(DEPTH) && hdrImage) {
-				imageType = FIT_FLOAT;
-				bitCount = 32;
-			} else
+			if (!HasChannel(DEPTH))
 				return;
+			channelCount = 1;		
 			break;
 		case FilmOutputs::POSITION:
-			if (HasChannel(POSITION) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
-				return;
+			if (!HasChannel(POSITION))
+				return;	
 			break;
 		case FilmOutputs::GEOMETRY_NORMAL:
-			if (HasChannel(GEOMETRY_NORMAL) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(GEOMETRY_NORMAL))
 				return;
 			break;
 		case FilmOutputs::SHADING_NORMAL:
-			if (HasChannel(SHADING_NORMAL) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(SHADING_NORMAL))
 				return;
 			break;
 		case FilmOutputs::MATERIAL_ID:
-			if (HasChannel(MATERIAL_ID) && !hdrImage) {
-				imageType = FIT_BITMAP;
-				bitCount = 24;
-			} else
+			if (!HasChannel(MATERIAL_ID))
 				return;
 			break;
 		case FilmOutputs::DIRECT_DIFFUSE:
-			if (HasChannel(DIRECT_DIFFUSE) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(DIRECT_DIFFUSE))
 				return;
 			break;
 		case FilmOutputs::DIRECT_GLOSSY:
-			if (HasChannel(DIRECT_GLOSSY) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(DIRECT_GLOSSY))
 				return;
 			break;
 		case FilmOutputs::EMISSION:
-			if (HasChannel(EMISSION) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(EMISSION))
 				return;
 			break;
 		case FilmOutputs::INDIRECT_DIFFUSE:
-			if (HasChannel(INDIRECT_DIFFUSE) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(INDIRECT_DIFFUSE))
 				return;
 			break;
 		case FilmOutputs::INDIRECT_GLOSSY:
-			if (HasChannel(INDIRECT_GLOSSY) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(INDIRECT_GLOSSY))
 				return;
 			break;
 		case FilmOutputs::INDIRECT_SPECULAR:
-			if (HasChannel(INDIRECT_SPECULAR) && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(INDIRECT_SPECULAR))
 				return;
 			break;
 		case FilmOutputs::MATERIAL_ID_MASK:
 			if (HasChannel(MATERIAL_ID_MASK) && props) {
-				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
-				bitCount = hdrImage ? 32 : 8;
-
+				channelCount = 1;		
 				// Look for the material mask ID index
 				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
 				bool found = false;
@@ -866,49 +818,33 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 				return;
 			break;
 		case FilmOutputs::DIRECT_SHADOW_MASK:
-			if (HasChannel(DIRECT_SHADOW_MASK)) {
-				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
-				bitCount = hdrImage ? 32 : 8;
-			} else
-				return;
+			if (!HasChannel(DIRECT_SHADOW_MASK))
+			      return;
+			channelCount = 1;
 			break;
 		case FilmOutputs::INDIRECT_SHADOW_MASK:
-			if (HasChannel(INDIRECT_SHADOW_MASK)) {
-				imageType = hdrImage ? FIT_FLOAT : FIT_BITMAP;
-				bitCount = hdrImage ? 32 : 8;
-			} else
+			if (!HasChannel(INDIRECT_SHADOW_MASK))
 				return;
+			channelCount = 1;
 			break;
 		case FilmOutputs::RADIANCE_GROUP:
-			if (props && hdrImage) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-
-				radianceGroupIndex = props->Get(Property("id")(0)).Get<u_int>();
-				if (radianceGroupIndex >= radianceGroupCount)
-					return;
-			} else
+			if (!props)
+				return;		
+			radianceGroupIndex = props->Get(Property("id")(0)).Get<u_int>();
+			if (radianceGroupIndex >= radianceGroupCount)
 				return;
 			break;
 		case FilmOutputs::UV:
-			if (hdrImage && HasChannel(UV)) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-			} else
+			if (!HasChannel(UV))
 				return;
 			break;
 		case FilmOutputs::RAYCOUNT:
-			if (hdrImage && HasChannel(RAYCOUNT)) {
-				imageType = FIT_FLOAT;
-				bitCount = 32;
-			} else
+			if (!HasChannel(RAYCOUNT))
 				return;
+			channelCount = 1;
 			break;
 		case FilmOutputs::BY_MATERIAL_ID:
-			if (hdrImage && HasChannel(BY_MATERIAL_ID) && props) {
-				imageType = FIT_RGBF;
-				bitCount = 96;
-
+			if (HasChannel(BY_MATERIAL_ID) && props) {
 				// Look for the material mask ID index
 				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
 				bool found = false;
@@ -928,214 +864,147 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
 
-	// Allocate the image
-	FIBITMAP *dib = FreeImage_AllocateT(imageType, width, height, bitCount);
-	if (!dib)
-		throw runtime_error("Unable to allocate FreeImage image");
+	ImageBuf buffer;
+	
+	SLG_LOG("Outputing film: " << fileName << " type: " << ToString(type));
 
-	// Build the image
-	u_int pitch = FreeImage_GetPitch(dib);
-	BYTE *bits = (BYTE *)FreeImage_GetBits(dib);
-	for (u_int y = 0; y < height; ++y) {
-		for (u_int x = 0; x < width; ++x) {
+
+	if (type == FilmOutputs::MATERIAL_ID) {
+		// For material IDs we must copy into int buffer first or risk screwing up the ID
+		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
+		buffer.reset(spec);
+		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			BYTE *pixel = (BYTE *)buffer.pixeladdr(x,y,0);
+			y = height-y-1;
+			
+			if (pixel==NULL)
+				throw runtime_error("Error while unpacking film data, could not address buffer!");
+			
+			const u_int *src = channel_MATERIAL_ID->GetPixel(x, y);
+			pixel[0] = (BYTE)src[0];
+			pixel[1] = (BYTE)src[1];
+			pixel[2] = (BYTE)src[2];
+		}
+	}
+	else {
+		// For all others copy into float buffer first and let OIIO figure out the conversion on write
+		ImageSpec spec(width, height, channelCount, TypeDesc::FLOAT);
+		buffer.reset(spec);
+	
+		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+			u_int x = it.x();
+			u_int y = it.y();
+			float *pixel = (float *)buffer.pixeladdr(x,y,0);
+			y = height-y-1;
+			if (pixel==NULL)
+				throw runtime_error("Error while unpacking film data, could not address buffer!");
 			switch (type) {
 				case FilmOutputs::RGB: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					// Accumulate all light groups
-					GetPixelFromMergedSampleBuffers(x, y, &dst[x].red);
+					// Accumulate all light groups			
+					GetPixelFromMergedSampleBuffers(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::RGB_TONEMAPPED: {
-					if (hdrImage) {
-						FIRGBF *dst = (FIRGBF *)bits;
-						channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, &dst[x].red);
-					} else {
-						BYTE *dst = &bits[x * 3];
-						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
-						dst[FI_RGBA_RED] = (BYTE)(src[0] * 255.f + .5f);
-						dst[FI_RGBA_GREEN] = (BYTE)(src[1] * 255.f + .5f);
-						dst[FI_RGBA_BLUE] = (BYTE)(src[2] * 255.f + .5f);
-					}
+					channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::RGBA: {
-					FIRGBAF *dst = (FIRGBAF *)bits;
 					// Accumulate all light groups
-					GetPixelFromMergedSampleBuffers(x, y, &dst[x].red);
-					channel_ALPHA->GetWeightedPixel(x, y, &dst[x].alpha);
+					GetPixelFromMergedSampleBuffers(x, y, pixel);
+					channel_ALPHA->GetWeightedPixel(x, y, &pixel[3]);
 					break;
 				}
 				case FilmOutputs::RGBA_TONEMAPPED: {
-					if (hdrImage) {
-						FIRGBAF *dst = (FIRGBAF *)bits;
-						channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, &dst[x].red);
-						channel_ALPHA->GetWeightedPixel(x, y, &dst[x].alpha);
-					} else {
-						BYTE *dst = &bits[x * 4];
-						const float *src = channel_RGB_TONEMAPPED->GetPixel(x, y);
-						dst[FI_RGBA_RED] = (BYTE)(src[0] * 255.f + .5f);
-						dst[FI_RGBA_GREEN] = (BYTE)(src[1] * 255.f + .5f);
-						dst[FI_RGBA_BLUE] = (BYTE)(src[2] * 255.f + .5f);
-
-						float alpha;
-						channel_ALPHA->GetWeightedPixel(x, y, &alpha);
-						dst[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
-					}
+					channel_RGB_TONEMAPPED->GetWeightedPixel(x, y, pixel);
+					channel_ALPHA->GetWeightedPixel(x, y, &pixel[3]);
 					break;
 				}
 				case FilmOutputs::ALPHA: {
-					if (hdrImage) {
-						float *dst = (float *)bits;
-						channel_ALPHA->GetWeightedPixel(x, y, &dst[x]);
-					} else {
-						BYTE *dst = &bits[x];
-
-						float alpha;
-						channel_ALPHA->GetWeightedPixel(x, y, &alpha);
-						dst[FI_RGBA_ALPHA] = (BYTE)(alpha * 255.f + .5f);
-					}
+					channel_ALPHA->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::DEPTH: {
-					float *dst = (float *)bits;
-					channel_DEPTH->GetWeightedPixel(x, y, &dst[x]);
+					channel_DEPTH->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::POSITION: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_POSITION->GetWeightedPixel(x, y, &dst[x].red);
+					channel_POSITION->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::GEOMETRY_NORMAL: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_GEOMETRY_NORMAL->GetWeightedPixel(x, y, &dst[x].red);
+					channel_GEOMETRY_NORMAL->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::SHADING_NORMAL: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_SHADING_NORMAL->GetWeightedPixel(x, y, &dst[x].red);
-					break;
-				}
-				case FilmOutputs::MATERIAL_ID: {
-					BYTE *dst = &bits[x * 3];
-					const u_int *src = channel_MATERIAL_ID->GetPixel(x, y);
-					dst[FI_RGBA_RED] = (BYTE)(src[0] & 0xff);
-					dst[FI_RGBA_GREEN] = (BYTE)((src[0] & 0xff00) >> 8);
-					dst[FI_RGBA_BLUE] = (BYTE)((src[0] & 0xff0000) >> 16);
+					channel_SHADING_NORMAL->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::DIRECT_DIFFUSE: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_DIRECT_DIFFUSE->GetWeightedPixel(x, y, &dst[x].red);
+					channel_DIRECT_DIFFUSE->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::DIRECT_GLOSSY: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_DIRECT_GLOSSY->GetWeightedPixel(x, y, &dst[x].red);
+					channel_DIRECT_GLOSSY->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::EMISSION: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_EMISSION->GetWeightedPixel(x, y, &dst[x].red);
+					channel_EMISSION->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::INDIRECT_DIFFUSE: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_INDIRECT_DIFFUSE->GetWeightedPixel(x, y, &dst[x].red);
+					channel_INDIRECT_DIFFUSE->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::INDIRECT_GLOSSY: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_INDIRECT_GLOSSY->GetWeightedPixel(x, y, &dst[x].red);
+					channel_INDIRECT_GLOSSY->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::INDIRECT_SPECULAR: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_INDIRECT_SPECULAR->GetWeightedPixel(x, y, &dst[x].red);
+					channel_INDIRECT_SPECULAR->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::MATERIAL_ID_MASK: {
-					if (hdrImage) {
-						float *dst = (float *)bits;
-						channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetWeightedPixel(x, y, &dst[x]);
-					} else {
-						BYTE *dst = &bits[x];
-
-						float maskData;
-						channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetWeightedPixel(x, y, &maskData);
-						*dst = (BYTE)(maskData * 255.f + .5f);
-					}
+					channel_MATERIAL_ID_MASKs[maskMaterialIDsIndex]->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::DIRECT_SHADOW_MASK: {
-					if (hdrImage) {
-						float *dst = (float *)bits;
-						channel_DIRECT_SHADOW_MASK->GetWeightedPixel(x, y, &dst[x]);
-					} else {
-						BYTE *dst = &bits[x];
-
-						float shadowData;
-						channel_DIRECT_SHADOW_MASK->GetWeightedPixel(x, y, &shadowData);
-						*dst = (BYTE)(shadowData * 255.f + .5f);
-					}
+					channel_DIRECT_SHADOW_MASK->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::INDIRECT_SHADOW_MASK: {
-					if (hdrImage) {
-						float *dst = (float *)bits;
-						channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(x, y, &dst[x]);
-					} else {
-						BYTE *dst = &bits[x];
-
-						float shadowData;
-						channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(x, y, &shadowData);
-						*dst = (BYTE)(shadowData * 255.f + .5f);
-					}
+					channel_INDIRECT_SHADOW_MASK->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::RADIANCE_GROUP: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					dst[x].red = 0.f;
-					dst[x].green = 0.f;
-					dst[x].blue = 0.f;
-
 					// Accumulate all light groups
 					if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size())
-						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, &dst[x].red);
+						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
 					if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size())
-						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, &dst[x].red);
-
+						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::UV: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_UV->GetWeightedPixel(x, y, &dst[x].red);
-					dst[x].blue = 0.f;
+					channel_UV->GetWeightedPixel(x, y, pixel);
+					pixel[2] = 0.f;
 					break;
 				}
 				case FilmOutputs::RAYCOUNT: {
-					float *dst = (float *)bits;
-					channel_RAYCOUNT->GetWeightedPixel(x, y, &dst[x]);
+					channel_RAYCOUNT->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::BY_MATERIAL_ID: {
-					FIRGBF *dst = (FIRGBF *)bits;
-					channel_BY_MATERIAL_IDs[byMaterialIDsIndex]->GetWeightedPixel(x, y, &dst[x].red);
+					channel_BY_MATERIAL_IDs[byMaterialIDsIndex]->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				default:
 					throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
-			}
+			}  
 		}
-
-		// Next line
-		bits += pitch;
 	}
-
-	if (!FREEIMAGE_SAVE(fif, dib, FREEIMAGE_CONVFILENAME(fileName).c_str(), 0))
-		throw runtime_error("Failed image save");
-
-	FreeImage_Unload(dib);
+	
+	buffer.write(fileName);
 }
 
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) {
