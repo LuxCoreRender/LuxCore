@@ -48,8 +48,6 @@ public:
 // ImagePipeline
 //------------------------------------------------------------------------------
 
-class GammaCorrectionPlugin;
-
 class ImagePipeline {
 public:
 	ImagePipeline() {}

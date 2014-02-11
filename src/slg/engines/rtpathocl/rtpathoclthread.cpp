@@ -86,8 +86,8 @@ string RTPathOCLRenderThread::AdditionalKernelOptions() {
 
 	const ImagePipeline *ip = engine->film->GetImagePipeline();
 	if (ip) {
-		const ToneMap *tm = (const ToneMap *)ip->GetPlugin(typeid(ToneMap));
-		if (tm && (tm->GetType() == TONEMAP_LINEAR)) {
+		const ToneMap *tm = (const ToneMap *)ip->GetPlugin(typeid(LinearToneMap));
+		if (tm) {
 			const LinearToneMap *ltm = (const LinearToneMap *)tm;
 			toneMapScale = ltm->scale;
 		}
