@@ -82,7 +82,7 @@ string RTBiasPathOCLRenderThread::AdditionalKernelOptions() {
 
 	const ImagePipeline *ip = engine->film->GetImagePipeline();
 	if (ip) {
-		const ToneMap *tm = (const ToneMap *)ip->GetPlugin(typeid(ToneMap));
+		const ToneMap *tm = (const ToneMap *)ip->GetPlugin(typeid(LinearToneMap));
 		if (tm && (tm->GetType() == TONEMAP_LINEAR)) {
 			const LinearToneMap *ltm = (const LinearToneMap *)tm;
 			toneMapScale = ltm->scale;
