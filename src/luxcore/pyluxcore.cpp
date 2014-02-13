@@ -155,7 +155,7 @@ static boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const
 		u_int srcIndex = y * width * 3;
 
 		for (u_int x = 0; x < width; ++x) {
-			l.append(boost::python::make_tuple(src[srcIndex + 2], src[srcIndex + 1], src[srcIndex], 1.f));
+			l.append(boost::python::make_tuple(src[srcIndex], src[srcIndex + 1], src[srcIndex + 2], 1.f));
 			srcIndex += 3;
 		}
 	}
