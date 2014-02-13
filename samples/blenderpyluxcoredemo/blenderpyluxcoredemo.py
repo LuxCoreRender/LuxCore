@@ -93,13 +93,13 @@ class LuxCoreDemoRenderEngine(bpy.types.RenderEngine):
 		
 		camera = blScene.camera
 		cameraDir = camera.matrix_world * Vector((0, 0, -1))
-		sceneProps.Set(pyluxcore.Property("scene.camera.lookat.target", [cameraDir.x, cameraDir.y, cameraDir.z]));
+		sceneProps.Set(pyluxcore.Property("scene.camera.lookat.target", [cameraDir.x, cameraDir.y, cameraDir.z]))
 		
 		# Camera.location not always updated, but matrix is
 		cameraLoc = camera.matrix_world.to_translation()
-		sceneProps.Set(pyluxcore.Property("scene.camera.lookat.orig", [cameraLoc.x, cameraLoc.y, cameraLoc.z]));
+		sceneProps.Set(pyluxcore.Property("scene.camera.lookat.orig", [cameraLoc.x, cameraLoc.y, cameraLoc.z]))
 		cameraUp = camera.matrix_world.to_3x3() * Vector((0, 1, 0))
-		sceneProps.Set(pyluxcore.Property("scene.camera.up", [cameraUp.x, cameraUp.y, cameraUp.z]));
+		sceneProps.Set(pyluxcore.Property("scene.camera.up", [cameraUp.x, cameraUp.y, cameraUp.z]))
 		
 		cameraFOV = camera.data.angle * 180.0 / 3.1415926536
 		sceneProps.Set(pyluxcore.Property("scene.camera.fieldofview", [cameraFOV]));
