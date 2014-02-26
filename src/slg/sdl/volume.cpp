@@ -36,8 +36,8 @@ Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW, float *reversePdfW) const {
 	Spectrum r = volume->SigmaS(hitPoint);
-	if (!r.Black())
-		r /= r + volume->SigmaA(hitPoint);
+	// DEFAULT_EPSILON_STATIC is there to avoid a division by 0
+	r /= r + volume->SigmaA(hitPoint) + Spectrum(DEFAULT_EPSILON_STATIC);
 
 	const Spectrum gValue = g->GetSpectrumValue(hitPoint).Clamp(-1.f, 1.f);
 	const Spectrum k = gValue * (Spectrum(1.55f) - .55f * gValue * gValue);
@@ -89,15 +89,15 @@ Spectrum SchlickScatter::Sample(const HitPoint &hitPoint,
 	// The - becomes a + because cost has been reversed above
 	const float compcost = 1.f + gFilter * cost;
 	*pdfW = (1.f - gFilter * gFilter) / (compcost * compcost * (4.f * M_PI));
-	if (!(*pdfW <= 0.f))
+	if (*pdfW <= 0.f)
 		return Spectrum();
 	
 	*absCosSampledDir = fabsf(localSampledDir->z);
 	*event = DIFFUSE | REFLECT;
 
 	Spectrum r = volume->SigmaS(hitPoint);
-	if (!r.Black())
-		r /= r + volume->SigmaA(hitPoint);
+	// DEFAULT_EPSILON_STATIC is there to avoid a division by 0
+	r /= r + volume->SigmaA(hitPoint) + Spectrum(DEFAULT_EPSILON_STATIC);
 
 	return r;
 }

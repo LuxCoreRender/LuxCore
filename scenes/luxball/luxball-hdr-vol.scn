@@ -1,17 +1,17 @@
 scene.camera.lookat.orig = 0.6 -1.7 0.4
 scene.camera.lookat.target = 0.0 0.0 0.4
-scene.camera.lensradius = 0.015
-scene.camera.focaldistance = 2.0
+#scene.camera.lensradius = 0.015
+#scene.camera.focaldistance = 2.0
 ################################################################################
 scene.volumes.vol_smoke.type = homogenous
-scene.volumes.vol_smoke.absorption = 0.0 0.0 0.0
-scene.volumes.vol_smoke.scattering = 0.035 0.035 0.035
+scene.volumes.vol_smoke.absorption = 5.0 1000.0 1000.0
+scene.volumes.vol_smoke.scattering = 2.0 15.0 15.0
 scene.volumes.vol_smoke.asymmetry = 0.0 0.0 0.0
 ################################################################################
 scene.materials.shell.type = null
 scene.materials.shell.kr = 0.75 0.75 0.75
 scene.materials.shell.id = 255
-#scene.materials.shell.volume.interior = vol_smoke
+scene.materials.shell.volume.interior = vol_smoke
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte

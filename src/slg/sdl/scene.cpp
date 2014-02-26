@@ -1515,7 +1515,9 @@ bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, const Volume *currentVolume,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput) const {
+	const float originalMaxT = ray->maxt;
 	*connectionThroughput = Spectrum(1.f);
+
 	for (;;) {
 		const bool hit = device->TraceRay(ray, rayHit);
 		const Volume *volume = currentVolume;
@@ -1548,6 +1550,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 			// It is a transparent material, continue to trace the ray
 			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+			ray->maxt = originalMaxT;
 
 			// A safety check
 			if (ray->mint >= ray->maxt)
