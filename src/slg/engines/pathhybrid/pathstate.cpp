@@ -163,7 +163,7 @@ bool PathHybridState::FinalizeRay(const PathHybridRenderThread *renderThread,
 		Scene *scene = renderEngine->renderConfig->scene;
 
 		// I have to check if it is an hit over a pass-through point
-		bsdf->Init(false, *scene, *ray, *rayHit, u0);
+		bsdf->Init(false, *scene, *ray, *rayHit, u0, NULL);
 
 		// Check if it is pass-through point
 		Spectrum t = bsdf->GetPassThroughTransparency();
@@ -177,7 +177,7 @@ bool PathHybridState::FinalizeRay(const PathHybridRenderThread *renderThread,
 			newRay.mint = rayHit->t + MachineEpsilon::E(rayHit->t);
 			RayHit newRayHit;			
 			Spectrum connectionThroughput;
-			if (scene->Intersect(renderThread->device, false, u0, &newRay, &newRayHit,
+			if (scene->Intersect(renderThread->device, false, NULL, u0, &newRay, &newRayHit,
 					bsdf, &connectionThroughput)) {
 				// Something was hit
 				return false;

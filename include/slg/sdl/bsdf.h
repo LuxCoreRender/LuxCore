@@ -25,6 +25,7 @@
 #include "luxrays/core/color/color.h"
 #include "slg/sdl/bsdfevents.h"
 #include "slg/sdl/material.h"
+#include "slg/sdl/volume.h"
 #include "slg/sdl/light.h"
 #include "slg/sdl/hitpoint.h"
 
@@ -44,12 +45,18 @@ public:
 
 	// A BSDF initialized from a ray hit
 	BSDF(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
-		const luxrays::RayHit &rayHit, const float passThroughEvent) {
+		const luxrays::RayHit &rayHit, const float passThroughEvent,
+		const Volume *currentVolume) {
 		assert (!rayHit.Miss());
-		Init(fixedFromLight, scene, ray, rayHit, passThroughEvent);
+		Init(fixedFromLight, scene, ray, rayHit, passThroughEvent, currentVolume);
 	}
+	// Used when hitting a surface
 	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
-		const luxrays::RayHit &rayHit, const float passThroughEvent);
+		const luxrays::RayHit &rayHit, const float passThroughEvent,
+		const Volume *currentVolume);
+	// Used when hitting a volume scatter event
+	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+		const Volume &volume, const float t, const float passThroughEvent);
 
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsLightSource() const { return material->IsLightSource(); }
@@ -64,6 +71,10 @@ public:
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 
 	luxrays::Spectrum GetPassThroughTransparency() const;
+
+	const Volume *GetVolume(const luxrays::Vector &sampledDir) const {
+		return (luxrays::Dot(sampledDir, hitPoint.geometryN) > 0.f) ? hitPoint.exteriorVolume : hitPoint.interiorVolume;
+	}
 
 	luxrays::Spectrum Evaluate(const luxrays::Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;

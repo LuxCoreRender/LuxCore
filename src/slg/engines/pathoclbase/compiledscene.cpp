@@ -465,6 +465,10 @@ void CompiledScene::CompileMaterials() {
                 mat->cloth.specularNormalization = cm->GetSpecularNormalization();
                 break;
             }
+			case HOMOGENEOUS_VOL: {
+				SLG_LOG("Volume rendering is not yet supported by OpenCL code");
+				break;
+			}
 			default:
 				throw runtime_error("Unknown material: " + boost::lexical_cast<string>(m->GetType()));
 		}

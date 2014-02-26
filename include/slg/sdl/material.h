@@ -49,6 +49,9 @@ typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT,
 
+	// Volumes
+	HOMOGENEOUS_VOL,
+
 	// The following types are used (in PATHOCL CompiledScene class) only to
 	// recognize the usage of some specific material option
 	GLOSSY2_ANISOTROPIC, GLOSSY2_ABSORPTION, GLOSSY2_INDEX, GLOSSY2_MULTIBOUNCE,
@@ -62,6 +65,7 @@ public:
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(NULL), emissionFunc(NULL),
+		interiorVolume(NULL), exteriorVolume(NULL),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) {
 		UpdateEmittedFactor();
 	}
@@ -129,6 +133,11 @@ public:
 	const ImageMap *GetEmissionMap() const { return emissionMap; }
 	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
 
+	void SetInteriorVolume(const Volume *vol) { interiorVolume = vol; }
+	const Volume *GetInteriorVolume() const { return interiorVolume; }
+	void SetExteriorVolume(const Volume *vol) { exteriorVolume = vol; }
+	const Volume *GetExteriorVolume() const { return exteriorVolume; }	
+	
     virtual void Bump(HitPoint *hitPoint,
         const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
         const luxrays::Normal &dndu, const luxrays::Normal &dndv,
@@ -190,6 +199,8 @@ protected:
 
 	const ImageMap *emissionMap;
 	SampleableSphericalFunction *emissionFunc;
+
+	const Volume *interiorVolume, *exteriorVolume;
 
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular, usePrimitiveArea;
 };

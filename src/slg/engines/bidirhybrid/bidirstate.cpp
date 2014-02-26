@@ -323,7 +323,7 @@ void BiDirState::TraceLightPath(HybridRenderThread *renderThread,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			if (scene->Intersect(thread->device, true, sampler->GetSample(lightVertexSampleOffset),
+			if (scene->Intersect(thread->device, true, NULL, sampler->GetSample(lightVertexSampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 				// Something was hit
 
@@ -512,7 +512,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(thread->device, false, sampler->GetSample(eyeVertexSampleOffset),
+			if (!scene->Intersect(thread->device, false, NULL, sampler->GetSample(eyeVertexSampleOffset),
 					&eyeRay, &eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 
@@ -594,7 +594,7 @@ bool BiDirState::ValidResult(BiDirHybridRenderThread *renderThread,
 
 		// I have to check if it is an hit over a pass-through point
 		BSDF bsdf(false, // true or false, here, doesn't really matter
-				*scene, *ray, *rayHit, u0);
+				*scene, *ray, *rayHit, u0, NULL);
 
 		// Check if it is pass-through point
 		Spectrum t = bsdf.GetPassThroughTransparency();
@@ -609,7 +609,7 @@ bool BiDirState::ValidResult(BiDirHybridRenderThread *renderThread,
 			RayHit newRayHit;			
 			Spectrum connectionThroughput;
 			if (scene->Intersect(renderThread->device, false, // true or false, here, doesn't really matter
-					u0, &newRay, &newRayHit, &bsdf, &connectionThroughput)) {
+					NULL, u0, &newRay, &newRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 				return false;
 			} else {

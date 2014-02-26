@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/engines/pathcpu/pathcpu.h"
+#include "slg/sdl/volume.h"
 
 using namespace std;
 using namespace luxrays;
@@ -64,7 +65,7 @@ void PathCPURenderThread::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
-				if (!scene->Intersect(device, false, u4, &shadowRay,
+				if (!scene->Intersect(device, false, bsdf.GetVolume(lightRayDir), u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = 1.f / directLightSamplingPdfW;
@@ -242,6 +243,7 @@ void PathCPURenderThread::RenderFunc() {
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 		float lastPdfW = 1.f;
 		Spectrum pathThroughput(1.f, 1.f, 1.f);
+		const Volume *currentVolume = scene->defaultWorldVolume;
 		BSDF bsdf;
 		for (;;) {
 			const bool firstPathVertex = (depth == 1);
@@ -249,7 +251,8 @@ void PathCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, false, sampler->GetSample(sampleOffset),
+			if (!scene->Intersect(device, false, currentVolume,
+					sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 				DirectHitInfiniteLight(firstPathVertex, lastBSDFEvent, pathBSDFEvent,
@@ -346,6 +349,7 @@ void PathCPURenderThread::RenderFunc() {
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
+			currentVolume = bsdf.GetVolume(sampledDir);
 			++depth;
 		}
 

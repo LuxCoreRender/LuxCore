@@ -95,7 +95,6 @@ if (GLEW_FOUND)
 	include_directories(SYSTEM ${GLEW_INCLUDE_PATH})
 endif ()
 
-
 set(GLUT_ROOT                  "${GLUT_SEARCH_PATH}")
 find_package(GLUT)
 

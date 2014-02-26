@@ -55,7 +55,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			if (!scene->Intersect(device, true, NULL, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
@@ -97,7 +97,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 		RayHit eyeRayHit;
 		BSDF bsdf;
 		Spectrum connectionThroughput;
-		const bool somethingWasHit = scene->Intersect(device, false,
+		const bool somethingWasHit = scene->Intersect(device, false, NULL,
 				sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
 		if (!somethingWasHit) {
 			// Nothing was hit, check infinite lights (including sun)
@@ -222,7 +222,7 @@ void LightCPURenderThread::RenderFunc() {
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			if (scene->Intersect(device, true, sampler->GetSample(sampleOffset),
+			if (scene->Intersect(device, true, NULL, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 

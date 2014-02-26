@@ -181,6 +181,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/texture.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/sdl/volume.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp

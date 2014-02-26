@@ -38,6 +38,7 @@
 #include "slg/sdl/sceneobject.h"
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/mapping.h"
+#include "slg/sdl/volume.h"
 
 namespace slg {
 
@@ -51,7 +52,8 @@ public:
 
 	const luxrays::Properties &GetProperties() const { return sceneProperties; }
 
-	bool Intersect(luxrays::IntersectionDevice *device, const bool fromLight,
+	bool Intersect(luxrays::IntersectionDevice *device,
+		const bool fromLight, const Volume *currentVolume,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
 
@@ -90,6 +92,9 @@ public:
 
 	//--------------------------------------------------------------------------
 
+	// This volume is applied to rays hitting nothing
+	const Volume *defaultWorldVolume;
+
 	Camera *camera;
 
 	luxrays::ExtMeshCache extMeshCache; // Mesh objects cache
@@ -109,6 +114,7 @@ public:
 protected:
 	void ParseCamera(const luxrays::Properties &props);
 	void ParseTextures(const luxrays::Properties &props);
+	void ParseVolumes(const luxrays::Properties &props);
 	void ParseMaterials(const luxrays::Properties &props);
 	void ParseObjects(const luxrays::Properties &props);
 	void ParseLights(const luxrays::Properties &props);
@@ -117,6 +123,7 @@ protected:
 	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
 	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
 	Texture *GetTexture(const luxrays::Property &name);
+	Volume *CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
 	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);

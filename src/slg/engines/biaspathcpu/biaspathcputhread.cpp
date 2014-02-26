@@ -83,7 +83,7 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 			BSDF shadowBsdf;
 			Spectrum connectionThroughput;
 			// Check if the light source is visible
-			if (!scene->Intersect(device, false, u3, &shadowRay,
+			if (!scene->Intersect(device, false, NULL, u3, &shadowRay,
 					&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 				const Spectrum radiance = connectionThroughput * illumRadiance;
 				sampleResult->radiancePerPixelNormalized[light->GetID()] += radiance;
@@ -274,7 +274,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 	for (;;) {
 		RayHit rayHit;
 		Spectrum connectionThroughput;
-		if (!scene->Intersect(device, false, rndGen->floatValue(),
+		if (!scene->Intersect(device, false, NULL, rndGen->floatValue(),
 				&ray, &rayHit, &bsdf, &connectionThroughput)) {
 			// Nothing was hit, look for infinitelight
 			illuminated |= DirectHitEnvLight(false, lastBSDFEvent, pathBSDFEvent,
@@ -382,7 +382,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 	RayHit eyeRayHit;
 	Spectrum pathThroughput(1.f);
 	BSDF bsdf;
-	if (!scene->Intersect(device, false, rndGen->floatValue(),
+	if (!scene->Intersect(device, false, NULL, rndGen->floatValue(),
 			&eyeRay, &eyeRayHit, &bsdf, &pathThroughput)) {
 		// Nothing was hit, look for env. lights
 

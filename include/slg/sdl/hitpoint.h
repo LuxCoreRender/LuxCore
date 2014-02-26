@@ -28,6 +28,8 @@ namespace ocl {
 #include "slg/sdl/hitpoint_types.cl"
 }
 
+class Volume;
+
 typedef struct {
 	// The incoming direction. It is the eyeDir when fromLight = false and
 	// lightDir when fromLight = true
@@ -39,7 +41,8 @@ typedef struct {
 	luxrays::Spectrum color;
 	float alpha;
 	float passThroughEvent;
-	bool fromLight;
+	const Volume *interiorVolume, *exteriorVolume;
+	bool fromLight, intoObject;
 } HitPoint;
 
 }

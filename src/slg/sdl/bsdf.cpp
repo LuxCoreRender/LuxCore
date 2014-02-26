@@ -23,9 +23,9 @@ using namespace luxrays;
 using namespace slg;
 
 void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
-		const RayHit &rayHit, const float u0) {
+		const RayHit &rayHit, const float passThroughEvent, const Volume *currentVolume) {
 	hitPoint.fromLight = fixedFromLight;
-	hitPoint.passThroughEvent = u0;
+	hitPoint.passThroughEvent = passThroughEvent;
 
 	hitPoint.p = ray(rayHit.t);
 	hitPoint.fixedDir = -ray.d;
@@ -39,6 +39,36 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	// Interpolate face normal
 	hitPoint.geometryN = mesh->GetGeometryNormal(rayHit.triangleIndex);
 	hitPoint.shadeN = mesh->InterpolateTriNormal(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
+
+	// Set interior and exterior volumes
+	hitPoint.intoObject = (Dot(ray.d, hitPoint.geometryN) < 0.f);
+	if (hitPoint.intoObject) {
+		// From outside to inside the object
+
+		hitPoint.interiorVolume = material->GetInteriorVolume();
+
+		if (!currentVolume)
+			hitPoint.exteriorVolume = material->GetExteriorVolume();
+		else {
+			// if (!material->GetExteriorVolume()) there may be conflict here
+			// between the material definition and the currentVolume value.
+			// The currentVolume value wins.
+			hitPoint.exteriorVolume = currentVolume;
+		}
+	} else {
+		// From inside to outside the object
+
+		if (!currentVolume)
+			hitPoint.interiorVolume = material->GetInteriorVolume();
+		else {
+			// if (!material->GetInteriorVolume()) there may be conflict here
+			// between the material definition and the currentVolume value.
+			// The currentVolume value wins.
+			hitPoint.interiorVolume = currentVolume;
+		}
+
+		hitPoint.exteriorVolume = material->GetExteriorVolume();
+	}
 
 	// Interpolate color
 	hitPoint.color = mesh->InterpolateTriColor(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
@@ -77,6 +107,35 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
         // Build the local reference system
         frame.SetFromZ(hitPoint.shadeN);
     }
+}
+
+void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+		const Volume &volume, const float t, const float passThroughEvent) {
+	hitPoint.fromLight = fixedFromLight;
+	hitPoint.passThroughEvent = passThroughEvent;
+
+	hitPoint.p = ray(t);
+	hitPoint.fixedDir = -ray.d;
+
+	mesh = NULL;
+	material = &volume;
+
+	hitPoint.geometryN = Normal(-ray.d);
+	hitPoint.shadeN = hitPoint.geometryN;
+
+	hitPoint.intoObject = true;
+	hitPoint.interiorVolume = &volume;
+	hitPoint.exteriorVolume = &volume;
+
+	hitPoint.color = Spectrum(1.f);
+	hitPoint.alpha = 1.f;
+
+	triangleLightSource = NULL;
+
+	hitPoint.uv = UV(0.f, 0.f);
+
+	// Build the local reference system
+	frame.SetFromZ(hitPoint.shadeN);
 }
 
 Spectrum BSDF::Evaluate(const Vector &generatedDir,
