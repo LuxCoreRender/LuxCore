@@ -202,7 +202,7 @@ Spectrum HomogeneousVolume::Sample(const HitPoint &hitPoint,
 void HomogeneousVolume::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
+	schlickScatter.Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
 void HomogeneousVolume::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
