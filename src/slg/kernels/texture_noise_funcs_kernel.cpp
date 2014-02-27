@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_texture_noise_funcs = 
-"#line 2 \"texture_blender_funcs.cl\"\n"
+"#line 2 \"texture_noise_funcs.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *\n"
@@ -161,7 +161,7 @@ std::string KernelSource_texture_noise_funcs =
 "float tex_tri(float a) {\n"
 "    const float b = 2.f * M_PI_F;\n"
 "    const float rmax = 1.f;\n"
-"    a = rmax - 2.f * fabs(floor((a * (1.0 / b)) + 0.5f) - (a * (1.f / b)));\n"
+"    a = rmax - 2.f * fabs(floor((a * (1.f / b)) + .5f) - (a * (1.f / b)));\n"
 "    return a;\n"
 "}\n"
 ; } }

@@ -1,4 +1,4 @@
-#line 2 "texture_blender_funcs.cl"
+#line 2 "texture_noise_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
@@ -158,6 +158,6 @@ float tex_saw(float a) {
 float tex_tri(float a) {
     const float b = 2.f * M_PI_F;
     const float rmax = 1.f;
-    a = rmax - 2.f * fabs(floor((a * (1.0 / b)) + 0.5f) - (a * (1.f / b)));
+    a = rmax - 2.f * fabs(floor((a * (1.f / b)) + .5f) - (a * (1.f / b)));
     return a;
 }
