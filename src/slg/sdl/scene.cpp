@@ -165,11 +165,11 @@ Properties Scene::ToProperties(const string &directoryName) {
 		// Set the default world interior/exterior volume if required
 		if (defaultWorldInteriorVolume) {
 			const u_int index = matDefs.GetMaterialIndex(defaultWorldInteriorVolume);
-			props.Set(Property("scene.world.interriorvolume")(matDefs.GetMaterial(index)->GetName()));
+			props.Set(Property("scene.world.volume.defaultinterior")(matDefs.GetMaterial(index)->GetName()));
 		}
 		if (defaultWorldExteriorVolume) {
 			const u_int index = matDefs.GetMaterialIndex(defaultWorldExteriorVolume);
-			props.Set(Property("scene.world.exteriorvolume")(matDefs.GetMaterial(index)->GetName()));
+			props.Set(Property("scene.world.volume.defaultexterior")(matDefs.GetMaterial(index)->GetName()));
 		}
 
 		// Write the materials information
@@ -400,8 +400,8 @@ void Scene::ParseVolumes(const Properties &props) {
 		}
 	}
 
-	if (props.IsDefined("scene.world.interiorvolume")) {
-		const string volName = props.Get("scene.world.interiorvolume").Get<string>();
+	if (props.IsDefined("scene.world.volume.defaultinterior")) {
+		const string volName = props.Get("scene.world.volume.defaultinterior").Get<string>();
 		const Material *m = matDefs.GetMaterial(volName);
 		const Volume *v = dynamic_cast<const Volume *>(m);
 		if (!v)
@@ -411,8 +411,8 @@ void Scene::ParseVolumes(const Properties &props) {
 		editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
 	}
 
-	if (props.IsDefined("scene.world.exteriorvolume")) {
-		const string volName = props.Get("scene.world.exteriorvolume").Get<string>();
+	if (props.IsDefined("scene.world.volume.defaultexterior")) {
+		const string volName = props.Get("scene.world.volume.defaultexterior").Get<string>();
 		const Material *m = matDefs.GetMaterial(volName);
 		const Volume *v = dynamic_cast<const Volume *>(m);
 		if (!v)
