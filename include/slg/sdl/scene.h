@@ -93,7 +93,8 @@ public:
 	//--------------------------------------------------------------------------
 
 	// This volume is applied to rays hitting nothing
-	const Volume *defaultWorldVolume;
+	const Volume *defaultWorldInteriorVolume;
+	const Volume *defaultWorldExteriorVolume;
 
 	Camera *camera;
 

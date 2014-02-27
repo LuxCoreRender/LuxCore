@@ -243,7 +243,7 @@ void PathCPURenderThread::RenderFunc() {
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 		float lastPdfW = 1.f;
 		Spectrum pathThroughput(1.f, 1.f, 1.f);
-		const Volume *currentVolume = scene->defaultWorldVolume;
+		const Volume *currentVolume = NULL;
 		BSDF bsdf;
 		for (;;) {
 			const bool firstPathVertex = (depth == 1);

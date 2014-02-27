@@ -45,7 +45,8 @@ using namespace luxrays;
 using namespace slg;
 
 Scene::Scene(const float imageScale) {
-	defaultWorldVolume = NULL;
+	defaultWorldInteriorVolume = NULL;
+	defaultWorldExteriorVolume = NULL;
 	camera = NULL;
 
 	dataSet = NULL;
@@ -57,7 +58,8 @@ Scene::Scene(const float imageScale) {
 }
 
 Scene::Scene(const string &fileName, const float imageScale) {
-	defaultWorldVolume = NULL;
+	defaultWorldInteriorVolume = NULL;
+	defaultWorldExteriorVolume = NULL;
 	// Just in case there is an unexpected exception during the scene loading
     camera = NULL;
 
@@ -160,10 +162,14 @@ Properties Scene::ToProperties(const string &directoryName) {
 			}
 		}
 
-		// Set the world volume if required
-		if (defaultWorldVolume) {
-			const u_int index = matDefs.GetMaterialIndex(defaultWorldVolume);
-			props.Set(Property("scene.worldvolume")(matDefs.GetMaterial(index)->GetName()));
+		// Set the default world interior/exterior volume if required
+		if (defaultWorldInteriorVolume) {
+			const u_int index = matDefs.GetMaterialIndex(defaultWorldInteriorVolume);
+			props.Set(Property("scene.world.interriorvolume")(matDefs.GetMaterial(index)->GetName()));
+		}
+		if (defaultWorldExteriorVolume) {
+			const u_int index = matDefs.GetMaterialIndex(defaultWorldExteriorVolume);
+			props.Set(Property("scene.world.exteriorvolume")(matDefs.GetMaterial(index)->GetName()));
 		}
 
 		// Write the materials information
@@ -394,16 +400,29 @@ void Scene::ParseVolumes(const Properties &props) {
 		}
 	}
 
-	if (props.IsDefined("scene.worldvolume")) {
-		const string volName = props.Get("scene.worldvolume").Get<string>();
+	if (props.IsDefined("scene.world.interiorvolume")) {
+		const string volName = props.Get("scene.world.interiorvolume").Get<string>();
 		const Material *m = matDefs.GetMaterial(volName);
 		const Volume *v = dynamic_cast<const Volume *>(m);
 		if (!v)
-			throw runtime_error(volName + " is not a volume and can not be used for world volume");
-		defaultWorldVolume = v;
+			throw runtime_error(volName + " is not a volume and can not be used for default world interior volume");
+		defaultWorldInteriorVolume = v;
 
 		editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
-	} else if (matKeys.size() == 0)
+	}
+
+	if (props.IsDefined("scene.world.exteriorvolume")) {
+		const string volName = props.Get("scene.world.exteriorvolume").Get<string>();
+		const Material *m = matDefs.GetMaterial(volName);
+		const Volume *v = dynamic_cast<const Volume *>(m);
+		if (!v)
+			throw runtime_error(volName + " is not a volume and can not be used for default world exterior volume");
+		defaultWorldExteriorVolume = v;
+
+		editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
+	}
+
+	if (matKeys.size() > 0)
 		editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
 }
 
@@ -1525,6 +1544,9 @@ bool Scene::Intersect(IntersectionDevice *device,
 			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, NULL);
 			volume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
 			ray->maxt = rayHit->t;
+		} else if (!volume) {
+			// Nothing was hit, I assume the be on the outside of any object
+			volume = defaultWorldExteriorVolume;
 		}
 
 		// Check if there is volume scatter event

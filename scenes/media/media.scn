@@ -6,7 +6,8 @@ scene.volumes.vol_air.type = homogenous
 scene.volumes.vol_air.absorption = 0.0 0.0 0.0
 scene.volumes.vol_air.scattering = 0.035 0.035 0.035
 scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
-scene.worldvolume = vol_air
+scene.world.interiorvolume = vol_air
+scene.world.exteriorvolume = vol_air
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 800.000012 800.000012 400.

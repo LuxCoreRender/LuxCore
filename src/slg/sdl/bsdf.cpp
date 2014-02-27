@@ -70,6 +70,11 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		hitPoint.exteriorVolume = material->GetExteriorVolume();
 	}
 
+	if (!hitPoint.interiorVolume)
+		hitPoint.interiorVolume = scene.defaultWorldInteriorVolume;
+	if (!hitPoint.exteriorVolume)
+		hitPoint.exteriorVolume = scene.defaultWorldExteriorVolume;
+
 	// Interpolate color
 	hitPoint.color = mesh->InterpolateTriColor(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 
