@@ -200,7 +200,7 @@ void PathCPURenderThread::RenderFunc() {
 	const unsigned int sampleStepSize = 9;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate eye ray
-		engine->maxPathDepth * sampleStepSize; // For each path vertex
+		(engine->maxPathDepth + 1) * sampleStepSize; // For each path vertex
 	sampler->RequestSamples(sampleSize);
 
 	//--------------------------------------------------------------------------
