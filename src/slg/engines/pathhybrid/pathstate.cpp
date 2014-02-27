@@ -177,7 +177,7 @@ bool PathHybridState::FinalizeRay(const PathHybridRenderThread *renderThread,
 			newRay.mint = rayHit->t + MachineEpsilon::E(rayHit->t);
 			RayHit newRayHit;			
 			Spectrum connectionThroughput;
-			if (scene->Intersect(renderThread->device, false, NULL, u0, &newRay, &newRayHit,
+			if (scene->Intersect(renderThread->device, false, u0, &newRay, &newRayHit,
 					bsdf, &connectionThroughput)) {
 				// Something was hit
 				return false;

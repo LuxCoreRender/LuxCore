@@ -128,7 +128,7 @@ void SchlickScatter::Pdf(const HitPoint &hitPoint,
 //------------------------------------------------------------------------------
 
 HomogeneousVolume::HomogeneousVolume(const Texture *a, const Texture *s,
-		const Texture *g) : schlickScatter(this, g) {
+		const Texture *g, const bool multiScat) : schlickScatter(this, g), multiScattering(multiScat) {
 	sigmaA = a;
 	sigmaS = s;
 }
@@ -166,7 +166,11 @@ Spectrum HomogeneousVolume::Tau(const Ray &ray, const float maxt) const {
 }
 
 float HomogeneousVolume::Scatter(const luxrays::Ray &ray, const float u,
-		luxrays::Spectrum *connectionThroughput) const {
+		 const bool scatteredPath, luxrays::Spectrum *connectionThroughput) const {
+	// Check if I have to support multi-scattering
+	if (scatteredPath && !multiScattering)
+		return -1.f;
+
 	// Determine scattering distance
 	const float k = sigmaS->Y();
 	const float d = logf(1.f - u) / k; // The real distance is ray.mint-d

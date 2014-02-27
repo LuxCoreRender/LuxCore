@@ -7,6 +7,7 @@ scene.volumes.vol_smoke.type = homogenous
 scene.volumes.vol_smoke.absorption = 5.0 1000.0 1000.0
 scene.volumes.vol_smoke.scattering = 2.0 15.0 15.0
 scene.volumes.vol_smoke.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol_smoke.multiscattering = 1
 ################################################################################
 scene.materials.shell.type = null
 scene.materials.shell.kr = 0.75 0.75 0.75

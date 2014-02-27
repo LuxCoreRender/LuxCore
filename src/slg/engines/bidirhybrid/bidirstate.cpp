@@ -323,7 +323,7 @@ void BiDirState::TraceLightPath(HybridRenderThread *renderThread,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			if (scene->Intersect(thread->device, true, NULL, sampler->GetSample(lightVertexSampleOffset),
+			if (scene->Intersect(thread->device, true, sampler->GetSample(lightVertexSampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 				// Something was hit
 
@@ -512,7 +512,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(thread->device, false, NULL, sampler->GetSample(eyeVertexSampleOffset),
+			if (!scene->Intersect(thread->device, false, sampler->GetSample(eyeVertexSampleOffset),
 					&eyeRay, &eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 
@@ -609,7 +609,7 @@ bool BiDirState::ValidResult(BiDirHybridRenderThread *renderThread,
 			RayHit newRayHit;			
 			Spectrum connectionThroughput;
 			if (scene->Intersect(renderThread->device, false, // true or false, here, doesn't really matter
-					NULL, u0, &newRay, &newRayHit, &bsdf, &connectionThroughput)) {
+					u0, &newRay, &newRayHit, &bsdf, &connectionThroughput)) {
 				// Something was hit
 				return false;
 			} else {

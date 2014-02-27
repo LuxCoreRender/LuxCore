@@ -53,7 +53,8 @@ private:
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		const int depth,SampleResult *sampleResult);
+		const bool scatteredPath, const int depth,
+		SampleResult *sampleResult);
 
 	void DirectHitFiniteLight(const bool firstPathVertex, const BSDFEvent lastBSDFEvent,
 			const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,

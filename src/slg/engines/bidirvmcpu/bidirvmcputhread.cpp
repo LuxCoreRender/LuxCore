@@ -146,7 +146,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput;
-				if (!scene->Intersect(device, false, NULL, sampler->GetSample(sampleOffset), &eyeRay,
+				if (!scene->Intersect(device, false, sampler->GetSample(sampleOffset), &eyeRay,
 						&eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 					// Nothing was hit, look for infinitelight
 

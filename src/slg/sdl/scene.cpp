@@ -919,11 +919,12 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 
 	Volume *vol;
 	if (volType == "homogenous") {
-		Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
-		Texture *scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
-		Texture *asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
+		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
+		const Texture *scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
+		const Texture *asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
+		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
-		vol = new HomogeneousVolume(absorption, scattering, asymmetry);
+		vol = new HomogeneousVolume(absorption, scattering, asymmetry, multiScattering);
 	} else
 		throw runtime_error("Unknown volume type: " + volType);
 
@@ -1531,7 +1532,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 //------------------------------------------------------------------------------
 
 bool Scene::Intersect(IntersectionDevice *device,
-		const bool fromLight, const Volume *currentVolume,
+		const bool fromLight, const Volume *currentVolume, bool *scatteredPath,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput) const {
 	const float originalMaxT = ray->maxt;
@@ -1551,11 +1552,14 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 		// Check if there is volume scatter event
 		if (volume) {
-			const float t = volume->Scatter(*ray, passThrough, connectionThroughput);
+			const float t = volume->Scatter(*ray, passThrough,
+					scatteredPath ? (*scatteredPath) : false, connectionThroughput);
 			if (t > 0.f) {
 				// There was a volume scatter event
 				bsdf->Init(fromLight, *this, *ray, *volume, t, passThrough);
 
+				if (scatteredPath)
+					*scatteredPath = true;
 				return true;
 			}
 		}
@@ -1582,4 +1586,13 @@ bool Scene::Intersect(IntersectionDevice *device,
 			return false;
 		}
 	}
+}
+
+// Just with all code not yet supporting volume rendering
+bool Scene::Intersect(IntersectionDevice *device,
+		const bool fromLight,
+		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
+		Spectrum *connectionThroughput) const {
+	return Intersect(device, fromLight, NULL, NULL, passThrough, ray, rayHit,
+			bsdf, connectionThroughput);
 }
