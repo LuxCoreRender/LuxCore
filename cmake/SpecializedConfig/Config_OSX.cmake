@@ -11,8 +11,10 @@ set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../macos) # can be macos or usr/loca
 MESSAGE(STATUS "OSX_DEPENDENCY_ROOT_PATH : " ${OSX_DEPENDENCY_ROOT})
 set(OSX_SEARCH_PATH     ${OSX_DEPENDENCY_ROOT})
 
+# Libs present in system ( /usr )
 SET(SYS_LIBRARIES z )
 
+# Libs that have find_package modules
 set(OPENIMAGEIO_ROOT_DIR "${OSX_SEARCH_PATH}")
 
 set(BOOST_SEARCH_PATH         "${OSX_SEARCH_PATH}")
@@ -33,6 +35,7 @@ set(GLUT_INCLUDE_PATH 		"${GLUT_SEARCH_PATH}/Headers")
 
 SET(OPENEXR_ROOT "${OSX_SEARCH_PATH}")
 
+# Libs with hardcoded pathes ( macos repo )
 SET(TIFF_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/libtiff.a)
 SET(TIFF_INCLUDE_DIR ${OSX_DEPENDENCY_ROOT}/include/tiff)
 SET(TIFF_FOUND ON)
