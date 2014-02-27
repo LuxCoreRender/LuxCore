@@ -37,7 +37,8 @@ void PathCPURenderThread::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
-		const int depth, SampleResult *sampleResult) {
+		const bool scatteredPath, const int depth,
+		SampleResult *sampleResult) {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -65,7 +66,9 @@ void PathCPURenderThread::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
-				if (!scene->Intersect(device, false, bsdf.GetVolume(lightRayDir), u4, &shadowRay,
+				bool scatteredShadowPath = scatteredPath;
+				if (!scene->Intersect(device, false, bsdf.GetVolume(lightRayDir),
+						&scatteredShadowPath, u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = 1.f / directLightSamplingPdfW;
@@ -244,6 +247,7 @@ void PathCPURenderThread::RenderFunc() {
 		float lastPdfW = 1.f;
 		Spectrum pathThroughput(1.f, 1.f, 1.f);
 		const Volume *currentVolume = NULL;
+		bool scatteredPath = false;
 		BSDF bsdf;
 		for (;;) {
 			const bool firstPathVertex = (depth == 1);
@@ -251,7 +255,7 @@ void PathCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, false, currentVolume,
+			if (!scene->Intersect(device, false, currentVolume, &scatteredPath,
 					sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
@@ -318,7 +322,7 @@ void PathCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					pathThroughput, bsdf, depth, &sampleResult);
+					pathThroughput, bsdf,  scatteredPath, depth, &sampleResult);
 
 			//------------------------------------------------------------------
 			// Build the next vertex path ray

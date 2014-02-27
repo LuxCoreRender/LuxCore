@@ -34,7 +34,7 @@ public:
 
 	// Returns the ray t value of the scatter event. If (t <= 0.0) there was
 	// no scattering.
-	virtual float Scatter(const luxrays::Ray &ray, const float u,
+	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
 		luxrays::Spectrum *connectionThroughput) const = 0;
 
 	friend class SchlickScatter;
@@ -79,9 +79,9 @@ public:
 class HomogeneousVolume : public Volume {
 public:
 	HomogeneousVolume(const Texture *a, const Texture *s,
-		const Texture *g);
+		const Texture *g, const bool multiScattering);
 
-	virtual float Scatter(const luxrays::Ray &ray, const float u,
+	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
 		luxrays::Spectrum *connectionThroughput) const;
 
 	// Material interface
@@ -114,6 +114,7 @@ protected:
 private:
 	const Texture *sigmaA, *sigmaS;
 	SchlickScatter schlickScatter;
+	const bool multiScattering;
 };
 
 }

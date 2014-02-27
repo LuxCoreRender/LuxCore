@@ -72,7 +72,7 @@ void BiDirCPURenderThread::ConnectVertices(
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, true, NULL, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				if (eyeVertex.depth >= engine->rrDepth) {
@@ -132,7 +132,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, true, NULL, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				if (lightVertex.depth >= engine->rrDepth) {
@@ -194,7 +194,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
-				if (!scene->Intersect(device, false, NULL, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				if (!scene->Intersect(device, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					if (eyeVertex.depth >= engine->rrDepth) {
 						// Russian Roulette
 						const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
@@ -299,7 +299,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			if (scene->Intersect(device, true, NULL, sampler->GetSample(sampleOffset),
+			if (scene->Intersect(device, true, sampler->GetSample(sampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
 				// Something was hit
 
@@ -476,7 +476,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, false, NULL, sampler->GetSample(sampleOffset), &eyeRay,
+			if (!scene->Intersect(device, false, sampler->GetSample(sampleOffset), &eyeRay,
 					&eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 
