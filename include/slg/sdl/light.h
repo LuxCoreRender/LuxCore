@@ -442,8 +442,6 @@ public:
 	SharpDistantLight();
 	virtual ~SharpDistantLight();
 
-	virtual bool IsInfinite() const { return true; }
-
 	virtual void Preprocess();
 	void GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData) const;
 
@@ -478,8 +476,6 @@ class DistantLight : public NotIntersecableLightSource {
 public:
 	DistantLight();
 	virtual ~DistantLight();
-
-	virtual bool IsInfinite() const { return true; }
 
 	virtual void Preprocess();
 	void GetPreprocessedData(float *absoluteLightDirData, float *xData, float *yData,
