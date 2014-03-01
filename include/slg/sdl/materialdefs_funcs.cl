@@ -525,18 +525,20 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 		if (!isKtBlack)
 			threshold = .5f;
 		else
-			threshold = 0.f;
+			threshold = 1.f;
 	} else {
 		if (!isKtBlack)
-			threshold = 1.f;
+			threshold = 0.f;
 		else {
 			if (directPdfW)
 				*directPdfW = 0.f;
 			return BLACK;
 		}
 	}
-	const float weight = (lightDir.z * eyeDir.z > 0.f) ?
-		threshold : (1.f - threshold);
+
+	const bool relfected = (CosTheta(lightDir) * CosTheta(eyeDir) > 0.f);
+	const float weight = (lightDir.z * eyeDir.z > 0.f) ? threshold : (1.f - threshold);
+
 	if (directPdfW)
 		*directPdfW = weight * fabs(lightDir.z * M_1_PI_F);
 
@@ -583,10 +585,10 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 		if ((requestedEvent & TRANSMIT) && !isKtBlack)
 			threshold = .5f;
 		else
-			threshold = 0.f;
+			threshold = 1.f;
 	} else {
 		if ((requestedEvent & TRANSMIT) && !isKtBlack)
-			threshold = 1.f;
+			threshold = 0.f;
 		else
 			return BLACK;
 	}

@@ -894,10 +894,10 @@ Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		if (!isKtBlack)
 			threshold = .5f;
 		else
-			threshold = 0.f;
+			threshold = 1.f;
 	} else {
 		if (!isKtBlack)
-			threshold = 1.f;
+			threshold = 0.f;
 		else {
 			if (directPdfW)
 				*directPdfW = 0.f;
@@ -906,8 +906,10 @@ Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			return Spectrum();
 		}
 	}
-	const float weight = (localLightDir.z * localEyeDir.z > 0.f) ?
-		threshold : (1.f - threshold);
+	
+	const bool relfected = (CosTheta(localLightDir) * CosTheta(localEyeDir) > 0.f);
+	const float weight = relfected ? threshold : (1.f - threshold);
+
 	if (directPdfW)
 		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (weight * INV_PI));
 
@@ -951,10 +953,10 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		if ((requestedEvent & TRANSMIT) && !isKtBlack)
 			threshold = .5f;
 		else
-			threshold = 0.f;
+			threshold = 1.f;
 	} else {
 		if ((requestedEvent & TRANSMIT) && !isKtBlack)
-			threshold = 1.f;
+			threshold = 0.f;
 		else
 			return Spectrum();
 	}
@@ -981,11 +983,42 @@ Spectrum MatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 void MatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
+	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp();
+	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp() * 
+		// Energy conservation
+		(Spectrum(1.f) - kr);
+
+	const bool isKrBlack = kr.Black();
+	const bool isKtBlack = kt.Black();
+
+	// Calculate the weight of reflecting/transmitting
+	float weight;
+	if (!isKrBlack) {
+		if (!isKtBlack)
+			weight = .5f;
+		else
+			weight = 1.f;
+	} else {
+		if (!isKtBlack)
+			weight = 0.f;
+		else {
+			if (directPdfW)
+				*directPdfW = 0.f;
+
+			if (reversePdfW)
+				*reversePdfW = 0.f;
+			return;
+		}
+	}
+
+	const bool relfected = (Sgn(CosTheta(localLightDir)) == Sgn(CosTheta(localEyeDir)));
+	weight = relfected ? weight : (1.f - weight);
+
 	if (directPdfW)
-		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (.5f * INV_PI));
+		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (weight * INV_PI));
 
 	if (reversePdfW)
-		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (.5f * INV_PI));
+		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (weight * INV_PI));
 }
 
 void MatteTranslucentMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
