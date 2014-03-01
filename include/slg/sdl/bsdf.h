@@ -72,10 +72,6 @@ public:
 
 	luxrays::Spectrum GetPassThroughTransparency() const;
 
-	const Volume *GetVolume(const luxrays::Vector &sampledDir) const {
-		return (luxrays::Dot(sampledDir, hitPoint.geometryN) > 0.f) ? hitPoint.exteriorVolume : hitPoint.interiorVolume;
-	}
-
 	luxrays::Spectrum Evaluate(const luxrays::Vector &generatedDir,
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	luxrays::Spectrum Sample(luxrays::Vector *sampledDir,

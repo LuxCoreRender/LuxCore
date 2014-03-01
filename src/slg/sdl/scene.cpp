@@ -928,6 +928,7 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 	} else
 		throw runtime_error("Unknown volume type: " + volType);
 
+	vol->SetPriority(props.Get(Property(propName + ".priority")(0)).Get<int>());
 	vol->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	vol->SetID(props.Get(Property(propName + ".id")(defaultVolID)).Get<u_int>());
 
@@ -1532,7 +1533,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 //------------------------------------------------------------------------------
 
 bool Scene::Intersect(IntersectionDevice *device,
-		const bool fromLight, const Volume *currentVolume, bool *scatteredPath,
+		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput) const {
 	const float originalMaxT = ray->maxt;
@@ -1540,37 +1541,80 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 	for (;;) {
 		const bool hit = device->TraceRay(ray, rayHit);
-		const Volume *volume = currentVolume;
+		const Volume *rayVolume = volInfo->GetCurrentVolume();
+
 		if (hit) {
 			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, NULL);
-			volume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
+			if (!rayVolume)
+				rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
 			ray->maxt = rayHit->t;
-		} else if (!volume) {
+		} else if (!rayVolume) {
 			// Nothing was hit, I assume the be on the outside of any object
-			volume = defaultWorldExteriorVolume;
+			rayVolume = defaultWorldExteriorVolume;
 		}
 
 		// Check if there is volume scatter event
-		if (volume) {
-			const float t = volume->Scatter(*ray, passThrough,
-					scatteredPath ? (*scatteredPath) : false, connectionThroughput);
+		if (rayVolume) {
+			// This applies volume transmittance too
+			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScattered(), connectionThroughput);
 			if (t > 0.f) {
 				// There was a volume scatter event
-				bsdf->Init(fromLight, *this, *ray, *volume, t, passThrough);
+				bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
+				volInfo->Scattered();
 
-				if (scatteredPath)
-					*scatteredPath = true;
 				return true;
 			}
 		}
 
 		if (hit) {
+			// Check if the volume priority system has to be applied
+			if (bsdf->GetEventTypes() & TRANSMIT) {
+				// Ok, the surface can transmit so check if volume priority
+				// system is telling me to continue to trace the ray
+				
+				// I have to continue to trace the ray if:
+				//
+				// 1) I'm entering an object and the interior volume has an
+				// higher priority of the current one.
+				//
+				// 2) I'm exiting an object and I'm leaving the current volume
+				
+				if (
+					// Condition #1
+					(bsdf->hitPoint.intoObject && Volume::CompareVolumePriorities(volInfo->GetCurrentVolume(), bsdf->hitPoint.interiorVolume)) ||
+					// Condition #2
+					(!bsdf->hitPoint.intoObject && (volInfo->GetCurrentVolume() != bsdf->hitPoint.interiorVolume))) {
+					// Ok, green light for continuing to trace the ray
+					ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+					ray->maxt = originalMaxT;
+
+					// A safety check
+					if (ray->mint >= ray->maxt)
+						return false;
+
+					if (bsdf->hitPoint.intoObject)
+						volInfo->AddVolume(bsdf->hitPoint.interiorVolume);
+					else
+						volInfo->RemoveVolume(bsdf->hitPoint.interiorVolume);
+
+					continue;
+				}
+			}
+
 			// Check if it is a pass through point
 
 			// Mix material can have IsPassThrough() = true and return Spectrum(0.f)
 			Spectrum t = bsdf->GetPassThroughTransparency();
 			if (t.Black())
 				return true;
+
+			// Update volume information
+			if (bsdf->GetEventTypes() & TRANSMIT) {
+				if (bsdf->hitPoint.intoObject)
+					volInfo->AddVolume(bsdf->hitPoint.interiorVolume);
+				else
+					volInfo->RemoveVolume(bsdf->hitPoint.interiorVolume);
+			}
 
 			*connectionThroughput *= t;
 
@@ -1593,6 +1637,28 @@ bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput) const {
-	return Intersect(device, fromLight, NULL, NULL, passThrough, ray, rayHit,
-			bsdf, connectionThroughput);
+	*connectionThroughput = Spectrum(1.f);
+	for (;;) {
+		if (!device->TraceRay(ray, rayHit)) {
+			// Nothing was hit
+			return false;
+		} else {
+			// Check if it is a pass through point
+			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, NULL);
+
+			// Mix material can have IsPassThrough() = true and return Spectrum(0.f)
+			Spectrum t = bsdf->GetPassThroughTransparency();
+			if (t.Black())
+				return true;
+
+			*connectionThroughput *= t;
+
+			// It is a transparent material, continue to trace the ray
+			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+
+			// A safety check
+			if (ray->mint >= ray->maxt)
+				return false;
+		}
+	}
 }

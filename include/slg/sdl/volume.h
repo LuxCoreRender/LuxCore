@@ -25,17 +25,20 @@
 
 namespace slg {
 
-//class SchlickScatter;
-
 class Volume : public Material {
 public:
-	Volume(const float stepSize = 1.f) : Material(NULL, NULL), step(stepSize) { }
+	Volume() : Material(NULL, NULL), priority(0) { }
 	virtual ~Volume() { }
+
+	void SetPriority(const int p) { priority = p; }
+	int GetPriority() const { return priority; }
 
 	// Returns the ray t value of the scatter event. If (t <= 0.0) there was
 	// no scattering.
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
 		luxrays::Spectrum *connectionThroughput) const = 0;
+
+	static bool CompareVolumePriorities(const Volume *vol1, const Volume *vol2);
 
 	friend class SchlickScatter;
 
@@ -47,8 +50,7 @@ protected:
 	}
 	virtual luxrays::Spectrum Tau(const luxrays::Ray &ray, const float offset) const = 0;
 
-protected:
-	float step;
+	int priority;
 };
 
 // An utility class
@@ -72,6 +74,31 @@ public:
 	const Texture *g;	
 };
 
+// A class used to store volume related information on the on going path
+#define PATHVOLUMEINFO_SIZE 8
+
+class PathVolumeInfo {
+public:
+	PathVolumeInfo();
+
+	const Volume *GetCurrentVolume() const { return currentVolume; }
+	const u_int GetListSize() const { return volumeListSize; }
+
+	void AddVolume(const Volume *v);
+	void RemoveVolume(const Volume *v);
+
+	void Scattered() { scatteredPath = true; }
+	bool IsScattered() const { return scatteredPath; }
+	
+private:
+	const Volume *currentVolume;
+	// Using a fixed array here mostly to have the some code of OpenCL implementation
+	const Volume *volumeList[PATHVOLUMEINFO_SIZE];
+	u_int volumeListSize;
+	
+	bool scatteredPath;
+};
+
 //------------------------------------------------------------------------------
 // HomogeneousVolume
 //------------------------------------------------------------------------------
@@ -79,7 +106,7 @@ public:
 class HomogeneousVolume : public Volume {
 public:
 	HomogeneousVolume(const Texture *a, const Texture *s,
-		const Texture *g, const bool multiScattering);
+			const Texture *g, const bool multiScattering);
 
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
 		luxrays::Spectrum *connectionThroughput) const;
@@ -109,7 +136,7 @@ public:
 protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum Tau(const luxrays::Ray &ray, const float offset) const;
+	virtual luxrays::Spectrum Tau(const luxrays::Ray &ray, const float maxt) const;
 
 private:
 	const Texture *sigmaA, *sigmaS;

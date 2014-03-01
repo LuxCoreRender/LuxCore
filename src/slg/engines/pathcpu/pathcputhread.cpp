@@ -37,7 +37,7 @@ void PathCPURenderThread::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
-		const bool scatteredPath, const int depth,
+		PathVolumeInfo volInfo, const int depth,
 		SampleResult *sampleResult) {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -66,9 +66,7 @@ void PathCPURenderThread::DirectLightSampling(
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
 				// Check if the light source is visible
-				bool scatteredShadowPath = scatteredPath;
-				if (!scene->Intersect(device, false, bsdf.GetVolume(lightRayDir),
-						&scatteredShadowPath, u4, &shadowRay,
+				if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = 1.f / directLightSamplingPdfW;
@@ -246,8 +244,7 @@ void PathCPURenderThread::RenderFunc() {
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 		float lastPdfW = 1.f;
 		Spectrum pathThroughput(1.f, 1.f, 1.f);
-		const Volume *currentVolume = NULL;
-		bool scatteredPath = false;
+		PathVolumeInfo volInfo;
 		BSDF bsdf;
 		for (;;) {
 			const bool firstPathVertex = (depth == 1);
@@ -255,8 +252,7 @@ void PathCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, false, currentVolume, &scatteredPath,
-					sampler->GetSample(sampleOffset),
+			if (!scene->Intersect(device, false, &volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput)) {
 				// Nothing was hit, look for infinitelight
 				DirectHitInfiniteLight(firstPathVertex, lastBSDFEvent, pathBSDFEvent,
@@ -322,7 +318,7 @@ void PathCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					pathThroughput, bsdf,  scatteredPath, depth, &sampleResult);
+					pathThroughput, bsdf, volInfo, depth, &sampleResult);
 
 			//------------------------------------------------------------------
 			// Build the next vertex path ray
@@ -352,8 +348,15 @@ void PathCPURenderThread::RenderFunc() {
 			pathThroughput *= bsdfSample;
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
+			// Update volume information
+			if (lastBSDFEvent & TRANSMIT) {
+				if (bsdf.hitPoint.intoObject)
+					volInfo.AddVolume(bsdf.hitPoint.interiorVolume);
+				else
+					volInfo.RemoveVolume(bsdf.hitPoint.interiorVolume);
+			}
+
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
-			currentVolume = bsdf.GetVolume(sampledDir);
 			++depth;
 		}
 

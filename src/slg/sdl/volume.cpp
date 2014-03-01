@@ -24,6 +24,75 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+bool Volume::CompareVolumePriorities(const Volume *vol1, const Volume *vol2) {
+	// A volume wins over another if and only if it is the same volume or has an
+	// higher priority
+
+	if (vol1) {
+		if (vol2) {
+			if (vol1 == vol2)
+				return true;
+			else
+				return (vol1->GetPriority() > vol2->GetPriority());
+		} else
+			return false;
+	} else
+		return false;
+}
+
+//------------------------------------------------------------------------------
+// PathVolumeInfo
+//------------------------------------------------------------------------------
+
+PathVolumeInfo::PathVolumeInfo() {
+	currentVolume = NULL;
+	volumeListSize = 0;
+
+	scatteredPath = false;
+}
+
+void PathVolumeInfo::AddVolume(const Volume *v) {
+	if ((!v) || (volumeListSize == PATHVOLUMEINFO_SIZE)) {
+		// NULL volume or out of space, I just ignore the volume
+		return;
+	}
+
+	// Update the current volume. ">=" because I want to catch the last added volume.
+	if (!currentVolume || (v->GetPriority() >= currentVolume->GetPriority()))
+		currentVolume = v;
+
+	// Add the volume to the list
+	volumeList[volumeListSize++] = v;
+}
+
+void PathVolumeInfo::RemoveVolume(const Volume *v) {
+	if ((!v) || (volumeListSize == 0)) {
+		// NULL volume or empty volume list
+		return;
+	}
+
+	// Update the current volume and the list
+	bool found = false;
+	currentVolume = NULL;
+	for (u_int i = 0; i < volumeListSize; ++i) {
+		if (found) {
+			// Re-compact the list
+			volumeList[i - 1] = volumeList[i];
+		} else if (volumeList[i] == v) {
+			// Found the volume to remove
+			found = true;
+			continue;
+		}
+
+		// Update currentVolume. ">=" because I want to catch the last added volume.
+		if (!currentVolume || (volumeList[i]->GetPriority() >= currentVolume->GetPriority()))
+			currentVolume = volumeList[i];
+	}
+
+	// Update the list size
+	--volumeListSize;
+}
+
 //------------------------------------------------------------------------------
 // SchlickScatter
 //------------------------------------------------------------------------------
@@ -128,7 +197,8 @@ void SchlickScatter::Pdf(const HitPoint &hitPoint,
 //------------------------------------------------------------------------------
 
 HomogeneousVolume::HomogeneousVolume(const Texture *a, const Texture *s,
-		const Texture *g, const bool multiScat) : schlickScatter(this, g), multiScattering(multiScat) {
+		const Texture *g, const bool multiScat) :
+		schlickScatter(this, g), multiScattering(multiScat) {
 	sigmaA = a;
 	sigmaS = s;
 }
@@ -167,21 +237,28 @@ Spectrum HomogeneousVolume::Tau(const Ray &ray, const float maxt) const {
 
 float HomogeneousVolume::Scatter(const luxrays::Ray &ray, const float u,
 		 const bool scatteredPath, luxrays::Spectrum *connectionThroughput) const {
+	const float k = sigmaS->Y();
+
 	// Check if I have to support multi-scattering
-	if (scatteredPath && !multiScattering)
+	if ((scatteredPath && !multiScattering) || (k == 0.f)) {
+		// I have still to apply volume transmittance
+		*connectionThroughput *= Exp(-Tau(ray, ray.maxt));
 		return -1.f;
+	}
 
 	// Determine scattering distance
-	const float k = sigmaS->Y();
 	const float d = logf(1.f - u) / k; // The real distance is ray.mint-d
 	const bool scatter = (d > ray.mint - ray.maxt);
 	if (scatter) {
 		// The ray is scattered
 		const float t  = ray.mint - d;
+
+		// Apply volume transmittance
 		*connectionThroughput *= Exp(-Tau(ray, t));
 
 		return t;
 	} else {
+		// Apply volume transmittance
 		*connectionThroughput *= Exp(-Tau(ray, ray.maxt));
 
 		return -1.f;

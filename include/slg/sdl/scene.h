@@ -53,9 +53,7 @@ public:
 	const luxrays::Properties &GetProperties() const { return sceneProperties; }
 
 	bool Intersect(luxrays::IntersectionDevice *device,
-		const bool fromLight,
-		// Temporary way to store and pass around volume rendering related information
-		const Volume *currentVolume, bool *scatteredPath,
+		const bool fromLight, PathVolumeInfo *volInfo,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
 	// Just with all code not yet supporting volume rendering
