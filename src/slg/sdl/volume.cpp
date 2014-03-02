@@ -25,22 +25,6 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-bool Volume::CompareVolumePriorities(const Volume *vol1, const Volume *vol2) {
-	// A volume wins over another if and only if it is the same volume or has an
-	// higher priority
-
-	if (vol1) {
-		if (vol2) {
-			if (vol1 == vol2)
-				return true;
-			else
-				return (vol1->GetPriority() > vol2->GetPriority());
-		} else
-			return false;
-	} else
-		return false;
-}
-
 //------------------------------------------------------------------------------
 // PathVolumeInfo
 //------------------------------------------------------------------------------
@@ -102,6 +86,48 @@ void PathVolumeInfo::Update(const BSDFEvent eventType, const BSDF &bsdf) {
 		else
 			RemoveVolume(bsdf.hitPoint.interiorVolume);
 	}
+}
+
+bool PathVolumeInfo::CompareVolumePriorities(const Volume *vol1, const Volume *vol2) {
+	// A volume wins over another if and only if it is the same volume or has an
+	// higher priority
+
+	if (vol1) {
+		if (vol2) {
+			if (vol1 == vol2)
+				return true;
+			else
+				return (vol1->GetPriority() > vol2->GetPriority());
+		} else
+			return false;
+	} else
+		return false;
+}
+
+bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
+	// Check if the volume priority system has to be applied
+	if (bsdf.GetEventTypes() & TRANSMIT) {
+		// Ok, the surface can transmit so check if volume priority
+		// system is telling me to continue to trace the ray
+
+		// I have to continue to trace the ray if:
+		//
+		// 1) I'm entering an object and the interior volume has an
+		// higher priority than the current one.
+		//
+		// 2) I'm exiting an object and I'm leaving the current volume
+
+		if (
+			// Condition #1
+			(bsdf.hitPoint.intoObject && CompareVolumePriorities(currentVolume, bsdf.hitPoint.interiorVolume)) ||
+			// Condition #2
+			(!bsdf.hitPoint.intoObject && (currentVolume != bsdf.hitPoint.interiorVolume))) {
+			// Ok, green light for continuing to trace the ray
+			return true;
+		}
+	}
+
+	return false;
 }
 
 //------------------------------------------------------------------------------
