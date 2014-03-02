@@ -64,6 +64,7 @@ public:
 	bool IsVisibleIndirectDiffuse() const { return material->IsVisibleIndirectDiffuse(); }
 	bool IsVisibleIndirectGlossy() const { return material->IsVisibleIndirectGlossy(); }
 	bool IsVisibleIndirectSpecular() const { return material->IsVisibleIndirectSpecular(); }
+	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
 	int GetSamples() const { return material->GetSamples(); }
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }

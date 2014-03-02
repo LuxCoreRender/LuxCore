@@ -56,7 +56,7 @@ public:
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
-	// Just with all code not yet supporting volume rendering
+	// Just for all code not yet supporting volume rendering
 	bool Intersect(luxrays::IntersectionDevice *device,
 		const bool fromLight, const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
 		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;

@@ -1548,8 +1548,11 @@ bool Scene::Intersect(IntersectionDevice *device,
 			if (!rayVolume)
 				rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
 			ray->maxt = rayHit->t;
-		} else if (!rayVolume) {
-			// Nothing was hit, I assume the be on the outside of any object
+		}
+
+		if (!rayVolume) {
+			// No volume information, I assume the be on the outside of any
+			// object and use the default volume
 			rayVolume = defaultWorldExteriorVolume;
 		}
 
@@ -1592,10 +1595,8 @@ bool Scene::Intersect(IntersectionDevice *device,
 					if (ray->mint >= ray->maxt)
 						return false;
 
-					if (bsdf->hitPoint.intoObject)
-						volInfo->AddVolume(bsdf->hitPoint.interiorVolume);
-					else
-						volInfo->RemoveVolume(bsdf->hitPoint.interiorVolume);
+					// Update volume information
+					volInfo->Update(bsdf->GetEventTypes(), *bsdf);
 
 					continue;
 				}
@@ -1609,12 +1610,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 				return true;
 
 			// Update volume information
-			if (bsdf->GetEventTypes() & TRANSMIT) {
-				if (bsdf->hitPoint.intoObject)
-					volInfo->AddVolume(bsdf->hitPoint.interiorVolume);
-				else
-					volInfo->RemoveVolume(bsdf->hitPoint.interiorVolume);
-			}
+			volInfo->Update(bsdf->GetEventTypes(), *bsdf);
 
 			*connectionThroughput *= t;
 
@@ -1632,7 +1628,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 	}
 }
 
-// Just with all code not yet supporting volume rendering
+// Just for all code not yet supporting volume rendering
 bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
