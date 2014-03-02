@@ -349,12 +349,7 @@ void PathCPURenderThread::RenderFunc() {
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 			// Update volume information
-			if (lastBSDFEvent & TRANSMIT) {
-				if (bsdf.hitPoint.intoObject)
-					volInfo.AddVolume(bsdf.hitPoint.interiorVolume);
-				else
-					volInfo.RemoveVolume(bsdf.hitPoint.interiorVolume);
-			}
+			volInfo.Update(lastBSDFEvent, bsdf);
 
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
 			++depth;

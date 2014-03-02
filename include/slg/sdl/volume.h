@@ -25,6 +25,8 @@
 
 namespace slg {
 
+class BSDF;
+	
 class Volume : public Material {
 public:
 	Volume() : Material(NULL, NULL), priority(0) { }
@@ -90,6 +92,8 @@ public:
 	void Scattered() { scatteredPath = true; }
 	bool IsScattered() const { return scatteredPath; }
 	
+	void Update(const BSDFEvent eventType, const BSDF &bsdf);
+
 private:
 	const Volume *currentVolume;
 	// Using a fixed array here mostly to have the some code of OpenCL implementation

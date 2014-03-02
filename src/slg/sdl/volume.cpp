@@ -19,6 +19,7 @@
 #include <cstddef>
 
 #include "slg/sdl/volume.h"
+#include "slg/sdl/bsdf.h"
 
 using namespace std;
 using namespace luxrays;
@@ -91,6 +92,16 @@ void PathVolumeInfo::RemoveVolume(const Volume *v) {
 
 	// Update the list size
 	--volumeListSize;
+}
+
+void PathVolumeInfo::Update(const BSDFEvent eventType, const BSDF &bsdf) {
+	// Update only if it isn't a volume scattering and the material can TRANSMIT
+	if (!bsdf.IsVolume() && (eventType  & TRANSMIT)) {
+		if (bsdf.hitPoint.intoObject)
+			AddVolume(bsdf.hitPoint.interiorVolume);
+		else
+			RemoveVolume(bsdf.hitPoint.interiorVolume);
+	}
 }
 
 //------------------------------------------------------------------------------
