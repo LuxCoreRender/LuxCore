@@ -25,6 +25,21 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+
+//------------------------------------------------------------------------------
+// Volume
+//------------------------------------------------------------------------------
+
+Properties Volume::ToProperties() const {
+	Properties props;
+
+	const string name = GetName();
+	props.Set(Property("scene.volumes." + name + ".priority")(priority));
+	props.Set(Material::ToProperties());
+
+	return props;
+}
+
 //------------------------------------------------------------------------------
 // PathVolumeInfo
 //------------------------------------------------------------------------------
@@ -227,6 +242,97 @@ void SchlickScatter::Pdf(const HitPoint &hitPoint,
 
 	if (reversePdfW)
 		*reversePdfW = pdf;
+}
+
+//------------------------------------------------------------------------------
+// ClearVolume
+//------------------------------------------------------------------------------
+
+ClearVolume::ClearVolume(const Texture *a) {
+	sigmaA = a;
+}
+
+Spectrum ClearVolume::SigmaA(const HitPoint &hitPoint) const {
+	//return fresnel->Evaluate(sw, dg).SigmaA(sw) + sigmaA->Evaluate(sw, dg).Clamp();
+	return sigmaA->GetSpectrumValue(hitPoint).Clamp();
+}
+
+Spectrum ClearVolume::SigmaS(const HitPoint &hitPoint) const {
+	return Spectrum();
+}
+
+Spectrum ClearVolume::Tau(const Ray &ray, const float maxt) const {
+	const HitPoint hitPoint =  {
+		ray.d,
+		ray.o,
+		UV(),
+		Normal(-ray.d),
+		Normal(-ray.d),
+		Spectrum(1.f),
+		1.f,
+		0.f, // It doesn't matter here
+		NULL, NULL, // It doesn't matter here
+		false // It doesn't matter here
+	};
+	
+	const Spectrum sigma = SigmaT(hitPoint);
+	if (sigma.Black())
+		return Spectrum();
+	
+	const float rl = maxt - ray.mint;
+
+	return (rl * sigma).Clamp();
+}
+
+float ClearVolume::Scatter(const luxrays::Ray &ray, const float u,
+		 const bool scatteredPath, luxrays::Spectrum *connectionThroughput) const {
+	// Apply volume transmittance
+	*connectionThroughput *= Exp(-Tau(ray, ray.maxt));
+	return -1.f;
+}
+
+Spectrum ClearVolume::Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const {
+	throw runtime_error("Internal error: called ClearVolume::Evaluate()");
+}
+
+Spectrum ClearVolume::Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const {
+	throw runtime_error("Internal error: called ClearVolume::Sample()");
+}
+
+void ClearVolume::Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	throw runtime_error("Internal error: called ClearVolume::Pdf()");
+}
+
+void ClearVolume::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	sigmaA->AddReferencedTextures(referencedTexs);
+}
+
+void ClearVolume::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (sigmaA == oldTex)
+		sigmaA = newTex;
+}
+
+Properties ClearVolume::ToProperties() const {
+	Properties props;
+
+	const string name = GetName();
+	props.Set(Property("scene.volumes." + name + ".type")("clear"));
+	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
+	props.Set(Volume::ToProperties());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
