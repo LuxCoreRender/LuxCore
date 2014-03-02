@@ -36,9 +36,13 @@ public:
 	int GetPriority() const { return priority; }
 
 	// Returns the ray t value of the scatter event. If (t <= 0.0) there was
-	// no scattering.
+	// no scattering. In any case, it applies transmittance to connectionThroughput
+	// too.
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
 		luxrays::Spectrum *connectionThroughput) const = 0;
+
+	
+	virtual luxrays::Properties ToProperties() const;
 
 	friend class SchlickScatter;
 
@@ -102,6 +106,48 @@ private:
 	u_int volumeListSize;
 	
 	bool scatteredPath;
+};
+
+//------------------------------------------------------------------------------
+// ClearVolume
+//------------------------------------------------------------------------------
+
+class ClearVolume : public Volume {
+public:
+	ClearVolume(const Texture *a);
+
+	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
+		luxrays::Spectrum *connectionThroughput) const;
+
+	// Material interface
+
+	virtual MaterialType GetType() const { return CLEAR_VOL; }
+	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT; };
+
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+
+	virtual luxrays::Properties ToProperties() const;
+
+protected:
+	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum Tau(const luxrays::Ray &ray, const float maxt) const;
+
+private:
+	const Texture *sigmaA;
 };
 
 //------------------------------------------------------------------------------

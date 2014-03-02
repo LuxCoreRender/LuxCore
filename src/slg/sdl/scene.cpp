@@ -918,7 +918,11 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 	const string volType = props.Get(Property(propName + ".type")("homogenous")).Get<string>();
 
 	Volume *vol;
-	if (volType == "homogenous") {
+	if (volType == "clear") {
+		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
+
+		vol = new ClearVolume(absorption);
+	} else if (volType == "homogenous") {
 		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
 		const Texture *scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
 		const Texture *asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
