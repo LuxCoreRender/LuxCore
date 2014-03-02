@@ -1570,57 +1570,31 @@ bool Scene::Intersect(IntersectionDevice *device,
 		}
 
 		if (hit) {
-			// Check if the volume priority system has to be applied
-			if (bsdf->GetEventTypes() & TRANSMIT) {
-				// Ok, the surface can transmit so check if volume priority
-				// system is telling me to continue to trace the ray
-				
-				// I have to continue to trace the ray if:
-				//
-				// 1) I'm entering an object and the interior volume has an
-				// higher priority of the current one.
-				//
-				// 2) I'm exiting an object and I'm leaving the current volume
-				
-				if (
-					// Condition #1
-					(bsdf->hitPoint.intoObject && Volume::CompareVolumePriorities(volInfo->GetCurrentVolume(), bsdf->hitPoint.interiorVolume)) ||
-					// Condition #2
-					(!bsdf->hitPoint.intoObject && (volInfo->GetCurrentVolume() != bsdf->hitPoint.interiorVolume))) {
-					// Ok, green light for continuing to trace the ray
-					ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
-					ray->maxt = originalMaxT;
-
-					// A safety check
-					if (ray->mint >= ray->maxt)
-						return false;
-
-					// Update volume information
-					volInfo->Update(bsdf->GetEventTypes(), *bsdf);
-
-					continue;
-				}
-			}
+			// Check if the volume priority system tells me to continue to trace the ray
+			bool continueToTrace = volInfo->ContinueToTrace(*bsdf);
 
 			// Check if it is a pass through point
+			if (!continueToTrace) {
+				const Spectrum t = bsdf->GetPassThroughTransparency();
+				if (!t.Black()) {
+					*connectionThroughput *= t;
+					continueToTrace = true;
+				}	
+			}
 
-			// Mix material can have IsPassThrough() = true and return Spectrum(0.f)
-			Spectrum t = bsdf->GetPassThroughTransparency();
-			if (t.Black())
+			if (continueToTrace) {
+				// Update volume information
+				volInfo->Update(bsdf->GetEventTypes(), *bsdf);
+
+				// It is a transparent material, continue to trace the ray
+				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
+				ray->maxt = originalMaxT;
+
+				// A safety check
+				if (ray->mint >= ray->maxt)
+					return false;
+			} else
 				return true;
-
-			// Update volume information
-			volInfo->Update(bsdf->GetEventTypes(), *bsdf);
-
-			*connectionThroughput *= t;
-
-			// It is a transparent material, continue to trace the ray
-			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
-			ray->maxt = originalMaxT;
-
-			// A safety check
-			if (ray->mint >= ray->maxt)
-				return false;
 		} else {
 			// Nothing was hit
 			return false;

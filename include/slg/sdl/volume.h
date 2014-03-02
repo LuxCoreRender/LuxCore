@@ -40,8 +40,6 @@ public:
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
 		luxrays::Spectrum *connectionThroughput) const = 0;
 
-	static bool CompareVolumePriorities(const Volume *vol1, const Volume *vol2);
-
 	friend class SchlickScatter;
 
 protected:
@@ -93,8 +91,11 @@ public:
 	bool IsScattered() const { return scatteredPath; }
 	
 	void Update(const BSDFEvent eventType, const BSDF &bsdf);
+	bool ContinueToTrace(const BSDF &bsdf) const;
 
 private:
+	static bool CompareVolumePriorities(const Volume *vol1, const Volume *vol2);
+
 	const Volume *currentVolume;
 	// Using a fixed array here mostly to have the some code of OpenCL implementation
 	const Volume *volumeList[PATHVOLUMEINFO_SIZE];
