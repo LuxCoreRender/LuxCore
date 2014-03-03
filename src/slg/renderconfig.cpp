@@ -371,7 +371,11 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 		// HDR image or not
 		bool hdrImage = false;
 		string lowerFileName = boost::algorithm::to_lower_copy(fileName);
-		string file_extension  = boost::filesystem::path(lowerFileName).extension().native();
+#if defined _MSC_VER
+        string file_extension  = boost::filesystem::path(lowerFileName).extension().string();
+#else
+        string file_extension  = boost::filesystem::path(lowerFileName).extension().native();
+#endif
 		
 		if (file_extension == ".exr" || file_extension == ".hdr")
 			hdrImage = true;
