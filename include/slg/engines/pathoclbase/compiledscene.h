@@ -59,7 +59,7 @@ public:
 
 	// Compiled Camera
 	slg::ocl::Camera camera;
-	bool enableHorizStereo, enableOculusRiftBarrel;
+	bool enableCameraHorizStereo, enableOculusRiftBarrel, enableCameraClippingPlane;
 
 	// Compiled Scene Geometry
 	vector<luxrays::Point> verts;

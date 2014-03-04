@@ -23,6 +23,11 @@
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/normal_types.cl"
+}
+
 class Normal {
 	friend class boost::serialization::access;
 public:

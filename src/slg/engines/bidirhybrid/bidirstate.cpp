@@ -145,7 +145,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 				eyeDistance - epsilon);
 
 		float scrX, scrY;
-		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
+		if (scene->camera->GetSamplePosition(&eyeRay, &scrX, &scrY)) {
 			if (lightVertex.depth >= renderEngine->rrDepth) {
 				// Russian Roulette
 				const float prob = RenderEngine::RussianRouletteProb(bsdfEval, renderEngine->rrImportanceCap);

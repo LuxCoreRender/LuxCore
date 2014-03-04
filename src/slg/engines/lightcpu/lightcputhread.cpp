@@ -51,7 +51,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 				eyeDistance - epsilon);
 
 		float filmX, filmY;
-		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &filmX, &filmY)) {
+		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;

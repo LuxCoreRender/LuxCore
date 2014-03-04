@@ -43,6 +43,10 @@ PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Poi
 	enableOculusRiftBarrel = false;
 	horizStereoEyesDistance = .0626f;
 	horizStereoLensDistance = .2779f;
+
+	enableClippingPlane = true;
+	clippingPlaneCenter = Point();
+	clippingPlaneNormal = Normal(1.f, 0.f, 0.f);
 }
 
 void PerspectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
@@ -149,6 +153,9 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 	const float xPixelWidth = tanAngle * ((screen[1] - screen[0]) / 2.f);
 	const float yPixelHeight = tanAngle * ((screen[3] - screen[2]) / 2.f);
 	pixelArea = xPixelWidth * yPixelHeight;
+	
+	if (enableClippingPlane)
+		clippingPlaneNormal = Normalize(clippingPlaneNormal);
 }
 
 void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4],
@@ -219,17 +226,61 @@ void PerspectiveCamera::GenerateRay(
 	ray->maxt = (clipYon - clipHither) / ray->d.z;
 
 	*ray = camTrans[transIndex].cameraToWorld * (*ray);
+
+	// World arbitrary clipping plane support
+	if (enableClippingPlane)
+		ApplyArbitraryClippingPlane(ray);
 }
 
-bool PerspectiveCamera::GetSamplePosition(const Point &p, const Vector &wi,
-	float distance, float *x, float *y) const {
-	const float cosi = Dot(wi, dir);
-	if ((cosi <= 0.f) || (!isinf(distance) && (distance * cosi < clipHither ||
-		distance * cosi > clipYon)))
+void PerspectiveCamera::ApplyArbitraryClippingPlane(Ray *ray) const {
+	// Intersect the ray with clipping plane
+	const float denom = Dot(clippingPlaneNormal, ray->d);
+	const Vector pr = clippingPlaneCenter - ray->o;
+	float d = Dot(pr, clippingPlaneNormal);
+
+	if (fabsf(denom) > DEFAULT_COS_EPSILON_STATIC) {
+		// There is a valid intersection
+		d /= denom; 
+
+		if (d > 0.f) {
+			// The plane is in front of the camera
+			if (denom < 0.f) {
+				// The plane points toward the camera
+				ray->maxt = Clamp(d, ray->mint, ray->maxt);
+			} else {
+				// The plane points away from the camera
+				ray->mint = Clamp(d, ray->mint, ray->maxt);
+			}
+		} else {
+			if ((denom < 0.f) && (d < 0.f)) {
+				// No intersection possible, I use a trick here to avoid any
+				// intersection by setting mint=maxt
+				ray->mint = ray->maxt;
+			} else {
+				// Nothing to do
+			}
+		}
+	} else {
+		// The plane is parallel to the view directions. Check if I'm on the
+		// visible side of the plane or not
+		if (d >= 0.f) {
+			// No intersection possible, I use a trick here to avoid any
+			// intersection by setting mint=maxt
+			ray->mint = ray->maxt;
+		} else {
+			// Nothing to do
+		}
+	}
+}
+
+bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
+	const float cosi = Dot(ray->d, dir);
+	if ((cosi <= 0.f) || (!isinf(ray->maxt) && (ray->maxt * cosi < clipHither ||
+		ray->maxt * cosi > clipYon)))
 		return false;
 
-	const Point pO(Inverse(camTrans[0].rasterToWorld) * (p + ((lensRadius > 0.f) ?
-		(wi * (focalDistance / cosi)) : wi)));
+	const Point pO(Inverse(camTrans[0].rasterToWorld) * (ray->o + ((lensRadius > 0.f) ?
+		(ray->d * (focalDistance / cosi)) : ray->d)));
 
 	*x = pO.x;
 	*y = filmHeight - 1 - pO.y;
@@ -238,8 +289,19 @@ bool PerspectiveCamera::GetSamplePosition(const Point &p, const Vector &wi,
 	if ((*x < 0.f) || (*x >= filmWidth) ||
 			(*y < 0.f) || (*y >= filmHeight))
 		return false;
-	else
+	else {
+		// World arbitrary clipping plane support
+		if (enableClippingPlane) {
+			// Check if the ray end point is on the not visible side of the plane
+			const Point endPoint = (*ray)(ray->maxt);
+			if (Dot(clippingPlaneNormal, endPoint - clippingPlaneCenter) <= 0.f)
+				return false;
+			// Update ray mint/maxt
+			ApplyArbitraryClippingPlane(ray);
+		}
+
 		return true;
+	}
 }
 
 bool PerspectiveCamera::SampleLens(const float u1, const float u2,
@@ -330,7 +392,6 @@ void PerspectiveCamera::OculusRiftBarrelPostprocess(const float x, const float y
 	}
 }
 
-
 //------------------------------------------------------------------------------
 // Allocate a Camera
 //------------------------------------------------------------------------------
@@ -399,6 +460,17 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 	} else {
 		SDL_LOG("Camera horizontal stereo disabled");
 		camera->SetHorizontalStereo(false);
+	}
+	
+	if (props.Get(Property("scene.camera.clippingplane.enable")(false)).Get<bool>()) {
+		camera->clippingPlaneCenter = props.Get(Property("scene.camera.clippingplane.center")(Point())).Get<Point>();
+		camera->clippingPlaneNormal = props.Get(Property("scene.camera.clippingplane.normal")(Normal())).Get<Normal>();
+
+		SDL_LOG("Camera clipping plane enabled");
+		camera->SetClippingPlane(true);
+	} else {
+		SDL_LOG("Camera clipping plane disabled");
+		camera->SetClippingPlane(false);
 	}
 
 	return camera.release();
