@@ -26,6 +26,11 @@ using std::ostream;
 
 namespace luxrays {
 
+	// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/point_types.cl"
+}
+
 class Point {
 	friend class boost::serialization::access;
 public:

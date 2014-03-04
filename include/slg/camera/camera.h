@@ -47,10 +47,10 @@ public:
 
 	CameraType GetType() const { return type; }
 
-	virtual const bool IsHorizontalStereoEnabled() const { return false; }
+	virtual bool IsHorizontalStereoEnabled() const { return false; }
 
 	virtual const luxrays::Vector GetDir() const = 0;
-	virtual const float GetPixelArea() const = 0;
+	virtual float GetPixelArea() const = 0;
 
 	// Mostly used by GUIs
 	virtual void Translate(const luxrays::Vector &t) = 0;
@@ -71,8 +71,8 @@ public:
 	virtual void GenerateRay(
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, const float u1, const float u2) const = 0;
-	virtual bool GetSamplePosition(const luxrays::Point &p, const luxrays::Vector &wi,
-		float distance, float *filmX, float *filmY) const = 0;
+	virtual bool GetSamplePosition(luxrays::Ray *eyeRay,
+		float *filmX, float *filmY) const = 0;
 	virtual bool SampleLens(const float u1, const float u2,
 		luxrays::Point *lensPoint) const = 0;
 
@@ -96,27 +96,33 @@ public:
 	PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
 			const luxrays::Vector &u, const float *region = NULL);
 
-	const void SetHorizontalStereo(const bool v) {
+	void SetHorizontalStereo(const bool v) {
 		if (v && !autoUpdateFilmRegion)
 			throw std::runtime_error("Can not enable horizontal stereo support without film region auto-update");
 
 		enableHorizStereo = v;
 	}
-	const bool IsHorizontalStereoEnabled() const { return enableHorizStereo; }
-	const void SetOculusRiftBarrel(const bool v) {
+	bool IsHorizontalStereoEnabled() const { return enableHorizStereo; }
+	void SetOculusRiftBarrel(const bool v) {
 		if (v && !enableHorizStereo)
 			throw std::runtime_error("Can not enable Oculus Rift Barrel post-processing without horizontal stereo");
 
 		enableOculusRiftBarrel = v;
 	}
-	const bool IsOculusRiftBarrelEnabled() const { return enableOculusRiftBarrel; }
+	bool IsOculusRiftBarrelEnabled() const { return enableOculusRiftBarrel; }
 	void SetHorizontalStereoEyesDistance(const float v) { horizStereoEyesDistance = v; }
-	const float GetHorizontalStereoEyesDistance() const { return horizStereoEyesDistance; }
+	float GetHorizontalStereoEyesDistance() const { return horizStereoEyesDistance; }
 	void SetHorizontalStereoLensDistance(const float v) { horizStereoLensDistance = v; }
-	const float GetHorizontalStereoLensDistance() const { return horizStereoLensDistance; }
+	float GetHorizontalStereoLensDistance() const { return horizStereoLensDistance; }
+
+	void SetClippingPlane(const bool v) {
+		enableClippingPlane = v;
+	}
+	bool IsClippingPlaneEnabled() const { return enableClippingPlane; }
+	
 
 	const luxrays::Vector GetDir() const { return dir; }
-	const float GetPixelArea() const { return pixelArea; }
+	float GetPixelArea() const { return pixelArea; }
 
 	void Translate(const luxrays::Vector &t) {
 		orig += t;
@@ -171,8 +177,7 @@ public:
 	void GenerateRay(
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, const float u1, const float u2) const;
-	bool GetSamplePosition(const luxrays::Point &p, const luxrays::Vector &wi,
-		float distance, float *filmX, float *filmY) const;
+	bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
 
 	bool SampleLens(const float u1, const float u2,
 		luxrays::Point *lensPoint) const;
@@ -192,6 +197,10 @@ public:
 	luxrays::Vector up;
 	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
 
+	// World clipping plane
+	luxrays::Point clippingPlaneCenter;
+	luxrays::Normal clippingPlaneNormal;
+
 	//--------------------------------------------------------------------------
 	// Oculus Rift post-processing pixel shader
 	//--------------------------------------------------------------------------
@@ -209,6 +218,7 @@ private:
 	void InitCameraTransforms(CameraTransforms *trans, const float screen[4],
 		const float eyeOffset,
 		const float screenOffsetX, const float screenOffsetY);
+	void ApplyArbitraryClippingPlane(luxrays::Ray *ray) const;
 
 	// A copy of Film values
 	u_int filmWidth, filmHeight;
@@ -219,10 +229,9 @@ private:
 
 	// ProjectiveCamera Protected Data
 	std::vector<CameraTransforms> camTrans;
-
+	
 	float filmRegion[4], horizStereoEyesDistance, horizStereoLensDistance;
-	bool autoUpdateFilmRegion, enableHorizStereo, enableOculusRiftBarrel;
-
+	bool autoUpdateFilmRegion, enableHorizStereo, enableOculusRiftBarrel, enableClippingPlane;
 };
 
 }

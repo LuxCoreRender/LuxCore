@@ -128,7 +128,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 				eyeDistance - epsilon);
 
 		float scrX, scrY;
-		if (scene->camera->GetSamplePosition(lensPoint, eyeDir, eyeDistance, &scrX, &scrY)) {
+		if (scene->camera->GetSamplePosition(&eyeRay, &scrX, &scrY)) {
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;

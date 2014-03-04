@@ -69,6 +69,60 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 }
 #endif
 
+#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
+void Camera_ApplyArbitraryClippingPlane(
+		__global Camera *camera,
+#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray) {
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+
+	const float3 clippingPlaneCenter = (float3)(camera->clippingPlaneCenter.x, camera->clippingPlaneCenter.y, camera->clippingPlaneCenter.z);
+	const float3 clippingPlaneNormal = (float3)(camera->clippingPlaneNormal.x, camera->clippingPlaneNormal.y, camera->clippingPlaneNormal.z);
+
+	// Intersect the ray with clipping plane
+	const float denom = dot(clippingPlaneNormal, rayDir);
+	const float3 pr = clippingPlaneCenter - rayOrig;
+	float d = dot(pr, clippingPlaneNormal);
+
+	if (fabs(denom) > DEFAULT_COS_EPSILON_STATIC) {
+		// There is a valid intersection
+		d /= denom; 
+
+		if (d > 0.f) {
+			// The plane is in front of the camera
+			if (denom < 0.f) {
+				// The plane points toward the camera
+				ray->maxt = clamp(d, ray->mint, ray->maxt);
+			} else {
+				// The plane points away from the camera
+				ray->mint = clamp(d, ray->mint, ray->maxt);
+			}
+		} else {
+			if ((denom < 0.f) && (d < 0.f)) {
+				// No intersection possible, I use a trick here to avoid any
+				// intersection by setting mint=maxt
+				ray->mint = ray->maxt;
+			} else {
+				// Nothing to do
+			}
+		}
+	} else {
+		// The plane is parallel to the view directions. Check if I'm on the
+		// visible side of the plane or not
+		if (d >= 0.f) {
+			// No intersection possible, I use a trick here to avoid any
+			// intersection by setting mint=maxt
+			ray->mint = ray->maxt;
+		} else {
+			// Nothing to do
+		}
+	}
+}
+#endif
+
 void Camera_GenerateRay(
 		__global Camera *camera,
 		const uint filmWidth, const uint filmHeight,
@@ -135,6 +189,10 @@ void Camera_GenerateRay(
 	Ray_Init3_Private(ray, rayOrig, rayDir, maxt);
 #else
 	Ray_Init3(ray, rayOrig, rayDir, maxt);
+#endif
+
+#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
+	Camera_ApplyArbitraryClippingPlane(camera, ray);
 #endif
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
