@@ -34,7 +34,7 @@ typedef struct {
 typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
-	unsigned int ousideIorTexIndex, iorTexIndex;
+	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
 } GlassParam;
 
 typedef struct {
@@ -45,7 +45,7 @@ typedef struct {
 typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
-	unsigned int ousideIorTexIndex, iorTexIndex;
+	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
 } ArchGlassParam;
 
 typedef struct {
@@ -79,14 +79,14 @@ typedef struct {
 typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
-	unsigned int ousideIorTexIndex, iorTexIndex;
+	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
 	unsigned int nuTexIndex;
 	unsigned int nvTexIndex;
 } RoughGlassParam;
 
 typedef struct {
     unsigned int kdTexIndex;
-	unsigned int  p1TexIndex;
+	unsigned int p1TexIndex;
 	unsigned int p2TexIndex;
 	unsigned int p3TexIndex;
 	unsigned int thicknessTexIndex;

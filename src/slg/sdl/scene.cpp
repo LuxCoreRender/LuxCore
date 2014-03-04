@@ -964,17 +964,42 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	} else if (matType == "glass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
-		const Texture *ioroutside = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
-		const Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
+		
+		Texture *exteriorIor, *interiorIor;
+		// For compatibility with the past
+		if (props.IsDefined(propName + ".ioroutside")) {
+			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
+			exteriorIor = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
+		} else
+			exteriorIor = GetTexture(props.Get(Property(propName + ".exteriorior")(1.f)));
+		// For compatibility with the past
+		if (props.IsDefined(propName + ".iorinside")) {
+			SLG_LOG("WARNING: deprecated property " + propName + ".iorinside");
+			interiorIor = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
+		} else
+			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.5f)));
 
-		mat = new GlassMaterial(emissionTex, bumpTex, kr, kt, ioroutside, iorinside);
+		mat = new GlassMaterial(emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor);
 	} else if (matType == "archglass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
-		const Texture *ioroutside = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
-		const Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.f)));
 
-		mat = new ArchGlassMaterial(emissionTex, bumpTex, kr, kt, ioroutside, iorinside);
+		Texture *exteriorIor, *interiorIor;
+		// For compatibility with the past
+		if (props.IsDefined(propName + ".ioroutside")) {
+			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
+			exteriorIor = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
+		} else
+			exteriorIor = GetTexture(props.Get(Property(propName + ".exteriorior")(1.f)));
+		// For compatibility with the past
+		if (props.IsDefined(propName + ".iorinside")) {
+			SLG_LOG("WARNING: deprecated property " + propName + ".iorinside");
+			interiorIor = GetTexture(props.Get(Property(propName + ".iorinside")(1.f)));
+		} else
+			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.f)));
+
+
+		mat = new ArchGlassMaterial(emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor);
 	} else if (matType == "mix") {
 		Material *matA = matDefs.GetMaterial(props.Get(Property(propName + ".material1")("mat1")).Get<string>());
 		Material *matB = matDefs.GetMaterial(props.Get(Property(propName + ".material2")("mat2")).Get<string>());
@@ -1041,12 +1066,25 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	} else if (matType == "roughglass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
-		const Texture *ioroutside = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
-		const Texture *iorinside = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
+
+		Texture *exteriorIor, *interiorIor;
+		// For compatibility with the past
+		if (props.IsDefined(propName + ".ioroutside")) {
+			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
+			exteriorIor = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
+		} else
+			exteriorIor = GetTexture(props.Get(Property(propName + ".exteriorior")(1.f)));
+		// For compatibility with the past
+		if (props.IsDefined(propName + ".iorinside")) {
+			SLG_LOG("WARNING: deprecated property " + propName + ".iorinside");
+			interiorIor = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
+		} else
+			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.5f)));
+
 		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
 
-		mat = new RoughGlassMaterial(emissionTex, bumpTex, kr, kt, ioroutside, iorinside, nu, nv);
+		mat = new RoughGlassMaterial(emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, nu, nv);
 	} else if (matType == "velvet") {
 		const Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
 		const Texture *p1 = GetTexture(props.Get(Property(propName + ".p1")(-2.0f)));

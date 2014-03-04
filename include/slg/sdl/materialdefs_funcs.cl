@@ -253,9 +253,9 @@ float3 GlassMaterial_Sample(__global Material *material,
 		return BLACK;
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = Texture_GetFloatValue(&texs[material->glass.ousideIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(&texs[material->glass.exteriorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(&texs[material->glass.iorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(&texs[material->glass.interiorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 	const float eta = entering ? (nc / nt) : ntc;
@@ -332,9 +332,9 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 	if (!(requestedEvent & SPECULAR))
 		return BLACK;
 
-	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.ktTexIndex], hitPoint
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.ktTexIndex], hitPoint
 		TEXTURES_PARAM));
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.krTexIndex], hitPoint
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.krTexIndex], hitPoint
 		TEXTURES_PARAM));
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
@@ -343,9 +343,9 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 		return BLACK;
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = Texture_GetFloatValue(&texs[material->glass.ousideIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(&texs[material->archglass.exteriorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(&texs[material->glass.iorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(&texs[material->archglass.interiorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 	const float eta = nc / nt;
@@ -419,9 +419,9 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
-	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.ktTexIndex], hitPoint
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.ktTexIndex], hitPoint
 		TEXTURES_PARAM));
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.krTexIndex], hitPoint
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->archglass.krTexIndex], hitPoint
 		TEXTURES_PARAM));
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
@@ -430,9 +430,9 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 		return BLACK;
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = Texture_GetFloatValue(&texs[material->glass.ousideIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(&texs[material->archglass.exteriorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(&texs[material->glass.iorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(&texs[material->archglass.interiorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 	const float eta = nc / nt;
@@ -1053,9 +1053,9 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 	if (isKtBlack && isKrBlack)
 		return BLACK;
 	
-	const float nc = Texture_GetFloatValue(&texs[material->roughglass.ousideIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(&texs[material->roughglass.exteriorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(&texs[material->roughglass.iorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(&texs[material->roughglass.interiorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 
@@ -1184,9 +1184,9 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 		wh = -wh;
 	const float cosThetaOH = dot(localFixedDir, wh);
 
-	const float nc = Texture_GetFloatValue(&texs[material->roughglass.ousideIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(&texs[material->roughglass.exteriorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(&texs[material->roughglass.iorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(&texs[material->roughglass.interiorIorTexIndex], hitPoint
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 
