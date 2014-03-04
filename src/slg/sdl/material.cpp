@@ -329,8 +329,8 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		return Spectrum();
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = ousideIor->GetFloatValue(hitPoint);
-	const float nt = ior->GetFloatValue(hitPoint);
+	const float nc = exteriorIor->GetFloatValue(hitPoint);
+	const float nt = interiorIor->GetFloatValue(hitPoint);
 	const float ntc = nt / nc;
 	const float eta = entering ? (nc / nt) : ntc;
 	const float costheta = CosTheta(localFixedDir);
@@ -394,8 +394,8 @@ void GlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> 
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
-	ousideIor->AddReferencedTextures(referencedTexs);
-	ior->AddReferencedTextures(referencedTexs);
+	exteriorIor->AddReferencedTextures(referencedTexs);
+	interiorIor->AddReferencedTextures(referencedTexs);
 }
 
 void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -405,10 +405,10 @@ void GlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture
 		Kr = newTex;
 	if (Kt == oldTex)
 		Kt = newTex;
-	if (ousideIor == oldTex)
-		ousideIor = newTex;
-	if (ior == oldTex)
-		ior = newTex;
+	if (exteriorIor == oldTex)
+		exteriorIor = newTex;
+	if (interiorIor == oldTex)
+		interiorIor = newTex;
 }
 
 Properties GlassMaterial::ToProperties() const  {
@@ -418,8 +418,8 @@ Properties GlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("glass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".ioroutside")(ousideIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".iorinside")(ior->GetName()));
+	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Material::ToProperties());
 
 	return props;
@@ -452,8 +452,8 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 		return Spectrum();
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = ousideIor->GetFloatValue(hitPoint);
-	const float nt = ior->GetFloatValue(hitPoint);
+	const float nc = exteriorIor->GetFloatValue(hitPoint);
+	const float nt = interiorIor->GetFloatValue(hitPoint);
 	const float ntc = nt / nc;
 	const float eta = nc / nt;
 	const float costheta = CosTheta(localFixedDir);
@@ -534,8 +534,8 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		return Spectrum();
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = ousideIor->GetFloatValue(hitPoint);
-	const float nt = ior->GetFloatValue(hitPoint);
+	const float nc = exteriorIor->GetFloatValue(hitPoint);
+	const float nt = interiorIor->GetFloatValue(hitPoint);
 	const float ntc = nt / nc;
 	const float eta = nc / nt;
 	const float costheta = CosTheta(localFixedDir);
@@ -579,8 +579,8 @@ void ArchGlassMaterial::AddReferencedTextures(boost::unordered_set<const Texture
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
-	ousideIor->AddReferencedTextures(referencedTexs);
-	ior->AddReferencedTextures(referencedTexs);
+	exteriorIor->AddReferencedTextures(referencedTexs);
+	interiorIor->AddReferencedTextures(referencedTexs);
 }
 
 void ArchGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -590,10 +590,10 @@ void ArchGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Tex
 		Kr = newTex;
 	if (Kt == oldTex)
 		Kt = newTex;
-	if (ousideIor == oldTex)
-		ousideIor = newTex;
-	if (ior == oldTex)
-		ior = newTex;
+	if (exteriorIor == oldTex)
+		exteriorIor = newTex;
+	if (interiorIor == oldTex)
+		interiorIor = newTex;
 }
 
 Properties ArchGlassMaterial::ToProperties() const  {
@@ -603,8 +603,8 @@ Properties ArchGlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("archglass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".ioroutside")(ousideIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".iorinside")(ior->GetName()));
+	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Material::ToProperties());
 
 	return props;
@@ -1560,8 +1560,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	if (isKtBlack && isKrBlack)
 		return Spectrum();
 
-	const float nc = ousideIor->GetFloatValue(hitPoint);
-	const float nt = ior->GetFloatValue(hitPoint);
+	const float nc = exteriorIor->GetFloatValue(hitPoint);
+	const float nt = interiorIor->GetFloatValue(hitPoint);
 	const float ntc = nt / nc;
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
@@ -1668,8 +1668,8 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		wh = -wh;
 	const float cosThetaOH = Dot(localFixedDir, wh);
 
-	const float nc = ousideIor->GetFloatValue(hitPoint);
-	const float nt = ior->GetFloatValue(hitPoint);
+	const float nc = exteriorIor->GetFloatValue(hitPoint);
+	const float nt = interiorIor->GetFloatValue(hitPoint);
 	const float ntc = nt / nc;
 
 	const float coso = fabsf(localFixedDir.z);
@@ -1768,9 +1768,8 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	if (isKtBlack && isKrBlack)
 		return;
 
-
-	const float nc = ousideIor->GetFloatValue(hitPoint);
-	const float nt = ior->GetFloatValue(hitPoint);
+	const float nc = exteriorIor->GetFloatValue(hitPoint);
+	const float nt = interiorIor->GetFloatValue(hitPoint);
 	const float ntc = nt / nc;
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
@@ -1835,8 +1834,8 @@ void RoughGlassMaterial::AddReferencedTextures(boost::unordered_set<const Textur
 
 	Kr->AddReferencedTextures(referencedTexs);
 	Kt->AddReferencedTextures(referencedTexs);
-	ousideIor->AddReferencedTextures(referencedTexs);
-	ior->AddReferencedTextures(referencedTexs);
+	exteriorIor->AddReferencedTextures(referencedTexs);
+	interiorIor->AddReferencedTextures(referencedTexs);
 	nu->AddReferencedTextures(referencedTexs);
 	nv->AddReferencedTextures(referencedTexs);
 }
@@ -1848,10 +1847,10 @@ void RoughGlassMaterial::UpdateTextureReferences(const Texture *oldTex, const Te
 		Kr = newTex;
 	if (Kt == oldTex)
 		Kt = newTex;
-	if (ousideIor == oldTex)
-		ousideIor = newTex;
-	if (ior == oldTex)
-		ior = newTex;
+	if (exteriorIor == oldTex)
+		exteriorIor = newTex;
+	if (interiorIor == oldTex)
+		interiorIor = newTex;
 	if (nu == oldTex)
 		nu = newTex;
 	if (nv == oldTex)
@@ -1865,8 +1864,8 @@ Properties RoughGlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("roughglass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".ioroutside")(ousideIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".iorinside")(ior->GetName()));
+	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
 	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
 	props.Set(Material::ToProperties());

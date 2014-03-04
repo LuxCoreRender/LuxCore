@@ -326,9 +326,9 @@ class GlassMaterial : public Material {
 public:
 	GlassMaterial(const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
-			const Texture *outsideIorFact, const Texture *iorFact) :
+			const Texture *exteriorIorFact, const Texture *interiorIorFact) :
 			Material(emitted, bump),
-			Kr(refl), Kt(trans), ousideIor(outsideIorFact), ior(iorFact) { }
+			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact) { }
 
 	virtual MaterialType GetType() const { return GLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
@@ -359,14 +359,14 @@ public:
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
-	const Texture *GetOutsideIOR() const { return ousideIor; }
-	const Texture *GetIOR() const { return ior; }
+	const Texture *GetExteriorIOR() const { return exteriorIor; }
+	const Texture *GetInteriorIOR() const { return interiorIor; }
 
 private:
 	const Texture *Kr;
 	const Texture *Kt;
-	const Texture *ousideIor;
-	const Texture *ior;
+	const Texture *exteriorIor;
+	const Texture *interiorIor;
 };
 
 //------------------------------------------------------------------------------
@@ -377,9 +377,9 @@ class ArchGlassMaterial : public Material {
 public:
 	ArchGlassMaterial(const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
-			const Texture *outsideIorFact, const Texture *iorFact) :
+			const Texture *exteriorIorFact, const Texture *interiorIorFact) :
 			Material(emitted, bump),
-			Kr(refl), Kt(trans), ousideIor(outsideIorFact), ior(iorFact) { }
+			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact) { }
 
 	virtual MaterialType GetType() const { return ARCHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
@@ -413,14 +413,14 @@ public:
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
-	const Texture *GetOutsideIOR() const { return ousideIor; }
-	const Texture *GetIOR() const { return ior; }
+	const Texture *GetExteriorIOR() const { return exteriorIor; }
+	const Texture *GetInteriorIOR() const { return interiorIor; }
 
 private:
 	const Texture *Kr;
 	const Texture *Kt;
-	const Texture *ousideIor;
-	const Texture *ior;
+	const Texture *exteriorIor;
+	const Texture *interiorIor;
 };
 
 //------------------------------------------------------------------------------
@@ -676,10 +676,10 @@ class RoughGlassMaterial : public Material {
 public:
 	RoughGlassMaterial(const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
-			const Texture *outsideIorFact, const Texture *iorFact,
+			const Texture *exteriorIorFact, const Texture *interiorIorFact,
 			const Texture *u, const Texture *v) :
 			Material(emitted, bump), Kr(refl), Kt(trans),
-			ousideIor(outsideIorFact), ior(iorFact), nu(u), nv(v) { }
+			exteriorIor(exteriorIorFact), interiorIor(interiorIorFact), nu(u), nv(v) { }
 
 	virtual MaterialType GetType() const { return ROUGHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT | TRANSMIT; };
@@ -703,16 +703,16 @@ public:
 
 	const Texture *GetKr() const { return Kr; }
 	const Texture *GetKt() const { return Kt; }
-	const Texture *GetOutsideIOR() const { return ousideIor; }
-	const Texture *GetIOR() const { return ior; }
+	const Texture *GetExteriorIOR() const { return exteriorIor; }
+	const Texture *GetInteriorIOR() const { return interiorIor; }
 	const Texture *GetNu() const { return nu; }
 	const Texture *GetNv() const { return nv; }
 
 private:
 	const Texture *Kr;
 	const Texture *Kt;
-	const Texture *ousideIor;
-	const Texture *ior;
+	const Texture *exteriorIor;
+	const Texture *interiorIor;
 	const Texture *nu;
 	const Texture *nv;
 };

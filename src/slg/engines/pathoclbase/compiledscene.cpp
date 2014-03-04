@@ -342,8 +342,8 @@ void CompiledScene::CompileMaterials() {
 				mat->type = slg::ocl::GLASS;
 				mat->glass.krTexIndex = scene->texDefs.GetTextureIndex(gm->GetKr());
 				mat->glass.ktTexIndex = scene->texDefs.GetTextureIndex(gm->GetKt());
-				mat->glass.ousideIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetOutsideIOR());
-				mat->glass.iorTexIndex = scene->texDefs.GetTextureIndex(gm->GetIOR());
+				mat->glass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetExteriorIOR());
+				mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetInteriorIOR());
 				break;
 			}
 			case ARCHGLASS: {
@@ -352,8 +352,8 @@ void CompiledScene::CompileMaterials() {
 				mat->type = slg::ocl::ARCHGLASS;
 				mat->archglass.krTexIndex = scene->texDefs.GetTextureIndex(am->GetKr());
 				mat->archglass.ktTexIndex = scene->texDefs.GetTextureIndex(am->GetKt());
-				mat->archglass.ousideIorTexIndex = scene->texDefs.GetTextureIndex(am->GetOutsideIOR());
-				mat->archglass.iorTexIndex = scene->texDefs.GetTextureIndex(am->GetIOR());
+				mat->archglass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetExteriorIOR());
+				mat->archglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetInteriorIOR());
 				break;
 			}
 			case MIX: {
@@ -435,8 +435,8 @@ void CompiledScene::CompileMaterials() {
 				mat->type = slg::ocl::ROUGHGLASS;
 				mat->roughglass.krTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKr());
 				mat->roughglass.ktTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKt());
-				mat->roughglass.ousideIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetOutsideIOR());
-				mat->roughglass.iorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetIOR());
+				mat->roughglass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetExteriorIOR());
+				mat->roughglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetInteriorIOR());
 
 				const Texture *nuTex = rgm->GetNu();
 				const Texture *nvTex = rgm->GetNv();
