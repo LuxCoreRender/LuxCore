@@ -385,6 +385,10 @@ void Scene::ParseVolumes(const Properties &props) {
 			objDefs.UpdateMaterialReferences(oldMat, newMat);
 			//lightDefs.UpdateMaterialReferences(oldMat, newMat);
 
+			// Check also the world default volume
+			if (defaultWorldVolume == oldMat)
+				defaultWorldVolume = (Volume *)newMat;
+
 			// Check if the old and/or the new material were/is light sources
 			//if (wasLightSource || newMat->IsLightSource())
 			//	editActions.AddAction(LIGHTS_EDIT);
@@ -625,6 +629,11 @@ void Scene::RemoveUnusedTextures() {
 void Scene::RemoveUnusedMaterials() {
 	// Build a list of all referenced material names
 	boost::unordered_set<const Material *> referencedMats;
+
+	// Add the default world volume
+	if (defaultWorldVolume)
+		referencedMats.insert(defaultWorldVolume);
+		
 	for (u_int i = 0; i < objDefs.GetSize(); ++i)
 		objDefs.GetSceneObject(i)->AddReferencedMaterials(referencedMats);
 
