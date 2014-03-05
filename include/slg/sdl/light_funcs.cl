@@ -741,6 +741,15 @@ float3 EnvLight_GetRadiance(__global LightSource *light, const float3 dir, float
 			return SunLight_GetRadiance(light,
 					dir, directPdfA);
 #endif
+#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
+		case TYPE_SHARPDISTANT:
+			// Just return Black
+#endif
+#if defined(PARAM_HAS_DISTANTLIGHT)
+		case TYPE_DISTANT:
+			// Just return Black
+#endif
+
 		default:
 			return BLACK;
 	}
@@ -897,6 +906,12 @@ bool Light_IsEnvOrIntersecable(__global LightSource *light) {
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		case TYPE_TRIANGLE:
 #endif
+#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
+		case TYPE_SHARPDISTANT:
+#endif
+#if defined(PARAM_HAS_DISTANTLIGHT)
+		case TYPE_DISTANT:
+#endif
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			return true;
 #endif
@@ -912,12 +927,6 @@ bool Light_IsEnvOrIntersecable(__global LightSource *light) {
 #endif
 #if defined(PARAM_HAS_PROJECTIONLIGHT)
 		case TYPE_PROJECTION:
-#endif
-#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
-		case TYPE_SHARPDISTANT:
-#endif
-#if defined(PARAM_HAS_DISTANTLIGHT)
-		case TYPE_DISTANT:
 #endif
 #if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT)
 			return false;

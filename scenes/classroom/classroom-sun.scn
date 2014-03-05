@@ -4,7 +4,7 @@ scene.camera.focaldistance = 4.0
 ################################################################################
 scene.volumes.vol_air.type = homogenous
 scene.volumes.vol_air.absorption = 0.0 0.0 0.0
-scene.volumes.vol_air.scattering = 0.05 0.05 0.05
+scene.volumes.vol_air.scattering = 0.06 0.06 0.06
 scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
 scene.volumes.vol_air.multiscattering = 0
 scene.world.volume.default = vol_air
@@ -60,9 +60,9 @@ scene.objects.white_paint.ply = scenes/classroom/white_paint.ply
 scene.objects.white_plastic.material = white_plastic
 scene.objects.white_plastic.ply = scenes/classroom/white_plastic.ply
 ################################################################################
-scene.infinitelight.file = scenes/simple-mat/sky.exr
-scene.infinitelight.gain = 1.0 1.0 1.0
-scene.infinitelight.shift = -0.375 0.0
+#scene.infinitelight.file = scenes/simple-mat/sky.exr
+#scene.infinitelight.gain = 1.0 1.0 1.0
+#scene.infinitelight.shift = -0.375 0.0
 ##
 #scene.materials.sun.emission = 300.0 300.0 220.0
 #scene.objects.sun.material = sun
@@ -71,12 +71,12 @@ scene.infinitelight.shift = -0.375 0.0
 #scene.lights.skylight.type = sky
 #scene.lights.skylight.dir = 0.166974 0.59908 0.783085
 #scene.lights.skylight.turbidity = 2.2
-#scene.lights.skylight.gain = .005 .005 .005
+#scene.lights.skylight.gain = .0075 .0075 .0075
 ##
 scene.lights.sunlight.type = sun
 scene.lights.sunlight.dir = 0.166974 0.59908 0.783085
 scene.lights.sunlight.turbidity = 2.2
-scene.lights.sunlight.gain = .005 .005 .005
+scene.lights.sunlight.gain = .0075 .0075 .0075
 scene.lights.sunlight.relsize = 32
 ##
 #scene.lights.sunlight.type = distant
