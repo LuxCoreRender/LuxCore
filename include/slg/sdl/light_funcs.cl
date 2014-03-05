@@ -332,7 +332,9 @@ float3 SkyLight2_Illuminate(__global LightSource *skyLight2,
 #if defined(PARAM_HAS_SUNLIGHT)
 
 float3 SunLight_Illuminate(__global LightSource *sunLight,
-		const float u0, const float u1,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
+		const float3 p, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float cosThetaMax = sunLight->notIntersecable.sun.cosThetaMax;
 	const float3 sunDir = VLOAD3F(&sunLight->notIntersecable.sun.absoluteDir.x);
@@ -343,7 +345,14 @@ float3 SunLight_Illuminate(__global LightSource *sunLight,
 	if (cosAtLight <= cosThetaMax)
 		return BLACK;
 
-	*distance = INFINITY;
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
 	*directPdfW = UniformConePdf(cosThetaMax);
 
 	return VLOAD3F(sunLight->notIntersecable.sun.color.c);
@@ -643,10 +652,19 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 #if defined(PARAM_HAS_SHARPDISTANTLIGHT)
 
 float3 SharpDistantLight_Illuminate(__global LightSource *sharpDistantLight,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
 		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
 	*dir = -VLOAD3F(&sharpDistantLight->notIntersecable.sharpDistant.absoluteLightDir.x);
 
-	*distance = INFINITY;
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
 	*directPdfW = 1.f;
 
 	return VLOAD3F(sharpDistantLight->notIntersecable.gain.c) *
@@ -662,6 +680,8 @@ float3 SharpDistantLight_Illuminate(__global LightSource *sharpDistantLight,
 #if defined(PARAM_HAS_DISTANTLIGHT)
 
 float3 DistantLight_Illuminate(__global LightSource *distantLight,
+		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
+		const float sceneRadius,
 		const float3 p,	const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float3 absoluteLightDir = VLOAD3F(&distantLight->notIntersecable.distant.absoluteLightDir.x);
@@ -669,7 +689,14 @@ float3 DistantLight_Illuminate(__global LightSource *distantLight,
 	const float3 y = VLOAD3F(&distantLight->notIntersecable.distant.y.x);
 	const float cosThetaMax = distantLight->notIntersecable.distant.cosThetaMax;
 	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
-	*distance = INFINITY;
+
+	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float3 toCenter = worldCenter - p;
+	const float centerDistance = dot(toCenter, toCenter);
+	const float approach = dot(toCenter, *dir);
+	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 	*directPdfW = uniformConePdf;
@@ -789,8 +816,8 @@ float3 Light_Illuminate(
 		case TYPE_SUN:
 			return SunLight_Illuminate(
 				light,
-				u0, u1,
-				lightRayDir, distance, directPdfW);
+				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				point, u0, u1, lightRayDir, distance, directPdfW);
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		case TYPE_TRIANGLE:
@@ -834,15 +861,16 @@ float3 Light_Illuminate(
 #if defined(PARAM_HAS_SHARPDISTANTLIGHT)
 		case TYPE_SHARPDISTANT:
 			return SharpDistantLight_Illuminate(
-				light, point,
-				lightRayDir, distance, directPdfW);
+				light,
+				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				point, lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_DISTANTLIGHT)
 		case TYPE_DISTANT:
 			return DistantLight_Illuminate(
-				light, point,
-				u0, u1,
-				lightRayDir, distance, directPdfW);
+				light,
+				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				point, u0, u1, lightRayDir, distance, directPdfW);
 #endif
 		default:
 			return BLACK;

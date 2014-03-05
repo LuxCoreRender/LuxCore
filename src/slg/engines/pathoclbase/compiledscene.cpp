@@ -594,8 +594,6 @@ void CompiledScene::CompileLights() {
 				delete[] infiniteLightDistribution;
 
 				oclLight->notIntersecable.infinite.distributionOffset = size;
-				
-				envLightIndices.push_back(i);
 				break;
 			}
 			case TYPE_IL_SKY: {
@@ -616,8 +614,6 @@ void CompiledScene::CompileLights() {
 						&oclLight->notIntersecable.sky.zenith_Y, &oclLight->notIntersecable.sky.zenith_x,
 						&oclLight->notIntersecable.sky.zenith_y, oclLight->notIntersecable.sky.perez_Y,
 						oclLight->notIntersecable.sky.perez_x, oclLight->notIntersecable.sky.perez_y);
-				
-				envLightIndices.push_back(i);
 				break;
 			}
 			case TYPE_IL_SKY2: {
@@ -644,8 +640,6 @@ void CompiledScene::CompileLights() {
 						oclLight->notIntersecable.sky2.hTerm.c,
 						oclLight->notIntersecable.sky2.iTerm.c,
 						oclLight->notIntersecable.sky2.radianceTerm.c);
-				
-				envLightIndices.push_back(i);
 				break;
 			}
 			case TYPE_SUN: {
@@ -669,8 +663,6 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.sun.color, sl->color);
 				oclLight->notIntersecable.sun.turbidity = sl->turbidity;
 				oclLight->notIntersecable.sun.relSize= sl->relSize;
-				
-				envLightIndices.push_back(i);
 				break;
 			}
 			case TYPE_POINT: {
@@ -780,8 +772,6 @@ void CompiledScene::CompileLights() {
 
 				// ConstantInfiniteLight data
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.constantInfinite.color, cil->color);
-
-				envLightIndices.push_back(i);
 				break;
 			}
 		case TYPE_SHARPDISTANT: {
@@ -824,6 +814,9 @@ void CompiledScene::CompileLights() {
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}
+		
+		if (l->IsEnvironmental())
+			envLightIndices.push_back(i);
 	}
 
 	lightTypeCounts = scene->lightDefs.GetLightTypeCounts();

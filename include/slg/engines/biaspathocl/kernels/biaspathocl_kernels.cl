@@ -504,7 +504,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				// Nothing was hit, add environmental lights radiance
 				//--------------------------------------------------------------
 
-#if defined(PARAM_HAS_ENVLIGHTS) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)
+#if defined(PARAM_HAS_ENVLIGHTS)
 				const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
 				DirectHitInfiniteLight(
 						firstPathVertex,
