@@ -2,6 +2,13 @@ scene.camera.lookat = -6.078912 -1.287569 -0.244332 3.862433 8.763888 -0.49751
 scene.camera.lensradius = 0.005
 scene.camera.focaldistance = 4.0
 ################################################################################
+scene.volumes.vol_air.type = homogenous
+scene.volumes.vol_air.absorption = 0.0 0.0 0.0
+scene.volumes.vol_air.scattering = 0.05 0.05 0.05
+scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol_air.multiscattering = 0
+scene.world.volume.default = vol_air
+################################################################################
 scene.materials.chrome.type = mirror
 scene.materials.mirror.chrome =  1.0 1.0 1.0
 scene.materials.lampshades_mat1.kd = 0.5 0.5 0.5
