@@ -148,14 +148,18 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 	const float dotEyeDirNG = Dot(eyeDir, hitPoint.geometryN);
 	const float absDotEyeDirNG = fabsf(dotEyeDirNG);
 
-	if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
-			(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
-		return Spectrum();
+	if (!IsVolume()) {
+		// This kind of tests make sense only for materials
 
-	const float sideTest = dotEyeDirNG * dotLightDirNG;
-	if (((sideTest > 0.f) && !(material->GetEventTypes() & REFLECT)) ||
-			((sideTest < 0.f) && !(material->GetEventTypes() & TRANSMIT)))
-		return Spectrum();
+		if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
+				(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
+			return Spectrum();
+
+		const float sideTest = dotEyeDirNG * dotLightDirNG;
+		if (((sideTest > 0.f) && !(material->GetEventTypes() & REFLECT)) ||
+				((sideTest < 0.f) && !(material->GetEventTypes() & TRANSMIT)))
+			return Spectrum();
+	}
 
 	const Vector localLightDir = frame.ToLocal(lightDir);
 	const Vector localEyeDir = frame.ToLocal(eyeDir);

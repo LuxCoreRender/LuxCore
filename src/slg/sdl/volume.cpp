@@ -157,8 +157,8 @@ Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW, float *reversePdfW) const {
 	Spectrum r = volume->SigmaS(hitPoint);
-	// DEFAULT_EPSILON_STATIC is there to avoid a division by 0
-	r /= r + volume->SigmaA(hitPoint) + Spectrum(DEFAULT_EPSILON_STATIC);
+	if (!r.Black())
+		r /= r + volume->SigmaA(hitPoint);
 
 	const Spectrum gValue = g->GetSpectrumValue(hitPoint).Clamp(-1.f, 1.f);
 	const Spectrum k = gValue * (Spectrum(1.55f) - .55f * gValue * gValue);
@@ -166,12 +166,11 @@ Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 	*event = DIFFUSE | REFLECT;
 
 	const float dotEyeLight = Dot(localEyeDir, localLightDir);
-
-	const float gFilter = k.Filter();
+	const float kFilter = k.Filter();
 	// 1+k*cos instead of 1-k*cos because localEyeDir is reversed compared to the
 	// standard phase function definition
-	const float compcostFilter = 1.f + gFilter * dotEyeLight;
-	const float pdf = (1.f - gFilter * gFilter) / (compcostFilter * compcostFilter * (4.f * M_PI));
+	const float compcostFilter = 1.f + kFilter * dotEyeLight;
+	const float pdf = (1.f - kFilter * kFilter) / (compcostFilter * compcostFilter * (4.f * M_PI));
 
 	if (directPdfW)
 		*directPdfW = pdf;
@@ -217,8 +216,8 @@ Spectrum SchlickScatter::Sample(const HitPoint &hitPoint,
 	*event = DIFFUSE | REFLECT;
 
 	Spectrum r = volume->SigmaS(hitPoint);
-	// DEFAULT_EPSILON_STATIC is there to avoid a division by 0
-	r /= r + volume->SigmaA(hitPoint) + Spectrum(DEFAULT_EPSILON_STATIC);
+	if (!r.Black())
+		r /= r + volume->SigmaA(hitPoint);
 
 	return r;
 }
