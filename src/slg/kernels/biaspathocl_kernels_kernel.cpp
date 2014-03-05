@@ -507,7 +507,7 @@ std::string KernelSource_biaspathocl_kernels =
 "				// Nothing was hit, add environmental lights radiance\n"
 "				//--------------------------------------------------------------\n"
 "\n"
-"#if defined(PARAM_HAS_ENVLIGHTS) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_SUNLIGHT)\n"
+"#if defined(PARAM_HAS_ENVLIGHTS)\n"
 "				const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);\n"
 "				DirectHitInfiniteLight(\n"
 "						firstPathVertex,\n"

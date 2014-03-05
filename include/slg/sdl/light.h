@@ -437,7 +437,7 @@ protected:
 // SharpDistantLight implementation
 //------------------------------------------------------------------------------
 
-class SharpDistantLight : public NotIntersecableLightSource {
+class SharpDistantLight : public EnvLightSource {
 public:
 	SharpDistantLight();
 	virtual ~SharpDistantLight();
@@ -458,6 +458,9 @@ public:
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const { return luxrays::Spectrum(); }
+	
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 	luxrays::Spectrum color;
@@ -472,7 +475,7 @@ protected:
 // DistantLight implementation
 //------------------------------------------------------------------------------
 
-class DistantLight : public NotIntersecableLightSource {
+class DistantLight : public EnvLightSource {
 public:
 	DistantLight();
 	virtual ~DistantLight();
@@ -493,6 +496,9 @@ public:
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const { return luxrays::Spectrum(); }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 

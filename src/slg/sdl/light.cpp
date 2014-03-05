@@ -812,16 +812,22 @@ Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	*dir = -absoluteLightDir;
 
-	*distance = numeric_limits<float>::infinity();
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+
 	*directPdfW = 1.f;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	if (emissionPdfW) {
-		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	if (emissionPdfW)
 		*emissionPdfW = 1.f / (M_PI * worldRadius * worldRadius);
-	}
 
 	return gain * color;
 }
@@ -924,7 +930,15 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
-	*distance = numeric_limits<float>::infinity();
+
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 	*directPdfW = uniformConePdf;
@@ -932,10 +946,8 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(-absoluteLightDir, *dir);
 
-	if (emissionPdfW) {
-		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+	if (emissionPdfW)
 		*emissionPdfW =  uniformConePdf / (M_PI * worldRadius * worldRadius);
-	}
 
 	return gain * color;
 }
@@ -1962,17 +1974,23 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 	if (cosAtLight <= cosThetaMax)
 		return Spectrum();
 
-	*distance = numeric_limits<float>::infinity();
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+
+	const Vector toCenter(worldCenter - p);
+	const float centerDistance = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, *dir);
+	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+		centerDistance + approach * approach));
+	
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 	*directPdfW = uniformConePdf;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	if (emissionPdfW) {
-		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+	if (emissionPdfW)
 		*emissionPdfW =  uniformConePdf / (M_PI * worldRadius * worldRadius);
-	}
 	
 	return color;
 }

@@ -780,6 +780,14 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_SUNLIGHT";
 		hasEnvLights = true;
 	}
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0) {
+		ss << " -D PARAM_HAS_SHARPDISTANTLIGHT";
+		hasEnvLights = true;
+	}
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0) {
+		ss << " -D PARAM_HAS_DISTANTLIGHT";
+		hasEnvLights = true;
+	}
 	if (hasEnvLights)
 		ss << " -D PARAM_HAS_ENVLIGHTS";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_POINT] > 0)
@@ -790,10 +798,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_SPOTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_PROJECTION] > 0)
 		ss << " -D PARAM_HAS_PROJECTIONLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0)
-		ss << " -D PARAM_HAS_SHARPDISTANTLIGHT";
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0)
-		ss << " -D PARAM_HAS_DISTANTLIGHT";
 	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
 	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
 
