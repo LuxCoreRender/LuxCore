@@ -55,6 +55,11 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 			// The currentVolume value wins.
 			hitPoint.exteriorVolume = currentVolume;
 		}
+		
+		if (!hitPoint.exteriorVolume) {
+			// No volume information, I use the default volume
+			hitPoint.exteriorVolume = scene.defaultWorldVolume;
+		}
 	} else {
 		// From inside to outside the object
 
@@ -65,6 +70,11 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 			// between the material definition and the currentVolume value.
 			// The currentVolume value wins.
 			hitPoint.interiorVolume = currentVolume;
+		}
+		
+		if (!hitPoint.interiorVolume) {
+			// No volume information, I use the default volume
+			hitPoint.interiorVolume = scene.defaultWorldVolume;
 		}
 
 		hitPoint.exteriorVolume = material->GetExteriorVolume();

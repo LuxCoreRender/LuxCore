@@ -909,18 +909,20 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 	const string propName = "scene.volumes." + volName;
 	const string volType = props.Get(Property(propName + ".type")("homogenous")).Get<string>();
 
+	const Texture *ior = GetTexture(props.Get(Property(propName + ".ior")(1.f)));
+
 	Volume *vol;
 	if (volType == "clear") {
 		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
 
-		vol = new ClearVolume(absorption);
+		vol = new ClearVolume(ior, absorption);
 	} else if (volType == "homogenous") {
 		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
 		const Texture *scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
 		const Texture *asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
 		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
-		vol = new HomogeneousVolume(absorption, scattering, asymmetry, multiScattering);
+		vol = new HomogeneousVolume(ior, absorption, scattering, asymmetry, multiScattering);
 	} else
 		throw runtime_error("Unknown volume type: " + volType);
 
@@ -974,18 +976,19 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
 		
-		Texture *exteriorIor, *interiorIor;
+		Texture *exteriorIor = NULL;
+		Texture *interiorIor = NULL;
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".ioroutside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
 			exteriorIor = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
-		} else
+		} else if (props.IsDefined(propName + ".exteriorior"))
 			exteriorIor = GetTexture(props.Get(Property(propName + ".exteriorior")(1.f)));
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".iorinside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".iorinside");
 			interiorIor = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
-		} else
+		} else if (props.IsDefined(propName + ".interiorior"))
 			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.5f)));
 
 		mat = new GlassMaterial(emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor);
@@ -993,20 +996,20 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
 
-		Texture *exteriorIor, *interiorIor;
+		Texture *exteriorIor = NULL;
+		Texture *interiorIor = NULL;
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".ioroutside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
 			exteriorIor = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
-		} else
+		} else if (props.IsDefined(propName + ".exteriorior"))
 			exteriorIor = GetTexture(props.Get(Property(propName + ".exteriorior")(1.f)));
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".iorinside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".iorinside");
 			interiorIor = GetTexture(props.Get(Property(propName + ".iorinside")(1.f)));
-		} else
+		} else if (props.IsDefined(propName + ".interiorior"))
 			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.f)));
-
 
 		mat = new ArchGlassMaterial(emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor);
 	} else if (matType == "mix") {
@@ -1076,18 +1079,19 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
 
-		Texture *exteriorIor, *interiorIor;
+		Texture *exteriorIor = NULL;
+		Texture *interiorIor = NULL;
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".ioroutside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".ioroutside");
 			exteriorIor = GetTexture(props.Get(Property(propName + ".ioroutside")(1.f)));
-		} else
+		} else if (props.IsDefined(propName + ".exteriorior"))
 			exteriorIor = GetTexture(props.Get(Property(propName + ".exteriorior")(1.f)));
 		// For compatibility with the past
 		if (props.IsDefined(propName + ".iorinside")) {
 			SLG_LOG("WARNING: deprecated property " + propName + ".iorinside");
 			interiorIor = GetTexture(props.Get(Property(propName + ".iorinside")(1.5f)));
-		} else
+		} else if (props.IsDefined(propName + ".interiorior"))
 			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.5f)));
 
 		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
@@ -1575,18 +1579,14 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 	for (;;) {
 		const bool hit = device->TraceRay(ray, rayHit);
+
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
-
 		if (hit) {
-			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, NULL);
-			if (!rayVolume)
-				rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
+			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, rayVolume);
+			rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
 			ray->maxt = rayHit->t;
-		}
-
-		if (!rayVolume) {
-			// No volume information, I assume the be on the outside of any
-			// object and use the default volume
+		} else if (!rayVolume) {
+			// No volume information, I use the default volume
 			rayVolume = defaultWorldVolume;
 		}
 

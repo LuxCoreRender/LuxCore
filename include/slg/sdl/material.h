@@ -163,6 +163,10 @@ public:
 	virtual bool IsReferencing(const Material *mat) const { return (this == mat); }
 	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 		referencedMats.insert(this);
+		if (interiorVolume)
+			referencedMats.insert((const Material *)interiorVolume);
+		if (exteriorVolume)
+			referencedMats.insert((const Material *)exteriorVolume);
 	}
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		if (emittedTex)

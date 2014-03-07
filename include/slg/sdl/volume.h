@@ -29,11 +29,13 @@ class BSDF;
 	
 class Volume : public Material {
 public:
-	Volume() : Material(NULL, NULL), priority(0) { }
+	Volume(const Texture *iorTex) : Material(NULL, NULL), ior(iorTex), priority(0) { }
 	virtual ~Volume() { }
 
 	void SetPriority(const int p) { priority = p; }
 	int GetPriority() const { return priority; }
+
+	float GetIOR(const HitPoint &hitPoint) const { return ior->GetFloatValue(hitPoint); }
 
 	// Returns the ray t value of the scatter event. If (t <= 0.0) there was
 	// no scattering. In any case, it applies transmittance to connectionThroughput
@@ -54,6 +56,7 @@ protected:
 	}
 	virtual luxrays::Spectrum Tau(const luxrays::Ray &ray, const float offset) const = 0;
 
+	const Texture *ior;
 	int priority;
 };
 
@@ -75,7 +78,7 @@ public:
 		float *directPdfW, float *reversePdfW) const;
 
 	const Volume *volume;
-	const Texture *g;	
+	const Texture *g;
 };
 
 // A class used to store volume related information on the on going path
@@ -114,7 +117,7 @@ private:
 
 class ClearVolume : public Volume {
 public:
-	ClearVolume(const Texture *a);
+	ClearVolume(const Texture *iorTex, const Texture *a);
 
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
 		luxrays::Spectrum *connectionThroughput) const;
@@ -156,7 +159,7 @@ private:
 
 class HomogeneousVolume : public Volume {
 public:
-	HomogeneousVolume(const Texture *a, const Texture *s,
+	HomogeneousVolume(const Texture *iorTex, const Texture *a, const Texture *s,
 			const Texture *g, const bool multiScattering);
 
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,

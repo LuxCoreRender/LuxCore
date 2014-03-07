@@ -342,8 +342,14 @@ void CompiledScene::CompileMaterials() {
 				mat->type = slg::ocl::GLASS;
 				mat->glass.krTexIndex = scene->texDefs.GetTextureIndex(gm->GetKr());
 				mat->glass.ktTexIndex = scene->texDefs.GetTextureIndex(gm->GetKt());
-				mat->glass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetExteriorIOR());
-				mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetInteriorIOR());
+				if (gm->GetExteriorIOR())
+					mat->glass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetExteriorIOR());
+				else
+					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+				if (gm->GetInteriorIOR())
+					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetInteriorIOR());
+				else
+					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
 				break;
 			}
 			case ARCHGLASS: {
@@ -352,8 +358,14 @@ void CompiledScene::CompileMaterials() {
 				mat->type = slg::ocl::ARCHGLASS;
 				mat->archglass.krTexIndex = scene->texDefs.GetTextureIndex(am->GetKr());
 				mat->archglass.ktTexIndex = scene->texDefs.GetTextureIndex(am->GetKt());
-				mat->archglass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetExteriorIOR());
-				mat->archglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetInteriorIOR());
+				if (am->GetExteriorIOR())
+					mat->glass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetExteriorIOR());
+				else
+					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+				if (am->GetInteriorIOR())
+					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetInteriorIOR());
+				else
+					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
 				break;
 			}
 			case MIX: {
@@ -435,8 +447,14 @@ void CompiledScene::CompileMaterials() {
 				mat->type = slg::ocl::ROUGHGLASS;
 				mat->roughglass.krTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKr());
 				mat->roughglass.ktTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKt());
-				mat->roughglass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetExteriorIOR());
-				mat->roughglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetInteriorIOR());
+				if (rgm->GetExteriorIOR())
+					mat->glass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetExteriorIOR());
+				else
+					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+				if (rgm->GetInteriorIOR())
+					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetInteriorIOR());
+				else
+					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
 
 				const Texture *nuTex = rgm->GetNu();
 				const Texture *nvTex = rgm->GetNv();
