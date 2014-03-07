@@ -133,10 +133,14 @@ public:
 	const ImageMap *GetEmissionMap() const { return emissionMap; }
 	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
 
+	// MixMaterial can have multiple volumes assigned and need the passThroughEvent
+	// information to be able to return the correct volume
 	void SetInteriorVolume(const Volume *vol) { interiorVolume = vol; }
-	const Volume *GetInteriorVolume() const { return interiorVolume; }
+	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,
+		const float passThroughEvent) const { return interiorVolume; }
 	void SetExteriorVolume(const Volume *vol) { exteriorVolume = vol; }
-	const Volume *GetExteriorVolume() const { return exteriorVolume; }	
+	virtual const Volume *GetExteriorVolume(const HitPoint &hitPoint,
+		const float passThroughEvent) const { return exteriorVolume; }	
 	
     virtual void Bump(HitPoint *hitPoint,
         const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
@@ -455,6 +459,11 @@ public:
 	}
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
+
+	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,
+		const float passThroughEvent) const;
+	virtual const Volume *GetExteriorVolume(const HitPoint &hitPoint,
+		const float passThroughEvent) const;
 
 	virtual float GetEmittedRadianceY() const;
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,

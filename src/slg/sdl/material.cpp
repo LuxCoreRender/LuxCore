@@ -647,6 +647,36 @@ Properties ArchGlassMaterial::ToProperties() const  {
 // Mix material
 //------------------------------------------------------------------------------
 
+const Volume *MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
+		const float passThroughEvent) const {
+	if (interiorVolume)
+		return interiorVolume;
+	else {
+		const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
+
+		if (passThroughEvent < weight1)
+			return matA->GetInteriorVolume(hitPoint, passThroughEvent / weight1);
+		else
+			return matB->GetInteriorVolume(hitPoint, (passThroughEvent - weight2) / weight2);
+	}
+}
+
+const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
+		const float passThroughEvent) const {
+	if (exteriorVolume)
+		return exteriorVolume;
+	else {
+		const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
+
+		if (passThroughEvent < weight1)
+			return matA->GetExteriorVolume(hitPoint, passThroughEvent / weight1);
+		else
+			return matB->GetExteriorVolume(hitPoint, (passThroughEvent - weight2) / weight2);
+	}
+}
+
 Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent) const {
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);

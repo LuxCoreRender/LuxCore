@@ -45,10 +45,10 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	if (hitPoint.intoObject) {
 		// From outside to inside the object
 
-		hitPoint.interiorVolume = material->GetInteriorVolume();
+		hitPoint.interiorVolume = material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent);
 
 		if (!currentVolume)
-			hitPoint.exteriorVolume = material->GetExteriorVolume();
+			hitPoint.exteriorVolume = material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent);
 		else {
 			// if (!material->GetExteriorVolume()) there may be conflict here
 			// between the material definition and the currentVolume value.
@@ -64,7 +64,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		// From inside to outside the object
 
 		if (!currentVolume)
-			hitPoint.interiorVolume = material->GetInteriorVolume();
+			hitPoint.interiorVolume = material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent);
 		else {
 			// if (!material->GetInteriorVolume()) there may be conflict here
 			// between the material definition and the currentVolume value.
@@ -77,7 +77,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 			hitPoint.interiorVolume = scene.defaultWorldVolume;
 		}
 
-		hitPoint.exteriorVolume = material->GetExteriorVolume();
+		hitPoint.exteriorVolume = material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent);
 	}
 
 	// Interpolate color

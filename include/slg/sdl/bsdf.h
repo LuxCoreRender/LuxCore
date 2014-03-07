@@ -68,8 +68,8 @@ public:
 	int GetSamples() const { return material->GetSamples(); }
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }
-	const Volume *GetMaterialInteriorVolume() const { return material->GetInteriorVolume(); }
-	const Volume *GetMaterialExteriorVolume() const { return material->GetExteriorVolume(); }
+	const Volume *GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
+	const Volume *GetMaterialExteriorVolume() const { return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent); }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 
