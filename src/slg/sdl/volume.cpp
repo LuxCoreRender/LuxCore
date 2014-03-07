@@ -97,9 +97,9 @@ void PathVolumeInfo::Update(const BSDFEvent eventType, const BSDF &bsdf) {
 	// Update only if it isn't a volume scattering and the material can TRANSMIT
 	if (!bsdf.IsVolume() && (eventType  & TRANSMIT)) {
 		if (bsdf.hitPoint.intoObject)
-			AddVolume(bsdf.hitPoint.interiorVolume);
+			AddVolume(bsdf.GetMaterialInteriorVolume());
 		else
-			RemoveVolume(bsdf.hitPoint.interiorVolume);
+			RemoveVolume(bsdf.GetMaterialInteriorVolume());
 	}
 }
 
@@ -134,9 +134,9 @@ bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
 
 		if (
 			// Condition #1
-			(bsdf.hitPoint.intoObject && CompareVolumePriorities(currentVolume, bsdf.hitPoint.interiorVolume)) ||
+			(bsdf.hitPoint.intoObject && CompareVolumePriorities(currentVolume, bsdf.GetMaterialInteriorVolume())) ||
 			// Condition #2
-			(!bsdf.hitPoint.intoObject && (currentVolume != bsdf.hitPoint.interiorVolume))) {
+			(!bsdf.hitPoint.intoObject && (currentVolume != bsdf.GetMaterialInteriorVolume()))) {
 			// Ok, green light for continuing to trace the ray
 			return true;
 		}
@@ -247,7 +247,7 @@ void SchlickScatter::Pdf(const HitPoint &hitPoint,
 // ClearVolume
 //------------------------------------------------------------------------------
 
-ClearVolume::ClearVolume(const Texture *a) {
+ClearVolume::ClearVolume(const Texture *iorTex, const Texture *a) : Volume(iorTex) {
 	sigmaA = a;
 }
 
@@ -338,9 +338,9 @@ Properties ClearVolume::ToProperties() const {
 // HomogeneousVolume
 //------------------------------------------------------------------------------
 
-HomogeneousVolume::HomogeneousVolume(const Texture *a, const Texture *s,
-		const Texture *g, const bool multiScat) :
-		schlickScatter(this, g), multiScattering(multiScat) {
+HomogeneousVolume::HomogeneousVolume(const Texture *iorTex, const Texture *a,
+		const Texture *s, const Texture *g, const bool multiScat) :
+		Volume(iorTex), schlickScatter(this, g), multiScattering(multiScat) {
 	sigmaA = a;
 	sigmaS = s;
 }
