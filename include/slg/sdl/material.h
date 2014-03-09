@@ -50,7 +50,7 @@ typedef enum {
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT,
 
 	// Volumes
-	HOMOGENEOUS_VOL, CLEAR_VOL,
+	HOMOGENEOUS_VOL, CLEAR_VOL, HETEROGENEOUS_VOL,
 
 	// The following types are used (in PATHOCL CompiledScene class) only to
 	// recognize the usage of some specific material option

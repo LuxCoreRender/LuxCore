@@ -923,6 +923,15 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
 		vol = new HomogeneousVolume(ior, absorption, scattering, asymmetry, multiScattering);
+	} else if (volType == "heterogenous") {
+		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
+		const Texture *scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
+		const Texture *asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
+		const float stepSize =  props.Get(Property(propName + ".steps.size")(1.f)).Get<float>();
+		const u_int maxStepsCount =  props.Get(Property(propName + ".steps.maxcount")(32)).Get<float>();
+		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
+
+		vol = new HeterogeneousVolume(ior, absorption, scattering, asymmetry, stepSize, maxStepsCount, multiScattering);
 	} else
 		throw runtime_error("Unknown volume type: " + volType);
 
@@ -1593,6 +1602,8 @@ bool Scene::Intersect(IntersectionDevice *device,
 		// Check if there is volume scatter event
 		if (rayVolume) {
 			// This applies volume transmittance too
+			// Note: by using passThrough here, I introduce subtle correlation
+			// between scattering events and passthrough events
 			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScattered(), connectionThroughput);
 			if (t > 0.f) {
 				// There was a volume scatter event
