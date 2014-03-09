@@ -27,7 +27,7 @@ bool Spectrum_IsBlack(const float3 a) {
 }
 
 float Spectrum_Filter(const float3 s)  {
-	return fmax(s.s0, fmax(s.s1, s.s2));
+	return (s.s0 + s.s1 + s.s2) * 0.33333333f;
 }
 
 float Spectrum_Y(const float3 s) {

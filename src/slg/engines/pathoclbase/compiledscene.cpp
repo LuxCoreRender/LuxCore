@@ -477,20 +477,37 @@ void CompiledScene::CompileMaterials() {
 				mat->velvet.thicknessTexIndex = scene->texDefs.GetTextureIndex(vm->GetThickness());
 				break;
 			}
-            case CLOTH: {
-                ClothMaterial *cm = static_cast<ClothMaterial *>(m);
+			case CLOTH: {
+				ClothMaterial *cm = static_cast<ClothMaterial *>(m);
 
 				mat->type = slg::ocl::CLOTH;
-                mat->cloth.Preset = cm->GetPreset();
-                mat->cloth.Weft_KdIndex = scene->texDefs.GetTextureIndex(cm->GetWeftKd());
-                mat->cloth.Weft_KsIndex = scene->texDefs.GetTextureIndex(cm->GetWeftKs());
-                mat->cloth.Warp_KdIndex = scene->texDefs.GetTextureIndex(cm->GetWarpKd());
-                mat->cloth.Warp_KsIndex = scene->texDefs.GetTextureIndex(cm->GetWarpKs());
-                mat->cloth.Repeat_U = cm->GetRepeatU();
-                mat->cloth.Repeat_V = cm->GetRepeatV();
-                mat->cloth.specularNormalization = cm->GetSpecularNormalization();
-                break;
-            }
+				mat->cloth.Preset = cm->GetPreset();
+				mat->cloth.Weft_KdIndex = scene->texDefs.GetTextureIndex(cm->GetWeftKd());
+				mat->cloth.Weft_KsIndex = scene->texDefs.GetTextureIndex(cm->GetWeftKs());
+				mat->cloth.Warp_KdIndex = scene->texDefs.GetTextureIndex(cm->GetWarpKd());
+				mat->cloth.Warp_KsIndex = scene->texDefs.GetTextureIndex(cm->GetWarpKs());
+				mat->cloth.Repeat_U = cm->GetRepeatU();
+				mat->cloth.Repeat_V = cm->GetRepeatV();
+				mat->cloth.specularNormalization = cm->GetSpecularNormalization();
+				break;
+			}
+			case CARPAINT: {
+				CarpaintMaterial *cm = static_cast<CarpaintMaterial *>(m);
+				mat->type = slg::ocl::CARPAINT;
+				mat->carpaint.KdTexIndex = scene->texDefs.GetTextureIndex(cm->Kd);
+				mat->carpaint.Ks1TexIndex = scene->texDefs.GetTextureIndex(cm->Ks1);
+				mat->carpaint.Ks2TexIndex = scene->texDefs.GetTextureIndex(cm->Ks2);
+				mat->carpaint.Ks3TexIndex = scene->texDefs.GetTextureIndex(cm->Ks3);
+				mat->carpaint.M1TexIndex = scene->texDefs.GetTextureIndex(cm->M1);
+				mat->carpaint.M2TexIndex = scene->texDefs.GetTextureIndex(cm->M2);
+				mat->carpaint.M3TexIndex = scene->texDefs.GetTextureIndex(cm->M3);
+				mat->carpaint.R1TexIndex = scene->texDefs.GetTextureIndex(cm->R1);
+				mat->carpaint.R2TexIndex = scene->texDefs.GetTextureIndex(cm->R2);
+				mat->carpaint.R3TexIndex = scene->texDefs.GetTextureIndex(cm->R3);
+				mat->carpaint.KaTexIndex = scene->texDefs.GetTextureIndex(cm->Ka);
+				mat->carpaint.depthTexIndex = scene->texDefs.GetTextureIndex(cm->depth);
+				break;
+			}
 			case HOMOGENEOUS_VOL: {
 				SLG_LOG("Volume rendering is not yet supported by OpenCL code");
 				break;

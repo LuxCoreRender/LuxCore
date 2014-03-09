@@ -161,6 +161,21 @@ typedef struct {
 } ClothParam;
 
 typedef struct {
+	unsigned int KdTexIndex;
+	unsigned int Ks1TexIndex;
+	unsigned int Ks2TexIndex;
+	unsigned int Ks3TexIndex;
+	unsigned int M1TexIndex;
+	unsigned int M2TexIndex;
+	unsigned int M3TexIndex;
+	unsigned int R1TexIndex;
+	unsigned int R2TexIndex;
+	unsigned int R3TexIndex;
+	unsigned int KaTexIndex;
+	unsigned int depthTexIndex;
+} CarpaintParam;
+
+typedef struct {
 	MaterialType type;
 	unsigned int matID, lightID;
     float bumpSampleDistance;
@@ -185,7 +200,8 @@ typedef struct {
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
 		VelvetParam velvet;
-        ClothParam cloth;
+        	ClothParam cloth;
+		CarpaintParam carpaint;
 	};
 } Material;
 

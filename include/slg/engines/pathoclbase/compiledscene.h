@@ -47,7 +47,8 @@ public:
 				IsMaterialCompiled(NULLMAT) ||
 				IsMaterialCompiled(MATTETRANSLUCENT) ||
 				IsMaterialCompiled(GLOSSY2) ||
-				IsMaterialCompiled(ROUGHGLASS));
+				IsMaterialCompiled(ROUGHGLASS) ||
+				IsMaterialCompiled(CARPAINT));
 	}
 
 	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);

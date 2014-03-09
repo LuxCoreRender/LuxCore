@@ -879,27 +879,6 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
-/*	const Texture *GetKd() const { return Kd; }
-	const Texture *GetKs() const { return Ks; }
-	const Texture *GetNu() const { return nu; }
-	const Texture *GetNv() const { return nv; }
-	const Texture *GetKa() const { return Ka; }
-	const Texture *GetDepth() const { return depth; }
-	const Texture *GetIndex() const { return index; }
-	const bool IsMultibounce() const { return multibounce; }
-
-private:
-	float SchlickBSDF_CoatingWeight(const luxrays::Spectrum &ks, const luxrays::Vector &localFixedDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingF(const bool fromLight, const luxrays::Spectrum &ks, const float roughness, const float anisotropy,
-		const luxrays::Vector &localFixedDir,	const luxrays::Vector &localSampledDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const luxrays::Spectrum ks,
-		const float roughness, const float anisotropy, const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
-		float u0, float u1, float *pdf) const;
-	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
-		const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
-		const luxrays::Spectrum &alpha, const float depth) const;*/
-
 	struct CarpaintData {
 		string name;
 		float kd[COLOR_SAMPLES];

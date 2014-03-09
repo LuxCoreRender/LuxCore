@@ -95,9 +95,19 @@ float SchlickDistribution_Pdf(const float roughness, const float3 wh,
 	return SchlickDistribution_D(roughness, wh, anisotropy);
 }
 
-float3 FresnelSlick_Evaluate(const float3 normalIncidence, const float cosi) {
+float3 FresnelSchlick_Evaluate(const float3 normalIncidence, const float cosi) {
 	return normalIncidence + (WHITE - normalIncidence) *
 		pow(1.f - cosi, 5.f);
+}
+
+float3 CoatingAbsorption(const float cosi, const float coso,
+		const float3 alpha, const float depth) {
+	if (depth > 0.f) {
+		// 1/cosi+1/coso=(cosi+coso)/(cosi*coso)
+		const float depthFactor = depth * (cosi + coso) / (cosi * coso);
+		return Spectrum_Exp(alpha * -depthFactor);
+	} else
+		return WHITE;
 }
 
 float3 FrDiel2(const float cosi, const float3 cost, const float3 eta) {
@@ -625,7 +635,7 @@ float SchlickBSDF_CoatingWeight(const float3 ks, const float3 fixedDir) {
 
 	// Approximate H by using reflection direction for wi
 	const float u = fabs(fixedDir.z);
-	const float3 S = FresnelSlick_Evaluate(ks, u);
+	const float3 S = FresnelSchlick_Evaluate(ks, u);
 
 	// Ensures coating is never sampled less than half the time
 	// unless we are on the back face
@@ -643,7 +653,7 @@ float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
 	const float cosi = fabs(sampledDir.z);
 
 	const float3 wh = normalize(fixedDir + sampledDir);
-	const float3 S = FresnelSlick_Evaluate(ks, fabs(dot(sampledDir, wh)));
+	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, wh)));
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
 
@@ -657,16 +667,6 @@ float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
 	//			(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
 
 	return factor * S;
-}
-
-float3 SchlickBSDF_CoatingAbsorption(const float cosi, const float coso,
-		const float3 alpha, const float depth) {
-	if (depth > 0.f) {
-		// 1/cosi+1/coso=(cosi+coso)/(cosi*coso)
-		const float depthFactor = depth * (cosi + coso) / (cosi * coso);
-		return Spectrum_Exp(alpha * -depthFactor);
-	} else
-		return WHITE;
 }
 
 float3 SchlickBSDF_CoatingSampleF(const float3 ks,
@@ -693,7 +693,7 @@ float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 	if (*pdf <= 0.f)
 		return BLACK;
 
-	float3 S = FresnelSlick_Evaluate(ks, cosWH);
+	float3 S = FresnelSchlick_Evaluate(ks, cosWH);
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 
@@ -779,14 +779,14 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 			TEXTURES_PARAM));
 	const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
 			TEXTURES_PARAM);
-	const float3 absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 #else
 	const float3 absorption = WHITE;
 #endif
 
 	// Coating fresnel factor
 	const float3 H = normalize(fixedDir + sampledDir);
-	const float3 S = FresnelSlick_Evaluate(ks, fabs(dot(sampledDir, H)));
+	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
 	const int multibounce = material->glossy2.multibounce;
@@ -910,14 +910,14 @@ float3 Glossy2Material_Sample(__global Material *material,
 		TEXTURES_PARAM));
 	const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
 		TEXTURES_PARAM);
-	const float3 absorption = SchlickBSDF_CoatingAbsorption(cosi, coso, alpha, d);
+	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 #else
 	const float3 absorption = WHITE;
 #endif
 
 	// Coating fresnel factor
 	const float3 H = normalize(fixedDir + *sampledDir);
-	const float3 S = FresnelSlick_Evaluate(ks, fabs(dot(*sampledDir, H)));
+	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(*sampledDir, H)));
 
 	// Blend in base layer Schlick style
 	// coatingF already takes fresnel factor S into account
@@ -1959,6 +1959,286 @@ float3 ClothMaterial_Sample(__global Material *material,
 			TEXTURES_PARAM));
 
 	return kdVal + ksVal * scale;
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Carpaint material
+//
+// LuxRender carpaint material porting.
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_CARPAINT)
+
+float3 CarpaintMaterial_Evaluate(__global Material *material,
+	__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+	BSDFEvent *event, float *directPdfW
+	TEXTURES_PARAM_DECL)
+{
+	float3 H = normalize(lightDir + eyeDir);
+	if (all(H == 0.f))
+	{
+		if (directPdfW)
+			*directPdfW = 0.f;
+		return BLACK;
+	}
+	if (H.z < 0.f)
+		H = -H;
+
+	float pdf = 0.f;
+	int n = 1; // already counts the diffuse layer
+
+	// Absorption
+	const float cosi = fabs(lightDir.z);
+	const float coso = fabs(eyeDir.z);
+	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KaTexIndex], hitPoint TEXTURES_PARAM));
+	const float d = Texture_GetFloatValue(&texs[material->carpaint.depthTexIndex], hitPoint TEXTURES_PARAM);
+	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
+
+	// Diffuse layer
+	float3 result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KdTexIndex], hitPoint TEXTURES_PARAM)) * M_1_PI_F * fabs(lightDir.z);
+
+	// 1st glossy layer
+	const float3 ks1 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks1TexIndex], hitPoint TEXTURES_PARAM));
+	const float m1 = Texture_GetFloatValue(&texs[material->carpaint.M1TexIndex], hitPoint TEXTURES_PARAM);
+	if (Spectrum_Filter(ks1) > 0.f && m1 > 0.f)
+	{
+		const float rough1 = m1 * m1;
+		const float r1 = Texture_GetFloatValue(&texs[material->carpaint.R1TexIndex], hitPoint TEXTURES_PARAM);
+		result += (SchlickDistribution_D(rough1, H, 0.f) * SchlickDistribution_G(rough1, lightDir, eyeDir) / (4.f * coso)) * (ks1 * FresnelSchlick_Evaluate(r1, dot(eyeDir, H)));
+		pdf += SchlickDistribution_Pdf(rough1, H, 0.f);
+		++n;
+	}
+	const float3 ks2 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks2TexIndex], hitPoint TEXTURES_PARAM));
+	const float m2 = Texture_GetFloatValue(&texs[material->carpaint.M2TexIndex], hitPoint TEXTURES_PARAM);
+	if (Spectrum_Filter(ks2) > 0.f && m2 > 0.f)
+	{
+		const float rough2 = m2 * m2;
+		const float r2 = Texture_GetFloatValue(&texs[material->carpaint.R2TexIndex], hitPoint TEXTURES_PARAM);
+		result += (SchlickDistribution_D(rough2, H, 0.f) * SchlickDistribution_G(rough2, lightDir, eyeDir) / (4.f * coso)) * (ks2 * FresnelSchlick_Evaluate(r2, dot(eyeDir, H)));
+		pdf += SchlickDistribution_Pdf(rough2, H, 0.f);
+		++n;
+	}
+	const float3 ks3 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks3TexIndex], hitPoint TEXTURES_PARAM));
+	const float m3 = Texture_GetFloatValue(&texs[material->carpaint.M3TexIndex], hitPoint TEXTURES_PARAM);
+	if (Spectrum_Filter(ks3) > 0.f && m3 > 0.f)
+	{
+		const float rough3 = m3 * m3;
+		const float r3 = Texture_GetFloatValue(&texs[material->carpaint.R3TexIndex], hitPoint TEXTURES_PARAM);
+		result += (SchlickDistribution_D(rough3, H, 0.f) * SchlickDistribution_G(rough3, lightDir, eyeDir) / (4.f * coso)) * (ks3 * FresnelSchlick_Evaluate(r3, dot(eyeDir, H)));
+		pdf += SchlickDistribution_Pdf(rough3, H, 0.f);
+		++n;
+	}
+
+	// Front face: coating+base
+	*event = GLOSSY | REFLECT;
+
+	// Finish pdf computation
+	pdf /= 4.f * fabs(dot(lightDir, H));
+	if (directPdfW)
+		*directPdfW = (pdf + fabs(lightDir.z) * M_1_PI_F) / n;
+
+	return result;
+}
+
+float3 CarpaintMaterial_Sample(__global Material *material,
+	__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+	const float u0, const float u1, const float passThroughEvent,
+	float *pdfW, float *cosSampledDir, BSDFEvent *event,
+	const BSDFEvent requestedEvent
+	TEXTURES_PARAM_DECL)
+{
+	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
+		(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+		return BLACK;
+
+	// Test presence of components
+	int n = 1; // already count the diffuse layer
+	int sampled = 0; // sampled layer
+	float3 result = BLACK;
+	float pdf = 0.f;
+	bool l1 = false, l2 = false, l3 = false;
+	// 1st glossy layer
+	const float3 ks1 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks1TexIndex], hitPoint TEXTURES_PARAM));
+	const float m1 = Texture_GetFloatValue(&texs[material->carpaint.M1TexIndex], hitPoint TEXTURES_PARAM);
+	if (Spectrum_Filter(ks1) > 0.f && m1 > 0.f)
+	{
+		l1 = true;
+		++n;
+	}
+	// 2nd glossy layer
+	const float3 ks2 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks2TexIndex], hitPoint TEXTURES_PARAM));
+	const float m2 = Texture_GetFloatValue(&texs[material->carpaint.M2TexIndex], hitPoint TEXTURES_PARAM);
+	if (Spectrum_Filter(ks2) > 0.f && m2 > 0.f)
+	{
+		l2 = true;
+		++n;
+	}
+	// 3rd glossy layer
+	const float3 ks3 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks3TexIndex], hitPoint TEXTURES_PARAM));
+	const float m3 = Texture_GetFloatValue(&texs[material->carpaint.M3TexIndex], hitPoint TEXTURES_PARAM);
+	if (Spectrum_Filter(ks3) > 0.f && m3 > 0.f)
+	{
+		l3 = true;
+		++n;
+	}
+
+	float3 wh;
+	float cosWH;
+	if (passThroughEvent < 1.f / n) {
+		// Sample diffuse layer
+		*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &pdf);
+
+		*cosSampledDir = fabs((*sampledDir).z);
+		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+			return BLACK;
+
+		// Absorption
+		const float cosi = fabs(fixedDir.z);
+		const float coso = fabs((*sampledDir).z);
+		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KaTexIndex], hitPoint TEXTURES_PARAM));
+		const float d = Texture_GetFloatValue(&texs[material->carpaint.depthTexIndex], hitPoint TEXTURES_PARAM);
+		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
+
+		// Evaluate base BSDF
+		result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KdTexIndex], hitPoint TEXTURES_PARAM)) * pdf;
+
+		wh = normalize(*sampledDir + fixedDir);
+		if (wh.z < 0.f)
+			wh = -wh;
+		cosWH = fabs(dot(fixedDir, wh));
+	} else if (passThroughEvent < 2.f / n && l1) {
+		// Sample 1st glossy layer
+		sampled = 1;
+		const float rough1 = m1 * m1;
+		float d;
+		SchlickDistribution_SampleH(rough1, 0.f, u0, u1, &wh, &d, &pdf);
+		cosWH = dot(fixedDir, wh);
+		*sampledDir = 2.f * cosWH * wh - fixedDir;
+		*cosSampledDir = fabs((*sampledDir).z);
+		cosWH = fabs(cosWH);
+
+		if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) ||
+			(fixedDir.z * (*sampledDir).z < 0.f))
+			return BLACK;
+
+		pdf /= 4.f * cosWH;
+		if (pdf <= 0.f)
+			return BLACK;
+
+		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R1TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+
+		const float G = SchlickDistribution_G(rough1, fixedDir, *sampledDir);
+		result *= d * G / (4.f * fabs(fixedDir.z));
+	} else if ((passThroughEvent < 2.f / n  ||
+		(!l1 && passThroughEvent < 3.f / n)) && l2) {
+		// Sample 2nd glossy layer
+		sampled = 2;
+		const float rough2 = m2 * m2;
+		float d;
+		SchlickDistribution_SampleH(rough2, 0.f, u0, u1, &wh, &d, &pdf);
+		cosWH = dot(fixedDir, wh);
+		*sampledDir = 2.f * cosWH * wh - fixedDir;
+		*cosSampledDir = fabs((*sampledDir).z);
+		cosWH = fabs(cosWH);
+
+		if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) ||
+			(fixedDir.z * (*sampledDir).z < 0.f))
+			return BLACK;
+
+		pdf /= 4.f * cosWH;
+		if (pdf <= 0.f)
+			return BLACK;
+
+		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R2TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+
+		const float G = SchlickDistribution_G(rough2, fixedDir, *sampledDir);
+		result *= d * G / (4.f * fabs(fixedDir.z));
+	} else if (l3) {
+		// Sample 3rd glossy layer
+		sampled = 3;
+		const float rough3 = m3 * m3;
+		float d;
+		SchlickDistribution_SampleH(rough3, 0.f, u0, u1, &wh, &d, &pdf);
+		cosWH = dot(fixedDir, wh);
+		*sampledDir = 2.f * cosWH * wh - fixedDir;
+		*cosSampledDir = fabs((*sampledDir).z);
+		cosWH = fabs(cosWH);
+
+		if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) ||
+			(fixedDir.z * (*sampledDir).z < 0.f))
+			return BLACK;
+
+		pdf /= 4.f * cosWH;
+		if (pdf <= 0.f)
+			return BLACK;
+
+		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R3TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+
+		const float G = SchlickDistribution_G(rough3, fixedDir, *sampledDir);
+		result *= d * G / (4.f * fabs(fixedDir.z));
+	} else {
+		// Sampling issue
+		return BLACK;
+	}
+	*event = GLOSSY | REFLECT;
+	// Add other components
+	// Diffuse
+	if (sampled != 0) {
+		// Absorption
+		const float cosi = fabs(fixedDir.z);
+		const float coso = fabs((*sampledDir).z);
+		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KaTexIndex], hitPoint TEXTURES_PARAM));
+		const float d = Texture_GetFloatValue(&texs[material->carpaint.depthTexIndex], hitPoint TEXTURES_PARAM);
+		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
+
+		const float pdf0 = fabs((*sampledDir).z) * M_1_PI_F;
+		pdf += pdf0;
+		result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KdTexIndex], hitPoint TEXTURES_PARAM)) * pdf0;
+	}
+	// 1st glossy
+	if (l1 && sampled != 1) {
+		const float rough1 = m1 * m1;
+		const float d1 = SchlickDistribution_D(rough1, wh, 0.f);
+		const float pdf1 = SchlickDistribution_Pdf(rough1, wh, 0.f) / (4.f * cosWH);
+		if (pdf1 > 0.f) {
+			result += (d1 *
+				SchlickDistribution_G(rough1, fixedDir, *sampledDir) /
+				(4.f * fabs(fixedDir.z))) *
+				FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R1TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+			pdf += pdf1;
+		}
+	}
+	// 2nd glossy
+	if (l2 && sampled != 2) {
+		const float rough2 = m2 * m2;
+		const float d2 = SchlickDistribution_D(rough2, wh, 0.f);
+		const float pdf2 = SchlickDistribution_Pdf(rough2, wh, 0.f) / (4.f * cosWH);
+		if (pdf2 > 0.f) {
+			result += (d2 *
+				SchlickDistribution_G(rough2, fixedDir, *sampledDir) /
+				(4.f * fabs(fixedDir.z))) *
+				FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R2TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+			pdf += pdf2;
+		}
+	}
+	// 3rd glossy
+	if (l3 && sampled != 3) {
+		const float rough3 = m3 * m3;
+		const float d3 = SchlickDistribution_D(rough3, wh, 0.f);
+		const float pdf3 = SchlickDistribution_Pdf(rough3, wh, 0.f) / (4.f * cosWH);
+		if (pdf3 > 0.f) {
+			result += (d3 *
+				SchlickDistribution_G(rough3, fixedDir, *sampledDir) /
+				(4.f * fabs(fixedDir.z))) *
+				FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R3TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+			pdf += pdf3;
+		}
+	}
+	// Adjust pdf and result
+	*pdfW = pdf / n;
+	return result / *pdfW;
 }
 
 #endif

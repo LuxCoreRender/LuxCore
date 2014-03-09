@@ -30,7 +30,7 @@ std::string KernelSource_color_funcs =
 "}\n"
 "\n"
 "float Spectrum_Filter(const float3 s)  {\n"
-"	return fmax(s.s0, fmax(s.s1, s.s2));\n"
+"	return (s.s0 + s.s1 + s.s2) * 0.33333333f;\n"
 "}\n"
 "\n"
 "float Spectrum_Y(const float3 s) {\n"
