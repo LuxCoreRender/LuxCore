@@ -252,7 +252,6 @@ ClearVolume::ClearVolume(const Texture *iorTex, const Texture *a) : Volume(iorTe
 }
 
 Spectrum ClearVolume::SigmaA(const HitPoint &hitPoint) const {
-	//return fresnel->Evaluate(sw, dg).SigmaA(sw) + sigmaA->Evaluate(sw, dg).Clamp();
 	return sigmaA->GetSpectrumValue(hitPoint).Clamp();
 }
 
@@ -346,7 +345,6 @@ HomogeneousVolume::HomogeneousVolume(const Texture *iorTex, const Texture *a,
 }
 
 Spectrum HomogeneousVolume::SigmaA(const HitPoint &hitPoint) const {
-	//return fresnel->Evaluate(sw, dg).SigmaA(sw) + sigmaA->Evaluate(sw, dg).Clamp();
 	return sigmaA->GetSpectrumValue(hitPoint).Clamp();
 }
 
@@ -379,6 +377,7 @@ Spectrum HomogeneousVolume::Tau(const Ray &ray, const float maxt) const {
 
 float HomogeneousVolume::Scatter(const luxrays::Ray &ray, const float u,
 		 const bool scatteredPath, luxrays::Spectrum *connectionThroughput) const {
+	// Note: LuxRender uses ->Filter() here
 	const float k = sigmaS->Y();
 
 	// Check if I have to support multi-scattering
@@ -455,6 +454,175 @@ Properties HomogeneousVolume::ToProperties() const {
 	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
 	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetName()));
 	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetName()));
+	props.Set(Material::ToProperties());
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// HeterogeneousVolume
+//------------------------------------------------------------------------------
+
+HeterogeneousVolume::HeterogeneousVolume(const Texture *iorTex, const Texture *a,
+		const Texture *s, const Texture *g, const float ss, const u_int maxStepC,
+		const bool multiScat) : Volume(iorTex),
+		schlickScatter(this, g), stepSize(ss), maxStepsCount(maxStepC),
+		multiScattering(multiScat) {
+	sigmaA = a;
+	sigmaS = s;
+}
+
+Spectrum HeterogeneousVolume::SigmaA(const HitPoint &hitPoint) const {
+	return sigmaA->GetSpectrumValue(hitPoint).Clamp();
+}
+
+Spectrum HeterogeneousVolume::SigmaS(const HitPoint &hitPoint) const {
+	return sigmaS->GetSpectrumValue(hitPoint);
+}
+
+float HeterogeneousVolume::Scatter(const luxrays::Ray &ray, const float initialU,
+		 const bool scatteredPath, luxrays::Spectrum *connectionThroughput) const {
+	// Compute the number of steps to evaluate the volume
+	// Integrates in steps of at most stepSize
+	// unless stepSize is too small compared to the total length
+	const float rl = ray.maxt - ray.mint;
+
+	// Handle the case when ray.maxt is infinity or a very large number
+	u_int steps;
+	float ss;
+	if (rl == numeric_limits<float>::infinity()) {
+		steps = maxStepsCount;
+		ss = stepSize;
+	} else {
+		// Note: Ceil2UInt() of an out of range number is 0
+		const float fsteps = rl / Max(MachineEpsilon::E(rl), stepSize);
+		if (fsteps >= maxStepsCount) {
+			steps = maxStepsCount;
+			ss = stepSize;
+		} else {
+			steps = Ceil2UInt(fsteps);
+			ss = rl / steps; // Effective step size
+		}
+	}
+
+	// Evaluate the scattering at the path origin
+	HitPoint hitPoint =  {
+		ray.d,
+		// Note: by using initialU here, I introduce subtle correlation
+		// with scattering event
+		ray(ray.mint + initialU * ss),
+		UV(),
+		Normal(-ray.d),
+		Normal(-ray.d),
+		Spectrum(1.f),
+		1.f,
+		0.f, // It doesn't matter here
+		NULL, NULL, // It doesn't matter here
+		false // It doesn't matter here
+	};
+
+	float u = initialU;
+
+	float sigmaS = SigmaS(hitPoint).Filter();
+	Spectrum sigmaT = SigmaT(hitPoint);
+
+	bool scatter = false;
+	float t = -1.f;
+	Spectrum tau;
+	for (u_int s = 1; s < steps; ++s) {
+		// Compute the mean scattering over the current step
+		hitPoint.p = ray(ray.mint + (initialU + s) * ss);
+
+		// Apply volume transmittance
+		const Spectrum currentSigmaT = SigmaT(hitPoint);
+		sigmaT = (sigmaT + currentSigmaT) * .5f;
+
+		tau += (ss * sigmaT).Clamp();
+		sigmaT = currentSigmaT;
+
+		// Check if there is a scattering event
+		const float currentSigmaS = SigmaS(hitPoint).Filter();
+		sigmaS = (sigmaS + currentSigmaS) * .5f;
+
+		// Skip the step if no scattering can occur
+		if (sigmaS <= 0.f) {
+			sigmaS = currentSigmaS;
+			continue;
+		}
+
+		// Determine scattering distance
+		const float d = logf(1.f - u) / sigmaS; // The real distance is ray.mint-d
+		scatter = d > (ray.mint + (s - 1U) * ss - ray.maxt);
+
+		if ((scatteredPath && !multiScattering) || !scatter) {
+			sigmaS = currentSigmaS;
+			// Update the random variable to account for
+			// the current step
+			u -= (1.f - u) * (expf(sigmaS * ss) - 1.f);
+			continue;
+		}
+
+		// The ray is scattered
+		t = ray.mint + (s - 1U) * ss - d;
+		break;
+	}
+
+	// Apply volume transmittance
+	*connectionThroughput *= Exp(-tau);
+
+	return t;
+}
+
+Spectrum HeterogeneousVolume::Evaluate(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW, float *reversePdfW) const {
+	return schlickScatter.Evaluate(hitPoint, localLightDir, localEyeDir, event, directPdfW, reversePdfW);
+}
+
+Spectrum HeterogeneousVolume::Sample(const HitPoint &hitPoint,
+		const Vector &localFixedDir, Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const {
+	return schlickScatter.Sample(hitPoint, localFixedDir, localSampledDir,
+			u0, u1, passThroughEvent, pdfW, absCosSampledDir, event, requestedEvent);
+}
+
+void HeterogeneousVolume::Pdf(const HitPoint &hitPoint,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	schlickScatter.Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
+}
+
+void HeterogeneousVolume::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+	Material::AddReferencedTextures(referencedTexs);
+
+	sigmaA->AddReferencedTextures(referencedTexs);
+	sigmaS->AddReferencedTextures(referencedTexs);
+	schlickScatter.g->AddReferencedTextures(referencedTexs);
+}
+
+void HeterogeneousVolume::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+	Material::UpdateTextureReferences(oldTex, newTex);
+
+	if (sigmaA == oldTex)
+		sigmaA = newTex;
+	if (sigmaS == oldTex)
+		sigmaS = newTex;
+	if (schlickScatter.g == oldTex)
+		schlickScatter.g = newTex;
+}
+
+Properties HeterogeneousVolume::ToProperties() const {
+	Properties props;
+
+	const string name = GetName();
+	props.Set(Property("scene.volumes." + name + ".type")("heterogeneous"));
+	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
+	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetName()));
+	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetName()));
+	props.Set(Property("scene.volumes." + name + ".steps.size")(stepSize));
+	props.Set(Property("scene.volumes." + name + ".steps.maxcount")(maxStepsCount));
 	props.Set(Material::ToProperties());
 
 	return props;
