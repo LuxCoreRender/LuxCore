@@ -73,7 +73,7 @@ public:
 		delete emissionFunc;
 	}
 
-	std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
+	virtual std::string GetName() const { return "material-" + boost::lexical_cast<std::string>(this); }
 	void SetLightID(const u_int id) { lightID = id; }
 	u_int GetLightID() const { return lightID; }
 	void SetID(const u_int id) { matID = id; }

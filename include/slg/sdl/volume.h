@@ -29,19 +29,25 @@ class BSDF;
 	
 class Volume : public Material {
 public:
-	Volume(const Texture *iorTex) : Material(NULL, NULL), ior(iorTex), priority(0) { }
+	Volume(const Texture *ior, const Texture *emission) : Material(NULL, NULL),
+			iorTex(ior), volumeEmissionTex(emission), priority(0) { }
 	virtual ~Volume() { }
+
+	virtual std::string GetName() const { return "volume-" + boost::lexical_cast<std::string>(this); }
 
 	void SetPriority(const int p) { priority = p; }
 	int GetPriority() const { return priority; }
 
-	float GetIOR(const HitPoint &hitPoint) const { return ior->GetFloatValue(hitPoint); }
+	const Texture *GetIORTexture() const { return iorTex; }
+	const Texture *GetVolumeEmissionTexture() const { return volumeEmissionTex; }
+
+	float GetIOR(const HitPoint &hitPoint) const { return iorTex->GetFloatValue(hitPoint); }
 
 	// Returns the ray t value of the scatter event. If (t <= 0.0) there was
 	// no scattering. In any case, it applies transmittance to connectionThroughput
 	// too.
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
-		luxrays::Spectrum *connectionThroughput) const = 0;
+		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const = 0;
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -54,7 +60,10 @@ protected:
 		return SigmaA(hitPoint) + SigmaS(hitPoint);
 	}
 
-	const Texture *ior;
+	const Texture *iorTex;
+	// This is a different kind of emission texture from the one in
+	// Material class (i.e. is not sampled by direct light).
+	const Texture *volumeEmissionTex;
 	int priority;
 };
 
@@ -115,10 +124,10 @@ private:
 
 class ClearVolume : public Volume {
 public:
-	ClearVolume(const Texture *iorTex, const Texture *a);
+	ClearVolume(const Texture *iorTex, const Texture *emiTex, const Texture *a);
 
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
-		luxrays::Spectrum *connectionThroughput) const;
+		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const;
 
 	// Material interface
 
@@ -145,7 +154,6 @@ public:
 protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const;
-	luxrays::Spectrum Tau(const luxrays::Ray &ray, const float maxt) const;
 
 private:
 	const Texture *sigmaA;
@@ -157,11 +165,12 @@ private:
 
 class HomogeneousVolume : public Volume {
 public:
-	HomogeneousVolume(const Texture *iorTex, const Texture *a, const Texture *s,
+	HomogeneousVolume(const Texture *iorTex, const Texture *emiTex,
+			const Texture *a, const Texture *s,
 			const Texture *g, const bool multiScattering);
 
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
-		luxrays::Spectrum *connectionThroughput) const;
+		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const;
 
 	// Material interface
 
@@ -188,7 +197,9 @@ public:
 protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const;
-	luxrays::Spectrum Tau(const luxrays::Ray &ray, const float maxt) const;
+
+	void Connect(const luxrays::Point &orig, const luxrays::Vector dir,
+		const float distance, luxrays::Spectrum *throughput, luxrays::Spectrum *emission) const;
 
 private:
 	const Texture *sigmaA, *sigmaS;
@@ -202,12 +213,13 @@ private:
 
 class HeterogeneousVolume : public Volume {
 public:
-	HeterogeneousVolume(const Texture *iorTex, const Texture *a, const Texture *s,
+	HeterogeneousVolume(const Texture *iorTex, const Texture *emiTex,
+			const Texture *a, const Texture *s,
 			const Texture *g, const float stepSize, const u_int maxStepsCount,
 			const bool multiScattering);
 
 	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
-		luxrays::Spectrum *connectionThroughput) const;
+		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const;
 
 	// Material interface
 

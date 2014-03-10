@@ -81,8 +81,27 @@ Scene::~Scene() {
 }
 
 void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight) {
-	if (lightDefs.GetSize() == 0)
-		throw runtime_error("The scene doesn't include any light source");
+	if (lightDefs.GetSize() == 0) {
+		throw runtime_error("The scene doesn't include any light source (note: volume emission doesn't count for this check)");
+		
+		// There may be only a volume emitting light. However I ignore this case
+		// because a lot of code has been written assuming that there is always
+		// at least one light source (i.e. for direct light sampling).
+		/*bool hasEmittingVolume = false;
+		for (u_int i = 0; i < matDefs.GetSize(); ++i) {
+			const Material *mat = matDefs.GetMaterial(i);
+			// Check if it is a volume
+			const Volume *vol = dynamic_cast<const Volume *>(mat);
+			if (vol && vol->GetVolumeEmissionTexture() &&
+					(vol->GetVolumeEmissionTexture()->Y() > 0.f)) {
+				hasEmittingVolume = true;
+				break;
+			}
+		}
+		
+		if (!hasEmittingVolume)
+			throw runtime_error("The scene doesn't include any light source");*/
+	}
 
 	// Check if I have to update the camera
 	if (editActions.Has(CAMERA_EDIT))
@@ -909,20 +928,27 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 	const string propName = "scene.volumes." + volName;
 	const string volType = props.Get(Property(propName + ".type")("homogenous")).Get<string>();
 
-	const Texture *ior = GetTexture(props.Get(Property(propName + ".ior")(1.f)));
+	const Texture *iorTex = GetTexture(props.Get(Property(propName + ".ior")(1.f)));
+	const Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
+		GetTexture(props.Get(Property(propName + ".emission")(0.f, 0.f, 0.f))) : NULL;
+	// Required to remove light source while editing the scene
+	if (emissionTex && (
+			((emissionTex->GetType() == CONST_FLOAT) && (((ConstFloatTexture *)emissionTex)->GetValue() == 0.f)) ||
+			((emissionTex->GetType() == CONST_FLOAT3) && (((ConstFloat3Texture *)emissionTex)->GetColor().Black()))))
+		emissionTex = NULL;
 
 	Volume *vol;
 	if (volType == "clear") {
 		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
 
-		vol = new ClearVolume(ior, absorption);
+		vol = new ClearVolume(iorTex, emissionTex, absorption);
 	} else if (volType == "homogenous") {
 		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
 		const Texture *scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
 		const Texture *asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
 		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
-		vol = new HomogeneousVolume(ior, absorption, scattering, asymmetry, multiScattering);
+		vol = new HomogeneousVolume(iorTex, emissionTex, absorption, scattering, asymmetry, multiScattering);
 	} else if (volType == "heterogenous") {
 		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
 		const Texture *scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
@@ -931,17 +957,14 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 		const u_int maxStepsCount =  props.Get(Property(propName + ".steps.maxcount")(32)).Get<float>();
 		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
-		vol = new HeterogeneousVolume(ior, absorption, scattering, asymmetry, stepSize, maxStepsCount, multiScattering);
+		vol = new HeterogeneousVolume(iorTex, emissionTex, absorption, scattering, asymmetry, stepSize, maxStepsCount, multiScattering);
 	} else
 		throw runtime_error("Unknown volume type: " + volType);
 
 	vol->SetPriority(props.Get(Property(propName + ".priority")(0)).Get<int>());
-	vol->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	vol->SetID(props.Get(Property(propName + ".id")(defaultVolID)).Get<u_int>());
 
-	vol->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
-	vol->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
-	vol->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
+	vol->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 
 	return vol;
 }
@@ -1582,9 +1605,10 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
-		Spectrum *connectionThroughput) const {
+		Spectrum *connectionThroughput, Spectrum *connectionEmission) const {
 	const float originalMaxT = ray->maxt;
 	*connectionThroughput = Spectrum(1.f);
+	*connectionEmission = Spectrum();
 
 	for (;;) {
 		const bool hit = device->TraceRay(ray, rayHit);
@@ -1604,7 +1628,8 @@ bool Scene::Intersect(IntersectionDevice *device,
 			// This applies volume transmittance too
 			// Note: by using passThrough here, I introduce subtle correlation
 			// between scattering events and passthrough events
-			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScattered(), connectionThroughput);
+			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScattered(),
+					connectionThroughput, connectionEmission);
 			if (t > 0.f) {
 				// There was a volume scatter event
 				bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);

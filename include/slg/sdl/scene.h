@@ -55,7 +55,8 @@ public:
 	bool Intersect(luxrays::IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
-		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
+		BSDF *bsdf, luxrays::Spectrum *connectionThroughput,
+		luxrays::Spectrum *connectionEmission) const;
 	// Just for all code not yet supporting volume rendering
 	bool Intersect(luxrays::IntersectionDevice *device,
 		const bool fromLight, const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
