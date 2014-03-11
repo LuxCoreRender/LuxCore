@@ -2,7 +2,7 @@ scene.camera.lookat = -6.078912 -1.287569 -0.244332 3.862433 8.763888 -0.49751
 scene.camera.lensradius = 0.005
 scene.camera.focaldistance = 4.0
 ################################################################################
-scene.volumes.vol_air.type = homogenous
+scene.volumes.vol_air.type = homogeneous
 scene.volumes.vol_air.absorption = 0.0 0.0 0.0
 scene.volumes.vol_air.scattering = 0.06 0.06 0.06
 scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0

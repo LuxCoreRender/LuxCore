@@ -1,13 +1,13 @@
 scene.camera.lookat = 1 -5.443411 1.72403 1 0.311952 0.805705
 scene.camera.fieldofview = 56.145
 ################################################################################
-scene.volumes.vol1.type = homogenous
+scene.volumes.vol1.type = homogeneous
 scene.volumes.vol1.absorption = 0.1 0.1 0.1
 scene.volumes.vol1.scattering = 0.0 0.0 0.0
 scene.volumes.vol1.asymmetry = 0.0 0.0 0.0
 scene.volumes.vol1.multiscattering = 0
 scene.volumes.vol1.priority = 1
-scene.volumes.vol2.type = homogenous
+scene.volumes.vol2.type = homogeneous
 scene.volumes.vol2.absorption = 0.0 0.0 0.0
 scene.volumes.vol2.scattering = 0.0 0.0 0.0
 scene.volumes.vol2.asymmetry = 0.0 0.0 0.0
