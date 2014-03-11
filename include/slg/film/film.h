@@ -287,11 +287,15 @@ public:
 			radiancePerPixelNormalized.resize(radianceGroupCount);
 		if (channels | Film::RADIANCE_PER_SCREEN_NORMALIZED)
 			radiancePerScreenNormalized.resize(radianceGroupCount);
+		
+		firstPathVertex = true;
+		firstPathVertexEvent = NONE;
 	}
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type); }
 
-	void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
-		const u_int lightID, const luxrays::Spectrum &emission);
+	void AddEmission(const u_int lightID, const luxrays::Spectrum &radiance);
+	void AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
+		const luxrays::Spectrum &radiance);
 
 	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
 		const float filmX, const float filmY,
@@ -301,6 +305,9 @@ public:
 	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
 		const float filmX, const float filmY,
 		const luxrays::Spectrum &radiancePSN);
+
+	bool firstPathVertex;
+	BSDFEvent firstPathVertexEvent;
 
 	float filmX, filmY;
 	std::vector<luxrays::Spectrum> radiancePerPixelNormalized, radiancePerScreenNormalized;

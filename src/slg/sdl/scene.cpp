@@ -1605,9 +1605,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
-		Spectrum *pathThroughput,
-		const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
-		SampleResult *sampleResult) const {
+		Spectrum *pathThroughput, SampleResult *sampleResult) const {
 	const float originalMaxT = ray->maxt;
 
 	for (;;) {
@@ -1634,8 +1632,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 			// Add the volume emitted light to the appropriate light group
 			if (sampleResult && !connectionEmission.Black())
-				sampleResult->AddEmission(firstPathVertex, pathBSDFEvent,
-						rayVolume->GetVolumeLightID(), connectionEmission);
+				sampleResult->AddEmission(rayVolume->GetVolumeLightID(), connectionEmission);
 
 			if (t > 0.f) {
 				// There was a volume scatter event
