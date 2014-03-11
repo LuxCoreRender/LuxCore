@@ -25,7 +25,7 @@ scene.textures.tex.type = scale
 scene.textures.tex.texture1 = 2
 scene.textures.tex.texture2 = fbmtex
 ################################################################################
-scene.volumes.vol1.type = heterogenous
+scene.volumes.vol1.type = heterogeneous
 scene.volumes.vol1.absorption = 0.0 0.0 0.0
 scene.volumes.vol1.scattering = tex
 scene.volumes.vol1.asymmetry = 0.0 0.0 0.0

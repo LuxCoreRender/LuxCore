@@ -3,7 +3,7 @@ scene.camera.lookat.target = 0.0 0.0 0.4
 #scene.camera.lensradius = 0.015
 #scene.camera.focaldistance = 2.0
 ################################################################################
-scene.volumes.vol_smoke.type = homogenous
+scene.volumes.vol_smoke.type = homogeneous
 scene.volumes.vol_smoke.absorption = 5.0 1000.0 1000.0
 scene.volumes.vol_smoke.scattering = 2.0 15.0 15.0
 scene.volumes.vol_smoke.asymmetry = 0.0 0.0 0.0

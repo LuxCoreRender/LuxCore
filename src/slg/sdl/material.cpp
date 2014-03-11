@@ -71,6 +71,7 @@ Properties Material::ToProperties() const {
 	luxrays::Properties props;
 
 	const string name = GetName();
+	props.Set(Property("scene.materials." + name + ".id")(matID));
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
@@ -80,6 +81,11 @@ Properties Material::ToProperties() const {
 	if (bumpTex)
 		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetName()));
 
+	if (interiorVolume)
+		props.Set(Property("scene.materials." + name + ".volume.interior")(interiorVolume->GetName()));
+	if (exteriorVolume)
+		props.Set(Property("scene.materials." + name + ".volume.exterior")(exteriorVolume->GetName()));
+		
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
 	props.Set(Property("scene.materials." + name + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
