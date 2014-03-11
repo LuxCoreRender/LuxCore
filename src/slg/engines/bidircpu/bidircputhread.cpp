@@ -155,7 +155,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
 					connectionThroughput * lightVertex.throughput * bsdfEval;
-				AddSampleResult(sampleResults, scrX, scrY, radiance);
+				SampleResult::AddSampleResult(sampleResults, scrX, scrY, radiance);
 			}
 		}
 	}

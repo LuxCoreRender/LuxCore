@@ -39,6 +39,7 @@
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
+#include "slg/sdl/bsdf.h"
 #include "slg/film/filter.h"
 #include "slg/film/imagepipeline.h"
 #include "slg/film/framebuffer.h"
@@ -289,6 +290,18 @@ public:
 	}
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type); }
 
+	void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
+		const u_int lightID, const luxrays::Spectrum &emission);
+
+	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
+		const float filmX, const float filmY,
+		const luxrays::Spectrum &radiancePPN,
+		const float alpha);
+
+	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
+		const float filmX, const float filmY,
+		const luxrays::Spectrum &radiancePSN);
+
 	float filmX, filmY;
 	std::vector<luxrays::Spectrum> radiancePerPixelNormalized, radiancePerScreenNormalized;
 	float alpha, depth;
@@ -306,32 +319,6 @@ public:
 private:
 	u_int channels;
 };
-
-inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
-	const float filmX, const float filmY,
-	const luxrays::Spectrum &radiancePPN,
-	const float alpha) {
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	sampleResults[size].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
-	sampleResults[size].filmX = filmX;
-	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiancePerPixelNormalized[0] = radiancePPN;
-	sampleResults[size].alpha = alpha;
-}
-
-inline void AddSampleResult(std::vector<SampleResult> &sampleResults,
-	const float filmX, const float filmY,
-	const luxrays::Spectrum &radiancePSN) {
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	sampleResults[size].Init(Film::RADIANCE_PER_SCREEN_NORMALIZED, 1);
-	sampleResults[size].filmX = filmX;
-	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiancePerScreenNormalized[0] = radiancePSN;
-}
 
 }
 

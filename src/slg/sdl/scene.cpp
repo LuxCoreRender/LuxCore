@@ -961,10 +961,10 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 	} else
 		throw runtime_error("Unknown volume type: " + volType);
 
-	vol->SetPriority(props.Get(Property(propName + ".priority")(0)).Get<int>());
 	vol->SetID(props.Get(Property(propName + ".id")(defaultVolID)).Get<u_int>());
 
-	vol->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
+	vol->SetVolumeLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
+	vol->SetPriority(props.Get(Property(propName + ".priority")(0)).Get<int>());
 
 	return vol;
 }
@@ -1605,10 +1605,10 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
-		Spectrum *connectionThroughput, Spectrum *connectionEmission) const {
+		Spectrum *pathThroughput,
+		const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
+		SampleResult *sampleResult) const {
 	const float originalMaxT = ray->maxt;
-	*connectionThroughput = Spectrum(1.f);
-	*connectionEmission = Spectrum();
 
 	for (;;) {
 		const bool hit = device->TraceRay(ray, rayHit);
@@ -1627,9 +1627,16 @@ bool Scene::Intersect(IntersectionDevice *device,
 		if (rayVolume) {
 			// This applies volume transmittance too
 			// Note: by using passThrough here, I introduce subtle correlation
-			// between scattering events and passthrough events
+			// between scattering events and pass-through events
+			Spectrum connectionEmission;
 			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScattered(),
-					connectionThroughput, connectionEmission);
+					pathThroughput, &connectionEmission);
+
+			// Add the volume emitted light to the appropriate light group
+			if (sampleResult && !connectionEmission.Black())
+				sampleResult->AddEmission(firstPathVertex, pathBSDFEvent,
+						rayVolume->GetVolumeLightID(), connectionEmission);
+
 			if (t > 0.f) {
 				// There was a volume scatter event
 				bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
@@ -1647,7 +1654,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 			if (!continueToTrace) {
 				const Spectrum t = bsdf->GetPassThroughTransparency();
 				if (!t.Black()) {
-					*connectionThroughput *= t;
+					*pathThroughput *= t;
 					continueToTrace = true;
 				}	
 			}

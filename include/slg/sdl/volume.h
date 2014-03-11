@@ -30,11 +30,13 @@ class BSDF;
 class Volume : public Material {
 public:
 	Volume(const Texture *ior, const Texture *emission) : Material(NULL, NULL),
-			iorTex(ior), volumeEmissionTex(emission), priority(0) { }
+			iorTex(ior), volumeEmissionTex(emission), volumeLightID(0), priority(0) { }
 	virtual ~Volume() { }
 
 	virtual std::string GetName() const { return "volume-" + boost::lexical_cast<std::string>(this); }
 
+	void SetVolumeLightID(const u_int id) { volumeLightID = id; }
+	u_int GetVolumeLightID() const { return volumeLightID; }
 	void SetPriority(const int p) { priority = p; }
 	int GetPriority() const { return priority; }
 
@@ -64,6 +66,7 @@ protected:
 	// This is a different kind of emission texture from the one in
 	// Material class (i.e. is not sampled by direct light).
 	const Texture *volumeEmissionTex;
+	u_int volumeLightID;
 	int priority;
 };
 
