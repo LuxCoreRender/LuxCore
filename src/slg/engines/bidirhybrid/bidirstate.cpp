@@ -170,7 +170,7 @@ bool BiDirState::ConnectToEye(HybridRenderThread *renderThread,
 			// Add the ray to trace and the result
 			lightSampleValue.push_back(u0);
 			thread->PushRay(eyeRay);
-			AddSampleResult(lightSampleResults, scrX, scrY, radiance);
+			SampleResult::AddSampleResult(lightSampleResults, scrX, scrY, radiance);
 			return true;
 		}
 	}

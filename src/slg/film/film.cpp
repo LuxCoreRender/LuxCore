@@ -1521,3 +1521,51 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}
 }
+
+//------------------------------------------------------------------------------
+// SampleResult
+//------------------------------------------------------------------------------
+
+void SampleResult::AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
+	const u_int lightID, const Spectrum &emis) {
+	radiancePerPixelNormalized[lightID] += emis;
+
+	if (firstPathVertex)
+		emission += emis;
+	else {
+		indirectShadowMask = 0.f;
+
+		if (pathBSDFEvent & DIFFUSE)
+			indirectDiffuse += emis;
+		else if (pathBSDFEvent & GLOSSY)
+			indirectGlossy += emis;
+		else if (pathBSDFEvent & SPECULAR)
+			indirectSpecular += emis;
+	}
+}
+
+void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
+	const float filmX, const float filmY,
+	const luxrays::Spectrum &radiancePPN,
+	const float alpha) {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	sampleResults[size].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
+	sampleResults[size].filmX = filmX;
+	sampleResults[size].filmY = filmY;
+	sampleResults[size].radiancePerPixelNormalized[0] = radiancePPN;
+	sampleResults[size].alpha = alpha;
+}
+
+void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
+	const float filmX, const float filmY,
+	const luxrays::Spectrum &radiancePSN) {
+	const u_int size = sampleResults.size();
+	sampleResults.resize(size + 1);
+
+	sampleResults[size].Init(Film::RADIANCE_PER_SCREEN_NORMALIZED, 1);
+	sampleResults[size].filmX = filmX;
+	sampleResults[size].filmY = filmY;
+	sampleResults[size].radiancePerScreenNormalized[0] = radiancePSN;
+}

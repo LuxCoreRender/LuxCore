@@ -65,7 +65,7 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
 				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
-				AddSampleResult(sampleResults, filmX, filmY, radiance);
+				SampleResult::AddSampleResult(sampleResults, filmX, filmY, radiance);
 			}
 		}
 	}
@@ -138,7 +138,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 
 	// Add a sample even if it is black in order to avoid aliasing problems
 	// between sampled pixel and not sampled one (in PER_PIXEL_NORMALIZED buffer)
-	AddSampleResult(*sampleResults, filmX, filmY, radiance, (depth == 1) ? 1.f : 0.f);
+	SampleResult::AddSampleResult(*sampleResults, filmX, filmY, radiance, (depth == 1) ? 1.f : 0.f);
 }
 
 void LightCPURenderThread::RenderFunc() {
