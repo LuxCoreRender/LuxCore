@@ -46,19 +46,17 @@ private:
 
 	void RenderFunc();
 
-	void DirectLightSampling(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
-		const float u0, const float u1, const float u2,
+	void DirectLightSampling(const float u0,
+		const float u1, const float u2,
 		const float u3, const float u4,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		PathVolumeInfo volInfo, const int depth,
 		SampleResult *sampleResult);
 
-	void DirectHitFiniteLight(const bool firstPathVertex, const BSDFEvent lastBSDFEvent,
-			const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,
+	void DirectHitFiniteLight(const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
 			const float distance, const BSDF &bsdf, const float lastPdfW,
 			SampleResult *sampleResult);
-	void DirectHitInfiniteLight(const bool firstPathVertex, const BSDFEvent lastBSDFEvent,
-			const BSDFEvent pathBSDFEvent, const luxrays::Spectrum &pathThrouput,
+	void DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
 			const luxrays::Vector &eyeDir, const float lastPdfW,
 			SampleResult *sampleResult);
 };

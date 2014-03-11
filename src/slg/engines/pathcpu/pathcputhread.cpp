@@ -33,7 +33,6 @@ PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
 }
 
 void PathCPURenderThread::DirectLightSampling(
-		const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
@@ -83,36 +82,17 @@ void PathCPURenderThread::DirectLightSampling(
 						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 					const Spectrum radiance = (weight * factor) * pathThroughput * connectionThroughput * lightRadiance * bsdfEval;
-					sampleResult->radiancePerPixelNormalized[light->GetID()] += radiance;
-
-					if (firstPathVertex) {
-						sampleResult->directShadowMask = 0.f;
-
-						if (bsdf.GetEventTypes() & DIFFUSE)
-							sampleResult->directDiffuse += radiance;
-						else
-							sampleResult->directGlossy += radiance;
-					} else {
-						sampleResult->indirectShadowMask = 0.f;
-
-						if (pathBSDFEvent & DIFFUSE)
-							sampleResult->indirectDiffuse += radiance;
-						else if (pathBSDFEvent & GLOSSY)
-							sampleResult->indirectGlossy += radiance;
-						else if (pathBSDFEvent & SPECULAR)
-							sampleResult->indirectSpecular += radiance;
-					}
+					sampleResult->AddDirectLight(light->GetID(), event, radiance);
 				}
 			}
 		}
 	} else {
-		if (firstPathVertex)
+		if (sampleResult->firstPathVertex)
 			sampleResult->directShadowMask = 0.f;
 	}
 }
 
-void PathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
-		const BSDFEvent lastBSDFEvent, const BSDFEvent pathBSDFEvent,
+void PathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 		const Spectrum &pathThroughput, const float distance, const BSDF &bsdf,
 		const float lastPdfW, SampleResult *sampleResult) {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
@@ -134,12 +114,11 @@ void PathCPURenderThread::DirectHitFiniteLight(const bool firstPathVertex,
 			weight = 1.f;
 
 		const Spectrum radiance = weight * pathThroughput * emittedRadiance;
-		sampleResult->AddEmission(firstPathVertex, pathBSDFEvent, bsdf.GetLightID(), radiance);
+		sampleResult->AddEmission(bsdf.GetLightID(), radiance);
 	}
 }
 
-void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
-		const BSDFEvent lastBSDFEvent, const BSDFEvent pathBSDFEvent,
+void PathCPURenderThread::DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent,
 		const Spectrum &pathThroughput, const Vector &eyeDir, const float lastPdfW,
 		SampleResult *sampleResult) {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
@@ -157,7 +136,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const bool firstPathVertex,
 				weight = 1.f;
 
 			const Spectrum radiance = weight * pathThroughput * envRadiance;
-			sampleResult->AddEmission(firstPathVertex, pathBSDFEvent, envLight->GetID(), radiance);
+			sampleResult->AddEmission(envLight->GetID(), radiance);
 		}
 	}
 }
@@ -224,29 +203,27 @@ void PathCPURenderThread::RenderFunc() {
 			sampler->GetSample(2), sampler->GetSample(3));
 
 		int depth = 1;
-		BSDFEvent pathBSDFEvent = NONE;
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 		float lastPdfW = 1.f;
 		Spectrum pathThroughput(1.f, 1.f, 1.f);
 		PathVolumeInfo volInfo;
 		BSDF bsdf;
 		for (;;) {
-			const bool firstPathVertex = (depth == 1);
+			sampleResult.firstPathVertex = (depth == 1);
 			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
 			RayHit eyeRayHit;
 			const bool hit = scene->Intersect(device, false,
 					&volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &pathThroughput,
-					firstPathVertex, pathBSDFEvent, &sampleResult);
+					&sampleResult);
 
 			if (!hit) {
 				// Nothing was hit, look for infinitelight
-				DirectHitInfiniteLight(firstPathVertex, lastBSDFEvent, pathBSDFEvent,
-						pathThroughput, eyeRay.d,
+				DirectHitInfiniteLight(lastBSDFEvent, pathThroughput, eyeRay.d,
 						lastPdfW, &sampleResult);
 
-				if (firstPathVertex) {
+				if (sampleResult.firstPathVertex) {
 					sampleResult.alpha = 0.f;
 					sampleResult.depth = std::numeric_limits<float>::infinity();
 					sampleResult.position = Point(
@@ -271,7 +248,7 @@ void PathCPURenderThread::RenderFunc() {
 			}
 
 			// Something was hit
-			if (firstPathVertex) {
+			if (sampleResult.firstPathVertex) {
 				sampleResult.alpha = 1.f;
 				sampleResult.depth = eyeRayHit.t;
 				sampleResult.position = bsdf.hitPoint.p;
@@ -287,8 +264,8 @@ void PathCPURenderThread::RenderFunc() {
 
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
-				DirectHitFiniteLight(firstPathVertex, lastBSDFEvent, pathBSDFEvent, pathThroughput,
-						eyeRayHit.t, bsdf, lastPdfW, &sampleResult);
+				DirectHitFiniteLight(lastBSDFEvent, pathThroughput, eyeRayHit.t,
+						bsdf, lastPdfW, &sampleResult);
 			}
 
 			// Note: pass-through check is done inside SceneIntersect()
@@ -297,7 +274,7 @@ void PathCPURenderThread::RenderFunc() {
 			// Direct light sampling
 			//------------------------------------------------------------------
 
-			DirectLightSampling(firstPathVertex, pathBSDFEvent, 
+			DirectLightSampling(
 					sampler->GetSample(sampleOffset + 1),
 					sampler->GetSample(sampleOffset + 2),
 					sampler->GetSample(sampleOffset + 3),
@@ -318,8 +295,8 @@ void PathCPURenderThread::RenderFunc() {
 			if (bsdfSample.Black())
 				break;
 
-			if (firstPathVertex)
-				pathBSDFEvent = lastBSDFEvent;
+			if (sampleResult.firstPathVertex)
+				sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
 			if ((depth >= engine->rrDepth) && !(lastBSDFEvent & SPECULAR)) {
 				// Russian Roulette

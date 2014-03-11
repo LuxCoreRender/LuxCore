@@ -1526,21 +1526,43 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 // SampleResult
 //------------------------------------------------------------------------------
 
-void SampleResult::AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent,
-	const u_int lightID, const Spectrum &emis) {
-	radiancePerPixelNormalized[lightID] += emis;
+void SampleResult::AddEmission(const u_int lightID, const Spectrum &radiance) {
+	radiancePerPixelNormalized[lightID] += radiance;
 
 	if (firstPathVertex)
-		emission += emis;
+		emission += radiance;
 	else {
 		indirectShadowMask = 0.f;
 
-		if (pathBSDFEvent & DIFFUSE)
-			indirectDiffuse += emis;
-		else if (pathBSDFEvent & GLOSSY)
-			indirectGlossy += emis;
-		else if (pathBSDFEvent & SPECULAR)
-			indirectSpecular += emis;
+		if (firstPathVertexEvent & DIFFUSE)
+			indirectDiffuse += radiance;
+		else if (firstPathVertexEvent & GLOSSY)
+			indirectGlossy += radiance;
+		else if (firstPathVertexEvent & SPECULAR)
+			indirectSpecular += radiance;
+	}
+}
+
+void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
+		const luxrays::Spectrum &radiance) {
+	radiancePerPixelNormalized[lightID] += radiance;
+
+	if (firstPathVertex) {
+		directShadowMask = 0.f;
+
+		if (bsdfEvent & DIFFUSE)
+			directDiffuse += radiance;
+		else
+			directGlossy += radiance;
+	} else {
+		indirectShadowMask = 0.f;
+
+		if (firstPathVertexEvent & DIFFUSE)
+			indirectDiffuse += radiance;
+		else if (firstPathVertexEvent & GLOSSY)
+			indirectGlossy += radiance;
+		else if (firstPathVertexEvent & SPECULAR)
+			indirectSpecular += radiance;
 	}
 }
 
