@@ -2,7 +2,7 @@ scene.camera.lookat.orig = 8.0 -11.0 5.0
 scene.camera.lookat.target = 1.0 0.0 1.0
 ################################################################################
 scene.volumes.vol_sss.type = homogeneous
-scene.volumes.vol_sss.absorption = 0.0 0.0 0.0
+scene.volumes.vol_sss.absorption = 1.0 5.0 5.0
 scene.volumes.vol_sss.scattering = 5.0 1.0 1.0
 scene.volumes.vol_sss.asymmetry = 0.0 0.0 0.0
 scene.volumes.vol_sss.multiscattering = 1
