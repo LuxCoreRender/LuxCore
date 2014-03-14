@@ -168,8 +168,14 @@ Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW, float *reversePdfW) const {
 	Spectrum r = volume->SigmaS(hitPoint);
-	if (!r.Black())
-		r /= r + volume->SigmaA(hitPoint);
+	const Spectrum sigmaA = volume->SigmaA(hitPoint);
+	for (u_int i = 0; i < COLOR_SAMPLES; ++i) {
+		if (r.c[i] > 0.f)
+			r.c[i] /= r.c[i] + sigmaA.c[i];
+		else
+			r.c[i] = 1.f;
+	}
+
 
 	const Spectrum gValue = g->GetSpectrumValue(hitPoint).Clamp(-1.f, 1.f);
 	const Spectrum k = gValue * (Spectrum(1.55f) - .55f * gValue * gValue);
@@ -227,8 +233,13 @@ Spectrum SchlickScatter::Sample(const HitPoint &hitPoint,
 	*event = DIFFUSE | REFLECT;
 
 	Spectrum r = volume->SigmaS(hitPoint);
-	if (!r.Black())
-		r /= r + volume->SigmaA(hitPoint);
+	const Spectrum sigmaA = volume->SigmaA(hitPoint);
+	for (u_int i = 0; i < COLOR_SAMPLES; ++i) {
+		if (r.c[i] > 0.f)
+			r.c[i] /= r.c[i] + sigmaA.c[i];
+		else
+			r.c[i] = 1.f;
+	}
 
 	return r;
 }
@@ -386,7 +397,7 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 
 		scatter = scatterAllowed && (scatterDistance < maxDistance);
 		distance = scatter ? scatterDistance : maxDistance;
-		
+
 		// Note: distance can not be infinity because otherwise there would
 		// have been a scatter event before.
 		const float pdf = expf(-distance * k) * (scatter ? k : 1.f);

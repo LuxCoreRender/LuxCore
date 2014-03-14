@@ -1649,9 +1649,9 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 			// Check if it is a pass through point
 			if (!continueToTrace) {
-				const Spectrum t = bsdf->GetPassThroughTransparency();
-				if (!t.Black()) {
-					*pathThroughput *= t;
+				const Spectrum transp = bsdf->GetPassThroughTransparency();
+				if (!transp.Black()) {
+					*pathThroughput *= transp;
 					continueToTrace = true;
 				}	
 			}
