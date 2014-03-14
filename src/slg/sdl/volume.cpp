@@ -53,7 +53,7 @@ PathVolumeInfo::PathVolumeInfo() {
 	currentVolume = NULL;
 	volumeListSize = 0;
 
-	scatteredPath = false;
+	scatteredStart = false;
 }
 
 void PathVolumeInfo::AddVolume(const Volume *v) {
@@ -100,11 +100,17 @@ void PathVolumeInfo::RemoveVolume(const Volume *v) {
 
 void PathVolumeInfo::Update(const BSDFEvent eventType, const BSDF &bsdf) {
 	// Update only if it isn't a volume scattering and the material can TRANSMIT
-	if (!bsdf.IsVolume() && (eventType  & TRANSMIT)) {
-		if (bsdf.hitPoint.intoObject)
-			AddVolume(bsdf.GetMaterialInteriorVolume());
-		else
-			RemoveVolume(bsdf.GetMaterialInteriorVolume());
+	if (bsdf.IsVolume())
+		scatteredStart = true;
+	else {
+		scatteredStart = false;
+
+		if(eventType  & TRANSMIT) {
+			if (bsdf.hitPoint.intoObject)
+				AddVolume(bsdf.GetMaterialInteriorVolume());
+			else
+				RemoveVolume(bsdf.GetMaterialInteriorVolume());
+		}
 	}
 }
 
@@ -266,7 +272,7 @@ Spectrum ClearVolume::SigmaS(const HitPoint &hitPoint) const {
 }
 
 float ClearVolume::Scatter(const Ray &ray, const float u,
-		const bool scatteredPath, Spectrum *connectionThroughput,
+		const bool scatteredStart, Spectrum *connectionThroughput,
 		Spectrum *connectionEmission) const {
 	const HitPoint hitPoint =  {
 		ray.d,
@@ -363,14 +369,36 @@ Spectrum HomogeneousVolume::SigmaS(const HitPoint &hitPoint) const {
 	return sigmaS->GetSpectrumValue(hitPoint).Clamp();
 }
 
-void HomogeneousVolume::Connect(const Point &orig, const Vector dir,
-		const float distance, Spectrum *throughput, Spectrum *emission) const {
+float HomogeneousVolume::Scatter(const Ray &ray, const float u,
+		const bool scatteredStart, Spectrum *connectionThroughput,
+		Spectrum *connectionEmission) const {
+	const float maxDistance = ray.maxt - ray.mint;
+
+	// Check if I have to support multi-scattering
+	const bool scatterAllowed = (!scatteredStart || multiScattering);
+
+	bool scatter = false;
+	float distance = maxDistance;
+	const float k = sigmaS->Filter();
+	if (scatterAllowed && (k > 0.f)) {
+		// Determine scattering distance
+		const float scatterDistance = -logf(1.f - u) / k;
+
+		scatter = scatterAllowed && (scatterDistance < maxDistance);
+		distance = scatter ? scatterDistance : maxDistance;
+		
+		// Note: distance can not be infinity because otherwise there would
+		// have been a scatter event before.
+		const float pdf = expf(-distance * k) * (scatter ? k : 1.f);
+		*connectionThroughput /= pdf;
+	}
+
 	const HitPoint hitPoint =  {
-		dir,
-		orig,
+		ray.d,
+		ray.o,
 		UV(),
-		Normal(-dir),
-		Normal(-dir),
+		Normal(-ray.d),
+		Normal(-ray.d),
 		Spectrum(1.f),
 		1.f,
 		0.f, // It doesn't matter here
@@ -378,44 +406,21 @@ void HomogeneousVolume::Connect(const Point &orig, const Vector dir,
 		false // It doesn't matter here
 	};
 
+	const Spectrum sigmaT = SigmaT(hitPoint);
 	Spectrum transmittance(1.f);
-
-	const Spectrum sigma = SigmaT(hitPoint);
-	if (!sigma.Black()) {
-		const Spectrum tau = (distance * sigma).Clamp();
+	if (!sigmaT.Black()) {
+		const Spectrum tau = (distance * sigmaT).Clamp();
 		transmittance = Exp(-tau);
-	}
 
-	// Apply volume transmittance
-	*throughput *= transmittance;
+		// Apply volume transmittance
+		*connectionThroughput *= transmittance * (scatter ? sigmaT : Spectrum(1.f));
+	}
 
 	// Apply volume emission
 	if (volumeEmissionTex)
-		*emission += transmittance * distance * volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp();
-}
+		*connectionEmission += transmittance * distance * volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp();
 
-float HomogeneousVolume::Scatter(const Ray &ray, const float u,
-		const bool scatteredPath, Spectrum *connectionThroughput,
-		Spectrum *connectionEmission) const {
-	const float maxDistance = ray.maxt - ray.mint;
-	// Note: LuxRender uses ->Filter() here
-	const float k = sigmaS->Y();
-
-	// Check if I have to support multi-scattering
-	if ((scatteredPath && !multiScattering) || (k == 0.f)) {
-		// I have still to apply volume transmittance and emission
-		Connect(ray.o, ray.d, maxDistance, connectionThroughput, connectionEmission);
-		return -1.f;
-	}
-
-	// Determine scattering distance
-	const float scatterDistance = -logf(1.f - u) / k;
-	const bool scatter = (scatterDistance < maxDistance);
-
-	// Apply volume transmittance and emission
-	Connect(ray.o, ray.d, scatter ? scatterDistance : maxDistance, connectionThroughput, connectionEmission);
-
-	return scatter ? (ray.mint + scatterDistance) : -1.f;
+	return scatter ? (ray.mint + distance) : -1.f;
 }
 
 Spectrum HomogeneousVolume::Evaluate(const HitPoint &hitPoint,
@@ -466,6 +471,7 @@ Properties HomogeneousVolume::ToProperties() const {
 	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
 	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetName()));
 	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetName()));
+	props.Set(Property("scene.volumes." + name + ".multiscattering")(multiScattering));
 	props.Set(Volume::ToProperties());
 
 	return props;
@@ -494,14 +500,17 @@ Spectrum HeterogeneousVolume::SigmaS(const HitPoint &hitPoint) const {
 }
 
 float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
-		const bool scatteredPath, Spectrum *connectionThroughput,
+		const bool scatteredStart, Spectrum *connectionThroughput,
 		Spectrum *connectionEmission) const {
 	// Compute the number of steps to evaluate the volume
 	// Integrates in steps of at most stepSize
 	// unless stepSize is too small compared to the total length
 	const float rayLen = ray.maxt - ray.mint;
 
+	//--------------------------------------------------------------------------
 	// Handle the case when ray.maxt is infinity or a very large number
+	//--------------------------------------------------------------------------
+
 	u_int steps;
 	float ss;
 	if (rayLen == numeric_limits<float>::infinity()) {
@@ -518,10 +527,12 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
 		ss = rayLen / steps; // Effective step size
 	}
 
+	const float totalDistance = ss * steps;
+
 	// Evaluate the scattering at the path origin
 	HitPoint hitPoint =  {
 		ray.d,
-		ray.o,
+		ray(ray.mint),
 		UV(),
 		Normal(-ray.d),
 		Normal(-ray.d),
@@ -532,52 +543,81 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
 		false // It doesn't matter here
 	};
 
+	const bool scatterAllowed = (!scatteredStart || multiScattering);
+
+	//--------------------------------------------------------------------------
+	// Find the scattering point if there is one
+	//--------------------------------------------------------------------------
+
+	float oldSigmaS = SigmaS(hitPoint).Filter();
 	float u = initialU;
-	bool scatter = false;
+	float scatterDistance = totalDistance;
 	float t = -1.f;
-	Spectrum tau, emission;
-	for (u_int s = 0; s < steps; ++s) {
+	float pdf = 1.f;
+	for (u_int s = 1; s <= steps; ++s) {
 		// Compute the mean scattering over the current step
-
-		// Note: by using initialU here, I introduce subtle correlation
-		// with scattering event
-		const float maxDistance = (initialU + s) * ss;
-		hitPoint.p = ray(ray.mint + maxDistance);
-
-		// Apply volume transmittance
-		const Spectrum sigmaT = SigmaT(hitPoint);
-		tau += (ss * sigmaT).Clamp();
-
-		// Accumulate volume emission
-		if (volumeEmissionTex)
-			emission += (ss * volumeEmissionTex->GetSpectrumValue(hitPoint)).Clamp();
+		hitPoint.p = ray(ray.mint + s * ss);
 
 		// Check if there is a scattering event
-		const float sigmaS = SigmaS(hitPoint).Filter();
+		const float newSigmaS = SigmaS(hitPoint).Filter();
+		const float halfWaySigmaS = (oldSigmaS + newSigmaS) * .5f;
+		oldSigmaS = newSigmaS;
 
 		// Skip the step if no scattering can occur
-		if (sigmaS <= 0.f)
+		if (halfWaySigmaS <= 0.f)
 			continue;
 
 		// Determine scattering distance
-		const float scatterDistance = -logf(1.f - u) / sigmaS; // The real distance is ray.mint-d
-		scatter = (scatterDistance < maxDistance);
+		const float d = logf(1.f - u) / halfWaySigmaS; // The real distance is ray.mint-d
+		const bool scatter = scatterAllowed && (d > (s - 1U) * ss - totalDistance);
+		if (!scatter) {
+			if (scatterAllowed)
+				pdf *= expf(-ss * halfWaySigmaS);
 
-		if ((scatteredPath && !multiScattering) || !scatter) {
 			// Update the random variable to account for
 			// the current step
-			u -= (1.f - u) * (expf(sigmaS * ss) - 1.f);
+			u -= (1.f - u) * (expf(oldSigmaS * ss) - 1.f);
 			continue;
 		}
 
 		// The ray is scattered
+		scatterDistance = (s - 1U) * ss - d;
 		t = ray.mint + scatterDistance;
+		pdf *= expf(d * halfWaySigmaS) * oldSigmaS;
+
+		hitPoint.p = ray(t);
+		*connectionThroughput *= SigmaT(hitPoint);
 		break;
 	}
 
+	//--------------------------------------------------------------------------
+	// Now I know the distance of the scattering point (if there is one) and
+	// I can calculate transmittance and emission
+	//--------------------------------------------------------------------------
+	
+	steps = Ceil2UInt(scatterDistance / Max(MachineEpsilon::E(scatterDistance), stepSize));
+	ss = scatterDistance / steps;
+
+	Spectrum tau, emission;
+	hitPoint.p = ray(ray.mint);
+	Spectrum oldSigmaT = SigmaT(hitPoint);
+	for (u_int s = 1; s <= steps; ++s) {
+		hitPoint.p = ray(ray.mint + s * ss);
+
+		// Accumulate tau values
+		const Spectrum newSigmaT = SigmaT(hitPoint);
+		const Spectrum halfWaySigmaT = (oldSigmaT + newSigmaT) * .5f;
+		tau += (ss * halfWaySigmaT).Clamp();
+		oldSigmaT = newSigmaT;
+
+		// Accumulate volume emission
+		if (volumeEmissionTex)
+			emission += Exp(-tau) * (ss * volumeEmissionTex->GetSpectrumValue(hitPoint)).Clamp();
+	}
+	
 	// Apply volume transmittance
 	const Spectrum transmittance = Exp(-tau);
-	*connectionThroughput *= transmittance;
+	*connectionThroughput *= transmittance / pdf;
 
 	// Accumulate volume emission
 	if (volumeEmissionTex)
@@ -634,6 +674,7 @@ Properties HeterogeneousVolume::ToProperties() const {
 	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
 	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetName()));
 	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetName()));
+	props.Set(Property("scene.volumes." + name + ".multiscattering")(multiScattering));
 	props.Set(Property("scene.volumes." + name + ".steps.size")(stepSize));
 	props.Set(Property("scene.volumes." + name + ".steps.maxcount")(maxStepsCount));
 	props.Set(Volume::ToProperties());

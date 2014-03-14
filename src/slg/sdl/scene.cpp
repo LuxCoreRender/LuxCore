@@ -949,12 +949,12 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
 		vol = new HomogeneousVolume(iorTex, emissionTex, absorption, scattering, asymmetry, multiScattering);
-	} else if (volType == "heterogenous") {
+	} else if (volType == "heterogeneous") {
 		const Texture *absorption = GetTexture(props.Get(Property(propName + ".absorption")(0.f, 0.f, 0.f)));
 		const Texture *scattering = GetTexture(props.Get(Property(propName + ".scattering")(0.f, 0.f, 0.f)));
 		const Texture *asymmetry = GetTexture(props.Get(Property(propName + ".asymmetry")(0.f, 0.f, 0.f)));
 		const float stepSize =  props.Get(Property(propName + ".steps.size")(1.f)).Get<float>();
-		const u_int maxStepsCount =  props.Get(Property(propName + ".steps.maxcount")(32)).Get<float>();
+		const u_int maxStepsCount =  props.Get(Property(propName + ".steps.maxcount")(32u)).Get<u_int>();
 		const bool multiScattering =  props.Get(Property(propName + ".multiscattering")(false)).Get<bool>();
 
 		vol = new HeterogeneousVolume(iorTex, emissionTex, absorption, scattering, asymmetry, stepSize, maxStepsCount, multiScattering);
@@ -1627,7 +1627,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 			// Note: by using passThrough here, I introduce subtle correlation
 			// between scattering events and pass-through events
 			Spectrum connectionEmission;
-			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScattered(),
+			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScatteredStart(),
 					pathThroughput, &connectionEmission);
 
 			// Add the volume emitted light to the appropriate light group
@@ -1637,7 +1637,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 			if (t > 0.f) {
 				// There was a volume scatter event
 				bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
-				volInfo->Scattered();
+				volInfo->SetScatteredStart(true);
 
 				return true;
 			}

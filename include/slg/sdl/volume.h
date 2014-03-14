@@ -48,7 +48,7 @@ public:
 	// Returns the ray t value of the scatter event. If (t <= 0.0) there was
 	// no scattering. In any case, it applies transmittance to connectionThroughput
 	// too.
-	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
+	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredStart,
 		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const = 0;
 
 	virtual luxrays::Properties ToProperties() const;
@@ -104,8 +104,8 @@ public:
 	void AddVolume(const Volume *v);
 	void RemoveVolume(const Volume *v);
 
-	void Scattered() { scatteredPath = true; }
-	bool IsScattered() const { return scatteredPath; }
+	void SetScatteredStart(const bool v) { scatteredStart = v; }
+	bool IsScatteredStart() const { return scatteredStart; }
 	
 	void Update(const BSDFEvent eventType, const BSDF &bsdf);
 	bool ContinueToTrace(const BSDF &bsdf) const;
@@ -118,7 +118,7 @@ private:
 	const Volume *volumeList[PATHVOLUMEINFO_SIZE];
 	u_int volumeListSize;
 	
-	bool scatteredPath;
+	bool scatteredStart;
 };
 
 //------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ class ClearVolume : public Volume {
 public:
 	ClearVolume(const Texture *iorTex, const Texture *emiTex, const Texture *a);
 
-	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
+	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredStart,
 		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const;
 
 	// Material interface
@@ -172,7 +172,7 @@ public:
 			const Texture *a, const Texture *s,
 			const Texture *g, const bool multiScattering);
 
-	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
+	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredStart,
 		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const;
 
 	// Material interface
@@ -201,9 +201,6 @@ protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum SigmaS(const HitPoint &hitPoint) const;
 
-	void Connect(const luxrays::Point &orig, const luxrays::Vector dir,
-		const float distance, luxrays::Spectrum *throughput, luxrays::Spectrum *emission) const;
-
 private:
 	const Texture *sigmaA, *sigmaS;
 	SchlickScatter schlickScatter;
@@ -221,7 +218,7 @@ public:
 			const Texture *g, const float stepSize, const u_int maxStepsCount,
 			const bool multiScattering);
 
-	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredPath,
+	virtual float Scatter(const luxrays::Ray &ray, const float u, const bool scatteredStart,
 		luxrays::Spectrum *connectionThroughput, luxrays::Spectrum *connectionEmission) const;
 
 	// Material interface

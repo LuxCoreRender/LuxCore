@@ -508,7 +508,8 @@ void CompiledScene::CompileMaterials() {
 				mat->carpaint.depthTexIndex = scene->texDefs.GetTextureIndex(cm->depth);
 				break;
 			}
-			case HOMOGENEOUS_VOL: {
+			case HOMOGENEOUS_VOL:
+			case HETEROGENEOUS_VOL: {
 				SLG_LOG("Volume rendering is not yet supported by OpenCL code");
 				break;
 			}

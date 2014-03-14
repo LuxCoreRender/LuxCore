@@ -617,6 +617,8 @@ Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) co
 
 ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping2D *mp, const float g) :
 	imgMap(im), mapping(mp), gain(g) {
+	imageY = gain * imgMap->GetSpectrumMeanY();
+	imageFilter = gain * imgMap->GetSpectrumMean();
 }
 
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -708,6 +710,10 @@ float FresnelApproxNTexture::Y() const {
 	return FresnelApproxN(tex->Y());
 }
 
+float FresnelApproxNTexture::Filter() const {
+	return FresnelApproxN(tex->Filter());
+}
+
 float FresnelApproxKTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return FresnelApproxK(tex->GetFloatValue(hitPoint));
 }
@@ -718,6 +724,10 @@ Spectrum FresnelApproxKTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 
 float FresnelApproxKTexture::Y() const {
 	return FresnelApproxK(tex->Y());
+}
+
+float FresnelApproxKTexture::Filter() const {
+	return FresnelApproxK(tex->Filter());
 }
 
 Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -807,6 +817,11 @@ Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache)
 float MixTexture::Y() const {
 	return luxrays::Lerp(amount->Y(), tex1->Y(), tex2->Y());
 }
+
+float MixTexture::Filter() const {
+	return luxrays::Lerp(amount->Filter(), tex1->Filter(), tex2->Filter());
+}
+
 float MixTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float value1 = tex1->GetFloatValue(hitPoint);
@@ -910,6 +925,18 @@ float MarbleTexture::Y() const {
 	for (u_int i = 0; i < NC; ++i)
 		cs += luxrays::Spectrum(c[i]);
 	return cs.Y() / NC;
+#undef NC
+}
+
+float MarbleTexture::Filter() const {
+	static float c[][3] = { { .58f, .58f, .6f }, { .58f, .58f, .6f }, { .58f, .58f, .6f },
+		{ .5f, .5f, .5f }, { .6f, .59f, .58f }, { .58f, .58f, .6f },
+		{ .58f, .58f, .6f }, {.2f, .2f, .33f }, { .58f, .58f, .6f }, };
+	luxrays::Spectrum cs;
+#define NC  sizeof(c) / sizeof(c[0])
+	for (u_int i = 0; i < NC; ++i)
+		cs += luxrays::Spectrum(c[i]);
+	return cs.Filter() / NC;
 #undef NC
 }
 

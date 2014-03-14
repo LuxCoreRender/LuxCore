@@ -78,6 +78,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const = 0;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const = 0;
 	virtual float Y() const = 0;
+	virtual float Filter() const = 0;
 
 	// Used for bump/normal mapping support
     virtual luxrays::UV GetDuv(const HitPoint &hitPoint,
@@ -148,6 +149,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return value; }
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return luxrays::Spectrum(value); }
 	virtual float Y() const { return value; }
+	virtual float Filter() const { return value; }
 
 	float GetValue() const { return value; };
 
@@ -166,6 +168,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return color.Y(); }
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
 	virtual float Y() const { return color.Y(); }
+	virtual float Filter() const { return color.Filter(); }
 
 	const luxrays::Spectrum &GetColor() const { return color; };
 
@@ -371,7 +374,8 @@ public:
 	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { return gain * imgMap->GetSpectrumMeanY(); }
+	virtual float Y() const { return imageY; }
+	virtual float Filter() const { return imageFilter; }
 
 	const ImageMap *GetImageMap() const { return imgMap; }
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
@@ -387,6 +391,8 @@ private:
 	const ImageMap *imgMap;
 	const TextureMapping2D *mapping;
 	float gain;
+	// Cached image information
+	float imageY, imageFilter;
 };
 
 //------------------------------------------------------------------------------
@@ -402,6 +408,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { return tex1->Y() * tex2->Y(); }
+	virtual float Filter() const { return tex1->Filter() * tex2->Filter(); }
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -446,6 +453,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const;
+	virtual float Filter() const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -478,6 +486,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const;
+	virtual float Filter() const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -514,6 +523,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { return (tex1->Y() + tex2->Y()) * .5f; }
+	virtual float Filter() const { return (tex1->Filter() + tex2->Filter()) * .5f; }
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -554,6 +564,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { return (tex1->Y() + tex2->Y()) * .5f; }
+	virtual float Filter() const { return (tex1->Filter() + tex2->Filter()) * .5f; }
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -599,6 +610,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const;
+	virtual float Filter() const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -647,6 +659,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	int GetOctaves() const { return octaves; }
@@ -675,6 +688,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const;
+	virtual float Filter() const;
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	int GetOctaves() const { return octaves; }
@@ -705,6 +719,9 @@ public:
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const {
 		return (insideTex->Y() + outsideTex->Y()) * .5f;
+	}
+	virtual float Filter() const {
+		return (insideTex->Filter() + outsideTex->Filter()) * .5f;
 	}
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
@@ -759,6 +776,10 @@ public:
 	virtual float Y() const {
 		const float m = powf(luxrays::Clamp(1.f - mortarsize, 0.f, 1.f), 3);
 		return luxrays::Lerp(m, tex2->Y(), tex1->Y());
+	}
+	virtual float Filter() const {
+		const float m = powf(luxrays::Clamp(1.f - mortarsize, 0.f, 1.f), 3);
+		return luxrays::Lerp(m, tex2->Filter(), tex1->Filter());
 	}
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
@@ -844,6 +865,9 @@ public:
 	virtual float Y() const { 
 		return tex1->Y() + tex2->Y(); 
 	}
+	virtual float Filter() const { 
+		return tex1->Filter() + tex2->Filter(); 
+	}
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -886,6 +910,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 
@@ -909,6 +934,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	int GetOctaves() const { return octaves; }
@@ -937,6 +963,9 @@ public:
 	virtual float Y() const {
 		return luxrays::Spectrum(.5f, .5f, 0.f).Y();
 	}
+	virtual float Filter() const {
+		return luxrays::Spectrum(.5f, .5f, 0.f).Filter();
+	}
 
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 
@@ -964,6 +993,13 @@ public:
 		for (u_int i = 0; i < offsets.size() - 1; ++i)
 			ret += .5f * (offsets[i + 1] - offsets[i]) *
 				(values[i + 1].Y() + values[i].Y());
+		return ret;
+	}
+	virtual float Filter() const {
+		float ret = offsets[0] * values[0].Filter();
+		for (u_int i = 0; i < offsets.size() - 1; ++i)
+			ret += .5f * (offsets[i + 1] - offsets[i]) *
+				(values[i + 1].Filter() + values[i].Filter());
 		return ret;
 	}
 
@@ -1008,6 +1044,7 @@ public:
 	// The following methods don't make very much sense in this case. I have no
 	// information about the color.
 	virtual float Y() const { return 1.f; }
+	virtual float Filter() const { return 1.f; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 };
@@ -1027,6 +1064,7 @@ public:
 	// The following methods don't make very much sense in this case. I have no
 	// information about the color.
 	virtual float Y() const { return 1.f; }
+	virtual float Filter() const { return 1.f; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 };
@@ -1046,6 +1084,7 @@ public:
 	// The following methods don't make very much sense in this case. I have no
 	// information about the color.
 	virtual float Y() const { return 1.f; }
+	virtual float Filter() const { return 1.f; }
 
 	u_int GetChannel() const { return channel; }
 
@@ -1077,6 +1116,7 @@ public:
 	// The following methods don't make very much sense in this case. I have no
 	// information about the color.
 	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	BlenderWoodType GetWoodType() const { return type; }
@@ -1113,6 +1153,7 @@ public:
 	// The following methods don't make very much sense in this case. I have no
 	// information about the color.
 	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	float GetBright() const { return bright; }
@@ -1144,6 +1185,7 @@ public:
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return 0.f; }
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return luxrays::Spectrum(); }
 	virtual float Y() const { return 0.f; }
+	virtual float Filter() const { return 0.f; }
 
     virtual luxrays::UV GetDuv(const HitPoint &hitPoint,
         const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
