@@ -887,7 +887,19 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_noise_funcs <<
 			slg::ocl::KernelSource_texture_blender_funcs <<
 			slg::ocl::KernelSource_texture_funcs <<
-			slg::ocl::KernelSource_materialdefs_funcs <<
+			slg::ocl::KernelSource_materialdefs_funcs_generic <<
+			slg::ocl::KernelSource_materialdefs_funcs_archglass <<
+			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
+			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
+			slg::ocl::KernelSource_materialdefs_funcs_glass <<
+			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_matte <<
+			slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
+			slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_mirror <<
+			slg::ocl::KernelSource_materialdefs_funcs_null <<
+			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
+			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
 			slg::ocl::KernelSource_material_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
 			slg::ocl::KernelSource_light_funcs <<
