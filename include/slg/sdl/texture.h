@@ -1158,7 +1158,7 @@ public:
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
-	int GetNoiseSize() const { return noisesize; }
+	float GetNoiseSize() const { return noisesize; }
 	int GetNoiseDepth() const { return noisedepth; }
 	bool GetNoiseType() const { return hard; }
 
