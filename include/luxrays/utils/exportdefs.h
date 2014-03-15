@@ -31,14 +31,14 @@
  #else
   #define CPP_API
  #endif
- #define CPP_EXPORT extern "C++"
+ #define CPP_EXPORT extern "C"
 #else
  #ifdef WIN32
   #define CPP_API __declspec(dllimport)
  #else
   #define CPP_API
  #endif
- #define CPP_EXPORT extern "C++"
+ #define CPP_EXPORT extern "C"
 #endif
 
 #endif	// _LUXRAYSEXPORT_DEFS_H
