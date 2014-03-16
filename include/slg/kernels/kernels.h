@@ -42,7 +42,6 @@ extern std::string KernelSource_bsdf_types;
 extern std::string KernelSource_bsdf_funcs;
 extern std::string KernelSource_material_types;
 extern std::string KernelSource_materialdefs_funcs_generic;
-extern std::string KernelSource_materialdefs_funcs_generic;
 extern std::string KernelSource_materialdefs_funcs_archglass;
 extern std::string KernelSource_materialdefs_funcs_carpaint;
 extern std::string KernelSource_materialdefs_funcs_cloth;
