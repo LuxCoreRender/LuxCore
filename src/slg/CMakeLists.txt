@@ -213,19 +213,19 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_types_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_generic.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_archglass.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_carpaint.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_cloth.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glass.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glossy2.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte_translucent.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_metal2.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_mirror.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_null.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_roughglass.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_velvet.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_generic_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_archglass_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_carpaint_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_cloth_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glass_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glossy2_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte_translucent_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_metal2_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_mirror_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_null_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_roughglass_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_velvet_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_funcs_kernel.cpp
