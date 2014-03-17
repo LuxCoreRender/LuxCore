@@ -1605,7 +1605,12 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
-		Spectrum *pathThroughput, SampleResult *sampleResult) const {
+		Spectrum *connectionThroughput, SampleResult *sampleResult,
+		Spectrum *connectionEmission) const {
+	*connectionThroughput = Spectrum(1.f);
+	if (connectionEmission)
+		*connectionEmission = Spectrum();
+
 	const float originalMaxT = ray->maxt;
 
 	for (;;) {
@@ -1626,13 +1631,17 @@ bool Scene::Intersect(IntersectionDevice *device,
 			// This applies volume transmittance too
 			// Note: by using passThrough here, I introduce subtle correlation
 			// between scattering events and pass-through events
-			Spectrum connectionEmission;
+			Spectrum emis;
 			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScatteredStart(),
-					pathThroughput, &connectionEmission);
+					connectionThroughput, &emis);
 
 			// Add the volume emitted light to the appropriate light group
-			if (sampleResult && !connectionEmission.Black())
-				sampleResult->AddEmission(rayVolume->GetVolumeLightID(), connectionEmission);
+			if (!emis.Black()) {
+				if (sampleResult)
+					sampleResult->AddEmission(rayVolume->GetVolumeLightID(), emis);
+				if (connectionEmission)
+					*connectionEmission += emis;
+			}
 
 			if (t > 0.f) {
 				// There was a volume scatter event
@@ -1651,7 +1660,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 			if (!continueToTrace) {
 				const Spectrum transp = bsdf->GetPassThroughTransparency();
 				if (!transp.Black()) {
-					*pathThroughput *= transp;
+					*connectionThroughput *= transp;
 					continueToTrace = true;
 				}	
 			}

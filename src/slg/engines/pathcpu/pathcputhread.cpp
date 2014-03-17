@@ -63,7 +63,7 @@ void PathCPURenderThread::DirectLightSampling(
 						distance - epsilon);
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
-				Spectrum connectionThroughput(1.f);
+				Spectrum connectionThroughput;
 				// Check if the light source is visible
 				if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay,
 						&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
@@ -205,7 +205,7 @@ void PathCPURenderThread::RenderFunc() {
 		int depth = 1;
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 		float lastPdfW = 1.f;
-		Spectrum pathThroughput(1.f, 1.f, 1.f);
+		Spectrum pathThroughput(1.f);
 		PathVolumeInfo volInfo;
 		BSDF bsdf;
 		for (;;) {
@@ -213,10 +213,12 @@ void PathCPURenderThread::RenderFunc() {
 			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
 			RayHit eyeRayHit;
+			Spectrum connectionThroughput;
 			const bool hit = scene->Intersect(device, false,
 					&volInfo, sampler->GetSample(sampleOffset),
-					&eyeRay, &eyeRayHit, &bsdf, &pathThroughput,
+					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 					&sampleResult);
+			pathThroughput *= connectionThroughput;
 
 			if (!hit) {
 				// Nothing was hit, look for infinitelight

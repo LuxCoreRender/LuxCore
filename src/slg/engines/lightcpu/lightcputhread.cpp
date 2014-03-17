@@ -33,7 +33,7 @@ LightCPURenderThread::LightCPURenderThread(LightCPURenderEngine *engine,
 
 void LightCPURenderThread::ConnectToEye(const float u0,
 		const BSDF &bsdf, const Point &lensPoint, const Spectrum &flux,
-		vector<SampleResult> &sampleResults) {
+		PathVolumeInfo volInfo, vector<SampleResult> *sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
@@ -52,12 +52,18 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 
 		float filmX, filmY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
-			RayHit eyeRayHit;
+			// I have to flip the direction of the traced ray because
+			// the information inside PathVolumeInfo are about the path from
+			// the light toward the camera (i.e. ray.o would be in the wrong
+			// place).
+			Ray traceRay(bsdf.hitPoint.p, -eyeDir, eyeRay.mint, eyeRay.maxt);
+			RayHit traceRayHit;
 			BSDF bsdfConn;
-			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
-				// Nothing was hit, the light path vertex is visible
 
+			Spectrum connectionThroughput, connectionEmission;
+			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+					&connectionThroughput, NULL, &connectionEmission)) {
+				// Nothing was hit, the light path vertex is visible
 				const float cosAtCamera = Dot(scene->camera->GetDir(), eyeDir);
 
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
@@ -65,13 +71,14 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
 				const Spectrum radiance = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
-				SampleResult::AddSampleResult(sampleResults, filmX, filmY, radiance);
+				SampleResult::AddSampleResult(*sampleResults, filmX, filmY, radiance + connectionEmission);
 			}
 		}
 	}
 }
 
-void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *sampleResults) {
+void LightCPURenderThread::TraceEyePath(Sampler *sampler, PathVolumeInfo volInfo,
+		vector<SampleResult> *sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
@@ -89,16 +96,19 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, vector<SampleResult> *
 	camera->GenerateRay(filmX, filmY, &eyeRay,
 		sampler->GetSample(10), sampler->GetSample(11));
 
-	Spectrum radiance, eyePathThroughput(1.f, 1.f, 1.f);
+	Spectrum radiance, eyePathThroughput(1.f);
 	int depth = 1;
 	while (depth <= engine->maxPathDepth) {
 		const u_int sampleOffset = sampleBootSize + (depth - 1) * sampleEyeStepSize;
 
 		RayHit eyeRayHit;
 		BSDF bsdf;
-		Spectrum connectionThroughput;
-		const bool somethingWasHit = scene->Intersect(device, false,
-				sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf, &connectionThroughput);
+		Spectrum connectionThroughput, connectionEmission;
+		const bool somethingWasHit = scene->Intersect(device, false, &volInfo,
+				sampler->GetSample(sampleOffset), &eyeRay, &eyeRayHit, &bsdf,
+				&connectionThroughput, NULL, &connectionEmission);
+		radiance += eyePathThroughput * connectionEmission;
+
 		if (!somethingWasHit) {
 			// Nothing was hit, check infinite lights (including sun)
 			const Spectrum throughput = eyePathThroughput * connectionThroughput;
@@ -208,32 +218,38 @@ void LightCPURenderThread::RenderFunc() {
 		// the Per-Screen-Normalization Buffers used by BiDir.
 		//----------------------------------------------------------------------
 
-		TraceEyePath(sampler, &sampleResults);
+		PathVolumeInfo eyeVolInfo;
+		TraceEyePath(sampler, eyeVolInfo, &sampleResults);
 
 		//----------------------------------------------------------------------
 		// Trace the light path
 		//----------------------------------------------------------------------
 
 		int depth = 1;
+		PathVolumeInfo volInfo;
 		while (depth <= engine->maxPathDepth) {
 			const u_int sampleOffset = sampleBootSize + sampleEyeStepSize * engine->maxPathDepth +
 				(depth - 1) * sampleLightStepSize;
 
 			RayHit nextEventRayHit;
 			BSDF bsdf;
-			Spectrum connectionThroughput;
-			if (scene->Intersect(device, true, sampler->GetSample(sampleOffset),
-					&nextEventRay, &nextEventRayHit, &bsdf, &connectionThroughput)) {
+			Spectrum connectionThroughput, connectEmission;
+			const bool hit = scene->Intersect(device, true, &volInfo, sampler->GetSample(sampleOffset),
+					&nextEventRay, &nextEventRayHit, &bsdf,
+					&connectionThroughput, NULL, &connectEmission);
+
+			if (hit) {
 				// Something was hit
 
 				lightPathFlux *= connectionThroughput;
+				lightPathFlux += connectEmission;
 
 				//--------------------------------------------------------------
 				// Try to connect the light path vertex with the eye
 				//--------------------------------------------------------------
 
 				ConnectToEye(sampler->GetSample(sampleOffset + 1),
-						bsdf, lensPoint, lightPathFlux, sampleResults);
+						bsdf, lensPoint, lightPathFlux, volInfo, &sampleResults);
 
 				if (depth >= engine->maxPathDepth)
 					break;
