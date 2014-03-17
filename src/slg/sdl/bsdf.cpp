@@ -176,8 +176,8 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 	const Spectrum result = material->Evaluate(hitPoint, localLightDir, localEyeDir,
 			event, directPdfW, reversePdfW);
 
-	// Adjoint BSDF
-	if (hitPoint.fromLight)
+	// Adjoint BSDF (not for volumes)
+	if (hitPoint.fromLight && !IsVolume())
 		return result * (absDotEyeDirNG / absDotLightDirNG);
 	else
 		return result;

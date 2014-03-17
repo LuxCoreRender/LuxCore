@@ -204,6 +204,12 @@ public:
 		if (isinf(c[2])) return true;
 		return false;
 	}
+	bool IsNeg() const {
+		if (c[0] < 0.f) return true;
+		if (c[1] < 0.f) return true;
+		if (c[2] < 0.f) return true;
+		return false;
+	}
 
 	// Color Public Data
 	float c[3];
