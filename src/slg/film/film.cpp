@@ -1571,7 +1571,7 @@ void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 	const luxrays::Spectrum &radiancePPN,
 	const float alpha) {
 	assert(!radiancePPN.IsInf() || !radiancePPN.IsNaN());
-	assert(!alpha.IsInf() || !alpha.IsNaN());
+	assert(!isinf(alpha) || !isnanf(alpha));
 
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
