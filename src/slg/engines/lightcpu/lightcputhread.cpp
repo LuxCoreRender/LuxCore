@@ -281,6 +281,9 @@ void LightCPURenderThread::RenderFunc() {
 				lightPathFlux *= bsdfSample;
 				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
+				// Update volume information
+				volInfo.Update(event, bsdf);
+
 				nextEventRay = Ray(bsdf.hitPoint.p, sampledDir);
 				++depth;
 			} else {
