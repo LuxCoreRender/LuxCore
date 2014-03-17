@@ -4,7 +4,7 @@ scene.camera.focaldistance = 4.0
 ################################################################################
 scene.volumes.vol_air.type = homogeneous
 scene.volumes.vol_air.absorption = 0.0 0.0 0.0
-scene.volumes.vol_air.scattering = 0.06 0.06 0.06
+scene.volumes.vol_air.scattering = 0.1 0.1 0.1
 scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
 scene.volumes.vol_air.multiscattering = 0
 scene.world.volume.default = vol_air

@@ -71,8 +71,10 @@ void BiDirCPURenderThread::ConnectVertices(
 					eyeDistance - epsilon);
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
-			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			Spectrum connectionThroughput, connectionEmission;
+			PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
+			if (!scene->Intersect(device, true, &volInfo, u0, &eyeRay, &eyeRayHit, &bsdfConn,
+					&connectionThroughput, NULL, &connectionEmission)) {
 				// Nothing was hit, the light path vertex is visible
 
 				if (eyeVertex.depth >= engine->rrDepth) {
@@ -101,6 +103,7 @@ void BiDirCPURenderThread::ConnectVertices(
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
+				eyeSampleResult->radiancePerPixelNormalized[0] += connectionEmission;
 				eyeSampleResult->radiancePerPixelNormalized[0] += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
 						connectionThroughput * lightBsdfEval * lightVertex.throughput;
 			}
@@ -129,10 +132,18 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &scrX, &scrY)) {
-			RayHit eyeRayHit;
+			// I have to flip the direction of the traced ray because
+			// the information inside PathVolumeInfo are about the path from
+			// the light toward the camera (i.e. ray.o would be in the wrong
+			// place).
+			Ray traceRay(lightVertex.bsdf.hitPoint.p, -eyeDir, eyeRay.mint, eyeRay.maxt);
+			RayHit traceRayHit;
+
 			BSDF bsdfConn;
-			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, true, u0, &eyeRay, &eyeRayHit, &bsdfConn, &connectionThroughput)) {
+			Spectrum connectionThroughput, connectionEmission;
+			PathVolumeInfo volInfo = lightVertex.volInfo; // I need to use a copy here
+			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+					&connectionThroughput, NULL, &connectionEmission)) {
 				// Nothing was hit, the light path vertex is visible
 
 				if (lightVertex.depth >= engine->rrDepth) {
@@ -155,7 +166,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
 					connectionThroughput * lightVertex.throughput * bsdfEval;
-				SampleResult::AddSampleResult(sampleResults, scrX, scrY, radiance);
+				SampleResult::AddSampleResult(sampleResults, scrX, scrY, radiance + connectionEmission);
 			}
 		}
 	}
@@ -193,8 +204,12 @@ void BiDirCPURenderThread::DirectLightSampling(
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
+				PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
 				// Check if the light source is visible
-				if (!scene->Intersect(device, false, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+				if (!scene->Intersect(device, false, &volInfo, u4, &shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
+					// I'm ignoring volume emission because it is not sampled in
+					// direct light step.
+
 					if (eyeVertex.depth >= engine->rrDepth) {
 						// Russian Roulette
 						const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
@@ -298,13 +313,18 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 			const unsigned int sampleOffset = sampleBootSize + (lightVertex.depth - 1) * sampleLightStepSize;
 
 			RayHit nextEventRayHit;
-			Spectrum connectionThroughput;
-			if (scene->Intersect(device, true, sampler->GetSample(sampleOffset),
-					&lightRay, &nextEventRayHit, &lightVertex.bsdf, &connectionThroughput)) {
+			Spectrum connectionThroughput, connectEmission;
+			const bool hit = scene->Intersect(device, true, &lightVertex.volInfo, sampler->GetSample(sampleOffset),
+					&lightRay, &nextEventRayHit, &lightVertex.bsdf,
+					&connectionThroughput, NULL, &connectEmission);
+
+			if (hit) {
 				// Something was hit
 
 				// Update the new light vertex
 				lightVertex.throughput *= connectionThroughput;
+				lightVertex.throughput += connectEmission;
+
 				// Infinite lights use MIS based on solid angle instead of area
 				if((lightVertex.depth > 1) || !light->IsEnvironmental())
 					lightVertex.dVCM *= MIS(nextEventRayHit.t * nextEventRayHit.t);
@@ -391,6 +411,9 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 		pathVertex->dVCM = MIS(1.f / bsdfPdfW);
 	}
 
+	// Update volume information
+	pathVertex->volInfo.Update(event, pathVertex->bsdf);
+
 	*nextEventRay = Ray(pathVertex->bsdf.hitPoint.p, sampledDir);
 
 	return true;
@@ -475,9 +498,13 @@ void BiDirCPURenderThread::RenderFunc() {
 				(eyeVertex.depth - 1) * sampleEyeStepSize;
 
 			RayHit eyeRayHit;
-			Spectrum connectionThroughput;
-			if (!scene->Intersect(device, false, sampler->GetSample(sampleOffset), &eyeRay,
-					&eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
+			Spectrum connectionThroughput, connectEmission;
+			const bool hit = scene->Intersect(device, false, &eyeVertex.volInfo, sampler->GetSample(sampleOffset),
+					&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
+					&connectionThroughput, NULL, &connectEmission);
+			eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
+
+			if (!hit) {
 				// Nothing was hit, look for infinitelight
 
 				// This is a trick, you can not have a BSDF of something that has
@@ -509,7 +536,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				break;
 			}
 
-			// Note: pass-through check is done inside SceneIntersect()
+			// Note: pass-through check is done inside Scene::Intersect()
 
 			//------------------------------------------------------------------
 			// Direct light sampling

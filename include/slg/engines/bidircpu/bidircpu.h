@@ -26,7 +26,7 @@
 #include "slg/sampler/sampler.h"
 #include "slg/film/film.h"
 #include "slg/sdl/bsdf.h"
-//#include "slg/sdl/volume.h"
+#include "slg/sdl/volume.h"
 
 namespace slg {
 
@@ -46,7 +46,7 @@ typedef struct {
 	float dVM; // MIS quantity used for vertex merging
 
 	// Volume rendering information
-	//PathVolumeInfo volInfo;
+	PathVolumeInfo volInfo;
 } PathVertexVM;
 
 class BiDirCPURenderEngine;
