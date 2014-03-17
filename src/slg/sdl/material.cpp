@@ -980,17 +980,17 @@ Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const float weight = relfected ? threshold : (1.f - threshold);
 
 	if (directPdfW)
-		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (weight * INV_PI));
+		*directPdfW = fabsf((hitPoint.fromLight ? CosTheta(localEyeDir) : CosTheta(localLightDir)) * (weight * INV_PI));
 
 	if (reversePdfW)
-		*reversePdfW = fabsf((hitPoint.fromLight ? localLightDir.z : localEyeDir.z) * (weight * INV_PI));
+		*reversePdfW = fabsf((hitPoint.fromLight ? CosTheta(localLightDir) : CosTheta(localEyeDir)) * (weight * INV_PI));
 
 	if (localLightDir.z * localEyeDir.z > 0.f) {
 		*event = DIFFUSE | REFLECT;
-		return r * INV_PI * localLightDir.z;
+		return r * INV_PI * fabsf(CosTheta(localLightDir));
 	} else {
 		*event = DIFFUSE | TRANSMIT;
-		return t * INV_PI * localLightDir.z;
+		return t * INV_PI * fabsf(CosTheta(localLightDir));
 	}
 }
 

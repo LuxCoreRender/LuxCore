@@ -176,7 +176,6 @@ Spectrum SchlickScatter::Evaluate(const HitPoint &hitPoint,
 			r.c[i] = 1.f;
 	}
 
-
 	const Spectrum gValue = g->GetSpectrumValue(hitPoint).Clamp(-1.f, 1.f);
 	const Spectrum k = gValue * (Spectrum(1.55f) - .55f * gValue * gValue);
 
@@ -312,7 +311,7 @@ float ClearVolume::Scatter(const Ray &ray, const float u,
 
 	// Apply volume emission
 	if (volumeEmissionTex)
-		*connectionEmission += transmittance * distance * volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp();
+		*connectionEmission += *connectionThroughput * distance * volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp();
 	
 	return -1.f;
 }
@@ -429,7 +428,7 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 
 	// Apply volume emission
 	if (volumeEmissionTex)
-		*connectionEmission += transmittance * distance * volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp();
+		*connectionEmission += *connectionThroughput * distance * volumeEmissionTex->GetSpectrumValue(hitPoint).Clamp();
 
 	return scatter ? (ray.mint + distance) : -1.f;
 }
@@ -632,7 +631,7 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
 
 	// Accumulate volume emission
 	if (volumeEmissionTex)
-		*connectionEmission += transmittance * emission;
+		*connectionEmission += *connectionThroughput * emission;
 
 	return t;
 }
