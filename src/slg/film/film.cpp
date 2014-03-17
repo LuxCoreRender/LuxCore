@@ -1570,6 +1570,9 @@ void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 	const float filmX, const float filmY,
 	const luxrays::Spectrum &radiancePPN,
 	const float alpha) {
+	assert(!radiancePPN.IsInf() || !radiancePPN.IsNaN());
+	assert(!alpha.IsInf() || !alpha.IsNaN());
+
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
 
@@ -1583,6 +1586,8 @@ void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 	const float filmX, const float filmY,
 	const luxrays::Spectrum &radiancePSN) {
+	assert(!radiancePSN.IsInf() || !radiancePSN.IsNaN());
+
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
 
