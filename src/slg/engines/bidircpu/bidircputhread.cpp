@@ -71,10 +71,10 @@ void BiDirCPURenderThread::ConnectVertices(
 					eyeDistance - epsilon);
 			RayHit eyeRayHit;
 			BSDF bsdfConn;
-			Spectrum connectionThroughput, connectionEmission;
+			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
 			if (!scene->Intersect(device, true, &volInfo, u0, &eyeRay, &eyeRayHit, &bsdfConn,
-					&connectionThroughput, NULL, &connectionEmission)) {
+					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				if (eyeVertex.depth >= engine->rrDepth) {
@@ -103,7 +103,6 @@ void BiDirCPURenderThread::ConnectVertices(
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
-				//eyeSampleResult->radiancePerPixelNormalized[0] += connectionEmission;
 				eyeSampleResult->radiancePerPixelNormalized[0] += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
 						connectionThroughput * lightBsdfEval * lightVertex.throughput;
 			}
@@ -140,10 +139,10 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 			RayHit traceRayHit;
 
 			BSDF bsdfConn;
-			Spectrum connectionThroughput, connectionEmission;
+			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = lightVertex.volInfo; // I need to use a copy here
 			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
-					&connectionThroughput, NULL, &connectionEmission)) {
+					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
 				if (lightVertex.depth >= engine->rrDepth) {
@@ -166,7 +165,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
 					connectionThroughput * lightVertex.throughput * bsdfEval;
-				SampleResult::AddSampleResult(sampleResults, scrX, scrY, radiance /*+ connectionEmission*/);
+				SampleResult::AddSampleResult(sampleResults, scrX, scrY, radiance);
 			}
 		}
 	}
@@ -310,20 +309,19 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 
 		lightVertex.depth = 1;
 		while (lightVertex.depth <= engine->maxLightPathDepth) {
-			const unsigned int sampleOffset = sampleBootSize + (lightVertex.depth - 1) * sampleLightStepSize;
+			const u_int sampleOffset = sampleBootSize + (lightVertex.depth - 1) * sampleLightStepSize;
 
 			RayHit nextEventRayHit;
-			Spectrum connectionThroughput, connectEmission;
+			Spectrum connectionThroughput;
 			const bool hit = scene->Intersect(device, true, &lightVertex.volInfo, sampler->GetSample(sampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf,
-					&connectionThroughput, NULL, &connectEmission);
+					&connectionThroughput);
 
 			if (hit) {
 				// Something was hit
 
 				// Update the new light vertex
 				lightVertex.throughput *= connectionThroughput;
-				//lightVertex.throughput += connectEmission;
 
 				// Infinite lights use MIS based on solid angle instead of area
 				if((lightVertex.depth > 1) || !light->IsEnvironmental())
@@ -337,9 +335,9 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 				if (!lightVertex.bsdf.IsDelta()) {
 					lightPathVertices.push_back(lightVertex);
 
-					//------------------------------------------------------
+					//----------------------------------------------------------
 					// Try to connect the light path vertex with the eye
-					//------------------------------------------------------
+					//----------------------------------------------------------
 
 					ConnectToEye(lightVertex, sampler->GetSample(sampleOffset + 1),
 							lensPoint, sampleResults);
@@ -348,9 +346,9 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 				if (lightVertex.depth >= engine->maxLightPathDepth)
 					break;
 
-				//----------------------------------------------------------
+				//--------------------------------------------------------------
 				// Build the next vertex path ray
-				//----------------------------------------------------------
+				//--------------------------------------------------------------
 
 				if (!Bounce(sampler, sampleOffset + 2, &lightVertex, &lightRay))
 					break;
@@ -431,15 +429,15 @@ void BiDirCPURenderThread::RenderFunc() {
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
-	const unsigned int filmWidth = film->GetWidth();
-	const unsigned int filmHeight = film->GetHeight();
+	const u_int filmWidth = film->GetWidth();
+	const u_int filmHeight = film->GetHeight();
 	pixelCount = filmWidth * filmHeight;
 
 	// Setup the sampler
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
-	const unsigned int sampleSize = 
+	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
@@ -484,7 +482,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			sampler->GetSample(10), sampler->GetSample(11));
 
 		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
-		eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
+		eyeVertex.throughput = Spectrum(1.f);
 		const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
 		const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 			scene->camera->GetPixelArea());
@@ -494,7 +492,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 		eyeVertex.depth = 1;
 		while (eyeVertex.depth <= engine->maxEyePathDepth) {
-			const unsigned int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
+			const u_int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
 				(eyeVertex.depth - 1) * sampleEyeStepSize;
 
 			RayHit eyeRayHit;
@@ -503,7 +501,9 @@ void BiDirCPURenderThread::RenderFunc() {
 					&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 					&connectionThroughput, NULL, &connectEmission);
-			//eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
+			// I account for volume emission only with path tracing (i.e. here and
+			// not in any other place)
+			eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
 
 			if (!hit) {
 				// Nothing was hit, look for infinitelight

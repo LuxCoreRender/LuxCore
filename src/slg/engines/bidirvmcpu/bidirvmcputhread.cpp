@@ -46,13 +46,13 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
-	const unsigned int filmWidth = film->GetWidth();
-	const unsigned int filmHeight = film->GetHeight();
+	const u_int filmWidth = film->GetWidth();
+	const u_int filmHeight = film->GetHeight();
 	pixelCount = filmWidth * filmHeight;
 
 	// Setup the samplers
 	vector<Sampler *> samplers(engine->lightPathsCount, NULL);
-	const unsigned int sampleSize = 
+	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
@@ -131,7 +131,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				sampler->GetSample(9), sampler->GetSample(10));
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
-			eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);
+			eyeVertex.throughput = Spectrum(1.f);
 			const float cosAtCamera = Dot(scene->camera->GetDir(), eyeRay.d);
 			const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 				scene->camera->GetPixelArea());
@@ -141,7 +141,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 			eyeVertex.depth = 1;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
-				const unsigned int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
+				const u_int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
 					(eyeVertex.depth - 1) * sampleEyeStepSize;
 
 				RayHit eyeRayHit;
@@ -150,7 +150,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 						&connectionThroughput, NULL, &connectEmission);
-				//eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
+				// I account for volume emission only with path tracing (i.e. here and
+				// not in any other place)
+				eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
 
 				if (!hit) {
 					// Nothing was hit, look for infinitelight
