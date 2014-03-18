@@ -499,7 +499,8 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput, connectEmission;
-			const bool hit = scene->Intersect(device, false, &eyeVertex.volInfo, sampler->GetSample(sampleOffset),
+			const bool hit = scene->Intersect(device, false,
+					&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 					&connectionThroughput, NULL, &connectEmission);
 			eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;

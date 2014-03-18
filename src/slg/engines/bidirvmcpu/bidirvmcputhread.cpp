@@ -145,9 +145,14 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					(eyeVertex.depth - 1) * sampleEyeStepSize;
 
 				RayHit eyeRayHit;
-				Spectrum connectionThroughput;
-				if (!scene->Intersect(device, false, sampler->GetSample(sampleOffset), &eyeRay,
-						&eyeRayHit, &eyeVertex.bsdf, &connectionThroughput)) {
+				Spectrum connectionThroughput, connectEmission;
+				const bool hit = scene->Intersect(device, false,
+						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
+						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
+						&connectionThroughput, NULL, &connectEmission);
+				eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
+
+				if (!hit) {
 					// Nothing was hit, look for infinitelight
 
 					// This is a trick, you can not have a BSDF of something that has
@@ -175,7 +180,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				if (eyeVertex.bsdf.IsLightSource())
 					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
 
-				// Note: pass-through check is done inside SceneIntersect()
+				// Note: pass-through check is done inside Scene::Intersect()
 
 				//--------------------------------------------------------------
 				// Direct light sampling
