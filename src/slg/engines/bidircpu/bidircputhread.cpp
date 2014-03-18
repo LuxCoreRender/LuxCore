@@ -103,7 +103,7 @@ void BiDirCPURenderThread::ConnectVertices(
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
-				eyeSampleResult->radiancePerPixelNormalized[0] += connectionEmission;
+				//eyeSampleResult->radiancePerPixelNormalized[0] += connectionEmission;
 				eyeSampleResult->radiancePerPixelNormalized[0] += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
 						connectionThroughput * lightBsdfEval * lightVertex.throughput;
 			}
@@ -166,7 +166,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 				const Spectrum radiance = (misWeight * fluxToRadianceFactor) *
 					connectionThroughput * lightVertex.throughput * bsdfEval;
-				SampleResult::AddSampleResult(sampleResults, scrX, scrY, radiance + connectionEmission);
+				SampleResult::AddSampleResult(sampleResults, scrX, scrY, radiance /*+ connectionEmission*/);
 			}
 		}
 	}
@@ -323,7 +323,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 
 				// Update the new light vertex
 				lightVertex.throughput *= connectionThroughput;
-				lightVertex.throughput += connectEmission;
+				//lightVertex.throughput += connectEmission;
 
 				// Infinite lights use MIS based on solid angle instead of area
 				if((lightVertex.depth > 1) || !light->IsEnvironmental())
@@ -503,7 +503,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 					&connectionThroughput, NULL, &connectEmission);
-			eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
+			//eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
 
 			if (!hit) {
 				// Nothing was hit, look for infinitelight

@@ -150,7 +150,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 						&connectionThroughput, NULL, &connectEmission);
-				eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
+				//eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
 
 				if (!hit) {
 					// Nothing was hit, look for infinitelight
