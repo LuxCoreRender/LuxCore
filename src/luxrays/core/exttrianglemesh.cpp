@@ -176,7 +176,7 @@ static int ColorCB(p_ply_argument argument) {
 	ply_get_argument_element(argument, NULL, &colIndex);
 
 	// Check the type of value used
-	p_ply_property property;
+	p_ply_property property = NULL;
 	ply_get_argument_property(argument, &property, NULL, NULL);
 	e_ply_type dataType;
 	ply_get_property_info(property, NULL, &dataType, NULL, NULL);
@@ -217,7 +217,7 @@ static int AlphaCB(p_ply_argument argument) {
 	ply_get_argument_element(argument, NULL, &alphaIndex);
 
 	// Check the type of value used
-	p_ply_property property;
+	p_ply_property property = NULL;
 	ply_get_argument_property(argument, &property, NULL, NULL);
 	e_ply_type dataType;
 	ply_get_property_info(property, NULL, &dataType, NULL, NULL);
