@@ -1645,9 +1645,18 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 			if (t > 0.f) {
 				// There was a volume scatter event
+
+				// I have to set RayHit fields even if there wasn't a real
+				// ray hit
+				rayHit->t = t;
+				// This is a trick in order to have RayHit::Miss() to return
+				// false. I assume 0xfffffffeu will trigger a memory fault if
+				// used (and the bug will be noticed)
+				rayHit->meshIndex = 0xfffffffeu;
+
 				bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
 				volInfo->SetScatteredStart(true);
-
+				
 				return true;
 			}
 		}
