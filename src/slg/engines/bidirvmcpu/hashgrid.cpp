@@ -130,12 +130,16 @@ void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 	if (distance2 <= radius2) {
 		float eyeBsdfPdfW, eyeBsdfRevPdfW;
 		BSDFEvent eyeEvent;
-		/* Trick to have proper shading normal adaption */
-		/* lightVertex can't be used directly because of texture variations */
-		const Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(lightVertex->bsdf.hitPoint.fixedDir,
-				&eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW) / AbsDot(lightVertex->bsdf.hitPoint.fixedDir, eyeVertex.bsdf.hitPoint.geometryN);
+		// I need to remove the dotN term from the result (see below)
+		Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(lightVertex->bsdf.hitPoint.fixedDir,
+				&eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW);
 		if(eyeBsdfEval.Black())
 			return;
+		
+		// Volume BSDF doesn't multiply BSDF::Evaluate() by dotN so I need
+		// to remove the term only if it isn't a Volume
+		if (!eyeVertex.bsdf.IsVolume())
+			eyeBsdfEval /= AbsDot(lightVertex->bsdf.hitPoint.fixedDir, eyeVertex.bsdf.hitPoint.geometryN);
 
 		BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)thread->renderEngine;
 		if (eyeVertex.depth >= engine->rrDepth) {
