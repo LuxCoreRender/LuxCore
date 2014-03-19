@@ -166,7 +166,7 @@ static void PrintHelpAndSettings() {
 	glColor3f(1.0f, 0.5f, 0.f);
 	int offset = 45;
 
-	double minPerf = 0.0;
+	double minPerf = numeric_limits<double>::infinity();
 	double totalPerf = 0.0;
 	for (u_int i = 0; i < deviceNames.GetSize(); ++i) {
 		const string deviceName = deviceNames.Get<string>(i);
