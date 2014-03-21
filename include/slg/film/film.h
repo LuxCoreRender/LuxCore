@@ -291,7 +291,7 @@ public:
 		firstPathVertex = true;
 		firstPathVertexEvent = NONE;
 	}
-	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type); }
+	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
 
 	void AddEmission(const u_int lightID, const luxrays::Spectrum &radiance);
 	void AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
