@@ -40,48 +40,43 @@ void BiDirCPURenderThread::ConnectVertices(
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	Vector eyeDir(lightVertex.bsdf.hitPoint.p - eyeVertex.bsdf.hitPoint.p);
-	const float eyeDistance2 = eyeDir.LengthSquared();
-	const float eyeDistance = sqrtf(eyeDistance2);
-	eyeDir /= eyeDistance;
+	Vector p2pDir(lightVertex.bsdf.hitPoint.p - eyeVertex.bsdf.hitPoint.p);
+	const float p2pDistance2 = p2pDir.LengthSquared();
+	const float p2pDistance = sqrtf(p2pDistance2);
+	p2pDir /= p2pDistance;
 
 	// Check eye vertex BSDF
 	float eyeBsdfPdfW, eyeBsdfRevPdfW;
 	BSDFEvent eyeEvent;
-	Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(eyeDir, &eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW);
+	const Spectrum eyeBsdfEval = eyeVertex.bsdf.Evaluate(p2pDir, &eyeEvent, &eyeBsdfPdfW, &eyeBsdfRevPdfW);
 
 	if (!eyeBsdfEval.Black()) {
 		// Check light vertex BSDF
 		float lightBsdfPdfW, lightBsdfRevPdfW;
 		BSDFEvent lightEvent;
-		Spectrum lightBsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &lightEvent, &lightBsdfPdfW, &lightBsdfRevPdfW);
+		const Spectrum lightBsdfEval = lightVertex.bsdf.Evaluate(-p2pDir, &lightEvent, &lightBsdfPdfW, &lightBsdfRevPdfW);
 
 		if (!lightBsdfEval.Black()) {
-			// Check the 2 surfaces can see each other
-			const float cosThetaAtCamera = Dot(eyeVertex.bsdf.hitPoint.shadeN, eyeDir);
-			const float cosThetaAtLight = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
+			// Check if the 2 surfaces can see each other
+			const float cosThetaAtCamera = Dot(eyeVertex.bsdf.hitPoint.shadeN, p2pDir);
+			const float cosThetaAtLight = Dot(lightVertex.bsdf.hitPoint.shadeN, -p2pDir);
 			// Was:
-			//  const float geometryTerm = cosThetaAtLight * cosThetaAtLight / eyeDistance2;
+			//  const float geometryTerm = cosThetaAtCamera * cosThetaAtLight / eyeDistance2;
 			//
 			// but now BSDF::Evaluate() follows LuxRender habit to return the
 			// result multiplied by cosThetaAtLight
-			//
-			// Volume BSDF doesn't multiply BSDF::Evaluate() by cosThetaAtLight so I need
-			// to remove the term only if it isn't a Volume
-			const float geometryTerm = (lightVertex.bsdf.IsVolume() ? 1.f : cosThetaAtLight * cosThetaAtLight) / eyeDistance2;
-			if (geometryTerm <= 0.f)
-				return;
+			const float geometryTerm = 1.f / p2pDistance2;
 
 			// Trace  ray between the two vertices
-			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(eyeDistance));
-			Ray eyeRay(eyeVertex.bsdf.hitPoint.p, eyeDir,
+			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(p2pDistance));
+			Ray p2pRay(eyeVertex.bsdf.hitPoint.p, p2pDir,
 					epsilon,
-					eyeDistance - epsilon);
-			RayHit eyeRayHit;
+					p2pDistance - epsilon);
+			RayHit p2pRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
-			if (!scene->Intersect(device, true, &volInfo, u0, &eyeRay, &eyeRayHit, &bsdfConn,
+			if (!scene->Intersect(device, true, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -100,13 +95,13 @@ void BiDirCPURenderThread::ConnectVertices(
 				}
 
 				// Convert pdfs to area pdf
-				const float eyeBsdfPdfA = PdfWtoA(eyeBsdfPdfW, eyeDistance, cosThetaAtLight);
-				const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  eyeDistance, cosThetaAtCamera);
+				const float eyeBsdfPdfA = PdfWtoA(eyeBsdfPdfW, p2pDistance, cosThetaAtLight);
+				const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  p2pDistance, cosThetaAtCamera);
 
 				// MIS weights
-				const float lightWeight = eyeBsdfPdfA *
+				const float lightWeight = MIS(eyeBsdfPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(lightBsdfRevPdfW));
-				const float eyeWeight = lightBsdfPdfA *
+				const float eyeWeight = MIS(lightBsdfPdfA) *
 					(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(eyeBsdfRevPdfW));
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
@@ -129,7 +124,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 
 	float bsdfPdfW, bsdfRevPdfW;
 	BSDFEvent event;
-	Spectrum bsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &event, &bsdfPdfW, &bsdfRevPdfW);
+	const Spectrum bsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 	if (!bsdfEval.Black()) {
 		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
@@ -170,12 +165,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 				//
 				// but now BSDF::Evaluate() follows LuxRender habit to return the
 				// result multiplied by cosThetaToLight
-				//
-				// Volume BSDF doesn't multiply BSDF::Evaluate() by cosThetaToLight so I need
-				// to remove the term only if it isn't a Volume
-				const float fluxToRadianceFactor = lightVertex.bsdf.IsVolume() ?
-					cameraPdfA :
-					cameraPdfW / (eyeDistance * eyeDistance);
+				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
 				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
@@ -204,14 +194,14 @@ void BiDirCPURenderThread::DirectLightSampling(
 
 		Vector lightRayDir;
 		float distance, directPdfW, emissionPdfW, cosThetaAtLight;
-		Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint.p,
+		const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf.hitPoint.p,
 				u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
 				&cosThetaAtLight);
 
 		if (!lightRadiance.Black()) {
 			BSDFEvent event;
 			float bsdfPdfW, bsdfRevPdfW;
-			Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
+			const Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 			if (!bsdfEval.Black()) {
 				const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(distance));
@@ -248,10 +238,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 					//
 					// but now BSDF::Evaluate() follows LuxRender habit to return the
 					// result multiplied by cosThetaToLight
-					//
-					// Volume BSDF doesn't multiply BSDF::Evaluate() by cosThetaToLight so I need
-					// to remove the term only if it isn't a Volume
-					const float factor = (eyeVertex.bsdf.IsVolume() ? 1.f : cosThetaAtLight * cosThetaAtLight) / directLightSamplingPdfW;
+					const float factor = 1.f / directLightSamplingPdfW;
 
 					*radiance += (misWeight * factor) * eyeVertex.throughput * connectionThroughput * lightRadiance * bsdfEval;
 				}
@@ -418,7 +405,9 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 			return false;
 	}
 
-	// Was: pathVertex->throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
+	// Was:
+	//  pathVertex->throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
+	//
 	// but now BSDF::Sample() follows LuxRender habit to return the
 	// result multiplied by cosSampledDir / bsdfPdfW
 	pathVertex->throughput *= bsdfSample;
@@ -427,7 +416,12 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 	// New MIS weights
 	if (event & SPECULAR) {
 		pathVertex->dVCM = 0.f;
-		const float factor = MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
+		// Was:
+		//  const float factor = MIS(cosSampledDir / bsdfPdfW) * MIS(bsdfRevPdfW);
+		//
+		// but bsdfPdfW = bsdfRevPdfW for specular material.
+		assert (bsdfPdfW == bsdfRevPdfW);
+		const float factor = MIS(cosSampledDir);
 		pathVertex->dVC *= factor;
 		pathVertex->dVM *= factor;
 	} else {
@@ -495,7 +489,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		TraceLightPath(sampler, lensPoint, lightPathVertices, sampleResults);
-		
+
 		//----------------------------------------------------------------------
 		// Trace eye path
 		//----------------------------------------------------------------------
