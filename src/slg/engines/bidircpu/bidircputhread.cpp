@@ -60,7 +60,15 @@ void BiDirCPURenderThread::ConnectVertices(
 			// Check the 2 surfaces can see each other
 			const float cosThetaAtCamera = Dot(eyeVertex.bsdf.hitPoint.shadeN, eyeDir);
 			const float cosThetaAtLight = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
-			const float geometryTerm = 1.f / eyeDistance2;
+			// Was:
+			//  const float geometryTerm = cosThetaAtLight * cosThetaAtLight / eyeDistance2;
+			//
+			// but now BSDF::Evaluate() follows LuxRender habit to return the
+			// result multiplied by cosThetaAtLight
+			//
+			// Volume BSDF doesn't multiply BSDF::Evaluate() by cosThetaAtLight so I need
+			// to remove the term only if it isn't a Volume
+			const float geometryTerm = (lightVertex.bsdf.IsVolume() ? 1.f : cosThetaAtLight * cosThetaAtLight) / eyeDistance2;
 			if (geometryTerm <= 0.f)
 				return;
 
@@ -157,7 +165,17 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 				const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera *
 					scene->camera->GetPixelArea());
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+				// Was:
+				//  const float fluxToRadianceFactor = cameraPdfA;
+				//
+				// but now BSDF::Evaluate() follows LuxRender habit to return the
+				// result multiplied by cosThetaToLight
+				//
+				// Volume BSDF doesn't multiply BSDF::Evaluate() by cosThetaToLight so I need
+				// to remove the term only if it isn't a Volume
+				const float fluxToRadianceFactor = lightVertex.bsdf.IsVolume() ?
+					cameraPdfA :
+					cameraPdfW / (eyeDistance * eyeDistance);
 
 				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
@@ -225,7 +243,15 @@ void BiDirCPURenderThread::DirectLightSampling(
 						(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
 					const float misWeight = 1.f / (weightLight + 1.f + weightCamera);
 
-					const float factor = 1.f / directLightSamplingPdfW;
+					// Was:
+					//  const float factor = cosThetaToLight / directLightSamplingPdfW;
+					//
+					// but now BSDF::Evaluate() follows LuxRender habit to return the
+					// result multiplied by cosThetaToLight
+					//
+					// Volume BSDF doesn't multiply BSDF::Evaluate() by cosThetaToLight so I need
+					// to remove the term only if it isn't a Volume
+					const float factor = (eyeVertex.bsdf.IsVolume() ? 1.f : cosThetaAtLight * cosThetaAtLight) / directLightSamplingPdfW;
 
 					*radiance += (misWeight * factor) * eyeVertex.throughput * connectionThroughput * lightRadiance * bsdfEval;
 				}
@@ -392,6 +418,9 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 			return false;
 	}
 
+	// Was: pathVertex->throughput *= bsdfSample * (cosSampledDir / bsdfPdfW);
+	// but now BSDF::Sample() follows LuxRender habit to return the
+	// result multiplied by cosSampledDir / bsdfPdfW
 	pathVertex->throughput *= bsdfSample;
 	assert (!pathVertex->throughput.IsNaN() && !pathVertex->throughput.IsInf());
 
