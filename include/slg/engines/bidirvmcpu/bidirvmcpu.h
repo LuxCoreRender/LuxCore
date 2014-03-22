@@ -36,10 +36,14 @@ public:
 	HashGrid() { }
 	~HashGrid() { }
 
+	u_int GetVertexCount() const { return vertexCount; }
+
 	void Build(vector<vector<PathVertexVM> > &pathsVertices, const float radius);
 
 	void Process(const BiDirVMCPURenderThread *thread,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
+
+	//void PrintStatistics() const;
 
 private:
 	void Process(const BiDirVMCPURenderThread *thread,
@@ -80,6 +84,11 @@ private:
 
 	vector<const PathVertexVM *> lightVertices;
     vector<int> cellEnds;
+
+	// Statistics
+	//mutable u_int mergeHitsV2V; // merge Volume with Volume path vertex
+	//mutable u_int mergeHitsV2S; // merge Volume with Surface path vertex
+	//mutable u_int mergeHitsS2S; // merge Surface with Surface path vertex
 };
 
 class BiDirVMCPURenderThread : public BiDirCPURenderThread {

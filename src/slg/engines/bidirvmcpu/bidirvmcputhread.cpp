@@ -112,6 +112,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 		hashGrid.Build(lightPathsVertices, radius);
 
+		//cout << "==========================================\n";
+		//cout << "Iteration: " << iteration << "  Paths: " << engine->lightPathsCount << "  Light path vertices: "<< hashGrid.GetVertexCount() <<"\n";
+
 		//----------------------------------------------------------------------
 		// Trace all eye paths
 		//----------------------------------------------------------------------
@@ -238,6 +241,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		// Work around Windows bad scheduling
 		renderThread->yield();
 #endif
+
+		//hashGrid.PrintStatistics();
 	}
 
 	for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex)

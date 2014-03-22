@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "boost/format.hpp"
+
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 
 using namespace std;
@@ -23,6 +25,11 @@ using namespace luxrays;
 using namespace slg;
 
 void HashGrid::Build(vector<vector<PathVertexVM> > &pathsVertices, const float radius) {
+	// Reset statistic counters
+	//mergeHitsV2V = 0;
+	//mergeHitsV2S = 0;
+	//mergeHitsS2S = 0;
+
 	radius2 = radius * radius;
 
 	// Build the vertices bounding box
@@ -158,5 +165,30 @@ void HashGrid::Process(const BiDirVMCPURenderThread *thread,
 
 		*radiance += (thread->vmNormalization * misWeight) *
 				eyeVertex.throughput * eyeBsdfEval * lightVertex->throughput;
+
+		// Statistics
+		/*if (eyeVertex.bsdf.IsVolume()) {
+			if (lightVertex->bsdf.IsVolume())
+				++mergeHitsV2V;
+			else
+				++mergeHitsV2S;
+		} else {
+			if (lightVertex->bsdf.IsVolume())
+				++mergeHitsV2S;
+			else
+				++mergeHitsS2S;			
+		}*/
 	}
 }
+
+/*void HashGrid::PrintStatistics() const {
+	const double mergeTotal = mergeHitsV2V + mergeHitsV2S + mergeHitsS2S;
+
+	if (mergeTotal == 0.f)
+		cout << "Volume2Volume = 0  Volume2Surface = 0  Volume2Volume = 0\n";
+	else
+		cout << boost::format("Volume2Volume = %d (%.2f%%)  Volume2Surface = %d (%.2f%%)  Surface2Surface = %d (%.2f%%)") %
+				mergeHitsV2V % (100.0 * mergeHitsV2V / mergeTotal) %
+				mergeHitsV2S % (100.0 * mergeHitsV2S / mergeTotal) %
+				mergeHitsS2S % (100.0 * mergeHitsS2S / mergeTotal) << "\n";
+}*/
