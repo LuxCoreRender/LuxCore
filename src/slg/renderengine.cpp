@@ -144,7 +144,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight());
 
 	if (contextStopped) {
-		// Set the LuxRays SataSet
+		// Set the LuxRays DataSet
 		ctx->SetDataSet(renderConfig->scene->dataSet);
 
 		// Restart all intersection devices
@@ -349,11 +349,11 @@ CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mute
 	intersectionDevices = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
-		// Disable the support for hybrid rendering in order to not waste resource
+		// Disable the support for hybrid rendering in order to not waste resources
 		intersectionDevices[i]->SetDataParallelSupport(false);
 	}
 
-	// Set the LuxRays SataSet
+	// Set the LuxRays DataSet
 	ctx->SetDataSet(renderConfig->scene->dataSet);
 
 	//--------------------------------------------------------------------------
@@ -446,7 +446,7 @@ void CPUNoTileRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
-	// Merge the all thread films
+	// Merge all thread films
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		if (!renderThreads[i])
 			continue;
@@ -679,7 +679,7 @@ void CPUTileRenderEngine::UpdateCounters() {
 	}
 	raysCount = totalCount;
 
-	// Update the time only until when the rendering is not finished
+	// Update the time only while rendering is not finished
 	if (!tileRepository->done)
 		elapsedTime = WallClockTime() - startTime;
 }
@@ -833,7 +833,7 @@ void HybridRenderThread::StartRenderThread() {
 
 	samplesCount = 0.0;
 
-	// Create the thread for the rendering
+	// Create the thread for rendering
 	renderThread = AllocRenderThread();
 }
 
@@ -861,7 +861,7 @@ size_t HybridRenderThread::PushRay(const Ray &ray) {
 			// I have to allocate a new RayBuffer
 			currentRayBufferToSend = device->NewRayBuffer();
 		} else {
-			// I can reuse one in queue
+			// I can reuse one in the queue
 			currentRayBufferToSend = freeRayBuffers.front();
 			freeRayBuffers.pop_front();
 		}
@@ -881,13 +881,13 @@ size_t HybridRenderThread::PushRay(const Ray &ray) {
 }
 
 void HybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
-	// Check if I have to get  the results out of intersection device
+	// Check if I have to get the results out of intersection device
 	if (!currentReiceivedRayBuffer) {
 		currentReiceivedRayBuffer = device->PopRayBuffer(threadIndex);
 		--pendingRayBuffers;
 		currentReiceivedRayBufferIndex = 0;
 	} else if (currentReiceivedRayBufferIndex >= currentReiceivedRayBuffer->GetSize()) {
-		// All the results in the RayBuffer has been elaborated
+		// All the results in the RayBuffer have been processed
 		currentReiceivedRayBuffer->Reset();
 		freeRayBuffers.push_back(currentReiceivedRayBuffer);
 
@@ -923,7 +923,7 @@ void HybridRenderThread::RenderFunc() {
 		u_int generateIndex = 0;
 		u_int collectIndex = 0;
 		while (!boost::this_thread::interruption_requested()) {
-			// Generate new rays up to the point to have 3 pending buffers
+			// Generate new rays until there are 3 pending buffers
 			while (pendingRayBuffers < 3) {
 				states[generateIndex]->GenerateRays(this);
 
@@ -945,7 +945,7 @@ void HybridRenderThread::RenderFunc() {
 			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] collectIndex: " << collectIndex);
 			//SLG_LOG("[HybridRenderThread::" << threadIndex << "] pendingRayBuffers: " << pendingRayBuffers);
 
-			// Collect rays up to the point to have only 1 pending buffer
+			// Collect rays until there is only 1 pending buffer
 			while (pendingRayBuffers > 1) {
 				samplesCount += states[collectIndex]->CollectResults(this);
 
@@ -1014,7 +1014,7 @@ HybridRenderEngine::HybridRenderEngine(const RenderConfig *rcfg, Film *flm,
 	}
 	const unsigned int renderThreadCount = boost::thread::hardware_concurrency();
 	if (selectedDeviceDescs.size() == 1) {
-		// Only one intersection device, use directly the device
+		// Only one intersection device, use the device directly
 		ctx->AddIntersectionDevices(selectedDeviceDescs);
 	} else {
 		// Multiple intersection devices, use a virtual device
@@ -1074,7 +1074,7 @@ void HybridRenderEngine::UpdateFilmLockLess() {
 
 	film->Reset();
 
-	// Merge the all thread films
+	// Merge all thread films
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
 		if (renderThreads[i]->threadFilm)
 			film->AddFilm(*(renderThreads[i]->threadFilm));
