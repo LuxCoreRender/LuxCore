@@ -38,6 +38,7 @@
 #define	_LUXCORE_H
 
 #include <cstddef>
+#include <stdexcept>
 #include <string>
 
 #include <luxcore/cfg.h>

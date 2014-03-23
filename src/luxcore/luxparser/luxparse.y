@@ -792,7 +792,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (namedCoordinateSystems.count(name))
 		currentTransform = namedCoordinateSystems[name];
 	else {
-		throw runtime_error("Coordinate system '" + name + "' unknown");
+		throw std::runtime_error("Coordinate system '" + name + "' unknown");
 	}
 }
 | EXTERIOR STRING
@@ -1034,7 +1034,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	// Replace any "." in the name with 2x"__"
 	boost::replace_all(name, ".", "__");
 	if (namedMaterials.count(name))
-		throw runtime_error("Named material '" + name + "' already defined");
+		throw std::runtime_error("Named material '" + name + "' already defined");
 
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -1218,7 +1218,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 			throw std::runtime_error("Missing P parameter in trianglemesh: " + objName);
 		Property pointsProp = props.Get("P");
 		if ((pointsProp.GetSize() == 0) || (pointsProp.GetSize() % 3 != 0))
-			throw runtime_error("Wrong trianglemesh point list length: " + objName);
+			throw std::runtime_error("Wrong trianglemesh point list length: " + objName);
 		// Copy all vertices
 		Property points = pointsProp.Renamed(prefix + ".vertices");
 
@@ -1226,7 +1226,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 			throw std::runtime_error("Missing indices parameter in trianglemesh: " + objName);
 		Property indicesProp = props.Get("indices");
 		if ((indicesProp.GetSize() == 0) || (indicesProp.GetSize() % 3 != 0))
-			throw runtime_error("Wrong trianglemesh indices list length: " + objName);
+			throw std::runtime_error("Wrong trianglemesh indices list length: " + objName);
 		// Copy all indices
 		Property faces = indicesProp.Renamed(prefix + ".faces");
 
