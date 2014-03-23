@@ -560,7 +560,7 @@ void RenderConfig::Parse(const Properties &props) {
 	renderConfig->Parse(props);
 }
 
-void RenderConfig::Delete(const string prefix) {
+void RenderConfig::Delete(const string &prefix) {
 	renderConfig->Delete(prefix);
 }
 
