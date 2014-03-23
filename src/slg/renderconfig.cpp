@@ -432,7 +432,7 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 				film->AddChannel(Film::MATERIAL_ID);
 				filmOutputs.Add(FilmOutputs::MATERIAL_ID, fileName);
 			} else
-				throw runtime_error("Material ID image can be saved only in no HDR formats: " + outputName);
+				throw runtime_error("Material ID image can be saved only in non HDR formats: " + outputName);
 		} else if (type == "DIRECT_DIFFUSE") {
 			if (hdrImage) {
 				film->AddChannel(Film::DIRECT_DIFFUSE);
