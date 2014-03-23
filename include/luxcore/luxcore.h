@@ -571,7 +571,7 @@ public:
 	 * 
 	 * \param prefix is the prefix of the Properties to delete.
 	 */
-	void Delete(const std::string prefix);
+	void Delete(const std::string &prefix);
 
 	/*!
 	 * \brief Return the configured Film width, height, sub-region width, height,
