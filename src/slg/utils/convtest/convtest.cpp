@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include <cstdio>
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 
 #include "slg/utils/convtest/convtest.h"

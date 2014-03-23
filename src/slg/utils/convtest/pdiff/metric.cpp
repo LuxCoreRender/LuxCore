@@ -17,7 +17,7 @@ if not, write to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 // Adapted for LuxRender/LuxRays by Dade
 
 #include <cstdio>
-#include <math.h>
+#include <cmath>
 
 #include "slg/utils/convtest/pdiff/metric.h"
 #include "slg/utils/convtest/pdiff/lpyramid.h"
