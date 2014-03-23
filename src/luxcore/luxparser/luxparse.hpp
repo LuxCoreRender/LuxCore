@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 2.7.12-4996.  */
+/* A Bison parser, made by GNU Bison 2.5.  */
 
 /* Bison interface for Yacc-like parsers in C
    
-      Copyright (C) 1984, 1989-1990, 2000-2013 Free Software Foundation, Inc.
+      Copyright (C) 1984, 1989-1990, 2000-2011 Free Software Foundation, Inc.
    
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,15 +30,6 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-#ifndef YY_LUXCORE_PARSERLXS_YY_DATA_IMG_SYNTH_LUX_ORIG_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
-# define YY_LUXCORE_PARSERLXS_YY_DATA_IMG_SYNTH_LUX_ORIG_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED
-/* Enabling traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
-#if YYDEBUG
-extern int luxcore_parserlxs_yydebug;
-#endif
 
 /* Tokens.  */
 #ifndef YYTOKENTYPE
@@ -101,19 +92,22 @@ extern int luxcore_parserlxs_yydebug;
 #endif
 
 
+
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
 {
-/* Line 2053 of yacc.c  */
-#line 543 "/data/img_synth/lux-orig/luxrays/src/luxcore/luxparser/luxparse.y"
+
+/* Line 2068 of yacc.c  */
+#line 551 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y"
 
 char string[1024];
 float num;
 ParamArray *ribarray;
 
 
-/* Line 2053 of yacc.c  */
-#line 117 "/data/img_synth/lux-orig/luxrays/src/luxcore/luxparser/luxparse.hpp"
+
+/* Line 2068 of yacc.c  */
+#line 111 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.hpp"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -122,18 +116,4 @@ ParamArray *ribarray;
 
 extern YYSTYPE luxcore_parserlxs_yylval;
 
-#ifdef YYPARSE_PARAM
-#if defined __STDC__ || defined __cplusplus
-int luxcore_parserlxs_yyparse (void *YYPARSE_PARAM);
-#else
-int luxcore_parserlxs_yyparse ();
-#endif
-#else /* ! YYPARSE_PARAM */
-#if defined __STDC__ || defined __cplusplus
-int luxcore_parserlxs_yyparse (void);
-#else
-int luxcore_parserlxs_yyparse ();
-#endif
-#endif /* ! YYPARSE_PARAM */
 
-#endif /* !YY_LUXCORE_PARSERLXS_YY_DATA_IMG_SYNTH_LUX_ORIG_LUXRAYS_SRC_LUXCORE_LUXPARSER_LUXPARSE_HPP_INCLUDED  */

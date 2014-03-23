@@ -167,7 +167,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 				// result multiplied by cosThetaToLight
 				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
-				const float weightLight = MIS(cameraPdfA) *
+				const float weightLight = MIS(cameraPdfA / engine->lightPathsCount) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
 				const float misWeight = 1.f / (weightLight + 1.f);
 
