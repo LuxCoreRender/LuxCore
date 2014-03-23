@@ -181,15 +181,15 @@ public:
 	 *
 	 * \return the size (in float or u_int) of a Film output channel.
 	 */
-	bool HasOutput(const FilmOutputType type) const;
+	size_t GetOutputSize(const FilmOutputType type) const;
 	/*!
-	 * \brief Returns if a film channel output is available or not.
+	 * \brief Returns if a film channel output is available.
 	 *
 	 * \param type is the Film output channel to use.
 	 *
 	 * \return true if the output is available, false otherwise.
 	 */
-	size_t GetOutputSize(const FilmOutputType type) const;
+	bool HasOutput(const FilmOutputType type) const;
 	/*!
 	 * \brief Returns the number of radiance groups.
 	 *
@@ -203,7 +203,7 @@ public:
 	 * of the enabled channels in RenderConfig. The supported template types are
 	 * float and unsigned int.
 	 * \param buffer is the place where the data will be copied.
-	 * \param index of the buffer to use. Most of the times is 0 however, for instance,
+	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
 	 */
 	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const u_int index = 0) const {
@@ -225,7 +225,7 @@ public:
 	 * \param type is the Film output channel to return. It must be one
 	 * of the enabled channels in RenderConfig. The supported template types are
 	 * float and unsigned int.
-	 * \param index of the buffer to use. Most of the times is 0 however, for instance,
+	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
 	 * 
 	 * \return a pointer to the requested raw buffer.
@@ -250,8 +250,7 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 class Scene;
 
 /*!
- * \brief Film stores all the outputs of a rendering. It can be obtained only
- * from a RenderSession.
+ * \brief Camera stores camera definitions.
  */
 CPP_EXPORT class CPP_API Camera {
 public:
@@ -265,25 +264,31 @@ public:
 	 */
 	void Translate(const luxrays::Vector &t) const;
 	/*!
-	 * \brief Translates at left by t. This method can be used only when
+	 * \brief Translates left by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
-	 * \param t is the left translation.
+	 * \param t is the translation distance.
 	 */
 	void TranslateLeft(const float t) const;
 	/*!
-	 * \brief Translates at right by t. This method can be used only when
+	 * \brief Translates right by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
+	 *
+	 * \param t is the translation distance.
 	 */
 	void TranslateRight(const float t) const;
 	/*!
 	 * \brief Translates forward by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
+	 *
+	 * \param t is the translation distance.
 	 */
 	void TranslateForward(const float t) const;
 	/*!
 	 * \brief Translates backward by t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
+	 *
+	 * \param t is the translation distance.
 	 */
 	void TranslateBackward(const float t) const;
 
@@ -291,36 +296,36 @@ public:
 	 * \brief Rotates by angle around the axis. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
-	 * \param angle is rotation angle.
-	 * \param axis is rotation axis.
+	 * \param angle is the rotation angle.
+	 * \param axis is the rotation axis.
 	 */
 	void Rotate(const float angle, const luxrays::Vector &axis) const;
 	/*!
-	* \brief Rotates the left by angle. This method can be used only when
+	* \brief Rotates left by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
-	 * \param angle is rotation angle.
+	 * \param angle is the rotation angle.
 	 */
 	void RotateLeft(const float angle) const;
 	/*!
-	 * \brief Rotates the right by angle. This method can be used only when
+	 * \brief Rotates right by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
-	 * \param angle is rotation angle.
+	 * \param angle is the rotation angle.
 	 */
 	void RotateRight(const float angle) const;
 	/*!
-	 * \brief Rotates the up by angle. This method can be used only when
+	 * \brief Rotates up by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
-	 * \param angle is rotation angle.
+	 * \param angle is the rotation angle.
 	 */
 	void RotateUp(const float angle) const;
 	/*!
-	 * \brief Rotates the down by angle. This method can be used only when
+	 * \brief Rotates down by angle. This method can be used only when
 	 * the Scene is not in use by a RenderSession.
 	 * 
-	 * \param angle is rotation angle.
+	 * \param angle is the rotation angle.
 	 */
 	void RotateDown(const float angle) const;
 
@@ -359,10 +364,10 @@ public:
 	 */
 	const luxrays::Properties &GetProperties() const;
 	/*!
-	 * \brief Returns the DataSet of the scene. It is available only
+	 * \brief Returns the DataSet of the Scene. It is available only
 	 * during the rendering (i.e. after a RenderSession::Start()).
 	 *
-	 * \return a reference to the Properties of this Scene.
+	 * \return a reference to the DataSet of this Scene.
 	 */
 	const luxrays::DataSet &GetDataSet() const;
 	/*!
@@ -378,16 +383,16 @@ public:
 	 * The memory allocated for cols array is always freed by the Scene class.
 	 *
 	 * \param imgMapName is the name of the defined image map.
-	 * \param cols is a pointer to the an array of float.
+	 * \param cols is a pointer to an array of float.
 	 * \param gamma is the gamma correction value of the image.
 	 * \param channels is the number of float used for each pixel (1 or 3).
 	 * \param width is the width of the image map.
-	 * \param height is the width of the image map.
+	 * \param height is the height of the image map.
 	 */
 	void DefineImageMap(const std::string &imgMapName, float *cols, const float gamma,
 		const u_int channels, const u_int width, const u_int height);
 	/*!
-	 * \brief Check if an image map with the given name has been defined or not.
+	 * \brief Check if an image map with the given name has been defined.
 	 *
 	 * \param imgMapName is the name to check.
 	 *
@@ -395,17 +400,17 @@ public:
 	 */
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 	/*!
-	 * \brief Sets if the Scene class destructor has to delete all the arrays
-	 * pointed by the defined meshes or not.
+	 * \brief Sets if the Scene class destructor will delete the arrays
+	 * pointed to by the defined meshes.
 	 *
-	 * \param v defines if I have to delete the mesh data or not.
+	 * \param v defines if the Scene class destructor will delete the mesh data.
 	 */
 	void SetDeleteMeshData(const bool v);
 	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects). The
-	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class
-	 * however the memory for the all vertices, triangle indices, etc. will be
-	 * freed or not according the settings.
+	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
+	 * however freeing of memory for the vertices, triangle indices, etc. depends
+	 * on the setting of SetDeleteMeshData().
 	 *
 	 * \param meshName is the name of the defined mesh.
 	 * \param mesh is a pointer to the mesh to be used.
@@ -413,11 +418,11 @@ public:
 	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
 	/*!
 	 * \brief Defines a mesh (to be later used in one or more scene objects). The
-	 * memory allocate for the ExtTriangleMesh is always freed by the Scene class
-	 * however the memory for the all vertices, triangle indices, etc. will be
-	 * freed or not according the settings.
+	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
+	 * however freeing of memory for the vertices, triangle indices, etc. depends
+	 * on the setting of SetDeleteMeshData().
 	 *
-	 * \param meshName is the name of the define mesh.
+	 * \param meshName is the name of the defined mesh.
 	 * \param plyNbVerts is the number of mesh vertices.
 	 * \param plyNbTris is the number of mesh triangles.
 	 * \param p is a pointer to an array of vertices.
@@ -425,14 +430,14 @@ public:
 	 * \param n is a pointer to an array of normals. It can be NULL.
 	 * \param uv is a pointer to an array of UV coordinates. It can be NULL.
 	 * \param cols is a pointer to an array of vertices colors. It can be NULL.
-	 * \param alphas is a pointer to an array of vertices alpha. It can be NULL.
+	 * \param alphas is a pointer to an array of vertices alphas. It can be NULL.
 	 */
 	void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas);
 	/*!
-	 * \brief Check if a mesh with the given name has been defined or not.
+	 * \brief Check if a mesh with the given name has been defined.
 	 *
 	 * \param meshName is the name to check.
 	 *
@@ -440,7 +445,7 @@ public:
 	 */
 	bool IsMeshDefined(const std::string &meshName) const;
 	/*!
-	 * \brief Check if a texture with the given name has been defined or not.
+	 * \brief Check if a texture with the given name has been defined.
 	 *
 	 * \param texName is the name to check.
 	 *
@@ -448,7 +453,7 @@ public:
 	 */
 	bool IsTextureDefined(const std::string &texName) const;
 	/*!
-	 * \brief Check if a material with the given name has been defined or not.
+	 * \brief Check if a material with the given name has been defined.
 	 *
 	 * \param matName is the name to check.
 	 *
@@ -485,7 +490,7 @@ public:
 	void DeleteObject(const std::string &objName);
 
 	/*!
-	 * \brief Removes all unused textures.
+	 * \brief Removes all unused image maps.
 	 */
 	void RemoveUnusedImageMaps();
 	/*!
@@ -523,16 +528,16 @@ public:
 	 * (optional) Scene.
 	 *
 	 * \param props are the Properties used to build the new RenderConfig.
-	 * \param scene is the scene used to build the new RenderConfig. The scene
-	 * is not deleted by the destructor if the parameter is not NULL. If it is NULL
-	 * the scene will be read from the file specified in "scene.file" Property
-	 * and deleted by the destructor.
+	 * \param scene is the Scene used to build the new RenderConfig. If specified,
+	 * the Scene will not be deleted by the destructor. If NULL, the Scene will be
+	 * read from the file specified in the "scene.file" Property and deleted by
+	 * the destructor.
 	 */
 	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
 	~RenderConfig();
 
 	/*!
-	 * \brief Returns a reference to the Properties used to create the RenderConfig;
+	 * \brief Returns a reference to the Properties used to create the RenderConfig.
 	 *
 	 * \return the RenderConfig properties.
 	 */
@@ -546,22 +551,22 @@ public:
 	const luxrays::Property GetProperty(const std::string &name) const;
 
 	/*!
-	 * \brief Returns a reference to the Scene used in the RenderConfig;
+	 * \brief Returns a reference to the Scene used in the RenderConfig.
 	 *
 	 * \return the reference to the RenderConfig Scene.
 	 */
 	Scene &GetScene();
 
 	/*!
-	 * \brief Sets configuration Properties with new values. this method can be
-	 * used only if the RenderConfig is not in use by a RenderSession.
+	 * \brief Sets configuration Properties with new values. This method can be
+	 * used only when the RenderConfig is not in use by a RenderSession.
 	 * 
 	 * \param props are the Properties to set. 
 	 */
 	void Parse(const luxrays::Properties &props);
 	/*!
-	 * \brief Deletes any configuration Property starting for the given prefix. This
-	 * method should be used only when the RenderConfig is not used by any
+	 * \brief Deletes any configuration Property starting with the given prefix.
+	 * This method can be used only when the RenderConfig is not in use by a
 	 * RenderSession.
 	 * 
 	 * \param prefix is the prefix of the Properties to delete.
@@ -569,8 +574,8 @@ public:
 	void Delete(const std::string prefix);
 
 	/*!
-	 * \brief Return the configured Film width, height and if sub-region
-	 * rendering is enabled or less.
+	 * \brief Return the configured Film width, height, sub-region width, height,
+	 * and if sub-region is enabled.
 	 * 
 	 * \param filmFullWidth is where the configured Film width is returned if the
 	 * pointer is not NULL. 
@@ -586,7 +591,7 @@ public:
 		u_int *filmSubRegion) const;
 
 	/*!
-	 * \brief Returns a Properties container with all default values
+	 * \brief Returns a Properties container with all default values.
 	 * 
 	 * \return the default Properties.
 	 */
@@ -648,7 +653,7 @@ public:
 	void WaitNewFrame();
 
 	/*!
-	 * \brief Checks if it is time to save the film according the RenderConfig.
+	 * \brief Checks if it is time to save the film according to the RenderConfig.
 	 *
 	 * \return true if it is time to save the Film, false otherwise.
 	 */
@@ -666,8 +671,8 @@ public:
 	void UpdateStats();
 	/*!
 	 * \brief Returns a list of statistics related to the ongoing rendering. The
-	 * returned Properties is granted to have a content only after the first call
-	 * to UpdateStats method.
+	 * returned Properties is granted to have content only after the first call
+	 * to the UpdateStats method.
 	 *
 	 * \return a Properties container with the statistics.
 	 */
