@@ -37,7 +37,7 @@ public:
 	const luxrays::Property GetProperty(const std::string &name) const;
 
 	void Parse(const luxrays::Properties &props);
-	void Delete(const std::string prefix);
+	void Delete(const std::string &prefix);
 
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
