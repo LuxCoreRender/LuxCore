@@ -64,11 +64,11 @@ private:
 inline std::ostream &operator<<(std::ostream &os, const EditActionList &eal) {
 	os << "EditActionList[";
 
-	bool addSeparetor = false;
+	bool addSeparator = false;
 #define SHOW_SEP\
-		if (addSeparetor)\
+		if (addSeparator)\
 			os << ", ";\
-		addSeparetor = true;
+		addSeparator = true;
 
 	if (eal.Has(CAMERA_EDIT)) {
         SHOW_SEP;
