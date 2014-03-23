@@ -394,8 +394,8 @@ protected:
 	luxrays::RayBuffer *currentRayBufferToSend;
 	std::deque<luxrays::RayBuffer *> freeRayBuffers;
 
-	luxrays::RayBuffer *currentReiceivedRayBuffer;
-	size_t currentReiceivedRayBufferIndex;
+	luxrays::RayBuffer *currentReceivedRayBuffer;
+	size_t currentReceivedRayBufferIndex;
 
 	// Used to store values shared among all metropolis samplers
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;

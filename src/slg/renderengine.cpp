@@ -792,7 +792,7 @@ HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
 
 	pendingRayBuffers = 0;
 	currentRayBufferToSend = NULL;
-	currentReiceivedRayBuffer = NULL;
+	currentReceivedRayBuffer = NULL;
 
 	started = false;
 	editMode = false;
@@ -882,23 +882,23 @@ size_t HybridRenderThread::PushRay(const Ray &ray) {
 
 void HybridRenderThread::PopRay(const Ray **ray, const RayHit **rayHit) {
 	// Check if I have to get the results out of intersection device
-	if (!currentReiceivedRayBuffer) {
-		currentReiceivedRayBuffer = device->PopRayBuffer(threadIndex);
+	if (!currentReceivedRayBuffer) {
+		currentReceivedRayBuffer = device->PopRayBuffer(threadIndex);
 		--pendingRayBuffers;
-		currentReiceivedRayBufferIndex = 0;
-	} else if (currentReiceivedRayBufferIndex >= currentReiceivedRayBuffer->GetSize()) {
+		currentReceivedRayBufferIndex = 0;
+	} else if (currentReceivedRayBufferIndex >= currentReceivedRayBuffer->GetSize()) {
 		// All the results in the RayBuffer have been processed
-		currentReiceivedRayBuffer->Reset();
-		freeRayBuffers.push_back(currentReiceivedRayBuffer);
+		currentReceivedRayBuffer->Reset();
+		freeRayBuffers.push_back(currentReceivedRayBuffer);
 
 		// Get a new buffer
-		currentReiceivedRayBuffer = device->PopRayBuffer(threadIndex);
+		currentReceivedRayBuffer = device->PopRayBuffer(threadIndex);
 		--pendingRayBuffers;
-		currentReiceivedRayBufferIndex = 0;
+		currentReceivedRayBufferIndex = 0;
 	}
 
-	*ray = currentReiceivedRayBuffer->GetRay(currentReiceivedRayBufferIndex);
-	*rayHit = currentReiceivedRayBuffer->GetRayHit(currentReiceivedRayBufferIndex++);
+	*ray = currentReceivedRayBuffer->GetRay(currentReceivedRayBufferIndex);
+	*rayHit = currentReceivedRayBuffer->GetRayHit(currentReceivedRayBufferIndex++);
 }
 
 void HybridRenderThread::RenderFunc() {
@@ -974,10 +974,10 @@ void HybridRenderThread::RenderFunc() {
 		freeRayBuffers.push_back(currentRayBufferToSend);
 		currentRayBufferToSend = NULL;
 	}
-	if (currentReiceivedRayBuffer) {
-		currentReiceivedRayBuffer->Reset();
-		freeRayBuffers.push_back(currentReiceivedRayBuffer);
-		currentReiceivedRayBuffer = NULL;
+	if (currentReceivedRayBuffer) {
+		currentReceivedRayBuffer->Reset();
+		freeRayBuffers.push_back(currentReceivedRayBuffer);
+		currentReceivedRayBuffer = NULL;
 	}
 
 	// Free all states
