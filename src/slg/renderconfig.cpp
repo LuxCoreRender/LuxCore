@@ -165,7 +165,7 @@ void RenderConfig::Parse(const luxrays::Properties &props) {
 	scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
 }
 
-void RenderConfig::Delete(const string prefix) {
+void RenderConfig::Delete(const string &prefix) {
 	cfg.DeleteAll(cfg.GetAllNames(prefix));
 }
 
