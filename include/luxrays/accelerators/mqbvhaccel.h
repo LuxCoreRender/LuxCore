@@ -19,7 +19,6 @@
 #ifndef _LUXRAYS_MQBVHACCEL_H
 #define	_LUXRAYS_MQBVHACCEL_H
 
-#include <string.h>
 #include <xmmintrin.h>
 
 #include <boost/cstdint.hpp>

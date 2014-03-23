@@ -16,8 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <string.h>
-
 #include <cassert>
 #include <deque>
 

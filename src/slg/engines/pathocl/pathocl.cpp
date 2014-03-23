@@ -23,7 +23,6 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-#include <string.h>
 #include <string>
 #include <sstream>
 #include <stdexcept>
