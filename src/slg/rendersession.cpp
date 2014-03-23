@@ -122,7 +122,7 @@ bool RenderSession::NeedPeriodicFilmSave() {
 }
 
 void RenderSession::SaveFilm() {
-	// Ask to the RenderEngine to update the film
+	// Ask the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 
 	// renderEngine->UpdateFilm() uses the film lock on its own
