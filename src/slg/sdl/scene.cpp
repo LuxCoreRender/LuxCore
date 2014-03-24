@@ -145,8 +145,8 @@ Properties Scene::ToProperties(const string &directoryName) {
         SDL_LOG("Saving Not intersectable light sources:");
 		for (u_int i = 0; i < lightDefs.GetSize(); ++i) {
 			const LightSource *l = lightDefs.GetLightSource(i);
-			if (dynamic_cast<const NotIntersecableLightSource *>(l))
-				props.Set(((const NotIntersecableLightSource *)l)->ToProperties(imgMapCache));
+			if (dynamic_cast<const NotIntersectableLightSource *>(l))
+				props.Set(((const NotIntersectableLightSource *)l)->ToProperties(imgMapCache));
 		}
 
 		// Write the image map information
@@ -1432,7 +1432,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		lightType = props.Get(Property(propName + ".type")("sky")).Get<string>();
 	}
 
-	NotIntersecableLightSource *lightSource = NULL;
+	NotIntersectableLightSource *lightSource = NULL;
 	if (lightType == "sky") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
