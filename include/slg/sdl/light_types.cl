@@ -111,7 +111,7 @@ typedef struct {
 		SharpDistantLightParam sharpDistant;
 		DistantLightParam distant;
 	};
-} NotIntersecableLightSource;
+} NotIntersectableLightSource;
 
 typedef struct {
 	Vector v0, v1, v2;
@@ -136,7 +136,7 @@ typedef struct {
 	BSDFEvent visibility;
 	
 	union {
-		NotIntersecableLightSource notIntersecable;
+		NotIntersectableLightSource notIntersectable;
 		TriangleLightParam triangle;
 	};
 } LightSource;

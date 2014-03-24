@@ -73,7 +73,7 @@ public:
 	// If the emitted power is based on scene radius
 	virtual bool IsInfinite() const { return false; }
 	// If it can be directly intersected by a ray
-	virtual bool IsIntersecable() const { return false; }
+	virtual bool IsIntersectable() const { return false; }
 
 	virtual u_int GetID() const = 0;
 	virtual float GetPower(const Scene &scene) const = 0;
@@ -112,7 +112,7 @@ public:
 	LightSourceDefinitions();
 	~LightSourceDefinitions();
 
-	// Update lightGroupCount, envLightSources, intersecableLightSources,
+	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexByMeshIndex and lightsDistribution
 	void Preprocess(const Scene *scene);
 
@@ -148,8 +148,8 @@ public:
 	const std::vector<EnvLightSource *> &GetEnvLightSources() const {
 		return envLightSources;
 	}
-	const std::vector<TriangleLight *> &GetIntersecableLightSources() const {
-		return intersecableLightSources;
+	const std::vector<TriangleLight *> &GetIntersectableLightSources() const {
+		return intersectableLightSources;
 	}
 	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
 	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
@@ -167,7 +167,7 @@ private:
 	std::vector<u_int> lightIndexByMeshIndex;
 
 	// Only intersectable light sources
-	std::vector<TriangleLight *> intersecableLightSources;
+	std::vector<TriangleLight *> intersectableLightSources;
 	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
 	std::vector<EnvLightSource *> envLightSources;
 
@@ -180,12 +180,12 @@ private:
 // Intersectable LightSource interface
 //------------------------------------------------------------------------------
 
-class IntersecableLightSource : public LightSource {
+class IntersectableLightSource : public LightSource {
 public:
-	IntersecableLightSource() : lightMaterial(NULL), area(0.f), invArea(0.f) { }
-	virtual ~IntersecableLightSource() { }
+	IntersectableLightSource() : lightMaterial(NULL), area(0.f), invArea(0.f) { }
+	virtual ~IntersectableLightSource() { }
 
-	virtual bool IsIntersecable() const { return true; }
+	virtual bool IsIntersectable() const { return true; }
 
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
@@ -216,11 +216,11 @@ protected:
 // Not intersectable LightSource interface
 //------------------------------------------------------------------------------
 
-class NotIntersecableLightSource : public LightSource {
+class NotIntersectableLightSource : public LightSource {
 public:
-	NotIntersecableLightSource() :
+	NotIntersectableLightSource() :
 		gain(1.f), id(0), samples(-1) { }
-	virtual ~NotIntersecableLightSource() { }
+	virtual ~NotIntersectableLightSource() { }
 
 	virtual bool IsVisibleIndirectDiffuse() const { return false; }
 	virtual bool IsVisibleIndirectGlossy() const { return false; }
@@ -245,7 +245,7 @@ protected:
 // Env. LightSource interface
 //------------------------------------------------------------------------------
 
-class EnvLightSource : public NotIntersecableLightSource {
+class EnvLightSource : public NotIntersectableLightSource {
 public:
 	EnvLightSource() : isVisibleIndirectDiffuse(true),
 		isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
@@ -275,7 +275,7 @@ protected:
 // PointLight implementation
 //------------------------------------------------------------------------------
 
-class PointLight : public NotIntersecableLightSource {
+class PointLight : public NotIntersectableLightSource {
 public:
 	PointLight();
 	virtual ~PointLight();
@@ -349,7 +349,7 @@ private:
 // SpotLight implementation
 //------------------------------------------------------------------------------
 
-class SpotLight : public NotIntersecableLightSource {
+class SpotLight : public NotIntersectableLightSource {
 public:
 	SpotLight();
 	virtual ~SpotLight();
@@ -391,7 +391,7 @@ protected:
 // ProjectionLight implementation
 //------------------------------------------------------------------------------
 
-class ProjectionLight : public NotIntersecableLightSource {
+class ProjectionLight : public NotIntersectableLightSource {
 public:
 	ProjectionLight();
 	virtual ~ProjectionLight();
@@ -725,7 +725,7 @@ private:
 // TriangleLight implementation
 //------------------------------------------------------------------------------
 
-class TriangleLight : public IntersecableLightSource {
+class TriangleLight : public IntersectableLightSource {
 public:
 	TriangleLight();
 	virtual ~TriangleLight();

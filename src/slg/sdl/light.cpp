@@ -142,11 +142,11 @@ void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
 }
 
 void LightSourceDefinitions::Preprocess(const Scene *scene) {
-	// Update lightGroupCount, envLightSources, intersecableLightSources,
+	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexByMeshIndex and lightsDistribution
 
 	lightGroupCount = 0;
-	intersecableLightSources.clear();
+	intersectableLightSources.clear();
 	envLightSources.clear();
 
 	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene->dataSet->GetBSphere().rad * 1.01f;
@@ -176,7 +176,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
 		if (tl) {
 			lightIndexByMeshIndex[tl->meshIndex] = i;
-			intersecableLightSources.push_back(tl);
+			intersectableLightSources.push_back(tl);
 		}
 	}
 
@@ -218,7 +218,7 @@ float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const 
 // NotIntersectableLightSource
 //------------------------------------------------------------------------------
 
-Properties NotIntersecableLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();
 	Properties props;
 
@@ -236,7 +236,7 @@ Properties NotIntersecableLightSource::ToProperties(const ImageMapCache &imgMapC
 
 Properties EnvLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
 	props.Set(Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
@@ -326,7 +326,7 @@ Spectrum PointLight::Illuminate(const Scene &scene, const Point &p,
 
 Properties PointLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("point"));
 	props.Set(Property(prefix + ".color")(color));
@@ -544,7 +544,7 @@ Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
 
 Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("spot"));
 	props.Set(Property(prefix + ".color")(color));
@@ -724,7 +724,7 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
 
 Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("projection"));
 	props.Set(Property(prefix + ".color")(color));
@@ -834,7 +834,7 @@ Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
 
 Properties SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("sharpdistant"));
 	props.Set(Property(prefix + ".color")(color));
@@ -954,7 +954,7 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
 
 Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersecableLightSource::ToProperties(imgMapCache);
+	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("distant"));
 	props.Set(Property(prefix + ".color")(color));
