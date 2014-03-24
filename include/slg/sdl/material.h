@@ -888,7 +888,7 @@ public:
 		float r1, r2, r3;
 		float m1, m2, m3;
 	};
-	static struct CarpaintData data[8];
+	static const struct CarpaintData data[8];
 	static int NbPresets() { return 8; }
 
 	const Texture *Kd;
