@@ -67,14 +67,14 @@ private:
 		const float u0, const float u1,
 		const float u2, const float u3,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		SampleResult *sampleResult);
+		PathVolumeInfo volInfo, SampleResult *sampleResult);
 	bool DirectLightSamplingONE(luxrays::RandomGenerator *rndGen,
 		const bool firstPathVertex,	const BSDFEvent pathBSDFEvent,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		SampleResult *sampleResult);
+		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
 	void DirectLightSamplingALL(luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		SampleResult *sampleResult);
+		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
 
 	void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent, const u_int lightID,
 		SampleResult *sampleResult, const luxrays::Spectrum &emission) const;
@@ -89,13 +89,13 @@ private:
 
 	bool ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
 		luxrays::Spectrum pathThrouput, BSDFEvent lastBSDFEvent, float lastPdfW,
-		SampleResult *sampleResult);
+		PathVolumeInfo *volInfo, SampleResult *sampleResult);
 	// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
 	void SampleComponent(luxrays::RandomGenerator *rndGen, const BSDFEvent requestedEventTypes,
 		const u_int size, const luxrays::Spectrum &pathThrouput, BSDF &bsdf,
-		SampleResult *sampleResult);
+		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
 	void TraceEyePath(luxrays::RandomGenerator *rndGen, const luxrays::Ray &ray,
-		SampleResult *sampleResult);
+		PathVolumeInfo *volInfo, SampleResult *sampleResult);
 	void RenderPixelSample(luxrays::RandomGenerator *rndGen,
 		const u_int x, const u_int y,
 		const u_int xOffset, const u_int yOffset,

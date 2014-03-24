@@ -392,7 +392,7 @@ std::string KernelSource_bsdf_funcs =
 "	if (triangleLightSourceIndex == NULL_INDEX)\n"
 "		return BLACK;\n"
 "	else\n"
-"		return IntersecableLight_GetRadiance(&lights[triangleLightSourceIndex],\n"
+"		return IntersectableLight_GetRadiance(&lights[triangleLightSourceIndex],\n"
 "				&bsdf->hitPoint, directPdfA\n"
 "				LIGHTS_PARAM);\n"
 "}\n"

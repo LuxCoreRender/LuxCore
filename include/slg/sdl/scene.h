@@ -52,11 +52,6 @@ public:
 
 	const luxrays::Properties &GetProperties() const { return sceneProperties; }
 
-	/*bool Connect(luxrays::IntersectionDevice *device,
-		const bool fromLight, PathVolumeInfo *volInfo,
-		const float passThrough, luxrays::Ray *ray,
-		luxrays::Spectrum *pathThroughput) const;*/
-
 	bool Intersect(luxrays::IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
