@@ -128,7 +128,7 @@ IESSphericalFunction::~IESSphericalFunction() {
 
 ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, const bool flipZ,
 			const u_int xRes, const u_int yRes) {
-	// This should be a warning by I have no way to emit that kind of information here
+	// This should be a warning but I have no way to emit that kind of information here
 	if (data.m_PhotometricType != PhotometricDataIES::PHOTOMETRIC_TYPE_C)
 		throw runtime_error("Unsupported photometric type IES file: " + ToString(data.m_PhotometricType));
 

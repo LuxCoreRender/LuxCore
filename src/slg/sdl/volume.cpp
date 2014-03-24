@@ -115,7 +115,7 @@ void PathVolumeInfo::Update(const BSDFEvent eventType, const BSDF &bsdf) {
 }
 
 bool PathVolumeInfo::CompareVolumePriorities(const Volume *vol1, const Volume *vol2) {
-	// A volume wins over another if and only if it is the same volume or has an
+	// A volume wins over another if and only if it is the same volume or has a
 	// higher priority
 
 	if (vol1) {
@@ -138,7 +138,7 @@ bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
 
 		// I have to continue to trace the ray if:
 		//
-		// 1) I'm entering an object and the interior volume has an
+		// 1) I'm entering an object and the interior volume has a
 		// higher priority than the current one.
 		//
 		// 2) I'm exiting an object and I'm leaving the current volume

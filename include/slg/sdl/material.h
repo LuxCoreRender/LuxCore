@@ -133,7 +133,7 @@ public:
 	const ImageMap *GetEmissionMap() const { return emissionMap; }
 	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
 
-	// MixMaterial can have multiple volumes assigned and need the passThroughEvent
+	// MixMaterial can have multiple volumes assigned and needs the passThroughEvent
 	// information to be able to return the correct volume
 	void SetInteriorVolume(const Volume *vol) { interiorVolume = vol; }
 	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,

@@ -129,7 +129,7 @@ Film::~Film() {
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 	if (initialized)
-		throw runtime_error("it is possible to add a channel to a Film only before the initialization");
+		throw runtime_error("It is only possible to add a channel to a Film before initialization");
 
 	channels.insert(type);
 	switch (type) {
@@ -152,7 +152,7 @@ void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 
 void Film::RemoveChannel(const FilmChannelType type) {
 	if (initialized)
-		throw runtime_error("it is possible to remove a channel of a Film only before the initialization");
+		throw runtime_error("It is only possible to remove a channel from a Film before initialization");
 
 	channels.erase(type);
 }
@@ -392,7 +392,7 @@ void Film::Reset() {
 			channel_BY_MATERIAL_IDs[i]->Clear();
 	}
 
-	// convTest has to be reseted explicitely
+	// convTest has to be reset explicitly
 
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
@@ -652,7 +652,7 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
-	// NOTE: update DEPTH channel as last because it is used to merge other channels
+	// NOTE: update DEPTH channel last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
@@ -866,7 +866,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 
 	ImageBuf buffer;
 	
-	SLG_LOG("Outputing film: " << fileName << " type: " << ToString(type));
+	SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
 
 
 	if (type == FilmOutputs::MATERIAL_ID) {

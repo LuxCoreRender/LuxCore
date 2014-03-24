@@ -126,7 +126,7 @@ std::vector<std::string> LightSourceDefinitions::GetLightSourceNames() const {
 }
 
 void LightSourceDefinitions::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
-	// Replace old material direct references with new one
+	// Replace old material direct references with new ones
 	BOOST_FOREACH(LightSource *l, lights) {
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
 		if (tl)
@@ -215,7 +215,7 @@ float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const 
 }
 
 //------------------------------------------------------------------------------
-// NotIntersecableLightSource
+// NotIntersectableLightSource
 //------------------------------------------------------------------------------
 
 Properties NotIntersecableLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -1003,7 +1003,7 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
 
-	// Choose p2 on scene bounding sphere
+	// Choose p1 on scene bounding sphere
 	const float phi = u0 * 2.f * M_PI;
 	const float theta = u1 * M_PI;
 	Point p1 = worldCenter + worldRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
@@ -1142,7 +1142,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
 
-	// Choose p2 on scene bounding sphere according importance sampling
+	// Choose p1 on scene bounding sphere according importance sampling
 	float uv[2];
 	float distPdf;
 	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
@@ -1880,7 +1880,7 @@ void SunLight::Preprocess() {
 			// Attenuation due to mixed gases absorption
 		tauG = expf(-1.41f * k_gCurve.Sample(lambda) * m / powf(1.f +
 			118.93f * k_gCurve.Sample(lambda) * m, 0.45f));
-			// Attenuation due to water vapor absorbtion
+			// Attenuation due to water vapor absorption
 			// w - precipitable water vapor in centimeters (standard = 2)
 		const float w = 2.0f;
 		tauWA = expf(-0.2385f * k_waCurve.Sample(lambda) * w * m /

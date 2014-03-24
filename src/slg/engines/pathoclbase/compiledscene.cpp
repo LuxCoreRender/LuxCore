@@ -111,7 +111,7 @@ void CompiledScene::CompileGeometry() {
 	// Translate geometry
 	//----------------------------------------------------------------------
 
-	// Not using boost::unordered_map because because the key is a ExtMesh pointer
+	// Not using boost::unordered_map because because the key is an ExtMesh pointer
 	map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
 
 	slg::ocl::Mesh newMeshDesc;
@@ -130,7 +130,7 @@ void CompiledScene::CompileGeometry() {
 
 		bool isExistingInstance;
 		if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
-			// It is a instanced mesh
+			// It is an instanced mesh
 			ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
 
 			// Check if is one of the already defined meshes
@@ -607,7 +607,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &il->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &il->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, il->gain);
@@ -639,7 +639,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL_SKY;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->gain);
@@ -659,7 +659,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL_SKY2;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->gain);
@@ -685,7 +685,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_SUN;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->gain);
@@ -708,7 +708,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_POINT;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &pl->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &pl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, pl->gain);
@@ -726,7 +726,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_MAPPOINT;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &mpl->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &mpl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, mpl->gain);
@@ -748,7 +748,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_SPOT;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				//memcpy(&oclLight->notIntersecable.light2World.m, &sl->lightToWorld.m, sizeof(float[4][4]));
 				//memcpy(&oclLight->notIntersecable.light2World.mInv, &sl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sl->gain);
@@ -772,7 +772,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_PROJECTION;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				//memcpy(&oclLight->notIntersecable.light2World.m, &pl->lightToWorld.m, sizeof(float[4][4]));
 				//memcpy(&oclLight->notIntersecable.light2World.mInv, &pl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, pl->gain);
@@ -802,7 +802,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_IL_CONSTANT;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &cil->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &cil->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, cil->gain);
@@ -817,7 +817,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_SHARPDISTANT;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &sdl->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &sdl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, sdl->gain);
@@ -833,7 +833,7 @@ void CompiledScene::CompileLights() {
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_DISTANT;
 
-				// NotIntersecableLightSource data
+				// NotIntersectableLightSource data
 				memcpy(&oclLight->notIntersecable.light2World.m, &dl->lightToWorld.m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersecable.light2World.mInv, &dl->lightToWorld.mInv, sizeof(float[4][4]));
 				ASSIGN_SPECTRUM(oclLight->notIntersecable.gain, dl->gain);
@@ -1318,7 +1318,7 @@ void CompiledScene::CompileImageMaps() {
 		bool found = false;
 		u_int page;
 		for (u_int j = 0; j < imageMapMemBlocks.size(); ++j) {
-			// Check if it fits in the this page
+			// Check if it fits in this page
 			if (memSize + imageMapMemBlocks[j].size() * sizeof(float) <= maxMemPageSize) {
 				found = true;
 				page = j;

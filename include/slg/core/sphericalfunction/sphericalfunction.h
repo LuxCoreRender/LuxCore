@@ -55,7 +55,7 @@ public:
 };
 
 /**
- * A basic spherical functions that is 1 everywhere.
+ * A basic spherical function that is 1 everywhere.
  */
 class NopSphericalFunction : public SphericalFunction {
 public:
@@ -65,7 +65,7 @@ public:
 };
 
 /**
- * A spherical functions that obtains its function values from a ImageMap.
+ * A spherical function that obtains its function values from an ImageMap.
  */
 class ImageMapSphericalFunction : public SphericalFunction {
 public:
@@ -82,7 +82,7 @@ protected:
 };
 
 /**
- * A spherical functions that composes multiple spherical functions
+ * A spherical function that composes multiple spherical functions
  * by multiplying their results.
  */
 class CompositeSphericalFunction : public SphericalFunction {
@@ -109,7 +109,7 @@ private:
 };
 
 /**
- * A spherical functions that allows efficient sampling.
+ * A spherical function that allows efficient sampling.
  */
 class SampleableSphericalFunction : public SphericalFunction {
 public:

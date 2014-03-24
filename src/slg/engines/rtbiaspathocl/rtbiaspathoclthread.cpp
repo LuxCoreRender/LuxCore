@@ -264,8 +264,8 @@ void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateAct
 void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
-	// Boost barriers are supposed to be not interruptable but they are
-	// and seems to missing a way to reset them. So better to disable
+	// Boost barriers are supposed to be not interruptible but they are
+	// and seem to be missing a way to reset them. So better to disable
 	// interruptions.
 	boost::this_thread::disable_interruption di;
 

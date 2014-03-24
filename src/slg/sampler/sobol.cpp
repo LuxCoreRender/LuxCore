@@ -21284,7 +21284,7 @@ void slg::SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions) 
 
 	const u_int L = SOBOL_BITS;
 
-	// First dimension is exception
+	// First dimension is an exception
 	u_int *v = &vectors[0];
 
 	for (u_int i = 0; i < L; i++)

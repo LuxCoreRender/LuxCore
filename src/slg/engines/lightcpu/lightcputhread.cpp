@@ -214,7 +214,7 @@ void LightCPURenderThread::RenderFunc() {
 		// I don't try to connect the light vertex directly with the eye
 		// because InfiniteLight::Emit() returns a point on the scene bounding
 		// sphere. Instead, I trace a ray from the camera like in BiDir.
-		// This is also a good why to test the Film Per-Pixel-Normalization and
+		// This is also a good way to test the Film Per-Pixel-Normalization and
 		// the Per-Screen-Normalization Buffers used by BiDir.
 		//----------------------------------------------------------------------
 

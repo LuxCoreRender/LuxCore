@@ -128,7 +128,7 @@ void MaterialDefinitions::DefineMaterial(const string &name, Material *newMat) {
 		matsByName.erase(name);
 		matsByName.insert(make_pair(name, newMat));
 
-		// Update all possible reference to old material with the new one
+		// Update all possible references to old material with the new one
 		BOOST_FOREACH(Material *mat, mats)
 			mat->UpdateMaterialReferences(oldMat, newMat);
 
@@ -2411,7 +2411,7 @@ const slg::ocl::Yarn *ClothMaterial::GetYarn(const float u_i, const float v_i,
 
 float ClothMaterial::RadiusOfCurvature(const slg::ocl::Yarn *yarn, float u, float umaxMod) const {
 	// rhat determines whether the spine is a segment
-	// of an ellipse, a parabole, or a hyperbola.
+	// of an ellipse, a parabola, or a hyperbola.
 	// See Section 5.3.
 	const float rhat = 1.0f + yarn->kappa * (1.0f + 1.0f / tanf(umaxMod));
 	const float a = 0.5f * yarn->width;

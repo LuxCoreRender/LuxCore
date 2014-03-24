@@ -41,7 +41,7 @@ typedef struct {
 	luxrays::Spectrum color;
 	float alpha;
 	float passThroughEvent;
-	// Interior and exterior volume (this include volume priority system
+	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	const Volume *interiorVolume, *exteriorVolume;
 	bool fromLight, intoObject;

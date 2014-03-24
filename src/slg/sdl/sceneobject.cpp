@@ -131,7 +131,7 @@ std::vector<std::string> SceneObjectDefinitions::GetSceneObjectNames() const {
 }
 
 void SceneObjectDefinitions::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
-	// Replace old material direct references with new one
+	// Replace old material direct references with new ones
 	BOOST_FOREACH(SceneObject *o, objs)
 		o->UpdateMaterialReferences(oldMat, newMat);
 }

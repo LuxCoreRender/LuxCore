@@ -159,7 +159,7 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 	const float absDotEyeDirNG = fabsf(dotEyeDirNG);
 
 	if (!IsVolume()) {
-		// This kind of tests make sense only for materials
+		// These kind of tests make sense only for materials
 
 		if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
 				(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
