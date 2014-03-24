@@ -76,7 +76,7 @@ typedef struct {
 	u_int m[SOBOL_MAX_NUMBER];
 } SobolDirectionNumbers;
 
-static SobolDirectionNumbers SOBOL_NUMBERS[SOBOL_MAX_DIMENSIONS - 1] = {
+static const SobolDirectionNumbers SOBOL_NUMBERS[SOBOL_MAX_DIMENSIONS - 1] = {
 	{2, 1, 0, {1}},
 	{3, 2, 1, {1, 3}},
 	{4, 3, 1, {1, 3, 1}},
@@ -21284,17 +21284,17 @@ void slg::SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions) 
 
 	const u_int L = SOBOL_BITS;
 
-	// First dimension is exception
+	// First dimension is an exception
 	u_int *v = &vectors[0];
 
 	for (u_int i = 0; i < L; i++)
 		v[i] = 1 << (31 - i); // all m's = 1
 
 	for (u_int dim = 1; dim < dimensions; dim++) {
-		SobolDirectionNumbers *numbers = &SOBOL_NUMBERS[dim - 1];
-		u_int s = numbers->s;
-		u_int a = numbers->a;
-		u_int *m = numbers->m;
+		const SobolDirectionNumbers *numbers = &SOBOL_NUMBERS[dim - 1];
+		const u_int s = numbers->s;
+		const u_int a = numbers->a;
+		const u_int *m = numbers->m;
 
 		v = &vectors[dim * L];
 

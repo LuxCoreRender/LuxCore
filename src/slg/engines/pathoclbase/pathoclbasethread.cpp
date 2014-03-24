@@ -945,7 +945,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels not cached");
 		}
 
-		// Film clear  kernel
+		// Film clear kernel
 		CompileKernel(program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
 
 		// Additional kernels
@@ -1114,7 +1114,7 @@ void PathOCLBaseRenderThread::Stop() {
 
 	started = false;
 
-	// Film is delete on the destructor to allow image saving after
+	// Film is deleted in the destructor to allow image saving after
 	// the rendering is finished
 }
 

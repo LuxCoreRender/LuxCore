@@ -75,7 +75,7 @@ UV Texture::GetDuv(const HitPoint &hitPoint,
 
 // Perlin Noise Data
 #define NOISE_PERM_SIZE 256
-static int NoisePerm[2 * NOISE_PERM_SIZE] = {
+static const int NoisePerm[2 * NOISE_PERM_SIZE] = {
 	151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96,
 	53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142,
 	// Rest of noise permutation table
@@ -436,7 +436,7 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 			}
 		}
 
-		// I assume the image have the same gamma
+		// I assume the images have the same gamma
 		return new ImageMap(mergedImg, map0->GetGamma(), 1, width, height);
 	} else if (channels == 3) {
 		float *mergedImg = new float[width * height * 3];
@@ -453,7 +453,7 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 			}
 		}
 
-		// I assume the image have the same gamma
+		// I assume the images have the same gamma
 		return new ImageMap(mergedImg, map0->GetGamma(), 3, width, height);
 	} else
 		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
@@ -888,7 +888,7 @@ Spectrum MarbleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	float marble = P.y + variation * FBm(P, omega, octaves);
 	float t = .5f + .5f * sinf(marble);
 	// Evaluate marble spline at _t_
-	static float c[9][3] = {
+	static const float c[9][3] = {
 		{ .58f, .58f, .6f},
 		{ .58f, .58f, .6f},
 		{ .58f, .58f, .6f},
@@ -1159,7 +1159,7 @@ Spectrum BrickTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const float offs = BRICK_EPSILON + mortarsize;
 	Point bP(P + Point(offs, offs, offs));
 
-	// Normalize coordinates according brick dimensions
+	// Normalize coordinates according to brick dimensions
 	bP.x /= brickwidth;
 	bP.y /= brickdepth;
 	bP.z /= brickheight;

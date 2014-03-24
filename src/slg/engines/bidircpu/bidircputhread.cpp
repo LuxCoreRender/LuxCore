@@ -67,7 +67,7 @@ void BiDirCPURenderThread::ConnectVertices(
 			// result multiplied by cosThetaAtLight
 			const float geometryTerm = 1.f / p2pDistance2;
 
-			// Trace  ray between the two vertices
+			// Trace ray between the two vertices
 			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(p2pDistance));
 			Ray p2pRay(eyeVertex.bsdf.hitPoint.p, p2pDir,
 					epsilon,
@@ -94,7 +94,7 @@ void BiDirCPURenderThread::ConnectVertices(
 					lightBsdfRevPdfW *= prob;
 				}
 
-				// Convert pdfs to area pdf
+				// Convert pdfs to area pdfs
 				const float eyeBsdfPdfA = PdfWtoA(eyeBsdfPdfW, p2pDistance, cosThetaAtLight);
 				const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  p2pDistance, cosThetaAtCamera);
 
@@ -314,7 +314,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 		assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
 
 		// I don't store the light vertex 0 because direct lighting will take
-		// care of this kind of paths
+		// care of these kind of paths
 		lightVertex.dVCM = MIS(lightDirectPdfW / lightEmitPdfW);
 		const float usedCosLight = light->IsEnvironmental() ? 1.f : cosThetaAtLight;
 		lightVertex.dVC = MIS(usedCosLight / lightEmitPdfW);

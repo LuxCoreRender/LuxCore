@@ -293,8 +293,8 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 void RTPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
-	// Boost barriers are supposed to be not interruptable but they are
-	// and seems to missing a way to reset them. So better to disable
+	// Boost barriers are supposed to be non interruptible but they are
+	// and seem to be missing a way to reset them. So better to disable
 	// interruptions.
 	boost::this_thread::disable_interruption di;
 
@@ -389,7 +389,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					// because I'm the only thread running
 
 					if (i == threadIndex) {
-						// Normalize and merge the my frame buffer
+						// Normalize and merge the frame buffers
 						u_int argIndex = 0;
 						mergeFBKernel->setArg(argIndex++, threadFilm->GetWidth());
 						mergeFBKernel->setArg(argIndex++, threadFilm->GetHeight());

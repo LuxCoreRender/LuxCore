@@ -141,12 +141,12 @@ Properties Scene::ToProperties(const string &directoryName) {
 		SDL_LOG("Saving camera information");
 		props.Set(camera->ToProperties());
 
-		// Save all not intersecable light sources
-        SDL_LOG("Saving Not intersecable light sources:");
+		// Save all not intersectable light sources
+        SDL_LOG("Saving Not intersectable light sources:");
 		for (u_int i = 0; i < lightDefs.GetSize(); ++i) {
 			const LightSource *l = lightDefs.GetLightSource(i);
-			if (dynamic_cast<const NotIntersecableLightSource *>(l))
-				props.Set(((const NotIntersecableLightSource *)l)->ToProperties(imgMapCache));
+			if (dynamic_cast<const NotIntersectableLightSource *>(l))
+				props.Set(((const NotIntersectableLightSource *)l)->ToProperties(imgMapCache));
 		}
 
 		// Write the image map information
@@ -304,7 +304,7 @@ void Scene::Parse(const Properties &props) {
 	ParseTextures(props);
 
 	//--------------------------------------------------------------------------
-	// Read all materials
+	// Read all volumes
 	//--------------------------------------------------------------------------
 
 	ParseVolumes(props);
@@ -378,7 +378,7 @@ void Scene::ParseTextures(const Properties &props) {
 void Scene::ParseVolumes(const Properties &props) {
 	vector<string> matKeys = props.GetAllUniqueSubNames("scene.volumes");
 	BOOST_FOREACH(const string &key, matKeys) {
-		// Extract the material name
+		// Extract the volume name
 		const string volName = Property::ExtractField(key, 2);
 		if (volName == "")
 			throw runtime_error("Syntax error in volume definition: " + volName);
@@ -408,7 +408,7 @@ void Scene::ParseVolumes(const Properties &props) {
 			if (defaultWorldVolume == oldMat)
 				defaultWorldVolume = (Volume *)newMat;
 
-			// Check if the old and/or the new material were/is light sources
+			// Check if the old material was or the new material is a light source
 			//if (wasLightSource || newMat->IsLightSource())
 			//	editActions.AddAction(LIGHTS_EDIT);
 		} else {
@@ -464,7 +464,7 @@ void Scene::ParseMaterials(const Properties &props) {
 			objDefs.UpdateMaterialReferences(oldMat, newMat);
 			lightDefs.UpdateMaterialReferences(oldMat, newMat);
 
-			// Check if the old and/or the new material were/is light sources
+			// Check if the old material was or the new material is a light source
 			if (wasLightSource || newMat->IsLightSource())
 				editActions.AddAction(LIGHTS_EDIT);
 		} else {
@@ -500,14 +500,14 @@ void Scene::ParseObjects(const Properties &props) {
 
 			objDefs.DefineSceneObject(objName, obj);
 
-			// Check if the old and/or the new object were/is light sources
+			// Check if the old material was or the new material is a light source
 			if (wasLightSource || obj->GetMaterial()->IsLightSource())
 				editActions.AddAction(LIGHTS_EDIT);
 		} else {
 			// Only a new object
 			objDefs.DefineSceneObject(objName, obj);
 			
-			// Check if it is a light sources
+			// Check if it is a light source
 			const Material *mat = obj->GetMaterial();
 			if (mat->IsLightSource()) {
 				const ExtMesh *mesh = obj->GetExtMesh();
@@ -567,7 +567,7 @@ void Scene::ParseLights(const Properties &props) {
 	}
 
 	BOOST_FOREACH(const string &key, lightKeys) {
-		// Extract the material name
+		// Extract the light name
 		const string lightName = Property::ExtractField(key, 2);
 		if (lightName == "")
 			throw runtime_error("Syntax error in light definition: " + lightName);
@@ -630,7 +630,7 @@ void Scene::RemoveUnusedTextures() {
 	for (u_int i = 0; i < matDefs.GetSize(); ++i)
 		matDefs.GetMaterial(i)->AddReferencedTextures(referencedTexs);
 
-	// Get the list of all defined material
+	// Get the list of all defined textures
 	vector<string> definedTexs = texDefs.GetTextureNames();
 	BOOST_FOREACH(const string  &texName, definedTexs) {
 		Texture *t = texDefs.GetTexture(texName);
@@ -656,7 +656,7 @@ void Scene::RemoveUnusedMaterials() {
 	for (u_int i = 0; i < objDefs.GetSize(); ++i)
 		objDefs.GetSceneObject(i)->AddReferencedMaterials(referencedMats);
 
-	// Get the list of all defined material
+	// Get the list of all defined materials
 	const vector<string> definedMats = matDefs.GetMaterialNames();
 	BOOST_FOREACH(const string  &matName, definedMats) {
 		Material *m = matDefs.GetMaterial(matName);
@@ -672,12 +672,12 @@ void Scene::RemoveUnusedMaterials() {
 }
 
 void Scene::RemoveUnusedMeshes() {
-	// Build a list of all referenced mesh
+	// Build a list of all referenced meshes
 	boost::unordered_set<const ExtMesh *> referencedMesh;
 	for (u_int i = 0; i < objDefs.GetSize(); ++i)
 		objDefs.GetSceneObject(i)->AddReferencedMeshes(referencedMesh);
 
-	// Get the list of all defined material
+	// Get the list of all defined objects
 	const vector<string> definedObjects = objDefs.GetSceneObjectNames();
 	BOOST_FOREACH(const string  &objName, definedObjects) {
 		SceneObject *obj = objDefs.GetSceneObject(objName);
@@ -1432,7 +1432,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		lightType = props.Get(Property(propName + ".type")("sky")).Get<string>();
 	}
 
-	NotIntersecableLightSource *lightSource = NULL;
+	NotIntersectableLightSource *lightSource = NULL;
 	if (lightType == "sky") {
 		const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform light2World(mat);
@@ -1649,7 +1649,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 				// I have to set RayHit fields even if there wasn't a real
 				// ray hit
 				rayHit->t = t;
-				// This is a trick in order to have RayHit::Miss() to return
+				// This is a trick in order to have RayHit::Miss() return
 				// false. I assume 0xfffffffeu will trigger a memory fault if
 				// used (and the bug will be noticed)
 				rayHit->meshIndex = 0xfffffffeu;

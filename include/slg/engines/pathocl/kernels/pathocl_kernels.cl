@@ -285,7 +285,7 @@ bool DirectLightSampling(
 			bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
 
 			// MIS between direct light sampling and BSDF sampling
-			const float weight = Light_IsEnvOrIntersecable(light) ?
+			const float weight = Light_IsEnvOrIntersectable(light) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);

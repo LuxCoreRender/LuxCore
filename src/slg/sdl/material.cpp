@@ -128,7 +128,7 @@ void MaterialDefinitions::DefineMaterial(const string &name, Material *newMat) {
 		matsByName.erase(name);
 		matsByName.insert(make_pair(name, newMat));
 
-		// Update all possible reference to old material with the new one
+		// Update all possible references to old material with the new one
 		BOOST_FOREACH(Material *mat, mats)
 			mat->UpdateMaterialReferences(oldMat, newMat);
 
@@ -2111,7 +2111,7 @@ Properties VelvetMaterial::ToProperties() const  {
 // Cloth material
 //------------------------------------------------------------------------------
 
-static slg::ocl::WeaveConfig ClothWeaves[] = {
+static const slg::ocl::WeaveConfig ClothWeaves[] = {
     // DenimWeave
     {
         3, 6,
@@ -2168,7 +2168,7 @@ static slg::ocl::WeaveConfig ClothWeaves[] = {
     }
 };
 
-static slg::ocl::Yarn ClothYarns[][14] = {
+static const slg::ocl::Yarn ClothYarns[][14] = {
     // DenimYarn[8]
     {
         {-30, 12, 0, 1, 5, 0.1667f, 0.75f, slg::ocl::WARP},
@@ -2237,7 +2237,7 @@ static slg::ocl::Yarn ClothYarns[][14] = {
     }
 };
 
-static int ClothPatterns[][6 * 9] = {
+static const int ClothPatterns[][6 * 9] = {
     // DenimPattern[3 * 6]
     {
         1, 3, 8,  1, 3, 5,  1, 7, 5,  1, 4, 5,  6, 4, 5,  2, 4, 5
@@ -2411,7 +2411,7 @@ const slg::ocl::Yarn *ClothMaterial::GetYarn(const float u_i, const float v_i,
 
 float ClothMaterial::RadiusOfCurvature(const slg::ocl::Yarn *yarn, float u, float umaxMod) const {
 	// rhat determines whether the spine is a segment
-	// of an ellipse, a parabole, or a hyperbola.
+	// of an ellipse, a parabola, or a hyperbola.
 	// See Section 5.3.
 	const float rhat = 1.0f + yarn->kappa * (1.0f + 1.0f / tanf(umaxMod));
 	const float a = 0.5f * yarn->width;
@@ -3186,7 +3186,7 @@ Properties CarpaintMaterial::ToProperties() const  {
 	return props;
 }
 
-struct CarpaintMaterial::CarpaintData CarpaintMaterial::data[8] = {
+const struct CarpaintMaterial::CarpaintData CarpaintMaterial::data[8] = {
   {"ford f8",
    {0.0012f, 0.0015f, 0.0018f},
    {0.0049f, 0.0076f, 0.0120f},

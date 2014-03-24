@@ -28,8 +28,8 @@ float3 ConstantInfiniteLight_GetRadiance(__global LightSource *constantInfiniteL
 		const float3 dir, float *directPdfA) {
 	*directPdfA = 1.f / (4.f * M_PI_F);
 
-	return VLOAD3F(constantInfiniteLight->notIntersecable.gain.c) *
-			VLOAD3F(constantInfiniteLight->notIntersecable.constantInfinite.color.c);
+	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
+			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
 }
 
 float3 ConstantInfiniteLight_Illuminate(__global LightSource *constantInfiniteLight,
@@ -59,8 +59,8 @@ float3 ConstantInfiniteLight_Illuminate(__global LightSource *constantInfiniteLi
 
 	*directPdfW = 1.f / (4.f * M_PI_F);
 
-	return VLOAD3F(constantInfiniteLight->notIntersecable.gain.c) *
-			VLOAD3F(constantInfiniteLight->notIntersecable.constantInfinite.color.c);
+	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
+			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
 }
 
 #endif
@@ -75,24 +75,24 @@ float3 InfiniteLight_GetRadiance(__global LightSource *infiniteLight,
 		__global float *infiniteLightDistirbution,
 		const float3 dir, float *directPdfA
 		IMAGEMAPS_PARAM_DECL) {
-	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersecable.infinite.imageMapIndex];
+	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
-	const float3 localDir = normalize(Transform_InvApplyVector(&infiniteLight->notIntersecable.light2World, -dir));
+	const float3 localDir = normalize(Transform_InvApplyVector(&infiniteLight->notIntersectable.light2World, -dir));
 	const float2 uv = (float2)(
 		SphericalPhi(localDir) * (1.f / (2.f * M_PI_F)),
 		SphericalTheta(localDir) * M_1_PI_F);
 
 	// TextureMapping2D_Map() is expended here
-	const float2 scale = VLOAD2F(&infiniteLight->notIntersecable.infinite.mapping.uvMapping2D.uScale);
-	const float2 delta = VLOAD2F(&infiniteLight->notIntersecable.infinite.mapping.uvMapping2D.uDelta);
+	const float2 scale = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uScale);
+	const float2 delta = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uDelta);
 	const float2 mapUV = uv * scale + delta;
 
 	const float distPdf = Distribution2D_Pdf(infiniteLightDistirbution, mapUV.s0, mapUV.s1);
 	*directPdfA = distPdf / (4.f * M_PI_F);
 
-	return VLOAD3F(infiniteLight->notIntersecable.gain.c) * ImageMap_GetSpectrum(
+	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			mapUV.s0, mapUV.s1);
@@ -111,7 +111,7 @@ float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
 
 	const float phi = sampleUV.s0 * 2.f * M_PI_F;
 	const float theta = sampleUV.s1 * M_PI_F;
-	*dir = normalize(Transform_ApplyVector(&infiniteLight->notIntersecable.light2World,
+	*dir = normalize(Transform_ApplyVector(&infiniteLight->notIntersectable.light2World,
 			SphericalDirection(sin(theta), cos(theta), phi)));
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
@@ -133,18 +133,18 @@ float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
 	*directPdfW = distPdf / (4.f * M_PI_F);
 
 	// InfiniteLight_GetRadiance is expended here
-	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersecable.infinite.imageMapIndex];
+	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = (float2)(sampleUV.s0, sampleUV.s1);
 
 	// TextureMapping2D_Map() is expended here
-	const float2 scale = VLOAD2F(&infiniteLight->notIntersecable.infinite.mapping.uvMapping2D.uScale);
-	const float2 delta = VLOAD2F(&infiniteLight->notIntersecable.infinite.mapping.uvMapping2D.uDelta);
+	const float2 scale = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uScale);
+	const float2 delta = VLOAD2F(&infiniteLight->notIntersectable.infinite.mapping.uvMapping2D.uDelta);
 	const float2 mapUV = uv * scale + delta;
 	
-	return VLOAD3F(infiniteLight->notIntersecable.gain.c) * ImageMap_GetSpectrum(
+	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			mapUV.s0, mapUV.s1);
@@ -196,15 +196,15 @@ float3 SkyLight_GetSkySpectralRadiance(__global LightSource *skyLight,
 	// Add bottom half of hemisphere with horizon colour
 	const float theta_fin = fmin(theta, (M_PI_F * .5f) - .001f);
 	const float gamma = SkyLight_RiAngleBetween(theta, phi, 
-			skyLight->notIntersecable.sky.absoluteTheta, skyLight->notIntersecable.sky.absolutePhi);
+			skyLight->notIntersectable.sky.absoluteTheta, skyLight->notIntersectable.sky.absolutePhi);
 
 	// Compute xyY values
-	const float x = skyLight->notIntersecable.sky.zenith_x * SkyLight_PerezBase(
-			skyLight->notIntersecable.sky.perez_x, theta_fin, gamma);
-	const float y = skyLight->notIntersecable.sky.zenith_y * SkyLight_PerezBase(
-			skyLight->notIntersecable.sky.perez_y, theta_fin, gamma);
-	const float Y = skyLight->notIntersecable.sky.zenith_Y * SkyLight_PerezBase(
-			skyLight->notIntersecable.sky.perez_Y, theta_fin, gamma);
+	const float x = skyLight->notIntersectable.sky.zenith_x * SkyLight_PerezBase(
+			skyLight->notIntersectable.sky.perez_x, theta_fin, gamma);
+	const float y = skyLight->notIntersectable.sky.zenith_y * SkyLight_PerezBase(
+			skyLight->notIntersectable.sky.perez_y, theta_fin, gamma);
+	const float Y = skyLight->notIntersectable.sky.zenith_Y * SkyLight_PerezBase(
+			skyLight->notIntersectable.sky.perez_Y, theta_fin, gamma);
 
 	return SkyLight_ChromaticityToSpectrum(Y, x, y);
 }
@@ -217,7 +217,7 @@ float3 SkyLight_GetRadiance(__global LightSource *skyLight, const float3 dir,
 	const float phi = SphericalPhi(-dir);
 	const float3 s = SkyLight_GetSkySpectralRadiance(skyLight, theta, phi);
 
-	return VLOAD3F(skyLight->notIntersecable.gain.c) * s;
+	return VLOAD3F(skyLight->notIntersectable.gain.c) * s;
 }
 
 float3 SkyLight_Illuminate(__global LightSource *skyLight,
@@ -228,8 +228,8 @@ float3 SkyLight_Illuminate(__global LightSource *skyLight,
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
 
-	const float3 localDir = normalize(Transform_ApplyVector(&skyLight->notIntersecable.light2World, -(*dir)));
-	*dir = normalize(Transform_ApplyVector(&skyLight->notIntersecable.light2World,  UniformSampleSphere(u0, u1)));
+	const float3 localDir = normalize(Transform_ApplyVector(&skyLight->notIntersectable.light2World, -(*dir)));
+	*dir = normalize(Transform_ApplyVector(&skyLight->notIntersectable.light2World,  UniformSampleSphere(u0, u1)));
 
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
@@ -260,22 +260,22 @@ float RiCosBetween(const float3 w1, const float3 w2) {
 }
 
 float3 SkyLight2_ComputeRadiance(__global LightSource *skyLight2, const float3 w) {
-	const float3 absoluteSunDir = VLOAD3F(&skyLight2->notIntersecable.sky2.absoluteSunDir.x);
+	const float3 absoluteSunDir = VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteSunDir.x);
 	const float cosG = RiCosBetween(w, absoluteSunDir);
 	const float cosG2 = cosG * cosG;
 	const float gamma = acos(cosG);
 	const float cosT = fmax(0.f, CosTheta(w));
 
-	const float3 aTerm = VLOAD3F(skyLight2->notIntersecable.sky2.aTerm.c);
-	const float3 bTerm = VLOAD3F(skyLight2->notIntersecable.sky2.bTerm.c);
-	const float3 cTerm = VLOAD3F(skyLight2->notIntersecable.sky2.cTerm.c);
-	const float3 dTerm = VLOAD3F(skyLight2->notIntersecable.sky2.dTerm.c);
-	const float3 eTerm = VLOAD3F(skyLight2->notIntersecable.sky2.eTerm.c);
-	const float3 fTerm = VLOAD3F(skyLight2->notIntersecable.sky2.fTerm.c);
-	const float3 gTerm = VLOAD3F(skyLight2->notIntersecable.sky2.gTerm.c);
-	const float3 hTerm = VLOAD3F(skyLight2->notIntersecable.sky2.hTerm.c);
-	const float3 iTerm = VLOAD3F(skyLight2->notIntersecable.sky2.iTerm.c);
-	const float3 radianceTerm = VLOAD3F(skyLight2->notIntersecable.sky2.radianceTerm.c);
+	const float3 aTerm = VLOAD3F(skyLight2->notIntersectable.sky2.aTerm.c);
+	const float3 bTerm = VLOAD3F(skyLight2->notIntersectable.sky2.bTerm.c);
+	const float3 cTerm = VLOAD3F(skyLight2->notIntersectable.sky2.cTerm.c);
+	const float3 dTerm = VLOAD3F(skyLight2->notIntersectable.sky2.dTerm.c);
+	const float3 eTerm = VLOAD3F(skyLight2->notIntersectable.sky2.eTerm.c);
+	const float3 fTerm = VLOAD3F(skyLight2->notIntersectable.sky2.fTerm.c);
+	const float3 gTerm = VLOAD3F(skyLight2->notIntersectable.sky2.gTerm.c);
+	const float3 hTerm = VLOAD3F(skyLight2->notIntersectable.sky2.hTerm.c);
+	const float3 iTerm = VLOAD3F(skyLight2->notIntersectable.sky2.iTerm.c);
+	const float3 radianceTerm = VLOAD3F(skyLight2->notIntersectable.sky2.radianceTerm.c);
 	
 	const float3 expTerm = dTerm * Spectrum_Exp(eTerm * gamma);
 	const float3 rayleighTerm = fTerm * cosG2;
@@ -293,7 +293,7 @@ float3 SkyLight2_GetRadiance(__global LightSource *skyLight2, const float3 dir,
 	*directPdfA = 1.f / (4.f * M_PI_F);
 	const float3 s = SkyLight2_ComputeRadiance(skyLight2, -dir);
 
-	return VLOAD3F(skyLight2->notIntersecable.gain.c) * s;
+	return VLOAD3F(skyLight2->notIntersectable.gain.c) * s;
 }
 
 float3 SkyLight2_Illuminate(__global LightSource *skyLight2,
@@ -304,8 +304,8 @@ float3 SkyLight2_Illuminate(__global LightSource *skyLight2,
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
 
-	const float3 localDir = normalize(Transform_ApplyVector(&skyLight2->notIntersecable.light2World, -(*dir)));
-	*dir = normalize(Transform_ApplyVector(&skyLight2->notIntersecable.light2World,  UniformSampleSphere(u0, u1)));
+	const float3 localDir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World, -(*dir)));
+	*dir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World,  UniformSampleSphere(u0, u1)));
 
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
@@ -336,9 +336,9 @@ float3 SunLight_Illuminate(__global LightSource *sunLight,
 		const float sceneRadius,
 		const float3 p, const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float cosThetaMax = sunLight->notIntersecable.sun.cosThetaMax;
-	const float3 sunDir = VLOAD3F(&sunLight->notIntersecable.sun.absoluteDir.x);
-	*dir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sunLight->notIntersecable.sun.x.x), VLOAD3F(&sunLight->notIntersecable.sun.y.x), sunDir);
+	const float cosThetaMax = sunLight->notIntersectable.sun.cosThetaMax;
+	const float3 sunDir = VLOAD3F(&sunLight->notIntersectable.sun.absoluteDir.x);
+	*dir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sunLight->notIntersectable.sun.x.x), VLOAD3F(&sunLight->notIntersectable.sun.y.x), sunDir);
 
 	// Check if the point can be inside the sun cone of light
 	const float cosAtLight = dot(sunDir, *dir);
@@ -355,15 +355,15 @@ float3 SunLight_Illuminate(__global LightSource *sunLight,
 
 	*directPdfW = UniformConePdf(cosThetaMax);
 
-	return VLOAD3F(sunLight->notIntersecable.sun.color.c);
+	return VLOAD3F(sunLight->notIntersectable.sun.color.c);
 }
 
 float3 SunLight_GetRadiance(__global LightSource *sunLight, const float3 dir, float *directPdfA) {
-	const float cosThetaMax = sunLight->notIntersecable.sun.cosThetaMax;
-	const float sin2ThetaMax = sunLight->notIntersecable.sun.sin2ThetaMax;
-	const float3 x = VLOAD3F(&sunLight->notIntersecable.sun.x.x);
-	const float3 y = VLOAD3F(&sunLight->notIntersecable.sun.y.x);
-	const float3 absoluteSunDir = VLOAD3F(&sunLight->notIntersecable.sun.absoluteDir.x);
+	const float cosThetaMax = sunLight->notIntersectable.sun.cosThetaMax;
+	const float sin2ThetaMax = sunLight->notIntersectable.sun.sin2ThetaMax;
+	const float3 x = VLOAD3F(&sunLight->notIntersectable.sun.x.x);
+	const float3 y = VLOAD3F(&sunLight->notIntersectable.sun.y.x);
+	const float3 absoluteSunDir = VLOAD3F(&sunLight->notIntersectable.sun.absoluteDir.x);
 
 	const float xD = dot(-dir, x);
 	const float yD = dot(-dir, y);
@@ -374,7 +374,7 @@ float3 SunLight_GetRadiance(__global LightSource *sunLight, const float3 dir, fl
 	if (directPdfA)
 		*directPdfA = UniformConePdf(cosThetaMax);
 
-	return VLOAD3F(sunLight->notIntersecable.sun.color.c);
+	return VLOAD3F(sunLight->notIntersectable.sun.color.c);
 }
 
 #endif
@@ -504,14 +504,14 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 
 float3 PointLight_Illuminate(__global LightSource *pointLight,
 		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
-	const float3 toLight = VLOAD3F(&pointLight->notIntersecable.point.absolutePos.x) - p;
+	const float3 toLight = VLOAD3F(&pointLight->notIntersectable.point.absolutePos.x) - p;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
 
 	*directPdfW = distanceSquared;
 
-	return VLOAD3F(pointLight->notIntersecable.point.emittedFactor.c);
+	return VLOAD3F(pointLight->notIntersectable.point.emittedFactor.c);
 }
 
 #endif
@@ -525,7 +525,7 @@ float3 PointLight_Illuminate(__global LightSource *pointLight,
 float3 MapPointLight_Illuminate(__global LightSource *mapPointLight,
 		const float3 p,	float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 toLight = VLOAD3F(&mapPointLight->notIntersecable.mapPoint.absolutePos.x) - p;
+	const float3 toLight = VLOAD3F(&mapPointLight->notIntersectable.mapPoint.absolutePos.x) - p;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
@@ -533,19 +533,19 @@ float3 MapPointLight_Illuminate(__global LightSource *mapPointLight,
 	*directPdfW = distanceSquared;
 
 	// Retrieve the image map information
-	__global ImageMap *imageMap = &imageMapDescs[mapPointLight->notIntersecable.mapPoint.imageMapIndex];
+	__global ImageMap *imageMap = &imageMapDescs[mapPointLight->notIntersectable.mapPoint.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
-	const float3 localFromLight = normalize(Transform_InvApplyVector(&mapPointLight->notIntersecable.light2World, p) - 
-		VLOAD3F(&mapPointLight->notIntersecable.mapPoint.localPos.x));
+	const float3 localFromLight = normalize(Transform_InvApplyVector(&mapPointLight->notIntersectable.light2World, p) - 
+		VLOAD3F(&mapPointLight->notIntersectable.mapPoint.localPos.x));
 	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
-			uv.s0, uv.s1) / mapPointLight->notIntersecable.mapPoint.avarage;
+			uv.s0, uv.s1) / mapPointLight->notIntersectable.mapPoint.avarage;
 
-	return VLOAD3F(mapPointLight->notIntersecable.mapPoint.emittedFactor.c) * emissionColor;
+	return VLOAD3F(mapPointLight->notIntersectable.mapPoint.emittedFactor.c) * emissionColor;
 }
 
 #endif
@@ -569,22 +569,22 @@ float SpotLight_LocalFalloff(const float3 w, const float cosTotalWidth, const fl
 
 float3 SpotLight_Illuminate(__global LightSource *spotLight,
 		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
-	const float3 toLight = VLOAD3F(&spotLight->notIntersecable.spot.absolutePos.x) - p;
+	const float3 toLight = VLOAD3F(&spotLight->notIntersectable.spot.absolutePos.x) - p;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
 
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
-			&spotLight->notIntersecable.light2World, -(*dir)));
+			&spotLight->notIntersectable.light2World, -(*dir)));
 	const float falloff = SpotLight_LocalFalloff(localFromLight,
-			spotLight->notIntersecable.spot.cosTotalWidth,
-			spotLight->notIntersecable.spot.cosFalloffStart);
+			spotLight->notIntersectable.spot.cosTotalWidth,
+			spotLight->notIntersectable.spot.cosFalloffStart);
 	if (falloff == 0.f)
 		return BLACK;
 
 	*directPdfW = distanceSquared;
 
-	return VLOAD3F(spotLight->notIntersecable.spot.emittedFactor.c) *
+	return VLOAD3F(spotLight->notIntersectable.spot.emittedFactor.c) *
 			(falloff / fabs(CosTheta(localFromLight)));
 }
 
@@ -599,32 +599,32 @@ float3 SpotLight_Illuminate(__global LightSource *spotLight,
 float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 		const float3 p,	float3 *dir, float *distance, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 toLight = VLOAD3F(&projectionLight->notIntersecable.projection.absolutePos.x) - p;
+	const float3 toLight = VLOAD3F(&projectionLight->notIntersectable.projection.absolutePos.x) - p;
 	const float distanceSquared = dot(toLight, toLight);
 	*distance = sqrt(distanceSquared);
 	*dir = toLight / *distance;
 
 	// Check the side
-	if (dot(-(*dir), VLOAD3F(&projectionLight->notIntersecable.projection.lightNormal.x)) < 0.f)
+	if (dot(-(*dir), VLOAD3F(&projectionLight->notIntersectable.projection.lightNormal.x)) < 0.f)
 		return BLACK;
 
 	// Check if the point is inside the image plane
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
-			&projectionLight->notIntersecable.light2World, -(*dir)));
+			&projectionLight->notIntersectable.light2World, -(*dir)));
 	const float3 p0 = Matrix4x4_ApplyPoint(
-			&projectionLight->notIntersecable.projection.lightProjection, localFromLight);
+			&projectionLight->notIntersectable.projection.lightProjection, localFromLight);
 
-	const float screenX0 = projectionLight->notIntersecable.projection.screenX0;
-	const float screenX1 = projectionLight->notIntersecable.projection.screenX1;
-	const float screenY0 = projectionLight->notIntersecable.projection.screenY0;
-	const float screenY1 = projectionLight->notIntersecable.projection.screenY1;
+	const float screenX0 = projectionLight->notIntersectable.projection.screenX0;
+	const float screenX1 = projectionLight->notIntersectable.projection.screenX1;
+	const float screenY0 = projectionLight->notIntersectable.projection.screenY0;
+	const float screenY1 = projectionLight->notIntersectable.projection.screenY1;
 	if ((p0.x < screenX0) || (p0.x >= screenX1) || (p0.y < screenY0) || (p0.y >= screenY1))
 		return BLACK;
 
 	*directPdfW = distanceSquared;
 
-	float3 c = VLOAD3F(projectionLight->notIntersecable.projection.emittedFactor.c);
-	const uint imageMapIndex = projectionLight->notIntersecable.projection.imageMapIndex;
+	float3 c = VLOAD3F(projectionLight->notIntersectable.projection.emittedFactor.c);
+	const uint imageMapIndex = projectionLight->notIntersectable.projection.imageMapIndex;
 	if (imageMapIndex != NULL_INDEX) {
 		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
 		const float v = (p0.y - screenY0) / (screenY1 - screenY0);
@@ -655,7 +655,7 @@ float3 SharpDistantLight_Illuminate(__global LightSource *sharpDistantLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
-	*dir = -VLOAD3F(&sharpDistantLight->notIntersecable.sharpDistant.absoluteLightDir.x);
+	*dir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
@@ -667,8 +667,8 @@ float3 SharpDistantLight_Illuminate(__global LightSource *sharpDistantLight,
 
 	*directPdfW = 1.f;
 
-	return VLOAD3F(sharpDistantLight->notIntersecable.gain.c) *
-			VLOAD3F(sharpDistantLight->notIntersecable.sharpDistant.color.c);
+	return VLOAD3F(sharpDistantLight->notIntersectable.gain.c) *
+			VLOAD3F(sharpDistantLight->notIntersectable.sharpDistant.color.c);
 }
 
 #endif
@@ -684,10 +684,10 @@ float3 DistantLight_Illuminate(__global LightSource *distantLight,
 		const float sceneRadius,
 		const float3 p,	const float u0, const float u1,
 		float3 *dir, float *distance, float *directPdfW) {
-	const float3 absoluteLightDir = VLOAD3F(&distantLight->notIntersecable.distant.absoluteLightDir.x);
-	const float3 x = VLOAD3F(&distantLight->notIntersecable.distant.x.x);
-	const float3 y = VLOAD3F(&distantLight->notIntersecable.distant.y.x);
-	const float cosThetaMax = distantLight->notIntersecable.distant.cosThetaMax;
+	const float3 absoluteLightDir = VLOAD3F(&distantLight->notIntersectable.distant.absoluteLightDir.x);
+	const float3 x = VLOAD3F(&distantLight->notIntersectable.distant.x.x);
+	const float3 y = VLOAD3F(&distantLight->notIntersectable.distant.y.x);
+	const float cosThetaMax = distantLight->notIntersectable.distant.cosThetaMax;
 	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
@@ -701,8 +701,8 @@ float3 DistantLight_Illuminate(__global LightSource *distantLight,
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 	*directPdfW = uniformConePdf;
 
-	return VLOAD3F(distantLight->notIntersecable.gain.c) *
-			VLOAD3F(distantLight->notIntersecable.sharpDistant.color.c);
+	return VLOAD3F(distantLight->notIntersectable.gain.c) *
+			VLOAD3F(distantLight->notIntersectable.sharpDistant.color.c);
 }
 
 #endif
@@ -722,7 +722,7 @@ float3 EnvLight_GetRadiance(__global LightSource *light, const float3 dir, float
 #if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
 			return InfiniteLight_GetRadiance(light,
-					&infiniteLightDistribution[light->notIntersecable.infinite.distributionOffset],
+					&infiniteLightDistribution[light->notIntersectable.infinite.distributionOffset],
 					dir, directPdfA
 					IMAGEMAPS_PARAM);
 #endif
@@ -756,7 +756,7 @@ float3 EnvLight_GetRadiance(__global LightSource *light, const float3 dir, float
 }
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-float3 IntersecableLight_GetRadiance(__global LightSource *light,
+float3 IntersectableLight_GetRadiance(__global LightSource *light,
 		 __global HitPoint *hitPoint, float *directPdfA
 		LIGHTS_PARAM_DECL) {
 	return TriangleLight_GetRadiance(light, hitPoint, directPdfA
@@ -796,7 +796,7 @@ float3 Light_Illuminate(
 		case TYPE_IL:
 			return InfiniteLight_Illuminate(
 				light,
-				&infiniteLightDistribution[light->notIntersecable.infinite.distributionOffset],
+				&infiniteLightDistribution[light->notIntersectable.infinite.distributionOffset],
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				u0, u1,
 				point,
@@ -886,7 +886,7 @@ float3 Light_Illuminate(
 	}
 }
 
-bool Light_IsEnvOrIntersecable(__global LightSource *light) {
+bool Light_IsEnvOrIntersectable(__global LightSource *light) {
 	switch (light->type) {
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 		case TYPE_IL_CONSTANT:

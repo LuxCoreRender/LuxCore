@@ -389,7 +389,7 @@ float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *directPdfA
 	if (triangleLightSourceIndex == NULL_INDEX)
 		return BLACK;
 	else
-		return IntersecableLight_GetRadiance(&lights[triangleLightSourceIndex],
+		return IntersectableLight_GetRadiance(&lights[triangleLightSourceIndex],
 				&bsdf->hitPoint, directPdfA
 				LIGHTS_PARAM);
 }

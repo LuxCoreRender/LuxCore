@@ -19,7 +19,7 @@
 #ifndef _LUXRAYS_COLOR_H
 #define _LUXRAYS_COLOR_H
 
-#include <math.h>
+#include <cmath>
 #include <ostream>
 #include <boost/serialization/access.hpp>
 

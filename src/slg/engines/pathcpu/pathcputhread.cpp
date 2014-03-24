@@ -78,7 +78,7 @@ void PathCPURenderThread::DirectLightSampling(
 					}
 
 					// MIS between direct light sampling and BSDF sampling
-					const float weight = (light->IsEnvironmental() || light->IsIntersecable()) ? 
+					const float weight = (light->IsEnvironmental() || light->IsIntersectable()) ? 
 						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 					const Spectrum radiance = (weight * factor) * pathThroughput * connectionThroughput * lightRadiance * bsdfEval;
