@@ -464,7 +464,7 @@ std::string KernelSource_biaspathocl_funcs =
 "			const float factor = 1.f / directLightSamplingPdfW;\n"
 "\n"
 "			// MIS between direct light sampling and BSDF sampling\n"
-"			const float weight = Light_IsEnvOrIntersecable(light) ?\n"
+"			const float weight = Light_IsEnvOrIntersectable(light) ?\n"
 "				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;\n"
 "\n"
 "			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->c[0]) * bsdfEval * lightRadiance, &radiance->c[0]);\n"

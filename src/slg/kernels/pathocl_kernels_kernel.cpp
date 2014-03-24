@@ -288,7 +288,7 @@ std::string KernelSource_pathocl_kernels =
 "			bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;\n"
 "\n"
 "			// MIS between direct light sampling and BSDF sampling\n"
-"			const float weight = Light_IsEnvOrIntersecable(light) ?\n"
+"			const float weight = Light_IsEnvOrIntersectable(light) ?\n"
 "				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;\n"
 "\n"
 "			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);\n"
