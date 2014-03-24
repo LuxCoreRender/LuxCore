@@ -29,7 +29,7 @@ scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply
-scene.objects.red.material = redmat
+scene.objects.red.material = mat2
 scene.objects.red.ply = scenes/bigmonkey/bigmonkey.ply
 scene.objects.l1.material = whitelight
 scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
