@@ -64,7 +64,7 @@ void FileSaverRenderEngine::SaveScene() {
 
 	const path dirPath(directoryName);
 
-	// Check if the directory exist
+	// Check if the directory exists
 	if (!exists(dirPath))
 		throw std::runtime_error("Directory doesn't exist: " + directoryName);
 	if (!is_directory(dirPath))

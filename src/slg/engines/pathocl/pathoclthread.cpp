@@ -279,8 +279,8 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 		uDataSize = sizeof(float) * 2;
 		
 		if (engine->sampler->type == slg::ocl::SOBOL) {
-			// Limit the number of dimension where I use Sobol sequence (after, I switch
-			// to Random sampler.
+			// Limit the number of dimensions where I use Sobol sequence (after,
+			// I switch to Random sampler.
 			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, engine->maxPathDepth);
 		}
 	} else if (engine->sampler->type == slg::ocl::METROPOLIS) {
@@ -341,7 +341,7 @@ void PathOCLRenderThread::AdditionalInit() {
 void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	// Set OpenCL kernel arguments
 
-	// OpenCL kernel setArg() is the only no thread safe function in OpenCL 1.1 so
+	// OpenCL kernel setArg() is the only non thread safe function in OpenCL 1.1 so
 	// I need to use a mutex here
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);

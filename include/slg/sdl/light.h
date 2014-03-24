@@ -68,11 +68,11 @@ public:
 
 	virtual LightSourceType GetType() const = 0;
 
-	// If emit light on rays intersecting nothing
+	// If emits light on rays intersecting nothing
 	virtual bool IsEnvironmental() const { return false; }
 	// If the emitted power is based on scene radius
 	virtual bool IsInfinite() const { return false; }
-	// If it can be directly interescted by a ray
+	// If it can be directly intersected by a ray
 	virtual bool IsIntersecable() const { return false; }
 
 	virtual u_int GetID() const = 0;
@@ -166,9 +166,9 @@ private:
 
 	std::vector<u_int> lightIndexByMeshIndex;
 
-	// Only intersecable light sources
+	// Only intersectable light sources
 	std::vector<TriangleLight *> intersecableLightSources;
-	// Only env. lights sources (i.e. sky, sun and infinite light, etc.)
+	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
 	std::vector<EnvLightSource *> envLightSources;
 
 	// Used for power based light sampling strategy
@@ -177,7 +177,7 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// Intersecable LightSource interface
+// Intersectable LightSource interface
 //------------------------------------------------------------------------------
 
 class IntersecableLightSource : public LightSource {
@@ -213,7 +213,7 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-// Not interescable LightSource interface
+// Not intersectable LightSource interface
 //------------------------------------------------------------------------------
 
 class NotIntersecableLightSource : public LightSource {

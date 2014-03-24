@@ -436,7 +436,7 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 			}
 		}
 
-		// I assume the image have the same gamma
+		// I assume the images have the same gamma
 		return new ImageMap(mergedImg, map0->GetGamma(), 1, width, height);
 	} else if (channels == 3) {
 		float *mergedImg = new float[width * height * 3];
@@ -453,7 +453,7 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 			}
 		}
 
-		// I assume the image have the same gamma
+		// I assume the images have the same gamma
 		return new ImageMap(mergedImg, map0->GetGamma(), 3, width, height);
 	} else
 		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
@@ -1159,7 +1159,7 @@ Spectrum BrickTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const float offs = BRICK_EPSILON + mortarsize;
 	Point bP(P + Point(offs, offs, offs));
 
-	// Normalize coordinates according brick dimensions
+	// Normalize coordinates according to brick dimensions
 	bP.x /= brickwidth;
 	bP.y /= brickdepth;
 	bP.z /= brickheight;

@@ -139,7 +139,7 @@ void BiasPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 	CompileKernel(program, &initSeedKernel, &initSeedWorkGroupSize, "InitSeed");
 
 	//----------------------------------------------------------------------
-	// InitSeed kernel
+	// InitStat kernel
 	//----------------------------------------------------------------------
 
 	CompileKernel(program, &initStatKernel, &initStatWorkGroupSize, "InitStat");
@@ -239,7 +239,7 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	// Set OpenCL kernel arguments
 
-	// OpenCL kernel setArg() is the only no thread safe function in OpenCL 1.1 so
+	// OpenCL kernel setArg() is the only non thread safe function in OpenCL 1.1 so
 	// I need to use a mutex here
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);

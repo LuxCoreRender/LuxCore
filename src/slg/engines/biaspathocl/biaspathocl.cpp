@@ -192,7 +192,7 @@ void BiasPathOCLRenderEngine::UpdateCounters() {
 	}
 	raysCount = totalCount;
 
-	// Update the time only until when the rendering is not finished
+	// Update the time only while rendering is not finished
 	if (!tileRepository->done)
 		elapsedTime = WallClockTime() - startTime;
 }

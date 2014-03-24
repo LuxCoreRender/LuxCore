@@ -53,7 +53,7 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 	filmWidth = width;
 	filmHeight = height;
 
-	// Used to move translate the camera
+	// Used to translate the camera
 	dir = target - orig;
 	dir = Normalize(dir);
 
@@ -365,7 +365,7 @@ void PerspectiveCamera::OculusRiftBarrelPostprocess(const float x, const float y
 	// Distance from the eye center
 	const float distance = sqrtf(ex * ex + ey * ey);
 
-	// "Push" the sample away base on the distance from the center
+	// "Push" the sample away based on the distance from the center
 	const float scale = 1.f / 1.4f;
 	const float k0 = 1.f;
 	const float k1 = .22f;

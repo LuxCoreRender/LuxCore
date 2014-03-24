@@ -114,7 +114,7 @@ private:
 	static bool CompareVolumePriorities(const Volume *vol1, const Volume *vol2);
 
 	const Volume *currentVolume;
-	// Using a fixed array here mostly to have the some code of OpenCL implementation
+	// Using a fixed array here mostly to have the same code as the OpenCL implementation
 	const Volume *volumeList[PATHVOLUMEINFO_SIZE];
 	u_int volumeListSize;
 	

@@ -82,7 +82,7 @@ void BiDirState::ConnectVertices(HybridRenderThread *renderThread,
 			if (geometryTerm <= 0.f)
 				return;
 
-			// Trace  ray between the two vertices
+			// Trace ray between the two vertices
 			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(eyeDistance));
 			Ray eyeRay(eyeVertex.bsdf.hitPoint.p, eyeDir,
 					epsilon,
@@ -102,7 +102,7 @@ void BiDirState::ConnectVertices(HybridRenderThread *renderThread,
 				lightBsdfRevPdfW *= prob;
 			}
 
-			// Convert pdfs to area pdf
+			// Convert pdfs to area pdfs
 			const float eyeBsdfPdfA = PdfWtoA(eyeBsdfPdfW, eyeDistance, cosThetaAtLight);
 			const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  eyeDistance, cosThetaAtCamera);
 
@@ -312,7 +312,7 @@ void BiDirState::TraceLightPath(HybridRenderThread *renderThread,
 		assert (!lightVertex.throughput.IsNaN() && !lightVertex.throughput.IsInf());
 
 		// I don't store the light vertex 0 because direct lighting will take
-		// care of this kind of paths
+		// care of these kind of paths
 		lightVertex.dVCM = MIS(lightDirectPdfW / lightEmitPdfW);
 		const float usedCosLight = light->IsEnvironmental() ? 1.f : cosThetaAtLight;
 		lightVertex.dVC = MIS(usedCosLight / lightEmitPdfW);
@@ -468,8 +468,8 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 		//----------------------------------------------------------------------
 
 		if (eyePathIndex == 0) {
-			// As suggested in the CBDPT paper (paragraph 3.2). I do connect the light vertices
-			// only with the first eye vertex of the first path. This because, in a pinhole camera,
+			// As suggested in the CBDPT paper (paragraph 3.2). I connect the light vertices
+			// only with the first eye vertex of the first path. This is because, in a pinhole camera,
 			// all the first vertices are the same (they are slightly different only if the lens radius
 			// is > 0.0).
 			for (u_int lightPathIndex = 0; lightPathIndex < lightPaths.size(); ++lightPathIndex) {
@@ -592,11 +592,11 @@ bool BiDirState::ValidResult(BiDirHybridRenderThread *renderThread,
 		BiDirHybridRenderEngine *renderEngine = (BiDirHybridRenderEngine *)renderThread->renderEngine;
 		Scene *scene = renderEngine->renderConfig->scene;
 
-		// I have to check if it is an hit over a pass-through point
+		// I have to check if it is a hit over a pass-through point
 		BSDF bsdf(false, // true or false, here, doesn't really matter
 				*scene, *ray, *rayHit, u0, NULL);
 
-		// Check if it is pass-through point
+		// Check if it is a pass-through point
 		Spectrum t = bsdf.GetPassThroughTransparency();
 		if (!t.Black()) {
 			*radiance *= t;
@@ -627,11 +627,11 @@ double BiDirState::CollectResults(HybridRenderThread *renderThread) {
 	
 	vector<SampleResult> validSampleResults;
 
-	// Elaborate the RayHit results for each eye paths
+	// Evaluate the RayHit results for each eye path
 	SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
 	u_int currentLightSampleResultsIndex = 0;
 	for (u_int eyePathIndex = 0; eyePathIndex < renderEngine->eyePathCount; ++eyePathIndex) {
-		// For each eye path, elaborate the RayHit results for eye to light path vertex connections
+		// For each eye path, evaluate the RayHit results for eye to light path vertex connections
 		for (u_int i = 0; i < eyeSampleResults[eyePathIndex].lightPathVertexConnections; ++i) {
 			const Ray *ray;
 			const RayHit *rayHit;

@@ -162,10 +162,10 @@ bool PathHybridState::FinalizeRay(const PathHybridRenderThread *renderThread,
 		PathHybridRenderEngine *renderEngine = (PathHybridRenderEngine *)renderThread->renderEngine;
 		Scene *scene = renderEngine->renderConfig->scene;
 
-		// I have to check if it is an hit over a pass-through point
+		// I have to check if it is a hit over a pass-through point
 		bsdf->Init(false, *scene, *ray, *rayHit, u0, NULL);
 
-		// Check if it is pass-through point
+		// Check if it is a pass-through point
 		Spectrum t = bsdf->GetPassThroughTransparency();
 		if (!t.Black()) {
 			*radiance *= t;

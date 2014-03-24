@@ -94,7 +94,7 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 }
 
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {
-	// Nothing to do: the display thread is in charge to update the film
+	// Nothing to do: the display thread is in charge of updating the film
 }
 
 void RTPathOCLRenderEngine::WaitNewFrame() {
@@ -115,7 +115,7 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetAssignedIterations() / t->GetFrameTime() << " iterations/sec");
 			//SLG_LOG("[RTPathOCLRenderEngine]   " << t->GetFrameTime() * 1000.0 << " msec");
 
-			// Check how far I'm from target frame rate
+			// Check how far I am from target frame rate
 			if (t->GetFrameTime() < targetFrameTime) {
 				// Too fast, increase the number of iterations
 				t->SetAssignedIterations(Max(t->GetAssignedIterations() + 1, minIterations));

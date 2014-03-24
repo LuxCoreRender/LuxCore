@@ -96,7 +96,7 @@ void RTBiasPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) 
 }
 
 void RTBiasPathOCLRenderEngine::UpdateFilmLockLess() {
-	// Nothing to do: the display thread is in charge to update the film
+	// Nothing to do: the display thread is in charge of updating the film
 }
 
 void RTBiasPathOCLRenderEngine::WaitNewFrame() {

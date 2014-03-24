@@ -81,8 +81,8 @@ void PathOCLRenderEngine::StartLockLess() {
 	} else {
 		taskCount = cfg.Get(Property("opencl.task.count")(65536)).Get<u_int>();
 		// I don't know yet the workgroup size of each device so I can not
-		// round up task count to be a multiply of workgroups size of all devices
-		// used. rounding to 2048 is a simple trick base don the assumption that
+		// round up task count to be a multiple of workgroups size of all devices
+		// used. rounding to 2048 is a simple trick based on the assumption that
 		// workgroup size is a power of 2 and <= 2048.
 		taskCount = RoundUp<u_int>(taskCount, 2048);
 		SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
@@ -132,7 +132,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	const FilterType filterType = filmFilter ? filmFilter->GetType() : FILTER_NONE;
 
 	filter = new slg::ocl::Filter();
-	// Force pixel filter to NONE if I'm RTOPENCL
+	// Force pixel filter to NONE if I'm RTPATHOCL
 	if ((filterType == FILTER_NONE) || (GetEngineType() == RTPATHOCL))
 		filter->type = slg::ocl::FILTER_NONE;
 	else if (filterType == FILTER_BOX) {
@@ -187,7 +187,7 @@ void PathOCLRenderEngine::UpdateCounters() {
 	}
 
 	samplesCount = totalCount;
-	// This is a bit tricky because film is reseted in UpdateFilmLockLess()
+	// This is a bit tricky because film is reset in UpdateFilmLockLess()
 	film->SetSampleCount(samplesCount);
 
 	// Update the ray count statistic
