@@ -824,6 +824,27 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
 		return new BlenderWoodTexture(CreateTextureMapping3D(propName + ".mapping", props), woodtype, noisebasis2, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
+	} else if (texType == "blender_voronoi") {
+		const float intensity = props.Get(Property(propName + ".intensity")(1.f)).Get<float>();
+		const float exponent = props.Get(Property(propName + ".exponent")(2.f)).Get<float>();
+		const std::string distmetric = props.Get(Property(propName + ".distmetric")("actual_distance")).Get<string>();
+		const float fw1 = props.Get(Property(propName + ".w1")(1.f)).Get<float>();
+		const float fw2 = props.Get(Property(propName + ".w2")(0.f)).Get<float>();
+		const float fw3 = props.Get(Property(propName + ".w3")(0.f)).Get<float>();
+		const float fw4 = props.Get(Property(propName + ".w4")(0.f)).Get<float>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
+		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
+		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
+		
+		DistanceMetric dm = ACTUAL_DISTANCE;
+		if (distmetric == "distance_squared") {dm = DISTANCE_SQUARED;}
+		else if (distmetric == "manhattan") {dm = MANHATTAN;}
+		else if (distmetric == "chebychev") {dm = CHEBYCHEV;}
+		else if (distmetric == "minkowski_half") {dm = MINKOWSKI_HALF;}
+		else if (distmetric == "minkowski_four") {dm = MINKOWSKI_FOUR;}
+		else if (distmetric == "manhattan") {dm = MANHATTAN;};
+
+		return new BlenderVoronoiTexture(CreateTextureMapping3D(propName + ".mapping", props), intensity, exponent, fw1, fw2, fw3, fw4, dm, noisesize, bright, contrast);
 	} else if (texType == "dots") {
 		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
 		const Texture *outsideTex = GetTexture(props.Get(Property(propName + ".outside")(0.f)));
