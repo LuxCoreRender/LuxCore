@@ -60,7 +60,8 @@ typedef enum {
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
 	HITPOINTGREY, NORMALMAP_TEX,
 	// Procedural textures
-	BLENDER_WOOD, BLENDER_CLOUDS, CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX,
+	BLENDER_WOOD, BLENDER_CLOUDS, BLENDER_VORONOI,
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX,
 	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX
 } TextureType;
 
@@ -98,10 +99,27 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 };
 
-extern float Noise(float x, float y = .5f, float z = .5f);
+float Noise(float x, float y = .5f, float z = .5f);
 inline float Noise(const luxrays::Point &P) {
 	return Noise(P.x, P.y, P.z);
 }
+
+typedef enum { 
+	ACTUAL_DISTANCE, DISTANCE_SQUARED, MANHATTAN, CHEBYCHEV, MINKOWSKI_HALF, 
+	MINKOWSKI_FOUR, MINKOWSKI
+} DistanceMetric;
+
+float tex_sin(float a);
+float tex_saw(float a);
+float tex_tri(float a);
+float Turbulence(const luxrays::Point &P, const float omega, const int maxOctaves);
+
+void voronoi(float x, float y, float z, float* da, float* pa, float me, DistanceMetric dtype);
+inline void voronoi(luxrays::Point P, float* da, float* pa, float me, DistanceMetric dtype) {
+	voronoi(P.x, P.y, P.z, da, pa, me, dtype);
+}
+
+
 
 //------------------------------------------------------------------------------
 // TextureDefinitions
@@ -1092,84 +1110,6 @@ public:
 
 private:
 	u_int channel;
-};
-
-//------------------------------------------------------------------------------
-// Blender wood texture
-//------------------------------------------------------------------------------
-typedef enum {
-	BANDS, RINGS, BANDNOISE, RINGNOISE
-} BlenderWoodType;
-
-typedef enum {
-	TEX_SIN, TEX_SAW, TEX_TRI
-} BlenderWoodNoiseBase;
-
-class BlenderWoodTexture : public Texture {
-public:
-	BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast);
-	virtual ~BlenderWoodTexture() { delete mapping; }
-
-	virtual TextureType GetType() const { return BLENDER_WOOD; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	// The following methods don't make very much sense in this case. I have no
-	// information about the color.
-	virtual float Y() const { return .5f; }
-	virtual float Filter() const { return .5f; }
-
-	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	BlenderWoodType GetWoodType() const { return type; }
-	BlenderWoodNoiseBase GetNoiseBasis2() const { return noisebasis2; }
-	float GetNoiseSize() const { return noisesize; }
-	float GetTurbulence() const { return turbulence; }
-	float GetBright() const { return bright; }
-	float GetContrast() const { return contrast; }
-	bool GetNoiseType() const { return hard; }
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	const TextureMapping3D *mapping;
-	BlenderWoodType type;
-	BlenderWoodNoiseBase noisebasis2;	
-	float noisesize, turbulence;
-	bool hard;
-	float bright, contrast;
-};
-
-//------------------------------------------------------------------------------
-// Blender clouds texture
-//------------------------------------------------------------------------------
-
-class BlenderCloudsTexture : public Texture {
-public:
-	BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, bool hard, float bright, float contrast);
-	virtual ~BlenderCloudsTexture() { delete mapping; }
-
-	virtual TextureType GetType() const { return BLENDER_CLOUDS; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	// The following methods don't make very much sense in this case. I have no
-	// information about the color.
-	virtual float Y() const { return .5f; }
-	virtual float Filter() const { return .5f; }
-
-	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	float GetBright() const { return bright; }
-	float GetContrast() const { return contrast; }
-	float GetNoiseSize() const { return noisesize; }
-	int GetNoiseDepth() const { return noisedepth; }
-	bool GetNoiseType() const { return hard; }
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	const TextureMapping3D *mapping;
-	int noisedepth;	
-	float noisesize;	
-	bool hard;
-	float bright, contrast;
 };
 
 //------------------------------------------------------------------------------
