@@ -35,9 +35,10 @@
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
 #include "slg/editaction.h"
-#include "slg/sdl/sdl.h"
 #include "slg/sampler/sampler.h"
+#include "slg/sdl/sdl.h"
 #include "slg/sdl/scene.h"
+#include "slg/sdl/blender_texture.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;
@@ -813,7 +814,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props), noisesize, noisedepth, (hard=="hard_noise"), bright, contrast);
+		return new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				noisesize,noisedepth,(hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_wood") {
 		const std::string woodtype = props.Get(Property(propName + ".woodtype")("bands")).Get<string>();
 		const std::string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
@@ -823,7 +825,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderWoodTexture(CreateTextureMapping3D(propName + ".mapping", props), woodtype, noisebasis2, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
+		return new BlenderWoodTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				woodtype, noisebasis2, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_voronoi") {
 		const float intensity = props.Get(Property(propName + ".intensity")(1.f)).Get<float>();
 		const float exponent = props.Get(Property(propName + ".exponent")(2.f)).Get<float>();

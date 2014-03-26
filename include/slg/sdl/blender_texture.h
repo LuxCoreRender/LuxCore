@@ -32,6 +32,7 @@ typedef enum {
 //------------------------------------------------------------------------------
 // Blender wood texture
 //------------------------------------------------------------------------------
+
 typedef enum {
 	BANDS, RINGS, BANDNOISE, RINGNOISE
 } BlenderWoodType;
@@ -147,6 +148,7 @@ public:
 			default:
 				result = "actual_distance";
 
+			return result;
 		}
 	}
 	float GetFeatureWeight1() const { return feature_weight1; }
