@@ -194,9 +194,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ApplyGaussianBlurF
 	src += gid * filmWidth;
 	dst += gid * filmWidth;
 
-	const float aF = .15f;
+	const float aF = weight;
 	const float bF = 1.f;
-	const float cF = .15f;
+	const float cF = weight;
 
 	ApplyBlurFilterXR1(filmWidth, filmHeight, src, dst, aF, bF, cF);
 }
