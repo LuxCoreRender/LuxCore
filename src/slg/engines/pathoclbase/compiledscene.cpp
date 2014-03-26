@@ -22,7 +22,8 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include"slg/engines/pathoclbase/compiledscene.h"
+#include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/sdl/blender_texture.h"
 
 using namespace std;
 using namespace luxrays;
