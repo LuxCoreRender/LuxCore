@@ -302,6 +302,9 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 				imagePipeline->AddPlugin(new OutputSwitcherPlugin(
 					Film::String2FilmChannelType(cfg.Get(Property(prefix + ".channel")("DEPTH")).Get<string>()),
 					cfg.Get(Property(prefix + ".index")(0u)).Get<u_int>()));
+			} else if (type == "GAUSSIANFILTER_3x3") {
+				imagePipeline->AddPlugin(new GaussianBlur3x3FilterPlugin(
+					cfg.Get(Property(prefix + ".weight")(.15f)).Get<float>()));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

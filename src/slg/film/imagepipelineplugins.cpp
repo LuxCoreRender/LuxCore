@@ -48,11 +48,11 @@ float GammaCorrectionPlugin::Radiance2PixelFloat(const float x) const {
 	//return powf(Clamp(x, 0.f, 1.f), 1.f / 2.2f);
 
 	const u_int tableSize = gammaTable.size();
-	const int index = Clamp<int>(luxrays::Floor2UInt(tableSize * Clamp(x, 0.f, 1.f)), 0, tableSize - 1);
+	const int index = Clamp<int>(Floor2UInt(tableSize * Clamp(x, 0.f, 1.f)), 0, tableSize - 1);
 	return gammaTable[index];
 }
 
-void GammaCorrectionPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	for (u_int i = 0; i < pixelCount; ++i) {
@@ -72,7 +72,7 @@ ImagePipelinePlugin *NopPlugin::Copy() const {
 	return new NopPlugin();
 }
 
-void NopPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void NopPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 }
 
 //------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ ImagePipelinePlugin *OutputSwitcherPlugin::Copy() const {
 	return new OutputSwitcherPlugin(type, index);
 }
 
-void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	// Copy the data from another Film output channel
 
 	// Do nothing if the Film is missing this particular channel
@@ -291,5 +291,138 @@ void OutputSwitcherPlugin::Apply(const Film &film, luxrays::Spectrum *pixels, st
 		}
 		default:
 			throw runtime_error("Unknown film output type in OutputSwitcherPlugin::Apply(): " + ToString(type));
+	}
+}
+
+//------------------------------------------------------------------------------
+// GaussianBlur filter plugin
+//------------------------------------------------------------------------------
+
+ImagePipelinePlugin *GaussianBlur3x3FilterPlugin::Copy() const {
+	return new GaussianBlur3x3FilterPlugin(weight);
+}
+
+void GaussianBlur3x3FilterPlugin::ApplyBlurFilterXR1(
+		const u_int filmWidth, const u_int filmHeight,
+		const Spectrum *src,
+		Spectrum *dst,
+		const float aF,
+		const float bF,
+		const float cF) const {
+	// Do left edge
+	Spectrum a;
+	Spectrum b = src[0];
+	Spectrum c = src[1];
+
+	const float leftTotF = bF + cF;
+	const Spectrum bLeftK = bF / leftTotF;
+	const Spectrum cLeftK = cF / leftTotF;
+	dst[0] = bLeftK  * b + cLeftK * c;
+
+    // Main loop
+	const float totF = aF + bF + cF;
+	const Spectrum aK = aF / totF;
+	const Spectrum bK = bF / totF;
+	const Spectrum cK = cF / totF;
+
+	for (unsigned int x = 1; x < filmWidth - 1; ++x) {
+		a = b;
+		b = c;
+		c = src[x + 1];
+
+		dst[x] = aK * a + bK  * b + cK * c;
+    }
+
+    // Do right edge
+	const float rightTotF = aF + bF;
+	const Spectrum aRightK = aF / rightTotF;
+	const Spectrum bRightK = bF / rightTotF;
+	a = b;
+	b = c;
+	dst[filmWidth - 1] = aRightK  * a + bRightK * b;
+}
+
+void GaussianBlur3x3FilterPlugin::ApplyBlurFilterYR1(
+		const u_int filmWidth, const u_int filmHeight,
+		const Spectrum *src,
+		Spectrum *dst,
+		const float aF,
+		const float bF,
+		const float cF) const {
+	// Do left edge
+	Spectrum a;
+	Spectrum b = src[0];
+	Spectrum c = src[filmWidth];
+
+	const float leftTotF = bF + cF;
+	const Spectrum bLeftK = bF / leftTotF;
+	const Spectrum cLeftK = cF / leftTotF;
+	dst[0] = bLeftK  * b + cLeftK * c;
+
+    // Main loop
+	const float totF = aF + bF + cF;
+	const Spectrum aK = aF / totF;
+	const Spectrum bK = bF / totF;
+	const Spectrum cK = cF / totF;
+
+    for (unsigned int y = 1; y < filmHeight - 1; ++y) {
+		const unsigned index = y * filmWidth;
+
+		a = b;
+		b = c;
+		c = src[index + filmWidth];
+
+		dst[index] = aK * a + bK  * b + cK * c;
+    }
+
+    // Do right edge
+	const float rightTotF = aF + bF;
+	const Spectrum aRightK = aF / rightTotF;
+	const Spectrum bRightK = bF / rightTotF;
+	a = b;
+	b = c;
+	dst[(filmHeight - 1) * filmWidth] = aRightK  * a + bRightK * b;
+}
+
+void GaussianBlur3x3FilterPlugin::ApplyGaussianBlurFilterXR1(
+		const u_int filmWidth, const u_int filmHeight,
+		const Spectrum *src, Spectrum *dst) const {
+	const float aF = weight;
+	const float bF = 1.f;
+	const float cF = weight;
+
+	ApplyBlurFilterXR1(filmWidth, filmHeight, src, dst, aF, bF, cF);
+}
+
+void GaussianBlur3x3FilterPlugin::ApplyGaussianBlurFilterYR1(
+		const u_int filmWidth, const u_int filmHeight,
+		const Spectrum *src, Spectrum *dst) const {
+	const float aF = weight;
+	const float bF = 1.f;
+	const float cF = weight;
+
+	ApplyBlurFilterYR1(filmWidth, filmHeight, src, dst, aF, bF, cF);
+}
+
+void GaussianBlur3x3FilterPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();
+
+	// Allocate the temporary buffer if required
+	if ((!tmpBuffer) || (width * height != tmpBufferSize)) {
+		delete tmpBuffer;
+
+		tmpBufferSize = width * height;
+		tmpBuffer = new Spectrum[tmpBufferSize];
+	}
+
+	for (u_int i = 0; i < 3; ++i) {
+		for (u_int y = 0; y < height; ++y) {
+			const u_int index = y * width;
+			ApplyGaussianBlurFilterXR1(width, height, &pixels[index], &tmpBuffer[index]);
+		}
+
+		for (u_int x = 0; x < width; ++x)
+			ApplyGaussianBlurFilterYR1(width, height, &tmpBuffer[x], &pixels[x]);
 	}
 }

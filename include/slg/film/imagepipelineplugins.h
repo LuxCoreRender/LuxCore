@@ -82,6 +82,41 @@ public:
 	const u_int index;
 };
 
+//------------------------------------------------------------------------------
+// GaussianBlur filter plugin
+//------------------------------------------------------------------------------
+
+class GaussianBlur3x3FilterPlugin : public ImagePipelinePlugin {
+public:
+	GaussianBlur3x3FilterPlugin(const float w) : weight(w), tmpBuffer(NULL), tmpBufferSize(0) { }
+	virtual ~GaussianBlur3x3FilterPlugin() { delete tmpBuffer; }
+
+	virtual ImagePipelinePlugin *Copy() const;
+
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+
+	const float weight;
+
+private:
+	void ApplyBlurFilterXR1(
+		const u_int filmWidth, const u_int filmHeight,
+		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
+		const float aF, const float bF, const float cF) const;
+	void ApplyBlurFilterYR1(
+		const u_int filmWidth, const u_int filmHeight,
+		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
+		const float aF, const float bF, const float cF) const;
+	void ApplyGaussianBlurFilterXR1(
+		const u_int filmWidth, const u_int filmHeight,
+		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
+	void ApplyGaussianBlurFilterYR1(
+		const u_int filmWidth, const u_int filmHeight,
+		const luxrays::Spectrum *src, luxrays::Spectrum *dst) const;
+
+	mutable luxrays::Spectrum *tmpBuffer;
+	mutable size_t tmpBufferSize;
+};
+
 }
 
 #endif	/*  _SLG_IMAGEPIPELINE_PLUGINS_H */
