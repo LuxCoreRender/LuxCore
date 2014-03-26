@@ -21,13 +21,9 @@
 
 #include <xmmintrin.h>
 
-#include <boost/cstdint.hpp>
-
 #include "luxrays/luxrays.h"
 #include "luxrays/core/accelerator.h"
 #include "luxrays/accelerators/qbvhaccel.h"
-
-using boost::int32_t;
 
 namespace luxrays {
 

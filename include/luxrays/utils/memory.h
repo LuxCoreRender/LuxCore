@@ -35,8 +35,6 @@
 
 #include <vector>
 #include <boost/serialization/split_member.hpp>
-#include <boost/cstdint.hpp>
-using boost::int8_t;
 
 namespace luxrays {
 
