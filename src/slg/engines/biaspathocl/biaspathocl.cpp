@@ -112,19 +112,15 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 		defaultTileSize = 32;
 	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(defaultTileSize)).Get<u_int>(), 8u));
 
-	if (GetEngineType() == RTBIASPATHOCL) {
-		tileRepository->enableProgressiveRefinement = false;
+	if (GetEngineType() == RTBIASPATHOCL)
 		tileRepository->enableMultipassRendering = false;
-	} else {
-		tileRepository->enableProgressiveRefinement = cfg.Get(Property("tile.progressiverefinement.enable")(false)).Get<bool>();
+	else
 		tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(false)).Get<bool>();
-	}
+
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 
-	taskCount = (tileRepository->enableProgressiveRefinement) ?
-		(tileRepository->tileSize * tileRepository->tileSize) :
-		(tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel);
+	taskCount = tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel;
 
 	InitPixelFilterDistribution();
 	
@@ -163,7 +159,7 @@ const bool BiasPathOCLRenderEngine::NextTile(TileRepository::Tile **tile, const 
 				(*tile)->xStart, (*tile)->yStart);
 	}
 
-	if (!tileRepository->NextTile(tile, film->GetWidth(), film->GetHeight())) {
+	if (!tileRepository->NextTile(film, tile, tileFilm)) {
 		// RTBIASPATHOCL would end in dead-lock on engineMutex
 		if (GetEngineType() != RTBIASPATHOCL) {
 			boost::unique_lock<boost::mutex> lock(engineMutex);

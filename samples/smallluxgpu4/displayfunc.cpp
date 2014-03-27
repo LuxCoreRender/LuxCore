@@ -198,6 +198,30 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 }
 
+static void DrawTiles(const Property &propCoords, const Property &propPasses, 
+		const u_int tileCount, const u_int tileSize) {
+	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
+
+	for (u_int i = 0; i < tileCount; ++i) {
+		const u_int xStart = propCoords.Get<u_int>(i * 2);
+		const u_int yStart = propCoords.Get<u_int>(i * 2 + 1);
+
+		glBegin(GL_LINE_LOOP);
+		glVertex2i(xStart, yStart);
+		glVertex2i(xStart + tileSize, yStart);
+		glVertex2i(xStart + tileSize, yStart + tileSize);
+		glVertex2i(xStart, yStart + tileSize);
+		glEnd();
+
+		if (showPassCount) {
+			const u_int passes = propPasses.Get<u_int>(i);
+			glRasterPos2i(xStart + 1, yStart + 2);
+			const string pass = boost::lexical_cast<string>(passes);
+			PrintString(GLUT_BITMAP_8_BY_13, pass.c_str());
+		}
+	}
+}
+
 static void PrintCaptions() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -212,22 +236,22 @@ static void PrintCaptions() {
 	const string engineType = config->GetProperty("renderengine.type").Get<string>();
 	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
 		const u_int tileSize = stats.Get("stats.biaspath.tiles.size").Get<u_int>();
-		const u_int tileCount = stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>();
 
-		// Draw tiles borders
-		const Property &prop = stats.Get("stats.biaspath.tiles.pending.coords");
-		glColor3f(1.f, 1.f, 0.f);
-		for (u_int i = 0; i < tileCount; ++i) {
-			const u_int xStart = prop.Get<u_int>(i * 2);
-			const u_int yStart = prop.Get<u_int>(i * 2 + 1);
-
-			glBegin(GL_LINE_LOOP);
-			glVertex2i(xStart, yStart);
-			glVertex2i(xStart + tileSize, yStart);
-			glVertex2i(xStart + tileSize, yStart + tileSize);
-			glVertex2i(xStart, yStart + tileSize);
-			glEnd();
+		if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
+			// Draw converged tiles borders
+			glColor3f(0.f, 1.f, 0.f);
+			DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
+					stats.Get("stats.biaspath.tiles.converged.pass"),
+					stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
+					tileSize);
 		}
+
+		// Draw pending tiles borders
+		glColor3f(1.f, 1.f, 0.f);
+		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
+				stats.Get("stats.biaspath.tiles.pending.pass"),
+				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
+				tileSize);
 	}
 
 	const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]") %

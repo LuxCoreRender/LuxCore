@@ -21,7 +21,6 @@
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
 //  PARAM_TILE_SIZE
-//  PARAM_TILE_PROGRESSIVE_REFINEMENT
 //  PARAM_DIRECT_LIGHT_ONE_STRATEGY or PARAM_DIRECT_LIGHT_ALL_STRATEGY
 //  PARAM_RADIANCE_CLAMP_MAXVALUE
 //  PARAM_PDF_CLAMP_VALUE
@@ -248,16 +247,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		) {
 	const size_t gid = get_global_id(0);
 
-#if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
-	const uint sampleIndex = tileSampleIndex;
-	const uint samplePixelX = gid % PARAM_TILE_SIZE;
-	const uint samplePixelY = gid / PARAM_TILE_SIZE;
-
-	if ((gid >= PARAM_TILE_SIZE * PARAM_TILE_SIZE) ||
-			(tileStartX + samplePixelX >= engineFilmWidth) ||
-			(tileStartY + samplePixelY >= engineFilmHeight))
-		return;
-#else
 	const uint sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
 	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
 	const uint samplePixelX = samplePixelIndex % PARAM_TILE_SIZE;
@@ -267,7 +256,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			(tileStartX + samplePixelX >= engineFilmWidth) ||
 			(tileStartY + samplePixelY >= engineFilmHeight))
 		return;
-#endif
 
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
@@ -867,38 +855,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 	// Radiance clamping
 	SR_RadianceClamp(sampleResult);
-
-#if defined(PARAM_TILE_PROGRESSIVE_REFINEMENT)
-	// Initialize Film radiance group pointer table
-	__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-		filmRadianceGroup[0] = filmRadianceGroup0;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-		filmRadianceGroup[1] = filmRadianceGroup1;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-		filmRadianceGroup[2] = filmRadianceGroup2;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-		filmRadianceGroup[3] = filmRadianceGroup3;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-		filmRadianceGroup[3] = filmRadianceGroup4;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-		filmRadianceGroup[3] = filmRadianceGroup5;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-		filmRadianceGroup[3] = filmRadianceGroup6;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-		filmRadianceGroup[3] = filmRadianceGroup7;
-#endif
-
-	Film_AddSample(samplePixelX, samplePixelY, sampleResult, 1.f
-			FILM_PARAM);
-#endif
 
 	taskStat->raysCount = tracedRaysCount;
 

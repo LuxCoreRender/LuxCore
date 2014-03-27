@@ -87,7 +87,8 @@ public:
 
 	virtual RenderEngineType GetEngineType() const { return BIASPATHOCL; }
 
-	void GetPendingTiles(vector<TileRepository::Tile> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetPendingTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
 	u_int GetTileSize() const { return tileRepository->tileSize; }
 
 	friend class BiasPathOCLRenderThread;
