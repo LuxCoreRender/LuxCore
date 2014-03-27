@@ -330,7 +330,6 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 					renderSampleKernel->setArg(0, tile->xStart);
 					renderSampleKernel->setArg(1, tile->yStart);
-					renderSampleKernel->setArg(2, tile->sampleIndex);
 
 					mergePixelSamplesKernel->setArg(0, tile->xStart);
 					mergePixelSamplesKernel->setArg(1, tile->yStart);
