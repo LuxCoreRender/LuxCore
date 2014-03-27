@@ -15,22 +15,12 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdint.h> 
 
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/core/utils.h"
 
 // Patched for x64 Linux/OSX based on http://src.luxrender.net/lux/rev/612d14f647ae
-#if defined(WIN32) && !defined(__CYGWIN__) 
-// MSVC doesn't support C99, uses LLP64 
-typedef signed char int8_t; 
-typedef unsigned char uint8_t; 
-typedef short int16_t; 
-typedef unsigned short uint16_t; 
-typedef int int32_t; 
-typedef unsigned int uint32_t; 
-#else 
-#include <stdint.h> 
-#endif
 
 namespace luxrays {
 
