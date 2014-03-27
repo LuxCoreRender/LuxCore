@@ -264,6 +264,7 @@ public:
 
 	void Clear();
 	void GetPendingTiles(std::deque<Tile *> &tiles);
+	void GetNotConvergedTiles(std::deque<Tile *> &tiles);
 	void GetConvergedTiles(std::deque<Tile *> &tiles);
 
 	void InitTiles(const u_int width, const u_int height);
@@ -315,6 +316,7 @@ public:
 	~CPUTileRenderEngine();
 
 	void GetPendingTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetNotConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
 	void GetConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
 	u_int GetTileSize() const { return tileRepository->tileSize; }
 

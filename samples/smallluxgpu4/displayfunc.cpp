@@ -205,17 +205,19 @@ static void DrawTiles(const Property &propCoords, const Property &propPasses,
 	for (u_int i = 0; i < tileCount; ++i) {
 		const u_int xStart = propCoords.Get<u_int>(i * 2);
 		const u_int yStart = propCoords.Get<u_int>(i * 2 + 1);
+		const u_int width = Min(tileSize, session->GetFilm().GetWidth() - xStart - 1);
+		const u_int height = Min(tileSize, session->GetFilm().GetHeight() - yStart - 1);
 
 		glBegin(GL_LINE_LOOP);
-		glVertex2i(xStart, yStart);
-		glVertex2i(xStart + tileSize, yStart);
-		glVertex2i(xStart + tileSize, yStart + tileSize);
-		glVertex2i(xStart, yStart + tileSize);
+		glVertex2i(xStart + 1, yStart + 1);
+		glVertex2i(xStart + width, yStart + 1);
+		glVertex2i(xStart + width, yStart + height);
+		glVertex2i(xStart + 1, yStart + height );
 		glEnd();
 
 		if (showPassCount) {
 			const u_int passes = propPasses.Get<u_int>(i);
-			glRasterPos2i(xStart + 1, yStart + 2);
+			glRasterPos2i(xStart + 2, yStart + 3);
 			const string pass = boost::lexical_cast<string>(passes);
 			PrintString(GLUT_BITMAP_8_BY_13, pass.c_str());
 		}
@@ -223,15 +225,7 @@ static void DrawTiles(const Property &propCoords, const Property &propPasses,
 }
 
 static void PrintCaptions() {
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glColor4f(0.f, 0.f, 0.f, 0.8f);
-	glRecti(0, session->GetFilm().GetHeight() - 15,
-			session->GetFilm().GetWidth() - 1, session->GetFilm().GetHeight() - 1);
-	glRecti(0, 0, session->GetFilm().GetWidth() - 1, 18);
-	glDisable(GL_BLEND);
-
-	// Draw the pending tiles for BIASPATHCPU or BIASPATHOCL
+	// Draw the pending, converged and not converged tiles for BIASPATHCPU or BIASPATHOCL
 	const Properties &stats = session->GetStats();
 	const string engineType = config->GetProperty("renderengine.type").Get<string>();
 	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
@@ -246,6 +240,15 @@ static void PrintCaptions() {
 					tileSize);
 		}
 
+		if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
+			// Draw converged tiles borders
+			glColor3f(1.f, 0.f, 0.f);
+			DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
+					stats.Get("stats.biaspath.tiles.notconverged.pass"),
+					stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
+					tileSize);
+		}
+
 		// Draw pending tiles borders
 		glColor3f(1.f, 1.f, 0.f);
 		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
@@ -253,6 +256,14 @@ static void PrintCaptions() {
 				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
 				tileSize);
 	}
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glColor4f(0.f, 0.f, 0.f, 0.8f);
+	glRecti(0, session->GetFilm().GetHeight() - 15,
+			session->GetFilm().GetWidth() - 1, session->GetFilm().GetHeight() - 1);
+	glRecti(0, 0, session->GetFilm().GetWidth() - 1, 18);
+	glDisable(GL_BLEND);
 
 	const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]") %
 		stats.Get("stats.renderengine.pass").Get<int>() %
