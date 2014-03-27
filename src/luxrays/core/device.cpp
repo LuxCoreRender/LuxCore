@@ -19,8 +19,6 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL) && !defined(WIN32) && !defined(__APPLE__)
 #include <GL/glx.h>
 #endif
-#include <cstdio>
-using std::sprintf;
 
 #ifdef LUXRAYS_DISABLE_OPENCL
 #include "luxrays/core/intersectiondevice.h"

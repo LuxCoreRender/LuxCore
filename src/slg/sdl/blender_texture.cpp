@@ -20,7 +20,6 @@
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/blender_texture.h"
 
-using namespace std;
 using namespace luxrays;
 using namespace slg;
 

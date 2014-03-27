@@ -18,7 +18,6 @@
 
 #include "slg/engines/pathhybrid/pathhybrid.h"
 
-using namespace std;
 using namespace luxrays;
 using namespace slg;
 

@@ -18,7 +18,6 @@
 
 #include "slg/engines/cbidirhybrid/cbidirhybrid.h"
 
-using namespace std;
 using namespace luxrays;
 using namespace slg;
 

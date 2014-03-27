@@ -18,7 +18,6 @@
 
 #include "slg/rendersession.h"
 
-using namespace std;
 using namespace luxrays;
 using namespace slg;
 

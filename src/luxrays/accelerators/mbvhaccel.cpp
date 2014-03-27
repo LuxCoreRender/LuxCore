@@ -37,9 +37,6 @@
 #include "luxrays/kernels/kernels.h"
 #endif
 
-using std::bind2nd;
-using std::ptr_fun;
-
 namespace luxrays {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
