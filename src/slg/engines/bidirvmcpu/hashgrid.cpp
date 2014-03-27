@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "boost/format.hpp"
+#include <boost/format.hpp>
 
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 
