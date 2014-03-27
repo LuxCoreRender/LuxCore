@@ -617,6 +617,21 @@ Film &RenderSession::GetFilm() {
 	return film;
 }
 
+static void SetTileProperties(Properties &props, const string &prefix,
+		const deque<slg::TileRepository::Tile *> &tiles) {
+	props.Set(Property(prefix + ".count")((u_int)tiles.size()));
+	Property tileCoordProp(prefix + ".coords");
+	Property tilePassProp(prefix + ".pass");
+
+	BOOST_FOREACH(const slg::TileRepository::Tile *tile, tiles) {
+		tileCoordProp.Add(tile->xStart).Add(tile->yStart);
+		tilePassProp.Add(tile->pass);
+	}
+
+	props.Set(tileCoordProp);
+	props.Set(tilePassProp);
+}
+
 void RenderSession::UpdateStats() {
 	// Film update may be required by some render engine to
 	// update statistics, convergence test and more
@@ -685,13 +700,27 @@ void RenderSession::UpdateStats() {
 			slg::BiasPathOCLRenderEngine *engine = (slg::BiasPathOCLRenderEngine *)renderSession->renderEngine;
 			
 			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
-			vector<slg::TileRepository::Tile> tiles;
-			engine->GetPendingTiles(tiles);
-			stats.Set(Property("stats.biaspath.tiles.pending.count")((u_int)tiles.size()));
-			Property tileProp("stats.biaspath.tiles.pending.coords");
-			BOOST_FOREACH(const slg::TileRepository::Tile &tile, tiles)
-				tileProp.Add(tile.xStart).Add(tile.yStart);
-			stats.Set(tileProp);
+
+			// Pending tiles
+			{
+				deque<slg::TileRepository::Tile *> tiles;
+				engine->GetPendingTiles(tiles);
+				SetTileProperties(stats, "stats.biaspath.tiles.pending", tiles);
+			}
+
+			// Mot converged tiles
+			{
+				deque<slg::TileRepository::Tile *> tiles;
+				engine->GetNotConvergedTiles(tiles);
+				SetTileProperties(stats, "stats.biaspath.tiles.notconverged", tiles);
+			}
+
+			// Converged tiles
+			{
+				deque<slg::TileRepository::Tile *> tiles;
+				engine->GetConvergedTiles(tiles);
+				SetTileProperties(stats, "stats.biaspath.tiles.converged", tiles);
+			}
 			break;
 		}
 #endif
@@ -699,13 +728,27 @@ void RenderSession::UpdateStats() {
 			slg::CPUTileRenderEngine *engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
 
 			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
-			vector<slg::TileRepository::Tile> tiles;
-			engine->GetPendingTiles(tiles);
-			stats.Set(Property("stats.biaspath.tiles.pending.count")((u_int)tiles.size()));
-			Property tileProp("stats.biaspath.tiles.pending.coords");
-			BOOST_FOREACH(const slg::TileRepository::Tile &tile, tiles)
-				tileProp.Add(tile.xStart).Add(tile.yStart);
-			stats.Set(tileProp);
+
+			// Pending tiles
+			{
+				deque<slg::TileRepository::Tile *> tiles;
+				engine->GetPendingTiles(tiles);
+				SetTileProperties(stats, "stats.biaspath.tiles.pending", tiles);
+			}
+
+			// Mot converged tiles
+			{
+				deque<slg::TileRepository::Tile *> tiles;
+				engine->GetNotConvergedTiles(tiles);
+				SetTileProperties(stats, "stats.biaspath.tiles.notconverged", tiles);
+			}
+
+			// Converged tiles
+			{
+				deque<slg::TileRepository::Tile *> tiles;
+				engine->GetConvergedTiles(tiles);
+				SetTileProperties(stats, "stats.biaspath.tiles.converged", tiles);
+			}
 			break;
 		}
 		default:
