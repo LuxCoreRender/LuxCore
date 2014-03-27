@@ -238,35 +238,55 @@ protected:
 
 class TileRepository {
 public:
-	typedef struct {
+	class Tile {
+	public:
+		Tile(const u_int x, const u_int y) :
+			xStart(x), yStart(y), pass(0), evenPassRendering(NULL) { }
+		Tile(const u_int x, const u_int y, const u_int tileSize) :
+			xStart(x), yStart(y), pass(0) {
+			evenPassRendering = new luxrays::Spectrum[tileSize * tileSize];
+		}
+		virtual ~Tile() { delete evenPassRendering; }
+
 		u_int xStart, yStart;
-		// -1 means: tile has to be rendered with all samples
-		int sampleIndex;
-	} Tile;
+		u_int pass;
+
+		luxrays::Spectrum *evenPassRendering;
+	};
 
 	TileRepository(const u_int size);
 	~TileRepository();
 
-	void HilberCurveTiles(const int sampleIndex,
+	void HilberCurveTiles(
 		const u_int n, const int xo, const int yo,
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd);
 
 	void Clear();
-	void GetPendingTiles(vector<Tile> &tiles);
+	void GetPendingTiles(std::deque<Tile *> &tiles);
+	void GetConvergedTiles(std::deque<Tile *> &tiles);
 
 	void InitTiles(const u_int width, const u_int height);
-	const bool NextTile(Tile **tile, const u_int width, const u_int height);
+	const bool NextTile(const Film *film, Tile **tile, const Film *tileFilm);
 
 	u_int tileSize;
 	u_int totalSamplesPerPixel;
-	bool enableProgressiveRefinement, enableMultipassRendering;
+
+	float convergenceTestThreshold;
+	bool enableMultipassRendering, enableConvergenceTest;
+
 	bool done;
 
 private:
 	boost::mutex tileMutex;
 	std::deque<Tile *> todoTiles;
-	std::vector<Tile *> pendingTiles;
+	std::deque<Tile *> pendingTiles;
+	std::deque<Tile *> doneTiles;
+
+	std::deque<Tile *> convergedTiles;
+
+	// Using Boost conditional variable to wakeup all other waiting threads
+	boost::condition_variable allTodoTilesDoneCondition;
 };
 
 //------------------------------------------------------------------------------
@@ -294,7 +314,8 @@ public:
 	CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPUTileRenderEngine();
 
-	void GetPendingTiles(vector<TileRepository::Tile> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetPendingTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
 	u_int GetTileSize() const { return tileRepository->tileSize; }
 
 	friend class CPUTileRenderThread;
