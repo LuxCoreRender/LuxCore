@@ -350,7 +350,7 @@ public:
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
 
 	// Get a path/name from imageMap object
-	const std::string &GetPath(const slg::ImageMap *im)const {
+	const std::string &GetPath(const ImageMap *im)const {
 		for (boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im)
 				return it->first;
@@ -358,7 +358,7 @@ public:
 		throw std::runtime_error("Unknown ImageMap in ImageMapCache::GetPath()");
 	}
 
-	void DeleteImageMap(const slg::ImageMap *im) {
+	void DeleteImageMap(const ImageMap *im) {
 		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByName.begin(); it != mapByName.end(); ++it) {
 			if (it->second == im) {
 				delete it->second;

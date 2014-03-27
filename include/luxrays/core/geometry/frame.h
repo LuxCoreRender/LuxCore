@@ -46,11 +46,11 @@ public:
 		SetFromZ(z);
 	}
 
-	Frame(const luxrays::Normal &z) {
+	Frame(const Normal &z) {
 		SetFromZ(Vector(z));
 	}
 
-	void SetFromZ(const luxrays::Normal &z) {
+	void SetFromZ(const Normal &z) {
 		SetFromZ(Vector(z)); 
 	}
 

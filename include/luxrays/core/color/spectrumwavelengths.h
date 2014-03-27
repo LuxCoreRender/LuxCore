@@ -38,7 +38,7 @@ public:
 	inline void Sample(float u1) {
 		single = false;
 		u1 *= WAVELENGTH_SAMPLES;
-		single_w = luxrays::Floor2UInt(u1);
+		single_w = Floor2UInt(u1);
 		u1 -= single_w;
 
 		// Sample new stratified wavelengths and precompute RGB/XYZ data

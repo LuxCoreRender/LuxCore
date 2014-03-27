@@ -581,7 +581,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			" -D SLG_OPENCL_KERNEL" <<
 			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
-			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << slg::LIGHT_WORLD_RADIUS_SCALE << "f"
+			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << LIGHT_WORLD_RADIUS_SCALE << "f"
 			;
 
 	switch (intersectionDevice->GetAccelerator()->GetType()) {

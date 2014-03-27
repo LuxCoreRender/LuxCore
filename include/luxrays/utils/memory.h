@@ -191,13 +191,13 @@ public:
 		blockSize = bs;
 		curBlockPos = 0;
 		currentBlockIdx = 0;
-		blocks.push_back(luxrays::AllocAligned<int8_t>(blockSize));
+		blocks.push_back(AllocAligned<int8_t>(blockSize));
 		beginBlockPos = 0;
 		beginBlockIdx = 0;
 	}
 	~MemoryArena() {
 		for (size_t i = 0; i < blocks.size(); ++i)
-			luxrays::FreeAligned(blocks[i]);
+			FreeAligned(blocks[i]);
 	}
 	void *Alloc(size_t sz) {
 		// Round up _sz_ to minimum machine alignment
@@ -211,7 +211,7 @@ public:
 			currentBlockIdx++;
 
 			if(currentBlockIdx == blocks.size())
-				blocks.push_back(luxrays::AllocAligned<int8_t>(std::max(sz, blockSize)));
+				blocks.push_back(AllocAligned<int8_t>(std::max(sz, blockSize)));
 
 			curBlockPos = 0;
 		}
@@ -281,7 +281,7 @@ public:
 		vRes = b.vRes;
 		uBlocks = RoundUp(uRes) >> logBlockSize;
 		size_t nAlloc = RoundUp(uRes) * RoundUp(vRes);
-		data = luxrays::AllocAligned<T>(nAlloc);
+		data = AllocAligned<T>(nAlloc);
 		if (!data) {
 			uRes = 0;
 			vRes = 0;
@@ -301,7 +301,7 @@ public:
 		vRes = nv;
 		uBlocks = RoundUp(uRes) >> logBlockSize;
 		size_t nAlloc = RoundUp(uRes) * RoundUp(vRes);
-		data = luxrays::AllocAligned<T>(nAlloc);
+		data = AllocAligned<T>(nAlloc);
 		if (!data) {
 			uRes = 0;
 			vRes = 0;
@@ -331,7 +331,7 @@ public:
 	~BlockedArray() {
 		for (size_t i = 0; i < uRes * vRes; ++i)
 			data[i].~T();
-		luxrays::FreeAligned(data);
+		FreeAligned(data);
 	}
 	size_t Block(size_t a) const { return a >> logBlockSize; }
 	size_t Offset(size_t a) const { return (a & (BlockSize() - 1)); }
@@ -379,7 +379,7 @@ private:
 		ar & uBlocks;
 
 		size_t nAlloc = RoundUp(uRes) * RoundUp(vRes);
-		data = luxrays::AllocAligned<T>(nAlloc);
+		data = AllocAligned<T>(nAlloc);
 		for (size_t i = 0; i < nAlloc; ++i)
 			ar & data[i];
 	}

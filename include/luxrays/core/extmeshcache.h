@@ -42,7 +42,7 @@ public:
 	void DefineExtMesh(const std::string &fileName,
 		const u_int plyNbVerts, const u_int plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv,
-		luxrays::Spectrum *cols, float *alphas);
+		Spectrum *cols, float *alphas);
 	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh);
 
 	bool IsExtMeshDefined(const std::string &name) const { return meshByName.find(name) != meshByName.end(); }

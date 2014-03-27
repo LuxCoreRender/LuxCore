@@ -45,7 +45,7 @@ public:
 
 private:
 	void Init(const PathHybridRenderThread *thread);
-	void DirectHitInfiniteLight(const slg::Scene *scene, const luxrays::Vector &eyeDir);
+	void DirectHitInfiniteLight(const Scene *scene, const luxrays::Vector &eyeDir);
 	void DirectHitFiniteLight(const Scene *scene, const float distance, const BSDF &bsdf);
 	void DirectLightSampling(const PathHybridRenderThread *renderThread,
 		const float u0, const float u1,
@@ -63,7 +63,7 @@ private:
 	luxrays::Ray nextPathVertexRay, directLightRay;
 	luxrays::Spectrum directLightRadiance;
 
-	vector<slg::SampleResult> sampleResults;
+	vector<SampleResult> sampleResults;
 
 	bool lastSpecular;
 };

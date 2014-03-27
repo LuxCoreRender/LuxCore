@@ -51,8 +51,8 @@ namespace luxrays {
 	void HoneycombSampleDisk(float u1, float u2, float *dx, float *dy);
 
 	// MC Inline Functions
-	inline luxrays::Vector CosineSampleHemisphere(const float u1, const float u2, float *pdfW = NULL) {
-		luxrays::Vector ret;
+	inline Vector CosineSampleHemisphere(const float u1, const float u2, float *pdfW = NULL) {
+		Vector ret;
 		ConcentricSampleDisk(u1, u2, &ret.x, &ret.y);
 		ret.z = sqrtf(luxrays::Max(0.f, 1.f - ret.x * ret.x - ret.y * ret.y));
 

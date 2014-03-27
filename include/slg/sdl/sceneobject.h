@@ -40,14 +40,14 @@ namespace slg {
 
 class SceneObject {
 public:
-	SceneObject(luxrays::ExtMesh *m, const slg::Material *mt) : mesh(m), mat(mt) { }
+	SceneObject(luxrays::ExtMesh *m, const Material *mt) : mesh(m), mat(mt) { }
 	virtual ~SceneObject() { }
 
 	std::string GetName() const { return "obj-" + boost::lexical_cast<std::string>(this); }
 
 	const luxrays::ExtMesh *GetExtMesh() const { return mesh; }
 	luxrays::ExtMesh *GetExtMesh() { return mesh; }
-	const slg::Material *GetMaterial() const { return mat; }
+	const Material *GetMaterial() const { return mat; }
 
 	void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
 		mat->AddReferencedMaterials(referencedMats);
@@ -61,7 +61,7 @@ public:
 
 private:
 	luxrays::ExtMesh *mesh;
-	const slg::Material *mat;
+	const Material *mat;
 };
 
 //------------------------------------------------------------------------------
