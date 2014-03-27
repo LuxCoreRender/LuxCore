@@ -40,7 +40,6 @@
 #include "slg/film/filter.h"
 #include "slg/sdl/scene.h"
 
-using namespace std;
 using namespace luxrays;
 using namespace slg;
 
