@@ -516,6 +516,13 @@ void TileRepository::GetPendingTiles(deque<Tile *> &tiles) {
 	tiles = pendingTiles;
 }
 
+void TileRepository::GetNotConvergedTiles(deque<Tile *> &tiles) {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	tiles = todoTiles;
+	tiles.insert(tiles.end(), doneTiles.begin(), doneTiles.end());
+}
+
 void TileRepository::GetConvergedTiles(deque<Tile *> &tiles) {
 	boost::unique_lock<boost::mutex> lock(tileMutex);
 
