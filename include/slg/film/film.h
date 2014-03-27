@@ -28,10 +28,6 @@
 #include <vector>
 #include <set>
 
-#if defined (WIN32)
-#include <windows.h>
-#endif
-
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/core/geometry/point.h"

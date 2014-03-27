@@ -19,10 +19,6 @@
 #ifndef _SLG_TEXTURE_H
 #define	_SLG_TEXTURE_H
 
-#if defined (WIN32)
-#include <windows.h>
-#endif
-
 #include <OpenImageIO/imageio.h>
 OIIO_NAMESPACE_USING
 
