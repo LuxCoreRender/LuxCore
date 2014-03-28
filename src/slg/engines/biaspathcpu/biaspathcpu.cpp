@@ -98,7 +98,6 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
 
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
-	printedRenderingTime = false;
 
 	CPURenderEngine::StartLockLess();
 }

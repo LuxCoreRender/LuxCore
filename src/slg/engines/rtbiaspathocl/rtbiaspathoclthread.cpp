@@ -307,7 +307,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			//------------------------------------------------------------------
 
 			TileRepository::Tile *tile = NULL;
-			while (engine->NextTile(&tile, threadFilm)) {
+			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilm)) {
 				threadFilm->Reset();
 				//const u_int tileWidth = Min(engine->tileRepository->tileSize, engine->film->GetWidth() - tile->xStart);
 				//const u_int tileHeight = Min(engine->tileRepository->tileSize, engine->film->GetHeight() - tile->yStart);

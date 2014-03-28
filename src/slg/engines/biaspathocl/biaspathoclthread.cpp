@@ -357,7 +357,8 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		TileRepository::Tile *tile = NULL;
-		while (engine->NextTile(&tile, threadFilm) && !boost::this_thread::interruption_requested()) {
+		while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilm) &&
+				!boost::this_thread::interruption_requested()) {
 			//const double t0 = WallClockTime();
 			threadFilm->Reset();
 			//const u_int tileWidth = Min(engine->tileRepository->tileSize, engine->film->GetWidth() - tile->xStart);

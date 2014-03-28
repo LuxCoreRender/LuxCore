@@ -118,8 +118,6 @@ protected:
 	virtual void UpdateFilmLockLess() { }
 	virtual void UpdateCounters();
 
-	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
-
 	void InitPixelFilterDistribution();
 
 	u_int taskCount;

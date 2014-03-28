@@ -209,10 +209,10 @@ static void DrawTiles(const Property &propCoords, const Property &propPasses,
 		const u_int height = Min(tileSize, session->GetFilm().GetHeight() - yStart - 1);
 
 		glBegin(GL_LINE_LOOP);
-		glVertex2i(xStart + 1, yStart + 1);
-		glVertex2i(xStart + width, yStart + 1);
+		glVertex2i(xStart, yStart);
+		glVertex2i(xStart + width, yStart);
 		glVertex2i(xStart + width, yStart + height);
-		glVertex2i(xStart + 1, yStart + height );
+		glVertex2i(xStart, yStart + height);
 		glEnd();
 
 		if (showPassCount) {
@@ -260,9 +260,9 @@ static void PrintCaptions() {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f(0.f, 0.f, 0.f, 0.8f);
-	glRecti(0, session->GetFilm().GetHeight() - 15,
-			session->GetFilm().GetWidth() - 1, session->GetFilm().GetHeight() - 1);
-	glRecti(0, 0, session->GetFilm().GetWidth() - 1, 18);
+	glRecti(0, session->GetFilm().GetHeight() - 16,
+			session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+	glRecti(0, 0, session->GetFilm().GetWidth(), 17);
 	glDisable(GL_BLEND);
 
 	const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]") %
@@ -277,7 +277,7 @@ static void PrintCaptions() {
 	PrintString(GLUT_BITMAP_8_BY_13, buffer.c_str());
 
 	// Title
-	glRasterPos2i(4, session->GetFilm().GetHeight() - 10);
+	glRasterPos2i(4, session->GetFilm().GetHeight() - 12);
 	if (optUseLuxVRName)
 		PrintString(GLUT_BITMAP_8_BY_13, slg::LUXVR_LABEL.c_str());
 	else
@@ -893,8 +893,8 @@ void RunGlut() {
 	glMatrixMode(GL_PROJECTION);
 	glViewport(0, 0, session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
 	glLoadIdentity();
-	glOrtho(0.f, session->GetFilm().GetWidth() - 1.f,
-			0.f, session->GetFilm().GetHeight() - 1.f, -1.f, 1.f);
+	glOrtho(0.f, session->GetFilm().GetWidth(),
+			0.f, session->GetFilm().GetHeight(), -1.f, 1.f);
 
 	glutMainLoop();
 }
