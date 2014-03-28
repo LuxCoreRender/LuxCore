@@ -274,18 +274,21 @@ public:
 	void GetConvergedTiles(std::deque<Tile *> &tiles);
 
 	void InitTiles(const u_int width, const u_int height);
-	bool NextTile(const Film *film, Tile **tile, const Film *tileFilm);
+	bool NextTile(Film *film, boost::mutex *filmMutex,
+		Tile **tile, const Film *tileFilm);
 
 	u_int tileSize;
 	u_int totalSamplesPerPixel;
 
 	float convergenceTestThreshold;
-	bool enableMultipassRendering, enableConvergenceTest;
+	bool enableMultipassRendering, enableConvergenceTest, enableRenderingDonePrint;
 
 	bool done;
 
 private:
 	boost::mutex tileMutex;
+	double startTime;
+
 	std::deque<Tile *> todoTiles;
 	std::deque<Tile *> pendingTiles;
 	std::deque<Tile *> doneTiles;
@@ -329,8 +332,6 @@ public:
 	friend class CPUTileRenderThread;
 
 protected:
-	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
-
 	// I don't implement StartLockLess() here because the step of initializing
 	// the tile repository is left to the sub-class (so some TileRepository
 	// can be set before to start all rendering threads).
@@ -343,7 +344,6 @@ protected:
 	virtual void UpdateCounters();
 
 	TileRepository *tileRepository;
-	bool printedRenderingTime;
 };
 
 //------------------------------------------------------------------------------

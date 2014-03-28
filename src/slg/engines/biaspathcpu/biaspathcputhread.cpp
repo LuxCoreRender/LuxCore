@@ -581,7 +581,7 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 	TileRepository::Tile *tile = NULL;
 	bool interruptionRequested = boost::this_thread::interruption_requested();
-	while (engine->NextTile(&tile, tileFilm) && !interruptionRequested) {
+	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
 		// Render the tile
 		tileFilm->Reset();
 		const u_int tileWidth = Min(engine->tileRepository->tileSize, filmWidth - tile->xStart);

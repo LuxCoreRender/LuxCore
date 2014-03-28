@@ -116,8 +116,10 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 		tileRepository->enableMultipassRendering = false;
 	else
 		tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(false)).Get<bool>();
+	tileRepository->enableConvergenceTest = cfg.Get(Property("tile.multipass.convergencetest.enable")(true)).Get<bool>();
+	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.02f)).Get<float>();
+	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
 
-	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
 	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
 
 	taskCount = tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel;
@@ -145,35 +147,6 @@ void BiasPathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 	}
 
 	PathOCLBaseRenderEngine::EndSceneEditLockLess(editActions);
-}
-
-const bool BiasPathOCLRenderEngine::NextTile(TileRepository::Tile **tile, const Film *tileFilm) {
-	// Check if I have to add the tile to the film
-	if (*tile) {
-		boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-		film->AddFilm(*tileFilm,
-				0, 0,
-				Min(tileRepository->tileSize, film->GetWidth() - (*tile)->xStart),
-				Min(tileRepository->tileSize, film->GetHeight() - (*tile)->yStart),
-				(*tile)->xStart, (*tile)->yStart);
-	}
-
-	if (!tileRepository->NextTile(film, tile, tileFilm)) {
-		// RTBIASPATHOCL would end in dead-lock on engineMutex
-		if (GetEngineType() != RTBIASPATHOCL) {
-			boost::unique_lock<boost::mutex> lock(engineMutex);
-
-			if (!printedRenderingTime && tileRepository->done) {
-				elapsedTime = WallClockTime() - startTime;
-				SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
-				printedRenderingTime = true;
-			}
-		}
-
-		return false;
-	} else
-		return true;
 }
 
 void BiasPathOCLRenderEngine::UpdateCounters() {

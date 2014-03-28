@@ -63,6 +63,8 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 	ghostEffect = 1.f - Clamp(cfg.Get(Property("rtpath.ghosteffect.intensity")(0.05f)).Get<float>(), 0.f, 1.f);
 
 	BiasPathOCLRenderEngine::StartLockLess();
+
+	tileRepository->enableRenderingDonePrint = false;
 }
 
 void RTBiasPathOCLRenderEngine::StopLockLess() {
