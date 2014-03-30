@@ -238,35 +238,60 @@ protected:
 
 class TileRepository {
 public:
-	typedef struct {
+	class Tile {
+	public:
+		Tile(const u_int x, const u_int y) :
+			xStart(x), yStart(y), pass(0) { }
+		virtual ~Tile() { }
+
 		u_int xStart, yStart;
-		// -1 means: tile has to be rendered with all samples
-		int sampleIndex;
-	} Tile;
+		u_int pass;
+	};
 
 	TileRepository(const u_int size);
 	~TileRepository();
 
-	void HilberCurveTiles(const int sampleIndex,
+	void HilberCurveTiles(
 		const u_int n, const int xo, const int yo,
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd);
 
 	void Clear();
-	void GetPendingTiles(vector<Tile> &tiles);
+	void GetPendingTiles(std::deque<Tile *> &tiles);
+	void GetNotConvergedTiles(std::deque<Tile *> &tiles);
+	void GetConvergedTiles(std::deque<Tile *> &tiles);
 
-	void InitTiles(const u_int width, const u_int height);
-	const bool NextTile(Tile **tile, const u_int width, const u_int height);
+	void InitTiles(const Film *film);
+	bool NextTile(Film *film, boost::mutex *filmMutex,
+		Tile **tile, const Film *tileFilm);
+
+	friend class Tile;
 
 	u_int tileSize;
 	u_int totalSamplesPerPixel;
-	bool enableProgressiveRefinement, enableMultipassRendering;
+	u_int pass;
+
+	float convergenceTestThreshold;
+	bool enableMultipassRendering, enableConvergenceTest, enableRenderingDonePrint;
+
 	bool done;
 
 private:
+	bool IsConvergedTile(const Tile *tile, const luxrays::Spectrum *allPassPixels,
+			const luxrays::Spectrum *evenPassPixels) const;
+
 	boost::mutex tileMutex;
+	double startTime;
+
 	std::deque<Tile *> todoTiles;
-	std::vector<Tile *> pendingTiles;
+	std::deque<Tile *> pendingTiles;
+	std::deque<Tile *> doneTiles;
+
+	std::deque<Tile *> convergedTiles;
+
+	// Using Boost conditional variable to wakeup all other waiting threads
+	boost::condition_variable allTodoTilesDoneCondition;
+	Film *evenPassFilm;
 };
 
 //------------------------------------------------------------------------------
@@ -294,14 +319,14 @@ public:
 	CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPUTileRenderEngine();
 
-	void GetPendingTiles(vector<TileRepository::Tile> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetPendingTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetNotConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
+	void GetConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
 	u_int GetTileSize() const { return tileRepository->tileSize; }
 
 	friend class CPUTileRenderThread;
 
 protected:
-	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
-
 	// I don't implement StartLockLess() here because the step of initializing
 	// the tile repository is left to the sub-class (so some TileRepository
 	// can be set before to start all rendering threads).
@@ -314,7 +339,6 @@ protected:
 	virtual void UpdateCounters();
 
 	TileRepository *tileRepository;
-	bool printedRenderingTime;
 };
 
 //------------------------------------------------------------------------------
