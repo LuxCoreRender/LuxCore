@@ -24,6 +24,111 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// Blender blend texture
+//------------------------------------------------------------------------------
+
+BlenderBlendTexture::BlenderBlendTexture(const TextureMapping3D *mp, const ProgressionType type, 
+										 const bool direction, float bright, float contrast) : 
+		mapping(mp), type(type), direction(direction), bright(bright), contrast(contrast) {
+
+}
+
+float BlenderBlendTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	float result = 0.f;
+	Point P(mapping->Map(hitPoint));
+
+	float x, y, t;
+    
+	if(direction) {
+		//horizontal
+		x = P.x;
+		y = P.y;
+	} else {
+		//vertical
+		x = P.y;
+		y = P.x;
+	};
+
+
+    if (type == TEX_LIN) { /* lin */
+        result = (1.f + x) / 2.f;
+    } else if (type == TEX_QUAD) { /* quad */
+        result = (1.f + x) / 2.f;
+        if (result < 0.f) result = 0.f;
+        else result *= result;
+    } else if (type == TEX_EASE) { /* ease */
+        result = (1.f + x) / 2.f;
+        if (result <= 0.f) result = 0.f;
+        else if (result >= 1.f) result = 1.f;
+        else {
+            t = result * result;
+            result = (3.f * t - 2.f * t * result);
+        }
+    } else if (type == TEX_DIAG) { /* diag */
+        result = (2.f + x + y) / 4.f;
+    } else if (type == TEX_RAD) { /* radial */
+        result = (atan2f(y, x) / (2.f * M_PI) + 0.5f);
+    } else { /* sphere TEX_SPHERE */
+        result = 1.f - sqrt(x * x + y * y + P.z * P.z);
+        if (result < 0.f) result = 0.f;
+        if (type == TEX_HALO) result *= result; /* halo */
+    }
+
+	result = (result - 0.5f) * contrast + bright - 0.5f;
+    if(result < 0.f) result = 0.f; 
+	else if(result > 1.f) result = 1.f;
+
+	return result;
+}
+
+Spectrum BlenderBlendTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	std::string progressiontype;
+	switch(type) {
+		default:
+		case TEX_LIN:
+			progressiontype = "linear";
+			break;
+		case TEX_QUAD:
+			progressiontype = "quadratic";
+			break;
+		case TEX_EASE:
+			progressiontype = "easing";
+			break;
+		case TEX_DIAG:
+			progressiontype = "diagonal";
+			break;
+		case TEX_SPHERE:
+			progressiontype = "spherical";
+			break;
+		case TEX_HALO:
+			progressiontype = "quadratic_spherical";
+			break;
+		case TEX_RAD:
+			progressiontype = "radial";
+			break;
+	}
+	std::string directiontype = "horizontal";
+	if(direction) directiontype = "vertical";
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_blend"));
+	props.Set(Property("scene.textures." + name + ".progressiontype")(progressiontype));
+	props.Set(Property("scene.textures." + name + ".direction")(directiontype));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Blender wood texture
 //------------------------------------------------------------------------------
 

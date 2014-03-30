@@ -807,6 +807,24 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float variation = props.Get(Property(propName + ".variation")(.2f)).Get<float>();
 
 		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
+	} else if (texType == "blender_blend") {
+		const std::string progressiontype = props.Get(Property(propName + ".progressiontype")("linear")).Get<string>();
+		const std::string direct = props.Get(Property(propName + ".direction")("horizontal")).Get<string>();
+		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
+		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
+
+		ProgressionType ptype = TEX_LIN;
+		
+		if (progressiontype == "quadratic") {ptype = TEX_QUAD;}
+		else if (progressiontype == "easing") {ptype = TEX_LIN;}
+		else if (progressiontype == "diagonal") {ptype = TEX_EASE;}
+		else if (progressiontype == "spherical") {ptype = TEX_SPHERE;}
+		else if (progressiontype == "quadratic_spherical") {ptype = TEX_HALO;}
+		else if (progressiontype == "halo") {ptype = TEX_HALO;}
+		else if (progressiontype == "radial") {ptype = TEX_RAD;};
+
+		return new BlenderBlendTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				ptype, (direct=="vertical"), bright, contrast);
 	} else if (texType == "blender_clouds") {
 		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();

@@ -30,6 +30,42 @@ typedef enum {
 } BlenderNoiseBasis;
 
 //------------------------------------------------------------------------------
+// Blender blend texture
+//------------------------------------------------------------------------------
+typedef enum {
+	TEX_LIN, TEX_QUAD, TEX_EASE, TEX_DIAG, TEX_SPHERE, TEX_HALO, TEX_RAD
+} ProgressionType;
+
+
+class BlenderBlendTexture : public Texture {
+public:
+	BlenderBlendTexture(const TextureMapping3D *mp, const ProgressionType type, const bool direction, float bright, float contrast);
+	virtual ~BlenderBlendTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_BLEND; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	ProgressionType GetProgressionType() const { return type; }
+	bool GetDirection() const { return direction; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	ProgressionType type;
+	bool direction;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
 // Blender wood texture
 //------------------------------------------------------------------------------
 
