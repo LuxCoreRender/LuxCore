@@ -117,10 +117,10 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	else
 		tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(false)).Get<bool>();
 	tileRepository->enableConvergenceTest = cfg.Get(Property("tile.multipass.convergencetest.enable")(true)).Get<bool>();
-	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.02f)).Get<float>();
+	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.04f)).Get<float>();
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
 
-	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	tileRepository->InitTiles(film);
 
 	taskCount = tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel;
 
@@ -142,7 +142,7 @@ void BiasPathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 	if (GetEngineType() != RTBIASPATHOCL) {
 		// RTBIASPATHOCL will InitTiles() on next frame
 		tileRepository->Clear();
-		tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+		tileRepository->InitTiles(film);
 		printedRenderingTime = false;
 	}
 

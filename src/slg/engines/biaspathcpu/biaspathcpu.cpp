@@ -94,10 +94,10 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(32)).Get<u_int>(), 8u));
 	tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(false)).Get<bool>();
 	tileRepository->enableConvergenceTest = cfg.Get(Property("tile.multipass.convergencetest.enable")(true)).Get<bool>();
-	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.02f)).Get<float>();
+	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.04f)).Get<float>();
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
 
-	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	tileRepository->InitTiles(film);
 
 	CPURenderEngine::StartLockLess();
 }
