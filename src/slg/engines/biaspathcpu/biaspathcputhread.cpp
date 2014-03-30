@@ -408,22 +408,22 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				1.f, sampleResult);
 
 		sampleResult->alpha = 0.f;
-		sampleResult->depth = std::numeric_limits<float>::infinity();
+		sampleResult->depth = numeric_limits<float>::infinity();
 		sampleResult->position = Point(
-				std::numeric_limits<float>::infinity(),
-				std::numeric_limits<float>::infinity(),
-				std::numeric_limits<float>::infinity());
+				numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity());
 		sampleResult->geometryNormal = Normal(
-				std::numeric_limits<float>::infinity(),
-				std::numeric_limits<float>::infinity(),
-				std::numeric_limits<float>::infinity());
+				numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity());
 		sampleResult->shadingNormal = Normal(
-				std::numeric_limits<float>::infinity(),
-				std::numeric_limits<float>::infinity(),
-				std::numeric_limits<float>::infinity());
-		sampleResult->materialID = std::numeric_limits<u_int>::max();
-		sampleResult->uv = UV(std::numeric_limits<float>::infinity(),
-				std::numeric_limits<float>::infinity());
+				numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity());
+		sampleResult->materialID = numeric_limits<u_int>::max();
+		sampleResult->uv = UV(numeric_limits<float>::infinity(),
+				numeric_limits<float>::infinity());
 	} else {
 		// Something was hit
 		sampleResult->alpha = 1.f;
@@ -581,7 +581,7 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 	TileRepository::Tile *tile = NULL;
 	bool interruptionRequested = boost::this_thread::interruption_requested();
-	while (engine->NextTile(&tile, tileFilm) && !interruptionRequested) {
+	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
 		// Render the tile
 		tileFilm->Reset();
 		const u_int tileWidth = Min(engine->tileRepository->tileSize, filmWidth - tile->xStart);
@@ -596,15 +596,9 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 		for (u_int y = 0; y < tileHeight && !interruptionRequested; ++y) {
 			for (u_int x = 0; x < tileWidth && !interruptionRequested; ++x) {
-				if (tile->sampleIndex >= 0) {
-					const u_int sampleX = tile->sampleIndex % engine->aaSamples;
-					const u_int sampleY = tile->sampleIndex / engine->aaSamples;
-					RenderPixelSample(rndGen, x, y, tile->xStart, tile->yStart, sampleX, sampleY);
-				} else {
-					for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
-						for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-							RenderPixelSample(rndGen, x, y, tile->xStart, tile->yStart, sampleX, sampleY);
-						}
+				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
+					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
+						RenderPixelSample(rndGen, x, y, tile->xStart, tile->yStart, sampleX, sampleY);
 					}
 				}
 

@@ -112,19 +112,17 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 		defaultTileSize = 32;
 	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(defaultTileSize)).Get<u_int>(), 8u));
 
-	if (GetEngineType() == RTBIASPATHOCL) {
-		tileRepository->enableProgressiveRefinement = false;
+	if (GetEngineType() == RTBIASPATHOCL)
 		tileRepository->enableMultipassRendering = false;
-	} else {
-		tileRepository->enableProgressiveRefinement = cfg.Get(Property("tile.progressiverefinement.enable")(false)).Get<bool>();
+	else
 		tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(false)).Get<bool>();
-	}
-	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples; // Used for progressive rendering
-	tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+	tileRepository->enableConvergenceTest = cfg.Get(Property("tile.multipass.convergencetest.enable")(true)).Get<bool>();
+	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.04f)).Get<float>();
+	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
 
-	taskCount = (tileRepository->enableProgressiveRefinement) ?
-		(tileRepository->tileSize * tileRepository->tileSize) :
-		(tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel);
+	tileRepository->InitTiles(film);
+
+	taskCount = tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel;
 
 	InitPixelFilterDistribution();
 	
@@ -144,40 +142,11 @@ void BiasPathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 	if (GetEngineType() != RTBIASPATHOCL) {
 		// RTBIASPATHOCL will InitTiles() on next frame
 		tileRepository->Clear();
-		tileRepository->InitTiles(film->GetWidth(), film->GetHeight());
+		tileRepository->InitTiles(film);
 		printedRenderingTime = false;
 	}
 
 	PathOCLBaseRenderEngine::EndSceneEditLockLess(editActions);
-}
-
-const bool BiasPathOCLRenderEngine::NextTile(TileRepository::Tile **tile, const Film *tileFilm) {
-	// Check if I have to add the tile to the film
-	if (*tile) {
-		boost::unique_lock<boost::mutex> lock(*filmMutex);
-
-		film->AddFilm(*tileFilm,
-				0, 0,
-				Min(tileRepository->tileSize, film->GetWidth() - (*tile)->xStart),
-				Min(tileRepository->tileSize, film->GetHeight() - (*tile)->yStart),
-				(*tile)->xStart, (*tile)->yStart);
-	}
-
-	if (!tileRepository->NextTile(tile, film->GetWidth(), film->GetHeight())) {
-		// RTBIASPATHOCL would end in dead-lock on engineMutex
-		if (GetEngineType() != RTBIASPATHOCL) {
-			boost::unique_lock<boost::mutex> lock(engineMutex);
-
-			if (!printedRenderingTime && tileRepository->done) {
-				elapsedTime = WallClockTime() - startTime;
-				SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
-				printedRenderingTime = true;
-			}
-		}
-
-		return false;
-	} else
-		return true;
 }
 
 void BiasPathOCLRenderEngine::UpdateCounters() {

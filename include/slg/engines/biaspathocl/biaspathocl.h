@@ -87,7 +87,9 @@ public:
 
 	virtual RenderEngineType GetEngineType() const { return BIASPATHOCL; }
 
-	void GetPendingTiles(vector<TileRepository::Tile> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetPendingTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetNotConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
+	void GetConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
 	u_int GetTileSize() const { return tileRepository->tileSize; }
 
 	friend class BiasPathOCLRenderThread;
@@ -115,8 +117,6 @@ protected:
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 	virtual void UpdateFilmLockLess() { }
 	virtual void UpdateCounters();
-
-	const bool NextTile(TileRepository::Tile **tile, const Film *tileFilm);
 
 	void InitPixelFilterDistribution();
 
