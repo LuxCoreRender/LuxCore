@@ -241,23 +241,11 @@ public:
 	class Tile {
 	public:
 		Tile(const u_int x, const u_int y) :
-			xStart(x), yStart(y), pass(0), evenPassRendering(NULL) { }
-		Tile(const u_int x, const u_int y, const u_int tileSize) :
-			xStart(x), yStart(y), pass(0) {
-			evenPassRendering = new luxrays::Spectrum[tileSize * tileSize];
-		}
-		virtual ~Tile() { delete evenPassRendering; }
-
-		friend class TileRepository;
+			xStart(x), yStart(y), pass(0) { }
+		virtual ~Tile() { }
 
 		u_int xStart, yStart;
 		u_int pass;
-
-	protected:
-		void UpdateEvenPassRendering(const Film *film, const u_int tileSize, const Film *tileFilm);
-		float CheckConvergence(const Film *film, const u_int tileSize) const;
-
-		luxrays::Spectrum *evenPassRendering;
 	};
 
 	TileRepository(const u_int size);
@@ -273,12 +261,15 @@ public:
 	void GetNotConvergedTiles(std::deque<Tile *> &tiles);
 	void GetConvergedTiles(std::deque<Tile *> &tiles);
 
-	void InitTiles(const u_int width, const u_int height);
+	void InitTiles(const Film *film);
 	bool NextTile(Film *film, boost::mutex *filmMutex,
 		Tile **tile, const Film *tileFilm);
 
+	friend class Tile;
+
 	u_int tileSize;
 	u_int totalSamplesPerPixel;
+	u_int pass;
 
 	float convergenceTestThreshold;
 	bool enableMultipassRendering, enableConvergenceTest, enableRenderingDonePrint;
@@ -286,6 +277,9 @@ public:
 	bool done;
 
 private:
+	bool IsConvergedTile(const Tile *tile, const luxrays::Spectrum *allPassPixels,
+			const luxrays::Spectrum *evenPassPixels) const;
+
 	boost::mutex tileMutex;
 	double startTime;
 
@@ -297,6 +291,7 @@ private:
 
 	// Using Boost conditional variable to wakeup all other waiting threads
 	boost::condition_variable allTodoTilesDoneCondition;
+	Film *evenPassFilm;
 };
 
 //------------------------------------------------------------------------------
