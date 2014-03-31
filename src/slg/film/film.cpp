@@ -868,7 +868,6 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 	
 	SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
 
-
 	if (type == FilmOutputs::MATERIAL_ID) {
 		// For material IDs we must copy into int buffer first or risk screwing up the ID
 		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
@@ -876,10 +875,10 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
-			BYTE *pixel = (BYTE *)buffer.pixeladdr(x,y,0);
-			y = height-y-1;
+			BYTE *pixel = (BYTE *)buffer.pixeladdr(x, y, 0);
+			y = height - y - 1;
 			
-			if (pixel==NULL)
+			if (pixel == NULL)
 				throw runtime_error("Error while unpacking film data, could not address buffer!");
 			
 			const u_int *src = channel_MATERIAL_ID->GetPixel(x, y);
@@ -887,18 +886,21 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 			pixel[1] = (BYTE)src[1];
 			pixel[2] = (BYTE)src[2];
 		}
-	}
-	else {
+	} else {
+		// OIIO 1 channel EXR output is apparently not working, I write 3 channels as
+		// temporary workaround
+
 		// For all others copy into float buffer first and let OIIO figure out the conversion on write
-		ImageSpec spec(width, height, channelCount, TypeDesc::FLOAT);
+		ImageSpec spec(width, height, (channelCount == 1) ? 3 : channelCount, TypeDesc::FLOAT);
 		buffer.reset(spec);
 	
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
-			float *pixel = (float *)buffer.pixeladdr(x,y,0);
-			y = height-y-1;
-			if (pixel==NULL)
+			float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+			y = height - y - 1;
+
+			if (pixel == NULL)
 				throw runtime_error("Error while unpacking film data, could not address buffer!");
 			switch (type) {
 				case FilmOutputs::RGB: {
@@ -1000,7 +1002,14 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 				}
 				default:
 					throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
-			}  
+			}
+
+			// OIIO 1 channel EXR output is apparently not working, I write 3 channels as
+			// temporary workaround
+			if (channelCount == 1) {
+				pixel[1] = pixel[0];
+				pixel[2] = pixel[0];
+			}
 		}
 	}
 	
