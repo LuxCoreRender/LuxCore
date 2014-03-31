@@ -115,7 +115,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	if (GetEngineType() == RTBIASPATHOCL)
 		tileRepository->enableMultipassRendering = false;
 	else
-		tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(false)).Get<bool>();
+		tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(true)).Get<bool>();
 	tileRepository->enableConvergenceTest = cfg.Get(Property("tile.multipass.convergencetest.enable")(true)).Get<bool>();
 	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.04f)).Get<float>();
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
