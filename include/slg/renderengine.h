@@ -272,7 +272,7 @@ public:
 	u_int pass;
 
 	float convergenceTestThreshold;
-	bool enableMultipassRendering, enableConvergenceTest, enableRenderingDonePrint;
+	bool enableMultipassRendering, enableRenderingDonePrint;
 
 	bool done;
 

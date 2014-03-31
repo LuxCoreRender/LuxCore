@@ -481,7 +481,6 @@ TileRepository::TileRepository(const u_int size) {
 	tileSize = size;
 
 	enableMultipassRendering = false;
-	enableConvergenceTest = true;
 	convergenceTestThreshold = .04f;
 	enableRenderingDonePrint = true;
 
@@ -570,7 +569,7 @@ void TileRepository::InitTiles(const Film *film) {
 	const u_int width = film->GetWidth();
 	const u_int height = film->GetHeight();
 
-	if (enableMultipassRendering && enableConvergenceTest && (convergenceTestThreshold > 0.f)) {
+	if (enableMultipassRendering && (convergenceTestThreshold > 0.f)) {
 		delete evenPassFilm;
 
 		evenPassFilm = new Film(width, height);
@@ -675,7 +674,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 
 		// If convergence test is enable and it is an even pass, add the tile
 		// film also to the even pass film
-		if (enableMultipassRendering && enableConvergenceTest && (convergenceTestThreshold > 0.f) &&
+		if (enableMultipassRendering && (convergenceTestThreshold > 0.f) &&
 				((pass % 2) == 0)) {
 			evenPassFilm->AddFilm(*tileFilm,
 				0, 0,
@@ -708,8 +707,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 				// I'm the thread with the last todo tile
 
 				// Check if I have to rune the convergence test and it is an odd pass
-				if (enableConvergenceTest && (convergenceTestThreshold > 0.f) &&
-						((pass % 2) == 1)) {
+				if ((convergenceTestThreshold > 0.f) &&	((pass % 2) == 1)) {
 					//const double t0 = WallClockTime();
 
 					// Get the even pass pixel values
