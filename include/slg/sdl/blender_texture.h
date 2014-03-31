@@ -66,6 +66,35 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// Blender magic texture
+//------------------------------------------------------------------------------
+class BlenderMagicTexture : public Texture {
+public:
+	BlenderMagicTexture(const TextureMapping3D *mp, const int noisedepth, const float turbulence, float bright, float contrast);
+	virtual ~BlenderMagicTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_BLEND; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const;
+	virtual float Filter() const;
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	int GetNoiseDepth() const { return noisedepth; }
+	float GetTurbulence() const { return turbulence; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	int noisedepth;
+	float turbulence;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
 // Blender wood texture
 //------------------------------------------------------------------------------
 

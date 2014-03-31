@@ -129,6 +129,141 @@ Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache) c
 }
 
 //------------------------------------------------------------------------------
+// Blender magic texture
+//------------------------------------------------------------------------------
+
+BlenderMagicTexture::BlenderMagicTexture(const TextureMapping3D *mp, const int noisedepth, 
+										 const float turbulence, float bright, float contrast) : 
+		mapping(mp), noisedepth(noisedepth), turbulence(turbulence), bright(bright), contrast(contrast) {
+
+}
+
+float BlenderMagicTexture::GetFloatValue(const HitPoint &hitPoint) const {	
+	return GetSpectrumValue(hitPoint).Y();
+}
+
+Spectrum BlenderMagicTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint));
+	Spectrum s;
+
+    float x, y, z, turb = 1.f;
+    float r, g, b;
+    int n;
+
+    n = noisedepth;
+    turb = turbulence / 5.f;
+
+    x = sin((P.x + P.y + P.z)*5.f);
+    y = cos((-P.x + P.y - P.z)*5.f);
+    z = -cos((-P.x - P.y + P.z)*5.f);
+    if (n > 0) {
+        x *= turb;
+        y *= turb;
+        z *= turb;
+        y = -cos(x - y + z);
+        y *= turb;
+        if (n > 1) {
+            x = cos(x - y - z);
+            x *= turb;
+            if (n > 2) {
+                z = sin(-x - y - z);
+                z *= turb;
+                if (n > 3) {
+                    x = -cos(-x + y - z);
+                    x *= turb;
+                    if (n > 4) {
+                        y = -sin(-x + y + z);
+                        y *= turb;
+                        if (n > 5) {
+                            y = -cos(-x + y + z);
+                            y *= turb;
+                            if (n > 6) {
+                                x = cos(x + y + z);
+                                x *= turb;
+                                if (n > 7) {
+                                    z = sin(x + y - z);
+                                    z *= turb;
+                                    if (n > 8) {
+                                        x = -cos(-x - y + z);
+                                        x *= turb;
+                                        if (n > 9) {
+                                            y = -sin(x - y + z);
+                                            y *= turb;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (turb != 0.f) {
+        turb *= 2.f;
+        x /= turb;
+        y /= turb;
+        z /= turb;
+    }
+    r = 0.5f - x;
+    g = 0.5f - y;
+    b = 0.5f - z;
+
+	r = (r - 0.5f) * contrast + bright - 0.5f;
+    if(r < 0.f) r = 0.f; 
+	else if(r > 1.f) r = 1.f;
+
+	g = (g - 0.5f) * contrast + bright - 0.5f;
+    if(g < 0.f) g = 0.f; 
+	else if(g > 1.f) g = 1.f;
+
+	b = (b - 0.5f) * contrast + bright - 0.5f;
+    if(b < 0.f) b = 0.f; 
+	else if(b > 1.f) b = 1.f;
+
+	return Spectrum(RGBColor(r,g,b));
+}
+
+float BlenderMagicTexture::Y() const {
+	static float c[][3] = { { .58f, .58f, .6f }, { .58f, .58f, .6f }, { .58f, .58f, .6f },
+		{ .5f, .5f, .5f }, { .6f, .59f, .58f }, { .58f, .58f, .6f },
+		{ .58f, .58f, .6f }, {.2f, .2f, .33f }, { .58f, .58f, .6f }, };
+	luxrays::Spectrum cs;
+#define NC  sizeof(c) / sizeof(c[0])
+	for (u_int i = 0; i < NC; ++i)
+		cs += luxrays::Spectrum(c[i]);
+	return cs.Y() / NC;
+#undef NC
+}
+
+float BlenderMagicTexture::Filter() const {
+	static float c[][3] = { { .58f, .58f, .6f }, { .58f, .58f, .6f }, { .58f, .58f, .6f },
+		{ .5f, .5f, .5f }, { .6f, .59f, .58f }, { .58f, .58f, .6f },
+		{ .58f, .58f, .6f }, {.2f, .2f, .33f }, { .58f, .58f, .6f }, };
+	luxrays::Spectrum cs;
+#define NC  sizeof(c) / sizeof(c[0])
+	for (u_int i = 0; i < NC; ++i)
+		cs += luxrays::Spectrum(c[i]);
+	return cs.Filter() / NC;
+#undef NC
+}
+
+Properties BlenderMagicTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_magic"));
+	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
+	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Blender wood texture
 //------------------------------------------------------------------------------
 
