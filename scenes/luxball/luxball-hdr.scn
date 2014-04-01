@@ -22,6 +22,7 @@ scene.objects.luxtext.material = luxtext
 scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
 scene.objects.luxshell.material = shell
 scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+#scene.objects.luxshell.ply = scenes/luxball/cube-shell.ply
 scene.objects.blacktext.material = blacktext
 scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
 ################################################################################

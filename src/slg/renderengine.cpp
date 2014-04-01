@@ -482,6 +482,7 @@ TileRepository::TileRepository(const u_int size) {
 
 	enableMultipassRendering = false;
 	convergenceTestThreshold = .04f;
+	convergenceTestThresholdReduction = 0.f;
 	enableRenderingDonePrint = true;
 
 	done = false;
@@ -706,7 +707,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 			} else {
 				// I'm the thread with the last todo tile
 
-				// Check if I have to rune the convergence test and it is an odd pass
+				// Check if I have to run the convergence test and it is an odd pass
 				if ((convergenceTestThreshold > 0.f) &&	((pass % 2) == 1)) {
 					//const double t0 = WallClockTime();
 
@@ -734,17 +735,31 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 					//SLG_LOG(boost::format("Convergence test time: %.2fms") % (100.0 * (t1 - t0)));
 
 					if (todoTiles.size() == 0) {
-						// All tiles have converged, nothing else to render
-						if (enableRenderingDonePrint) {
-							const double elapsedTime = WallClockTime() - startTime;
-							SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+						if (convergenceTestThresholdReduction == 0.f) {
+							// All tiles have converged, nothing else to render
+							if (enableRenderingDonePrint) {
+								const double elapsedTime = WallClockTime() - startTime;
+								SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+							}
+							done = true;
+
+							// I still need to wake up some waiting thread
+							allTodoTilesDoneCondition.notify_all();
+
+							return false;
+						} else {
+							// Reduce the target threshold and continue the rendering				
+							if (enableRenderingDonePrint) {
+								const double elapsedTime = WallClockTime() - startTime;
+								SLG_LOG(boost::format("Threshold %.4f reached: %.2f secs") % convergenceTestThreshold % elapsedTime);
+							}
+
+							convergenceTestThreshold *= convergenceTestThresholdReduction;
+
+							// Re-start the rendering for all tiles with the new error
+							todoTiles = convergedTiles;
+							convergedTiles.clear();
 						}
-						done = true;
-
-						// I still need to wake up some waiting thread
-						allTodoTilesDoneCondition.notify_all();
-
-						return false;
 					}
 				} else {
 					todoTiles = doneTiles;

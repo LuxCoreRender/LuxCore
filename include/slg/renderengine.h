@@ -271,7 +271,7 @@ public:
 	u_int totalSamplesPerPixel;
 	u_int pass;
 
-	float convergenceTestThreshold;
+	float convergenceTestThreshold, convergenceTestThresholdReduction;
 	bool enableMultipassRendering, enableRenderingDonePrint;
 
 	bool done;
