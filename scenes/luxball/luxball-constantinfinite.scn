@@ -1,7 +1,7 @@
-scene.camera.lookat.orig = 0.6 -1.7 0.4
+scene.camera.lookat.orig = 0.6 -2.7 0.4
 scene.camera.lookat.target = 0.0 0.0 0.4
-scene.camera.lensradius = 0.015
-scene.camera.focaldistance = 2.0
+#scene.camera.lensradius = 0.015
+#scene.camera.focaldistance = 2.0
 ################################################################################
 scene.materials.shell.type = glossy2
 scene.materials.shell.kd = 0.1 0.1 0.1
@@ -25,8 +25,8 @@ scene.objects.luxtext.material = luxtext
 scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
 scene.objects.luxshell.material = shell
 scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
-scene.objects.blacktext.material = blacktext
-scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+#scene.objects.blacktext.material = blacktext
+#scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
 ################################################################################
 scene.lights.il.type = constantinfinite
 scene.lights.il.color = 1.0 1.0 1.0

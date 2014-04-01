@@ -1,6 +1,6 @@
-scene.camera.lookat = 0.6 -1.7 0.4 0.0 0.0 0.4
+scene.camera.lookat = 0.6 -2.7 0.4 0.0 0.0 0.4
 scene.camera.lensradius = 0.015
-scene.camera.focaldistance = 2.0
+scene.camera.focaldistance = 3.0
 ################################################################################
 scene.materials.shell.type = mirror
 scene.materials.shell.kr = 0.75 0.75 0.75
@@ -23,6 +23,7 @@ scene.objects.blacktext.material = blacktext
 scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
 ################################################################################
 scene.infinitelight.file = scenes/simple-mat/sky.exr
+scene.infinitelight.gain = 1 1 1
 scene.sunlight.dir = 0.166974 -0.59908 0.783085
 scene.sunlight.turbidity = 2.2
-scene.sunlight.gain = 0.8 0.8 0.8
+scene.sunlight.gain = 0.00004 0.00004 0.00004

@@ -152,7 +152,7 @@ static void PrintHelpAndSettings() {
 
 	fontOffset -= 15;
 	glRasterPos2i(20, fontOffset);
-	const string samplerName = ((engineType == "BIASPATHCPU") ||
+	const string samplerName = ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL") ||
 		(engineType == "RTBIASPATHOCL")) ?
 			"N/A" : config->GetProperty("sampler.type").Get<string>();
 	buffer = boost::str(boost::format("[Render engine %s][Sampler %s]") %
