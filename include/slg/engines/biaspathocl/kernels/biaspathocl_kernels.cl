@@ -763,7 +763,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				MATERIALS_PARAM);
 
 			for (;;) {
-				const int matSamplesCount = mats[task->bsdfPathVertex1.materialIndex].visibility;
+				const int matSamplesCount = mats[task->bsdfPathVertex1.materialIndex].samples;
 				const uint globalMatSamplesCount = ((vertex1SampleComponent == DIFFUSE) ? PARAM_DIFFUSE_SAMPLES :
 					((vertex1SampleComponent == GLOSSY) ? PARAM_GLOSSY_SAMPLES :
 						PARAM_SPECULAR_SAMPLES));
