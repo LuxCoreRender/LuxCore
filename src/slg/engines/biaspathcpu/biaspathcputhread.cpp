@@ -284,7 +284,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		if (!hit) {
 			// Nothing was hit, look for infinitelight
 			illuminated |= DirectHitEnvLight(false, lastBSDFEvent, pathBSDFEvent,
-					pathThroughput * connectionThroughput, ray.d,	lastPdfW, sampleResult);
+					pathThroughput * connectionThroughput, ray.d, lastPdfW, sampleResult);
 			break;
 		}
 		pathThroughput *= connectionThroughput;

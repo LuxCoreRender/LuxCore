@@ -184,10 +184,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 		,
 		// Scene parameters
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
+#endif
 		__global Material *mats,
 		__global Texture *texs,
 		__global uint *meshMats,
@@ -649,7 +651,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					DirectLightSampling_ONE(
 						firstPathVertex,
 						&seed,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
@@ -665,7 +667,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 						&taskDirectLight->lightIndex,
 						&taskDirectLight->lightSampleIndex,
 						&seed,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)

@@ -771,7 +771,7 @@ float3 Light_Illuminate(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float u3,
 #endif
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,

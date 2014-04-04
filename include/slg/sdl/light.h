@@ -101,82 +101,6 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// LightSourceDefinitions
-//------------------------------------------------------------------------------
-
-class EnvLightSource;
-class TriangleLight;
-
-class LightSourceDefinitions {
-public:
-	LightSourceDefinitions();
-	~LightSourceDefinitions();
-
-	// Update lightGroupCount, envLightSources, intersectableLightSources,
-	// lightIndexByMeshIndex and lightsDistribution
-	void Preprocess(const Scene *scene);
-
-	bool IsLightSourceDefined(const std::string &name) const {
-		return (lightsByName.count(name) > 0);
-	}
-	void DefineLightSource(const std::string &name, LightSource *l);
-
-	const LightSource *GetLightSource(const std::string &name) const;
-	LightSource *GetLightSource(const std::string &name);
-	const LightSource *GetLightSource(const u_int index) const { return lights[index]; }
-	LightSource *GetLightSource(const u_int index) { return lights[index]; }
-	u_int GetLightSourceIndex(const std::string &name) const;
-	u_int GetLightSourceIndex(const LightSource *l) const;
-	const LightSource *GetLightByType(const LightSourceType type) const;
-	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
-
-	u_int GetSize() const { return static_cast<u_int>(lights.size()); }
-	std::vector<std::string> GetLightSourceNames() const;
-
-	// Update any reference to oldMat with newMat
-	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
-
-	void DeleteLightSource(const std::string &name);
-  
-	u_int GetLightGroupCount() const { return lightGroupCount; }
-	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
-	const vector<u_int> &GetLightTypeCounts() const { return lightTypeCount; }
-
-	const std::vector<LightSource *> &GetLightSources() const {
-		return lights;
-	}
-	const std::vector<EnvLightSource *> &GetEnvLightSources() const {
-		return envLightSources;
-	}
-	const std::vector<TriangleLight *> &GetIntersectableLightSources() const {
-		return intersectableLightSources;
-	}
-	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
-	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
-
-	LightSource *SampleAllLights(const float u, float *pdf) const;
-	float SampleAllLightPdf(const LightSource *light) const;
-
-private:
-	std::vector<LightSource *> lights;
-	boost::unordered_map<std::string, LightSource *> lightsByName;
-
-	u_int lightGroupCount;
-	vector<u_int> lightTypeCount;
-
-	std::vector<u_int> lightIndexByMeshIndex;
-
-	// Only intersectable light sources
-	std::vector<TriangleLight *> intersectableLightSources;
-	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
-	std::vector<EnvLightSource *> envLightSources;
-
-	// Used for power based light sampling strategy
-	luxrays::Distribution1D *lightsDistribution;
-
-};
-
-//------------------------------------------------------------------------------
 // Intersectable LightSource interface
 //------------------------------------------------------------------------------
 
@@ -242,16 +166,15 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-// Env. LightSource interface
+// Infinite LightSource interface
 //------------------------------------------------------------------------------
 
-class EnvLightSource : public NotIntersectableLightSource {
+class InfiniteLightSource : public NotIntersectableLightSource {
 public:
-	EnvLightSource() : isVisibleIndirectDiffuse(true),
+	InfiniteLightSource() : isVisibleIndirectDiffuse(true),
 		isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
-	virtual ~EnvLightSource() { }
+	virtual ~InfiniteLightSource() { }
 
-	virtual bool IsEnvironmental() const { return true; }
 	virtual bool IsInfinite() const { return true; }
 
 	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
@@ -262,13 +185,100 @@ public:
 	virtual bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
 	virtual bool IsVisibleIndirectSpecular() const { return isVisibleIndirectSpecular; }
 
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
-			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
-
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 protected:
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
+};
+
+//------------------------------------------------------------------------------
+// Env. LightSource interface
+//------------------------------------------------------------------------------
+
+class EnvLightSource : public InfiniteLightSource {
+public:
+	EnvLightSource() { }
+	virtual ~EnvLightSource() { }
+
+	virtual bool IsEnvironmental() const { return true; }
+
+	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
+			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
+};
+
+//------------------------------------------------------------------------------
+// LightSourceDefinitions
+//------------------------------------------------------------------------------
+
+class TriangleLight;
+
+class LightSourceDefinitions {
+public:
+	LightSourceDefinitions();
+	~LightSourceDefinitions();
+
+	// Update lightGroupCount, infiniteLightSources, intersectableLightSources,
+	// lightIndexByMeshIndex and lightsDistribution
+	void Preprocess(const Scene *scene);
+
+	bool IsLightSourceDefined(const std::string &name) const {
+		return (lightsByName.count(name) > 0);
+	}
+	void DefineLightSource(const std::string &name, LightSource *l);
+
+	const LightSource *GetLightSource(const std::string &name) const;
+	LightSource *GetLightSource(const std::string &name);
+	const LightSource *GetLightSource(const u_int index) const { return lights[index]; }
+	LightSource *GetLightSource(const u_int index) { return lights[index]; }
+	u_int GetLightSourceIndex(const std::string &name) const;
+	u_int GetLightSourceIndex(const LightSource *l) const;
+	const LightSource *GetLightByType(const LightSourceType type) const;
+	const TriangleLight *GetLightSourceByMeshIndex(const u_int index) const;
+
+	u_int GetSize() const { return static_cast<u_int>(lights.size()); }
+	std::vector<std::string> GetLightSourceNames() const;
+
+	// Update any reference to oldMat with newMat
+	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
+
+	void DeleteLightSource(const std::string &name);
+  
+	u_int GetLightGroupCount() const { return lightGroupCount; }
+	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
+	const vector<u_int> &GetLightTypeCounts() const { return lightTypeCount; }
+
+	const std::vector<LightSource *> &GetLightSources() const {
+		return lights;
+	}
+	const std::vector<EnvLightSource *> &GetEnvLightSources() const {
+		return envLightSources;
+	}
+	const std::vector<TriangleLight *> &GetIntersectableLightSources() const {
+		return intersectableLightSources;
+	}
+	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
+	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
+
+	LightSource *SampleAllLights(const float u, float *pdf) const;
+	float SampleAllLightPdf(const LightSource *light) const;
+
+private:
+	std::vector<LightSource *> lights;
+	boost::unordered_map<std::string, LightSource *> lightsByName;
+
+	u_int lightGroupCount;
+	vector<u_int> lightTypeCount;
+
+	std::vector<u_int> lightIndexByMeshIndex;
+
+	// Only intersectable light sources
+	std::vector<TriangleLight *> intersectableLightSources;
+	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
+	std::vector<EnvLightSource *> envLightSources;
+
+	// Used for power based light sampling strategy
+	luxrays::Distribution1D *lightsDistribution;
+
 };
 
 //------------------------------------------------------------------------------
@@ -437,7 +447,7 @@ protected:
 // SharpDistantLight implementation
 //------------------------------------------------------------------------------
 
-class SharpDistantLight : public EnvLightSource {
+class SharpDistantLight : public InfiniteLightSource {
 public:
 	SharpDistantLight();
 	virtual ~SharpDistantLight();
@@ -457,9 +467,6 @@ public:
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
-
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
-			float *directPdfA = NULL, float *emissionPdfW = NULL) const { return luxrays::Spectrum(); }
 	
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
@@ -475,7 +482,7 @@ protected:
 // DistantLight implementation
 //------------------------------------------------------------------------------
 
-class DistantLight : public EnvLightSource {
+class DistantLight : public InfiniteLightSource {
 public:
 	DistantLight();
 	virtual ~DistantLight();
@@ -496,9 +503,6 @@ public:
 		const float u0, const float u1, const float passThroughEvent,
         luxrays::Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
-
-	virtual luxrays::Spectrum GetRadiance(const Scene &scene, const luxrays::Vector &dir,
-			float *directPdfA = NULL, float *emissionPdfW = NULL) const { return luxrays::Spectrum(); }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 

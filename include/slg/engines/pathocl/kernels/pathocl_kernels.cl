@@ -232,7 +232,7 @@ float RussianRouletteProb(const float3 color) {
 bool DirectLightSampling(
 		__global LightSource *light,
 		const float lightPickPdf,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -259,7 +259,7 @@ bool DirectLightSampling(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			u3,
 #endif
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
@@ -310,7 +310,7 @@ bool DirectLightSampling(
 }
 
 bool DirectLightSampling_ONE(
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -335,7 +335,7 @@ bool DirectLightSampling_ONE(
 	return DirectLightSampling(
 		&lights[lightIndex],
 		lightPickPdf,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		worldCenterX,
 		worldCenterY,
 		worldCenterZ,
@@ -444,10 +444,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 		,
 		// Scene parameters
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
+#endif
 		__global Material *mats,
 		__global Texture *texs,
 		__global uint *meshMats,
@@ -846,7 +848,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #endif
 			} else {
 				if (DirectLightSampling_ONE(
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)

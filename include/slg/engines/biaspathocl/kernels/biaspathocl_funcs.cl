@@ -412,7 +412,7 @@ void DirectHitFiniteLight(
 bool DirectLightSampling(
 		__global LightSource *light,
 		const float lightPickPdf,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -437,7 +437,7 @@ bool DirectLightSampling(
 #if defined(PARAM_HAS_PASSTHROUGH)
 			u3,
 #endif
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
@@ -485,7 +485,7 @@ bool DirectLightSampling(
 bool DirectLightSampling_ONE(
 		const bool firstPathVertex,
 		Seed *seed,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -505,7 +505,7 @@ bool DirectLightSampling_ONE(
 	const bool illuminated = DirectLightSampling(
 		&lights[lightIndex],
 		lightPickPdf,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		worldCenterX,
 		worldCenterY,
 		worldCenterZ,
@@ -535,7 +535,7 @@ bool DirectLightSampling_ALL(
 		__global uint *currentLightIndex,
 		__global uint *currentLightSampleIndex,
 		Seed *seed,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -566,7 +566,7 @@ bool DirectLightSampling_ALL(
 			const bool illuminated = DirectLightSampling(
 				&lights[*currentLightIndex],
 				1.f,
-#if defined(PARAM_HAS_ENVLIGHTS)
+#if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX,
 				worldCenterY,
 				worldCenterZ,

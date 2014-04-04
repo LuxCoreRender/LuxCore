@@ -364,10 +364,12 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	argIndex = SetFilmKernelArgs(*advancePathsKernel, argIndex);
 
 	// Scene parameters
-	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
-	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
-	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
-	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
+	if (cscene->hasInfiniteLights) {
+		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
+		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
+		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
+		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
+	}
 	advancePathsKernel->setArg(argIndex++, *materialsBuff);
 	advancePathsKernel->setArg(argIndex++, *texturesBuff);
 	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
@@ -393,6 +395,7 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	if (infiniteLightDistributionsBuff)
 		advancePathsKernel->setArg(argIndex++, *infiniteLightDistributionsBuff);
 	advancePathsKernel->setArg(argIndex++, *lightsDistributionBuff);
+
 	// Images
 	if (imageMapDescsBuff) {
 		advancePathsKernel->setArg(argIndex++, *imageMapDescsBuff);

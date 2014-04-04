@@ -165,10 +165,11 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 
 		float power = l->GetPower(*scene);
 		// In order to avoid over-sampling of distant lights
-		if (l->IsInfinite()) {
+		if (l->IsInfinite())
 			power *= iWorldRadius2;			
+		// update the list of env. lights
+		if (l->IsEnvironmental())
 			envLightSources.push_back((EnvLightSource *)l);
-		}
 		lightPower.push_back(power);
 		totalPower += power;
 
@@ -231,10 +232,10 @@ Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMap
 }
 
 //------------------------------------------------------------------------------
-// EnvLightSource
+// InfiniteLightSource
 //------------------------------------------------------------------------------
 
-Properties EnvLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties InfiniteLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();
 	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache);
 

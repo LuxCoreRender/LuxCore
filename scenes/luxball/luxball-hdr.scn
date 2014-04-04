@@ -16,15 +16,15 @@ scene.materials.blacktext.kd = 0.05 0.05 0.05
 ################################################################################
 scene.objects.room.material = whitematte
 scene.objects.room.ply = scenes/luxball/room-nowall.ply
-#scene.objects.luxinner.material = whitematte
-#scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
-#scene.objects.luxtext.material = luxtext
-#scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
-#scene.objects.luxshell.material = shell
-#scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxshell.material = shell
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
 #scene.objects.luxshell.ply = scenes/luxball/cube-shell.ply
-#scene.objects.blacktext.material = blacktext
-#scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+scene.objects.blacktext.material = blacktext
+scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
 ################################################################################
 #scene.infinitelight.file = scenes/simple-mat/sky.exr
 scene.infinitelight.file = scenes/simple-mat/arch.exr
