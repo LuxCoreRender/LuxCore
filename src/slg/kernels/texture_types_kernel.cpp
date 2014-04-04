@@ -197,7 +197,7 @@ std::string KernelSource_texture_types =
 "		UVTexParam uvTex;\n"
 "		BandTexParam band;\n"
 "		HitPointGreyTexParam hitPointGrey;\n"
-"		NormalMapTexParam normalMap;\n"
+"        NormalMapTexParam normalMap;\n"
 "	};\n"
 "} Texture;\n"
 "\n"

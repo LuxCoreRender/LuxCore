@@ -280,10 +280,12 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	argIndex = SetFilmKernelArgs(*renderSampleKernel, argIndex);
 
 	// Scene parameters
-	renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
-	renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
-	renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
-	renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.rad);
+	if (cscene->hasInfiniteLights) {
+		renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
+		renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
+		renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
+		renderSampleKernel->setArg(argIndex++, cscene->worldBSphere.rad);
+	}
 	renderSampleKernel->setArg(argIndex++, *materialsBuff);
 	renderSampleKernel->setArg(argIndex++, *texturesBuff);
 	renderSampleKernel->setArg(argIndex++, *meshMatsBuff);

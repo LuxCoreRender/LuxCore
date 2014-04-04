@@ -59,7 +59,7 @@ std::string KernelSource_texture_blender_funcs =
 "				wood = tex_tri(sqrt(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f);\n"
 "			}\n"
 "			break;\n"
-"		case BANDNOISE:\n"
+"		case BANDNOISE:			\n"
 "			if(texture->blenderWood.hard)	\n"
 "				wood = texture->blenderWood.turbulence * fabs(2.f * Noise3(scale*P) - 1.f);\n"
 "			else\n"

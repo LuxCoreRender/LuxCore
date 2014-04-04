@@ -762,37 +762,20 @@ void PathOCLBaseRenderThread::InitKernels() {
 	if (cscene->enableCameraClippingPlane)
 		ss << " -D PARAM_CAMERA_ENABLE_CLIPPING_PLANE";
 
-	bool hasEnvLights = false;
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0)
 		ss << " -D PARAM_HAS_INFINITELIGHT";
-		hasEnvLights = true;
-	}
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_CONSTANT] > 0)
 		ss << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
-		hasEnvLights = true;
-	}
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY] > 0)
 		ss << " -D PARAM_HAS_SKYLIGHT";
-		hasEnvLights = true;
-	}
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY2] > 0) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL_SKY2] > 0)
 		ss << " -D PARAM_HAS_SKYLIGHT2";
-		hasEnvLights = true;
-	}
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SUN] > 0) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SUN] > 0)
 		ss << " -D PARAM_HAS_SUNLIGHT";
-		hasEnvLights = true;
-	}
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_SHARPDISTANT] > 0)
 		ss << " -D PARAM_HAS_SHARPDISTANTLIGHT";
-		hasEnvLights = true;
-	}
-	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0) {
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_DISTANT] > 0)
 		ss << " -D PARAM_HAS_DISTANTLIGHT";
-		hasEnvLights = true;
-	}
-	if (hasEnvLights)
-		ss << " -D PARAM_HAS_ENVLIGHTS";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_POINT] > 0)
 		ss << " -D PARAM_HAS_POINTLIGHT";
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_MAPPOINT] > 0)
@@ -803,6 +786,11 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_HAS_PROJECTIONLIGHT";
 	ss << " -D PARAM_TRIANGLE_LIGHT_COUNT=" << renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE];
 	ss << " -D PARAM_LIGHT_COUNT=" << renderEngine->compiledScene->lightDefs.size();
+
+	if (renderEngine->compiledScene->hasInfiniteLights)
+		ss << " -D PARAM_HAS_INFINITELIGHTS";
+	if (renderEngine->compiledScene->hasEnvLights)
+		ss << " -D PARAM_HAS_ENVLIGHTS";
 
 	if (imageMapDescsBuff) {
 		ss << " -D PARAM_HAS_IMAGEMAPS";

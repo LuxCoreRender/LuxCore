@@ -550,6 +550,8 @@ void CompiledScene::CompileLights() {
 	lightDefs.resize(lightCount);
 	envLightIndices.clear();
 	infiniteLightDistributions.clear();
+	hasInfiniteLights = false;
+	hasEnvLights = false;
 
 	for (u_int i = 0; i < lightSources.size(); ++i) {
 		const LightSource *l = lightSources[i];
@@ -562,6 +564,9 @@ void CompiledScene::CompileLights() {
 				(l->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
 				(l->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
+		hasInfiniteLights |= l->IsInfinite();
+		hasEnvLights |= l->IsEnvironmental();
+			
 		switch (l->GetType()) {
 			case TYPE_TRIANGLE: {
 				const TriangleLight *tl = (const TriangleLight *)l;

@@ -774,7 +774,7 @@ std::string KernelSource_light_funcs =
 "#if defined(PARAM_HAS_PASSTHROUGH)\n"
 "		const float u3,\n"
 "#endif\n"
-"#if defined(PARAM_HAS_ENVLIGHTS)\n"
+"#if defined(PARAM_HAS_INFINITELIGHTS)\n"
 "		const float worldCenterX,\n"
 "		const float worldCenterY,\n"
 "		const float worldCenterZ,\n"
