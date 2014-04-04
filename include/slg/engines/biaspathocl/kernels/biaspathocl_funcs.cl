@@ -461,6 +461,14 @@ bool DirectLightSampling(
 			const float factor = 1.f / directLightSamplingPdfW;
 
 			// MIS between direct light sampling and BSDF sampling
+			// Note: applying MIS to the direct light of the last path vertex (when we
+			// hit the max. path depth) is not correct because the light source
+			// can be sampled only here and not with the next path vertex. The
+			// value of weight should be 1 in that case. However, because of different
+			// max. depths for diffuse, glossy and specular, i can not really know
+			// if I'm on the last path vertex or not.
+			//
+			// For the moment, I'm just ignoring this error.
 			const float weight = Light_IsEnvOrIntersectable(light) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
