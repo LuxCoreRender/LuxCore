@@ -136,10 +136,10 @@ public:
 	// MixMaterial can have multiple volumes assigned and needs the passThroughEvent
 	// information to be able to return the correct volume
 	void SetInteriorVolume(const Volume *vol) { interiorVolume = vol; }
-	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,
+	const Volume *GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const { return interiorVolume; }
 	void SetExteriorVolume(const Volume *vol) { exteriorVolume = vol; }
-	virtual const Volume *GetExteriorVolume(const HitPoint &hitPoint,
+	const Volume *GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const { return exteriorVolume; }	
 	
     virtual void Bump(HitPoint *hitPoint,

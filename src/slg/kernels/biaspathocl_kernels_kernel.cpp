@@ -766,7 +766,7 @@ std::string KernelSource_biaspathocl_kernels =
 "				MATERIALS_PARAM);\n"
 "\n"
 "			for (;;) {\n"
-"				const int matSamplesCount = mats[task->bsdfPathVertex1.materialIndex].visibility;\n"
+"				const int matSamplesCount = mats[task->bsdfPathVertex1.materialIndex].samples;\n"
 "				const uint globalMatSamplesCount = ((vertex1SampleComponent == DIFFUSE) ? PARAM_DIFFUSE_SAMPLES :\n"
 "					((vertex1SampleComponent == GLOSSY) ? PARAM_GLOSSY_SAMPLES :\n"
 "						PARAM_SPECULAR_SAMPLES));\n"
