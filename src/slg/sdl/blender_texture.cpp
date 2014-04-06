@@ -129,6 +129,51 @@ Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache) c
 }
 
 //------------------------------------------------------------------------------
+// Blender clouds texture
+//------------------------------------------------------------------------------
+
+BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, 
+		bool hard, float bright, float contrast) : 
+		mapping(mp), noisedepth(noisedepth), noisesize(noisesize), hard(hard), bright(bright), contrast(contrast) {
+}
+
+float BlenderCloudsTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint));
+	float scale = 1.f;
+	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
+
+	float clouds = Turbulence(scale*P, noisesize, noisedepth);
+
+	clouds = (clouds - 0.5f) * contrast + bright - 0.5f;
+    if(clouds < 0.f) clouds = 0.f; 
+	else if(clouds > 1.f) clouds = 1.f;
+	
+    return clouds;
+}
+
+Spectrum BlenderCloudsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	std::string noisetype = "soft_noise";
+	if(hard) noisetype = "hard_noise";
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_clouds"));
+	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Blender magic texture
 //------------------------------------------------------------------------------
 
@@ -264,6 +309,55 @@ Properties BlenderMagicTexture::ToProperties(const ImageMapCache &imgMapCache) c
 }
 
 //------------------------------------------------------------------------------
+// Blender noise texture
+//------------------------------------------------------------------------------
+
+BlenderNoiseTexture::BlenderNoiseTexture(int noisedepth, float bright, float contrast) :
+		noisedepth(noisedepth), bright(bright), contrast(contrast) {
+}
+
+float BlenderNoiseTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	float result = 0.f;
+
+	float div = 3.f;
+    int val, ran, loop;
+
+    ran = BLI_rand();
+    val = (ran & 3);
+
+    loop = noisedepth;
+    while (loop--) {
+        ran = (ran >> 2);
+        val *= (ran & 3);
+        div *= 3.f;
+    }
+
+    result = ((float) val) / div;
+
+	result = (result - 0.5f) * contrast + bright - 0.5f;
+    if(result < 0.f) result = 0.f; 
+	else if(result > 1.f) result = 1.f;
+
+	return result;
+}
+
+Spectrum BlenderNoiseTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties BlenderNoiseTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_noise"));
+	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Blender wood texture
 //------------------------------------------------------------------------------
 
@@ -380,51 +474,6 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) co
 	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
 	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
 	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
-
-	return props;
-}
-
-//------------------------------------------------------------------------------
-// Blender clouds texture
-//------------------------------------------------------------------------------
-
-BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, 
-		bool hard, float bright, float contrast) : 
-		mapping(mp), noisedepth(noisedepth), noisesize(noisesize), hard(hard), bright(bright), contrast(contrast) {
-}
-
-float BlenderCloudsTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	Point P(mapping->Map(hitPoint));
-	float scale = 1.f;
-	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
-
-	float clouds = Turbulence(scale*P, noisesize, noisedepth);
-
-	clouds = (clouds - 0.5f) * contrast + bright - 0.5f;
-    if(clouds < 0.f) clouds = 0.f; 
-	else if(clouds > 1.f) clouds = 1.f;
-	
-    return clouds;
-}
-
-Spectrum BlenderCloudsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return Spectrum(GetFloatValue(hitPoint));
-}
-
-Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
-
-	std::string noisetype = "soft_noise";
-	if(hard) noisetype = "hard_noise";
-
-	const std::string name = GetName();
-
-	props.Set(Property("scene.textures." + name + ".type")("blender_clouds"));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
 	props.Set(Property("scene.textures." + name + ".bright")(bright));
 	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));

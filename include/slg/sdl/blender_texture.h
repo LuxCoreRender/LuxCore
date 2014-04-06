@@ -66,6 +66,40 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// Blender clouds texture
+//------------------------------------------------------------------------------
+
+class BlenderCloudsTexture : public Texture {
+public:
+	BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, bool hard, float bright, float contrast);
+	virtual ~BlenderCloudsTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_CLOUDS; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+	float GetNoiseSize() const { return noisesize; }
+	int GetNoiseDepth() const { return noisedepth; }
+	bool GetNoiseType() const { return hard; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	int noisedepth;	
+	float noisesize;	
+	bool hard;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
 // Blender magic texture
 //------------------------------------------------------------------------------
 class BlenderMagicTexture : public Texture {
@@ -91,6 +125,34 @@ private:
 	const TextureMapping3D *mapping;
 	int noisedepth;
 	float turbulence;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
+// Blender noise texture
+//------------------------------------------------------------------------------
+
+class BlenderNoiseTexture : public Texture {
+public:
+	BlenderNoiseTexture(int noisedepth, float bright, float contrast);
+	virtual ~BlenderNoiseTexture() {};
+
+	virtual TextureType GetType() const { return BLENDER_NOISE; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
+
+	int GetNoiseDepth() const { return noisedepth; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	int noisedepth;
 	float bright, contrast;
 };
 
@@ -135,40 +197,6 @@ private:
 	BlenderWoodType type;
 	BlenderWoodNoiseBase noisebasis2;	
 	float noisesize, turbulence;
-	bool hard;
-	float bright, contrast;
-};
-
-//------------------------------------------------------------------------------
-// Blender clouds texture
-//------------------------------------------------------------------------------
-
-class BlenderCloudsTexture : public Texture {
-public:
-	BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, bool hard, float bright, float contrast);
-	virtual ~BlenderCloudsTexture() { delete mapping; }
-
-	virtual TextureType GetType() const { return BLENDER_CLOUDS; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	// The following methods don't make very much sense in this case. I have no
-	// information about the color.
-	virtual float Y() const { return .5f; }
-	virtual float Filter() const { return .5f; }
-
-	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	float GetBright() const { return bright; }
-	float GetContrast() const { return contrast; }
-	float GetNoiseSize() const { return noisesize; }
-	int GetNoiseDepth() const { return noisedepth; }
-	bool GetNoiseType() const { return hard; }
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	const TextureMapping3D *mapping;
-	int noisedepth;	
-	float noisesize;	
 	bool hard;
 	float bright, contrast;
 };

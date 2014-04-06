@@ -192,6 +192,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/sdl/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/blender_texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/volume.cpp
