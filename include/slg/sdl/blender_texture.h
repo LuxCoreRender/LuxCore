@@ -39,7 +39,7 @@ typedef enum {
 
 class BlenderBlendTexture : public Texture {
 public:
-	BlenderBlendTexture(const TextureMapping3D *mp, const ProgressionType type, const bool direction, float bright, float contrast);
+	BlenderBlendTexture(const TextureMapping3D *mp, const std::string ptype, const bool direction, float bright, float contrast);
 	virtual ~BlenderBlendTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BLENDER_BLEND; }
@@ -83,16 +83,18 @@ public:
 	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	int GetNoiseDepth() const { return noisedepth; }
+	float GetNoiseSize() const { return noisesize; }
+	bool GetNoiseType() const { return hard; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
-	float GetNoiseSize() const { return noisesize; }
-	int GetNoiseDepth() const { return noisedepth; }
-	bool GetNoiseType() const { return hard; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
 	const TextureMapping3D *mapping;
+	BlenderNoiseBasis noisebasis;	
 	int noisedepth;	
 	float noisesize;	
 	bool hard;
@@ -153,6 +155,48 @@ public:
 
 private:
 	int noisedepth;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
+// Blender stucci texture
+//------------------------------------------------------------------------------
+
+typedef enum {
+	TEX_PLASTIC, TEX_WALL_IN, TEX_WALL_OUT
+} BlenderStucciType;
+
+class BlenderStucciTexture : public Texture {
+public:
+	BlenderStucciTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis, 
+		const float noisesize, float turb, bool hard, float bright, float contrast);
+	virtual ~BlenderStucciTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_STUCCI; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	BlenderStucciType GetStucciType() const { return type; }
+	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	float GetNoiseSize() const { return noisesize; }
+	float GetTurbulence() const { return turbulence; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+	bool GetNoiseType() const { return hard; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	BlenderStucciType type;
+	BlenderNoiseBasis noisebasis;	
+	float noisesize, turbulence;
+	bool hard;
 	float bright, contrast;
 };
 
