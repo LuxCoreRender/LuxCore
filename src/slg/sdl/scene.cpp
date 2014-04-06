@@ -813,18 +813,18 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		ProgressionType ptype = TEX_LIN;
-		
-		if (progressiontype == "quadratic") {ptype = TEX_QUAD;}
-		else if (progressiontype == "easing") {ptype = TEX_LIN;}
-		else if (progressiontype == "diagonal") {ptype = TEX_EASE;}
-		else if (progressiontype == "spherical") {ptype = TEX_SPHERE;}
-		else if (progressiontype == "quadratic_spherical") {ptype = TEX_HALO;}
-		else if (progressiontype == "halo") {ptype = TEX_HALO;}
-		else if (progressiontype == "radial") {ptype = TEX_RAD;};
-
 		return new BlenderBlendTexture(CreateTextureMapping3D(propName + ".mapping", props),
-				ptype, (direct=="vertical"), bright, contrast);
+				progressiontype, (direct=="vertical"), bright, contrast);
+	} else if (texType == "blender_clouds") {
+		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
+		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
+		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
+		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
+
+		return new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				noisebasis, noisesize, noisedepth,(hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_magic") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
@@ -833,15 +833,23 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new BlenderMagicTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisedepth, turbulence, bright, contrast);
-	} else if (texType == "blender_clouds") {
-		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
-		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
+	} else if (texType == "blender_noise") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
-		return new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props),
-				noisesize,noisedepth,(hard=="hard_noise"), bright, contrast);
+		return new BlenderNoiseTexture(noisedepth, bright, contrast);
+	} else if (texType == "blender_stucci") {
+		const std::string woodtype = props.Get(Property(propName + ".stuccitype")("platic")).Get<string>();
+		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
+		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
+		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
+		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
+
+		return new BlenderStucciTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				woodtype, noisebasis, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_wood") {
 		const std::string woodtype = props.Get(Property(propName + ".woodtype")("bands")).Get<string>();
 		const std::string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
