@@ -861,7 +861,7 @@ Spectrum LaserLight::Illuminate(const Scene &scene, const Point &p,
 	*directPdfW = 1.f;
 
 	if (emissionPdfW)
-		*emissionPdfW = 1.f / (M_PI * radius2);
+		*emissionPdfW = 0.f;
 
 	return emittedFactor;
 }
