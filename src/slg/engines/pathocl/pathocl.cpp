@@ -156,6 +156,10 @@ void PathOCLRenderEngine::StartLockLess() {
 		filter->mitchell.widthY = Min(filmFilter->yWidth, 1.5f);
 		filter->mitchell.B = ((MitchellFilterSS *)filmFilter)->B;
 		filter->mitchell.C = ((MitchellFilterSS *)filmFilter)->C;
+	} else if (filterType == FILTER_BLACKMANHARRIS) {
+		filter->type = slg::ocl::FILTER_BLACKMANHARRIS;
+		filter->blackmanharris.widthX = Min(filmFilter->xWidth, 1.5f);
+		filter->blackmanharris.widthY = Min(filmFilter->yWidth, 1.5f);
 	} else
 		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
 

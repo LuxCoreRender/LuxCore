@@ -111,6 +111,11 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchell.C << "f";
 			break;
+		case slg::ocl::FILTER_BLACKMANHARRIS:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=4" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->blackmanharris.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f";
+			break;
 		default:
 			assert (false);
 	}
