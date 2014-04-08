@@ -843,6 +843,19 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new BlenderMagicTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisedepth, turbulence, bright, contrast);
+	} else if (texType == "blender_marble") {
+		const std::string marbletype = props.Get(Property(propName + ".marbletype")("soft")).Get<string>();
+		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const std::string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
+		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(0.25f)).Get<float>();
+		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
+		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
+		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
+
+		return new BlenderMarbleTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				marbletype, noisebasis, noisebasis2, noisesize, turbulence, noisedepth, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_noise") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
