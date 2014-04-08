@@ -623,6 +623,153 @@ Properties BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache) 
 }
 
 //------------------------------------------------------------------------------
+// Blender musgrave texture
+//------------------------------------------------------------------------------
+
+BlenderMusgraveTexture::BlenderMusgraveTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
+		const float dimension, const float intensity, const float lacunarity, const float offset, const float gain,
+		const float octaves, float noisesize, bool hard, float bright, float contrast) : 
+		mapping(mp), type(TEX_MULTIFRACTAL), noisebasis(BLENDER_ORIGINAL), dimension(dimension), intensity(intensity),
+		lacunarity(lacunarity), offset(offset), gain(gain), octaves(octaves), 
+		noisesize(noisesize), hard(hard), bright(bright), contrast(contrast) {
+			
+	if(ptype == "multifractal") {
+		type = TEX_MULTIFRACTAL;
+	} else if(ptype == "ridged_multifractal") {
+		type = TEX_RIDGED_MULTIFRACTAL;
+	} else if(ptype == "hybrid_multifractal") {
+		type = TEX_HYBRID_MULTIFRACTAL;
+	} else if(ptype == "fBM") {
+		type = TEX_FBM;
+	} else if(ptype == "hetero_terrain") {
+		type = TEX_HETERO_TERRAIN;
+	};
+
+	if(pnoisebasis == "blender_original") {
+		noisebasis = BLENDER_ORIGINAL;
+	} else if(pnoisebasis == "original_perlin") {
+		noisebasis = ORIGINAL_PERLIN;
+	} else if(pnoisebasis == "improved_perlin") {
+		noisebasis = IMPROVED_PERLIN;
+	} else if(pnoisebasis == "voronoi_f1") {
+		noisebasis = VORONOI_F1;
+	} else if(pnoisebasis == "voronoi_f2") {
+		noisebasis = VORONOI_F2;
+	} else if(pnoisebasis == "voronoi_f3") {
+		noisebasis = VORONOI_F3;
+	} else if(pnoisebasis == "voronoi_f4") {
+		noisebasis = VORONOI_F4;
+	} else if(pnoisebasis == "voronoi_f2_f1") {
+		noisebasis = VORONOI_F2_F1;
+	} else if(pnoisebasis == "voronoi_crackle") {
+		noisebasis = VORONOI_CRACKLE;
+	} else if(pnoisebasis == "cell_noise") {
+		noisebasis = CELL_NOISE;
+	};
+}
+
+float BlenderMusgraveTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint));	
+
+	float scale = 1.f;
+	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
+	P *= scale;
+
+	float result = 0.f;
+
+	switch (type) {
+		case TEX_MULTIFRACTAL:
+			result = mg_MultiFractal(P.x, P.y, P.z, dimension, lacunarity, octaves, noisebasis);
+			break;
+		case TEX_FBM:
+			result = mg_fBm(P.x, P.y, P.z, dimension, lacunarity, octaves, noisebasis);
+            break;
+		case TEX_RIDGED_MULTIFRACTAL:
+			result = mg_RidgedMultiFractal(P.x, P.y, P.z, dimension, lacunarity, octaves, offset, gain, noisebasis);
+			break;
+        case TEX_HYBRID_MULTIFRACTAL:
+			result = mg_HybridMultiFractal(P.x, P.y, P.z, dimension, lacunarity, octaves, offset, gain, noisebasis);
+			break;
+        case TEX_HETERO_TERRAIN:
+			result = mg_HeteroTerrain(P.x, P.y, P.z, dimension, lacunarity, octaves, offset, noisebasis);
+			break;
+    };
+
+	result *= intensity;
+           
+	result = (result - 0.5f) * contrast + bright - 0.5f;
+    if(result < 0.f) result = 0.f; 
+	else if(result > 1.f) result = 1.f;
+	
+    return result;
+}
+
+Spectrum BlenderMusgraveTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties BlenderMusgraveTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	std::string nbas;
+	switch(noisebasis) {
+		default:
+		case BLENDER_ORIGINAL:
+			nbas = "blender_original";
+			break;
+		case ORIGINAL_PERLIN:
+			nbas = "original_perlin";
+			break;
+		case IMPROVED_PERLIN:
+			nbas = "improved_perlin";
+			break;
+		case VORONOI_F1:
+			nbas = "voronoi_f1";
+			break;
+		case VORONOI_F2:
+			nbas = "voronoi_f2";
+			break;
+		case VORONOI_F3:
+			nbas = "voronoi_f3";
+			break;
+		case VORONOI_F4:
+			nbas = "voronoi_f4";
+			break;
+		case VORONOI_F2_F1:
+			nbas = "voronoi_f2_f1";
+			break;
+		case VORONOI_CRACKLE:
+			nbas = "voronoi_crackle";
+			break;
+		case CELL_NOISE:
+			nbas = "cell_noise";
+			break;
+	}
+
+	std::string noisetype = "soft_noise";
+	if(hard) noisetype = "hard_noise";
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_musgrave"));
+	props.Set(Property("scene.textures." + name + ".musgravetype")(type));
+	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
+	props.Set(Property("scene.textures." + name + ".dimension")(dimension));
+	props.Set(Property("scene.textures." + name + ".intensity")(intensity));
+	props.Set(Property("scene.textures." + name + ".lacunarity")(lacunarity));
+	props.Set(Property("scene.textures." + name + ".offset")(offset));
+	props.Set(Property("scene.textures." + name + ".gain")(gain));
+	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
+	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Blender noise texture
 //------------------------------------------------------------------------------
 
