@@ -825,6 +825,16 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisebasis, noisesize, noisedepth,(hard=="hard_noise"), bright, contrast);
+	} else if (texType == "blender_distortednoise") {
+		const std::string noisedistortion = props.Get(Property(propName + ".noise_distortion")("blender_original")).Get<string>();
+		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
+		const float distortion = props.Get(Property(propName + ".distortion")(1.f)).Get<float>();
+		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
+		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
+
+		return new BlenderDistortedNoiseTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				noisedistortion, noisebasis, distortion, noisesize, bright, contrast);	
 	} else if (texType == "blender_magic") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();

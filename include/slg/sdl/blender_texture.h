@@ -20,14 +20,13 @@
 #define	_SLG_BLENDER_TEXTURE_H
 
 #include "slg/sdl/texture.h"
+#include "slg/sdl/blender_noiselib.h"
 
 namespace slg {
 
 typedef enum {
-    BLENDER_ORIGINAL, ORIGINAL_PERLIN, IMPROVED_PERLIN,
-    VORONOI_F1, VORONOI_F2, VORONOI_F3, VORONOI_F4, VORONOI_F2_F1,
-    VORONOI_CRACKLE, CELL_NOISE
-} BlenderNoiseBasis;
+	TEX_SIN, TEX_SAW, TEX_TRI
+} BlenderNoiseBase;
 
 //------------------------------------------------------------------------------
 // Blender blend texture
@@ -98,6 +97,42 @@ private:
 	int noisedepth;	
 	float noisesize;	
 	bool hard;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
+// Blender distorted noise texture
+//------------------------------------------------------------------------------
+
+class BlenderDistortedNoiseTexture : public Texture {
+public:
+	BlenderDistortedNoiseTexture(const TextureMapping3D *mp, const std::string &pnoisedistortion,const std::string &pnoisebasis, 
+		float distortion, float noisesize, float bright, float contrast);
+	virtual ~BlenderDistortedNoiseTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_NOISE; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	BlenderNoiseBasis GetNoiseDistortion() const { return noisedistortion; }
+	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	float GetNoiseSize() const { return noisesize; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	BlenderNoiseBasis noisedistortion;
+	BlenderNoiseBasis noisebasis;
+	float distortion;
+	float noisesize;
 	float bright, contrast;
 };
 
@@ -208,10 +243,6 @@ typedef enum {
 	BANDS, RINGS, BANDNOISE, RINGNOISE
 } BlenderWoodType;
 
-typedef enum {
-	TEX_SIN, TEX_SAW, TEX_TRI
-} BlenderWoodNoiseBase;
-
 class BlenderWoodTexture : public Texture {
 public:
 	BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast);
@@ -227,7 +258,7 @@ public:
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	BlenderWoodType GetWoodType() const { return type; }
-	BlenderWoodNoiseBase GetNoiseBasis2() const { return noisebasis2; }
+	BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetTurbulence() const { return turbulence; }
 	float GetBright() const { return bright; }
