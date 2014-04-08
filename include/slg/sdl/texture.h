@@ -56,8 +56,8 @@ typedef enum {
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
 	HITPOINTGREY, NORMALMAP_TEX,
 	// Procedural textures
-	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_MAGIC, BLENDER_NOISE,
-	BLENDER_STUCCI, BLENDER_WOOD,  BLENDER_VORONOI,
+	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
+	BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD,  BLENDER_VORONOI,
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX,
 	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX
 } TextureType;
@@ -101,22 +101,10 @@ inline float Noise(const luxrays::Point &P) {
 	return Noise(P.x, P.y, P.z);
 }
 
-typedef enum { 
-	ACTUAL_DISTANCE, DISTANCE_SQUARED, MANHATTAN, CHEBYCHEV, MINKOWSKI_HALF, 
-	MINKOWSKI_FOUR, MINKOWSKI
-} DistanceMetric;
-
 float tex_sin(float a);
 float tex_saw(float a);
 float tex_tri(float a);
 float Turbulence(const luxrays::Point &P, const float omega, const int maxOctaves);
-
-void voronoi(float x, float y, float z, float* da, float* pa, float me, DistanceMetric dtype);
-inline void voronoi(luxrays::Point P, float* da, float* pa, float me, DistanceMetric dtype) {
-	voronoi(P.x, P.y, P.z, da, pa, me, dtype);
-}
-
-
 
 //------------------------------------------------------------------------------
 // TextureDefinitions

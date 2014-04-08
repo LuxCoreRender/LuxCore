@@ -227,9 +227,103 @@ Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache) 
 	const std::string name = GetName();
 
 	props.Set(Property("scene.textures." + name + ".type")("blender_clouds"));
+	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
 	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
 	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
 	props.Set(Property("scene.textures." + name + ".noisedepth")(noisedepth));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// Blender distorted noise texture
+//------------------------------------------------------------------------------
+
+BlenderDistortedNoiseTexture::BlenderDistortedNoiseTexture(const TextureMapping3D *mp, const std::string &pnoisedistortion,
+		const std::string &pnoisebasis, float distortion, float noisesize, float bright, float contrast) :
+		mapping(mp), noisedistortion(BLENDER_ORIGINAL), noisebasis(BLENDER_ORIGINAL), distortion(distortion), noisesize(noisesize), 
+		bright(bright), contrast(contrast) {
+
+	if(pnoisedistortion == "blender_original") {
+		noisedistortion = BLENDER_ORIGINAL;
+	} else if(pnoisedistortion == "original_perlin") {
+		noisedistortion = ORIGINAL_PERLIN;
+	} else if(pnoisedistortion == "improved_perlin") {
+		noisedistortion = IMPROVED_PERLIN;
+	} else if(pnoisedistortion == "voronoi_f1") {
+		noisedistortion = VORONOI_F1;
+	} else if(pnoisedistortion == "voronoi_f2") {
+		noisedistortion = VORONOI_F2;
+	} else if(pnoisedistortion == "voronoi_f3") {
+		noisedistortion = VORONOI_F3;
+	} else if(pnoisedistortion == "voronoi_f4") {
+		noisedistortion = VORONOI_F4;
+	} else if(pnoisedistortion == "voronoi_f2_f1") {
+		noisedistortion = VORONOI_F2_F1;
+	} else if(pnoisedistortion == "voronoi_crackle") {
+		noisedistortion = VORONOI_CRACKLE;
+	} else if(pnoisedistortion == "cell_noise") {
+		noisedistortion = CELL_NOISE;
+	};
+
+	if(pnoisebasis == "blender_original") {
+		noisebasis = BLENDER_ORIGINAL;
+	} else if(pnoisebasis == "original_perlin") {
+		noisebasis = ORIGINAL_PERLIN;
+	} else if(pnoisebasis == "improved_perlin") {
+		noisebasis = IMPROVED_PERLIN;
+	} else if(pnoisebasis == "voronoi_f1") {
+		noisebasis = VORONOI_F1;
+	} else if(pnoisebasis == "voronoi_f2") {
+		noisebasis = VORONOI_F2;
+	} else if(pnoisebasis == "voronoi_f3") {
+		noisebasis = VORONOI_F3;
+	} else if(pnoisebasis == "voronoi_f4") {
+		noisebasis = VORONOI_F4;
+	} else if(pnoisebasis == "voronoi_f2_f1") {
+		noisebasis = VORONOI_F2_F1;
+	} else if(pnoisebasis == "voronoi_crackle") {
+		noisebasis = VORONOI_CRACKLE;
+	} else if(pnoisebasis == "cell_noise") {
+		noisebasis = CELL_NOISE;
+	};
+
+}
+
+float BlenderDistortedNoiseTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint));
+	float result = 0.f;
+	float scale = 1.f;
+
+	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
+	P *= scale;
+
+	result = mg_VLNoise(P.x, P.y, P.z, distortion, noisebasis, noisedistortion);
+
+	result = (result - 0.5f) * contrast + bright - 0.5f;
+    if(result < 0.f) result = 0.f; 
+	else if(result > 1.f) result = 1.f;
+
+	return result;
+}
+
+Spectrum BlenderDistortedNoiseTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties BlenderDistortedNoiseTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_distortednoise"));
+	props.Set(Property("scene.textures." + name + ".noisebasis")(noisebasis));
+	props.Set(Property("scene.textures." + name + ".noise_distortion")(noisedistortion));
+	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props.Set(Property("scene.textures." + name + ".distortion")(distortion));
 	props.Set(Property("scene.textures." + name + ".bright")(bright));
 	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
@@ -451,7 +545,6 @@ BlenderStucciTexture::BlenderStucciTexture(const TextureMapping3D *mp, const std
 	} else if(pnoisebasis == "cell_noise") {
 		noisebasis = CELL_NOISE;
 	};
-
 
 	if(ptype == "plastic") {
 		type = TEX_PLASTIC;
@@ -703,18 +796,22 @@ float BlenderVoronoiTexture::GetFloatValue(const HitPoint &hitPoint) const {
     float da[4], pa[12]; /* distance and point coordinate arrays of 4 nearest neighbours */
 	luxrays::Point P(mapping->Map(hitPoint));
 
-    const float aw1 = fabs(feature_weight1);
+	float scale = 1.f;
+	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
+	P *= scale;
+
+	const float aw1 = fabs(feature_weight1);
     const float aw2 = fabs(feature_weight2);
     const float aw3 = fabs(feature_weight3);
     const float aw4 = fabs(feature_weight4);
 
     float sc = (aw1 + aw2 + aw3 + aw4);
 
-    if (sc > 1e-3f) sc = noisesize / sc;
+    if (sc > 0.00001f) sc = noisesize / sc;
 
     float result = 1.f;
 
-	voronoi(P, da, pa, exponent, distancemetric);
+	voronoi(P.x, P.y, P.z, da, pa, exponent, distancemetric);
     result = sc * fabs(feature_weight1 * da[0] + feature_weight2 * da[1] + feature_weight3 * da[2] + feature_weight4 * da[3]);
 
 	result = (result - 0.5f) * contrast + bright - 0.5f;
