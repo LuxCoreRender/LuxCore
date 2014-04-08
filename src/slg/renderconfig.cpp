@@ -62,8 +62,8 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("batch.haltthreshold")(-1.f));
 
 			// Film Filter related Properties
-			defaultProperties->Set(Property("film.filter.type")("GAUSSIAN"));
-			defaultProperties->Set(Property("film.filter.width")(1.5f));
+			defaultProperties->Set(Property("film.filter.type")("BLACKMANHARRIS"));
+			defaultProperties->Set(Property("film.filter.width")(2.f));
 			defaultProperties->Set(Property("film.filter.gaussian.alpha")(2.f));
 			defaultProperties->Set(Property("film.filter.mitchell.b")(1.f / 3.f));
 			defaultProperties->Set(Property("film.filter.mitchell.c")(1.f / 3.f));
