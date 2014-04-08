@@ -251,6 +251,10 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			filter.reset(new MitchellFilterSS(filterWidth, filterWidth, b, c));
 			break;
 		}
+		case FILTER_BLACKMANHARRIS: {
+			filter.reset(new BlackmanHarrisFilter(filterWidth, filterWidth));
+			break;
+		}
 		default:
 			throw runtime_error("Unknown filter type: " + boost::lexical_cast<string>(filterType));
 	}
