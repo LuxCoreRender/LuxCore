@@ -30,6 +30,8 @@ std::string KernelSource_pathocl_kernels =
 "//  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = Blackman-Harris)\n"
 "//  PARAM_IMAGE_FILTER_WIDTH_X\n"
 "//  PARAM_IMAGE_FILTER_WIDTH_Y\n"
+"//  PARAM_IMAGE_FILTER_PIXEL_WIDTH_X\n"
+"//  PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y\n"
 "// (Box filter)\n"
 "// (Gaussian filter)\n"
 "//  PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA\n"

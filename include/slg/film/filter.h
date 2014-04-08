@@ -235,7 +235,7 @@ public:
 	virtual FilterType GetType() const { return FILTER_BLACKMANHARRIS; }
 
 	float Evaluate(const float x, const float y) const {
-		return BlackmanHarris1D(x * 2.f * invXWidth) * BlackmanHarris1D(y *  2.f * invYWidth);
+		return BlackmanHarris1D(x * invXWidth) * BlackmanHarris1D(y *  invYWidth);
 	}
 
 	virtual Filter *Clone() const { return new BlackmanHarrisFilter(xWidth, yWidth); }

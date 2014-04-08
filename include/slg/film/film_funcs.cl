@@ -437,35 +437,13 @@ void Film_SplatSample(__global SampleResult *sampleResult, const float weight
 	const float sx = px - (float)x;
 	const float sy = py - (float)y;
 
-	Film_AddSampleFilteredResultColor(x - 1, y - 1, sx + 1.f, sy + 1.f,
-			sampleResult, weight
-			FILM_PARAM);
-	Film_AddSampleFilteredResultColor(x, y - 1, sx, sy + 1.f,
-			sampleResult, weight
-			FILM_PARAM);
-	Film_AddSampleFilteredResultColor(x + 1, y - 1, sx - 1.f, sy + 1.f,
-			sampleResult, weight
-			FILM_PARAM);
-
-	Film_AddSampleFilteredResultColor(x - 1, y, sx + 1.f, sy,
-			sampleResult, weight
-			FILM_PARAM);
-	Film_AddSampleFilteredResultColor(x, y, sx, sy,
-			sampleResult, weight
-			FILM_PARAM);
-	Film_AddSampleFilteredResultColor(x + 1, y, sx - 1.f, sy,
-			sampleResult, weight
-			FILM_PARAM);
-
-	Film_AddSampleFilteredResultColor(x - 1, y + 1, sx + 1.f, sy - 1.f,
-			sampleResult, weight
-			FILM_PARAM);
-	Film_AddSampleFilteredResultColor(x, y + 1, sx, sy - 1.f,
-			sampleResult, weight
-			FILM_PARAM);
-	Film_AddSampleFilteredResultColor(x + 1, y + 1, sx - 1.f, sy - 1.f,
-			sampleResult, weight
-			FILM_PARAM);
+	for (int dy = -PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y; dy <= PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y; ++dy) {
+		for (int dx = -PARAM_IMAGE_FILTER_PIXEL_WIDTH_X; dx <= PARAM_IMAGE_FILTER_PIXEL_WIDTH_X; ++dx) {
+			Film_AddSampleFilteredResultColor(x + dx, y + dy, sx - dx, sy - dy,
+					sampleResult, weight
+					FILM_PARAM);
+		}
+	}
 }
 
 #else
