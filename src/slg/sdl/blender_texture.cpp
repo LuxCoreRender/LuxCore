@@ -465,6 +465,162 @@ Properties BlenderMagicTexture::ToProperties(const ImageMapCache &imgMapCache) c
 
 	return props;
 }
+//------------------------------------------------------------------------------
+// Blender marble texture
+//------------------------------------------------------------------------------
+
+BlenderMarbleTexture::BlenderMarbleTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
+		const std::string &pnoise, float noisesize, float turb, int noisedepth, bool hard, float bright, float contrast) : 
+		mapping(mp), type(TEX_SOFT), noisebasis(BLENDER_ORIGINAL), noisebasis2(TEX_SIN), noisesize(noisesize),
+		turbulence(turb), noisedepth(noisedepth), hard(hard), bright(bright), contrast(contrast) {
+			
+	if(pnoisebasis == "blender_original") {
+		noisebasis = BLENDER_ORIGINAL;
+	} else if(pnoisebasis == "original_perlin") {
+		noisebasis = ORIGINAL_PERLIN;
+	} else if(pnoisebasis == "improved_perlin") {
+		noisebasis = IMPROVED_PERLIN;
+	} else if(pnoisebasis == "voronoi_f1") {
+		noisebasis = VORONOI_F1;
+	} else if(pnoisebasis == "voronoi_f2") {
+		noisebasis = VORONOI_F2;
+	} else if(pnoisebasis == "voronoi_f3") {
+		noisebasis = VORONOI_F3;
+	} else if(pnoisebasis == "voronoi_f4") {
+		noisebasis = VORONOI_F4;
+	} else if(pnoisebasis == "voronoi_f2_f1") {
+		noisebasis = VORONOI_F2_F1;
+	} else if(pnoisebasis == "voronoi_crackle") {
+		noisebasis = VORONOI_CRACKLE;
+	} else if(pnoisebasis == "cell_noise") {
+		noisebasis = CELL_NOISE;
+	};
+
+	if(ptype == "soft") {
+		type = TEX_SOFT;
+	} else if(ptype == "sharp") {
+		type = TEX_SHARP;
+	} else if(ptype == "sharper") {
+		type = TEX_SHARPER;
+	};
+	
+	if(pnoise == "sin") {
+		noisebasis2 = TEX_SIN;
+	} else if(pnoise == "saw") {
+		noisebasis2 = TEX_SAW;
+	} else if(pnoise == "tri") {
+		noisebasis2 = TEX_TRI;
+	};
+}
+
+float BlenderMarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	Point P(mapping->Map(hitPoint));	
+
+    float (*waveform[3])(float); /* create array of pointers to waveform functions */
+    waveform[0] = tex_sin; /* assign address of tex_sin() function to pointer array */
+    waveform[1] = tex_saw;
+    waveform[2] = tex_tri;
+
+	u_int wf = 0;
+
+	if(noisebasis2 == TEX_SAW) { 
+		wf = 1;
+	} else if(noisebasis2 == TEX_TRI) 
+		wf = 2;
+
+	float result = 0.f;
+
+    float n = 5.f * (P.x + P.y + P.z);
+
+    result = n + turbulence * BLI_gTurbulence(noisesize, P.x, P.y, P.z, noisedepth, hard, noisebasis);
+	result = waveform[wf](result);
+	
+	if (type == TEX_SHARP) {
+		result = sqrtf(result);
+	} else if (type == TEX_SHARPER) {
+		result = sqrtf(sqrtf(result));
+	}
+
+	result = (result - 0.5f) * contrast + bright - 0.5f;
+    if(result < 0.f) result = 0.f; 
+	else if(result > 1.f) result = 1.f;
+	
+    return result;
+}
+
+Spectrum BlenderMarbleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	std::string nbas;
+	switch(noisebasis) {
+		default:
+		case BLENDER_ORIGINAL:
+			nbas = "blender_original";
+			break;
+		case ORIGINAL_PERLIN:
+			nbas = "original_perlin";
+			break;
+		case IMPROVED_PERLIN:
+			nbas = "improved_perlin";
+			break;
+		case VORONOI_F1:
+			nbas = "voronoi_f1";
+			break;
+		case VORONOI_F2:
+			nbas = "voronoi_f2";
+			break;
+		case VORONOI_F3:
+			nbas = "voronoi_f3";
+			break;
+		case VORONOI_F4:
+			nbas = "voronoi_f4";
+			break;
+		case VORONOI_F2_F1:
+			nbas = "voronoi_f2_f1";
+			break;
+		case VORONOI_CRACKLE:
+			nbas = "voronoi_crackle";
+			break;
+		case CELL_NOISE:
+			nbas = "cell_noise";
+			break;
+	}
+
+	std::string noise;
+	switch(noisebasis2) {
+		default:
+		case TEX_SIN:
+			noise = "sin";
+			break;
+		case TEX_SAW:
+			noise = "saw";
+			break;
+		case TEX_TRI:
+			noise = "tri";
+			break;
+	}
+
+	std::string noisetype = "soft_noise";
+	if(hard) noisetype = "hard_noise";
+
+	const std::string name = GetName();
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_marble"));
+	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
+	props.Set(Property("scene.textures." + name + ".noisebasis2")(noise));
+	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
+	props.Set(Property("scene.textures." + name + ".turbulence")(turbulence));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
 
 //------------------------------------------------------------------------------
 // Blender noise texture

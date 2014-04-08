@@ -166,6 +166,52 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// Blender marble texture
+//------------------------------------------------------------------------------
+
+typedef enum {
+	TEX_SOFT, TEX_SHARP, TEX_SHARPER
+} BlenderMarbleType;
+
+class BlenderMarbleTexture : public Texture {
+public:
+	BlenderMarbleTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
+		const std::string &pnoise, float noisesize, float turb, int noisedepth, bool hard,
+		float bright, float contrast);
+	virtual ~BlenderMarbleTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_WOOD; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	BlenderMarbleType GetMarbleType() const { return type; }
+	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
+	float GetNoiseSize() const { return noisesize; }
+	float GetTurbulence() const { return turbulence; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+	bool GetNoiseType() const { return hard; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	BlenderMarbleType type;
+	BlenderNoiseBasis noisebasis;	
+	BlenderNoiseBase noisebasis2;	
+	float noisesize, turbulence;
+	int noisedepth;
+	bool hard;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
 // Blender noise texture
 //------------------------------------------------------------------------------
 
