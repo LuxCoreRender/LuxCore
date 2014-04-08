@@ -879,7 +879,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new BlenderNoiseTexture(noisedepth, bright, contrast);
 	} else if (texType == "blender_stucci") {
-		const std::string woodtype = props.Get(Property(propName + ".stuccitype")("platic")).Get<string>();
+		const std::string woodtype = props.Get(Property(propName + ".stuccitype")("plastic")).Get<string>();
 		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
 		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
