@@ -104,8 +104,8 @@ float BlackmanHarris1D(float x) {
 
 // Blackman-Harris Filter
 float ImageFilter_Evaluate(const float x, const float y) {
-	return BlackmanHarris1D(x * (2.f / PARAM_IMAGE_FILTER_WIDTH_X)) *
-			BlackmanHarris1D(y *  (2.f / PARAM_IMAGE_FILTER_WIDTH_Y));
+	return BlackmanHarris1D(x * (1.f / PARAM_IMAGE_FILTER_WIDTH_X)) *
+			BlackmanHarris1D(y *  (1.f / PARAM_IMAGE_FILTER_WIDTH_Y));
 }
 
 #else

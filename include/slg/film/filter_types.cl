@@ -41,7 +41,9 @@ typedef enum {
 
 typedef struct {
 	FilterType type;
+
 	union {
+		// Nothing to store for NONE filter
 		struct {
 			float widthX, widthY;
 		} box;

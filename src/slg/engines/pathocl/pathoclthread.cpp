@@ -96,25 +96,33 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 		case slg::ocl::FILTER_BOX:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->box.widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->box.widthY << "f";
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->box.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->box.widthX) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->box.widthY);
 			break;
 		case slg::ocl::FILTER_GAUSSIAN:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->gaussian.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->gaussian.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->gaussian.widthX) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->gaussian.widthY) <<
 					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << filter->gaussian.alpha << "f";
 			break;
 		case slg::ocl::FILTER_MITCHELL:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchell.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchell.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->mitchell.widthX) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->mitchell.widthY) <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchell.C << "f";
 			break;
 		case slg::ocl::FILTER_BLACKMANHARRIS:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=4" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->blackmanharris.widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f";
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->box.widthX) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->box.widthY);
 			break;
 		default:
 			assert (false);

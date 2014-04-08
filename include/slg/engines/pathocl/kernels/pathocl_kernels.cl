@@ -27,6 +27,8 @@
 //  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = Blackman-Harris)
 //  PARAM_IMAGE_FILTER_WIDTH_X
 //  PARAM_IMAGE_FILTER_WIDTH_Y
+//  PARAM_IMAGE_FILTER_PIXEL_WIDTH_X
+//  PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y
 // (Box filter)
 // (Gaussian filter)
 //  PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA
