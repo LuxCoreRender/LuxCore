@@ -212,6 +212,60 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// Blender musgrave texture
+//------------------------------------------------------------------------------
+
+typedef enum {
+	TEX_MULTIFRACTAL, TEX_RIDGED_MULTIFRACTAL, TEX_HYBRID_MULTIFRACTAL, TEX_FBM, TEX_HETERO_TERRAIN
+} BlenderMusgraveType;
+
+class BlenderMusgraveTexture : public Texture {
+public:
+	BlenderMusgraveTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis, 
+		const float dimension, const float intensity, const float lacunarity, const float offset, const float gain,
+		const float octaves, const float noisesize, bool hard, float bright, float contrast);
+	virtual ~BlenderMusgraveTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_STUCCI; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	BlenderMusgraveType GetMusgraveType() const { return type; }
+	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	float GetDimension() const { return dimension; }
+	float GetIntensity() const { return intensity; }
+	float GetLacunarity() const { return lacunarity; }
+	float GetOffset() const { return offset; }
+	float GetGain() const { return gain; }
+	float GetOctaves() const { return octaves; }
+	float GetNoiseSize() const { return noisesize; }
+	bool GetNoiseType() const { return hard; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	BlenderMusgraveType type;
+	BlenderNoiseBasis noisebasis;
+	float dimension;
+	float intensity;
+	float lacunarity;
+	float offset;
+	float gain;
+	float octaves;
+	float noisesize;
+	bool hard;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
 // Blender noise texture
 //------------------------------------------------------------------------------
 

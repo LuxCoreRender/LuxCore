@@ -856,6 +856,22 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new BlenderMarbleTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				marbletype, noisebasis, noisebasis2, noisesize, turbulence, noisedepth, (hard=="hard_noise"), bright, contrast);
+	} else if (texType == "blender_musgrave") {
+		const std::string musgravetype = props.Get(Property(propName + ".musgravetype")("multifractal")).Get<string>();
+		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const float dimension = props.Get(Property(propName + ".dimension")(1.f)).Get<float>();
+		const float intensity = props.Get(Property(propName + ".intensity")(1.f)).Get<float>();
+		const float lacunarity = props.Get(Property(propName + ".lacunarity")(1.f)).Get<float>();
+		const float offset = props.Get(Property(propName + ".offset")(1.f)).Get<float>();
+		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
+		const float octaves = props.Get(Property(propName + ".octaves")(2.f)).Get<float>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(0.25f)).Get<float>();
+		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
+		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
+
+		return new BlenderMusgraveTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				musgravetype, noisebasis, dimension, intensity, lacunarity, offset, gain, octaves, noisesize, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_noise") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
