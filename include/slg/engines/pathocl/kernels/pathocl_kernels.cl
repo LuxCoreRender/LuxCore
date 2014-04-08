@@ -24,7 +24,7 @@
 //  PARAM_RR_CAP
 
 // (optional)
-//  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell)
+//  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = Blackman-Harris)
 //  PARAM_IMAGE_FILTER_WIDTH_X
 //  PARAM_IMAGE_FILTER_WIDTH_Y
 // (Box filter)

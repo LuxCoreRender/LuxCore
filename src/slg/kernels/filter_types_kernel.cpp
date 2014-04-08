@@ -39,7 +39,7 @@ std::string KernelSource_filter_types =
 "//------------------------------------------------------------------------------\n"
 "\n"
 "typedef enum {\n"
-"	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL\n"
+"	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL, FILTER_BLACKMANHARRIS\n"
 "} FilterType;\n"
 "\n"
 "typedef struct {\n"
@@ -56,6 +56,9 @@ std::string KernelSource_filter_types =
 "			float widthX, widthY;\n"
 "			float B, C;\n"
 "		} mitchell;\n"
+"		struct {\n"
+"			float widthX, widthY;\n"
+"		} blackmanharris;\n"
 "	};\n"
 "} Filter;\n"
 ; } }
