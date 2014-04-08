@@ -32,6 +32,8 @@ FilterType Filter::String2FilterType(const std::string &type) {
 		return FILTER_MITCHELL;
 	else if ((type.compare("4") == 0) || (type.compare("MITCHELL_SS") == 0))
 		return FILTER_MITCHELL_SS;
+	else if ((type.compare("5") == 0) || (type.compare("BLACKMANHARRIS") == 0))
+		return FILTER_BLACKMANHARRIS;
 	throw std::runtime_error("Unknown filter type: " + type);
 }
 
