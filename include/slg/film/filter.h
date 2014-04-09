@@ -40,7 +40,8 @@ using luxrays::ocl::Spectrum;
 //------------------------------------------------------------------------------
 
 typedef enum {
-	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL, FILTER_MITCHELL_SS
+	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL, FILTER_MITCHELL_SS,
+	FILTER_BLACKMANHARRIS
 } FilterType;
 
 class Filter {
@@ -78,12 +79,15 @@ private:
 	luxrays::Distribution2D *distrib;
 };
 
+//------------------------------------------------------------------------------
+// BoxFilter
+//------------------------------------------------------------------------------
+
 class BoxFilter : public Filter {
 public:
-	// GaussianFilter Public Methods
+	// BoxFilter Public Methods
 	BoxFilter(const float xw = 2.f, const float yw = 2.f) :
-		Filter(xw, yw) {
-	}
+		Filter(xw, yw) { }
 	virtual ~BoxFilter() { }
 
 	virtual FilterType GetType() const { return FILTER_BOX; }
@@ -95,9 +99,13 @@ public:
 	virtual Filter *Clone() const { return new BoxFilter(xWidth, yWidth); }
 };
 
+//------------------------------------------------------------------------------
+// GaussianFilter
+//------------------------------------------------------------------------------
+
 class GaussianFilter : public Filter {
 public:
-	// GaussianFilter Public Methods
+	// MitchellFilter Public Methods
 	GaussianFilter(const float xw = 2.f, const float yw = 2.f, const float a = 2.f) :
 		Filter(xw, yw) {
 		alpha = a;
@@ -126,9 +134,13 @@ private:
 	}
 };
 
+//------------------------------------------------------------------------------
+// MitchellFilter
+//------------------------------------------------------------------------------
+
 class MitchellFilter : public Filter {
 public:
-	// GaussianFilter Public Methods
+	// MitchellFilter Public Methods
 	MitchellFilter(const float xw = 2.f, const float yw = 2.f,
 			const float b = 1.f / 3.f, const float c = 1.f / 3.f) :
 		Filter(xw, yw), B(b), C(c) { }
@@ -162,6 +174,10 @@ private:
 				(1.f - B / 3.f);
 	}
 };
+
+//------------------------------------------------------------------------------
+// MitchellFilter
+//------------------------------------------------------------------------------
 
 class MitchellFilterSS : public Filter {
 public:
@@ -203,6 +219,39 @@ private:
 	}
 
 	const float a0, a1;
+};
+
+//------------------------------------------------------------------------------
+// BlackmanHarrisFilter
+//------------------------------------------------------------------------------
+
+class BlackmanHarrisFilter : public Filter {
+public:
+	// GaussianFilter Public Methods
+	BlackmanHarrisFilter(const float xw = 2.f, const float yw = 2.f) :
+		Filter(xw, yw) { }
+	virtual ~BlackmanHarrisFilter() { }
+
+	virtual FilterType GetType() const { return FILTER_BLACKMANHARRIS; }
+
+	float Evaluate(const float x, const float y) const {
+		return BlackmanHarris1D(x * invXWidth) * BlackmanHarris1D(y *  invYWidth);
+	}
+
+	virtual Filter *Clone() const { return new BlackmanHarrisFilter(xWidth, yWidth); }
+
+private:
+	float BlackmanHarris1D(float x) const {
+		if (x < -1.f || x > 1.f)
+			return 0.f;
+		x = (x + 1.f) * .5f;
+		x *= M_PI;
+		const float A0 =  0.35875f;
+		const float A1 = -0.48829f;
+		const float A2 =  0.14128f;
+		const float A3 = -0.01168f;
+		return A0 + A1 * cosf(2.f * x) + A2 * cosf(4.f * x) + A3 * cosf(6.f * x);
+	}
 };
 
 //------------------------------------------------------------------------------

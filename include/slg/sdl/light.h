@@ -47,7 +47,7 @@ class Scene;
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
-	TYPE_IL_SKY2,
+	TYPE_IL_SKY2, TYPE_LASER,
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
@@ -441,6 +441,47 @@ protected:
 	float screenX0, screenX1, screenY0, screenY1, area;
 	float cosTotalWidth;
 	luxrays::Transform alignedLight2World, lightProjection;
+};
+
+//------------------------------------------------------------------------------
+// LaserLight implementation
+//------------------------------------------------------------------------------
+
+class LaserLight : public NotIntersectableLightSource {
+public:
+	LaserLight();
+	virtual ~LaserLight();
+
+	virtual void Preprocess();
+	void GetPreprocessedData(float *emittedFactor, float *absolutePos,
+		float *absolutDir, float *xData, float *yData) const;
+
+	virtual LightSourceType GetType() const { return TYPE_LASER; }
+	virtual float GetPower(const Scene &scene) const;
+
+	virtual luxrays::Spectrum Emit(const Scene &scene,
+		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
+		luxrays::Point *pos, luxrays::Vector *dir,
+		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
+		const float u0, const float u1, const float passThroughEvent,
+        luxrays::Vector *dir, float *distance, float *directPdfW,
+		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+	luxrays::Spectrum color;
+	float power, efficency;
+
+	luxrays::Point localPos, localTarget;
+	float radius;
+
+protected:
+	luxrays::Spectrum emittedFactor;
+	luxrays::Point absoluteLightPos;
+	luxrays::Vector absoluteLightDir;
+	luxrays::Vector x, y;
 };
 
 //------------------------------------------------------------------------------

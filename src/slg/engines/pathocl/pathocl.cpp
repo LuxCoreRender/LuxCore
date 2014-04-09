@@ -137,25 +137,29 @@ void PathOCLRenderEngine::StartLockLess() {
 		filter->type = slg::ocl::FILTER_NONE;
 	else if (filterType == FILTER_BOX) {
 		filter->type = slg::ocl::FILTER_BOX;
-		filter->box.widthX = Min(filmFilter->xWidth, 1.5f);
-		filter->box.widthY = Min(filmFilter->yWidth, 1.5f);
+		filter->box.widthX = filmFilter->xWidth;
+		filter->box.widthY = filmFilter->yWidth;
 	} else if (filterType == FILTER_GAUSSIAN) {
 		filter->type = slg::ocl::FILTER_GAUSSIAN;
-		filter->gaussian.widthX = Min(filmFilter->xWidth, 1.5f);
-		filter->gaussian.widthY = Min(filmFilter->yWidth, 1.5f);
+		filter->gaussian.widthX = filmFilter->xWidth;
+		filter->gaussian.widthY = filmFilter->yWidth;
 		filter->gaussian.alpha = ((GaussianFilter *)filmFilter)->alpha;
 	} else if (filterType == FILTER_MITCHELL) {
 		filter->type = slg::ocl::FILTER_MITCHELL;
-		filter->mitchell.widthX = Min(filmFilter->xWidth, 1.5f);
-		filter->mitchell.widthY = Min(filmFilter->yWidth, 1.5f);
+		filter->mitchell.widthX = filmFilter->xWidth;
+		filter->mitchell.widthY = filmFilter->yWidth;
 		filter->mitchell.B = ((MitchellFilter *)filmFilter)->B;
 		filter->mitchell.C = ((MitchellFilter *)filmFilter)->C;
 	} else if (filterType == FILTER_MITCHELL_SS) {
 		filter->type = slg::ocl::FILTER_MITCHELL;
-		filter->mitchell.widthX = Min(filmFilter->xWidth, 1.5f);
-		filter->mitchell.widthY = Min(filmFilter->yWidth, 1.5f);
+		filter->mitchell.widthX = filmFilter->xWidth;
+		filter->mitchell.widthY = filmFilter->yWidth;
 		filter->mitchell.B = ((MitchellFilterSS *)filmFilter)->B;
 		filter->mitchell.C = ((MitchellFilterSS *)filmFilter)->C;
+	} else if (filterType == FILTER_BLACKMANHARRIS) {
+		filter->type = slg::ocl::FILTER_BLACKMANHARRIS;
+		filter->blackmanharris.widthX = filmFilter->xWidth;
+		filter->blackmanharris.widthY = filmFilter->yWidth;
 	} else
 		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
 

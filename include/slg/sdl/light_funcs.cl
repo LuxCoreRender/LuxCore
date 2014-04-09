@@ -708,6 +708,56 @@ float3 DistantLight_Illuminate(__global LightSource *distantLight,
 #endif
 
 //------------------------------------------------------------------------------
+// LaserLight
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_LASERLIGHT)
+
+float3 LaserLight_Illuminate(__global LightSource *laserLight,
+		const float3 p,	float3 *dir, float *distance, float *directPdfW) {
+	const float3 absoluteLightPos = VLOAD3F(&laserLight->notIntersectable.laser.absoluteLightPos.x);
+	const float3 absoluteLightDir = VLOAD3F(&laserLight->notIntersectable.laser.absoluteLightDir.x);
+
+	*dir = -absoluteLightDir;
+	
+	const float3 rayOrig = p;
+	const float3 rayDir = *dir;
+	const float3 planeCenter = absoluteLightPos;
+	const float3 planeNormal = absoluteLightDir;
+
+	// Intersect the shadow ray with light plane
+	const float denom = dot(planeNormal, rayDir);
+	const float3 pr = planeCenter - rayOrig;
+	float d = dot(pr, planeNormal);
+
+	if (fabs(denom) > DEFAULT_COS_EPSILON_STATIC) {
+		// There is a valid intersection
+		d /= denom; 
+
+		if ((d <= 0.f) || (denom >= 0.f))
+			return BLACK;
+	} else
+		return BLACK;
+
+	const float3 lightPoint = rayOrig + d * rayDir;
+
+	// Check if the point is inside the emitting circle
+	const float radius = laserLight->notIntersectable.laser.radius;
+	const float3 dist = lightPoint - absoluteLightPos;
+	if (dot(dist, dist) > radius * radius)
+		return BLACK;
+	
+	// Ok, the light is visible
+	
+	*distance = d;
+	*directPdfW = 1.f;
+
+	return VLOAD3F(laserLight->notIntersectable.laser.emittedFactor.c);
+}
+
+#endif
+
+//------------------------------------------------------------------------------
 // Generic light functions
 //------------------------------------------------------------------------------
 
@@ -881,6 +931,12 @@ float3 Light_Illuminate(
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				point, u0, u1, lightRayDir, distance, directPdfW);
 #endif
+#if defined(PARAM_HAS_LASERLIGHT)
+		case TYPE_LASER:
+			return LaserLight_Illuminate(
+					light, point,
+					lightRayDir, distance, directPdfW);
+#endif
 		default:
 			return BLACK;
 	}
@@ -928,7 +984,10 @@ bool Light_IsEnvOrIntersectable(__global LightSource *light) {
 #if defined(PARAM_HAS_PROJECTIONLIGHT)
 		case TYPE_PROJECTION:
 #endif
-#if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT)
+#if defined(PARAM_HAS_LASERLIGHT)
+		case TYPE_POINT:
+#endif
+#if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT)
 			return false;
 #endif
 
