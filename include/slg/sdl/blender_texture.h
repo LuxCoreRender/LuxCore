@@ -372,7 +372,7 @@ public:
 private:
 	const TextureMapping3D *mapping;
 	BlenderWoodType type;
-	BlenderWoodNoiseBase noisebasis2;	
+	BlenderNoiseBase noisebasis2;	
 	float noisesize, turbulence;
 	bool hard;
 	float bright, contrast;
@@ -385,7 +385,7 @@ private:
 class BlenderVoronoiTexture : public Texture {
 public:
 	BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent, const float fw1, const float fw2, const float fw3, const float fw4, 
-		const DistanceMetric distmetric, const float noisesize, float bright, float contrast);
+		const std::string distmetric, const float noisesize, float bright, float contrast);
 	virtual ~BlenderVoronoiTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BLENDER_VORONOI; }
@@ -399,7 +399,7 @@ public:
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
-	DistanceMetric GetDistMetric() const { return result; }
+	DistanceMetric GetDistMetric() const { return distancemetric; }
 	float GetFeatureWeight1() const { return feature_weight1; }
 	float GetFeatureWeight2() const { return feature_weight2; }
 	float GetFeatureWeight3() const { return feature_weight3; }

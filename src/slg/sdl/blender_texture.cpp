@@ -1089,7 +1089,7 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) co
 //------------------------------------------------------------------------------
 
 BlenderVoronoiTexture::BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent,
-        const float fw1, const float fw2, const float fw3, const float fw4, DistanceMetric distmetric, float noisesize,  float bright, float contrast) :
+        const float fw1, const float fw2, const float fw3, const float fw4, const std::string distmetric, float noisesize,  float bright, float contrast) :
 		mapping(mp), intensity(intensity), exponent(exponent), feature_weight1(fw1), feature_weight2(fw2), feature_weight3(fw3), feature_weight4(fw4),
 		distancemetric(ACTUAL_DISTANCE), noisesize(noisesize), bright(bright), contrast(contrast) {
 
