@@ -140,7 +140,7 @@ Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache) c
 // Blender clouds texture
 //------------------------------------------------------------------------------
 
-BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, 
+BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const std::string &pnoisebasis, const float noisesize, const int noisedepth, 
 		bool hard, float bright, float contrast) : 
 		mapping(mp), noisebasis(BLENDER_ORIGINAL), noisedepth(noisedepth), noisesize(noisesize), 
 		hard(hard), bright(bright), contrast(contrast) {

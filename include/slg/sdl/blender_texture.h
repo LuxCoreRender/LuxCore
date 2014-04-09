@@ -22,6 +22,8 @@
 #include "slg/sdl/texture.h"
 #include "slg/sdl/blender_noiselib.h"
 
+using namespace blender;
+
 namespace slg {
 
 typedef enum {
@@ -70,7 +72,7 @@ private:
 
 class BlenderCloudsTexture : public Texture {
 public:
-	BlenderCloudsTexture(const TextureMapping3D *mp, const float noisesize, const int noisedepth, bool hard, float bright, float contrast);
+	BlenderCloudsTexture(const TextureMapping3D *mp, const std::string &pnoisebasis, const float noisesize, const int noisedepth, bool hard, float bright, float contrast);
 	virtual ~BlenderCloudsTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BLENDER_CLOUDS; }
