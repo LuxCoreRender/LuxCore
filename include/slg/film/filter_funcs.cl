@@ -88,6 +88,26 @@ float ImageFilter_Evaluate(const float x, const float y) {
 	return Mitchell1D(distance);
 }
 
+#elif (PARAM_IMAGE_FILTER_TYPE == 4)
+
+float BlackmanHarris1D(float x) {
+	if (x < -1.f || x > 1.f)
+		return 0.f;
+	x = (x + 1.f) * .5f;
+	x *= M_PI;
+	const float A0 =  0.35875f;
+	const float A1 = -0.48829f;
+	const float A2 =  0.14128f;
+	const float A3 = -0.01168f;
+	return A0 + A1 * cos(2.f * x) + A2 * cos(4.f * x) + A3 * cos(6.f * x);
+}
+
+// Blackman-Harris Filter
+float ImageFilter_Evaluate(const float x, const float y) {
+	return BlackmanHarris1D(x * (1.f / PARAM_IMAGE_FILTER_WIDTH_X)) *
+			BlackmanHarris1D(y *  (1.f / PARAM_IMAGE_FILTER_WIDTH_Y));
+}
+
 #else
 
 Error: unknown image filter !!!

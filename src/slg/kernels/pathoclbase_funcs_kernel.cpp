@@ -90,6 +90,7 @@ std::string KernelSource_pathoclbase_funcs =
 "//  PARAM_HAS_CONSTANTINFINITELIGHT\n"
 "//  PARAM_HAS_SHARPDISTANTLIGHT\n"
 "//  PARAM_HAS_DISTANTLIGHT\n"
+"//  PARAM_HAS_LASERLIGHT\n"
 "//  PARAM_HAS_INFINITELIGHTS (if it has any infinite light)\n"
 "//  PARAM_HAS_ENVLIGHTS (if it has any env. light)\n"
 "\n"

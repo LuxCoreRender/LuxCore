@@ -854,6 +854,26 @@ void CompiledScene::CompileLights() {
 					&(oclLight->notIntersectable.distant.cosThetaMax));
 				break;
 			}
+			case TYPE_LASER: {
+				const LaserLight *ll = (const LaserLight *)l;
+
+				// LightSource data
+				oclLight->type = slg::ocl::TYPE_LASER;
+
+				// NotIntersectableLightSource data
+				memcpy(&oclLight->notIntersectable.light2World.m, &ll->lightToWorld.m, sizeof(float[4][4]));
+				memcpy(&oclLight->notIntersectable.light2World.mInv, &ll->lightToWorld.mInv, sizeof(float[4][4]));
+				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, ll->gain);
+
+				// LaserLight data
+				ll->GetPreprocessedData(
+					oclLight->notIntersectable.laser.emittedFactor.c,
+					&oclLight->notIntersectable.laser.absoluteLightPos.x,
+					&oclLight->notIntersectable.laser.absoluteLightDir.x,
+					NULL, NULL);
+				oclLight->notIntersectable.laser.radius = ll->radius;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}

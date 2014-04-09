@@ -32,6 +32,8 @@ FilterType Filter::String2FilterType(const std::string &type) {
 		return FILTER_MITCHELL;
 	else if ((type.compare("4") == 0) || (type.compare("MITCHELL_SS") == 0))
 		return FILTER_MITCHELL_SS;
+	else if ((type.compare("5") == 0) || (type.compare("BLACKMANHARRIS") == 0))
+		return FILTER_BLACKMANHARRIS;
 	throw std::runtime_error("Unknown filter type: " + type);
 }
 
@@ -51,8 +53,8 @@ FilterDistribution::FilterDistribution(const Filter *f, const u_int s) {
 		for (u_int x = 0; x < size; ++x) {
 			// Use an uniform distribution if the Filter is missing
 			data[x + y * size] = (filter) ? filter->Evaluate(
-					filter->xWidth *((x + .5f) * isize - .5),
-					filter->yWidth *((y + .5f) * isize - .5)) : 1.f;
+					filter->xWidth * ((x + .5f) * isize - .5),
+					filter->yWidth * ((y + .5f) * isize - .5)) : 1.f;
 		}
 	}
 

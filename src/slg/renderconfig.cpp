@@ -62,8 +62,8 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("batch.haltthreshold")(-1.f));
 
 			// Film Filter related Properties
-			defaultProperties->Set(Property("film.filter.type")("GAUSSIAN"));
-			defaultProperties->Set(Property("film.filter.width")(1.5f));
+			defaultProperties->Set(Property("film.filter.type")("BLACKMANHARRIS"));
+			defaultProperties->Set(Property("film.filter.width")(2.f));
 			defaultProperties->Set(Property("film.filter.gaussian.alpha")(2.f));
 			defaultProperties->Set(Property("film.filter.mitchell.b")(1.f / 3.f));
 			defaultProperties->Set(Property("film.filter.mitchell.c")(1.f / 3.f));
@@ -225,30 +225,35 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	//--------------------------------------------------------------------------
 
 	const FilterType filterType = Filter::String2FilterType(GetProperty("film.filter.type").Get<string>());
-	const float filterWidth = GetProperty("film.filter.width").Get<float>();
+	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(GetProperty("film.filter.width").Get<float>())).Get<float>();
+	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(GetProperty("film.filter.width").Get<float>())).Get<float>();
 
 	auto_ptr<Filter> filter;
 	switch (filterType) {
 		case FILTER_NONE:
 			break;
 		case FILTER_BOX:
-			filter.reset(new BoxFilter(filterWidth, filterWidth));
+			filter.reset(new BoxFilter(filterXWidth, filterYWidth));
 			break;
 		case FILTER_GAUSSIAN: {
 			const float alpha = GetProperty("film.filter.gaussian.alpha").Get<float>();
-			filter.reset(new GaussianFilter(filterWidth, filterWidth, alpha));
+			filter.reset(new GaussianFilter(filterXWidth, filterYWidth, alpha));
 			break;
 		}
 		case FILTER_MITCHELL: {
 			const float b = GetProperty("film.filter.mitchell.b").Get<float>();
 			const float c = GetProperty("film.filter.mitchell.c").Get<float>();
-			filter.reset(new MitchellFilter(filterWidth, filterWidth, b, c));
+			filter.reset(new MitchellFilter(filterXWidth, filterYWidth, b, c));
 			break;
 		}
 		case FILTER_MITCHELL_SS: {
 			const float b = GetProperty("film.filter.mitchellss.b").Get<float>();
 			const float c = GetProperty("film.filter.mitchellss.c").Get<float>();
-			filter.reset(new MitchellFilterSS(filterWidth, filterWidth, b, c));
+			filter.reset(new MitchellFilterSS(filterXWidth, filterYWidth, b, c));
+			break;
+		}
+		case FILTER_BLACKMANHARRIS: {
+			filter.reset(new BlackmanHarrisFilter(filterXWidth, filterYWidth));
 			break;
 		}
 		default:
