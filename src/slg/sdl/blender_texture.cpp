@@ -1090,9 +1090,23 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) co
 
 BlenderVoronoiTexture::BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent,
         const float fw1, const float fw2, const float fw3, const float fw4, DistanceMetric distmetric, float noisesize,  float bright, float contrast) :
-		mapping(mp), intensity(intensity), feature_weight1(fw1), feature_weight2(fw2), feature_weight3(fw3), feature_weight4(fw4),
-		distancemetric(distmetric), exponent(exponent),
-		noisesize(noisesize), bright(bright), contrast(contrast) {
+		mapping(mp), intensity(intensity), exponent(exponent), feature_weight1(fw1), feature_weight2(fw2), feature_weight3(fw3), feature_weight4(fw4),
+		distancemetric(ACTUAL_DISTANCE), noisesize(noisesize), bright(bright), contrast(contrast) {
+
+	distancemetric = ACTUAL_DISTANCE;
+	if(distmetric == "distance_squared") {
+		distancemetric=  DISTANCE_SQUARED;
+	} else if(distmetric == "manhattan") {
+		distancemetric =  MANHATTAN;
+	} else if(distmetric == "chebychev") {			
+		distancemetric = CHEBYCHEV;
+	} else if(distmetric == "minkowski_half") {			
+		distancemetric=   MINKOWSKI_HALF;
+	} else if(distmetric == "minkowski_four") {			
+		distancemetric=   MINKOWSKI_FOUR;
+	} else if(distmetric == "minkowski") {			
+		distancemetric=   MINKOWSKI;			
+	};
 }
 
 float BlenderVoronoiTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -1110,7 +1124,7 @@ float BlenderVoronoiTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
     float sc = (aw1 + aw2 + aw3 + aw4);
 
-    if (sc > 0.00001f) sc = noisesize / sc;
+    if (sc > 0.00001f) sc = intensity / sc;
 
     float result = 1.f;
 
@@ -1133,7 +1147,34 @@ Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache)
 
 	const std::string name = GetName();
 
+	std::string dm = "";
+	switch(distancemetric) {
+		case DISTANCE_SQUARED:
+			dm = "distance_squared";
+			break;
+		case MANHATTAN:
+			dm = "manhattan";
+			break;
+		case CHEBYCHEV:
+			dm = "chebychev";
+			break;
+		case MINKOWSKI_HALF:
+			dm = "minkowski_half";
+			break;
+		case MINKOWSKI_FOUR:
+			dm = "minkowski_four";
+			break;
+		case MINKOWSKI:
+			dm = "minkowski";
+			break;
+		case ACTUAL_DISTANCE: 
+		default:
+			dm = "actual_distance";
+			break;
+	};
+
 	props.Set(Property("scene.textures." + name + ".type")("blender_voronoi"));
+	props.Set(Property("scene.textures." + name + ".distancemetric")(dm));
 	props.Set(Property("scene.textures." + name + ".intentity")(intensity));
 	props.Set(Property("scene.textures." + name + ".exponent")(exponent));
 	props.Set(Property("scene.textures." + name + ".w1")(feature_weight1));

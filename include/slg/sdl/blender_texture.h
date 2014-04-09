@@ -399,28 +399,7 @@ public:
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
-	string GetDistMetric() const {
-		std::string result = "";
-		switch(distancemetric) {
-			case DISTANCE_SQUARED:
-				result = "distance_squared";
-			case MANHATTAN:
-				result = "manhattan";
-			case CHEBYCHEV:
-				result = "chebychev";
-			case MINKOWSKI_HALF:
-				result = "minkowski_half";
-			case MINKOWSKI_FOUR:
-				result = "minkowski_four";
-			case MINKOWSKI:
-				result = "minkowski";
-			case ACTUAL_DISTANCE: 
-			default:
-				result = "actual_distance";
-
-			return result;
-		}
-	}
+	DistanceMetric GetDistMetric() const { return result; }
 	float GetFeatureWeight1() const { return feature_weight1; }
 	float GetFeatureWeight2() const { return feature_weight2; }
 	float GetFeatureWeight3() const { return feature_weight3; }
