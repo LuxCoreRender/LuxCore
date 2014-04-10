@@ -23,8 +23,6 @@
 
 #include "luxrays/utils/mc.h"
 
-using namespace std;
-
 namespace luxrays {
 
 /**
@@ -59,7 +57,7 @@ public:
 	float Eval(float x) const {
 		float pos = Clamp(x, 0.f, 1.f) * count + .5f;
 		int off1 = (int)pos;
-		int off2 = min(count-1, off1 + 1);
+		int off2 = Min(count-1, off1 + 1);
 		float d = pos - off1;
 		return func[off1] * (1.f - d) * func[off2] * d;
 	}
@@ -208,7 +206,7 @@ public:
 	float Pdf(float u) const { return func[Offset(u)]; }
 	float Average() const { return funcInt; }
 	u_int Offset(float u) const {
-		return min(count - 1, Floor2UInt(u * count));
+		return Min(count - 1, Floor2UInt(u * count));
 	}
 
 	const u_int GetCount() const { return count; }
@@ -241,7 +239,7 @@ public:
 		for (u_int v = 0; v < nv; ++v)
 			pConditionalV.push_back(new Distribution1D(data + v * nu, nu));
 		// Compute marginal sampling distribution $p[\tilde{v}]$
-		vector<float> marginalFunc;
+		std::vector<float> marginalFunc;
 		marginalFunc.reserve(nv);
 		for (u_int v = 0; v < nv; ++v)
 			marginalFunc.push_back(pConditionalV[v]->Average());
@@ -281,7 +279,7 @@ public:
 
 private:
 	// Distribution2D Private Data
-	vector<Distribution1D *> pConditionalV;
+	std::vector<Distribution1D *> pConditionalV;
 	Distribution1D *pMarginal;
 };
 
@@ -405,7 +403,7 @@ public:
 		xCdf[count] = aX1;
 		yCdf[0] = 0.f;
 		for (int i = 1; i < count+1; ++i) {
-			yCdf[i] = yCdf[i-1] + max( 1e-3f, yFunc[i-1] ) * ( xCdf[i] - xCdf[i-1] );
+			yCdf[i] = yCdf[i-1] + Max( 1e-3f, yFunc[i-1] ) * ( xCdf[i] - xCdf[i-1] );
 		}
 		funcInt = yCdf[count];
 		// Transform step function integral into cdf

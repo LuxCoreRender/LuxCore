@@ -16,11 +16,24 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// Dade - sources imported from Blender with authors permission
+
+#ifndef _SLG_BLENDER_NOISELIB_H
+#define	_SLG_BLENDER_NOISELIB_H
+
 #include "luxrays/core/geometry/point.h"
 
-namespace blender
-{
-// Dade - sources imported from Blender with authors permission
+namespace slg {
+	
+namespace blender {
+
+typedef enum {
+	TEX_SIN, TEX_SAW, TEX_TRI
+} BlenderNoiseBase;
+
+typedef enum {
+	TEX_LIN, TEX_QUAD, TEX_EASE, TEX_DIAG, TEX_SPHERE, TEX_HALO, TEX_RAD
+} ProgressionType;
 
 typedef enum { 
 	ACTUAL_DISTANCE, DISTANCE_SQUARED, MANHATTAN, CHEBYCHEV, MINKOWSKI_HALF, 
@@ -56,3 +69,7 @@ void cellNoiseV(float x, float y, float z, float *ca);
 float newPerlin(float x, float y, float z);
 
 } // namespace blender
+
+} // namespace slg
+
+#endif	/* _SLG_BLENDER_NOISELIB_H */

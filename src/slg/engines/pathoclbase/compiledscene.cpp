@@ -28,6 +28,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+using namespace slg::blender;
 
 CompiledScene::CompiledScene(Scene *scn, Film *flm, const size_t maxMemPageS) {
 	scene = scn;

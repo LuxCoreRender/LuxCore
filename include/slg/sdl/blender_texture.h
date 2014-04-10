@@ -22,21 +22,11 @@
 #include "slg/sdl/texture.h"
 #include "slg/sdl/blender_noiselib.h"
 
-using namespace blender;
-
 namespace slg {
-
-typedef enum {
-	TEX_SIN, TEX_SAW, TEX_TRI
-} BlenderNoiseBase;
 
 //------------------------------------------------------------------------------
 // Blender blend texture
 //------------------------------------------------------------------------------
-typedef enum {
-	TEX_LIN, TEX_QUAD, TEX_EASE, TEX_DIAG, TEX_SPHERE, TEX_HALO, TEX_RAD
-} ProgressionType;
-
 
 class BlenderBlendTexture : public Texture {
 public:
@@ -52,7 +42,7 @@ public:
 	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	ProgressionType GetProgressionType() const { return type; }
+	blender::ProgressionType GetProgressionType() const { return type; }
 	bool GetDirection() const { return direction; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
@@ -61,7 +51,7 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
-	ProgressionType type;
+	blender::ProgressionType type;
 	bool direction;
 	float bright, contrast;
 };
@@ -84,7 +74,7 @@ public:
 	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
 	int GetNoiseDepth() const { return noisedepth; }
 	float GetNoiseSize() const { return noisesize; }
 	bool GetNoiseType() const { return hard; }
@@ -95,7 +85,7 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
-	BlenderNoiseBasis noisebasis;	
+	blender::BlenderNoiseBasis noisebasis;	
 	int noisedepth;	
 	float noisesize;	
 	bool hard;
@@ -121,8 +111,8 @@ public:
 	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	BlenderNoiseBasis GetNoiseDistortion() const { return noisedistortion; }
-	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	blender::BlenderNoiseBasis GetNoiseDistortion() const { return noisedistortion; }
+	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
@@ -131,8 +121,8 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
-	BlenderNoiseBasis noisedistortion;
-	BlenderNoiseBasis noisebasis;
+	blender::BlenderNoiseBasis noisedistortion;
+	blender::BlenderNoiseBasis noisebasis;
 	float distortion;
 	float noisesize;
 	float bright, contrast;
@@ -192,8 +182,8 @@ public:
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	BlenderMarbleType GetMarbleType() const { return type; }
-	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
-	BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
+	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	blender::BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetTurbulence() const { return turbulence; }
 	float GetBright() const { return bright; }
@@ -205,8 +195,8 @@ public:
 private:
 	const TextureMapping3D *mapping;
 	BlenderMarbleType type;
-	BlenderNoiseBasis noisebasis;	
-	BlenderNoiseBase noisebasis2;	
+	blender::BlenderNoiseBasis noisebasis;	
+	blender::BlenderNoiseBase noisebasis2;	
 	float noisesize, turbulence;
 	int noisedepth;
 	bool hard;
@@ -238,7 +228,7 @@ public:
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	BlenderMusgraveType GetMusgraveType() const { return type; }
-	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
 	float GetDimension() const { return dimension; }
 	float GetIntensity() const { return intensity; }
 	float GetLacunarity() const { return lacunarity; }
@@ -255,7 +245,7 @@ public:
 private:
 	const TextureMapping3D *mapping;
 	BlenderMusgraveType type;
-	BlenderNoiseBasis noisebasis;
+	blender::BlenderNoiseBasis noisebasis;
 	float dimension;
 	float intensity;
 	float lacunarity;
@@ -319,7 +309,7 @@ public:
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	BlenderStucciType GetStucciType() const { return type; }
-	BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetTurbulence() const { return turbulence; }
 	float GetBright() const { return bright; }
@@ -331,7 +321,7 @@ public:
 private:
 	const TextureMapping3D *mapping;
 	BlenderStucciType type;
-	BlenderNoiseBasis noisebasis;	
+	blender::BlenderNoiseBasis noisebasis;	
 	float noisesize, turbulence;
 	bool hard;
 	float bright, contrast;
@@ -360,7 +350,7 @@ public:
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	BlenderWoodType GetWoodType() const { return type; }
-	BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
+	blender::BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetTurbulence() const { return turbulence; }
 	float GetBright() const { return bright; }
@@ -372,7 +362,7 @@ public:
 private:
 	const TextureMapping3D *mapping;
 	BlenderWoodType type;
-	BlenderNoiseBase noisebasis2;	
+	blender::BlenderNoiseBase noisebasis2;	
 	float noisesize, turbulence;
 	bool hard;
 	float bright, contrast;
@@ -385,7 +375,7 @@ private:
 class BlenderVoronoiTexture : public Texture {
 public:
 	BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent, const float fw1, const float fw2, const float fw3, const float fw4, 
-		const DistanceMetric distmetric, const float noisesize, float bright, float contrast);
+		const blender::DistanceMetric distmetric, const float noisesize, float bright, float contrast);
 	virtual ~BlenderVoronoiTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BLENDER_VORONOI; }
@@ -399,7 +389,7 @@ public:
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
-	DistanceMetric GetDistMetric() const { return distancemetric; }
+	blender::DistanceMetric GetDistMetric() const { return distancemetric; }
 	float GetFeatureWeight1() const { return feature_weight1; }
 	float GetFeatureWeight2() const { return feature_weight2; }
 	float GetFeatureWeight3() const { return feature_weight3; }
@@ -418,7 +408,7 @@ private:
 	float feature_weight2;
 	float feature_weight3;
 	float feature_weight4;
-	DistanceMetric distancemetric;
+	blender::DistanceMetric distancemetric;
 	float exponent;
 	float noisesize;
 	float bright, contrast;

@@ -44,6 +44,7 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+using namespace slg::blender;
 
 Scene::Scene(const float imageScale) {
 	defaultWorldVolume = NULL;

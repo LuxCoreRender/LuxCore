@@ -69,7 +69,7 @@ void RejectionSampleDisk(const float u1, const float u2, float *x, float *y) {
 
 Vector UniformSampleHemisphere(const float u1, const float u2) {
 	const float z = u1;
-	const float r = sqrtf(max(0.f, 1.f - z*z));
+	const float r = sqrtf(Max(0.f, 1.f - z*z));
 	const float phi = 2.f * M_PI * u2;
 	const float x = r * cosf(phi);
 	const float y = r * sinf(phi);
@@ -82,7 +82,7 @@ float UniformHemispherePdf(float theta, float phi) {
 
 Vector UniformSampleSphere(const float u1, const float u2) {
 	const float z = 1.f - 2.f * u1;
-	const float r = sqrtf(max(0.f, 1.f - z * z));
+	const float r = sqrtf(Max(0.f, 1.f - z * z));
 	const float phi = 2.f * M_PI * u2;
 	const float x = r * cosf(phi);
 	const float y = r * sinf(phi);
@@ -153,7 +153,7 @@ float UniformConePdf(const float cosThetaMax) {
 
 Vector UniformSampleCone(const float u1, const float u2, float costhetamax) {
 	const float costheta = Lerp(u1, costhetamax, 1.f);
-	const float sintheta = sqrtf(max(0.f, 1.f - costheta * costheta));
+	const float sintheta = sqrtf(Max(0.f, 1.f - costheta * costheta));
 	const float phi = u2 * 2.f * M_PI;
 	return Vector(cosf(phi) * sintheta, sinf(phi) * sintheta, costheta);
 }
@@ -161,7 +161,7 @@ Vector UniformSampleCone(const float u1, const float u2, float costhetamax) {
 Vector UniformSampleCone(const float u1, const float u2, float costhetamax,
 	const Vector &x, const Vector &y, const Vector &z) {
 	const float costheta = Lerp(u1, costhetamax, 1.f);
-	const float sintheta = sqrtf(max(0.f, 1.f - costheta * costheta));
+	const float sintheta = sqrtf(Max(0.f, 1.f - costheta * costheta));
 	const float phi = u2 * 2.f * M_PI;
 	return cosf(phi) * sintheta * x + sinf(phi) * sintheta * y +
 		costheta * z;
@@ -176,7 +176,7 @@ Vector SampleHG(const Vector &w, float g, const float u1, const float u2) {
 		const float sqrTerm = (1.f - g * g) / (1.f - g + 2.f * g * u1);
 		costheta = (1.f + g * g - sqrTerm * sqrTerm) / (2.f * g);
 	}
-	const float sintheta = sqrtf(max(0.f, 1.f - costheta * costheta));
+	const float sintheta = sqrtf(Max(0.f, 1.f - costheta * costheta));
 	const float phi = 2.f * M_PI * u2;
 	Vector v1, v2;
 	CoordinateSystem(w, &v1, &v2);
