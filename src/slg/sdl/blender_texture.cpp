@@ -1089,24 +1089,9 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) co
 //------------------------------------------------------------------------------
 
 BlenderVoronoiTexture::BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent,
-        const float fw1, const float fw2, const float fw3, const float fw4, const std::string distmetric, float noisesize,  float bright, float contrast) :
-		mapping(mp), intensity(intensity), exponent(exponent), feature_weight1(fw1), feature_weight2(fw2), feature_weight3(fw3), feature_weight4(fw4),
-		distancemetric(ACTUAL_DISTANCE), noisesize(noisesize), bright(bright), contrast(contrast) {
-
-	distancemetric = ACTUAL_DISTANCE;
-	if(distmetric == "distance_squared") {
-		distancemetric=  DISTANCE_SQUARED;
-	} else if(distmetric == "manhattan") {
-		distancemetric =  MANHATTAN;
-	} else if(distmetric == "chebychev") {			
-		distancemetric = CHEBYCHEV;
-	} else if(distmetric == "minkowski_half") {			
-		distancemetric=   MINKOWSKI_HALF;
-	} else if(distmetric == "minkowski_four") {			
-		distancemetric=   MINKOWSKI_FOUR;
-	} else if(distmetric == "minkowski") {			
-		distancemetric=   MINKOWSKI;			
-	};
+        const float fw1, const float fw2, const float fw3, const float fw4, const DistanceMetric distancemetric, float noisesize,  float bright, float contrast) :
+		mapping(mp), intensity(intensity), feature_weight1(fw1), feature_weight2(fw2), feature_weight3(fw3), feature_weight4(fw4),
+		distancemetric(ACTUAL_DISTANCE), exponent(exponent), noisesize(noisesize), bright(bright), contrast(contrast) {
 }
 
 float BlenderVoronoiTexture::GetFloatValue(const HitPoint &hitPoint) const {
