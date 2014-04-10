@@ -225,8 +225,9 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	//--------------------------------------------------------------------------
 
 	const FilterType filterType = Filter::String2FilterType(GetProperty("film.filter.type").Get<string>());
-	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(GetProperty("film.filter.width").Get<float>())).Get<float>();
-	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(GetProperty("film.filter.width").Get<float>())).Get<float>();
+	const float defaultFilterWidth = GetProperty("film.filter.width").Get<float>();
+	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
+	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
 	auto_ptr<Filter> filter;
 	switch (filterType) {
