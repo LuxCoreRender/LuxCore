@@ -880,7 +880,7 @@ public:
 	virtual luxrays::Properties ToProperties() const;
 
 	struct CarpaintData {
-		string name;
+		std::string name;
 		float kd[COLOR_SAMPLES];
 		float ks1[COLOR_SAMPLES];
 		float ks2[COLOR_SAMPLES];

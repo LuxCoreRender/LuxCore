@@ -22,6 +22,7 @@
 
 using namespace luxrays;
 using namespace slg;
+using namespace slg::blender;
 
 //------------------------------------------------------------------------------
 // Blender blend texture

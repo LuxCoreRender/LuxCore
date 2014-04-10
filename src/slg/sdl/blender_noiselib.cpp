@@ -19,8 +19,9 @@
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/blender_noiselib.h"
 
-namespace blender
-{
+namespace slg {
+
+namespace blender {
 
 typedef unsigned long long r_uint64;
 
@@ -1841,4 +1842,7 @@ float mg_VLNoise(float x, float y, float z, float distortion, BlenderNoiseBasis 
 /****************/
 /* musgrave end */
 /****************/
+
 } // namespace blender
+
+} // namespace slg
