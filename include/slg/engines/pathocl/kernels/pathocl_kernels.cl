@@ -357,6 +357,88 @@ bool DirectLightSampling_ONE(
 		LIGHTS_PARAM);
 }
 
+bool Scene_Intersect(
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThrough,
+#endif
+		__global Ray *ray, __global RayHit *rayHit, __global BSDF *bsdf,
+		__global Spectrum *pathThroughput,
+		// BSDF_Init parameters
+		__global Mesh *meshDescs,
+		__global uint *meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global uint *meshTriLightDefsOffset,
+#endif
+		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+		__global UV *vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+		__global Spectrum *vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+		__global float *vertAlphas,
+#endif
+		__global Triangle *triangles
+		MATERIALS_PARAM_DECL
+		) {
+	const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
+
+	if (!rayMiss) {
+		// Something was hit
+
+		// Initialize the BSDF of the hit point
+		BSDF_Init(bsdf,
+				meshDescs,
+				meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+				meshTriLightDefsOffset,
+#endif
+				vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+				vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+				vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+				vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+				vertAlphas,
+#endif
+				triangles, ray, rayHit
+#if defined(PARAM_HAS_PASSTHROUGH)
+				, passThrough
+#endif
+#if defined(PARAM_HAS_BUMPMAPS)
+				MATERIALS_PARAM
+#endif
+				);
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+		// Check if it is a pass through point
+		const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
+				MATERIALS_PARAM);
+		if (!Spectrum_IsBlack(passThroughTrans)) {
+			const float3 pt = VLOAD3F(pathThroughput->c) * passThroughTrans;
+			VSTORE3F(pt, pathThroughput->c);
+
+			// It is a pass through point, continue to trace the ray
+			ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+			
+			return true;
+		}
+#endif
+	}
+	
+	// Stop tracing the ray
+	return false;
+}
+
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global GPUTask *tasks,
 		__global GPUTaskStats *taskStats,
@@ -589,53 +671,42 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == RT_NEXT_VERTEX) {
-		if (!rayMiss) {
-			//------------------------------------------------------------------
-			// Something was hit
-			//------------------------------------------------------------------
-
-			BSDF_Init(bsdf,
-					meshDescs,
-					meshMats,
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-					meshTriLightDefsOffset,
+		const bool continueToTrace = Scene_Intersect(
+#if defined(PARAM_HAS_PASSTHROUGH)
+			task->pathStateBase.bsdf.hitPoint.passThroughEvent,
 #endif
-					vertices,
+			ray, rayHit, bsdf,
+			&task->pathStateBase.throughput,
+			// BSDF_Init parameters
+			meshDescs,
+			meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+			meshTriLightDefsOffset,
+#endif
+			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-					vertNormals,
+			vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-					vertUVs,
+			vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-					vertCols,
+			vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-					vertAlphas,
+			vertAlphas,
 #endif
-					triangles, ray, rayHit
-#if defined(PARAM_HAS_PASSTHROUGH)
-					, task->pathStateBase.bsdf.hitPoint.passThroughEvent
-#endif
-#if defined(PARAM_HAS_BUMPMAPS)
-					MATERIALS_PARAM
-#endif
-					);
+			triangles
+			MATERIALS_PARAM
+			);
 
-#if defined(PARAM_HAS_PASSTHROUGH)
-			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
-					MATERIALS_PARAM);
-			if (!Spectrum_IsBlack(passThroughTrans)) {
-				const float3 pathThroughput = VLOAD3F(task->pathStateBase.throughput.c) * passThroughTrans;
-				VSTORE3F(pathThroughput, task->pathStateBase.throughput.c);
+		// If continueToTrace, there is nothing to do, just keep the same state
+		if (!continueToTrace) {
+			if (!rayMiss) {
+				//--------------------------------------------------------------
+				// Something was hit
+				//--------------------------------------------------------------
 
-				// It is a pass through point, continue to trace the ray
-				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-
-				// Keep the same path state
-			} else
-#endif
-			{
 				if (depth == 1) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 					sample->result.alpha = 1.f;
@@ -676,61 +747,61 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 				// Direct light sampling
 				pathState = GENERATE_DL_RAY;
-			}
-		} else {
-			//------------------------------------------------------------------
-			// Nothing was hit, add environmental lights radiance
-			//------------------------------------------------------------------
+			} else {
+				//--------------------------------------------------------------
+				// Nothing was hit, add environmental lights radiance
+				//--------------------------------------------------------------
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-			DirectHitInfiniteLight(
-					(depth == 1),
-					task->directLightState.lastBSDFEvent,
-					task->directLightState.pathBSDFEvent,
-					&task->pathStateBase.throughput,
-					-VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
-					&sample->result
-					LIGHTS_PARAM);
+				DirectHitInfiniteLight(
+						(depth == 1),
+						task->directLightState.lastBSDFEvent,
+						task->directLightState.pathBSDFEvent,
+						&task->pathStateBase.throughput,
+						-VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
+						&sample->result
+						LIGHTS_PARAM);
 #endif
 
-			if (depth == 1) {
+				if (depth == 1) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-				sample->result.alpha = 0.f;
+					sample->result.alpha = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-				sample->result.depth = INFINITY;
+					sample->result.depth = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-				sample->result.position.x = INFINITY;
-				sample->result.position.y = INFINITY;
-				sample->result.position.z = INFINITY;
+					sample->result.position.x = INFINITY;
+					sample->result.position.y = INFINITY;
+					sample->result.position.z = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-				sample->result.geometryNormal.x = INFINITY;
-				sample->result.geometryNormal.y = INFINITY;
-				sample->result.geometryNormal.z = INFINITY;
+					sample->result.geometryNormal.x = INFINITY;
+					sample->result.geometryNormal.y = INFINITY;
+					sample->result.geometryNormal.z = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-				sample->result.shadingNormal.x = INFINITY;
-				sample->result.shadingNormal.y = INFINITY;
-				sample->result.shadingNormal.z = INFINITY;
+					sample->result.shadingNormal.x = INFINITY;
+					sample->result.shadingNormal.y = INFINITY;
+					sample->result.shadingNormal.z = INFINITY;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-				sample->result.materialID = NULL_INDEX;
+					sample->result.materialID = NULL_INDEX;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-				sample->result.directShadowMask = 0.f;
+					sample->result.directShadowMask = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-				sample->result.indirectShadowMask = 0.f;
+					sample->result.indirectShadowMask = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
-				sample->result.uv.u = INFINITY;
-				sample->result.uv.v = INFINITY;
+					sample->result.uv.u = INFINITY;
+					sample->result.uv.v = INFINITY;
 #endif
-			}
+				}
 
-			pathState = SPLAT_SAMPLE;
+				pathState = SPLAT_SAMPLE;
+			}
 		}
 	}
 
@@ -742,90 +813,85 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == RT_DL) {
-		pathState = GENERATE_NEXT_VERTEX_RAY;
-
-		if (rayMiss) {
-			// Nothing was hit, the light source is visible
-			const float3 lightRadiance = VLOAD3F(task->directLightState.lightRadiance.c);
-
-			const uint lightID = task->directLightState.lightID;
-			VADD3F(sample->result.radiancePerPixelNormalized[lightID].c, lightRadiance);
-
-			if (depth == 1) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-				sample->result.directShadowMask = 0.f;
-#endif
-				if (BSDF_GetEventTypes(bsdf
-						MATERIALS_PARAM) & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-					VADD3F(sample->result.directDiffuse.c, lightRadiance);
-#endif
-				} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-					VADD3F(sample->result.directGlossy.c, lightRadiance);
-#endif
-				}
-			} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-				sample->result.indirectShadowMask = 0.f;
-#endif
-
-				const BSDFEvent pathBSDFEvent = task->directLightState.pathBSDFEvent;
-				if (pathBSDFEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-					VADD3F(sample->result.indirectDiffuse.c, lightRadiance);
-#endif
-				} else if (pathBSDFEvent & GLOSSY) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-					VADD3F(sample->result.indirectGlossy.c, lightRadiance);
-#endif
-				} else if (pathBSDFEvent & SPECULAR) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-					VADD3F(sample->result.indirectSpecular.c, lightRadiance);
-#endif
-				}
-			}
-		}
+		const bool continueToTrace = 
 #if defined(PARAM_HAS_PASSTHROUGH)
-		else {
-			BSDF_Init(&task->passThroughState.passThroughBsdf,
-					meshDescs,
-					meshMats,
+			Scene_Intersect(
+				task->passThroughState.passThroughEvent,
+				ray, rayHit, &task->passThroughState.passThroughBsdf,
+				&task->directLightState.lightRadiance,
+				// BSDF_Init parameters
+				meshDescs,
+				meshMats,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-					meshTriLightDefsOffset,
+				meshTriLightDefsOffset,
 #endif
-					vertices,
+				vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-					vertNormals,
+				vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-					vertUVs,
+				vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-					vertCols,
+				vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-					vertAlphas,
+				vertAlphas,
 #endif
-					triangles, ray, rayHit,
-					task->passThroughState.passThroughEvent
-#if defined(PARAM_HAS_BUMPMAPS)
-					MATERIALS_PARAM
+				triangles
+				MATERIALS_PARAM
+				);
+#else
+		false;
 #endif
-					);
 
-			const float3 passthroughTrans = BSDF_GetPassThroughTransparency(&task->passThroughState.passThroughBsdf
-					MATERIALS_PARAM);
-			if (!Spectrum_IsBlack(passthroughTrans)) {
-				const float3 lightRadiance = VLOAD3F(task->directLightState.lightRadiance.c) * passthroughTrans;
-				VSTORE3F(lightRadiance, task->directLightState.lightRadiance.c);
+		// If continueToTrace, there is nothing to do, just keep the same state
+		if (!continueToTrace) {
+			pathState = GENERATE_NEXT_VERTEX_RAY;
 
-				// It is a pass through point, continue to trace the ray
-				ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-				pathState = RT_DL;
+			if (rayMiss) {
+				// Nothing was hit, the light source is visible
+				const float3 lightRadiance = VLOAD3F(task->directLightState.lightRadiance.c);
+
+				const uint lightID = task->directLightState.lightID;
+				VADD3F(sample->result.radiancePerPixelNormalized[lightID].c, lightRadiance);
+
+				if (depth == 1) {
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+					sample->result.directShadowMask = 0.f;
+#endif
+					if (BSDF_GetEventTypes(bsdf
+							MATERIALS_PARAM) & DIFFUSE) {
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+						VADD3F(sample->result.directDiffuse.c, lightRadiance);
+#endif
+					} else {
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+						VADD3F(sample->result.directGlossy.c, lightRadiance);
+#endif
+					}
+				} else {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+					sample->result.indirectShadowMask = 0.f;
+#endif
+
+					const BSDFEvent pathBSDFEvent = task->directLightState.pathBSDFEvent;
+					if (pathBSDFEvent & DIFFUSE) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+						VADD3F(sample->result.indirectDiffuse.c, lightRadiance);
+#endif
+					} else if (pathBSDFEvent & GLOSSY) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+						VADD3F(sample->result.indirectGlossy.c, lightRadiance);
+#endif
+					} else if (pathBSDFEvent & SPECULAR) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+						VADD3F(sample->result.indirectSpecular.c, lightRadiance);
+#endif
+					}
+				}
 			}
 		}
-#endif
 	}
 
 	//--------------------------------------------------------------------------
