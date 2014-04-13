@@ -913,15 +913,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 		
-		DistanceMetric dm = ACTUAL_DISTANCE;
-		if (distmetric == "distance_squared") {dm = DISTANCE_SQUARED;}
-		else if (distmetric == "manhattan") {dm = MANHATTAN;}
-		else if (distmetric == "chebychev") {dm = CHEBYCHEV;}
-		else if (distmetric == "minkowski_half") {dm = MINKOWSKI_HALF;}
-		else if (distmetric == "minkowski_four") {dm = MINKOWSKI_FOUR;}
-		else if (distmetric == "manhattan") {dm = MANHATTAN;};
-
-		return new BlenderVoronoiTexture(CreateTextureMapping3D(propName + ".mapping", props), intensity, exponent, fw1, fw2, fw3, fw4, dm, noisesize, bright, contrast);
+		return new BlenderVoronoiTexture(CreateTextureMapping3D(propName + ".mapping", props), intensity, exponent, fw1, fw2, fw3, fw4, distmetric, noisesize, bright, contrast);
 	} else if (texType == "dots") {
 		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
 		const Texture *outsideTex = GetTexture(props.Get(Property(propName + ".outside")(0.f)));
