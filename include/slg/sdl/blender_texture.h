@@ -375,7 +375,7 @@ private:
 class BlenderVoronoiTexture : public Texture {
 public:
 	BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent, const float fw1, const float fw2, const float fw3, const float fw4, 
-		const blender::DistanceMetric distmetric, const float noisesize, float bright, float contrast);
+		const std::string distmetric, const float noisesize, float bright, float contrast);
 	virtual ~BlenderVoronoiTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BLENDER_VORONOI; }
