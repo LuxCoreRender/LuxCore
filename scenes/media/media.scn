@@ -1,0 +1,49 @@
+scene.camera.lookat.orig = 0.618576 -11.311428 5.343666
+scene.camera.lookat.target = -2.558834 -1.985422 3.632028
+scene.camera.fieldofview = 77.3196
+################################################################################
+#scene.textures.fbmtex.type = fbm
+#scene.textures.fbmtex.octaves = 1
+#scene.textures.fbmtex.omega = 0.5
+#scene.textures.fbmtex.mapping.type = globalmapping3d
+#scene.textures.fbmtex.mapping.transformation = 1.0 0 0 0  0 1.0 0 0  0 0 1.0 0  0 0 0 1
+#scene.textures.tex.type = scale
+#scene.textures.tex.texture1 = 0.05
+#scene.textures.tex.texture2 = fbmtex
+##
+#scene.textures.tex.type = checkerboard3d
+#scene.textures.tex.texture1 = 0.0 0.0 0.0
+#scene.textures.tex.texture2 = 0.035 0.035 0.035
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 1.0 0 0 0  0 1.0 0 0  0 0 1.0 0  0 0 0 1
+################################################################################
+scene.world.volume.default = vol_air
+##
+scene.volumes.vol_air.type = homogeneous
+scene.volumes.vol_air.absorption = 0.0 0.0 0.0
+scene.volumes.vol_air.scattering = 0.035 0.035 0.035
+scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol_air.multiscattering = 0
+##
+#scene.volumes.vol_air.type = heterogeneous
+#scene.volumes.vol_air.absorption = 0.0 0.0 0.0
+#scene.volumes.vol_air.scattering = tex
+#scene.volumes.vol_air.asymmetry = 0.0 0.0 0.0
+#scene.volumes.vol_air.steps.size = 0.5
+#scene.volumes.vol_air.steps.maxcount = 32
+#scene.volumes.vol_air.multiscattering = 0
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 800.000012 800.000012 400.
+scene.materials.mat_light.kd = 0.0 0.0 0.0
+scene.materials.mat_light.volume.interior = vol_air
+scene.materials.mat_light.volume.exterior = vol_air
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = 0.1 0.1 0.1
+scene.materials.mat_white.volume.interior = vol_air
+scene.materials.mat_white.volume.exterior = vol_air
+################################################################################
+scene.objects.mat_light.material = mat_light
+scene.objects.mat_light.ply = scenes/media/mat_light.ply
+scene.objects.mat_white.material = mat_white
+scene.objects.mat_white.ply = scenes/media/mat_white.ply
