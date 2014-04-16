@@ -270,7 +270,7 @@ void PathCPURenderThread::RenderFunc() {
 						bsdf, lastPdfW, &sampleResult);
 			}
 
-			// Note: pass-through check is done inside SceneIntersect()
+			// Note: pass-through check is done inside Scene::Intersect()
 
 			//------------------------------------------------------------------
 			// Direct light sampling

@@ -1,4 +1,4 @@
-#line 2 "bsdf_types.cl"
+#line 2 "volume_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
@@ -18,38 +18,16 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef enum {
-	NONE = 0,
-	DIFFUSE = 1,
-	GLOSSY = 2,
-	SPECULAR = 4,
-	REFLECT = 8,
-	TRANSMIT = 16,
+// NOTE: check VolumeParam in material_type.cl for volume definitions
 
-	ALL_TYPES = DIFFUSE | GLOSSY | SPECULAR,
-	ALL_REFLECT = REFLECT | ALL_TYPES,
-	ALL_TRANSMIT = TRANSMIT | ALL_TYPES,
-	ALL = ALL_REFLECT | ALL_TRANSMIT
-} BSDFEventType;
-
-typedef int BSDFEvent;
-
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
+#define OPENCL_PATHVOLUMEINFO_SIZE 8
 
 typedef struct {
-	HitPoint hitPoint;
+	unsigned int currentVolumeIndex;
+	unsigned int volumeIndexList[OPENCL_PATHVOLUMEINFO_SIZE];
+	unsigned int volumeIndexListSize;
 
-	unsigned int materialIndex;
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-	unsigned int triangleLightSourceIndex;
-#endif
+	bool scatteredStart;
+} PathVolumeInfo;
 
-	Frame frame;
-
-#if defined(PARAM_HAS_VOLUMES)
-	bool isVolume;
-#endif
-} BSDF;
-
-#endif
+typedef Material Volume;

@@ -66,6 +66,78 @@ void SampleResult_Init(__global SampleResult *sampleResult) {
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	sampleResult->rayCount = 0.f;
 #endif
+	
+	sampleResult->firstPathVertexEvent = NONE;
+	sampleResult->firstPathVertex = true;
+}
+
+void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint lightID,
+		const BSDFEvent bsdfEvent, const float3 radiance) {
+	VADD3F(sampleResult->radiancePerPixelNormalized[lightID].c, radiance);
+
+	if (sampleResult->firstPathVertex) {
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+		sampleResult->directShadowMask = 0.f;
+#endif
+
+		if (bsdfEvent & DIFFUSE) {
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+			VADD3F(sampleResult->directDiffuse.c, radiance);
+#endif
+		} else {
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+			VADD3F(sampleResult->directGlossy.c, radiance);
+#endif
+		}
+	} else {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+		sampleResult->indirectShadowMask = 0.f;
+#endif
+
+		const BSDFEvent firstPathVertexEvent = sampleResult->firstPathVertexEvent;
+		if (firstPathVertexEvent & DIFFUSE) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+			VADD3F(sampleResult->indirectDiffuse.c, radiance);
+#endif
+		} else if (firstPathVertexEvent & GLOSSY) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+			VADD3F(sampleResult->indirectGlossy.c, radiance);
+#endif
+		} else if (firstPathVertexEvent & SPECULAR) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+			VADD3F(sampleResult->indirectSpecular.c, radiance);
+#endif
+		}
+	}
+}
+
+void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,
+		const float3 emission) {
+	VADD3F(sampleResult->radiancePerPixelNormalized[lightID].c, emission);
+
+	if (sampleResult->firstPathVertex) {
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+		VADD3F(sampleResult->emission.c, emission);
+#endif
+	} else {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+		sampleResult->indirectShadowMask = 0.f;
+#endif
+		const BSDFEvent firstPathVertexEvent = sampleResult->firstPathVertexEvent;
+		if (firstPathVertexEvent & DIFFUSE) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+			VADD3F(sampleResult->indirectDiffuse.c, emission);
+#endif
+		} else if (firstPathVertexEvent & GLOSSY) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+			VADD3F(sampleResult->indirectGlossy.c, emission);
+#endif
+		} else if (firstPathVertexEvent & SPECULAR) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+			VADD3F(sampleResult->indirectSpecular.c, emission);
+#endif
+		}
+	}
 }
 
 float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {

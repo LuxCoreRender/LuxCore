@@ -57,9 +57,10 @@ void BSDF_Init(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float u0
 #endif
-#if defined(PARAM_HAS_BUMPMAPS)
-		MATERIALS_PARAM_DECL
+#if defined(PARAM_HAS_VOLUMES)
+		, const uint currentVolumeIndex
 #endif
+		MATERIALS_PARAM_DECL
 		) {
 	//bsdf->fromLight = fromL;
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -115,6 +116,70 @@ void BSDF_Init(
 #endif
 		shadeN = geometryN;
     VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
+
+	//--------------------------------------------------------------------------
+	// Set interior and exterior volumes
+	//--------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_VOLUMES)
+	const bool intoObject = (dot(rayDir, geometryN) < 0.f);
+	bsdf->hitPoint.intoObject = intoObject;
+
+	__global Material *mat = &mats[matIndex];
+	if (intoObject) {
+		// From outside to inside the object
+
+		bsdf->hitPoint.interiorVolumeIndex = Material_GetInteriorVolume(mat, &bsdf->hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+				, u0
+#endif
+				);
+
+		if (currentVolumeIndex == NULL_INDEX)
+			bsdf->hitPoint.exteriorVolumeIndex = Material_GetExteriorVolume(mat, &bsdf->hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+				, u0
+#endif
+			);
+		else {
+			// if (!material->GetExteriorVolume()) there may be conflict here
+			// between the material definition and the currentVolume value.
+			// The currentVolume value wins.
+			bsdf->hitPoint.exteriorVolumeIndex = currentVolumeIndex;
+		}
+		
+		if (bsdf->hitPoint.exteriorVolumeIndex == NULL_INDEX) {
+			// No volume information, I use the default volume
+			bsdf->hitPoint.exteriorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
+		}
+	} else {
+		// From inside to outside the object
+
+		if (currentVolumeIndex == NULL_INDEX)
+			bsdf->hitPoint.interiorVolumeIndex = Material_GetInteriorVolume(mat, &bsdf->hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+				, u0
+#endif
+				);
+		else {
+			// if (!material->GetInteriorVolume()) there may be conflict here
+			// between the material definition and the currentVolume value.
+			// The currentVolume value wins.
+			bsdf->hitPoint.interiorVolumeIndex = currentVolumeIndex;
+		}
+		
+		if (bsdf->hitPoint.interiorVolumeIndex == NULL_INDEX) {
+			// No volume information, I use the default volume
+			bsdf->hitPoint.interiorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
+		}
+
+		bsdf->hitPoint.exteriorVolumeIndex = Material_GetExteriorVolume(mat, &bsdf->hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+				, u0
+#endif
+				);
+	}
+#endif
 
 	//--------------------------------------------------------------------------
 	// Get UV coordinate
@@ -280,6 +345,10 @@ void BSDF_Init(
 #if defined(PARAM_HAS_UVS_BUFFER)
     }
 #endif
+
+#if defined(PARAM_HAS_VOLUMES)
+	bsdf->isVolume = false;
+#endif
 }
 
 float3 BSDF_Evaluate(__global BSDF *bsdf,
@@ -403,5 +472,25 @@ float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 	return Material_GetPassThroughTransparency(&mats[bsdf->materialIndex],
 			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
+}
+#endif
+
+#if defined(PARAM_HAS_VOLUMES)
+uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetInteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+			, bsdf->hitPoint.passThroughEvent
+#endif
+			);
+}
+
+uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetExteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+			, bsdf->hitPoint.passThroughEvent
+#endif
+			);
 }
 #endif

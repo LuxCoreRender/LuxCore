@@ -55,6 +55,8 @@ extern std::string KernelSource_materialdefs_funcs_null;
 extern std::string KernelSource_materialdefs_funcs_roughglass;
 extern std::string KernelSource_materialdefs_funcs_velvet;
 extern std::string KernelSource_material_funcs;
+extern std::string KernelSource_volume_types;
+extern std::string KernelSource_volume_funcs;
 extern std::string KernelSource_texture_noise_funcs;
 extern std::string KernelSource_texture_blender_funcs;
 extern std::string KernelSource_texture_types;
@@ -65,6 +67,7 @@ extern std::string KernelSource_scene_funcs;
 extern std::string KernelSource_mapping_types;
 extern std::string KernelSource_mapping_funcs;
 extern std::string KernelSource_hitpoint_types;
+
 } }
 
 #endif	/* _SLG_KERNELS_H */

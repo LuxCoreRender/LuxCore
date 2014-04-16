@@ -51,6 +51,16 @@ public:
 				IsMaterialCompiled(CARPAINT));
 	}
 
+	bool HasVolumes() {
+		return IsMaterialCompiled(HOMOGENEOUS_VOL) ||
+				IsMaterialCompiled(CLEAR_VOL) ||
+				IsMaterialCompiled(HETEROGENEOUS_VOL) ||
+				// Volume rendering may be required to evaluate the IOR
+				IsMaterialCompiled(GLASS) ||
+				IsMaterialCompiled(ARCHGLASS) ||
+				IsMaterialCompiled(ROUGHGLASS);
+	}
+
 	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
 	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
 
@@ -85,10 +95,11 @@ public:
 	u_int lightsDistributionSize;
 	bool hasInfiniteLights, hasEnvLights;
 
-	// Compiled Materials
+	// Compiled Materials (and Volumes))
 	std::set<MaterialType> usedMaterialTypes;
 	vector<slg::ocl::Material> mats;
 	vector<u_int> meshMats;
+	u_int defaultWorldVolumeIndex;
 	bool useBumpMapping;
 
 	// Compiled Textures

@@ -105,7 +105,7 @@ void PathVolumeInfo::Update(const BSDFEvent eventType, const BSDF &bsdf) {
 	else {
 		scatteredStart = false;
 
-		if(eventType  & TRANSMIT) {
+		if(eventType & TRANSMIT) {
 			if (bsdf.hitPoint.intoObject)
 				AddVolume(bsdf.GetMaterialInteriorVolume());
 			else
@@ -294,7 +294,7 @@ float ClearVolume::Scatter(const Ray &ray, const float u,
 		1.f,
 		0.f, // It doesn't matter here
 		NULL, NULL, // It doesn't matter here
-		false // It doesn't matter here
+		true // It doesn't matter here
 	};
 	
 	const float distance = ray.maxt - ray.mint;	
@@ -413,7 +413,7 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 		1.f,
 		0.f, // It doesn't matter here
 		NULL, NULL, // It doesn't matter here
-		false // It doesn't matter here
+		true // It doesn't matter here
 	};
 
 	const Spectrum sigmaT = SigmaT(hitPoint);
@@ -550,7 +550,7 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
 		1.f,
 		0.f, // It doesn't matter here
 		NULL, NULL, // It doesn't matter here
-		false // It doesn't matter here
+		true // It doesn't matter here
 	};
 
 	const bool scatterAllowed = (!scatteredStart || multiScattering);

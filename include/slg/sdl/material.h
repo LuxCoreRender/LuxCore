@@ -141,6 +141,9 @@ public:
 	void SetExteriorVolume(const Volume *vol) { exteriorVolume = vol; }
 	const Volume *GetExteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const { return exteriorVolume; }	
+
+	const Volume *GetInteriorVolume() const { return interiorVolume; }
+	const Volume *GetExteriorVolume() const { return exteriorVolume; }	
 	
     virtual void Bump(HitPoint *hitPoint,
         const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
