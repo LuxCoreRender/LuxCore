@@ -20,7 +20,10 @@
 
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT
+	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT,
+			
+	// Volumes
+	/*HOMOGENEOUS_VOL,*/ CLEAR_VOL /*, HETEROGENEOUS_VOL*/
 } MaterialType;
 
 typedef struct {
@@ -176,6 +179,23 @@ typedef struct {
 } CarpaintParam;
 
 typedef struct {
+	unsigned int sigmaATexIndex;
+} ClearVolumeParam;
+
+typedef struct {
+	unsigned int iorTexIndex;
+	// This is a different kind of emission texture from the one in
+	// Material class (i.e. is not sampled by direct light).
+	unsigned int volumeEmissionTexIndex;
+	unsigned int volumeLightID;
+	int priority;
+
+	union {
+		ClearVolumeParam clear;
+	};
+} VolumeParam;
+
+typedef struct {
 	MaterialType type;
 	unsigned int matID, lightID;
     float bumpSampleDistance;
@@ -186,6 +206,7 @@ typedef struct {
 	// Type of indirect paths where a light source is visible with a direct hit. It is
 	// an OR of DIFFUSE, GLOSSY and SPECULAR.
 	BSDFEvent visibility;
+	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
 
 	union {
 		MatteParam matte;
@@ -200,8 +221,9 @@ typedef struct {
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
 		VelvetParam velvet;
-        	ClothParam cloth;
+        ClothParam cloth;
 		CarpaintParam carpaint;
+		VolumeParam volume;
 	};
 } Material;
 

@@ -343,9 +343,7 @@ void GenerateCameraRay(
 
 #if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
-		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
-		const BSDFEvent pathBSDFEvent,
 		__global const Spectrum *pathThroughput,
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
@@ -355,7 +353,7 @@ void DirectHitInfiniteLight(
 	for (uint i = 0; i < envLightCount; ++i) {
 		__global LightSource *light = &lights[envLightIndices[i]];
 
-		if (firstPathVertex || (light->visibility & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+		if (sampleResult->firstPathVertex || (light->visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 			float directPdfW;
 			const float3 lightRadiance = EnvLight_GetRadiance(light, eyeDir, &directPdfW
 					LIGHTS_PARAM);
@@ -366,8 +364,7 @@ void DirectHitInfiniteLight(
 				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
 				const float3 radiance = weight * throughput * lightRadiance;
 
-				const uint lightID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-				AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, radiance);
+				SampleResult_AddEmission(sampleResult, light->lightID, radiance);
 			}
 		}
 	}
@@ -376,9 +373,7 @@ void DirectHitInfiniteLight(
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
-		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
-		const BSDFEvent pathBSDFEvent,
 		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
@@ -401,9 +396,8 @@ void DirectHitFiniteLight(
 			}
 			const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->c[0]) * emittedRadiance;
 
-			const uint lightID =  min(BSDF_GetLightID(bsdf
-					MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
+					MATERIALS_PARAM), lightRadiance);
 		}
 	}
 }
@@ -421,9 +415,9 @@ bool DirectLightSampling(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
 #endif
-		const float u0, const float u1, const float u2,
+		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
-		const float u3,
+		const float passThroughEvent,
 #endif
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
@@ -433,9 +427,9 @@ bool DirectLightSampling(
 	const float3 lightRadiance = Light_Illuminate(
 			light,
 			VLOAD3F(&bsdf->hitPoint.p.x),
-			u0, u1, u2,
+			u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
-			u3,
+			passThroughEvent,
 #endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
@@ -491,7 +485,6 @@ bool DirectLightSampling(
 }
 
 bool DirectLightSampling_ONE(
-		const bool firstPathVertex,
 		Seed *seed,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
@@ -522,7 +515,7 @@ bool DirectLightSampling_ONE(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		tmpHitPoint,
 #endif
-		Rnd_FloatValue(seed), Rnd_FloatValue(seed), Rnd_FloatValue(seed),
+		Rnd_FloatValue(seed), Rnd_FloatValue(seed),
 #if defined(PARAM_HAS_PASSTHROUGH)
 		Rnd_FloatValue(seed),
 #endif
@@ -531,7 +524,7 @@ bool DirectLightSampling_ONE(
 		LIGHTS_PARAM);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	if (firstPathVertex && !illuminated)
+	if (sampleResult->firstPathVertex && !illuminated)
 		sampleResult->directShadowMask += 1.f;
 #endif
 
@@ -583,7 +576,7 @@ bool DirectLightSampling_ALL(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				tmpHitPoint,
 #endif
-				u0, u1, Rnd_FloatValue(seed),
+				u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Rnd_FloatValue(seed),
 #endif

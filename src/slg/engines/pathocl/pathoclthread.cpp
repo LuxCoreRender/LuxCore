@@ -55,6 +55,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	samplesBuff = NULL;
 	sampleDataBuff = NULL;
 	taskStatsBuff = NULL;
+	pathVolInfosBuff = NULL;
+	directLightVolInfosBuff = NULL;
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -208,6 +210,7 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
 	const bool hasPassThrough = engine->compiledScene->RequiresPassThrough();
+	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
 
 	// Add Seed memory size
 	size_t gpuTaksSize = sizeof(slg::ocl::Seed);
@@ -216,18 +219,24 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	gpuTaksSize += sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
 
 	// Add PathStateBase.BSDF memory size
-	gpuTaksSize += GetOpenCLBSDFSize();
+	gpuTaksSize += openCLBSDFSize;
 
 	// Add PathStateDirectLight memory size
 	gpuTaksSize += sizeof(Spectrum) + sizeof(u_int) + 2 * sizeof(BSDFEvent) + sizeof(float);
-	if (engine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0) {
-		// Add PathStateDirectLight.tmpHitPoint memory size
-		gpuTaksSize += GetOpenCLHitPointSize();
-	}
 
-	// Add PathStateDirectLightPassThrough memory size
+	// Add directLightRayPassThroughEvent memory size
 	if (hasPassThrough)
-		gpuTaksSize += sizeof(float) + GetOpenCLBSDFSize();
+		gpuTaksSize += sizeof(float);
+
+	// Add temporary storage space
+	
+	// Add tmpBsdf memory size
+	if (hasPassThrough || engine->compiledScene->HasVolumes())
+		gpuTaksSize += openCLBSDFSize;
+
+	// Add tmpHitPoint memory size
+	if ((engine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0) || engine->compiledScene->HasVolumes())
+		gpuTaksSize += GetOpenCLHitPointSize();
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
 	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
@@ -241,7 +250,7 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	// SampleResult size
 	//--------------------------------------------------------------------------
 
-	size_t sampleResultSize = GetOpenCLSampleResultSize();
+	const size_t sampleResultSize = GetOpenCLSampleResultSize();
 	
 	//--------------------------------------------------------------------------
 	// Sample size
@@ -349,6 +358,15 @@ void PathOCLRenderThread::AdditionalInit() {
 	//--------------------------------------------------------------------------
 
 	InitSampleDataBuffer();
+
+	//--------------------------------------------------------------------------
+	// Allocate volume info buffers if required
+	//--------------------------------------------------------------------------
+
+	if (engine->compiledScene->HasVolumes()) {
+		AllocOCLBufferRW(&pathVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "PathVolumeInfo");
+		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "directLightVolumeInfo");
+	}
 }
 
 void PathOCLRenderThread::SetAdditionalKernelArgs() {
@@ -370,6 +388,10 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
 	advancePathsKernel->setArg(argIndex++, *samplesBuff);
 	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
+	if (cscene->HasVolumes()) {
+		advancePathsKernel->setArg(argIndex++, *pathVolInfosBuff);
+		advancePathsKernel->setArg(argIndex++, *directLightVolInfosBuff);
+	}
 	advancePathsKernel->setArg(argIndex++, *raysBuff);
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
 
@@ -427,6 +449,8 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	initKernel->setArg(argIndex++, *taskStatsBuff);
 	initKernel->setArg(argIndex++, *samplesBuff);
 	initKernel->setArg(argIndex++, *sampleDataBuff);
+	if (cscene->HasVolumes())
+		initKernel->setArg(argIndex++, *pathVolInfosBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
 	initKernel->setArg(argIndex++, *cameraBuff);
 	initKernel->setArg(argIndex++, threadFilm->GetWidth());
@@ -442,6 +466,8 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&samplesBuff);
 	FreeOCLBuffer(&sampleDataBuff);
 	FreeOCLBuffer(&taskStatsBuff);
+	FreeOCLBuffer(&pathVolInfosBuff);
+	FreeOCLBuffer(&directLightVolInfosBuff);
 }
 
 void PathOCLRenderThread::RenderThreadImpl() {
