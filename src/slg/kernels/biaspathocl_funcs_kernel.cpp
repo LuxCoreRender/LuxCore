@@ -380,7 +380,7 @@ std::string KernelSource_biaspathocl_funcs =
 "		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,\n"
 "		const float lastPdfW, __global SampleResult *sampleResult\n"
 "		LIGHTS_PARAM_DECL) {\n"
-"	if (firstPathVertex || (lights[bsdf->triangleLightSourceIndex].visibility & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {\n"
+"	if (sampleResult->firstPathVertex || (lights[bsdf->triangleLightSourceIndex].visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {\n"
 "		float directPdfA;\n"
 "		const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, &directPdfA\n"
 "				LIGHTS_PARAM);\n"

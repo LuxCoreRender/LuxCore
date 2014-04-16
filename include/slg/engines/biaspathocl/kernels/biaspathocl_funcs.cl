@@ -377,7 +377,7 @@ void DirectHitFiniteLight(
 		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
-	if (firstPathVertex || (lights[bsdf->triangleLightSourceIndex].visibility & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+	if (sampleResult->firstPathVertex || (lights[bsdf->triangleLightSourceIndex].visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 		float directPdfA;
 		const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, &directPdfA
 				LIGHTS_PARAM);
