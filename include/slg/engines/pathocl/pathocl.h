@@ -76,6 +76,8 @@ protected:
 	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;
+	cl::Buffer *pathVolInfosBuff;
+	cl::Buffer *directLightVolInfosBuff;
 
 	u_int sampleDimensions;
 

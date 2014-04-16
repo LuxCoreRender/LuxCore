@@ -127,6 +127,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_roughglass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_velvet.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/material_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/sdl/volume_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/sdl/volume_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_blender_funcs.cl
@@ -229,6 +231,8 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_roughglass_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_velvet_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_funcs_kernel.cpp

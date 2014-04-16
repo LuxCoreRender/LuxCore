@@ -814,3 +814,25 @@ float3 Material_GetPassThroughTransparency(__global Material *material,
 				TEXTURES_PARAM);
 }
 #endif
+
+#if defined(PARAM_HAS_VOLUMES)
+uint Material_GetInteriorVolume(__global Material *material, 
+		__global HitPoint *hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+		, const float passThroughEvent
+#endif
+	) {
+	// TODO: support MIX material
+	return material->interiorVolumeIndex;
+}
+
+uint Material_GetExteriorVolume(__global Material *material, 
+		__global HitPoint *hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+		, const float passThroughEvent
+#endif
+	) {
+	// TODO: support MIX material
+	return material->exteriorVolumeIndex;
+}
+#endif

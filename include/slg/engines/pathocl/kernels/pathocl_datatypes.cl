@@ -68,18 +68,7 @@ typedef struct {
 
 	BSDFEvent pathBSDFEvent, lastBSDFEvent;
 	float lastPdfW;
-
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-	// This is used by TriangleLight_Illuminate() to temporary store the
-	// point on the light sources
-	HitPoint tmpHitPoint;
-#endif
 } PathStateDirectLight;
-
-typedef struct {
-	float passThroughEvent; // The passthrough sample used for the shadow ray
-	BSDF passThroughBsdf;
-} PathStateDirectLightPassThrough;
 
 typedef struct {
 	// The task seed
@@ -88,8 +77,20 @@ typedef struct {
 	// The state used to keep track of the rendered path
 	PathStateBase pathStateBase;
 	PathStateDirectLight directLightState;
+
 #if defined(PARAM_HAS_PASSTHROUGH)
-	PathStateDirectLightPassThrough passThroughState;
+	float directLightRayPassThroughEvent;
+#endif
+
+	// Space for temporary storage
+#if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
+	BSDF tmpBsdf; // Variable size structure
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+	// This is used by TriangleLight_Illuminate() to temporary store the
+	// point on the light sources.
+	// Also used by Scene_Intersect() for evaluating volume textures.
+	HitPoint tmpHitPoint;
 #endif
 } GPUTask;
 

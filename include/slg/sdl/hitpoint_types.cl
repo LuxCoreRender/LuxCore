@@ -42,6 +42,13 @@ typedef struct {
 	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
 #endif
+
+#if defined(PARAM_HAS_VOLUMES)
+	// Interior and exterior volume (this includes volume priority system
+	// computation and scene default world volume)
+	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
+	bool intoObject;
+#endif
 } HitPoint;
 
 #endif

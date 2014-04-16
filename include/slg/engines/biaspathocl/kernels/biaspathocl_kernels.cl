@@ -335,7 +335,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	PathDepthInfo depthInfo;
 	PathDepthInfo_Init(&depthInfo, 0);
 	float lastPdfW = 1.f;
-	BSDFEvent pathBSDFEvent = NONE;
 	BSDFEvent lastBSDFEvent = SPECULAR;
 
 	__global BSDF *currentBSDF = &task->bsdfPathVertex1;
@@ -397,9 +396,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_PASSTHROUGH)
 					, currentBSDF->hitPoint.passThroughEvent
 #endif
-#if defined(PARAM_HAS_BUMPMAPS)
-					MATERIALS_PARAM
+#if defined(PARAM_HAS_VOLUMES)
+					, NULL_INDEX
 #endif
+					MATERIALS_PARAM
 					);
 
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -432,6 +432,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 		if (pathState & NEXT_VERTEX_TRACE_RAY) {
 			const bool firstPathVertex = (pathState & PATH_VERTEX_1);
+			sampleResult->firstPathVertex = firstPathVertex;
 
 			if (rayHit.meshIndex != NULL_INDEX) {
 				//--------------------------------------------------------------
@@ -464,12 +465,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 				}
 
-				if (firstPathVertex || (mats[currentBSDF->materialIndex].visibility & (pathBSDFEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+				if (firstPathVertex || (mats[currentBSDF->materialIndex].visibility &
+						(sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 					// Check if it is a light source (note: I can hit only triangle area light sources)
 					if (BSDF_IsLightSource(currentBSDF) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
-						DirectHitFiniteLight(firstPathVertex, lastBSDFEvent,
-								pathBSDFEvent,
+						DirectHitFiniteLight(lastBSDFEvent,
 								currentThroughput,
 								rayHit.t, currentBSDF, lastPdfW,
 								sampleResult
@@ -497,9 +498,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_ENVLIGHTS)
 				const float3 rayDir = (float3)(ray.d.x, ray.d.y, ray.d.z);
 				DirectHitInfiniteLight(
-						firstPathVertex,
 						lastBSDFEvent,
-						pathBSDFEvent,
 						currentThroughput,
 						-rayDir, lastPdfW,
 						sampleResult
@@ -551,6 +550,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 		if (pathState & DIRECT_LIGHT_TRACE_RAY) {
 			const bool firstPathVertex = (pathState & PATH_VERTEX_1);
+			sampleResult->firstPathVertex = firstPathVertex;
 
 			if (rayHit.meshIndex == NULL_INDEX) {
 				//--------------------------------------------------------------
@@ -569,11 +569,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					if (BSDF_GetEventTypes(&task->bsdfPathVertex1
 							MATERIALS_PARAM) & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-						VADD3F(&sampleResult->directDiffuse.r, lightRadiance);
+						VADD3F(sampleResult->directDiffuse.c, lightRadiance);
 #endif
 					} else {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-						VADD3F(&sampleResult->directGlossy.r, lightRadiance);
+						VADD3F(sampleResult->directGlossy.c, lightRadiance);
 #endif
 					}
 				} else {
@@ -581,15 +581,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 					sampleResult->indirectShadowMask = 0.f;
 #endif
 
-					if (pathBSDFEvent & DIFFUSE) {
+					if (sampleResult->firstPathVertexEvent & DIFFUSE) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
 						VADD3F(sampleResult->indirectDiffuse.c, lightRadiance);
 #endif
-					} else if (pathBSDFEvent & GLOSSY) {
+					} else if (sampleResult->firstPathVertexEvent & GLOSSY) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
 						VADD3F(sampleResult->indirectGlossy.c, lightRadiance);
 #endif
-					} else if (pathBSDFEvent & SPECULAR) {
+					} else if (sampleResult->firstPathVertexEvent & SPECULAR) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
 						VADD3F(sampleResult->indirectSpecular.c, lightRadiance);
 #endif
@@ -599,7 +599,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 			else {
 				if (firstPathVertex) {
-					const int lightSamplesCount = lightSamples[taskDirectLight->lightIndex];
+					const int lightSamplesCount = lights[taskDirectLight->lightIndex].samples;
 					const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
 
 					sampleResult->directShadowMask += 1.f / (sampleCount * sampleCount);
@@ -638,6 +638,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 		if (pathState & DIRECT_LIGHT_GENERATE_RAY) {
 			const bool firstPathVertex = (pathState & PATH_VERTEX_1);
+			sampleResult->firstPathVertex = firstPathVertex;
 
 			if (BSDF_IsDelta(firstPathVertex ? &task->bsdfPathVertex1 : &taskPathVertexN->bsdfPathVertexN
 				MATERIALS_PARAM)) {
@@ -649,7 +650,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 				(!firstPathVertex) ?
 #endif
 					DirectLightSampling_ONE(
-						firstPathVertex,
 						&seed,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
@@ -821,7 +821,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 
 						Ray_Init2_Private(&ray, VLOAD3F(&task->bsdfPathVertex1.hitPoint.p.x), sampledDir);
 
-						pathBSDFEvent = event;
+						sampleResult->firstPathVertexEvent = event;
 						lastBSDFEvent = event;
 
 #if defined(PARAM_HAS_PASSTHROUGH)

@@ -25,6 +25,11 @@
 
 namespace slg {
 
+// OpenCL data types
+namespace ocl {
+#include "slg/sdl/volume_types.cl"
+}
+
 class BSDF;
 	
 class Volume : public Material {
@@ -153,6 +158,8 @@ public:
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
+
+	const Texture *GetSigmaA() const { return sigmaA; }
 
 protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
