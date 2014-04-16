@@ -39,9 +39,9 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	// Interpolate face normal
 	hitPoint.geometryN = mesh->GetGeometryNormal(rayHit.triangleIndex);
 	hitPoint.shadeN = mesh->InterpolateTriNormal(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
+	hitPoint.intoObject = (Dot(ray.d, hitPoint.geometryN) < 0.f);
 
 	// Set interior and exterior volumes
-	hitPoint.intoObject = (Dot(ray.d, hitPoint.geometryN) < 0.f);
 	if (hitPoint.intoObject) {
 		// From outside to inside the object
 

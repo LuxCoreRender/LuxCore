@@ -172,6 +172,10 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 		hitPointSize += sizeof(float);
 	if (renderEngine->compiledScene->RequiresPassThrough())
 		hitPointSize += sizeof(float);
+	// Volume fields
+	if (renderEngine->compiledScene->HasVolumes())
+		hitPointSize += 2 * sizeof(u_int) +
+				sizeof(int); // This is for bool field
 
 	return hitPointSize;	
 }
@@ -179,12 +183,16 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	// Add BSDF memory size
 	size_t bsdfSize = GetOpenCLHitPointSize();
-	// Add PathStateBase.BSDF.materialIndex memory size
+	// Add BSDF.materialIndex memory size
 	bsdfSize += sizeof(u_int);
-	// Add PathStateBase.BSDF.triangleLightSourceIndex memory size
-	bsdfSize += sizeof(u_int);
-	// Add PathStateBase.BSDF.Frame memory size
+	// Add BSDF.triangleLightSourceIndex memory size
+	if (renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0)
+		bsdfSize += sizeof(u_int);
+	// Add BSDF.Frame memory size
 	bsdfSize += sizeof(slg::ocl::Frame);
+	// Add BSDF.isVolume memory size
+	if (renderEngine->compiledScene->HasVolumes())
+		bsdfSize += sizeof(int); // This is for bool field
 
 	return bsdfSize;	
 }
@@ -233,6 +241,9 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 	if (threadFilm->HasChannel(Film::RAYCOUNT))
 		sampleResultSize += sizeof(Film::RAYCOUNT);
 
+	sampleResultSize += sizeof(BSDFEvent) +
+			sizeof(int);  // For the boolean field
+	
 	return sampleResultSize;
 }
 
@@ -806,6 +817,11 @@ void PathOCLBaseRenderThread::InitKernels() {
 	if (renderEngine->compiledScene->useBumpMapping)
 		ss << " -D PARAM_HAS_BUMPMAPS";
 
+	if (renderEngine->compiledScene->HasVolumes()) {
+		ss << " -D PARAM_HAS_VOLUMES";
+		ss << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
+	}
+
 	// Some information about our place in the universe...
 	ss << " -D PARAM_DEVICE_INDEX=" << threadIndex;
 	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
@@ -818,6 +834,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 #if defined(__APPLE__)
 	ss << " -D __APPLE_CL__";
 #endif
+
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
@@ -863,6 +880,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_types <<
 			slg::ocl::KernelSource_bsdf_types <<
 			slg::ocl::KernelSource_material_types <<
+			slg::ocl::KernelSource_volume_types <<
 			slg::ocl::KernelSource_film_types <<
 			slg::ocl::KernelSource_filter_types <<
 			slg::ocl::KernelSource_sampler_types <<
@@ -898,6 +916,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
 			slg::ocl::KernelSource_scene_funcs <<
+			slg::ocl::KernelSource_volume_funcs <<
 			// PathOCL Funcs
 			slg::ocl::KernelSource_pathoclbase_funcs;
 

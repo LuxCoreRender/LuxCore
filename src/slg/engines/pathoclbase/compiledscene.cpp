@@ -321,25 +321,31 @@ void CompiledScene::CompileMaterials() {
 				(m->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
 				(m->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
+		// Material volumes
+		const Material *interiorVol = m->GetInteriorVolume();
+		mat->interiorVolumeIndex = interiorVol ? scene->matDefs.GetMaterialIndex(interiorVol) : NULL_INDEX;
+		const Material *exteriorVol = m->GetExteriorVolume();
+		mat->exteriorVolumeIndex = exteriorVol ? scene->matDefs.GetMaterialIndex(exteriorVol) : NULL_INDEX;
+
 		// Material specific parameters
 		usedMaterialTypes.insert(m->GetType());
 		switch (m->GetType()) {
 			case MATTE: {
-				MatteMaterial *mm = static_cast<MatteMaterial *>(m);
+				const MatteMaterial *mm = static_cast<MatteMaterial *>(m);
 
 				mat->type = slg::ocl::MATTE;
 				mat->matte.kdTexIndex = scene->texDefs.GetTextureIndex(mm->GetKd());
 				break;
 			}
 			case MIRROR: {
-				MirrorMaterial *mm = static_cast<MirrorMaterial *>(m);
+				const MirrorMaterial *mm = static_cast<MirrorMaterial *>(m);
 
 				mat->type = slg::ocl::MIRROR;
 				mat->mirror.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
 				break;
 			}
 			case GLASS: {
-				GlassMaterial *gm = static_cast<GlassMaterial *>(m);
+				const GlassMaterial *gm = static_cast<GlassMaterial *>(m);
 
 				mat->type = slg::ocl::GLASS;
 				mat->glass.krTexIndex = scene->texDefs.GetTextureIndex(gm->GetKr());
@@ -355,7 +361,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case ARCHGLASS: {
-				ArchGlassMaterial *am = static_cast<ArchGlassMaterial *>(m);
+				const ArchGlassMaterial *am = static_cast<ArchGlassMaterial *>(m);
 
 				mat->type = slg::ocl::ARCHGLASS;
 				mat->archglass.krTexIndex = scene->texDefs.GetTextureIndex(am->GetKr());
@@ -371,7 +377,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MIX: {
-				MixMaterial *mm = static_cast<MixMaterial *>(m);
+				const MixMaterial *mm = static_cast<MixMaterial *>(m);
 
 				mat->type = slg::ocl::MIX;
 				mat->mix.matAIndex = scene->matDefs.GetMaterialIndex(mm->GetMaterialA());
@@ -384,7 +390,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MATTETRANSLUCENT: {
-				MatteTranslucentMaterial *mm = static_cast<MatteTranslucentMaterial *>(m);
+				const MatteTranslucentMaterial *mm = static_cast<MatteTranslucentMaterial *>(m);
 
 				mat->type = slg::ocl::MATTETRANSLUCENT;
 				mat->matteTranslucent.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
@@ -392,7 +398,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case GLOSSY2: {
-				Glossy2Material *g2m = static_cast<Glossy2Material *>(m);
+				const Glossy2Material *g2m = static_cast<Glossy2Material *>(m);
 
 				mat->type = slg::ocl::GLOSSY2;
 				mat->glossy2.kdTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKd());
@@ -427,7 +433,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case METAL2: {
-				Metal2Material *m2m = static_cast<Metal2Material *>(m);
+				const Metal2Material *m2m = static_cast<Metal2Material *>(m);
 
 				mat->type = slg::ocl::METAL2;
 				mat->metal2.nTexIndex = scene->texDefs.GetTextureIndex(m2m->GetN());
@@ -444,7 +450,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case ROUGHGLASS: {
-				RoughGlassMaterial *rgm = static_cast<RoughGlassMaterial *>(m);
+				const RoughGlassMaterial *rgm = static_cast<RoughGlassMaterial *>(m);
 
 				mat->type = slg::ocl::ROUGHGLASS;
 				mat->roughglass.krTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKr());
@@ -469,7 +475,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case VELVET: {
-				VelvetMaterial *vm = static_cast<VelvetMaterial *>(m);
+				const VelvetMaterial *vm = static_cast<VelvetMaterial *>(m);
 
 				mat->type = slg::ocl::VELVET;
 				mat->velvet.kdTexIndex = scene->texDefs.GetTextureIndex(vm->GetKd());
@@ -480,7 +486,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case CLOTH: {
-				ClothMaterial *cm = static_cast<ClothMaterial *>(m);
+				const ClothMaterial *cm = static_cast<ClothMaterial *>(m);
 
 				mat->type = slg::ocl::CLOTH;
 				mat->cloth.Preset = cm->GetPreset();
@@ -494,7 +500,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case CARPAINT: {
-				CarpaintMaterial *cm = static_cast<CarpaintMaterial *>(m);
+				const CarpaintMaterial *cm = static_cast<CarpaintMaterial *>(m);
 				mat->type = slg::ocl::CARPAINT;
 				mat->carpaint.KdTexIndex = scene->texDefs.GetTextureIndex(cm->Kd);
 				mat->carpaint.Ks1TexIndex = scene->texDefs.GetTextureIndex(cm->Ks1);
@@ -510,10 +516,32 @@ void CompiledScene::CompileMaterials() {
 				mat->carpaint.depthTexIndex = scene->texDefs.GetTextureIndex(cm->depth);
 				break;
 			}
+			//------------------------------------------------------------------
+			// Volumes
+			//------------------------------------------------------------------
 			case CLEAR_VOL:
 			case HOMOGENEOUS_VOL:
 			case HETEROGENEOUS_VOL: {
-				SLG_LOG("Volume rendering is not yet supported by OpenCL code");
+				const Volume *v = static_cast<ClearVolume *>(m);
+				mat->volume.iorTexIndex = v->GetIORTexture() ?
+					scene->texDefs.GetTextureIndex(v->GetIORTexture()) :
+					NULL_INDEX;
+				mat->volume.volumeEmissionTexIndex = v->GetVolumeEmissionTexture() ?
+					scene->texDefs.GetTextureIndex(v->GetVolumeEmissionTexture()) :
+					NULL_INDEX;
+				mat->volume.volumeLightID = v->GetVolumeLightID();
+				mat->volume.priority = v->GetPriority();
+	
+				switch (m->GetType()) {
+					case CLEAR_VOL: {
+						const ClearVolume *cv = static_cast<ClearVolume *>(m);
+						mat->type = slg::ocl::CLEAR_VOL;
+						mat->volume.clear.sigmaATexIndex = scene->texDefs.GetTextureIndex(cv->GetSigmaA());
+						break;
+					}
+					default:
+						throw runtime_error("Unknown volume: " + boost::lexical_cast<string>(m->GetType()));
+				}
 				break;
 			}
 			default:
@@ -531,6 +559,12 @@ void CompiledScene::CompileMaterials() {
 		const Material *m = scene->objDefs.GetSceneObject(i)->GetMaterial();
 		meshMats[i] = scene->matDefs.GetMaterialIndex(m);
 	}
+
+	//--------------------------------------------------------------------------
+	// Default scene volume
+	//--------------------------------------------------------------------------
+	defaultWorldVolumeIndex = scene->defaultWorldVolume ?
+		scene->matDefs.GetMaterialIndex(scene->defaultWorldVolume) : NULL_INDEX;
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

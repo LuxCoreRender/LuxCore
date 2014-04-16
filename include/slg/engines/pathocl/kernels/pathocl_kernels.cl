@@ -128,6 +128,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		__global GPUTaskStats *taskStats,
 		__global Sample *samples,
 		__global float *samplesData,
+#if defined (PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *pathVolInfos,
+#endif
 		__global Ray *rays,
 		__global Camera *camera,
 		const uint filmWidth,
@@ -157,6 +160,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 
 	__global GPUTaskStats *taskStat = &taskStats[gid];
 	taskStat->sampleCount = 0;
+
+#if defined (PARAM_HAS_VOLUMES)
+	PathVolumeInfo_Init(&pathVolInfos[gid]);
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -165,9 +172,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 
 #if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
-		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
-		const BSDFEvent pathBSDFEvent,
 		__global const Spectrum *pathThroughput,
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
@@ -187,8 +192,7 @@ void DirectHitInfiniteLight(
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
 			const float3 radiance = weight * throughput * lightRadiance;
 
-			const uint lightID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-			AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, radiance);
+			SampleResult_AddEmission(sampleResult, light->lightID, radiance);
 		}
 	}
 }
@@ -196,9 +200,7 @@ void DirectHitInfiniteLight(
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
-		const bool firstPathVertex,
 		const BSDFEvent lastBSDFEvent,
-		const BSDFEvent pathBSDFEvent,
 		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
@@ -222,7 +224,7 @@ void DirectHitFiniteLight(
 
 		const uint lightID =  min(BSDF_GetLightID(bsdf
 				MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-		AddEmission(firstPathVertex, pathBSDFEvent, lightID, sampleResult, lightRadiance);
+		SampleResult_AddEmission(sampleResult, lightID, lightRadiance);
 	}
 }
 #endif
@@ -243,11 +245,10 @@ bool DirectLightSampling(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
 #endif
+		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
-		const float u3,
-		__global float *shadowPassThrought,
+		const float lightPassThroughEvent,
 #endif
-		const float u0, const float u1, const float u2,
 		const uint depth,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
@@ -257,9 +258,9 @@ bool DirectLightSampling(
 	const float3 lightRadiance = Light_Illuminate(
 			light,
 			VLOAD3F(&bsdf->hitPoint.p.x),
-			u0, u1, u2,
+			u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
-			u3,
+			lightPassThroughEvent,
 #endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
@@ -292,9 +293,6 @@ bool DirectLightSampling(
 
 			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);
 			*ID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-#if defined(PARAM_HAS_PASSTHROUGH)
-			*shadowPassThrought = u3;
-#endif
 
 			// Setup the shadow ray
 			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
@@ -321,11 +319,10 @@ bool DirectLightSampling_ONE(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
 #endif
+		const float u0, const float u1, const float u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
-		const float u4,
-		__global float *shadowPassThrought,
+		const float lightPassThroughEvent,
 #endif
-		const float u0, const float u1, const float u2, const float u3,
 		const uint depth,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
@@ -346,11 +343,10 @@ bool DirectLightSampling_ONE(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		tmpHitPoint,
 #endif
+		u1, u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
-		u4,
-		shadowPassThrought,
+		lightPassThroughEvent,
 #endif
-		u1, u2, u3,
 		depth,
 		pathThroughput, bsdf,
 		shadowRay, radiance, ID
@@ -358,11 +354,16 @@ bool DirectLightSampling_ONE(
 }
 
 bool Scene_Intersect(
+#if defined (PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *volInfo,
+		__global HitPoint *tmpHitPoint,
+#endif
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThrough,
 #endif
 		__global Ray *ray, __global RayHit *rayHit, __global BSDF *bsdf,
 		__global Spectrum *pathThroughput,
+		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global Mesh *meshDescs,
 		__global uint *meshMats,
@@ -385,11 +386,12 @@ bool Scene_Intersect(
 		__global Triangle *triangles
 		MATERIALS_PARAM_DECL
 		) {
-	const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
+	const bool hit = (rayHit->meshIndex != NULL_INDEX);
 
-	if (!rayMiss) {
-		// Something was hit
-
+#if defined (PARAM_HAS_VOLUMES)
+	uint rayVolumeIndex = volInfo->currentVolumeIndex;
+#endif
+	if (hit) {
 		// Initialize the BSDF of the hit point
 		BSDF_Init(bsdf,
 				meshDescs,
@@ -414,29 +416,114 @@ bool Scene_Intersect(
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, passThrough
 #endif
-#if defined(PARAM_HAS_BUMPMAPS)
-				MATERIALS_PARAM
+#if defined(PARAM_HAS_VOLUMES)
+				, rayVolumeIndex
 #endif
+				MATERIALS_PARAM
 				);
+
+#if defined (PARAM_HAS_VOLUMES)
+		rayVolumeIndex = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolumeIndex : bsdf->hitPoint.interiorVolumeIndex;
+#endif
+	}
+#if defined (PARAM_HAS_VOLUMES)
+	else if (rayVolumeIndex == NULL_INDEX) {
+		// No volume information, I use the default volume
+		rayVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
+	}
+#endif
+
+#if defined (PARAM_HAS_VOLUMES)
+	// Check if there is volume scatter event
+	if (rayVolumeIndex != NULL_INDEX) {
+		// This applies volume transmittance too
+		// Note: by using passThrough here, I introduce subtle correlation
+		// between scattering events and pass-through events
+		float3 connectionThroughput = WHITE;
+		float3 connectionEmission = BLACK;
+		const float t = Volume_Scatter(&mats[rayVolumeIndex], ray,
+				hit ? rayHit->t : ray->maxt,
+#if defined(PARAM_HAS_PASSTHROUGH)
+				passThrough,
+#endif
+				volInfo->scatteredStart,
+				&connectionThroughput, &connectionEmission,
+				tmpHitPoint
+				TEXTURES_PARAM);
+		VSTORE3F(VLOAD3F(pathThroughput->c) * connectionThroughput, pathThroughput->c);
+
+		// Add the volume emitted light to the appropriate light group
+		if (!Spectrum_IsBlack(connectionEmission) && sampleResult)
+			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
+				MATERIALS_PARAM), connectionEmission);
+
+//		if (t > 0.f) {
+//			// There was a volume scatter event
+//
+//			// I have to set RayHit fields even if there wasn't a real
+//			// ray hit
+//			rayHit->t = t;
+//			// This is a trick in order to have RayHit::Miss() return
+//			// false. I assume 0xfffffffeu will trigger a memory fault if
+//			// used (and the bug will be noticed)
+//			rayHit->meshIndex = 0xfffffffeu;
+//
+//			bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
+//			volInfo->SetScatteredStart(true);
+//
+//			return true;
+//		}
+	}
+#endif
+
+	if (hit) {
+		// Check if the volume priority system tells me to continue to trace the ray
+		bool continueToTrace =
+#if defined (PARAM_HAS_VOLUMES)
+			PathVolumeInfo_ContinueToTrace(volInfo, bsdf
+				MATERIALS_PARAM);
+#else
+		false;
+#endif
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		// Check if it is a pass through point
-		const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
+		if (!continueToTrace) {
+			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
 				MATERIALS_PARAM);
-		if (!Spectrum_IsBlack(passThroughTrans)) {
-			const float3 pt = VLOAD3F(pathThroughput->c) * passThroughTrans;
-			VSTORE3F(pt, pathThroughput->c);
+			if (!Spectrum_IsBlack(passThroughTrans)) {
+				VSTORE3F(VLOAD3F(pathThroughput->c) * passThroughTrans, pathThroughput->c);
 
-			// It is a pass through point, continue to trace the ray
-			ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-			
-			return true;
+				// It is a pass through point, continue to trace the ray
+				continueToTrace = true;
+			}
 		}
 #endif
+
+		if (continueToTrace) {
+#if defined (PARAM_HAS_VOLUMES)
+			// Update volume information
+			PathVolumeInfo_Update(volInfo,
+					BSDF_GetEventTypes(bsdf
+						MATERIALS_PARAM),
+					bsdf
+					MATERIALS_PARAM);
+#endif
+
+			// It is a transparent material, continue to trace the ray
+			ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+
+			// A safety check
+			if (ray->mint >= ray->maxt)
+				return false;
+			else
+				return true;
+		} else
+			return false;
+	} else {
+		// Nothing was hit, stop tracing the ray
+		return false;
 	}
-	
-	// Stop tracing the ray
-	return false;
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
@@ -444,6 +531,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		__global GPUTaskStats *taskStats,
 		__global Sample *samples,
 		__global float *samplesData,
+#if defined (PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *pathVolInfos,
+		__global PathVolumeInfo *directLightVolInfos,
+#endif
 		__global Ray *rays,
 		__global RayHit *rayHits,
 		// Film parameters
@@ -672,11 +763,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 	if (pathState == RT_NEXT_VERTEX) {
 		const bool continueToTrace = Scene_Intersect(
+#if defined (PARAM_HAS_VOLUMES)
+			&pathVolInfos[gid],
+			&task->tmpHitPoint,
+#endif
 #if defined(PARAM_HAS_PASSTHROUGH)
 			task->pathStateBase.bsdf.hitPoint.passThroughEvent,
 #endif
 			ray, rayHit, bsdf,
 			&task->pathStateBase.throughput,
+			&sample->result,
 			// BSDF_Init parameters
 			meshDescs,
 			meshMats,
@@ -735,9 +831,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				// Check if it is a light source (note: I can hit only triangle area light sources)
 				if (BSDF_IsLightSource(bsdf)) {
-					DirectHitFiniteLight((depth == 1),
+					DirectHitFiniteLight(
 							task->directLightState.lastBSDFEvent,
-							task->directLightState.pathBSDFEvent,
 							&task->pathStateBase.throughput,
 							rayHit->t, bsdf, task->directLightState.lastPdfW,
 							&sample->result
@@ -754,9 +849,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 #if defined(PARAM_HAS_ENVLIGHTS)
 				DirectHitInfiniteLight(
-						(depth == 1),
 						task->directLightState.lastBSDFEvent,
-						task->directLightState.pathBSDFEvent,
 						&task->pathStateBase.throughput,
 						-VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
 						&sample->result
@@ -814,11 +907,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 	if (pathState == RT_DL) {
 		const bool continueToTrace = 
-#if defined(PARAM_HAS_PASSTHROUGH)
+#if defined(PARAM_HAS_PASSTHROUGH) || defined (PARAM_HAS_VOLUMES)
 			Scene_Intersect(
-				task->passThroughState.passThroughEvent,
-				ray, rayHit, &task->passThroughState.passThroughBsdf,
+#if defined (PARAM_HAS_VOLUMES)
+				&directLightVolInfos[gid],
+				&task->tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+				task->directLightRayPassThroughEvent,
+#endif
+				ray, rayHit, &task->tmpBsdf,
 				&task->directLightState.lightRadiance,
+				NULL,
 				// BSDF_Init parameters
 				meshDescs,
 				meshMats,
@@ -851,45 +951,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 			if (rayMiss) {
 				// Nothing was hit, the light source is visible
-				const float3 lightRadiance = VLOAD3F(task->directLightState.lightRadiance.c);
 
-				const uint lightID = task->directLightState.lightID;
-				VADD3F(sample->result.radiancePerPixelNormalized[lightID].c, lightRadiance);
-
-				if (depth == 1) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-					sample->result.directShadowMask = 0.f;
-#endif
-					if (BSDF_GetEventTypes(bsdf
-							MATERIALS_PARAM) & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-						VADD3F(sample->result.directDiffuse.c, lightRadiance);
-#endif
-					} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-						VADD3F(sample->result.directGlossy.c, lightRadiance);
-#endif
-					}
-				} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-					sample->result.indirectShadowMask = 0.f;
-#endif
-
-					const BSDFEvent pathBSDFEvent = task->directLightState.pathBSDFEvent;
-					if (pathBSDFEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-						VADD3F(sample->result.indirectDiffuse.c, lightRadiance);
-#endif
-					} else if (pathBSDFEvent & GLOSSY) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-						VADD3F(sample->result.indirectGlossy.c, lightRadiance);
-#endif
-					} else if (pathBSDFEvent & SPECULAR) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-						VADD3F(sample->result.indirectSpecular.c, lightRadiance);
-#endif
-					}
-				}
+				SampleResult_AddDirectLight(&sample->result, task->directLightState.lightID,
+						BSDF_GetEventTypes(bsdf
+							MATERIALS_PARAM),
+						VLOAD3F(task->directLightState.lightRadiance.c));
 			}
 		}
 	}
@@ -920,19 +986,26 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-						&task->directLightState.tmpHitPoint,
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A),
-						&task->passThroughState.passThroughEvent,
+						&task->tmpHitPoint,
 #endif
 						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X),
 						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
 						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
+#if defined(PARAM_HAS_PASSTHROUGH)
 						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
+#endif
 						depth, &task->pathStateBase.throughput, bsdf,
 						ray, &task->directLightState.lightRadiance, &task->directLightState.lightID
 						LIGHTS_PARAM)) {
+#if defined(PARAM_HAS_PASSTHROUGH)
+					// Initialize the pass-through event for the shadow ray
+					task->directLightRayPassThroughEvent = Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A);
+#endif
+#if defined(PARAM_HAS_VOLUMES)
+					// Make a copy of current PathVolumeInfo for tracing the
+					// shadow ray
+					directLightVolInfos[gid] = pathVolInfos[gid];
+#endif
 					// I have to trace the shadow ray
 					pathState = RT_DL;
 				}
@@ -975,7 +1048,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 			VSTORE3F(throughput, task->pathStateBase.throughput.c);
 
+#if defined(PARAM_HAS_VOLUMES)
+			// Update volume information
+			PathVolumeInfo_Update(&pathVolInfos[gid], event, bsdf
+					MATERIALS_PARAM);
+#endif
+
 			Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir);
+
+			if (sample->result.firstPathVertex)
+				sample->result.firstPathVertexEvent = event;
 
 			task->pathStateBase.depth = depth + 1;
 			if (depth == 1)
@@ -992,6 +1074,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				sample, sampleDataPathBase, depth + 1);
 			task->pathStateBase.bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
 #endif
+
+			sample->result.firstPathVertex = (depth == 1);
+
 			pathState = RT_NEXT_VERTEX;
 		} else
 			pathState = SPLAT_SAMPLE;
@@ -1038,6 +1123,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 		GenerateCameraPath(task, sample, sampleData, camera, filmWidth, filmHeight, ray, seed);
 		// task->pathStateBase.state is set to RT_NEXT_VERTEX inside Sampler_NextSample() => GenerateCameraPath()
+		
+		// Re-initialize the volume information
+#if defined (PARAM_HAS_VOLUMES)
+		PathVolumeInfo_Init(&pathVolInfos[gid]);
+#endif
 	} else {
 		// Save the state
 		task->pathStateBase.state = pathState;

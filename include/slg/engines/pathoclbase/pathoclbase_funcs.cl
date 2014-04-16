@@ -32,6 +32,7 @@
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
 //  PARAM_TRIANGLE_LIGHT_COUNT
 //  PARAM_LIGHT_COUNT
+//  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -96,34 +97,6 @@
 //  PARAM_HAS_UVS_BUFFER
 //  PARAM_HAS_COLS_BUFFER
 //  PARAM_HAS_ALPHAS_BUFFER
-
-void AddEmission(const bool firstPathVertex, const BSDFEvent pathBSDFEvent, const uint lightID,
-		__global SampleResult *sampleResult, const float3 emission) {
-	VADD3F(sampleResult->radiancePerPixelNormalized[lightID].c, emission);
-
-	if (firstPathVertex) {
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-		VADD3F(sampleResult->emission.c, emission);
-#endif
-	} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-		sampleResult->indirectShadowMask = 0.f;
-#endif
-		if (pathBSDFEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-			VADD3F(sampleResult->indirectDiffuse.c, emission);
-#endif
-		} else if (pathBSDFEvent & GLOSSY) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-			VADD3F(sampleResult->indirectGlossy.c, emission);
-#endif
-		} else if (pathBSDFEvent & SPECULAR) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-			VADD3F(sampleResult->indirectSpecular.c, emission);
-#endif
-		}
-	}
-}
 
 void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;

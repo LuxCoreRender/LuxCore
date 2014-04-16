@@ -447,8 +447,19 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 	VSTORE2F(triUV, &tmpHitPoint->uv.u);
 	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
 	VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
+	VSTORE2F(WHITE, &tmpHitPoint->color.c);
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+	VSTORE2F(1.f, &tmpHitPoint->alpha);
+#endif
 #if defined(PARAM_HAS_PASSTHROUGH)
 	tmpHitPoint->passThroughEvent = passThroughEvent;
+#endif
+#if defined(PARAM_HAS_VOLUMES)
+	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
+	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
+	tmpHitPoint->intoObject = true;
 #endif
 
 	return Material_GetEmittedRadiance(&mats[triLight->triangle.materialIndex],
@@ -817,9 +828,9 @@ float3 IntersectableLight_GetRadiance(__global LightSource *light,
 float3 Light_Illuminate(
 		__global LightSource *light,
 		const float3 point,
-		const float u0, const float u1, const float u2,
+		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
-		const float u3,
+		const float passThroughEvent,
 #endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
@@ -886,7 +897,7 @@ float3 Light_Illuminate(
 					point,
 					u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
-					u3,
+					passThroughEvent,
 #endif
 					lightRayDir, distance, directPdfW
 					MATERIALS_PARAM);
@@ -962,12 +973,6 @@ bool Light_IsEnvOrIntersectable(__global LightSource *light) {
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		case TYPE_TRIANGLE:
 #endif
-#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
-		case TYPE_SHARPDISTANT:
-#endif
-#if defined(PARAM_HAS_DISTANTLIGHT)
-		case TYPE_DISTANT:
-#endif
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			return true;
 #endif
@@ -984,8 +989,14 @@ bool Light_IsEnvOrIntersectable(__global LightSource *light) {
 #if defined(PARAM_HAS_PROJECTIONLIGHT)
 		case TYPE_PROJECTION:
 #endif
+#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
+		case TYPE_SHARPDISTANT:
+#endif
+#if defined(PARAM_HAS_DISTANTLIGHT)
+		case TYPE_DISTANT:
+#endif
 #if defined(PARAM_HAS_LASERLIGHT)
-		case TYPE_POINT:
+		case TYPE_LASERLIGHT:
 #endif
 #if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT)
 			return false;
