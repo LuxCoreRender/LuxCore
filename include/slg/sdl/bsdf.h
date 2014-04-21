@@ -46,15 +46,15 @@ public:
 	// A BSDF initialized from a ray hit
 	BSDF(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
-		const Volume *currentVolume) {
+		const PathVolumeInfo *volInfo) {
 		assert (!rayHit.Miss());
-		Init(fixedFromLight, scene, ray, rayHit, passThroughEvent, currentVolume);
+		Init(fixedFromLight, scene, ray, rayHit, passThroughEvent, volInfo);
 	}
 	// Used when hitting a surface
 	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
-		const Volume *currentVolume);
-	// Used when hitting a volume scatter event
+		const PathVolumeInfo *volInfo);
+	// Used when hitting a volume scatter point
 	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
 		const Volume &volume, const float t, const float passThroughEvent);
 

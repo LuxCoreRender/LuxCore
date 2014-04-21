@@ -23,7 +23,7 @@ using namespace luxrays;
 using namespace slg;
 
 void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
-		const RayHit &rayHit, const float passThroughEvent, const Volume *currentVolume) {
+		const RayHit &rayHit, const float passThroughEvent, const PathVolumeInfo *volInfo) {
 	hitPoint.fromLight = fixedFromLight;
 	hitPoint.passThroughEvent = passThroughEvent;
 
@@ -42,43 +42,10 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	hitPoint.intoObject = (Dot(ray.d, hitPoint.geometryN) < 0.f);
 
 	// Set interior and exterior volumes
-	if (hitPoint.intoObject) {
-		// From outside to inside the object
-
-		hitPoint.interiorVolume = material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent);
-
-		if (!currentVolume)
-			hitPoint.exteriorVolume = material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent);
-		else {
-			// if (!material->GetExteriorVolume()) there may be conflict here
-			// between the material definition and the currentVolume value.
-			// The currentVolume value wins.
-			hitPoint.exteriorVolume = currentVolume;
-		}
-		
-		if (!hitPoint.exteriorVolume) {
-			// No volume information, I use the default volume
-			hitPoint.exteriorVolume = scene.defaultWorldVolume;
-		}
-	} else {
-		// From inside to outside the object
-
-		if (!currentVolume)
-			hitPoint.interiorVolume = material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent);
-		else {
-			// if (!material->GetInteriorVolume()) there may be conflict here
-			// between the material definition and the currentVolume value.
-			// The currentVolume value wins.
-			hitPoint.interiorVolume = currentVolume;
-		}
-		
-		if (!hitPoint.interiorVolume) {
-			// No volume information, I use the default volume
-			hitPoint.interiorVolume = scene.defaultWorldVolume;
-		}
-
-		hitPoint.exteriorVolume = material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent);
-	}
+	volInfo->SetHitPointVolumes(hitPoint,
+			material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent),
+			material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
+			scene.defaultWorldVolume);
 
 	// Interpolate color
 	hitPoint.color = mesh->InterpolateTriColor(rayHit.triangleIndex, rayHit.b1, rayHit.b2);

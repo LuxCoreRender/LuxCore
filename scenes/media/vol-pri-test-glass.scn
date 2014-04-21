@@ -6,10 +6,10 @@ scene.volumes.vol1.type = clear
 scene.volumes.vol1.absorption = 0.1 0.1 0.1
 scene.volumes.vol1.ior = 1.45
 scene.volumes.vol1.priority = 1
-#scene.volumes.vol2.type = clear
-#scene.volumes.vol2.absorption = 0.1 0.1 0.1
-#scene.volumes.vol2.ior = 1.45
-#scene.volumes.vol2.priority = 1
+scene.volumes.vol2.type = clear
+scene.volumes.vol2.absorption = 0.1 4 4
+scene.volumes.vol2.ior = 1.45
+scene.volumes.vol2.priority = 2
 ################################################################################
 scene.materials.Matte.type = matte
 scene.materials.Matte.kd = 0.40197 0.40197 0.40197
@@ -20,7 +20,7 @@ scene.materials.mat1.volume.interior = vol1
 scene.materials.mat2.type = glass
 scene.materials.mat2.kr = 0.9 0.9 0.9
 scene.materials.mat2.kt = 0.9 0.9 0.9
-scene.materials.mat2.volume.interior = vol1
+scene.materials.mat2.volume.interior = vol2
 ################################################################################
 scene.objects.Matte.material = Matte
 scene.objects.Matte.ply = scenes/sky/Matte.ply
