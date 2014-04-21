@@ -60,36 +60,31 @@ typedef struct {
 	// The task seed
 	Seed seed;
 
-	Spectrum throughputPathVertex1;
 	BSDF bsdfPathVertex1;
+#if defined(PARAM_HAS_VOLUMES)
+	PathVolumeInfo volInfoPathVertex1;
+#endif
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+	// This is used by TriangleLight_Illuminate() to temporary store the
+	// point on the light sources
+	// Also used by Scene_Intersect() for evaluating volume textures.
+	HitPoint tmpHitPoint;
+#endif
 } GPUTask;
 
 typedef struct {
-#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-	unsigned int lightIndex, lightSampleIndex;
-#endif
-
-	Spectrum directLightThroughput;
 	BSDF directLightBSDF;
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-	// This is used by TriangleLight_Illuminate() to temporary store the
-	// point on the light sources
-	HitPoint directLightHitPoint;
+#if defined(PARAM_HAS_VOLUMES)
+	PathVolumeInfo directLightVolInfo;
 #endif
-
-	// Direct light sampling. Radiance to add to the result
-	// if light source is visible.
-	Spectrum lightRadiance;
-	unsigned int lightID;
 } GPUTaskDirectLight;
 
 typedef struct {
-	// DIFFUSE, GLOSSY and SPECULAR BSDF sampling
-	BSDFEvent vertex1SampleComponent;
-	unsigned int vertex1SampleIndex;
-
-	Spectrum throughputPathVertexN;
 	BSDF bsdfPathVertexN;
+#if defined(PARAM_HAS_VOLUMES)
+	PathVolumeInfo volInfoPathVertexN;
+#endif
 } GPUTaskPathVertexN;
 
 #endif

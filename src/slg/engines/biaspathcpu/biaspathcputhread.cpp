@@ -257,7 +257,6 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	const BSDFEvent pathBSDFEvent = lastBSDFEvent;
 	BSDF bsdf;
 	bool illuminated = false;
 	for (;;) {
@@ -267,21 +266,21 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 				volInfo, rndGen->floatValue(),
 				&ray, &rayHit, &bsdf, &connectionThroughput,
 				sampleResult);
+		pathThroughput *= connectionThroughput;
 
 		if (!hit) {
-			// Nothing was hit, look for infinitelight
-			illuminated |= DirectHitEnvLight(lastBSDFEvent, pathThroughput * connectionThroughput,
+			// Nothing was hit, look for env. lights
+			illuminated |= DirectHitEnvLight(lastBSDFEvent, pathThroughput,
 					ray.d, lastPdfW, sampleResult);
 			break;
 		}
-		pathThroughput *= connectionThroughput;
 
 		// Something was hit
 
 		// Check if it is visible in indirect paths
-		if (((pathBSDFEvent & DIFFUSE) && !bsdf.IsVisibleIndirectDiffuse()) ||
-				((pathBSDFEvent & GLOSSY) && !bsdf.IsVisibleIndirectGlossy()) ||
-				((pathBSDFEvent & SPECULAR) && !bsdf.IsVisibleIndirectSpecular()))
+		if (((sampleResult->firstPathVertexEvent & DIFFUSE) && !bsdf.IsVisibleIndirectDiffuse()) ||
+				((sampleResult->firstPathVertexEvent & GLOSSY) && !bsdf.IsVisibleIndirectGlossy()) ||
+				((sampleResult->firstPathVertexEvent & SPECULAR) && !bsdf.IsVisibleIndirectSpecular()))
 			break;
 
 		// Check if it is a light source
@@ -304,7 +303,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 			illuminated |= DirectLightSamplingONE(rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
 
 		//----------------------------------------------------------------------
-		// Build the next vertex path ray
+		// Build the next path vertex ray
 		//----------------------------------------------------------------------
 
 		Vector sampledDir;
@@ -316,7 +315,7 @@ bool BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		if (bsdfSample.Black())
 			break;
 
-		// Check if I have to stop because of path depth
+		// Increment path depth informations
 		depthInfo.IncDepths(lastBSDFEvent);
 
 		// Update volume information
@@ -363,12 +362,13 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 			PathVolumeInfo volInfo = startVolInfo;
 			volInfo.Update(event, bsdf);
 
-			const Spectrum continuepathThroughput = pathThroughput * bsdfSample * scaleFactor * min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
-			assert (!continuepathThroughput.IsNaN() && !continuepathThroughput.IsInf());
+			const Spectrum continuePathThroughput = pathThroughput * bsdfSample * scaleFactor *
+				min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
+			assert (!continuePathThroughput.IsNaN() && !continuePathThroughput.IsInf());
 
 			Ray continueRay(bsdf.hitPoint.p, sampledDir);
 			const bool illuminated = ContinueTracePath(rndGen, depthInfo, continueRay,
-					continuepathThroughput, event, pdfW, &volInfo, sampleResult);
+					continuePathThroughput, event, pdfW, &volInfo, sampleResult);
 
 			if (!illuminated)
 				sampleResult->indirectShadowMask += scaleFactor;

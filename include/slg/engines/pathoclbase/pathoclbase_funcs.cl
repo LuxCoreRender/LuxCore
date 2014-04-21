@@ -105,3 +105,197 @@ void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	for (uint i = 0; i < size; ++i)
 		*ptr++ = (unsigned char)(Rnd_UintValue(&seed) & 0xff);
 }
+
+bool Scene_Intersect(
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *volInfo,
+		__global HitPoint *tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThrough,
+#endif
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray,
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		RayHit *rayHit,
+		__global BSDF *bsdf,
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global Spectrum *pathThroughput,
+#else
+		float3 *pathThroughput,
+#endif
+		
+		__global SampleResult *sampleResult,
+		// BSDF_Init parameters
+		__global Mesh *meshDescs,
+		__global uint *meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global uint *meshTriLightDefsOffset,
+#endif
+		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+		__global UV *vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+		__global Spectrum *vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+		__global float *vertAlphas,
+#endif
+		__global Triangle *triangles
+		MATERIALS_PARAM_DECL
+		) {
+	const bool hit = (rayHit->meshIndex != NULL_INDEX);
+
+#if defined(PARAM_HAS_VOLUMES)
+	uint rayVolumeIndex = volInfo->currentVolumeIndex;
+#endif
+	if (hit) {
+		// Initialize the BSDF of the hit point
+		BSDF_Init(bsdf,
+				meshDescs,
+				meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+				meshTriLightDefsOffset,
+#endif
+				vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+				vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+				vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+				vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+				vertAlphas,
+#endif
+				triangles, ray, rayHit
+#if defined(PARAM_HAS_PASSTHROUGH)
+				, passThrough
+#endif
+#if defined(PARAM_HAS_VOLUMES)
+				, rayVolumeIndex
+#endif
+				MATERIALS_PARAM
+				);
+
+#if defined(PARAM_HAS_VOLUMES)
+		rayVolumeIndex = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolumeIndex : bsdf->hitPoint.interiorVolumeIndex;
+#endif
+	}
+#if defined(PARAM_HAS_VOLUMES)
+	else if (rayVolumeIndex == NULL_INDEX) {
+		// No volume information, I use the default volume
+		rayVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
+	}
+#endif
+
+#if defined(PARAM_HAS_VOLUMES)
+	// Check if there is volume scatter event
+	if (rayVolumeIndex != NULL_INDEX) {
+		// This applies volume transmittance too
+		// Note: by using passThrough here, I introduce subtle correlation
+		// between scattering events and pass-through events
+		float3 connectionThroughput = WHITE;
+		float3 connectionEmission = BLACK;
+
+		const float t = Volume_Scatter(&mats[rayVolumeIndex], ray,
+				hit ? rayHit->t : ray->maxt,
+#if defined(PARAM_HAS_PASSTHROUGH)
+				passThrough,
+#endif
+				volInfo->scatteredStart,
+				&connectionThroughput, &connectionEmission,
+				tmpHitPoint
+				TEXTURES_PARAM);
+
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		VSTORE3F(VLOAD3F(pathThroughput->c) * connectionThroughput, pathThroughput->c);
+#else
+		*pathThroughput *= connectionThroughput;
+#endif
+
+		// Add the volume emitted light to the appropriate light group
+		if (!Spectrum_IsBlack(connectionEmission) && sampleResult)
+			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
+				MATERIALS_PARAM), connectionEmission);
+
+//		if (t > 0.f) {
+//			// There was a volume scatter event
+//
+//			// I have to set RayHit fields even if there wasn't a real
+//			// ray hit
+//			rayHit->t = t;
+//			// This is a trick in order to have RayHit::Miss() return
+//			// false. I assume 0xfffffffeu will trigger a memory fault if
+//			// used (and the bug will be noticed)
+//			rayHit->meshIndex = 0xfffffffeu;
+//
+//			bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
+//			volInfo->SetScatteredStart(true);
+//
+//			return true;
+//		}
+	}
+#endif
+
+	if (hit) {
+		// Check if the volume priority system tells me to continue to trace the ray
+		bool continueToTrace =
+#if defined(PARAM_HAS_VOLUMES)
+			PathVolumeInfo_ContinueToTrace(volInfo, bsdf
+				MATERIALS_PARAM);
+#else
+		false;
+#endif
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+		// Check if it is a pass through point
+		if (!continueToTrace) {
+			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
+				MATERIALS_PARAM);
+			if (!Spectrum_IsBlack(passThroughTrans)) {
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+				VSTORE3F(VLOAD3F(pathThroughput->c) * passThroughTrans, pathThroughput->c);
+#else
+				*pathThroughput *= passThroughTrans;
+#endif
+				// It is a pass through point, continue to trace the ray
+				continueToTrace = true;
+			}
+		}
+#endif
+
+		if (continueToTrace) {
+#if defined(PARAM_HAS_VOLUMES)
+			// Update volume information
+			const BSDFEvent eventTypes = BSDF_GetEventTypes(bsdf
+						MATERIALS_PARAM);
+			PathVolumeInfo_Update(volInfo, eventTypes, bsdf
+					MATERIALS_PARAM);
+#endif
+
+			// It is a transparent material, continue to trace the ray
+			ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
+
+			// A safety check
+			if (ray->mint >= ray->maxt)
+				return false;
+			else
+				return true;
+		} else
+			return false;
+	} else {
+		// Nothing was hit, stop tracing the ray
+		return false;
+	}
+}
