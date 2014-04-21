@@ -276,11 +276,11 @@ typedef struct {
 	uint depth, diffuseDepth, glossyDepth, specularDepth;
 } PathDepthInfo;
 
-void PathDepthInfo_Init(PathDepthInfo *depthInfo, const uint val) {
-	depthInfo->depth = val;
-	depthInfo->diffuseDepth = val;
-	depthInfo->glossyDepth = val;
-	depthInfo->specularDepth = val;
+void PathDepthInfo_Init(PathDepthInfo *depthInfo) {
+	depthInfo->depth = 0;
+	depthInfo->diffuseDepth = 0;
+	depthInfo->glossyDepth = 0;
+	depthInfo->specularDepth = 0;
 }
 
 void PathDepthInfo_IncDepths(PathDepthInfo *depthInfo, const BSDFEvent event) {
@@ -293,11 +293,17 @@ void PathDepthInfo_IncDepths(PathDepthInfo *depthInfo, const BSDFEvent event) {
 		++(depthInfo->specularDepth);
 }
 
-bool PathDepthInfo_CheckDepths(PathDepthInfo *depthInfo) {
+bool PathDepthInfo_CheckDepths(const PathDepthInfo *depthInfo) {
 	return ((depthInfo->depth <= PARAM_DEPTH_MAX) &&
 			(depthInfo->diffuseDepth <= PARAM_DEPTH_DIFFUSE_MAX) &&
 			(depthInfo->glossyDepth <= PARAM_DEPTH_GLOSSY_MAX) &&
 			(depthInfo->specularDepth <= PARAM_DEPTH_SPECULAR_MAX));
+}
+
+bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
+	return ((component & DIFFUSE) && (PARAM_DEPTH_DIFFUSE_MAX > 0)) ||
+			((component & GLOSSY) && (PARAM_DEPTH_GLOSSY_MAX > 0)) ||
+			((component & SPECULAR) && (PARAM_DEPTH_SPECULAR_MAX > 0));
 }
 
 //------------------------------------------------------------------------------
@@ -341,15 +347,107 @@ void GenerateCameraRay(
 			);	
 }
 
+//------------------------------------------------------------------------------
+
+uint BIASPATHOCL_Scene_Intersect(
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *volInfo,
+		__global HitPoint *tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThrough,
+#endif
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray,
+#if !defined(BSDF_INIT_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		RayHit *rayHit,
+		__global BSDF *bsdf,
+		float3 *pathThroughput,
+		__global SampleResult *sampleResult,
+		// BSDF_Init parameters
+		__global Mesh *meshDescs,
+		__global uint *meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global uint *meshTriLightDefsOffset,
+#endif
+		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+		__global UV *vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+		__global Spectrum *vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+		__global float *vertAlphas,
+#endif
+		__global Triangle *triangles
+		MATERIALS_PARAM_DECL
+		// Accelerator_Intersect parameters
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		) {
+	uint tracedRaysCount = 0;
+
+	do {
+		Accelerator_Intersect(ray, rayHit
+			ACCELERATOR_INTERSECT_PARAM);
+		++tracedRaysCount;
+	} while(
+		Scene_Intersect(
+#if defined(PARAM_HAS_VOLUMES)
+			volInfo,
+			tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+			passThrough,
+#endif
+			ray, rayHit, bsdf,
+			pathThroughput,
+			sampleResult,
+			// BSDF_Init parameters
+			meshDescs,
+			meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+			meshTriLightDefsOffset,
+#endif
+			vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+			vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+			vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+			vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+			vertAlphas,
+#endif
+			triangles
+			MATERIALS_PARAM
+			)
+		);
+
+	return tracedRaysCount;
+}
+
+//------------------------------------------------------------------------------
+// Direct light sampling
+//------------------------------------------------------------------------------
+
 #if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
 		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum *pathThroughput,
+		const float3 pathThroughput,
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
-	const float3 throughput = VLOAD3F(&pathThroughput->c[0]);
-
 	for (uint i = 0; i < envLightCount; ++i) {
 		__global LightSource *light = &lights[envLightIndices[i]];
 
@@ -362,7 +460,7 @@ void DirectHitInfiniteLight(
 				// MIS between BSDF sampling and direct light sampling
 				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, light->lightSceneIndex);
 				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-				const float3 radiance = weight * throughput * lightRadiance;
+				const float3 radiance = weight * pathThroughput * lightRadiance;
 
 				SampleResult_AddEmission(sampleResult, light->lightID, radiance);
 			}
@@ -374,7 +472,7 @@ void DirectHitInfiniteLight(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
 		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
+		const float3 pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	if (sampleResult->firstPathVertex || (lights[bsdf->triangleLightSourceIndex].visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
@@ -394,7 +492,7 @@ void DirectHitFiniteLight(
 				// MIS between BSDF sampling and direct light sampling
 				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 			}
-			const float3 lightRadiance = weight * VLOAD3F(&pathThroughput->c[0]) * emittedRadiance;
+			const float3 lightRadiance = weight * pathThroughput * emittedRadiance;
 
 			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
 					MATERIALS_PARAM), lightRadiance);
@@ -403,7 +501,7 @@ void DirectHitFiniteLight(
 }
 #endif
 
-bool DirectLightSampling(
+bool DirectLightSamplingInit(
 		__global LightSource *light,
 		const float lightPickPdf,
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -419,8 +517,8 @@ bool DirectLightSampling(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
-		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		const float3 pathThroughput, __global BSDF *bsdf,
+		Ray *shadowRay, float3 *radiance, uint *ID
 		LIGHTS_PARAM_DECL) {
 	float3 lightRayDir;
 	float distance, directPdfW;
@@ -455,19 +553,20 @@ bool DirectLightSampling(
 			const float factor = 1.f / directLightSamplingPdfW;
 
 			// MIS between direct light sampling and BSDF sampling
+			//
 			// Note: applying MIS to the direct light of the last path vertex (when we
 			// hit the max. path depth) is not correct because the light source
 			// can be sampled only here and not with the next path vertex. The
 			// value of weight should be 1 in that case. However, because of different
-			// max. depths for diffuse, glossy and specular, i can not really know
+			// max. depths for diffuse, glossy and specular, I can not really know
 			// if I'm on the last path vertex or not.
 			//
 			// For the moment, I'm just ignoring this error.
 			const float weight = Light_IsEnvOrIntersectable(light) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			VSTORE3F((weight * factor) * VLOAD3F(&pathThroughput->c[0]) * bsdfEval * lightRadiance, &radiance->c[0]);
-			*ID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+			*radiance = (weight * factor) * pathThroughput * bsdfEval * lightRadiance;
+			*ID = light->lightID;
 
 			// Setup the shadow ray
 			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
@@ -484,7 +583,7 @@ bool DirectLightSampling(
 	return false;
 }
 
-bool DirectLightSampling_ONE(
+bool DirectLightSamplingInit_ONE(
 		Seed *seed,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
@@ -495,15 +594,15 @@ bool DirectLightSampling_ONE(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
 #endif
-		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+		const float3 pathThroughput, __global BSDF *bsdf,
 		__global SampleResult *sampleResult,
-		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		Ray *shadowRay, float3 *radiance, uint *ID
 		LIGHTS_PARAM_DECL) {
 	// Pick a light source to sample
 	float lightPickPdf;
 	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
 
-	const bool illuminated = DirectLightSampling(
+	const bool illuminated = DirectLightSamplingInit(
 		&lights[lightIndex],
 		lightPickPdf,
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -531,41 +630,176 @@ bool DirectLightSampling_ONE(
 	return illuminated;
 }
 
-#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
-bool DirectLightSampling_ALL(
-		__global uint *currentLightIndex,
-		__global uint *currentLightSampleIndex,
+uint DirectLightSampling_ONE(
 		Seed *seed,
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *volInfo,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+		__global HitPoint *tmpHitPoint,
+#endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
+		const float3 pathThroughput,
+		__global BSDF *bsdf, __global BSDF *directLightBSDF,
+		__global SampleResult *sampleResult,
+		// BSDF_Init parameters
+		__global Mesh *meshDescs,
+		__global uint *meshMats,
+		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+		__global UV *vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+		__global Spectrum *vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+		__global float *vertAlphas,
+#endif
+		__global Triangle *triangles
+		// Accelerator_Intersect parameters
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		// Light related parameters
+		LIGHTS_PARAM_DECL) {
+	// ONE direct light sampling strategy
+
+	Ray shadowRay;
+	float3 lightRadiance;
+	uint lightID;
+	const bool illuminated = DirectLightSamplingInit_ONE(
+		seed,
+#if defined(PARAM_HAS_INFINITELIGHTS)
+		worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+#endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		tmpHitPoint,
+#endif
+		pathThroughput,
+		bsdf,
+		sampleResult,
+		&shadowRay, &lightRadiance, &lightID
+		LIGHTS_PARAM);
+
+	uint tracedRaysCount = 0;
+	if (illuminated) {
+		// Trace the shadow ray
+
+		float3 directLightThroughput = WHITE;
+		RayHit shadowRayHit;
+		tracedRaysCount += BIASPATHOCL_Scene_Intersect(
+#if defined(PARAM_HAS_VOLUMES)
+				volInfo,
+				tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+				Rnd_FloatValue(seed),
+#endif
+				&shadowRay, &shadowRayHit,
+				directLightBSDF,
+				&directLightThroughput,
+				sampleResult,
+				// BSDF_Init parameters
+				meshDescs,
+				meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+				meshTriLightDefsOffset,
+#endif
+				vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+				vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+				vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+				vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+				vertAlphas,
+#endif
+				triangles
+				MATERIALS_PARAM
+				// Accelerator_Intersect parameters
+				ACCELERATOR_INTERSECT_PARAM
+				);
+
+		if (shadowRayHit.meshIndex == NULL_INDEX) {
+			// Nothing was hit, the light source is visible
+			// TODO: fix PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK and PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
+			SampleResult_AddDirectLight(sampleResult, lightID,
+					BSDF_GetEventTypes(directLightBSDF
+						MATERIALS_PARAM), directLightThroughput * lightRadiance);
+		}
+	}
+	
+	return tracedRaysCount;
+}
+
+#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
+uint DirectLightSampling_ALL(
+		Seed *seed,
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *volInfo,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
 		__global HitPoint *tmpHitPoint,
 #endif
-		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+#if defined(PARAM_HAS_INFINITELIGHTS)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+		const float3 pathThroughput,
+		__global BSDF *bsdf, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
-		Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		// BSDF_Init parameters
+		__global Mesh *meshDescs,
+		__global uint *meshMats,
+		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+		__global UV *vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+		__global Spectrum *vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+		__global float *vertAlphas,
+#endif
+		__global Triangle *triangles
+		// Accelerator_Intersect parameters
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		// Light related parameters
 		LIGHTS_PARAM_DECL) {
-	for (; *currentLightIndex < PARAM_LIGHT_COUNT; ++(*currentLightIndex)) {
-		const int lightSamplesCount = lights[*currentLightIndex].samples;
+	uint tracedRaysCount = 0;
+
+	for (uint currentLightIndex = 0; currentLightIndex < PARAM_LIGHT_COUNT; ++currentLightIndex) {
+		const int lightSamplesCount = lights[currentLightIndex].samples;
 		const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
 		const uint sampleCount2 = sampleCount * sampleCount;
 
-		for (; *currentLightSampleIndex < sampleCount2; ++(*currentLightSampleIndex)) {
-			//if (get_global_id(0) == 0)
-			//	printf("DirectLightSampling_ALL() ==> currentLightIndex: %d  currentLightSampleIndex: %d\n", *currentLightIndex, *currentLightSampleIndex);
-
+		const float scaleFactor = 1.f / sampleCount2;
+		for (uint currentLightSampleIndex = 0; currentLightSampleIndex < sampleCount2; ++currentLightSampleIndex) {
 			float u0, u1;
 			SampleGrid(seed, sampleCount,
-					(*currentLightSampleIndex) % sampleCount, (*currentLightSampleIndex) / sampleCount,
+					currentLightSampleIndex % sampleCount, currentLightSampleIndex / sampleCount,
 					&u0, &u1);
 
-			const float scaleFactor = 1.f / sampleCount2;
-			const bool illuminated = DirectLightSampling(
-				&lights[*currentLightIndex],
+			Ray shadowRay;
+			float3 lightRadiance;
+			uint lightID;
+			const bool illuminated = DirectLightSamplingInit(
+				&lights[currentLightIndex],
 				1.f,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX,
@@ -581,23 +815,410 @@ bool DirectLightSampling_ALL(
 				Rnd_FloatValue(seed),
 #endif
 				pathThroughput, bsdf,
-				shadowRay, radiance, ID
+				&shadowRay, &lightRadiance, &lightID
 				LIGHTS_PARAM);
 
 			if (illuminated) {
-				VSTORE3F(scaleFactor * VLOAD3F(&radiance->c[0]), &radiance->c[0]);
-				return true;
-			}
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-			else {
-				sampleResult->directShadowMask += scaleFactor;
-			}
-#endif
-		}
+				// Trace the shadow ray
 
-		*currentLightSampleIndex = 0;
+				float3 directLightThroughput = WHITE;
+				RayHit shadowRayHit;
+				tracedRaysCount += BIASPATHOCL_Scene_Intersect(
+#if defined(PARAM_HAS_VOLUMES)
+						volInfo,
+						tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+						Rnd_FloatValue(seed),
+#endif
+						&shadowRay, &shadowRayHit,
+						directLightBSDF,
+						&directLightThroughput,
+						sampleResult,
+						// BSDF_Init parameters
+						meshDescs,
+						meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+						meshTriLightDefsOffset,
+#endif
+						vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+						vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+						vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+						vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+						vertAlphas,
+#endif
+						triangles
+						MATERIALS_PARAM
+						// Accelerator_Intersect parameters
+						ACCELERATOR_INTERSECT_PARAM
+						);
+
+				if (shadowRayHit.meshIndex == NULL_INDEX) {
+					// Nothing was hit, the light source is visible
+					// TODO: fix PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK and PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
+					SampleResult_AddDirectLight(sampleResult, lightID,
+							BSDF_GetEventTypes(directLightBSDF
+								MATERIALS_PARAM),
+							scaleFactor * directLightThroughput * lightRadiance);
+				}
+			}
+		}
 	}
 
-	return false;
+	return tracedRaysCount;
 }
 #endif
+
+//------------------------------------------------------------------------------
+// Indirect light sampling
+//------------------------------------------------------------------------------
+
+uint ContinueTracePath(
+		Seed *seed,
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *volInfoPathVertexN,
+		__global PathVolumeInfo *directLightVolInfo,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+		__global HitPoint *tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHTS)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+		PathDepthInfo *depthInfo,
+		Ray *ray,
+		float3 pathThroughput,
+		BSDFEvent lastBSDFEvent, float lastPdfW,
+		__global BSDF *bsdfPathVertexN, __global BSDF *directLightBSDF,
+		__global SampleResult *sampleResult,
+		// BSDF_Init parameters
+		__global Mesh *meshDescs,
+		__global uint *meshMats,
+		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+		__global UV *vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+		__global Spectrum *vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+		__global float *vertAlphas,
+#endif
+		__global Triangle *triangles
+		// Accelerator_Intersect parameters
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		// Light related parameters
+		LIGHTS_PARAM_DECL) {
+	uint tracedRaysCount = 0;
+
+	for (;;) {
+		//----------------------------------------------------------------------
+		// Trace the ray
+		//----------------------------------------------------------------------
+
+		RayHit rayHit;
+		tracedRaysCount += BIASPATHOCL_Scene_Intersect(
+#if defined(PARAM_HAS_VOLUMES)
+			volInfoPathVertexN,
+			tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+			Rnd_FloatValue(seed),
+#endif
+			ray, &rayHit,
+			bsdfPathVertexN,
+			&pathThroughput,
+			sampleResult,
+			// BSDF_Init parameters
+			meshDescs,
+			meshMats,
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+			meshTriLightDefsOffset,
+#endif
+			vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+			vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+			vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+			vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+			vertAlphas,
+#endif
+			triangles
+			MATERIALS_PARAM
+			// Accelerator_Intersect parameters
+			ACCELERATOR_INTERSECT_PARAM);
+		
+		if (rayHit.meshIndex == NULL_INDEX) {
+			// Nothing was hit, look for env. lights
+
+#if defined(PARAM_HAS_ENVLIGHTS)
+			// Add environmental lights radiance
+			const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+			DirectHitInfiniteLight(
+					lastBSDFEvent,
+					pathThroughput,
+					-rayDir, lastPdfW,
+					sampleResult
+					LIGHTS_PARAM);
+#endif
+
+			break;
+		}
+
+		// Something was hit
+
+		// Check if it is visible in indirect paths
+		if (!(mats[bsdfPathVertexN->materialIndex].visibility &
+				(sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR))))
+			break;
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		// Check if it is a light source (note: I can hit only triangle area light sources)
+		if (BSDF_IsLightSource(bsdfPathVertexN) && (rayHit.t > PARAM_NEAR_START_LIGHT)) {
+			DirectHitFiniteLight(lastBSDFEvent,
+					pathThroughput,
+					rayHit.t, bsdfPathVertexN, lastPdfW,
+					sampleResult
+					LIGHTS_PARAM);
+		}
+#endif
+
+		// Check the path depth
+		// NOTE: before direct Light sampling in order to have a correct MIS
+		if (!PathDepthInfo_CheckDepths(depthInfo))
+			break;
+
+		//------------------------------------------------------------------
+		// Direct light sampling
+		//------------------------------------------------------------------
+
+		// Only if it is not a SPECULAR BSDF
+		if (!BSDF_IsDelta(bsdfPathVertexN
+				MATERIALS_PARAM)) {
+#if defined(PARAM_HAS_VOLUMES)
+			// I need to work on a copy of volume information of the path vertex
+			*directLightVolInfo = *volInfoPathVertexN;
+#endif
+
+			tracedRaysCount += DirectLightSampling_ONE(
+				seed,
+#if defined(PARAM_HAS_VOLUMES)
+				directLightVolInfo,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+				tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHTS)
+				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+#endif
+				pathThroughput,
+				bsdfPathVertexN, directLightBSDF,
+				sampleResult,
+				// BSDF_Init parameters
+				meshDescs,
+				meshMats,
+				vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+				vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+				vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+				vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+				vertAlphas,
+#endif
+				triangles
+				// Accelerator_Intersect parameters
+				ACCELERATOR_INTERSECT_PARAM
+				// Light related parameters
+				LIGHTS_PARAM);
+		}
+
+		//------------------------------------------------------------------
+		// Build the next path vertex ray
+		//------------------------------------------------------------------
+
+		float3 sampledDir;
+		float cosSampledDir;
+
+		const float3 bsdfSample = BSDF_Sample(bsdfPathVertexN,
+			Rnd_FloatValue(seed),
+			Rnd_FloatValue(seed),
+			&sampledDir, &lastPdfW, &cosSampledDir, &lastBSDFEvent,
+			ALL
+			MATERIALS_PARAM);
+
+		if (Spectrum_IsBlack(bsdfSample))
+			break;
+
+		// Increment path depth informations
+		PathDepthInfo_IncDepths(depthInfo, lastBSDFEvent);
+
+		// Update volume information
+#if defined(PARAM_HAS_VOLUMES)
+		PathVolumeInfo_Update(volInfoPathVertexN, lastBSDFEvent, bsdfPathVertexN
+				MATERIALS_PARAM);
+#endif
+
+		// Continue to trace the path
+		pathThroughput *= bsdfSample *
+			((lastBSDFEvent & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE));
+
+		Ray_Init2_Private(ray, VLOAD3F(&bsdfPathVertexN->hitPoint.p.x), sampledDir);
+	}
+
+	return tracedRaysCount;
+}
+
+uint SampleComponent(
+		Seed *seed,
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *volInfoPathVertex1,
+		__global PathVolumeInfo *volInfoPathVertexN,
+		__global PathVolumeInfo *directLightVolInfo,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+		__global HitPoint *tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHTS)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+		const BSDFEvent requestedEventTypes,
+		const uint size,
+		const float3 throughputPathVertex1,
+		__global BSDF *bsdfPathVertex1, __global BSDF *bsdfPathVertexN,
+		__global BSDF *directLightBSDF,
+		__global SampleResult *sampleResult,
+		// BSDF_Init parameters
+		__global Mesh *meshDescs,
+		__global uint *meshMats,
+		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+		__global UV *vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+		__global Spectrum *vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+		__global float *vertAlphas,
+#endif
+		__global Triangle *triangles
+		// Accelerator_Intersect parameters
+		ACCELERATOR_INTERSECT_PARAM_DECL
+		// Light related parameters
+		LIGHTS_PARAM_DECL) {
+	uint tracedRaysCount = 0;
+
+	const uint sampleCount = size * size;
+	const float scaleFactor = 1.f / sampleCount;
+	for (uint currentBSDFSampleIndex = 0; currentBSDFSampleIndex < sampleCount; ++currentBSDFSampleIndex) {
+		float u0, u1;
+		SampleGrid(seed, size,
+			currentBSDFSampleIndex % size, currentBSDFSampleIndex / size,
+			&u0, &u1);
+
+		// Sample the BSDF on the first path vertex
+		float3 sampledDir;
+		float pdfW, cosSampledDir;
+		BSDFEvent event;
+
+		const float3 bsdfSample = BSDF_Sample(bsdfPathVertex1,
+			u0,
+			u1,
+			&sampledDir, &pdfW, &cosSampledDir, &event,
+			requestedEventTypes | REFLECT | TRANSMIT
+			MATERIALS_PARAM);
+
+		if (!Spectrum_IsBlack(bsdfSample)) {
+			PathDepthInfo depthInfo;
+			PathDepthInfo_Init(&depthInfo);
+			PathDepthInfo_IncDepths(&depthInfo, event);
+
+			// Update information about the first path BSDF 
+			sampleResult->firstPathVertexEvent = event;
+
+			// Update volume information
+#if defined(PARAM_HAS_VOLUMES)
+			// I need to work on a copy of volume information of the first path vertex
+			*volInfoPathVertexN = *volInfoPathVertex1;
+			PathVolumeInfo_Update(volInfoPathVertexN, event, bsdfPathVertexN
+					MATERIALS_PARAM);
+#endif
+
+			// Continue to trace the path
+			const float3 continuePathThroughput = throughputPathVertex1 * bsdfSample *
+				(scaleFactor * ((event & SPECULAR) ? 1.f : min(1.f, pdfW / PARAM_PDF_CLAMP_VALUE)));
+
+			Ray continueRay;
+			Ray_Init2_Private(&continueRay, VLOAD3F(&bsdfPathVertex1->hitPoint.p.x), sampledDir);
+
+			tracedRaysCount += ContinueTracePath(
+					seed,
+#if defined(PARAM_HAS_VOLUMES)
+					volInfoPathVertexN,
+					directLightVolInfo,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+					tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHTS)
+					worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+#endif
+					&depthInfo, &continueRay,
+					continuePathThroughput,
+					event, pdfW,
+					bsdfPathVertexN, directLightBSDF,
+					sampleResult,
+					// BSDF_Init parameters
+					meshDescs,
+					meshMats,
+					vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+					vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+					vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+					vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+					vertAlphas,
+#endif
+					triangles
+					// Accelerator_Intersect parameters
+					ACCELERATOR_INTERSECT_PARAM
+					// Light related parameters
+					LIGHTS_PARAM);
+		}
+	}
+
+	return tracedRaysCount;
+}

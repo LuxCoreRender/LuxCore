@@ -168,12 +168,13 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 
 	const size_t GPUTaskSize =
 		// Add Seed memory size
-		sizeof(slg::ocl::Seed) +
-	
-		// Spectrum (throughputPathVertex1) size
-		sizeof(slg::ocl::Spectrum) +
+		sizeof(slg::ocl::Seed) +	
 		// BSDF (bsdfPathVertex1) size
-		GetOpenCLBSDFSize();
+		GetOpenCLBSDFSize() +
+		// PathVolumeInfo (volInfoPathVertex1) size
+		(engine->compiledScene->HasVolumes() ? sizeof(slg::ocl::PathVolumeInfo) : 0) +
+		// HitPoint (tmpHitPoint) size
+		GetOpenCLHitPointSize();
 	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] BSDF size: " << GetOpenCLBSDFSize() << "bytes");
 	//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] HitPoint size: " << GetOpenCLHitPointSize() << "bytes");
 	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask size: " << GPUTaskSize << "bytes");
@@ -181,35 +182,20 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 	AllocOCLBufferRW(&tasksBuff, GPUTaskSize * engine->taskCount, "GPUTask");
 
 	const size_t GPUTaskDirectLightSize =
-		// u_int (lightIndex and lightSampleIndex) size
-		((engine->lightSamplingStrategyONE) ? 0 : 2 * sizeof(u_int)) +
-
-		// Spectrum (directLightThroughput) size
-		sizeof(slg::ocl::Spectrum) +
 		// BSDF (directLightBSDF) size
 		GetOpenCLBSDFSize() +
-		// HitPoint (directLightHitPoint) size
-		GetOpenCLHitPointSize() +
-
-		// Spectrum (lightRadiance) size
-		sizeof(slg::ocl::Spectrum) +
-		// u_int (lightID) size
-		sizeof(u_int);
-	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask DirectLight size: " << GPUTaskSize << "bytes");
+		// PathVolumeInfo (directLightVolInfo) size
+		(engine->compiledScene->HasVolumes() ? sizeof(slg::ocl::PathVolumeInfo) : 0);
+	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask DirectLight size: " << GPUTaskDirectLightSize << "bytes");
 
 	AllocOCLBufferRW(&tasksDirectLightBuff, GPUTaskDirectLightSize * engine->taskCount, "GPUTask DirectLight");
 
 	const size_t GPUTaskPathVertexNSize =
-		// BSDFEvent (vertex1SampleComponent) size
-		sizeof(BSDFEvent) +
-		// u_int (vertex1SampleIndex) size
-		sizeof(u_int) +
-
-		// Spectrum (throughputPathVertexN) size
-		sizeof(slg::ocl::Spectrum) +
 		// BSDF (bsdfPathVertexN) size
-		GetOpenCLBSDFSize();
-	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask PathVertexN size: " << GPUTaskSize << "bytes");
+		GetOpenCLBSDFSize() +
+		// PathVolumeInfo (volInfoPathVertexN) size
+		(engine->compiledScene->HasVolumes() ? sizeof(slg::ocl::PathVolumeInfo) : 0);
+	SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] GPUTask PathVertexN size: " << GPUTaskPathVertexNSize << "bytes");
 
 	AllocOCLBufferRW(&tasksPathVertexNBuff, GPUTaskPathVertexNSize * engine->taskCount, "GPUTask PathVertexN");
 
