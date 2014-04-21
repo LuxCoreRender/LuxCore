@@ -183,7 +183,7 @@ bool Scene_Intersect(
 				, passThrough
 #endif
 #if defined(PARAM_HAS_VOLUMES)
-				, rayVolumeIndex
+				, volInfo
 #endif
 				MATERIALS_PARAM
 				);

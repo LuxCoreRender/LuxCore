@@ -909,6 +909,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
 			slg::ocl::KernelSource_material_funcs <<
+			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
+			slg::ocl::KernelSource_volume_funcs <<
+			slg::ocl::KernelSource_volumeinfo_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
 			slg::ocl::KernelSource_light_funcs <<
 			slg::ocl::KernelSource_filter_funcs <<
@@ -916,7 +919,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
 			slg::ocl::KernelSource_scene_funcs <<
-			slg::ocl::KernelSource_volume_funcs <<
 			// PathOCL Funcs
 			slg::ocl::KernelSource_pathoclbase_funcs;
 

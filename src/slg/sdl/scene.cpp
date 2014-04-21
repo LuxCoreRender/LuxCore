@@ -1722,7 +1722,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {
-			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, rayVolume);
+			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, volInfo);
 			rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
 			ray->maxt = rayHit->t;
 		} else if (!rayVolume) {

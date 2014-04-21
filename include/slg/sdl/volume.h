@@ -106,14 +106,22 @@ public:
 	const Volume *GetCurrentVolume() const { return currentVolume; }
 	const u_int GetListSize() const { return volumeListSize; }
 
-	void AddVolume(const Volume *v);
-	void RemoveVolume(const Volume *v);
+	void AddVolume(const Volume *vol);
+	void RemoveVolume(const Volume *vol);
 
-	void SetScatteredStart(const bool v) { scatteredStart = v; }
+	const Volume *SimulateRemoveVolume(const Volume *vol) const;
+	const Volume *SimulateAddVolume(const Volume *vol) const;
+
+	void SetScatteredStart(const bool vol) { scatteredStart = vol; }
 	bool IsScatteredStart() const { return scatteredStart; }
 	
 	void Update(const BSDFEvent eventType, const BSDF &bsdf);
 	bool ContinueToTrace(const BSDF &bsdf) const;
+
+	void SetHitPointVolumes(HitPoint &hitPoint,
+		const Volume *matInteriorVolume,
+		const Volume *matExteriorVolume,
+		const Volume *defaultWorldVolume) const;
 
 private:
 	static bool CompareVolumePriorities(const Volume *vol1, const Volume *vol2);

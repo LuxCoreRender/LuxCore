@@ -24,6 +24,7 @@
 #if !defined(BSDF_INIT_PARAM_RAYHIT_MEM_SPACE)
 #define BSDF_INIT_PARAM_RAYHIT_MEM_SPACE __global
 #endif
+
 void BSDF_Init(
 		__global BSDF *bsdf,
 		//const bool fromL,
@@ -58,7 +59,7 @@ void BSDF_Init(
 		, const float u0
 #endif
 #if defined(PARAM_HAS_VOLUMES)
-		, const uint currentVolumeIndex
+		, __global PathVolumeInfo *volInfo
 #endif
 		MATERIALS_PARAM_DECL
 		) {
@@ -122,63 +123,22 @@ void BSDF_Init(
 	//--------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-	const bool intoObject = (dot(rayDir, geometryN) < 0.f);
-	bsdf->hitPoint.intoObject = intoObject;
+	bsdf->hitPoint.intoObject = (dot(rayDir, geometryN) < 0.f);
 
-	__global Material *mat = &mats[matIndex];
-	if (intoObject) {
-		// From outside to inside the object
-
-		bsdf->hitPoint.interiorVolumeIndex = Material_GetInteriorVolume(mat, &bsdf->hitPoint
+	PathVolumeInfo_SetHitPointVolumes(
+			volInfo,
+			&bsdf->hitPoint,
+			Material_GetInteriorVolume(&mats[matIndex], &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, u0
 #endif
-				);
-
-		if (currentVolumeIndex == NULL_INDEX)
-			bsdf->hitPoint.exteriorVolumeIndex = Material_GetExteriorVolume(mat, &bsdf->hitPoint
+			),
+			Material_GetExteriorVolume(&mats[matIndex], &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, u0
 #endif
-			);
-		else {
-			// if (!material->GetExteriorVolume()) there may be conflict here
-			// between the material definition and the currentVolume value.
-			// The currentVolume value wins.
-			bsdf->hitPoint.exteriorVolumeIndex = currentVolumeIndex;
-		}
-		
-		if (bsdf->hitPoint.exteriorVolumeIndex == NULL_INDEX) {
-			// No volume information, I use the default volume
-			bsdf->hitPoint.exteriorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
-		}
-	} else {
-		// From inside to outside the object
-
-		if (currentVolumeIndex == NULL_INDEX)
-			bsdf->hitPoint.interiorVolumeIndex = Material_GetInteriorVolume(mat, &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-				, u0
-#endif
-				);
-		else {
-			// if (!material->GetInteriorVolume()) there may be conflict here
-			// between the material definition and the currentVolume value.
-			// The currentVolume value wins.
-			bsdf->hitPoint.interiorVolumeIndex = currentVolumeIndex;
-		}
-		
-		if (bsdf->hitPoint.interiorVolumeIndex == NULL_INDEX) {
-			// No volume information, I use the default volume
-			bsdf->hitPoint.interiorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
-		}
-
-		bsdf->hitPoint.exteriorVolumeIndex = Material_GetExteriorVolume(mat, &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-				, u0
-#endif
-				);
-	}
+			)
+			MATERIALS_PARAM);
 #endif
 
 	//--------------------------------------------------------------------------
@@ -424,73 +384,3 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 //	} else
 		return result;
 }
-
-BSDFEvent BSDF_GetEventTypes(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return Material_GetEventTypes(&mats[bsdf->materialIndex]
-			MATERIALS_PARAM);
-}
-
-bool BSDF_IsDelta(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return Material_IsDelta(&mats[bsdf->materialIndex]
-			MATERIALS_PARAM);
-}
-
-uint BSDF_GetMaterialID(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return mats[bsdf->materialIndex].matID;
-}
-
-uint BSDF_GetLightID(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return mats[bsdf->materialIndex].lightID;
-}
-
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-bool BSDF_IsLightSource(__global BSDF *bsdf) {
-	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
-}
-
-float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *directPdfA
-		LIGHTS_PARAM_DECL) {
-	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
-	if (triangleLightSourceIndex == NULL_INDEX)
-		return BLACK;
-	else
-		return IntersectableLight_GetRadiance(&lights[triangleLightSourceIndex],
-				&bsdf->hitPoint, directPdfA
-				LIGHTS_PARAM);
-}
-#endif
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->hitPoint.fixedDir.x));
-
-	return Material_GetPassThroughTransparency(&mats[bsdf->materialIndex],
-			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent
-			MATERIALS_PARAM);
-}
-#endif
-
-#if defined(PARAM_HAS_VOLUMES)
-uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return Material_GetInteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, bsdf->hitPoint.passThroughEvent
-#endif
-			);
-}
-
-uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return Material_GetExteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, bsdf->hitPoint.passThroughEvent
-#endif
-			);
-}
-#endif

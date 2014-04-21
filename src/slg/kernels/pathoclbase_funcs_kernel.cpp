@@ -186,7 +186,7 @@ std::string KernelSource_pathoclbase_funcs =
 "				, passThrough\n"
 "#endif\n"
 "#if defined(PARAM_HAS_VOLUMES)\n"
-"				, rayVolumeIndex\n"
+"				, volInfo\n"
 "#endif\n"
 "				MATERIALS_PARAM\n"
 "				);\n"
