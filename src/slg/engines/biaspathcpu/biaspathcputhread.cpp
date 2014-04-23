@@ -99,7 +99,7 @@ bool BiasPathCPURenderThread::DirectLightSampling(
 				sampleResult->radiancePerPixelNormalized[light->GetID()] += radiance;
 
 				if (sampleResult->firstPathVertex) {
-					if (bsdf.GetEventTypes() & DIFFUSE)
+					if (event & DIFFUSE)
 						sampleResult->directDiffuse += radiance;
 					else
 						sampleResult->directGlossy += radiance;
