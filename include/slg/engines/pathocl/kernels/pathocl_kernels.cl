@@ -222,9 +222,8 @@ void DirectHitFiniteLight(
 		}
 		const float3 lightRadiance = weight * VLOAD3F(pathThroughput->c) * emittedRadiance;
 
-		const uint lightID =  min(BSDF_GetLightID(bsdf
-				MATERIALS_PARAM), PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-		SampleResult_AddEmission(sampleResult, lightID, lightRadiance);
+		SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
+				MATERIALS_PARAM), lightRadiance);
 	}
 }
 #endif
