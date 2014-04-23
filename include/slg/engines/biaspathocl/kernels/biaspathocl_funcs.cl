@@ -517,7 +517,7 @@ bool DirectLightSamplingInit(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		const float3 pathThroughput, __global BSDF *bsdf,
+		const float3 pathThroughput, __global BSDF *bsdf, BSDFEvent *event,
 		Ray *shadowRay, float3 *radiance, uint *ID
 		LIGHTS_PARAM_DECL) {
 	float3 lightRayDir;
@@ -542,10 +542,9 @@ bool DirectLightSamplingInit(
 	const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
 	if (((Spectrum_Y(lightRadiance) * cosThetaToLight / directPdfW) > PARAM_LOW_LIGHT_THREASHOLD) &&
 			(distance > PARAM_NEAR_START_LIGHT)) {
-		BSDFEvent event;
 		float bsdfPdfW;
 		const float3 bsdfEval = BSDF_Evaluate(bsdf,
-				lightRayDir, &event, &bsdfPdfW
+				lightRayDir, event, &bsdfPdfW
 				MATERIALS_PARAM);
 
 		if (!Spectrum_IsBlack(bsdfEval)) {
@@ -581,53 +580,6 @@ bool DirectLightSamplingInit(
 	}
 
 	return false;
-}
-
-bool DirectLightSamplingInit_ONE(
-		Seed *seed,
-#if defined(PARAM_HAS_INFINITELIGHTS)
-		const float worldCenterX,
-		const float worldCenterY,
-		const float worldCenterZ,
-		const float worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		__global HitPoint *tmpHitPoint,
-#endif
-		const float3 pathThroughput, __global BSDF *bsdf,
-		__global SampleResult *sampleResult,
-		Ray *shadowRay, float3 *radiance, uint *ID
-		LIGHTS_PARAM_DECL) {
-	// Pick a light source to sample
-	float lightPickPdf;
-	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
-
-	const bool illuminated = DirectLightSamplingInit(
-		&lights[lightIndex],
-		lightPickPdf,
-#if defined(PARAM_HAS_INFINITELIGHTS)
-		worldCenterX,
-		worldCenterY,
-		worldCenterZ,
-		worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		tmpHitPoint,
-#endif
-		Rnd_FloatValue(seed), Rnd_FloatValue(seed),
-#if defined(PARAM_HAS_PASSTHROUGH)
-		Rnd_FloatValue(seed),
-#endif
-		pathThroughput, bsdf,
-		shadowRay, radiance, ID
-		LIGHTS_PARAM);
-
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	if (sampleResult->firstPathVertex && !illuminated)
-		sampleResult->directShadowMask += 1.f;
-#endif
-
-	return illuminated;
 }
 
 uint DirectLightSampling_ONE(
@@ -670,22 +622,38 @@ uint DirectLightSampling_ONE(
 		LIGHTS_PARAM_DECL) {
 	// ONE direct light sampling strategy
 
+	// Pick a light source to sample
+	float lightPickPdf;
+	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
+
 	Ray shadowRay;
-	float3 lightRadiance;
 	uint lightID;
-	const bool illuminated = DirectLightSamplingInit_ONE(
-		seed,
+	BSDFEvent event;
+	float3 lightRadiance;
+	const bool illuminated = DirectLightSamplingInit(
+		&lights[lightIndex],
+		lightPickPdf,
 #if defined(PARAM_HAS_INFINITELIGHTS)
-		worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+		worldCenterX,
+		worldCenterY,
+		worldCenterZ,
+		worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		tmpHitPoint,
 #endif
-		pathThroughput,
-		bsdf,
-		sampleResult,
+		Rnd_FloatValue(seed), Rnd_FloatValue(seed),
+#if defined(PARAM_HAS_PASSTHROUGH)
+		Rnd_FloatValue(seed),
+#endif
+		pathThroughput, bsdf, &event,
 		&shadowRay, &lightRadiance, &lightID
 		LIGHTS_PARAM);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+	if (sampleResult->firstPathVertex && !illuminated)
+		sampleResult->directShadowMask += 1.f;
+#endif
 
 	uint tracedRaysCount = 0;
 	if (illuminated) {
@@ -733,9 +701,7 @@ uint DirectLightSampling_ONE(
 		if (shadowRayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
 			// TODO: fix PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK and PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
-			SampleResult_AddDirectLight(sampleResult, lightID,
-					BSDF_GetEventTypes(directLightBSDF
-						MATERIALS_PARAM), directLightThroughput * lightRadiance);
+			SampleResult_AddDirectLight(sampleResult, lightID, event, directLightThroughput * lightRadiance);
 		}
 	}
 	
@@ -798,6 +764,7 @@ uint DirectLightSampling_ALL(
 			Ray shadowRay;
 			float3 lightRadiance;
 			uint lightID;
+			BSDFEvent event;
 			const bool illuminated = DirectLightSamplingInit(
 				&lights[currentLightIndex],
 				1.f,
@@ -814,7 +781,7 @@ uint DirectLightSampling_ALL(
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Rnd_FloatValue(seed),
 #endif
-				pathThroughput, bsdf,
+				pathThroughput, bsdf, &event,
 				&shadowRay, &lightRadiance, &lightID
 				LIGHTS_PARAM);
 
@@ -863,10 +830,7 @@ uint DirectLightSampling_ALL(
 				if (shadowRayHit.meshIndex == NULL_INDEX) {
 					// Nothing was hit, the light source is visible
 					// TODO: fix PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK and PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
-					SampleResult_AddDirectLight(sampleResult, lightID,
-							BSDF_GetEventTypes(directLightBSDF
-								MATERIALS_PARAM),
-							scaleFactor * directLightThroughput * lightRadiance);
+					SampleResult_AddDirectLight(sampleResult, lightID, event, scaleFactor * directLightThroughput * lightRadiance);
 				}
 			}
 		}
