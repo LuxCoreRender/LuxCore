@@ -82,13 +82,10 @@ void PathCPURenderThread::DirectLightSampling(
 						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 					const Spectrum radiance = (weight * factor) * pathThroughput * connectionThroughput * lightRadiance * bsdfEval;
-					sampleResult->AddDirectLight(light->GetID(), event, radiance);
+					sampleResult->AddDirectLight(light->GetID(), event, radiance, 1.f);
 				}
 			}
 		}
-	} else {
-		if (sampleResult->firstPathVertex)
-			sampleResult->directShadowMask = 0.f;
 	}
 }
 
@@ -241,8 +238,6 @@ void PathCPURenderThread::RenderFunc() {
 							std::numeric_limits<float>::infinity(),
 							std::numeric_limits<float>::infinity());
 					sampleResult.materialID = std::numeric_limits<u_int>::max();
-					sampleResult.directShadowMask = 0.f;
-					sampleResult.indirectShadowMask = 0.f;
 					sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
 							std::numeric_limits<float>::infinity());
 				}

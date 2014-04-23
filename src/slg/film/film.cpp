@@ -1553,18 +1553,20 @@ void SampleResult::AddEmission(const u_int lightID, const Spectrum &radiance) {
 }
 
 void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
-		const luxrays::Spectrum &radiance) {
+		const luxrays::Spectrum &radiance, const float lightScale) {
 	radiancePerPixelNormalized[lightID] += radiance;
 
 	if (firstPathVertex) {
-		directShadowMask = 0.f;
+		// directShadowMask is supposed to be initialized to 1.0
+		directShadowMask = Max(0.f, directShadowMask - lightScale);
 
 		if (bsdfEvent & DIFFUSE)
 			directDiffuse += radiance;
 		else
 			directGlossy += radiance;
 	} else {
-		indirectShadowMask = 0.f;
+		// indirectShadowMask is supposed to be initialized to 1.0
+		indirectShadowMask = Max(0.f, indirectShadowMask - lightScale);
 
 		if (firstPathVertexEvent & DIFFUSE)
 			indirectDiffuse += radiance;

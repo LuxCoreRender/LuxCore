@@ -650,11 +650,6 @@ uint DirectLightSampling_ONE(
 		&shadowRay, &lightRadiance, &lightID
 		LIGHTS_PARAM);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	if (sampleResult->firstPathVertex && !illuminated)
-		sampleResult->directShadowMask += 1.f;
-#endif
-
 	uint tracedRaysCount = 0;
 	if (illuminated) {
 		// Trace the shadow ray
@@ -700,8 +695,7 @@ uint DirectLightSampling_ONE(
 
 		if (shadowRayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
-			// TODO: fix PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK and PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
-			SampleResult_AddDirectLight(sampleResult, lightID, event, directLightThroughput * lightRadiance);
+			SampleResult_AddDirectLight(sampleResult, lightID, event, directLightThroughput * lightRadiance, 1.f);
 		}
 	}
 	
@@ -829,8 +823,8 @@ uint DirectLightSampling_ALL(
 
 				if (shadowRayHit.meshIndex == NULL_INDEX) {
 					// Nothing was hit, the light source is visible
-					// TODO: fix PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK and PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
-					SampleResult_AddDirectLight(sampleResult, lightID, event, scaleFactor * directLightThroughput * lightRadiance);
+					SampleResult_AddDirectLight(sampleResult, lightID, event,
+							scaleFactor * directLightThroughput * lightRadiance, scaleFactor);
 				}
 			}
 		}
@@ -1102,7 +1096,14 @@ uint SampleComponent(
 
 	const uint sampleCount = size * size;
 	const float scaleFactor = 1.f / sampleCount;
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+	float indirectShadowMask = 0.f;
+#endif
 	for (uint currentBSDFSampleIndex = 0; currentBSDFSampleIndex < sampleCount; ++currentBSDFSampleIndex) {
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+		sampleResult->indirectShadowMask = 1.f;
+#endif
+
 		float u0, u1;
 		SampleGrid(seed, size,
 			currentBSDFSampleIndex % size, currentBSDFSampleIndex / size,
@@ -1182,7 +1183,17 @@ uint SampleComponent(
 					// Light related parameters
 					LIGHTS_PARAM);
 		}
+
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+		// sampleResult->indirectShadowMask requires special handling: the
+		// end result must be the average of all path results
+		indirectShadowMask += scaleFactor * sampleResult->indirectShadowMask;
+#endif
 	}
+
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+	sampleResult->indirectShadowMask = indirectShadowMask;
+#endif
 
 	return tracedRaysCount;
 }

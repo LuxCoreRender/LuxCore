@@ -72,12 +72,12 @@ void SampleResult_Init(__global SampleResult *sampleResult) {
 }
 
 void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint lightID,
-		const BSDFEvent bsdfEvent, const float3 radiance) {
+		const BSDFEvent bsdfEvent, const float3 radiance, const float lightScale) {
 	VADD3F(sampleResult->radiancePerPixelNormalized[lightID].c, radiance);
 
 	if (sampleResult->firstPathVertex) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-		sampleResult->directShadowMask = 0.f;
+		sampleResult->directShadowMask = fmax(0.f, sampleResult->directShadowMask - lightScale);
 #endif
 
 		if (bsdfEvent & DIFFUSE) {
@@ -91,7 +91,7 @@ void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint
 		}
 	} else {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-		sampleResult->indirectShadowMask = 0.f;
+		sampleResult->indirectShadowMask = fmax(0.f, sampleResult->indirectShadowMask - lightScale);
 #endif
 
 		const BSDFEvent firstPathVertexEvent = sampleResult->firstPathVertexEvent;
