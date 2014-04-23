@@ -291,7 +291,7 @@ public:
 
 	void AddEmission(const u_int lightID, const luxrays::Spectrum &radiance);
 	void AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
-		const luxrays::Spectrum &radiance);
+		const luxrays::Spectrum &radiance, const float lightScale);
 
 	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
 		const float filmX, const float filmY,

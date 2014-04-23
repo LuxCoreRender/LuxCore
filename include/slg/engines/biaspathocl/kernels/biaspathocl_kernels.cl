@@ -314,10 +314,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	__global SampleResult *sampleResult = &taskResults[gid];
 	SampleResult_Init(sampleResult);
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	sampleResult->directShadowMask = 0.f;
+	sampleResult->directShadowMask = 1.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-	sampleResult->indirectShadowMask = 0.f;
+	sampleResult->indirectShadowMask = 1.f;
 #endif
 
 	Ray ray;
@@ -470,7 +470,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		//----------------------------------------------------------------------
 		// Sample the components of the BSDF of the first path vertex
 		//----------------------------------------------------------------------
-		
+
+		sampleResult->firstPathVertex = false;
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+		sampleResult->indirectShadowMask = 0.f;
+#endif
+
 		const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
 			MATERIALS_PARAM);
 

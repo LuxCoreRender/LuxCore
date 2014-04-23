@@ -61,29 +61,29 @@ private:
 	void SampleGrid(luxrays::RandomGenerator *rndGen, const u_int size,
 		const u_int ix, const u_int iy, float *u0, float *u1) const;
 
-	bool DirectLightSampling(
+	void DirectLightSampling(
 		const LightSource *light, const float lightPickPdf,
 		const float u0, const float u1,
 		const float u2, const float u3,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, SampleResult *sampleResult);
-	bool DirectLightSamplingONE(luxrays::RandomGenerator *rndGen,
+		PathVolumeInfo volInfo, SampleResult *sampleResult, const float lightScale);
+	void DirectLightSamplingONE(luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
 	void DirectLightSamplingALL(luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
 
-	bool DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
+	void DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 		const luxrays::Spectrum &pathThrouput,
 		const float distance, const BSDF &bsdf, const float lastPdfW,
 		SampleResult *sampleResult);
-	bool DirectHitEnvLight(const BSDFEvent lastBSDFEvent,
+	void DirectHitEnvLight(const BSDFEvent lastBSDFEvent,
 		const luxrays::Spectrum &pathThrouput,
 		const luxrays::Vector &eyeDir, const float lastPdfW,
 		SampleResult *sampleResult);
 
-	bool ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
+	void ContinueTracePath(luxrays::RandomGenerator *rndGen, PathDepthInfo depthInfo, luxrays::Ray ray,
 		luxrays::Spectrum pathThrouput, BSDFEvent lastBSDFEvent, float lastPdfW,
 		PathVolumeInfo *volInfo, SampleResult *sampleResult);
 	// NOTE: bsdf.hitPoint.passThroughEvent is modified by this method

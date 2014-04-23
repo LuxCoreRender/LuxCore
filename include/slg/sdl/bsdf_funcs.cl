@@ -384,3 +384,51 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 //	} else
 		return result;
 }
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+bool BSDF_IsLightSource(__global BSDF *bsdf) {
+	return (bsdf->triangleLightSourceIndex != NULL_INDEX);
+}
+
+float3 BSDF_GetEmittedRadiance(__global BSDF *bsdf, float *directPdfA
+		LIGHTS_PARAM_DECL) {
+	const uint triangleLightSourceIndex = bsdf->triangleLightSourceIndex;
+	if (triangleLightSourceIndex == NULL_INDEX)
+		return BLACK;
+	else
+		return IntersectableLight_GetRadiance(&lights[triangleLightSourceIndex],
+				&bsdf->hitPoint, directPdfA
+				LIGHTS_PARAM);
+}
+#endif
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->hitPoint.fixedDir.x));
+
+	return Material_GetPassThroughTransparency(&mats[bsdf->materialIndex],
+			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent
+			MATERIALS_PARAM);
+}
+#endif
+
+#if defined(PARAM_HAS_VOLUMES)
+uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetInteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+			, bsdf->hitPoint.passThroughEvent
+#endif
+			);
+}
+
+uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetExteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+			, bsdf->hitPoint.passThroughEvent
+#endif
+			);
+}
+#endif

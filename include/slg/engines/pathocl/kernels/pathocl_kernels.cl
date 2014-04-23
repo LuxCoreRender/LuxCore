@@ -707,12 +707,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 					sample->result.materialID = NULL_INDEX;
 #endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-					sample->result.directShadowMask = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-					sample->result.indirectShadowMask = 0.f;
-#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 					sample->result.uv.u = INFINITY;
 					sample->result.uv.v = INFINITY;
@@ -781,7 +775,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				SampleResult_AddDirectLight(&sample->result, task->directLightState.lightID,
 						BSDF_GetEventTypes(bsdf
 							MATERIALS_PARAM),
-						VLOAD3F(task->directLightState.lightRadiance.c));
+						VLOAD3F(task->directLightState.lightRadiance.c),
+						1.f);
 			}
 		}
 	}
