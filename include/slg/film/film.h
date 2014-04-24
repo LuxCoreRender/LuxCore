@@ -283,8 +283,11 @@ public:
 			radiancePerPixelNormalized.resize(radianceGroupCount);
 		if (channels | Film::RADIANCE_PER_SCREEN_NORMALIZED)
 			radiancePerScreenNormalized.resize(radianceGroupCount);
-		
+
 		firstPathVertex = true;
+		// lastPathVertex can not be really initialized here without knowing
+		// the max. path depth.
+		lastPathVertex = false;
 		firstPathVertexEvent = NONE;
 	}
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
@@ -302,9 +305,6 @@ public:
 		const float filmX, const float filmY,
 		const luxrays::Spectrum &radiancePSN);
 
-	bool firstPathVertex;
-	BSDFEvent firstPathVertexEvent;
-
 	float filmX, filmY;
 	std::vector<luxrays::Spectrum> radiancePerPixelNormalized, radiancePerScreenNormalized;
 	float alpha, depth;
@@ -318,6 +318,9 @@ public:
 	float directShadowMask, indirectShadowMask;
 	luxrays::UV uv;
 	float rayCount;
+
+	BSDFEvent firstPathVertexEvent;
+	bool firstPathVertex, lastPathVertex;
 
 private:
 	u_int channels;

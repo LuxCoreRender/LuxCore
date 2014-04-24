@@ -66,7 +66,7 @@ typedef struct {
 	Spectrum lightRadiance;
 	uint lightID;
 
-	BSDFEvent pathBSDFEvent, lastBSDFEvent;
+	BSDFEvent lastBSDFEvent;
 	float lastPdfW;
 } PathStateDirectLight;
 

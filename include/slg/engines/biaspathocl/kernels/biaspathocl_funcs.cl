@@ -293,11 +293,11 @@ void PathDepthInfo_IncDepths(PathDepthInfo *depthInfo, const BSDFEvent event) {
 		++(depthInfo->specularDepth);
 }
 
-bool PathDepthInfo_CheckDepths(const PathDepthInfo *depthInfo) {
-	return ((depthInfo->depth <= PARAM_DEPTH_MAX) &&
-			(depthInfo->diffuseDepth <= PARAM_DEPTH_DIFFUSE_MAX) &&
-			(depthInfo->glossyDepth <= PARAM_DEPTH_GLOSSY_MAX) &&
-			(depthInfo->specularDepth <= PARAM_DEPTH_SPECULAR_MAX));
+bool PathDepthInfo_IsLastPathVertex(const PathDepthInfo *depthInfo, const BSDFEvent event) {
+	return (depthInfo->depth == PARAM_DEPTH_MAX) ||
+			((event & DIFFUSE) && (depthInfo->diffuseDepth == PARAM_DEPTH_DIFFUSE_MAX)) ||
+			((event & GLOSSY) && (depthInfo->glossyDepth == PARAM_DEPTH_GLOSSY_MAX)) ||
+			((event & SPECULAR) && (depthInfo->specularDepth == PARAM_DEPTH_SPECULAR_MAX));
 }
 
 bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
@@ -518,6 +518,7 @@ bool DirectLightSamplingInit(
 		const float passThroughEvent,
 #endif
 		const float3 pathThroughput, __global BSDF *bsdf, BSDFEvent *event,
+		__global SampleResult *sampleResult,
 		Ray *shadowRay, float3 *radiance, uint *ID
 		LIGHTS_PARAM_DECL) {
 	float3 lightRayDir;
@@ -552,16 +553,7 @@ bool DirectLightSamplingInit(
 			const float factor = 1.f / directLightSamplingPdfW;
 
 			// MIS between direct light sampling and BSDF sampling
-			//
-			// Note: applying MIS to the direct light of the last path vertex (when we
-			// hit the max. path depth) is not correct because the light source
-			// can be sampled only here and not with the next path vertex. The
-			// value of weight should be 1 in that case. However, because of different
-			// max. depths for diffuse, glossy and specular, I can not really know
-			// if I'm on the last path vertex or not.
-			//
-			// For the moment, I'm just ignoring this error.
-			const float weight = Light_IsEnvOrIntersectable(light) ?
+			const float weight = (!sampleResult->lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 			*radiance = (weight * factor) * pathThroughput * bsdfEval * lightRadiance;
@@ -646,7 +638,7 @@ uint DirectLightSampling_ONE(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		Rnd_FloatValue(seed),
 #endif
-		pathThroughput, bsdf, &event,
+		pathThroughput, bsdf, &event, sampleResult,
 		&shadowRay, &lightRadiance, &lightID
 		LIGHTS_PARAM);
 
@@ -775,7 +767,7 @@ uint DirectLightSampling_ALL(
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Rnd_FloatValue(seed),
 #endif
-				pathThroughput, bsdf, &event,
+				pathThroughput, bsdf, &event, sampleResult,
 				&shadowRay, &lightRadiance, &lightID
 				LIGHTS_PARAM);
 
@@ -959,14 +951,13 @@ uint ContinueTracePath(
 		}
 #endif
 
-		// Check the path depth
-		// NOTE: before direct Light sampling in order to have a correct MIS
-		if (!PathDepthInfo_CheckDepths(depthInfo))
-			break;
-
 		//------------------------------------------------------------------
 		// Direct light sampling
 		//------------------------------------------------------------------
+
+		sampleResult->lastPathVertex = PathDepthInfo_IsLastPathVertex(depthInfo,
+				BSDF_GetEventTypes(bsdfPathVertexN
+					MATERIALS_PARAM));
 
 		// Only if it is not a SPECULAR BSDF
 		if (!BSDF_IsDelta(bsdfPathVertexN
@@ -1012,6 +1003,9 @@ uint ContinueTracePath(
 				// Light related parameters
 				LIGHTS_PARAM);
 		}
+
+		if (sampleResult->lastPathVertex)
+			break;
 
 		//------------------------------------------------------------------
 		// Build the next path vertex ray

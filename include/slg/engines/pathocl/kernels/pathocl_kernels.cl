@@ -103,7 +103,6 @@ void GenerateCameraPath(
 	task->pathStateBase.state = RT_NEXT_VERTEX;
 	task->pathStateBase.depth = 1;
 	VSTORE3F(WHITE, task->pathStateBase.throughput.c);
-	task->directLightState.pathBSDFEvent = NONE;
 	task->directLightState.lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	task->directLightState.lastPdfW = 1.f;
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -120,6 +119,8 @@ void GenerateCameraPath(
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	sample->result.indirectShadowMask = 1.f;
 #endif
+
+	sample->result.lastPathVertex = (PARAM_MAX_PATH_DEPTH == 1);
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
@@ -248,7 +249,7 @@ bool DirectLightSampling(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
 #endif
-		const uint depth,
+		const bool lastPathVertex, const uint depth,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
 		LIGHTS_PARAM_DECL) {
@@ -287,7 +288,9 @@ bool DirectLightSampling(
 			bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
 
 			// MIS between direct light sampling and BSDF sampling
-			const float weight = Light_IsEnvOrIntersectable(light) ?
+			//
+			// Note: I have to avoiding MIS on the last path vertex
+			const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);
@@ -322,7 +325,7 @@ bool DirectLightSampling_ONE(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
 #endif
-		const uint depth,
+		const bool lastPathVertex, const uint depth,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
 		LIGHTS_PARAM_DECL) {
@@ -346,7 +349,7 @@ bool DirectLightSampling_ONE(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		lightPassThroughEvent,
 #endif
-		depth,
+		lastPathVertex, depth,
 		pathThroughput, bsdf,
 		shadowRay, radiance, ID
 		LIGHTS_PARAM);
@@ -519,7 +522,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 	// Read the path state
 	PathState pathState = task->pathStateBase.state;
-	const uint depth = task->pathStateBase.depth;
+	uint depth = task->pathStateBase.depth;
+
 	__global BSDF *bsdf = &task->pathStateBase.bsdf;
 
 	__global Sample *sample = &samples[gid];
@@ -767,8 +771,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 		// If continueToTrace, there is nothing to do, just keep the same state
 		if (!continueToTrace) {
-			pathState = GENERATE_NEXT_VERTEX_RAY;
-
 			if (rayMiss) {
 				// Nothing was hit, the light source is visible
 
@@ -778,6 +780,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 						VLOAD3F(task->directLightState.lightRadiance.c),
 						1.f);
 			}
+
+			// Check if this is the last path vertex
+			if (sample->result.lastPathVertex)
+				pathState = SPLAT_SAMPLE;
+			else
+				pathState = GENERATE_NEXT_VERTEX_RAY;
 		}
 	}
 
@@ -789,48 +797,42 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == GENERATE_DL_RAY) {
-		if (depth > PARAM_MAX_PATH_DEPTH) {
-			pathState = SPLAT_SAMPLE;
-		} else {
-			// No shadow ray to trace, move to the next vertex ray
-			pathState = GENERATE_NEXT_VERTEX_RAY;
-
-			if (BSDF_IsDelta(bsdf
-				MATERIALS_PARAM)) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-				if (depth == 1)
-					sample->result.directShadowMask = 0.f;
-#endif
-			} else {
-				if (DirectLightSampling_ONE(
+		if (!BSDF_IsDelta(bsdf
+				MATERIALS_PARAM) &&
+			DirectLightSampling_ONE(
 #if defined(PARAM_HAS_INFINITELIGHTS)
-						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-						&task->tmpHitPoint,
+				&task->tmpHitPoint,
 #endif
-						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X),
-						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
-						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
+				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X),
+				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
+				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 #if defined(PARAM_HAS_PASSTHROUGH)
-						Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
+				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
 #endif
-						depth, &task->pathStateBase.throughput, bsdf,
-						ray, &task->directLightState.lightRadiance, &task->directLightState.lightID
-						LIGHTS_PARAM)) {
+				sample->result.lastPathVertex, depth, &task->pathStateBase.throughput, bsdf,
+				ray, &task->directLightState.lightRadiance, &task->directLightState.lightID
+				LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
-					// Initialize the pass-through event for the shadow ray
-					task->directLightRayPassThroughEvent = Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A);
+			// Initialize the pass-through event for the shadow ray
+			task->directLightRayPassThroughEvent = Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A);
 #endif
 #if defined(PARAM_HAS_VOLUMES)
-					// Make a copy of current PathVolumeInfo for tracing the
-					// shadow ray
-					directLightVolInfos[gid] = pathVolInfos[gid];
+			// Make a copy of current PathVolumeInfo for tracing the
+			// shadow ray
+			directLightVolInfos[gid] = pathVolInfos[gid];
 #endif
-					// I have to trace the shadow ray
-					pathState = RT_DL;
-				}
-			}
+			// I have to trace the shadow ray
+			pathState = RT_DL;
+		} else {
+			// No shadow ray to trace, move to the next vertex ray
+			// however, I have to Check if this is the last path vertex
+			if (sample->result.lastPathVertex)
+				pathState = SPLAT_SAMPLE;
+			else
+				pathState = GENERATE_NEXT_VERTEX_RAY;
 		}
 	}
 
@@ -860,7 +862,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !(event & SPECULAR);
 		const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(depth, IDX_RR) < rrProb);
 
-		const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath;
+		// Max. path depth
+		const bool maxPathDepth = (depth >= PARAM_MAX_PATH_DEPTH);
+
+		const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath && !maxPathDepth;
 		if (continuePath) {
 			float3 throughput = VLOAD3F(task->pathStateBase.throughput.c);
 			throughput *= bsdfSample;
@@ -877,12 +882,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 			Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir);
 
+			++depth;
+			sample->result.firstPathVertex = false;
+			sample->result.lastPathVertex = (depth == PARAM_MAX_PATH_DEPTH);
+
 			if (sample->result.firstPathVertex)
 				sample->result.firstPathVertexEvent = event;
 
-			task->pathStateBase.depth = depth + 1;
-			if (depth == 1)
-				task->directLightState.pathBSDFEvent = event;
+			task->pathStateBase.depth = depth;
 			task->directLightState.lastBSDFEvent = event;
 			task->directLightState.lastPdfW = lastPdfW;
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -892,11 +899,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 			// This sampleDataPathVertexBase is used inside Sampler_GetSamplePathVertex() macro
 			__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-				sample, sampleDataPathBase, depth + 1);
-			task->pathStateBase.bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(depth + 1, IDX_PASSTHROUGH);
+				sample, sampleDataPathBase, depth);
+			task->pathStateBase.bsdf.hitPoint.passThroughEvent = Sampler_GetSamplePathVertex(depth, IDX_PASSTHROUGH);
 #endif
-
-			sample->result.firstPathVertex = (depth == 1);
 
 			pathState = RT_NEXT_VERTEX;
 		} else

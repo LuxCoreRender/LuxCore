@@ -76,8 +76,9 @@ typedef struct {
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	float rayCount;
 #endif
+
 	BSDFEvent firstPathVertexEvent;
-	bool firstPathVertex;
+	bool firstPathVertex, lastPathVertex;
 } SampleResult;
 
 #endif

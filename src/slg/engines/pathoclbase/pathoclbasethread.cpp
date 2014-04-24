@@ -242,7 +242,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Film::RAYCOUNT);
 
 	sampleResultSize += sizeof(BSDFEvent) +
-			sizeof(int);  // For the boolean field
+			2 * sizeof(int);  // For the 2 boolean fields
 	
 	return sampleResultSize;
 }

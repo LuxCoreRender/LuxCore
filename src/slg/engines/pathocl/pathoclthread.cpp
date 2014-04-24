@@ -222,7 +222,7 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	gpuTaksSize += openCLBSDFSize;
 
 	// Add PathStateDirectLight memory size
-	gpuTaksSize += sizeof(Spectrum) + sizeof(u_int) + 2 * sizeof(BSDFEvent) + sizeof(float);
+	gpuTaksSize += sizeof(Spectrum) + sizeof(u_int) + sizeof(BSDFEvent) + sizeof(float);
 
 	// Add directLightRayPassThroughEvent memory size
 	if (hasPassThrough)
