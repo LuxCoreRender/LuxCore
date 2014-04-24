@@ -590,6 +590,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 	ss << scientific <<
 			" -D LUXRAYS_OPENCL_KERNEL" <<
 			" -D SLG_OPENCL_KERNEL" <<
+			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetEngineType()) <<
 			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << LIGHT_WORLD_RADIUS_SCALE << "f"
