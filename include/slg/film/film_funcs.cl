@@ -69,6 +69,9 @@ void SampleResult_Init(__global SampleResult *sampleResult) {
 	
 	sampleResult->firstPathVertexEvent = NONE;
 	sampleResult->firstPathVertex = true;
+	// sampleResult->lastPathVertex can not be really initialized here without knowing
+	// the max. path depth.
+	sampleResult->lastPathVertex = true;
 }
 
 void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint lightID,

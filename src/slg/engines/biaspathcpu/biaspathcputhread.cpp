@@ -68,16 +68,7 @@ void BiasPathCPURenderThread::DirectLightSampling(
 		const float factor = 1.f / directLightSamplingPdfW;
 
 		// MIS between direct light sampling and BSDF sampling
-		//
-		// Note: applying MIS to the direct light of the last path vertex (when we
-		// hit the max. path depth) is not correct because the light source
-		// can be sampled only here and not with the next path vertex. The
-		// value of weight should be 1 in that case. However, because of different
-		// max. depths for diffuse, glossy and specular, i can not really know
-		// if I'm on the last path vertex or not.
-		//
-		// For the moment, I'm just ignoring this error.
-		const float weight = (light->IsEnvironmental() || light->IsIntersectable()) ? 
+		const float weight = (!sampleResult->lastPathVertex && (light->IsEnvironmental() || light->IsIntersectable())) ? 
 						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 		const Spectrum illumRadiance = (weight * factor) * pathThroughput * lightRadiance * bsdfEval;
@@ -231,6 +222,7 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 				&ray, &rayHit, &bsdf, &connectionThroughput,
 				sampleResult);
 		pathThroughput *= connectionThroughput;
+		// Note: pass-through check is done inside Scene::Intersect()
 
 		if (!hit) {
 			// Nothing was hit, look for env. lights
@@ -252,18 +244,17 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 			DirectHitFiniteLight(lastBSDFEvent,
 					pathThroughput, rayHit.t, bsdf, lastPdfW, sampleResult);
 
-		// Note: pass-through check is done inside Scene::Intersect()
-
-		// Before Direct Lighting in order to have a correct MIS
-		if (!depthInfo.CheckDepths(engine->maxPathDepth))
-			break;
-
 		//----------------------------------------------------------------------
 		// Direct light sampling
 		//----------------------------------------------------------------------
 
+		sampleResult->lastPathVertex = depthInfo.IsLastPathVertex(engine->maxPathDepth, bsdf.GetEventTypes());
+
 		if (!bsdf.IsDelta())
 			DirectLightSamplingONE(rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
+
+		if (sampleResult->lastPathVertex)
+			break;
 
 		//----------------------------------------------------------------------
 		// Build the next path vertex ray
@@ -347,6 +338,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 	sampleResult->firstPathVertex = true;
+	sampleResult->lastPathVertex = false;
 	sampleResult->firstPathVertexEvent = NONE;
 
 	Ray eyeRay = ray;
@@ -405,6 +397,13 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		// Direct light sampling
 		//----------------------------------------------------------------------
 
+		const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
+		sampleResult->lastPathVertex = 
+				(engine->maxPathDepth.depth <= 1) ||
+				(!((engine->maxPathDepth.diffuseDepth > 0) && (materialEventTypes & DIFFUSE)) &&
+				!((engine->maxPathDepth.glossyDepth > 0) && (materialEventTypes & GLOSSY)) &&
+				!((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)));
+
 		if (!bsdf.IsDelta()) {
 			if (engine->lightSamplingStrategyONE)
 				DirectLightSamplingONE(rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
@@ -416,54 +415,55 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		// Split the path
 		//----------------------------------------------------------------------
 
-		sampleResult->firstPathVertex = false;
 		sampleResult->indirectShadowMask = 0.f;
 
-		const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
-		int materialSamples = bsdf.GetSamples();
+		if (!sampleResult->lastPathVertex) {
+			sampleResult->firstPathVertex = false;
+			int materialSamples = bsdf.GetSamples();
 
-		//----------------------------------------------------------------------
-		// Sample the diffuse component
-		//
-		// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
-		//----------------------------------------------------------------------
+			//------------------------------------------------------------------
+			// Sample the diffuse component
+			//
+			// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
+			//------------------------------------------------------------------
 
-		if ((engine->maxPathDepth.diffuseDepth > 0) && (materialEventTypes & DIFFUSE)) {
-			const u_int diffuseSamples = (materialSamples < 0) ? engine->diffuseSamples : ((u_int)materialSamples);
+			if ((engine->maxPathDepth.diffuseDepth > 0) && (materialEventTypes & DIFFUSE)) {
+				const u_int diffuseSamples = (materialSamples < 0) ? engine->diffuseSamples : ((u_int)materialSamples);
 
-			if (diffuseSamples > 0) {
-				SampleComponent(rndGen, DIFFUSE | REFLECT | TRANSMIT,
-						diffuseSamples, pathThroughput, bsdf, *volInfo, sampleResult);
+				if (diffuseSamples > 0) {
+					SampleComponent(rndGen, DIFFUSE | REFLECT | TRANSMIT,
+							diffuseSamples, pathThroughput, bsdf, *volInfo, sampleResult);
+				}
 			}
-		}
 
-		//----------------------------------------------------------------------
-		// Sample the glossy component
-		//
-		// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
-		//----------------------------------------------------------------------
+			//------------------------------------------------------------------
+			// Sample the glossy component
+			//
+			// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
+			//------------------------------------------------------------------
 
-		if ((engine->maxPathDepth.glossyDepth > 0) && (materialEventTypes & GLOSSY)) {
-			const u_int glossySamples = (materialSamples < 0) ? engine->glossySamples : ((u_int)materialSamples);
+			if ((engine->maxPathDepth.glossyDepth > 0) && (materialEventTypes & GLOSSY)) {
+				const u_int glossySamples = (materialSamples < 0) ? engine->glossySamples : ((u_int)materialSamples);
 
-			if (glossySamples > 0) {
-				SampleComponent(rndGen, GLOSSY | REFLECT | TRANSMIT, 
-						glossySamples, pathThroughput, bsdf, *volInfo, sampleResult);
+				if (glossySamples > 0) {
+					SampleComponent(rndGen, GLOSSY | REFLECT | TRANSMIT, 
+							glossySamples, pathThroughput, bsdf, *volInfo, sampleResult);
+				}
 			}
-		}
 
-		//----------------------------------------------------------------------
-		// Sample the specular component
-		//
-		// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
-		//----------------------------------------------------------------------
+			//------------------------------------------------------------------
+			// Sample the specular component
+			//
+			// NOTE: bsdf.hitPoint.passThroughEvent is modified by SampleComponent()
+			//------------------------------------------------------------------
 
-		if ((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)) {
-			const u_int specularSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
+			if ((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)) {
+				const u_int specularSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
 
-			if (specularSamples > 0) {
-				SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT,
-						specularSamples, pathThroughput, bsdf, *volInfo, sampleResult);
+				if (specularSamples > 0) {
+					SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT,
+							specularSamples, pathThroughput, bsdf, *volInfo, sampleResult);
+				}
 			}
 		}
 	}

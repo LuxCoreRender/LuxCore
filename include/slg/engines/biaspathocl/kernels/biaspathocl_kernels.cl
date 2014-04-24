@@ -417,6 +417,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		// First path vertex direct light sampling
 		//----------------------------------------------------------------------
 
+		const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
+			MATERIALS_PARAM);
+		sampleResult->lastPathVertex = 
+				(PARAM_DEPTH_MAX <= 1) ||
+				(!((PARAM_DEPTH_DIFFUSE_MAX > 0) && (materialEventTypes & DIFFUSE)) &&
+				!((PARAM_DEPTH_GLOSSY_MAX > 0) && (materialEventTypes & GLOSSY)) &&
+				!((PARAM_DEPTH_SPECULAR_MAX > 0) && (materialEventTypes & SPECULAR)));
+
 		// Only if it is not a SPECULAR BSDF
 		if (!BSDF_IsDelta(&task->bsdfPathVertex1
 				MATERIALS_PARAM)) {
@@ -471,68 +479,68 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		// Sample the components of the BSDF of the first path vertex
 		//----------------------------------------------------------------------
 
-		sampleResult->firstPathVertex = false;
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 		sampleResult->indirectShadowMask = 0.f;
 #endif
 
-		const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
-			MATERIALS_PARAM);
+		if (!sampleResult->lastPathVertex) {
+			sampleResult->firstPathVertex = false;
 
-		BSDFEvent vertex1SampleComponent = DIFFUSE;
-		do {
-			if (PathDepthInfo_CheckComponentDepths(vertex1SampleComponent) && (materialEventTypes & vertex1SampleComponent)) {
-				const int matSamplesCount = mats[task->bsdfPathVertex1.materialIndex].samples;
-				const uint globalMatSamplesCount = ((vertex1SampleComponent == DIFFUSE) ? PARAM_DIFFUSE_SAMPLES :
-					((vertex1SampleComponent == GLOSSY) ? PARAM_GLOSSY_SAMPLES :
-						PARAM_SPECULAR_SAMPLES));
-				const uint sampleCount = (matSamplesCount < 0) ? globalMatSamplesCount : (uint)matSamplesCount;
+			BSDFEvent vertex1SampleComponent = DIFFUSE;
+			do {
+				if (PathDepthInfo_CheckComponentDepths(vertex1SampleComponent) && (materialEventTypes & vertex1SampleComponent)) {
+					const int matSamplesCount = mats[task->bsdfPathVertex1.materialIndex].samples;
+					const uint globalMatSamplesCount = ((vertex1SampleComponent == DIFFUSE) ? PARAM_DIFFUSE_SAMPLES :
+						((vertex1SampleComponent == GLOSSY) ? PARAM_GLOSSY_SAMPLES :
+							PARAM_SPECULAR_SAMPLES));
+					const uint sampleCount = (matSamplesCount < 0) ? globalMatSamplesCount : (uint)matSamplesCount;
 
-				tracedRaysCount += SampleComponent(
-						&seed,
+					tracedRaysCount += SampleComponent(
+							&seed,
 #if defined(PARAM_HAS_VOLUMES)
-						&task->volInfoPathVertex1,
-						&taskPathVertexN->volInfoPathVertexN,
-						&taskDirectLight->directLightVolInfo,
+							&task->volInfoPathVertex1,
+							&taskPathVertexN->volInfoPathVertexN,
+							&taskDirectLight->directLightVolInfo,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
-						&task->tmpHitPoint,
+							&task->tmpHitPoint,
 #endif
 #if defined(PARAM_HAS_INFINITELIGHTS)
-						worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+							worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
-						vertex1SampleComponent,
-						sampleCount, throughputPathVertex1,
-						&task->bsdfPathVertex1, &taskPathVertexN->bsdfPathVertexN,
-						&taskDirectLight->directLightBSDF,
-						sampleResult,
-						// BSDF_Init parameters
-						meshDescs,
-						meshMats,
-						vertices,
+							vertex1SampleComponent,
+							sampleCount, throughputPathVertex1,
+							&task->bsdfPathVertex1, &taskPathVertexN->bsdfPathVertexN,
+							&taskDirectLight->directLightBSDF,
+							sampleResult,
+							// BSDF_Init parameters
+							meshDescs,
+							meshMats,
+							vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-						vertNormals,
+							vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-						vertUVs,
+							vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-						vertCols,
+							vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-						vertAlphas,
+							vertAlphas,
 #endif
-						triangles
-						// Accelerator_Intersect parameters
-						ACCELERATOR_INTERSECT_PARAM
-						// Light related parameters
-						LIGHTS_PARAM);
-			}
+							triangles
+							// Accelerator_Intersect parameters
+							ACCELERATOR_INTERSECT_PARAM
+							// Light related parameters
+							LIGHTS_PARAM);
+				}
 
-			// Move to the next BSDF component
-			vertex1SampleComponent = (vertex1SampleComponent == DIFFUSE) ? GLOSSY :
-				((vertex1SampleComponent == GLOSSY) ? SPECULAR : NONE);
-		} while (vertex1SampleComponent != NONE);
+				// Move to the next BSDF component
+				vertex1SampleComponent = (vertex1SampleComponent == DIFFUSE) ? GLOSSY :
+					((vertex1SampleComponent == GLOSSY) ? SPECULAR : NONE);
+			} while (vertex1SampleComponent != NONE);
+		}
 	} else {
 		//----------------------------------------------------------------------
 		// Nothing was hit

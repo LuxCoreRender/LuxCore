@@ -69,7 +69,7 @@ std::string KernelSource_pathocl_datatypes =
 "	Spectrum lightRadiance;\n"
 "	uint lightID;\n"
 "\n"
-"	BSDFEvent pathBSDFEvent, lastBSDFEvent;\n"
+"	BSDFEvent lastBSDFEvent;\n"
 "	float lastPdfW;\n"
 "} PathStateDirectLight;\n"
 "\n"

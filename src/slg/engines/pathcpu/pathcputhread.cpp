@@ -78,7 +78,9 @@ void PathCPURenderThread::DirectLightSampling(
 					}
 
 					// MIS between direct light sampling and BSDF sampling
-					const float weight = (light->IsEnvironmental() || light->IsIntersectable()) ? 
+					//
+					// Note: I have to avoiding MIS on the last path vertex
+					const float weight = (!sampleResult->lastPathVertex &&  (light->IsEnvironmental() || light->IsIntersectable())) ? 
 						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 					const Spectrum radiance = (weight * factor) * pathThroughput * connectionThroughput * lightRadiance * bsdfEval;
@@ -207,6 +209,8 @@ void PathCPURenderThread::RenderFunc() {
 		BSDF bsdf;
 		for (;;) {
 			sampleResult.firstPathVertex = (depth == 1);
+			sampleResult.lastPathVertex = (depth == engine->maxPathDepth);
+
 			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
 			RayHit eyeRayHit;
@@ -216,9 +220,10 @@ void PathCPURenderThread::RenderFunc() {
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 					&sampleResult);
 			pathThroughput *= connectionThroughput;
+			// Note: pass-through check is done inside Scene::Intersect()
 
 			if (!hit) {
-				// Nothing was hit, look for infinitelight
+				// Nothing was hit, look for env. lights
 				DirectHitInfiniteLight(lastBSDFEvent, pathThroughput, eyeRay.d,
 						lastPdfW, &sampleResult);
 
@@ -255,17 +260,11 @@ void PathCPURenderThread::RenderFunc() {
 				sampleResult.uv = bsdf.hitPoint.uv;
 			}
 
-			// Before Direct Lighting in order to have a correct MIS
-			if (depth > engine->maxPathDepth)
-				break;
-
 			// Check if it is a light source
 			if (bsdf.IsLightSource()) {
 				DirectHitFiniteLight(lastBSDFEvent, pathThroughput, eyeRayHit.t,
 						bsdf, lastPdfW, &sampleResult);
 			}
-
-			// Note: pass-through check is done inside Scene::Intersect()
 
 			//------------------------------------------------------------------
 			// Direct light sampling
@@ -278,6 +277,9 @@ void PathCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
 					pathThroughput, bsdf, volInfo, depth, &sampleResult);
+
+			if (sampleResult.lastPathVertex)
+				break;
 
 			//------------------------------------------------------------------
 			// Build the next vertex path ray

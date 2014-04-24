@@ -38,8 +38,8 @@ public:
 	~PathDepthInfo() { }
 
 	void IncDepths(const BSDFEvent event);
-
-	bool CheckDepths(const PathDepthInfo &maxPathDepth) const;
+	bool IsLastPathVertex(const PathDepthInfo &maxPathDepth,
+		const BSDFEvent event) const;
 
 	u_int depth, diffuseDepth, glossyDepth, specularDepth;
 };
