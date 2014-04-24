@@ -357,11 +357,11 @@ uint BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThrough,
 #endif
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
 		Ray *ray,
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
 		RayHit *rayHit,

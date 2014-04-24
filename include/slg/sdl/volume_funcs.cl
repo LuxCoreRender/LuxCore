@@ -47,7 +47,7 @@ float3 ClearVolume_SigmaT(__global Volume *vol, __global HitPoint *hitPoint
 }
 
 float ClearVolume_Scatter(__global Volume *vol,
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
 		Ray *ray, const float hitT,
@@ -58,7 +58,7 @@ float ClearVolume_Scatter(__global Volume *vol,
 		float3 *connectionEmission, __global HitPoint *tmpHitPoint
 		TEXTURES_PARAM_DECL) {
 	// Initialize tmpHitPoint
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
 #else
@@ -112,7 +112,7 @@ float ClearVolume_Scatter(__global Volume *vol,
 //------------------------------------------------------------------------------
 
 float Volume_Scatter(__global Volume *vol,
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
 		Ray *ray, const float hitT, const float passThrough,

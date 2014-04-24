@@ -114,16 +114,16 @@ bool Scene_Intersect(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThrough,
 #endif
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
 		Ray *ray,
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
 		RayHit *rayHit,
 		__global BSDF *bsdf,
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global Spectrum *pathThroughput,
 #else
 		float3 *pathThroughput,
@@ -218,7 +218,7 @@ bool Scene_Intersect(
 				tmpHitPoint
 				TEXTURES_PARAM);
 
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		VSTORE3F(VLOAD3F(pathThroughput->c) * connectionThroughput, pathThroughput->c);
 #else
 		*pathThroughput *= connectionThroughput;
@@ -264,7 +264,7 @@ bool Scene_Intersect(
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
 				MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
-#if !defined(RENDER_ENGINE_BIASPATHOCL)
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 				VSTORE3F(VLOAD3F(pathThroughput->c) * passThroughTrans, pathThroughput->c);
 #else
 				*pathThroughput *= passThroughTrans;
