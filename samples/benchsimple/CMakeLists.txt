@@ -20,4 +20,9 @@ include_directories(${LuxRays_INCLUDE_DIR})
 link_directories (${LuxRays_LIB_DIR})
 
 add_executable(benchsimple benchsimple.cpp)
+
+if(APPLE)
+	SET_TARGET_PROPERTIES(benchsimple PROPERTIES XCODE_ATTRIBUTE_LLVM_LTO NO) # exclude from LTO, breaks compiling in some configurations
+endif()
+
 target_link_libraries(benchsimple luxrays)
