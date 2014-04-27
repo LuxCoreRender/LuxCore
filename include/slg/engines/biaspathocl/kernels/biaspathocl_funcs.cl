@@ -955,9 +955,13 @@ uint ContinueTracePath(
 		// Direct light sampling
 		//------------------------------------------------------------------
 
+		// I avoid to do DL on the last vertex otherwise it introduces a lot of
+		// noise because I can not use MIS
 		sampleResult->lastPathVertex = PathDepthInfo_IsLastPathVertex(depthInfo,
 				BSDF_GetEventTypes(bsdfPathVertexN
 					MATERIALS_PARAM));
+		if (sampleResult->lastPathVertex)
+			break;
 
 		// Only if it is not a SPECULAR BSDF
 		if (!BSDF_IsDelta(bsdfPathVertexN
@@ -1003,9 +1007,6 @@ uint ContinueTracePath(
 				// Light related parameters
 				LIGHTS_PARAM);
 		}
-
-		if (sampleResult->lastPathVertex)
-			break;
 
 		//------------------------------------------------------------------
 		// Build the next path vertex ray
