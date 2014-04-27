@@ -80,6 +80,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
+	writeKernelsToFile = false;
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -151,6 +152,8 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 			maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
 	}
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
+
+	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Compile the scene

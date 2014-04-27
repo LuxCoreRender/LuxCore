@@ -192,6 +192,8 @@ protected:
 	CompiledScene *compiledScene;
 
 	vector<PathOCLBaseRenderThread *> renderThreads;
+	
+	bool writeKernelsToFile;
 };
 
 }

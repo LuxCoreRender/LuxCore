@@ -930,14 +930,16 @@ void PathOCLBaseRenderThread::InitKernels() {
 		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
 		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
 
-		// Some debug code to write the OpenCL kernel source to a file
-		/*const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".txt";
-		ofstream kernelFile(kernelFileName.c_str());
-		string kernelDefs = kernelsParameters;
-		boost::replace_all(kernelDefs, "-D", "\n#define");
-		boost::replace_all(kernelDefs, "=", " ");
-		kernelFile << kernelDefs << endl << endl << kernelSource << endl;
-		kernelFile.close();*/
+		if (renderEngine->writeKernelsToFile) {
+			// Some debug code to write the OpenCL kernel source to a file
+			const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".cl";
+			ofstream kernelFile(kernelFileName.c_str());
+			string kernelDefs = kernelsParameters;
+			boost::replace_all(kernelDefs, "-D", "\n#define");
+			boost::replace_all(kernelDefs, "=", " ");
+			kernelFile << kernelDefs << endl << endl << kernelSource << endl;
+			kernelFile.close();
+		}
 
 		bool cached;
 		cl::STRING_CLASS error;
