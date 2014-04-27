@@ -670,8 +670,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				}
 #endif
 
-				// Direct light sampling
-				pathState = GENERATE_DL_RAY;
+				// Check if this is the last path vertex (but not also the first)
+				//
+				// I handle as a special case when the path vertex is both the first
+				// and the last: I do direct light sampling without MIS.
+				if (sample->result.lastPathVertex && !sample->result.firstPathVertex)
+					pathState = SPLAT_SAMPLE;
+				else {
+					// Direct light sampling
+					pathState = GENERATE_DL_RAY;
+				}
 			} else {
 				//--------------------------------------------------------------
 				// Nothing was hit, add environmental lights radiance

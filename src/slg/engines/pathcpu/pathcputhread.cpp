@@ -270,6 +270,13 @@ void PathCPURenderThread::RenderFunc() {
 			// Direct light sampling
 			//------------------------------------------------------------------
 
+			// I avoid to do DL on the last vertex otherwise it introduces a lot of
+			// noise because I can not use MIS.
+			// I handle as a special case when the path vertex is both the first
+			// and the last: I do direct light sampling without MIS.
+			if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
+				break;
+
 			DirectLightSampling(
 					sampler->GetSample(sampleOffset + 1),
 					sampler->GetSample(sampleOffset + 2),

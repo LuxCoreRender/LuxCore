@@ -248,13 +248,14 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Direct light sampling
 		//----------------------------------------------------------------------
 
+		// I avoid to do DL on the last vertex otherwise it introduces a lot of
+		// noise because I can not use MIS
 		sampleResult->lastPathVertex = depthInfo.IsLastPathVertex(engine->maxPathDepth, bsdf.GetEventTypes());
+		if (sampleResult->lastPathVertex)
+			break;
 
 		if (!bsdf.IsDelta())
 			DirectLightSamplingONE(rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
-
-		if (sampleResult->lastPathVertex)
-			break;
 
 		//----------------------------------------------------------------------
 		// Build the next path vertex ray
