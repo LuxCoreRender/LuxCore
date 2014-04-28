@@ -405,23 +405,3 @@ float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 			MATERIALS_PARAM);
 }
 #endif
-
-#if defined(PARAM_HAS_VOLUMES)
-uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return Material_GetInteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, bsdf->hitPoint.passThroughEvent
-#endif
-			);
-}
-
-uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return Material_GetExteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, bsdf->hitPoint.passThroughEvent
-#endif
-			);
-}
-#endif

@@ -93,7 +93,7 @@ const uint PathVolumeInfo_SimulateAddVolume(__global PathVolumeInfo *pvi, const 
 		return volIndex;
 }
 
-const uint PathVolumeInfo_SimulateRemoveVolume(__global PathVolumeInfo *pvi, const uint volIndex
+uint PathVolumeInfo_SimulateRemoveVolume(__global PathVolumeInfo *pvi, const uint volIndex
 		MATERIALS_PARAM_DECL) {
 	if ((volIndex == NULL_INDEX) || (pvi->volumeIndexListSize == 0)) {
 		// NULL volume or empty volume list

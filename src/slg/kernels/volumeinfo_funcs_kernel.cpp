@@ -96,7 +96,7 @@ std::string KernelSource_volumeinfo_funcs =
 "		return volIndex;\n"
 "}\n"
 "\n"
-"const uint PathVolumeInfo_SimulateRemoveVolume(__global PathVolumeInfo *pvi, const uint volIndex\n"
+"uint PathVolumeInfo_SimulateRemoveVolume(__global PathVolumeInfo *pvi, const uint volIndex\n"
 "		MATERIALS_PARAM_DECL) {\n"
 "	if ((volIndex == NULL_INDEX) || (pvi->volumeIndexListSize == 0)) {\n"
 "		// NULL volume or empty volume list\n"
