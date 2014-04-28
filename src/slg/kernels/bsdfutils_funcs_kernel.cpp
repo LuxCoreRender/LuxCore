@@ -50,7 +50,7 @@ std::string KernelSource_bsdfutils_funcs =
 "#if defined(PARAM_HAS_PASSTHROUGH)\n"
 "			, bsdf->hitPoint.passThroughEvent\n"
 "#endif\n"
-"			);\n"
+"			MATERIALS_PARAM);\n"
 "}\n"
 "\n"
 "uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf\n"
@@ -59,7 +59,7 @@ std::string KernelSource_bsdfutils_funcs =
 "#if defined(PARAM_HAS_PASSTHROUGH)\n"
 "			, bsdf->hitPoint.passThroughEvent\n"
 "#endif\n"
-"			);\n"
+"			MATERIALS_PARAM);\n"
 "}\n"
 "#endif\n"
 ; } }

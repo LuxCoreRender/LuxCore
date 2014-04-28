@@ -125,12 +125,12 @@ void BSDF_Init(
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, u0
 #endif
-			),
+			MATERIALS_PARAM),
 			Material_GetExteriorVolume(&mats[matIndex], &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, u0
 #endif
-			)
+			MATERIALS_PARAM)
 			MATERIALS_PARAM);
 #endif
 

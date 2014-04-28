@@ -684,12 +684,79 @@ float3 MixMaterial_GetPassThroughTransparency(__global Material *material,
 
 		if (mat->type == MIX) {
 			currentMixMat = mat;
-			continue;
 		} else
 			return Material_GetPassThroughTransparencyNoMix(mat, hitPoint, fixedDir, passThroughEvent
 					TEXTURES_PARAM);
 	}
 }
+
+#if defined(PARAM_HAS_VOLUMES)
+uint MixMaterial_GetInteriorVolume(__global Material *material, 
+		__global HitPoint *hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+		, const float passEvent
+#endif
+		MATERIALS_PARAM_DECL) {
+	if (material->interiorVolumeIndex != NULL_INDEX)
+		return material->interiorVolumeIndex;
+
+	__global Material *currentMixMat = material;
+	float passThroughEvent = passEvent;
+	for (;;) {
+		const float factor = Texture_GetFloatValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
+				TEXTURES_PARAM);
+		const float weight2 = clamp(factor, 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
+
+		const bool sampleMatA = (passThroughEvent < weight1);
+		passThroughEvent = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
+		const uint matIndex = sampleMatA ? currentMixMat->mix.matAIndex : currentMixMat->mix.matBIndex;
+		__global Material *mat = &mats[matIndex];
+
+		if (mat->type == MIX) {
+			if (mat->interiorVolumeIndex != NULL_INDEX)
+				return mat->interiorVolumeIndex;
+			else
+				currentMixMat = mat;
+		} else
+			return mat->interiorVolumeIndex;
+	}
+}
+#endif
+
+#if defined(PARAM_HAS_VOLUMES)
+uint MixMaterial_GetExteriorVolume(__global Material *material, 
+		__global HitPoint *hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+		, const float passEvent
+#endif
+		MATERIALS_PARAM_DECL) {
+	if (material->exteriorVolumeIndex != NULL_INDEX)
+		return material->exteriorVolumeIndex;
+
+	__global Material *currentMixMat = material;
+	float passThroughEvent = passEvent;
+	for (;;) {
+		const float factor = Texture_GetFloatValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
+				TEXTURES_PARAM);
+		const float weight2 = clamp(factor, 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
+
+		const bool sampleMatA = (passThroughEvent < weight1);
+		passThroughEvent = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
+		const uint matIndex = sampleMatA ? currentMixMat->mix.matAIndex : currentMixMat->mix.matBIndex;
+		__global Material *mat = &mats[matIndex];
+
+		if (mat->type == MIX) {
+			if (mat->exteriorVolumeIndex != NULL_INDEX)
+				return mat->exteriorVolumeIndex;
+			else
+				currentMixMat = mat;
+		} else
+			return mat->exteriorVolumeIndex;
+	}
+}
+#endif
 
 #endif
 
@@ -821,9 +888,17 @@ uint Material_GetInteriorVolume(__global Material *material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float passThroughEvent
 #endif
-	) {
-	// TODO: support MIX material
-	return material->interiorVolumeIndex;
+		MATERIALS_PARAM_DECL) {
+#if defined (PARAM_ENABLE_MAT_MIX)
+	if (material->type == MIX)
+		return MixMaterial_GetInteriorVolume(material, hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+			, passThroughEvent
+#endif
+			MATERIALS_PARAM);
+	else
+#endif
+		return material->interiorVolumeIndex;
 }
 
 uint Material_GetExteriorVolume(__global Material *material, 
@@ -831,8 +906,16 @@ uint Material_GetExteriorVolume(__global Material *material,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float passThroughEvent
 #endif
-	) {
-	// TODO: support MIX material
-	return material->exteriorVolumeIndex;
+		MATERIALS_PARAM_DECL) {
+#if defined (PARAM_ENABLE_MAT_MIX)
+	if (material->type == MIX)
+		return MixMaterial_GetExteriorVolume(material, hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+			, passThroughEvent
+#endif
+			MATERIALS_PARAM);
+	else
+#endif
+		return material->exteriorVolumeIndex;
 }
 #endif
