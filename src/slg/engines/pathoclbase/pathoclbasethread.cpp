@@ -19,6 +19,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/ocl.h"
