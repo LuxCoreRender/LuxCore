@@ -47,7 +47,7 @@ uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
 #if defined(PARAM_HAS_PASSTHROUGH)
 			, bsdf->hitPoint.passThroughEvent
 #endif
-			);
+			MATERIALS_PARAM);
 }
 
 uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
@@ -56,6 +56,6 @@ uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
 #if defined(PARAM_HAS_PASSTHROUGH)
 			, bsdf->hitPoint.passThroughEvent
 #endif
-			);
+			MATERIALS_PARAM);
 }
 #endif
