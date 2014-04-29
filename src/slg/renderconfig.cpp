@@ -311,6 +311,9 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			} else if (type == "GAUSSIANFILTER_3x3") {
 				imagePipeline->AddPlugin(new GaussianBlur3x3FilterPlugin(
 					cfg.Get(Property(prefix + ".weight")(.15f)).Get<float>()));
+			} else if (type == "CAMERA_RESPONSE_FUNC") {
+				imagePipeline->AddPlugin(new CameraResponsePlugin(
+					cfg.Get(Property(prefix + ".name")("Advantix_100CD")).Get<string>()));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
