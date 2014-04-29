@@ -24,6 +24,7 @@
 #include <typeinfo> 
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/color/color.h"
 #include "slg/film/film.h"
 
 namespace slg {
@@ -115,6 +116,38 @@ private:
 
 	mutable luxrays::Spectrum *tmpBuffer;
 	mutable size_t tmpBufferSize;
+};
+
+//------------------------------------------------------------------------------
+// CameraResponse filter plugin
+//------------------------------------------------------------------------------
+
+class CameraResponsePlugin : public ImagePipelinePlugin {
+public:
+	CameraResponsePlugin(const std::string &name);
+	virtual ~CameraResponsePlugin() { }
+
+	virtual ImagePipelinePlugin *Copy() const;
+
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+
+private:
+	// Used by Copy()
+	CameraResponsePlugin() { }
+
+	bool LoadPreset(const std::string &filmName);
+	void LoadFile(const std::string &filmName);
+
+	void Map(luxrays::RGBColor &rgb) const;
+	float ApplyCrf(float point, const vector<float> &from, const vector<float> &to) const;
+
+	bool color;
+	vector<float> RedI; // image irradiance (on the image plane)
+	vector<float> RedB; // measured intensity
+	vector<float> GreenI; // image irradiance (on the image plane)
+	vector<float> GreenB; // measured intensity
+	vector<float> BlueI; // image irradiance (on the image plane)
+	vector<float> BlueB; // measured intensity
 };
 
 }
