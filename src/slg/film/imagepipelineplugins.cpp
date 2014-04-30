@@ -537,9 +537,8 @@ CameraResponsePlugin::CameraResponsePlugin(const string &name) {
 		YB[i] = c.Y();
 	}
 
-	float sourceGamma, rmse;
-
-	sourceGamma = EstimateGamma(YI, YB, &rmse);
+	float rmse;
+	const float sourceGamma = EstimateGamma(YI, YB, &rmse);
 
 	// Compensate for built-in gamma
 	AdjustGamma(RedI, RedB, 1.f / sourceGamma);

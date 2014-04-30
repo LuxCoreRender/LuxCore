@@ -176,6 +176,7 @@ int main(int argc, char *argv[]) {
 		luxcore::Init();
 
 		bool batchMode = false;
+		bool removeUnusedMatsAndTexs = false;
 		Properties cmdLineProp;
 		string configFileName;
 		for (int i = 1; i < argc; i++) {
@@ -194,6 +195,7 @@ int main(int argc, char *argv[]) {
 							" -m <makes the mouse operations work in \"grab mode\">" << endl << 
 							" -R <use LuxVR name>" << endl <<
 							" -g <enable full screen mode>" << endl <<
+							" -c <remove all unused materials and textures>" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
 				}
@@ -224,6 +226,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'R') optUseLuxVRName = true;
 
 				else if (argv[i][1] == 'g') optUseGameMode = true;
+
+				else if (argv[i][1] == 'c') removeUnusedMatsAndTexs = true;
 
 				else {
 					SLG_LOG("Invalid option: " << argv[i]);
@@ -269,6 +273,12 @@ int main(int argc, char *argv[]) {
 			// It is a LuxCore SDL file
 			config = new RenderConfig(Properties(configFileName).Set(cmdLineProp));
 			scene = NULL;
+		}
+
+		if (removeUnusedMatsAndTexs) {
+			// Remove unused materials and textures
+			config->GetScene().RemoveUnusedMaterials();
+			config->GetScene().RemoveUnusedTextures();
 		}
 
 		const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
