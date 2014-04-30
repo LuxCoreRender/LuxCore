@@ -27,33 +27,41 @@
 
 bool Material_IsDeltaNoMix(__global Material *material) {
 	switch (material->type) {
+		//----------------------------------------------------------------------
 		// Non Specular materials
 #if defined (PARAM_ENABLE_MAT_CARPAINT)
 		case CARPAINT:
+			return false;
 #endif
 #if defined (PARAM_ENABLE_MAT_CLOTH)
 		case CLOTH:
+			return false;
 #endif
 #if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
 		case ROUGHGLASS:
+			return false;
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
+			return false;
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
+			return false;
 #endif
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 		case MATTETRANSLUCENT:
-#endif
-#if defined (PARAM_ENABLE_MAT_MATTE)
-		case MATTE:
 			return false;
 #endif
 #if defined (PARAM_ENABLE_MAT_VELVET)
 		case VELVET:
 			return false;
 #endif
+#if defined (PARAM_ENABLE_MAT_MATTE)
+		case MATTE:
+			return false;
+#endif
+		//----------------------------------------------------------------------
 		// Specular materials
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:

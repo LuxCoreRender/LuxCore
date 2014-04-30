@@ -1373,11 +1373,11 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	const float coso = fabsf(localFixedDir.z);
 	const Spectrum alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
 	const float d = depth->GetFloatValue(hitPoint);
-		const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
+	const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 	// Coating fresnel factor
 	const Vector H(Normalize(localFixedDir + *localSampledDir));
-		const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(*localSampledDir, H));
+	const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(*localSampledDir, H));
 
 	// Blend in base layer Schlick style
 	// coatingF already takes fresnel factor S into account
@@ -3250,8 +3250,7 @@ const struct CarpaintMaterial::CarpaintData CarpaintMaterial::data[8] = {
 //------------------------------------------------------------------------------
 
 Spectrum slg::CoatingAbsorption(const float cosi, const float coso,
-	const Spectrum &alpha, const float depth)
-{
+	const Spectrum &alpha, const float depth) {
 	if (depth > 0.f) {
 		// 1/cosi+1/coso=(cosi+coso)/(cosi*coso)
 		const float depthFactor = depth * (cosi + coso) / (cosi * coso);
