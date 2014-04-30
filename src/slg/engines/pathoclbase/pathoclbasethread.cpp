@@ -757,7 +757,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 	}
 	if (cscene->IsMaterialCompiled(CLOTH))
 		ss << " -D PARAM_ENABLE_MAT_CLOTH";
-
 	if (cscene->IsMaterialCompiled(CARPAINT))
 		ss << " -D PARAM_ENABLE_MAT_CARPAINT";
 
