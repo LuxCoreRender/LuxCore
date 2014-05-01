@@ -28,12 +28,30 @@ FUNCTION(PreprocessOCLKernel NAMESPACE KERNEL SRC DST)
 	IF(WIN32)
 		add_custom_command(
 			OUTPUT ${DST}
-			COMMAND echo "#include <string>" > ${DST}
-			COMMAND echo namespace ${NAMESPACE} "{ namespace ocl {" >> ${DST}
-			COMMAND echo std::string KernelSource_PathOCL_${KERNEL} = >> ${DST}
-# TODO: this code need to be update in order to replace " char with \" (i.e. sed 's/"/\\"/g')
-			COMMAND for /F \"usebackq tokens=*\" %%a in (${SRC}) do echo \"%%a\\n\" >> ${DST}
-			COMMAND echo "; } }" >> ${DST}
+			COMMAND echo \#include ^<string^> > ${DST}
+			COMMAND echo namespace ${NAMESPACE} { namespace ocl { >> ${DST}
+			COMMAND echo std::string KernelSource_${KERNEL} = >> ${DST}
+			
+			# need delayed expansion for the env variable
+			# so we can use the search/replace functionality when expanding env vars
+			# which for some reason doesn't work for loop vars
+			# however delayed expansion relies on ! keyword which causes "lone" !'s 
+			# to get eaten in the first set statement
+			# so, enable after the initial set statement and disable when done
+			
+			#COMMAND for /F \"usebackq tokens=*\" %%a in (${SRC}) do if \"%%a\"==\"\" (echo \"\\n\" >> ${DST}) else (set line=%%a&&set line=!line:\\=\\\\!&& echo \"!line:\"=\\\"!\\n\" >> ${DST}) 
+			COMMAND for /F \"usebackq tokens=*\" %%a in (${SRC}) do if \"%%a\"==\"\" (echo \"\\n\" >> ${DST}) else (
+			COMMAND set line=%%a
+			COMMAND setlocal ENABLEDELAYEDEXPANSION
+			# escape \
+			COMMAND set line=!line:\\=\\\\!
+			# escape "
+			COMMAND set line=!line:\"=\\\"!
+			# output processed line
+			COMMAND echo \"!line!\\n\" >> ${DST}
+			COMMAND endlocal
+			COMMAND )
+			COMMAND echo \; } } >> ${DST}
 			MAIN_DEPENDENCY ${SRC}
 		)
 	ELSE(WIN32)

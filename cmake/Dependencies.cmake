@@ -63,9 +63,9 @@ find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENT
 if (NOT Boost_FOUND)
         # Try again with the other type of libs
         if(Boost_USE_STATIC_LIBS)
-                set(Boost_USE_STATIC_LIBS)
-        else()
                 set(Boost_USE_STATIC_LIBS OFF)
+        else()
+                set(Boost_USE_STATIC_LIBS ON)
         endif()
         find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 endif()
