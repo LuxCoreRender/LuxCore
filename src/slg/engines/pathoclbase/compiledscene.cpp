@@ -18,10 +18,10 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <iosfwd>
 #include <limits>
 
 #include <boost/lexical_cast.hpp>
-#include <c++/4.7/iosfwd>
 
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/sdl/blender_texture.h"
