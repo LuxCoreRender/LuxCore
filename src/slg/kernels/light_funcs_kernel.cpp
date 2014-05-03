@@ -451,7 +451,7 @@ std::string KernelSource_light_funcs =
 "	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);\n"
 "	VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);\n"
 "#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)\n"
-"	VSTORE2F(WHITE, &tmpHitPoint->color.c);\n"
+"	VSTORE2F((float2)(1.f, 1.f), &tmpHitPoint->color.c);\n"
 "#endif\n"
 "#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)\n"
 "	VSTORE2F(1.f, &tmpHitPoint->alpha);\n"

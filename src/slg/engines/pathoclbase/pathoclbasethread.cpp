@@ -827,6 +827,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 	ss << " -D PARAM_DEVICE_INDEX=" << threadIndex;
 	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
 
+	if (!renderEngine->useDynamicCodeGenerationForTextures)
+		ss << " -D PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION";
+
 	ss << AdditionalKernelOptions();
 	
 	//--------------------------------------------------------------------------
@@ -895,7 +898,18 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_mapping_funcs <<
 			slg::ocl::KernelSource_texture_noise_funcs <<
 			slg::ocl::KernelSource_texture_blender_funcs <<
-			slg::ocl::KernelSource_texture_funcs <<
+			slg::ocl::KernelSource_texture_funcs;
+		
+		if (renderEngine->useDynamicCodeGenerationForTextures) {
+			// Generate the code to evaluate the textures
+			ssKernel <<
+				"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
+				cscene->GetTexturesEvaluationSourceCode() <<
+				"\n";
+		}
+
+		ssKernel <<
+			slg::ocl::KernelSource_texture_bump_funcs <<
 			slg::ocl::KernelSource_materialdefs_funcs_generic <<
 			slg::ocl::KernelSource_materialdefs_funcs_archglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<

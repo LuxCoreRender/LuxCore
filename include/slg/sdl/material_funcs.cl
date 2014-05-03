@@ -290,7 +290,7 @@ float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global Hi
 	if (emitTexIndex == NULL_INDEX)
 		return BLACK;
 
-	return Texture_GetSpectrumValue(&texs[emitTexIndex], hitPoint
+	return Texture_GetSpectrumValue(emitTexIndex, hitPoint
 				TEXTURES_PARAM);
 }
 
@@ -300,18 +300,17 @@ void Material_BumpNoMix(__global Material *material, __global HitPoint *hitPoint
         const float3 dndu, const float3 dndv, const float weight
         MATERIALS_PARAM_DECL) {
     if ((material->bumpTexIndex != NULL_INDEX) && (weight > 0.f)) {
-        __global Texture *tex = &texs[material->bumpTexIndex];
         const float2 duv = weight * 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
-            ((tex->type == NORMALMAP_TEX) ?
-                NormalMapTexture_GetDuv(tex,
+            ((texs[material->bumpTexIndex].type == NORMALMAP_TEX) ?
+                NormalMapTexture_GetDuv(material->bumpTexIndex,
                     hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
                     TEXTURES_PARAM) :
-                Texture_GetDuv(tex,
+                Texture_GetDuv(material->bumpTexIndex,
                     hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
                     TEXTURES_PARAM));
 #else
-            Texture_GetDuv(tex,
+            Texture_GetDuv(material->bumpTexIndex,
                 hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
                 TEXTURES_PARAM);
 #endif
@@ -437,7 +436,7 @@ float3 MixMaterial_Evaluate(__global Material *material,
 		// Check if it is a Mix material too
 		if (m->type == MIX) {
 			// Add both material to the stack
-			const float factor = Texture_GetFloatValue(&texs[m->mix.mixFactorTexIndex], hitPoint
+			const float factor = Texture_GetFloatValue(m->mix.mixFactorTexIndex, hitPoint
 					TEXTURES_PARAM);
 			const float weight2 = clamp(factor, 0.f, 1.f);
 			const float weight1 = 1.f - weight2;
@@ -488,7 +487,7 @@ float3 MixMaterial_Sample(__global Material *material,
 	float passThroughEvent = passEvent;
 	float parentWeight = 1.f;
 	for (;;) {
-		const float factor = Texture_GetFloatValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
+		const float factor = Texture_GetFloatValue(currentMixMat->mix.mixFactorTexIndex, hitPoint
 			TEXTURES_PARAM);
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
@@ -596,7 +595,7 @@ float3 MixMaterial_GetEmittedRadiance(__global Material *material, __global HitP
 		float totalWeight = totalWeightStack[stackIndex--];
 
 		if (m->type == MIX) {
-			const float factor = Texture_GetFloatValue(&texs[m->mix.mixFactorTexIndex], hitPoint
+			const float factor = Texture_GetFloatValue(m->mix.mixFactorTexIndex, hitPoint
 					TEXTURES_PARAM);
 			const float weight2 = clamp(factor, 0.f, 1.f);
 			const float weight1 = 1.f - weight2;
@@ -650,7 +649,7 @@ void MixMaterial_Bump(__global Material *material, __global HitPoint *hitPoint,
             float totalWeight = totalWeightStack[stackIndex--];
 
             if (m->type == MIX) {
-                const float factor = Texture_GetFloatValue(&texs[m->mix.mixFactorTexIndex], hitPoint
+                const float factor = Texture_GetFloatValue(m->mix.mixFactorTexIndex, hitPoint
                         TEXTURES_PARAM);
                 const float weight2 = clamp(factor, 0.f, 1.f);
                 const float weight1 = 1.f - weight2;
@@ -680,7 +679,7 @@ float3 MixMaterial_GetPassThroughTransparency(__global Material *material,
 	__global Material *currentMixMat = material;
 	float passThroughEvent = passEvent;
 	for (;;) {
-		const float factor = Texture_GetFloatValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
+		const float factor = Texture_GetFloatValue(currentMixMat->mix.mixFactorTexIndex, hitPoint
 				TEXTURES_PARAM);
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
@@ -711,7 +710,7 @@ uint MixMaterial_GetInteriorVolume(__global Material *material,
 	__global Material *currentMixMat = material;
 	float passThroughEvent = passEvent;
 	for (;;) {
-		const float factor = Texture_GetFloatValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
+		const float factor = Texture_GetFloatValue(currentMixMat->mix.mixFactorTexIndex, hitPoint
 				TEXTURES_PARAM);
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
@@ -745,7 +744,7 @@ uint MixMaterial_GetExteriorVolume(__global Material *material,
 	__global Material *currentMixMat = material;
 	float passThroughEvent = passEvent;
 	for (;;) {
-		const float factor = Texture_GetFloatValue(&texs[currentMixMat->mix.mixFactorTexIndex], hitPoint
+		const float factor = Texture_GetFloatValue(currentMixMat->mix.mixFactorTexIndex, hitPoint
 				TEXTURES_PARAM);
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;

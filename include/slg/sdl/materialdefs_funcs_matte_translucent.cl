@@ -28,9 +28,9 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		TEXTURES_PARAM_DECL) {
-	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
+	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint
 			TEXTURES_PARAM));
-	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
+	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint
 			TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - r);
@@ -86,9 +86,9 @@ float3 MatteTranslucentMaterial_Sample(__global Material *material,
 	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.krTexIndex], hitPoint
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint
 			TEXTURES_PARAM));
-	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matteTranslucent.ktTexIndex], hitPoint
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint
 			TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - kr);

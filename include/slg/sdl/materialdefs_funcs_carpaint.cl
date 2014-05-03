@@ -47,40 +47,40 @@ float3 CarpaintMaterial_Evaluate(__global Material *material,
 	// Absorption
 	const float cosi = fabs(lightDir.z);
 	const float coso = fabs(eyeDir.z);
-	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KaTexIndex], hitPoint TEXTURES_PARAM));
-	const float d = Texture_GetFloatValue(&texs[material->carpaint.depthTexIndex], hitPoint TEXTURES_PARAM);
+	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.KaTexIndex, hitPoint TEXTURES_PARAM));
+	const float d = Texture_GetFloatValue(material->carpaint.depthTexIndex, hitPoint TEXTURES_PARAM);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 	// Diffuse layer
-	float3 result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KdTexIndex], hitPoint TEXTURES_PARAM)) * M_1_PI_F * fabs(lightDir.z);
+	float3 result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.KdTexIndex, hitPoint TEXTURES_PARAM)) * M_1_PI_F * fabs(lightDir.z);
 
 	// 1st glossy layer
-	const float3 ks1 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks1TexIndex], hitPoint TEXTURES_PARAM));
-	const float m1 = Texture_GetFloatValue(&texs[material->carpaint.M1TexIndex], hitPoint TEXTURES_PARAM);
+	const float3 ks1 = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.Ks1TexIndex, hitPoint TEXTURES_PARAM));
+	const float m1 = Texture_GetFloatValue(material->carpaint.M1TexIndex, hitPoint TEXTURES_PARAM);
 	if (Spectrum_Filter(ks1) > 0.f && m1 > 0.f)
 	{
 		const float rough1 = m1 * m1;
-		const float r1 = Texture_GetFloatValue(&texs[material->carpaint.R1TexIndex], hitPoint TEXTURES_PARAM);
+		const float r1 = Texture_GetFloatValue(material->carpaint.R1TexIndex, hitPoint TEXTURES_PARAM);
 		result += (SchlickDistribution_D(rough1, H, 0.f) * SchlickDistribution_G(rough1, lightDir, eyeDir) / (4.f * coso)) * (ks1 * FresnelSchlick_Evaluate(r1, dot(eyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough1, H, 0.f);
 		++n;
 	}
-	const float3 ks2 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks2TexIndex], hitPoint TEXTURES_PARAM));
-	const float m2 = Texture_GetFloatValue(&texs[material->carpaint.M2TexIndex], hitPoint TEXTURES_PARAM);
+	const float3 ks2 = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.Ks2TexIndex, hitPoint TEXTURES_PARAM));
+	const float m2 = Texture_GetFloatValue(material->carpaint.M2TexIndex, hitPoint TEXTURES_PARAM);
 	if (Spectrum_Filter(ks2) > 0.f && m2 > 0.f)
 	{
 		const float rough2 = m2 * m2;
-		const float r2 = Texture_GetFloatValue(&texs[material->carpaint.R2TexIndex], hitPoint TEXTURES_PARAM);
+		const float r2 = Texture_GetFloatValue(material->carpaint.R2TexIndex, hitPoint TEXTURES_PARAM);
 		result += (SchlickDistribution_D(rough2, H, 0.f) * SchlickDistribution_G(rough2, lightDir, eyeDir) / (4.f * coso)) * (ks2 * FresnelSchlick_Evaluate(r2, dot(eyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough2, H, 0.f);
 		++n;
 	}
-	const float3 ks3 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks3TexIndex], hitPoint TEXTURES_PARAM));
-	const float m3 = Texture_GetFloatValue(&texs[material->carpaint.M3TexIndex], hitPoint TEXTURES_PARAM);
+	const float3 ks3 = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.Ks3TexIndex, hitPoint TEXTURES_PARAM));
+	const float m3 = Texture_GetFloatValue(material->carpaint.M3TexIndex, hitPoint TEXTURES_PARAM);
 	if (Spectrum_Filter(ks3) > 0.f && m3 > 0.f)
 	{
 		const float rough3 = m3 * m3;
-		const float r3 = Texture_GetFloatValue(&texs[material->carpaint.R3TexIndex], hitPoint TEXTURES_PARAM);
+		const float r3 = Texture_GetFloatValue(material->carpaint.R3TexIndex, hitPoint TEXTURES_PARAM);
 		result += (SchlickDistribution_D(rough3, H, 0.f) * SchlickDistribution_G(rough3, lightDir, eyeDir) / (4.f * coso)) * (ks3 * FresnelSchlick_Evaluate(r3, dot(eyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough3, H, 0.f);
 		++n;
@@ -115,24 +115,24 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 	float pdf = 0.f;
 	bool l1 = false, l2 = false, l3 = false;
 	// 1st glossy layer
-	const float3 ks1 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks1TexIndex], hitPoint TEXTURES_PARAM));
-	const float m1 = Texture_GetFloatValue(&texs[material->carpaint.M1TexIndex], hitPoint TEXTURES_PARAM);
+	const float3 ks1 = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.Ks1TexIndex, hitPoint TEXTURES_PARAM));
+	const float m1 = Texture_GetFloatValue(material->carpaint.M1TexIndex, hitPoint TEXTURES_PARAM);
 	if (Spectrum_Filter(ks1) > 0.f && m1 > 0.f)
 	{
 		l1 = true;
 		++n;
 	}
 	// 2nd glossy layer
-	const float3 ks2 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks2TexIndex], hitPoint TEXTURES_PARAM));
-	const float m2 = Texture_GetFloatValue(&texs[material->carpaint.M2TexIndex], hitPoint TEXTURES_PARAM);
+	const float3 ks2 = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.Ks2TexIndex, hitPoint TEXTURES_PARAM));
+	const float m2 = Texture_GetFloatValue(material->carpaint.M2TexIndex, hitPoint TEXTURES_PARAM);
 	if (Spectrum_Filter(ks2) > 0.f && m2 > 0.f)
 	{
 		l2 = true;
 		++n;
 	}
 	// 3rd glossy layer
-	const float3 ks3 = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.Ks3TexIndex], hitPoint TEXTURES_PARAM));
-	const float m3 = Texture_GetFloatValue(&texs[material->carpaint.M3TexIndex], hitPoint TEXTURES_PARAM);
+	const float3 ks3 = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.Ks3TexIndex, hitPoint TEXTURES_PARAM));
+	const float m3 = Texture_GetFloatValue(material->carpaint.M3TexIndex, hitPoint TEXTURES_PARAM);
 	if (Spectrum_Filter(ks3) > 0.f && m3 > 0.f)
 	{
 		l3 = true;
@@ -152,12 +152,12 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 		// Absorption
 		const float cosi = fabs(fixedDir.z);
 		const float coso = fabs((*sampledDir).z);
-		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KaTexIndex], hitPoint TEXTURES_PARAM));
-		const float d = Texture_GetFloatValue(&texs[material->carpaint.depthTexIndex], hitPoint TEXTURES_PARAM);
+		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.KaTexIndex, hitPoint TEXTURES_PARAM));
+		const float d = Texture_GetFloatValue(material->carpaint.depthTexIndex, hitPoint TEXTURES_PARAM);
 		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 		// Evaluate base BSDF
-		result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KdTexIndex], hitPoint TEXTURES_PARAM)) * pdf;
+		result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.KdTexIndex, hitPoint TEXTURES_PARAM)) * pdf;
 
 		wh = normalize(*sampledDir + fixedDir);
 		if (wh.z < 0.f)
@@ -182,7 +182,7 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 		if (pdf <= 0.f)
 			return BLACK;
 
-		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R1TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(material->carpaint.R1TexIndex, hitPoint TEXTURES_PARAM), cosWH);
 
 		const float G = SchlickDistribution_G(rough1, fixedDir, *sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -206,7 +206,7 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 		if (pdf <= 0.f)
 			return BLACK;
 
-		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R2TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(material->carpaint.R2TexIndex, hitPoint TEXTURES_PARAM), cosWH);
 
 		const float G = SchlickDistribution_G(rough2, fixedDir, *sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -229,7 +229,7 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 		if (pdf <= 0.f)
 			return BLACK;
 
-		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R3TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+		result = FresnelSchlick_Evaluate(Texture_GetFloatValue(material->carpaint.R3TexIndex, hitPoint TEXTURES_PARAM), cosWH);
 
 		const float G = SchlickDistribution_G(rough3, fixedDir, *sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -244,13 +244,13 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 		// Absorption
 		const float cosi = fabs(fixedDir.z);
 		const float coso = fabs((*sampledDir).z);
-		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KaTexIndex], hitPoint TEXTURES_PARAM));
-		const float d = Texture_GetFloatValue(&texs[material->carpaint.depthTexIndex], hitPoint TEXTURES_PARAM);
+		const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.KaTexIndex, hitPoint TEXTURES_PARAM));
+		const float d = Texture_GetFloatValue(material->carpaint.depthTexIndex, hitPoint TEXTURES_PARAM);
 		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 		const float pdf0 = fabs((*sampledDir).z) * M_1_PI_F;
 		pdf += pdf0;
-		result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->carpaint.KdTexIndex], hitPoint TEXTURES_PARAM)) * pdf0;
+		result = absorption * Spectrum_Clamp(Texture_GetSpectrumValue(material->carpaint.KdTexIndex, hitPoint TEXTURES_PARAM)) * pdf0;
 	}
 	// 1st glossy
 	if (l1 && sampled != 1) {
@@ -261,7 +261,7 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 			result += (d1 *
 				SchlickDistribution_G(rough1, fixedDir, *sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
-				FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R1TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+				FresnelSchlick_Evaluate(Texture_GetFloatValue(material->carpaint.R1TexIndex, hitPoint TEXTURES_PARAM), cosWH);
 			pdf += pdf1;
 		}
 	}
@@ -274,7 +274,7 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 			result += (d2 *
 				SchlickDistribution_G(rough2, fixedDir, *sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
-				FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R2TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+				FresnelSchlick_Evaluate(Texture_GetFloatValue(material->carpaint.R2TexIndex, hitPoint TEXTURES_PARAM), cosWH);
 			pdf += pdf2;
 		}
 	}
@@ -287,7 +287,7 @@ float3 CarpaintMaterial_Sample(__global Material *material,
 			result += (d3 *
 				SchlickDistribution_G(rough3, fixedDir, *sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
-				FresnelSchlick_Evaluate(Texture_GetFloatValue(&texs[material->carpaint.R3TexIndex], hitPoint TEXTURES_PARAM), cosWH);
+				FresnelSchlick_Evaluate(Texture_GetFloatValue(material->carpaint.R3TexIndex, hitPoint TEXTURES_PARAM), cosWH);
 			pdf += pdf3;
 		}
 	}

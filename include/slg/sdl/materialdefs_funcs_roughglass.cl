@@ -28,9 +28,9 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW
 		TEXTURES_PARAM_DECL) {
-	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.ktTexIndex], hitPoint
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->roughglass.ktTexIndex, hitPoint
 		TEXTURES_PARAM));
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.krTexIndex], hitPoint
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->roughglass.krTexIndex, hitPoint
 		TEXTURES_PARAM));
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
@@ -38,16 +38,16 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 	if (isKtBlack && isKrBlack)
 		return BLACK;
 	
-	const float nc = Texture_GetFloatValue(&texs[material->roughglass.exteriorIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(material->roughglass.exteriorIorTexIndex, hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(&texs[material->roughglass.interiorIorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(material->roughglass.interiorIorTexIndex, hitPoint
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 
-	const float u = clamp(Texture_GetFloatValue(&texs[material->roughglass.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(material->roughglass.nuTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
-	const float v = clamp(Texture_GetFloatValue(&texs[material->roughglass.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(material->roughglass.nvTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -138,9 +138,9 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 			(fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
-	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.ktTexIndex], hitPoint
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->roughglass.ktTexIndex, hitPoint
 		TEXTURES_PARAM));
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->roughglass.krTexIndex], hitPoint
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->roughglass.krTexIndex, hitPoint
 		TEXTURES_PARAM));
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
@@ -148,10 +148,10 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 	if (isKtBlack && isKrBlack)
 		return BLACK;
 
-	const float u = clamp(Texture_GetFloatValue(&texs[material->roughglass.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(material->roughglass.nuTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
-	const float v = clamp(Texture_GetFloatValue(&texs[material->roughglass.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(material->roughglass.nvTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -169,9 +169,9 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 		wh = -wh;
 	const float cosThetaOH = dot(localFixedDir, wh);
 
-	const float nc = Texture_GetFloatValue(&texs[material->roughglass.exteriorIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(material->roughglass.exteriorIorTexIndex, hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(&texs[material->roughglass.interiorIorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(material->roughglass.interiorIorTexIndex, hitPoint
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 

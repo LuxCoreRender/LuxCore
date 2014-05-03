@@ -547,9 +547,9 @@ float3 ClothMaterial_Evaluate(__global Material *material,
 	const uint ksIndex = yarn->yarn_type == WARP ? material->cloth.Warp_KsIndex : material->cloth.Weft_KsIndex;
 	const uint kdIndex = yarn->yarn_type == WARP ? material->cloth.Warp_KdIndex : material->cloth.Weft_KdIndex;
 
-    const float3 ksVal = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[ksIndex], hitPoint
+    const float3 ksVal = Spectrum_Clamp(Texture_GetSpectrumValue(ksIndex, hitPoint
 			TEXTURES_PARAM));
-    const float3 kdVal = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[kdIndex], hitPoint
+    const float3 kdVal = Spectrum_Clamp(Texture_GetSpectrumValue(kdIndex, hitPoint
 			TEXTURES_PARAM));
 
 	return (kdVal + ksVal * scale) * M_1_PI_F * fabs(localLightDir.z);
@@ -592,9 +592,9 @@ float3 ClothMaterial_Sample(__global Material *material,
     const uint ksIndex = yarn->yarn_type == WARP ? material->cloth.Warp_KsIndex : material->cloth.Weft_KsIndex;
 	const uint kdIndex = yarn->yarn_type == WARP ? material->cloth.Warp_KdIndex : material->cloth.Weft_KdIndex;
 
-    const float3 ksVal = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[ksIndex], hitPoint
+    const float3 ksVal = Spectrum_Clamp(Texture_GetSpectrumValue(ksIndex, hitPoint
 			TEXTURES_PARAM));
-    const float3 kdVal = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[kdIndex], hitPoint
+    const float3 kdVal = Spectrum_Clamp(Texture_GetSpectrumValue(kdIndex, hitPoint
 			TEXTURES_PARAM));
 
 	return kdVal + ksVal * scale;
