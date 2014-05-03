@@ -30,10 +30,10 @@ float3 Metal2Material_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		TEXTURES_PARAM_DECL) {
-	const float u = clamp(Texture_GetFloatValue(&texs[material->metal2.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(material->metal2.nuTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
-	const float v = clamp(Texture_GetFloatValue(&texs[material->metal2.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -50,9 +50,9 @@ float3 Metal2Material_Evaluate(__global Material *material,
 	if (directPdfW)
 		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
 
-	const float3 nVal = Texture_GetSpectrumValue(&texs[material->metal2.nTexIndex], hitPoint
+	const float3 nVal = Texture_GetSpectrumValue(material->metal2.nTexIndex, hitPoint
 			TEXTURES_PARAM);
-	const float3 kVal = Texture_GetSpectrumValue(&texs[material->metal2.kTexIndex], hitPoint
+	const float3 kVal = Texture_GetSpectrumValue(material->metal2.kTexIndex, hitPoint
 			TEXTURES_PARAM);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
@@ -73,10 +73,10 @@ float3 Metal2Material_Sample(__global Material *material,
 			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
-	const float u = clamp(Texture_GetFloatValue(&texs[material->metal2.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(material->metal2.nuTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
-	const float v = clamp(Texture_GetFloatValue(&texs[material->metal2.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -105,9 +105,9 @@ float3 Metal2Material_Sample(__global Material *material,
 
 	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
 	
-	const float3 nVal = Texture_GetSpectrumValue(&texs[material->metal2.nTexIndex], hitPoint
+	const float3 nVal = Texture_GetSpectrumValue(material->metal2.nTexIndex, hitPoint
 			TEXTURES_PARAM);
-	const float3 kVal = Texture_GetSpectrumValue(&texs[material->metal2.kTexIndex], hitPoint
+	const float3 kVal = Texture_GetSpectrumValue(material->metal2.kTexIndex, hitPoint
 			TEXTURES_PARAM);
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 

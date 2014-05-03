@@ -39,7 +39,7 @@ float3 MirrorMaterial_Sample(__global Material *material,
 	*pdfW = 1.f;
 
 	*cosSampledDir = fabs((*sampledDir).z);
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->mirror.krTexIndex], hitPoint
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->mirror.krTexIndex, hitPoint
 			TEXTURES_PARAM));
 	return kr;
 }

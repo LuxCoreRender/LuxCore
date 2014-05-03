@@ -448,7 +448,7 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
 	VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
-	VSTORE2F(WHITE, &tmpHitPoint->color.c);
+	VSTORE2F((float2)(1.f, 1.f), &tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	VSTORE2F(1.f, &tmpHitPoint->alpha);

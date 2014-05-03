@@ -171,11 +171,11 @@ BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const std
 
 float BlenderCloudsTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	Point P(mapping->Map(hitPoint));
+
 	float clouds = BLI_gTurbulence(noisesize, P.x, P.y, P.z, noisedepth, hard, noisebasis);
 
 	clouds = (clouds - 0.5f) * contrast + bright - 0.5f;
-    if(clouds < 0.f) clouds = 0.f; 
-	else if(clouds > 1.f) clouds = 1.f;
+	clouds = Clamp(clouds, 0.f, 1.f);
 	
     return clouds;
 }
@@ -1025,8 +1025,7 @@ float BlenderWoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	}
     
 	wood = (wood - 0.5f) * contrast + bright - 0.5f;
-    if(wood < 0.f) wood = 0.f; 
-	else if(wood > 1.f) wood = 1.f;
+	wood = Clamp(wood, 0.f, 1.f);
 	
     return wood;
 }

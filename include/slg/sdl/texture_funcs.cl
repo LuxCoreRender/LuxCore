@@ -117,17 +117,27 @@ float3 ImageMap_GetSpectrum(__global float *pixels,
 // ConstFloat texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_CONST_FLOAT)
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 
+float ConstFloatTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
+	return texture->constFloat.value;
+}
+
+float3 ConstFloatTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	return texture->constFloat.value;
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void ConstFloatTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = texture->constFloat.value;
+	texValues[(*texValuesSize)++] = ConstFloatTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void ConstFloatTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = texture->constFloat.value;
+	texValues[(*texValuesSize)++] = ConstFloatTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -135,17 +145,27 @@ void ConstFloatTexture_EvaluateSpectrum(__global Texture *texture, __global HitP
 // ConstFloat3 texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_CONST_FLOAT3)
+#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 
+float ConstFloat3Texture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
+	return Spectrum_Y(VLOAD3F(texture->constFloat3.color.c));
+}
+
+float3 ConstFloat3Texture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	return VLOAD3F(texture->constFloat3.color.c);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void ConstFloat3Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(texture->constFloat3.color.c));
+	texValues[(*texValuesSize)++] = ConstFloat3Texture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void ConstFloat3Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = VLOAD3F(texture->constFloat3.color.c);
+	texValues[(*texValuesSize)++] = ConstFloat3Texture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -153,10 +173,9 @@ void ConstFloat3Texture_EvaluateSpectrum(__global Texture *texture, __global Hit
 // ImageMap texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_IMAGEMAP)
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 
-void ImageMapTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
+float ImageMapTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
 	__global float *pixels = ImageMap_GetPixelsAddress(
@@ -165,27 +184,42 @@ void ImageMapTexture_EvaluateFloat(__global Texture *texture, __global HitPoint 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(&texture->imageMapTex.mapping, hitPoint);
 
-	texValues[(*texValuesSize)++] = texture->imageMapTex.gain * ImageMap_GetFloat(
+	return texture->imageMapTex.gain * ImageMap_GetFloat(
 			pixels,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			mapUV.s0, mapUV.s1);
+}
+
+float3 ImageMapTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint
+		IMAGEMAPS_PARAM_DECL) {
+	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
+	__global float *pixels = ImageMap_GetPixelsAddress(
+			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 mapUV = TextureMapping2D_Map(&texture->imageMapTex.mapping, hitPoint);
+
+	return texture->imageMapTex.gain * ImageMap_GetSpectrum(
+			pixels,
+			imageMap->width, imageMap->height, imageMap->channelCount,
+			mapUV.s0, mapUV.s1);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void ImageMapTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
+		IMAGEMAPS_PARAM_DECL) {
+	texValues[(*texValuesSize)++] = ImageMapTexture_DynamicEvaluateFloat(texture, hitPoint
+		IMAGEMAPS_PARAM);
 }
 
 void ImageMapTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
 		IMAGEMAPS_PARAM_DECL) {
-	__global ImageMap *imageMap = &imageMapDescs[texture->imageMapTex.imageMapIndex];
-	__global float *pixels = ImageMap_GetPixelsAddress(
-			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = TextureMapping2D_Map(&texture->imageMapTex.mapping, hitPoint);
-
-	texValues[(*texValuesSize)++] = texture->imageMapTex.gain * ImageMap_GetSpectrum(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			mapUV.s0, mapUV.s1);
+	texValues[(*texValuesSize)++] =  ImageMapTexture_DynamicEvaluateSpectrum(texture, hitPoint
+		IMAGEMAPS_PARAM);
 }
+#endif
 
 #endif
 
@@ -193,21 +227,37 @@ void ImageMapTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoi
 // Scale texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_SCALE)
+#if defined(PARAM_ENABLE_TEX_SCALE)
+
+float ScaleTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float tex1, const float tex2) {
+	return tex1 * tex2;
+}
+
+float3 ScaleTexture_DynamicEvaluateSpectrum(__global Texture *texture,  __global HitPoint *hitPoint,
+		const float3 tex1, const float3 tex2) {
+	return tex1 * tex2;
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 
 void ScaleTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float value = texValues[--(*texValuesSize)] * texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = value;
+	const float tex1 = texValues[--(*texValuesSize)];
+	const float tex2 = texValues[--(*texValuesSize)];
+	
+	texValues[(*texValuesSize)++] = ScaleTexture_DynamicEvaluateFloat(texture, hitPoint, tex1, tex2);
 }
 
 void ScaleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 value = texValues[--(*texValuesSize)] * texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = value;
+	const float3 tex1 = texValues[--(*texValuesSize)];
+	const float3 tex2 = texValues[--(*texValuesSize)];
+	
+	texValues[(*texValuesSize)++] = ScaleTexture_DynamicEvaluateSpectrum(texture, hitPoint, tex1, tex2);
 }
+
+#endif
 
 #endif
 
@@ -215,7 +265,7 @@ void ScaleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 // FresnelApproxN & FresnelApproxK texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
+#if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
 
 float FresnelApproxN(const float Fr) {
 	const float sqrtReflectance = sqrt(clamp(Fr, 0.f, .999f));
@@ -231,23 +281,35 @@ float3 FresnelApproxN3(const float3 Fr) {
 		(WHITE - sqrtReflectance);
 }
 
+float FresnelApproxNTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float value) {
+	return FresnelApproxN(value);
+}
+
+float3 FresnelApproxNTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 value) {
+	return FresnelApproxN3(value);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void FresnelApproxNTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float value = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = FresnelApproxN(value);
+	texValues[(*texValuesSize)++] = FresnelApproxNTexture_DynamicEvaluateFloat(texture, hitPoint, value);
 }
 
 void FresnelApproxNTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float3 value = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = FresnelApproxN3(value);
+	texValues[(*texValuesSize)++] = FresnelApproxNTexture_DynamicEvaluateSpectrum(texture, hitPoint, value);
 }
+#endif
 
 #endif
 
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+#if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
 
 float FresnelApproxK(const float Fr) {
 	const float reflectance = clamp(Fr, 0.f, .999f);
@@ -263,19 +325,69 @@ float3 FresnelApproxK3(const float3 Fr) {
 		(WHITE - reflectance));
 }
 
+float FresnelApproxKTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float value) {
+	return FresnelApproxK(value);
+}
+
+float3 FresnelApproxKTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 value) {
+	return FresnelApproxK3(value);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void FresnelApproxKTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float value = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = FresnelApproxK(value);
+	texValues[(*texValuesSize)++] = FresnelApproxKTexture_DynamicEvaluateFloat(texture, hitPoint, value);
 }
 
 void FresnelApproxKTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float3 value = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = FresnelApproxK3(value);
+	texValues[(*texValuesSize)++] = FresnelApproxKTexture_DynamicEvaluateSpectrum(texture, hitPoint, value);
 }
+#endif
+
+#endif
+
+//------------------------------------------------------------------------------
+// Mix texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_MIX)
+
+float MixTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float amt, const float value1, const float value2) {
+	return Lerp(clamp(amt, 0.f, 1.f), value1, value2);
+}
+
+float3 MixTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 amt, const float3 value1, const float3 value2) {
+	return mix(value1, value2, clamp(amt, 0.f, 1.f));
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void MixTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float amt = texValues[--(*texValuesSize)];
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = MixTexture_DynamicEvaluateFloat(texture,hitPoint, amt, value1, value2);
+}
+
+void MixTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 amt = texValues[--(*texValuesSize)];
+	const float3 value1 = texValues[--(*texValuesSize)];
+	const float3 value2 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = MixTexture_DynamicEvaluateSpectrum(texture,hitPoint, amt, value1, value2);
+}
+#endif
 
 #endif
 
@@ -283,17 +395,31 @@ void FresnelApproxKTexture_EvaluateSpectrum(__global Texture *texture, __global 
 // CheckerBoard 2D & 3D texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_CHECKERBOARD2D)
+#if defined(PARAM_ENABLE_CHECKERBOARD2D)
 
+float CheckerBoard2DTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float value1, const float value2) {
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 mapUV = TextureMapping2D_Map(&texture->checkerBoard2D.mapping, hitPoint);
+
+	return ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
+}
+
+float3 CheckerBoard2DTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 value1, const float3 value2) {
+	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 mapUV = TextureMapping2D_Map(&texture->checkerBoard2D.mapping, hitPoint);
+
+	return ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void CheckerBoard2DTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float value1 = texValues[--(*texValuesSize)];
 	const float value2 = texValues[--(*texValuesSize)];
 
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = TextureMapping2D_Map(&texture->checkerBoard2D.mapping, hitPoint);
-
-	texValues[(*texValuesSize)++] = ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
+	texValues[(*texValuesSize)++] = CheckerBoard2DTexture_DynamicEvaluateFloat(texture, hitPoint, value1, value2);
 }
 
 void CheckerBoard2DTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
@@ -301,16 +427,29 @@ void CheckerBoard2DTexture_EvaluateSpectrum(__global Texture *texture, __global 
 	const float3 value1 = texValues[--(*texValuesSize)];
 	const float3 value2 = texValues[--(*texValuesSize)];
 
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
-	const float2 mapUV = TextureMapping2D_Map(&texture->checkerBoard2D.mapping, hitPoint);
-
-	texValues[(*texValuesSize)++] = ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
+	texValues[(*texValuesSize)++] = CheckerBoard2DTexture_DynamicEvaluateSpectrum(texture, hitPoint, value1, value2);
 }
+#endif
 
 #endif
 
-#if defined (PARAM_ENABLE_CHECKERBOARD3D)
+#if defined(PARAM_ENABLE_CHECKERBOARD3D)
 
+float CheckerBoard3DTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float value1, const float value2) {
+	const float3 mapP = TextureMapping3D_Map(&texture->checkerBoard3D.mapping, hitPoint);
+
+	return ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
+}
+
+float3 CheckerBoard3DTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 value1, const float3 value2) {
+	const float3 mapP = TextureMapping3D_Map(&texture->checkerBoard3D.mapping, hitPoint);
+
+	return ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void CheckerBoard3DTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float value1 = texValues[--(*texValuesSize)];
@@ -330,32 +469,7 @@ void CheckerBoard3DTexture_EvaluateSpectrum(__global Texture *texture, __global 
 
 	texValues[(*texValuesSize)++] = ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
 }
-
 #endif
-
-//------------------------------------------------------------------------------
-// Mix texture
-//------------------------------------------------------------------------------
-
-#if defined (PARAM_ENABLE_TEX_MIX)
-
-void MixTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float amt = clamp(texValues[--(*texValuesSize)], 0.f, 1.f);;
-	const float value1 = texValues[--(*texValuesSize)];
-	const float value2 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = Lerp(amt, value1, value2);
-}
-
-void MixTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 amt = clamp(texValues[--(*texValuesSize)], 0.f, 1.f);
-	const float3 value1 = texValues[--(*texValuesSize)];
-	const float3 value2 = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = mix(value1, value2, amt);
-}
 
 #endif
 
@@ -363,21 +477,31 @@ void MixTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *h
 // FBM texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_FBM_TEX)
+#if defined(PARAM_ENABLE_FBM_TEX)
 
-void FBMTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+float FBMTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
 	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitPoint);
 
-	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
+	return FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
+}
+
+float3 FBMTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitPoint);
+
+	return FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void FBMTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = FBMTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void FBMTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 mapP = TextureMapping3D_Map(&texture->fbm.mapping, hitPoint);
-
-	texValues[(*texValuesSize)++] = FBm(mapP, texture->fbm.omega, texture->fbm.octaves);
+	texValues[(*texValuesSize)++] = FBMTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -385,7 +509,7 @@ void FBMTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *h
 // Marble texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MARBLE)
+#if defined(PARAM_ENABLE_MARBLE)
 
 // Evaluate marble spline at _t_
 __constant float MarbleTexture_c[9][3] = {
@@ -427,15 +551,25 @@ float3 MarbleTexture_Evaluate(__global Texture *texture, __global HitPoint *hitP
 	return 1.5f * mix(s0, s1, t);
 }
 
+float MarbleTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
+	return Spectrum_Y(MarbleTexture_Evaluate(texture, hitPoint));
+}
+
+float3 MarbleTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	return MarbleTexture_Evaluate(texture, hitPoint);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void MarbleTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = Spectrum_Y(MarbleTexture_Evaluate(texture, hitPoint));
+	texValues[(*texValuesSize)++] = MarbleTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void MarbleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = MarbleTexture_Evaluate(texture, hitPoint);
+	texValues[(*texValuesSize)++] = MarbleTexture_EvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -443,13 +577,10 @@ void MarbleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint
 // Dots texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_DOTS)
+#if defined(PARAM_ENABLE_DOTS)
 
-void DotsTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float value1 = texValues[--(*texValuesSize)];
-	const float value2 = texValues[--(*texValuesSize)];
-
+float DotsTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float value1, const float value2) {
 	const float2 uv = TextureMapping2D_Map(&texture->dots.mapping, hitPoint);
 
 	const int sCell = Floor2Int(uv.s0 + .5f);
@@ -463,13 +594,42 @@ void DotsTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hit
 		const float tCenter = tCell + maxShift *
 			Noise(sCell + 4.5f, tCell + 9.8f, .5f);
 		const float ds = uv.s0 - sCenter, dt = uv.s1 - tCenter;
-		if (ds * ds + dt * dt < radius * radius) {
-			texValues[(*texValuesSize)++] = value1;
-			return;
-		}
+		if (ds * ds + dt * dt < radius * radius)
+			return value1;
 	}
 
-	texValues[(*texValuesSize)++] = value2;
+	return value2;
+}
+
+float3 DotsTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 value1, const float3 value2) {
+	const float2 uv = TextureMapping2D_Map(&texture->dots.mapping, hitPoint);
+
+	const int sCell = Floor2Int(uv.s0 + .5f);
+	const int tCell = Floor2Int(uv.s1 + .5f);
+	// Return _insideDot_ result if point is inside dot
+	if (Noise(sCell + .5f, tCell + .5f, .5f) > 0.f) {
+		const float radius = .35f;
+		const float maxShift = 0.5f - radius;
+		const float sCenter = sCell + maxShift *
+			Noise(sCell + 1.5f, tCell + 2.8f, .5f);
+		const float tCenter = tCell + maxShift *
+			Noise(sCell + 4.5f, tCell + 9.8f, .5f);
+		const float ds = uv.s0 - sCenter, dt = uv.s1 - tCenter;
+		if (ds * ds + dt * dt < radius * radius)
+			return value1;
+	}
+
+	return value2;
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void DotsTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = DotsTexture_DynamicEvaluateFloat(texture, hitPoint, value1, value2);
 }
 
 void DotsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
@@ -477,27 +637,9 @@ void DotsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 	const float3 value1 = texValues[--(*texValuesSize)];
 	const float3 value2 = texValues[--(*texValuesSize)];
 
-	const float2 uv = TextureMapping2D_Map(&texture->dots.mapping, hitPoint);
-
-	const int sCell = Floor2Int(uv.s0 + .5f);
-	const int tCell = Floor2Int(uv.s1 + .5f);
-	// Return _insideDot_ result if point is inside dot
-	if (Noise(sCell + .5f, tCell + .5f, .5f) > 0.f) {
-		const float radius = .35f;
-		const float maxShift = 0.5f - radius;
-		const float sCenter = sCell + maxShift *
-			Noise(sCell + 1.5f, tCell + 2.8f, .5f);
-		const float tCenter = tCell + maxShift *
-			Noise(sCell + 4.5f, tCell + 9.8f, .5f);
-		const float ds = uv.s0 - sCenter, dt = uv.s1 - tCenter;
-		if (ds * ds + dt * dt < radius * radius) {
-			texValues[(*texValuesSize)++] = value1;
-			return;
-		}
-	}
-
-	texValues[(*texValuesSize)++] = value2;
+	texValues[(*texValuesSize)++] = DotsTexture_DynamicEvaluateSpectrum(texture, hitPoint, value1, value2);
 }
+#endif
 
 #endif
 
@@ -505,7 +647,7 @@ void DotsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 // Brick texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_BRICK)
+#if defined(PARAM_ENABLE_BRICK)
 
 bool BrickTexture_RunningAlternate(__global Texture *texture, const float3 p, float3 *i, float3 *b,
 		int nWhole) {
@@ -664,16 +806,30 @@ bool BrickTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoin
 #undef BRICK_EPSILON
 }
 
+float BrickTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float value1, const float value2, const float value3) {
+	if (BrickTexture_Evaluate(texture, hitPoint))
+		return value1 * value3;
+	else
+		return value2;
+}
+
+float3 BrickTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 value1, const float3 value2, const float3 value3) {
+	if (BrickTexture_Evaluate(texture, hitPoint))
+		return value1 * value3;
+	else
+		return value2;
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void BrickTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float value1 = texValues[--(*texValuesSize)];
 	const float value2 = texValues[--(*texValuesSize)];
 	const float value3 = texValues[--(*texValuesSize)];
 
-	if (BrickTexture_Evaluate(texture, hitPoint))
-		texValues[(*texValuesSize)++] = value1 * value3;
-	else
-		texValues[(*texValuesSize)++] = value2;
+	texValues[(*texValuesSize)++] = BrickTexture_DynamicEvaluateFloat(hitPoint, texture, value1, value2, value3);
 }
 
 void BrickTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
@@ -682,11 +838,9 @@ void BrickTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 	const float3 value2 = texValues[--(*texValuesSize)];
 	const float3 value3 = texValues[--(*texValuesSize)];
 
-	if (BrickTexture_Evaluate(texture, hitPoint))
-		texValues[(*texValuesSize)++] = value1 * value3;
-	else
-		texValues[(*texValuesSize)++] = value2;
+	texValues[(*texValuesSize)++] = BrickTexture_DynamicEvaluateSpectrum(hitPoint, texture, value1, value2, value3);
 }
+#endif
 
 #endif
 
@@ -694,21 +848,35 @@ void BrickTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 // Add texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_ADD)
+#if defined(PARAM_ENABLE_TEX_ADD)
 
+float AddTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float value1, const float value2) {
+	return value1 + value2;
+}
+
+float3 AddTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 value1, const float3 value2) {
+	return value1 + value2;
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void AddTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float value = texValues[--(*texValuesSize)] + texValues[--(*texValuesSize)];
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = value;
+	texValues[(*texValuesSize)++] = AddTexture_DynamicEvaluateFloat(texture, hitPoint, value1, value2);
 }
 
 void AddTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 value = texValues[--(*texValuesSize)] + texValues[--(*texValuesSize)];
+	const float3 value1 = texValues[--(*texValuesSize)];
+	const float3 value2 = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = value;
+	texValues[(*texValuesSize)++] = AddTexture_DynamicEvaluateSpectrum(texture, hitPoint, value1, value2);
 }
+#endif
 
 #endif
 
@@ -716,27 +884,37 @@ void AddTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *h
 // Windy texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_WINDY)
+#if defined(PARAM_ENABLE_WINDY)
 
-void WindyTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+float WindyTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
 	const float3 mapP = TextureMapping3D_Map(&texture->windy.mapping, hitPoint);
 
 	const float windStrength = FBm(.1f * mapP, .5f, 3);
 	const float waveHeight = FBm(mapP, .5f, 6);
 
-	texValues[(*texValuesSize)++] = fabs(windStrength) * waveHeight;
+	return fabs(windStrength) * waveHeight;
+}
+
+float3 WindyTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	const float3 mapP = TextureMapping3D_Map(&texture->windy.mapping, hitPoint);
+
+	const float windStrength = FBm(.1f * mapP, .5f, 3);
+	const float waveHeight = FBm(mapP, .5f, 6);
+
+	return fabs(windStrength) * waveHeight;
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void WindyTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = WindyTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void WindyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 mapP = TextureMapping3D_Map(&texture->windy.mapping, hitPoint);
-
-	const float windStrength = FBm(.1f * mapP, .5f, 3);
-	const float waveHeight = FBm(mapP, .5f, 6);
-
-	texValues[(*texValuesSize)++] = fabs(windStrength) * waveHeight;
+	texValues[(*texValuesSize)++] = WindyTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -744,21 +922,31 @@ void WindyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 // Wrinkled texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_WRINKLED)
+#if defined(PARAM_ENABLE_WRINKLED)
 
-void WrinkledTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+float WrinkledTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
 	const float3 mapP = TextureMapping3D_Map(&texture->wrinkled.mapping, hitPoint);
 
-	texValues[(*texValuesSize)++] = Turbulence(mapP, texture->wrinkled.omega, texture->wrinkled.octaves);
+	return Turbulence(mapP, texture->wrinkled.omega, texture->wrinkled.octaves);
+}
+
+float3 WrinkledTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	const float3 mapP = TextureMapping3D_Map(&texture->wrinkled.mapping, hitPoint);
+
+	return Turbulence(mapP, texture->wrinkled.omega, texture->wrinkled.octaves);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void WrinkledTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = WrinkledTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void WrinkledTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 mapP = TextureMapping3D_Map(&texture->wrinkled.mapping, hitPoint);
-
-	texValues[(*texValuesSize)++] = Turbulence(mapP, texture->wrinkled.omega, texture->wrinkled.octaves);
+	texValues[(*texValuesSize)++] = WrinkledTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -766,21 +954,33 @@ void WrinkledTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoi
 // UV texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_UV)
+#if defined(PARAM_ENABLE_TEX_UV)
 
-void UVTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+float UVTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
 	const float2 uv = TextureMapping2D_Map(&texture->uvTex.mapping, hitPoint);
 
-	texValues[(*texValuesSize)++] = Spectrum_Y((float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f));
+	return Spectrum_Y((float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f));
+}
+
+float3 UVTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	const float2 uv = TextureMapping2D_Map(&texture->uvTex.mapping, hitPoint);
+
+	return (float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void UVTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = UVTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void UVTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float2 uv = TextureMapping2D_Map(&texture->uvTex.mapping, hitPoint);
 
-	texValues[(*texValuesSize)++] = (float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f);
+	texValues[(*texValuesSize)++] = UVTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -788,17 +988,17 @@ void UVTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hi
 // Band texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_BAND)
+#if defined(PARAM_ENABLE_TEX_BAND)
 
-void BandTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float a = clamp(texValues[--(*texValuesSize)], 0.f, 1.f);
+float BandTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		const float amt) {
+	const float a = clamp(amt, 0.f, 1.f);
 
 	const uint last = texture->band.size - 1;
 	if (a < texture->band.offsets[0])
-		texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(texture->band.values[0].c));
+		return Spectrum_Y(VLOAD3F(texture->band.values[0].c));
 	else if (a >= texture->band.offsets[last])
-		texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(texture->band.values[last].c));
+		return Spectrum_Y(VLOAD3F(texture->band.values[last].c));
 	else {
 		uint p = 0;
 		for (; p <= last; ++p) {
@@ -810,19 +1010,19 @@ void BandTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hit
 		const float p0 = Spectrum_Y(VLOAD3F(texture->band.values[p].c));
 		const float o1 = texture->band.offsets[p - 1];
 		const float o0 = texture->band.offsets[p];
-		texValues[(*texValuesSize)++] = Lerp((a - o1) / (o0 - o1), p1, p0);
+		return Lerp((a - o1) / (o0 - o1), p1, p0);
 	}
 }
 
-void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float a = clamp(Spectrum_Y(texValues[--(*texValuesSize)]), 0.f, 1.f);
+float3 BandTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		const float3 amt) {
+	const float a = clamp(Spectrum_Y(amt), 0.f, 1.f);
 
 	const uint last = texture->band.size - 1;
 	if (a < texture->band.offsets[0])
-		texValues[(*texValuesSize)++] = VLOAD3F(texture->band.values[0].c);
+		return VLOAD3F(texture->band.values[0].c);
 	else if (a >= texture->band.offsets[last])
-		texValues[(*texValuesSize)++] = VLOAD3F(texture->band.values[last].c);
+		return VLOAD3F(texture->band.values[last].c);
 	else {
 		uint p = 0;
 		for (; p <= last; ++p) {
@@ -834,9 +1034,25 @@ void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 		const float3 p0 = VLOAD3F(texture->band.values[p].c);
 		const float o1 = texture->band.offsets[p - 1];
 		const float o0 = texture->band.offsets[p];
-		texValues[(*texValuesSize)++] = Lerp3((a - o1) / (o0 - o1), p1, p0);
+		return Lerp3((a - o1) / (o0 - o1), p1, p0);
 	}
 }
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void BandTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float a = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = BandTexture_DynamicEvaluateFloat(texture, hitPoint, a);
+}
+
+void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 a = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = BandTexture_EvaluateSpectrum(texture, hitPoint, a);
+}
+#endif
 
 #endif
 
@@ -844,17 +1060,27 @@ void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 // HitPointColor texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_HITPOINTCOLOR)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
 
+float HitPointColorTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
+	return Spectrum_Y(VLOAD3F(hitPoint->color.c));
+}
+
+float3 HitPointColorTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	return VLOAD3F(hitPoint->color.c);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void HitPointColorTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = Spectrum_Y(VLOAD3F(hitPoint->color.c));
+	texValues[(*texValuesSize)++] = HitPointColorTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void HitPointColorTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = VLOAD3F(hitPoint->color.c);
+	texValues[(*texValuesSize)++] = HitPointColorTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -862,18 +1088,28 @@ void HitPointColorTexture_EvaluateSpectrum(__global Texture *texture, __global H
 // HitPointAlpha texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_HITPOINTALPHA)
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 
+float HitPointAlphaTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
+	return hitPoint->alpha;
+}
+
+float3 HitPointAlphaTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	const float alpha = hitPoint->alpha;
+	return (float3)(alpha, alpha, alpha);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void HitPointAlphaTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = hitPoint->alpha;
+	texValues[(*texValuesSize)++] = HitPointAlphaTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void HitPointAlphaTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float alpha = hitPoint->alpha;
-	texValues[(*texValuesSize)++] = (float3)(alpha, alpha, alpha);
+	texValues[(*texValuesSize)++] = HitPointAlphaTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
@@ -881,31 +1117,23 @@ void HitPointAlphaTexture_EvaluateSpectrum(__global Texture *texture, __global H
 // HitPointGrey texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_HITPOINTGREY)
+#if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
 
-void HitPointGreyTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+float HitPointGreyTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
 	const uint channel = texture->hitPointGrey.channel;
 	switch (channel) {
 		case 0:
-			texValues[*texValuesSize] = hitPoint->color.c[0];
-			break;
+			return hitPoint->color.c[0];
 		case 1:
-			texValues[*texValuesSize] = hitPoint->color.c[1];
-			break;
+			return hitPoint->color.c[1];
 		case 2:
-			texValues[*texValuesSize] = hitPoint->color.c[2];
-			break;
+			return hitPoint->color.c[2];
 		default:
-			texValues[*texValuesSize] = Spectrum_Y(VLOAD3F(hitPoint->color.c));
-			break;
+			return Spectrum_Y(VLOAD3F(hitPoint->color.c));
 	}
-
-	++(*texValuesSize);
 }
 
-void HitPointGreyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+float3 HitPointGreyTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
 	const uint channel = texture->hitPointGrey.channel;
 	float v;
 	switch (channel) {
@@ -923,8 +1151,20 @@ void HitPointGreyTexture_EvaluateSpectrum(__global Texture *texture, __global Hi
 			break;
 	}
 
-	texValues[(*texValuesSize)++] = (float3)(v, v, v);
+	return (float3)(v, v, v);
 }
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
+void HitPointGreyTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = HitPointGreyTexture_DynamicEvaluateFloat(texture, hitPoint);
+}
+
+void HitPointGreyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	texValues[(*texValuesSize)++] = HitPointGreyTexture_DynamicEvaluateSpectrum(texture, hitPoint);
+}
+#endif
 
 #endif
 
@@ -932,24 +1172,35 @@ void HitPointGreyTexture_EvaluateSpectrum(__global Texture *texture, __global Hi
 // NormalMap texture
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_TEX_NORMALMAP)
+#if defined(PARAM_ENABLE_TEX_NORMALMAP)
 
+float NormalMapTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
+    return 0.f;
+}
+
+float3 NormalMapTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
+	return (float3)(0.f, 0.f, 0.f);
+}
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void NormalMapTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-    texValues[*texValuesSize] = 0.f;
-	++(*texValuesSize);
+    texValues[(*texValuesSize)++] = NormalMapTexture_DynamicEvaluateFloat(texture, hitPoint);
 }
 
 void NormalMapTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = (float3)(0.f, 0.f, 0.f);
+	texValues[(*texValuesSize)++] = NormalMapTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
+#endif
 
 #endif
 
 //------------------------------------------------------------------------------
 // Generic texture functions with support for recursive textures
 //------------------------------------------------------------------------------
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 
 uint Texture_AddSubTexture(__global Texture *texture,
 		__global Texture *todoTex[TEXTURE_STACK_SIZE], uint *todoTexSize
@@ -961,12 +1212,12 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->scaleTex.tex2Index];
 			return 2;
 #endif
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
+#if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_N:
 			todoTex[(*todoTexSize)++] = &texs[texture->fresnelApproxN.texIndex];
 			return 1;
 #endif
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+#if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
 			todoTex[(*todoTexSize)++] = &texs[texture->fresnelApproxK.texIndex];
 			return 1;
@@ -983,7 +1234,7 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->checkerBoard3D.tex2Index];
 			return 2;
 #endif
-#if defined (PARAM_ENABLE_TEX_MIX)
+#if defined(PARAM_ENABLE_TEX_MIX)
 		case MIX_TEX:
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.amountTexIndex];
 			todoTex[(*todoTexSize)++] = &texs[texture->mixTex.tex1Index];
@@ -1009,42 +1260,42 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex2Index];
 			return 2;
 #endif
-#if defined (PARAM_ENABLE_TEX_BAND)
+#if defined(PARAM_ENABLE_TEX_BAND)
 		case BAND_TEX:
 			todoTex[(*todoTexSize)++] = &texs[texture->band.amountTexIndex];
 			return 1;
 #endif
-#if defined (PARAM_ENABLE_TEX_NORMALMAP)
+#if defined(PARAM_ENABLE_TEX_NORMALMAP)
 		case NORMALMAP_TEX:
 #endif
-#if defined (PARAM_ENABLE_TEX_HITPOINTGREY)
+#if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
 		case HITPOINTGREY:
 #endif
-#if defined (PARAM_ENABLE_TEX_HITPOINTALPHA)
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 		case HITPOINTALPHA:
 #endif
-#if defined (PARAM_ENABLE_TEX_HITPOINTCOLOR)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
 		case HITPOINTCOLOR:
 #endif
-#if defined (PARAM_ENABLE_TEX_UV)
+#if defined(PARAM_ENABLE_TEX_UV)
 		case UV_TEX:
 #endif
-#if defined (PARAM_ENABLE_WRINKLED)
+#if defined(PARAM_ENABLE_WRINKLED)
 		case WRINKLED:
 #endif
-#if defined (PARAM_ENABLE_BLENDER_WOOD)
+#if defined(PARAM_ENABLE_BLENDER_WOOD)
 		case BLENDER_WOOD:
 #endif
-#if defined (PARAM_ENABLE_BLENDER_CLOUDS)
+#if defined(PARAM_ENABLE_BLENDER_CLOUDS)
 		case BLENDER_CLOUDS:
 #endif
-#if defined (PARAM_ENABLE_WINDY)
+#if defined(PARAM_ENABLE_WINDY)
 		case WINDY:
 #endif
-#if defined (PARAM_ENABLE_MARBLE)
+#if defined(PARAM_ENABLE_MARBLE)
 		case MARBLE:
 #endif
-#if defined (PARAM_ENABLE_FBM_TEX)
+#if defined(PARAM_ENABLE_FBM_TEX)
 		case FBM_TEX:
 #endif
 #if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
@@ -1061,9 +1312,13 @@ uint Texture_AddSubTexture(__global Texture *texture,
 	}
 }
 
+#endif
+
 //------------------------------------------------------------------------------
 // Float texture channel
 //------------------------------------------------------------------------------
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 
 void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
@@ -1090,47 +1345,47 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 			ScaleTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
+#if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_N:
 			FresnelApproxNTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+#if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
 			FresnelApproxKTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_CHECKERBOARD2D)
+#if defined(PARAM_ENABLE_CHECKERBOARD2D)
 		case CHECKERBOARD2D:
 			CheckerBoard2DTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_CHECKERBOARD3D)
+#if defined(PARAM_ENABLE_CHECKERBOARD3D)
 		case CHECKERBOARD3D:
 			CheckerBoard3DTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_TEX_MIX)
+#if defined(PARAM_ENABLE_TEX_MIX)
 		case MIX_TEX:
 			MixTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_FBM_TEX)
+#if defined(PARAM_ENABLE_FBM_TEX)
 		case FBM_TEX:
 			FBMTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_MARBLE)
+#if defined(PARAM_ENABLE_MARBLE)
 		case MARBLE:
 			MarbleTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_DOTS)
+#if defined(PARAM_ENABLE_DOTS)
 		case DOTS:
 			DotsTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_BRICK)
+#if defined(PARAM_ENABLE_BRICK)
 		case BRICK:
 			BrickTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
@@ -1145,12 +1400,12 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 			WindyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_BLENDER_CLOUDS)
+#if defined(PARAM_ENABLE_BLENDER_CLOUDS)
 		case BLENDER_CLOUDS:
 			BlenderCloudsTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_BLENDER_WOOD)
+#if defined(PARAM_ENABLE_BLENDER_WOOD)
 		case BLENDER_WOOD:
 			BlenderWoodTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
@@ -1244,9 +1499,13 @@ float Texture_GetFloatValue(__global Texture *texture, __global HitPoint *hitPoi
 	return texValues[0];
 }
 
+#endif
+
 //------------------------------------------------------------------------------
 // Color texture channel
 //------------------------------------------------------------------------------
+
+#if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 
 void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize
@@ -1273,47 +1532,47 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			ScaleTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_N)
+#if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
 		case FRESNEL_APPROX_N:
 			FresnelApproxNTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_FRESNEL_APPROX_K)
+#if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
 		case FRESNEL_APPROX_K:
 			FresnelApproxKTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_CHECKERBOARD2D)
+#if defined(PARAM_ENABLE_CHECKERBOARD2D)
 		case CHECKERBOARD2D:
 			CheckerBoard2DTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_CHECKERBOARD3D)
+#if defined(PARAM_ENABLE_CHECKERBOARD3D)
 		case CHECKERBOARD3D:
 			CheckerBoard3DTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_TEX_MIX)
+#if defined(PARAM_ENABLE_TEX_MIX)
 		case MIX_TEX:
 			MixTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_FBM_TEX)
+#if defined(PARAM_ENABLE_FBM_TEX)
 		case FBM_TEX:
 			FBMTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_MARBLE)
+#if defined(PARAM_ENABLE_MARBLE)
 		case MARBLE:
 			MarbleTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_DOTS)
+#if defined(PARAM_ENABLE_DOTS)
 		case DOTS:
 			DotsTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_BRICK)
+#if defined(PARAM_ENABLE_BRICK)
 		case BRICK:
 			BrickTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
@@ -1328,12 +1587,12 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 			WindyTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_BLENDER_CLOUDS)
+#if defined(PARAM_ENABLE_BLENDER_CLOUDS)
 		case BLENDER_CLOUDS:
 			BlenderCloudsTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
-#if defined (PARAM_ENABLE_BLENDER_WOOD)
+#if defined(PARAM_ENABLE_BLENDER_WOOD)
 		case BLENDER_WOOD:
 			BlenderWoodTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
@@ -1379,8 +1638,10 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 	}
 }
 
-float3 Texture_GetSpectrumValue(__global Texture *texture, __global HitPoint *hitPoint
+float3 Texture_GetSpectrumValue(const uint texIndex, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
+	__global Texture *texture = &texs[texIndex];
+
 	__global Texture *todoTex[TEXTURE_STACK_SIZE];
 	uint todoTexSize = 0;
 
@@ -1426,113 +1687,5 @@ float3 Texture_GetSpectrumValue(__global Texture *texture, __global HitPoint *hi
 
 	return texValues[0];
 }
-
-//------------------------------------------------------------------------------
-// Duv texture information
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_BUMPMAPS)
-float2 Texture_GetDuv(
-        __global Texture *texture,
-        __global HitPoint *hitPoint,
-        const float3 dpdu, const float3 dpdv,
-        const float3 dndu, const float3 dndv,
-        const float sampleDistance
-        TEXTURES_PARAM_DECL) {
-    // Calculate bump map value at intersection point
-    const float base = Texture_GetFloatValue(texture, hitPoint
-			TEXTURES_PARAM);
-
-    // Compute offset positions and evaluate displacement texture
-    const float3 origP = VLOAD3F(&hitPoint->p.x);
-    const float3 origShadeN = VLOAD3F(&hitPoint->shadeN.x);
-    const float2 origUV = VLOAD2F(&hitPoint->uv.u);
-
-    float2 duv;
-
-    // Shift hitPointTmp.du in the u direction and calculate value
-    const float uu = sampleDistance / length(dpdu);
-    VSTORE3F(origP + uu * dpdu, &hitPoint->p.x);
-    hitPoint->uv.u += uu;
-    VSTORE3F(normalize(origShadeN + uu * dndu), &hitPoint->shadeN.x);
-    const float duValue = Texture_GetFloatValue(texture, hitPoint
-			TEXTURES_PARAM);
-    duv.s0 = (duValue - base) / uu;
-
-    // Shift hitPointTmp.dv in the v direction and calculate value
-    const float vv = sampleDistance / length(dpdv);
-    VSTORE3F(origP + vv * dpdv, &hitPoint->p.x);
-    hitPoint->uv.u = origUV.s0;
-    hitPoint->uv.v += vv;
-    VSTORE3F(normalize(origShadeN + vv * dndv), &hitPoint->shadeN.x);
-    const float dvValue = Texture_GetFloatValue(texture, hitPoint
-			TEXTURES_PARAM);
-    duv.s1 = (dvValue - base) / vv;
-
-    // Restore HitPoint
-    VSTORE3F(origP, &hitPoint->p.x);
-    VSTORE2F(origUV, &hitPoint->uv.u);
-    VSTORE3F(origShadeN, &hitPoint->shadeN.x);
-
-    return duv;
-}
-
-#if defined (PARAM_ENABLE_TEX_NORMALMAP)
-float2 NormalMapTexture_GetDuv(
-        __global Texture *texture,
-        __global HitPoint *hitPoint,
-        const float3 dpdu, const float3 dpdv,
-        const float3 dndu, const float3 dndv,
-        const float sampleDistance
-        TEXTURES_PARAM_DECL) {
-    float3 rgb = Texture_GetSpectrumValue(&texs[texture->normalMap.texIndex], hitPoint
-			TEXTURES_PARAM);
-    rgb = clamp(rgb, -1.f, 1.f);
-
-	// Normal from normal map
-	float3 n = 2.f * rgb - (float3)(1.f, 1.f, 1.f);
-
-	const float3 k = VLOAD3F(&hitPoint->shadeN.x);
-
-	// Transform n from tangent to object space
-    const float btsign = (dot(dpdv, k) > 0.f) ? 1.f : -1.f;
-
-	// Magnitude of btsign is the magnitude of the interpolated normal
-	const float3 kk = k * fabs(btsign);
-
-	// tangent -> object
-	n = normalize(n.x * dpdu + n.y * btsign * dpdv + n.z * kk);	
-
-	// Since n is stored normalized in the normal map
-	// we need to recover the original length (lambda).
-	// We do this by solving 
-	//   lambda*n = dp/du x dp/dv
-	// where 
-	//   p(u,v) = base(u,v) + h(u,v) * k
-	// and
-	//   k = dbase/du x dbase/dv
-	//
-	// We recover lambda by dotting the above with k
-	//   k . lambda*n = k . (dp/du x dp/dv)
-	//   lambda = (k . k) / (k . n)
-	// 
-	// We then recover dh/du by dotting the first eq by dp/du
-	//   dp/du . lambda*n = dp/du . (dp/du x dp/dv)
-	//   dp/du . lambda*n = dh/du * [dbase/du . (k x dbase/dv)]
-	//
-	// The term "dbase/du . (k x dbase/dv)" reduces to "-(k . k)", so we get
-	//   dp/du . lambda*n = dh/du * -(k . k)
-	//   dp/du . [(k . k) / (k . n)*n] = dh/du * -(k . k)
-	//   dp/du . [-n / (k . n)] = dh/du
-	// and similar for dh/dv
-	// 
-	// Since the recovered dh/du will be in units of ||k||, we must divide
-	// by ||k|| to get normalized results. Using dg.nn as k in the last eq 
-	// yields the same result.
-	const float3 nn = (-1.f / dot(k, n)) * n;
-
-	return (float2)(dot(dpdu, nn), dot(dpdv, nn));
-}
-#endif
 
 #endif

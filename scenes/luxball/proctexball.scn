@@ -15,11 +15,26 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.textures.tex.mapping.type = uvmapping2d
 #scene.textures.tex.mapping.uvscale = 50.0 50.0
 ################################################################################
+#scene.textures.tex.type = checkerboard2d
+#scene.textures.tex.texture1 = 1.0 0.0 0.0
+#scene.textures.tex.texture2 = 1.0 1.0 1.0
+#scene.textures.tex.mapping.type = uvmapping2d
+#scene.textures.tex.mapping.uvscale = 10.0 10.0
+################################################################################
 #scene.textures.tex.type = checkerboard3d
 #scene.textures.tex.texture1 = 1.0 0.0 0.0
 #scene.textures.tex.texture2 = 1.0 1.0 1.0
-#scene.textures.tex.mapping.type = uvmapping3d
-#scene.textures.tex.mapping.uvscale = 10.0 10.0
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 25.0 0.01 0.0 0.0  0.0 25.0 0.01 0.0  0.0 0.0 25.0 0.0  0.0 0.0 0.0 1.0
+################################################################################
+#scene.textures.fbmtex.type = fbm
+#scene.textures.fbmtex.octaves = 8
+#scene.textures.fbmtex.omega = 0.5
+#scene.textures.fbmtex.mapping.type = globalmapping3d
+#scene.textures.fbmtex.mapping.transformation = 20.0 0.0 0.0 0.0  0.0 20.0 0.0 0.0  0.0 0.0 20.0 0.0  0.0 0.0 0.0 1.0
+#scene.textures.tex.type = scale
+#scene.textures.tex.texture1 = 0.5
+#scene.textures.tex.texture2 = fbmtex
 ################################################################################
 #scene.textures.fbmtex.type = fbm
 #scene.textures.fbmtex.octaves = 8
@@ -40,9 +55,9 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.textures.tex.mapping.type = uvmapping3d
 #scene.textures.tex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.01 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
 ################################################################################
-scene.textures.tex.type = windy
-scene.textures.tex.mapping.type = globalmapping3d
-scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.0  0.0 0.0 100.0 0.0  0.0 0.0 0.0 1.0
+#scene.textures.tex.type = windy
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.0  0.0 0.0 100.0 0.0  0.0 0.0 0.0 1.0
 ################################################################################
 #scene.textures.tex.type = wrinkled
 #scene.textures.tex.mapping.type = globalmapping3d
@@ -52,31 +67,36 @@ scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.
 #scene.textures.tex.mapping.type = uvmapping2d
 #scene.textures.tex.mapping.uvscale = 10.0 10.0
 ################################################################################
-#scene.textures.wrtex.type = wrinkled
-#scene.textures.wrtex.mapping.type = globalmapping3d
-#scene.textures.wrtex.mapping.transformation = 40.0 0.0 0.0 0.0  0.0 40.0 0.01 0.0  0.0 0.0 40.0 0.0  0.0 0.0 0.0 1.0
-#scene.textures.tex.type = band
-#scene.textures.tex.amount = wrtex
-#scene.textures.tex.offset0 = 0.33
-#scene.textures.tex.value0 = 0.75 0.0 0.0
-#scene.textures.tex.offset1 = 0.6
-#scene.textures.tex.value1 = 0.0 0.75 0.0
-#scene.textures.tex.offset2 = 1.0
-#scene.textures.tex.value2 = 0.0 0.0 0.75
+scene.textures.wrtex.type = wrinkled
+scene.textures.wrtex.mapping.type = globalmapping3d
+scene.textures.wrtex.mapping.transformation = 40.0 0.0 0.0 0.0  0.0 40.0 0.01 0.0  0.0 0.0 40.0 0.0  0.0 0.0 0.0 1.0
+scene.textures.tex.type = band
+scene.textures.tex.amount = wrtex
+scene.textures.tex.offset0 = 0.33
+scene.textures.tex.value0 = 0.75 0.0 0.0
+scene.textures.tex.offset1 = 0.6
+scene.textures.tex.value1 = 0.0 0.75 0.0
+scene.textures.tex.offset2 = 1.0
+scene.textures.tex.value2 = 0.0 0.0 0.75
 ################################################################################
-scene.textures.stex.type = scale
-scene.textures.stex.texture1 = 0.01
-scene.textures.stex.texture2 = tex
+##scene.textures.tex.type = blender_clouds
+#scene.textures.tex.type = blender_wood
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.0 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
 ################################################################################
-scene.materials.shell.type = glossy2
-#scene.materials.shell.kd = stex
-scene.materials.shell.kd = 0.6 0.0 0.0
-scene.materials.shell.ks = 0.35 0.35 0.35
-scene.materials.shell.uroughness = 0.03
-scene.materials.shell.vroughness = 0.03
-scene.materials.shell.bumptex = stex
-#scene.materials.shell.type = matte
-#scene.materials.shell.kd = stex
+#scene.textures.stex.type = scale
+#scene.textures.stex.texture1 = 0.01
+#scene.textures.stex.texture2 = tex
+################################################################################
+#scene.materials.shell.type = glossy2
+##scene.materials.shell.kd = stex
+#scene.materials.shell.kd = 0.6 0.0 0.0
+#scene.materials.shell.ks = 0.35 0.35 0.35
+#scene.materials.shell.uroughness = 0.03
+#scene.materials.shell.vroughness = 0.03
+#scene.materials.shell.bumptex = stex
+scene.materials.shell.type = matte
+scene.materials.shell.kd = tex
 #scene.materials.shell.bumptex = scalefbmtex
 #scene.materials.shell.type = matte
 #scene.materials.shell.kd = 0.0 0.3 0.6

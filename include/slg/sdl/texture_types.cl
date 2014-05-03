@@ -62,6 +62,10 @@ typedef struct {
 } FresnelApproxKTexParam;
 
 typedef struct {
+	unsigned int amountTexIndex, tex1Index, tex2Index;
+} MixTexParam;
+
+typedef struct {
 	TextureMapping2D mapping;
 	unsigned int tex1Index, tex2Index;
 } CheckerBoard2DTexParam;
@@ -70,10 +74,6 @@ typedef struct {
 	TextureMapping3D mapping;
 	unsigned int tex1Index, tex2Index;
 } CheckerBoard3DTexParam;
-
-typedef struct {
-	unsigned int amountTexIndex, tex1Index, tex2Index;
-} MixTexParam;
 
 typedef struct {
 	TextureMapping3D mapping;
@@ -181,9 +181,9 @@ typedef struct {
 		ScaleTexParam scaleTex;
 		FresnelApproxNTexParam fresnelApproxN;
 		FresnelApproxKTexParam fresnelApproxK;
+		MixTexParam mixTex;
 		CheckerBoard2DTexParam checkerBoard2D;
 		CheckerBoard3DTexParam checkerBoard3D;
-		MixTexParam mixTex;
 		FBMTexParam fbm;
 		MarbleTexParam marble;
 		DotsTexParam dots;

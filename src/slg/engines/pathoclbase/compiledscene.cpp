@@ -21,6 +21,7 @@
 #include <limits>
 
 #include <boost/lexical_cast.hpp>
+#include <c++/4.7/iosfwd>
 
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/sdl/blender_texture.h"
@@ -84,7 +85,7 @@ void CompiledScene::CompileCamera() {
 			break;
 		}
 		default:
-			throw std::runtime_error("Unknown camera type: " + boost::lexical_cast<std::string>(scene->camera->GetType()));
+			throw std::runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + boost::lexical_cast<std::string>(scene->camera->GetType()));
 	}
 						
 }
@@ -109,9 +110,9 @@ void CompiledScene::CompileGeometry() {
 	tris.resize(0);
 	meshDescs.resize(0);
 
-	//----------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// Translate geometry
-	//----------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	// Not using boost::unordered_map because because the key is an ExtMesh pointer
 	map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
@@ -540,12 +541,12 @@ void CompiledScene::CompileMaterials() {
 						break;
 					}
 					default:
-						throw runtime_error("Unknown volume: " + boost::lexical_cast<string>(m->GetType()));
+						throw runtime_error("Unknown volume in CompiledScene::CompileMaterials(): " + boost::lexical_cast<string>(m->GetType()));
 				}
 				break;
 			}
 			default:
-				throw runtime_error("Unknown material: " + boost::lexical_cast<string>(m->GetType()));
+				throw runtime_error("Unknown material in CompiledScene::CompileMaterials(): " + boost::lexical_cast<string>(m->GetType()));
 		}
 	}
 
@@ -940,7 +941,7 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 			break;
 		}
 		default:
-			throw runtime_error("Unknown 2D texture mapping: " + boost::lexical_cast<string>(m->GetType()));
+			throw runtime_error("Unknown 2D texture mapping in CompiledScene::CompileTextureMapping2D: " + boost::lexical_cast<string>(m->GetType()));
 	}
 }
 
@@ -961,7 +962,7 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 			break;
 		}
 		default:
-			throw runtime_error("Unknown texture mapping: " + boost::lexical_cast<string>(m->GetType()));
+			throw runtime_error("Unknown 3D texture mapping in CompiledScene::CompileTextureMapping3D: " + boost::lexical_cast<string>(m->GetType()));
 	}
 }
 
@@ -1341,13 +1342,229 @@ void CompiledScene::CompileTextures() {
 				break;
             }
 			default:
-				throw runtime_error("Unknown texture: " + boost::lexical_cast<string>(t->GetType()));
+				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
 		}
 	}
 		
 	const double tEnd = WallClockTime();
 	SLG_LOG("Textures compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+}
+
+static void AddTextureSourceHeader(stringstream &source, const string &returnType,
+		const string &type, u_int i) {
+	source <<
+			returnType <<" Texture_Index" << i << "_Evaluate" << type <<"(__global HitPoint *hitPoint\n" <<
+			"\t\tTEXTURES_PARAM_DECL) {\n";
+}
+
+static void AddTextureSourceFooter(stringstream &source) {
+	source << "}\n";
+}
+
+static void AddTextureSource(stringstream &source, 
+		const string &texName, const u_int i, const string &returnType, const string &type,
+		const vector<u_int> &argsList) {
+	AddTextureSourceHeader(source, returnType, type, i);
+	
+	source <<
+		"\treturn " << texName << "Texture_DynamicEvaluate" << type << "(&texs[" << i << "], hitPoint";
+	if (argsList.size() > 0)
+		source << ",\n";
+	else {
+		// ImageMapTexture needs additional parameters
+		if (texName == "ImageMap")
+			source << " IMAGEMAPS_PARAM);\n";
+		else
+			source << ");\n";
+	}
+
+	for (u_int j = 0; j < argsList.size(); ++j) {
+		source << "\t\tTexture_Index" << argsList[j] << "_Evaluate" << type << "(hitPoint TEXTURES_PARAM)";
+		if (j == argsList.size() - 1)
+			source << ");\n";
+		else
+			source << ",\n";
+			
+	}
+
+	AddTextureSourceFooter(source);
+}
+
+static void AddTextureSource(stringstream &source, 
+		const string &texName, const u_int i,
+		const vector<u_int> &argsList) {
+	AddTextureSource(source, texName, i, "float", "Float", argsList);
+	source << "\n";
+	AddTextureSource(source, texName, i, "float3", "Spectrum", argsList);
+}
+
+string CompiledScene::GetTexturesEvaluationSourceCode() const {
+	// Generate the source code for each texture that reference other textures
+	// and constant textures
+	stringstream source;
+
+	const u_int texturesCount = texs.size();
+	for (u_int i = 0; i < texturesCount; ++i) {
+		const slg::ocl::Texture *tex = &texs[i];
+
+		switch (tex->type) {
+			case slg::ocl::CONST_FLOAT: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "ConstFloat", i, argsList);
+				break;
+			}
+			case slg::ocl::CONST_FLOAT3: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "ConstFloat3", i, argsList);
+				break;
+			}
+			case slg::ocl::IMAGEMAP: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "ImageMap", i, argsList);
+				break;
+			}
+			case slg::ocl::SCALE_TEX: {
+				vector<u_int> argsList;
+				argsList.push_back(tex->scaleTex.tex1Index);
+				argsList.push_back(tex->scaleTex.tex2Index);
+				AddTextureSource(source, "Scale", i, argsList);
+				break;
+			}
+			case slg::ocl::MIX_TEX: {
+				vector<u_int> argsList;
+				argsList.push_back(tex->mixTex.amountTexIndex);
+				argsList.push_back(tex->mixTex.tex1Index);
+				argsList.push_back(tex->mixTex.tex2Index);
+				AddTextureSource(source, "Mix", i, argsList);
+				break;
+			}
+			case slg::ocl::ADD_TEX: {
+				vector<u_int> argsList;
+				argsList.push_back(tex->addTex.tex1Index);
+				argsList.push_back(tex->addTex.tex2Index);
+				AddTextureSource(source, "Add", i, argsList);
+				break;
+			}
+			case slg::ocl::HITPOINTCOLOR: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "HitPointColor", i, argsList);
+				break;
+			}
+			case slg::ocl::HITPOINTALPHA: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "HitPointAlpha", i, argsList);
+				break;
+			}
+			case slg::ocl::HITPOINTGREY: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "HitPointGrey", i, argsList);
+				break;
+			}
+			case slg::ocl::BLENDER_CLOUDS: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "BlenderClouds", i, argsList);
+				break;
+			}
+			case slg::ocl::BLENDER_WOOD: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "BlenderWood", i, argsList);
+				break;
+			}
+			case slg::ocl::CHECKERBOARD2D: {
+				vector<u_int> argsList;
+				argsList.push_back(tex->checkerBoard2D.tex1Index);
+				argsList.push_back(tex->checkerBoard2D.tex2Index);
+				AddTextureSource(source, "CheckerBoard2D", i, argsList);
+				break;
+			}
+			case slg::ocl::CHECKERBOARD3D: {
+				vector<u_int> argsList;
+				argsList.push_back(tex->checkerBoard3D.tex1Index);
+				argsList.push_back(tex->checkerBoard3D.tex2Index);
+				AddTextureSource(source, "CheckerBoard3D", i, argsList);
+				break;
+			}
+			case slg::ocl::FBM_TEX: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "FBM", i, argsList);
+				break;
+			}
+			case slg::ocl::MARBLE: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "Marble", i, argsList);
+				break;
+			}
+			case slg::ocl::DOTS: {
+				vector<u_int> argsList;
+				argsList.push_back(tex->dots.insideIndex);
+				argsList.push_back(tex->dots.outsideIndex);
+				AddTextureSource(source, "Dots", i, argsList);
+				break;
+			}
+			case slg::ocl::BRICK: {
+				vector<u_int> argsList;
+				argsList.push_back(tex->brick.tex1Index);
+				argsList.push_back(tex->brick.tex2Index);
+				argsList.push_back(tex->brick.tex3Index);
+				AddTextureSource(source, "Brick", i, argsList);
+				break;
+			}
+			case slg::ocl::WINDY: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "Windy", i, argsList);
+				break;
+			}
+			case slg::ocl::WRINKLED: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "Wrinkled", i, argsList);
+				break;
+			}
+			case slg::ocl::UV_TEX: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "UV", i, argsList);
+				break;
+			}
+			case slg::ocl::BAND_TEX: {
+				vector<u_int> argsList;
+				argsList.push_back(tex->band.amountTexIndex);
+				AddTextureSource(source, "Band", i, argsList);
+				break;
+			}
+			case slg::ocl::NORMALMAP_TEX: {
+				vector<u_int> argsList;
+				AddTextureSource(source, "NormalMap", i, argsList);
+				break;
+			}
+			default:
+				throw runtime_error("Unknown texture in CompiledScene::GetTexturesEvaluationSourceCode(): " + boost::lexical_cast<string>(tex->type));
+				break;
+		}
+		
+		source << "\n";
+	}
+
+	// Generate the code for evaluating a generic float texture
+	source << "float Texture_GetFloatValue(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
+			"\tswitch (texIndex) {\n";
+	for (u_int i = 0; i < texturesCount; ++i) {
+		source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateFloat(hitPoint TEXTURES_PARAM);\n";
+	}
+	source << "\t\tdefault: return 0.f;\n"
+			"\t}\n"
+			"}\n\n";
+
+	// Generate the code for evaluating a generic spectrum texture
+	source << "float3 Texture_GetSpectrumValue(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
+			"\tswitch (texIndex) {\n";
+	for (u_int i = 0; i < texturesCount; ++i) {
+		source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateSpectrum(hitPoint TEXTURES_PARAM);\n";
+	}
+	source << "\t\tdefault: return BLACK;\n"
+			"\t}\n"
+			"}\n";
+	
+	return source.str();
 }
 
 void CompiledScene::CompileImageMaps() {

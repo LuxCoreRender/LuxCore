@@ -33,7 +33,7 @@ float3 MatteMaterial_Evaluate(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matte.kdTexIndex], hitPoint
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint
 			TEXTURES_PARAM));
 	return kd * fabs(lightDir.z * M_1_PI_F);
 }
@@ -56,7 +56,7 @@ float3 MatteMaterial_Sample(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->matte.kdTexIndex], hitPoint
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint
 			TEXTURES_PARAM));
 	return kd;
 }

@@ -33,9 +33,9 @@ float3 GlassMaterial_Sample(__global Material *material,
 	if (!(requestedEvent & SPECULAR))
 		return BLACK;
 
-	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.ktTexIndex], hitPoint
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->glass.ktTexIndex, hitPoint
 		TEXTURES_PARAM));
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glass.krTexIndex], hitPoint
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint
 		TEXTURES_PARAM));
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
@@ -44,9 +44,9 @@ float3 GlassMaterial_Sample(__global Material *material,
 		return BLACK;
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = Texture_GetFloatValue(&texs[material->glass.exteriorIorTexIndex], hitPoint
+	const float nc = Texture_GetFloatValue(material->glass.exteriorIorTexIndex, hitPoint
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(&texs[material->glass.interiorIorTexIndex], hitPoint
+	const float nt = Texture_GetFloatValue(material->glass.interiorIorTexIndex, hitPoint
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 	const float eta = entering ? (nc / nt) : ntc;

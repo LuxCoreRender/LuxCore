@@ -26,7 +26,7 @@
 
 float3 ClearVolume_SigmaA(__global Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
-	const float3 sigmaA = Texture_GetSpectrumValue(&texs[vol->volume.clear.sigmaATexIndex], hitPoint
+	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.clear.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
 			
 	return clamp(sigmaA, 0.f, INFINITY);
@@ -99,7 +99,7 @@ float ClearVolume_Scatter(__global Volume *vol,
 	// Apply volume emission
 	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
 	if (emiTexIndex != NULL_INDEX) {
-		const float3 emiTex = Texture_GetSpectrumValue(&texs[emiTexIndex], tmpHitPoint
+		const float3 emiTex = Texture_GetSpectrumValue(emiTexIndex, tmpHitPoint
 			TEXTURES_PARAM);
 		*connectionEmission += *connectionThroughput * distance * clamp(emiTex, 0.f, INFINITY);
 	}

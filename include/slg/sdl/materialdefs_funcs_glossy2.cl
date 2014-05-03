@@ -119,7 +119,7 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
 
-	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
+	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint
 			TEXTURES_PARAM)) * M_1_PI_F * fabs(lightDir.z);
 	if (eyeDir.z <= 0.f) {
 		// Back face: no coating
@@ -134,10 +134,10 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	// Front face: coating+base
 	*event = GLOSSY | REFLECT;
 
-	float3 ks = Texture_GetSpectrumValue(&texs[material->glossy2.ksTexIndex], hitPoint
+	float3 ks = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint
 			TEXTURES_PARAM);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
-	const float i = Texture_GetFloatValue(&texs[material->glossy2.indexTexIndex], hitPoint
+	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint
 			TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
@@ -146,10 +146,10 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 #endif
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(Texture_GetFloatValue(&texs[material->glossy2.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-	const float v = clamp(Texture_GetFloatValue(&texs[material->glossy2.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -173,9 +173,9 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	const float coso = fabs(fixedDir.z);
 
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
-	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
+	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kaTexIndex, hitPoint
 			TEXTURES_PARAM));
-	const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
+	const float d = Texture_GetFloatValue(material->glossy2.depthTexIndex, hitPoint
 			TEXTURES_PARAM);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 #else
@@ -219,14 +219,14 @@ float3 Glossy2Material_Sample(__global Material *material,
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 		*event = DIFFUSE | REFLECT;
-		return Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
+		return Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint
 			TEXTURES_PARAM));
 	}
 
-	float3 ks = Texture_GetSpectrumValue(&texs[material->glossy2.ksTexIndex], hitPoint
+	float3 ks = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint
 			TEXTURES_PARAM);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
-	const float i = Texture_GetFloatValue(&texs[material->glossy2.indexTexIndex], hitPoint
+	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint
 			TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
@@ -235,10 +235,10 @@ float3 Glossy2Material_Sample(__global Material *material,
 #endif
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(Texture_GetFloatValue(&texs[material->glossy2.nuTexIndex], hitPoint
+	const float u = clamp(Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-	const float v = clamp(Texture_GetFloatValue(&texs[material->glossy2.nvTexIndex], hitPoint
+	const float v = clamp(Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint
 		TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
@@ -253,7 +253,7 @@ float3 Glossy2Material_Sample(__global Material *material,
 	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
-	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kdTexIndex], hitPoint
+	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint
 		TEXTURES_PARAM)) * M_1_PI_F;
 
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
@@ -304,9 +304,9 @@ float3 Glossy2Material_Sample(__global Material *material,
 	const float coso = fabs(fixedDir.z);
 
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
-	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->glossy2.kaTexIndex], hitPoint
+	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kaTexIndex, hitPoint
 		TEXTURES_PARAM));
-	const float d = Texture_GetFloatValue(&texs[material->glossy2.depthTexIndex], hitPoint
+	const float d = Texture_GetFloatValue(material->glossy2.depthTexIndex, hitPoint
 		TEXTURES_PARAM);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 #else

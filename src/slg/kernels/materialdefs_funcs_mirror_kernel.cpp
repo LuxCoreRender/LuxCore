@@ -42,7 +42,7 @@ std::string KernelSource_materialdefs_funcs_mirror =
 "	*pdfW = 1.f;\n"
 "\n"
 "	*cosSampledDir = fabs((*sampledDir).z);\n"
-"	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->mirror.krTexIndex], hitPoint\n"
+"	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->mirror.krTexIndex, hitPoint\n"
 "			TEXTURES_PARAM));\n"
 "	return kr;\n"
 "}\n"

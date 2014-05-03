@@ -131,6 +131,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_blender_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/volume_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/volume_funcs.cl
@@ -237,6 +238,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bump_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_noise_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_funcs_kernel.cpp
