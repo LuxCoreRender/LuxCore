@@ -75,6 +75,10 @@ if (Boost_FOUND)
 	link_directories(${Boost_LIBRARY_DIRS})
 	# Don't use old boost versions interfaces
 	ADD_DEFINITIONS(-DBOOST_FILESYSTEM_NO_DEPRECATED)
+	if (Boost_USE_STATIC_LIBS)
+		ADD_DEFINITIONS(-DBOOST_STATIC_LIB)
+		ADD_DEFINITIONS(-DBOOST_PYTHON_STATIC_LIB)
+	endif()
 endif ()
 
 

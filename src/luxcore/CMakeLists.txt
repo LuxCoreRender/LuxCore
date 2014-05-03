@@ -94,7 +94,7 @@ IF (NOT BISON_NOT_AVAILABLE AND NOT FLEX_NOT_AVAILABLE)
 	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
 
 	# Create custom command for flex/lex
-	FLEX_TARGET(lux_lexer ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp)
+	FLEX_TARGET(lux_lexer ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp COMPILE_FLAGS "${FLEX_FLAGS}")
 	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
 	ADD_FLEX_BISON_DEPENDENCY(lux_lexer lux_parser)
 
