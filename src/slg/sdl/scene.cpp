@@ -1071,15 +1071,15 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			((emissionTex->GetType() == CONST_FLOAT3) && (((ConstFloat3Texture *)emissionTex)->GetColor().Black()))))
 		emissionTex = NULL;
 
-	const Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
+	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
 		GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : NULL;
     if (!bumpTex) {
-        const Texture *normalTex =props.IsDefined(propName + ".normaltex") ? 
+        const Texture *normalTex = props.IsDefined(propName + ".normaltex") ? 
             GetTexture(props.Get(Property(propName + ".normaltex")(1.f))) : NULL;
 
         if (normalTex) {
-            Texture *implicitTex = new NormalMapTexture(normalTex);
-            texDefs.DefineTexture("Implicit-NormalMapTexture-" + boost::lexical_cast<string>(bumpTex), implicitTex);
+            bumpTex = new NormalMapTexture(normalTex);
+            texDefs.DefineTexture("Implicit-NormalMapTexture-" + boost::lexical_cast<string>(bumpTex), bumpTex);
         }
     }
 
