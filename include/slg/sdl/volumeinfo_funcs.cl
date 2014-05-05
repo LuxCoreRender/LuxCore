@@ -187,8 +187,9 @@ bool PathVolumeInfo_ContinueToTrace(__global PathVolumeInfo *pvi, __global BSDF 
 		//
 		// I have to calculate the potentially new currentVolume in order
 		// to check if I'm leaving the current one
-		if ((!intoObject) && (PathVolumeInfo_SimulateRemoveVolume(pvi, bsdfInteriorVolIndex
-				MATERIALS_PARAM) == pvi->currentVolumeIndex))
+		if ((!intoObject) && (pvi->currentVolumeIndex != NULL_INDEX) &&
+				(PathVolumeInfo_SimulateRemoveVolume(pvi, bsdfInteriorVolIndex
+					MATERIALS_PARAM) == pvi->currentVolumeIndex))
 			return true;
 	}
 
