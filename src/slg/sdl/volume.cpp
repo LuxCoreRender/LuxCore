@@ -190,7 +190,7 @@ bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
 		//
 		// I have to calculate the potentially new currentVolume in order
 		// to check if I'm leaving the current one
-		if ((!bsdf.hitPoint.intoObject) && (SimulateRemoveVolume(bsdfInteriorVol) == currentVolume))
+		if ((!bsdf.hitPoint.intoObject) && currentVolume && (SimulateRemoveVolume(bsdfInteriorVol) == currentVolume))
 			return true;
 	}
 
