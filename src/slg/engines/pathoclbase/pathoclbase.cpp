@@ -156,9 +156,9 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
 	useDynamicCodeGenerationForTextures = cfg.Get(Property(
-			"opencl.kernel.dynamiccodegeneration.textures.enable")(true)).Get<bool>();
+			"opencl.kernel.dynamiccodegeneration.textures.enable")(false)).Get<bool>();
 	useDynamicCodeGenerationForMaterials = cfg.Get(Property(
-			"opencl.kernel.dynamiccodegeneration.materials.enable")(true)).Get<bool>();
+			"opencl.kernel.dynamiccodegeneration.materials.enable")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Compile the scene
