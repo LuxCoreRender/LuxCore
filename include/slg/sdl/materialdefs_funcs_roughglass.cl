@@ -24,6 +24,22 @@
 
 #if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
 
+BSDFEvent RoughGlassMaterial_GetEventTypes() {
+	return GLOSSY | REFLECT | TRANSMIT;
+}
+
+bool RoughGlassMaterial_IsDelta() {
+	return false;
+}
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 RoughGlassMaterial_GetPassThroughTransparency(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+#endif
+
 float3 RoughGlassMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW
@@ -130,7 +146,10 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 
 float3 RoughGlassMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
-		const float u0, const float u1, const float passThroughEvent,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {

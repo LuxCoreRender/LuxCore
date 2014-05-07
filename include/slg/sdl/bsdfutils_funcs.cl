@@ -20,13 +20,13 @@
 
 BSDFEvent BSDF_GetEventTypes(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return Material_GetEventTypes(&mats[bsdf->materialIndex]
+	return Material_GetEventTypes(bsdf->materialIndex
 			MATERIALS_PARAM);
 }
 
 bool BSDF_IsDelta(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return Material_IsDelta(&mats[bsdf->materialIndex]
+	return Material_IsDelta(bsdf->materialIndex
 			MATERIALS_PARAM);
 }
 
@@ -43,7 +43,7 @@ uint BSDF_GetLightID(__global BSDF *bsdf
 #if defined(PARAM_HAS_VOLUMES)
 uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return Material_GetInteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
+	return Material_GetInteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 			, bsdf->hitPoint.passThroughEvent
 #endif
@@ -52,7 +52,7 @@ uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
 
 uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return Material_GetExteriorVolume(&mats[bsdf->materialIndex], &bsdf->hitPoint
+	return Material_GetExteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 			, bsdf->hitPoint.passThroughEvent
 #endif

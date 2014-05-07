@@ -26,6 +26,22 @@
 
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 
+BSDFEvent Glossy2Material_GetEventTypes() {
+	return GLOSSY | REFLECT;
+}
+
+bool Glossy2Material_IsDelta() {
+	return false;
+}
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 Glossy2Material_GetPassThroughTransparency(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+#endif
+
 float SchlickBSDF_CoatingWeight(const float3 ks, const float3 fixedDir) {
 	// No sampling on the back face
 	if (fixedDir.z <= 0.f)
@@ -202,8 +218,10 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 
 float3 Glossy2Material_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
+#endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {

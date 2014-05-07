@@ -117,6 +117,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_generic.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_archglass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_carpaint.cl
+	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_clearvol.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_cloth.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glossy2.cl
@@ -224,6 +225,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_generic_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_archglass_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_carpaint_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_clearvol_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_cloth_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glass_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glossy2_kernel.cpp

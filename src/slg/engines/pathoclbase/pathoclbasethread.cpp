@@ -759,6 +759,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_CLOTH";
 	if (cscene->IsMaterialCompiled(CARPAINT))
 		ss << " -D PARAM_ENABLE_MAT_CARPAINT";
+	if (cscene->IsMaterialCompiled(CLEAR_VOL))
+		ss << " -D PARAM_ENABLE_MAT_CLEAR_VOL";
 
 	if (cscene->RequiresPassThrough())
 		ss << " -D PARAM_HAS_PASSTHROUGH";
@@ -829,6 +831,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	if (!renderEngine->useDynamicCodeGenerationForTextures)
 		ss << " -D PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION";
+	if (!renderEngine->useDynamicCodeGenerationForMaterials)
+		ss << " -D PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION";
 
 	ss << AdditionalKernelOptions();
 	
@@ -913,6 +917,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_generic <<
 			slg::ocl::KernelSource_materialdefs_funcs_archglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
+			slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
 			slg::ocl::KernelSource_materialdefs_funcs_glass <<
 			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
@@ -923,7 +928,17 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_null <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_material_funcs <<
+			slg::ocl::KernelSource_material_funcs;
+
+		if (renderEngine->useDynamicCodeGenerationForMaterials) {
+			// Generate the code to evaluate the textures
+			ssKernel <<
+				"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
+				cscene->GetMaterialsEvaluationSourceCode() <<
+				"\n";
+		}
+
+		ssKernel <<
 			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
 			slg::ocl::KernelSource_volume_funcs <<
 			slg::ocl::KernelSource_volumeinfo_funcs <<
