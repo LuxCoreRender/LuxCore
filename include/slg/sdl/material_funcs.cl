@@ -18,6 +18,62 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global HitPoint *hitPoint
+		TEXTURES_PARAM_DECL) {
+	const uint emitTexIndex = material->emitTexIndex;
+	if (emitTexIndex == NULL_INDEX)
+		return BLACK;
+
+	return Texture_GetSpectrumValue(emitTexIndex, hitPoint
+				TEXTURES_PARAM);
+}
+
+#if defined(PARAM_HAS_BUMPMAPS)
+void Material_BumpNoMix(__global Material *material, __global HitPoint *hitPoint,
+        const float3 dpdu, const float3 dpdv,
+        const float3 dndu, const float3 dndv, const float weight
+        TEXTURES_PARAM_DECL) {
+    if ((material->bumpTexIndex != NULL_INDEX) && (weight > 0.f)) {
+        const float2 duv = weight * 
+#if defined(PARAM_ENABLE_TEX_NORMALMAP)
+            ((texs[material->bumpTexIndex].type == NORMALMAP_TEX) ?
+                NormalMapTexture_GetDuv(material->bumpTexIndex,
+                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
+                    TEXTURES_PARAM) :
+                Texture_GetDuv(material->bumpTexIndex,
+                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
+                    TEXTURES_PARAM));
+#else
+            Texture_GetDuv(material->bumpTexIndex,
+                hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
+                TEXTURES_PARAM);
+#endif
+
+        const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
+        const float3 bumpDpdu = dpdu + duv.s0 * oldShadeN;
+        const float3 bumpDpdv = dpdv + duv.s1 * oldShadeN;
+        float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
+
+        // The above transform keeps the normal in the original normal
+        // hemisphere. If they are opposed, it means UVN was indirect and
+        // the normal needs to be reversed
+        newShadeN *= (dot(oldShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
+
+        VSTORE3F(newShadeN, &hitPoint->shadeN.x);
+    }
+}
+#endif
+
+#if defined(PARAM_HAS_VOLUMES)
+uint Material_GetInteriorVolumeNoMix(__global Material *material) {
+	return material->interiorVolumeIndex;
+}
+
+uint Material_GetExteriorVolumeNoMix(__global Material *material) {
+	return material->exteriorVolumeIndex;
+}
+#endif
+
 #if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
 
 //------------------------------------------------------------------------------
@@ -333,52 +389,6 @@ float3 Material_EvaluateNoMix(__global Material *material,
 			return BLACK;
 	}
 }
-
-float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	const uint emitTexIndex = material->emitTexIndex;
-	if (emitTexIndex == NULL_INDEX)
-		return BLACK;
-
-	return Texture_GetSpectrumValue(emitTexIndex, hitPoint
-				TEXTURES_PARAM);
-}
-
-#if defined(PARAM_HAS_BUMPMAPS)
-void Material_BumpNoMix(__global Material *material, __global HitPoint *hitPoint,
-        const float3 dpdu, const float3 dpdv,
-        const float3 dndu, const float3 dndv, const float weight
-        TEXTURES_PARAM_DECL) {
-    if ((material->bumpTexIndex != NULL_INDEX) && (weight > 0.f)) {
-        const float2 duv = weight * 
-#if defined(PARAM_ENABLE_TEX_NORMALMAP)
-            ((texs[material->bumpTexIndex].type == NORMALMAP_TEX) ?
-                NormalMapTexture_GetDuv(material->bumpTexIndex,
-                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                    TEXTURES_PARAM) :
-                Texture_GetDuv(material->bumpTexIndex,
-                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                    TEXTURES_PARAM));
-#else
-            Texture_GetDuv(material->bumpTexIndex,
-                hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                TEXTURES_PARAM);
-#endif
-
-        const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
-        const float3 bumpDpdu = dpdu + duv.s0 * oldShadeN;
-        const float3 bumpDpdv = dpdv + duv.s1 * oldShadeN;
-        float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
-
-        // The above transform keeps the normal in the original normal
-        // hemisphere. If they are opposed, it means UVN was indirect and
-        // the normal needs to be reversed
-        newShadeN *= (dot(oldShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
-
-        VSTORE3F(newShadeN, &hitPoint->shadeN.x);
-    }
-}
-#endif
 
 float3 Material_GetPassThroughTransparencyNoMix(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, const float passThroughEvent
@@ -754,8 +764,9 @@ uint MixMaterial_GetInteriorVolume(__global Material *material,
 		, const float passEvent
 #endif
 		MATERIALS_PARAM_DECL) {
-	if (material->interiorVolumeIndex != NULL_INDEX)
-		return material->interiorVolumeIndex;
+	const uint intVolIndex = Material_GetInteriorVolumeNoMix(mat);
+	if (intVolIndex != NULL_INDEX)
+		return intVolIndex;
 
 	__global Material *currentMixMat = material;
 	float passThroughEvent = passEvent;
@@ -770,13 +781,14 @@ uint MixMaterial_GetInteriorVolume(__global Material *material,
 		const uint matIndex = sampleMatA ? currentMixMat->mix.matAIndex : currentMixMat->mix.matBIndex;
 		__global Material *mat = &mats[matIndex];
 
+		const uint intVolIndex = Material_GetInteriorVolumeNoMix(mat);
 		if (mat->type == MIX) {
-			if (mat->interiorVolumeIndex != NULL_INDEX)
-				return mat->interiorVolumeIndex;
+			if (intVolIndex != NULL_INDEX)
+				return intVolIndex;
 			else
 				currentMixMat = mat;
 		} else
-			return mat->interiorVolumeIndex;
+			return intVolIndex;
 	}
 }
 #endif
@@ -788,8 +800,9 @@ uint MixMaterial_GetExteriorVolume(__global Material *material,
 		, const float passEvent
 #endif
 		MATERIALS_PARAM_DECL) {
-	if (material->exteriorVolumeIndex != NULL_INDEX)
-		return material->exteriorVolumeIndex;
+	const uint extVolIndex = Material_GetExteriorVolumeNoMix(material);
+	if (extVolIndex != NULL_INDEX)
+		return extVolIndex;
 
 	__global Material *currentMixMat = material;
 	float passThroughEvent = passEvent;
@@ -804,13 +817,14 @@ uint MixMaterial_GetExteriorVolume(__global Material *material,
 		const uint matIndex = sampleMatA ? currentMixMat->mix.matAIndex : currentMixMat->mix.matBIndex;
 		__global Material *mat = &mats[matIndex];
 
+		const uint extVolIndex = Material_GetExteriorVolumeNoMix(material);
 		if (mat->type == MIX) {
-			if (mat->exteriorVolumeIndex != NULL_INDEX)
-				return mat->exteriorVolumeIndex;
+			if (extVolIndex != NULL_INDEX)
+				return extVolIndex;
 			else
 				currentMixMat = mat;
 		} else
-			return mat->exteriorVolumeIndex;
+			return extVolIndex;
 	}
 }
 #endif
@@ -971,7 +985,7 @@ uint Material_GetInteriorVolume(const uint matIndex,
 			MATERIALS_PARAM);
 	else
 #endif
-		return material->interiorVolumeIndex;
+		return Material_GetInteriorVolumeNoMix(material);
 }
 
 uint Material_GetExteriorVolume(const uint matIndex,
@@ -991,71 +1005,7 @@ uint Material_GetExteriorVolume(const uint matIndex,
 			MATERIALS_PARAM);
 	else
 #endif
-		return material->exteriorVolumeIndex;
-}
-#endif
-
-#else
-
-//------------------------------------------------------------------------------
-// Functions for material dynamic code generation
-//------------------------------------------------------------------------------
-
-float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global HitPoint *hitPoint,
-		const float oneOverPrimitiveArea TEXTURES_PARAM_DECL) {
-	const uint emitTexIndex = material->emitTexIndex;
-	if (emitTexIndex == NULL_INDEX)
-		return BLACK;
-
-	const float3 result = Texture_GetSpectrumValue(emitTexIndex, hitPoint
-				TEXTURES_PARAM);
-	
-	return 	VLOAD3F(material->emittedFactor.c) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;
-}
-
-#if defined(PARAM_HAS_BUMPMAPS)
-void Material_BumpNoMix(__global Material *material, __global HitPoint *hitPoint,
-        const float3 dpdu, const float3 dpdv,
-        const float3 dndu, const float3 dndv, const float weight
-        TEXTURES_PARAM_DECL) {
-    if ((material->bumpTexIndex != NULL_INDEX) && (weight > 0.f)) {
-        const float2 duv = weight * 
-#if defined(PARAM_ENABLE_TEX_NORMALMAP)
-            ((texs[material->bumpTexIndex].type == NORMALMAP_TEX) ?
-                NormalMapTexture_GetDuv(material->bumpTexIndex,
-                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                    TEXTURES_PARAM) :
-                Texture_GetDuv(material->bumpTexIndex,
-                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                    TEXTURES_PARAM));
-#else
-            Texture_GetDuv(material->bumpTexIndex,
-                hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                TEXTURES_PARAM);
-#endif
-
-        const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
-        const float3 bumpDpdu = dpdu + duv.s0 * oldShadeN;
-        const float3 bumpDpdv = dpdv + duv.s1 * oldShadeN;
-        float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
-
-        // The above transform keeps the normal in the original normal
-        // hemisphere. If they are opposed, it means UVN was indirect and
-        // the normal needs to be reversed
-        newShadeN *= (dot(oldShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
-
-        VSTORE3F(newShadeN, &hitPoint->shadeN.x);
-    }
-}
-#endif
-
-#if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolumeNoMix(__global Material *material) {
-	return material->interiorVolumeIndex;
-}
-
-uint Material_GetExteriorVolumeNoMix(__global Material *material) {
-	return material->exteriorVolumeIndex;
+		return Material_GetExteriorVolumeNoMix(material);
 }
 #endif
 
