@@ -94,7 +94,7 @@ float BlackmanHarris1D(float x) {
 	if (x < -1.f || x > 1.f)
 		return 0.f;
 	x = (x + 1.f) * .5f;
-	x *= M_PI;
+	x *= M_PI_F;
 	const float A0 =  0.35875f;
 	const float A1 = -0.48829f;
 	const float A2 =  0.14128f;

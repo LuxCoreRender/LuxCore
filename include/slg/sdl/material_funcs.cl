@@ -119,6 +119,10 @@ bool Material_IsDeltaNoMix(__global Material *material) {
 		case MATTE:
 			return false;
 #endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
+		case ROUGHMATTE:
+			return false;
+#endif
 		//----------------------------------------------------------------------
 		// Specular materials
 #if defined (PARAM_ENABLE_MAT_MIRROR)
@@ -142,6 +146,10 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 	switch (mat->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
+			return DIFFUSE | REFLECT;
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
+		case ROUGHMATTE:
 			return DIFFUSE | REFLECT;
 #endif
 #if defined (PARAM_ENABLE_MAT_VELVET)
@@ -206,6 +214,16 @@ float3 Material_SampleNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return MatteMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
+		case ROUGHMATTE:
+			return RoughMatteMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
 					u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
@@ -336,6 +354,11 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return MatteMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
+		case ROUGHMATTE:
+			return RoughMatteMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_VELVET)

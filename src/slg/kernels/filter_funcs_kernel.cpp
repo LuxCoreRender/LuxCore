@@ -97,7 +97,7 @@ std::string KernelSource_filter_funcs =
 "	if (x < -1.f || x > 1.f)\n"
 "		return 0.f;\n"
 "	x = (x + 1.f) * .5f;\n"
-"	x *= M_PI;\n"
+"	x *= M_PI_F;\n"
 "	const float A0 =  0.35875f;\n"
 "	const float A1 = -0.48829f;\n"
 "	const float A2 =  0.14128f;\n"

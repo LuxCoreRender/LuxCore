@@ -338,6 +338,14 @@ void CompiledScene::CompileMaterials() {
 				mat->matte.kdTexIndex = scene->texDefs.GetTextureIndex(mm->GetKd());
 				break;
 			}
+			case ROUGHMATTE: {
+				const RoughMatteMaterial *mm = static_cast<RoughMatteMaterial *>(m);
+
+				mat->type = slg::ocl::ROUGHMATTE;
+				mat->roughmatte.kdTexIndex = scene->texDefs.GetTextureIndex(mm->GetKd());
+				mat->roughmatte.sigmaTexIndex = scene->texDefs.GetTextureIndex(mm->GetSigma());
+				break;
+			}
 			case MIRROR: {
 				const MirrorMaterial *mm = static_cast<MirrorMaterial *>(m);
 
