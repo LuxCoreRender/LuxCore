@@ -1,4 +1,4 @@
-#line 2 "materialdefs_funcs_null.cl"
+#line 2 "materialdefs_funcs_matte.cl"
 
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
@@ -19,52 +19,46 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// NULL material
+// ClearVol material
+//
+// ClearVol hasn't scattering so none of the below functions is really used.
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_NULL)
+#if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
 
-BSDFEvent NullMaterial_GetEventTypes() {
-	return SPECULAR | TRANSMIT;
+BSDFEvent ClearVolMaterial_GetEventTypes() {
+	return DIFFUSE | REFLECT;
 }
 
-bool NullMaterial_IsDelta() {
-	return true;
+bool ClearVolMaterial_IsDelta() {
+	return false;
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 NullMaterial_GetPassThroughTransparency(__global Material *material,
+float3 ClearVolMaterial_GetPassThroughTransparency(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
-	return WHITE;
+	return BLACK;
 }
 #endif
 
-float3 NullMaterial_Evaluate(__global Material *material,
+float3 ClearVolMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		TEXTURES_PARAM_DECL) {
 	return BLACK;
 }
 
-float3 NullMaterial_Sample(__global Material *material,
+float3 ClearVolMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
+		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
-	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
-		return BLACK;
-
-	*sampledDir = -fixedDir;
-	*cosSampledDir = 1.f;
-
-	*pdfW = 1.f;
-	*event = SPECULAR | TRANSMIT;
-	return WHITE;
+	return BLACK;
 }
 
 #endif

@@ -193,7 +193,8 @@ protected:
 
 	vector<PathOCLBaseRenderThread *> renderThreads;
 	
-	bool writeKernelsToFile, useDynamicCodeGenerationForTextures;
+	bool writeKernelsToFile, useDynamicCodeGenerationForTextures,
+		useDynamicCodeGenerationForMaterials;
 };
 
 }

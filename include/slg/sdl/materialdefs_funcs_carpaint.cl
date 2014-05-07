@@ -26,11 +26,26 @@
 
 #if defined (PARAM_ENABLE_MAT_CARPAINT)
 
+BSDFEvent CarpaintMaterial_GetEventTypes() {
+	return GLOSSY | REFLECT;
+}
+
+bool CarpaintMaterial_IsDelta() {
+	return false;
+}
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 CarpaintMaterial_GetPassThroughTransparency(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+#endif
+
 float3 CarpaintMaterial_Evaluate(__global Material *material,
 	__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 	BSDFEvent *event, float *directPdfW
-	TEXTURES_PARAM_DECL)
-{
+	TEXTURES_PARAM_DECL) {
 	float3 H = normalize(lightDir + eyeDir);
 	if (all(H == 0.f))
 	{
@@ -98,12 +113,14 @@ float3 CarpaintMaterial_Evaluate(__global Material *material,
 }
 
 float3 CarpaintMaterial_Sample(__global Material *material,
-	__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *cosSampledDir, BSDFEvent *event,
-	const BSDFEvent requestedEvent
-	TEXTURES_PARAM_DECL)
-{
+		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
+	TEXTURES_PARAM_DECL) {
 	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
 		(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;

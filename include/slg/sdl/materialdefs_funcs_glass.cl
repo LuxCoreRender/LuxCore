@@ -24,9 +24,35 @@
 
 #if defined (PARAM_ENABLE_MAT_GLASS)
 
+BSDFEvent GlassMaterial_GetEventTypes() {
+	return SPECULAR | REFLECT | TRANSMIT;
+}
+
+bool GlassMaterial_IsDelta() {
+	return true;
+}
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 GlassMaterial_GetPassThroughTransparency(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+#endif
+
+float3 GlassMaterial_Evaluate(__global Material *material,
+		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+
 float3 GlassMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
-		const float u0, const float u1, const float passThroughEvent,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {

@@ -155,7 +155,10 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
-	useDynamicCodeGenerationForTextures = cfg.Get(Property("opencl.kernel.dynamiccodegeneration.textures.enable")(true)).Get<bool>();
+	useDynamicCodeGenerationForTextures = cfg.Get(Property(
+			"opencl.kernel.dynamiccodegeneration.textures.enable")(true)).Get<bool>();
+	useDynamicCodeGenerationForMaterials = cfg.Get(Property(
+			"opencl.kernel.dynamiccodegeneration.materials.enable")(true)).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Compile the scene

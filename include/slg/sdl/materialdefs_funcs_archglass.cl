@@ -24,9 +24,85 @@
 
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 
+BSDFEvent ArchGlassMaterial_GetEventTypes() {
+	return SPECULAR | REFLECT | TRANSMIT;
+}
+
+bool ArchGlassMaterial_IsDelta() {
+	return true;
+}
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		TEXTURES_PARAM_DECL) {
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint
+		TEXTURES_PARAM));
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint
+		TEXTURES_PARAM));
+
+	const bool isKtBlack = Spectrum_IsBlack(kt);
+	const bool isKrBlack = Spectrum_IsBlack(kr);
+	if (isKtBlack && isKrBlack)
+		return BLACK;
+
+	const bool entering = (CosTheta(localFixedDir) > 0.f);
+	const float nc = Texture_GetFloatValue(material->archglass.exteriorIorTexIndex, hitPoint
+			TEXTURES_PARAM);
+	const float nt = Texture_GetFloatValue(material->archglass.interiorIorTexIndex, hitPoint
+			TEXTURES_PARAM);
+	const float ntc = nt / nc;
+	const float eta = nc / nt;
+	const float costheta = CosTheta(localFixedDir);
+
+	// Decide to transmit or reflect
+	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
+	if (passThroughEvent < threshold) {
+		// Transmit
+
+		// Compute transmitted ray direction
+		const float sini2 = SinTheta2(localFixedDir);
+		const float eta2 = eta * eta;
+		const float sint2 = eta2 * sini2;
+
+		// Handle total internal reflection for transmission
+		if (sint2 >= 1.f)
+			return BLACK;
+
+		float3 result;
+		//if (!hitPoint.fromLight) {
+			if (entering)
+				result = BLACK;
+			else
+				result = FresnelCauchy_Evaluate(ntc, -costheta);
+		//} else {
+		//	if (entering)
+		//		result = FresnelCauchy_Evaluate(ntc, costheta);
+		//	else
+		//		result = BLACK;
+		//}
+		result *= 1.f + (1.f - result) * (1.f - result);
+		result = 1.f - result;
+
+		return kt * result;
+	} else
+		return BLACK;
+}
+#endif
+
+float3 ArchGlassMaterial_Evaluate(__global Material *material,
+		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+
 float3 ArchGlassMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
-		const float u0, const float u1, const float passThroughEvent,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
@@ -115,62 +191,6 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 	}
 
 	return result / *pdfW;
-}
-
-float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
-		TEXTURES_PARAM_DECL) {
-	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint
-		TEXTURES_PARAM));
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint
-		TEXTURES_PARAM));
-
-	const bool isKtBlack = Spectrum_IsBlack(kt);
-	const bool isKrBlack = Spectrum_IsBlack(kr);
-	if (isKtBlack && isKrBlack)
-		return BLACK;
-
-	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = Texture_GetFloatValue(material->archglass.exteriorIorTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(material->archglass.interiorIorTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float ntc = nt / nc;
-	const float eta = nc / nt;
-	const float costheta = CosTheta(localFixedDir);
-
-	// Decide to transmit or reflect
-	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
-	if (passThroughEvent < threshold) {
-		// Transmit
-
-		// Compute transmitted ray direction
-		const float sini2 = SinTheta2(localFixedDir);
-		const float eta2 = eta * eta;
-		const float sint2 = eta2 * sini2;
-
-		// Handle total internal reflection for transmission
-		if (sint2 >= 1.f)
-			return BLACK;
-
-		float3 result;
-		//if (!hitPoint.fromLight) {
-			if (entering)
-				result = BLACK;
-			else
-				result = FresnelCauchy_Evaluate(ntc, -costheta);
-		//} else {
-		//	if (entering)
-		//		result = FresnelCauchy_Evaluate(ntc, costheta);
-		//	else
-		//		result = BLACK;
-		//}
-		result *= 1.f + (1.f - result) * (1.f - result);
-		result = 1.f - result;
-
-		return kt * result;
-	} else
-		return BLACK;
 }
 
 #endif
