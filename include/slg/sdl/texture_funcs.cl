@@ -1451,8 +1451,9 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 	}
 }
 
-float Texture_GetFloatValue(__global Texture *texture, __global HitPoint *hitPoint
+float Texture_GetFloatValue(const uint texIndex, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
+	__global Texture *texture = &texs[texIndex];
 	__global Texture *todoTex[TEXTURE_STACK_SIZE];
 	uint todoTexSize = 0;
 

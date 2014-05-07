@@ -26,14 +26,13 @@ scene.objects.blacktext.material = blacktext
 scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
 ################################################################################
 scene.infinitelight.file = scenes/simple-mat/sky.exr
-scene.infinitelight.gain = 0.2 0.2 0.2
+scene.infinitelight.gain = 1 1 1
 #scene.skylight.dir = 0 -1 0
 #scene.skylight.turbidity = 2.2
 #scene.skylight.gain = .5 .5 .5
-scene.sunlight.dir = 0 -1 0
-#scene.sunlight.gain = 3.5 3.5 3.5
+scene.sunlight.dir = 0 -1 0.25
+scene.sunlight.gain = 0.0001 0.0001 0.0001
 #scene.sunlight.relsize = 40.0
-scene.sunlight.gain = 50 50 50
 scene.sunlight.relsize = 10.0
 #scene.sunlight.visibility.indirect.diffuse.enable = 0
 #scene.sunlight.visibility.indirect.glossy.enable = 0

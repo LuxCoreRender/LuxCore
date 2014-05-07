@@ -18,6 +18,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+
 //------------------------------------------------------------------------------
 // Generic material functions
 //
@@ -148,73 +150,121 @@ float3 Material_SampleNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
 			return MatteMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_VELVET)
 		case VELVET:
 			return VelvetMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
 			return MirrorMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1, pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
 			return GlassMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
 			return ArchGlassMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
 			return NullMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1, pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 		case MATTETRANSLUCENT:
 			return MatteTranslucentMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
 			return Glossy2Material_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
 			return Metal2Material_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
 		case ROUGHGLASS:
 			return RoughGlassMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_CLOTH)
 		case CLOTH:
 			return ClothMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1,	pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_CARPAINT)
 		case CARPAINT:
 			return CarpaintMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
-					u0, u1, passThroughEvent, pdfW, cosSampledDir, event, requestedEvent
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
 		default:
@@ -298,7 +348,7 @@ float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global Hi
 void Material_BumpNoMix(__global Material *material, __global HitPoint *hitPoint,
         const float3 dpdu, const float3 dpdv,
         const float3 dndu, const float3 dndv, const float weight
-        MATERIALS_PARAM_DECL) {
+        TEXTURES_PARAM_DECL) {
     if ((material->bumpTexIndex != NULL_INDEX) && (weight > 0.f)) {
         const float2 duv = weight * 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
@@ -632,7 +682,7 @@ void MixMaterial_Bump(__global Material *material, __global HitPoint *hitPoint,
         // Use this mix node bump mapping
         Material_BumpNoMix(material, hitPoint,
                 dpdu, dpdv, dndu, dndv, weight
-                MATERIALS_PARAM);
+                TEXTURES_PARAM);
     } else {
         // Mix the child bump mapping
         __global Material *materialStack[MIX_STACK_SIZE];
@@ -666,7 +716,7 @@ void MixMaterial_Bump(__global Material *material, __global HitPoint *hitPoint,
             } else {
                 Material_BumpNoMix(m, hitPoint,
                         dpdu, dpdv, dndu, dndv, totalWeight
-                        MATERIALS_PARAM);
+                        TEXTURES_PARAM);
             }
         }
     }
@@ -771,8 +821,10 @@ uint MixMaterial_GetExteriorVolume(__global Material *material,
 // Generic material functions with Mix support
 //------------------------------------------------------------------------------
 
-BSDFEvent Material_GetEventTypes(__global Material *material
+BSDFEvent Material_GetEventTypes(const uint matIndex
 		MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
 		return MixMaterial_GetEventTypes(material
@@ -782,8 +834,10 @@ BSDFEvent Material_GetEventTypes(__global Material *material
 		return Material_GetEventTypesNoMix(material);
 }
 
-bool Material_IsDelta(__global Material *material
+bool Material_IsDelta(const uint matIndex
 		MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
 		return MixMaterial_IsDelta(material
@@ -793,10 +847,12 @@ bool Material_IsDelta(__global Material *material
 		return Material_IsDeltaNoMix(material);
 }
 
-float3 Material_Evaluate(__global Material *material,
+float3 Material_Evaluate(const uint matIndex,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
 		return MixMaterial_Evaluate(material, hitPoint, lightDir, eyeDir,
@@ -809,7 +865,7 @@ float3 Material_Evaluate(__global Material *material,
 				TEXTURES_PARAM);
 }
 
-float3 Material_Sample(__global Material *material,	__global HitPoint *hitPoint,
+float3 Material_Sample(const uint matIndex,	__global HitPoint *hitPoint,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -818,6 +874,8 @@ float3 Material_Sample(__global Material *material,	__global HitPoint *hitPoint,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
 		return MixMaterial_Sample(material, hitPoint,
@@ -838,9 +896,11 @@ float3 Material_Sample(__global Material *material,	__global HitPoint *hitPoint,
 				TEXTURES_PARAM);
 }
 
-float3 Material_GetEmittedRadiance(__global Material *material,
+float3 Material_GetEmittedRadiance(const uint matIndex,
 		__global HitPoint *hitPoint, const float oneOverPrimitiveArea
 		MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 	float3 result;
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
@@ -855,10 +915,12 @@ float3 Material_GetEmittedRadiance(__global Material *material,
 }
 
 #if defined(PARAM_HAS_BUMPMAPS)
-void Material_Bump(__global Material *material, __global HitPoint *hitPoint,
+void Material_Bump(const uint matIndex, __global HitPoint *hitPoint,
         const float3 dpdu, const float3 dpdv,
         const float3 dndu, const float3 dndv, const float weight
         MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
 		MixMaterial_Bump(material, hitPoint,
@@ -868,14 +930,16 @@ void Material_Bump(__global Material *material, __global HitPoint *hitPoint,
 #endif
 		Material_BumpNoMix(material, hitPoint,
                 dpdu, dpdv, dndu, dndv, weight
-                MATERIALS_PARAM);
+                TEXTURES_PARAM);
 }
 #endif
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 Material_GetPassThroughTransparency(__global Material *material,
+float3 Material_GetPassThroughTransparency(const uint matIndex,
 		__global HitPoint *hitPoint, const float3 fixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
 		return MixMaterial_GetPassThroughTransparency(material,
@@ -890,12 +954,14 @@ float3 Material_GetPassThroughTransparency(__global Material *material,
 #endif
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolume(__global Material *material, 
+uint Material_GetInteriorVolume(const uint matIndex,
 		__global HitPoint *hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float passThroughEvent
 #endif
 		MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
 		return MixMaterial_GetInteriorVolume(material, hitPoint
@@ -908,12 +974,14 @@ uint Material_GetInteriorVolume(__global Material *material,
 		return material->interiorVolumeIndex;
 }
 
-uint Material_GetExteriorVolume(__global Material *material, 
+uint Material_GetExteriorVolume(const uint matIndex,
 		__global HitPoint *hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float passThroughEvent
 #endif
 		MATERIALS_PARAM_DECL) {
+	__global Material *material = &mats[matIndex];
+
 #if defined (PARAM_ENABLE_MAT_MIX)
 	if (material->type == MIX)
 		return MixMaterial_GetExteriorVolume(material, hitPoint
@@ -925,4 +993,70 @@ uint Material_GetExteriorVolume(__global Material *material,
 #endif
 		return material->exteriorVolumeIndex;
 }
+#endif
+
+#else
+
+//------------------------------------------------------------------------------
+// Functions for material dynamic code generation
+//------------------------------------------------------------------------------
+
+float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global HitPoint *hitPoint,
+		const float oneOverPrimitiveArea TEXTURES_PARAM_DECL) {
+	const uint emitTexIndex = material->emitTexIndex;
+	if (emitTexIndex == NULL_INDEX)
+		return BLACK;
+
+	const float3 result = Texture_GetSpectrumValue(emitTexIndex, hitPoint
+				TEXTURES_PARAM);
+	
+	return 	VLOAD3F(material->emittedFactor.c) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;
+}
+
+#if defined(PARAM_HAS_BUMPMAPS)
+void Material_BumpNoMix(__global Material *material, __global HitPoint *hitPoint,
+        const float3 dpdu, const float3 dpdv,
+        const float3 dndu, const float3 dndv, const float weight
+        TEXTURES_PARAM_DECL) {
+    if ((material->bumpTexIndex != NULL_INDEX) && (weight > 0.f)) {
+        const float2 duv = weight * 
+#if defined(PARAM_ENABLE_TEX_NORMALMAP)
+            ((texs[material->bumpTexIndex].type == NORMALMAP_TEX) ?
+                NormalMapTexture_GetDuv(material->bumpTexIndex,
+                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
+                    TEXTURES_PARAM) :
+                Texture_GetDuv(material->bumpTexIndex,
+                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
+                    TEXTURES_PARAM));
+#else
+            Texture_GetDuv(material->bumpTexIndex,
+                hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
+                TEXTURES_PARAM);
+#endif
+
+        const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
+        const float3 bumpDpdu = dpdu + duv.s0 * oldShadeN;
+        const float3 bumpDpdv = dpdv + duv.s1 * oldShadeN;
+        float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
+
+        // The above transform keeps the normal in the original normal
+        // hemisphere. If they are opposed, it means UVN was indirect and
+        // the normal needs to be reversed
+        newShadeN *= (dot(oldShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
+
+        VSTORE3F(newShadeN, &hitPoint->shadeN.x);
+    }
+}
+#endif
+
+#if defined(PARAM_HAS_VOLUMES)
+uint Material_GetInteriorVolumeNoMix(__global Material *material) {
+	return material->interiorVolumeIndex;
+}
+
+uint Material_GetExteriorVolumeNoMix(__global Material *material) {
+	return material->exteriorVolumeIndex;
+}
+#endif
+
 #endif
