@@ -62,6 +62,7 @@ public:
 	}
 
 	std::string GetTexturesEvaluationSourceCode() const;
+	std::string GetMaterialsEvaluationSourceCode() const;
 
 	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
 	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);

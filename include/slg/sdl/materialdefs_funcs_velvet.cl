@@ -24,6 +24,22 @@
 
 #if defined (PARAM_ENABLE_MAT_VELVET)
 
+BSDFEvent VelvetMaterial_GetEventTypes() {
+	return DIFFUSE | REFLECT;
+}
+
+bool VelvetMaterial_IsDelta() {
+	return false;
+}
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 VelvetMaterial_GetPassThroughTransparency(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+#endif
+
 float3 VelvetMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
@@ -34,19 +50,19 @@ float3 VelvetMaterial_Evaluate(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->velvet.kdTexIndex], hitPoint
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->velvet.kdTexIndex, hitPoint
 			TEXTURES_PARAM));
 
-	const float A1 = Texture_GetFloatValue(&texs[material->velvet.p1TexIndex], hitPoint
+	const float A1 = Texture_GetFloatValue(material->velvet.p1TexIndex, hitPoint
 			TEXTURES_PARAM);
 
-	const float A2 = Texture_GetFloatValue(&texs[material->velvet.p2TexIndex], hitPoint
+	const float A2 = Texture_GetFloatValue(material->velvet.p2TexIndex, hitPoint
 			TEXTURES_PARAM);
 
-	const float A3 = Texture_GetFloatValue(&texs[material->velvet.p3TexIndex], hitPoint
+	const float A3 = Texture_GetFloatValue(material->velvet.p3TexIndex, hitPoint
 			TEXTURES_PARAM);
 
-	const float delta = Texture_GetFloatValue(&texs[material->velvet.thicknessTexIndex], hitPoint
+	const float delta = Texture_GetFloatValue(material->velvet.thicknessTexIndex, hitPoint
 			TEXTURES_PARAM);
 
 	const float cosv = -dot(lightDir, eyeDir);
@@ -71,7 +87,10 @@ float3 VelvetMaterial_Evaluate(__global Material *material,
 
 float3 VelvetMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
@@ -87,19 +106,19 @@ float3 VelvetMaterial_Sample(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(&texs[material->velvet.kdTexIndex], hitPoint
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->velvet.kdTexIndex, hitPoint
 			TEXTURES_PARAM));
 
-	const float A1 = Texture_GetFloatValue(&texs[material->velvet.p1TexIndex], hitPoint
+	const float A1 = Texture_GetFloatValue(material->velvet.p1TexIndex, hitPoint
 			TEXTURES_PARAM);
 
-	const float A2 = Texture_GetFloatValue(&texs[material->velvet.p2TexIndex], hitPoint
+	const float A2 = Texture_GetFloatValue(material->velvet.p2TexIndex, hitPoint
 			TEXTURES_PARAM);
 
-	const float A3 = Texture_GetFloatValue(&texs[material->velvet.p3TexIndex], hitPoint
+	const float A3 = Texture_GetFloatValue(material->velvet.p3TexIndex, hitPoint
 			TEXTURES_PARAM);
 
-	const float delta = Texture_GetFloatValue(&texs[material->velvet.thicknessTexIndex], hitPoint
+	const float delta = Texture_GetFloatValue(material->velvet.thicknessTexIndex, hitPoint
 			TEXTURES_PARAM);
 
 	const float cosv = dot(-fixedDir, *sampledDir);;
@@ -121,4 +140,5 @@ float3 VelvetMaterial_Sample(__global Material *material,
 
 	return kd * (p / *pdfW);
 }
+
 #endif

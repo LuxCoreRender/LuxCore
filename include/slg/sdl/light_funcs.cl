@@ -462,7 +462,7 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 	tmpHitPoint->intoObject = true;
 #endif
 
-	return Material_GetEmittedRadiance(&mats[triLight->triangle.materialIndex],
+	return Material_GetEmittedRadiance(triLight->triangle.materialIndex,
 			tmpHitPoint, triLight->triangle.invArea
 			MATERIALS_PARAM) * emissionColor;
 }
@@ -500,7 +500,7 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 	}
 #endif
 
-	return Material_GetEmittedRadiance(&mats[triLight->triangle.materialIndex],
+	return Material_GetEmittedRadiance(triLight->triangle.materialIndex,
 			hitPoint, triLight->triangle.invArea
 			MATERIALS_PARAM) * emissionColor;
 }

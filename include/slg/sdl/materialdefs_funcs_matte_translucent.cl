@@ -24,6 +24,22 @@
 
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 
+BSDFEvent MatteTranslucentMaterial_GetEventTypes() {
+	return DIFFUSE | REFLECT | TRANSMIT;
+}
+
+bool MatteTranslucentMaterial_IsDelta() {
+	return false;
+}
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 MatteTranslucentMaterial_GetPassThroughTransparency(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+#endif
+
 float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
@@ -72,8 +88,10 @@ float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
 
 float3 MatteTranslucentMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
+#endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {

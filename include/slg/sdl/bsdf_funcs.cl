@@ -121,12 +121,12 @@ void BSDF_Init(
 	PathVolumeInfo_SetHitPointVolumes(
 			volInfo,
 			&bsdf->hitPoint,
-			Material_GetInteriorVolume(&mats[matIndex], &bsdf->hitPoint
+			Material_GetInteriorVolume(matIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, u0
 #endif
 			MATERIALS_PARAM),
-			Material_GetExteriorVolume(&mats[matIndex], &bsdf->hitPoint
+			Material_GetExteriorVolume(matIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, u0
 #endif
@@ -276,7 +276,7 @@ void BSDF_Init(
             //------------------------------------------------------------------
 
 #if defined(PARAM_HAS_BUMPMAPS)
-            Material_Bump(&mats[matIndex],
+            Material_Bump(matIndex,
                     &bsdf->hitPoint, shadeDpdu, shadeDpdv,
                     geometryDndu, geometryDndu, 1.f
                     MATERIALS_PARAM);
@@ -322,9 +322,8 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 			(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
-	__global Material *mat = &mats[bsdf->materialIndex];
 	const float sideTest = dotEyeDirNG * dotLightDirNG;
-	const BSDFEvent matEvent = Material_GetEventTypes(mat
+	const BSDFEvent matEvent = Material_GetEventTypes(bsdf->materialIndex
 			MATERIALS_PARAM);
 	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
 			((sideTest < 0.f) && !(matEvent & TRANSMIT)))
@@ -333,7 +332,7 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
 	const float3 localEyeDir = Frame_ToLocal(frame, eyeDir);
-	const float3 result = Material_Evaluate(mat, &bsdf->hitPoint,
+	const float3 result = Material_Evaluate(bsdf->materialIndex, &bsdf->hitPoint,
 			localLightDir, localEyeDir,	event, directPdfW
 			MATERIALS_PARAM);
 
@@ -354,7 +353,7 @@ float3 BSDF_Sample(__global BSDF *bsdf, const float u0, const float u1,
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, fixedDir);
 	float3 localSampledDir;
 
-	const float3 result = Material_Sample(&mats[bsdf->materialIndex], &bsdf->hitPoint,
+	const float3 result = Material_Sample(bsdf->materialIndex, &bsdf->hitPoint,
 			localFixedDir, &localSampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			bsdf->hitPoint.passThroughEvent,
@@ -400,7 +399,7 @@ float3 BSDF_GetPassThroughTransparency(__global BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->hitPoint.fixedDir.x));
 
-	return Material_GetPassThroughTransparency(&mats[bsdf->materialIndex],
+	return Material_GetPassThroughTransparency(bsdf->materialIndex,
 			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
 }
