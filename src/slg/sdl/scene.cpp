@@ -1090,6 +1090,11 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.75f, .75f, .75f)));
 
 		mat = new MatteMaterial(emissionTex, bumpTex, kd);
+	} else if (matType == "roughmatte") {
+		const Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.75f, .75f, .75f)));
+		const Texture *sigma = GetTexture(props.Get(Property(propName + ".kd")(0.f)));
+
+		mat = new RoughMatteMaterial(emissionTex, bumpTex, kd, sigma);
 	} else if (matType == "mirror") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 

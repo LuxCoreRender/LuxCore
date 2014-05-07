@@ -719,6 +719,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
+	if (cscene->IsMaterialCompiled(ROUGHMATTE))
+		ss << " -D PARAM_ENABLE_MAT_ROUGHMATTE";
 	if (cscene->IsMaterialCompiled(VELVET))
 		ss << " -D PARAM_ENABLE_MAT_VELVET";
 	if (cscene->IsMaterialCompiled(MIRROR))

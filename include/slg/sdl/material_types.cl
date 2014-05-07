@@ -20,7 +20,7 @@
 
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
-	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT,
+	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
 			
 	// Volumes
 	/*HOMOGENEOUS_VOL,*/ CLEAR_VOL /*, HETEROGENEOUS_VOL*/
@@ -29,6 +29,11 @@ typedef enum {
 typedef struct {
     unsigned int kdTexIndex;
 } MatteParam;
+
+typedef struct {
+    unsigned int kdTexIndex;
+    unsigned int sigmaTexIndex;
+} RoughMatteParam;
 
 typedef struct {
     unsigned int krTexIndex;
@@ -210,6 +215,7 @@ typedef struct {
 
 	union {
 		MatteParam matte;
+		RoughMatteParam roughmatte;
 		MirrorParam mirror;
 		GlassParam glass;
 		MetalParam metal;

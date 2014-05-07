@@ -81,3 +81,94 @@ float3 MatteMaterial_Sample(__global Material *material,
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Rough matte material
+//------------------------------------------------------------------------------
+
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
+
+BSDFEvent RoughMatteMaterial_GetEventTypes() {
+	return DIFFUSE | REFLECT;
+}
+
+bool RoughMatteMaterial_IsDelta() {
+	return false;
+}
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+float3 RoughMatteMaterial_GetPassThroughTransparency(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+#endif
+
+float3 RoughMatteMaterial_Evaluate(__global Material *material,
+		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+	if (directPdfW)
+		*directPdfW = fabs(lightDir.z * M_1_PI_F);
+
+	*event = DIFFUSE | REFLECT;
+
+        const float s = Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURE_PARAM);
+        const float sigma2 = s * s;
+        const float A = 1.f - (sigma2 / (2.f * (sigma2 + 0.33f)));
+        const float B = 0.45f * sigma2 / (sigma2 + 0.09f);
+        const float sinthetai = SinTheta(eyeDir);
+        const float sinthetao = SinTheta(lightDir);
+        float maxcos = 0.f;
+        if (sinthetai > 1e-4f && sinthetao > 1e-4f) {
+                const float dcos = CosPhi(lightDir) * CosPhi(eyeDir) +
+                        SinPhi(lightDir) * SinPhi(eyeDir);
+                maxcos = max(0.f, dcos);
+        }
+											const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint
+			TEXTURES_PARAM));
+	return kd * fabs(lightDir.z * M_1_PI_F) *
+		(A + B * maxcos * sinthetai * sinthetao / max(fabsf(CosTheta(lightDir)), fabsf(CosTheta(eyeDir)))));
+}
+
+float3 RoughMatteMaterial_Sample(__global Material *material,
+		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1, 
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
+		TEXTURES_PARAM_DECL) {
+	if (!(requestedEvent & (DIFFUSE | REFLECT)) ||
+			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+		return BLACK;
+
+	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
+
+	*cosSampledDir = fabs((*sampledDir).z);
+	if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	*event = DIFFUSE | REFLECT;
+
+        const float s = Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURE_PARAM);
+        const float sigma2 = s * s;
+        const float A = 1.f - (sigma2 / (2.f * (sigma2 + 0.33f)));
+        const float B = 0.45f * sigma2 / (sigma2 + 0.09f);
+        const float sinthetai = SinTheta(fixedDir);
+        const float sinthetao = SinTheta(*sampledDir);
+        float maxcos = 0.f;
+        if (sinthetai > 1e-4f && sinthetao > 1e-4f) {
+                const float dcos = CosPhi(*sampledDir) * CosPhi(fixedDir) +
+                        SinPhi(*sampledDir) * SinPhi(fixedDir);
+                maxcos = max(0.f, dcos);
+        }
+
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint
+			TEXTURES_PARAM));
+	return kd *
+		(A + B * maxcos * sinthetai * sinthetao / max(fabsf(CosTheta(*sampledDir)), fabsf(CosTheta(fixedDir))));
+}
+
+#endif
