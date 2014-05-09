@@ -930,7 +930,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_null <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_material_funcs;
+			slg::ocl::KernelSource_material_funcs <<
+			// KernelSource_materialdefs_funcs_mix must always be the last one
+			slg::ocl::KernelSource_materialdefs_funcs_mix;
 
 		if (renderEngine->useDynamicCodeGenerationForMaterials) {
 			// Generate the code to evaluate the textures
