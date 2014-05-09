@@ -51,6 +51,7 @@ extern std::string KernelSource_materialdefs_funcs_glass;
 extern std::string KernelSource_materialdefs_funcs_glossy2;
 extern std::string KernelSource_materialdefs_funcs_matte;
 extern std::string KernelSource_materialdefs_funcs_matte_translucent;
+extern std::string KernelSource_materialdefs_funcs_mix;
 extern std::string KernelSource_materialdefs_funcs_metal2;
 extern std::string KernelSource_materialdefs_funcs_mirror;
 extern std::string KernelSource_materialdefs_funcs_null;

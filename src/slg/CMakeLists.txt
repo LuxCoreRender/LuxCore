@@ -123,6 +123,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glossy2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_matte.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_matte_translucent.cl
+	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_mix.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_metal2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_mirror.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_null.cl
@@ -231,6 +232,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glossy2_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte_translucent_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_mix_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_metal2_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_mirror_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_null_kernel.cpp
