@@ -18,6 +18,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+//------------------------------------------------------------------------------
+// Generic material functions
+//
+// They include the support for all material but Mix
+// (because OpenCL doesn't support recursion)
+//------------------------------------------------------------------------------
+
 float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	const uint emitTexIndex = material->emitTexIndex;
@@ -74,67 +81,59 @@ uint Material_GetExteriorVolumeNoMix(__global Material *material) {
 }
 #endif
 
-
-//------------------------------------------------------------------------------
-// Generic material functions
-//
-// They include the support for all material but Mix
-// (because OpenCL doesn't support recursion)
-//------------------------------------------------------------------------------
-
 bool Material_IsDeltaNoMix(__global Material *material) {
 	switch (material->type) {
-		//----------------------------------------------------------------------
-		// Non Specular materials
-#if defined (PARAM_ENABLE_MAT_CARPAINT)
-		case CARPAINT:
-			return false;
-#endif
-#if defined (PARAM_ENABLE_MAT_CLOTH)
-		case CLOTH:
-			return false;
-#endif
-#if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
-		case ROUGHGLASS:
-			return false;
-#endif
-#if defined (PARAM_ENABLE_MAT_METAL2)
-		case METAL2:
-			return false;
-#endif
-#if defined (PARAM_ENABLE_MAT_GLOSSY2)
-		case GLOSSY2:
-			return false;
-#endif
-#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
-		case MATTETRANSLUCENT:
-			return false;
-#endif
-#if defined (PARAM_ENABLE_MAT_VELVET)
-		case VELVET:
-			return false;
-#endif
 #if defined (PARAM_ENABLE_MAT_MATTE)
-		case MATTE:
-			return false;
+		case MATTE:	
+			return MatteMaterial_IsDelta();
 #endif
 #if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
 		case ROUGHMATTE:
-			return false;
+			return RoughMatteMaterial_IsDelta();
 #endif
-		//----------------------------------------------------------------------
-		// Specular materials
+#if defined (PARAM_ENABLE_MAT_VELVET)
+		case VELVET:
+			return VelvetMaterial_IsDelta();
+#endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
+			return MirrorMaterial_IsDelta();
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
+			return GlassMaterial_IsDelta();
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
+			return ArchGlassMaterial_IsDelta();
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
+			return NullMaterial_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
+		case MATTETRANSLUCENT:
+			return MatteTranslucentMaterial_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_GLOSSY2)
+		case GLOSSY2:
+			return Glossy2Material_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_METAL2)
+		case METAL2:
+			return Metal2Material_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
+		case ROUGHGLASS:
+			return RoughGlassMaterial_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_CLOTH)
+		case CLOTH:
+			return ClothMaterial_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_CARPAINT)
+		case CARPAINT:
+			return CarPaintMaterial_IsDelta();
 #endif
 		default:
 			return true;
@@ -145,55 +144,55 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 	switch (mat->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
-			return DIFFUSE | REFLECT;
+			return MatteMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
 		case ROUGHMATTE:
-			return DIFFUSE | REFLECT;
+			return RoughMatteMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_VELVET)
 		case VELVET:
-			return DIFFUSE | REFLECT;
+			return VelvetMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
 		case MIRROR:
-			return SPECULAR | REFLECT;
+			return MirrorMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_GLASS)
 		case GLASS:
-			return SPECULAR | REFLECT | TRANSMIT;
+			return GlassMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
-			return SPECULAR | REFLECT | TRANSMIT;
+			return ArchGlassMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
-			return SPECULAR | TRANSMIT;
+			return NullMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 		case MATTETRANSLUCENT:
-			return DIFFUSE | REFLECT | TRANSMIT;
+			return MatteTranslucentMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
-			return DIFFUSE | GLOSSY | REFLECT;
+			return Glossy2Material_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2:
-			return GLOSSY | REFLECT;
+			return Metal2Material_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
 		case ROUGHGLASS:
-			return GLOSSY | REFLECT | TRANSMIT;
+			return RoughGlassMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_CLOTH)
 		case CLOTH:
-			return GLOSSY | REFLECT;
+			return ClothMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_CARPAINT)
 		case CARPAINT:
-			return GLOSSY | REFLECT;
+			return CarPaintMaterial_GetEventTypes();
 #endif
 		default:
 			return NONE;
@@ -332,7 +331,7 @@ float3 Material_SampleNoMix(__global Material *material,
 #endif
 #if defined (PARAM_ENABLE_MAT_CARPAINT)
 		case CARPAINT:
-			return CarpaintMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
+			return CarPaintMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
 					u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
@@ -392,7 +391,7 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #endif
 #if defined (PARAM_ENABLE_MAT_CARPAINT)
 		case CARPAINT:
-			return CarpaintMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
+			return CarPaintMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)
@@ -424,7 +423,9 @@ float3 Material_GetPassThroughTransparencyNoMix(__global Material *material,
 #endif
 #if defined (PARAM_ENABLE_MAT_NULL)
 		case NULLMAT:
-			return WHITE;
+			return NullMaterial_GetPassThroughTransparency(material,
+					hitPoint, fixedDir, passThroughEvent
+					TEXTURES_PARAM);
 #endif
 		default:
 			return BLACK;

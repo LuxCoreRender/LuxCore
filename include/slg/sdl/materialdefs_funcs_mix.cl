@@ -377,7 +377,7 @@ uint MixMaterial_GetInteriorVolume(__global Material *material,
 		, const float passEvent
 #endif
 		MATERIALS_PARAM_DECL) {
-	const uint intVolIndex = Material_GetInteriorVolumeNoMix(mat);
+	const uint intVolIndex = Material_GetInteriorVolumeNoMix(material);
 	if (intVolIndex != NULL_INDEX)
 		return intVolIndex;
 

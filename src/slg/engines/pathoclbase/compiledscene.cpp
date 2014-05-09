@@ -509,7 +509,7 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case CARPAINT: {
-				const CarpaintMaterial *cm = static_cast<CarpaintMaterial *>(m);
+				const CarPaintMaterial *cm = static_cast<CarPaintMaterial *>(m);
 				mat->type = slg::ocl::CARPAINT;
 				mat->carpaint.KdTexIndex = scene->texDefs.GetTextureIndex(cm->Kd);
 				mat->carpaint.Ks1TexIndex = scene->texDefs.GetTextureIndex(cm->Ks1);

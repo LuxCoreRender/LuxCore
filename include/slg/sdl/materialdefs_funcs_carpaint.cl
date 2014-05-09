@@ -19,30 +19,30 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// Carpaint material
+// CarPaint material
 //
 // LuxRender carpaint material porting.
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_MAT_CARPAINT)
 
-BSDFEvent CarpaintMaterial_GetEventTypes() {
+BSDFEvent CarPaintMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
-bool CarpaintMaterial_IsDelta() {
+bool CarPaintMaterial_IsDelta() {
 	return false;
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 CarpaintMaterial_GetPassThroughTransparency(__global Material *material,
+float3 CarPaintMaterial_GetPassThroughTransparency(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
 	return BLACK;
 }
 #endif
 
-float3 CarpaintMaterial_Evaluate(__global Material *material,
+float3 CarPaintMaterial_Evaluate(__global Material *material,
 	__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 	BSDFEvent *event, float *directPdfW
 	TEXTURES_PARAM_DECL) {
@@ -112,7 +112,7 @@ float3 CarpaintMaterial_Evaluate(__global Material *material,
 	return result;
 }
 
-float3 CarpaintMaterial_Sample(__global Material *material,
+float3 CarPaintMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

@@ -2869,12 +2869,12 @@ void ClothMaterial::SetPreset() {
 }
 
 //------------------------------------------------------------------------------
-// Carpaint material
+// CarPaint material
 //
 // LuxRender carpaint material porting.
 //------------------------------------------------------------------------------
 
-Spectrum CarpaintMaterial::Evaluate(const HitPoint &hitPoint,
+Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const
 {
@@ -2950,7 +2950,7 @@ Spectrum CarpaintMaterial::Evaluate(const HitPoint &hitPoint,
 	return result;
 }
 
-Spectrum CarpaintMaterial::Sample(const HitPoint &hitPoint,
+Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
@@ -3162,7 +3162,7 @@ Spectrum CarpaintMaterial::Sample(const HitPoint &hitPoint,
 	return result / *pdfW;
 }
 
-void CarpaintMaterial::Pdf(const HitPoint &hitPoint,
+void CarPaintMaterial::Pdf(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir,
 	float *directPdfW, float *reversePdfW) const
 {
@@ -3221,7 +3221,7 @@ void CarpaintMaterial::Pdf(const HitPoint &hitPoint,
 		*reversePdfW = (pdf + fabsf(localFixedDir.z) * INV_PI) / n;
 }
 
-void CarpaintMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+void CarPaintMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 	Material::AddReferencedTextures(referencedTexs);
 
 	Kd->AddReferencedTextures(referencedTexs);
@@ -3238,7 +3238,7 @@ void CarpaintMaterial::AddReferencedTextures(boost::unordered_set<const Texture 
 	depth->AddReferencedTextures(referencedTexs);
 }
 
-void CarpaintMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+void CarPaintMaterial::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
 	if (Kd == oldTex)
@@ -3267,7 +3267,7 @@ void CarpaintMaterial::UpdateTextureReferences(const Texture *oldTex, const Text
 		depth = newTex;
 }
 
-Properties CarpaintMaterial::ToProperties() const  {
+Properties CarPaintMaterial::ToProperties() const  {
 	Properties props;
 
 	const string name = GetName();
@@ -3289,7 +3289,7 @@ Properties CarpaintMaterial::ToProperties() const  {
 	return props;
 }
 
-const struct CarpaintMaterial::CarpaintData CarpaintMaterial::data[8] = {
+const struct CarPaintMaterial::CarPaintData CarPaintMaterial::data[8] = {
   {"ford f8",
    {0.0012f, 0.0015f, 0.0018f},
    {0.0049f, 0.0076f, 0.0120f},

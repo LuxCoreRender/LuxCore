@@ -567,7 +567,7 @@ void MarbleTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *h
 
 void MarbleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = MarbleTexture_EvaluateSpectrum(texture, hitPoint);
+	texValues[(*texValuesSize)++] = MarbleTexture_DynamicEvaluateSpectrum(texture, hitPoint);
 }
 #endif
 
@@ -829,7 +829,7 @@ void BrickTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hi
 	const float value2 = texValues[--(*texValuesSize)];
 	const float value3 = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = BrickTexture_DynamicEvaluateFloat(hitPoint, texture, value1, value2, value3);
+	texValues[(*texValuesSize)++] = BrickTexture_DynamicEvaluateFloat(texture, hitPoint, value1, value2, value3);
 }
 
 void BrickTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
@@ -838,7 +838,7 @@ void BrickTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 	const float3 value2 = texValues[--(*texValuesSize)];
 	const float3 value3 = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = BrickTexture_DynamicEvaluateSpectrum(hitPoint, texture, value1, value2, value3);
+	texValues[(*texValuesSize)++] = BrickTexture_DynamicEvaluateSpectrum(texture, hitPoint, value1, value2, value3);
 }
 #endif
 
@@ -1050,7 +1050,7 @@ void BandTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float3 a = texValues[--(*texValuesSize)];
 
-	texValues[(*texValuesSize)++] = BandTexture_EvaluateSpectrum(texture, hitPoint, a);
+	texValues[(*texValuesSize)++] = BandTexture_DynamicEvaluateSpectrum(texture, hitPoint, a);
 }
 #endif
 

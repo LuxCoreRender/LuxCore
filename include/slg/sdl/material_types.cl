@@ -181,7 +181,7 @@ typedef struct {
 	unsigned int R3TexIndex;
 	unsigned int KaTexIndex;
 	unsigned int depthTexIndex;
-} CarpaintParam;
+} CarPaintParam;
 
 typedef struct {
 	unsigned int sigmaATexIndex;
@@ -228,7 +228,7 @@ typedef struct {
 		RoughGlassParam roughglass;
 		VelvetParam velvet;
         ClothParam cloth;
-		CarpaintParam carpaint;
+		CarPaintParam carpaint;
 		VolumeParam volume;
 	};
 } Material;

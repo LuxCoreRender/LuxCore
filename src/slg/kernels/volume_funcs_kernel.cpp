@@ -74,7 +74,7 @@ std::string KernelSource_volume_funcs =
 "	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);\n"
 "	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);\n"
 "#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)\n"
-"	VSTORE2F(WHITE, &tmpHitPoint->color.c);\n"
+"	VSTORE3F(WHITE, tmpHitPoint->color.c);\n"
 "#endif\n"
 "#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)\n"
 "	VSTORE2F(1.f, &tmpHitPoint->alpha);\n"

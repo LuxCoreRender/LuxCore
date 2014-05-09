@@ -889,12 +889,12 @@ private:
 
 
 //------------------------------------------------------------------------------
-// Carpaint material
+// CarPaint material
 //------------------------------------------------------------------------------
 
-class CarpaintMaterial : public Material {
+class CarPaintMaterial : public Material {
 public:
-	CarpaintMaterial(const Texture *emitted, const Texture *bump,
+	CarPaintMaterial(const Texture *emitted, const Texture *bump,
 			const Texture *kd, const Texture *ks1, const Texture *ks2, const Texture *ks3, const Texture *m1, const Texture *m2, const Texture *m3,
 			const Texture *r1, const Texture *r2, const Texture *r3, const Texture *ka, const Texture *d) :
 			Material(emitted, bump), Kd(kd), Ks1(ks1), Ks2(ks2), Ks3(ks3), M1(m1), M2(m2), M3(m3), R1(r1), R2(r2), R3(r3),
@@ -920,7 +920,7 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
-	struct CarpaintData {
+	struct CarPaintData {
 		std::string name;
 		float kd[COLOR_SAMPLES];
 		float ks1[COLOR_SAMPLES];
@@ -929,7 +929,7 @@ public:
 		float r1, r2, r3;
 		float m1, m2, m3;
 	};
-	static const struct CarpaintData data[8];
+	static const struct CarPaintData data[8];
 	static int NbPresets() { return 8; }
 
 	const Texture *Kd;
