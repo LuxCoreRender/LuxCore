@@ -380,7 +380,7 @@ std::string KernelSource_materialdefs_funcs_mix =
 "		, const float passEvent\n"
 "#endif\n"
 "		MATERIALS_PARAM_DECL) {\n"
-"	const uint intVolIndex = Material_GetInteriorVolumeNoMix(mat);\n"
+"	const uint intVolIndex = Material_GetInteriorVolumeNoMix(material);\n"
 "	if (intVolIndex != NULL_INDEX)\n"
 "		return intVolIndex;\n"
 "\n"

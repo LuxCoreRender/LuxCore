@@ -70,6 +70,20 @@ float SinTheta2(const float3 w) {
 	return fmax(0.f, 1.f - CosTheta(w) * CosTheta(w));
 }
 
+float SinTheta(const float3 w) {
+	return sqrt(SinTheta2(w));
+}
+
+float CosPhi(const float3 w) {
+	const float sinTheta = SinTheta(w);
+	return sinTheta > 0.f ? clamp(w.x / sinTheta, -1.f, 1.f) : 1.f;
+}
+
+float SinPhi(const float3 w) {
+	const float sinTheta = SinTheta(w);
+	return sinTheta > 0.f ? clamp(w.y / sinTheta, -1.f, 1.f) : 0.f;
+}
+
 float3 SphericalDirection(float sintheta, float costheta, float phi) {
 	return (float3)(sintheta * cos(phi), sintheta * sin(phi), costheta);
 }

@@ -113,22 +113,22 @@ float3 RoughMatteMaterial_Evaluate(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-        const float s = Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURE_PARAM);
-        const float sigma2 = s * s;
-        const float A = 1.f - (sigma2 / (2.f * (sigma2 + 0.33f)));
-        const float B = 0.45f * sigma2 / (sigma2 + 0.09f);
-        const float sinthetai = SinTheta(eyeDir);
-        const float sinthetao = SinTheta(lightDir);
-        float maxcos = 0.f;
-        if (sinthetai > 1e-4f && sinthetao > 1e-4f) {
-                const float dcos = CosPhi(lightDir) * CosPhi(eyeDir) +
-                        SinPhi(lightDir) * SinPhi(eyeDir);
-                maxcos = max(0.f, dcos);
-        }
-											const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint
+	const float s = Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURES_PARAM);
+	const float sigma2 = s * s;
+	const float A = 1.f - (sigma2 / (2.f * (sigma2 + 0.33f)));
+	const float B = 0.45f * sigma2 / (sigma2 + 0.09f);
+	const float sinthetai = SinTheta(eyeDir);
+	const float sinthetao = SinTheta(lightDir);
+	float maxcos = 0.f;
+	if (sinthetai > 1e-4f && sinthetao > 1e-4f) {
+			const float dcos = CosPhi(lightDir) * CosPhi(eyeDir) +
+					SinPhi(lightDir) * SinPhi(eyeDir);
+			maxcos = fmax(0.f, dcos);
+	}
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint
 			TEXTURES_PARAM));
 	return kd * fabs(lightDir.z * M_1_PI_F) *
-		(A + B * maxcos * sinthetai * sinthetao / max(fabsf(CosTheta(lightDir)), fabsf(CosTheta(eyeDir)))));
+		(A + B * maxcos * sinthetai * sinthetao / fmax(fabs(CosTheta(lightDir)), fabs(CosTheta(eyeDir))));
 }
 
 float3 RoughMatteMaterial_Sample(__global Material *material,
@@ -152,7 +152,7 @@ float3 RoughMatteMaterial_Sample(__global Material *material,
 
 	*event = DIFFUSE | REFLECT;
 
-        const float s = Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURE_PARAM);
+        const float s = Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURES_PARAM);
         const float sigma2 = s * s;
         const float A = 1.f - (sigma2 / (2.f * (sigma2 + 0.33f)));
         const float B = 0.45f * sigma2 / (sigma2 + 0.09f);
@@ -162,13 +162,13 @@ float3 RoughMatteMaterial_Sample(__global Material *material,
         if (sinthetai > 1e-4f && sinthetao > 1e-4f) {
                 const float dcos = CosPhi(*sampledDir) * CosPhi(fixedDir) +
                         SinPhi(*sampledDir) * SinPhi(fixedDir);
-                maxcos = max(0.f, dcos);
+                maxcos = fmax(0.f, dcos);
         }
 
-	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint
+	const float3 kd = Spectrum_Clamp(Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint
 			TEXTURES_PARAM));
 	return kd *
-		(A + B * maxcos * sinthetai * sinthetao / max(fabsf(CosTheta(*sampledDir)), fabsf(CosTheta(fixedDir))));
+		(A + B * maxcos * sinthetai * sinthetao / fmax(fabs(CosTheta(*sampledDir)), fabs(CosTheta(fixedDir))));
 }
 
 #endif

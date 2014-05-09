@@ -71,7 +71,7 @@ float ClearVolume_Scatter(__global Volume *vol,
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
-	VSTORE2F(WHITE, &tmpHitPoint->color.c);
+	VSTORE3F(WHITE, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	VSTORE2F(1.f, &tmpHitPoint->alpha);
