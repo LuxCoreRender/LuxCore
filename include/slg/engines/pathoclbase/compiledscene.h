@@ -40,26 +40,9 @@ public:
 	bool IsMaterialCompiled(const MaterialType type) const;
 	bool IsTextureCompiled(const TextureType type) const;
 
-	bool RequiresPassThrough() {
-		return (IsMaterialCompiled(GLASS) ||
-				IsMaterialCompiled(ARCHGLASS) ||
-				IsMaterialCompiled(MIX) ||
-				IsMaterialCompiled(NULLMAT) ||
-				IsMaterialCompiled(MATTETRANSLUCENT) ||
-				IsMaterialCompiled(GLOSSY2) ||
-				IsMaterialCompiled(ROUGHGLASS) ||
-				IsMaterialCompiled(CARPAINT));
-	}
-
-	bool HasVolumes() {
-		return IsMaterialCompiled(HOMOGENEOUS_VOL) ||
-				IsMaterialCompiled(CLEAR_VOL) ||
-				IsMaterialCompiled(HETEROGENEOUS_VOL) ||
-				// Volume rendering may be required to evaluate the IOR
-				IsMaterialCompiled(GLASS) ||
-				IsMaterialCompiled(ARCHGLASS) ||
-				IsMaterialCompiled(ROUGHGLASS);
-	}
+	bool RequiresPassThrough() const;
+	bool HasVolumes() const;
+	bool HasBumpMaps() const;
 
 	std::string GetTexturesEvaluationSourceCode() const;
 	std::string GetMaterialsEvaluationSourceCode() const;
@@ -103,7 +86,6 @@ public:
 	vector<slg::ocl::Material> mats;
 	vector<u_int> meshMats;
 	u_int defaultWorldVolumeIndex;
-	bool useBumpMapping;
 
 	// Compiled Textures
 	std::set<TextureType> usedTextureTypes;
@@ -122,6 +104,8 @@ private:
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileLights();
+	
+	bool useBumpMapping;
 };
 
 }

@@ -819,7 +819,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_IMAGEMAPS_COUNT=" << imageMapsBuff.size();
 	}
 
-	if (renderEngine->compiledScene->useBumpMapping)
+	if (renderEngine->compiledScene->HasBumpMaps())
 		ss << " -D PARAM_HAS_BUMPMAPS";
 
 	if (renderEngine->compiledScene->HasVolumes()) {

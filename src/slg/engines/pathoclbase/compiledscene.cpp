@@ -274,9 +274,10 @@ static float GetTexConstantFloatValue(const Texture *tex) {
 }
 
 void CompiledScene::CompileMaterials() {
-	SLG_LOG("Compile Materials");
-
 	CompileTextures();
+
+	const u_int materialsCount = scene->matDefs.GetSize();
+	SLG_LOG("Compile " << materialsCount << " Materials");
 
 	//--------------------------------------------------------------------------
 	// Translate material definitions
@@ -286,7 +287,6 @@ void CompiledScene::CompileMaterials() {
 
 	usedMaterialTypes.clear();
 
-	const u_int materialsCount = scene->matDefs.GetSize();
 	mats.resize(materialsCount);
 	useBumpMapping = false;
 
@@ -1022,7 +1022,8 @@ float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *s
 }
 
 void CompiledScene::CompileTextures() {
-	SLG_LOG("Compile Textures");
+	const u_int texturesCount = scene->texDefs.GetSize();
+	SLG_LOG("Compile " << texturesCount << " Textures");
 	//SLG_LOG("  Texture size: " << sizeof(slg::ocl::Texture));
 
 	//--------------------------------------------------------------------------
@@ -1032,8 +1033,6 @@ void CompiledScene::CompileTextures() {
 	const double tStart = WallClockTime();
 
 	usedTextureTypes.clear();
-
-	const u_int texturesCount = scene->texDefs.GetSize();
 	texs.resize(texturesCount);
 
 	for (u_int i = 0; i < texturesCount; ++i) {
@@ -2182,6 +2181,31 @@ bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
 
 bool CompiledScene::IsTextureCompiled(const TextureType type) const {
 	return (usedTextureTypes.find(type) != usedTextureTypes.end());
+}
+
+bool CompiledScene::HasBumpMaps() const {
+	return useBumpMapping;
+}
+
+bool CompiledScene::RequiresPassThrough() const {
+	return (IsMaterialCompiled(GLASS) ||
+			IsMaterialCompiled(ARCHGLASS) ||
+			IsMaterialCompiled(MIX) ||
+			IsMaterialCompiled(NULLMAT) ||
+			IsMaterialCompiled(MATTETRANSLUCENT) ||
+			IsMaterialCompiled(GLOSSY2) ||
+			IsMaterialCompiled(ROUGHGLASS) ||
+			IsMaterialCompiled(CARPAINT));
+}
+
+bool CompiledScene::HasVolumes() const {
+	return IsMaterialCompiled(HOMOGENEOUS_VOL) ||
+			IsMaterialCompiled(CLEAR_VOL) ||
+			IsMaterialCompiled(HETEROGENEOUS_VOL) ||
+			// Volume rendering may be required to evaluate the IOR
+			IsMaterialCompiled(GLASS) ||
+			IsMaterialCompiled(ARCHGLASS) ||
+			IsMaterialCompiled(ROUGHGLASS);
 }
 
 #endif
