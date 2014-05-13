@@ -90,7 +90,7 @@ void ResetParser() {
 			Property("opencl.gpu.use")(true) <<
 			Property("renderengine.type")("PATHOCL") <<
 			Property("sampler.type")("RANDOM") <<
-			Property("film.filter.type")("MITCHELL") <<
+			Property("film.filter.type")("BLACKMANHARRIS") <<
 			Property("accelerator.instances.enable")(false);
 
 	graphicsStatesStack.clear();
@@ -756,7 +756,15 @@ ri_stmt: ACCELERATOR STRING paramlist
 		*sceneProps << Property("scene.camera.screenwindow")(
 			prop.Get<float>(0), prop.Get<float>(1), prop.Get<float>(2), prop.Get<float>(3));
 	}
-	
+
+	if (props.IsDefined("clippingplane")) {
+		Property prop = props.Get("clippingplane");
+		*sceneProps <<
+				Property("scene.camera.clippingplane.enable")(1) <<
+				Property("scene.camera.clippingplane.center")(prop.Get<float>(0), prop.Get<float>(1), prop.Get<float>(2)) <<
+				Property("scene.camera.clippingplane.normal")(prop.Get<float>(3), prop.Get<float>(4), prop.Get<float>(5));
+	}
+
 	*sceneProps <<
 			Property("scene.camera.fieldofview")(props.Get(Property("fov")(90.f)).Get<float>()) <<
 			Property("scene.camera.lensradius")(props.Get(Property("lensradius")(0.f)).Get<float>()) <<
