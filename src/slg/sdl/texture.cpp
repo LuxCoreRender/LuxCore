@@ -962,7 +962,7 @@ Properties MarbleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 // Dots texture
 //------------------------------------------------------------------------------
 
-float DotsTexture::GetFloatValue(const HitPoint &hitPoint) const {
+bool DotsTexture::Evaluate(const HitPoint &hitPoint) const {
 	const UV uv = mapping->Map(hitPoint);
 
 	const int sCell = Floor2Int(uv.u + .5f);
@@ -977,31 +977,20 @@ float DotsTexture::GetFloatValue(const HitPoint &hitPoint) const {
 			Noise(sCell + 4.5f, tCell + 9.8f);
 		const float ds = uv.u - sCenter, dt = uv.v - tCenter;
 		if (ds * ds + dt * dt < radius * radius)
-			return insideTex->GetFloatValue(hitPoint);
+			return true;
 	}
 
-	return outsideTex->GetFloatValue(hitPoint);
+	return false;
+}
+
+float DotsTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return Evaluate(hitPoint) ? insideTex->GetFloatValue(hitPoint) :
+		outsideTex->GetFloatValue(hitPoint);
 }
 
 Spectrum DotsTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping->Map(hitPoint);
-
-	const int sCell = Floor2Int(uv.u + .5f);
-	const int tCell = Floor2Int(uv.v + .5f);
-	// Return _insideDot_ result if point is inside dot
-	if (Noise(sCell + .5f, tCell + .5f) > 0.f) {
-		const float radius = .35f;
-		const float maxShift = 0.5f - radius;
-		const float sCenter = sCell + maxShift *
-			Noise(sCell + 1.5f, tCell + 2.8f);
-		const float tCenter = tCell + maxShift *
-			Noise(sCell + 4.5f, tCell + 9.8f);
-		const float ds = uv.u - sCenter, dt = uv.v - tCenter;
-		if (ds * ds + dt * dt < radius * radius)
-			return insideTex->GetSpectrumValue(hitPoint);
-	}
-
-	return outsideTex->GetSpectrumValue(hitPoint);
+	return Evaluate(hitPoint) ? insideTex->GetSpectrumValue(hitPoint) :
+		outsideTex->GetSpectrumValue(hitPoint);
 }
 
 Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache) const {

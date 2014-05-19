@@ -295,13 +295,13 @@ template <class T> inline std::string ToString(const T& t) {
 
 inline std::string ToString(const float t) {
 	std::ostringstream ss;
-	ss << std::setprecision(24) << t;
+	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1) << t;
 	return ss.str();
 }
 
 inline std::string ToString(const Matrix4x4 &m) {
 	std::ostringstream ss;
-	ss << std::setprecision(24);
+	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1);
 
 	for (int i = 0; i < 4; ++i) {
 		for (int j = 0; j < 4; ++j) {

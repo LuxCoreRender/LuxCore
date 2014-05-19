@@ -1142,7 +1142,7 @@ void CompiledScene::CompileTextures() {
 				MarbleTexture *mt = static_cast<MarbleTexture *>(t);
 
 				tex->type = slg::ocl::MARBLE;
-				CompileTextureMapping3D(&tex->fbm.mapping, mt->GetTextureMapping());
+				CompileTextureMapping3D(&tex->marble.mapping, mt->GetTextureMapping());
 				tex->marble.octaves = mt->GetOctaves();
 				tex->marble.omega = mt->GetOmega();
 				tex->marble.scale = mt->GetScale();
@@ -1358,51 +1358,31 @@ void CompiledScene::CompileTextures() {
 	SLG_LOG("Textures compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
-static void AddTextureSourceHeader(stringstream &source, const string &returnType,
-		const string &type, u_int i) {
-	source <<
-			returnType << " Texture_Index" << i << "_Evaluate" << type <<"(__global HitPoint *hitPoint\n" <<
-			"\t\tTEXTURES_PARAM_DECL) {\n";
+static string ToOCLString(const slg::ocl::Spectrum &v) {
+	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
 }
 
-static void AddTextureSourceFooter(stringstream &source) {
-	source << "}\n";
+static void AddTextureSource(stringstream &source,  const string &texName, const string &returnType,
+		const string &type, const u_int i, const string &texArgs) {
+	source << returnType << " Texture_Index" << i << "_Evaluate" << type << "(__global Texture *texture, "
+			"__global HitPoint *hitPoint\n"
+			"\t\tTEXTURES_PARAM_DECL) {\n"
+			"\treturn " << texName << "Texture_ConstEvaluate" << type << "(hitPoint" <<
+				((texArgs.length() > 0) ? (", " + texArgs) : "") << ");\n"
+			"}\n";
 }
 
-static void AddTextureSource(stringstream &source, 
-		const string &texName, const u_int i, const string &returnType, const string &type,
-		const vector<u_int> &argsList) {
-	AddTextureSourceHeader(source, returnType, type, i);
-	
-	source <<
-		"\treturn " << texName << "Texture_DynamicEvaluate" << type << "(&texs[" << i << "], hitPoint";
-	if (argsList.size() > 0)
-		source << ",\n";
-	else {
-		// ImageMapTexture needs additional parameters
-		if (texName == "ImageMap")
-			source << " IMAGEMAPS_PARAM);\n";
-		else
-			source << ");\n";
-	}
-
-	for (u_int j = 0; j < argsList.size(); ++j) {
-		source << "\t\tTexture_Index" << argsList[j] << "_Evaluate" << type << "(hitPoint TEXTURES_PARAM)";
-		if (j == argsList.size() - 1)
-			source << ");\n";
-		else
-			source << ",\n";
-			
-	}
-
-	AddTextureSourceFooter(source);
+static void AddTextureSource(stringstream &source,  const string &texName,
+		const u_int i, const string &texArgs) {
+	AddTextureSource(source, texName, "float", "Float", i, texArgs);
+	AddTextureSource(source, texName, "float3", "Spectrum", i, texArgs);
 }
 
-static void AddTextureSource(stringstream &source, 
-		const string &texName, const u_int i,
-		const vector<u_int> &argsList) {
-	AddTextureSource(source, texName, i, "float", "Float", argsList);
-	AddTextureSource(source, texName, i, "float3", "Spectrum", argsList);
+static string AddTextureSourceCall(const string &type, const u_int i) {
+	stringstream ss;
+	ss << "Texture_Index" << i << "_Evaluate" << type << "(&texs[" << i << "], hitPoint TEXTURES_PARAM)";
+
+	return ss.str();
 }
 
 string CompiledScene::GetTexturesEvaluationSourceCode() const {
@@ -1415,133 +1395,191 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 		const slg::ocl::Texture *tex = &texs[i];
 
 		switch (tex->type) {
-			case slg::ocl::CONST_FLOAT: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "ConstFloat", i, argsList);
+			case slg::ocl::CONST_FLOAT:
+				AddTextureSource(source, "ConstFloat", i, ToString(tex->constFloat.value));
 				break;
-			}
-			case slg::ocl::CONST_FLOAT3: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "ConstFloat3", i, argsList);
+			case slg::ocl::CONST_FLOAT3:
+				AddTextureSource(source, "ConstFloat3", i, ToOCLString(tex->constFloat3.color));
 				break;
-			}
-			case slg::ocl::IMAGEMAP: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "ImageMap", i, argsList);
+			case slg::ocl::IMAGEMAP:
+				AddTextureSource(source, "ImageMap", i,
+						ToString(tex->imageMapTex.gain) + ", " +
+						ToString(tex->imageMapTex.imageMapIndex) + ", " +
+						"&texture->imageMapTex.mapping"
+						" IMAGEMAPS_PARAM");
 				break;
-			}
 			case slg::ocl::SCALE_TEX: {
-				vector<u_int> argsList;
-				argsList.push_back(tex->scaleTex.tex1Index);
-				argsList.push_back(tex->scaleTex.tex2Index);
-				AddTextureSource(source, "Scale", i, argsList);
+				AddTextureSource(source, "Scale", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->scaleTex.tex1Index) + ", " +
+						AddTextureSourceCall("Float", tex->scaleTex.tex2Index));
+				AddTextureSource(source, "Scale", "float3", "Spectrum", i, 
+						AddTextureSourceCall("Spectrum", tex->scaleTex.tex1Index) + ", " +
+						AddTextureSourceCall("Spectrum", tex->scaleTex.tex2Index));
 				break;
 			}
+			case FRESNEL_APPROX_N:
+				AddTextureSource(source, "FresnelApproxN", i, ToString(tex->fresnelApproxN.texIndex));
+				break;
+			case FRESNEL_APPROX_K: 
+				AddTextureSource(source, "FresnelApproxK", i, ToString(tex->fresnelApproxK.texIndex));
+				break;
 			case slg::ocl::MIX_TEX: {
-				vector<u_int> argsList;
-				argsList.push_back(tex->mixTex.amountTexIndex);
-				argsList.push_back(tex->mixTex.tex1Index);
-				argsList.push_back(tex->mixTex.tex2Index);
-				AddTextureSource(source, "Mix", i, argsList);
+				AddTextureSource(source, "Mix", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->mixTex.amountTexIndex) + ", " +
+						AddTextureSourceCall("Float", tex->mixTex.tex1Index) + ", " +
+						AddTextureSourceCall("Float", tex->mixTex.tex2Index));
+				AddTextureSource(source, "Mix", "float3", "Spectrum", i,
+						AddTextureSourceCall("Spectrum", tex->mixTex.amountTexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", tex->mixTex.tex1Index) + ", " +
+						AddTextureSourceCall("Spectrum", tex->mixTex.tex2Index));
 				break;
 			}
 			case slg::ocl::ADD_TEX: {
-				vector<u_int> argsList;
-				argsList.push_back(tex->addTex.tex1Index);
-				argsList.push_back(tex->addTex.tex2Index);
-				AddTextureSource(source, "Add", i, argsList);
+				AddTextureSource(source, "Add", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->addTex.tex1Index) + ", " +
+						AddTextureSourceCall("Float", tex->addTex.tex2Index));
+				AddTextureSource(source, "Add", "float3", "Spectrum", i, 
+						AddTextureSourceCall("Spectrum", tex->addTex.tex1Index) + ", " +
+						AddTextureSourceCall("Spectrum", tex->addTex.tex2Index));
 				break;
 			}
-			case slg::ocl::HITPOINTCOLOR: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "HitPointColor", i, argsList);
+			case slg::ocl::HITPOINTCOLOR:
+				AddTextureSource(source, "HitPointColor", i, "");
 				break;
-			}
-			case slg::ocl::HITPOINTALPHA: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "HitPointAlpha", i, argsList);
+			case slg::ocl::HITPOINTALPHA:
+				AddTextureSource(source, "HitPointAlpha", i, "");
 				break;
-			}
-			case slg::ocl::HITPOINTGREY: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "HitPointGrey", i, argsList);
+			case slg::ocl::HITPOINTGREY:
+				AddTextureSource(source, "HitPointGrey", i, "");
 				break;
-			}
-			case slg::ocl::BLENDER_CLOUDS: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "BlenderClouds", i, argsList);
+			case slg::ocl::BLENDER_CLOUDS:
+				AddTextureSource(source, "BlenderClouds", i,
+						ToString(tex->blenderClouds.noisesize) + ", " +
+						ToString(tex->blenderClouds.noisedepth) + ", " +
+						ToString(tex->blenderClouds.contrast) + ", " +
+						ToString(tex->blenderClouds.bright) + ", " +
+						"&texture->blenderClouds.mapping");
 				break;
-			}
-			case slg::ocl::BLENDER_WOOD: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "BlenderWood", i, argsList);
+			case slg::ocl::BLENDER_WOOD:
+				AddTextureSource(source, "BlenderWood", i,
+						ToString(tex->blenderWood.type) + ", " +
+						ToString(tex->blenderWood.noisebasis2) + ", " +
+						ToString(tex->blenderWood.noisesize) + ", " +
+						ToString(tex->blenderWood.turbulence) + ", " +
+						ToString(tex->blenderWood.contrast) + ", " +
+						ToString(tex->blenderWood.bright) + ", " +
+						ToString(tex->blenderWood.hard) + ", " +
+						"&texture->blenderWood.mapping");
 				break;
-			}
-			case slg::ocl::CHECKERBOARD2D: {
-				vector<u_int> argsList;
-				argsList.push_back(tex->checkerBoard2D.tex1Index);
-				argsList.push_back(tex->checkerBoard2D.tex2Index);
-				AddTextureSource(source, "CheckerBoard2D", i, argsList);
+			case slg::ocl::CHECKERBOARD2D:
+				AddTextureSource(source, "CheckerBoard2D", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->checkerBoard2D.tex1Index) + ", " +
+						AddTextureSourceCall("Float", tex->checkerBoard2D.tex2Index) + ", " +
+						"&texture->checkerBoard2D.mapping");
+				AddTextureSource(source, "CheckerBoard2D", "float3", "Spectrum", i, 
+						AddTextureSourceCall("Spectrum", tex->checkerBoard2D.tex1Index) + ", " +
+						AddTextureSourceCall("Spectrum", tex->checkerBoard2D.tex2Index) + ", " +
+						"&texture->checkerBoard2D.mapping");
 				break;
-			}
-			case slg::ocl::CHECKERBOARD3D: {
-				vector<u_int> argsList;
-				argsList.push_back(tex->checkerBoard3D.tex1Index);
-				argsList.push_back(tex->checkerBoard3D.tex2Index);
-				AddTextureSource(source, "CheckerBoard3D", i, argsList);
+			case slg::ocl::CHECKERBOARD3D:
+				AddTextureSource(source, "CheckerBoard3D", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->checkerBoard3D.tex1Index) + ", " +
+						AddTextureSourceCall("Float", tex->checkerBoard3D.tex2Index) + ", " +
+						"&texture->checkerBoard3D.mapping");
+				AddTextureSource(source, "CheckerBoard3D", "float3", "Spectrum", i, 
+						AddTextureSourceCall("Spectrum", tex->checkerBoard3D.tex1Index) + ", " +
+						AddTextureSourceCall("Spectrum", tex->checkerBoard3D.tex2Index) + ", " +
+						"&texture->checkerBoard3D.mapping");
 				break;
-			}
-			case slg::ocl::FBM_TEX: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "FBM", i, argsList);
+			case slg::ocl::FBM_TEX:
+				AddTextureSource(source, "FBM", i,
+						ToString(tex->fbm.omega) + ", " +
+						ToString(tex->fbm.octaves) + ", " +
+						"&texture->fbm.mapping");
 				break;
-			}
-			case slg::ocl::MARBLE: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "Marble", i, argsList);
+			case slg::ocl::MARBLE:
+				AddTextureSource(source, "Marble", i,
+						ToString(tex->marble.scale) + ", " +
+						ToString(tex->marble.omega) + ", " +
+						ToString(tex->marble.octaves) + ", " +
+						ToString(tex->marble.variation) + ", " +
+						"&texture->marble.mapping");
 				break;
-			}
-			case slg::ocl::DOTS: {
-				vector<u_int> argsList;
-				argsList.push_back(tex->dots.insideIndex);
-				argsList.push_back(tex->dots.outsideIndex);
-				AddTextureSource(source, "Dots", i, argsList);
+			case slg::ocl::DOTS:
+				AddTextureSource(source, "Dots", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->dots.insideIndex) + ", " +
+						AddTextureSourceCall("Float", tex->dots.outsideIndex) + ", " +
+						"&texture->dots.mapping");
+				AddTextureSource(source, "Dots", "float3", "Spectrum", i, 
+						AddTextureSourceCall("Spectrum", tex->dots.insideIndex) + ", " +
+						AddTextureSourceCall("Spectrum", tex->dots.outsideIndex) + ", " +
+						"&texture->dots.mapping");
 				break;
-			}
-			case slg::ocl::BRICK: {
-				vector<u_int> argsList;
-				argsList.push_back(tex->brick.tex1Index);
-				argsList.push_back(tex->brick.tex2Index);
-				argsList.push_back(tex->brick.tex3Index);
-				AddTextureSource(source, "Brick", i, argsList);
+			case slg::ocl::BRICK:
+				AddTextureSource(source, "Brick", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->brick.tex1Index) + ", " +
+						AddTextureSourceCall("Float", tex->brick.tex2Index) + ", " +
+						AddTextureSourceCall("Float", tex->brick.tex3Index) + ", " +
+						ToString(tex->brick.bond) + ", " +
+						ToString(tex->brick.brickwidth) + ", " +
+						ToString(tex->brick.brickheight) + ", " +
+						ToString(tex->brick.brickdepth) + ", " +
+						ToString(tex->brick.mortarsize) + ", " +
+						"(float3)(" + ToString(tex->brick.offsetx) + ", " + ToString(tex->brick.offsetx) + ", " + ToString(tex->brick.offsetx) + "), " +
+						ToString(tex->brick.run) + ", " +
+						ToString(tex->brick.mortarwidth) + ", " +
+						ToString(tex->brick.mortarheight) + ", " +
+						ToString(tex->brick.mortardepth) + ", " +
+						ToString(tex->brick.proportion) + ", " +
+						ToString(tex->brick.invproportion) + ", " +
+						"&texture->brick.mapping");
+				AddTextureSource(source, "Brick", "float3", "Spectrum", i, 
+						AddTextureSourceCall("Spectrum", tex->brick.tex1Index) + ", " +
+						AddTextureSourceCall("Spectrum", tex->brick.tex2Index) + ", " +
+						AddTextureSourceCall("Spectrum", tex->brick.tex3Index) + ", " +
+						ToString(tex->brick.bond) + ", " +
+						ToString(tex->brick.brickwidth) + ", " +
+						ToString(tex->brick.brickheight) + ", " +
+						ToString(tex->brick.brickdepth) + ", " +
+						ToString(tex->brick.mortarsize) + ", " +
+						"(float3)(" + ToString(tex->brick.offsetx) + ", " + ToString(tex->brick.offsetx) + ", " + ToString(tex->brick.offsetx) + "), " +
+						ToString(tex->brick.run) + ", " +
+						ToString(tex->brick.mortarwidth) + ", " +
+						ToString(tex->brick.mortarheight) + ", " +
+						ToString(tex->brick.mortardepth) + ", " +
+						ToString(tex->brick.proportion) + ", " +
+						ToString(tex->brick.invproportion) + ", " +
+						"&texture->brick.mapping");
 				break;
-			}
-			case slg::ocl::WINDY: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "Windy", i, argsList);
+			case slg::ocl::WINDY:
+				AddTextureSource(source, "Windy", i,
+						"&texture->windy.mapping");
 				break;
-			}
-			case slg::ocl::WRINKLED: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "Wrinkled", i, argsList);
+			case slg::ocl::WRINKLED:
+				AddTextureSource(source, "Wrinkled", i,
+						ToString(tex->marble.omega) + ", " +
+						ToString(tex->marble.octaves) + ", " +
+						"&texture->wrinkled.mapping");
 				break;
-			}
-			case slg::ocl::UV_TEX: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "UV", i, argsList);
+			case slg::ocl::UV_TEX:
+				AddTextureSource(source, "UV", i,
+						"&texture->uvTex.mapping");
 				break;
-			}
-			case slg::ocl::BAND_TEX: {
-				vector<u_int> argsList;
-				argsList.push_back(tex->band.amountTexIndex);
-				AddTextureSource(source, "Band", i, argsList);
+			case slg::ocl::BAND_TEX:
+				AddTextureSource(source, "Band", "float", "Float", i,
+						ToString(tex->band.size) + ", " +
+						"texture->band.offsets, "
+						"texture->band.values, " +
+						AddTextureSourceCall("Float", tex->band.amountTexIndex));
+				AddTextureSource(source, "Band", "float3", "Spectrum", i,
+						ToString(tex->band.size) + ", " +
+						"texture->band.offsets, "
+						"texture->band.values, " +
+						AddTextureSourceCall("Spectrum", tex->band.amountTexIndex));
 				break;
-			}
-			case slg::ocl::NORMALMAP_TEX: {
-				vector<u_int> argsList;
-				AddTextureSource(source, "NormalMap", i, argsList);
+			case slg::ocl::NORMALMAP_TEX:
+				AddTextureSource(source, "NormalMap", i, "");
 				break;
-			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::GetTexturesEvaluationSourceCode(): " + boost::lexical_cast<string>(tex->type));
 				break;
@@ -1550,9 +1588,10 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 
 	// Generate the code for evaluating a generic float texture
 	source << "float Texture_GetFloatValue(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
+			"\t __global Texture *tex = &texs[texIndex];\n"
 			"\tswitch (texIndex) {\n";
 	for (u_int i = 0; i < texturesCount; ++i) {
-		source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateFloat(hitPoint TEXTURES_PARAM);\n";
+		source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateFloat(tex, hitPoint TEXTURES_PARAM);\n";
 	}
 	source << "\t\tdefault: return 0.f;\n"
 			"\t}\n"
@@ -1560,9 +1599,10 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 
 	// Generate the code for evaluating a generic spectrum texture
 	source << "float3 Texture_GetSpectrumValue(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
+			"\t __global Texture *tex = &texs[texIndex];\n"
 			"\tswitch (texIndex) {\n";
 	for (u_int i = 0; i < texturesCount; ++i) {
-		source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateSpectrum(hitPoint TEXTURES_PARAM);\n";
+		source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateSpectrum(tex, hitPoint TEXTURES_PARAM);\n";
 	}
 	source << "\t\tdefault: return BLACK;\n"
 			"\t}\n"
