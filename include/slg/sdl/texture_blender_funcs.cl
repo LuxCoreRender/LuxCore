@@ -28,88 +28,106 @@
 
 #if defined(PARAM_ENABLE_BLENDER_WOOD)
 
-float BlenderWoodTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint){
-	const float3 P = TextureMapping3D_Map(&texture->blenderWood.mapping, hitPoint);
+float BlenderWoodTexture_Evaluate(__global HitPoint *hitPoint,
+		const BlenderWoodType type, const BlenderWoodNoiseBase noisebasis2,
+		const float noisesize, const float turbulence,
+		const float contrast, const float bright, const bool hard,
+		__global TextureMapping3D *mapping) {
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
 	float scale = 1.f;
-	if(fabs(texture->blenderWood.noisesize) > 0.00001f) scale = (1.f/texture->blenderWood.noisesize);
+	if (fabs(noisesize) > 0.00001f) scale = (1.f / noisesize);
 
-	const BlenderWoodNoiseBase noise = texture->blenderWood.noisebasis2;
 	float wood = 0.f;
-
-	switch(texture->blenderWood.type) {
+	switch(type) {
 		default:
 		case BANDS:
-			if(noise == TEX_SIN) {
+			if(noisebasis2 == TEX_SIN) {
 				wood = tex_sin((P.x + P.y + P.z) * 10.f);
-			} else if(noise == TEX_SAW) {
+			} else if(noisebasis2 == TEX_SAW) {
 				wood = tex_saw((P.x + P.y + P.z) * 10.f);
 			} else {
 				wood = tex_tri((P.x + P.y + P.z) * 10.f);
 			}
 			break;
 		case RINGS:
-			if(noise == TEX_SIN) {
+			if(noisebasis2 == TEX_SIN) {
 				wood = tex_sin(sqrt(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f);
-			} else if(noise == TEX_SAW) {
+			} else if(noisebasis2 == TEX_SAW) {
 				wood = tex_saw(sqrt(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f);
 			} else {
 				wood = tex_tri(sqrt(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f);
 			}
 			break;
 		case BANDNOISE:			
-			if(texture->blenderWood.hard)	
-				wood = texture->blenderWood.turbulence * fabs(2.f * Noise3(scale*P) - 1.f);
+			if(hard)	
+				wood = turbulence * fabs(2.f * Noise3(scale*P) - 1.f);
 			else
-				wood = texture->blenderWood.turbulence * Noise3(scale*P);
+				wood = turbulence * Noise3(scale*P);
 
-			if(noise == TEX_SIN) {
+			if(noisebasis2 == TEX_SIN) {
 				wood = tex_sin((P.x + P.y + P.z) * 10.f + wood);
-			} else if(noise == TEX_SAW) {
+			} else if(noisebasis2 == TEX_SAW) {
 				wood = tex_saw((P.x + P.y + P.z) * 10.f + wood);
 			} else {
 				wood = tex_tri((P.x + P.y + P.z) * 10.f + wood);
 			}
 			break;
 		case RINGNOISE:
-			if(texture->blenderWood.hard)	
-				wood = texture->blenderWood.turbulence * fabs(2.f * Noise3(scale*P) - 1.f);
+			if(hard)	
+				wood = turbulence * fabs(2.f * Noise3(scale*P) - 1.f);
 			else
-				wood = texture->blenderWood.turbulence * Noise3(scale*P);
+				wood = turbulence * Noise3(scale*P);
 
-			if(noise == TEX_SIN) {
+			if(noisebasis2 == TEX_SIN) {
 				wood = tex_sin(sqrt(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f + wood);
-			} else if(noise == TEX_SAW) {
+			} else if(noisebasis2 == TEX_SAW) {
 				wood = tex_saw(sqrt(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f + wood);
 			} else {
 				wood = tex_tri(sqrt(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f + wood);
 			}
 			break;
 	}
-	wood = (wood - 0.5f) * texture->blenderWood.contrast + texture->blenderWood.bright - 0.5f;
+	wood = (wood - 0.5f) * contrast + bright - 0.5f;
 	wood = clamp(wood, 0.f, 1.f);
 
 	return wood;
 }
 
-float BlenderWoodTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
-	return BlenderWoodTexture_Evaluate(texture, hitPoint);
+float BlenderWoodTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const BlenderWoodType type, const BlenderWoodNoiseBase noisebasis2,
+		const float noisesize, const float turbulence,
+		const float contrast, const float bright, const bool hard,
+		__global TextureMapping3D *mapping) {
+	return BlenderWoodTexture_Evaluate(hitPoint, type, noisebasis2,
+		noisesize, turbulence, contrast, bright, hard, mapping);
 }
 
-float3 BlenderWoodTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
-    const float wood = BlenderWoodTexture_Evaluate(texture, hitPoint);
-
-    return (float3)(wood, wood, wood);
+float3 BlenderWoodTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const BlenderWoodType type, const BlenderWoodNoiseBase noisebasis2,
+		const float noisesize, const float turbulence,
+		const float contrast, const float bright, const bool hard,
+		__global TextureMapping3D *mapping) {
+    return BlenderWoodTexture_Evaluate(hitPoint, type, noisebasis2,
+		noisesize, turbulence, contrast, bright, hard, mapping);
 }
 
 #if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void BlenderWoodTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderWoodTexture_DynamicEvaluateFloat(texture, hitPoint);
+	texValues[(*texValuesSize)++] = BlenderWoodTexture_ConstEvaluateFloat(hitPoint,
+			texture->blenderWood.type, texture->blenderWood.noisebasis2,
+			texture->blenderWood.noisesize, texture->blenderWood.turbulence, 
+			texture->blenderWood.contrast, texture->blenderWood.bright,
+			texture->blenderWood.hard, &texture->blenderWood.mapping);
 }
 
 void BlenderWoodTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 	float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-    texValues[(*texValuesSize)++] = BlenderWoodTexture_DynamicEvaluateSpectrum(texture, hitPoint);
+    texValues[(*texValuesSize)++] = BlenderWoodTexture_ConstEvaluateSpectrum(hitPoint,
+			texture->blenderWood.type, texture->blenderWood.noisebasis2,
+			texture->blenderWood.noisesize, texture->blenderWood.turbulence, 
+			texture->blenderWood.contrast, texture->blenderWood.bright,
+			texture->blenderWood.hard, &texture->blenderWood.mapping);
 }
 #endif
 
@@ -121,39 +139,51 @@ void BlenderWoodTexture_EvaluateSpectrum(__global Texture *texture, __global Hit
 
 #if defined(PARAM_ENABLE_BLENDER_CLOUDS)
 
-float BlenderCloudsTexture_Evaluate(__global Texture *texture, __global HitPoint *hitPoint) {
-	const float3 P = TextureMapping3D_Map(&texture->blenderClouds.mapping, hitPoint);
+float BlenderCloudsTexture_Evaluate(__global HitPoint *hitPoint,
+		const float noisesize, const int noisedepth, const float contrast,
+		const float bright, __global TextureMapping3D *mapping) {
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
 
 	float scale = 1.f;
-	if(fabs(texture->blenderClouds.noisesize) > 0.00001f) scale = (1.f/texture->blenderClouds.noisesize);
+	if (fabs(noisesize) > 0.00001f) scale = (1.f / noisesize);
 
-	float clouds = Turbulence(scale*P, texture->blenderClouds.noisesize, texture->blenderClouds.noisedepth);
+	float clouds = Turbulence(scale*P, noisesize, noisedepth);
 
-	clouds = (clouds - 0.5f) * texture->blenderClouds.contrast + texture->blenderClouds.bright - 0.5f;
+	clouds = (clouds - 0.5f) * contrast + bright - 0.5f;
 	clouds = clamp(clouds, 0.f, 1.f);
 
 	return clouds;
 }
 
-float BlenderCloudsTexture_DynamicEvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint) {
-	return BlenderCloudsTexture_Evaluate(texture, hitPoint);
+float BlenderCloudsTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float noisesize, const int noisedepth, const float contrast,
+		const float bright, __global TextureMapping3D *mapping) {
+	return BlenderCloudsTexture_Evaluate(hitPoint, noisesize, noisedepth,
+			contrast, bright, mapping);
 }
 
-float3 BlenderCloudsTexture_DynamicEvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint) {
-	const float clouds = BlenderCloudsTexture_Evaluate(texture, hitPoint);
-
-	return (float3)(clouds, clouds, clouds);
+float3 BlenderCloudsTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float noisesize, const int noisedepth, const float contrast,
+		const float bright, __global TextureMapping3D *mapping) {
+	return BlenderCloudsTexture_Evaluate(hitPoint, noisesize, noisedepth,
+			contrast, bright, mapping);
 }
 
 #if defined(PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION)
 void BlenderCloudsTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderCloudsTexture_DynamicEvaluateFloat(texture, hitPoint);
+	texValues[(*texValuesSize)++] = BlenderCloudsTexture_ConstEvaluateFloat(hitPoint,
+			texture->blenderClouds.noisesize, texture->blenderClouds.noisedepth,
+			texture->blenderClouds.contrast, texture->blenderClouds.bright,
+			&texture->blenderClouds.mapping);
 }
 
 void BlenderCloudsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderCloudsTexture_DynamicEvaluateSpectrum(texture, hitPoint);
+	texValues[(*texValuesSize)++] = BlenderCloudsTexture_ConstEvaluateSpectrum(hitPoint,
+			texture->blenderClouds.noisesize, texture->blenderClouds.noisedepth,
+			texture->blenderClouds.contrast, texture->blenderClouds.bright,
+			&texture->blenderClouds.mapping);
 }
 #endif
 

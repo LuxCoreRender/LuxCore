@@ -752,6 +752,8 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
+	bool Evaluate(const HitPoint &hitPoint) const;
+
 	const TextureMapping2D *mapping;
 	const Texture *insideTex;
 	const Texture *outsideTex;
