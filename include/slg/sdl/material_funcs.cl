@@ -81,6 +81,13 @@ uint Material_GetExteriorVolumeNoMix(__global Material *material) {
 }
 #endif
 
+//------------------------------------------------------------------------------
+// All following functions are used only when material dynamic code generation
+// is disabled
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+
 bool Material_IsDeltaNoMix(__global Material *material) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
@@ -431,3 +438,5 @@ float3 Material_GetPassThroughTransparencyNoMix(__global Material *material,
 			return BLACK;
 	}
 }
+
+#endif

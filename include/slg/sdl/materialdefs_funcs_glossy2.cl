@@ -128,15 +128,28 @@ float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
 }
 
-float3 Glossy2Material_Evaluate(__global Material *material,
+float3 Glossy2Material_ConstEvaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
+		BSDFEvent *event, float *directPdfW,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
+		const float i,
+#endif
+		const float nuVal,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
+		const float nvVal,
+#endif
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
+		const float3 kaVal,
+		const float d,
+#endif
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
+		const int multibounceVal,
+#endif
+		const float3 kdVal, const float3 ksVal) {
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
 
-	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint
-			TEXTURES_PARAM)) * M_1_PI_F * fabs(lightDir.z);
+	const float3 baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * fabs(lightDir.z);
 	if (eyeDir.z <= 0.f) {
 		// Back face: no coating
 
@@ -150,11 +163,8 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	// Front face: coating+base
 	*event = GLOSSY | REFLECT;
 
-	float3 ks = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint
-			TEXTURES_PARAM);
+	float3 ks = ksVal;
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
-	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint
-			TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
@@ -162,11 +172,9 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 #endif
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint
-		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float u = clamp(nuVal, 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-	const float v = clamp(Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint
-		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float v = clamp(nvVal, 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -189,10 +197,7 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	const float coso = fabs(fixedDir.z);
 
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
-	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kaTexIndex, hitPoint
-			TEXTURES_PARAM));
-	const float d = Texture_GetFloatValue(material->glossy2.depthTexIndex, hitPoint
-			TEXTURES_PARAM);
+	const float3 alpha = Spectrum_Clamp(kaVal);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 #else
 	const float3 absorption = WHITE;
@@ -203,7 +208,7 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
-	const int multibounce = material->glossy2.multibounce;
+	const int multibounce = multibounceVal;
 #else
 	const int multibounce = 0;
 #endif
@@ -216,15 +221,29 @@ float3 Glossy2Material_Evaluate(__global Material *material,
 	return coatingF + absorption * (WHITE - S) * baseF;
 }
 
-float3 Glossy2Material_Sample(__global Material *material,
+float3 Glossy2Material_ConstSample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
+		const BSDFEvent requestedEvent,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
+		const float i,
+#endif
+		const float nuVal,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
+		const float nvVal,
+#endif
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
+		const float3 kaVal,
+		const float d,
+#endif
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
+		const int multibounceVal,
+#endif
+		const float3 kdVal, const float3 ksVal) {
 	if ((!(requestedEvent & (GLOSSY | REFLECT)) && fixedDir.z > 0.f) ||
 		(!(requestedEvent & (DIFFUSE | REFLECT)) && fixedDir.z <= 0.f) ||
 		(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
@@ -237,15 +256,11 @@ float3 Glossy2Material_Sample(__global Material *material,
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
 		*event = DIFFUSE | REFLECT;
-		return Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint
-			TEXTURES_PARAM));
+		return Spectrum_Clamp(kdVal);
 	}
 
-	float3 ks = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint
-			TEXTURES_PARAM);
+	float3 ks = ksVal;
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
-	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint
-			TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
@@ -253,11 +268,9 @@ float3 Glossy2Material_Sample(__global Material *material,
 #endif
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint
-		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float u = clamp(nuVal, 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-	const float v = clamp(Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint
-		TEXTURES_PARAM), 6e-3f, 1.f);
+	const float v = clamp(nvVal, 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -271,11 +284,10 @@ float3 Glossy2Material_Sample(__global Material *material,
 	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
-	const float3 baseF = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint
-		TEXTURES_PARAM)) * M_1_PI_F;
+	const float3 baseF = Spectrum_Clamp(kdVal) * M_1_PI_F;
 
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
-	const int multibounce = material->glossy2.multibounce;
+	const int multibounce = multibounceVal;
 #else
 	const int multibounce = 0;
 #endif
@@ -322,10 +334,7 @@ float3 Glossy2Material_Sample(__global Material *material,
 	const float coso = fabs(fixedDir.z);
 
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
-	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kaTexIndex, hitPoint
-		TEXTURES_PARAM));
-	const float d = Texture_GetFloatValue(material->glossy2.depthTexIndex, hitPoint
-		TEXTURES_PARAM);
+	const float3 alpha = Spectrum_Clamp(kaVal);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 #else
 	const float3 absorption = WHITE;
@@ -340,5 +349,121 @@ float3 Glossy2Material_Sample(__global Material *material,
 
 	return (coatingF + absorption * (WHITE - S) * baseF * *cosSampledDir) / *pdfW;
 }
+
+#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+float3 Glossy2Material_Evaluate(__global Material *material,
+		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
+	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint
+			TEXTURES_PARAM);
+#endif
+
+	const float nuVal = Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint
+		TEXTURES_PARAM);
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
+	const float nvVal = Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint
+		TEXTURES_PARAM);
+#endif
+
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
+	const float3 kaVal = Texture_GetSpectrumValue(material->glossy2.kaTexIndex, hitPoint
+			TEXTURES_PARAM);
+	const float d = Texture_GetFloatValue(material->glossy2.depthTexIndex, hitPoint
+			TEXTURES_PARAM);
+#endif
+
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
+	const int multibounce = material->glossy2.multibounce;
+#endif
+
+	const float3 kdVal = Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint
+			TEXTURES_PARAM);
+	const float3 ksVal = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint
+			TEXTURES_PARAM);
+
+	return Glossy2Material_ConstEvaluate(
+			hitPoint, lightDir, eyeDir,
+			event, directPdfW,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
+			i,
+#endif
+			nuVal,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
+			nvVal,
+#endif
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
+			kaVal,
+			d,
+#endif
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
+			multibounce,
+#endif
+			kdVal, ksVal);
+}
+
+float3 Glossy2Material_Sample(__global Material *material,
+		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
+		TEXTURES_PARAM_DECL) {
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
+	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint
+			TEXTURES_PARAM);
+#endif
+
+	const float nuVal = Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint
+		TEXTURES_PARAM);
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
+	const float nvVal = Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint
+		TEXTURES_PARAM);
+#endif
+
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
+	const float3 kaVal = Texture_GetSpectrumValue(material->glossy2.kaTexIndex, hitPoint
+			TEXTURES_PARAM);
+	const float d = Texture_GetFloatValue(material->glossy2.depthTexIndex, hitPoint
+			TEXTURES_PARAM);
+#endif
+
+	const float3 kdVal = Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint
+			TEXTURES_PARAM);
+	const float3 ksVal = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint
+			TEXTURES_PARAM);
+
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
+	const int multibounce = material->glossy2.multibounce;
+#endif
+
+	return Glossy2Material_ConstSample(
+			hitPoint, fixedDir, sampledDir,
+			u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+			passThroughEvent,
+#endif
+			pdfW, cosSampledDir, event,
+			requestedEvent,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
+			i,
+#endif
+			nuVal,
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
+			nvVal,
+#endif
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
+			kaVal,
+			d,
+#endif
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
+			multibounce,
+#endif
+			kdVal, ksVal);
+}
+#endif
 
 #endif

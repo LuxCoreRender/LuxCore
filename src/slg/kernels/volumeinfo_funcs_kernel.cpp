@@ -81,7 +81,7 @@ std::string KernelSource_volumeinfo_funcs =
 "	--(pvi->volumeIndexListSize);\n"
 "}\n"
 "\n"
-"const uint PathVolumeInfo_SimulateAddVolume(__global PathVolumeInfo *pvi, const uint volIndex\n"
+"uint PathVolumeInfo_SimulateAddVolume(__global PathVolumeInfo *pvi, const uint volIndex\n"
 "		MATERIALS_PARAM_DECL) {\n"
 "	// A volume wins over current if and only if it is the same volume or has an\n"
 "	// higher priority\n"

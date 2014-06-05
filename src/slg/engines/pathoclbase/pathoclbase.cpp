@@ -81,7 +81,8 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
 	writeKernelsToFile = false;
-	useDynamicCodeGenerationForTextures = true;
+	useDynamicCodeGenerationForTextures = false;
+	useDynamicCodeGenerationForMaterials = false;
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -159,6 +160,10 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 			"opencl.kernel.dynamiccodegeneration.textures.enable")(false)).Get<bool>();
 	useDynamicCodeGenerationForMaterials = cfg.Get(Property(
 			"opencl.kernel.dynamiccodegeneration.materials.enable")(false)).Get<bool>();
+	// Dynamic code generation for materials requires dynamic code generation
+	// for textures
+	if (useDynamicCodeGenerationForMaterials)
+		useDynamicCodeGenerationForTextures = true;
 
 	//--------------------------------------------------------------------------
 	// Compile the scene
