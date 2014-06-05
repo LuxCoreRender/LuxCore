@@ -42,6 +42,24 @@ float3 ClearVolMaterial_GetPassThroughTransparency(__global Material *material,
 }
 #endif
 
+float3 ClearVolMaterial_ConstEvaluate(
+		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW) {
+	return BLACK;
+}
+
+float3 ClearVolMaterial_ConstSample(
+		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1, 
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) {
+	return BLACK;
+}
+
+#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
 float3 ClearVolMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
@@ -60,5 +78,6 @@ float3 ClearVolMaterial_Sample(__global Material *material,
 		TEXTURES_PARAM_DECL) {
 	return BLACK;
 }
+#endif
 
 #endif

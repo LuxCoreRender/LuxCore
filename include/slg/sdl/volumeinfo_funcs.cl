@@ -78,7 +78,7 @@ void PathVolumeInfo_RemoveVolume(__global PathVolumeInfo *pvi, const uint volInd
 	--(pvi->volumeIndexListSize);
 }
 
-const uint PathVolumeInfo_SimulateAddVolume(__global PathVolumeInfo *pvi, const uint volIndex
+uint PathVolumeInfo_SimulateAddVolume(__global PathVolumeInfo *pvi, const uint volIndex
 		MATERIALS_PARAM_DECL) {
 	// A volume wins over current if and only if it is the same volume or has an
 	// higher priority

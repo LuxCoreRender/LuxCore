@@ -540,46 +540,45 @@ float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const f
 	return EvalIntegrand(Weave, yarn, uv, umax, &om_i, &om_r);
 }
 
-float3 ClothMaterial_Evaluate(__global Material *material,
+float3 ClothMaterial_ConstEvaluate(
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
+		BSDFEvent *event, float *directPdfW,
+		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
+		const float s, const float3 Warp_Ks, const float3 Weft_Ks,
+		const float3 Warp_Kd, const float3 Weft_Kd) {
     *directPdfW = fabs(localLightDir.z * M_1_PI_F);
     
     *event = GLOSSY | REFLECT;
 
-    const ClothPreset Preset = material->cloth.Preset;
     __constant WeaveConfig *Weave = &ClothWeaves[Preset];
-    const float Repeat_U = material->cloth.Repeat_U;
-    const float Repeat_V = material->cloth.Repeat_V;
 
 	float2 uv;
-	float umax, scale = material->cloth.specularNormalization;
+	float umax, scale = s;
 	__constant Yarn *yarn = GetYarn(Preset, Weave, Repeat_U, Repeat_V,
             hitPoint->uv.u, hitPoint->uv.v, &uv, &umax, &scale);
     
     scale = scale * EvalSpecular(Weave, yarn, uv, umax, localLightDir, localEyeDir);
 	
-	const uint ksIndex = yarn->yarn_type == WARP ? material->cloth.Warp_KsIndex : material->cloth.Weft_KsIndex;
-	const uint kdIndex = yarn->yarn_type == WARP ? material->cloth.Warp_KdIndex : material->cloth.Weft_KdIndex;
+	const float3 ks = (yarn->yarn_type == WARP) ? Warp_Ks : Weft_Ks;
+	const float3 kd = (yarn->yarn_type == WARP) ? Warp_Kd : Weft_Kd;
 
-    const float3 ksVal = Spectrum_Clamp(Texture_GetSpectrumValue(ksIndex, hitPoint
-			TEXTURES_PARAM));
-    const float3 kdVal = Spectrum_Clamp(Texture_GetSpectrumValue(kdIndex, hitPoint
-			TEXTURES_PARAM));
+    const float3 ksVal = Spectrum_Clamp(ks);
+    const float3 kdVal = Spectrum_Clamp(kd);
 
 	return (kdVal + ksVal * scale) * M_1_PI_F * fabs(localLightDir.z);
 }
 
-float3 ClothMaterial_Sample(__global Material *material,
+float3 ClothMaterial_ConstSample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
+		const BSDFEvent requestedEvent,
+		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
+		const float s, const float3 Warp_Ks, const float3 Weft_Ks,
+		const float3 Warp_Kd, const float3 Weft_Kd) {
 	if (!(requestedEvent & (GLOSSY | REFLECT)) ||
 			(fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
@@ -592,14 +591,10 @@ float3 ClothMaterial_Sample(__global Material *material,
 
 	*event = GLOSSY | REFLECT;
 
-    const ClothPreset Preset = material->cloth.Preset;
     __constant WeaveConfig *Weave = &ClothWeaves[Preset];
-    const float Repeat_U = material->cloth.Repeat_U;
-    const float Repeat_V = material->cloth.Repeat_V;
 
 	float2 uv;
-	float umax, scale = material->cloth.specularNormalization;
-
+	float umax, scale = s;
 	__constant Yarn *yarn = GetYarn(Preset, Weave, Repeat_U, Repeat_V,
             hitPoint->uv.u, hitPoint->uv.v, &uv, &umax, &scale);
 
@@ -608,15 +603,77 @@ float3 ClothMaterial_Sample(__global Material *material,
 //	else
 //	    scale = scale * EvalSpecular(Weave, yarn, uv, umax, *localSampledDir, localFixedDir);
 
-    const uint ksIndex = yarn->yarn_type == WARP ? material->cloth.Warp_KsIndex : material->cloth.Weft_KsIndex;
-	const uint kdIndex = yarn->yarn_type == WARP ? material->cloth.Warp_KdIndex : material->cloth.Weft_KdIndex;
+    const float3 ks = (yarn->yarn_type == WARP) ? Warp_Ks : Weft_Ks;
+	const float3 kd = (yarn->yarn_type == WARP) ? Warp_Kd : Weft_Kd;
 
-    const float3 ksVal = Spectrum_Clamp(Texture_GetSpectrumValue(ksIndex, hitPoint
-			TEXTURES_PARAM));
-    const float3 kdVal = Spectrum_Clamp(Texture_GetSpectrumValue(kdIndex, hitPoint
-			TEXTURES_PARAM));
+    const float3 ksVal = Spectrum_Clamp(ks);
+    const float3 kdVal = Spectrum_Clamp(kd);
 
 	return kdVal + ksVal * scale;
 }
+
+#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+float3 ClothMaterial_Evaluate(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+	const ClothPreset Preset = material->cloth.Preset;
+	const float Repeat_U = material->cloth.Repeat_U;
+    const float Repeat_V = material->cloth.Repeat_V;
+	const float scale = material->cloth.specularNormalization;
+
+	const float3 Warp_Ks = Texture_GetSpectrumValue(material->cloth.Warp_KsIndex, hitPoint
+			TEXTURES_PARAM);
+	const float3 Weft_Ks = Texture_GetSpectrumValue(material->cloth.Weft_KsIndex, hitPoint
+			TEXTURES_PARAM);
+	const float3 Warp_Kd = Texture_GetSpectrumValue(material->cloth.Warp_KdIndex, hitPoint
+			TEXTURES_PARAM);
+	const float3 Weft_Kd = Texture_GetSpectrumValue(material->cloth.Weft_KdIndex, hitPoint
+			TEXTURES_PARAM);
+
+	return ClothMaterial_ConstEvaluate(
+			hitPoint, localLightDir, localEyeDir,
+			event, directPdfW,
+			Preset, Repeat_U, Repeat_V,
+			scale, Warp_Ks, Weft_Ks,
+			Warp_Kd,Weft_Kd);
+}
+
+float3 ClothMaterial_Sample(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
+		TEXTURES_PARAM_DECL) {
+	const ClothPreset Preset = material->cloth.Preset;
+	const float Repeat_U = material->cloth.Repeat_U;
+    const float Repeat_V = material->cloth.Repeat_V;
+	const float scale = material->cloth.specularNormalization;
+
+	const float3 Warp_Ks = Texture_GetSpectrumValue(material->cloth.Warp_KsIndex, hitPoint
+			TEXTURES_PARAM);
+	const float3 Weft_Ks = Texture_GetSpectrumValue(material->cloth.Weft_KsIndex, hitPoint
+			TEXTURES_PARAM);
+	const float3 Warp_Kd = Texture_GetSpectrumValue(material->cloth.Warp_KdIndex, hitPoint
+			TEXTURES_PARAM);
+	const float3 Weft_Kd = Texture_GetSpectrumValue(material->cloth.Weft_KdIndex, hitPoint
+			TEXTURES_PARAM);
+	
+	return ClothMaterial_ConstSample(
+			hitPoint, localFixedDir, localSampledDir,
+			u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+			passThroughEvent,
+#endif
+			pdfW, absCosSampledDir, event,
+			requestedEvent,
+			Preset, Repeat_U, Repeat_V,
+			scale, Warp_Ks, Weft_Ks,
+			Warp_Kd, Weft_Kd);
+}
+#endif
 
 #endif

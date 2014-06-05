@@ -40,29 +40,29 @@ float3 GlassMaterial_GetPassThroughTransparency(__global Material *material,
 }
 #endif
 
-float3 GlassMaterial_Evaluate(__global Material *material,
+float3 GlassMaterial_ConstEvaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
+		BSDFEvent *event, float *directPdfW,
+		const float3 ktTexVal, const float3 krTexVal,
+		const float nc, const float nt) {
 	return BLACK;
 }
 
-float3 GlassMaterial_Sample(__global Material *material,
+float3 GlassMaterial_ConstSample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
+		const BSDFEvent requestedEvent,
+		const float3 ktTexVal, const float3 krTexVal,
+		const float nc, const float nt) {
 	if (!(requestedEvent & SPECULAR))
 		return BLACK;
 
-	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->glass.ktTexIndex, hitPoint
-		TEXTURES_PARAM));
-	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint
-		TEXTURES_PARAM));
+	const float3 kt = Spectrum_Clamp(ktTexVal);
+	const float3 kr = Spectrum_Clamp(krTexVal);
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
 	const bool isKrBlack = Spectrum_IsBlack(kr);
@@ -70,10 +70,6 @@ float3 GlassMaterial_Sample(__global Material *material,
 		return BLACK;
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = Texture_GetFloatValue(material->glass.exteriorIorTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(material->glass.interiorIorTexIndex, hitPoint
-			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 	const float eta = entering ? (nc / nt) : ntc;
 	const float costheta = CosTheta(localFixedDir);
@@ -131,5 +127,41 @@ float3 GlassMaterial_Sample(__global Material *material,
 
 	return result / *pdfW;
 }
+
+#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+float3 GlassMaterial_Evaluate(__global Material *material,
+		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW
+		TEXTURES_PARAM_DECL) {
+	return BLACK;
+}
+
+float3 GlassMaterial_Sample(__global Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent
+		TEXTURES_PARAM_DECL) {
+	const float3 kt = Texture_GetSpectrumValue(material->glass.ktTexIndex, hitPoint
+		TEXTURES_PARAM);
+	const float3 kr = Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint
+		TEXTURES_PARAM);
+	const float nc = Texture_GetFloatValue(material->glass.exteriorIorTexIndex, hitPoint
+			TEXTURES_PARAM);
+	const float nt = Texture_GetFloatValue(material->glass.interiorIorTexIndex, hitPoint
+			TEXTURES_PARAM);
+
+	return GlassMaterial_ConstSample(hitPoint, localFixedDir, localSampledDir,
+			u0, u1, 
+#if defined(PARAM_HAS_PASSTHROUGH)
+			passThroughEvent,
+#endif
+			pdfW, absCosSampledDir, event, requestedEvent,
+			kt, kr, nc, nt);
+}
+#endif
 
 #endif

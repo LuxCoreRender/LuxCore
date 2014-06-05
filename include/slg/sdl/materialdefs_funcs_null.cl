@@ -40,6 +40,32 @@ float3 NullMaterial_GetPassThroughTransparency(__global Material *material,
 }
 #endif
 
+float3 NullMaterial_ConstEvaluate(
+		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
+		BSDFEvent *event, float *directPdfW) {
+	return BLACK;
+}
+
+float3 NullMaterial_ConstSample(
+		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float passThroughEvent,
+#endif
+		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) {
+	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
+		return BLACK;
+
+	*sampledDir = -fixedDir;
+	*cosSampledDir = 1.f;
+
+	*pdfW = 1.f;
+	*event = SPECULAR | TRANSMIT;
+	return WHITE;
+}
+
+#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
 float3 NullMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
@@ -56,15 +82,13 @@ float3 NullMaterial_Sample(__global Material *material,
 		float *pdfW, float *cosSampledDir, BSDFEvent *event,
 		const BSDFEvent requestedEvent
 		TEXTURES_PARAM_DECL) {
-	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
-		return BLACK;
-
-	*sampledDir = -fixedDir;
-	*cosSampledDir = 1.f;
-
-	*pdfW = 1.f;
-	*event = SPECULAR | TRANSMIT;
-	return WHITE;
+	return NullMaterial_ConstSample(hitPoint, fixedDir, sampledDir,
+			u0, u1, 
+#if defined(PARAM_HAS_PASSTHROUGH)
+			passThroughEvent,
+#endif
+			pdfW, cosSampledDir, event, requestedEvent);
 }
+#endif
 
 #endif
