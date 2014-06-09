@@ -87,3 +87,9 @@ float SinPhi(const float3 w) {
 float3 SphericalDirection(float sintheta, float costheta, float phi) {
 	return (float3)(sintheta * cos(phi), sintheta * sin(phi), costheta);
 }
+
+float3 SphericalDirectionWithFrame(float sintheta, float costheta, float phi,
+	const float3 x, const float3 y, const float3 z) {
+	return sintheta * cos(phi) * x + sintheta * sin(phi) * y +
+		costheta * z;
+}

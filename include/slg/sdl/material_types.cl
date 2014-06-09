@@ -23,7 +23,7 @@ typedef enum {
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
 			
 	// Volumes
-	/*HOMOGENEOUS_VOL,*/ CLEAR_VOL /*, HETEROGENEOUS_VOL*/
+	HOMOGENEOUS_VOL, CLEAR_VOL /*, HETEROGENEOUS_VOL*/
 } MaterialType;
 
 typedef struct {
@@ -188,6 +188,13 @@ typedef struct {
 } ClearVolumeParam;
 
 typedef struct {
+	unsigned int sigmaATexIndex;
+	unsigned int sigmaSTexIndex;
+	unsigned int gTexIndex;
+	bool multiScattering;
+} HomogenousVolumeParam;
+
+typedef struct {
 	unsigned int iorTexIndex;
 	// This is a different kind of emission texture from the one in
 	// Material class (i.e. is not sampled by direct light).
@@ -197,6 +204,7 @@ typedef struct {
 
 	union {
 		ClearVolumeParam clear;
+		HomogenousVolumeParam homogenous;
 	};
 } VolumeParam;
 

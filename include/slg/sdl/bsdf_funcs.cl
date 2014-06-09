@@ -18,6 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// Used when hitting a surface
 void BSDF_Init(
 		__global BSDF *bsdf,
 		//const bool fromL,
@@ -294,7 +295,7 @@ void BSDF_Init(
         }
     } else {
 #endif
-        Frame_SetFromZ(&bsdf->frame, shadeN);
+       Frame_SetFromZ(&bsdf->frame, shadeN);
 #if defined(PARAM_HAS_UVS_BUFFER)
     }
 #endif
@@ -303,6 +304,58 @@ void BSDF_Init(
 	bsdf->isVolume = false;
 #endif
 }
+
+#if defined(PARAM_HAS_VOLUMES)
+// Used when hitting a volume scatter point
+void BSDF_InitVolume(
+		__global BSDF *bsdf,
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+		__global
+#endif
+		Ray *ray,
+		const uint volumeIndex, const float t, const float passThroughEvent) {
+#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
+	const float3 rayOrig = VLOAD3F(&ray->o.x);
+	const float3 rayDir = VLOAD3F(&ray->d.x);
+#else
+	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+#endif
+	const float3 hitPointP = rayOrig + t * rayDir;
+	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
+	const float3 shadeN = -rayDir;
+	VSTORE3F(shadeN, &bsdf->hitPoint.fixedDir.x);
+
+	bsdf->hitPoint.passThroughEvent = passThroughEvent;
+
+	bsdf->materialIndex = volumeIndex;
+
+	VSTORE3F(shadeN, &bsdf->hitPoint.geometryN.x);
+	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
+
+	bsdf->hitPoint.intoObject = true;
+	bsdf->hitPoint.interiorVolumeIndex = volumeIndex;
+	bsdf->hitPoint.exteriorVolumeIndex = volumeIndex;
+
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
+	VSTORE3F(WHITE, bsdf->hitPoint.color.c);
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+	bsdf->hitPoint.alpha = 1.f;
+#endif
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+	bsdf->triangleLightSourceIndex = NULL_INDEX;
+#endif
+
+	VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.uv.u);
+
+	bsdf->isVolume = true;
+
+	// Build the local reference system
+	Frame_SetFromZ(&bsdf->frame, shadeN);
+}
+#endif
 
 float3 BSDF_Evaluate(__global BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
@@ -318,16 +371,23 @@ float3 BSDF_Evaluate(__global BSDF *bsdf,
 	const float dotEyeDirNG = dot(eyeDir, geometryN);
 	const float absDotEyeDirNG = fabs(dotEyeDirNG);
 
-	if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
-			(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
-		return BLACK;
+#if defined(PARAM_HAS_VOLUMES)
+	if (!bsdf->isVolume) {
+		// These kind of tests make sense only for materials
+#endif
+		if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
+				(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
+			return BLACK;
 
-	const float sideTest = dotEyeDirNG * dotLightDirNG;
-	const BSDFEvent matEvent = Material_GetEventTypes(bsdf->materialIndex
-			MATERIALS_PARAM);
-	if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
-			((sideTest < 0.f) && !(matEvent & TRANSMIT)))
-		return BLACK;
+		const float sideTest = dotEyeDirNG * dotLightDirNG;
+		const BSDFEvent matEvent = Material_GetEventTypes(bsdf->materialIndex
+				MATERIALS_PARAM);
+		if (((sideTest > 0.f) && !(matEvent & REFLECT)) ||
+				((sideTest < 0.f) && !(matEvent & TRANSMIT)))
+			return BLACK;
+#if defined(PARAM_HAS_VOLUMES)
+	}
+#endif
 
 	__global Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
