@@ -83,8 +83,8 @@ void PathOCLRenderEngine::StartLockLess() {
 		// I don't know yet the workgroup size of each device so I can not
 		// round up task count to be a multiple of workgroups size of all devices
 		// used. rounding to 2048 is a simple trick based on the assumption that
-		// workgroup size is a power of 2 and <= 2048.
-		taskCount = RoundUp<u_int>(taskCount, 2048);
+		// workgroup size is a power of 2 and <= 8192.
+		taskCount = RoundUp<u_int>(taskCount, 8192);
 		SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
 	}
 

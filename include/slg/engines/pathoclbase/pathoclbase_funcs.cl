@@ -1,4 +1,4 @@
-#line 2 "patchoclbase_kernels.cl"
+#line 2 "patchoclbase_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
@@ -215,10 +215,7 @@ bool Scene_Intersect(
 
 		const float t = Volume_Scatter(&mats[rayVolumeIndex], ray,
 				hit ? rayHit->t : ray->maxt,
-#if defined(PARAM_HAS_PASSTHROUGH)
-				passThrough,
-#endif
-				volInfo->scatteredStart,
+				passThrough, volInfo->scatteredStart,
 				&connectionThroughput, &connectionEmission,
 				tmpHitPoint
 				TEXTURES_PARAM);
@@ -234,22 +231,22 @@ bool Scene_Intersect(
 			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
 				MATERIALS_PARAM), connectionEmission);
 
-//		if (t > 0.f) {
-//			// There was a volume scatter event
-//
-//			// I have to set RayHit fields even if there wasn't a real
-//			// ray hit
-//			rayHit->t = t;
-//			// This is a trick in order to have RayHit::Miss() return
-//			// false. I assume 0xfffffffeu will trigger a memory fault if
-//			// used (and the bug will be noticed)
-//			rayHit->meshIndex = 0xfffffffeu;
-//
-//			bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
-//			volInfo->SetScatteredStart(true);
-//
-//			return true;
-//		}
+		if (t > 0.f) {
+			// There was a volume scatter event
+
+			// I have to set RayHit fields even if there wasn't a real
+			// ray hit
+			rayHit->t = t;
+			// This is a trick in order to have RayHit::Miss() return
+			// false. I assume 0xfffffffeu will trigger a memory fault if
+			// used (and the bug will be noticed)
+			rayHit->meshIndex = 0xfffffffeu;
+
+			BSDF_InitVolume(bsdf, ray, rayVolumeIndex, t, passThrough);
+			volInfo->scatteredStart = true;
+
+			return false;
+		}
 	}
 #endif
 

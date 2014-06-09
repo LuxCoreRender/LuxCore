@@ -90,4 +90,10 @@ std::string KernelSource_utils_funcs =
 "float3 SphericalDirection(float sintheta, float costheta, float phi) {\n"
 "	return (float3)(sintheta * cos(phi), sintheta * sin(phi), costheta);\n"
 "}\n"
+"\n"
+"float3 SphericalDirectionWithFrame(float sintheta, float costheta, float phi,\n"
+"	const float3 x, const float3 y, const float3 z) {\n"
+"	return sintheta * cos(phi) * x + sintheta * sin(phi) * y +\n"
+"		costheta * z;\n"
+"}\n"
 ; } }

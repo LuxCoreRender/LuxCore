@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_materialdefs_funcs_clearvol = 
-"#line 2 \"materialdefs_funcs_matte.cl\"\n"
+"#line 2 \"materialdefs_funcs_clearvol.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *\n"

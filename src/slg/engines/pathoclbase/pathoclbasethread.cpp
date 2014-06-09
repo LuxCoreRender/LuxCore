@@ -763,6 +763,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_CARPAINT";
 	if (cscene->IsMaterialCompiled(CLEAR_VOL))
 		ss << " -D PARAM_ENABLE_MAT_CLEAR_VOL";
+	if (cscene->IsMaterialCompiled(HOMOGENEOUS_VOL))
+		ss << " -D PARAM_ENABLE_MAT_HOMOGENEOUS_VOL";
 
 	if (cscene->RequiresPassThrough())
 		ss << " -D PARAM_HAS_PASSTHROUGH";
@@ -923,6 +925,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
 			slg::ocl::KernelSource_materialdefs_funcs_glass <<
 			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_matte <<
 			slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_metal2 <<

@@ -548,6 +548,15 @@ void CompiledScene::CompileMaterials() {
 						mat->volume.clear.sigmaATexIndex = scene->texDefs.GetTextureIndex(cv->GetSigmaA());
 						break;
 					}
+					case HOMOGENEOUS_VOL: {
+						const HomogeneousVolume *hv = static_cast<HomogeneousVolume *>(m);
+						mat->type = slg::ocl::HOMOGENEOUS_VOL;
+						mat->volume.homogenous.sigmaATexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaA());
+						mat->volume.homogenous.sigmaSTexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaS());
+						mat->volume.homogenous.gTexIndex = scene->texDefs.GetTextureIndex(hv->GetG());
+						mat->volume.homogenous.multiScattering = hv->IsMultiScattering();
+						break;
+					}
 					default:
 						throw runtime_error("Unknown volume in CompiledScene::CompileMaterials(): " + boost::lexical_cast<string>(m->GetType()));
 				}
@@ -1910,6 +1919,16 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
+			case slg::ocl::HOMOGENEOUS_VOL: {
+				AddMaterialSource(source, "HomogeneousVol", i,
+						AddTextureSourceCall("Spectrum", mat->volume.homogenous.sigmaSTexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->volume.homogenous.sigmaATexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->volume.homogenous.gTexIndex));
+				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
+				AddMaterialSourceStandardImplBump(source, i);
+				AddMaterialSourceStandardImplGetvolume(source, i);
+				break;
+			}
 			case slg::ocl::MIX: {
 				// MIX material requires ad hoc code
 
@@ -2329,7 +2348,10 @@ bool CompiledScene::RequiresPassThrough() const {
 			IsMaterialCompiled(MATTETRANSLUCENT) ||
 			IsMaterialCompiled(GLOSSY2) ||
 			IsMaterialCompiled(ROUGHGLASS) ||
-			IsMaterialCompiled(CARPAINT));
+			IsMaterialCompiled(CARPAINT) ||
+			IsMaterialCompiled(CLEAR_VOL) ||
+			IsMaterialCompiled(HOMOGENEOUS_VOL) ||
+			IsMaterialCompiled(HETEROGENEOUS_VOL));
 }
 
 bool CompiledScene::HasVolumes() const {

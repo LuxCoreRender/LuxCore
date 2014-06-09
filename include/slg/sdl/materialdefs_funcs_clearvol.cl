@@ -1,4 +1,4 @@
-#line 2 "materialdefs_funcs_matte.cl"
+#line 2 "materialdefs_funcs_clearvol.cl"
 
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *

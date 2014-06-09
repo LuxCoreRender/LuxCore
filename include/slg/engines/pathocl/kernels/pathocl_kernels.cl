@@ -579,7 +579,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
-	const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	sample->result.rayCount += 1;
 #endif
@@ -625,6 +624,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			triangles
 			MATERIALS_PARAM
 			);
+		const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
 
 		// If continueToTrace, there is nothing to do, just keep the same state
 		if (!continueToTrace) {
@@ -776,6 +776,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #else
 		false;
 #endif
+		const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
 
 		// If continueToTrace, there is nothing to do, just keep the same state
 		if (!continueToTrace) {
