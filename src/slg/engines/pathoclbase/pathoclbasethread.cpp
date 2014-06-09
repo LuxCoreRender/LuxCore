@@ -31,6 +31,11 @@
 #include "slg/renderconfig.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 
+#if defined(__APPLE__)
+//OSX version detection
+#include <sys/sysctl.h>
+#endif
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
@@ -843,8 +848,15 @@ void PathOCLBaseRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
 
 	// Check the OpenCL vendor and use some specific compiler options
+
 #if defined(__APPLE__)
-	ss << " -D __APPLE_CL__";
+	// Starting with 10.10 (darwin 14.x.x), opencl mix() function is fixed
+	char darwin_ver[10];
+	size_t len = sizeof(darwin_ver);
+	sysctlbyname("kern.osrelease", &darwin_ver, &len, NULL, 0);
+	if(darwin_ver[0] == '1' && darwin_ver[1] <= '4') {
+		ss << " -D __APPLE_CL__";
+	}
 #endif
 
 	//--------------------------------------------------------------------------
