@@ -854,7 +854,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 	char darwin_ver[10];
 	size_t len = sizeof(darwin_ver);
 	sysctlbyname("kern.osrelease", &darwin_ver, &len, NULL, 0);
-	if(darwin_ver[0] == '1' && darwin_ver[1] <= '4') {
+	if(darwin_ver[0] == '1' && darwin_ver[1] < '4') {
 		ss << " -D __APPLE_CL__";
 	}
 #endif
