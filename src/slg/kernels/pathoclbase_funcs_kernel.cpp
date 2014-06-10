@@ -245,7 +245,7 @@ std::string KernelSource_pathoclbase_funcs =
 "			// used (and the bug will be noticed)\n"
 "			rayHit->meshIndex = 0xfffffffeu;\n"
 "\n"
-"			BSDF_InitVolume(bsdf, ray, rayVolumeIndex, t, passThrough);\n"
+"			BSDF_InitVolume(bsdf, mats, ray, rayVolumeIndex, t, passThrough);\n"
 "			volInfo->scatteredStart = true;\n"
 "\n"
 "			return false;\n"

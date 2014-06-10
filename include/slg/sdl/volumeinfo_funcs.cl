@@ -203,46 +203,55 @@ void PathVolumeInfo_SetHitPointVolumes(__global PathVolumeInfo *pvi,
 		MATERIALS_PARAM_DECL) {
 	// Set interior and exterior volumes
 
+	uint interiorVolumeIndex, exteriorVolumeIndex;
 	const uint currentVolumeIndex = pvi->currentVolumeIndex;
 	if (hitPoint->intoObject) {
 		// From outside to inside the object
 
-		hitPoint->interiorVolumeIndex = PathVolumeInfo_SimulateAddVolume(pvi, matInteriorVolumeIndex
+		interiorVolumeIndex = PathVolumeInfo_SimulateAddVolume(pvi, matInteriorVolumeIndex
 				MATERIALS_PARAM);
 
 		if (currentVolumeIndex == NULL_INDEX)
-			hitPoint->exteriorVolumeIndex = matExteriorVolumeIndex;
+			exteriorVolumeIndex = matExteriorVolumeIndex;
 		else {
 			// if (!material->GetExteriorVolume()) there may be conflict here
 			// between the material definition and the currentVolume value.
 			// The currentVolume value wins.
-			hitPoint->exteriorVolumeIndex = currentVolumeIndex;
+			exteriorVolumeIndex = currentVolumeIndex;
 		}
 
 		if (hitPoint->exteriorVolumeIndex == NULL_INDEX) {
 			// No volume information, I use the default volume
-			hitPoint->exteriorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
+			exteriorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
 		}
 	} else {
 		// From inside to outside the object
 
 		if (currentVolumeIndex == NULL_INDEX)
-			hitPoint->interiorVolumeIndex = matInteriorVolumeIndex;
+			interiorVolumeIndex = matInteriorVolumeIndex;
 		else {
 			// if (!material->GetInteriorVolume()) there may be conflict here
 			// between the material definition and the currentVolume value.
 			// The currentVolume value wins.
-			hitPoint->interiorVolumeIndex = currentVolumeIndex;
+			interiorVolumeIndex = currentVolumeIndex;
 		}
 		
-		if (hitPoint->interiorVolumeIndex == NULL_INDEX) {
+		if (interiorVolumeIndex == NULL_INDEX) {
 			// No volume information, I use the default volume
-			hitPoint->interiorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
+			interiorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
 		}
 
-		hitPoint->exteriorVolumeIndex = PathVolumeInfo_SimulateRemoveVolume(pvi, matExteriorVolumeIndex
+		exteriorVolumeIndex = PathVolumeInfo_SimulateRemoveVolume(pvi, matExteriorVolumeIndex
 				MATERIALS_PARAM);
 	}
+
+	hitPoint->interiorVolumeIndex = interiorVolumeIndex;
+	hitPoint->exteriorVolumeIndex = exteriorVolumeIndex;
+		
+	hitPoint->interiorIorTexIndex = (interiorVolumeIndex != NULL_INDEX) ?
+		mats[interiorVolumeIndex].volume.iorTexIndex : NULL_INDEX;
+	hitPoint->exteriorIorTexIndex = (exteriorVolumeIndex != NULL_INDEX) ?
+		mats[exteriorVolumeIndex].volume.iorTexIndex : NULL_INDEX;
 }
 
 #endif

@@ -180,7 +180,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 		hitPointSize += sizeof(float);
 	// Volume fields
 	if (renderEngine->compiledScene->HasVolumes())
-		hitPointSize += 2 * sizeof(u_int) +
+		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int) +
 				sizeof(int); // This is for bool field
 
 	return hitPointSize;	
