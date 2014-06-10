@@ -242,7 +242,7 @@ bool Scene_Intersect(
 			// used (and the bug will be noticed)
 			rayHit->meshIndex = 0xfffffffeu;
 
-			BSDF_InitVolume(bsdf, ray, rayVolumeIndex, t, passThrough);
+			BSDF_InitVolume(bsdf, mats, ray, rayVolumeIndex, t, passThrough);
 			volInfo->scatteredStart = true;
 
 			return false;

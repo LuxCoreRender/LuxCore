@@ -18,6 +18,36 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if defined(PARAM_HAS_VOLUMES)
+float ExtractExteriorIors(__global HitPoint *hitPoint, const uint exteriorIorTexIndex
+		TEXTURES_PARAM_DECL) {
+	uint extIndex = NULL_INDEX;
+	if (exteriorIorTexIndex != NULL_INDEX)
+		extIndex = exteriorIorTexIndex;
+	else {
+		const uint hitPointExteriorIorTexIndex = hitPoint->exteriorIorTexIndex;
+		if (hitPointExteriorIorTexIndex != NULL_INDEX)
+			extIndex = hitPointExteriorIorTexIndex;
+	}
+	return (extIndex == NULL_INDEX) ? 1.f : Texture_GetFloatValue(extIndex, hitPoint
+			TEXTURES_PARAM);
+}
+
+float ExtractInteriorIors(__global HitPoint *hitPoint, const uint interiorIorTexIndex
+		TEXTURES_PARAM_DECL) {
+	uint intIndex = NULL_INDEX;
+	if (interiorIorTexIndex != NULL_INDEX)
+		intIndex = interiorIorTexIndex;
+	else {
+		const uint hitPointInteriorIorTexIndex = hitPoint->interiorIorTexIndex;
+		if (hitPointInteriorIorTexIndex != NULL_INDEX)
+			intIndex = hitPointInteriorIorTexIndex;
+	}
+	return (intIndex == NULL_INDEX) ? 1.f : Texture_GetFloatValue(intIndex, hitPoint
+			TEXTURES_PARAM);
+}
+#endif
+
 //------------------------------------------------------------------------------
 // ArchGlass material
 //------------------------------------------------------------------------------
@@ -47,9 +77,12 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 		return BLACK;
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
-	const float nc = Texture_GetFloatValue(material->archglass.exteriorIorTexIndex, hitPoint
+	
+	const float nc = ExtractExteriorIors(hitPoint,
+			material->archglass.exteriorIorTexIndex
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(material->archglass.interiorIorTexIndex, hitPoint
+	const float nt = ExtractInteriorIors(hitPoint,
+			material->archglass.interiorIorTexIndex
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
 	const float eta = nc / nt;
@@ -211,9 +244,11 @@ float3 ArchGlassMaterial_Sample(__global Material *material,
 	const float3 kr = Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint
 		TEXTURES_PARAM);
 
-	const float nc = Texture_GetFloatValue(material->archglass.exteriorIorTexIndex, hitPoint
+	const float nc = ExtractExteriorIors(hitPoint,
+			material->archglass.exteriorIorTexIndex
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(material->archglass.interiorIorTexIndex, hitPoint
+	const float nt = ExtractInteriorIors(hitPoint,
+			material->archglass.interiorIorTexIndex
 			TEXTURES_PARAM);
 
 	return ArchGlassMaterial_ConstSample(hitPoint, localFixedDir, localSampledDir,
