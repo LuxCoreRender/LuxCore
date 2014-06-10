@@ -362,11 +362,11 @@ void CompiledScene::CompileMaterials() {
 				if (gm->GetExteriorIOR())
 					mat->glass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetExteriorIOR());
 				else
-					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+					mat->glass.exteriorIorTexIndex = NULL_INDEX;
 				if (gm->GetInteriorIOR())
 					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetInteriorIOR());
 				else
-					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+					mat->glass.interiorIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case ARCHGLASS: {
@@ -376,13 +376,13 @@ void CompiledScene::CompileMaterials() {
 				mat->archglass.krTexIndex = scene->texDefs.GetTextureIndex(am->GetKr());
 				mat->archglass.ktTexIndex = scene->texDefs.GetTextureIndex(am->GetKt());
 				if (am->GetExteriorIOR())
-					mat->glass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetExteriorIOR());
+					mat->archglass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetExteriorIOR());
 				else
-					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+					mat->archglass.exteriorIorTexIndex = NULL_INDEX;
 				if (am->GetInteriorIOR())
-					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetInteriorIOR());
+					mat->archglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetInteriorIOR());
 				else
-					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+					mat->archglass.interiorIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case MIX: {
@@ -465,13 +465,13 @@ void CompiledScene::CompileMaterials() {
 				mat->roughglass.krTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKr());
 				mat->roughglass.ktTexIndex = scene->texDefs.GetTextureIndex(rgm->GetKt());
 				if (rgm->GetExteriorIOR())
-					mat->glass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetExteriorIOR());
+					mat->roughglass.exteriorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetExteriorIOR());
 				else
-					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+					mat->roughglass.exteriorIorTexIndex = NULL_INDEX;
 				if (rgm->GetInteriorIOR())
-					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetInteriorIOR());
+					mat->roughglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetInteriorIOR());
 				else
-					throw runtime_error("Volume rendering is not yet supported by OpenCL code");
+					mat->roughglass.exteriorIorTexIndex = NULL_INDEX;
 
 				const Texture *nuTex = rgm->GetNu();
 				const Texture *nvTex = rgm->GetNv();
@@ -1776,8 +1776,8 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSource(source, "ArchGlass", i,
 						AddTextureSourceCall("Spectrum", mat->archglass.ktTexIndex) + ", " +
 						AddTextureSourceCall("Spectrum", mat->archglass.krTexIndex) + ", " +
-						AddTextureSourceCall("Float", mat->archglass.exteriorIorTexIndex) + ", " +
-						AddTextureSourceCall("Float", mat->archglass.interiorIorTexIndex));
+						"ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
+						"ExtractInteriorIors(hitPoint, material->archglass.interiorIorTexIndex TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplBump(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
@@ -1821,8 +1821,8 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSource(source, "Glass", i,
 						AddTextureSourceCall("Spectrum", mat->glass.ktTexIndex) + ", " +
 						AddTextureSourceCall("Spectrum", mat->glass.krTexIndex) + ", " +
-						AddTextureSourceCall("Float", mat->glass.exteriorIorTexIndex) + ", " +
-						AddTextureSourceCall("Float", mat->glass.interiorIorTexIndex));
+						"ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
+						"ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplBump(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
@@ -1893,8 +1893,8 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\n#if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)\n" +
 						AddTextureSourceCall("Float", mat->roughglass.nvTexIndex) + ", " +
 						"\n#endif\n" +
-						AddTextureSourceCall("Float", mat->roughglass.exteriorIorTexIndex) + ", " +
-						AddTextureSourceCall("Float", mat->roughglass.interiorIorTexIndex));
+						"ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
+						"ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplBump(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);

@@ -415,6 +415,26 @@ Properties MirrorMaterial::ToProperties() const  {
 // Glass material
 //------------------------------------------------------------------------------
 
+static float ExtractExteriorIors(const HitPoint &hitPoint, const Texture *exteriorIor) {
+	float nc = 1.f;
+	if (exteriorIor)
+		nc = exteriorIor->GetFloatValue(hitPoint);
+	else if (hitPoint.exteriorVolume)
+		nc = hitPoint.exteriorVolume->GetIOR(hitPoint);
+
+	return nc;
+}
+
+static float ExtractInteriorIors(const HitPoint &hitPoint, const Texture *interiorIor) {
+	float nt = 1.f;
+	if (interiorIor)
+		nt = interiorIor->GetFloatValue(hitPoint);
+	else if (hitPoint.interiorVolume)
+		nt = hitPoint.interiorVolume->GetIOR(hitPoint);
+
+	return nt;
+}
+
 Spectrum GlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
@@ -439,18 +459,8 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 
-	float nc = 1.f;
-	if (exteriorIor)
-		nc = exteriorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.exteriorVolume)
-		nc = hitPoint.exteriorVolume->GetIOR(hitPoint);
-
-	float nt = 1.f;
-	if (interiorIor)
-		nt = interiorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.interiorVolume)
-		nt = hitPoint.interiorVolume->GetIOR(hitPoint);
-
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 	const float eta = entering ? (nc / nt) : ntc;
 	const float costheta = CosTheta(localFixedDir);
@@ -573,18 +583,8 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 
-	float nc = 1.f;
-	if (exteriorIor)
-		nc = exteriorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.exteriorVolume)
-		nc = hitPoint.exteriorVolume->GetIOR(hitPoint);
-
-	float nt = 1.f;
-	if (interiorIor)
-		nt = interiorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.interiorVolume)
-		nt = hitPoint.interiorVolume->GetIOR(hitPoint);
-
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 	const float eta = nc / nt;
 	const float costheta = CosTheta(localFixedDir);
@@ -666,18 +666,8 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 
-	float nc = 1.f;
-	if (exteriorIor)
-		nc = exteriorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.exteriorVolume)
-		nc = hitPoint.exteriorVolume->GetIOR(hitPoint);
-
-	float nt = 1.f;
-	if (interiorIor)
-		nt = interiorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.interiorVolume)
-		nt = hitPoint.interiorVolume->GetIOR(hitPoint);
-
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 	const float eta = nc / nt;
 	const float costheta = CosTheta(localFixedDir);
@@ -1732,18 +1722,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	if (isKtBlack && isKrBlack)
 		return Spectrum();
 
-	float nc = 1.f;
-	if (exteriorIor)
-		nc = exteriorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.exteriorVolume)
-		nc = hitPoint.exteriorVolume->GetIOR(hitPoint);
-
-	float nt = 1.f;
-	if (interiorIor)
-		nt = interiorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.interiorVolume)
-		nt = hitPoint.interiorVolume->GetIOR(hitPoint);
-
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
@@ -1850,18 +1830,8 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		wh = -wh;
 	const float cosThetaOH = Dot(localFixedDir, wh);
 
-	float nc = 1.f;
-	if (exteriorIor)
-		nc = exteriorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.exteriorVolume)
-		nc = hitPoint.exteriorVolume->GetIOR(hitPoint);
-
-	float nt = 1.f;
-	if (interiorIor)
-		nt = interiorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.interiorVolume)
-		nt = hitPoint.interiorVolume->GetIOR(hitPoint);
-
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 
 	const float coso = fabsf(localFixedDir.z);
@@ -1960,18 +1930,8 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	if (isKtBlack && isKrBlack)
 		return;
 
-	float nc = 1.f;
-	if (exteriorIor)
-		nc = exteriorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.exteriorVolume)
-		nc = hitPoint.exteriorVolume->GetIOR(hitPoint);
-
-	float nt = 1.f;
-	if (interiorIor)
-		nt = interiorIor->GetFloatValue(hitPoint);
-	else if (hitPoint.interiorVolume)
-		nt = hitPoint.interiorVolume->GetIOR(hitPoint);
-
+	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
+	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);

@@ -288,9 +288,11 @@ float3 RoughGlassMaterial_Evaluate(__global Material *material,
 		TEXTURES_PARAM);
 #endif
 
-	const float nc = Texture_GetFloatValue(material->roughglass.exteriorIorTexIndex, hitPoint
+	const float nc = ExtractExteriorIors(hitPoint,
+			material->glass.exteriorIorTexIndex
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(material->roughglass.interiorIorTexIndex, hitPoint
+	const float nt = ExtractInteriorIors(hitPoint,
+			material->glass.interiorIorTexIndex
 			TEXTURES_PARAM);
 
 	return RoughGlassMaterial_ConstEvaluate(hitPoint, localLightDir, localEyeDir,
@@ -324,9 +326,11 @@ float3 RoughGlassMaterial_Sample(__global Material *material,
 		TEXTURES_PARAM);
 #endif
 
-	const float nc = Texture_GetFloatValue(material->roughglass.exteriorIorTexIndex, hitPoint
+	const float nc = ExtractExteriorIors(hitPoint,
+			material->glass.exteriorIorTexIndex
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(material->roughglass.interiorIorTexIndex, hitPoint
+	const float nt = ExtractInteriorIors(hitPoint,
+			material->glass.interiorIorTexIndex
 			TEXTURES_PARAM);
 
 	return RoughGlassMaterial_ConstSample(hitPoint, localFixedDir, localSampledDir,
