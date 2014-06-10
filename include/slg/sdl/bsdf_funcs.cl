@@ -309,6 +309,7 @@ void BSDF_Init(
 // Used when hitting a volume scatter point
 void BSDF_InitVolume(
 		__global BSDF *bsdf,
+		__global Material *mats,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
@@ -336,6 +337,10 @@ void BSDF_InitVolume(
 	bsdf->hitPoint.intoObject = true;
 	bsdf->hitPoint.interiorVolumeIndex = volumeIndex;
 	bsdf->hitPoint.exteriorVolumeIndex = volumeIndex;
+
+	const uint iorTexIndex = (volumeIndex != NULL_INDEX) ? mats[volumeIndex].volume.iorTexIndex : NULL_INDEX;
+	bsdf->hitPoint.interiorIorTexIndex = iorTexIndex;
+	bsdf->hitPoint.exteriorIorTexIndex = iorTexIndex;
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
 	VSTORE3F(WHITE, bsdf->hitPoint.color.c);

@@ -47,6 +47,9 @@ typedef struct {
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
+	// Material code (i.e. glass, etc.) doesn't have access to materials list
+	// so I use HitPoint to carry texture index information
+	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
 	bool intoObject;
 #endif
 } HitPoint;

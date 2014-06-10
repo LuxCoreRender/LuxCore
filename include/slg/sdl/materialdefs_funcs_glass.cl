@@ -149,9 +149,12 @@ float3 GlassMaterial_Sample(__global Material *material,
 		TEXTURES_PARAM);
 	const float3 kr = Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint
 		TEXTURES_PARAM);
-	const float nc = Texture_GetFloatValue(material->glass.exteriorIorTexIndex, hitPoint
+
+	const float nc = ExtractExteriorIors(hitPoint,
+			material->glass.exteriorIorTexIndex
 			TEXTURES_PARAM);
-	const float nt = Texture_GetFloatValue(material->glass.interiorIorTexIndex, hitPoint
+	const float nt = ExtractInteriorIors(hitPoint,
+			material->glass.interiorIorTexIndex
 			TEXTURES_PARAM);
 
 	return GlassMaterial_ConstSample(hitPoint, localFixedDir, localSampledDir,
