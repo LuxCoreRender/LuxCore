@@ -215,7 +215,7 @@ public:
 	const Texture *GetSigmaA() const { return sigmaA; }
 	const Texture *GetSigmaS() const { return sigmaS; }
 	const Texture *GetG() const { return schlickScatter.g; }
-	const bool IsMultiScattering() const { return multiScattering; }
+	bool IsMultiScattering() const { return multiScattering; }
 
 protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
@@ -262,6 +262,13 @@ public:
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	virtual luxrays::Properties ToProperties() const;
+	
+	const Texture *GetSigmaA() const { return sigmaA; }
+	const Texture *GetSigmaS() const { return sigmaS; }
+	const Texture *GetG() const { return schlickScatter.g; }
+	float GetStepSize() const { return stepSize; }
+	u_int GetMaxStepsCount() const { return maxStepsCount; }
+	bool IsMultiScattering() const { return multiScattering; }
 
 protected:
 	virtual luxrays::Spectrum SigmaA(const HitPoint &hitPoint) const;
