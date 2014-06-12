@@ -150,6 +150,10 @@ bool Material_IsDeltaNoMix(__global Material *material) {
 		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_IsDelta();
 #endif
+#if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
+		case HETEROGENEOUS_VOL:
+			return HeterogeneousVolMaterial_IsDelta();
+#endif
 		default:
 			return true;
 	}
@@ -216,6 +220,10 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_GetEventTypes();
+#endif
+#if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
+		case HETEROGENEOUS_VOL:
+			return HeterogeneousVolMaterial_GetEventTypes();
 #endif
 		default:
 			return NONE;
@@ -373,8 +381,18 @@ float3 Material_SampleNoMix(__global Material *material,
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
-		case CLEAR_VOL:
+		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
+		case HETEROGENEOUS_VOL:
+			return HeterogeneousVolMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
 					u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
@@ -445,6 +463,11 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
 		case HOMOGENEOUS_VOL:
 			return HomogeneousVolMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
+		case HETEROGENEOUS_VOL:
+			return HeterogeneousVolMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_MIRROR)

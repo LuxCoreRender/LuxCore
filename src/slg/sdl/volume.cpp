@@ -715,7 +715,7 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
 	const Spectrum transmittance = Exp(-tau);
 	*connectionThroughput *= transmittance / pdf;
 
-	// Accumulate volume emission
+	// Add volume emission
 	if (volumeEmissionTex)
 		*connectionEmission += *connectionThroughput * emission;
 

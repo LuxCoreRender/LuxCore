@@ -540,7 +540,7 @@ void CompiledScene::CompileMaterials() {
 					NULL_INDEX;
 				mat->volume.volumeLightID = v->GetVolumeLightID();
 				mat->volume.priority = v->GetPriority();
-	
+
 				switch (m->GetType()) {
 					case CLEAR_VOL: {
 						const ClearVolume *cv = static_cast<ClearVolume *>(m);
@@ -555,6 +555,17 @@ void CompiledScene::CompileMaterials() {
 						mat->volume.homogenous.sigmaSTexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaS());
 						mat->volume.homogenous.gTexIndex = scene->texDefs.GetTextureIndex(hv->GetG());
 						mat->volume.homogenous.multiScattering = hv->IsMultiScattering();
+						break;
+					}
+					case HETEROGENEOUS_VOL: {
+						const HeterogeneousVolume *hv = static_cast<HeterogeneousVolume *>(m);
+						mat->type = slg::ocl::HETEROGENEOUS_VOL;
+						mat->volume.heterogenous.sigmaATexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaA());
+						mat->volume.heterogenous.sigmaSTexIndex = scene->texDefs.GetTextureIndex(hv->GetSigmaS());
+						mat->volume.heterogenous.gTexIndex = scene->texDefs.GetTextureIndex(hv->GetG());
+						mat->volume.heterogenous.stepSize = hv->GetStepSize();
+						mat->volume.heterogenous.maxStepsCount = hv->GetMaxStepsCount();
+						mat->volume.heterogenous.multiScattering = hv->IsMultiScattering();
 						break;
 					}
 					default:
@@ -1924,6 +1935,16 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall("Spectrum", mat->volume.homogenous.sigmaSTexIndex) + ", " +
 						AddTextureSourceCall("Spectrum", mat->volume.homogenous.sigmaATexIndex) + ", " +
 						AddTextureSourceCall("Spectrum", mat->volume.homogenous.gTexIndex));
+				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
+				AddMaterialSourceStandardImplBump(source, i);
+				AddMaterialSourceStandardImplGetvolume(source, i);
+				break;
+			}
+			case slg::ocl::HETEROGENEOUS_VOL: {
+				AddMaterialSource(source, "HeterogeneousVol", i,
+						AddTextureSourceCall("Spectrum", mat->volume.heterogenous.sigmaSTexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->volume.heterogenous.sigmaATexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->volume.heterogenous.gTexIndex));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplBump(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
