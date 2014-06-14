@@ -199,7 +199,7 @@ typedef struct {
 	unsigned int sigmaSTexIndex;
 	unsigned int gTexIndex;
 	float stepSize;
-	uint maxStepsCount;
+	unsigned int maxStepsCount;
 	bool multiScattering;
 } HeterogenousVolumeParam;
 
