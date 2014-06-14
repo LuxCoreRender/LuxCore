@@ -202,7 +202,7 @@ std::string KernelSource_material_types =
 "	unsigned int sigmaSTexIndex;\n"
 "	unsigned int gTexIndex;\n"
 "	float stepSize;\n"
-"	uint maxStepsCount;\n"
+"	unsigned int maxStepsCount;\n"
 "	bool multiScattering;\n"
 "} HeterogenousVolumeParam;\n"
 "\n"
