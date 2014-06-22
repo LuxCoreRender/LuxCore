@@ -86,7 +86,7 @@ float3 SchlickScatter_ConstSample(
 
 	// The - becomes a + because cost has been reversed above
 	const float compcost = 1.f + gFilter * cost;
-	*pdfW = (1.f - gFilter * gFilter) / (compcost * compcost * (4.f * M_PI));
+	*pdfW = (1.f - gFilter * gFilter) / (compcost * compcost * (4.f * M_PI_F));
 	if (*pdfW <= 0.f)
 		return BLACK;
 

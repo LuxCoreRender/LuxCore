@@ -89,7 +89,7 @@ std::string KernelSource_materialdefs_funcs_heterogeneousvol =
 "\n"
 "	// The - becomes a + because cost has been reversed above\n"
 "	const float compcost = 1.f + gFilter * cost;\n"
-"	*pdfW = (1.f - gFilter * gFilter) / (compcost * compcost * (4.f * M_PI));\n"
+"	*pdfW = (1.f - gFilter * gFilter) / (compcost * compcost * (4.f * M_PI_F));\n"
 "	if (*pdfW <= 0.f)\n"
 "		return BLACK;\n"
 "\n"
