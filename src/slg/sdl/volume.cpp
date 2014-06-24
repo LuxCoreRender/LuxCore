@@ -238,7 +238,7 @@ void  PathVolumeInfo::SetHitPointVolumes(HitPoint &hitPoint,
 			hitPoint.interiorVolume = defaultWorldVolume;
 		}
 
-		hitPoint.exteriorVolume = SimulateRemoveVolume(matExteriorVolume);
+		hitPoint.exteriorVolume = SimulateRemoveVolume(matInteriorVolume);
 	}
 }
 
