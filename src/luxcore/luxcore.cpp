@@ -708,7 +708,7 @@ void RenderSession::UpdateStats() {
 				SetTileProperties(stats, "stats.biaspath.tiles.pending", tiles);
 			}
 
-			// Mot converged tiles
+			// Not converged tiles
 			{
 				deque<slg::TileRepository::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
@@ -736,7 +736,7 @@ void RenderSession::UpdateStats() {
 				SetTileProperties(stats, "stats.biaspath.tiles.pending", tiles);
 			}
 
-			// Mot converged tiles
+			// Not converged tiles
 			{
 				deque<slg::TileRepository::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);

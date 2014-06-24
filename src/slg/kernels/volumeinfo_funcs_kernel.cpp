@@ -244,7 +244,7 @@ std::string KernelSource_volumeinfo_funcs =
 "			interiorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;\n"
 "		}\n"
 "\n"
-"		exteriorVolumeIndex = PathVolumeInfo_SimulateRemoveVolume(pvi, matExteriorVolumeIndex\n"
+"		exteriorVolumeIndex = PathVolumeInfo_SimulateRemoveVolume(pvi, matInteriorVolumeIndex\n"
 "				MATERIALS_PARAM);\n"
 "	}\n"
 "\n"

@@ -241,7 +241,7 @@ void PathVolumeInfo_SetHitPointVolumes(__global PathVolumeInfo *pvi,
 			interiorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
 		}
 
-		exteriorVolumeIndex = PathVolumeInfo_SimulateRemoveVolume(pvi, matExteriorVolumeIndex
+		exteriorVolumeIndex = PathVolumeInfo_SimulateRemoveVolume(pvi, matInteriorVolumeIndex
 				MATERIALS_PARAM);
 	}
 
