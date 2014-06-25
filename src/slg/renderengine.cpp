@@ -856,9 +856,11 @@ void CPUTileRenderEngine::UpdateCounters() {
 	}
 	raysCount = totalCount;
 
-	// Update the time only while rendering is not finished
-	if (!tileRepository->done)
+	if (!tileRepository->done) {
+		// Update the time only while rendering is not finished
 		elapsedTime = WallClockTime() - startTime;
+	} else
+		convergence = 1.f;
 }
 
 //------------------------------------------------------------------------------
