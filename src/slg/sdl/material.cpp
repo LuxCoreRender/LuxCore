@@ -831,6 +831,32 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
+	// I have to check if the evaluation of one (or both) sub-material must
+	// be avoided in order to account MixMaterial::GetPassThroughTransparency().
+	//
+	// I'm not sure if this is really true. In practice, the difference doesn't
+	// seems noticeable.
+
+	/*const Vector &localFixedDir = (hitPoint.fromLight) ? localLightDir : localEyeDir;
+	const Spectrum matATransparency = matA->GetPassThroughTransparency(hitPoint, localFixedDir, hitPoint.passThroughEvent / weight1);
+	const Spectrum matBTransparency = matB->GetPassThroughTransparency(hitPoint, localFixedDir, (hitPoint.passThroughEvent - weight2) / weight2);
+	if (matATransparency.Black()) {
+		if (matBTransparency.Black()) {
+			// Nothing to do, I have to evaluate both materials
+		} else {
+			// I need to evaluate only matA
+			weight2 = 0.f;
+		}
+	} else {
+		if (matBTransparency.Black()) {
+			// I need to evaluate only matB
+			weight1 = 0.f;
+		} else {
+			// This should never happen
+			return Spectrum();
+		}		
+	}*/
+
 	if (directPdfW)
 		*directPdfW = 0.f;
 	if (reversePdfW)
@@ -841,6 +867,9 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 		float directPdfWMatA, reversePdfWMatA;
 		const Spectrum matAResult = matA->Evaluate(hitPoint, localLightDir, localEyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
 		if (!matAResult.Black()) {
+			// I have to weight the result only if I evaluate matB too
+			//weight1 = (weight2 > 0.f) ? weight1 : 1.f;
+
 			result += weight1 * matAResult;
 
 			if (directPdfW)
@@ -855,6 +884,9 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 		float directPdfWMatB, reversePdfWMatB;
 		const Spectrum matBResult = matB->Evaluate(hitPoint, localLightDir, localEyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
 		if (!matBResult.Black()) {
+			// I have to weight the result only if I evaluate matA too
+			//weight2 = (weight1 > 0.f) ? weight2 : 1.f;
+
 			result += weight2 * matBResult;
 
 			if (directPdfW)

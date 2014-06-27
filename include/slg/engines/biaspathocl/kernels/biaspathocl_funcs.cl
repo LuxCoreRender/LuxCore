@@ -355,7 +355,7 @@ uint BIASPATHOCL_Scene_Intersect(
 		__global HitPoint *tmpHitPoint,
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThrough,
+		const float initialPassThrough,
 #endif
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
@@ -393,13 +393,16 @@ uint BIASPATHOCL_Scene_Intersect(
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
 	uint tracedRaysCount = 0;
+#if defined(PARAM_HAS_PASSTHROUGH)
+	float passThrough = initialPassThrough;
+#endif
 
-	do {
+	for (;;) {
 		Accelerator_Intersect(ray, rayHit
 			ACCELERATOR_INTERSECT_PARAM);
 		++tracedRaysCount;
-	} while(
-		Scene_Intersect(
+
+		const bool continueToTrace = Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 			volInfo,
 			tmpHitPoint,
@@ -431,8 +434,18 @@ uint BIASPATHOCL_Scene_Intersect(
 #endif
 			triangles
 			MATERIALS_PARAM
-			)
-		);
+			);
+		if (!continueToTrace)
+			break;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+		// I generate a new random variable starting from the previous one. I'm
+		// not really sure about the kind of correlation introduced by this
+		// trick.
+		passThrough = fabs(passThrough - .5f) * 2.f;
+#endif
+	}
+	
 
 	return tracedRaysCount;
 }

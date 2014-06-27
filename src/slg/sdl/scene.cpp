@@ -1713,13 +1713,14 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 
 bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
-		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
+		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput, SampleResult *sampleResult,
 		Spectrum *connectionEmission) const {
 	*connectionThroughput = Spectrum(1.f);
 	if (connectionEmission)
 		*connectionEmission = Spectrum();
 
+	float passThrough = initialPassThrough;
 	const float originalMaxT = ray->maxt;
 
 	for (;;) {
@@ -1738,6 +1739,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 		// Check if there is volume scatter event
 		if (rayVolume) {
 			// This applies volume transmittance too
+			//
 			// Note: by using passThrough here, I introduce subtle correlation
 			// between scattering events and pass-through events
 			Spectrum emis;
@@ -1800,6 +1802,11 @@ bool Scene::Intersect(IntersectionDevice *device,
 			// Nothing was hit
 			return false;
 		}
+		
+		// I generate a new random variable starting from the previous one. I'm
+		// not really sure about the kind of correlation introduced by this
+		// trick.
+		passThrough = fabsf(passThrough - .5f) * 2.f;
 	}
 }
 

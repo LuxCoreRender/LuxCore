@@ -728,6 +728,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				pathState = SPLAT_SAMPLE;
 			}
 		}
+#if defined(PARAM_HAS_PASSTHROUGH)
+		else {
+			// I generate a new random variable starting from the previous one. I'm
+			// not really sure about the kind of correlation introduced by this
+			// trick.
+			task->pathStateBase.bsdf.hitPoint.passThroughEvent = fabs(task->pathStateBase.bsdf.hitPoint.passThroughEvent - .5f) * 2.f;
+		}
+#endif
 	}
 
 	//--------------------------------------------------------------------------
@@ -796,6 +804,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			else
 				pathState = GENERATE_NEXT_VERTEX_RAY;
 		}
+#if defined(PARAM_HAS_PASSTHROUGH)
+		else {
+			// I generate a new random variable starting from the previous one. I'm
+			// not really sure about the kind of correlation introduced by this
+			// trick.
+			task->directLightRayPassThroughEvent = fabs(task->directLightRayPassThroughEvent - .5f) * 2.f;
+		}
+#endif
 	}
 
 	//--------------------------------------------------------------------------
