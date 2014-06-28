@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 
@@ -285,8 +286,8 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	// Check if the kernel is available in the cache
 
 	cl::Platform platform = device.getInfo<CL_DEVICE_PLATFORM>();
-	std::string platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
-	std::string deviceName = device.getInfo<CL_DEVICE_NAME>();
+	std::string platformName = boost::trim_copy(platform.getInfo<CL_PLATFORM_VENDOR>());
+	std::string deviceName = boost::trim_copy(device.getInfo<CL_DEVICE_NAME>());
 	std::string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
 	std::string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
 	boost::filesystem::path dirPath = boost::filesystem::temp_directory_path() / "kernel_cache" /
