@@ -1,0 +1,42 @@
+scene.camera.lookat.orig = 0.6 -2.7 0.4
+scene.camera.lookat.target = 0.0 0.0 0.4
+#scene.camera.lensradius = 0.015
+#scene.camera.focaldistance = 2.0
+################################################################################
+scene.materials.shell.type = glossy2
+scene.materials.shell.kd = 0.1 0.1 0.1
+scene.materials.shell.ks = 0.2 0.2 0.2
+scene.materials.shell.uroughness = 0.05
+scene.materials.shell.vroughness = 0.05
+scene.materials.shell.id = 255
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.id = 128
+scene.materials.blacktext.kd = 0.05 0.05 0.05
+################################################################################
+scene.objects.room.material = whitematte
+scene.objects.room.ply = scenes/luxball/room-nowall.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxshell.material = shell
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+#scene.objects.blacktext.material = blacktext
+#scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+################################################################################
+scene.lights.il.type = constantinfinite
+scene.lights.il.color = 1.0 1.0 1.0
+scene.lights.il.gain = 0.15 0.25 0.5
+scene.lights.distl.type = distant
+scene.lights.distl.color = 1.0 1.0 1.0
+scene.lights.distl.gain = 10 10 10
+scene.lights.distl.direction = 1 1 -1
+scene.lights.distl.theta = 10
+#scene.lights.distl.type = sharpdistant
+#scene.lights.distl.color = 1.0 1.0 1.0
+#scene.lights.distl.gain = 2 2 2
+#scene.lights.distl.direction = 1 1 -1
