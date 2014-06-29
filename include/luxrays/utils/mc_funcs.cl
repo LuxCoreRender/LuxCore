@@ -236,7 +236,7 @@ float Distribution1D_Pdf_FLOAT(__global float *distribution1D, const float u) {
 	const uint count = as_uint(distribution1D[0]);
 	__global float *func = &distribution1D[1];
 
-	return func[Distribution1D_Offset(distribution1D, u)] / count;
+	return func[Distribution1D_Offset(distribution1D, u)];
 }
 
 //------------------------------------------------------------------------------
@@ -248,9 +248,9 @@ void Distribution2D_SampleContinuous(__global float *distribution2D,
 	const uint width = as_uint(distribution2D[0]);
 	const uint height = as_uint(distribution2D[1]);
 	__global float *marginal = &distribution2D[2];
-	// size of Distribution1Dsize of count + size of func + size of cdf
+	// size of Distribution1D: size of counts + size of func + size of cdf
 	const uint marginalSize = 1 + height + height + 1;
-	// size of Distribution1Dsize of count + size of func + size of cdf
+	// size of Distribution1D: size of counts + size of func + size of cdf
 	const uint conditionalSize = 1 + width + width + 1;
 
 	float pdf1;
@@ -268,9 +268,9 @@ float Distribution2D_Pdf(__global float *distribution2D, const float u0, const f
 	const uint width = as_uint(distribution2D[0]);
 	const uint height = as_uint(distribution2D[1]);
 	__global float *marginal = &distribution2D[2];
-	// size of Distribution1Dsize of count + size of func + size of cdf
+	// size of Distribution1D: size of counts + size of func + size of cdf
 	const uint marginalSize = 1 + height + height + 1;
-	// size of Distribution1Dsize of count + size of func + size of cdf
+	// size of Distribution1D: size of counts + size of func + size of cdf
 	const uint conditionalSize = 1 + width + width + 1;
 
 	const uint index = Distribution1D_Offset(marginal, u1);

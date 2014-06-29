@@ -184,13 +184,12 @@ void DirectHitInfiniteLight(
 		__global LightSource *light = &lights[envLightIndices[i]];
 
 		float directPdfW;
-		const float3 lightRadiance = EnvLight_GetRadiance(light, eyeDir, &directPdfW
+		const float3 lightRadiance = EnvLight_GetRadiance(light, -eyeDir, &directPdfW
 				LIGHTS_PARAM);
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
 			// MIS between BSDF sampling and direct light sampling
-			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, light->lightSceneIndex);
-			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW));
 			const float3 radiance = weight * throughput * lightRadiance;
 
 			SampleResult_AddEmission(sampleResult, light->lightID, radiance);
@@ -689,7 +688,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				DirectHitInfiniteLight(
 						task->directLightState.lastBSDFEvent,
 						&task->pathStateBase.throughput,
-						-VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
+						VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
 						&sample->result
 						LIGHTS_PARAM);
 #endif
