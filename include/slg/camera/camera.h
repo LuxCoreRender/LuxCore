@@ -36,16 +36,20 @@ using namespace luxrays::ocl;
 #include "slg/camera/camera_types.cl"
 } 
 
+class Scene;
+
 class Camera {
 public:
 	typedef enum {
 		PERSPECTIVE
 	} CameraType;
 
-	Camera(const CameraType t) : type(t) { }
+	Camera(const CameraType t) : type(t), autoFocus(false) { }
 	virtual ~Camera() { }
 
 	CameraType GetType() const { return type; }
+	void SetAutofocus(const bool af) { autoFocus = af; }
+	bool GetAutoFocus() const { return autoFocus; }
 
 	virtual bool IsHorizontalStereoEnabled() const { return false; }
 
@@ -65,9 +69,10 @@ public:
 	virtual void RotateRight(const float angle) = 0;
 	virtual void RotateUp(const float angle) = 0;
 	virtual void RotateDown(const float angle) = 0;
+
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,
 		const u_int *filmSubRegion = NULL) = 0;
-
+	virtual void UpdateFocus(const Scene *scene) = 0;
 	virtual void GenerateRay(
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, const float u1, const float u2) const = 0;
@@ -85,6 +90,9 @@ public:
 
 private:
 	const CameraType type;
+
+protected:
+	bool autoFocus;
 };
 
 //------------------------------------------------------------------------------
@@ -171,9 +179,9 @@ public:
 		Rotate(-angle, x);
 	}
 
-	void Update(const u_int filmWidth, const u_int filmHeight,
+	virtual void Update(const u_int filmWidth, const u_int filmHeight,
 		const u_int *filmSubRegion = NULL);
-
+	virtual void UpdateFocus(const Scene *scene);
 	void GenerateRay(
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, const float u1, const float u2) const;

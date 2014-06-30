@@ -47,6 +47,8 @@ public:
 	void Preprocess();
 	bool IsPreprocessed() const { return preprocessed; }
 
+	// Just return the first available
+	const Accelerator *GetAccelerator();
 	const Accelerator *GetAccelerator(const AcceleratorType accelType);
 	bool DoesAllAcceleratorsSupportUpdate() const;
 	const void Update();

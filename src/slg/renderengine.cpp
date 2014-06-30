@@ -84,6 +84,9 @@ void RenderEngine::Start() {
 	MachineEpsilon::SetMax(epsilonMax);
 
 	ctx->Start();
+	
+	// Only at this point I can safely trace the auto-focus ray
+	renderConfig->scene->camera->UpdateFocus(renderConfig->scene);
 
 	StartLockLess();
 
@@ -155,6 +158,10 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		// Update the DataSet
 		ctx->UpdateDataSet();
 	}
+
+	// Only at this point I can safely trace the auto-focus ray
+	if (editActions.Has(CAMERA_EDIT))
+		renderConfig->scene->camera->UpdateFocus(renderConfig->scene);
 
 	samplesCount = 0;
 	elapsedTime = 0.0f;

@@ -21,6 +21,9 @@
 #include "slg/camera/camera.h"
 #include "slg/film/film.h"
 #include "slg/sdl/sdl.h"
+#include "slg/sdl/scene.h"
+#include "luxcore/luxcore.h"
+#include "slg/sdl/lightdata/ArHosekSkyModelData.h"
 
 using namespace std;
 using namespace luxrays;
@@ -156,6 +159,30 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 	
 	if (enableClippingPlane)
 		clippingPlaneNormal = Normalize(clippingPlaneNormal);
+}
+
+void PerspectiveCamera::UpdateFocus(const Scene *scene) {
+	if (autoFocus) {
+		// Trace a ray in the middle of the screen
+		// Note: for stereo, I'm just using the left eyes as main camera
+		const Point Pras(filmWidth / 2, filmHeight / 2, 0.f);
+
+		const Point Pcamera(camTrans[0].rasterToCamera * Pras);
+		Ray ray;
+		ray.o = Pcamera;
+		ray.d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
+		ray.d = Normalize(ray.d);
+		
+		ray.mint = 0.f;
+		ray.maxt = (clipYon - clipHither) / ray.d.z;
+		ray *= camTrans[0].cameraToWorld;
+		
+		// Trace the ray. If there isn't an intersection just use the current
+		// focal distance
+		RayHit rayHit;
+		if (scene->dataSet->GetAccelerator()->Intersect(&ray, &rayHit))
+			focalDistance = rayHit.t;
+	}
 }
 
 void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4],
@@ -335,6 +362,7 @@ Properties PerspectiveCamera::ToProperties() const {
 	props.Set(Property("scene.camera.fieldofview")(fieldOfView));
 	props.Set(Property("scene.camera.horizontalstereo.enable")(enableHorizStereo));
 	props.Set(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
+	props.Set(Property("scene.camera.autofocus.enable")(autoFocus));
 
 	return props;
 }
@@ -437,6 +465,7 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 	camera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
 	camera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
 	camera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
+	camera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
 
 	if (props.Get(Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>()) {
 		SDL_LOG("Camera horizontal stereo enabled");
