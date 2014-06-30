@@ -90,6 +90,11 @@ void DataSet::Preprocess() {
 	LR_LOG(context, "Preprocessing DataSet done");
 }
 
+const Accelerator *DataSet::GetAccelerator() {
+	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin();
+	return it->second;
+}
+
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
 	if (it == accels.end()) {
