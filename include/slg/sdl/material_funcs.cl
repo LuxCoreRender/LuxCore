@@ -122,6 +122,10 @@ bool Material_IsDeltaNoMix(__global Material *material) {
 		case MATTETRANSLUCENT:
 			return MatteTranslucentMaterial_IsDelta();
 #endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT)
+		case ROUGHMATTETRANSLUCENT:
+			return RoughMatteTranslucentMaterial_IsDelta();
+#endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
 			return Glossy2Material_IsDelta();
@@ -192,6 +196,10 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 		case MATTETRANSLUCENT:
 			return MatteTranslucentMaterial_GetEventTypes();
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT)
+		case ROUGHMATTETRANSLUCENT:
+			return RoughMatteTranslucentMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
@@ -320,6 +328,16 @@ float3 Material_SampleNoMix(__global Material *material,
 					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT)
+		case ROUGHMATTETRANSLUCENT:
+			return RoughMatteTranslucentMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
+					u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW, cosSampledDir, event, requestedEvent
+					TEXTURES_PARAM);
+#endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)
 		case GLOSSY2:
 			return Glossy2Material_Sample(material, hitPoint, fixedDir, sampledDir,
@@ -428,6 +446,11 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
 		case MATTETRANSLUCENT:
 			return MatteTranslucentMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
+					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT)
+		case ROUGHMATTETRANSLUCENT:
+			return RoughMatteTranslucentMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSY2)

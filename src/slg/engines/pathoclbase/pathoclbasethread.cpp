@@ -740,6 +740,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_NULL";
 	if (cscene->IsMaterialCompiled(MATTETRANSLUCENT))
 		ss << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
+	if (cscene->IsMaterialCompiled(ROUGHMATTETRANSLUCENT))
+		ss << " -D PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT";
 	if (cscene->IsMaterialCompiled(GLOSSY2)) {
 		ss << " -D PARAM_ENABLE_MAT_GLOSSY2";
 
@@ -947,6 +949,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_mirror <<
 			slg::ocl::KernelSource_materialdefs_funcs_null <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
+			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
 			slg::ocl::KernelSource_material_funcs <<
 			// KernelSource_materialdefs_funcs_mix must always be the last one

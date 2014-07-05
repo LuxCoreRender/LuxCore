@@ -48,6 +48,7 @@ class Scene;
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
+	ROUGHMATTETRANSLUCENT,
 
 	// Volumes
 	HOMOGENEOUS_VOL, CLEAR_VOL, HETEROGENEOUS_VOL,
@@ -617,6 +618,46 @@ public:
 private:
 	const Texture *Kr;
 	const Texture *Kt;
+};
+
+//------------------------------------------------------------------------------
+// RoughMatteTranslucent material
+//------------------------------------------------------------------------------
+
+class RoughMatteTranslucentMaterial : public Material {
+public:
+	RoughMatteTranslucentMaterial(const Texture *emitted, const Texture *bump,
+			const Texture *refl, const Texture *trans, const Texture *s) : Material(emitted, bump),
+			Kr(refl), Kt(trans), sigma(s) { }
+
+	virtual MaterialType GetType() const { return ROUGHMATTETRANSLUCENT; }
+	virtual BSDFEvent GetEventTypes() const { return DIFFUSE | REFLECT | TRANSMIT; };
+
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
+	virtual void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+
+	virtual luxrays::Properties ToProperties() const;
+
+	const Texture *GetKr() const { return Kr; }
+	const Texture *GetKt() const { return Kt; }
+	const Texture *GetSigma() const { return sigma; }
+
+private:
+	const Texture *Kr;
+	const Texture *Kt;
+	const Texture *sigma;
 };
 
 //------------------------------------------------------------------------------

@@ -21,6 +21,7 @@
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
+	ROUGHMATTETRANSLUCENT,
 			
 	// Volumes
 	HOMOGENEOUS_VOL, CLEAR_VOL, HETEROGENEOUS_VOL
@@ -65,6 +66,12 @@ typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
 } MatteTranslucentParam;
+
+typedef struct {
+    unsigned int krTexIndex;
+	unsigned int ktTexIndex;
+	unsigned int sigmaTexIndex;
+} RoughMatteTranslucentParam;
 
 typedef struct {
     unsigned int kdTexIndex;
@@ -241,6 +248,7 @@ typedef struct {
 		MixParam mix;
 		// NULLMAT has no parameters
 		MatteTranslucentParam matteTranslucent;
+		RoughMatteTranslucentParam roughmatteTranslucent;
 		Glossy2Param glossy2;
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
