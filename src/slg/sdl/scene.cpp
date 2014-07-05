@@ -1160,6 +1160,12 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(.5f, .5f, .5f)));
 
 		mat = new MatteTranslucentMaterial(emissionTex, bumpTex, kr, kt);
+	} else if (matType == "roughmattetranslucent") {
+		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(.5f, .5f, .5f)));
+		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(.5f, .5f, .5f)));
+		const Texture *sigma = GetTexture(props.Get(Property(propName + ".sigma")(0.f)));
+
+		mat = new RoughMatteTranslucentMaterial(emissionTex, bumpTex, kr, kt, sigma);
 	} else if (matType == "glossy2") {
 		const Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
 		const Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));

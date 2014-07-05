@@ -399,11 +399,20 @@ void CompiledScene::CompileMaterials() {
 				break;
 			}
 			case MATTETRANSLUCENT: {
-				const MatteTranslucentMaterial *mm = static_cast<MatteTranslucentMaterial *>(m);
+				const MatteTranslucentMaterial *mt = static_cast<MatteTranslucentMaterial *>(m);
 
 				mat->type = slg::ocl::MATTETRANSLUCENT;
-				mat->matteTranslucent.krTexIndex = scene->texDefs.GetTextureIndex(mm->GetKr());
-				mat->matteTranslucent.ktTexIndex = scene->texDefs.GetTextureIndex(mm->GetKt());
+				mat->matteTranslucent.krTexIndex = scene->texDefs.GetTextureIndex(mt->GetKr());
+				mat->matteTranslucent.ktTexIndex = scene->texDefs.GetTextureIndex(mt->GetKt());
+				break;
+			}
+			case ROUGHMATTETRANSLUCENT: {
+				const RoughMatteTranslucentMaterial *rmt = static_cast<RoughMatteTranslucentMaterial *>(m);
+
+				mat->type = slg::ocl::ROUGHMATTETRANSLUCENT;
+				mat->roughmatteTranslucent.krTexIndex = scene->texDefs.GetTextureIndex(rmt->GetKr());
+				mat->roughmatteTranslucent.ktTexIndex = scene->texDefs.GetTextureIndex(rmt->GetKt());
+				mat->roughmatteTranslucent.sigmaTexIndex = scene->texDefs.GetTextureIndex(rmt->GetSigma());
 				break;
 			}
 			case GLOSSY2: {
@@ -1868,6 +1877,16 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
+			case slg::ocl::ROUGHMATTETRANSLUCENT: {
+				AddMaterialSource(source, "RoughMatteTranslucent", i,
+						AddTextureSourceCall("Spectrum", mat->roughmatteTranslucent.krTexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->roughmatteTranslucent.ktTexIndex) + ", " +
+						AddTextureSourceCall("Float", mat->roughmatteTranslucent.sigmaTexIndex));
+				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
+				AddMaterialSourceStandardImplBump(source, i);
+				AddMaterialSourceStandardImplGetvolume(source, i);
+				break;
+			}
 			case slg::ocl::METAL2: {
 				AddMaterialSource(source, "Metal2", i,
 						AddTextureSourceCall("Float", mat->metal2.nuTexIndex) + ", " +
@@ -2367,6 +2386,7 @@ bool CompiledScene::RequiresPassThrough() const {
 			IsMaterialCompiled(MIX) ||
 			IsMaterialCompiled(NULLMAT) ||
 			IsMaterialCompiled(MATTETRANSLUCENT) ||
+			IsMaterialCompiled(ROUGHMATTETRANSLUCENT) ||
 			IsMaterialCompiled(GLOSSY2) ||
 			IsMaterialCompiled(ROUGHGLASS) ||
 			IsMaterialCompiled(CARPAINT) ||
