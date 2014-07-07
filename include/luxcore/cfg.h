@@ -19,7 +19,7 @@
 #ifndef _LUXCORE_CFG_H
 #define	_LUXCORE_CFG_H
 
-// The configured options and settings for LuxCore
+// The configured options and settings for SmallLuxGPU
 
 #define LUXCORE_VERSION_MAJOR "1"
 #define LUXCORE_VERSION_MINOR "4devel2"

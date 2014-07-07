@@ -22,6 +22,6 @@
 // The configured options and settings for SmallLuxGPU
 
 #define SLG_VERSION_MAJOR "4"
-#define SLG_VERSION_MINOR "0devel2"
+#define SLG_VERSION_MINOR "0devel3"
 
 #endif	/* _SLG_CFG_H */
