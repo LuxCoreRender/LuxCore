@@ -196,8 +196,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		*sharedSampleCount += 1.;
 	}
 
-	const float meanIntensity = (*sharedTotalLuminance > 0.) ?
-		static_cast<float>(*sharedTotalLuminance / *sharedSampleCount) : 1.f;
+	const float invMeanIntensity = (*sharedTotalLuminance > 0.) ?
+		static_cast<float>(*sharedSampleCount / *sharedTotalLuminance) : 1.f;
 
 	// Define the probability of large mutations. It is 50% if we are still
 	// inside the cooldown phase.
@@ -215,7 +215,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	// Try or force accepting of the new sample
 	if ((accProb == 1.f) || (rndGen->floatValue() < accProb)) {
 		// Add accumulated SampleResult of previous reference sample
-		const float norm = weight / (currentLuminance / meanIntensity + currentLargeMutationProbability);
+		const float norm = weight / (currentLuminance * invMeanIntensity + currentLargeMutationProbability);
 		if (norm > 0.f)
 			AddSamplesToFilm(currentSampleResult, norm);
 
@@ -230,7 +230,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		consecRejects = 0;
 	} else {
 		// Add contribution of new sample before rejecting it
-		const float norm = newWeight / (newLuminance / meanIntensity + currentLargeMutationProbability);
+		const float norm = newWeight / (newLuminance * invMeanIntensity + currentLargeMutationProbability);
 		if (norm > 0.f)
 			AddSamplesToFilm(sampleResults, norm);
 
