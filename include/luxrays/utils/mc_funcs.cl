@@ -91,8 +91,9 @@ float3 UniformSampleSphere(const float u1, const float u2) {
 
 float3 UniformSampleCone(const float u0, const float u1, const float costhetamax,
 	const float3 x, const float3 y, const float3 z) {
-	const float costheta = mix(costhetamax, 1.f, u0);
-	const float sintheta = sqrt(1.f - costheta * costheta);
+	const float costheta = mix(1.f, costhetamax, u0);
+	const float u0x = (1.f - costhetamax) * u0;
+	const float sintheta = sqrt(u0x * (2.f - u0x));
 	const float phi = u1 * 2.f * M_PI_F;
 
 	const float kx = cos(phi) * sintheta;
