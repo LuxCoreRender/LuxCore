@@ -45,7 +45,14 @@ Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneO
 		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
 				emittedTex->GetSpectrumValue(hitPoint);
 	} else
-		return luxrays::Spectrum();
+		return Spectrum();
+}
+
+float Material::GetEmittedRadianceY() const {
+	if (emittedTex)
+		return emittedFactor.Y() * emittedTex->Y();
+	else
+		return 0.f;
 }
 
 void Material::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,

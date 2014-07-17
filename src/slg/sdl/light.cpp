@@ -167,7 +167,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		// In order to avoid over-sampling of distant lights
 		if (l->IsInfinite())
 			power *= iWorldRadius2;			
-		// update the list of env. lights
+		// Update the list of env. lights
 		if (l->IsEnvironmental())
 			envLightSources.push_back((EnvLightSource *)l);
 		lightPower.push_back(power);
@@ -657,7 +657,7 @@ void ProjectionLight::GetPreprocessedData(float *emittedFactorData, float *absol
 }
 
 float ProjectionLight::GetPower(const Scene &scene) const {
-	return gain.Y() * color.Y() *
+	return emittedFactor.Y() *
 			(imageMap ? imageMap->GetSpectrumMeanY() : 1.f) *
 			2.f * M_PI * (1.f - cosTotalWidth);
 }
@@ -679,7 +679,7 @@ Spectrum ProjectionLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	Spectrum c = gain * color;
+	Spectrum c = emittedFactor;
 	if (imageMap)
 		c *= imageMap->GetSpectrum(UV(u0, u1));
 
@@ -713,7 +713,7 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
 	if (emissionPdfW)
 		*emissionPdfW = 0.f;
 
-	Spectrum c = gain * color;
+	Spectrum c = emittedFactor;
 	if (imageMap) {
 		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
 		const float v = (p0.y - screenY0) / (screenY1 - screenY0);
