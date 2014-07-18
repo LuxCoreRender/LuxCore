@@ -34,6 +34,7 @@ scene.lights.l1.fov = 60.0
 scene.lights.l1.gain = 50.0 50.0 50.0
 #scene.lights.l1.mapfile = scenes/bump/map.png
 scene.lights.l1.mapfile = scenes/simple-mat/sky.exr
+#scene.lights.l1.importance = 10
 scene.lights.l2.type = spot
 scene.lights.l2.position = 0 -2 6
 scene.lights.l2.target = 0 -2 0

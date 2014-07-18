@@ -960,7 +960,8 @@ void CompiledScene::CompileLights() {
 
 	// Compile LightDistribution
 	delete[] lightsDistribution;
-	lightsDistribution = CompileDistribution1D(scene->lightDefs.GetLightsDistribution(), &lightsDistributionSize);
+	lightsDistribution = CompileDistribution1D(
+			scene->lightDefs.GetLightStrategy()->GetLightsDistribution(), &lightsDistributionSize);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Lights compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

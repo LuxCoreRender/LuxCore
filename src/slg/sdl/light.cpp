@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <algorithm>
 #include <boost/format.hpp>
 
 #include "luxrays/core/geometry/frame.h"
@@ -35,15 +36,109 @@ using namespace slg;
 const float slg::LIGHT_WORLD_RADIUS_SCALE = 10.f;
 
 //------------------------------------------------------------------------------
+// LightStrategy
+//------------------------------------------------------------------------------
+
+LightSource *LightStrategy::SampleLights(const float u, float *pdf) const {
+		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
+		assert ((lightIndex >= 0) && (lightIndex < GetSize()));
+
+		return  scene->lightDefs.GetLightSources()[lightIndex];
+	}
+
+float LightStrategy::SampleLightPdf(const LightSource *light) const {
+	return lightsDistribution->Pdf(light->lightSceneIndex);
+}
+
+//------------------------------------------------------------------------------
+// LightStrategyUniform
+//------------------------------------------------------------------------------
+
+void LightStrategyUniform::Preprocess(const Scene *scn) {
+	LightStrategy::Preprocess(scn);
+	
+	const u_int lightCount = scene->lightDefs.GetSize();
+	vector<float> lightPower;
+	lightPower.reserve(lightCount);
+
+	for (u_int i = 0; i < lightCount; ++i) {
+		const LightSource *l = scene->lightDefs.GetLightSource(i);
+
+		lightPower.push_back(l->importance);
+	}
+
+	delete lightsDistribution;
+	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+}
+
+//------------------------------------------------------------------------------
+// LightStrategyPower
+//------------------------------------------------------------------------------
+
+void LightStrategyPower::Preprocess(const Scene *scn) {
+	LightStrategy::Preprocess(scn);
+
+	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene->dataSet->GetBSphere().rad * 1.01f;
+	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
+
+	const u_int lightCount = scene->lightDefs.GetSize();
+	float totalPower = 0.f;
+	vector<float> lightPower;
+	lightPower.reserve(lightCount);
+
+	for (u_int i = 0; i < lightCount; ++i) {
+		const LightSource *l = scene->lightDefs.GetLightSource(i);
+
+		float power = l->GetPower(*scene);
+		// In order to avoid over-sampling of distant lights
+		if (l->IsInfinite())
+			power *= iWorldRadius2;			
+		lightPower.push_back(power * l->importance);
+		totalPower += power;
+	}
+
+	// Build the data to power based light sampling
+	delete lightsDistribution;
+	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+}
+
+//------------------------------------------------------------------------------
+// LightStrategyLogPower
+//------------------------------------------------------------------------------
+
+void LightStrategyLogPower::Preprocess(const Scene *scn) {
+	LightStrategy::Preprocess(scn);
+
+	const u_int lightCount = scene->lightDefs.GetSize();
+	float totalPower = 0.f;
+	vector<float> lightPower;
+	lightPower.reserve(lightCount);
+
+	for (u_int i = 0; i < lightCount; ++i) {
+		const LightSource *l = scene->lightDefs.GetLightSource(i);
+
+		float power = logf(1.f + l->GetPower(*scene));
+
+		lightPower.push_back(power * l->importance);
+		totalPower += power;
+	}
+
+	// Build the data to power based light sampling
+	delete lightsDistribution;
+	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+}
+
+//------------------------------------------------------------------------------
 // LightSourceDefinitions
 //------------------------------------------------------------------------------
 
 LightSourceDefinitions::LightSourceDefinitions() : lightTypeCount(LIGHT_SOURCE_TYPE_COUNT, 0) {
-	lightsDistribution = NULL;
+	lightStrategy = new LightStrategyPower();
 	lightGroupCount = 1;
 }
 
 LightSourceDefinitions::~LightSourceDefinitions() {
+	delete lightStrategy;
 	BOOST_FOREACH(LightSource *l, lights)
 		delete l;
 }
@@ -141,6 +236,28 @@ void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
 	lightsByName.erase(name);
 }
 
+void LightSourceDefinitions::SetLightStrategy(const LightStrategyType type) {
+	if (lightStrategy && (lightStrategy->GetType() == type))
+		return;
+
+	delete lightStrategy;
+	lightStrategy = NULL;
+
+	switch (type) {
+		case TYPE_UNIFORM:
+			lightStrategy = new LightStrategyUniform();
+			break;
+		case TYPE_POWER:
+			lightStrategy = new LightStrategyPower();
+			break;
+		case TYPE_LOG_POWER:
+			lightStrategy = new LightStrategyLogPower();
+			break;
+		default:
+			throw runtime_error("Unknown LightStrategyType in LightSourceDefinitions::SetLightStrategy(): " + ToString(type));
+	}
+}
+
 void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexByMeshIndex and lightsDistribution
@@ -148,12 +265,6 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 	lightGroupCount = 0;
 	intersectableLightSources.clear();
 	envLightSources.clear();
-
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene->dataSet->GetBSphere().rad * 1.01f;
-	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
-	float totalPower = 0.f;
-	vector<float> lightPower;
-	lightPower.reserve(lights.size());
 
 	lightIndexByMeshIndex.resize(scene->objDefs.GetSize(), NULL_INDEX);
 	for (u_int i = 0; i < lights.size(); ++i) {
@@ -163,15 +274,9 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 
 		lightGroupCount = Max(lightGroupCount, l->GetID() + 1);
 
-		float power = l->GetPower(*scene);
-		// In order to avoid over-sampling of distant lights
-		if (l->IsInfinite())
-			power *= iWorldRadius2;			
 		// Update the list of env. lights
 		if (l->IsEnvironmental())
 			envLightSources.push_back((EnvLightSource *)l);
-		lightPower.push_back(power);
-		totalPower += power;
 
 		// Build lightIndexByMeshIndex
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
@@ -181,38 +286,8 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		}
 	}
 
-	// Build the data to power based light sampling
-	delete lightsDistribution;
-	if (totalPower == 0.f) {
-		// To handle a corner case
-		lightsDistribution = NULL;
-	} else
-		lightsDistribution = new Distribution1D(&lightPower[0], lights.size());
-}
-
-LightSource *LightSourceDefinitions::SampleAllLights(const float u, float *pdf) const {
-	if (lightsDistribution) {
-		// Power based light strategy
-		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-		assert ((lightIndex >= 0) && (lightIndex < GetSize()));
-
-		return lights[lightIndex];
-	} else {
-		// All uniform light strategy
-		const u_int lightIndex = Min<u_int>(Floor2UInt(lights.size() * u), lights.size() - 1);
-
-		return lights[lightIndex];
-	}
-}
-
-float LightSourceDefinitions::SampleAllLightPdf(const LightSource *light) const {
-	if (lightsDistribution) {
-		// Power based light strategy
-		return lightsDistribution->Pdf(light->lightSceneIndex);
-	} else {
-		// All uniform light strategy
-		return 1.f /  GetSize();
-	}
+	// Build the light strategy
+	lightStrategy->Preprocess(scene);
 }
 
 //------------------------------------------------------------------------------
