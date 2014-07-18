@@ -106,7 +106,7 @@ public:
 
 	// Light settings
 	float lowLightThreashold, nearStartLight;
-	bool lightSamplingStrategyONE;
+	u_int firstVertexLightSampleCount;
 
 protected:
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,

@@ -70,7 +70,9 @@ private:
 	void DirectLightSamplingONE(luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
-	void DirectLightSamplingALL(luxrays::RandomGenerator *rndGen,
+	void DirectLightSamplingALL(
+		const u_int sampleCount,
+		luxrays::RandomGenerator *rndGen,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult);
 
@@ -117,7 +119,7 @@ public:
 
 	// Light settings
 	float lowLightThreashold, nearStartLight;
-	bool lightSamplingStrategyONE;
+	u_int firstVertexLightSampleCount;
 
 	friend class BiasPathCPURenderThread;
 

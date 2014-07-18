@@ -93,7 +93,7 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss << scientific <<
 			" -D PARAM_TASK_COUNT=" <<  engine->taskCount <<
 			" -D PARAM_TILE_SIZE=" << engine->tileRepository->tileSize <<
-			((engine->lightSamplingStrategyONE) ? " -D PARAM_DIRECT_LIGHT_ONE_STRATEGY" : " -D PARAM_DIRECT_LIGHT_ALL_STRATEGY") <<
+			" -D PARAM_FIRST_VERTEX_DL_COUNT=" << engine->firstVertexLightSampleCount <<
 			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f" <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f" <<
 			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<

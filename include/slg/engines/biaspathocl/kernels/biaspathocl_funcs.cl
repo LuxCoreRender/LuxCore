@@ -707,7 +707,6 @@ uint DirectLightSampling_ONE(
 	return tracedRaysCount;
 }
 
-#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 uint DirectLightSampling_ALL(
 		Seed *seed,
 #if defined(PARAM_HAS_VOLUMES)
@@ -748,12 +747,17 @@ uint DirectLightSampling_ALL(
 		LIGHTS_PARAM_DECL) {
 	uint tracedRaysCount = 0;
 
-	for (uint currentLightIndex = 0; currentLightIndex < PARAM_LIGHT_COUNT; ++currentLightIndex) {
-		const int lightSamplesCount = lights[currentLightIndex].samples;
+	for (uint samples = 0; samples < PARAM_FIRST_VERTEX_DL_COUNT; ++samples) {
+		// Pick a light source to sample
+		float lightPickPdf;
+		const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
+
+		__global LightSource *light = &lights[lightIndex];
+		const int lightSamplesCount = light->samples;
 		const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
 		const uint sampleCount2 = sampleCount * sampleCount;
 
-		const float scaleFactor = 1.f / sampleCount2;
+		const float scaleFactor = 1.f / (sampleCount2 * PARAM_FIRST_VERTEX_DL_COUNT);
 		for (uint currentLightSampleIndex = 0; currentLightSampleIndex < sampleCount2; ++currentLightSampleIndex) {
 			float u0, u1;
 			SampleGrid(seed, sampleCount,
@@ -765,8 +769,8 @@ uint DirectLightSampling_ALL(
 			uint lightID;
 			BSDFEvent event;
 			const bool illuminated = DirectLightSamplingInit(
-				&lights[currentLightIndex],
-				1.f,
+				light,
+				lightPickPdf,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX,
 				worldCenterY,
@@ -837,7 +841,6 @@ uint DirectLightSampling_ALL(
 
 	return tracedRaysCount;
 }
-#endif
 
 //------------------------------------------------------------------------------
 // Indirect light sampling

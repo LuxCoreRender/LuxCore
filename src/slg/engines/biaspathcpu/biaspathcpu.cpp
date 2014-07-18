@@ -75,14 +75,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	// Light settings
 	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(0.f)).Get<float>());
 	nearStartLight = Max(0.f, cfg.Get(Property("biaspath.lights.nearstart")(.001f)).Get<float>());
-
-	string lightStratType = cfg.Get(Property("biaspath.lights.samplingstrategy.type")("ALL")).Get<string>();
-	if (lightStratType == "ALL")
-		lightSamplingStrategyONE = false;
-	else if (lightStratType == "ONE")
-		lightSamplingStrategyONE = true;
-	else
-		throw std::runtime_error("Unknown light sampling strategy type: " + lightStratType);
+	firstVertexLightSampleCount = Max(1, cfg.Get(Property("biaspath.lights.firstvertexsamples")(4)).Get<int>());
 
 	InitPixelFilterDistribution();
 
