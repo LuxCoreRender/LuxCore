@@ -1708,6 +1708,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		throw runtime_error("Unknown light type: " + lightType);
 
 	lightSource->gain = props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>();
+	lightSource->importance = props.Get(Property(propName + ".importance")(1.f)).Get<float>();
 	lightSource->SetSamples(props.Get(Property(propName + ".samples")(-1)).Get<int>());
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
 	lightSource->Preprocess();

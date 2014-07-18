@@ -59,7 +59,7 @@ extern const float LIGHT_WORLD_RADIUS_SCALE;
 
 class LightSource {
 public:
-	LightSource() : lightSceneIndex(0) { }
+	LightSource() : lightSceneIndex(0), importance(1.f) { }
 	virtual ~LightSource() { }
 
 	std::string GetName() const { return "light-" + boost::lexical_cast<std::string>(this); }
@@ -98,6 +98,7 @@ public:
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
 
 	u_int lightSceneIndex;
+	float importance;
 };
 
 //------------------------------------------------------------------------------
@@ -207,6 +208,59 @@ public:
 };
 
 //------------------------------------------------------------------------------
+// LightStrategy
+//------------------------------------------------------------------------------
+
+typedef enum {
+	TYPE_UNIFORM, TYPE_POWER, TYPE_LOG_POWER,
+	LIGHT_STRATEGY_TYPE_COUNT
+} LightStrategyType;
+
+class LightStrategy {
+public:
+	virtual ~LightStrategy() { delete lightsDistribution; }
+
+	LightStrategyType GetType() const { return type; }
+
+	virtual void Preprocess(const Scene *scn) { scene = scn; }
+
+	LightSource *SampleLights(const float u, float *pdf) const;
+	float SampleLightPdf(const LightSource *light) const;
+	
+	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
+
+protected:
+	LightStrategy(const LightStrategyType t) : scene(NULL), lightsDistribution(NULL), type(t) { }
+
+	const Scene *scene;
+	luxrays::Distribution1D *lightsDistribution;
+
+private:
+	const LightStrategyType type;
+};
+
+class LightStrategyUniform : public LightStrategy {
+public:
+	LightStrategyUniform() : LightStrategy(TYPE_UNIFORM) { }
+
+	virtual void Preprocess(const Scene *scene);
+};
+
+class LightStrategyPower : public LightStrategy {
+public:
+	LightStrategyPower() : LightStrategy(TYPE_POWER) { }
+
+	virtual void Preprocess(const Scene *scene);
+};
+
+class LightStrategyLogPower : public LightStrategy {
+public:
+	LightStrategyLogPower() : LightStrategy(TYPE_LOG_POWER) { }
+
+	virtual void Preprocess(const Scene *scene);
+};
+
+//------------------------------------------------------------------------------
 // LightSourceDefinitions
 //------------------------------------------------------------------------------
 
@@ -217,8 +271,10 @@ public:
 	LightSourceDefinitions();
 	~LightSourceDefinitions();
 
+	void SetLightStrategy(const LightStrategyType type);
+
 	// Update lightGroupCount, infiniteLightSources, intersectableLightSources,
-	// lightIndexByMeshIndex and lightsDistribution
+	// lightIndexByMeshIndex and lightStrategyType
 	void Preprocess(const Scene *scene);
 
 	bool IsLightSourceDefined(const std::string &name) const {
@@ -257,10 +313,7 @@ public:
 		return intersectableLightSources;
 	}
 	const std::vector<u_int> &GetLightIndexByMeshIndex() const { return lightIndexByMeshIndex; }
-	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
-
-	LightSource *SampleAllLights(const float u, float *pdf) const;
-	float SampleAllLightPdf(const LightSource *light) const;
+	const LightStrategy *GetLightStrategy() const { return lightStrategy; }
 
 private:
 	std::vector<LightSource *> lights;
@@ -276,9 +329,7 @@ private:
 	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
 	std::vector<EnvLightSource *> envLightSources;
 
-	// Used for power based light sampling strategy
-	luxrays::Distribution1D *lightsDistribution;
-
+	LightStrategy *lightStrategy;
 };
 
 //------------------------------------------------------------------------------

@@ -190,7 +190,7 @@ void BiDirCPURenderThread::DirectLightSampling(
 	if (!eyeVertex.bsdf.IsDelta()) {
 		// Pick a light source to sample
 		float lightPickPdf;
-		const LightSource *light = scene->lightDefs.SampleAllLights(u0, &lightPickPdf);
+		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(u0, &lightPickPdf);
 
 		Vector lightRayDir;
 		float distance, directPdfW, emissionPdfW, cosThetaAtLight;
@@ -261,7 +261,7 @@ void BiDirCPURenderThread::DirectHitLight(
 
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
-	const float lightPickPdf = scene->lightDefs.SampleAllLightPdf(light);
+	const float lightPickPdf = scene->lightDefs.GetLightStrategy()->SampleLightPdf(light);
 
 	// MIS weight
 	const float weightCamera = MIS(directPdfA * lightPickPdf) * eyeVertex.dVCM +
@@ -297,7 +297,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 
 	// Select one light source
 	float lightPickPdf;
-	const LightSource *light = scene->lightDefs.SampleAllLights(sampler->GetSample(2), &lightPickPdf);
+	const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
 
 	// Initialize the light path
 	PathVertexVM lightVertex;

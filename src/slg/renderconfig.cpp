@@ -56,6 +56,8 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("accelerator.instances.enable")(true));
 			defaultProperties->Set(Property("accelerator.type")("AUTO"));
 
+			defaultProperties->Set(Property("lightstrategy.type")("LOG_POWER"));
+
 			// Batch related Properties
 			defaultProperties->Set(Property("batch.halttime")(0u));
 			defaultProperties->Set(Property("batch.haltspp")(0u));
@@ -156,6 +158,17 @@ void RenderConfig::Parse(const luxrays::Properties &props) {
 		scene->accelType = ACCEL_MQBVH;
 	else {
 		SLG_LOG("Unknown accelerator type (using AUTO instead): " << accelType);
+	}
+
+	const string lightStrategy = GetProperty("lightstrategy.type").Get<string>();
+	if (lightStrategy == "UNIFORM")
+		scene->lightDefs.SetLightStrategy(TYPE_UNIFORM);
+	else if (lightStrategy == "POWER")
+		scene->lightDefs.SetLightStrategy(TYPE_POWER);
+	else if (lightStrategy == "LOG_POWER")
+		scene->lightDefs.SetLightStrategy(TYPE_LOG_POWER);
+	else {
+		SLG_LOG("Unknown light strategy type (using AUTO instead): " << lightStrategy);
 	}
 
 	// Update the Camera
