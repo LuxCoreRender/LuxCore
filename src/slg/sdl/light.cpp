@@ -64,7 +64,7 @@ void LightStrategyUniform::Preprocess(const Scene *scn) {
 	for (u_int i = 0; i < lightCount; ++i) {
 		const LightSource *l = scene->lightDefs.GetLightSource(i);
 
-		lightPower.push_back(l->importance);
+		lightPower.push_back(l->GetImportance());
 	}
 
 	delete lightsDistribution;
@@ -93,7 +93,7 @@ void LightStrategyPower::Preprocess(const Scene *scn) {
 		// In order to avoid over-sampling of distant lights
 		if (l->IsInfinite())
 			power *= iWorldRadius2;			
-		lightPower.push_back(power * l->importance);
+		lightPower.push_back(power * l->GetImportance());
 		totalPower += power;
 	}
 
@@ -119,7 +119,7 @@ void LightStrategyLogPower::Preprocess(const Scene *scn) {
 
 		float power = logf(1.f + l->GetPower(*scene));
 
-		lightPower.push_back(power * l->importance);
+		lightPower.push_back(power * l->GetImportance());
 		totalPower += power;
 	}
 
