@@ -59,7 +59,7 @@ extern const float LIGHT_WORLD_RADIUS_SCALE;
 
 class LightSource {
 public:
-	LightSource() : lightSceneIndex(0), importance(1.f) { }
+	LightSource() : lightSceneIndex(0) { }
 	virtual ~LightSource() { }
 
 	std::string GetName() const { return "light-" + boost::lexical_cast<std::string>(this); }
@@ -78,6 +78,7 @@ public:
 	virtual u_int GetID() const = 0;
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual int GetSamples() const = 0;
+	virtual float GetImportance() const = 0;
 
 	virtual bool IsVisibleIndirectDiffuse() const = 0;
 	virtual bool IsVisibleIndirectGlossy() const = 0;
@@ -98,7 +99,6 @@ public:
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
 
 	u_int lightSceneIndex;
-	float importance;
 };
 
 //------------------------------------------------------------------------------
@@ -115,6 +115,7 @@ public:
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
 	virtual int GetSamples() const { return lightMaterial->GetEmittedSamples(); }
+	virtual float GetImportance() const { return lightMaterial->GetEmittedImportance(); }
 
 	virtual bool IsVisibleIndirectDiffuse() const { return lightMaterial->IsVisibleIndirectDiffuse(); }
 	virtual bool IsVisibleIndirectGlossy() const { return lightMaterial->IsVisibleIndirectGlossy(); }
@@ -144,7 +145,7 @@ protected:
 class NotIntersectableLightSource : public LightSource {
 public:
 	NotIntersectableLightSource() :
-		gain(1.f), id(0), samples(-1) { }
+		gain(1.f), id(0), samples(-1), importance(1.f) { }
 	virtual ~NotIntersectableLightSource() { }
 
 	virtual bool IsVisibleIndirectDiffuse() const { return false; }
@@ -155,6 +156,8 @@ public:
 	virtual u_int GetID() const { return id; }
 	void SetSamples(const int sampleCount) { samples = sampleCount; }
 	virtual int GetSamples() const { return samples; }
+	virtual float GetImportance() const { return importance; }
+	virtual void SetImportance(const float imp) { importance = imp; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
@@ -164,6 +167,7 @@ public:
 protected:
 	u_int id;
 	int samples;
+	float importance;
 };
 
 //------------------------------------------------------------------------------

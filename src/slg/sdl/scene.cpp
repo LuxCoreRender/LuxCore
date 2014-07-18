@@ -1323,6 +1323,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficency")(0.f)).Get<float>()));
 	mat->SetEmittedSamples(Max(-1, props.Get(Property(propName + ".emission.samples")(-1)).Get<int>()));
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
+	mat->SetEmittedImportance(props.Get(Property(propName + ".importance")(1.f)).Get<float>());
 
 	mat->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 	mat->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
@@ -1708,10 +1709,10 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 		throw runtime_error("Unknown light type: " + lightType);
 
 	lightSource->gain = props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>();
-	lightSource->importance = props.Get(Property(propName + ".importance")(1.f)).Get<float>();
 	lightSource->SetSamples(props.Get(Property(propName + ".samples")(-1)).Get<int>());
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
 	lightSource->Preprocess();
+	lightSource->SetImportance(props.Get(Property(propName + ".importance")(1.f)).Get<float>());
 	
 	return lightSource;
 }

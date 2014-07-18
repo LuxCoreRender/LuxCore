@@ -62,7 +62,7 @@ typedef enum {
 class Material {
 public:
 	Material(const Texture *emitted, const Texture *bump) :
-		matID(0), lightID(0), samples(-1), emittedSamples(-1),
+		matID(0), lightID(0), samples(-1), emittedSamples(-1), emittedImportance(1.f),
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(NULL), emissionFunc(NULL),
@@ -123,6 +123,8 @@ public:
 	const int GetSamples() const { return samples; }
 	const void SetEmittedSamples(const int sampleCount) { emittedSamples = sampleCount; }
 	const int GetEmittedSamples() const { return emittedSamples; }
+	const void SetEmittedImportance(const float imp) { emittedImportance = imp; }
+	const float GetEmittedImportance() const { return emittedImportance; }
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
 	void SetEmissionMap(const ImageMap *map);
@@ -197,6 +199,7 @@ protected:
 	u_int matID, lightID;
 
 	int samples, emittedSamples;
+	float emittedImportance;
 	luxrays::Spectrum emittedGain, emittedFactor;
 	float emittedPower, emittedEfficency;
 
