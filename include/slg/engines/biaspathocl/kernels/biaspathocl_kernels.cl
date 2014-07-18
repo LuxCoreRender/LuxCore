@@ -21,7 +21,7 @@
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
 //  PARAM_TILE_SIZE
-//  PARAM_DIRECT_LIGHT_ONE_STRATEGY or PARAM_DIRECT_LIGHT_ALL_STRATEGY
+//  PARAM_FIRST_VERTEX_DL_COUNT
 //  PARAM_RADIANCE_CLAMP_MAXVALUE
 //  PARAM_PDF_CLAMP_VALUE
 //  PARAM_AA_SAMPLES
@@ -434,11 +434,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 
 			tracedRaysCount +=
-#if defined(PARAM_DIRECT_LIGHT_ALL_STRATEGY)
 				DirectLightSampling_ALL(
-#else
-				DirectLightSampling_ONE(
-#endif
 				&seed,
 #if defined(PARAM_HAS_VOLUMES)
 				&taskDirectLight->directLightVolInfo,

@@ -112,19 +112,20 @@ void BiasPathCPURenderThread::DirectLightSamplingONE(
 }
 
 void BiasPathCPURenderThread::DirectLightSamplingALL(
+		const u_int sampleCount,
 		RandomGenerator *rndGen,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
-	const u_int lightsSize = scene->lightDefs.GetSize();
-	for (u_int i = 0; i < lightsSize; ++i) {
-		const LightSource *light = scene->lightDefs.GetLightSource(i);
+	for (u_int i = 0; i < sampleCount; ++i) {
+		float lightPickPdf;
+		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(rndGen->floatValue(), &lightPickPdf);
 		const int samples = light->GetSamples();
 		const u_int samplesToDo = (samples < 0) ? engine->directLightSamples : ((u_int)samples);
 
-		const float scaleFactor = 1.f / (samplesToDo * samplesToDo);
+		const float scaleFactor = 1.f / (samplesToDo * samplesToDo * sampleCount);
 		const Spectrum lightPathTrough = pathThroughput * scaleFactor;
 		for (u_int sampleY = 0; sampleY < samplesToDo; ++sampleY) {
 			for (u_int sampleX = 0; sampleX < samplesToDo; ++sampleX) {
@@ -132,7 +133,7 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 				SampleGrid(rndGen, samplesToDo, sampleX, sampleY, &u0, &u1);
 
 				DirectLightSampling(
-						light, 1.f, u0, u1,
+						light, lightPickPdf, u0, u1,
 						rndGen->floatValue(), rndGen->floatValue(),
 						lightPathTrough, bsdf, volInfo, sampleResult, scaleFactor);
 			}
@@ -405,12 +406,9 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				!((engine->maxPathDepth.glossyDepth > 0) && (materialEventTypes & GLOSSY)) &&
 				!((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)));
 
-		if (!bsdf.IsDelta()) {
-			if (engine->lightSamplingStrategyONE)
-				DirectLightSamplingONE(rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
-			else
-				DirectLightSamplingALL(rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
-		}
+		if (!bsdf.IsDelta())
+			DirectLightSamplingALL(engine->firstVertexLightSampleCount, rndGen,
+					pathThroughput, bsdf, *volInfo, sampleResult);
 
 		//----------------------------------------------------------------------
 		// Split the path
