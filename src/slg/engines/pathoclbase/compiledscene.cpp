@@ -857,7 +857,10 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, pl->gain);
 
 				// ProjectionLight data
-				oclLight->notIntersectable.projection.imageMapIndex = scene->imgMapCache.GetImageMapIndex(pl->imageMap);
+				oclLight->notIntersectable.projection.imageMapIndex = (pl->imageMap) ? 
+					scene->imgMapCache.GetImageMapIndex(pl->imageMap) :
+					NULL_INDEX;
+
 				const Transform *alignedWorld2Light, *lightProjection;
 				pl->GetPreprocessedData(
 					oclLight->notIntersectable.projection.emittedFactor.c,
