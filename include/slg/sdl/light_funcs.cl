@@ -635,6 +635,7 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 	*directPdfW = distanceSquared;
 
 	float3 c = VLOAD3F(projectionLight->notIntersectable.projection.emittedFactor.c);
+#if defined(PARAM_HAS_IMAGEMAPS)
 	const uint imageMapIndex = projectionLight->notIntersectable.projection.imageMapIndex;
 	if (imageMapIndex != NULL_INDEX) {
 		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
@@ -650,6 +651,7 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 				imageMap->width, imageMap->height, imageMap->channelCount,
 				u, v);
 	}
+#endif
 
 	return c;
 }
