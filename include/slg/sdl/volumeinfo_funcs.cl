@@ -220,7 +220,7 @@ void PathVolumeInfo_SetHitPointVolumes(__global PathVolumeInfo *pvi,
 			exteriorVolumeIndex = currentVolumeIndex;
 		}
 
-		if (hitPoint->exteriorVolumeIndex == NULL_INDEX) {
+		if (exteriorVolumeIndex == NULL_INDEX) {
 			// No volume information, I use the default volume
 			exteriorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
 		}

@@ -223,7 +223,7 @@ std::string KernelSource_volumeinfo_funcs =
 "			exteriorVolumeIndex = currentVolumeIndex;\n"
 "		}\n"
 "\n"
-"		if (hitPoint->exteriorVolumeIndex == NULL_INDEX) {\n"
+"		if (exteriorVolumeIndex == NULL_INDEX) {\n"
 "			// No volume information, I use the default volume\n"
 "			exteriorVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;\n"
 "		}\n"
