@@ -284,4 +284,4 @@ void TransformAccordingNormal(const Normal &nn, const Vector &woL, Vector *woW);
 
 }
 
-#endif // LUX_TRANSFORM_H
+#endif // _LUXRAYS_TRANSFORM_H
