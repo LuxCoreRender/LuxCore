@@ -37,8 +37,8 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	material = scene.objDefs.GetSceneObject(rayHit.meshIndex)->GetMaterial();
 
 	// Interpolate face normal
-	hitPoint.geometryN = mesh->GetGeometryNormal(rayHit.triangleIndex);
-	hitPoint.shadeN = mesh->InterpolateTriNormal(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
+	hitPoint.geometryN = mesh->GetGeometryNormal(ray.time, rayHit.triangleIndex);
+	hitPoint.shadeN = mesh->InterpolateTriNormal(ray.time, rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 	hitPoint.intoObject = (Dot(ray.d, hitPoint.geometryN) < 0.f);
 
 	// Set interior and exterior volumes
@@ -65,7 +65,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
     // Compute geometry differentials
     Vector geometryDpdu, geometryDpdv;
     Normal geometryDndu, geometryDndv;
-    const bool hasDPDUV = mesh->GetDifferentials(rayHit.triangleIndex,
+    const bool hasDPDUV = mesh->GetDifferentials(ray.time, rayHit.triangleIndex,
             &geometryDpdu, &geometryDpdv,
             &geometryDndu, &geometryDndv);
 

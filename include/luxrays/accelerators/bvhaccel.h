@@ -35,8 +35,9 @@ struct BVHAccelTreeNode {
 		} triangleLeaf;
 		struct {
 			u_int leafIndex;
-			u_int transformIndex;
+			u_int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX
 			u_int meshOffsetIndex;
+			bool isMotionMesh; // If I have to use motionIndex or transformIndex
 		} bvhLeaf;
 	};
 
@@ -58,7 +59,7 @@ struct BVHAccelArrayNode {
 		} triangleLeaf;
 		struct {
 			u_int leafIndex;
-			u_int transformIndex;
+			u_int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX
 			u_int meshOffsetIndex;
 		} bvhLeaf; // Used by MBVH
 	};

@@ -75,7 +75,7 @@ public:
 	virtual void UpdateFocus(const Scene *scene) = 0;
 	virtual void GenerateRay(
 		const float filmX, const float filmY,
-		luxrays::Ray *ray, const float u1, const float u2) const = 0;
+		luxrays::Ray *ray, const float u1, const float u2, const float u3 = 0.f) const = 0;
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay,
 		float *filmX, float *filmY) const = 0;
 	virtual bool SampleLens(const float u1, const float u2,
@@ -184,7 +184,7 @@ public:
 	virtual void UpdateFocus(const Scene *scene);
 	void GenerateRay(
 		const float filmX, const float filmY,
-		luxrays::Ray *ray, const float u1, const float u2) const;
+		luxrays::Ray *ray, const float u1, const float u2, const float u4) const;
 	bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
 
 	bool SampleLens(const float u1, const float u2,

@@ -89,7 +89,7 @@ TriangleMesh *TriangleMesh::Merge(
 
 				// Copy the mesh vertices
 				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); j++)
-					v[vIndex + j] = mesh->GetVertex(j);
+					v[vIndex + j] = mesh->GetVertices()[j];
 
 				tris = mesh->GetTriangles();
 				break;
@@ -99,7 +99,7 @@ TriangleMesh *TriangleMesh::Merge(
 
 				// Copy the mesh vertices
 				for (unsigned int j = 0; j <mesh->GetTotalVertexCount(); j++)
-					v[vIndex + j] = mesh->GetVertex(j);
+					v[vIndex + j] = mesh->GetVertices()[j];
 
 				tris = mesh->GetTriangles();
 				break;
@@ -109,15 +109,13 @@ TriangleMesh *TriangleMesh::Merge(
 
 				// Copy the mesh vertices
 				for (unsigned int j = 0; j <mesh->GetTotalVertexCount(); j++)
-					v[vIndex + j] = mesh->GetVertex(j);
+					v[vIndex + j] = mesh->GetVertices()[j];
 
 				tris = mesh->GetTriangles();
 				break;
 			}
 			default:
-				assert (false);
-				tris = NULL;
-				break;
+				throw std::runtime_error("Unknown mesh type in TriangleMesh::Merge(): " + ToString((*m)->GetType()));
 		}
 
 		// Translate mesh indices

@@ -2262,7 +2262,7 @@ float TriangleLight::GetPower(const Scene &scene) const {
 }
 
 void TriangleLight::Preprocess() {
-	area = mesh->GetTriangleArea(triangleIndex);
+	area = mesh->GetTriangleArea(0.f, triangleIndex);
 	invArea = 1.f / area;
 }
 
@@ -2272,10 +2272,10 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Origin
 	float b0, b1, b2;
-	mesh->Sample(triangleIndex, u0, u1, orig, &b0, &b1, &b2);
+	mesh->Sample(0.f, triangleIndex, u0, u1, orig, &b0, &b1, &b2);
 
 	// Build the local frame
-	const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
+	const Normal N = mesh->GetGeometryNormal(0.f, triangleIndex); // Light sources are supposed to be flat
 	Frame frame(N);
 
 	Spectrum emissionColor(1.f);
@@ -2318,8 +2318,8 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh->Sample(triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
-	const Normal &sampleN = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
+	mesh->Sample(0.f, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	const Normal &sampleN = mesh->GetGeometryNormal(0.f, triangleIndex); // Light sources are supposed to be flat
 
 	*dir = samplePoint - p;
 	const float distanceSquared = dir->LengthSquared();
@@ -2337,7 +2337,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 	if (emissionFunc) {
 		// Build the local frame
-		const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
+		const Normal N = mesh->GetGeometryNormal(0.f, triangleIndex); // Light sources are supposed to be flat
 		Frame frame(N);
 
 		const Vector localFromLight = Normalize(frame.ToLocal(-(*dir)));
@@ -2381,7 +2381,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 	if (emissionFunc) {
 		// Build the local frame
-		const Normal N = mesh->GetGeometryNormal(triangleIndex); // Light sources are supposed to be flat
+		const Normal N = mesh->GetGeometryNormal(0.f, triangleIndex); // Light sources are supposed to be flat
 		Frame frame(N);
 
 		const Vector localFromLight = Normalize(frame.ToLocal(hitPoint.fixedDir));

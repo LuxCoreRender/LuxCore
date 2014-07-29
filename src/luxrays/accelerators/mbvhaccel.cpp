@@ -448,9 +448,9 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 	std::vector<u_int> leafsIndex;
 	std::vector<u_int> leafsTransformIndex;
+	std::vector<u_int> leafsMotionSystemIndex;
 
 	leafsIndex.reserve(nLeafs);
-	leafsTransformIndex.reserve(nLeafs);
 
 	std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)> uniqueLeafIndexByMesh(MeshPtrCompare);
 
@@ -476,10 +476,11 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				uniqueLeafs.push_back(leaf);
 				leafsIndex.push_back(uniqueLeafIndex);
 				leafsTransformIndex.push_back(NULL_INDEX);
+				leafsMotionSystemIndex.push_back(NULL_INDEX);
 				break;
 			}
 			case TYPE_TRIANGLE_INSTANCE: {
-				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)mesh;
+				const InstanceTriangleMesh *itm = (const InstanceTriangleMesh *)mesh;
 
 				// Check if a BVH has already been created
 				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
@@ -503,10 +504,11 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
 				uniqueLeafsTransform.push_back(itm->GetTransformation().mInv);
+				leafsMotionSystemIndex.push_back(NULL_INDEX);
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
-				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)mesh;
+				const ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)mesh;
 
 				// Check if a BVH has already been created
 				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(eitm->GetExtTriangleMesh());
@@ -530,6 +532,63 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
 				uniqueLeafsTransform.push_back(eitm->GetTransformation().mInv);
+				leafsMotionSystemIndex.push_back(NULL_INDEX);
+				break;
+			}
+			case TYPE_TRIANGLE_MOTION: {
+				const MotionTriangleMesh *mtm = (const MotionTriangleMesh *)mesh;
+
+				// Check if a BVH has already been created
+				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(mtm->GetTriangleMesh());
+
+				if (it == uniqueLeafIndexByMesh.end()) {
+					TriangleMesh *motionMesh = mtm->GetTriangleMesh();
+
+					// Create a new BVH
+					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
+					std::deque<const Mesh *> mlist(1, motionMesh);
+					leaf->Init(mlist, motionMesh->GetTotalVertexCount(), motionMesh->GetTotalTriangleCount());
+
+					const u_int uniqueLeafIndex = uniqueLeafs.size();
+					uniqueLeafIndexByMesh[motionMesh] = uniqueLeafIndex;
+					uniqueLeafs.push_back(leaf);
+					leafsIndex.push_back(uniqueLeafIndex);
+				} else {
+					//LR_LOG(ctx, "Cached BVH leaf");
+					leafsIndex.push_back(it->second);
+				}
+
+				leafsMotionSystemIndex.push_back(uniqueLeafsMotionSystem.size());
+				uniqueLeafsMotionSystem.push_back(mtm->GetMotionSystem());
+				leafsTransformIndex.push_back(NULL_INDEX);
+				break;
+			}
+			case TYPE_EXT_TRIANGLE_MOTION: {
+				const ExtMotionTriangleMesh *emtm = (const ExtMotionTriangleMesh *)mesh;
+
+				// Check if a BVH has already been created
+				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(emtm->GetExtTriangleMesh());
+
+				if (it == uniqueLeafIndexByMesh.end()) {
+					ExtTriangleMesh *motionMesh = emtm->GetExtTriangleMesh();
+
+					// Create a new BVH
+					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
+					std::deque<const Mesh *> mlist(1, motionMesh);
+					leaf->Init(mlist, motionMesh->GetTotalVertexCount(), motionMesh->GetTotalTriangleCount());
+
+					const u_int uniqueLeafIndex = uniqueLeafs.size();
+					uniqueLeafIndexByMesh[motionMesh] = uniqueLeafIndex;
+					uniqueLeafs.push_back(leaf);
+					leafsIndex.push_back(uniqueLeafIndex);
+				} else {
+					//LR_LOG(ctx, "Cached BVH leaf");
+					leafsIndex.push_back(it->second);
+				}
+
+				leafsMotionSystemIndex.push_back(uniqueLeafsMotionSystem.size());
+				uniqueLeafsMotionSystem.push_back(emtm->GetMotionSystem());
+				leafsTransformIndex.push_back(NULL_INDEX);
 				break;
 			}
 			default:
@@ -550,6 +609,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 		node->bbox = meshes[i]->GetBBox();
 		node->bvhLeaf.leafIndex = leafsIndex[i];
 		node->bvhLeaf.transformIndex = leafsTransformIndex[i];
+		node->bvhLeaf.motionIndex = leafsMotionSystemIndex[i];
 		node->bvhLeaf.meshOffsetIndex = i;
 		node->leftChild = NULL;
 		node->rightSibling = NULL;
@@ -655,24 +715,32 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 				// I have to check a leaf tree
 				currentTree = uniqueLeafs[node.bvhLeaf.leafIndex]->bvhTree;
 				// Transform the ray in the local coordinate system
-				if (node.bvhLeaf.transformIndex != NULL_INDEX) {
-					const Matrix4x4 &m = uniqueLeafsTransform[node.bvhLeaf.transformIndex];
-
+				Matrix4x4 tmpMat;
+				const Matrix4x4 *m = NULL;
+				if (node.bvhLeaf.transformIndex != NULL_INDEX)
+					m = &uniqueLeafsTransform[node.bvhLeaf.transformIndex];
+				if (node.bvhLeaf.motionIndex != NULL_INDEX) {
+					tmpMat = uniqueLeafsMotionSystem[node.bvhLeaf.motionIndex].Sample(ray->time).mInv;
+					m = &tmpMat;
+				}
+				
+				if (m) {
 					// Transform ray origin
-					currentRay.o.x = m.m[0][0] * ray->o.x + m.m[0][1] * ray->o.x + m.m[0][2] * ray->o.x + m.m[0][3];
-					currentRay.o.y = m.m[1][0] * ray->o.x + m.m[1][1] * ray->o.y + m.m[1][2] * ray->o.z + m.m[1][3];
-					currentRay.o.z = m.m[2][0] * ray->o.x + m.m[2][1] * ray->o.y + m.m[2][2] * ray->o.z + m.m[2][3];
-					const float w = m.m[3][0] * ray->o.x + m.m[3][1] * ray->o.y + m.m[3][2] * ray->o.z + m.m[3][3];
+					currentRay.o.x = m->m[0][0] * ray->o.x + m->m[0][1] * ray->o.x + m->m[0][2] * ray->o.x + m->m[0][3];
+					currentRay.o.y = m->m[1][0] * ray->o.x + m->m[1][1] * ray->o.y + m->m[1][2] * ray->o.z + m->m[1][3];
+					currentRay.o.z = m->m[2][0] * ray->o.x + m->m[2][1] * ray->o.y + m->m[2][2] * ray->o.z + m->m[2][3];
+					const float w = m->m[3][0] * ray->o.x + m->m[3][1] * ray->o.y + m->m[3][2] * ray->o.z + m->m[3][3];
 					if (w != 1.f)
 						currentRay.o /= w;
 
 					// Transform ray direction
-					currentRay.d.x = m.m[0][0] * ray->d.x + m.m[0][1] * ray->d.y + m.m[0][2] * ray->d.z;
-					currentRay.d.y = m.m[1][0] * ray->d.x + m.m[1][1] * ray->d.y + m.m[1][2] * ray->d.z;
-					currentRay.d.z = m.m[2][0] * ray->d.x + m.m[2][1] * ray->d.y + m.m[2][2] * ray->d.z;
+					currentRay.d.x = m->m[0][0] * ray->d.x + m->m[0][1] * ray->d.y + m->m[0][2] * ray->d.z;
+					currentRay.d.y = m->m[1][0] * ray->d.x + m->m[1][1] * ray->d.y + m->m[1][2] * ray->d.z;
+					currentRay.d.z = m->m[2][0] * ray->d.x + m->m[2][1] * ray->d.y + m->m[2][2] * ray->d.z;
 
 					currentRay.maxt = rayHit->t;
 				}
+
 				currentMeshOffset = node.bvhLeaf.meshOffsetIndex;
 
 				currentRootNode = currentNode + 1;

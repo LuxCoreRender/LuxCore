@@ -46,7 +46,8 @@ private:
 
 	void RenderFunc();
 
-	void DirectLightSampling(const float u0,
+	void DirectLightSampling(
+		const float time, const float u0,
 		const float u1, const float u2,
 		const float u3, const float u4,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,

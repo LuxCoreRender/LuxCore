@@ -207,7 +207,7 @@ void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const floa
 
 void PerspectiveCamera::GenerateRay(
 	const float filmX, const float filmY,
-	Ray *ray, const float u1, const float u2) const {
+	Ray *ray, const float u1, const float u2, const float u3) const {
 	u_int transIndex;
 	Point Pras, Pcamera;
 	if (enableHorizStereo) {
@@ -251,6 +251,7 @@ void PerspectiveCamera::GenerateRay(
 	ray->d = Normalize(ray->d);
 	ray->mint = MachineEpsilon::E(ray->o);
 	ray->maxt = (clipYon - clipHither) / ray->d.z;
+	ray->time = u3 * (1.f / 24.f);
 
 	*ray = camTrans[transIndex].cameraToWorld * (*ray);
 

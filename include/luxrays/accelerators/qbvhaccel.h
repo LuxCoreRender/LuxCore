@@ -79,9 +79,9 @@ public:
 			const Mesh *mesh = meshes[meshIndex[i]];
 			const Triangle *t = &(mesh->GetTriangles()[triangleIndex[i]]);
 
-			const Point p0 = mesh->GetVertex(t->v[0]);
-			const Point p1 = mesh->GetVertex(t->v[1]);
-			const Point p2 = mesh->GetVertex(t->v[2]);
+			const Point p0 = mesh->GetVertex(0.f, t->v[0]);
+			const Point p1 = mesh->GetVertex(0.f, t->v[1]);
+			const Point p2 = mesh->GetVertex(0.f, t->v[2]);
 			reinterpret_cast<float *> (&origx)[i] = p0.x;
 			reinterpret_cast<float *> (&origy)[i] = p0.y;
 			reinterpret_cast<float *> (&origz)[i] = p0.z;

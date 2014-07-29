@@ -22,14 +22,14 @@
 #include <boost/unordered_map.hpp>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/utils/mcdistribution.h"
-#include "luxrays/core/color/color.h"
 #include "luxrays/core/color/spds/regular.h"
 #include "luxrays/core/color/spds/irregular.h"
+#include "luxrays/utils/mcdistribution.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/material.h"
@@ -39,6 +39,7 @@ namespace slg {
 
 // OpenCL data types
 namespace ocl {
+using luxrays::ocl::Vector;
 #include "slg/sdl/light_types.cl"
 }
 

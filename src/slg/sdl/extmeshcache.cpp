@@ -73,31 +73,40 @@ void ExtMeshCache::DeleteExtMesh(const string &fileName) {
 	meshByName.erase(fileName);
 }
 
-ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName, const Transform *trans) {
-	if (trans) {
-		ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName);
+ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName) {
+	// Check if the mesh has been already loaded
+	boost::unordered_map<string, ExtTriangleMesh *>::const_iterator it = meshByName.find(fileName);
 
-		ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(mesh, *trans);
-		meshes.push_back(imesh);
+	if (it == meshByName.end()) {
+		// I have yet to load the file
+		ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName);
 
-		return imesh;
+		meshByName.insert(make_pair(fileName, mesh));
+		meshes.push_back(mesh);
+
+		return mesh;
 	} else {
-		// Check if the mesh has been already loaded
-		boost::unordered_map<string, ExtTriangleMesh *>::const_iterator it = meshByName.find(fileName);
-
-		if (it == meshByName.end()) {
-			// I have yet to load the file
-			ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName);
-
-			meshByName.insert(make_pair(fileName, mesh));
-			meshes.push_back(mesh);
-
-			return mesh;
-		} else {
-			//SDL_LOG("Cached mesh object: " << fileName << ")");
-			return it->second;
-		}
+		//SDL_LOG("Cached mesh object: " << fileName << ")");
+		return it->second;
 	}
+}
+
+ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName, const Transform &trans) {
+	ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName);
+
+	ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(mesh, trans);
+	meshes.push_back(imesh);
+
+	return imesh;
+}
+
+ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName, const MotionSystem &ms) {
+	ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName);
+
+	ExtMotionTriangleMesh *mmesh = new ExtMotionTriangleMesh(mesh, ms);
+	meshes.push_back(mmesh);
+
+	return mmesh;
 }
 
 u_int ExtMeshCache::GetExtMeshIndex(const string &fileName) const {

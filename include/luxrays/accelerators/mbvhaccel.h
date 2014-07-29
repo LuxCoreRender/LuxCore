@@ -23,6 +23,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/accelerators/bvhaccel.h"
+#include "luxrays/core/geometry/motionsystem.h"
 
 namespace luxrays {
 
@@ -59,6 +60,7 @@ private:
 
 	std::vector<BVHAccel *> uniqueLeafs;
 	std::vector<Matrix4x4> uniqueLeafsTransform;
+	std::vector<MotionSystem> uniqueLeafsMotionSystem;
 	
 	const Context *ctx;
 	std::deque<const Mesh *> meshes;

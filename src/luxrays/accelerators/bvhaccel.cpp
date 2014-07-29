@@ -88,7 +88,7 @@ public:
 					meshVertCount = (*mesh)->GetTotalVertexCount();
 					meshVertIndex = 0;
 				}
-				tmpVerts[i] = (*mesh)->GetVertex(meshVertIndex++);
+				tmpVerts[i] = (*mesh)->GetVertex(0.f, meshVertIndex++);
 				++vertsCopied;
 			}
 
@@ -335,8 +335,8 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 			BVHAccelTreeNode *node = new BVHAccelTreeNode();
 
 			node->bbox = Union(
-					BBox(mesh->GetVertex(p[i].v[0]), mesh->GetVertex(p[i].v[1])),
-					mesh->GetVertex(p[i].v[2]));
+					BBox(mesh->GetVertex(0.f, p[i].v[0]), mesh->GetVertex(0.f, p[i].v[1])),
+					mesh->GetVertex(0.f, p[i].v[2]));
 			// NOTE - Ratow - Expand bbox a little to make sure rays collide
 			node->bbox.Expand(MachineEpsilon::E(node->bbox));
 			node->triangleLeaf.meshIndex = meshIndex;
@@ -546,6 +546,7 @@ u_int BVHAccel::BuildArray(const std::deque<const Mesh *> *meshes, BVHAccelTreeN
 				// It is a BVH of BVHs (i.e. MBVH)
 				p->bvhLeaf.leafIndex = node->bvhLeaf.leafIndex;
 				p->bvhLeaf.transformIndex = node->bvhLeaf.transformIndex;
+				p->bvhLeaf.motionIndex = node->bvhLeaf.motionIndex;
 				p->bvhLeaf.meshOffsetIndex = node->bvhLeaf.meshOffsetIndex;
 			}
 
@@ -578,9 +579,9 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the triangle
 			const Mesh *mesh = meshes[node.triangleLeaf.meshIndex];
-			const Point p0 = mesh->GetVertex(node.triangleLeaf.v[0]);
-			const Point p1 = mesh->GetVertex(node.triangleLeaf.v[1]);
-			const Point p2 = mesh->GetVertex(node.triangleLeaf.v[2]);
+			const Point p0 = mesh->GetVertex(0.f, node.triangleLeaf.v[0]);
+			const Point p1 = mesh->GetVertex(0.f, node.triangleLeaf.v[1]);
+			const Point p2 = mesh->GetVertex(0.f, node.triangleLeaf.v[2]);
 
 			if (Triangle::Intersect(ray, p0, p1, p2, &t, &b1, &b2)) {
 				if (t < rayHit->t) {

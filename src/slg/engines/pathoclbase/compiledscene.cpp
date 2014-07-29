@@ -197,7 +197,7 @@ void CompiledScene::CompileGeometry() {
 
 			if (mesh->HasNormals()) {
 				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					normals.push_back(mesh->GetShadeNormal(j));
+					normals.push_back(mesh->GetShadeNormal(0.f, j));
 			} else
 				currentMeshDesc.normalsOffset = NULL_INDEX;
 
@@ -236,7 +236,7 @@ void CompiledScene::CompileGeometry() {
 			//------------------------------------------------------------------
 
 			for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-				verts.push_back(mesh->GetVertex(j));
+				verts.push_back(mesh->GetVertex(0.f, j));
 
 			//------------------------------------------------------------------
 			// Translate mesh indices
@@ -651,9 +651,9 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_TRIANGLE;
 
 				// TriangleLight data
-				ASSIGN_VECTOR(oclLight->triangle.v0, mesh->GetVertex(tri->v[0]));
-				ASSIGN_VECTOR(oclLight->triangle.v1, mesh->GetVertex(tri->v[1]));
-				ASSIGN_VECTOR(oclLight->triangle.v2, mesh->GetVertex(tri->v[2]));
+				ASSIGN_VECTOR(oclLight->triangle.v0, mesh->GetVertex(0.f, tri->v[0]));
+				ASSIGN_VECTOR(oclLight->triangle.v1, mesh->GetVertex(0.f, tri->v[1]));
+				ASSIGN_VECTOR(oclLight->triangle.v2, mesh->GetVertex(0.f, tri->v[2]));
 				if (mesh->HasUVs()) {
 					ASSIGN_UV(oclLight->triangle.uv0, mesh->GetUV(tri->v[0]));
 					ASSIGN_UV(oclLight->triangle.uv1, mesh->GetUV(tri->v[1]));

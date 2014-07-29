@@ -1375,12 +1375,33 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 		if (plyFileName == "")
 			throw runtime_error("Syntax error in object .ply file name: " + objName);
 
-		// Check if I have to use an instance mesh or not
-		if (props.IsDefined(propName + ".transformation")) {
-			const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-			const Transform trans(mat);
+		// Check if I have to use a motion mesh, instance mesh or normal mesh
+		if (props.IsDefined(propName + ".motion.0.time")) {
+			// Build the motion system
+			vector<float> times;
+			vector<Transform> transforms;
+			for (u_int i =0;; ++i) {
+				const string prefix = propName + ".motion." + ToString(i);
+				if (!props.IsDefined(prefix +".time"))
+					break;
 
-			mesh = extMeshCache.GetExtMesh(plyFileName, &trans);
+				const float t = props.Get(prefix +".time").Get<float>();
+				if (i > 0 && t <= times.back())
+					throw runtime_error(objName + " motion time must be monotonic");
+				times.push_back(t);
+
+				const Matrix4x4 mat = props.Get(Property(propName + ".motion." + ToString(i) +
+					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+				transforms.push_back(Transform(mat));
+			}
+
+			MotionSystem ms(times, transforms);
+			mesh = extMeshCache.GetExtMesh(plyFileName, ms);
+		} else if (props.IsDefined(propName + ".transformation")) {
+			const Matrix4x4 mat = props.Get(Property(propName +
+				".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+
+			mesh = extMeshCache.GetExtMesh(plyFileName, Transform(mat));
 		} else
 			mesh = extMeshCache.GetExtMesh(plyFileName);
 	} else {

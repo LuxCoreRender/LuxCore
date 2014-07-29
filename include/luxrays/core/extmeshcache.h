@@ -27,6 +27,7 @@
 
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/transform.h"
+#include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
 
@@ -46,7 +47,10 @@ public:
 	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh);
 
 	bool IsExtMeshDefined(const std::string &name) const { return meshByName.find(name) != meshByName.end(); }
-	ExtMesh *GetExtMesh(const std::string &fileName, const Transform *trans = NULL);
+
+	ExtMesh *GetExtMesh(const std::string &fileName);
+	ExtMesh *GetExtMesh(const std::string &fileName, const Transform &trans);
+	ExtMesh *GetExtMesh(const std::string &fileName, const MotionSystem &ms);
 
 	// Note: before call to DeleteExtMesh, be sore to not have any instance referencing
 	// the geometry

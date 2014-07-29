@@ -33,6 +33,7 @@ PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
 }
 
 void PathCPURenderThread::DirectLightSampling(
+		const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
@@ -60,7 +61,8 @@ void PathCPURenderThread::DirectLightSampling(
 				const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 				Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 						epsilon,
-						distance - epsilon);
+						distance - epsilon,
+						time);
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
@@ -159,7 +161,7 @@ void PathCPURenderThread::RenderFunc() {
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
-	const unsigned int sampleBootSize = 4;
+	const unsigned int sampleBootSize = 5;
 	const unsigned int sampleStepSize = 9;
 	const unsigned int sampleSize = 
 		sampleBootSize + // To generate eye ray
@@ -199,7 +201,7 @@ void PathCPURenderThread::RenderFunc() {
 		sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 		sampleResult.filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
-			sampler->GetSample(2), sampler->GetSample(3));
+			sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 
 		int depth = 1;
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
@@ -278,6 +280,7 @@ void PathCPURenderThread::RenderFunc() {
 				break;
 
 			DirectLightSampling(
+					eyeRay.time,
 					sampler->GetSample(sampleOffset + 1),
 					sampler->GetSample(sampleOffset + 2),
 					sampler->GetSample(sampleOffset + 3),
@@ -319,7 +322,10 @@ void PathCPURenderThread::RenderFunc() {
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
 
+			const float time = eyeRay.time;
 			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
+			eyeRay.time = time;
+
 			++depth;
 		}
 

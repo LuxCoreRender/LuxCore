@@ -558,8 +558,8 @@ void QBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 			// Compute the bounding box for the triangle
 			primsBboxes[i][j] = Union(
-					BBox(mesh->GetVertex(p[j].v[0]), mesh->GetVertex(p[j].v[1])),
-					mesh->GetVertex(p[j].v[2]));
+					BBox(mesh->GetVertex(0.f, p[j].v[0]), mesh->GetVertex(0.f, p[j].v[1])),
+					mesh->GetVertex(0.f, p[j].v[2]));
 			primsBboxes[i][j].Expand(MachineEpsilon::E(primsBboxes[i][j]));
 			primsCentroids[i][j] = (primsBboxes[i][j].pMin + primsBboxes[i][j].pMax) * .5f;
 
