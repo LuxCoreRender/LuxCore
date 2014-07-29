@@ -77,7 +77,8 @@ void LightCPURenderThread::ConnectToEye(const float u0,
 	}
 }
 
-void LightCPURenderThread::TraceEyePath(Sampler *sampler, PathVolumeInfo volInfo,
+void LightCPURenderThread::TraceEyePath(const float time,
+		Sampler *sampler, PathVolumeInfo volInfo,
 		vector<SampleResult> *sampleResults) {
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -86,15 +87,11 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, PathVolumeInfo volInfo
 	const u_int filmWidth = film->GetWidth();
 	const u_int filmHeight = film->GetHeight();
 
-	// Sample offsets
-	const u_int sampleBootSize = 11;
-	const u_int sampleEyeStepSize = 3;
-
 	Ray eyeRay;
 	const float filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 	const float filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 	camera->GenerateRay(filmX, filmY, &eyeRay,
-		sampler->GetSample(10), sampler->GetSample(11));
+		sampler->GetSample(10), sampler->GetSample(11), time);
 
 	Spectrum radiance, eyePathThroughput(1.f);
 	int depth = 1;
@@ -139,7 +136,7 @@ void LightCPURenderThread::TraceEyePath(Sampler *sampler, PathVolumeInfo volInfo
 				eyePathThroughput *= connectionThroughput * bsdfSample;
 				assert (!eyePathThroughput.IsNaN() && !eyePathThroughput.IsInf());
 
-				eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
+				eyeRay.Update(bsdf.hitPoint.p, sampledDir);
 			}
 
 			++depth;
@@ -168,9 +165,6 @@ void LightCPURenderThread::RenderFunc() {
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
-	const u_int sampleBootSize = 12;
-	const u_int sampleEyeStepSize = 4;
-	const u_int sampleLightStepSize = 5;
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex
@@ -185,6 +179,8 @@ void LightCPURenderThread::RenderFunc() {
 	while (!boost::this_thread::interruption_requested()) {
 		sampleResults.clear();
 
+		const float time = sampler->GetSample(12);
+
 		// Select one light source
 		float lightPickPdf;
 		const LightSource *light = scene->lightDefs.GetLightStrategy()->SampleLights(sampler->GetSample(2), &lightPickPdf);
@@ -195,6 +191,7 @@ void LightCPURenderThread::RenderFunc() {
 		Spectrum lightPathFlux = light->Emit(*scene,
 			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+		nextEventRay.time = time;
 		if (lightPathFlux.Black()) {
 			sampler->NextSample(sampleResults);
 			continue;
@@ -219,7 +216,7 @@ void LightCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		PathVolumeInfo eyeVolInfo;
-		TraceEyePath(sampler, eyeVolInfo, &sampleResults);
+		TraceEyePath(time, sampler, eyeVolInfo, &sampleResults);
 
 		//----------------------------------------------------------------------
 		// Trace the light path
@@ -284,7 +281,7 @@ void LightCPURenderThread::RenderFunc() {
 				// Update volume information
 				volInfo.Update(event, bsdf);
 
-				nextEventRay = Ray(bsdf.hitPoint.p, sampledDir);
+				nextEventRay.Update(bsdf.hitPoint.p, sampledDir);
 				++depth;
 			} else {
 				// Ray lost in space...
