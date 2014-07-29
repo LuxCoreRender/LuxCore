@@ -60,7 +60,8 @@ public:
 
 protected:
 	// Used to offset Sampler data
-	static const u_int sampleBootSize = 12;
+	static const u_int sampleBootSize = 13;
+	static const u_int sampleBootSizeVM = 12; // I'm using the same time for all rays in a single pass (so I need one less random variable)
 	static const u_int sampleLightStepSize = 5;
 	static const u_int sampleEyeStepSize = 10;
 
@@ -73,7 +74,7 @@ protected:
 
 	void RenderFunc();
 
-	void DirectLightSampling(
+	void DirectLightSampling(const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
@@ -83,15 +84,18 @@ protected:
 		const float directPdfA, const float emissionPdfW,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
-	void ConnectVertices(const PathVertexVM &eyeVertex, const PathVertexVM &BiDirVertex,
+	void ConnectVertices(const float time,
+		const PathVertexVM &eyeVertex, const PathVertexVM &BiDirVertex,
 		SampleResult *eyeSampleResult, const float u0) const;
-	void ConnectToEye(const PathVertexVM &BiDirVertex, const float u0,
+	void ConnectToEye(const float time,
+		const PathVertexVM &BiDirVertex, const float u0,
 		const luxrays::Point &lensPoint, vector<SampleResult> &sampleResults) const;
 
-	void TraceLightPath(Sampler *sampler, const luxrays::Point &lensPoint,
+	void TraceLightPath(const float time,
+		Sampler *sampler, const luxrays::Point &lensPoint,
 		vector<PathVertexVM> &lightPathVertices,
 		vector<SampleResult> &sampleResults) const;
-	bool Bounce(Sampler *sampler, const u_int sampleOffset,
+	bool Bounce(const float time, Sampler *sampler, const u_int sampleOffset,
 		PathVertexVM *pathVertex, luxrays::Ray *nextEventRay) const;
 
 	u_int pixelCount;

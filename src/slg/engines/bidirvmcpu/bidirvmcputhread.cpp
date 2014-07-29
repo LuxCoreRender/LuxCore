@@ -53,7 +53,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	// Setup the samplers
 	vector<Sampler *> samplers(engine->lightPathsCount, NULL);
 	const u_int sampleSize = 
-		sampleBootSize + // To generate the initial light vertex and trace eye ray
+		sampleBootSizeVM + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
@@ -90,6 +90,11 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		misVmWeightFactor = MIS(etaVCM);
 		misVcWeightFactor = MIS(1.f / etaVCM);
 
+		// Using the same time for all rays in the same pass is required by the
+		// current implementation (i.e. I can not mix paths with different
+		// times). However this is detrimental for the Metropolis sampler.
+		const float time = rndGen->floatValue();
+
 		//----------------------------------------------------------------------
 		// Trace all light paths
 		//----------------------------------------------------------------------
@@ -102,7 +107,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					&lensPoints[samplerIndex]))
 				continue;
 
-			TraceLightPath(sampler, lensPoints[samplerIndex],
+			TraceLightPath(time, sampler, lensPoints[samplerIndex],
 					lightPathsVertices[samplerIndex], samplesResults[samplerIndex]);
 		}
 
@@ -131,7 +136,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 			eyeSampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
-				sampler->GetSample(9), sampler->GetSample(10));
+				sampler->GetSample(9), sampler->GetSample(10), time);
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
@@ -144,7 +149,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 			eyeVertex.depth = 1;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
-				const u_int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
+				const u_int sampleOffset = sampleBootSizeVM + engine->maxLightPathDepth * sampleLightStepSize +
 					(eyeVertex.depth - 1) * sampleEyeStepSize;
 
 				RayHit eyeRayHit;
@@ -191,7 +196,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				// Direct light sampling
 				//--------------------------------------------------------------
 
-				DirectLightSampling(sampler->GetSample(sampleOffset + 1),
+				DirectLightSampling(time,
+						sampler->GetSample(sampleOffset + 1),
 						sampler->GetSample(sampleOffset + 2),
 						sampler->GetSample(sampleOffset + 3),
 						sampler->GetSample(sampleOffset + 4),
@@ -205,7 +211,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 					for (vector<PathVertexVM>::const_iterator lightPathVertex = lightPathVertices.begin();
 							lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
-						ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
+						ConnectVertices(time,
+								eyeVertex, *lightPathVertex, &eyeSampleResult,
 								sampler->GetSample(sampleOffset + 6));
 
 					//----------------------------------------------------------
@@ -219,7 +226,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				// Build the next vertex path ray
 				//--------------------------------------------------------------
 
-				if (!Bounce(sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
+				if (!Bounce(time, sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
 					break;
 
 				++(eyeVertex.depth);
