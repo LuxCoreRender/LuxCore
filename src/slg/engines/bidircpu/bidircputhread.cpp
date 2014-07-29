@@ -34,7 +34,7 @@ BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		CPUNoTileRenderThread(engine, index, device) {
 }
 
-void BiDirCPURenderThread::ConnectVertices(
+void BiDirCPURenderThread::ConnectVertices(const float time,
 		const PathVertexVM &eyeVertex, const PathVertexVM &lightVertex,
 		SampleResult *eyeSampleResult, const float u0) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
@@ -71,7 +71,8 @@ void BiDirCPURenderThread::ConnectVertices(
 			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(p2pDistance));
 			Ray p2pRay(eyeVertex.bsdf.hitPoint.p, p2pDir,
 					epsilon,
-					p2pDistance - epsilon);
+					p2pDistance - epsilon,
+					time);
 			RayHit p2pRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
@@ -113,7 +114,8 @@ void BiDirCPURenderThread::ConnectVertices(
 	}
 }
 
-void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const float u0,
+void BiDirCPURenderThread::ConnectToEye(const float time,
+		const PathVertexVM &lightVertex, const float u0,
 		const Point &lensPoint, vector<SampleResult> &sampleResults) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -130,7 +132,8 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
 		Ray eyeRay(lensPoint, eyeDir,
 				epsilon,
-				eyeDistance - epsilon);
+				eyeDistance - epsilon,
+				time);
 
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &scrX, &scrY)) {
@@ -138,7 +141,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
-			Ray traceRay(lightVertex.bsdf.hitPoint.p, -eyeDir, eyeRay.mint, eyeRay.maxt);
+			Ray traceRay(lightVertex.bsdf.hitPoint.p, -eyeDir, eyeRay.mint, eyeRay.maxt, time);
 			RayHit traceRayHit;
 
 			BSDF bsdfConn;
@@ -179,7 +182,7 @@ void BiDirCPURenderThread::ConnectToEye(const PathVertexVM &lightVertex, const f
 	}
 }
 
-void BiDirCPURenderThread::DirectLightSampling(
+void BiDirCPURenderThread::DirectLightSampling(const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const PathVertexVM &eyeVertex,
@@ -207,7 +210,8 @@ void BiDirCPURenderThread::DirectLightSampling(
 				const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(distance));
 				Ray shadowRay(eyeVertex.bsdf.hitPoint.p, lightRayDir,
 						epsilon,
-						distance - epsilon);
+						distance - epsilon,
+						time);
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
@@ -288,8 +292,8 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 	}
 }
 
-void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
-		const Point &lensPoint,
+void BiDirCPURenderThread::TraceLightPath(const float time,
+		Sampler *sampler, const Point &lensPoint,
 		vector<PathVertexVM> &lightPathVertices,
 		vector<SampleResult> &sampleResults) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
@@ -306,6 +310,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 	lightVertex.throughput = light->Emit(*scene,
 		sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
 		&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
+	lightRay.time = time;
 	if (!lightVertex.throughput.Black()) {
 		lightEmitPdfW *= lightPickPdf;
 		lightDirectPdfW *= lightPickPdf;
@@ -352,7 +357,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 					// Try to connect the light path vertex with the eye
 					//----------------------------------------------------------
 
-					ConnectToEye(lightVertex, sampler->GetSample(sampleOffset + 1),
+					ConnectToEye(time, lightVertex, sampler->GetSample(sampleOffset + 1),
 							lensPoint, sampleResults);
 				}
 
@@ -363,7 +368,7 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 				// Build the next vertex path ray
 				//--------------------------------------------------------------
 
-				if (!Bounce(sampler, sampleOffset + 2, &lightVertex, &lightRay))
+				if (!Bounce(time, sampler, sampleOffset + 2, &lightVertex, &lightRay))
 					break;
 
 				++(lightVertex.depth);
@@ -375,8 +380,8 @@ void BiDirCPURenderThread::TraceLightPath(Sampler *sampler,
 	}
 }
 
-bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
-		PathVertexVM *pathVertex, Ray *nextEventRay) const {
+bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
+		const u_int sampleOffset, PathVertexVM *pathVertex, Ray *nextEventRay) const {
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 
 	Vector sampledDir;
@@ -436,6 +441,7 @@ bool BiDirCPURenderThread::Bounce(Sampler *sampler, const u_int sampleOffset,
 	pathVertex->volInfo.Update(event, pathVertex->bsdf);
 
 	*nextEventRay = Ray(pathVertex->bsdf.hitPoint.p, sampledDir);
+	nextEventRay->time = time;
 
 	return true;
 }
@@ -488,7 +494,8 @@ void BiDirCPURenderThread::RenderFunc() {
 		// Trace light path
 		//----------------------------------------------------------------------
 
-		TraceLightPath(sampler, lensPoint, lightPathVertices, sampleResults);
+		const float time = sampler->GetSample(12);
+		TraceLightPath(time, sampler, lensPoint, lightPathVertices, sampleResults);
 
 		//----------------------------------------------------------------------
 		// Trace eye path
@@ -502,7 +509,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 		eyeSampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
-			sampler->GetSample(10), sampler->GetSample(11));
+			sampler->GetSample(10), sampler->GetSample(11), time);
 
 		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 		eyeVertex.throughput = Spectrum(1.f);
@@ -566,7 +573,8 @@ void BiDirCPURenderThread::RenderFunc() {
 			// Direct light sampling
 			//------------------------------------------------------------------
 
-			DirectLightSampling(sampler->GetSample(sampleOffset + 1),
+			DirectLightSampling(time,
+					sampler->GetSample(sampleOffset + 1),
 					sampler->GetSample(sampleOffset + 2),
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
@@ -580,7 +588,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			if (!eyeVertex.bsdf.IsDelta()) {
 				for (vector<PathVertexVM>::const_iterator lightPathVertex = lightPathVertices.begin();
 						lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
-					ConnectVertices(eyeVertex, *lightPathVertex, &eyeSampleResult,
+					ConnectVertices(time, eyeVertex, *lightPathVertex, &eyeSampleResult,
 							sampler->GetSample(sampleOffset + 6));
 			}
 
@@ -588,7 +596,7 @@ void BiDirCPURenderThread::RenderFunc() {
 			// Build the next vertex path ray
 			//------------------------------------------------------------------
 
-			if (!Bounce(sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
+			if (!Bounce(time, sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
 				break;
 
 			++(eyeVertex.depth);
