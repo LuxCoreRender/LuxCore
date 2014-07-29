@@ -47,6 +47,7 @@ void BiasPathCPURenderThread::DirectLightSampling(
 		const LightSource *light, const float lightPickPdf,
 		const float u0, const float u1,
 		const float u2, const float u3,
+		const float time,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
 		PathVolumeInfo volInfo, SampleResult *sampleResult, const float lightScale) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
@@ -77,7 +78,8 @@ void BiasPathCPURenderThread::DirectLightSampling(
 			const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 			Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 					epsilon,
-					distance - epsilon);
+					distance - epsilon,
+					time);
 			RayHit shadowRayHit;
 			BSDF shadowBsdf;
 			Spectrum connectionThroughput;
@@ -94,6 +96,7 @@ void BiasPathCPURenderThread::DirectLightSampling(
 }
 
 void BiasPathCPURenderThread::DirectLightSamplingONE(
+		const float time,
 		RandomGenerator *rndGen,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
 		const PathVolumeInfo &volInfo, SampleResult *sampleResult) {
@@ -108,10 +111,12 @@ void BiasPathCPURenderThread::DirectLightSamplingONE(
 			light, lightPickPdf,
 			rndGen->floatValue(), rndGen->floatValue(),
 			rndGen->floatValue(), rndGen->floatValue(),
+			time,
 			pathThroughput, bsdf, volInfo, sampleResult, 1.f);
 }
 
 void BiasPathCPURenderThread::DirectLightSamplingALL(
+		const float time,
 		const u_int sampleCount,
 		RandomGenerator *rndGen,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
@@ -134,7 +139,7 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 
 				DirectLightSampling(
 						light, lightPickPdf, u0, u1,
-						rndGen->floatValue(), rndGen->floatValue(),
+						rndGen->floatValue(), rndGen->floatValue(), time,
 						lightPathTrough, bsdf, volInfo, sampleResult, scaleFactor);
 			}
 		}
@@ -256,7 +261,7 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 			break;
 
 		if (!bsdf.IsDelta())
-			DirectLightSamplingONE(rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
+			DirectLightSamplingONE(ray.time, rndGen, pathThroughput, bsdf, *volInfo, sampleResult);
 
 		//----------------------------------------------------------------------
 		// Build the next path vertex ray
@@ -280,12 +285,13 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		pathThroughput *= bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
 		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
-		ray = Ray(bsdf.hitPoint.p, sampledDir);
+		ray.Update(bsdf.hitPoint.p, sampledDir);
 	}
 }
 
 // NOTE: bsdf.hitPoint.passThroughEvent is modified by this method
-void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
+void BiasPathCPURenderThread::SampleComponent(
+		const float time, RandomGenerator *rndGen,
 		const BSDFEvent requestedEventTypes, const u_int size,
 		const luxrays::Spectrum &pathThroughput, BSDF &bsdf,
 		const PathVolumeInfo &startVolInfo, SampleResult *sampleResult) {
@@ -322,6 +328,7 @@ void BiasPathCPURenderThread::SampleComponent(RandomGenerator *rndGen,
 				assert (!continuePathThroughput.IsNaN() && !continuePathThroughput.IsInf());
 
 				Ray continueRay(bsdf.hitPoint.p, sampledDir);
+				continueRay.time = time;
 				ContinueTracePath(rndGen, depthInfo, continueRay,
 						continuePathThroughput, event, pdfW, &volInfo, sampleResult);
 			}
@@ -407,7 +414,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				!((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)));
 
 		if (!bsdf.IsDelta())
-			DirectLightSamplingALL(engine->firstVertexLightSampleCount, rndGen,
+			DirectLightSamplingALL(eyeRay.time, engine->firstVertexLightSampleCount, rndGen,
 					pathThroughput, bsdf, *volInfo, sampleResult);
 
 		//----------------------------------------------------------------------
@@ -430,7 +437,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				const u_int diffuseSamples = (materialSamples < 0) ? engine->diffuseSamples : ((u_int)materialSamples);
 
 				if (diffuseSamples > 0) {
-					SampleComponent(rndGen, DIFFUSE | REFLECT | TRANSMIT,
+					SampleComponent(eyeRay.time, rndGen, DIFFUSE | REFLECT | TRANSMIT,
 							diffuseSamples, pathThroughput, bsdf, *volInfo, sampleResult);
 				}
 			}
@@ -445,7 +452,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				const u_int glossySamples = (materialSamples < 0) ? engine->glossySamples : ((u_int)materialSamples);
 
 				if (glossySamples > 0) {
-					SampleComponent(rndGen, GLOSSY | REFLECT | TRANSMIT, 
+					SampleComponent(eyeRay.time, rndGen, GLOSSY | REFLECT | TRANSMIT, 
 							glossySamples, pathThroughput, bsdf, *volInfo, sampleResult);
 				}
 			}
@@ -460,7 +467,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				const u_int specularSamples = (materialSamples < 0) ? engine->specularSamples : ((u_int)materialSamples);
 
 				if (specularSamples > 0) {
-					SampleComponent(rndGen, SPECULAR | REFLECT | TRANSMIT,
+					SampleComponent(eyeRay.time, rndGen, SPECULAR | REFLECT | TRANSMIT,
 							specularSamples, pathThroughput, bsdf, *volInfo, sampleResult);
 				}
 			}
@@ -506,7 +513,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	sampleResult.filmY = yOffset + y + .5f + u1;
 	Ray eyeRay;
 	engine->renderConfig->scene->camera->GenerateRay(sampleResult.filmX, sampleResult.filmY,
-			&eyeRay, rndGen->floatValue(), rndGen->floatValue());
+			&eyeRay, rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
 	// Trace the path
 	PathVolumeInfo volInfo;
