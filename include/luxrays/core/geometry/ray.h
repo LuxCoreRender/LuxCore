@@ -56,6 +56,14 @@ public:
 		signs[1] = boost::math::signbit(d.y);
 		signs[2] = boost::math::signbit(d.z);
 	}
+	
+	void Update(const Point &origin, const Vector &direction) {
+		o = origin;
+		d = direction;
+		mint = MachineEpsilon::E(origin);
+		maxt = std::numeric_limits<float>::infinity();
+		// Keep the same time value
+	}
 
 	// Ray Public Data
 	Point o;

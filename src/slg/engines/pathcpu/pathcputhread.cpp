@@ -322,10 +322,7 @@ void PathCPURenderThread::RenderFunc() {
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
 
-			const float time = eyeRay.time;
-			eyeRay = Ray(bsdf.hitPoint.p, sampledDir);
-			eyeRay.time = time;
-
+			eyeRay.Update(bsdf.hitPoint.p, sampledDir);
 			++depth;
 		}
 
