@@ -49,8 +49,15 @@ private:
 	void ConnectToEye(const float u0,
 			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
 			PathVolumeInfo volInfo, vector<SampleResult> *sampleResults);
-	void TraceEyePath(Sampler *sampler, PathVolumeInfo volInfo,
+	void TraceEyePath(const float time,
+			Sampler *sampler, PathVolumeInfo volInfo,
 			vector<SampleResult> *sampleResults);
+	
+	// Used to offset Sampler data
+	static const u_int sampleBootSize = 13;
+	static const u_int sampleEyeStepSize = 3;
+	static const u_int sampleLightStepSize = 5;
+
 };
 
 class LightCPURenderEngine : public CPUNoTileRenderEngine {
