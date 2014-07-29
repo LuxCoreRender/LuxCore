@@ -71,7 +71,7 @@ InterpolatedTransform::InterpolatedTransform(float st, float et,
 BBox InterpolatedTransform::Bound(BBox ibox) const {
 	// Compute total bounding box by naive unions.
 	BBox tbox;
-	const float N = 32.f;
+	const float N = 1024.f;
 	for (float i = 0; i <= N; ++i) {
 		const float t = Lerp(i / N, startTime, endTime);
 		tbox = Union(tbox, Sample(t) * ibox);

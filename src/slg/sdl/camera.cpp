@@ -29,10 +29,31 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+//------------------------------------------------------------------------------
+// Camera
+//------------------------------------------------------------------------------
+
+Properties Camera::ToProperties() const {
+	Properties props;
+
+	props.Set(Property("scene.camera.cliphither")(clipHither));
+	props.Set(Property("scene.camera.clipyon")(clipYon));
+	props.Set(Property("scene.camera.lensradius")(lensRadius));
+	props.Set(Property("scene.camera.focaldistance")(focalDistance));
+	props.Set(Property("scene.camera.shutteropen")(shutterOpen));
+	props.Set(Property("scene.camera.shutterclose")(shutterClose));
+	props.Set(Property("scene.camera.autofocus.enable")(autoFocus));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// PerspectiveCamera
+//------------------------------------------------------------------------------
+
 PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
 		const luxrays::Vector &u, const float *region) : Camera(PERSPECTIVE),
-		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f), clipHither(1e-3f), clipYon(1e30f),
-		lensRadius(0.f), focalDistance(10.f) {
+		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f) {
 	if (region) {
 		autoUpdateFilmRegion = false;
 		filmRegion[0] = region[0];
@@ -251,7 +272,7 @@ void PerspectiveCamera::GenerateRay(
 	ray->d = Normalize(ray->d);
 	ray->mint = MachineEpsilon::E(ray->o);
 	ray->maxt = (clipYon - clipHither) / ray->d.z;
-	ray->time = u3 * (1.f / 24.f);
+	ray->time = Lerp(u3, shutterOpen, shutterClose);
 
 	*ray = camTrans[transIndex].cameraToWorld * (*ray);
 
@@ -349,6 +370,8 @@ bool PerspectiveCamera::SampleLens(const float u1, const float u2,
 Properties PerspectiveCamera::ToProperties() const {
 	Properties props;
 
+	props.Set(Camera::ToProperties());
+	
 	props.Set(Property("scene.camera.lookat.orig")(orig));
 	props.Set(Property("scene.camera.lookat.target")(target));
 	props.Set(Property("scene.camera.up")(up));
@@ -356,14 +379,9 @@ Properties PerspectiveCamera::ToProperties() const {
 	if (!autoUpdateFilmRegion)
 		props.Set(Property("scene.camera.screenwindow")(filmRegion[0], filmRegion[1], filmRegion[2], filmRegion[3]));
 
-	props.Set(Property("scene.camera.cliphither")(clipHither));
-	props.Set(Property("scene.camera.clipyon")(clipYon));
-	props.Set(Property("scene.camera.lensradius")(lensRadius));
-	props.Set(Property("scene.camera.focaldistance")(focalDistance));
 	props.Set(Property("scene.camera.fieldofview")(fieldOfView));
 	props.Set(Property("scene.camera.horizontalstereo.enable")(enableHorizStereo));
 	props.Set(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
-	props.Set(Property("scene.camera.autofocus.enable")(autoFocus));
 
 	return props;
 }
@@ -465,6 +483,8 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 	camera->clipYon = props.Get(Property("scene.camera.clipyon")(1e30f)).Get<float>();
 	camera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
 	camera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
+	camera->shutterOpen = props.Get(Property("scene.camera.shutteropen")(0.f)).Get<float>();
+	camera->shutterClose = props.Get(Property("scene.camera.shutterclose")(1.f)).Get<float>();
 	camera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
 	camera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
 

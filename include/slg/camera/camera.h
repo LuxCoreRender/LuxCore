@@ -44,12 +44,12 @@ public:
 		PERSPECTIVE
 	} CameraType;
 
-	Camera(const CameraType t) : type(t), autoFocus(false) { }
+	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),
+		lensRadius(0.f), focalDistance(10.f), shutterOpen(0.f), shutterClose(1.f),
+		autoFocus(false), type(t) { }
 	virtual ~Camera() { }
 
 	CameraType GetType() const { return type; }
-	void SetAutofocus(const bool af) { autoFocus = af; }
-	bool GetAutoFocus() const { return autoFocus; }
 
 	virtual bool IsHorizontalStereoEnabled() const { return false; }
 
@@ -84,15 +84,16 @@ public:
 	virtual const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const = 0;
 	virtual const luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index) const = 0;
 
-	virtual luxrays::Properties ToProperties() const = 0;
+	virtual luxrays::Properties ToProperties() const;
 
 	static Camera *AllocCamera(const luxrays::Properties &props);
 
+	// User defined values
+	float clipHither, clipYon, lensRadius, focalDistance, shutterOpen, shutterClose;
+	bool autoFocus;
+
 private:
 	const CameraType type;
-
-protected:
-	bool autoFocus;
 };
 
 //------------------------------------------------------------------------------
@@ -203,7 +204,7 @@ public:
 	// User defined values
 	luxrays::Point orig, target;
 	luxrays::Vector up;
-	float fieldOfView, clipHither, clipYon, lensRadius, focalDistance;
+	float fieldOfView;
 
 	// World clipping plane
 	luxrays::Point clippingPlaneCenter;
