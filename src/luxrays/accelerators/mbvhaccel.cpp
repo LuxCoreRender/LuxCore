@@ -63,7 +63,7 @@ public:
 		vertOffsetPerLeafMesh.resize(mbvh->uniqueLeafs.size());
 		u_int totalVertCount = 0;
 		for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i) {
-			BVHAccel *leaf = mbvh->uniqueLeafs[i];
+			const BVHAccel *leaf = mbvh->uniqueLeafs[i];
 
 			for (u_int j = 0; j < leaf->meshes.size(); ++j) {
 				vertOffsetPerLeafMesh[i].push_back(totalVertCount);
@@ -504,7 +504,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				}
 
 				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
-				uniqueLeafsTransform.push_back(itm->GetTransformation().mInv);
+				uniqueLeafsTransform.push_back(&itm->GetTransformation());
 				leafsMotionSystemIndex.push_back(NULL_INDEX);
 				break;
 			}
@@ -533,7 +533,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				}
 
 				leafsMotionSystemIndex.push_back(uniqueLeafsMotionSystem.size());
-				uniqueLeafsMotionSystem.push_back(mtm->GetMotionSystem());
+				uniqueLeafsMotionSystem.push_back(&mtm->GetMotionSystem());
 				leafsTransformIndex.push_back(NULL_INDEX);
 				break;
 			}
@@ -571,7 +571,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	BVHAccel::FreeHierarchy(rootNode);
 
 	size_t totalMem = nRootNodes;
-	BOOST_FOREACH(BVHAccel *bvh, uniqueLeafs)
+	BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)
 		totalMem += bvh->nNodes;
 	totalMem *= sizeof(BVHAccelArrayNode);
 	LR_LOG(ctx, "Total Multilevel BVH memory usage: " << totalMem / 1024 << "Kbytes");
@@ -582,7 +582,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 
 MBVHAccel::~MBVHAccel() {
 	if (initialized) {
-		BOOST_FOREACH(BVHAccel *bvh, uniqueLeafs)
+		BOOST_FOREACH(const BVHAccel *bvh, uniqueLeafs)
 			delete bvh;
 		delete bvhRootTree;
 	}
@@ -663,9 +663,9 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 				Matrix4x4 tmpMat;
 				const Matrix4x4 *m = NULL;
 				if (node.bvhLeaf.transformIndex != NULL_INDEX)
-					m = &uniqueLeafsTransform[node.bvhLeaf.transformIndex];
+					m = &uniqueLeafsTransform[node.bvhLeaf.transformIndex]->mInv;
 				if (node.bvhLeaf.motionIndex != NULL_INDEX) {
-					tmpMat = uniqueLeafsMotionSystem[node.bvhLeaf.motionIndex].Sample(ray->time).mInv;
+					tmpMat = uniqueLeafsMotionSystem[node.bvhLeaf.motionIndex]->Sample(ray->time).mInv;
 					m = &tmpMat;
 				}
 				
@@ -682,9 +682,9 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 					currentRay.d.x = m->m[0][0] * ray->d.x + m->m[0][1] * ray->d.y + m->m[0][2] * ray->d.z;
 					currentRay.d.y = m->m[1][0] * ray->d.x + m->m[1][1] * ray->d.y + m->m[1][2] * ray->d.z;
 					currentRay.d.z = m->m[2][0] * ray->d.x + m->m[2][1] * ray->d.y + m->m[2][2] * ray->d.z;
-
-					currentRay.maxt = rayHit->t;
 				}
+
+				currentRay.maxt = rayHit->t;
 
 				currentMeshOffset = node.bvhLeaf.meshOffsetIndex;
 
