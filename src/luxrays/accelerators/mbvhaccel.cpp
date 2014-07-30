@@ -479,8 +479,9 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				leafsMotionSystemIndex.push_back(NULL_INDEX);
 				break;
 			}
-			case TYPE_TRIANGLE_INSTANCE: {
-				const InstanceTriangleMesh *itm = (const InstanceTriangleMesh *)mesh;
+			case TYPE_TRIANGLE_INSTANCE:
+			case TYPE_EXT_TRIANGLE_INSTANCE: {
+				const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(mesh);
 
 				// Check if a BVH has already been created
 				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
@@ -507,36 +508,9 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				leafsMotionSystemIndex.push_back(NULL_INDEX);
 				break;
 			}
-			case TYPE_EXT_TRIANGLE_INSTANCE: {
-				const ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)mesh;
-
-				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(eitm->GetExtTriangleMesh());
-
-				if (it == uniqueLeafIndexByMesh.end()) {
-					ExtTriangleMesh *instancedMesh = eitm->GetExtTriangleMesh();
-
-					// Create a new BVH
-					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
-					std::deque<const Mesh *> mlist(1, instancedMesh);
-					leaf->Init(mlist, instancedMesh->GetTotalVertexCount(), instancedMesh->GetTotalTriangleCount());
-
-					const u_int uniqueLeafIndex = uniqueLeafs.size();
-					uniqueLeafIndexByMesh[instancedMesh] = uniqueLeafIndex;
-					uniqueLeafs.push_back(leaf);
-					leafsIndex.push_back(uniqueLeafIndex);
-				} else {
-					//LR_LOG(ctx, "Cached BVH leaf");
-					leafsIndex.push_back(it->second);
-				}
-
-				leafsTransformIndex.push_back(uniqueLeafsTransform.size());
-				uniqueLeafsTransform.push_back(eitm->GetTransformation().mInv);
-				leafsMotionSystemIndex.push_back(NULL_INDEX);
-				break;
-			}
-			case TYPE_TRIANGLE_MOTION: {
-				const MotionTriangleMesh *mtm = (const MotionTriangleMesh *)mesh;
+			case TYPE_TRIANGLE_MOTION:
+			case TYPE_EXT_TRIANGLE_MOTION: {
+				const MotionTriangleMesh *mtm = dynamic_cast<const MotionTriangleMesh *>(mesh);
 
 				// Check if a BVH has already been created
 				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(mtm->GetTriangleMesh());
@@ -563,37 +537,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				leafsTransformIndex.push_back(NULL_INDEX);
 				break;
 			}
-			case TYPE_EXT_TRIANGLE_MOTION: {
-				const ExtMotionTriangleMesh *emtm = (const ExtMotionTriangleMesh *)mesh;
-
-				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(emtm->GetExtTriangleMesh());
-
-				if (it == uniqueLeafIndexByMesh.end()) {
-					ExtTriangleMesh *motionMesh = emtm->GetExtTriangleMesh();
-
-					// Create a new BVH
-					BVHAccel *leaf = new BVHAccel(ctx, params.treeType, params.costSamples, params.isectCost, params.traversalCost, params.emptyBonus);
-					std::deque<const Mesh *> mlist(1, motionMesh);
-					leaf->Init(mlist, motionMesh->GetTotalVertexCount(), motionMesh->GetTotalTriangleCount());
-
-					const u_int uniqueLeafIndex = uniqueLeafs.size();
-					uniqueLeafIndexByMesh[motionMesh] = uniqueLeafIndex;
-					uniqueLeafs.push_back(leaf);
-					leafsIndex.push_back(uniqueLeafIndex);
-				} else {
-					//LR_LOG(ctx, "Cached BVH leaf");
-					leafsIndex.push_back(it->second);
-				}
-
-				leafsMotionSystemIndex.push_back(uniqueLeafsMotionSystem.size());
-				uniqueLeafsMotionSystem.push_back(emtm->GetMotionSystem());
-				leafsTransformIndex.push_back(NULL_INDEX);
-				break;
-			}
 			default:
-				assert (false);
-				break;
+				throw std::runtime_error("Unknown Mesh type in MBVHAccel::Init(): " + ToString(mesh->GetType()));
 		}
 	}
 

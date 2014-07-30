@@ -425,8 +425,9 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_longlong t
 				leafsTransform[i] = NULL;
 				break;
 			}
-			case TYPE_TRIANGLE_INSTANCE: {
-				InstanceTriangleMesh *itm = (InstanceTriangleMesh *)meshList[i];
+			case TYPE_TRIANGLE_INSTANCE:
+			case TYPE_EXT_TRIANGLE_INSTANCE: {
+				const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(meshList[i]);
 
 				// Check if a QBVH has already been created
 				std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::iterator it = accels.find(itm->GetTriangleMesh());
@@ -445,28 +446,8 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_longlong t
 				leafsTransform[i] = &itm->GetTransformation();
 				break;
 			}
-			case TYPE_EXT_TRIANGLE_INSTANCE: {
-				ExtInstanceTriangleMesh *eitm = (ExtInstanceTriangleMesh *)meshList[i];
-
-				// Check if a QBVH has already been created
-				std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::iterator it = accels.find(eitm->GetExtTriangleMesh());
-				if (it == accels.end()) {
-					// Create a new QBVH
-					leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
-					leafs[i]->Init(std::deque<const Mesh *>(1, eitm->GetExtTriangleMesh()),
-							eitm->GetTotalVertexCount(), eitm->GetTotalTriangleCount());
-					accels[eitm->GetExtTriangleMesh()] = leafs[i];
-				} else {
-					//LR_LOG(ctx, "Cached QBVH leaf");
-					leafs[i] = it->second;
-				}
-
-				leafsTransform[i] = &eitm->GetTransformation();
-				break;
-			}
 			default:
-				assert (false);
-				break;
+				throw std::runtime_error("Unknown Mesh type in MQBVHAccel::Init(): " + ToString(meshList[i]->GetType()));
 		}
 
 		currentOffset += meshList[i]->GetTotalTriangleCount();
