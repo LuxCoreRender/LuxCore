@@ -43,7 +43,8 @@ public:
 	unsigned int GetNNodes() const { return nNodes; }
 	QBVHNode *GetTree() const { return nodes; }
 	unsigned int GetNLeafs() const { return nLeafs; }
-	const Transform **GetTransforms() const { return leafsTransform; }
+	const vector<const Transform *> &GetTransforms() const { return leafsTransform; }
+	const vector<const MotionSystem *> &GetMotionSystem() const { return leafsMotionSystem; }
 
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
@@ -77,7 +78,8 @@ private:
 	// Not using boost::unordered_map because because the key is a Mesh pointer
 	std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)> accels;
 	QBVHAccel **leafs;
-	const Transform **leafsTransform;
+	vector<const Transform *> leafsTransform;
+	vector<const MotionSystem *> leafsMotionSystem;
 
 	const Context *ctx;
 	bool initialized;
