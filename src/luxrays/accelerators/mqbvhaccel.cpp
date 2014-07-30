@@ -381,7 +381,6 @@ MQBVHAccel::~MQBVHAccel() {
 	if (initialized) {
 		FreeAligned(nodes);
 
-		delete[] leafsTransform;
 		delete[] leafs;
 
 		for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::iterator it = accels.begin(); it != accels.end(); it++)
@@ -404,7 +403,8 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_longlong t
 	LR_LOG(ctx, "MQBVH leaf count: " << nLeafs);
 
 	leafs = new QBVHAccel*[nLeafs];
-	leafsTransform = new const Transform*[nLeafs];
+	leafsTransform.resize(nLeafs, NULL);
+	leafsMotionSystem.resize(nLeafs, NULL);
 	u_int currentOffset = 0;
 	double lastPrint = WallClockTime();
 	for (u_int i = 0; i < nLeafs; ++i) {
@@ -421,8 +421,6 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_longlong t
 				leafs[i]->Init(std::deque<const Mesh *>(1, meshList[i]),
 						meshList[i]->GetTotalVertexCount(), meshList[i]->GetTotalTriangleCount());
 				accels[meshList[i]] = leafs[i];
-
-				leafsTransform[i] = NULL;
 				break;
 			}
 			case TYPE_TRIANGLE_INSTANCE:
@@ -444,6 +442,27 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_longlong t
 				}
 
 				leafsTransform[i] = &itm->GetTransformation();
+				break;
+			}
+			case TYPE_TRIANGLE_MOTION:
+			case TYPE_EXT_TRIANGLE_MOTION: {
+				const MotionTriangleMesh *mtm = dynamic_cast<const MotionTriangleMesh *>(meshList[i]);
+
+				// Check if a QBVH has already been created
+				std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::iterator it = accels.find(mtm->GetTriangleMesh());
+
+				if (it == accels.end()) {
+					// Create a new QBVH
+					leafs[i] = new QBVHAccel(ctx, 4, 4 * 4, 1);
+					leafs[i]->Init(std::deque<const Mesh *>(1, mtm->GetTriangleMesh()),
+							mtm->GetTotalVertexCount(), mtm->GetTotalTriangleCount());
+					accels[mtm->GetTriangleMesh()] = leafs[i];
+				} else {
+					//LR_LOG(ctx, "Cached QBVH leaf");
+					leafs[i] = it->second;
+				}
+
+				leafsMotionSystem[i] = &mtm->GetMotionSystem();
 				break;
 			}
 			default:
@@ -753,7 +772,6 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 	Ray ray(*initialRay);
 	rayHit->SetMiss();
 
-	//------------------------------
 	// Prepare the ray for intersection
 	QuadRay ray4(ray);
 	__m128 invDir[3];
@@ -764,7 +782,6 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 	int signs[3];
 	ray.GetDirectionSigns(signs);
 
-	//------------------------------
 	// Main loop
 	int todoNode = 0; // the index in the stack
 	int32_t nodeStack[64];
@@ -775,7 +792,7 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 		if (!QBVHNode::IsLeaf(nodeStack[todoNode])) {
 			QBVHNode &node = nodes[nodeStack[todoNode]];
 			--todoNode;
-
+		
 			// It is quite strange but checking here for empty nodes slows down the rendering
 			const int32_t visit = node.BBoxIntersect(ray4, invDir, signs);
 
@@ -845,7 +862,6 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 					break;
 			}
 		} else {
-			//----------------------
 			// It is a leaf,
 			// all the informations are encoded in the index
 			const int32_t leafData = nodeStack[todoNode];
@@ -857,31 +873,25 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 			const u_int leafIndex = QBVHNode::FirstQuadIndex(leafData);
 			QBVHAccel *qbvh = leafs[leafIndex];
 
-			if (leafsTransform[leafIndex]) {
-				Ray r(Inverse(*leafsTransform[leafIndex]) * ray);
-				RayHit rh;
-				if (qbvh->Intersect(&r, &rh)) {
-					rayHit->t = rh.t;
-					rayHit->b1 = rh.b1;
-					rayHit->b2 = rh.b2;
-					rayHit->meshIndex = leafIndex;
-					rayHit->triangleIndex = rh.triangleIndex;
+			Ray localRay;
+			if (leafsTransform[leafIndex])
+				localRay = Ray(Inverse(*leafsTransform[leafIndex]) * ray);
+			else if (leafsMotionSystem[leafIndex])
+				localRay = Ray(Inverse(leafsMotionSystem[leafIndex]->Sample(ray.time)) * ray);
+			else
+				localRay = ray;
 
-					ray.maxt = rh.t;
-				}
-			} else {
-				RayHit rh;
-				if (qbvh->Intersect(&ray, &rh)) {
-					rayHit->t = rh.t;
-					rayHit->b1 = rh.b1;
-					rayHit->b2 = rh.b2;
-					rayHit->meshIndex = leafIndex;
-					rayHit->triangleIndex = rh.triangleIndex;
+			RayHit rh;
+			if (qbvh->Intersect(&localRay, &rh)) {
+				rayHit->t = rh.t;
+				rayHit->b1 = rh.b1;
+				rayHit->b2 = rh.b2;
+				rayHit->meshIndex = leafIndex;
+				rayHit->triangleIndex = rh.triangleIndex;
 
-					ray.maxt = rh.t;
-				}
+				ray.maxt = rh.t;
 			}
-		}//end of the else
+		}
 	}
 
 	return !rayHit->Miss();

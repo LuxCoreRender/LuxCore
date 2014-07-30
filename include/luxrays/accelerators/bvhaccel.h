@@ -59,7 +59,7 @@ struct BVHAccelArrayNode {
 		} triangleLeaf;
 		struct {
 			u_int leafIndex;
-			u_int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX
+			u_int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX (i.e. only one can be used)
 			u_int meshOffsetIndex;
 		} bvhLeaf; // Used by MBVH
 	};
