@@ -74,49 +74,10 @@ TriangleMesh *TriangleMesh::Merge(
 	unsigned int iIndex = 0;
 	TriangleMeshID currentID = 0;
 	for (std::deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
-		const Triangle *tris;
-		switch ((*m)->GetType()) {
-			case TYPE_TRIANGLE: {
-				const TriangleMesh *mesh = (TriangleMesh *)*m;
-				// Copy the mesh vertices
-				memcpy(&v[vIndex], mesh->GetVertices(), sizeof(Point) * mesh->GetTotalVertexCount());
+		// Copy the mesh vertices
+		memcpy(&v[vIndex], (*m)->GetVertices(), sizeof(Point) * (*m)->GetTotalVertexCount());
 
-				tris = mesh->GetTriangles();
-				break;
-			}
-			case TYPE_TRIANGLE_INSTANCE: {
-				const InstanceTriangleMesh *mesh = (InstanceTriangleMesh *)*m;
-
-				// Copy the mesh vertices
-				for (unsigned int j = 0; j < mesh->GetTotalVertexCount(); j++)
-					v[vIndex + j] = mesh->GetVertices()[j];
-
-				tris = mesh->GetTriangles();
-				break;
-			}
-			case TYPE_EXT_TRIANGLE: {
-				const ExtTriangleMesh *mesh = (ExtTriangleMesh *)*m;
-
-				// Copy the mesh vertices
-				for (unsigned int j = 0; j <mesh->GetTotalVertexCount(); j++)
-					v[vIndex + j] = mesh->GetVertices()[j];
-
-				tris = mesh->GetTriangles();
-				break;
-			}
-			case TYPE_EXT_TRIANGLE_INSTANCE: {
-				const ExtInstanceTriangleMesh *mesh = (ExtInstanceTriangleMesh *)*m;
-
-				// Copy the mesh vertices
-				for (unsigned int j = 0; j <mesh->GetTotalVertexCount(); j++)
-					v[vIndex + j] = mesh->GetVertices()[j];
-
-				tris = mesh->GetTriangles();
-				break;
-			}
-			default:
-				throw std::runtime_error("Unknown mesh type in TriangleMesh::Merge(): " + ToString((*m)->GetType()));
-		}
+		const Triangle *tris = (*m)->GetTriangles();
 
 		// Translate mesh indices
 		for (unsigned int j = 0; j < (*m)->GetTotalTriangleCount(); j++) {

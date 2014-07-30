@@ -61,7 +61,7 @@ public:
 	virtual void ApplyTransform(const Transform &trans) = 0;
 };
 
-class TriangleMesh : public Mesh {
+class TriangleMesh : virtual public Mesh {
 public:
 	// NOTE: deleting meshVertices and meshIndices is up to the application
 	TriangleMesh(const u_int meshVertCount,
@@ -113,7 +113,7 @@ protected:
 	Triangle *tris;
 };
 
-class InstanceTriangleMesh : public Mesh {
+class InstanceTriangleMesh : virtual public Mesh {
 public:
 	InstanceTriangleMesh(TriangleMesh *m, const Transform &t) {
 		assert (m != NULL);
@@ -147,7 +147,7 @@ protected:
 	TriangleMesh *mesh;
 };
 
-class MotionTriangleMesh : public Mesh {
+class MotionTriangleMesh : virtual public Mesh {
 public:
 	MotionTriangleMesh(TriangleMesh *m, const MotionSystem &ms) {
 		assert (m != NULL);

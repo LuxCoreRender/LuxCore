@@ -392,34 +392,25 @@ ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
 // ExtTriangleMesh
 //------------------------------------------------------------------------------
 
-ExtTriangleMesh::ExtTriangleMesh(ExtTriangleMesh *mesh) {
-	assert (mesh != NULL);
-
-	vertCount = mesh->vertCount;
-	triCount = mesh->triCount;
-	vertices = mesh->vertices;
-	tris = mesh->tris;
-
-	normals = mesh->normals;
-	triNormals = mesh->triNormals;
-	uvs = mesh->uvs;
-	cols = mesh->cols;
-	alphas = mesh->alphas;
-}
+//ExtTriangleMesh::ExtTriangleMesh(ExtTriangleMesh *mesh) {
+//	assert (mesh != NULL);
+//
+//	vertCount = mesh->vertCount;
+//	triCount = mesh->triCount;
+//	vertices = mesh->vertices;
+//	tris = mesh->tris;
+//
+//	normals = mesh->normals;
+//	triNormals = mesh->triNormals;
+//	uvs = mesh->uvs;
+//	cols = mesh->cols;
+//	alphas = mesh->alphas;
+//}
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
-			Spectrum *meshCols, float *meshAlpha) {
-	assert (meshVertCount > 0);
-	assert (meshTriCount > 0);
-	assert (meshVertices != NULL);
-	assert (meshTris != NULL);
-
-	vertCount = meshVertCount;
-	triCount = meshTriCount;
-	vertices = meshVertices;
-	tris = meshTris;
-
+			Spectrum *meshCols, float *meshAlpha) :
+		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
 	normals = meshNormals;
 	uvs = meshUV;
 	cols = meshCols;
@@ -466,19 +457,6 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 	}
 
 	return allocated ? normals : NULL;
-}
-
-BBox ExtTriangleMesh::GetBBox() const {
-	BBox bbox;
-	for (u_int i = 0; i < vertCount; ++i)
-		bbox = Union(bbox, vertices[i]);
-
-	return bbox;
-}
-
-void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
-	for (u_int i = 0; i < vertCount; ++i)
-		vertices[i] *= trans;
 }
 
 void ExtTriangleMesh::WritePly(const std::string &fileName) const {

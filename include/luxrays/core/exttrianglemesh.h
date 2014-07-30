@@ -38,12 +38,12 @@ namespace luxrays {
 
 class ExtMeshCache;
 
-class ExtMesh : public Mesh {
+class ExtMesh : virtual public Mesh {
 public:
 	ExtMesh() { }
 	virtual ~ExtMesh() { }
 
-	std::string GetName() const { return "extmesh-" + boost::lexical_cast<std::string>(this); }
+	virtual std::string GetName() const { return "extmesh-" + boost::lexical_cast<std::string>(this); }
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs() const = 0;
@@ -69,15 +69,16 @@ public:
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const = 0;
 
 	virtual float GetTriangleArea(const float time, const unsigned int triIndex) const = 0;
-	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const = 0;
+	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1,
+		Point *p, float *b0, float *b1, float *b2) const = 0;
 
 	virtual void Delete() = 0;
 	virtual void WritePly(const std::string &fileName) const = 0;
 };
 
-class ExtTriangleMesh : public ExtMesh {
+class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
-	ExtTriangleMesh(ExtTriangleMesh *mesh);
+	//ExtTriangleMesh(ExtTriangleMesh *mesh);
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, UV *meshUV = NULL,
 			Spectrum *meshCols = NULL, float *meshAlpha = NULL);
@@ -96,19 +97,11 @@ public:
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
 
-	virtual BBox GetBBox() const;
-
-	virtual Point *GetVertices() const { return vertices; }
-	virtual Triangle *GetTriangles() const { return tris; }
-	virtual u_int GetTotalVertexCount() const { return vertCount; }
-	virtual u_int GetTotalTriangleCount() const { return triCount; }
-
 	virtual bool HasNormals() const { return normals != NULL; }
 	virtual bool HasUVs() const { return uvs != NULL; }
 	virtual bool HasColors() const { return cols != NULL; }
 	virtual bool HasAlphas() const { return alphas != NULL; }
 
-	virtual Point GetVertex(const float time, const u_int vertIndex) const { return vertices[vertIndex]; }
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
 		return triNormals[triIndex];
 	}
@@ -167,8 +160,6 @@ public:
 		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
 	}
 
-	virtual void ApplyTransform(const Transform &trans);
-
 	virtual void WritePly(const std::string &fileName) const;
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName);
@@ -177,10 +168,6 @@ public:
 		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas);
 
 private:
-	u_int vertCount;
-	u_int triCount;
-	Point *vertices;
-	Triangle *tris;
 	Normal *normals; // Vertices normals
 	Normal *triNormals; // Triangle normals
 	UV *uvs; // Vertex uvs
@@ -188,46 +175,31 @@ private:
 	float *alphas; // Vertex alpha
 };
 
-class ExtInstanceTriangleMesh : public ExtMesh {
+class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
-	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) {
-		assert (m != NULL);
-
-		trans = t;
-		mesh = m;
-	}
+	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) :  InstanceTriangleMesh(m, t) { }
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
 
-	virtual BBox GetBBox() const {
-		return trans * mesh->GetBBox();
-	}
+	virtual bool HasNormals() const { return ((ExtTriangleMesh *)mesh)->HasNormals(); }
+	virtual bool HasUVs() const { return ((ExtTriangleMesh *)mesh)->HasUVs(); }
+	virtual bool HasColors() const { return ((ExtTriangleMesh *)mesh)->HasColors(); }
+	virtual bool HasAlphas() const { return ((ExtTriangleMesh *)mesh)->HasAlphas(); }
 
-	virtual Point *GetVertices() const { return mesh->GetVertices(); }
-	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
-	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
-	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
-
-	virtual bool HasNormals() const { return mesh->HasNormals(); }
-	virtual bool HasUVs() const { return mesh->HasUVs(); }
-	virtual bool HasColors() const { return mesh->HasColors(); }
-	virtual bool HasAlphas() const { return mesh->HasAlphas(); }
-
-	virtual Point GetVertex(const float time, const u_int vertIndex) const { return trans * mesh->GetVertex(time, vertIndex); }
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
-		return Normalize(trans * mesh->GetGeometryNormal(time, triIndex));
+		return Normalize(trans * ((ExtTriangleMesh *)mesh)->GetGeometryNormal(time, triIndex));
 	}
 	virtual Normal GetShadeNormal(const float time, const unsigned vertIndex) const {
-		return Normalize(trans * mesh->GetShadeNormal(time, vertIndex));
+		return Normalize(trans * ((ExtTriangleMesh *)mesh)->GetShadeNormal(time, vertIndex));
 	}
 	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const {
-		return Normalize(trans * mesh->GetShadeNormal(time, triIndex, vertIndex));
+		return Normalize(trans * ((ExtTriangleMesh *)mesh)->GetShadeNormal(time, triIndex, vertIndex));
 	}
-	virtual UV GetUV(const unsigned vertIndex) const { return mesh->GetUV(vertIndex); }
-	virtual Spectrum GetColor(const unsigned vertIndex) const { return mesh->GetColor(vertIndex); }
-	virtual float GetAlpha(const unsigned vertIndex) const { return mesh->GetAlpha(vertIndex); }
+	virtual UV GetUV(const unsigned vertIndex) const { return ((ExtTriangleMesh *)mesh)->GetUV(vertIndex); }
+	virtual Spectrum GetColor(const unsigned vertIndex) const { return ((ExtTriangleMesh *)mesh)->GetColor(vertIndex); }
+	virtual float GetAlpha(const unsigned vertIndex) const { return ((ExtTriangleMesh *)mesh)->GetAlpha(vertIndex); }
 
 	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
@@ -237,19 +209,19 @@ public:
 	}
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
-		return Normalize(trans * mesh->InterpolateTriNormal(time, triIndex, b1, b2));
+		return Normalize(trans * ((ExtTriangleMesh *)mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
 	}
 
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const {
-		return mesh->InterpolateTriUV(triIndex, b1, b2);
+		return ((ExtTriangleMesh *)mesh)->InterpolateTriUV(triIndex, b1, b2);
 	}
 
 	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const {
-		return mesh->InterpolateTriColor(triIndex, b1, b2);
+		return ((ExtTriangleMesh *)mesh)->InterpolateTriColor(triIndex, b1, b2);
 	}
 	
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const {
-		return mesh->InterpolateTriAlpha(triIndex, b1, b2);
+		return ((ExtTriangleMesh *)mesh)->InterpolateTriAlpha(triIndex, b1, b2);
 	}
 
 	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
@@ -258,67 +230,45 @@ public:
 		return Triangle::Area(GetVertex(time, tri.v[0]), GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]));
 	}
 	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
-		mesh->Sample(time, triIndex, u0, u1, p , b0, b1, b2);
+		((ExtTriangleMesh *)mesh)->Sample(time, triIndex, u0, u1, p , b0, b1, b2);
 		*p *= trans;
 	}
 
-	virtual void ApplyTransform(const Transform &t) { trans = trans * t; }
-
-	virtual void WritePly(const std::string &fileName) const { mesh->WritePly(fileName); }
+	virtual void WritePly(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->WritePly(fileName); }
 
 	const Transform &GetTransformation() const { return trans; }
 	void SetTransformation(const Transform &t) {
 		trans = t;
 	}
-	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
-
-private:
-	Transform trans;
-	ExtTriangleMesh *mesh;
+	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 };
 
-class ExtMotionTriangleMesh : public ExtMesh {
+class ExtMotionTriangleMesh : public MotionTriangleMesh, public ExtMesh {
 public:
-	ExtMotionTriangleMesh(ExtTriangleMesh *m, const MotionSystem &ms) {
-		assert (m != NULL);
-
-		motionSystem = ms;
-		mesh = m;
-	}
+	ExtMotionTriangleMesh(ExtTriangleMesh *m, const MotionSystem &ms) :
+		MotionTriangleMesh(m, ms) { }
 	~ExtMotionTriangleMesh() { };
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_MOTION; }
 
-	virtual BBox GetBBox() const {
-		return motionSystem.Bound(mesh->GetBBox());
-	}
+	virtual bool HasNormals() const { return ((ExtTriangleMesh *)mesh)->HasNormals(); }
+	virtual bool HasUVs() const { return ((ExtTriangleMesh *)mesh)->HasUVs(); }
+	virtual bool HasColors() const { return ((ExtTriangleMesh *)mesh)->HasColors(); }
+	virtual bool HasAlphas() const { return ((ExtTriangleMesh *)mesh)->HasAlphas(); }
 
-	virtual Point *GetVertices() const { return mesh->GetVertices(); }
-	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
-	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
-	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
-
-	virtual bool HasNormals() const { return mesh->HasNormals(); }
-	virtual bool HasUVs() const { return mesh->HasUVs(); }
-	virtual bool HasColors() const { return mesh->HasColors(); }
-	virtual bool HasAlphas() const { return mesh->HasAlphas(); }
-
-	virtual Point GetVertex(const float time, const u_int vertIndex) const {
-		return motionSystem.Sample(time) * mesh->GetVertex(time, vertIndex);
-	}
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
-		return Normalize(motionSystem.Sample(time) * mesh->GetGeometryNormal(time, triIndex));
+		return Normalize(motionSystem.Sample(time) * ((ExtTriangleMesh *)mesh)->GetGeometryNormal(time, triIndex));
 	}
 	virtual Normal GetShadeNormal(const float time, const unsigned vertIndex) const {
-		return Normalize(motionSystem.Sample(time) * mesh->GetShadeNormal(time, vertIndex));
+		return Normalize(motionSystem.Sample(time) * ((ExtTriangleMesh *)mesh)->GetShadeNormal(time, vertIndex));
 	}
 	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const {
-		return Normalize(motionSystem.Sample(time) * mesh->GetShadeNormal(time, triIndex, vertIndex));
+		return Normalize(motionSystem.Sample(time) * ((ExtTriangleMesh *)mesh)->GetShadeNormal(time, triIndex, vertIndex));
 	}
-	virtual UV GetUV(const unsigned vertIndex) const { return mesh->GetUV(vertIndex); }
-	virtual Spectrum GetColor(const unsigned vertIndex) const { return mesh->GetColor(vertIndex); }
-	virtual float GetAlpha(const unsigned vertIndex) const { return mesh->GetAlpha(vertIndex); }
+	virtual UV GetUV(const unsigned vertIndex) const { return ((ExtTriangleMesh *)mesh)->GetUV(vertIndex); }
+	virtual Spectrum GetColor(const unsigned vertIndex) const { return ((ExtTriangleMesh *)mesh)->GetColor(vertIndex); }
+	virtual float GetAlpha(const unsigned vertIndex) const { return ((ExtTriangleMesh *)mesh)->GetAlpha(vertIndex); }
 
 	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
@@ -328,19 +278,19 @@ public:
 	}
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
-		return Normalize(motionSystem.Sample(time) * mesh->InterpolateTriNormal(time, triIndex, b1, b2));
+		return Normalize(motionSystem.Sample(time) * ((ExtTriangleMesh *)mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
 	}
 
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const {
-		return mesh->InterpolateTriUV(triIndex, b1, b2);
+		return ((ExtTriangleMesh *)mesh)->InterpolateTriUV(triIndex, b1, b2);
 	}
 	
 	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const {
-		return mesh->InterpolateTriColor(triIndex, b1, b2);
+		return ((ExtTriangleMesh *)mesh)->InterpolateTriColor(triIndex, b1, b2);
 	}
 	
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const {
-		return mesh->InterpolateTriAlpha(triIndex, b1, b2);
+		return ((ExtTriangleMesh *)mesh)->InterpolateTriAlpha(triIndex, b1, b2);
 	}
 
 	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
@@ -349,22 +299,14 @@ public:
 		return Triangle::Area(GetVertex(time, tri.v[0]), GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]));
 	}
 	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
-		mesh->Sample(time, triIndex, u0, u1, p , b0, b1, b2);
+		((ExtTriangleMesh *)mesh)->Sample(time, triIndex, u0, u1, p , b0, b1, b2);
 		*p *= motionSystem.Sample(time);
 	}
 
-	virtual void ApplyTransform(const Transform &t) {
-		throw std::runtime_error("ExtMotionTriangleMesh::ApplyTransform() not yet supported");
-	}
-
-	virtual void WritePly(const std::string &fileName) const { mesh->WritePly(fileName); }
+	virtual void WritePly(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->WritePly(fileName); }
 
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
-	ExtTriangleMesh *GetExtTriangleMesh() const { return mesh; };
-
-private:
-	MotionSystem motionSystem;
-	ExtTriangleMesh *mesh;
+	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 };
 
 }
