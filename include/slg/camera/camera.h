@@ -21,6 +21,7 @@
 
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/transform.h"
+#include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/utils/mc.h"
 
 #include "slg/film/film.h"
@@ -46,11 +47,15 @@ public:
 
 	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),
 		lensRadius(0.f), focalDistance(10.f), shutterOpen(0.f), shutterClose(1.f),
-		autoFocus(false), type(t) { }
-	virtual ~Camera() { }
+		autoFocus(false), type(t), motionSystem(NULL) { }
+	virtual ~Camera() {
+		delete motionSystem;
+	}
+
+	void SetMotionSystem(const luxrays::MotionSystem *ms) { motionSystem = ms; }
 
 	CameraType GetType() const { return type; }
-
+	
 	virtual bool IsHorizontalStereoEnabled() const { return false; }
 
 	virtual const luxrays::Vector GetDir() const = 0;
@@ -75,10 +80,10 @@ public:
 	virtual void UpdateFocus(const Scene *scene) = 0;
 	virtual void GenerateRay(
 		const float filmX, const float filmY,
-		luxrays::Ray *ray, const float u1, const float u2, const float u3 = 0.f) const = 0;
+		luxrays::Ray *ray, const float u1, const float u2, const float u3) const = 0;
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay,
 		float *filmX, float *filmY) const = 0;
-	virtual bool SampleLens(const float u1, const float u2,
+	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const = 0;
 
 	virtual const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const = 0;
@@ -92,8 +97,10 @@ public:
 	float clipHither, clipYon, lensRadius, focalDistance, shutterOpen, shutterClose;
 	bool autoFocus;
 
-private:
+protected:
 	const CameraType type;
+
+	const luxrays::MotionSystem *motionSystem;
 };
 
 //------------------------------------------------------------------------------
@@ -188,7 +195,7 @@ public:
 		luxrays::Ray *ray, const float u1, const float u2, const float u4) const;
 	bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
 
-	bool SampleLens(const float u1, const float u2,
+	bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const;
 
 	const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const {
@@ -218,6 +225,7 @@ public:
 
 private:
 	typedef struct {
+		// Note: all *ToWorld don't include camera motion blur
 		luxrays::Transform cameraToWorld;
 		luxrays::Transform screenToCamera, screenToWorld;
 		luxrays::Transform rasterToScreen, rasterToWorld;
@@ -236,7 +244,6 @@ private:
 	float pixelArea;
 	luxrays::Vector dir, x, y;
 
-	// ProjectiveCamera Protected Data
 	std::vector<CameraTransforms> camTrans;
 	
 	float filmRegion[4], horizStereoEyesDistance, horizStereoLensDistance;

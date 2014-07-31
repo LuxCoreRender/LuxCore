@@ -46,7 +46,11 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache) const {
     props.Set(Property("scene.objects." + name + ".material")(mat->GetName()));
 
     u_int meshIndex;
-    if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+	if (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION) {
+		const ExtMotionTriangleMesh *mot = (const ExtMotionTriangleMesh *)mesh;
+		props.Set(mot->GetMotionSystem().ToProperties("scene.objects." + name + "."));
+        meshIndex = extMeshCache.GetExtMeshIndex(mot->GetExtTriangleMesh());		
+	} else if (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
 		const ExtInstanceTriangleMesh *inst = (const ExtInstanceTriangleMesh *)mesh;
 		props << Property("scene.objects." + name + ".transformation")(inst->GetTransformation().m);
         meshIndex = extMeshCache.GetExtMeshIndex(inst->GetExtTriangleMesh());

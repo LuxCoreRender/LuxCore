@@ -66,7 +66,7 @@ void PathHybridState::Init(const PathHybridRenderThread *thread) {
 	sampleResults[0].filmX = std::min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
 	sampleResults[0].filmY = std::min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 	camera->GenerateRay(sampleResults[0].filmX, sampleResults[0].filmY, &nextPathVertexRay,
-		sampler->GetSample(2), sampler->GetSample(3));
+		sampler->GetSample(2), sampler->GetSample(3), 0.f);
 
 	sampleResults[0].alpha = 1.f;
 	sampleResults[0].radiancePerPixelNormalized[0] = Spectrum(0.f);

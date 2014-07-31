@@ -19,10 +19,13 @@
 #ifndef _LUXRAYS_MOTIONSYSTEM_H
 #define _LUXRAYS_MOTIONSYSTEM_H
 
+#include <string>
+
 #include "luxrays/core/geometry/quaternion.h"
 #include "luxrays/core/geometry/bbox.h"
 using luxrays::BBox;
 #include "luxrays/core/geometry/transform.h"
+#include "luxrays/utils/properties.h"
 
 namespace luxrays {
 
@@ -43,7 +46,6 @@ public:
 		return !isActive;
 	}
 
-protected:
 	class DecomposedTransform {
 	public:
 		DecomposedTransform() : Valid(false) {
@@ -100,6 +102,8 @@ public:
 	Transform Sample(float time) const;
 
 	BBox Bound(BBox ibox) const;
+
+	luxrays::Properties ToProperties(const std::string &prefix) const;
 
 private:
 	vector<float> times;

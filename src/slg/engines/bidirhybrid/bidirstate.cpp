@@ -458,7 +458,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 
 		// Sample a point on the camera lens
 		Point lensPoint;
-		if (!camera->SampleLens(sampler->GetSample(eyePathSampleOffset + 2), sampler->GetSample(eyePathSampleOffset + 3),
+		if (!camera->SampleLens(0.f, sampler->GetSample(eyePathSampleOffset + 2), sampler->GetSample(eyePathSampleOffset + 3),
 				&lensPoint))
 			return;
 
@@ -496,7 +496,7 @@ void BiDirState::GenerateRays(HybridRenderThread *renderThread) {
 		eyeSampleResults[eyePathIndex].filmX = luxrays::Min(sampler->GetSample(eyePathSampleOffset) * filmWidth, (float)(filmWidth - 1));
 		eyeSampleResults[eyePathIndex].filmY = luxrays::Min(sampler->GetSample(eyePathSampleOffset + 1) * filmHeight, (float)(filmHeight - 1));
 		camera->GenerateRay(eyeSampleResults[eyePathIndex].filmX, eyeSampleResults[eyePathIndex].filmY, &eyeRay,
-			sampler->GetSample(eyePathSampleOffset + 4), sampler->GetSample(eyePathSampleOffset + 5));
+			sampler->GetSample(eyePathSampleOffset + 4), sampler->GetSample(eyePathSampleOffset + 5), 0.f);
 
 		eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 		eyeVertex.throughput = Spectrum(1.f, 1.f, 1.f);

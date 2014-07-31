@@ -201,7 +201,7 @@ void LightCPURenderThread::RenderFunc() {
 
 		// Sample a point on the camera lens
 		Point lensPoint;
-		if (!camera->SampleLens(sampler->GetSample(8), sampler->GetSample(9),
+		if (!camera->SampleLens(time, sampler->GetSample(8), sampler->GetSample(9),
 				&lensPoint)) {
 			sampler->NextSample(sampleResults);
 			continue;

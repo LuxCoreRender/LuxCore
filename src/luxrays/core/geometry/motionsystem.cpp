@@ -22,12 +22,17 @@ using std::memset;
 #include <vector>
 #include <algorithm>
 #include <utility>
+#include <boost/foreach.hpp>
 
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/core/geometry/matrix4x4.h"
 using luxrays::Matrix4x4;
 
 namespace luxrays {
+
+//------------------------------------------------------------------------------
+// MotionSystem
+//------------------------------------------------------------------------------
 
 InterpolatedTransform::InterpolatedTransform(float st, float et,
 	const Transform &s, const Transform &e) : hasRotation(false),
@@ -38,9 +43,8 @@ InterpolatedTransform::InterpolatedTransform(float st, float et,
 	start = s;
 	end = e;
 
-	if (startTime == endTime) {
+	if (startTime == endTime)
 		return;
-	}
 
 	startT = DecomposedTransform(start.m);
 	endT = DecomposedTransform(end.m);
@@ -270,6 +274,10 @@ InterpolatedTransform::DecomposedTransform::DecomposedTransform(const Matrix4x4 
 	Valid = true;
 }
 
+//------------------------------------------------------------------------------
+// MotionSystem
+//------------------------------------------------------------------------------
+
 MotionSystem::MotionSystem(const vector<float> &t, const vector<Transform> &transforms) : times(t) {
 	typedef vector<float>::const_iterator time_cit;
 	typedef vector<Transform>::const_iterator trans_cit;
@@ -326,6 +334,28 @@ BBox MotionSystem::Bound(BBox ibox) const {;
 
 	return result;
 }
+
+Properties MotionSystem::ToProperties(const std::string &prefix) const {
+	Properties props;
+
+	for (u_int i = 0; i < interpolatedTransforms.size(); ++i) {
+		const InterpolatedTransform &it = interpolatedTransforms[i];
+
+		props.Set(Property(prefix+".motion." + ToString(i) + ".time")(it.startTime));
+		props.Set(Property(prefix+".motion." + ToString(i) + ".transformation")(it.start.m));
+	}
+
+	const u_int lastIndex = interpolatedTransforms.size() - 1;
+	const InterpolatedTransform &it = interpolatedTransforms[lastIndex];
+	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".time")(it.endTime));
+	props.Set(Property(prefix+".motion." + ToString(lastIndex) + ".transformation")(it.end.m));
+		
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// MotionTransform
+//------------------------------------------------------------------------------
 
 // Contains one or more <time, transform> pairs (knots) representing a path
 MotionTransform::MotionTransform(const MotionTransform &other) : times(other.times), transforms(other.transforms) { }
