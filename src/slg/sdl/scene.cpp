@@ -1390,7 +1390,7 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 					throw runtime_error(objName + " motion time must be monotonic");
 				times.push_back(t);
 
-				const Matrix4x4 mat = props.Get(Property(propName + ".motion." + ToString(i) +
+				const Matrix4x4 mat = props.Get(Property(prefix +
 					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 				transforms.push_back(Transform(mat));
 			}

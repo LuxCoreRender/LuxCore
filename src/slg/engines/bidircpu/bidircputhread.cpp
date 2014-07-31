@@ -482,9 +482,11 @@ void BiDirCPURenderThread::RenderFunc() {
 		sampleResults.clear();
 		lightPathVertices.clear();
 
+		const float time = sampler->GetSample(12);
+
 		// Sample a point on the camera lens
 		Point lensPoint;
-		if (!camera->SampleLens(sampler->GetSample(3), sampler->GetSample(4),
+		if (!camera->SampleLens(time, sampler->GetSample(3), sampler->GetSample(4),
 				&lensPoint)) {
 			sampler->NextSample(sampleResults);
 			continue;
@@ -494,7 +496,6 @@ void BiDirCPURenderThread::RenderFunc() {
 		// Trace light path
 		//----------------------------------------------------------------------
 
-		const float time = sampler->GetSample(12);
 		TraceLightPath(time, sampler, lensPoint, lightPathVertices, sampleResults);
 
 		//----------------------------------------------------------------------

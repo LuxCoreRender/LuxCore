@@ -103,7 +103,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			Sampler *sampler = samplers[samplerIndex];
 
 			// Sample a point on the camera lens
-			if (!camera->SampleLens(sampler->GetSample(3), sampler->GetSample(4),
+			if (!camera->SampleLens(time, sampler->GetSample(3), sampler->GetSample(4),
 					&lensPoints[samplerIndex]))
 				continue;
 

@@ -44,6 +44,9 @@ Properties Camera::ToProperties() const {
 	props.Set(Property("scene.camera.shutterclose")(shutterClose));
 	props.Set(Property("scene.camera.autofocus.enable")(autoFocus));
 
+	if (motionSystem)
+		props.Set(motionSystem->ToProperties("scene.camera."));
+		
 	return props;
 }
 
@@ -274,7 +277,10 @@ void PerspectiveCamera::GenerateRay(
 	ray->maxt = (clipYon - clipHither) / ray->d.z;
 	ray->time = Lerp(u3, shutterOpen, shutterClose);
 
-	*ray = camTrans[transIndex].cameraToWorld * (*ray);
+	if (motionSystem)
+		*ray = motionSystem->Sample(ray->time) * (camTrans[transIndex].cameraToWorld * (*ray));
+	else
+		*ray = camTrans[transIndex].cameraToWorld * (*ray);
 
 	// World arbitrary clipping plane support
 	if (enableClippingPlane)
@@ -328,8 +334,9 @@ bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 		ray->maxt * cosi > clipYon)))
 		return false;
 
-	const Point pO(Inverse(camTrans[0].rasterToWorld) * (ray->o + ((lensRadius > 0.f) ?
-		(ray->d * (focalDistance / cosi)) : ray->d)));
+	Point pO(
+		Inverse((motionSystem) ? (motionSystem->Sample(ray->time) * camTrans[0].rasterToWorld) : camTrans[0].rasterToWorld) *
+		(ray->o + ((lensRadius > 0.f) ?	(ray->d * (focalDistance / cosi)) : ray->d)));
 
 	*x = pO.x;
 	*y = filmHeight - 1 - pO.y;
@@ -353,7 +360,8 @@ bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	}
 }
 
-bool PerspectiveCamera::SampleLens(const float u1, const float u2,
+bool PerspectiveCamera::SampleLens(const float time,
+		const float u1, const float u2,
 		Point *lensp) const {
 	Point lensPoint(0.f, 0.f, 0.f);
 	if (lensRadius > 0.f) {
@@ -362,7 +370,10 @@ bool PerspectiveCamera::SampleLens(const float u1, const float u2,
 		lensPoint.y *= lensRadius;
 	}
 
-	*lensp = camTrans[0].cameraToWorld * lensPoint;
+	if (motionSystem)
+		*lensp = motionSystem->Sample(time) * (camTrans[0].cameraToWorld * lensPoint);
+	else
+		*lensp = camTrans[0].cameraToWorld * lensPoint;
 
 	return true;
 }
@@ -521,6 +532,29 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 	} else {
 		SDL_LOG("Camera clipping plane disabled");
 		camera->SetClippingPlane(false);
+	}
+
+	// Check if I have to use a motion system
+	if (props.IsDefined("scene.camera.motion.0.time")) {
+		// Build the motion system
+		vector<float> times;
+		vector<Transform> transforms;
+		for (u_int i =0;; ++i) {
+			const string prefix = "scene.camera.motion." + ToString(i);
+			if (!props.IsDefined(prefix +".time"))
+				break;
+
+			const float t = props.Get(prefix +".time").Get<float>();
+			if (i > 0 && t <= times.back())
+				throw runtime_error("Motion camera time must be monotonic");
+			times.push_back(t);
+
+			const Matrix4x4 mat = props.Get(Property(prefix +
+				".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			transforms.push_back(Transform(mat));
+		}
+
+		camera->motionSystem = new MotionSystem(times, transforms);
 	}
 
 	return camera.release();
