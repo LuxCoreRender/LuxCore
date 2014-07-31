@@ -103,9 +103,12 @@ public:
 
 	BBox Bound(BBox ibox) const;
 
+	void ApplyTransform(const Transform &trans);
 	luxrays::Properties ToProperties(const std::string &prefix) const;
 
 private:
+	void Init(const vector<float> &t, const vector<Transform> &transforms);
+
 	vector<float> times;
 	vector<InterpolatedTransform> interpolatedTransforms;
 };

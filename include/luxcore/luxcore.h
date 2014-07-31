@@ -483,6 +483,14 @@ public:
 	void Parse(const luxrays::Properties &props);
 
 	/*!
+	 * \brief Apply a transformation to an object
+	 *
+	 * \param objName is the name of the object to transform.
+	 * \param trans is the transformation to apply.
+	 */
+	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
+
+	/*!
 	 * \brief Deletes an object from the scene.
 	 *
 	 * \param objName is the name of the object to delete.

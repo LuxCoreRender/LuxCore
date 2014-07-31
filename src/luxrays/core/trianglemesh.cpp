@@ -24,6 +24,10 @@
 
 using namespace luxrays;
 
+//------------------------------------------------------------------------------
+// TriangleMesh
+//------------------------------------------------------------------------------
+
 BBox TriangleMesh::GetBBox() const {
 	BBox bbox;
 	for (unsigned int i = 0; i < vertCount; ++i)
@@ -101,4 +105,12 @@ TriangleMesh *TriangleMesh::Merge(
 	}
 
 	return new TriangleMesh(totalVertexCount, totalTriangleCount, v, i);
+}
+
+//------------------------------------------------------------------------------
+// TriangleMesh
+//------------------------------------------------------------------------------
+
+void MotionTriangleMesh::ApplyTransform(const Transform &trans) {
+	motionSystem.ApplyTransform(trans);
 }

@@ -599,6 +599,8 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
 			lightDefs.GetLightSource(objName + "_triangle_light_" + ToString(i))->Preprocess();
 	}
+
+	editActions.AddAction(GEOMETRY_EDIT);
 }
 
 void Scene::RemoveUnusedImageMaps() {
