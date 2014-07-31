@@ -171,9 +171,7 @@ public:
 	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
-	virtual void ApplyTransform(const Transform &t) {
-		throw std::runtime_error("MotionTriangleMesh::ApplyTransform() not yet supported");
-	}
+	virtual void ApplyTransform(const Transform &t);
 
 	TriangleMesh *GetTriangleMesh() const { return mesh; };	
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }

@@ -502,6 +502,10 @@ void Scene::Parse(const Properties &props) {
 	scene->Parse(props);
 }
 
+void Scene::UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans) {
+	scene->UpdateObjectTransformation(objName, trans);
+}
+
 void Scene::DeleteObject(const string &objName) {
 	scene->DeleteObject(objName);
 }
