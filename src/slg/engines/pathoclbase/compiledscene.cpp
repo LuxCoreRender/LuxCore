@@ -1862,7 +1862,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall("Float", mat->glossy2.nvTexIndex) + ", " +
 						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)\n" +
-						AddTextureSourceCall("Float", mat->glossy2.multibounce) + ", " +
+						ToString(mat->glossy2.multibounce) + ", " +
 						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)\n" +
 						AddTextureSourceCall("Spectrum", mat->glossy2.kaTexIndex) + ", " +
