@@ -1462,7 +1462,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall("Float", tex->mixTex.tex1Index) + ", " +
 						AddTextureSourceCall("Float", tex->mixTex.tex2Index));
 				AddTextureSource(source, "Mix", "float3", "Spectrum", i,
-						AddTextureSourceCall("Spectrum", tex->mixTex.amountTexIndex) + ", " +
+						AddTextureSourceCall("Float", tex->mixTex.amountTexIndex) + ", " +
 						AddTextureSourceCall("Spectrum", tex->mixTex.tex1Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->mixTex.tex2Index));
 				break;
@@ -1608,7 +1608,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						ToString(tex->band.size) + ", " +
 						"texture->band.offsets, "
 						"texture->band.values, " +
-						AddTextureSourceCall("Spectrum", tex->band.amountTexIndex));
+						AddTextureSourceCall("Float", tex->band.amountTexIndex));
 				break;
 			case slg::ocl::NORMALMAP_TEX:
 				AddTextureSource(source, "NormalMap", i, "");
