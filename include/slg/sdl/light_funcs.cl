@@ -998,7 +998,7 @@ bool Light_IsEnvOrIntersectable(__global LightSource *light) {
 		case TYPE_DISTANT:
 #endif
 #if defined(PARAM_HAS_LASERLIGHT)
-		case TYPE_LASERLIGHT:
+		case TYPE_LASER:
 #endif
 #if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT)
 			return false;

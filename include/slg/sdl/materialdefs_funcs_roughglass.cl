@@ -271,7 +271,7 @@ float3 RoughGlassMaterial_ConstSample(
 	return result;
 }
 
-#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
 float3 RoughGlassMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW

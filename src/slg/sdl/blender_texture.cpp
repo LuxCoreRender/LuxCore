@@ -28,10 +28,10 @@ using namespace slg::blender;
 // Blender blend texture
 //------------------------------------------------------------------------------
 
-BlenderBlendTexture::BlenderBlendTexture(const TextureMapping3D *mp, const std::string ptype, 
-										 const bool direction, float bright, float contrast) : 
+BlenderBlendTexture::BlenderBlendTexture(const TextureMapping3D *mp, const std::string ptype,
+										 const bool direction, float bright, float contrast) :
 		mapping(mp), type(TEX_LIN), direction(direction), bright(bright), contrast(contrast) {
-		
+
 		if (ptype == "linear") {type = TEX_LIN;}
 		else if (ptype == "quadratic") {type = TEX_QUAD;}
 		else if (ptype == "easing") {type = TEX_LIN;}
@@ -47,7 +47,7 @@ float BlenderBlendTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	Point P(mapping->Map(hitPoint));
 
 	float x, y, t;
-    
+
 	if(direction) {
 		//horizontal
 		x = P.x;
@@ -84,7 +84,7 @@ float BlenderBlendTexture::GetFloatValue(const HitPoint &hitPoint) const {
     }
 
 	result = (result - 0.5f) * contrast + bright - 0.5f;
-    if(result < 0.f) result = 0.f; 
+    if(result < 0.f) result = 0.f;
 	else if(result > 1.f) result = 1.f;
 
 	return result;
@@ -141,11 +141,11 @@ Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache) c
 // Blender clouds texture
 //------------------------------------------------------------------------------
 
-BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const std::string &pnoisebasis, const float noisesize, const int noisedepth, 
-		bool hard, float bright, float contrast) : 
-		mapping(mp), noisebasis(BLENDER_ORIGINAL), noisedepth(noisedepth), noisesize(noisesize), 
+BlenderCloudsTexture::BlenderCloudsTexture(const TextureMapping3D *mp, const std::string &pnoisebasis, const float noisesize, const int noisedepth,
+		bool hard, float bright, float contrast) :
+		mapping(mp), noisebasis(BLENDER_ORIGINAL), noisedepth(noisedepth), noisesize(noisesize),
 		hard(hard), bright(bright), contrast(contrast) {
-	
+
 	if(pnoisebasis == "blender_original") {
 		noisebasis = BLENDER_ORIGINAL;
 	} else if(pnoisebasis == "original_perlin") {
@@ -176,7 +176,7 @@ float BlenderCloudsTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
 	clouds = (clouds - 0.5f) * contrast + bright - 0.5f;
 	clouds = Clamp(clouds, 0.f, 1.f);
-	
+
     return clouds;
 }
 
@@ -245,7 +245,7 @@ Properties BlenderCloudsTexture::ToProperties(const ImageMapCache &imgMapCache) 
 
 BlenderDistortedNoiseTexture::BlenderDistortedNoiseTexture(const TextureMapping3D *mp, const std::string &pnoisedistortion,
 		const std::string &pnoisebasis, float distortion, float noisesize, float bright, float contrast) :
-		mapping(mp), noisedistortion(BLENDER_ORIGINAL), noisebasis(BLENDER_ORIGINAL), distortion(distortion), noisesize(noisesize), 
+		mapping(mp), noisedistortion(BLENDER_ORIGINAL), noisebasis(BLENDER_ORIGINAL), distortion(distortion), noisesize(noisesize),
 		bright(bright), contrast(contrast) {
 
 	if(pnoisedistortion == "blender_original") {
@@ -305,7 +305,7 @@ float BlenderDistortedNoiseTexture::GetFloatValue(const HitPoint &hitPoint) cons
 	result = mg_VLNoise(P.x, P.y, P.z, distortion, noisebasis, noisedistortion);
 
 	result = (result - 0.5f) * contrast + bright - 0.5f;
-    if(result < 0.f) result = 0.f; 
+    if(result < 0.f) result = 0.f;
 	else if(result > 1.f) result = 1.f;
 
 	return result;
@@ -336,13 +336,13 @@ Properties BlenderDistortedNoiseTexture::ToProperties(const ImageMapCache &imgMa
 // Blender magic texture
 //------------------------------------------------------------------------------
 
-BlenderMagicTexture::BlenderMagicTexture(const TextureMapping3D *mp, const int noisedepth, 
-										 const float turbulence, float bright, float contrast) : 
+BlenderMagicTexture::BlenderMagicTexture(const TextureMapping3D *mp, const int noisedepth,
+										 const float turbulence, float bright, float contrast) :
 		mapping(mp), noisedepth(noisedepth), turbulence(turbulence), bright(bright), contrast(contrast) {
 
 }
 
-float BlenderMagicTexture::GetFloatValue(const HitPoint &hitPoint) const {	
+float BlenderMagicTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	return GetSpectrumValue(hitPoint).Y();
 }
 
@@ -415,15 +415,15 @@ Spectrum BlenderMagicTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
     b = 0.5f - z;
 
 	r = (r - 0.5f) * contrast + bright - 0.5f;
-    if(r < 0.f) r = 0.f; 
+    if(r < 0.f) r = 0.f;
 	else if(r > 1.f) r = 1.f;
 
 	g = (g - 0.5f) * contrast + bright - 0.5f;
-    if(g < 0.f) g = 0.f; 
+    if(g < 0.f) g = 0.f;
 	else if(g > 1.f) g = 1.f;
 
 	b = (b - 0.5f) * contrast + bright - 0.5f;
-    if(b < 0.f) b = 0.f; 
+    if(b < 0.f) b = 0.f;
 	else if(b > 1.f) b = 1.f;
 
 	return Spectrum(RGBColor(r,g,b));
@@ -471,10 +471,10 @@ Properties BlenderMagicTexture::ToProperties(const ImageMapCache &imgMapCache) c
 //------------------------------------------------------------------------------
 
 BlenderMarbleTexture::BlenderMarbleTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
-		const std::string &pnoise, float noisesize, float turb, int noisedepth, bool hard, float bright, float contrast) : 
+		const std::string &pnoise, float noisesize, float turb, int noisedepth, bool hard, float bright, float contrast) :
 		mapping(mp), type(TEX_SOFT), noisebasis(BLENDER_ORIGINAL), noisebasis2(TEX_SIN), noisesize(noisesize),
 		turbulence(turb), noisedepth(noisedepth), hard(hard), bright(bright), contrast(contrast) {
-			
+
 	if(pnoisebasis == "blender_original") {
 		noisebasis = BLENDER_ORIGINAL;
 	} else if(pnoisebasis == "original_perlin") {
@@ -504,7 +504,7 @@ BlenderMarbleTexture::BlenderMarbleTexture(const TextureMapping3D *mp, const std
 	} else if(ptype == "sharper") {
 		type = TEX_SHARPER;
 	};
-	
+
 	if(pnoise == "sin") {
 		noisebasis2 = TEX_SIN;
 	} else if(pnoise == "saw") {
@@ -515,7 +515,7 @@ BlenderMarbleTexture::BlenderMarbleTexture(const TextureMapping3D *mp, const std
 }
 
 float BlenderMarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	Point P(mapping->Map(hitPoint));	
+	Point P(mapping->Map(hitPoint));
 
     float (*waveform[3])(float); /* create array of pointers to waveform functions */
     waveform[0] = tex_sin; /* assign address of tex_sin() function to pointer array */
@@ -524,9 +524,9 @@ float BlenderMarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
 	u_int wf = 0;
 
-	if(noisebasis2 == TEX_SAW) { 
+	if(noisebasis2 == TEX_SAW) {
 		wf = 1;
-	} else if(noisebasis2 == TEX_TRI) 
+	} else if(noisebasis2 == TEX_TRI)
 		wf = 2;
 
 	float result = 0.f;
@@ -535,7 +535,7 @@ float BlenderMarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
     result = n + turbulence * BLI_gTurbulence(noisesize, P.x, P.y, P.z, noisedepth, hard, noisebasis);
 	result = waveform[wf](result);
-	
+
 	if (type == TEX_SHARP) {
 		result = sqrtf(result);
 	} else if (type == TEX_SHARPER) {
@@ -543,9 +543,9 @@ float BlenderMarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	}
 
 	result = (result - 0.5f) * contrast + bright - 0.5f;
-    if(result < 0.f) result = 0.f; 
+    if(result < 0.f) result = 0.f;
 	else if(result > 1.f) result = 1.f;
-	
+
     return result;
 }
 
@@ -629,11 +629,11 @@ Properties BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache) 
 
 BlenderMusgraveTexture::BlenderMusgraveTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
 		const float dimension, const float intensity, const float lacunarity, const float offset, const float gain,
-		const float octaves, float noisesize, bool hard, float bright, float contrast) : 
+		const float octaves, float noisesize, bool hard, float bright, float contrast) :
 		mapping(mp), type(TEX_MULTIFRACTAL), noisebasis(BLENDER_ORIGINAL), dimension(dimension), intensity(intensity),
-		lacunarity(lacunarity), offset(offset), gain(gain), octaves(octaves), 
+		lacunarity(lacunarity), offset(offset), gain(gain), octaves(octaves),
 		noisesize(noisesize), hard(hard), bright(bright), contrast(contrast) {
-			
+
 	if(ptype == "multifractal") {
 		type = TEX_MULTIFRACTAL;
 	} else if(ptype == "ridged_multifractal") {
@@ -670,7 +670,7 @@ BlenderMusgraveTexture::BlenderMusgraveTexture(const TextureMapping3D *mp, const
 }
 
 float BlenderMusgraveTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	Point P(mapping->Map(hitPoint));	
+	Point P(mapping->Map(hitPoint));
 
 	float scale = 1.f;
 	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
@@ -697,11 +697,11 @@ float BlenderMusgraveTexture::GetFloatValue(const HitPoint &hitPoint) const {
     };
 
 	result *= intensity;
-           
+
 	result = (result - 0.5f) * contrast + bright - 0.5f;
-    if(result < 0.f) result = 0.f; 
+    if(result < 0.f) result = 0.f;
 	else if(result > 1.f) result = 1.f;
-	
+
     return result;
 }
 
@@ -797,7 +797,7 @@ float BlenderNoiseTexture::GetFloatValue(const HitPoint &hitPoint) const {
     result = ((float) val) / div;
 
 	result = (result - 0.5f) * contrast + bright - 0.5f;
-    if(result < 0.f) result = 0.f; 
+    if(result < 0.f) result = 0.f;
 	else if(result > 1.f) result = 1.f;
 
 	return result;
@@ -824,10 +824,10 @@ Properties BlenderNoiseTexture::ToProperties(const ImageMapCache &imgMapCache) c
 //------------------------------------------------------------------------------
 
 BlenderStucciTexture::BlenderStucciTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
-		const float noisesize, float turb, bool hard, float bright, float contrast) : 
+		const float noisesize, float turb, bool hard, float bright, float contrast) :
 		mapping(mp), type(TEX_PLASTIC), noisebasis(BLENDER_ORIGINAL), noisesize(noisesize),
 		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
-			
+
 	if(pnoisebasis == "blender_original") {
 		noisebasis = BLENDER_ORIGINAL;
 	} else if(pnoisebasis == "original_perlin") {
@@ -860,7 +860,7 @@ BlenderStucciTexture::BlenderStucciTexture(const TextureMapping3D *mp, const std
 }
 
 float BlenderStucciTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	Point P(mapping->Map(hitPoint));	
+	Point P(mapping->Map(hitPoint));
 
 	float result = 0.f;
     float nor[3], b2, ofs;
@@ -881,9 +881,9 @@ float BlenderStucciTexture::GetFloatValue(const HitPoint &hitPoint) const {
         result = 1.f - result;
 
 	result = (result - 0.5f) * contrast + bright - 0.5f;
-    if(result < 0.f) result = 0.f; 
+    if(result < 0.f) result = 0.f;
 	else if(result > 1.f) result = 1.f;
-	
+
     return result;
 }
 
@@ -966,9 +966,32 @@ Properties BlenderStucciTexture::ToProperties(const ImageMapCache &imgMapCache) 
 //------------------------------------------------------------------------------
 
 BlenderWoodTexture::BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise,
-		const float noisesize, float turb, bool hard, float bright, float contrast) : 
-		mapping(mp), type(BANDS), noisebasis2(TEX_SIN),  noisesize(noisesize),
+		const std::string &pnoisebasis, const float noisesize, float turb, bool hard, float bright, float contrast) :
+		mapping(mp), type(BANDS), noisebasis2(TEX_SIN), noisebasis(BLENDER_ORIGINAL), noisesize(noisesize),
 		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
+
+	if(pnoisebasis == "blender_original") {
+		noisebasis = BLENDER_ORIGINAL;
+	} else if(pnoisebasis == "original_perlin") {
+		noisebasis = ORIGINAL_PERLIN;
+	} else if(pnoisebasis == "improved_perlin") {
+		noisebasis = IMPROVED_PERLIN;
+	} else if(pnoisebasis == "voronoi_f1") {
+		noisebasis = VORONOI_F1;
+	} else if(pnoisebasis == "voronoi_f2") {
+		noisebasis = VORONOI_F2;
+	} else if(pnoisebasis == "voronoi_f3") {
+		noisebasis = VORONOI_F3;
+	} else if(pnoisebasis == "voronoi_f4") {
+		noisebasis = VORONOI_F4;
+	} else if(pnoisebasis == "voronoi_f2_f1") {
+		noisebasis = VORONOI_F2_F1;
+	} else if(pnoisebasis == "voronoi_crackle") {
+		noisebasis = VORONOI_CRACKLE;
+	} else if(pnoisebasis == "cell_noise") {
+		noisebasis = CELL_NOISE;
+	};
+
 	if(ptype == "bands") {
 		type = BANDS;
 	} else if(ptype == "rings") {
@@ -990,8 +1013,6 @@ BlenderWoodTexture::BlenderWoodTexture(const TextureMapping3D *mp, const std::st
 
 float BlenderWoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	Point P(mapping->Map(hitPoint));
-	float scale = 1.f;
-	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
 
     float (*waveform[3])(float); /* create array of pointers to waveform functions */
     waveform[0] = tex_sin; /* assign address of tex_sin() function to pointer array */
@@ -999,9 +1020,9 @@ float BlenderWoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
     waveform[2] = tex_tri;
 
 	u_int wf = 0;
-	if(noisebasis2 == TEX_SAW) { 
+	if(noisebasis2 == TEX_SAW) {
 		wf = 1;
-	} else if(noisebasis2 == TEX_TRI) 
+	} else if(noisebasis2 == TEX_TRI)
 		wf = 2;
 
 	float wood = 0.f;
@@ -1013,20 +1034,20 @@ float BlenderWoodTexture::GetFloatValue(const HitPoint &hitPoint) const {
 			wood = waveform[wf](sqrtf(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f);
 			break;
 		case BANDNOISE:
-			if(hard) wood = turbulence * fabs(2.f * Noise(scale*P) - 1.f);			
-			else wood = turbulence * Noise(scale*P);
+			if(hard) wood = turbulence * fabs(2.f * BLI_gNoise(noisesize, P.x, P.y, P.z, hard, noisebasis) - 1.f);
+			else wood = turbulence * BLI_gNoise(noisesize, P.x, P.y, P.z, hard, noisebasis);
 			wood = waveform[wf]((P.x + P.y + P.z) * 10.f + wood);
 			break;
 		case RINGNOISE:
-			if(hard) wood = turbulence * fabs(2.f * Noise(scale*P) - 1.f);			
-			else wood = turbulence * Noise(scale*P);
+			if(hard) wood = turbulence * fabs(2.f * BLI_gNoise(noisesize, P.x, P.y, P.z, hard, noisebasis) - 1.f);
+			else wood = turbulence * BLI_gNoise(noisesize, P.x, P.y, P.z, hard, noisebasis);
 			wood = waveform[wf](sqrtf(P.x*P.x + P.y*P.y + P.z*P.z) * 20.f + wood);
 			break;
 	}
-    
+
 	wood = (wood - 0.5f) * contrast + bright - 0.5f;
 	wood = Clamp(wood, 0.f, 1.f);
-	
+
     return wood;
 }
 
@@ -1066,6 +1087,41 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) co
 			woodtype = "ringnoise";
 			break;
 	}
+
+	std::string nbas;
+	switch(noisebasis) {
+		default:
+		case BLENDER_ORIGINAL:
+			nbas = "blender_original";
+			break;
+		case ORIGINAL_PERLIN:
+			nbas = "original_perlin";
+			break;
+		case IMPROVED_PERLIN:
+			nbas = "improved_perlin";
+			break;
+		case VORONOI_F1:
+			nbas = "voronoi_f1";
+			break;
+		case VORONOI_F2:
+			nbas = "voronoi_f2";
+			break;
+		case VORONOI_F3:
+			nbas = "voronoi_f3";
+			break;
+		case VORONOI_F4:
+			nbas = "voronoi_f4";
+			break;
+		case VORONOI_F2_F1:
+			nbas = "voronoi_f2_f1";
+			break;
+		case VORONOI_CRACKLE:
+			nbas = "voronoi_crackle";
+			break;
+		case CELL_NOISE:
+			nbas = "cell_noise";
+			break;
+	}
 	std::string noisetype = "soft_noise";
 	if(hard) noisetype = "hard_noise";
 
@@ -1073,6 +1129,7 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) co
 
 	props.Set(Property("scene.textures." + name + ".type")("blender_wood"));
 	props.Set(Property("scene.textures." + name + ".woodtype")(woodtype));
+	props.Set(Property("scene.textures." + name + ".noisebasis")(nbas));
 	props.Set(Property("scene.textures." + name + ".noisebasis2")(noise));
 	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
 	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
@@ -1098,7 +1155,7 @@ BlenderVoronoiTexture::BlenderVoronoiTexture(const TextureMapping3D *mp, const f
 	} else if(distmetric == "distance_squared") {
 		distancemetric = DISTANCE_SQUARED;
 	} else if(distmetric == "manhattan") {
-		distancemetric = MANHATTAN;			
+		distancemetric = MANHATTAN;
 	} else if(distmetric == "chebychev") {
 		distancemetric = CHEBYCHEV;
 	} else if(distmetric == "minkowski_half") {
@@ -1133,7 +1190,7 @@ float BlenderVoronoiTexture::GetFloatValue(const HitPoint &hitPoint) const {
     result = sc * fabs(feature_weight1 * da[0] + feature_weight2 * da[1] + feature_weight3 * da[2] + feature_weight4 * da[3]);
 
 	result = (result - 0.5f) * contrast + bright - 0.5f;
-    if(result < 0.f) result = 0.f; 
+    if(result < 0.f) result = 0.f;
 	else if(result > 1.f) result = 1.f;
 
     return result;
@@ -1168,7 +1225,7 @@ Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache)
 		case MINKOWSKI:
 			dm = "minkowski";
 			break;
-		case ACTUAL_DISTANCE: 
+		case ACTUAL_DISTANCE:
 		default:
 			dm = "actual_distance";
 			break;

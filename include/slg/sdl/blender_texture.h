@@ -85,9 +85,9 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
-	blender::BlenderNoiseBasis noisebasis;	
-	int noisedepth;	
-	float noisesize;	
+	blender::BlenderNoiseBasis noisebasis;
+	int noisedepth;
+	float noisesize;
 	bool hard;
 	float bright, contrast;
 };
@@ -98,11 +98,11 @@ private:
 
 class BlenderDistortedNoiseTexture : public Texture {
 public:
-	BlenderDistortedNoiseTexture(const TextureMapping3D *mp, const std::string &pnoisedistortion,const std::string &pnoisebasis, 
+	BlenderDistortedNoiseTexture(const TextureMapping3D *mp, const std::string &pnoisedistortion,const std::string &pnoisebasis,
 		float distortion, float noisesize, float bright, float contrast);
 	virtual ~BlenderDistortedNoiseTexture() { delete mapping; }
 
-	virtual TextureType GetType() const { return BLENDER_NOISE; }
+	virtual TextureType GetType() const { return BLENDER_DISTORTED_NOISE; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	// The following methods don't make very much sense in this case. I have no
@@ -136,7 +136,7 @@ public:
 	BlenderMagicTexture(const TextureMapping3D *mp, const int noisedepth, const float turbulence, float bright, float contrast);
 	virtual ~BlenderMagicTexture() { delete mapping; }
 
-	virtual TextureType GetType() const { return BLENDER_BLEND; }
+	virtual TextureType GetType() const { return BLENDER_MAGIC; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const;
@@ -172,7 +172,7 @@ public:
 		float bright, float contrast);
 	virtual ~BlenderMarbleTexture() { delete mapping; }
 
-	virtual TextureType GetType() const { return BLENDER_WOOD; }
+	virtual TextureType GetType() const { return BLENDER_MARBLE; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	// The following methods don't make very much sense in this case. I have no
@@ -186,6 +186,7 @@ public:
 	blender::BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetTurbulence() const { return turbulence; }
+	int GetNoiseDepth() const { return noisedepth; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
 	bool GetNoiseType() const { return hard; }
@@ -195,8 +196,8 @@ public:
 private:
 	const TextureMapping3D *mapping;
 	BlenderMarbleType type;
-	blender::BlenderNoiseBasis noisebasis;	
-	blender::BlenderNoiseBase noisebasis2;	
+	blender::BlenderNoiseBasis noisebasis;
+	blender::BlenderNoiseBase noisebasis2;
 	float noisesize, turbulence;
 	int noisedepth;
 	bool hard;
@@ -213,12 +214,12 @@ typedef enum {
 
 class BlenderMusgraveTexture : public Texture {
 public:
-	BlenderMusgraveTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis, 
+	BlenderMusgraveTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
 		const float dimension, const float intensity, const float lacunarity, const float offset, const float gain,
 		const float octaves, const float noisesize, bool hard, float bright, float contrast);
 	virtual ~BlenderMusgraveTexture() { delete mapping; }
 
-	virtual TextureType GetType() const { return BLENDER_STUCCI; }
+	virtual TextureType GetType() const { return BLENDER_MUSGRAVE; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	// The following methods don't make very much sense in this case. I have no
@@ -295,7 +296,7 @@ typedef enum {
 
 class BlenderStucciTexture : public Texture {
 public:
-	BlenderStucciTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis, 
+	BlenderStucciTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
 		const float noisesize, float turb, bool hard, float bright, float contrast);
 	virtual ~BlenderStucciTexture() { delete mapping; }
 
@@ -321,7 +322,7 @@ public:
 private:
 	const TextureMapping3D *mapping;
 	BlenderStucciType type;
-	blender::BlenderNoiseBasis noisebasis;	
+	blender::BlenderNoiseBasis noisebasis;
 	float noisesize, turbulence;
 	bool hard;
 	float bright, contrast;
@@ -337,7 +338,7 @@ typedef enum {
 
 class BlenderWoodTexture : public Texture {
 public:
-	BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const float noisesize, float turb, bool hard, float bright, float contrast);
+	BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const std::string &pnoisebasis, const float noisesize, float turb, bool hard, float bright, float contrast);
 	virtual ~BlenderWoodTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BLENDER_WOOD; }
@@ -350,6 +351,7 @@ public:
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	BlenderWoodType GetWoodType() const { return type; }
+	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
 	blender::BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetTurbulence() const { return turbulence; }
@@ -362,7 +364,8 @@ public:
 private:
 	const TextureMapping3D *mapping;
 	BlenderWoodType type;
-	blender::BlenderNoiseBase noisebasis2;	
+	blender::BlenderNoiseBasis noisebasis;
+	blender::BlenderNoiseBase noisebasis2;
 	float noisesize, turbulence;
 	bool hard;
 	float bright, contrast;
@@ -374,7 +377,7 @@ private:
 
 class BlenderVoronoiTexture : public Texture {
 public:
-	BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent, const float fw1, const float fw2, const float fw3, const float fw4, 
+	BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent, const float fw1, const float fw2, const float fw3, const float fw4,
 		const std::string distmetric, const float noisesize, float bright, float contrast);
 	virtual ~BlenderVoronoiTexture() { delete mapping; }
 

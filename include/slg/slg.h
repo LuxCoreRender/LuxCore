@@ -50,6 +50,18 @@ extern void NullDebugHandler(const char *msg);
 
 #define SLG_LOG(a) { if (slg::SLG_DebugHandler) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; slg::SLG_DebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); } }
 
+#if defined(WIN32) && !defined(__CYGWIN__)
+inline float atanhf(float x) {
+	// if outside of domain, return NaN
+	// not 100% correct but should be good for now
+	if(x <= -1.f || x >= 1.f)
+		return sqrtf(-1.f);
+
+	return logf((1.f + x) / (1.f - x)) / 2.f;
+}
+#endif
+
+
 }
 
 #endif	/* _LUXRAYS_H */

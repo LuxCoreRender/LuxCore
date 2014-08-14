@@ -85,7 +85,7 @@ Scene::~Scene() {
 void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight) {
 	if (lightDefs.GetSize() == 0) {
 		throw runtime_error("The scene doesn't include any light source (note: volume emission doesn't count for this check)");
-		
+
 		// There may be only a volume emitting light. However I ignore this case
 		// because a lot of code has been written assuming that there is always
 		// at least one light source (i.e. for direct light sampling).
@@ -100,7 +100,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 				break;
 			}
 		}
-		
+
 		if (!hasEmittingVolume)
 			throw runtime_error("The scene doesn't include any light source");*/
 	}
@@ -228,7 +228,7 @@ Properties Scene::ToProperties(const string &directoryName) {
 
 		SDL_LOG("Saving objects information:");
 		lastPrint = WallClockTime();
-		for (u_int i = 0; i < objDefs.GetSize(); ++i) {			
+		for (u_int i = 0; i < objDefs.GetSize(); ++i) {
 			if (WallClockTime() - lastPrint > 2.0) {
 				SDL_LOG("  " << i << "/" << objDefs.GetSize());
 				lastPrint = WallClockTime();
@@ -508,7 +508,7 @@ void Scene::ParseObjects(const Properties &props) {
 		} else {
 			// Only a new object
 			objDefs.DefineSceneObject(objName, obj);
-			
+
 			// Check if it is a light source
 			const Material *mat = obj->GetMaterial();
 			if (mat->IsLightSource()) {
@@ -654,7 +654,7 @@ void Scene::RemoveUnusedMaterials() {
 	// Add the default world volume
 	if (defaultWorldVolume)
 		referencedMats.insert(defaultWorldVolume);
-		
+
 	for (u_int i = 0; i < objDefs.GetSize(); ++i)
 		objDefs.GetSceneObject(i)->AddReferencedMaterials(referencedMats);
 
@@ -700,7 +700,7 @@ void Scene::DeleteObject(const std::string &objName) {
 			editActions.AddAction(LIGHTS_EDIT);
 
 		objDefs.DeleteSceneObject(objName);
-		
+
 		editActions.AddAction(GEOMETRY_EDIT);
 
 		// Delete the object definition from the properties
@@ -835,7 +835,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
 		return new BlenderDistortedNoiseTexture(CreateTextureMapping3D(propName + ".mapping", props),
-				noisedistortion, noisebasis, distortion, noisesize, bright, contrast);	
+				noisedistortion, noisebasis, distortion, noisesize, bright, contrast);
 	} else if (texType == "blender_magic") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
@@ -892,6 +892,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 				woodtype, noisebasis, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_wood") {
 		const std::string woodtype = props.Get(Property(propName + ".woodtype")("bands")).Get<string>();
+		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
 		const std::string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
 		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
@@ -900,7 +901,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
 		return new BlenderWoodTexture(CreateTextureMapping3D(propName + ".mapping", props),
-				woodtype, noisebasis2, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
+				woodtype, noisebasis2, noisebasis, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_voronoi") {
 		const float intensity = props.Get(Property(propName + ".intensity")(1.f)).Get<float>();
 		const float exponent = props.Get(Property(propName + ".exponent")(2.f)).Get<float>();
@@ -912,7 +913,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
-		
+
 		return new BlenderVoronoiTexture(CreateTextureMapping3D(propName + ".mapping", props), intensity, exponent, fw1, fw2, fw3, fw4, distmetric, noisesize, bright, contrast);
 	} else if (texType == "dots") {
 		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(1.f)));
@@ -970,7 +971,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "hitpointgrey") {
 		const int channel = props.Get(Property(propName + ".channel")(-1)).Get<int>();
 
-		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ? 
+		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ?
 			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
@@ -1019,7 +1020,7 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 	const string volType = props.Get(Property(propName + ".type")("homogenous")).Get<string>();
 
 	const Texture *iorTex = GetTexture(props.Get(Property(propName + ".ior")(1.f)));
-	const Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
+	const Texture *emissionTex = props.IsDefined(propName + ".emission") ?
 		GetTexture(props.Get(Property(propName + ".emission")(0.f, 0.f, 0.f))) : NULL;
 	// Required to remove light source while editing the scene
 	if (emissionTex && (
@@ -1063,7 +1064,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	const string propName = "scene.materials." + matName;
 	const string matType = props.Get(Property(propName + ".type")("matte")).Get<string>();
 
-	const Texture *emissionTex = props.IsDefined(propName + ".emission") ? 
+	const Texture *emissionTex = props.IsDefined(propName + ".emission") ?
 		GetTexture(props.Get(Property(propName + ".emission")(0.f, 0.f, 0.f))) : NULL;
 	// Required to remove light source while editing the scene
 	if (emissionTex && (
@@ -1071,10 +1072,10 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			((emissionTex->GetType() == CONST_FLOAT3) && (((ConstFloat3Texture *)emissionTex)->GetColor().Black()))))
 		emissionTex = NULL;
 
-	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ? 
+	Texture *bumpTex = props.IsDefined(propName + ".bumptex") ?
 		GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : NULL;
     if (!bumpTex) {
-        const Texture *normalTex = props.IsDefined(propName + ".normaltex") ? 
+        const Texture *normalTex = props.IsDefined(propName + ".normaltex") ?
             GetTexture(props.Get(Property(propName + ".normaltex")(1.f))) : NULL;
 
         if (normalTex) {
@@ -1102,7 +1103,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	} else if (matType == "glass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
-		
+
 		Texture *exteriorIor = NULL;
 		Texture *interiorIor = NULL;
 		// For compatibility with the past
@@ -1241,20 +1242,20 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		mat = new VelvetMaterial(emissionTex, bumpTex, kd, p1, p2, p3, thickness);
 	} else if (matType == "cloth") {
 		slg::ocl::ClothPreset preset = slg::ocl::DENIM;
-		
+
 		if (props.IsDefined(propName + ".preset")) {
 			const string type = props.Get(Property(propName + ".preset")("denim")).Get<string>();
-			
+
 			if (type == "denim")
 				preset = slg::ocl::DENIM;
 			else if (type == "silk_charmeuse")
-				preset = slg::ocl::SILKCHARMEUSE;  
+				preset = slg::ocl::SILKCHARMEUSE;
 			else if (type == "silk_shantung")
-				preset = slg::ocl::SILKSHANTUNG;  
+				preset = slg::ocl::SILKSHANTUNG;
 			else if (type == "cotton_twill")
-				preset = slg::ocl::COTTONTWILL;  
+				preset = slg::ocl::COTTONTWILL;
 			else if (type == "wool_garbardine")
-				preset = slg::ocl::WOOLGARBARDINE;  
+				preset = slg::ocl::WOOLGARBARDINE;
 			else if (type == "polyester_lining_cloth")
 				preset = slg::ocl::POLYESTER;
 		}
@@ -1407,7 +1408,7 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 			Property prop = props.Get(propName + ".faces");
 			if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
 				throw runtime_error("Wrong object face list length: " + objName);
-			
+
 			trisSize = prop.GetSize() / 3;
 			tris = new Triangle[trisSize];
 			for (u_int i = 0; i < trisSize; ++i) {
@@ -1713,7 +1714,7 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
 	lightSource->Preprocess();
 	lightSource->SetImportance(props.Get(Property(propName + ".importance")(1.f)).Get<float>());
-	
+
 	return lightSource;
 }
 
@@ -1775,7 +1776,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 				bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
 				volInfo->SetScatteredStart(true);
-				
+
 				return true;
 			}
 		}
@@ -1790,7 +1791,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 				if (!transp.Black()) {
 					*connectionThroughput *= transp;
 					continueToTrace = true;
-				}	
+				}
 			}
 
 			if (continueToTrace) {
@@ -1810,7 +1811,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 			// Nothing was hit
 			return false;
 		}
-		
+
 		// I generate a new random variable starting from the previous one. I'm
 		// not really sure about the kind of correlation introduced by this
 		// trick.
