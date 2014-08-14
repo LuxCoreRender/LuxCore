@@ -230,8 +230,8 @@ BlenderWoodType;
 typedef struct {
 	TextureMapping3D mapping;
 	BlenderWoodType type;
-	BlenderWoodNoiseBase noisebasis2;
-	BlenderWoodNoiseBasis noisebasis;
+	BlenderNoiseBase noisebasis2;
+	BlenderNoiseBasis noisebasis;
 	float noisesize, turbulence;
 	float bright, contrast;
 	bool hard;

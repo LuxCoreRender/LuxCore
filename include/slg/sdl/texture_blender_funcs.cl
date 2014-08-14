@@ -681,11 +681,11 @@ void BlenderWoodTexture_EvaluateSpectrum(__global Texture *texture, __global Hit
 
 #endif
 
- //------------------------------------------------------------------------------
-+// Blender voronoi texture
- //------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+// Blender voronoi texture
+//------------------------------------------------------------------------------
  
-+#if defined(PARAM_ENABLE_BLENDER_VORONOI)
+#if defined(PARAM_ENABLE_BLENDER_VORONOI)
  
 float BlenderVoronoiTexture_Evaluate(__global HitPoint *hitPoint,
 		const DistanceMetric distancemetric, const float feature_weight1, const float feature_weight2, 
