@@ -113,6 +113,7 @@ public:
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	blender::BlenderNoiseBasis GetNoiseDistortion() const { return noisedistortion; }
 	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	float GetDistortion() const { return distortion; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
