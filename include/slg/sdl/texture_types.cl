@@ -225,7 +225,7 @@ typedef struct {
 
 typedef enum {
 	BANDS, RINGS, BANDNOISE, RINGNOISE
-BlenderWoodType;
+} BlenderWoodType;
 
 typedef struct {
 	TextureMapping3D mapping;
