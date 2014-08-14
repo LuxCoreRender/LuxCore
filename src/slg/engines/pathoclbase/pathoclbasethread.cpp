@@ -183,7 +183,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int) +
 				sizeof(int); // This is for bool field
 
-	return hitPointSize;	
+	return hitPointSize;
 }
 
 size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
@@ -200,7 +200,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	if (renderEngine->compiledScene->HasVolumes())
 		bsdfSize += sizeof(int); // This is for bool field
 
-	return bsdfSize;	
+	return bsdfSize;
 }
 
 size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
@@ -249,7 +249,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 
 	sampleResultSize += sizeof(BSDFEvent) +
 			2 * sizeof(int);  // For the 2 boolean fields
-	
+
 	return sampleResultSize;
 }
 
@@ -257,7 +257,7 @@ void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, con
 	// Check if the buffer is too big
 	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
 		stringstream ss;
-		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() << 
+		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() <<
 				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
 				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
 				"): try to reduce related parameters";
@@ -295,7 +295,7 @@ void PathOCLBaseRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t s
 	// Check if the buffer is too big
 	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
 		stringstream ss;
-		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() << 
+		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() <<
 				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
 				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
 				"): try to reduce related parameters";
@@ -317,7 +317,7 @@ void PathOCLBaseRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t s
 	}
 
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
- 
+
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer size: " <<
 			(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 	*buff = new cl::Buffer(oclContext,
@@ -705,12 +705,26 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_WINDY";
 	if (cscene->IsTextureCompiled(WRINKLED))
 		ss << " -D PARAM_ENABLE_WRINKLED";
-	if (cscene->IsTextureCompiled(BLENDER_CLOUDS))
-		ss << " -D PARAM_ENABLE_BLENDER_CLOUDS";
-	if (cscene->IsTextureCompiled(BLENDER_WOOD))
-		ss << " -D PARAM_ENABLE_BLENDER_WOOD";
-	if (cscene->IsTextureCompiled(UV_TEX))
-		ss << " -D PARAM_ENABLE_TEX_UV";
+	if (cscene->IsTextureCompiled(BLENDER_BLEND))
+		ss << " -D PARAM_ENABLE_BLENDER_BLEND";
+ 	if (cscene->IsTextureCompiled(BLENDER_CLOUDS))
+ 		ss << " -D PARAM_ENABLE_BLENDER_CLOUDS";
+	if (cscene->IsTextureCompiled(BLENDER_DISTORTED_NOISE))
+		ss << " -D PARAM_ENABLE_BLENDER_DISTORTED_NOISE";
+	if (cscene->IsTextureCompiled(BLENDER_MAGIC))
+		ss << " -D PARAM_ENABLE_BLENDER_MAGIC";
+	if (cscene->IsTextureCompiled(BLENDER_MARBLE))
+		ss << " -D PARAM_ENABLE_BLENDER_MARBLE";
+	if (cscene->IsTextureCompiled(BLENDER_MUSGRAVE))
+		ss << " -D PARAM_ENABLE_BLENDER_MUSGRAVE";
+	if (cscene->IsTextureCompiled(BLENDER_STUCCI))
+		ss << " -D PARAM_ENABLE_BLENDER_STUCCI";
+ 	if (cscene->IsTextureCompiled(BLENDER_WOOD))
+ 		ss << " -D PARAM_ENABLE_BLENDER_WOOD";
+	if (cscene->IsTextureCompiled(BLENDER_VORONOI))
+		ss << " -D PARAM_ENABLE_BLENDER_VORONOI";
+    if (cscene->IsTextureCompiled(UV_TEX))
+        ss << " -D PARAM_ENABLE_TEX_UV";
 	if (cscene->IsTextureCompiled(BAND_TEX))
 		ss << " -D PARAM_ENABLE_TEX_BAND";
 	if (cscene->IsTextureCompiled(HITPOINTCOLOR))
@@ -777,7 +791,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	if (cscene->RequiresPassThrough())
 		ss << " -D PARAM_HAS_PASSTHROUGH";
-	
+
 	if (cscene->camera.lensRadius > 0.f)
 		ss << " -D PARAM_CAMERA_HAS_DOF";
 	if (cscene->enableCameraHorizStereo) {
@@ -848,7 +862,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION";
 
 	ss << AdditionalKernelOptions();
-	
+
 	//--------------------------------------------------------------------------
 
 	// Check the OpenCL vendor and use some specific compiler options
@@ -921,9 +935,11 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_trianglemesh_funcs <<
 			slg::ocl::KernelSource_mapping_funcs <<
 			slg::ocl::KernelSource_texture_noise_funcs <<
+			slg::ocl::KernelSource_texture_blender_noise_funcs <<
+			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
 			slg::ocl::KernelSource_texture_blender_funcs <<
 			slg::ocl::KernelSource_texture_funcs;
-		
+
 		if (renderEngine->useDynamicCodeGenerationForTextures) {
 			// Generate the code to evaluate the textures
 			ssKernel <<
@@ -1133,7 +1149,7 @@ void PathOCLBaseRenderThread::Stop() {
 	StopRenderThread();
 
 	TransferFilm(intersectionDevice->GetOpenCLQueue());
-	
+
 	// Film buffers
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		FreeOCLBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);

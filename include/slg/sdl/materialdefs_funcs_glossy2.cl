@@ -350,7 +350,7 @@ float3 Glossy2Material_ConstSample(
 	return (coatingF + absorption * (WHITE - S) * baseF * *cosSampledDir) / *pdfW;
 }
 
-#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
 float3 Glossy2Material_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW

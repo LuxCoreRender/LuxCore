@@ -25,8 +25,9 @@ typedef enum {
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, HITPOINTCOLOR, HITPOINTALPHA,
 	HITPOINTGREY, NORMALMAP_TEX,
 	// Procedural textures
-	BLENDER_CLOUDS, BLENDER_WOOD, CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX,
-	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX
+	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
+	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX
 } TextureType;
 
 typedef struct {
@@ -118,30 +119,137 @@ typedef struct {
 	float omega;
 } WindyTexParam;
 
+typedef enum { 
+	ACTUAL_DISTANCE, DISTANCE_SQUARED, MANHATTAN, CHEBYCHEV, MINKOWSKI_HALF, 
+	MINKOWSKI_FOUR, MINKOWSKI
+} DistanceMetric;
+
 typedef enum {
-	BANDS, RINGS, BANDNOISE, RINGNOISE
-} BlenderWoodType;
+	TEX_LIN, TEX_QUAD, TEX_EASE, TEX_DIAG, TEX_SPHERE, TEX_HALO, TEX_RAD
+} ProgressionType;
+
+typedef enum {
+    BLENDER_ORIGINAL, ORIGINAL_PERLIN, IMPROVED_PERLIN,
+    VORONOI_F1, VORONOI_F2, VORONOI_F3, VORONOI_F4, VORONOI_F2_F1,
+    VORONOI_CRACKLE, CELL_NOISE
+} BlenderNoiseBasis;
 
 typedef enum {
 	TEX_SIN, TEX_SAW, TEX_TRI
-} BlenderWoodNoiseBase;
+} BlenderNoiseBase;
+
+typedef struct {
+	TextureMapping3D mapping;
+	ProgressionType type;
+	bool direction;
+	float bright, contrast;
+} BlenderBlendTexParam;
+
+typedef struct {
+	TextureMapping3D mapping;
+	BlenderNoiseBasis noisebasis;	
+	float noisesize;
+	int noisedepth;
+	float bright, contrast;
+	bool hard;
+} BlenderCloudsTexParam;
+
+typedef struct {
+	TextureMapping3D mapping;
+	BlenderNoiseBasis noisedistortion;	
+	BlenderNoiseBasis noisebasis;	
+	float distortion;
+	float noisesize;
+	float bright, contrast;
+} BlenderDistortedNoiseTexParam;
+
+typedef struct {
+	TextureMapping3D mapping;
+	int noisedepth;
+	float turbulence;
+	float bright, contrast;
+} BlenderMagicTexParam;
+
+typedef enum {
+	TEX_SOFT, TEX_SHARP, TEX_SHARPER
+} BlenderMarbleType;
+
+typedef struct {
+	TextureMapping3D mapping;
+	BlenderMarbleType type;
+	BlenderNoiseBasis noisebasis;	
+	BlenderNoiseBase noisebasis2;	
+	float noisesize, turbulence;
+	int noisedepth;
+	float bright, contrast;
+	bool hard;
+} BlenderMarbleTexParam;
+
+typedef enum {
+	TEX_MULTIFRACTAL, TEX_RIDGED_MULTIFRACTAL, TEX_HYBRID_MULTIFRACTAL, TEX_FBM, TEX_HETERO_TERRAIN
+} BlenderMusgraveType;
+
+typedef struct {
+	TextureMapping3D mapping;
+	BlenderMusgraveType type;
+	BlenderNoiseBasis noisebasis;	
+	float dimension;
+	float intensity;
+	float lacunarity;
+	float offset;
+	float gain;
+	float octaves;
+	float noisesize;
+	float bright, contrast;
+	bool hard;
+} BlenderMusgraveTexParam;
+
+typedef struct {
+	int noisedepth;
+	float bright, contrast;
+} BlenderNoiseTexParam;
+
+typedef enum {
+	TEX_PLASTIC, TEX_WALL_IN, TEX_WALL_OUT
+} BlenderStucciType;
+
+typedef struct {
+	TextureMapping3D mapping;
+	BlenderStucciType type;
+	BlenderNoiseBasis noisebasis;	
+	float noisesize;
+	float turbulence;
+	float bright, contrast;
+	bool hard;
+} BlenderStucciTexParam;
+
+typedef enum {
+	BANDS, RINGS, BANDNOISE, RINGNOISE
+BlenderWoodType;
 
 typedef struct {
 	TextureMapping3D mapping;
 	BlenderWoodType type;
 	BlenderWoodNoiseBase noisebasis2;
+	BlenderWoodNoiseBasis noisebasis;
 	float noisesize, turbulence;
 	float bright, contrast;
 	bool hard;
 } BlenderWoodTexParam;
 
 typedef struct {
-	TextureMapping3D mapping;
+ 	TextureMapping3D mapping;
+	DistanceMetric distancemetric;
+	float feature_weight1;
+	float feature_weight2;
+	float feature_weight3;
+	float feature_weight4;
 	float noisesize;
-	int noisedepth;
-	float bright, contrast;
-	bool hard;
-} BlenderCloudsTexParam;
+	float intensity;
+	float exponent;
+ 	float bright, contrast;
+} BlenderVoronoiTexParam;
+
 
 typedef struct {
 	TextureMapping3D mapping;
@@ -173,8 +281,16 @@ typedef struct {
 typedef struct {
 	TextureType type;
 	union {
-		BlenderCloudsTexParam blenderClouds;
-		BlenderWoodTexParam blenderWood;
+		BlenderBlendTexParam blenderBlend;
+ 		BlenderCloudsTexParam blenderClouds;
+		BlenderDistortedNoiseTexParam blenderDistortedNoise;
+		BlenderMagicTexParam blenderMagic;
+		BlenderMarbleTexParam blenderMarble;
+		BlenderMusgraveTexParam blenderMusgrave;
+		BlenderNoiseTexParam blenderNoise;
+		BlenderStucciTexParam blenderStucci;
+ 		BlenderWoodTexParam blenderWood;
+		BlenderVoronoiTexParam blenderVoronoi;
 		ConstFloatParam constFloat;
 		ConstFloat3Param constFloat3;
 		ImageMapTexParam imageMapTex;

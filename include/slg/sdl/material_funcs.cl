@@ -86,7 +86,7 @@ uint Material_GetExteriorVolumeNoMix(__global Material *material) {
 // is disabled
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
 
 bool Material_IsDeltaNoMix(__global Material *material) {
 	switch (material->type) {

@@ -62,6 +62,8 @@ extern std::string KernelSource_materialdefs_funcs_roughmatte_translucent;
 extern std::string KernelSource_materialdefs_funcs_velvet;
 extern std::string KernelSource_material_funcs;
 extern std::string KernelSource_texture_noise_funcs;
+extern std::string KernelSource_texture_blender_noise_funcs;
+extern std::string KernelSource_texture_blender_noise_funcs2;
 extern std::string KernelSource_texture_blender_funcs;
 extern std::string KernelSource_texture_bump_funcs;
 extern std::string KernelSource_texture_types;
