@@ -249,8 +249,8 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_noise_funcs.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_noise_funcs2.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_noise_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_noise_funcs2_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bump_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_noise_funcs_kernel.cpp
