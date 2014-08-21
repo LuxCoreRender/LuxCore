@@ -76,7 +76,7 @@ void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bo
 			Y += y;
 		}
 	}
-	Y = Y / Max(1u, pixelCount);
+	Y /= pixelCount;
 
 	if (Y <= 0.f)
 		return;
@@ -93,6 +93,8 @@ void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bo
 
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])
+			// Note: I don't need to convert to XYZ and back because I'm only
+			// scaling the value
 			pixels[i] = scale * pixels[i];
 	}
 }
@@ -127,6 +129,8 @@ void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<boo
 	const float scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, gamma);
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])
+			// Note: I don't need to convert to XYZ and back because I'm only
+			// scaling the value
 			pixels[i] = scale * pixels[i];
 	}
 }
@@ -137,22 +141,14 @@ void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<boo
 
 void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool> &pixelsMask) const {
 	RGBColor *rgbPixels = (RGBColor *)pxls;
-	XYZColor *xyzPixels = (XYZColor *)pxls;
 
 	const float alpha = .1f;
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
-	// Use the frame buffer as temporary storage and calculate the average luminance
 	float Ywa = 0.f;
-	const ColorSystem colorSystem;
 	for (u_int i = 0; i < pixelCount; ++i) {
-		if (pixelsMask[i] && !rgbPixels[i].IsInf()) {
-			// Convert to XYZ color space
-			const XYZColor xyz = colorSystem.ToXYZ(rgbPixels[i]);
-			xyzPixels[i] = xyz;
-
-			Ywa += xyzPixels[i].Y();
-		}
+		if (pixelsMask[i] && !rgbPixels[i].IsInf())
+			Ywa += rgbPixels[i].Y();
 	}
 	Ywa /= pixelCount;
 
@@ -166,12 +162,10 @@ void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool
 
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i]) {
-			const float ys = xyzPixels[i].Y();
-			xyzPixels[i] *= pScale * (1.f + ys * invY2) / (1.f + ys);
-
-			// Convert back to RGB color space
-			const RGBColor rgb = colorSystem.ToRGBConstrained(xyzPixels[i]);
-			rgbPixels[i] = rgb;
+			const float ys = rgbPixels[i].Y();
+			// Note: I don't need to convert to XYZ and back because I'm only
+			// scaling the value
+			rgbPixels[i] *= pScale * (1.f + ys * invY2) / (1.f + ys);
 		}
 	}
 }

@@ -331,7 +331,7 @@ std::string KernelSource_texture_blender_noise_funcs2 =
 " *    ``H''  determines the highest fractal dimension\n"
 " *    ``lacunarity''  is gap between successive frequencies\n"
 " *    ``octaves''  is the number of frequencies in the fBm\n"
-" *    ``offset''  is the zero offset, which determines multifractality (NOT USED??)\n"
+" *    ``offset''  is the zero offset, which determines multifractality (NOT USED?!?)\n"
 " */\n"
 " /* this one is in fact rather confusing,\n"
 " 	* there seem to be errors in the original source code (in all three versions of proc.text&mod),\n"

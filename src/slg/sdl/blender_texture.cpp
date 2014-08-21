@@ -967,7 +967,7 @@ Properties BlenderStucciTexture::ToProperties(const ImageMapCache &imgMapCache) 
 
 BlenderWoodTexture::BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise,
 		const std::string &pnoisebasis, const float noisesize, float turb, bool hard, float bright, float contrast) :
-		mapping(mp), type(BANDS), noisebasis2(TEX_SIN), noisebasis(BLENDER_ORIGINAL), noisesize(noisesize),
+		mapping(mp), type(BANDS), noisebasis(BLENDER_ORIGINAL), noisebasis2(TEX_SIN), noisesize(noisesize),
 		turbulence(turb), hard(hard), bright(bright), contrast(contrast) {
 
 	if(pnoisebasis == "blender_original") {
