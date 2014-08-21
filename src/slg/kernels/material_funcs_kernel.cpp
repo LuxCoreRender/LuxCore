@@ -89,7 +89,7 @@ std::string KernelSource_material_funcs =
 "// is disabled\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
-"#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)\n"
+"#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)\n"
 "\n"
 "bool Material_IsDeltaNoMix(__global Material *material) {\n"
 "	switch (material->type) {\n"

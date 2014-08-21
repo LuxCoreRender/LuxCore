@@ -1001,7 +1001,7 @@ std::string KernelSource_light_funcs =
 "		case TYPE_DISTANT:\n"
 "#endif\n"
 "#if defined(PARAM_HAS_LASERLIGHT)\n"
-"		case TYPE_LASERLIGHT:\n"
+"		case TYPE_LASER:\n"
 "#endif\n"
 "#if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT)\n"
 "			return false;\n"

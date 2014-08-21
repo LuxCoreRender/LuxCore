@@ -274,7 +274,7 @@ std::string KernelSource_materialdefs_funcs_roughglass =
 "	return result;\n"
 "}\n"
 "\n"
-"#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)\n"
+"#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)\n"
 "float3 RoughGlassMaterial_Evaluate(__global Material *material,\n"
 "		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,\n"
 "		BSDFEvent *event, float *directPdfW\n"

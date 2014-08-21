@@ -328,7 +328,7 @@ float mg_fBm(float x, float y, float z, float H, float lacunarity, float octaves
  *    ``H''  determines the highest fractal dimension
  *    ``lacunarity''  is gap between successive frequencies
  *    ``octaves''  is the number of frequencies in the fBm
- *    ``offset''  is the zero offset, which determines multifractality (NOT USED??)
+ *    ``offset''  is the zero offset, which determines multifractality (NOT USED?!?)
  */
  /* this one is in fact rather confusing,
  	* there seem to be errors in the original source code (in all three versions of proc.text&mod),
