@@ -94,7 +94,7 @@ void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bo
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])
 			// Note: I don't need to convert to XYZ and back because I'm only
-			// scaling the value
+			// scaling the value.
 			pixels[i] = scale * pixels[i];
 	}
 }
@@ -130,7 +130,7 @@ void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<boo
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])
 			// Note: I don't need to convert to XYZ and back because I'm only
-			// scaling the value
+			// scaling the value.
 			pixels[i] = scale * pixels[i];
 	}
 }
@@ -164,7 +164,7 @@ void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool
 		if (pixelsMask[i]) {
 			const float ys = rgbPixels[i].Y();
 			// Note: I don't need to convert to XYZ and back because I'm only
-			// scaling the value
+			// scaling the value.
 			rgbPixels[i] *= pScale * (1.f + ys * invY2) / (1.f + ys);
 		}
 	}
