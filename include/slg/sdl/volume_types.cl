@@ -27,7 +27,7 @@ typedef struct {
 	unsigned int volumeIndexList[OPENCL_PATHVOLUMEINFO_SIZE];
 	unsigned int volumeIndexListSize;
 
-	bool scatteredStart;
+	int scatteredStart;
 } PathVolumeInfo;
 
 typedef Material Volume;

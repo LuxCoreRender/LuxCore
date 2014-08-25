@@ -132,7 +132,7 @@ typedef struct {
 	BlenderWoodNoiseBase noisebasis2;
 	float noisesize, turbulence;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderWoodTexParam;
 
 typedef struct {
@@ -140,7 +140,7 @@ typedef struct {
 	float noisesize;
 	int noisedepth;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderCloudsTexParam;
 
 typedef struct {
