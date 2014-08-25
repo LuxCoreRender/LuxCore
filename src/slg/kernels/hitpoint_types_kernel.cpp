@@ -53,7 +53,7 @@ std::string KernelSource_hitpoint_types =
 "	// Material code (i.e. glass, etc.) doesn't have access to materials list\n"
 "	// so I use HitPoint to carry texture index information\n"
 "	unsigned int interiorIorTexIndex, exteriorIorTexIndex;\n"
-"	bool intoObject;\n"
+"	int intoObject;\n"
 "#endif\n"
 "} HitPoint;\n"
 "\n"

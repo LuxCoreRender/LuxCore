@@ -50,7 +50,7 @@ typedef struct {
 	// Material code (i.e. glass, etc.) doesn't have access to materials list
 	// so I use HitPoint to carry texture index information
 	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
-	bool intoObject;
+	int intoObject;
 #endif
 } HitPoint;
 

@@ -81,7 +81,7 @@ std::string KernelSource_film_types =
 "#endif\n"
 "\n"
 "	BSDFEvent firstPathVertexEvent;\n"
-"	bool firstPathVertex, lastPathVertex;\n"
+"	int firstPathVertex, lastPathVertex;\n"
 "} SampleResult;\n"
 "\n"
 "#endif\n"

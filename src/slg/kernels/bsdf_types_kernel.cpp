@@ -51,7 +51,7 @@ std::string KernelSource_bsdf_types =
 "	Frame frame;\n"
 "\n"
 "#if defined(PARAM_HAS_VOLUMES)\n"
-"	bool isVolume;\n"
+"	int isVolume;\n"
 "#endif\n"
 "} BSDF;\n"
 "\n"

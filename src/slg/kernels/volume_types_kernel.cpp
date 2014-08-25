@@ -30,7 +30,7 @@ std::string KernelSource_volume_types =
 "	unsigned int volumeIndexList[OPENCL_PATHVOLUMEINFO_SIZE];\n"
 "	unsigned int volumeIndexListSize;\n"
 "\n"
-"	bool scatteredStart;\n"
+"	int scatteredStart;\n"
 "} PathVolumeInfo;\n"
 "\n"
 "typedef Material Volume;\n"

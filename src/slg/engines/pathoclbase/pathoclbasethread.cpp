@@ -181,7 +181,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 	// Volume fields
 	if (renderEngine->compiledScene->HasVolumes())
 		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int) +
-				sizeof(int); // This is for bool field
+				sizeof(int);
 
 	return hitPointSize;	
 }
@@ -198,7 +198,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	bsdfSize += sizeof(slg::ocl::Frame);
 	// Add BSDF.isVolume memory size
 	if (renderEngine->compiledScene->HasVolumes())
-		bsdfSize += sizeof(int); // This is for bool field
+		bsdfSize += sizeof(int);
 
 	return bsdfSize;	
 }
@@ -248,7 +248,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Film::RAYCOUNT);
 
 	sampleResultSize += sizeof(BSDFEvent) +
-			2 * sizeof(int);  // For the 2 boolean fields
+			2 * sizeof(int);
 	
 	return sampleResultSize;
 }
