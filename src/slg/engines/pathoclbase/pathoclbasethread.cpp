@@ -889,7 +889,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_color_types <<
 			luxrays::ocl::KernelSource_frame_types <<
 			luxrays::ocl::KernelSource_matrix4x4_types <<
+			luxrays::ocl::KernelSource_quaternion_types <<
 			luxrays::ocl::KernelSource_transform_types <<
+			luxrays::ocl::KernelSource_motionsystem_types <<
 			// OpenCL LuxRays Funcs
 			luxrays::ocl::KernelSource_epsilon_funcs <<
 			luxrays::ocl::KernelSource_utils_funcs <<
@@ -899,7 +901,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_color_funcs <<
 			luxrays::ocl::KernelSource_frame_funcs <<
 			luxrays::ocl::KernelSource_matrix4x4_funcs <<
+			luxrays::ocl::KernelSource_quaternion_funcs <<
 			luxrays::ocl::KernelSource_transform_funcs <<
+			luxrays::ocl::KernelSource_motionsystem_funcs <<
 			// OpenCL SLG Types
 			slg::ocl::KernelSource_randomgen_types <<
 			slg::ocl::KernelSource_trianglemesh_types <<

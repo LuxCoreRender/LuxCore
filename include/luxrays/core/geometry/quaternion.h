@@ -24,6 +24,11 @@ using luxrays::Vector;
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/quaternion_types.cl"
+}
+
 class Quaternion {
 
 public:

@@ -130,7 +130,7 @@ void Camera_GenerateRay(
 		__global
 #endif
 		Ray *ray,
-		const float filmX, const float filmY
+		const float filmX, const float filmY, const float timeSample
 #if defined(PARAM_CAMERA_HAS_DOF)
 		, const float dofSampleX, const float dofSampleY
 #endif
@@ -180,15 +180,25 @@ void Camera_GenerateRay(
 
 	rayDir = normalize(rayDir);
 	const float maxt = (camera->yon - hither) / rayDir.z;
+	const float time = mix(camera->shutterOpen, camera->shutterClose, timeSample);
 
 	// Transform ray in world coordinates
 	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld[transIndex], rayOrig);
 	rayDir = Transform_ApplyVector(&camera->cameraToWorld[transIndex], rayDir);
 
+	const uint interpolatedTransformFirstIndex = camera->motionSystem.interpolatedTransformFirstIndex;
+	if (interpolatedTransformFirstIndex != NULL_INDEX) {
+		Matrix4x4 m;
+		MotionSystem_Sample(&camera->motionSystem, time, camera->interpolatedTransforms, &m);
+
+		rayOrig = Matrix4x4_ApplyPoint_Private(&m, rayOrig);
+		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);		
+	}
+
 #if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
-	Ray_Init3_Private(ray, rayOrig, rayDir, maxt);
+	Ray_Init3_Private(ray, rayOrig, rayDir, maxt, time);
 #else
-	Ray_Init3(ray, rayOrig, rayDir, maxt);
+	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
 #endif
 
 #if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)

@@ -1,7 +1,7 @@
 #include <string>
-namespace slg { namespace ocl {
-std::string KernelSource_camera_types = 
-"#line 2 \"camera_types.cl\"\n"
+namespace luxrays { namespace ocl {
+std::string KernelSource_quaternion_types = 
+"#line 2 \"quaternion_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *\n"
@@ -21,24 +21,8 @@ std::string KernelSource_camera_types =
 " * limitations under the License.                                          *\n"
 " ***************************************************************************/\n"
 "\n"
-"#define CAMERA_MAX_INTERPOLATED_TRANSFORM 8\n"
-"\n"
 "typedef struct {\n"
-"	Transform rasterToCamera[2]; // 2 used for stereo rendering\n"
-"	Transform cameraToWorld[2]; // 2 used for stereo rendering\n"
-"\n"
-"	// Used for camera clipping plane\n"
-"	Point clippingPlaneCenter;\n"
-"	Normal clippingPlaneNormal;\n"
-"\n"
-"	// Placed here for Transform memory alignement\n"
-"	float lensRadius;\n"
-"	float focalDistance;\n"
-"	float yon, hither;\n"
-"	float shutterOpen, shutterClose;\n"
-"\n"
-"	// Used for camera motion blur\n"
-"	MotionSystem motionSystem;\n"
-"	InterpolatedTransform interpolatedTransforms[CAMERA_MAX_INTERPOLATED_TRANSFORM];\n"
-"} Camera;\n"
+"	float w;\n"
+"	Vector v;\n"
+"} Quaternion;\n"
 ; } }

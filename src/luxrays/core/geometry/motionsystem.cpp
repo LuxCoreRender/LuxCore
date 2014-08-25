@@ -137,23 +137,20 @@ Transform InterpolatedTransform::Sample(float time) const {
 		}
 	}
 
-	if (hasTranslationX) {
+	if (hasTranslationX)
 		interMatrix[0][3] = Lerp(le, startT.Tx, endT.Tx);
-	} else {
+	else
 		interMatrix[0][3] = startT.Tx;
-	}
 
-	if (hasTranslationY) {
+	if (hasTranslationY)
 		interMatrix[1][3] = Lerp(le, startT.Ty, endT.Ty);
-	} else {
+	else
 		interMatrix[1][3] = startT.Ty;
-	}
 
-	if (hasTranslationZ) {
+	if (hasTranslationZ)
 		interMatrix[2][3] = Lerp(le, startT.Tz, endT.Tz);
-	} else {
+	else
 		interMatrix[2][3] = startT.Tz;
-	}
 
 	return Transform(interMatrix);
 }
@@ -165,7 +162,8 @@ static void V4MulByMatrix(const Matrix4x4 &A, const float x[4], float b[4]) {
 	b[3] = A.m[3][0]*x[0] + A.m[3][1]*x[1] + A.m[3][2]*x[2] + A.m[3][3]*x[3];
 }
 
-InterpolatedTransform::DecomposedTransform::DecomposedTransform(const Matrix4x4 &m) : Valid(false), R(m) {
+InterpolatedTransform::DecomposedTransform::DecomposedTransform(const Matrix4x4 &m) :
+		R(m), Valid(false) {
 	// Normalize the matrix. 
 	if (R.m[3][3] == 0)
 		return;

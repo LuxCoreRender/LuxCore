@@ -1,7 +1,7 @@
 #include <string>
 namespace luxrays { namespace ocl {
 std::string KernelSource_transform_types = 
-"#line 2 \"ray_types.cl\"\n"
+"#line 2 \"transform_types.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *\n"

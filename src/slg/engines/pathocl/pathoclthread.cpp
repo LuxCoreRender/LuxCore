@@ -277,8 +277,8 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 	const bool hasPassThrough = engine->compiledScene->RequiresPassThrough();
 
 	const size_t eyePathVertexDimension =
-		// IDX_SCREEN_X, IDX_SCREEN_Y
-		2 +
+		// IDX_SCREEN_X, IDX_SCREEN_Y, IDX_EYE_TIME
+		3 +
 		// IDX_EYE_PASSTROUGHT
 		(hasPassThrough ? 1 : 0) +
 		// IDX_DOF_X, IDX_DOF_Y

@@ -46,6 +46,10 @@ float3 VLOAD3F(const __global float *p) {
 	return (float3)(p[0], p[1], p[2]);
 }
 
+float3 VLOAD3F_Private(const float *p) {
+	return (float3)(p[0], p[1], p[2]);
+}
+
 void VSTORE3F(const float3 v, __global float *p) {
 	p[0] = v.x;
 	p[1] = v.y;
@@ -53,6 +57,10 @@ void VSTORE3F(const float3 v, __global float *p) {
 }
 
 float4 VLOAD4F(const __global float *p) {
+	return (float4)(p[0], p[1], p[2], p[3]);
+}
+
+float4 VLOAD4F_Private(const float *p) {
 	return (float4)(p[0], p[1], p[2], p[3]);
 }
 
@@ -77,11 +85,19 @@ float3 VLOAD3F(const __global float *p) {
 	return vload3(0, p);
 }
 
+float3 VLOAD3F_Private(const float *p) {
+	return vload3(0, p);
+}
+
 void VSTORE3F(const float3 v, __global float *p) {
 	vstore3(v, 0, p);
 }
 
 float4 VLOAD4F(const __global float *p) {
+	return vload4(0, p);
+}
+
+float4 VLOAD4F_Private(const float *p) {
 	return vload4(0, p);
 }
 

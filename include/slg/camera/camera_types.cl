@@ -18,6 +18,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define CAMERA_MAX_INTERPOLATED_TRANSFORM 8
+
 typedef struct {
 	Transform rasterToCamera[2]; // 2 used for stereo rendering
 	Transform cameraToWorld[2]; // 2 used for stereo rendering
@@ -30,5 +32,9 @@ typedef struct {
 	float lensRadius;
 	float focalDistance;
 	float yon, hither;
-} Camera;
+	float shutterOpen, shutterClose;
 
+	// Used for camera motion blur
+	MotionSystem motionSystem;
+	InterpolatedTransform interpolatedTransforms[CAMERA_MAX_INTERPOLATED_TRANSFORM];
+} Camera;

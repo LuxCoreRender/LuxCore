@@ -26,6 +26,7 @@ namespace luxrays { namespace ocl {
 extern std::string KernelSource_luxrays_types;
 	
 // Intersection kernels
+extern std::string KernelSource_bvh_types;
 extern std::string KernelSource_bvh;
 extern std::string KernelSource_mbvh;
 extern std::string KernelSource_qbvh;
@@ -49,8 +50,12 @@ extern std::string KernelSource_point_types;
 extern std::string KernelSource_vector_types;
 extern std::string KernelSource_vector_funcs;
 extern std::string KernelSource_normal_types;
+extern std::string KernelSource_quaternion_types;
+extern std::string KernelSource_quaternion_funcs;
 extern std::string KernelSource_bbox_types;
 extern std::string KernelSource_bbox_funcs;
+extern std::string KernelSource_motionsystem_types;
+extern std::string KernelSource_motionsystem_funcs;
 extern std::string KernelSource_triangle_types;
 extern std::string KernelSource_triangle_funcs;
 extern std::string KernelSource_uv_types;

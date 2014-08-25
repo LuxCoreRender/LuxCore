@@ -1,4 +1,4 @@
-#line 2 "transform_types.cl"
+#line 2 "quaternion_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
@@ -19,5 +19,6 @@
  ***************************************************************************/
 
 typedef struct {
-	Matrix4x4 m, mInv;
-} Transform;
+	float w;
+	Vector v;
+} Quaternion;

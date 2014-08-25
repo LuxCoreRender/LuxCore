@@ -1,4 +1,4 @@
-#line 2 "transform_types.cl"
+#line 2 "motionsystem_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
@@ -19,5 +19,33 @@
  ***************************************************************************/
 
 typedef struct {
-	Matrix4x4 m, mInv;
-} Transform;
+	// Scaling
+	float Sx, Sy, Sz;
+	// Shearing
+	float Sxy, Sxz, Syz;
+	// Rotation
+	Matrix4x4 R;
+	// Translation
+	float Tx, Ty, Tz;
+	// Perspective
+	float Px, Py, Pz, Pw;
+	// Represents a valid series of transformations
+	bool Valid;
+} DecomposedTransform;
+
+typedef struct {
+	float startTime, endTime;
+	Transform start, end;
+	DecomposedTransform startT, endT;
+	Quaternion startQ, endQ;
+	int hasRotation, hasTranslation, hasScale;
+	int hasTranslationX, hasTranslationY, hasTranslationZ;
+	int hasScaleX, hasScaleY, hasScaleZ;
+	// false if start and end transformations are identical
+	int isActive;
+} InterpolatedTransform;
+
+typedef struct {
+	unsigned int interpolatedTransformFirstIndex;
+	unsigned int interpolatedTransformLastIndex;
+} MotionSystem;
