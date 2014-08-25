@@ -29,6 +29,11 @@ using luxrays::BBox;
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/geometry/motionsystem_types.cl"
+}
+
 // Interpolates between two transforms
 class InterpolatedTransform {
 public:
@@ -57,8 +62,6 @@ public:
 		// TODO - implement extraction of perspective transform
 		DecomposedTransform(const Matrix4x4 &m);
 
-		// Represents a valid series of transformations
-		bool Valid;
 		// Scaling
 		float Sx, Sy, Sz;
 		// Shearing
@@ -69,18 +72,22 @@ public:
 		float Tx, Ty, Tz;
 		// Perspective
 		float Px, Py, Pz, Pw;
+		// Represents a valid series of transformations
+		bool Valid;
 	};
 
-	// InterpolatedTransform Protected Data
+	// InterpolatedTransform Data
 	float startTime, endTime;
 	Transform start, end;
 	DecomposedTransform startT, endT;
 	Quaternion startQ, endQ;
-	bool hasRotation, hasTranslation, hasScale;
-	bool hasTranslationX, hasTranslationY, hasTranslationZ;
-	bool hasScaleX, hasScaleY, hasScaleZ;
+	// I'm using int instead of bool to match the OpenCL structure declaration
+	// (note: bool are not allowed in CPU <=> GPU data transfers)
+	int hasRotation, hasTranslation, hasScale;
+	int hasTranslationX, hasTranslationY, hasTranslationZ;
+	int hasScaleX, hasScaleY, hasScaleZ;
 	// false if start and end transformations are identical
-	bool isActive;
+	int isActive;
 };
 
 class MotionSystem {
@@ -104,13 +111,14 @@ public:
 	BBox Bound(BBox ibox) const;
 
 	void ApplyTransform(const Transform &trans);
-	luxrays::Properties ToProperties(const std::string &prefix) const;
 
-private:
-	void Init(const vector<float> &t, const vector<Transform> &transforms);
+	luxrays::Properties ToProperties(const std::string &prefix) const;
 
 	vector<float> times;
 	vector<InterpolatedTransform> interpolatedTransforms;
+
+private:
+	void Init(const vector<float> &t, const vector<Transform> &transforms);
 };
 
 // Contains one or more <time, transform> pairs (knots) representing a path
@@ -136,7 +144,7 @@ public:
 	Transform StaticTransform() const;
 	MotionSystem GetMotionSystem() const;
 
-	// Concantenate two MotionTransform.
+	// Concatenate two MotionTransform.
 	// Extract the unique knots from input MotionTransform'
 	// for each unique knot interpolate the knots from the other MotionTransform and concantenate.
 	// Thus if left hand has knots at (1, 3) and right hand has knots at (1, 4) then output has 

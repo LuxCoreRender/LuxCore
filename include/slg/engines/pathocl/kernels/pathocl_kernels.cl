@@ -61,6 +61,7 @@ void GenerateCameraPath(
 		__global Ray *ray,
 		Seed *seed) {
 #if (PARAM_SAMPLER_TYPE == 0)
+	const float time = Rnd_FloatValue(seed);
 
 #if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Rnd_FloatValue(seed);
@@ -73,6 +74,9 @@ void GenerateCameraPath(
 
 #if (PARAM_SAMPLER_TYPE == 1)
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+	
+	const float time = Sampler_GetSamplePath(IDX_EYE_TIME);
+
 #if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
@@ -83,6 +87,8 @@ void GenerateCameraPath(
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 2)
+	const float time = Sampler_GetSamplePath(IDX_EYE_TIME);
+
 #if defined(PARAM_CAMERA_HAS_DOF)
 	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
@@ -93,7 +99,7 @@ void GenerateCameraPath(
 #endif
 
 	Camera_GenerateRay(camera, filmWidth, filmHeight, ray,
-			sample->result.filmX, sample->result.filmY
+			sample->result.filmX, sample->result.filmY, time
 #if defined(PARAM_CAMERA_HAS_DOF)
 			, dofSampleX, dofSampleY
 #endif
@@ -244,7 +250,7 @@ bool DirectLightSampling(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
 #endif
-		const float u0, const float u1,
+		const float time, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
 #endif
@@ -301,7 +307,7 @@ bool DirectLightSampling(
 
 			Ray_Init4(shadowRay, hitPoint, lightRayDir,
 				epsilon,
-				distance - epsilon);
+				distance - epsilon, time);
 
 			return true;
 		}
@@ -320,7 +326,7 @@ bool DirectLightSampling_ONE(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
 #endif
-		const float u0, const float u1, const float u2,
+		const float time, const float u0, const float u1, const float u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
 #endif
@@ -344,7 +350,7 @@ bool DirectLightSampling_ONE(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		tmpHitPoint,
 #endif
-		u1, u2,
+		time, u1, u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		lightPassThroughEvent,
 #endif
@@ -830,6 +836,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				&task->tmpHitPoint,
 #endif
+				ray->time,
 				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X),
 				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
 				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
@@ -904,7 +911,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 					MATERIALS_PARAM);
 #endif
 
-			Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir);
+			Ray_Init2(ray, VLOAD3F(&bsdf->hitPoint.p.x), sampledDir, ray->time);
 
 			++depth;
 			sample->result.firstPathVertex = false;

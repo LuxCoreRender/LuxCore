@@ -18,29 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef struct {
-	union {
-		struct {
-			// I can not use BBox here because objects with a constructor are not
-			// allowed inside an union.
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			uint v[3];
-			uint meshIndex, triangleIndex;
-		} triangleLeaf;
-		struct {
-			uint leafIndex;
-			uint transformIndex;
-			uint meshOffsetIndex;
-		} bvhLeaf; // Used by MBVH
-	};
-	// Most significant bit is used to mark leafs
-	uint nodeData;
-	int pad0; // To align to float4
-} BVHAccelArrayNode;
-
 #define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
 #define BVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
 #if (BVH_NODES_PAGE_COUNT > 1)

@@ -47,7 +47,7 @@ public:
 
 	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),
 		lensRadius(0.f), focalDistance(10.f), shutterOpen(0.f), shutterClose(1.f),
-		autoFocus(false), type(t), motionSystem(NULL) { }
+		autoFocus(false), motionSystem(NULL), type(t) { }
 	virtual ~Camera() {
 		delete motionSystem;
 	}
@@ -97,10 +97,10 @@ public:
 	float clipHither, clipYon, lensRadius, focalDistance, shutterOpen, shutterClose;
 	bool autoFocus;
 
+	const luxrays::MotionSystem *motionSystem;
+
 protected:
 	const CameraType type;
-
-	const luxrays::MotionSystem *motionSystem;
 };
 
 //------------------------------------------------------------------------------

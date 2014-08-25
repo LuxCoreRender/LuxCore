@@ -1,4 +1,4 @@
-#line 2 "transform_types.cl"
+#line 2 "bvh_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
@@ -19,5 +19,24 @@
  ***************************************************************************/
 
 typedef struct {
-	Matrix4x4 m, mInv;
-} Transform;
+	union {
+		struct {
+			// I can not use BBox here because objects with a constructor are not
+			// allowed inside an union.
+			float bboxMin[3];
+			float bboxMax[3];
+		} bvhNode;
+		struct {
+			unsigned int v[3];
+			unsigned int meshIndex, triangleIndex;
+		} triangleLeaf;
+		struct {
+			unsigned int leafIndex;
+			unsigned int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX (i.e. only one can be used)
+			unsigned int meshOffsetIndex;
+		} bvhLeaf; // Used by MBVH
+	};
+	// Most significant bit is used to mark leafs
+	unsigned int nodeData;
+	int pad0; // To align to float4
+} BVHAccelArrayNode;

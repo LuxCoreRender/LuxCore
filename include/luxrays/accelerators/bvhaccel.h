@@ -27,6 +27,11 @@
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/accelerators/bvh_types.cl"
+}
+
 struct BVHAccelTreeNode {
 	BBox bbox;
 	union {
@@ -43,29 +48,6 @@ struct BVHAccelTreeNode {
 
 	BVHAccelTreeNode *leftChild;
 	BVHAccelTreeNode *rightSibling;
-};
-
-struct BVHAccelArrayNode {
-	union {
-		struct {
-			// I can not use BBox here because objects with a constructor are not
-			// allowed inside an union.
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			u_int v[3];
-			u_int meshIndex, triangleIndex;
-		} triangleLeaf;
-		struct {
-			u_int leafIndex;
-			u_int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX (i.e. only one can be used)
-			u_int meshOffsetIndex;
-		} bvhLeaf; // Used by MBVH
-	};
-	// Most significant bit is used to mark leafs
-	u_int nodeData;
-	int pad0; // To align to float4
 };
 
 #define BVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
@@ -113,12 +95,12 @@ private:
 		u_int *bestAxis);
 
 	static u_int BuildArray(const std::deque<const Mesh *> *meshes, BVHAccelTreeNode *node,
-		u_int offset, BVHAccelArrayNode *bvhTree);
+		u_int offset, luxrays::ocl::BVHAccelArrayNode *bvhTree);
 
 	BVHParams params;
 
 	u_int nNodes;
-	BVHAccelArrayNode *bvhTree;
+	luxrays::ocl::BVHAccelArrayNode *bvhTree;
 
 	const Context *ctx;
 	std::deque<const Mesh *> meshes;

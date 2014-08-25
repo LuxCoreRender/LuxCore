@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
-		const float mint, const float maxt) {
+		const float mint, const float maxt, const float time) {
 	ray->o.x = orig.x;
 	ray->o.y = orig.y;
 	ray->o.z = orig.z;
@@ -29,9 +29,12 @@ void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
 
 	ray->mint = mint;
 	ray->maxt = maxt;
+
+	ray->time = time;
 }
 
-void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir, const float maxt) {
+void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir,
+		const float maxt, const float time) {
 	ray->o.x = orig.x;
 	ray->o.y = orig.y;
 	ray->o.z = orig.z;
@@ -42,9 +45,11 @@ void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir, const floa
 
 	ray->mint = MachineEpsilon_E_Float3(orig);
 	ray->maxt = maxt;
+
+	ray->time = time;
 }
 
-void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir) {
+void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir, const float time) {
 	ray->o.x = orig.x;
 	ray->o.y = orig.y;
 	ray->o.z = orig.z;
@@ -55,31 +60,44 @@ void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir) {
 
 	ray->mint = MachineEpsilon_E_Float3(orig);
 	ray->maxt = INFINITY;
+
+	ray->time = time;
 }
 
 void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
-		const float mint, const float maxt) {
+		const float mint, const float maxt, const float time) {
 	VSTORE3F(orig, &ray->o.x);
 	VSTORE3F(dir, &ray->d.x);
+
 	ray->mint = mint;
 	ray->maxt = maxt;
+
+	ray->time = time;
 }
 
-void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir, const float maxt) {
+void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir,
+		const float maxt, const float time) {
 	VSTORE3F(orig, &ray->o.x);
 	VSTORE3F(dir, &ray->d.x);
+
 	ray->mint = MachineEpsilon_E_Float3(orig);
 	ray->maxt = maxt;
+
+	ray->time = time;
 }
 
-void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir) {
+void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir, const float time) {
 	VSTORE3F(orig, &ray->o.x);
 	VSTORE3F(dir, &ray->d.x);
+
 	ray->mint = MachineEpsilon_E_Float3(orig);
 	ray->maxt = INFINITY;
+
+	ray->time = time;
 }
 
-void Ray_ReadAligned4(__global Ray *ray, float3 *rayOrig, float3 *rayDir, float *mint, float *maxt) {
+void Ray_ReadAligned4(__global Ray *ray, float3 *rayOrig, float3 *rayDir,
+		float *mint, float *maxt, float *time) {
 	__global float4 *basePtr =(__global float4 *)ray;
 	const float4 data0 = (*basePtr++);
 	const float4 data1 = (*basePtr);
@@ -89,6 +107,8 @@ void Ray_ReadAligned4(__global Ray *ray, float3 *rayOrig, float3 *rayDir, float 
 
 	*mint = data1.z;
 	*maxt = data1.w;
+
+	*time = ray->time;
 }
 
 void Ray_ReadAligned4_Private(__global Ray *ray, Ray *dstRay) {
@@ -105,4 +125,6 @@ void Ray_ReadAligned4_Private(__global Ray *ray, Ray *dstRay) {
 
 	dstRay->mint = data1.z;
 	dstRay->maxt = data1.w;
+
+	dstRay->time = ray->time;
 }

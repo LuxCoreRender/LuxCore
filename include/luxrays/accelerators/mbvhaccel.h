@@ -57,7 +57,7 @@ private:
 
 	// The root BVH tree
 	unsigned int nRootNodes;
-	BVHAccelArrayNode *bvhRootTree;
+	luxrays::ocl::BVHAccelArrayNode *bvhRootTree;
 
 	std::vector<const BVHAccel *> uniqueLeafs;
 	std::vector<const Transform *> uniqueLeafsTransform;
