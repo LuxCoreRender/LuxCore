@@ -292,7 +292,6 @@ std::string KernelSource_mbvh =
 "				//const uint motionIndex = node->bvhLeaf.motionIndex;\n"
 "				const uint motionIndex = as_int(data0.s2);\n"
 "				if (motionIndex != NULL_INDEX) {\n"
-"if(get_global_id(0))printf(\"%d %f\\n\",motionIndex,rayTime);\n"
 "					// Transform ray origin and direction\n"
 "					Matrix4x4 m;\n"
 "					MotionSystem_Sample(&leafMotionSystems[motionIndex], rayTime, leafInterpolatedTransforms, &m);\n"
