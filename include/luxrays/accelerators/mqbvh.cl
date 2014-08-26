@@ -22,170 +22,6 @@
 // GPU registers (otherwise the GPU can easily run out of registers)
 #define STACK_SIZE 64
 
-typedef struct QuadRay {
-	float4 ox, oy, oz;
-	float4 dx, dy, dz;
-	float4 mint, maxt;
-} QuadRay;
-
-typedef struct {
-	float4 origx, origy, origz;
-	float4 edge1x, edge1y, edge1z;
-	float4 edge2x, edge2y, edge2z;
-	uint4 meshIndex, triangleIndex;
-} QuadTiangle;
-
-typedef struct {
-	float4 bboxes[2][3];
-	int4 children;
-} QBVHNode;
-
-void TransformP(Point *ptrans, const Point *p, __global Matrix4x4 *m) {
-    const float x = p->x;
-    const float y = p->y;
-    const float z = p->z;
-
-	ptrans->x = m->m[0][0] * x + m->m[0][1] * y + m->m[0][2] * z + m->m[0][3];
-	ptrans->y = m->m[1][0] * x + m->m[1][1] * y + m->m[1][2] * z + m->m[1][3];
-	ptrans->z = m->m[2][0] * x + m->m[2][1] * y + m->m[2][2] * z + m->m[2][3];
-	const float w = m->m[3][0] * x + m->m[3][1] * y + m->m[3][2] * z + m->m[3][3];
-
-    ptrans->x /= w;
-    ptrans->y /= w;
-    ptrans->z /= w;
-}
-
-void TransformV(Vector *ptrans, const Vector *p, __global Matrix4x4 *m) {
-    const float x = p->x;
-    const float y = p->y;
-    const float z = p->z;
-
-	ptrans->x = m->m[0][0] * x + m->m[0][1] * y + m->m[0][2] * z;
-	ptrans->y = m->m[1][0] * x + m->m[1][1] * y + m->m[1][2] * z;
-	ptrans->z = m->m[2][0] * x + m->m[2][1] * y + m->m[2][2] * z;
-}
-
-#define emptyLeafNode 0xffffffff
-
-#define QBVHNode_IsLeaf(index) (index < 0)
-#define QBVHNode_IsEmpty(index) (index == emptyLeafNode)
-#define QBVHNode_NbQuadPrimitives(index) ((uint)(((index >> 27) & 0xf) + 1))
-#define QBVHNode_FirstQuadIndex(index) (index & 0x07ffffff)
-
-// Using invDir0/invDir1/invDir2 instead of an
-// array because I dont' trust OpenCL compiler =)
-int4 QBVHNode_BBoxIntersect(
-        const float4 bboxes_minX, const float4 bboxes_maxX,
-        const float4 bboxes_minY, const float4 bboxes_maxY,
-        const float4 bboxes_minZ, const float4 bboxes_maxZ,
-        const QuadRay *ray4,
-		const float4 invDir0, const float4 invDir1, const float4 invDir2) {
-	float4 tMin = ray4->mint;
-	float4 tMax = ray4->maxt;
-
-	// X coordinate
-	tMin = fmax(tMin, (bboxes_minX - ray4->ox) * invDir0);
-	tMax = fmin(tMax, (bboxes_maxX - ray4->ox) * invDir0);
-
-	// Y coordinate
-	tMin = fmax(tMin, (bboxes_minY - ray4->oy) * invDir1);
-	tMax = fmin(tMax, (bboxes_maxY - ray4->oy) * invDir1);
-
-	// Z coordinate
-	tMin = fmax(tMin, (bboxes_minZ - ray4->oz) * invDir2);
-	tMax = fmin(tMax, (bboxes_maxZ - ray4->oz) * invDir2);
-
-	// Return the visit flags
-	return  (tMax >= tMin);
-}
-
-void QuadTriangle_Intersect(
-    const float4 origx, const float4 origy, const float4 origz,
-    const float4 edge1x, const float4 edge1y, const float4 edge1z,
-    const float4 edge2x, const float4 edge2y, const float4 edge2z,
-    const uint4 meshIndex,  const uint4 triangleIndex,
-    QuadRay *ray4, RayHit *rayHit) {
-	//--------------------------------------------------------------------------
-	// Calc. b1 coordinate
-
-	const float4 s1x = (ray4->dy * edge2z) - (ray4->dz * edge2y);
-	const float4 s1y = (ray4->dz * edge2x) - (ray4->dx * edge2z);
-	const float4 s1z = (ray4->dx * edge2y) - (ray4->dy * edge2x);
-
-	const float4 divisor = (s1x * edge1x) + (s1y * edge1y) + (s1z * edge1z);
-
-	const float4 dx = ray4->ox - origx;
-	const float4 dy = ray4->oy - origy;
-	const float4 dz = ray4->oz - origz;
-
-	const float4 b1 = ((dx * s1x) + (dy * s1y) + (dz * s1z)) / divisor;
-
-	//--------------------------------------------------------------------------
-	// Calc. b2 coordinate
-
-	const float4 s2x = (dy * edge1z) - (dz * edge1y);
-	const float4 s2y = (dz * edge1x) - (dx * edge1z);
-	const float4 s2z = (dx * edge1y) - (dy * edge1x);
-
-	const float4 b2 = ((ray4->dx * s2x) + (ray4->dy * s2y) + (ray4->dz * s2z)) / divisor;
-
-	//--------------------------------------------------------------------------
-	// Calc. b0 coordinate
-
-	const float4 b0 = ((float4)1.f) - b1 - b2;
-
-	//--------------------------------------------------------------------------
-
-	const float4 t = ((edge2x * s2x) + (edge2y * s2y) + (edge2z * s2z)) / divisor;
-
-    float _b1, _b2;
-	float maxt = ray4->maxt.s0;
-    uint mIndex, tIndex;
-
-    int4 cond = isnotequal(divisor, (float4)0.f) & isgreaterequal(b0, (float4)0.f) &
-			isgreaterequal(b1, (float4)0.f) & isgreaterequal(b2, (float4)0.f) &
-			isgreater(t, ray4->mint);
-
-    const int cond0 = cond.s0 && (t.s0 < maxt);
-    maxt = select(maxt, t.s0, cond0);
-    _b1 = select(0.f, b1.s0, cond0);
-    _b2 = select(0.f, b2.s0, cond0);
-    mIndex = select(NULL_INDEX, meshIndex.s0, cond0);
-	tIndex = select(NULL_INDEX, triangleIndex.s0, cond0);
-
-    const int cond1 = cond.s1 && (t.s1 < maxt);
-    maxt = select(maxt, t.s1, cond1);
-    _b1 = select(_b1, b1.s1, cond1);
-    _b2 = select(_b2, b2.s1, cond1);
-    mIndex = select(mIndex, meshIndex.s1, cond1);
-	tIndex = select(tIndex, triangleIndex.s1, cond1);
-
-    const int cond2 = cond.s2 && (t.s2 < maxt);
-    maxt = select(maxt, t.s2, cond2);
-    _b1 = select(_b1, b1.s2, cond2);
-    _b2 = select(_b2, b2.s2, cond2);
-    mIndex = select(mIndex, meshIndex.s2, cond2);
-	tIndex = select(tIndex, triangleIndex.s2, cond2);
-
-    const int cond3 = cond.s3 && (t.s3 < maxt);
-    maxt = select(maxt, t.s3, cond3);
-    _b1 = select(_b1, b1.s3, cond3);
-    _b2 = select(_b2, b2.s3, cond3);
-    mIndex = select(mIndex, meshIndex.s3, cond3);
-	tIndex = select(tIndex, triangleIndex.s3, cond3);
-
-	if (mIndex == NULL_INDEX)
-		return;
-
-	ray4->maxt = (float4)maxt;
-
-	rayHit->t = maxt;
-	rayHit->b1 = _b1;
-	rayHit->b2 = _b2;
-	rayHit->meshIndex = mIndex;
-	rayHit->triangleIndex = tIndex;
-}
-
 void LeafIntersect(
 		const Ray *ray,
 		RayHit *rayHit,
@@ -276,8 +112,12 @@ void LeafIntersect(
 	}
 }
 
-#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global unsigned int *qbvhMemMap, __global QBVHNode *leafNodes, __global QuadTiangle *leafQuadTris, __global Matrix4x4 *leafTransformations
-#define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris, leafTransformations
+
+#define QBVH_MOTIONSYSTEMS_PARAM_DECL , __global MotionSystem *leafMotionSystems , __global InterpolatedTransform *leafInterpolatedTransforms
+#define QBVH_MOTIONSYSTEMS_PARAM , leafMotionSystems, leafInterpolatedTransforms
+
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global unsigned int *qbvhMemMap, __global QBVHNode *leafNodes, __global QuadTiangle *leafQuadTris, __global Matrix4x4 *leafTransformations QBVH_MOTIONSYSTEMS_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris, leafTransformations QBVH_MOTIONSYSTEMS_PARAM
 
 void Accelerator_Intersect(
 		Ray *ray,
@@ -285,8 +125,8 @@ void Accelerator_Intersect(
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
 	// Prepare the ray for intersection
-    Point rayOrig = ray->o;
-    Vector rayDir = ray->d;
+    const float3 rayOrig = VLOAD3F_Private(&ray->o.x);
+    const float3 rayDir = VLOAD3F_Private(&ray->d.x);
 
 	QuadRay ray4;
 	ray4.ox = (float4)ray->o.x;
@@ -307,6 +147,8 @@ void Accelerator_Intersect(
 	const int signs0 = signbit(ray4.dx.s0);
 	const int signs1 = signbit(ray4.dy.s0);
 	const int signs2 = signbit(ray4.dz.s0);
+
+	const float rayTime = ray->time;
 
 	rayHit->meshIndex = NULL_INDEX;
 	rayHit->triangleIndex = NULL_INDEX;
@@ -347,10 +189,31 @@ void Accelerator_Intersect(
 			const uint leafIndex = QBVHNode_FirstQuadIndex(nodeData);
 
             Ray tray;
-            TransformP(&tray.o, &rayOrig, &leafTransformations[leafIndex]);
-            TransformV(&tray.d, &rayDir, &leafTransformations[leafIndex]);
+			const float3 newOrig = Matrix4x4_ApplyPoint(&leafTransformations[leafIndex], rayOrig);
+			tray.o.x = newOrig.x;
+			tray.o.y = newOrig.y;
+			tray.o.z = newOrig.z;
+			const float3 newDir = Matrix4x4_ApplyVector(&leafTransformations[leafIndex], rayDir);
+			tray.d.x = newDir.x;
+			tray.d.y = newDir.y;
+			tray.d.z = newDir.z;
             tray.mint = ray4.mint.s0;
             tray.maxt = ray4.maxt.s0;
+			tray.time = rayTime;
+
+			if (leafMotionSystems[leafIndex].interpolatedTransformFirstIndex != NULL_INDEX) {
+				// Transform ray origin and direction
+				Matrix4x4 m;
+				MotionSystem_Sample(&leafMotionSystems[leafIndex], rayTime, leafInterpolatedTransforms, &m);
+				const float3 newOrig = Matrix4x4_ApplyPoint_Private(&m, rayOrig);
+				tray.o.x = newOrig.x;
+				tray.o.y = newOrig.y;
+				tray.o.z = newOrig.z;
+				const float3 newDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
+				tray.d.x = newDir.x;
+				tray.d.y = newDir.y;
+				tray.d.z = newDir.z;
+			}
 
             const unsigned int memIndex = leafIndex * 2;
             const unsigned int leafNodeOffset = qbvhMemMap[memIndex];
