@@ -192,7 +192,9 @@ public:
 			kernelDefs << "#define BVH_NODES_PAGE" << i << " 1\n";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel definitions: \n" << kernelDefs.str());
 
-		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_bvh;
+		intersectionKernelSource = kernelDefs.str() +
+				luxrays::ocl::KernelSource_bvh_types +
+				luxrays::ocl::KernelSource_bvh;
 		
 		std::string code(
 			kernelDefs.str() +
