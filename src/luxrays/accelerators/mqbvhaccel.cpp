@@ -35,7 +35,8 @@ class OpenCLMQBVHKernels : public OpenCLKernels {
 public:
 	OpenCLMQBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const MQBVHAccel *accel) :
 		OpenCLKernels(dev, kernelCount), mqbvh(accel), mqbvhBuff(NULL), memMapBuff(NULL), leafBuff(NULL),
-		leafQuadTrisBuff(NULL), invTransBuff(NULL) {
+		leafQuadTrisBuff(NULL), invTransBuff(NULL), leafsMotionSystemBuff(NULL),
+		uniqueLeafsInterpolatedTransformBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
 		const std::string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
@@ -51,7 +52,9 @@ public:
 				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH compile options: \n" << opts.str());
 
-		intersectionKernelSource = luxrays::ocl::KernelSource_mqbvh;
+		intersectionKernelSource =
+				luxrays::ocl::KernelSource_qbvh_types +
+				luxrays::ocl::KernelSource_mqbvh;
 
 		std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
@@ -59,10 +62,19 @@ public:
 			luxrays::ocl::KernelSource_epsilon_funcs +
 			luxrays::ocl::KernelSource_point_types +
 			luxrays::ocl::KernelSource_vector_types +
+			luxrays::ocl::KernelSource_matrix4x4_types +
+			luxrays::ocl::KernelSource_matrix4x4_funcs +
+			luxrays::ocl::KernelSource_quaternion_types +
+			luxrays::ocl::KernelSource_quaternion_funcs +
 			luxrays::ocl::KernelSource_ray_types +
 			luxrays::ocl::KernelSource_ray_funcs +
 			luxrays::ocl::KernelSource_bbox_types +
-			luxrays::ocl::KernelSource_matrix4x4_types +
+			luxrays::ocl::KernelSource_bbox_funcs +
+			luxrays::ocl::KernelSource_transform_types +
+			luxrays::ocl::KernelSource_transform_funcs +
+			luxrays::ocl::KernelSource_motionsystem_types +
+			luxrays::ocl::KernelSource_motionsystem_funcs +
+			luxrays::ocl::KernelSource_qbvh_types +
 			luxrays::ocl::KernelSource_mqbvh);
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
@@ -113,10 +125,16 @@ public:
 		device->FreeMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
 		delete invTransBuff;
 		invTransBuff = NULL;
+		leafsMotionSystemBuff = NULL;
+		device->FreeMemory(leafsMotionSystemBuff->getInfo<CL_MEM_SIZE>());
+		delete leafsMotionSystemBuff;
+		uniqueLeafsInterpolatedTransformBuff = NULL;
+		device->FreeMemory(uniqueLeafsInterpolatedTransformBuff->getInfo<CL_MEM_SIZE>());
+		delete uniqueLeafsInterpolatedTransformBuff;
 	}
 
 	void SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
-		cl::Buffer *mm, cl::Buffer *t);
+		cl::Buffer *mm, cl::Buffer *t, cl::Buffer *ms, cl::Buffer *it);
 	virtual void Update(const DataSet *newDataSet);
 	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
@@ -133,15 +151,20 @@ protected:
 	cl::Buffer *leafBuff;
 	cl::Buffer *leafQuadTrisBuff;
 	cl::Buffer *invTransBuff;
+	cl::Buffer *leafsMotionSystemBuff;
+	cl::Buffer *uniqueLeafsInterpolatedTransformBuff;
+
 };
 
 void OpenCLMQBVHKernels::SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
-	cl::Buffer *mm, cl::Buffer *t) {
+	cl::Buffer *mm, cl::Buffer *t, cl::Buffer *ms, cl::Buffer *it) {
 	mqbvhBuff = m;
 	leafBuff = l;
 	leafQuadTrisBuff = q;
 	memMapBuff = mm;
 	invTransBuff = t;
+	leafsMotionSystemBuff = ms;
+	uniqueLeafsInterpolatedTransformBuff = it;
 
 	// Set arguments
 	BOOST_FOREACH(cl::Kernel *kernel, kernels)
@@ -205,6 +228,8 @@ u_int OpenCLMQBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_
 	kernel.setArg(argIndex++, *leafBuff);
 	kernel.setArg(argIndex++, *leafQuadTrisBuff);
 	kernel.setArg(argIndex++, *invTransBuff);
+	kernel.setArg(argIndex++, *leafsMotionSystemBuff);
+	kernel.setArg(argIndex++, *uniqueLeafsInterpolatedTransformBuff);
 
 	return argIndex;
 }
@@ -243,7 +268,10 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		totalQuadTrisCount += qbvh->nQuads;
 	}
 
+	//--------------------------------------------------------------------------
 	// Pack together all QBVH Leafs
+	//--------------------------------------------------------------------------
+
 	QBVHNode *allLeafs = new QBVHNode[totalNodesCount];
 	u_int nodesOffset = 0;
 	for (std::map<const Mesh *, QBVHAccel *, bool (*)(const Mesh *, const Mesh *)>::const_iterator it = accels.begin(); it != accels.end(); ++it) {
@@ -254,7 +282,10 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		nodesOffset += qbvh->nNodes;
 	}
 
+	//--------------------------------------------------------------------------
 	// Allocate memory for QBVH Leafs
+	//--------------------------------------------------------------------------
+
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] MQBVH leaf Nodes buffer size: " <<
 		(totalNodesCount * sizeof(QBVHNode) / 1024) << "Kbytes");
@@ -275,7 +306,10 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 		quadTrisOffset += qbvh->nQuads;
 	}
 
+	//--------------------------------------------------------------------------
 	// Allocate memory for QBVH QuadTriangles
+	//--------------------------------------------------------------------------
+
 	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 		"] MQBVH QuadTriangle buffer size: " <<
 		(totalQuadTrisCount * sizeof(QuadTriangle) / 1024) << "Kbytes");
@@ -299,7 +333,10 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 	device->AllocMemory(memMapBuff->getInfo<CL_MEM_SIZE>());
 	delete[] memMap;
 
-	// Upload QBVH leafs transformations
+	//--------------------------------------------------------------------------
+	// Upload QBVH leaf transformations
+	//--------------------------------------------------------------------------
+
 	Matrix4x4 *invTrans = new Matrix4x4[nLeafs];
 	for (u_int i = 0; i < nLeafs; ++i) {
 		if (leafsTransform[i])
@@ -317,10 +354,70 @@ OpenCLKernels *MQBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 	device->AllocMemory(invTransBuff->getInfo<CL_MEM_SIZE>());
 	delete[] invTrans;
 
+	//--------------------------------------------------------------------------
+	// Upload QBVH leaf motion systems
+	//--------------------------------------------------------------------------
+
+	// Transform CPU data structures in OpenCL data structures
+
+	vector<luxrays::ocl::MotionSystem> motionSystems;
+	vector<luxrays::ocl::InterpolatedTransform> interpolatedTransforms;
+	BOOST_FOREACH(const MotionSystem *ms, leafsMotionSystem) {
+		luxrays::ocl::MotionSystem oclMotionSystem;
+
+		if (ms) {
+			oclMotionSystem.interpolatedTransformFirstIndex = interpolatedTransforms.size();
+			BOOST_FOREACH(const InterpolatedTransform &it, ms->interpolatedTransforms) {
+				// Here, I assume that luxrays::ocl::InterpolatedTransform and
+				// luxrays::InterpolatedTransform are the same
+				interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
+			}
+			oclMotionSystem.interpolatedTransformLastIndex = interpolatedTransforms.size() - 1;
+		} else {
+			oclMotionSystem.interpolatedTransformFirstIndex = NULL_INDEX;
+			oclMotionSystem.interpolatedTransformLastIndex = NULL_INDEX;
+		}
+
+		motionSystems.push_back(oclMotionSystem);
+	}
+
+	// Allocate the motion system buffer
+	LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+		"] Leaf motion systems buffer size: " <<
+		(sizeof(luxrays::ocl::MotionSystem) * motionSystems.size() / 1024) <<
+		"Kbytes");
+	cl::Buffer *leafMotionSystemBuff = new cl::Buffer(oclContext,
+		CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+		sizeof(luxrays::ocl::MotionSystem) * motionSystems.size(),
+		(void *)&(motionSystems[0]));
+	device->AllocMemory(leafMotionSystemBuff->getInfo<CL_MEM_SIZE>());
+
+	// Allocate the InterpolatedTransform buffer
+	cl::Buffer *leafInterpolatedTransformBuff = NULL;
+	if (interpolatedTransforms.size() > 0) {
+		LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			"] Leaf interpolated transforms buffer size: " <<
+			(sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size() / 1024) <<
+			"Kbytes");
+		leafInterpolatedTransformBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
+			(void *)&(interpolatedTransforms[0]));
+		device->AllocMemory(leafInterpolatedTransformBuff->getInfo<CL_MEM_SIZE>());
+	} else {
+		// Just allocating a place holder
+		luxrays::ocl::InterpolatedTransform placeHolder;
+		leafInterpolatedTransformBuff = new cl::Buffer(oclContext,
+			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			sizeof(luxrays::ocl::InterpolatedTransform),
+			(void *)&placeHolder);
+		device->AllocMemory(leafInterpolatedTransformBuff->getInfo<CL_MEM_SIZE>());
+	}
+
 	// Setup kernels
 	OpenCLMQBVHKernels *kernels = new OpenCLMQBVHKernels(device, kernelCount, this);
 	kernels->SetBuffers(mqbvhBuff, leafBuff, leafQuadTrisBuff, memMapBuff,
-				invTransBuff);
+				invTransBuff, leafMotionSystemBuff, leafInterpolatedTransformBuff);
 
 	return kernels;
 }
