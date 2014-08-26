@@ -353,7 +353,9 @@ public:
 			kernelDefs << "#define MBVH_HAS_MOTIONSYSTEMS 1\n";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH kernel definitions: \n" << kernelDefs.str());
 
-		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_mbvh;
+		intersectionKernelSource = kernelDefs.str() +
+				luxrays::ocl::KernelSource_bvh_types +
+				luxrays::ocl::KernelSource_mbvh;
 
 		std::string code(
 			kernelDefs.str() +

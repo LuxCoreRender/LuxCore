@@ -204,12 +204,12 @@ ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, con
 		   data.BallastFactor * 
 		   data.BallastLampPhotometricFactor;
 	u_int nVFuncs = horizAngles.size();
-	IrregularFunction1D** vFuncs = new IrregularFunction1D*[nVFuncs];
+	IrregularFunction1D **vFuncs = new IrregularFunction1D*[nVFuncs];
 	u_int vFuncLength = vertAngles.size();
-	float* vFuncX = new float[vFuncLength];
-	float* vFuncY = new float[vFuncLength];
-	float* uFuncX = new float[nVFuncs];
-	float* uFuncY = new float[nVFuncs];
+	float *vFuncX = new float[vFuncLength];
+	float *vFuncY = new float[vFuncLength];
+	float *uFuncX = new float[nVFuncs];
+	float *uFuncY = new float[nVFuncs];
 	for (u_int i = 0; i < nVFuncs; ++i) {
 		for (u_int j = 0; j < vFuncLength; ++j) {
 			vFuncX[j] = Clamp(Radians(vertAngles[j]) * INV_PI, 0.f, 1.f);
@@ -224,7 +224,7 @@ ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, con
 	delete[] vFuncX;
 	delete[] vFuncY;
 
-	IrregularFunction1D* uFunc = new IrregularFunction1D(uFuncX, uFuncY, nVFuncs);
+	IrregularFunction1D *uFunc = new IrregularFunction1D(uFuncX, uFuncY, nVFuncs);
 	delete[] uFuncX;
 	delete[] uFuncY;
 

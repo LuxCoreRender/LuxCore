@@ -340,7 +340,8 @@ void GenerateCameraRay(
 	const float dofSampleY = Rnd_FloatValue(seed);
 #endif
 
-	Camera_GenerateRay(camera, engineFilmWidth, engineFilmHeight, ray, tileStartX + filmX, tileStartY + filmY
+	Camera_GenerateRay(camera, engineFilmWidth, engineFilmHeight, ray,
+			tileStartX + filmX, tileStartY + filmY, Rnd_FloatValue(seed)
 #if defined(PARAM_CAMERA_HAS_DOF)
 			, dofSampleX, dofSampleY
 #endif
@@ -526,7 +527,7 @@ bool DirectLightSamplingInit(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
 #endif
-		const float u0, const float u1,
+		const float time, const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
@@ -578,7 +579,7 @@ bool DirectLightSamplingInit(
 
 			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir,
 				epsilon,
-				distance - epsilon);
+				distance - epsilon, time);
 
 			return true;
 		}
@@ -601,6 +602,7 @@ uint DirectLightSampling_ONE(
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
+		const float time,
 		const float3 pathThroughput,
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
@@ -647,7 +649,7 @@ uint DirectLightSampling_ONE(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		tmpHitPoint,
 #endif
-		Rnd_FloatValue(seed), Rnd_FloatValue(seed),
+		time, Rnd_FloatValue(seed), Rnd_FloatValue(seed),
 #if defined(PARAM_HAS_PASSTHROUGH)
 		Rnd_FloatValue(seed),
 #endif
@@ -721,6 +723,7 @@ uint DirectLightSampling_ALL(
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
+		const float time,
 		const float3 pathThroughput,
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
@@ -780,7 +783,7 @@ uint DirectLightSampling_ALL(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				tmpHitPoint,
 #endif
-				u0, u1,
+				time, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Rnd_FloatValue(seed),
 #endif
@@ -863,6 +866,7 @@ uint ContinueTracePath(
 #endif
 		PathDepthInfo *depthInfo,
 		Ray *ray,
+		const float time,
 		float3 pathThroughput,
 		BSDFEvent lastBSDFEvent, float lastPdfW,
 		__global BSDF *bsdfPathVertexN, __global BSDF *directLightBSDF,
@@ -998,6 +1002,7 @@ uint ContinueTracePath(
 #if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
+				time,
 				pathThroughput,
 				bsdfPathVertexN, directLightBSDF,
 				sampleResult,
@@ -1054,7 +1059,7 @@ uint ContinueTracePath(
 		pathThroughput *= bsdfSample *
 			((lastBSDFEvent & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE));
 
-		Ray_Init2_Private(ray, VLOAD3F(&bsdfPathVertexN->hitPoint.p.x), sampledDir);
+		Ray_Init2_Private(ray, VLOAD3F(&bsdfPathVertexN->hitPoint.p.x), sampledDir, time);
 	}
 
 	return tracedRaysCount;
@@ -1076,6 +1081,7 @@ uint SampleComponent(
 		const float worldCenterZ,
 		const float worldRadius,
 #endif
+		const float time,
 		const BSDFEvent requestedEventTypes,
 		const uint size,
 		const float3 throughputPathVertex1,
@@ -1153,7 +1159,7 @@ uint SampleComponent(
 				(scaleFactor * ((event & SPECULAR) ? 1.f : min(1.f, pdfW / PARAM_PDF_CLAMP_VALUE)));
 
 			Ray continueRay;
-			Ray_Init2_Private(&continueRay, VLOAD3F(&bsdfPathVertex1->hitPoint.p.x), sampledDir);
+			Ray_Init2_Private(&continueRay, VLOAD3F(&bsdfPathVertex1->hitPoint.p.x), sampledDir, time);
 
 			tracedRaysCount += ContinueTracePath(
 					seed,
@@ -1168,6 +1174,7 @@ uint SampleComponent(
 					worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 					&depthInfo, &continueRay,
+					time,
 					continuePathThroughput,
 					event, pdfW,
 					bsdfPathVertexN, directLightBSDF,

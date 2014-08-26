@@ -327,6 +327,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 			samplePixelX, samplePixelY, sampleIndex,
 			tileStartX, tileStartY,
 			engineFilmWidth, engineFilmHeight, &ray);
+	const float time = ray.time;
 
 	//--------------------------------------------------------------------------
 	// Trace the eye ray
@@ -445,6 +446,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
+				time,
 				throughputPathVertex1,
 				&task->bsdfPathVertex1, &taskDirectLight->directLightBSDF,
 				sampleResult,
@@ -504,6 +506,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #if defined(PARAM_HAS_INFINITELIGHTS)
 							worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
+							time,
 							vertex1SampleComponent,
 							sampleCount, throughputPathVertex1,
 							&task->bsdfPathVertex1, &taskPathVertexN->bsdfPathVertexN,
