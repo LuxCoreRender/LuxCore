@@ -122,23 +122,18 @@ public:
 		device->FreeMemory(leafQuadTrisBuff->getInfo<CL_MEM_SIZE>());
 		delete leafQuadTrisBuff;
 		leafQuadTrisBuff = NULL;
-		std::cout<<"===1\n";
 		device->FreeMemory(leafTransIndexBuff->getInfo<CL_MEM_SIZE>());
 		delete leafTransIndexBuff;
 		leafTransIndexBuff = NULL;
-		std::cout<<"===2\n";
 		device->FreeMemory(uniqueInvTransBuff->getInfo<CL_MEM_SIZE>());
 		delete uniqueInvTransBuff;
 		uniqueInvTransBuff = NULL;
-		std::cout<<"===3="<<leafsMotionSystemBuff<<"\n";
 		leafsMotionSystemBuff = NULL;
 		device->FreeMemory(leafsMotionSystemBuff->getInfo<CL_MEM_SIZE>());
 		delete leafsMotionSystemBuff;
-		std::cout<<"===4\n";
 		uniqueLeafsInterpolatedTransformBuff = NULL;
 		device->FreeMemory(uniqueLeafsInterpolatedTransformBuff->getInfo<CL_MEM_SIZE>());
 		delete uniqueLeafsInterpolatedTransformBuff;
-		std::cout<<"===last\n";
 	}
 
 	void SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,

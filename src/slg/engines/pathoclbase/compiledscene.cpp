@@ -96,7 +96,7 @@ void CompiledScene::CompileCamera() {
 		if (sceneCamera->motionSystem->interpolatedTransforms.size() > CAMERA_MAX_INTERPOLATED_TRANSFORM)
 			throw std::runtime_error("Too many interpolated transformations in camera motion system: " +
 					ToString(sceneCamera->motionSystem->interpolatedTransforms.size()));
-printf("(%d)\n",(int)sizeof(InterpolatedTransform));
+
 		for (u_int i = 0; i < sceneCamera->motionSystem->interpolatedTransforms.size(); ++i) {
 			const InterpolatedTransform &it = sceneCamera->motionSystem->interpolatedTransforms[i];
 
