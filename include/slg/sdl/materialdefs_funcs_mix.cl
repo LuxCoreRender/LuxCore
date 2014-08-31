@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
 
 //------------------------------------------------------------------------------
 // Mix material

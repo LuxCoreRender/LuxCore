@@ -21,7 +21,7 @@ std::string KernelSource_materialdefs_funcs_mix =
 " * limitations under the License.                                          *\n"
 " ***************************************************************************/\n"
 "\n"
-"#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)\n"
+"#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)\n"
 "\n"
 "//------------------------------------------------------------------------------\n"
 "// Mix material\n"

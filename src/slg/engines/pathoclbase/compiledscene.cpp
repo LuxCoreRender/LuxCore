@@ -74,12 +74,12 @@ void CompiledScene::CompileCamera() {
 				enableOculusRiftBarrel = perspCamera->IsOculusRiftBarrelEnabled();
 
 				memcpy(camera.rasterToCamera[1].m.m, perspCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
-				memcpy(camera.cameraToWorld[1].m.m, perspCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));		
+				memcpy(camera.cameraToWorld[1].m.m, perspCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
 			} else {
 				enableCameraHorizStereo = false;
 				enableOculusRiftBarrel = false;
 			}
-			
+
 			if (perspCamera->IsClippingPlaneEnabled()) {
 				enableCameraClippingPlane = true;
 				ASSIGN_VECTOR(camera.clippingPlaneCenter, perspCamera->clippingPlaneCenter);
@@ -655,14 +655,14 @@ void CompiledScene::CompileLights() {
 		oclLight->lightSceneIndex = l->lightSceneIndex;
 		oclLight->lightID = l->GetID();
 		oclLight->samples = l->GetSamples();
-		oclLight->visibility = 
+		oclLight->visibility =
 				(l->IsVisibleIndirectDiffuse() ? DIFFUSE : NONE) |
 				(l->IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
 				(l->IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 
 		hasInfiniteLights |= l->IsInfinite();
 		hasEnvLights |= l->IsEnvironmental();
-			
+
 		switch (l->GetType()) {
 			case TYPE_TRIANGLE: {
 				const TriangleLight *tl = (const TriangleLight *)l;
@@ -863,7 +863,7 @@ void CompiledScene::CompileLights() {
 					&oclLight->notIntersectable.spot.cosTotalWidth,
 					&oclLight->notIntersectable.spot.cosFalloffStart,
 					&alignedWorld2Light);
-				
+
 				memcpy(&oclLight->notIntersectable.light2World.m, &alignedWorld2Light->m, sizeof(float[4][4]));
 				memcpy(&oclLight->notIntersectable.light2World.mInv, &alignedWorld2Light->mInv, sizeof(float[4][4]));
 				break;
@@ -880,7 +880,7 @@ void CompiledScene::CompileLights() {
 				ASSIGN_SPECTRUM(oclLight->notIntersectable.gain, pl->gain);
 
 				// ProjectionLight data
-				oclLight->notIntersectable.projection.imageMapIndex = (pl->imageMap) ? 
+				oclLight->notIntersectable.projection.imageMapIndex = (pl->imageMap) ?
 					scene->imgMapCache.GetImageMapIndex(pl->imageMap) :
 					NULL_INDEX;
 
@@ -976,7 +976,7 @@ void CompiledScene::CompileLights() {
 			default:
 				throw runtime_error("Unknown Light source type in CompiledScene::CompileLights()");
 		}
-		
+
 		if (l->IsEnvironmental())
 			envLightIndices.push_back(i);
 	}
@@ -1248,7 +1248,7 @@ void CompiledScene::CompileTextures() {
 						break;
 					case KETTING:
 						tex->brick.bond = slg::ocl::KETTING;
-						break; 
+						break;
 				}
 
 				tex->brick.offsetx = bt->GetOffset().x;
@@ -1297,15 +1297,355 @@ void CompiledScene::CompileTextures() {
 				tex->wrinkled.omega = wt->GetOmega();
 				break;
 			}
+			case BLENDER_BLEND: {
+				BlenderBlendTexture *wt = static_cast<BlenderBlendTexture *>(t);
+				tex->type = slg::ocl::BLENDER_BLEND;
+				CompileTextureMapping3D(&tex->blenderBlend.mapping, wt->GetTextureMapping());
+				tex->blenderBlend.direction = wt->GetDirection();
+				tex->blenderBlend.bright = wt->GetBright();
+				tex->blenderBlend.contrast = wt->GetContrast();
+
+				switch (wt->GetProgressionType()) {
+					default:
+					case TEX_LIN:
+						tex->blenderBlend.type = slg::ocl::TEX_LIN;
+						break;
+					case TEX_QUAD:
+						tex->blenderBlend.type = slg::ocl::TEX_QUAD;
+						break;
+					case TEX_EASE:
+						tex->blenderBlend.type = slg::ocl::TEX_EASE;
+						break;
+					case TEX_DIAG:
+						tex->blenderBlend.type = slg::ocl::TEX_DIAG;
+						break;
+					case TEX_SPHERE:
+						tex->blenderBlend.type = slg::ocl::TEX_SPHERE;
+						break;
+					case TEX_HALO:
+						tex->blenderBlend.type = slg::ocl::TEX_HALO;
+						break;
+					case TEX_RAD:
+						tex->blenderBlend.type = slg::ocl::TEX_RAD;
+						break;
+				}
+				break;
+			}
 			case BLENDER_CLOUDS: {
 				BlenderCloudsTexture *wt = static_cast<BlenderCloudsTexture *>(t);
 				tex->type = slg::ocl::BLENDER_CLOUDS;
-				CompileTextureMapping3D(&tex->blenderClouds.mapping, wt->GetTextureMapping());				 
+				CompileTextureMapping3D(&tex->blenderClouds.mapping, wt->GetTextureMapping());
 				tex->blenderClouds.noisesize = wt->GetNoiseSize();
 				tex->blenderClouds.noisedepth = wt->GetNoiseDepth();
 				tex->blenderClouds.bright = wt->GetBright();
 				tex->blenderClouds.contrast = wt->GetContrast();
 				tex->blenderClouds.hard = wt->GetNoiseType();
+				switch (wt->GetNoiseBasis()) {
+					default:
+					case BLENDER_ORIGINAL:
+						tex->blenderClouds.noisebasis = slg::ocl::BLENDER_ORIGINAL;
+						break;
+					case ORIGINAL_PERLIN:
+						tex->blenderClouds.noisebasis = slg::ocl::ORIGINAL_PERLIN;
+						break;
+					case IMPROVED_PERLIN:
+						tex->blenderClouds.noisebasis = slg::ocl::IMPROVED_PERLIN;
+						break;
+					case VORONOI_F1:
+						tex->blenderClouds.noisebasis = slg::ocl::VORONOI_F1;
+						break;
+					case VORONOI_F2:
+						tex->blenderClouds.noisebasis = slg::ocl::VORONOI_F2;
+						break;
+					case VORONOI_F3:
+						tex->blenderClouds.noisebasis = slg::ocl::VORONOI_F3;
+						break;
+					case VORONOI_F4:
+						tex->blenderClouds.noisebasis = slg::ocl::VORONOI_F4;
+						break;
+					case VORONOI_F2_F1:
+						tex->blenderClouds.noisebasis = slg::ocl::VORONOI_F2_F1;
+						break;
+					case VORONOI_CRACKLE:
+						tex->blenderClouds.noisebasis = slg::ocl::VORONOI_CRACKLE;
+						break;
+					case CELL_NOISE:
+						tex->blenderClouds.noisebasis = slg::ocl::CELL_NOISE;
+						break;
+				}
+				break;
+			}
+			case BLENDER_DISTORTED_NOISE: {
+				BlenderDistortedNoiseTexture *wt = static_cast<BlenderDistortedNoiseTexture *>(t);
+				tex->type = slg::ocl::BLENDER_DISTORTED_NOISE;
+				CompileTextureMapping3D(&tex->blenderDistortedNoise.mapping, wt->GetTextureMapping());
+				tex->blenderDistortedNoise.distortion = wt->GetDistortion();
+				tex->blenderDistortedNoise.noisesize = wt->GetNoiseSize();
+				tex->blenderDistortedNoise.bright = wt->GetBright();
+				tex->blenderDistortedNoise.contrast = wt->GetContrast();
+
+				switch (wt->GetNoiseDistortion()) {
+					default:
+					case BLENDER_ORIGINAL:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::BLENDER_ORIGINAL;
+						break;
+					case ORIGINAL_PERLIN:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::ORIGINAL_PERLIN;
+						break;
+					case IMPROVED_PERLIN:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::IMPROVED_PERLIN;
+						break;
+					case VORONOI_F1:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::VORONOI_F1;
+						break;
+					case VORONOI_F2:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::VORONOI_F2;
+						break;
+					case VORONOI_F3:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::VORONOI_F3;
+						break;
+					case VORONOI_F4:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::VORONOI_F4;
+						break;
+					case VORONOI_F2_F1:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::VORONOI_F2_F1;
+						break;
+					case VORONOI_CRACKLE:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::VORONOI_CRACKLE;
+						break;
+					case CELL_NOISE:
+						tex->blenderDistortedNoise.noisedistortion = slg::ocl::CELL_NOISE;
+						break;
+				}
+
+				switch (wt->GetNoiseBasis()) {
+					default:
+					case BLENDER_ORIGINAL:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::BLENDER_ORIGINAL;
+						break;
+					case ORIGINAL_PERLIN:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::ORIGINAL_PERLIN;
+						break;
+					case IMPROVED_PERLIN:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::IMPROVED_PERLIN;
+						break;
+					case VORONOI_F1:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::VORONOI_F1;
+						break;
+					case VORONOI_F2:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::VORONOI_F2;
+						break;
+					case VORONOI_F3:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::VORONOI_F3;
+						break;
+					case VORONOI_F4:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::VORONOI_F4;
+						break;
+					case VORONOI_F2_F1:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::VORONOI_F2_F1;
+						break;
+					case VORONOI_CRACKLE:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::VORONOI_CRACKLE;
+						break;
+					case CELL_NOISE:
+						tex->blenderDistortedNoise.noisebasis = slg::ocl::CELL_NOISE;
+						break;
+				}
+				break;
+			}
+			case BLENDER_MAGIC: {
+				BlenderMagicTexture *wt = static_cast<BlenderMagicTexture *>(t);
+				tex->type = slg::ocl::BLENDER_MAGIC;
+				CompileTextureMapping3D(&tex->blenderMagic.mapping, wt->GetTextureMapping());
+				tex->blenderMagic.noisedepth = wt->GetNoiseDepth();
+				tex->blenderMagic.turbulence = wt->GetTurbulence();
+				tex->blenderMagic.bright = wt->GetBright();
+				tex->blenderMagic.contrast = wt->GetContrast();
+				break;
+			}
+			case BLENDER_MARBLE: {
+				BlenderMarbleTexture *wt = static_cast<BlenderMarbleTexture *>(t);
+				tex->type = slg::ocl::BLENDER_MARBLE;
+				CompileTextureMapping3D(&tex->blenderMarble.mapping, wt->GetTextureMapping());
+				tex->blenderMarble.turbulence = wt->GetTurbulence();
+				tex->blenderMarble.noisesize = wt->GetNoiseSize();
+				tex->blenderMarble.noisedepth = wt->GetNoiseDepth();
+				tex->blenderMarble.bright = wt->GetBright();
+				tex->blenderMarble.contrast = wt->GetContrast();
+				tex->blenderMarble.hard = wt->GetNoiseType();
+
+				switch (wt->GetNoiseBasis2()) {
+					default:
+					case TEX_SIN:
+						tex->blenderMarble.noisebasis2 = slg::ocl::TEX_SIN;
+						break;
+					case TEX_SAW:
+						tex->blenderMarble.noisebasis2 = slg::ocl::TEX_SAW;
+						break;
+					case TEX_TRI:
+						tex->blenderMarble.noisebasis2 = slg::ocl::TEX_TRI;
+						break;
+				}
+
+				switch (wt->GetMarbleType()) {
+					default:
+					case TEX_SOFT:
+						tex->blenderMarble.type = slg::ocl::TEX_SOFT;
+						break;
+					case TEX_SHARP:
+						tex->blenderMarble.type = slg::ocl::TEX_SHARP;
+						break;
+					case TEX_SHARPER:
+						tex->blenderMarble.type = slg::ocl::TEX_SHARPER;
+						break;
+				}
+
+				switch (wt->GetNoiseBasis()) {
+					default:
+					case BLENDER_ORIGINAL:
+						tex->blenderMarble.noisebasis = slg::ocl::BLENDER_ORIGINAL;
+						break;
+					case ORIGINAL_PERLIN:
+						tex->blenderMarble.noisebasis = slg::ocl::ORIGINAL_PERLIN;
+						break;
+					case IMPROVED_PERLIN:
+						tex->blenderMarble.noisebasis = slg::ocl::IMPROVED_PERLIN;
+						break;
+					case VORONOI_F1:
+						tex->blenderMarble.noisebasis = slg::ocl::VORONOI_F1;
+						break;
+					case VORONOI_F2:
+						tex->blenderMarble.noisebasis = slg::ocl::VORONOI_F2;
+						break;
+					case VORONOI_F3:
+						tex->blenderMarble.noisebasis = slg::ocl::VORONOI_F3;
+						break;
+					case VORONOI_F4:
+						tex->blenderMarble.noisebasis = slg::ocl::VORONOI_F4;
+						break;
+					case VORONOI_F2_F1:
+						tex->blenderMarble.noisebasis = slg::ocl::VORONOI_F2_F1;
+						break;
+					case VORONOI_CRACKLE:
+						tex->blenderMarble.noisebasis = slg::ocl::VORONOI_CRACKLE;
+						break;
+					case CELL_NOISE:
+						tex->blenderMarble.noisebasis = slg::ocl::CELL_NOISE;
+						break;
+				}
+				break;
+			}
+			case BLENDER_MUSGRAVE: {
+				BlenderMusgraveTexture *wt = static_cast<BlenderMusgraveTexture *>(t);
+				tex->type = slg::ocl::BLENDER_MUSGRAVE;
+				CompileTextureMapping3D(&tex->blenderMusgrave.mapping, wt->GetTextureMapping());
+				tex->blenderMusgrave.dimension = wt->GetDimension();
+				tex->blenderMusgrave.intensity = wt->GetIntensity();
+				tex->blenderMusgrave.lacunarity = wt->GetLacunarity();
+				tex->blenderMusgrave.offset = wt->GetOffset();
+				tex->blenderMusgrave.gain = wt->GetGain();
+				tex->blenderMusgrave.octaves = wt->GetOctaves();
+				tex->blenderMusgrave.noisesize = wt->GetNoiseSize();
+				tex->blenderMusgrave.bright = wt->GetBright();
+				tex->blenderMusgrave.contrast = wt->GetContrast();
+
+				switch (wt->GetMusgraveType()) {
+					default:
+					case TEX_MULTIFRACTAL:
+						tex->blenderMusgrave.type = slg::ocl::TEX_MULTIFRACTAL;
+						break;
+					case TEX_RIDGED_MULTIFRACTAL:
+						tex->blenderMusgrave.type = slg::ocl::TEX_RIDGED_MULTIFRACTAL;
+						break;
+					case TEX_HYBRID_MULTIFRACTAL:
+						tex->blenderMusgrave.type = slg::ocl::TEX_HYBRID_MULTIFRACTAL;
+						break;
+					case TEX_FBM:
+						tex->blenderMusgrave.type = slg::ocl::TEX_FBM;
+						break;
+					case TEX_HETERO_TERRAIN:
+						tex->blenderMusgrave.type = slg::ocl::TEX_HETERO_TERRAIN;
+						break;
+				}
+
+				switch (wt->GetNoiseBasis()) {
+					default:
+					case BLENDER_ORIGINAL:
+						tex->blenderMusgrave.noisebasis = slg::ocl::BLENDER_ORIGINAL;
+						break;
+					case ORIGINAL_PERLIN:
+						tex->blenderMusgrave.noisebasis = slg::ocl::ORIGINAL_PERLIN;
+						break;
+					case IMPROVED_PERLIN:
+						tex->blenderMusgrave.noisebasis = slg::ocl::IMPROVED_PERLIN;
+						break;
+					case VORONOI_F1:
+						tex->blenderMusgrave.noisebasis = slg::ocl::VORONOI_F1;
+						break;
+					case VORONOI_F2:
+						tex->blenderMusgrave.noisebasis = slg::ocl::VORONOI_F2;
+						break;
+					case VORONOI_F3:
+						tex->blenderMusgrave.noisebasis = slg::ocl::VORONOI_F3;
+						break;
+					case VORONOI_F4:
+						tex->blenderMusgrave.noisebasis = slg::ocl::VORONOI_F4;
+						break;
+					case VORONOI_F2_F1:
+						tex->blenderMusgrave.noisebasis = slg::ocl::VORONOI_F2_F1;
+						break;
+					case VORONOI_CRACKLE:
+						tex->blenderMusgrave.noisebasis = slg::ocl::VORONOI_CRACKLE;
+						break;
+					case CELL_NOISE:
+						tex->blenderMusgrave.noisebasis = slg::ocl::CELL_NOISE;
+						break;
+				}
+				break;
+			}
+			case BLENDER_STUCCI: {
+				BlenderStucciTexture *wt = static_cast<BlenderStucciTexture *>(t);
+				tex->type = slg::ocl::BLENDER_STUCCI;
+				CompileTextureMapping3D(&tex->blenderStucci.mapping, wt->GetTextureMapping());
+				tex->blenderStucci.noisesize = wt->GetNoiseSize();
+				tex->blenderStucci.turbulence = wt->GetTurbulence();
+				tex->blenderStucci.bright = wt->GetBright();
+				tex->blenderStucci.contrast = wt->GetContrast();
+				tex->blenderStucci.hard = wt->GetNoiseType();
+
+				switch (wt->GetNoiseBasis()) {
+					default:
+					case BLENDER_ORIGINAL:
+						tex->blenderStucci.noisebasis = slg::ocl::BLENDER_ORIGINAL;
+						break;
+					case ORIGINAL_PERLIN:
+						tex->blenderStucci.noisebasis = slg::ocl::ORIGINAL_PERLIN;
+						break;
+					case IMPROVED_PERLIN:
+						tex->blenderStucci.noisebasis = slg::ocl::IMPROVED_PERLIN;
+						break;
+					case VORONOI_F1:
+						tex->blenderStucci.noisebasis = slg::ocl::VORONOI_F1;
+						break;
+					case VORONOI_F2:
+						tex->blenderStucci.noisebasis = slg::ocl::VORONOI_F2;
+						break;
+					case VORONOI_F3:
+						tex->blenderStucci.noisebasis = slg::ocl::VORONOI_F3;
+						break;
+					case VORONOI_F4:
+						tex->blenderStucci.noisebasis = slg::ocl::VORONOI_F4;
+						break;
+					case VORONOI_F2_F1:
+						tex->blenderStucci.noisebasis = slg::ocl::VORONOI_F2_F1;
+						break;
+					case VORONOI_CRACKLE:
+						tex->blenderStucci.noisebasis = slg::ocl::VORONOI_CRACKLE;
+						break;
+					case CELL_NOISE:
+						tex->blenderStucci.noisebasis = slg::ocl::CELL_NOISE;
+						break;
+				}
 
 				break;
 			}
@@ -1313,7 +1653,7 @@ void CompiledScene::CompileTextures() {
 				BlenderWoodTexture *wt = static_cast<BlenderWoodTexture *>(t);
 
 				tex->type = slg::ocl::BLENDER_WOOD;
-				CompileTextureMapping3D(&tex->blenderWood.mapping, wt->GetTextureMapping());				 
+				CompileTextureMapping3D(&tex->blenderWood.mapping, wt->GetTextureMapping());
 				tex->blenderWood.turbulence = wt->GetTurbulence();
 				tex->blenderWood.bright = wt->GetBright();
 				tex->blenderWood.contrast = wt->GetContrast();
@@ -1331,7 +1671,7 @@ void CompiledScene::CompileTextures() {
 						tex->blenderWood.noisebasis2 = slg::ocl::TEX_TRI;
 						break;
 				}
-				
+
 				switch (wt->GetWoodType()) {
 					default:
 					case BANDS:
@@ -1347,9 +1687,83 @@ void CompiledScene::CompileTextures() {
 						tex->blenderWood.type = slg::ocl::RINGNOISE;
 						break;
 				}
+				switch (wt->GetNoiseBasis()) {
+					default:
+					case BLENDER_ORIGINAL:
+						tex->blenderWood.noisebasis = slg::ocl::BLENDER_ORIGINAL;
+						break;
+					case ORIGINAL_PERLIN:
+						tex->blenderWood.noisebasis = slg::ocl::ORIGINAL_PERLIN;
+						break;
+					case IMPROVED_PERLIN:
+						tex->blenderWood.noisebasis = slg::ocl::IMPROVED_PERLIN;
+						break;
+					case VORONOI_F1:
+						tex->blenderWood.noisebasis = slg::ocl::VORONOI_F1;
+						break;
+					case VORONOI_F2:
+						tex->blenderWood.noisebasis = slg::ocl::VORONOI_F2;
+						break;
+					case VORONOI_F3:
+						tex->blenderWood.noisebasis = slg::ocl::VORONOI_F3;
+						break;
+					case VORONOI_F4:
+						tex->blenderWood.noisebasis = slg::ocl::VORONOI_F4;
+						break;
+					case VORONOI_F2_F1:
+						tex->blenderWood.noisebasis = slg::ocl::VORONOI_F2_F1;
+						break;
+					case VORONOI_CRACKLE:
+						tex->blenderWood.noisebasis = slg::ocl::VORONOI_CRACKLE;
+						break;
+					case CELL_NOISE:
+						tex->blenderWood.noisebasis = slg::ocl::CELL_NOISE;
+						break;
+				}
 				break;
 			}
-			case UV_TEX: {
+			case BLENDER_VORONOI: {
+				BlenderVoronoiTexture *wt = static_cast<BlenderVoronoiTexture *>(t);
+
+				tex->type = slg::ocl::BLENDER_VORONOI;
+				CompileTextureMapping3D(&tex->blenderVoronoi.mapping, wt->GetTextureMapping());
+				tex->blenderVoronoi.feature_weight1 = wt->GetFeatureWeight1();
+				tex->blenderVoronoi.feature_weight2 = wt->GetFeatureWeight2();
+				tex->blenderVoronoi.feature_weight3 = wt->GetFeatureWeight3();
+				tex->blenderVoronoi.feature_weight4 = wt->GetFeatureWeight4();
+				tex->blenderVoronoi.noisesize = wt->GetNoiseSize();
+				tex->blenderVoronoi.intensity = wt->GetIntensity();
+				tex->blenderVoronoi.exponent = wt->GetExponent();
+				tex->blenderVoronoi.bright = wt->GetBright();
+				tex->blenderVoronoi.contrast = wt->GetContrast();
+
+				switch (wt->GetDistMetric()) {
+					default:
+					case ACTUAL_DISTANCE:
+						tex->blenderVoronoi.distancemetric = slg::ocl::ACTUAL_DISTANCE;
+						break;
+					case DISTANCE_SQUARED:
+						tex->blenderVoronoi.distancemetric = slg::ocl::DISTANCE_SQUARED;
+						break;
+					case MANHATTAN:
+						tex->blenderVoronoi.distancemetric = slg::ocl::MANHATTAN;
+						break;
+					case CHEBYCHEV:
+						tex->blenderVoronoi.distancemetric = slg::ocl::CHEBYCHEV;
+						break;
+					case MINKOWSKI_HALF:
+						tex->blenderVoronoi.distancemetric = slg::ocl::MINKOWSKI_HALF;
+						break;
+					case MINKOWSKI_FOUR:
+						tex->blenderVoronoi.distancemetric = slg::ocl::MINKOWSKI_FOUR;
+						break;
+					case MINKOWSKI:
+						tex->blenderVoronoi.distancemetric = slg::ocl::MANHATTAN;
+						break;
+				}
+				break;
+			}
+            case UV_TEX: {
 				UVTexture *uvt = static_cast<UVTexture *>(t);
 
 				tex->type = slg::ocl::UV_TEX;
@@ -1409,7 +1823,7 @@ void CompiledScene::CompileTextures() {
 				break;
 		}
 	}
-		
+
 	const double tEnd = WallClockTime();
 	SLG_LOG("Textures compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
@@ -1468,7 +1882,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "Scale", "float", "Float", i,
 						AddTextureSourceCall("Float", tex->scaleTex.tex1Index) + ", " +
 						AddTextureSourceCall("Float", tex->scaleTex.tex2Index));
-				AddTextureSource(source, "Scale", "float3", "Spectrum", i, 
+				AddTextureSource(source, "Scale", "float3", "Spectrum", i,
 						AddTextureSourceCall("Spectrum", tex->scaleTex.tex1Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->scaleTex.tex2Index));
 				break;
@@ -1476,7 +1890,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			case FRESNEL_APPROX_N:
 				AddTextureSource(source, "FresnelApproxN", i, ToString(tex->fresnelApproxN.texIndex));
 				break;
-			case FRESNEL_APPROX_K: 
+			case FRESNEL_APPROX_K:
 				AddTextureSource(source, "FresnelApproxK", i, ToString(tex->fresnelApproxK.texIndex));
 				break;
 			case slg::ocl::MIX_TEX: {
@@ -1485,7 +1899,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall("Float", tex->mixTex.tex1Index) + ", " +
 						AddTextureSourceCall("Float", tex->mixTex.tex2Index));
 				AddTextureSource(source, "Mix", "float3", "Spectrum", i,
-						AddTextureSourceCall("Spectrum", tex->mixTex.amountTexIndex) + ", " +
+						AddTextureSourceCall("Float", tex->mixTex.amountTexIndex) + ", " +
 						AddTextureSourceCall("Spectrum", tex->mixTex.tex1Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->mixTex.tex2Index));
 				break;
@@ -1494,7 +1908,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "Add", "float", "Float", i,
 						AddTextureSourceCall("Float", tex->addTex.tex1Index) + ", " +
 						AddTextureSourceCall("Float", tex->addTex.tex2Index));
-				AddTextureSource(source, "Add", "float3", "Spectrum", i, 
+				AddTextureSource(source, "Add", "float3", "Spectrum", i,
 						AddTextureSourceCall("Spectrum", tex->addTex.tex1Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->addTex.tex2Index));
 				break;
@@ -1508,18 +1922,92 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			case slg::ocl::HITPOINTGREY:
 				AddTextureSource(source, "HitPointGrey", i, "");
 				break;
+			case slg::ocl::BLENDER_BLEND:
+				AddTextureSource(source, "BlenderBlend", i,
+						ToString(tex->blenderBlend.type) + ", " +
+						ToString(tex->blenderBlend.direction) + ", " +
+						ToString(tex->blenderBlend.contrast) + ", " +
+						ToString(tex->blenderBlend.bright) + ", " +
+						"&texture->blenderBlend.mapping");
+				break;
 			case slg::ocl::BLENDER_CLOUDS:
 				AddTextureSource(source, "BlenderClouds", i,
+						ToString(tex->blenderClouds.noisebasis) + ", " +
 						ToString(tex->blenderClouds.noisesize) + ", " +
 						ToString(tex->blenderClouds.noisedepth) + ", " +
 						ToString(tex->blenderClouds.contrast) + ", " +
 						ToString(tex->blenderClouds.bright) + ", " +
+						ToString(tex->blenderClouds.hard) + ", " +
 						"&texture->blenderClouds.mapping");
 				break;
-			case slg::ocl::BLENDER_WOOD:
+			case slg::ocl::BLENDER_DISTORTED_NOISE:
+				AddTextureSource(source, "BlenderDistortedNoise", i,
+						ToString(tex->blenderDistortedNoise.noisedistortion) + ", " +
+						ToString(tex->blenderDistortedNoise.noisebasis) + ", " +
+						ToString(tex->blenderDistortedNoise.distortion) + ", " +
+						ToString(tex->blenderDistortedNoise.noisesize) + ", " +
+						ToString(tex->blenderDistortedNoise.contrast) + ", " +
+						ToString(tex->blenderDistortedNoise.bright) + ", " +
+						"&texture->blenderDistortedNoise.mapping");
+				break;
+			case slg::ocl::BLENDER_MAGIC:
+				AddTextureSource(source, "BlenderMagic", "float", "Float", i,
+						ToString(tex->blenderMagic.noisedepth) + ", " +
+						ToString(tex->blenderMagic.turbulence) + ", " +
+						ToString(tex->blenderMagic.contrast) + ", " +
+						ToString(tex->blenderMagic.bright) + ", " +
+						"&texture->blenderMagic.mapping");
+				AddTextureSource(source, "BlenderMagic", "float3", "Spectrum", i,
+						ToString(tex->blenderMagic.noisedepth) + ", " +
+						ToString(tex->blenderMagic.turbulence) + ", " +
+						ToString(tex->blenderMagic.contrast) + ", " +
+						ToString(tex->blenderMagic.bright) + ", " +
+						"&texture->blenderMagic.mapping");
+				break;
+			case slg::ocl::BLENDER_MARBLE:
+				AddTextureSource(source, "BlenderMarble", i,
+						ToString(tex->blenderMarble.type) + ", " +
+						ToString(tex->blenderMarble.noisebasis) + ", " +
+						ToString(tex->blenderMarble.noisebasis2) + ", " +
+						ToString(tex->blenderMarble.noisesize) + ", " +
+						ToString(tex->blenderMarble.turbulence) + ", " +
+						ToString(tex->blenderMarble.noisedepth) + ", " +
+						ToString(tex->blenderMarble.contrast) + ", " +
+						ToString(tex->blenderMarble.bright) + ", " +
+						ToString(tex->blenderMarble.hard) + ", " +
+						"&texture->blenderMagic.mapping");
+				break;
+			case slg::ocl::BLENDER_MUSGRAVE:
+				AddTextureSource(source, "BlenderMusgrave", i,
+						ToString(tex->blenderMusgrave.type) + ", " +
+						ToString(tex->blenderMusgrave.noisebasis) + ", " +
+						ToString(tex->blenderMusgrave.dimension) + ", " +
+						ToString(tex->blenderMusgrave.intensity) + ", " +
+						ToString(tex->blenderMusgrave.lacunarity) + ", " +
+						ToString(tex->blenderMusgrave.offset) + ", " +
+						ToString(tex->blenderMusgrave.gain) + ", " +
+						ToString(tex->blenderMusgrave.octaves) + ", " +
+						ToString(tex->blenderMusgrave.noisesize) + ", " +
+						ToString(tex->blenderMusgrave.contrast) + ", " +
+						ToString(tex->blenderMusgrave.bright) + ", " +
+						"&texture->blenderMusgrave.mapping");
+				break;
+			case slg::ocl::BLENDER_STUCCI:
+				AddTextureSource(source, "BlenderStucci", i,
+						ToString(tex->blenderStucci.type) + ", " +
+						ToString(tex->blenderStucci.noisebasis) + ", " +
+						ToString(tex->blenderStucci.noisesize) + ", " +
+						ToString(tex->blenderStucci.turbulence) + ", " +
+						ToString(tex->blenderStucci.contrast) + ", " +
+						ToString(tex->blenderStucci.bright) + ", " +
+						ToString(tex->blenderStucci.hard) + ", " +
+						"&texture->blenderStucci.mapping");
+				break;
+            case slg::ocl::BLENDER_WOOD:
 				AddTextureSource(source, "BlenderWood", i,
 						ToString(tex->blenderWood.type) + ", " +
 						ToString(tex->blenderWood.noisebasis2) + ", " +
+						ToString(tex->blenderWood.noisebasis) + ", " +
 						ToString(tex->blenderWood.noisesize) + ", " +
 						ToString(tex->blenderWood.turbulence) + ", " +
 						ToString(tex->blenderWood.contrast) + ", " +
@@ -1527,12 +2015,26 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						ToString(tex->blenderWood.hard) + ", " +
 						"&texture->blenderWood.mapping");
 				break;
+			case slg::ocl::BLENDER_VORONOI:
+				AddTextureSource(source, "BlenderVoronoi", i,
+						ToString(tex->blenderVoronoi.distancemetric) + ", " +
+						ToString(tex->blenderVoronoi.feature_weight1) + ", " +
+						ToString(tex->blenderVoronoi.feature_weight2) + ", " +
+						ToString(tex->blenderVoronoi.feature_weight3) + ", " +
+						ToString(tex->blenderVoronoi.feature_weight4) + ", " +
+						ToString(tex->blenderVoronoi.noisesize) + ", " +
+						ToString(tex->blenderVoronoi.intensity) + ", " +
+						ToString(tex->blenderVoronoi.exponent) + ", " +
+						ToString(tex->blenderVoronoi.contrast) + ", " +
+						ToString(tex->blenderVoronoi.bright) + ", " +
+						"&texture->blenderVoronoi.mapping");
+				break;
 			case slg::ocl::CHECKERBOARD2D:
 				AddTextureSource(source, "CheckerBoard2D", "float", "Float", i,
 						AddTextureSourceCall("Float", tex->checkerBoard2D.tex1Index) + ", " +
 						AddTextureSourceCall("Float", tex->checkerBoard2D.tex2Index) + ", " +
 						"&texture->checkerBoard2D.mapping");
-				AddTextureSource(source, "CheckerBoard2D", "float3", "Spectrum", i, 
+				AddTextureSource(source, "CheckerBoard2D", "float3", "Spectrum", i,
 						AddTextureSourceCall("Spectrum", tex->checkerBoard2D.tex1Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->checkerBoard2D.tex2Index) + ", " +
 						"&texture->checkerBoard2D.mapping");
@@ -1542,7 +2044,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall("Float", tex->checkerBoard3D.tex1Index) + ", " +
 						AddTextureSourceCall("Float", tex->checkerBoard3D.tex2Index) + ", " +
 						"&texture->checkerBoard3D.mapping");
-				AddTextureSource(source, "CheckerBoard3D", "float3", "Spectrum", i, 
+				AddTextureSource(source, "CheckerBoard3D", "float3", "Spectrum", i,
 						AddTextureSourceCall("Spectrum", tex->checkerBoard3D.tex1Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->checkerBoard3D.tex2Index) + ", " +
 						"&texture->checkerBoard3D.mapping");
@@ -1566,7 +2068,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall("Float", tex->dots.insideIndex) + ", " +
 						AddTextureSourceCall("Float", tex->dots.outsideIndex) + ", " +
 						"&texture->dots.mapping");
-				AddTextureSource(source, "Dots", "float3", "Spectrum", i, 
+				AddTextureSource(source, "Dots", "float3", "Spectrum", i,
 						AddTextureSourceCall("Spectrum", tex->dots.insideIndex) + ", " +
 						AddTextureSourceCall("Spectrum", tex->dots.outsideIndex) + ", " +
 						"&texture->dots.mapping");
@@ -1589,7 +2091,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						ToString(tex->brick.proportion) + ", " +
 						ToString(tex->brick.invproportion) + ", " +
 						"&texture->brick.mapping");
-				AddTextureSource(source, "Brick", "float3", "Spectrum", i, 
+				AddTextureSource(source, "Brick", "float3", "Spectrum", i,
 						AddTextureSourceCall("Spectrum", tex->brick.tex1Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->brick.tex2Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->brick.tex3Index) + ", " +
@@ -1631,7 +2133,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						ToString(tex->band.size) + ", " +
 						"texture->band.offsets, "
 						"texture->band.values, " +
-						AddTextureSourceCall("Spectrum", tex->band.amountTexIndex));
+						AddTextureSourceCall("Float", tex->band.amountTexIndex));
 				break;
 			case slg::ocl::NORMALMAP_TEX:
 				AddTextureSource(source, "NormalMap", i, "");
@@ -1663,11 +2165,11 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 	source << "\t\tdefault: return BLACK;\n"
 			"\t}\n"
 			"}\n";
-	
+
 	return source.str();
 }
 
-static void AddMaterialSourceGlue(stringstream &source, 
+static void AddMaterialSourceGlue(stringstream &source,
 		const string &matName, const u_int i, const string &funcName1, const string &funcName2,
 		const string &returnType, const string &args,  const string &params, const bool hasReturn = true) {
 	source <<
@@ -1678,7 +2180,7 @@ static void AddMaterialSourceGlue(stringstream &source,
 			"}\n";
 }
 
-static void AddMaterialSource(stringstream &source, 
+static void AddMaterialSource(stringstream &source,
 		const string &matName, const u_int i, const string &params) {
 	AddMaterialSourceGlue(source, matName, i, "GetEventTypes", "GetEventTypes", "BSDFEvent",
 			"__global Material *material MATERIALS_PARAM_DECL", "");
@@ -1747,9 +2249,9 @@ static void AddMaterialSourceStandardImplGetvolume(stringstream &source, const u
 	source << "#endif\n";
 }
 
-static void AddMaterialSourceSwitch(stringstream &source, 
+static void AddMaterialSourceSwitch(stringstream &source,
 		const u_int count, const string &funcName, const string &calledFuncName,
-		const string &returnType, const string &defaultReturnValue, 
+		const string &returnType, const string &defaultReturnValue,
 		const string &args,  const string &params, const bool hasReturn = true) {
 	source << returnType << " Material_" << funcName << "(" << args << ") { \n"
 			"\t__global Material *mat = &mats[index];\n"
@@ -1762,13 +2264,13 @@ static void AddMaterialSourceSwitch(stringstream &source,
 		if (!hasReturn)
 			source << "\t\t\tbreak;\n";
 	}
-	
+
 	if (hasReturn) {
 		source << "\t\tdefault:\n"
 				"\t\t\treturn " << defaultReturnValue<< ";\n";
 	}
 
-	source << 
+	source <<
 			"\t}\n"
 			"}\n";
 }
@@ -1883,6 +2385,9 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall("Float", mat->glossy2.nuTexIndex) + ", " +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)\n" +
 						AddTextureSourceCall("Float", mat->glossy2.nvTexIndex) + ", " +
+						"\n#endif\n" +
+						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)\n" +
+						ToString(mat->glossy2.multibounce) + ", " +
 						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)\n" +
 						AddTextureSourceCall("Spectrum", mat->glossy2.kaTexIndex) + ", " +
@@ -2012,7 +2517,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\treturn Material_Index" << mat->mix.matAIndex << "_IsDelta(&mats[" << mat->mix.matAIndex << "] MATERIALS_PARAM) &&\n"
 						"\t\tMaterial_Index" << mat->mix.matBIndex << "_IsDelta(&mats[" << mat->mix.matBIndex << "] MATERIALS_PARAM);\n"
 						"}\n";
-				
+
 				// Material_IndexN_Evaluate()
 				source <<
 						"float3 Material_Index" << i << "_Evaluate(__global Material *material, __global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, BSDFEvent *event, float *directPdfW MATERIALS_PARAM_DECL) {\n"
@@ -2090,7 +2595,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\t}\n"
 						"\treturn result / *pdfW;\n"
 						"}\n";
-				
+
 				// Material_IndexN_GetEmittedRadiance()
 				source <<
 						"float3 Material_Index" << i << "_GetEmittedRadiance(__global Material *material, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL) {\n"
@@ -2176,7 +2681,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	AddMaterialSourceSwitch(source, materialsCount, "GetEventTypes", "GetEventTypes", "BSDFEvent", "NONE",
 			"const uint index MATERIALS_PARAM_DECL",
 			"mat MATERIALS_PARAM");
-	
+
 	// Generate the code for generic Material_IsDelta()
 	AddMaterialSourceSwitch(source, materialsCount, "IsDelta", "IsDelta", "bool", "true",
 			"const uint index MATERIALS_PARAM_DECL",

@@ -136,7 +136,7 @@ float3 Metal2Material_ConstSample(
 	return factor * F;
 }
 
-#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
 float3 Metal2Material_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
