@@ -62,7 +62,7 @@ std::string KernelSource_materialdefs_funcs_clearvol =
 "	return BLACK;\n"
 "}\n"
 "\n"
-"#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)\n"
+"#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)\n"
 "float3 ClearVolMaterial_Evaluate(__global Material *material,\n"
 "		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,\n"
 "		BSDFEvent *event, float *directPdfW\n"

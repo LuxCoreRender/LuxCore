@@ -32,6 +32,22 @@ typedef enum {
 } BlenderNoiseBase;
 
 typedef enum {
+	TEX_SOFT, TEX_SHARP, TEX_SHARPER
+} BlenderMarbleType;
+
+typedef enum {
+	TEX_MULTIFRACTAL, TEX_RIDGED_MULTIFRACTAL, TEX_HYBRID_MULTIFRACTAL, TEX_FBM, TEX_HETERO_TERRAIN
+} BlenderMusgraveType;
+
+typedef enum {
+	TEX_PLASTIC, TEX_WALL_IN, TEX_WALL_OUT
+} BlenderStucciType;
+
+typedef enum {
+	BANDS, RINGS, BANDNOISE, RINGNOISE
+} BlenderWoodType;
+
+typedef enum {
 	TEX_LIN, TEX_QUAD, TEX_EASE, TEX_DIAG, TEX_SPHERE, TEX_HALO, TEX_RAD
 } ProgressionType;
 

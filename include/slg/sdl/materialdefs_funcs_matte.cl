@@ -75,7 +75,7 @@ float3 MatteMaterial_ConstSample(__global HitPoint *hitPoint, const float3 fixed
 	return Spectrum_Clamp(kdVal);
 }
 
-#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
 float3 MatteMaterial_Sample(__global Material *material,
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
@@ -195,7 +195,7 @@ float3 RoughMatteMaterial_ConstSample(
 		(A + B * maxcos * sinthetai * sinthetao / fmax(fabs(CosTheta(*sampledDir)), fabs(CosTheta(fixedDir))));
 }
 
-#if defined(PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION)
+#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
 float3 RoughMatteMaterial_Evaluate(__global Material *material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
