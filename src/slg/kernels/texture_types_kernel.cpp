@@ -204,7 +204,6 @@ std::string KernelSource_texture_types =
 "	float octaves;\n"
 "	float noisesize;\n"
 "	float bright, contrast;\n"
-"	bool hard;\n"
 "} BlenderMusgraveTexParam;\n"
 "\n"
 "typedef struct {\n"

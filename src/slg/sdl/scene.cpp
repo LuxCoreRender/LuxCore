@@ -867,12 +867,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 		const float octaves = props.Get(Property(propName + ".octaves")(2.f)).Get<float>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(0.25f)).Get<float>();
-		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
 		return new BlenderMusgraveTexture(CreateTextureMapping3D(propName + ".mapping", props),
-				musgravetype, noisebasis, dimension, intensity, lacunarity, offset, gain, octaves, noisesize, (hard=="hard_noise"), bright, contrast);
+				musgravetype, noisebasis, dimension, intensity, lacunarity, offset, gain, octaves, noisesize, bright, contrast);
 	} else if (texType == "blender_noise") {
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();

@@ -1525,7 +1525,6 @@ void CompiledScene::CompileTextures() {
 				tex->blenderMusgrave.noisesize = wt->GetNoiseSize();
 				tex->blenderMusgrave.bright = wt->GetBright();
 				tex->blenderMusgrave.contrast = wt->GetContrast();
-				tex->blenderMusgrave.hard = wt->GetNoiseType();
 
 				switch (wt->GetMusgraveType()) {
 					default:
@@ -1968,7 +1967,6 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						ToString(tex->blenderMusgrave.noisesize) + ", " +
 						ToString(tex->blenderMusgrave.contrast) + ", " +
 						ToString(tex->blenderMusgrave.bright) + ", " +
-						ToString(tex->blenderMusgrave.hard) + ", " +
 						"&texture->blenderMusgrave.mapping");
 				break;
 			case slg::ocl::BLENDER_STUCCI:

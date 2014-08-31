@@ -23,7 +23,7 @@
 #include "slg/sdl/blender_noiselib.h"
 
 namespace slg {
-
+ 
 //------------------------------------------------------------------------------
 // Blender blend texture
 //------------------------------------------------------------------------------
@@ -162,10 +162,6 @@ private:
 // Blender marble texture
 //------------------------------------------------------------------------------
 
-typedef enum {
-	TEX_SOFT, TEX_SHARP, TEX_SHARPER
-} BlenderMarbleType;
-
 class BlenderMarbleTexture : public Texture {
 public:
 	BlenderMarbleTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
@@ -182,7 +178,7 @@ public:
 	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	BlenderMarbleType GetMarbleType() const { return type; }
+	blender::BlenderMarbleType GetMarbleType() const { return type; }
 	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
 	blender::BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
 	float GetNoiseSize() const { return noisesize; }
@@ -196,7 +192,7 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
-	BlenderMarbleType type;
+	blender::BlenderMarbleType type;
 	blender::BlenderNoiseBasis noisebasis;
 	blender::BlenderNoiseBase noisebasis2;
 	float noisesize, turbulence;
@@ -209,15 +205,11 @@ private:
 // Blender musgrave texture
 //------------------------------------------------------------------------------
 
-typedef enum {
-	TEX_MULTIFRACTAL, TEX_RIDGED_MULTIFRACTAL, TEX_HYBRID_MULTIFRACTAL, TEX_FBM, TEX_HETERO_TERRAIN
-} BlenderMusgraveType;
-
 class BlenderMusgraveTexture : public Texture {
 public:
 	BlenderMusgraveTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
 		const float dimension, const float intensity, const float lacunarity, const float offset, const float gain,
-		const float octaves, const float noisesize, bool hard, float bright, float contrast);
+		const float octaves, const float noisesize, float bright, float contrast);
 	virtual ~BlenderMusgraveTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BLENDER_MUSGRAVE; }
@@ -229,7 +221,7 @@ public:
 	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	BlenderMusgraveType GetMusgraveType() const { return type; }
+	blender::BlenderMusgraveType GetMusgraveType() const { return type; }
 	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
 	float GetDimension() const { return dimension; }
 	float GetIntensity() const { return intensity; }
@@ -238,7 +230,6 @@ public:
 	float GetGain() const { return gain; }
 	float GetOctaves() const { return octaves; }
 	float GetNoiseSize() const { return noisesize; }
-	bool GetNoiseType() const { return hard; }
 	float GetBright() const { return bright; }
 	float GetContrast() const { return contrast; }
 
@@ -246,7 +237,7 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
-	BlenderMusgraveType type;
+	blender::BlenderMusgraveType type;
 	blender::BlenderNoiseBasis noisebasis;
 	float dimension;
 	float intensity;
@@ -255,7 +246,6 @@ private:
 	float gain;
 	float octaves;
 	float noisesize;
-	bool hard;
 	float bright, contrast;
 };
 
@@ -291,10 +281,6 @@ private:
 // Blender stucci texture
 //------------------------------------------------------------------------------
 
-typedef enum {
-	TEX_PLASTIC, TEX_WALL_IN, TEX_WALL_OUT
-} BlenderStucciType;
-
 class BlenderStucciTexture : public Texture {
 public:
 	BlenderStucciTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
@@ -310,7 +296,7 @@ public:
 	virtual float Filter() const { return .5f; }
 
 	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	BlenderStucciType GetStucciType() const { return type; }
+	blender::BlenderStucciType GetStucciType() const { return type; }
 	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
 	float GetNoiseSize() const { return noisesize; }
 	float GetTurbulence() const { return turbulence; }
@@ -322,51 +308,8 @@ public:
 
 private:
 	const TextureMapping3D *mapping;
-	BlenderStucciType type;
+	blender::BlenderStucciType type;
 	blender::BlenderNoiseBasis noisebasis;
-	float noisesize, turbulence;
-	bool hard;
-	float bright, contrast;
-};
-
-//------------------------------------------------------------------------------
-// Blender wood texture
-//------------------------------------------------------------------------------
-
-typedef enum {
-	BANDS, RINGS, BANDNOISE, RINGNOISE
-} BlenderWoodType;
-
-class BlenderWoodTexture : public Texture {
-public:
-	BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const std::string &pnoisebasis, const float noisesize, float turb, bool hard, float bright, float contrast);
-	virtual ~BlenderWoodTexture() { delete mapping; }
-
-	virtual TextureType GetType() const { return BLENDER_WOOD; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	// The following methods don't make very much sense in this case. I have no
-	// information about the color.
-	virtual float Y() const { return .5f; }
-	virtual float Filter() const { return .5f; }
-
-	const TextureMapping3D *GetTextureMapping() const { return mapping; }
-	BlenderWoodType GetWoodType() const { return type; }
-	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
-	blender::BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
-	float GetNoiseSize() const { return noisesize; }
-	float GetTurbulence() const { return turbulence; }
-	float GetBright() const { return bright; }
-	float GetContrast() const { return contrast; }
-	bool GetNoiseType() const { return hard; }
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	const TextureMapping3D *mapping;
-	BlenderWoodType type;
-	blender::BlenderNoiseBasis noisebasis;
-	blender::BlenderNoiseBase noisebasis2;
 	float noisesize, turbulence;
 	bool hard;
 	float bright, contrast;
@@ -415,6 +358,45 @@ private:
 	blender::DistanceMetric distancemetric;
 	float exponent;
 	float noisesize;
+	float bright, contrast;
+};
+
+//------------------------------------------------------------------------------
+// Blender wood texture
+//------------------------------------------------------------------------------
+
+class BlenderWoodTexture : public Texture {
+public:
+	BlenderWoodTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoise, const std::string &pnoisebasis, const float noisesize, float turb, bool hard, float bright, float contrast);
+	virtual ~BlenderWoodTexture() { delete mapping; }
+
+	virtual TextureType GetType() const { return BLENDER_WOOD; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	// The following methods don't make very much sense in this case. I have no
+	// information about the color.
+	virtual float Y() const { return .5f; }
+	virtual float Filter() const { return .5f; }
+
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
+	blender::BlenderWoodType GetWoodType() const { return type; }
+	blender::BlenderNoiseBasis GetNoiseBasis() const { return noisebasis; }
+	blender::BlenderNoiseBase GetNoiseBasis2() const { return noisebasis2; }
+	float GetNoiseSize() const { return noisesize; }
+	float GetTurbulence() const { return turbulence; }
+	float GetBright() const { return bright; }
+	float GetContrast() const { return contrast; }
+	bool GetNoiseType() const { return hard; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
+
+private:
+	const TextureMapping3D *mapping;
+	blender::BlenderWoodType type;
+	blender::BlenderNoiseBasis noisebasis;
+	blender::BlenderNoiseBase noisebasis2;
+	float noisesize, turbulence;
+	bool hard;
 	float bright, contrast;
 };
 

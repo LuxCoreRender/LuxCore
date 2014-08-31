@@ -201,7 +201,6 @@ typedef struct {
 	float octaves;
 	float noisesize;
 	float bright, contrast;
-	bool hard;
 } BlenderMusgraveTexParam;
 
 typedef struct {
