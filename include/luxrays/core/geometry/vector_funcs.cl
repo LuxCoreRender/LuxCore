@@ -23,7 +23,7 @@ float SphericalTheta(const float3 v) {
 }
 
 float SphericalPhi(const float3 v) {
-	float p = atan2(v.y, v.x);
+	const float p = atan2(v.y, v.x);
 	return (p < 0.f) ? p + 2.f * M_PI_F : p;
 }
 

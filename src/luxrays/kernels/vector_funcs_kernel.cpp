@@ -26,7 +26,7 @@ std::string KernelSource_vector_funcs =
 "}\n"
 "\n"
 "float SphericalPhi(const float3 v) {\n"
-"	float p = atan2(v.y, v.x);\n"
+"	const float p = atan2(v.y, v.x);\n"
 "	return (p < 0.f) ? p + 2.f * M_PI_F : p;\n"
 "}\n"
 "\n"
