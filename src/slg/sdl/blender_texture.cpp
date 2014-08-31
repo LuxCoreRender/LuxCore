@@ -34,10 +34,9 @@ BlenderBlendTexture::BlenderBlendTexture(const TextureMapping3D *mp, const std::
 
 		if (ptype == "linear") {type = TEX_LIN;}
 		else if (ptype == "quadratic") {type = TEX_QUAD;}
-		else if (ptype == "easing") {type = TEX_LIN;}
-		else if (ptype == "diagonal") {type = TEX_EASE;}
+		else if (ptype == "easing") {type = TEX_EASE;}
+		else if (ptype == "diagonal") {type = TEX_DIAG;}
 		else if (ptype == "spherical") {type = TEX_SPHERE;}
-		else if (ptype == "quadratic_spherical") {type = TEX_HALO;}
 		else if (ptype == "halo") {type = TEX_HALO;}
 		else if (ptype == "radial") {type = TEX_RAD;};
 }
@@ -48,7 +47,7 @@ float BlenderBlendTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
 	float x, y, t;
 
-	if(direction) {
+	if(!direction) {
 		//horizontal
 		x = P.x;
 		y = P.y;
@@ -57,7 +56,6 @@ float BlenderBlendTexture::GetFloatValue(const HitPoint &hitPoint) const {
 		x = P.y;
 		y = P.x;
 	};
-
 
     if (type == TEX_LIN) { /* lin */
         result = (1.f + x) / 2.f;
@@ -629,10 +627,10 @@ Properties BlenderMarbleTexture::ToProperties(const ImageMapCache &imgMapCache) 
 
 BlenderMusgraveTexture::BlenderMusgraveTexture(const TextureMapping3D *mp, const std::string &ptype, const std::string &pnoisebasis,
 		const float dimension, const float intensity, const float lacunarity, const float offset, const float gain,
-		const float octaves, float noisesize, bool hard, float bright, float contrast) :
+		const float octaves, float noisesize, float bright, float contrast) :
 		mapping(mp), type(TEX_MULTIFRACTAL), noisebasis(BLENDER_ORIGINAL), dimension(dimension), intensity(intensity),
 		lacunarity(lacunarity), offset(offset), gain(gain), octaves(octaves),
-		noisesize(noisesize), hard(hard), bright(bright), contrast(contrast) {
+		noisesize(noisesize), bright(bright), contrast(contrast) {
 
 	if(ptype == "multifractal") {
 		type = TEX_MULTIFRACTAL;
@@ -747,9 +745,6 @@ Properties BlenderMusgraveTexture::ToProperties(const ImageMapCache &imgMapCache
 			break;
 	}
 
-	std::string noisetype = "soft_noise";
-	if(hard) noisetype = "hard_noise";
-
 	const std::string name = GetName();
 
 	props.Set(Property("scene.textures." + name + ".type")("blender_musgrave"));
@@ -762,7 +757,6 @@ Properties BlenderMusgraveTexture::ToProperties(const ImageMapCache &imgMapCache
 	props.Set(Property("scene.textures." + name + ".gain")(gain));
 	props.Set(Property("scene.textures." + name + ".octaves")(octaves));
 	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".noisetype")(noisetype));
 	props.Set(Property("scene.textures." + name + ".bright")(bright));
 	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
@@ -962,6 +956,112 @@ Properties BlenderStucciTexture::ToProperties(const ImageMapCache &imgMapCache) 
 }
 
 //------------------------------------------------------------------------------
+// Blender voronoi texture
+//------------------------------------------------------------------------------
+
+BlenderVoronoiTexture::BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent,
+        const float fw1, const float fw2, const float fw3, const float fw4, const std::string distmetric, float noisesize,  float bright, float contrast) :
+		mapping(mp), intensity(intensity), feature_weight1(fw1), feature_weight2(fw2), feature_weight3(fw3), feature_weight4(fw4),
+		distancemetric(ACTUAL_DISTANCE), exponent(exponent), noisesize(noisesize), bright(bright), contrast(contrast) {
+
+	if(distmetric == "actual_distance") {
+		distancemetric = ACTUAL_DISTANCE;
+	} else if(distmetric == "distance_squared") {
+		distancemetric = DISTANCE_SQUARED;
+	} else if(distmetric == "manhattan") {
+		distancemetric = MANHATTAN;
+	} else if(distmetric == "chebychev") {
+		distancemetric = CHEBYCHEV;
+	} else if(distmetric == "minkowski_half") {
+		distancemetric = MINKOWSKI_HALF;
+	} else if(distmetric == "minkowski_four") {
+		distancemetric = MINKOWSKI_FOUR;
+	} else if(distmetric == "minkowski") {
+		distancemetric = MINKOWSKI;
+	};
+}
+
+float BlenderVoronoiTexture::GetFloatValue(const HitPoint &hitPoint) const {
+    float da[4], pa[12]; /* distance and point coordinate arrays of 4 nearest neighbours */
+	luxrays::Point P(mapping->Map(hitPoint));
+
+	float scale = 1.f;
+	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
+	P *= scale;
+
+	const float aw1 = fabs(feature_weight1);
+    const float aw2 = fabs(feature_weight2);
+    const float aw3 = fabs(feature_weight3);
+    const float aw4 = fabs(feature_weight4);
+
+    float sc = (aw1 + aw2 + aw3 + aw4);
+
+    if (sc > 0.00001f) sc = intensity / sc;
+
+    float result = 1.f;
+
+	voronoi(P.x, P.y, P.z, da, pa, exponent, distancemetric);
+    result = sc * fabs(feature_weight1 * da[0] + feature_weight2 * da[1] + feature_weight3 * da[2] + feature_weight4 * da[3]);
+
+	result = (result - 0.5f) * contrast + bright - 0.5f;
+    if(result < 0.f) result = 0.f;
+	else if(result > 1.f) result = 1.f;
+
+    return result;
+}
+
+Spectrum BlenderVoronoiTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+
+	const std::string name = GetName();
+
+	std::string dm = "";
+	switch(distancemetric) {
+		case DISTANCE_SQUARED:
+			dm = "distance_squared";
+			break;
+		case MANHATTAN:
+			dm = "manhattan";
+			break;
+		case CHEBYCHEV:
+			dm = "chebychev";
+			break;
+		case MINKOWSKI_HALF:
+			dm = "minkowski_half";
+			break;
+		case MINKOWSKI_FOUR:
+			dm = "minkowski_four";
+			break;
+		case MINKOWSKI:
+			dm = "minkowski";
+			break;
+		case ACTUAL_DISTANCE:
+		default:
+			dm = "actual_distance";
+			break;
+	};
+
+	props.Set(Property("scene.textures." + name + ".type")("blender_voronoi"));
+	props.Set(Property("scene.textures." + name + ".distancemetric")(dm));
+	props.Set(Property("scene.textures." + name + ".intentity")(intensity));
+	props.Set(Property("scene.textures." + name + ".exponent")(exponent));
+	props.Set(Property("scene.textures." + name + ".w1")(feature_weight1));
+	props.Set(Property("scene.textures." + name + ".w2")(feature_weight2));
+	props.Set(Property("scene.textures." + name + ".w3")(feature_weight3));
+	props.Set(Property("scene.textures." + name + ".w4")(feature_weight4));
+	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
+	props.Set(Property("scene.textures." + name + ".bright")(bright));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
+	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Blender wood texture
 //------------------------------------------------------------------------------
 
@@ -1141,108 +1241,3 @@ Properties BlenderWoodTexture::ToProperties(const ImageMapCache &imgMapCache) co
 	return props;
 }
 
-//------------------------------------------------------------------------------
-// Blender voronoi texture
-//------------------------------------------------------------------------------
-
-BlenderVoronoiTexture::BlenderVoronoiTexture(const TextureMapping3D *mp, const float intensity, const float exponent,
-        const float fw1, const float fw2, const float fw3, const float fw4, const std::string distmetric, float noisesize,  float bright, float contrast) :
-		mapping(mp), intensity(intensity), feature_weight1(fw1), feature_weight2(fw2), feature_weight3(fw3), feature_weight4(fw4),
-		distancemetric(ACTUAL_DISTANCE), exponent(exponent), noisesize(noisesize), bright(bright), contrast(contrast) {
-
-	if(distmetric == "actual_distance") {
-		distancemetric = ACTUAL_DISTANCE;
-	} else if(distmetric == "distance_squared") {
-		distancemetric = DISTANCE_SQUARED;
-	} else if(distmetric == "manhattan") {
-		distancemetric = MANHATTAN;
-	} else if(distmetric == "chebychev") {
-		distancemetric = CHEBYCHEV;
-	} else if(distmetric == "minkowski_half") {
-		distancemetric = MINKOWSKI_HALF;
-	} else if(distmetric == "minkowski_four") {
-		distancemetric = MINKOWSKI_FOUR;
-	} else if(distmetric == "minkowski") {
-		distancemetric = MINKOWSKI;
-	};
-}
-
-float BlenderVoronoiTexture::GetFloatValue(const HitPoint &hitPoint) const {
-    float da[4], pa[12]; /* distance and point coordinate arrays of 4 nearest neighbours */
-	luxrays::Point P(mapping->Map(hitPoint));
-
-	float scale = 1.f;
-	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
-	P *= scale;
-
-	const float aw1 = fabs(feature_weight1);
-    const float aw2 = fabs(feature_weight2);
-    const float aw3 = fabs(feature_weight3);
-    const float aw4 = fabs(feature_weight4);
-
-    float sc = (aw1 + aw2 + aw3 + aw4);
-
-    if (sc > 0.00001f) sc = intensity / sc;
-
-    float result = 1.f;
-
-	voronoi(P.x, P.y, P.z, da, pa, exponent, distancemetric);
-    result = sc * fabs(feature_weight1 * da[0] + feature_weight2 * da[1] + feature_weight3 * da[2] + feature_weight4 * da[3]);
-
-	result = (result - 0.5f) * contrast + bright - 0.5f;
-    if(result < 0.f) result = 0.f;
-	else if(result > 1.f) result = 1.f;
-
-    return result;
-}
-
-Spectrum BlenderVoronoiTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return Spectrum(GetFloatValue(hitPoint));
-}
-
-Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
-
-	const std::string name = GetName();
-
-	std::string dm = "";
-	switch(distancemetric) {
-		case DISTANCE_SQUARED:
-			dm = "distance_squared";
-			break;
-		case MANHATTAN:
-			dm = "manhattan";
-			break;
-		case CHEBYCHEV:
-			dm = "chebychev";
-			break;
-		case MINKOWSKI_HALF:
-			dm = "minkowski_half";
-			break;
-		case MINKOWSKI_FOUR:
-			dm = "minkowski_four";
-			break;
-		case MINKOWSKI:
-			dm = "minkowski";
-			break;
-		case ACTUAL_DISTANCE:
-		default:
-			dm = "actual_distance";
-			break;
-	};
-
-	props.Set(Property("scene.textures." + name + ".type")("blender_voronoi"));
-	props.Set(Property("scene.textures." + name + ".distancemetric")(dm));
-	props.Set(Property("scene.textures." + name + ".intentity")(intensity));
-	props.Set(Property("scene.textures." + name + ".exponent")(exponent));
-	props.Set(Property("scene.textures." + name + ".w1")(feature_weight1));
-	props.Set(Property("scene.textures." + name + ".w2")(feature_weight2));
-	props.Set(Property("scene.textures." + name + ".w3")(feature_weight3));
-	props.Set(Property("scene.textures." + name + ".w4")(feature_weight4));
-	props.Set(Property("scene.textures." + name + ".noisesize")(noisesize));
-	props.Set(Property("scene.textures." + name + ".bright")(bright));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrast));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
-
-	return props;
-}

@@ -17,6 +17,8 @@
  ***************************************************************************/
 
 #include <sstream>
+#include <algorithm>
+#include <numeric>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
 
@@ -26,6 +28,7 @@
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/texture.h"
 #include "slg/sdl/bsdf.h"
+#include "slg/sdl/blender_texture.h"
 
 using namespace std;
 using namespace luxrays;

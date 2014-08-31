@@ -36,7 +36,7 @@ float BlenderBlendTexture_Evaluate(__global HitPoint *hitPoint,
 	float result = 0.f;
 	float x, y, t;
      
-	if(direction) {
+	if(!direction) {
 		//horizontal
 		x = P.x;
 		y = P.y;
@@ -423,7 +423,7 @@ void BlenderMarbleTexture_EvaluateSpectrum(__global Texture *texture, __global H
 float BlenderMusgraveTexture_Evaluate(__global HitPoint *hitPoint, const BlenderMusgraveType type,
 		const BlenderNoiseBasis noisebasis, const float dimension, const float intensity, const float lacunarity,
 		const float offset, const float gain, const float octaves, const float noisesize,
-		const float contrast, const float bright, const bool hard, __global TextureMapping3D *mapping) {
+		const float contrast, const float bright, __global TextureMapping3D *mapping) {
 		
 	float scale = 1.f;
 	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
@@ -461,17 +461,17 @@ float BlenderMusgraveTexture_Evaluate(__global HitPoint *hitPoint, const Blender
 float BlenderMusgraveTexture_ConstEvaluateFloat(__global HitPoint *hitPoint, const BlenderMusgraveType type,
 		const BlenderNoiseBasis noisebasis, const float dimension, const float intensity, const float lacunarity,
 		const float offset, const float gain, const float octaves, const float noisesize,
-		const float contrast, const float bright, const bool hard, __global TextureMapping3D *mapping) {
+		const float contrast, const float bright, __global TextureMapping3D *mapping) {
 	return BlenderMusgraveTexture_Evaluate(hitPoint, type, noisebasis, dimension, intensity, lacunarity,
-			offset, gain, octaves, noisesize, contrast, bright, hard, mapping);
+			offset, gain, octaves, noisesize, contrast, bright, mapping);
 }
 
 float3 BlenderMusgraveTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, const BlenderMusgraveType type,
 		const BlenderNoiseBasis noisebasis, const float dimension, const float intensity, const float lacunarity,
 		const float offset, const float gain, const float octaves, const float noisesize,
-		const float contrast, const float bright, const bool hard, __global TextureMapping3D *mapping) {
+		const float contrast, const float bright, __global TextureMapping3D *mapping) {
 	return BlenderMusgraveTexture_Evaluate(hitPoint, type, noisebasis, dimension, intensity, lacunarity,
-			offset, gain, octaves, noisesize, contrast, bright, hard, mapping);
+			offset, gain, octaves, noisesize, contrast, bright, mapping);
 }
 
 #if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
@@ -481,7 +481,7 @@ void BlenderMusgraveTexture_EvaluateFloat(__global Texture *texture, __global Hi
 			texture->blenderMusgrave.type, texture->blenderMusgrave.noisebasis, texture->blenderMusgrave.dimension,
 			texture->blenderMusgrave.intensity, texture->blenderMusgrave.lacunarity, texture->blenderMusgrave.offset,
 			texture->blenderMusgrave.gain, texture->blenderMusgrave.octaves, texture->blenderMusgrave.noisesize,
-			texture->blenderMusgrave.contrast, texture->blenderMusgrave.bright, texture->blenderMusgrave.hard,
+			texture->blenderMusgrave.contrast, texture->blenderMusgrave.bright,
 			&texture->blenderMusgrave.mapping);
 }
 
@@ -491,7 +491,7 @@ void BlenderMusgraveTexture_EvaluateSpectrum(__global Texture *texture, __global
 			texture->blenderMusgrave.type, texture->blenderMusgrave.noisebasis, texture->blenderMusgrave.dimension,
 			texture->blenderMusgrave.intensity, texture->blenderMusgrave.lacunarity, texture->blenderMusgrave.offset,
 			texture->blenderMusgrave.gain, texture->blenderMusgrave.octaves, texture->blenderMusgrave.noisesize,
-			texture->blenderMusgrave.contrast, texture->blenderMusgrave.bright, texture->blenderMusgrave.hard,
+			texture->blenderMusgrave.contrast, texture->blenderMusgrave.bright,
 			&texture->blenderMusgrave.mapping);
 }
 #endif
