@@ -193,7 +193,7 @@ inline float SphericalTheta(const Vector &v) {
 }
 
 inline float SphericalPhi(const Vector &v) {
-	float p = atan2f(v.y, v.x);
+	const float p = atan2f(v.y, v.x);
 	return (p < 0.f) ? p + 2.f * M_PI : p;
 }
 

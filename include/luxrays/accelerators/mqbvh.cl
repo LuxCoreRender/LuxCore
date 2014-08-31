@@ -112,12 +112,14 @@ void LeafIntersect(
 	}
 }
 
+#define MQBVH_TRANSFORMATIONS_PARAM_DECL , __global uint *leafTransformationIndex , __global Matrix4x4 *leafTransformations
+#define MQBVH_TRANSFORMATIONS_PARAM , leafTransformationIndex, leafTransformations
 
-#define QBVH_MOTIONSYSTEMS_PARAM_DECL , __global MotionSystem *leafMotionSystems , __global InterpolatedTransform *leafInterpolatedTransforms
-#define QBVH_MOTIONSYSTEMS_PARAM , leafMotionSystems, leafInterpolatedTransforms
+#define MQBVH_MOTIONSYSTEMS_PARAM_DECL , __global MotionSystem *leafMotionSystems , __global InterpolatedTransform *leafInterpolatedTransforms
+#define MQBVH_MOTIONSYSTEMS_PARAM , leafMotionSystems, leafInterpolatedTransforms
 
-#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global unsigned int *qbvhMemMap, __global QBVHNode *leafNodes, __global QuadTiangle *leafQuadTris, __global Matrix4x4 *leafTransformations QBVH_MOTIONSYSTEMS_PARAM_DECL
-#define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris, leafTransformations QBVH_MOTIONSYSTEMS_PARAM
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global unsigned int *qbvhMemMap, __global QBVHNode *leafNodes, __global QuadTiangle *leafQuadTris MQBVH_TRANSFORMATIONS_PARAM_DECL MQBVH_MOTIONSYSTEMS_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris MQBVH_TRANSFORMATIONS_PARAM MQBVH_MOTIONSYSTEMS_PARAM
 
 void Accelerator_Intersect(
 		Ray *ray,
@@ -189,31 +191,32 @@ void Accelerator_Intersect(
 			const uint leafIndex = QBVHNode_FirstQuadIndex(nodeData);
 
             Ray tray;
-			const float3 newOrig = Matrix4x4_ApplyPoint(&leafTransformations[leafIndex], rayOrig);
-			tray.o.x = newOrig.x;
-			tray.o.y = newOrig.y;
-			tray.o.z = newOrig.z;
-			const float3 newDir = Matrix4x4_ApplyVector(&leafTransformations[leafIndex], rayDir);
-			tray.d.x = newDir.x;
-			tray.d.y = newDir.y;
-			tray.d.z = newDir.z;
-            tray.mint = ray4.mint.s0;
-            tray.maxt = ray4.maxt.s0;
-			tray.time = rayTime;
+			float3 newRayOrig = rayOrig;
+			float3 newRayDir = rayDir;
+
+			if (leafTransformationIndex[leafIndex] != NULL_INDEX) {
+				__global Matrix4x4 *m = &leafTransformations[leafTransformationIndex[leafIndex]];
+				newRayOrig = Matrix4x4_ApplyPoint(m, newRayOrig);
+				newRayDir = Matrix4x4_ApplyVector(m, newRayDir);
+			}
 
 			if (leafMotionSystems[leafIndex].interpolatedTransformFirstIndex != NULL_INDEX) {
 				// Transform ray origin and direction
 				Matrix4x4 m;
 				MotionSystem_Sample(&leafMotionSystems[leafIndex], rayTime, leafInterpolatedTransforms, &m);
-				const float3 newOrig = Matrix4x4_ApplyPoint_Private(&m, rayOrig);
-				tray.o.x = newOrig.x;
-				tray.o.y = newOrig.y;
-				tray.o.z = newOrig.z;
-				const float3 newDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
-				tray.d.x = newDir.x;
-				tray.d.y = newDir.y;
-				tray.d.z = newDir.z;
+				newRayOrig = Matrix4x4_ApplyPoint_Private(&m, newRayOrig);
+				newRayDir = Matrix4x4_ApplyVector_Private(&m, newRayDir);
 			}
+
+			tray.o.x = newRayOrig.x;
+			tray.o.y = newRayOrig.y;
+			tray.o.z = newRayOrig.z;
+			tray.d.x = newRayDir.x;
+			tray.d.y = newRayDir.y;
+			tray.d.z = newRayDir.z;
+			tray.mint = ray4.mint.s0;
+			tray.maxt = ray4.maxt.s0;
+			tray.time = rayTime;
 
             const unsigned int memIndex = leafIndex * 2;
             const unsigned int leafNodeOffset = qbvhMemMap[memIndex];
