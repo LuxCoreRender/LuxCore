@@ -88,10 +88,10 @@ ColorSystem::ColorSystem(float xR, float yR, float xG, float yG, float xB, float
 	float xW, float yW, float lum)
 	: xRed(xR), yRed(yR), xGreen(xG), yGreen(yG), xBlue(xB), yBlue(yB),
 	xWhite(xW), yWhite(yW), luminance(lum) {
-	float red[3] = {xRed / yRed, 1.f, (1.f - xRed - yRed) / yRed};
-	float green[3] = {xGreen / yGreen, 1.f, (1.f - xGreen - yGreen) / yGreen};
-	float blue[3] = {xBlue / yBlue, 1.f, (1.f - xBlue - yBlue) / yBlue};
-	float white[3] = {xWhite / yWhite, 1.f, (1.f - xWhite - yWhite) / yWhite};
+	const float red[3] = { xRed / yRed, 1.f, (1.f - xRed - yRed) / yRed };
+	const float green[3] = { xGreen / yGreen, 1.f, (1.f - xGreen - yGreen) / yGreen };
+	const float blue[3] = { xBlue / yBlue, 1.f, (1.f - xBlue - yBlue) / yBlue };
+	const float white[3] = { xWhite / yWhite, 1.f, (1.f - xWhite - yWhite) / yWhite };
 	float rgb[3][3];
 	rgb[0][0] = red[0]; rgb[1][0] = red[1]; rgb[2][0] = red[2];
 	rgb[0][1] = green[0]; rgb[1][1] = green[1]; rgb[2][1] = green[2];
@@ -278,7 +278,7 @@ RGBColor ColorSystem::Limit(const RGBColor &rgb, int method) const {
 			// the parameter of the point on the vector from
 			// the white point to the original requested colour
 			// in RGB space.
-			float l = lum / luminance;
+			const float l = lum / luminance;
 			float parameter;
 			if (rgb.c[0] > rgb.c[1] && rgb.c[0] > rgb.c[2]) {
 				parameter = (1.f - l) / (rgb.c[0] - l);
@@ -307,7 +307,7 @@ static const float invBradford[3][3] = {
 	{0.4323053f, 0.5183603f, 0.0492912f},
 	{-0.0085287f, 0.0400428f, 0.9684867f}};
 ColorAdaptator::ColorAdaptator(const XYZColor &from, const XYZColor &to) {
-	float mat[3][3] = {
+	const float mat[3][3] = {
 		{to.c[0] / from.c[0], 0.f, 0.f},
 		{0.f, to.c[1] / from.c[1], 0.f},
 		{0.f, 0.f, to.c[2] / from.c[2]}};

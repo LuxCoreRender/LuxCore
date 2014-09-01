@@ -148,7 +148,7 @@ bool BBox::IntersectP(const Ray &ray,
 	float t0 = ray.mint, t1 = ray.maxt;
 	for (int i = 0; i < 3; ++i) {
 		// Update interval for _i_th bounding box slab
-		float invRayDir = 1.f / ray.d[i];
+		const float invRayDir = 1.f / ray.d[i];
 		float tNear = (pMin[i] - ray.o[i]) * invRayDir;
 		float tFar = (pMax[i] - ray.o[i]) * invRayDir;
 		// Update parametric interval from slab intersection $t$s

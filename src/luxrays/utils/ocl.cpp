@@ -285,14 +285,14 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
 
-	cl::Platform platform = device.getInfo<CL_DEVICE_PLATFORM>();
-	std::string platformName = boost::trim_copy(platform.getInfo<CL_PLATFORM_VENDOR>());
-	std::string deviceName = boost::trim_copy(device.getInfo<CL_DEVICE_NAME>());
-	std::string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
-	std::string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
-	boost::filesystem::path dirPath = boost::filesystem::temp_directory_path() / "kernel_cache" /
-			appName / platformName / deviceName / deviceUnits;
-	boost::filesystem::path filePath = dirPath / kernelName;
+	const cl::Platform platform = device.getInfo<CL_DEVICE_PLATFORM>();
+	const std::string platformName = boost::trim_copy(platform.getInfo<CL_PLATFORM_VENDOR>());
+	const std::string deviceName = boost::trim_copy(device.getInfo<CL_DEVICE_NAME>());
+	const std::string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
+	const std::string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
+	const boost::filesystem::path dirPath = boost::filesystem::temp_directory_path() /
+		"kernel_cache" / appName / platformName / deviceName / deviceUnits;
+	const boost::filesystem::path filePath = dirPath / kernelName;
 	const std::string fileName = filePath.generic_string();
 	
 	if (!boost::filesystem::exists(filePath)) {

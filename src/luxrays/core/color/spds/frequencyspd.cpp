@@ -35,7 +35,7 @@ void FrequencySPD::init(float freq, float phase, float refl) {
 
 	// Fill samples with Frequency curve
 	for(int i=0; i<FREQ_CACHE_SAMPLES; i++) {
-		float w = (FREQ_CACHE_START + (delta*i));
+		const float w = (FREQ_CACHE_START + (delta*i));
 		samples[i] = (sinf(w * freq + phase) + 1.0f) * 0.5f * refl;
 	}
 

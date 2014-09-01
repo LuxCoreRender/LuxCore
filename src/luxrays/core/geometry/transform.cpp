@@ -55,8 +55,8 @@ Transform Scale(float x, float y, float z) {
 }
 
 Transform RotateX(float angle) {
-	float sin_t = sinf(Radians(angle));
-	float cos_t = cosf(Radians(angle));
+	const float sin_t = sinf(Radians(angle));
+	const float cos_t = cosf(Radians(angle));
 	Matrix4x4 m(1, 0, 0, 0,
 			0, cos_t, -sin_t, 0,
 			0, sin_t, cos_t, 0,
@@ -65,8 +65,8 @@ Transform RotateX(float angle) {
 }
 
 Transform RotateY(float angle) {
-	float sin_t = sinf(Radians(angle));
-	float cos_t = cosf(Radians(angle));
+	const float sin_t = sinf(Radians(angle));
+	const float cos_t = cosf(Radians(angle));
 	Matrix4x4 m(cos_t, 0, sin_t, 0,
 			0, 1, 0, 0,
 			-sin_t, 0, cos_t, 0,
@@ -75,8 +75,8 @@ Transform RotateY(float angle) {
 }
 
 Transform RotateZ(float angle) {
-	float sin_t = sinf(Radians(angle));
-	float cos_t = cosf(Radians(angle));
+	const float sin_t = sinf(Radians(angle));
+	const float cos_t = cosf(Radians(angle));
 	Matrix4x4 m(cos_t, -sin_t, 0, 0,
 			sin_t, cos_t, 0, 0,
 			0, 0, 1, 0,
@@ -85,9 +85,9 @@ Transform RotateZ(float angle) {
 }
 
 Transform Rotate(float angle, const Vector &axis) {
-	Vector a = Normalize(axis);
-	float s = sinf(Radians(angle));
-	float c = cosf(Radians(angle));
+	const Vector a = Normalize(axis);
+	const float s = sinf(Radians(angle));
+	const float c = cosf(Radians(angle));
 	float m[4][4];
 
 	m[0][0] = a.x * a.x + (1.f - a.x * a.x) * c;
@@ -110,7 +110,7 @@ Transform Rotate(float angle, const Vector &axis) {
 	m[3][2] = 0;
 	m[3][3] = 1;
 
-	Matrix4x4 o(m);
+	const Matrix4x4 o(m);
 	return Transform(o, o.Transpose());
 }
 
@@ -121,9 +121,9 @@ Transform LookAt(const Point &pos, const Point &look, const Vector &up) {
 	m[1][3] = pos.y;
 	m[2][3] = pos.z;
 	m[3][3] = 1;
-	Vector dir = Normalize(look - pos);
-	Vector right = Normalize(Cross(dir, up));
-	Vector newUp = Cross(right, dir);
+	const Vector dir = Normalize(look - pos);
+	const Vector right = Normalize(Cross(dir, up));
+	const Vector newUp = Cross(right, dir);
 	m[0][0] = right.x;
 	m[1][0] = right.y;
 	m[2][0] = right.z;
@@ -136,13 +136,13 @@ Transform LookAt(const Point &pos, const Point &look, const Vector &up) {
 	m[1][2] = dir.y;
 	m[2][2] = dir.z;
 	m[3][2] = 0.;
-	Matrix4x4 camToWorld(m);
+	const Matrix4x4 camToWorld(m);
 	return Transform(camToWorld.Inverse(), camToWorld);
 }
 
 bool Transform::HasScale() const {
 	//#if 0
-	float det = fabsf(m.m[0][0] * (m.m[1][1] * m.m[2][2] - m.m[1][2] * m.m[2][1])) -
+	const float det = fabsf(m.m[0][0] * (m.m[1][1] * m.m[2][2] - m.m[1][2] * m.m[2][1])) -
 			(m.m[0][1] * (m.m[1][0] * m.m[2][2] - m.m[1][2] * m.m[2][0])) +
 			(m.m[0][2] * (m.m[1][0] * m.m[2][1] - m.m[1][1] * m.m[2][0]));
 	return (det < .999f || det > 1.001f);
@@ -152,7 +152,7 @@ bool Transform::HasScale() const {
 
 void TransformAccordingNormal(const Normal &nn, const Vector &woL, Vector *woW) {
 	Vector sn, tn;
-	float zz = sqrtf(1.f - nn.z * nn.z);
+	const float zz = sqrtf(1.f - nn.z * nn.z);
 	sn.z = 0.f;
 	if (fabsf(zz) < 1e-6f) {
 		sn.x = 1.f;
@@ -172,13 +172,13 @@ Transform Orthographic(float znear, float zfar) {
 
 Transform Perspective(float fov, float n, float f) {
 	// Perform projective divide
-	float inv_denom = 1.f / (1.f - n / f);
-	Matrix4x4 persp(1, 0, 0, 0,
+	const float inv_denom = 1.f / (1.f - n / f);
+	const Matrix4x4 persp(1, 0, 0, 0,
 			0, 1, 0, 0,
 			0, 0, inv_denom, -n * inv_denom,
 			0, 0, 1, 0);
 	// Scale to canonical viewing volume
-	float invTanAng = 1.f / tanf(Radians(fov) / 2.f);
+	const float invTanAng = 1.f / tanf(Radians(fov) / 2.f);
 	return Scale(invTanAng, invTanAng, 1) * Transform(persp);
 }
 

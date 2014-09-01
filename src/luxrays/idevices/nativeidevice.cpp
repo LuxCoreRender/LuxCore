@@ -80,7 +80,7 @@ void NativeThreadIntersectionDevice::Start() {
 			boost::thread *intersectionThread = new boost::thread(boost::bind(NativeThreadIntersectionDevice::IntersectionThread, this, i));
 
 			// Set intersectionThread priority
-			bool res = SetThreadRRPriority(intersectionThread);
+			const bool res = SetThreadRRPriority(intersectionThread);
 			if (res && !reportedPermissionError) {
 				LR_LOG(deviceContext, "[NativeThread device::" << deviceName << "] Failed to set ray intersection thread priority (you probably need root/administrator permission to set thread realtime priority)");
 				reportedPermissionError = true;

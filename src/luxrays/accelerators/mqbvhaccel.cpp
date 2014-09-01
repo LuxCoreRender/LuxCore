@@ -56,7 +56,7 @@ public:
 				luxrays::ocl::KernelSource_qbvh_types +
 				luxrays::ocl::KernelSource_mqbvh;
 
-		std::string code(
+		const std::string code(
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
 			luxrays::ocl::KernelSource_epsilon_funcs +
@@ -694,7 +694,7 @@ void MQBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 	for (u_int i = 0; i < NB_BINS; ++i)
 		bins[i] = 0;
 
-	u_int step = (end - start < fullSweepThreshold) ? 1 : skipFactor;
+	const u_int step = (end - start < fullSweepThreshold) ? 1 : skipFactor;
 
 	// Choose the split axis, taking the axis of maximum extent for the
 	// centroids (else weird cases can occur, where the maximum extent axis
@@ -872,7 +872,7 @@ void MQBVHAccel::BuildTree(u_int start, u_int end, u_int *primsIndexes,
 
 int32_t  MQBVHAccel::CreateNode(int32_t parentIndex, int32_t childIndex,
 	const BBox &nodeBbox) {
-	int32_t index = nNodes++; // increment after assignment
+	const int32_t index = nNodes++; // increment after assignment
 	if (nNodes >= maxNodes) {
 		QBVHNode *newNodes = AllocAligned<QBVHNode>(2 * maxNodes);
 		memcpy(newNodes, nodes, sizeof(QBVHNode) * maxNodes);

@@ -357,7 +357,7 @@ public:
 				luxrays::ocl::KernelSource_bvh_types +
 				luxrays::ocl::KernelSource_mbvh;
 
-		std::string code(
+		const std::string code(
 			kernelDefs.str() +
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
@@ -675,7 +675,7 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 
 	bool insideLeafTree = false;
 	u_int currentRootNode = 0;
-	u_int rootStopNode = BVHNodeData_GetSkipIndex(bvhRootTree[0].nodeData); // Non-existent
+	const u_int rootStopNode = BVHNodeData_GetSkipIndex(bvhRootTree[0].nodeData); // Non-existent
 	u_int currentNode = currentRootNode;
 	u_int currentStopNode = rootStopNode; // Non-existent
 	u_int currentMeshOffset = 0;

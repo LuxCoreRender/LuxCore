@@ -24,7 +24,7 @@ using namespace luxrays;
 void RGBReflSPD::init(const RGBColor &s) {
 	lambdaMin = refrgb2spect_start;
 	lambdaMax = refrgb2spect_end;
-	u_int n = refrgb2spect_bins;
+	const u_int n = refrgb2spect_bins;
 	delta = (lambdaMax - lambdaMin) / (n - 1);
 	invDelta = 1.f / delta;
 	nSamples = n;
