@@ -49,7 +49,7 @@ void Quaternion_ToMatrix(const float4 q, Matrix4x4 *m) {
 float4 Quaternion_Slerp(float t, const float4 q1, const float4 q2) {
 
 	float cos_phi = dot(q1, q2);
-	float sign = (cos_phi > 0.f) ? 1.f : -1.f;
+	const float sign = (cos_phi > 0.f) ? 1.f : -1.f;
 	
 	cos_phi *= sign;
 

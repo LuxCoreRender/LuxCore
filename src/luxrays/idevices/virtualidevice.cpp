@@ -81,7 +81,7 @@ void VirtualIntersectionDevice::Stop() {
 	// Need to wait for all my pending RayBuffer
 	for (size_t i = 0; i < queueCount; ++i) {
 		while (pendingRayBufferDeviceIndex[i].size() > 0) {
-			u_int deviceIndex = pendingRayBufferDeviceIndex[i].back();
+			const u_int deviceIndex = pendingRayBufferDeviceIndex[i].back();
 			pendingRayBufferDeviceIndex[i].pop_back();
 
 			realDevices[deviceIndex]->PopRayBuffer(i);

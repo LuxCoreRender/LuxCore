@@ -66,7 +66,7 @@ public:
 				luxrays::ocl::KernelSource_qbvh_types +
 				luxrays::ocl::KernelSource_qbvh;
 
-		std::string code(
+		const std::string code(
 			kernelDefs.str() +
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
@@ -211,7 +211,7 @@ public:
 
 		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_qbvh;
 
-		std::string code(
+		const std::string code(
 			kernelDefs.str() +
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
@@ -428,7 +428,7 @@ OpenCLKernels *QBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
 				if (QBVHNode::IsEmpty(index)) {
 					inodes[offset + 6 * 4 + j] = index;
 				} else if (QBVHNode::IsLeaf(index)) {
-					int32_t count = QBVHNode::FirstQuadIndex(index) * 11;
+					const int32_t count = QBVHNode::FirstQuadIndex(index) * 11;
 					// "/ 11" in order to not waste bits
 					const unsigned short x = static_cast<unsigned short>((count % leafWidth) / 11);
 					const unsigned short y = static_cast<unsigned short>(count / leafWidth);
@@ -637,7 +637,7 @@ void QBVHAccel::BuildTree(u_int start, u_int end, std::vector<u_int> &meshIndexe
 	for (u_int i = 0; i < NB_BINS; ++i)
 		bins[i] = 0;
 
-	u_int step = (end - start < fullSweepThreshold) ? 1 : skipFactor;
+	const u_int step = (end - start < fullSweepThreshold) ? 1 : skipFactor;
 
 	// Choose the split axis, taking the axis of maximum extent for the
 	// centroids (else weird cases can occur, where the maximum extent axis
@@ -711,7 +711,7 @@ void QBVHAccel::BuildTree(u_int start, u_int end, std::vector<u_int> &meshIndexe
 		//-----
 		// Right side
 		// Number of prims
-		int rightIndex = NB_BINS - 1 - i;
+		const int rightIndex = NB_BINS - 1 - i;
 		currentNbRight += bins[rightIndex];
 		nbPrimsRight[rightIndex] = currentNbRight;
 		// Prims bbox
@@ -743,7 +743,7 @@ void QBVHAccel::BuildTree(u_int start, u_int end, std::vector<u_int> &meshIndexe
 
 	// The split plane coordinate is the coordinate of the end of
 	// the chosen bin along the split axis
-	float splitPos = centroidsBbox.pMin[axis] + (minBin + 1) *
+	const float splitPos = centroidsBbox.pMin[axis] + (minBin + 1) *
 			(centroidsBbox.pMax[axis] - centroidsBbox.pMin[axis]) / NB_BINS;
 
 

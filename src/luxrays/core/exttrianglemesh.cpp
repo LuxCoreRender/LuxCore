@@ -284,7 +284,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	}
 
 	Point *p;
-	long plyNbVerts = ply_set_read_cb(plyfile, "vertex", "x", VertexCB, &p, 0);
+	const long plyNbVerts = ply_set_read_cb(plyfile, "vertex", "x", VertexCB, &p, 0);
 	ply_set_read_cb(plyfile, "vertex", "y", VertexCB, &p, 1);
 	ply_set_read_cb(plyfile, "vertex", "z", VertexCB, &p, 2);
 	if (plyNbVerts <= 0) {
@@ -294,7 +294,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	}
 
 	vector<Triangle> vi;
-	long plyNbFaces = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
+	const long plyNbFaces = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
 	if (plyNbFaces <= 0) {
 		std::stringstream ss;
 		ss << "No faces found in '" << fileName << "'";
@@ -303,7 +303,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	// Check if the file includes normal informations
 	Normal *n;
-	long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
+	const long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
 	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n, 2);
 	if ((plyNbNormals > 0) && (plyNbNormals != plyNbVerts)) {
@@ -314,7 +314,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	// Check if the file includes uv informations
 	UV *uv;
-	long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
+	const long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
 	ply_set_read_cb(plyfile, "vertex", "t", UVCB, &uv, 1);
 	if ((plyNbUVs > 0) && (plyNbUVs != plyNbVerts)) {
 		std::stringstream ss;
@@ -324,7 +324,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	// Check if the file includes color informations
 	Spectrum *cols;
-	long plyNbColors = ply_set_read_cb(plyfile, "vertex", "red", ColorCB, &cols, 0);
+	const long plyNbColors = ply_set_read_cb(plyfile, "vertex", "red", ColorCB, &cols, 0);
 	ply_set_read_cb(plyfile, "vertex", "green", ColorCB, &cols, 1);
 	ply_set_read_cb(plyfile, "vertex", "blue", ColorCB, &cols, 2);
 	if ((plyNbColors > 0) && (plyNbColors != plyNbVerts)) {
@@ -335,7 +335,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 
 	// Check if the file includes alpha informations
 	float *alphas;
-	long plyNbAlphas = ply_set_read_cb(plyfile, "vertex", "alpha", AlphaCB, &alphas, 0);
+	const long plyNbAlphas = ply_set_read_cb(plyfile, "vertex", "alpha", AlphaCB, &alphas, 0);
 	if ((plyNbAlphas > 0) && (plyNbAlphas != plyNbVerts)) {
 		std::stringstream ss;
 		ss << "Wrong count of alphas in '" << fileName << "'";
