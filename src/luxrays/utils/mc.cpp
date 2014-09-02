@@ -50,7 +50,7 @@ float SampleStep1d(const float *f, const float *cdf, float c, u_int nSteps,
 		return 0.f;
 	}
 	const float *ptr = std::upper_bound(cdf, cdf + nSteps + 1, u);
-	u_int offset = static_cast<u_int>(ptr - cdf - 1);
+	const u_int offset = static_cast<u_int>(ptr - cdf - 1);
 	// Return offset along current cdf segment
 	u = (u - cdf[offset]) / (cdf[offset + 1] - cdf[offset]);
 	*pdf = f[offset] / c;
@@ -103,8 +103,8 @@ void UniformSampleDisk(const float u1, const float u2, float *x, float *y) {
 void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) {
 	float r, theta;
 	// Map uniform random numbers to $[-1,1]^2$
-	float sx = 2.f * u1 - 1.f;
-	float sy = 2.f * u2 - 1.f;
+	const float sx = 2.f * u1 - 1.f;
+	const float sy = 2.f * u2 - 1.f;
 	// Map square to $(r,\theta)$
 	// Handle degeneracy at the origin
 	if (sx == 0.f && sy == 0.f) {

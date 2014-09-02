@@ -21,8 +21,8 @@
 void ConcentricSampleDisk(const float u0, const float u1, float *dx, float *dy) {
 	float r, theta;
 	// Map uniform random numbers to $[-1,1]^2$
-	float sx = 2.f * u0 - 1.f;
-	float sy = 2.f * u1 - 1.f;
+	const float sx = 2.f * u0 - 1.f;
+	const float sy = 2.f * u1 - 1.f;
 	// Map square to $(r,\theta)$
 	// Handle degeneracy at the origin
 	if (sx == 0.f && sy == 0.f) {

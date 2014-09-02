@@ -24,7 +24,7 @@ using namespace luxrays;
 void RGBIllumSPD::init(const RGBColor &s) {
 	lambdaMin = illumrgb2spect_start;
 	lambdaMax = illumrgb2spect_end;
-	u_int n = illumrgb2spect_bins;
+	const u_int n = illumrgb2spect_bins;
 	delta = (lambdaMax - lambdaMin) / (n - 1);
 	invDelta = 1.f / delta;
 	nSamples = n;
