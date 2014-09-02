@@ -25,7 +25,7 @@ void GaussianSPD::init(float mean, float width, float refl) {
     wd = width;
 	r0 = refl;
 
-	float scale2 = float(-0.5 / (width * width));
+	const float scale2 = float(-0.5 / (width * width));
 
 	lambdaMin = GAUSS_CACHE_START;
 	lambdaMax = GAUSS_CACHE_END;
@@ -37,8 +37,8 @@ void GaussianSPD::init(float mean, float width, float refl) {
 
 	// Fill samples with Gaussian curve
 	for(int i=0; i<GAUSS_CACHE_SAMPLES; i++) {
-		float w = (GAUSS_CACHE_START + (delta*i));
-		float x = w - mu;
+		const float w = (GAUSS_CACHE_START + (delta*i));
+		const float x = w - mu;
 		samples[i] = refl * expf(x * x * scale2);
 	}
 

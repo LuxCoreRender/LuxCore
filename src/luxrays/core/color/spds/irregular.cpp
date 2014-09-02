@@ -32,17 +32,17 @@ using namespace luxrays;
 IrregularSPD::IrregularSPD(const float* const wavelengths, const float* const samples,
 	u_int n, float resolution, SPDResamplingMethod resamplingMethod) 
 	: SPD() {
-	float lambdaMin = wavelengths[0];
-	float lambdaMax = wavelengths[n - 1];
+	const float lambdaMin = wavelengths[0];
+	const float lambdaMax = wavelengths[n - 1];
 
-	u_int sn = Ceil2UInt((lambdaMax - lambdaMin) / resolution) + 1;
+	const u_int sn = Ceil2UInt((lambdaMax - lambdaMin) / resolution) + 1;
 
 	vector<float> sam(sn);
 
 	if (resamplingMethod == Linear) {
 		u_int k = 0;
 		for (u_int i = 0; i < sn; i++) {
-			float lambda = lambdaMin + i * resolution;
+			const float lambda = lambdaMin + i * resolution;
 
 			if (lambda < wavelengths[0] || lambda > wavelengths[n-1]) {
 				sam[i] = 0.f;
@@ -57,8 +57,8 @@ IrregularSPD::IrregularSPD(const float* const wavelengths, const float* const sa
 			if (wavelengths[k] == lambda)
 				sam[i] = samples[k];
 			else { 
-				float intervalWidth = wavelengths[k] - wavelengths[k - 1];
-				float u = (lambda - wavelengths[k - 1]) / intervalWidth;
+				const float intervalWidth = wavelengths[k] - wavelengths[k - 1];
+				const float u = (lambda - wavelengths[k - 1]) / intervalWidth;
 				sam[i] = Lerp(u, samples[k - 1], samples[k]);
 			}
 		}
@@ -69,7 +69,7 @@ IrregularSPD::IrregularSPD(const float* const wavelengths, const float* const sa
 
 		u_int k = 0;
 		for (u_int i = 0; i < sn; i++) {
-			float lambda = lambdaMin + i * resolution;
+			const float lambda = lambdaMin + i * resolution;
 
 			if (lambda < wavelengths[0] || lambda > wavelengths[n-1]) {
 				sam[i] = 0.f;
@@ -79,9 +79,9 @@ IrregularSPD::IrregularSPD(const float* const wavelengths, const float* const sa
 			while (lambda > wavelengths[k+1])
 				k++;
 
-			float h = wavelengths[k+1] - wavelengths[k];
-			float a = (wavelengths[k+1] - lambda) / h;
-			float b = (lambda - wavelengths[k]) / h;
+			const float h = wavelengths[k + 1] - wavelengths[k];
+			const float a = (wavelengths[k + 1] - lambda) / h;
+			const float b = (lambda - wavelengths[k]) / h;
 
 			sam[i] = max(a*samples[k] + b*samples[k+1]+
 				((a*a*a-a)*sd[k] + (b*b*b-b)*sd[k+1])*(h*h)/6.f, 0.f);
@@ -116,9 +116,9 @@ void IrregularSPD::calc_spline_data(const float* const wavelengths,
 	spline_data[0] = u[0] = 0.f;
 
 	for (u_int i = 1; i <= n - 2; i++) {
-		float sig = (wavelengths[i] - wavelengths[i - 1]) /
+		const float sig = (wavelengths[i] - wavelengths[i - 1]) /
 			(wavelengths[i + 1] - wavelengths[i - 1]);
-		float p = sig * spline_data[i - 1] + 2.f;
+		const float p = sig * spline_data[i - 1] + 2.f;
 		spline_data[i] = (sig - 1.f) / p;
 		u[i] = (amplitudes[i + 1] - amplitudes[i]) /
 			(wavelengths[i + 1] - wavelengths[i]) - 

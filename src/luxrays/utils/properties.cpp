@@ -304,7 +304,7 @@ Properties &Properties::SetFromStream(istream &stream) {
 		if (line.length() == 0)
 			continue;
 
-		size_t idx = line.find('=');
+		const size_t idx = line.find('=');
 		if (idx == string::npos)
 			throw runtime_error("Syntax error in a Properties at line " + luxrays::ToString(lineNumber));
 
@@ -434,7 +434,7 @@ vector<string> Properties::GetAllNamesRE(const string &regularExpression) const 
 }
 
 vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
-	size_t fieldsCount = std::count(prefix.begin(), prefix.end(), '.') + 2;
+	const size_t fieldsCount = std::count(prefix.begin(), prefix.end(), '.') + 2;
 
 	set<string> definedNames;
 	vector<string> namesSubset;

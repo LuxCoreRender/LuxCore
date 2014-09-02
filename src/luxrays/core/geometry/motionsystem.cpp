@@ -447,7 +447,7 @@ MotionTransform MotionTransform::operator*(const MotionTransform &t) const {
 	vector<Transform> new_transforms;
 
 	// remove duplicates
-	size_t new_size = std::set_union(times.begin(), times.end(), t.times.begin(), t.times.end(), new_times.begin()) - new_times.begin();		
+	const size_t new_size = std::set_union(times.begin(), times.end(), t.times.begin(), t.times.end(), new_times.begin()) - new_times.begin();
 	new_times.resize(new_size);
 
 	typedef vector<float>::const_iterator time_cit;
@@ -498,8 +498,8 @@ MotionTransform MotionTransform::operator*(const MotionTransform &t) const {
 		}
 
 		// get (possibly interpolated) left and right hand values at new knot
-		Transform tL = itL.Sample(*timeN);
-		Transform tR = itR.Sample(*timeN);
+		const Transform tL = itL.Sample(*timeN);
+		const Transform tR = itR.Sample(*timeN);
 
 		// append the concantenated result
 		new_transforms.push_back(tL * tR);

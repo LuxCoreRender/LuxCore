@@ -143,14 +143,14 @@ void Quaternion::ToMatrix(float m[4][4]) const {
 Quaternion Slerp(float t, const Quaternion &q1, const Quaternion &q2) {
 
 	float cos_phi = Dot(q1, q2);
-	float sign = (cos_phi > 0.f) ? 1.f : -1.f;
+	const float sign = (cos_phi > 0.f) ? 1.f : -1.f;
 	
 	cos_phi *= sign;
 
 	float f1, f2;
 	if (1.f - cos_phi > 1e-6f) {	
-		float phi = acosf(cos_phi);
-		float sin_phi = sinf(phi);	
+		const float phi = acosf(cos_phi);
+		const float sin_phi = sinf(phi);
 		f1 = sinf((1.f - t) * phi) / sin_phi;
 		f2 = sinf(t * phi) / sin_phi;
 	} else {

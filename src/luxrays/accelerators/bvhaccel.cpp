@@ -196,7 +196,7 @@ public:
 				luxrays::ocl::KernelSource_bvh_types +
 				luxrays::ocl::KernelSource_bvh;
 		
-		std::string code(
+		const std::string code(
 			kernelDefs.str() +
 			luxrays::ocl::KernelSource_luxrays_types +
 			luxrays::ocl::KernelSource_epsilon_types +
@@ -492,7 +492,7 @@ void BVHAccel::FindBestSplit(const BVHParams &params, std::vector<BVHAccelTreeNo
 			const float invTotalSA = 1.f / nodeBounds.SurfaceArea();
 
 			// Sample cost for split at some points
-			float increment = 2 * d[*bestAxis] / (params.costSamples + 1);
+			const float increment = 2 * d[*bestAxis] / (params.costSamples + 1);
 			float bestCost = INFINITY;
 			for (float splitVal = 2 * nodeBounds.pMin[*bestAxis] + increment; splitVal < 2 * nodeBounds.pMax[*bestAxis]; splitVal += increment) {
 				int nBelow = 0, nAbove = 0;
@@ -508,8 +508,8 @@ void BVHAccel::FindBestSplit(const BVHParams &params, std::vector<BVHAccelTreeNo
 				}
 				const float pBelow = bbBelow.SurfaceArea() * invTotalSA;
 				const float pAbove = bbAbove.SurfaceArea() * invTotalSA;
-				float eb = (nAbove == 0 || nBelow == 0) ? params.emptyBonus : 0.f;
-				float cost = params.traversalCost + params.isectCost * (1.f - eb) * (pBelow * nBelow + pAbove * nAbove);
+				const float eb = (nAbove == 0 || nBelow == 0) ? params.emptyBonus : 0.f;
+				const float cost = params.traversalCost + params.isectCost * (1.f - eb) * (pBelow * nBelow + pAbove * nAbove);
 				// Update best split if this is lowest cost so far
 				if (cost < bestCost) {
 					bestCost = cost;
@@ -570,7 +570,7 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 	Ray ray(*initialRay);
 
 	u_int currentNode = 0; // Root Node
-	u_int stopNode = BVHNodeData_GetSkipIndex(bvhTree[0].nodeData); // Non-existent
+	const u_int stopNode = BVHNodeData_GetSkipIndex(bvhTree[0].nodeData); // Non-existent
 	rayHit->t = ray.maxt;
 	rayHit->SetMiss();
 
