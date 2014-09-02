@@ -223,7 +223,7 @@ IF(APPLE)
 		SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
 	endif()
 	#### OSX-flags by jensverwiebe
-	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden -Wall -DHAVE_PTHREAD_H) # global compile definitions
+	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H) # global compile definitions
 	set(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}") # cmake emits "-O3 -DNDEBUG" for Release by default, "-O0 -g" for Debug
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
