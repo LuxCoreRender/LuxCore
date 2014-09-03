@@ -47,6 +47,6 @@ SET(PNG_INCLUDE_DIR ${OSX_DEPENDENCY_ROOT}/include/png)
 SET(PNG_FOUND ON)
 
 # use Blender python libs for static compiling !
-SET(PYTHON_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py33_uni_intel/libbf_python_ext.a ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py33_uni_intel/libbf_python.a)
-SET(PYTHON_INCLUDE_DIRS ${OSX_DEPENDENCY_ROOT}/include/Python3.3m)
+SET(PYTHON_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py34_intel64/libbf_python_ext.a ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py34_intel64/libbf_python.a)
+SET(PYTHON_INCLUDE_DIRS ${OSX_DEPENDENCY_ROOT}/include/Python3.4m)
 SET(PYTHONLIBS_FOUND ON)
