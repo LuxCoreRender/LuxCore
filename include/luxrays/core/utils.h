@@ -287,7 +287,7 @@ template <class T> int SignOf(T x)
 	return (x > 0) - (x < 0);
 }
 
-template <class T> inline std::string ToString(const T& t) {
+template <class T> inline std::string ToString(const T &t) {
 	std::ostringstream ss;
 	ss << t;
 	return ss.str();

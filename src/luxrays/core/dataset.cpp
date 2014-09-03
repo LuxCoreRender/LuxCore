@@ -49,8 +49,10 @@ DataSet::DataSet(const Context *luxRaysContext) {
 
 	accelType = ACCEL_AUTO;
 	preprocessed = false;
-	enableInstanceSupport = true;
 	hasInstances = false;
+	enableInstanceSupport = true;
+	hasMotionBlur = false;
+	enableMotionBlurSupport = true;
 }
 
 DataSet::~DataSet() {
@@ -69,6 +71,8 @@ TriangleMeshID DataSet::Add(const Mesh *mesh) {
 
 	if ((mesh->GetType() == TYPE_TRIANGLE_INSTANCE) || (mesh->GetType() == TYPE_EXT_TRIANGLE_INSTANCE))
 		hasInstances = true;
+	else if ((mesh->GetType() == TYPE_TRIANGLE_MOTION) || (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION))
+		hasMotionBlur = true;
 
 	return id;
 }
