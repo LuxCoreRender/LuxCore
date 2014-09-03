@@ -238,7 +238,7 @@ void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 			// Check if the OpenCL device prefer float4 or float1
 			if (deviceDesc->GetNativeVectorWidthFloat() >= 4) {
 				// The device prefers float4
-				if (dataSet->RequiresInstanceSupport()) {
+				if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport()) {
 					accel = dataSet->GetAccelerator(ACCEL_MQBVH);
 					// Check if the device is able to run MQBVH
 					if (!accel->CanRunOnOpenCLDevice(this)) {
@@ -259,7 +259,7 @@ void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 				}
 			} else {
 				// The device prefers float1
-				if (dataSet->RequiresInstanceSupport())
+				if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
 					accel = dataSet->GetAccelerator(ACCEL_MBVH);
 				else
 					accel = dataSet->GetAccelerator(ACCEL_BVH);

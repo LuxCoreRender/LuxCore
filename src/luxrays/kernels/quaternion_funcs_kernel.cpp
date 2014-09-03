@@ -52,7 +52,7 @@ std::string KernelSource_quaternion_funcs =
 "float4 Quaternion_Slerp(float t, const float4 q1, const float4 q2) {\n"
 "\n"
 "	float cos_phi = dot(q1, q2);\n"
-"	float sign = (cos_phi > 0.f) ? 1.f : -1.f;\n"
+"	const float sign = (cos_phi > 0.f) ? 1.f : -1.f;\n"
 "	\n"
 "	cos_phi *= sign;\n"
 "\n"
