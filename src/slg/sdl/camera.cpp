@@ -23,7 +23,6 @@
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/scene.h"
 #include "luxcore/luxcore.h"
-#include "slg/sdl/lightdata/ArHosekSkyModelData.h"
 
 using namespace std;
 using namespace luxrays;
@@ -344,9 +343,9 @@ bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 		ray->maxt * cosi > clipYon)))
 		return false;
 
-	Point pO(
-		Inverse((motionSystem) ? (motionSystem->Sample(ray->time) * camTrans[0].rasterToWorld) : camTrans[0].rasterToWorld) *
-		(ray->o + ((lensRadius > 0.f) ?	(ray->d * (focalDistance / cosi)) : ray->d)));
+	Point pO(Inverse(camTrans[0].rasterToWorld) * (ray->o + ((lensRadius > 0.f) ?	(ray->d * (focalDistance / cosi)) : ray->d)));
+	if (motionSystem)
+		pO *= motionSystem->Sample(ray->time);
 
 	*x = pO.x;
 	*y = filmHeight - 1 - pO.y;

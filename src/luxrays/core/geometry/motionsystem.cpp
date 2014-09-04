@@ -25,7 +25,7 @@ using std::memset;
 #include <boost/foreach.hpp>
 
 #include "luxrays/core/geometry/motionsystem.h"
-#include "luxrays/core/geometry/matrix4x4.h"
+
 using luxrays::Matrix4x4;
 
 namespace luxrays {
@@ -78,20 +78,20 @@ BBox InterpolatedTransform::Bound(BBox ibox) const {
 	const float N = 1024.f;
 	for (float i = 0; i <= N; ++i) {
 		const float t = Lerp(i / N, startTime, endTime);
-		tbox = Union(tbox, Sample(t) * ibox);
+		tbox = Union(tbox, Sample(t).Inverse() * ibox);
 	}
 	return tbox;
 }
 
-Transform InterpolatedTransform::Sample(float time) const {
+Matrix4x4 InterpolatedTransform::Sample(const float time) const {
 	if (!isActive)
-		return start;
+		return start.m;
 
 	// Determine interpolation value
 	if (time <= startTime)
-		return start;
+		return start.m;
 	if (time >= endTime)
-		return end;
+		return end.m;
 
 	const float w = endTime - startTime;
 	const float d = time - startTime;
@@ -108,7 +108,7 @@ Transform InterpolatedTransform::Sample(float time) const {
 			interMatrix[1][3] = Lerp(le, startT.Ty, endT.Ty);
 		if (hasTranslationZ)
 			interMatrix[2][3] = Lerp(le, startT.Tz, endT.Tz);
-		return Transform(interMatrix);
+		return interMatrix;
 	}
 
 	if (hasRotation) {
@@ -152,7 +152,7 @@ Transform InterpolatedTransform::Sample(float time) const {
 	else
 		interMatrix[2][3] = startT.Tz;
 
-	return Transform(interMatrix);
+	return interMatrix;
 }
 
 static void V4MulByMatrix(const Matrix4x4 &A, const float x[4], float b[4]) {
@@ -322,7 +322,7 @@ bool MotionSystem::IsStatic() const {
 	return false;
 }
 
-Transform MotionSystem::Sample(float time) const {
+Matrix4x4 MotionSystem::Sample(float time) const {
 	size_t index = std::upper_bound(times.begin(), times.end(), time) - times.begin();
 
 	index = Min(index, times.size() - 1);
@@ -418,7 +418,7 @@ std::pair<float, float> MotionTransform::Interval() const {
 
 Transform MotionTransform::StaticTransform() const {
 	if (!IsStatic())
-		return MotionSystem(times, transforms).Sample(0.f);
+		return Transform(MotionSystem(times, transforms).Sample(0.f));
 
 	return transforms.front();
 }
@@ -498,8 +498,8 @@ MotionTransform MotionTransform::operator*(const MotionTransform &t) const {
 		}
 
 		// get (possibly interpolated) left and right hand values at new knot
-		const Transform tL = itL.Sample(*timeN);
-		const Transform tR = itR.Sample(*timeN);
+		const Transform tL = Transform(itL.Sample(*timeN));
+		const Transform tR = Transform(itR.Sample(*timeN));
 
 		// append the concantenated result
 		new_transforms.push_back(tL * tR);

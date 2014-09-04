@@ -25,6 +25,7 @@
 #include "luxrays/core/geometry/ray.h"
 #include "luxrays/core/geometry/bbox.h"
 #include "luxrays/core/geometry/matrix4x4.h"
+#include "luxrays/core/geometry/matrix4x4op.h"
 
 namespace luxrays {
 
