@@ -44,7 +44,7 @@ public:
 
 	Matrix4x4 Sample(const float time) const;
 
-	BBox Bound(BBox ibox) const;
+	BBox Bound(BBox ibox, const bool storingGlobal2Local) const;
 
 	// true if start and end transform or time is identical
 	bool IsStatic() const {
@@ -108,7 +108,7 @@ public:
 
 	Matrix4x4 Sample(const float time) const;
 
-	BBox Bound(BBox ibox) const;
+	BBox Bound(BBox ibox, const bool storingGlobal2Local) const;
 
 	void ApplyTransform(const Transform &trans);
 

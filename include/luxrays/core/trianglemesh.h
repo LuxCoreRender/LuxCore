@@ -160,7 +160,7 @@ public:
 	virtual MeshType GetType() const { return TYPE_TRIANGLE_MOTION; }
 
 	BBox GetBBox() const {
-		return motionSystem.Bound(mesh->GetBBox());
+		return motionSystem.Bound(mesh->GetBBox(), true);
 	}
 	virtual Point GetVertex(const float time, const u_int vertIndex) const {
 		return motionSystem.Sample(time) * mesh->GetVertex(time, vertIndex);
