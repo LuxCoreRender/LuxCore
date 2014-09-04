@@ -50,7 +50,6 @@ void InterpolatedTransform_Sample(__global InterpolatedTransform *interpolatedTr
 		if (interpolatedTransform->hasTranslationZ)
 			result->m[2][3] = mix(interpolatedTransform->startT.Tz, interpolatedTransform->endT.Tz, le);
 
-		Matrix4x4_Invert(result);
 		return;
 	}
 
@@ -96,8 +95,6 @@ void InterpolatedTransform_Sample(__global InterpolatedTransform *interpolatedTr
 		result->m[2][3] = mix(interpolatedTransform->startT.Tz, interpolatedTransform->endT.Tz, le);
 	else
 		result->m[2][3] = interpolatedTransform->startT.Tz;
-
-	Matrix4x4_Invert(result);
 }
 
 void MotionSystem_Sample(__global MotionSystem *motionSystem, const float time,

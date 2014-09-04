@@ -23,7 +23,6 @@
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/scene.h"
 #include "luxcore/luxcore.h"
-#include "slg/sdl/lightdata/ArHosekSkyModelData.h"
 
 using namespace std;
 using namespace luxrays;
@@ -199,7 +198,11 @@ void PerspectiveCamera::UpdateFocus(const Scene *scene) {
 		
 		ray.mint = 0.f;
 		ray.maxt = (clipYon - clipHither) / ray.d.z;
-		ray *= camTrans[0].cameraToWorld;
+
+		if (motionSystem)
+			ray = motionSystem->Sample(0.f) * (camTrans[0].cameraToWorld * ray);
+		else
+			ray = camTrans[0].cameraToWorld * ray;
 		
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance
@@ -212,11 +215,17 @@ void PerspectiveCamera::UpdateFocus(const Scene *scene) {
 void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4],
 		const float eyeOffset,
 		const float screenOffsetX, const float screenOffsetY) {
-	// Shift from camera to eye position
-	const Point eyeOrig = orig + eyeOffset * luxrays::Normalize(x);
-	const Point eyeTarget = target + eyeOffset * luxrays::Normalize(x);
-	const Transform worldToCamera = LookAt(eyeOrig, eyeTarget, up);
-	trans->cameraToWorld = Inverse(worldToCamera);
+	// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
+	// identity matrix.
+	if (orig == target)
+		trans->cameraToWorld = Transform();
+	else {
+		// Shift from camera to eye position
+		const Point eyeOrig = orig + eyeOffset * luxrays::Normalize(x);
+		const Point eyeTarget = target + eyeOffset * luxrays::Normalize(x);
+		const Transform worldToCamera = LookAt(eyeOrig, eyeTarget, up);
+		trans->cameraToWorld = Inverse(worldToCamera);
+	}
 
 	// Compute projective camera transformations
 	trans->screenToCamera = Inverse(Perspective(fieldOfView, clipHither, clipYon));
@@ -334,9 +343,9 @@ bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 		ray->maxt * cosi > clipYon)))
 		return false;
 
-	Point pO(
-		Inverse((motionSystem) ? (motionSystem->Sample(ray->time) * camTrans[0].rasterToWorld) : camTrans[0].rasterToWorld) *
-		(ray->o + ((lensRadius > 0.f) ?	(ray->d * (focalDistance / cosi)) : ray->d)));
+	Point pO(Inverse(camTrans[0].rasterToWorld) * (ray->o + ((lensRadius > 0.f) ?	(ray->d * (focalDistance / cosi)) : ray->d)));
+	if (motionSystem)
+		pO *= motionSystem->Sample(ray->time);
 
 	*x = pO.x;
 	*y = filmHeight - 1 - pO.y;
@@ -382,7 +391,7 @@ Properties PerspectiveCamera::ToProperties() const {
 	Properties props;
 
 	props.Set(Camera::ToProperties());
-	
+
 	props.Set(Property("scene.camera.lookat.orig")(orig));
 	props.Set(Property("scene.camera.lookat.target")(target));
 	props.Set(Property("scene.camera.up")(up));
@@ -456,6 +465,7 @@ void PerspectiveCamera::OculusRiftBarrelPostprocess(const float x, const float y
 
 Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 	Point orig, target;
+	Vector up;
 	if (props.IsDefined("scene.camera.lookat")) {
 		SDL_LOG("WARNING: deprecated property scene.camera.lookat");
 
@@ -467,14 +477,20 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 		target.y = prop.Get<float>(4);
 		target.z = prop.Get<float>(5);
 	} else {
-		orig = props.Get(Property("scene.camera.lookat.orig")(0.f, 10.f, 0.f)).Get<Point>();
-		target = props.Get(Property("scene.camera.lookat.target")(0.f, 0.f, 0.f)).Get<Point>();
+		if (!props.IsDefined("scene.camera.lookat.orig")) {
+			// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
+			// identity matrix.
+			//
+			// I leave orig, target and up all set to (0.f, 0.f, 0.f)
+		} else {
+			orig = props.Get(Property("scene.camera.lookat.orig")(0.f, 10.f, 0.f)).Get<Point>();
+			target = props.Get(Property("scene.camera.lookat.target")(0.f, 0.f, 0.f)).Get<Point>();
+			up = props.Get(Property("scene.camera.up")(0.f, 0.f, 1.f)).Get<Vector>();
+		}
 	}
 
 	SDL_LOG("Camera position: " << orig);
 	SDL_LOG("Camera target: " << target);
-
-	const Vector up = props.Get(Property("scene.camera.up")(0.f, 0.f, 1.f)).Get<Vector>();
 
 	auto_ptr<PerspectiveCamera> camera;
 	if (props.IsDefined("scene.camera.screenwindow")) {

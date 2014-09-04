@@ -128,12 +128,12 @@ public:
 		device->FreeMemory(uniqueInvTransBuff->getInfo<CL_MEM_SIZE>());
 		delete uniqueInvTransBuff;
 		uniqueInvTransBuff = NULL;
-		leafsMotionSystemBuff = NULL;
 		device->FreeMemory(leafsMotionSystemBuff->getInfo<CL_MEM_SIZE>());
 		delete leafsMotionSystemBuff;
-		uniqueLeafsInterpolatedTransformBuff = NULL;
+		leafsMotionSystemBuff = NULL;
 		device->FreeMemory(uniqueLeafsInterpolatedTransformBuff->getInfo<CL_MEM_SIZE>());
 		delete uniqueLeafsInterpolatedTransformBuff;
+		uniqueLeafsInterpolatedTransformBuff = NULL;
 	}
 
 	void SetBuffers(cl::Buffer *m, cl::Buffer *l, cl::Buffer *q,
@@ -1014,7 +1014,7 @@ bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 			if (leafsTransform[leafIndex])
 				localRay = Ray(Inverse(*leafsTransform[leafIndex]) * ray);
 			else if (leafsMotionSystem[leafIndex])
-				localRay = Ray(Inverse(leafsMotionSystem[leafIndex]->Sample(ray.time)) * ray);
+				localRay = Ray(leafsMotionSystem[leafIndex]->Sample(ray.time) * ray);
 			else
 				localRay = ray;
 
