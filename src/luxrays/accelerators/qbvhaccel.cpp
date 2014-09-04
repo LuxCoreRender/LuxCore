@@ -221,6 +221,7 @@ public:
 			luxrays::ocl::KernelSource_ray_types +
 			luxrays::ocl::KernelSource_ray_funcs +
 			luxrays::ocl::KernelSource_bbox_types +
+			luxrays::ocl::KernelSource_qbvh_types +
 			luxrays::ocl::KernelSource_qbvh);
 		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
 		cl::Program program = cl::Program(oclContext, source);
