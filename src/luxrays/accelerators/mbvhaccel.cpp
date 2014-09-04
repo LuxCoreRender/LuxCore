@@ -737,30 +737,14 @@ bool MBVHAccel::Intersect(const Ray *ray, RayHit *rayHit) const {
 			} else {
 				// I have to check a leaf tree
 				currentTree = uniqueLeafs[node.bvhLeaf.leafIndex]->bvhTree;
-				// Transform the ray in the local coordinate system
-				Matrix4x4 tmpMat;
-				const Matrix4x4 *m = NULL;
-				if (node.bvhLeaf.transformIndex != NULL_INDEX)
-					m = &uniqueLeafsTransform[node.bvhLeaf.transformIndex]->mInv;
-				if (node.bvhLeaf.motionIndex != NULL_INDEX) {
-					tmpMat = uniqueLeafsMotionSystem[node.bvhLeaf.motionIndex]->Sample(ray->time).mInv;
-					m = &tmpMat;
-				}
-				
-				if (m) {
-					// Transform ray origin
-					currentRay.o.x = m->m[0][0] * ray->o.x + m->m[0][1] * ray->o.x + m->m[0][2] * ray->o.x + m->m[0][3];
-					currentRay.o.y = m->m[1][0] * ray->o.x + m->m[1][1] * ray->o.y + m->m[1][2] * ray->o.z + m->m[1][3];
-					currentRay.o.z = m->m[2][0] * ray->o.x + m->m[2][1] * ray->o.y + m->m[2][2] * ray->o.z + m->m[2][3];
-					const float w = m->m[3][0] * ray->o.x + m->m[3][1] * ray->o.y + m->m[3][2] * ray->o.z + m->m[3][3];
-					if (w != 1.f)
-						currentRay.o /= w;
 
-					// Transform ray direction
-					currentRay.d.x = m->m[0][0] * ray->d.x + m->m[0][1] * ray->d.y + m->m[0][2] * ray->d.z;
-					currentRay.d.y = m->m[1][0] * ray->d.x + m->m[1][1] * ray->d.y + m->m[1][2] * ray->d.z;
-					currentRay.d.z = m->m[2][0] * ray->d.x + m->m[2][1] * ray->d.y + m->m[2][2] * ray->d.z;
-				}
+				// Transform the ray in the local coordinate system
+				if (node.bvhLeaf.transformIndex != NULL_INDEX)
+					currentRay = Ray(Inverse(*uniqueLeafsTransform[node.bvhLeaf.transformIndex]) * (*ray));
+				else if (node.bvhLeaf.motionIndex != NULL_INDEX)
+					currentRay = Ray(uniqueLeafsMotionSystem[node.bvhLeaf.motionIndex]->Sample(ray->time) * (*ray));
+				else
+					currentRay = (*ray);
 
 				currentRay.maxt = rayHit->t;
 

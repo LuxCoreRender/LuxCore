@@ -258,13 +258,16 @@ public:
 	virtual bool HasAlphas() const { return ((ExtTriangleMesh *)mesh)->HasAlphas(); }
 
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
-		return Normalize(motionSystem.Sample(time) * ((ExtTriangleMesh *)mesh)->GetGeometryNormal(time, triIndex));
+		const Matrix4x4 m = motionSystem.Sample(time);
+		return Normalize(Transform(m) * ((ExtTriangleMesh *)mesh)->GetGeometryNormal(time, triIndex));
 	}
 	virtual Normal GetShadeNormal(const float time, const unsigned vertIndex) const {
-		return Normalize(motionSystem.Sample(time) * ((ExtTriangleMesh *)mesh)->GetShadeNormal(time, vertIndex));
+		const Matrix4x4 m = motionSystem.Sample(time);
+		return Normalize(Transform(m) * ((ExtTriangleMesh *)mesh)->GetShadeNormal(time, vertIndex));
 	}
 	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const {
-		return Normalize(motionSystem.Sample(time) * ((ExtTriangleMesh *)mesh)->GetShadeNormal(time, triIndex, vertIndex));
+		const Matrix4x4 m = motionSystem.Sample(time);
+		return Normalize(Transform(m) * ((ExtTriangleMesh *)mesh)->GetShadeNormal(time, triIndex, vertIndex));
 	}
 	virtual UV GetUV(const unsigned vertIndex) const { return ((ExtTriangleMesh *)mesh)->GetUV(vertIndex); }
 	virtual Spectrum GetColor(const unsigned vertIndex) const { return ((ExtTriangleMesh *)mesh)->GetColor(vertIndex); }
@@ -278,7 +281,8 @@ public:
 	}
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
-		return Normalize(motionSystem.Sample(time) * ((ExtTriangleMesh *)mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
+		const Matrix4x4 m = motionSystem.Sample(time);
+		return Normalize(Transform(m) * ((ExtTriangleMesh *)mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
 	}
 
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const {
