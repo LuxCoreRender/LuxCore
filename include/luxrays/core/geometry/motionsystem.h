@@ -42,7 +42,7 @@ public:
 	InterpolatedTransform(float st, float et,
 		const Transform &s, const Transform &e);
 
-	Transform Sample(float time) const;
+	Matrix4x4 Sample(const float time) const;
 
 	BBox Bound(BBox ibox) const;
 
@@ -106,7 +106,7 @@ public:
 		return times.back();
 	}
 
-	Transform Sample(float time) const;
+	Matrix4x4 Sample(const float time) const;
 
 	BBox Bound(BBox ibox) const;
 

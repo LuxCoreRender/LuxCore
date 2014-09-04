@@ -179,7 +179,7 @@ Transform Perspective(float fov, float n, float f) {
 			0, 0, 1, 0);
 	// Scale to canonical viewing volume
 	const float invTanAng = 1.f / tanf(Radians(fov) / 2.f);
-	return Scale(invTanAng, invTanAng, 1) * Transform(persp);
+	return Scale(invTanAng, invTanAng, 1) * Transform(persp, persp.Inverse());
 }
 
 }
