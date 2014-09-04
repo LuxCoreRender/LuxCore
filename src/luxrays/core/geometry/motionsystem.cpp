@@ -72,13 +72,16 @@ InterpolatedTransform::InterpolatedTransform(float st, float et,
 	isActive = hasTranslation || hasScale || hasRotation;
 }
 
-BBox InterpolatedTransform::Bound(BBox ibox) const {
+BBox InterpolatedTransform::Bound(BBox ibox, const bool storingGlobal2Local) const {
 	// Compute total bounding box by naive unions.
 	BBox tbox;
 	const float N = 1024.f;
 	for (float i = 0; i <= N; ++i) {
 		const float t = Lerp(i / N, startTime, endTime);
-		tbox = Union(tbox, Sample(t).Inverse() * ibox);
+		Matrix4x4 m = Sample(t);
+		if (storingGlobal2Local)
+			m = m.Inverse();
+		tbox = Union(tbox, m * ibox);
 	}
 	return tbox;
 }
@@ -330,13 +333,13 @@ Matrix4x4 MotionSystem::Sample(float time) const {
 	return interpolatedTransforms[index].Sample(time);
 }
 
-BBox MotionSystem::Bound(BBox ibox) const {;
+BBox MotionSystem::Bound(BBox ibox, const bool storingGlobal2Local) const {;
 	typedef vector<InterpolatedTransform>::const_iterator msys_cit;
 
 	BBox result;
 
 	for(msys_cit ms = interpolatedTransforms.begin(); ms != interpolatedTransforms.end(); ++ms)
-		result = Union(result, ms->Bound(ibox));
+		result = Union(result, ms->Bound(ibox, storingGlobal2Local));
 
 	return result;
 }
