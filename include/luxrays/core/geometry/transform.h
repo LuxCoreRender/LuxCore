@@ -50,9 +50,9 @@ public:
 	// Transform Public Methods
 	Transform() : m(Matrix4x4::MAT_IDENTITY), mInv(Matrix4x4::MAT_IDENTITY) { }
 
-	Transform(float mat[4][4]) : m(mat) { mInv = m.Inverse(); }
+	explicit Transform(float mat[4][4]) : m(mat) { mInv = m.Inverse(); }
 
-	Transform(const Matrix4x4 &mat) : m(mat) { mInv = m.Inverse(); }
+	explicit Transform(const Matrix4x4 &mat) : m(mat) { mInv = m.Inverse(); }
 
 	Transform(const Matrix4x4 &mat, const Matrix4x4 &minv) :
 		m(mat), mInv(minv) { }
