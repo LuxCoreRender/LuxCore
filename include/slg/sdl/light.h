@@ -772,7 +772,7 @@ private:
 	float ComputeY(const luxrays::Vector &w) const;
 
 	luxrays::Vector absoluteSunDir;
-	luxrays::RegularSPD *model[10];
+	luxrays::Spectrum model[10];
 	luxrays::Spectrum aTerm, bTerm, cTerm, dTerm, eTerm, fTerm,
 		gTerm, hTerm, iTerm, radianceTerm;
 };

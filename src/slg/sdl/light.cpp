@@ -1777,7 +1777,7 @@ static float ComputeCoefficient(const float elevation[6],
 		elevation[5] * parameters[5];
 }
 
-static float ComputeInterpolatedCoefficient(u_int index, u_int wavelength,
+static float ComputeInterpolatedCoefficient(u_int index, u_int component,
 	float turbidity, float albedo, const float elevation[6]) {
 	const u_int lowTurbidity = Floor2UInt(Clamp(turbidity - 1.f, 0.f, 9.f));
 	const u_int highTurbidity = min(lowTurbidity + 1U, 9U);
@@ -1785,15 +1785,15 @@ static float ComputeInterpolatedCoefficient(u_int index, u_int wavelength,
 
 	return Lerp(Clamp(albedo, 0.f, 1.f),
 		Lerp(turbidityLerp,
-			ComputeCoefficient(elevation, datasets[wavelength][0][lowTurbidity][index]),
-			ComputeCoefficient(elevation, datasets[wavelength][0][highTurbidity][index])),
+			ComputeCoefficient(elevation, datasetsRGB[component][0][lowTurbidity][index]),
+			ComputeCoefficient(elevation, datasetsRGB[component][0][highTurbidity][index])),
 		Lerp(turbidityLerp,
-			ComputeCoefficient(elevation, datasets[wavelength][1][lowTurbidity][index]),
-			ComputeCoefficient(elevation, datasets[wavelength][1][highTurbidity][index])));
+			ComputeCoefficient(elevation, datasetsRGB[component][1][lowTurbidity][index]),
+			ComputeCoefficient(elevation, datasetsRGB[component][1][highTurbidity][index])));
 }
 
-static void ComputeModel(float turbidity, float albedo[11], float elevation,
-	RegularSPD *skyModel[10]) {
+static void ComputeModel(float turbidity, const Spectrum &albedo, float elevation,
+	Spectrum skyModel[10]) {
 	const float normalizedElevation = powf(Max(0.f, elevation) * 2.f * INV_PI, 1.f / 3.f);
 
 	const float elevations[6] = {
@@ -1805,22 +1805,18 @@ static void ComputeModel(float turbidity, float albedo[11], float elevation,
 		powf(normalizedElevation, 5.f)
 	};
 
-	float values[11];
+	float values[3];
 	for (u_int i = 0; i < 10; ++i) {
-		for (u_int wl = 0; wl < 11; ++wl)
-			values[wl] = ComputeInterpolatedCoefficient(i, wl, turbidity, albedo[wl], elevations);
-		skyModel[i] = new RegularSPD(values, 320.f, 720.f, 11);
+		for (u_int comp = 0; comp < 3; ++comp)
+			values[comp] = ComputeInterpolatedCoefficient(i, comp, turbidity, albedo.c[comp], elevations);
+		skyModel[i] = Spectrum(values);
 	}
 }
 
 SkyLight2::SkyLight2() {
-	for (u_int i = 0; i < 10; ++i)
-		model[i] = NULL;
 }
 
 SkyLight2::~SkyLight2() {
-	for (u_int i = 0; i < 10; ++i)
-		delete model[i];
 }
 
 Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
@@ -1835,32 +1831,28 @@ Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
 		Pow(Spectrum(1.f) + iTerm * (iTerm - Spectrum(2.f * cosG)), 1.5f));
 	const Spectrum zenithTerm(hTerm * sqrtf(cosT));
 
-	// 0.00001f is an arbitrary scale factor to match LuxRender intensity output
-	return 0.00001f * (Spectrum(1.f) + aTerm * Exp(bTerm / (cosT + .01f))) *
+	// 683 is a scaling factor to convert W to lm
+	return 683.f * (Spectrum(1.f) + aTerm * Exp(bTerm / (cosT + .01f))) *
 		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
 }
 
 void SkyLight2::Preprocess() {
 	absoluteSunDir = Normalize(lightToWorld * localSunDir);
 
-	float albedo[11] = { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f };
-	for (u_int i = 0; i < 10; ++i) {
-		delete model[i];
-		model[i] = NULL;
-	}
+	const Spectrum albedo(0.f);
 
 	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
-	aTerm = ColorSystem::DefaultColorSystem.ToRGB(model[0]->ToXYZ());
-	bTerm = ColorSystem::DefaultColorSystem.ToRGB(model[1]->ToXYZ());
-	cTerm = ColorSystem::DefaultColorSystem.ToRGB(model[2]->ToXYZ());
-	dTerm = ColorSystem::DefaultColorSystem.ToRGB(model[3]->ToXYZ());
-	eTerm = ColorSystem::DefaultColorSystem.ToRGB(model[4]->ToXYZ());
-	fTerm = ColorSystem::DefaultColorSystem.ToRGB(model[5]->ToXYZ());
-	gTerm = ColorSystem::DefaultColorSystem.ToRGB(model[6]->ToXYZ());
-	hTerm = ColorSystem::DefaultColorSystem.ToRGB(model[7]->ToXYZ());
-	iTerm = ColorSystem::DefaultColorSystem.ToRGB(model[8]->ToXYZ());
-	radianceTerm = ColorSystem::DefaultColorSystem.ToRGB(model[9]->ToXYZ());
+	aTerm = model[0];
+	bTerm = model[1];
+	cTerm = model[2];
+	dTerm = model[3];
+	eTerm = model[4];
+	fTerm = model[5];
+	gTerm = model[6];
+	hTerm = model[7];
+	iTerm = model[8];
+	radianceTerm = model[9];
 }
 
 void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
