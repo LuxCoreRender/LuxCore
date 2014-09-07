@@ -1,7 +1,7 @@
 /*
 This source is published under the following 3-clause BSD license.
 
-Copyright (c) 2012, Lukas Hosek and Alexander Wilkie
+Copyright (c) 2012 - 2013, Lukas Hosek and Alexander Wilkie
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without 
@@ -31,36 +31,274 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /* ============================================================================
 
-This file is part of a sample implementation of the analytical skylight model
-presented in the SIGGRAPH 2012 paper
+This file is part of a sample implementation of the analytical skylight and
+solar radiance models presented in the SIGGRAPH 2012 paper
 
 
            "An Analytic Model for Full Spectral Sky-Dome Radiance"
 
-                                    by 
+and the 2013 IEEE CG&A paper
+
+       "Adding a Solar Radiance Function to the Hosek Skylight Model"
+
+                                   both by 
 
                        Lukas Hosek and Alexander Wilkie
                 Charles University in Prague, Czech Republic
 
 
-                        Version: 1.1, July 4th, 2012
+                        Version: 1.4a, February 22nd, 2013
                         
 Version history:
 
-1.1  The coefficients of the spectral model are now scaled so that the output 
-     is given in physical units: W / (m^-2 * sr * nm). Also, the output of the   
-     XYZ model is now no longer scaled to the range [0...1]. Instead, it is
-     the result of a simple conversion from spectral data via the CIE 2 degree
-     standard observer matching functions. Therefore, after multiplication 
-     with 683 lm / W, the Y channel now corresponds to luminance in lm.
+1.4a  February 22nd, 2013
+      Removed unnecessary and counter-intuitive solar radius parameters 
+      from the interface of the colourspace sky dome initialisation functions.
+
+1.4   February 11th, 2013
+      Fixed a bug which caused the relative brightness of the solar disc
+      and the sky dome to be off by a factor of about 6. The sun was too 
+      bright: this affected both normal and alien sun scenarios. The 
+      coefficients of the solar radiance function were changed to fix this.
+
+1.3   January 21st, 2013 (not released to the public)
+      Added support for solar discs that are not exactly the same size as
+      the terrestrial sun. Also added support for suns with a different
+      emission spectrum ("Alien World" functionality).
+
+1.2a  December 18th, 2012
+      Fixed a mistake and some inaccuracies in the solar radiance function
+      explanations found in ArHosekSkyModel.h. The actual source code is
+      unchanged compared to version 1.2.
+
+1.2   December 17th, 2012
+      Native RGB data and a solar radiance function that matches the turbidity
+      conditions were added.
+
+1.1   September 2012
+      The coefficients of the spectral model are now scaled so that the output
+      is given in physical units: W / (m^-2 * sr * nm). Also, the output of the
+      XYZ model is now no longer scaled to the range [0...1]. Instead, it is
+      the result of a simple conversion from spectral data via the CIE 2 degree
+      standard observer matching functions. Therefore, after multiplication
+      with 683 lm / W, the Y channel now corresponds to luminance in lm.
      
-1.0  Initial release (May 11th, 2012).
+1.0   May 11th, 2012
+      Initial release.
 
 
 Please visit http://cgg.mff.cuni.cz/projects/SkylightModelling/ to check if
 an updated version of this code has been published!
 
 ============================================================================ */
+
+
+/*
+
+This code is taken from ART, a rendering research system written in a
+mix of C99 / Objective C. Since ART is not a small system and is intended to 
+be inter-operable with other libraries, and since C does not have namespaces, 
+the structures and functions in ART all have to have somewhat wordy 
+canonical names that begin with Ar.../ar..., like those seen in this example.
+
+Usage information:
+==================
+
+
+Model initialisation
+--------------------
+
+A separate ArHosekSkyModelState has to be maintained for each spectral
+band you want to use the model for. So in a renderer with 'num_channels'
+bands, you would need something like
+
+    ArHosekSkyModelState  * skymodel_state[num_channels];
+
+You then have to allocate and initialise these states. In the following code
+snippet, we assume that 'albedo' is defined as
+
+    double  albedo[num_channels];
+
+with a ground albedo value between [0,1] for each channel. The solar elevation  
+is given in radians.
+
+    for ( unsigned int i = 0; i < num_channels; i++ )
+        skymodel_state[i] =
+            arhosekskymodelstate_alloc_init(
+                  turbidity,
+                  albedo[i],
+                  solarElevation
+                );
+
+Note that starting with version 1.3, there is also a second initialisation 
+function which generates skydome states for different solar emission spectra 
+and solar radii: 'arhosekskymodelstate_alienworld_alloc_init()'.
+
+See the notes about the "Alien World" functionality provided further down for a 
+discussion of the usefulness and limits of that second initalisation function.
+Sky model states that have been initialised with either function behave in a
+completely identical fashion during use and cleanup.
+
+Using the model to generate skydome samples
+-------------------------------------------
+
+Generating a skydome radiance spectrum "skydome_result" for a given location
+on the skydome determined via the angles theta and gamma works as follows:
+
+    double  skydome_result[num_channels];
+
+    for ( unsigned int i = 0; i < num_channels; i++ )
+        skydome_result[i] =
+            arhosekskymodel_radiance(
+                skymodel_state[i],
+                theta,
+                gamma,
+                channel_center[i]
+              );
+              
+The variable "channel_center" is assumed to hold the channel center wavelengths
+for each of the num_channels samples of the spectrum we are building.
+
+
+Cleanup after use
+-----------------
+
+After rendering is complete, the content of the sky model states should be
+disposed of via
+
+        for ( unsigned int i = 0; i < num_channels; i++ )
+            arhosekskymodelstate_free( skymodel_state[i] );
+
+
+CIE XYZ Version of the Model
+----------------------------
+
+Usage of the CIE XYZ version of the model is exactly the same, except that
+num_channels is of course always 3, and that ArHosekTristimSkyModelState and
+arhosek_tristim_skymodel_radiance() have to be used instead of their spectral
+counterparts.
+
+RGB Version of the Model
+------------------------
+
+The RGB version uses sRGB primaries with a linear gamma ramp. The same set of
+functions as with the XYZ data is used, except the model is initialized
+by calling arhosek_rgb_skymodelstate_alloc_init.
+
+Solar Radiance Function
+-----------------------
+
+For each position on the solar disc, this function returns the entire radiance 
+one sees - direct emission, as well as in-scattered light in the area of the 
+solar disc. The latter is important for low solar elevations - nice images of 
+the setting sun would not be possible without this. This is also the reason why 
+this function, just like the regular sky dome model evaluation function, needs 
+access to the sky dome data structures, as these provide information on 
+in-scattered radiance.
+
+CAVEAT #1: in this release, this function is only provided in spectral form!
+           RGB/XYZ versions to follow at a later date.
+
+CAVEAT #2: (fixed from release 1.3 onwards) 
+
+CAVEAT #3: limb darkening renders the brightness of the solar disc
+           inhomogeneous even for high solar elevations - only taking a single
+           sample at the centre of the sun will yield an incorrect power
+           estimate for the solar disc! Always take multiple random samples
+           across the entire solar disc to estimate its power!
+           
+CAVEAT #4: in this version, the limb darkening calculations still use a fairly
+           computationally expensive 5th order polynomial that was directly 
+           taken from astronomical literature. For the purposes of Computer
+           Graphics, this is needlessly accurate, though, and will be replaced 
+           by a cheaper approximation in a future release.
+
+"Alien World" functionality
+---------------------------
+
+The Hosek sky model can be used to roughly (!) predict the appearance of 
+outdoor scenes on earth-like planets, i.e. planets of a similar size and 
+atmospheric make-up. Since the spectral version of our model predicts sky dome 
+luminance patterns and solar radiance independently for each waveband, and 
+since the intensity of each waveband is solely dependent on the input radiance 
+from the star that the world in question is orbiting, it is trivial to re-scale 
+the wavebands to match a different star radiance.
+
+At least in theory, the spectral version of the model has always been capable 
+of this sort of thing, and the actual sky dome and solar radiance models were 
+actually not altered at all in this release. All we did was to add some support
+functionality for doing this more easily with the existing data and functions, 
+and to add some explanations.
+
+Just use 'arhosekskymodelstate_alienworld_alloc_init()' to initialise the sky
+model states (you will have to provide values for star temperature and solar 
+intensity compared to the terrestrial sun), and do everything else as you 
+did before.
+
+CAVEAT #1: we assume the emission of the star that illuminates the alien world 
+           to be a perfect blackbody emission spectrum. This is never entirely 
+           realistic - real star emission spectra are considerably more complex 
+           than this, mainly due to absorption effects in the outer layers of 
+           stars. However, blackbody spectra are a reasonable first assumption 
+           in a usage scenario like this, where 100% accuracy is simply not 
+           necessary: for rendering purposes, there are likely no visible 
+           differences between a highly accurate solution based on a more 
+           involved simulation, and this approximation.
+
+CAVEAT #2: we always use limb darkening data from our own sun to provide this
+           "appearance feature", even for suns of strongly different 
+           temperature. Which is presumably not very realistic, but (as with 
+           the unaltered blackbody spectrum from caveat #1) probably not a bad 
+           first guess, either. If you need more accuracy than we provide here,
+           please make inquiries with a friendly astro-physicst of your choice.
+
+CAVEAT #3: you have to provide a value for the solar intensity of the star 
+           which illuminates the alien world. For this, please bear in mind  
+           that there is very likely a comparatively tight range of absolute  
+           solar irradiance values for which an earth-like planet with an  
+           atmosphere like the one we assume in our model can exist in the  
+           first place!
+            
+           Too much irradiance, and the atmosphere probably boils off into 
+           space, too little, it freezes. Which means that stars of 
+           considerably different emission colour than our sun will have to be 
+           fairly different in size from it, to still provide a reasonable and 
+           inhabitable amount of irradiance. Red stars will need to be much 
+           larger than our sun, while white or blue stars will have to be 
+           comparatively tiny. The initialisation function handles this and 
+           computes a plausible solar radius for a given emission spectrum. In
+           terms of absolute radiometric values, you should probably not stray
+           all too far from a solar intensity value of 1.0.
+
+CAVEAT #4: although we now support different solar radii for the actual solar 
+           disc, the sky dome luminance patterns are *not* parameterised by 
+           this value - i.e. the patterns stay exactly the same for different 
+           solar radii! Which is of course not correct. But in our experience, 
+           solar discs up to several degrees in diameter (! - our own sun is 
+           half a degree across) do not cause the luminance patterns on the sky 
+           to change perceptibly. The reason we know this is that we initially 
+           used unrealistically large suns in our brute force path tracer, in 
+           order to improve convergence speeds (which in the beginning were 
+           abysmal). Later, we managed to do the reference renderings much 
+           faster even with realistically small suns, and found that there was 
+           no real difference in skydome appearance anyway. 
+           Conclusion: changing the solar radius should not be over-done, so  
+           close orbits around red supergiants are a no-no. But for the  
+           purposes of getting a fairly credible first impression of what an 
+           alien world with a reasonably sized sun would look like, what we are  
+           doing here is probably still o.k.
+
+HINT #1:   if you want to model the sky of an earth-like planet that orbits 
+           a binary star, just super-impose two of these models with solar 
+           intensity of ~0.5 each, and closely spaced solar positions. Light is
+           additive, after all. Tattooine, here we come... :-)
+
+           P.S. according to Star Wars canon, Tattooine orbits a binary
+           that is made up of a G and K class star, respectively. 
+           So ~5500K and ~4200K should be good first guesses for their 
+           temperature. Just in case you were wondering, after reading the
+           previous paragraph.
+*/
 
 
 /*
@@ -7182,6 +7420,1947 @@ const float datasets[11][2][10][10][6] = {
 },
 { // radiance
 0.00603161f, 0.02016534f, -0.05448075f, 0.1436689f, 0.297183f, 0.1639884f
+}
+}
+}
+}
+};
+
+const float datasetsRGB[3][2][10][10][6] = {
+{ // Red
+{ // albedo 0
+{ // turbidity 1
+{ // coefficient A
+-1.099459f, -1.169858f, -0.9665225f, -1.292508f, -0.9264666f, -1.139072f
+},
+{ // coefficient B
+-0.1335146f, -0.1832793f, -0.1403888f, -0.1299552f, -0.169678f, -0.1796056f
+},
+{ // coefficient C
+-4.083223f, 0.9694744f, 5.194457f, -2.071404f, 4.57407f, 1.923311f
+},
+{ // coefficient D
+5.919603f, 0.09495762f, -1.107607f, -0.04752482f, -0.4232936f, 6.788529f
+},
+{ // coefficient E
+-0.1104166f, -0.04738918f, -0.8135181f, 1.215598f, -7.575833f, -2.364389f
+},
+{ // coefficient F
+1.600158f, 0.2194171f, 4.969661f, -1.904179f, 5.079755f, -1.064041f
+},
+{ // coefficient G
+-1.326538e-06f, 0.1095749f, -0.2300508f, 0.3027985f, -0.2576343f, 0.171701f
+},
+{ // coefficient H
+4.917807f, 3.603604f, -2.48935f, 8.707768f, -4.506805f, 1.534681f
+},
+{ // coefficient I
+0.5127716f, 0.3815119f, 1.279158f, 0.06332446f, 0.6908129f, 0.501581f
+},
+{ // radiance
+1.962684f, 1.159831f, 4.450588f, 5.079633f, 4.437388f, 4.324573f
+}
+},
+{ // turbidity 2
+{ // coefficient A
+-1.107257f, -1.187337f, -0.9685321f, -1.252817f, -0.9459509f, -1.125092f
+},
+{ // coefficient B
+-0.1384411f, -0.1969013f, -0.1553308f, -0.05129949f, -0.2322133f, -0.179675f
+},
+{ // coefficient C
+-4.285744f, 0.8551048f, 4.732492f, -2.800433f, 4.375041f, 1.626399f
+},
+{ // coefficient D
+5.713157f, 0.05289708f, -1.178935f, -0.01295992f, -0.1712018f, 6.989743f
+},
+{ // coefficient E
+-0.1015992f, -0.07626406f, -0.7852791f, 1.308964f, -7.451681f, -2.406382f
+},
+{ // coefficient F
+1.372638f, 0.01733153f, 4.604492f, -2.204331f, 5.078019f, -0.9060383f
+},
+{ // coefficient G
+0.06555893f, 0.1779454f, -0.2666518f, 0.7276011f, -0.4223538f, 0.2961611f
+},
+{ // coefficient H
+5.127514f, 3.801038f, -2.367663f, 8.699265f, -4.595561f, 1.337715f
+},
+{ // coefficient I
+0.6550471f, 0.4742709f, 1.177527f, 0.1188388f, 1.074719f, 0.543814f
+},
+{ // radiance
+1.946487f, 1.287515f, 3.703696f, 8.782833f, 3.440437f, 5.160333f
+}
+},
+{ // turbidity 3
+{ // coefficient A
+-1.135338f, -1.13278f, -1.167176f, -1.042529f, -1.061598f, -1.07356f
+},
+{ // coefficient B
+-0.171616f, -0.1456214f, -0.2927225f, 0.04110823f, -0.2096143f, -0.2077964f
+},
+{ // coefficient C
+-1.499253f, -1.736672f, 5.727667f, -4.000629f, 3.803155f, 1.492052f
+},
+{ // coefficient D
+2.373491f, 1.756589f, -3.139244f, 4.362364f, -7.977069f, 16.26322f
+},
+{ // coefficient E
+-0.1654023f, -0.1087003f, -0.6425204f, 1.09054f, -3.63788f, -5.015304f
+},
+{ // coefficient F
+0.9566404f, 0.3757927f, 2.822634f, -1.338674f, 3.707671f, -0.4059889f
+},
+{ // coefficient G
+0.1113453f, 0.252507f, -0.1457812f, 0.8246964f, -0.1903128f, 0.2659782f
+},
+{ // coefficient H
+4.528473f, 7.178513f, -6.78708f, 10.95249f, -3.397953f, 0.639538f
+},
+{ // coefficient I
+0.6579439f, 0.5003814f, 1.017072f, 0.2912211f, 0.99715f, 0.5634436f
+},
+{ // radiance
+1.88217f, 1.335878f, 2.648641f, 13.58368f, 3.105473f, 5.907387f
+}
+},
+{ // turbidity 4
+{ // coefficient A
+-1.172794f, -1.238374f, -1.176923f, -1.003284f, -1.060017f, -1.081141f
+},
+{ // coefficient B
+-0.2111186f, -0.2670827f, -0.2574586f, 0.01943984f, -0.2037206f, -0.2123302f
+},
+{ // coefficient C
+-1.360013f, 0.3247678f, 2.304045f, -2.145066f, 2.483018f, 1.092275f
+},
+{ // coefficient D
+1.60408f, 0.5466311f, -2.797678f, 10.30924f, -4.595459f, 2.683841f
+},
+{ // coefficient E
+-0.08473723f, -0.7425952f, 1.464405f, -15.25413f, 6.526991f, -4.166938f
+},
+{ // coefficient F
+0.7217312f, 0.527644f, 1.998552f, -2.02301f, 4.031804f, -1.396582f
+},
+{ // coefficient G
+0.154803f, 0.02678026f, 0.2550559f, 0.5448699f, 0.1206513f, 0.4371205f
+},
+{ // coefficient H
+4.25701f, 5.484169f, -4.199772f, 8.159497f, -2.586527f, 1.030233f
+},
+{ // coefficient I
+0.6328974f, 0.6814734f, 0.7544892f, 0.5539148f, 0.7875752f, 0.6664862f
+},
+{ // radiance
+1.738159f, 1.624289f, -0.008786695f, 21.18253f, 2.770255f, 7.055672f
+}
+},
+{ // turbidity 5
+{ // coefficient A
+-1.222392f, -1.42461f, -1.130655f, -0.9739015f, -1.082178f, -1.063354f
+},
+{ // coefficient B
+-0.2651924f, -0.4710155f, -0.1358609f, -0.06674749f, -0.1974495f, -0.1727108f
+},
+{ // coefficient C
+-0.4625037f, -0.1826815f, 0.9171203f, -0.4768897f, 1.050245f, 0.9681592f
+},
+{ // coefficient D
+0.3521964f, 1.786277f, -4.660394f, 12.48589f, -4.792855f, 2.736077f
+},
+{ // coefficient E
+0.02148855f, -1.952442f, 6.251162f, -19.94688f, 8.663406f, -4.969269f
+},
+{ // coefficient F
+0.5078494f, 0.5277612f, 1.904529f, -2.353043f, 3.246969f, -0.836057f
+},
+{ // coefficient G
+0.179159f, -0.01773629f, 0.2639668f, 0.5885575f, 0.1556731f, 0.5994612f
+},
+{ // coefficient H
+3.852516f, 2.415874f, 1.85613f, 1.287251f, 0.8117442f, 1.024039f
+},
+{ // coefficient I
+0.5998216f, 0.6701272f, 0.822844f, 0.4830135f, 0.8050376f, 0.6786935f
+},
+{ // radiance
+1.571896f, 2.301786f, -4.028545f, 29.66806f, 1.630876f, 8.711031f
+}
+},
+{ // turbidity 6
+{ // coefficient A
+-1.261936f, -1.681088f, -0.9453001f, -1.086609f, -1.041259f, -1.063473f
+},
+{ // coefficient B
+-0.3053676f, -0.6971919f, 0.03460388f, -0.2029011f, -0.138879f, -0.1916051f
+},
+{ // coefficient C
+-0.4262222f, -0.1105652f, 0.6067038f, -0.639917f, 1.147331f, 0.6556979f
+},
+{ // coefficient D
+0.4000196f, 0.7437426f, -1.985128f, 6.926885f, 6.282086f, -0.003371891f
+},
+{ // coefficient E
+-0.02059388f, -0.6594399f, 3.457236f, -15.12189f, 3.679836f, -3.699664f
+},
+{ // coefficient F
+0.4721802f, 0.2254221f, 2.655483f, -3.793051f, 4.398314f, -1.926783f
+},
+{ // coefficient G
+0.1480028f, 0.08710195f, -0.01162354f, 0.945612f, -0.1355232f, 0.7371154f
+},
+{ // coefficient H
+3.505343f, 1.263913f, 3.304716f, 0.2222222f, 1.031134f, 1.179975f
+},
+{ // coefficient I
+0.6121337f, 0.5681865f, 1.00195f, 0.2893725f, 0.9273509f, 0.6367068f
+},
+{ // radiance
+1.475048f, 2.679086f, -6.311315f, 33.77896f, 2.140975f, 9.385283f
+}
+},
+{ // turbidity 7
+{ // coefficient A
+-1.33639f, -2.119878f, -0.7761432f, -1.118734f, -1.026437f, -1.069949f
+},
+{ // coefficient B
+-0.3778927f, -1.055472f, 0.2124336f, -0.3513815f, -0.08257946f, -0.2029607f
+},
+{ // coefficient C
+-0.7259477f, 0.5422052f, -0.6845184f, 0.5500918f, 0.3221701f, 0.5825042f
+},
+{ // coefficient D
+0.2270247f, 0.7826648f, -0.9812342f, 0.9449627f, 11.98372f, -0.002398595f
+},
+{ // coefficient E
+0.4627513f, -1.286065f, 4.347257f, -12.6207f, 1.55513f, -3.278335f
+},
+{ // coefficient F
+0.1366459f, 0.9517905f, 0.967198f, -1.82528f, 2.560304f, -1.349882f
+},
+{ // coefficient G
+0.2637347f, -0.1432358f, 0.377315f, 0.473126f, 0.1406465f, 0.7208433f
+},
+{ // coefficient H
+3.292059f, -0.2379816f, 5.789529f, -3.326892f, 2.912858f, 0.8505164f
+},
+{ // coefficient I
+0.4998211f, 0.5910513f, 0.9646598f, 0.3568768f, 0.8643181f, 0.6625391f
+},
+{ // radiance
+1.326174f, 3.378759f, -9.831444f, 39.42061f, 2.852702f, 10.82542f
+}
+},
+{ // turbidity 8
+{ // coefficient A
+-1.392309f, -2.713405f, -0.9588644f, -0.8028546f, -1.198326f, -1.013531f
+},
+{ // coefficient B
+-0.4454945f, -1.395112f, 0.024339f, -0.2473563f, -0.1804865f, -0.185906f
+},
+{ // coefficient C
+-0.5664f, 0.202923f, -1.527493f, 1.617898f, -0.3565414f, 0.5799857f
+},
+{ // coefficient D
+0.6283393f, 0.1877272f, -0.9632874f, 2.073591f, 4.0732f, 13.31883f
+},
+{ // coefficient E
+-0.3761727f, -0.3715859f, 5.496269f, -11.49446f, 1.662086f, -4.346873f
+},
+{ // coefficient F
+0.6949802f, -0.1652929f, 1.094931f, -0.8394131f, 1.23977f, -1.11382f
+},
+{ // coefficient G
+0.07748178f, 0.2385861f, 0.2004044f, 0.2726847f, 0.3367978f, 0.5275714f
+},
+{ // coefficient H
+3.192797f, -0.4150768f, 6.084554f, -4.634538f, 2.997402f, 0.8045177f
+},
+{ // coefficient I
+0.5968661f, 0.1375467f, 1.369604f, 0.1367293f, 0.9360383f, 0.6496373f
+},
+{ // radiance
+1.153344f, 3.967771f, -12.65181f, 41.95016f, 7.468239f, 12.2135f
+}
+},
+{ // turbidity 9
+{ // coefficient A
+-1.530103f, -2.415469f, -3.096796f, 0.2713904f, -1.45658f, -0.9860389f
+},
+{ // coefficient B
+-0.6107468f, -1.057499f, -1.465688f, 0.2852852f, -0.345596f, -0.2099564f
+},
+{ // coefficient C
+-0.3841771f, -0.4161968f, -1.199232f, 1.20209f, -0.06409257f, 0.294665f
+},
+{ // coefficient D
+1.881508f, -2.357548f, 4.567061f, -8.206784f, 16.67697f, -0.0035478f
+},
+{ // coefficient E
+-1.464807f, 0.6300296f, 3.26098f, -5.805762f, -2.311094f, -2.268313f
+},
+{ // coefficient F
+0.665469f, 0.6224915f, -0.9794907f, 1.804431f, -0.9771104f, -0.06205647f
+},
+{ // coefficient G
+-5.950797e-06f, 0.01545048f, 0.8950491f, -0.6090648f, 0.6759863f, 0.4705185f
+},
+{ // coefficient H
+2.738912f, 2.038561f, 2.049235f, -1.990902f, 1.245136f, 0.8657995f
+},
+{ // coefficient I
+0.8101012f, -0.1339415f, 1.331015f, 0.3288858f, 0.7911932f, 0.6856284f
+},
+{ // radiance
+0.9746081f, 4.051626f, -12.98454f, 37.54964f, 17.49232f, 14.20619f
+}
+},
+{ // turbidity 10
+{ // coefficient A
+-1.971736f, -1.589845f, -6.940173f, 1.293144f, -1.48888f, -1.060891f
+},
+{ // coefficient B
+-0.9414047f, -0.7797079f, -2.823963f, -0.001919778f, -0.2495496f, -0.4035829f
+},
+{ // coefficient C
+-0.3400557f, -0.558224f, -1.620848f, 1.644206f, -0.2377137f, 0.2823207f
+},
+{ // coefficient D
+1.468763f, -0.8137376f, 1.090696f, -0.8666967f, 11.67714f, -0.002369798f
+},
+{ // coefficient E
+-1.474284f, 0.5846617f, 2.39173f, -7.161953f, -0.8617124f, -1.876577f
+},
+{ // coefficient F
+0.5501062f, 0.1129459f, 1.370047f, -1.385018f, 1.053828f, -0.5950265f
+},
+{ // coefficient G
+-1.10975e-05f, -0.02658005f, 0.5890462f, -0.1505374f, 0.1992744f, 0.4241017f
+},
+{ // coefficient H
+2.35637f, 2.707248f, 1.7284f, -1.388643f, 0.3633564f, 0.3140802f
+},
+{ // coefficient I
+0.9001702f, -0.2112486f, 1.331253f, 0.2530122f, 0.8553304f, 0.6631669f
+},
+{ // radiance
+0.8448016f, 3.181809f, -8.757338f, 21.97962f, 35.24033f, 16.39549f
+}
+}
+},
+{ // albedo 1
+{ // turbidity 1
+{ // coefficient A
+-1.101204f, -1.154597f, -1.031588f, -1.159454f, -1.03594f, -1.096669f
+},
+{ // coefficient B
+-0.1351353f, -0.1923378f, -0.1546804f, -0.09546699f, -0.2021151f, -0.1558196f
+},
+{ // coefficient C
+-4.030882f, 0.8512132f, 5.266214f, -1.508146f, 4.719343f, 2.057553f
+},
+{ // coefficient D
+6.096353f, 0.2934895f, -0.949139f, -0.02031411f, -0.9019318f, 6.274495f
+},
+{ // coefficient E
+-0.1148599f, -0.06522777f, -0.7184867f, 1.040653f, -7.858046f, -2.678352f
+},
+{ // coefficient F
+1.606507f, 0.1389077f, 4.875626f, -2.333508f, 3.901234f, -1.814927f
+},
+{ // coefficient G
+-1.555474e-06f, 0.09091469f, -0.1911907f, 0.2540592f, -0.2233137f, 0.1550676f
+},
+{ // coefficient H
+4.436084f, 3.133307f, -2.865642f, 8.594981f, -4.344739f, 1.903276f
+},
+{ // coefficient I
+0.5973715f, 0.2108541f, 1.087895f, 0.0931677f, 0.6550733f, 0.4998989f
+},
+{ // radiance
+2.029623f, 1.364434f, 4.201529f, 5.415099f, 9.825839f, 10.63328f
+}
+},
+{ // turbidity 2
+{ // coefficient A
+-1.114209f, -1.149397f, -1.056121f, -1.125047f, -1.051444f, -1.093847f
+},
+{ // coefficient B
+-0.1473531f, -0.1981628f, -0.1456172f, -0.04003662f, -0.2804541f, -0.1436965f
+},
+{ // coefficient C
+-7.602914f, 4.914096f, 0.4272656f, 1.058457f, 3.364668f, 2.38478f
+},
+{ // coefficient D
+8.973685f, -3.498986f, 2.912649f, -3.462236f, 3.293787f, 5.78707f
+},
+{ // coefficient E
+-0.04980074f, -0.0625709f, -0.5501745f, 0.4395278f, -10.15741f, -2.445987f
+},
+{ // coefficient F
+1.289198f, 0.1667401f, 4.406542f, -2.395805f, 3.807407f, -1.311171f
+},
+{ // coefficient G
+0.08366906f, 0.104898f, -0.138768f, 0.5177589f, -0.3592377f, 0.2326563f
+},
+{ // coefficient H
+4.557987f, 2.284689f, 1.245555f, 4.866247f, -3.367415f, 1.158439f
+},
+{ // coefficient I
+0.6118757f, 0.5935965f, 0.9733011f, 0.4253189f, 0.7900825f, 0.5555416f
+},
+{ // radiance
+2.023126f, 1.494728f, 3.420413f, 9.072178f, 9.205157f, 11.86639f
+}
+},
+{ // turbidity 3
+{ // coefficient A
+-1.134824f, -1.143017f, -1.136801f, -1.063652f, -1.061015f, -1.106302f
+},
+{ // coefficient B
+-0.1680468f, -0.1565926f, -0.2907502f, 0.07808107f, -0.2859814f, -0.1697123f
+},
+{ // coefficient C
+-3.32562f, 0.3014687f, 3.682423f, -1.983678f, 4.223615f, 2.087196f
+},
+{ // coefficient D
+4.458596f, -0.1763027f, -0.4061202f, 0.3648078f, -2.290138f, 8.238929f
+},
+{ // coefficient E
+-0.1135063f, -0.03557925f, -0.8728159f, 2.102276f, -8.31401f, -2.992416f
+},
+{ // coefficient F
+1.1045f, -0.2342406f, 4.00151f, -3.06505f, 4.405718f, -1.821776f
+},
+{ // coefficient G
+0.07794544f, 0.2528705f, -0.1522202f, 0.8431951f, -0.4613627f, 0.3434859f
+},
+{ // coefficient H
+4.609952f, 5.884085f, -5.528713f, 10.3883f, -4.50291f, 0.7755179f
+},
+{ // coefficient I
+0.6854854f, 0.4750602f, 1.044847f, 0.2662834f, 1.008383f, 0.534119f
+},
+{ // radiance
+1.956307f, 1.648665f, 2.039712f, 14.30239f, 9.039526f, 13.30453f
+}
+},
+{ // turbidity 4
+{ // coefficient A
+-1.17111f, -1.20048f, -1.223587f, -0.9452673f, -1.134681f, -1.083237f
+},
+{ // coefficient B
+-0.2106304f, -0.2235733f, -0.3502622f, 0.1468459f, -0.3310951f, -0.1831394f
+},
+{ // coefficient C
+-1.614361f, 1.01439f, 1.699106f, -1.335034f, 3.571244f, 2.062654f
+},
+{ // coefficient D
+2.378103f, -1.174074f, 0.6724266f, 4.346628f, -2.208948f, 1.385424f
+},
+{ // coefficient E
+-0.1625969f, -0.444018f, 1.268567f, -12.85652f, 6.04158f, -5.00495f
+},
+{ // coefficient F
+0.8504483f, 0.2262406f, 2.135102f, -1.807046f, 3.107577f, -1.332669f
+},
+{ // coefficient G
+0.1059312f, 0.1665868f, 0.0008039374f, 0.8175243f, -0.3112127f, 0.3627352f
+},
+{ // coefficient H
+4.046256f, 5.461829f, -5.221111f, 9.301065f, -4.186351f, 0.332315f
+},
+{ // coefficient I
+0.6618227f, 0.567631f, 0.944569f, 0.3656798f, 0.9188333f, 0.6191181f
+},
+{ // radiance
+1.825053f, 1.985022f, -0.8036307f, 22.02493f, 9.415361f, 15.17659f
+}
+},
+{ // turbidity 5
+{ // coefficient A
+-1.211527f, -1.433017f, -1.08492f, -1.008242f, -1.103151f, -1.102235f
+},
+{ // coefficient B
+-0.2590617f, -0.4733592f, -0.1587903f, 0.00279303f, -0.2799598f, -0.2025061f
+},
+{ // coefficient C
+-0.1660874f, 0.1724445f, 0.8999585f, -0.3507469f, 2.525791f, 2.08566f
+},
+{ // coefficient D
+0.3627905f, 0.9953236f, -2.537516f, 10.283f, -4.255704f, 1.686787f
+},
+{ // coefficient E
+-0.1039258f, -1.874457f, 5.877859f, -20.80454f, 9.903388f, -5.010957f
+},
+{ // coefficient F
+0.4697924f, 0.4432099f, 2.014554f, -2.781026f, 3.722668f, -1.656458f
+},
+{ // coefficient G
+0.1671653f, 0.0171581f, 0.09689141f, 0.899509f, -0.3603941f, 0.4584029f
+},
+{ // coefficient H
+3.507497f, 2.339272f, 0.3177242f, 3.366951f, -1.303292f, -0.2751759f
+},
+{ // coefficient I
+0.6022506f, 0.644147f, 0.9030399f, 0.3473867f, 0.9369454f, 0.6184162f
+},
+{ // radiance
+1.650367f, 2.593201f, -4.469328f, 29.69817f, 9.410977f, 17.4485f
+}
+},
+{ // turbidity 6
+{ // coefficient A
+-1.25613f, -1.620114f, -0.9686204f, -1.089377f, -1.044681f, -1.133658f
+},
+{ // coefficient B
+-0.3104904f, -0.655267f, -0.03755647f, -0.1023062f, -0.2156857f, -0.2505101f
+},
+{ // coefficient C
+0.163935f, -0.2877157f, 1.46998f, -1.498891f, 3.230136f, 1.71784f
+},
+{ // coefficient D
+0.1315502f, 1.094371f, -3.103414f, 10.66455f, -0.5863862f, 0.008480428f
+},
+{ // coefficient E
+-0.7297583f, 0.2818914f, 2.856583f, -17.20184f, 6.09664f, -5.011789f
+},
+{ // coefficient F
+0.477848f, 0.369683f, 1.883209f, -2.759314f, 3.550019f, -1.740989f
+},
+{ // coefficient G
+0.1259265f, 0.09428521f, -0.05746099f, 1.061258f, -0.4255773f, 0.498343f
+},
+{ // coefficient H
+3.012108f, 1.450951f, 1.286383f, 2.910211f, -1.500033f, -0.2081829f
+},
+{ // coefficient I
+0.6202728f, 0.5681308f, 1.001751f, 0.2624701f, 0.9687696f, 0.6088641f
+},
+{ // radiance
+1.555202f, 2.962925f, -6.60817f, 33.29887f, 10.64559f, 18.50816f
+}
+},
+{ // turbidity 7
+{ // coefficient A
+-1.335366f, -2.004511f, -0.8714157f, -1.042618f, -1.099112f, -1.106985f
+},
+{ // coefficient B
+-0.3863319f, -0.9957121f, 0.1192051f, -0.2285793f, -0.1869868f, -0.2396881f
+},
+{ // coefficient C
+-0.5279971f, 1.250807f, -0.8486879f, 0.3620175f, 2.044065f, 1.809807f
+},
+{ // coefficient D
+0.3638324f, 0.01625025f, -0.3702497f, 2.983368f, 2.062964f, 8.523319f
+},
+{ // coefficient E
+0.3230699f, -0.3410754f, 1.818277f, -9.776844f, 1.265668f, -5.011788f
+},
+{ // coefficient F
+0.08339707f, 0.7858244f, 1.103427f, -1.971587f, 2.71013f, -1.590086f
+},
+{ // coefficient G
+0.2483293f, -0.09506757f, 0.2454866f, 0.6691674f, -0.1099443f, 0.3248449f
+},
+{ // coefficient H
+2.678646f, 0.02651876f, 3.841575f, -0.7901947f, 0.2179353f, -0.1003187f
+},
+{ // coefficient I
+0.4998346f, 0.5788643f, 0.984735f, 0.32132f, 0.9024108f, 0.6550606f
+},
+{ // radiance
+1.412478f, 3.439403f, -9.196616f, 36.85077f, 13.45341f, 20.03128f
+}
+},
+{ // turbidity 8
+{ // coefficient A
+-1.421285f, -2.611217f, -0.9881543f, -0.7544759f, -1.273719f, -1.046864f
+},
+{ // coefficient B
+-0.4767024f, -1.398846f, 0.04684782f, -0.2314808f, -0.218703f, -0.2247559f
+},
+{ // coefficient C
+-0.3885004f, 0.4527425f, -0.8616613f, 0.812577f, 1.401798f, 1.679449f
+},
+{ // coefficient D
+0.827459f, -0.5932142f, 0.8799807f, -0.7724135f, 5.231832f, 11.40057f
+},
+{ // coefficient E
+-0.3644229f, 0.2224617f, 4.00313f, -9.577645f, 0.7405093f, -4.948829f
+},
+{ // coefficient F
+0.6999513f, -0.5593581f, 1.739543f, -1.629433f, 1.775166f, -1.182664f
+},
+{ // coefficient G
+0.0519671f, 0.3389633f, -0.08098378f, 0.6790832f, -0.07269476f, 0.3241038f
+},
+{ // coefficient H
+2.578431f, -0.7767112f, 5.524802f, -4.193895f, 1.996087f, -0.2470012f
+},
+{ // coefficient I
+0.624631f, 0.06536004f, 1.499673f, -0.02526624f, 1.05745f, 0.61159f
+},
+{ // radiance
+1.25299f, 3.820805f, -11.15338f, 37.21593f, 20.14916f, 21.8232f
+}
+},
+{ // turbidity 9
+{ // coefficient A
+-1.514607f, -2.308414f, -3.230837f, 0.5149378f, -1.62187f, -0.9951701f
+},
+{ // coefficient B
+-0.598543f, -1.083797f, -1.43867f, 0.2754789f, -0.3192763f, -0.2550607f
+},
+{ // coefficient C
+-0.187761f, -0.1179959f, -0.9868286f, 1.040965f, 0.8786242f, 1.498952f
+},
+{ // coefficient D
+1.75693f, -1.728246f, 2.974393f, -4.501186f, 9.785565f, -0.002737197f
+},
+{ // coefficient E
+-1.314206f, 0.7784742f, 1.949339f, -3.399057f, -2.727652f, -3.101832f
+},
+{ // coefficient F
+0.611581f, 0.5494505f, -0.6337857f, 0.9661861f, 0.01903691f, -0.5921329f
+},
+{ // coefficient G
+-5.97046e-06f, 0.006203168f, 0.8160271f, -0.4736173f, 0.5521261f, 0.2864422f
+},
+{ // coefficient H
+2.412975f, 0.9326251f, 3.278606f, -4.037574f, 2.138764f, -0.4405218f
+},
+{ // coefficient I
+0.8124304f, -0.1419518f, 1.354373f, 0.2794847f, 0.8419871f, 0.663141f
+},
+{ // radiance
+1.091952f, 3.663027f, -10.3133f, 29.78985f, 32.96835f, 23.7545f
+}
+},
+{ // turbidity 10
+{ // coefficient A
+-1.902954f, -1.271627f, -7.647175f, 2.191403f, -1.932296f, -0.9471101f
+},
+{ // coefficient B
+-0.9056918f, -0.7193923f, -3.114129f, 0.342112f, -0.3814739f, -0.405264f
+},
+{ // coefficient C
+-0.206957f, -0.01136606f, -1.490128f, 1.44651f, 0.6245422f, 1.300174f
+},
+{ // coefficient D
+1.191499f, -0.1167951f, -0.5266488f, 2.170943f, 6.748294f, -0.003951536f
+},
+{ // coefficient E
+-1.092577f, 0.003286175f, 3.06309f, -7.768187f, -0.3060171f, -1.908284f
+},
+{ // coefficient F
+0.5849556f, -0.05262827f, 1.474262f, -1.471207f, 1.067747f, -0.5385721f
+},
+{ // coefficient G
+-9.649602e-06f, -0.02473874f, 0.5481458f, -0.1456708f, 0.2500671f, 0.2133578f
+},
+{ // coefficient H
+2.048407f, 1.716125f, 2.052174f, -1.753574f, -0.1252596f, -0.6250292f
+},
+{ // coefficient I
+0.9001527f, -0.2187133f, 1.353089f, 0.2310576f, 0.8614611f, 0.6658012f
+},
+{ // radiance
+0.9501691f, 2.664579f, -5.545167f, 12.81159f, 51.54768f, 25.74284f
+}
+}
+}
+},
+{ // Green
+{ // albedo 0
+{ // turbidity 1
+{ // coefficient A
+-1.14053f, -1.165117f, -1.169936f, -1.060246f, -1.089753f, -1.075481f
+},
+{ // coefficient B
+-0.1982747f, -0.1852955f, -0.3357429f, -0.1051633f, -0.2382167f, -0.1242391f
+},
+{ // coefficient C
+-7.51273f, 2.963684f, 1.911291f, 0.5013829f, 2.360312f, 1.425781f
+},
+{ // coefficient D
+8.403899f, -2.262274f, -0.2391074f, 2.832309f, -5.902562f, 8.810319f
+},
+{ // coefficient E
+-0.05699038f, -0.1571683f, -0.4791643f, -0.3707855f, -8.799894f, -2.922646f
+},
+{ // coefficient F
+0.9015907f, 0.6339974f, 1.446113f, 1.523131f, 1.377692f, 1.48652f
+},
+{ // coefficient G
+0.03392161f, 0.04977879f, -0.09178108f, 0.09163749f, -0.06131633f, 0.0327058f
+},
+{ // coefficient H
+4.772522f, 7.243307f, -4.700239f, 5.604183f, -1.415472f, 3.889783f
+},
+{ // coefficient I
+0.5111184f, 0.4220053f, 0.8096219f, 0.7208566f, 0.6124057f, 0.4999482f
+},
+{ // radiance
+1.59033f, 1.355401f, 1.151412f, 13.59116f, 5.857714f, 8.090833f
+}
+},
+{ // turbidity 2
+{ // coefficient A
+-1.149342f, -1.120531f, -1.226964f, -0.9664377f, -1.153358f, -1.05385f
+},
+{ // coefficient B
+-0.2076337f, -0.1513311f, -0.3516378f, 0.02767589f, -0.3126223f, -0.1330743f
+},
+{ // coefficient C
+-7.446587f, 2.735504f, 1.308298f, 0.1658235f, 2.078934f, 1.481738f
+},
+{ // coefficient D
+8.014559f, -2.417591f, -0.05097487f, 2.407439f, -5.857733f, 10.49485f
+},
+{ // coefficient E
+-0.04866227f, -0.1361114f, -0.4846783f, -0.1300304f, -8.659848f, -3.528854f
+},
+{ // coefficient F
+0.8203043f, 0.4296342f, 1.654619f, 0.9170958f, 1.758505f, 0.9142363f
+},
+{ // coefficient G
+0.06386483f, 0.09427488f, -0.113494f, 0.2742895f, -0.09616094f, 0.124488f
+},
+{ // coefficient H
+4.894198f, 8.171403f, -3.347854f, 6.642633f, -1.230863f, 2.644615f
+},
+{ // coefficient I
+0.5452051f, 0.4102448f, 1.131147f, 0.2550064f, 0.9663832f, 0.5001048f
+},
+{ // radiance
+1.55254f, 1.51004f, 0.1276413f, 16.04643f, 5.912162f, 8.350009f
+}
+},
+{ // turbidity 3
+{ // coefficient A
+-1.173687f, -1.213757f, -1.108794f, -1.060896f, -1.085145f, -1.077983f
+},
+{ // coefficient B
+-0.2360362f, -0.2589561f, -0.225987f, -0.0134669f, -0.2840715f, -0.1416633f
+},
+{ // coefficient C
+-3.741454f, 0.7132551f, 1.574179f, -0.7529656f, 2.088029f, 1.100848f
+},
+{ // coefficient D
+4.088507f, -0.4259327f, -0.3753731f, 1.711319f, -4.935097f, 10.15875f
+},
+{ // coefficient E
+-0.07528205f, -0.1980821f, -0.5984743f, -0.9792435f, -9.056542f, -2.943712f
+},
+{ // coefficient F
+0.6645237f, 0.3627815f, 1.659414f, 0.2022433f, 1.976149f, 0.5255135f
+},
+{ // coefficient G
+0.07718265f, 0.0466656f, -0.01681021f, 0.3826487f, -0.03912485f, 0.2164224f
+},
+{ // coefficient H
+4.65122f, 5.807984f, 0.6785219f, 5.725157f, -0.8636064f, 2.941143f
+},
+{ // coefficient I
+0.5586318f, 0.5847377f, 0.8647325f, 0.5290714f, 0.7452125f, 0.6699937f
+},
+{ // radiance
+1.470871f, 1.880464f, -1.865398f, 20.30808f, 5.471461f, 9.109834f
+}
+},
+{ // turbidity 4
+{ // coefficient A
+-1.223293f, -1.325342f, -1.113581f, -1.016063f, -1.099582f, -1.064357f
+},
+{ // coefficient B
+-0.2867444f, -0.4280991f, -0.1192133f, -0.1038138f, -0.2228607f, -0.1520775f
+},
+{ // coefficient C
+-1.624136f, 0.470549f, 0.4011536f, -0.2280391f, 1.332648f, 0.8207368f
+},
+{ // coefficient D
+1.668299f, 0.06926592f, 0.7011889f, 0.7898918f, 5.135188f, -0.001323565f
+},
+{ // coefficient E
+-0.09537589f, -0.4572587f, 0.2052842f, -11.27333f, 1.653152f, -5.009523f
+},
+{ // coefficient F
+0.5015947f, 0.5344144f, 0.9880724f, 0.2074545f, 1.41702f, 0.3946298f
+},
+{ // coefficient G
+0.1130741f, -0.02554192f, 0.01807533f, 0.5388182f, -0.1087532f, 0.4337902f
+},
+{ // coefficient H
+4.244812f, 3.093939f, 4.69016f, 1.364263f, 1.809275f, 2.593198f
+},
+{ // coefficient I
+0.5082152f, 0.6639401f, 0.857624f, 0.4660455f, 0.8080874f, 0.6719172f
+},
+{ // radiance
+1.356563f, 2.373866f, -4.653245f, 25.70922f, 5.686009f, 10.0948f
+}
+},
+{ // turbidity 5
+{ // coefficient A
+-1.278702f, -1.580069f, -0.9474023f, -1.129091f, -1.030884f, -1.075192f
+},
+{ // coefficient B
+-0.3512866f, -0.7095475f, 0.1173703f, -0.3287694f, -0.1137581f, -0.1627166f
+},
+{ // coefficient C
+-0.4511055f, -0.3198904f, 0.4881381f, -0.3524077f, 1.109855f, 0.351491f
+},
+{ // coefficient D
+0.389576f, 1.715748f, -2.618684f, 3.352892f, 8.082276f, 1.168164f
+},
+{ // coefficient E
+-0.2429672f, -1.185915f, 3.251661f, -14.16073f, 1.519214f, -4.255822f
+},
+{ // coefficient F
+0.4270577f, 0.4523161f, 1.213931f, -0.8485617f, 2.112433f, -0.6015348f
+},
+{ // coefficient G
+0.1135348f, -0.01026159f, -0.01736274f, 0.6560766f, -0.1592299f, 0.6265776f
+},
+{ // coefficient H
+3.71913f, 0.7927188f, 8.000768f, -2.820937f, 3.675905f, 2.884818f
+},
+{ // coefficient I
+0.4998867f, 0.553835f, 1.025998f, 0.3111303f, 0.8703367f, 0.6548384f
+},
+{ // radiance
+1.244232f, 2.851519f, -7.130942f, 29.93449f, 6.38212f, 11.14578f
+}
+},
+{ // turbidity 6
+{ // coefficient A
+-1.316017f, -1.731876f, -0.927368f, -1.099377f, -1.04842f, -1.063233f
+},
+{ // coefficient B
+-0.3889652f, -0.8493806f, 0.1380954f, -0.3325392f, -0.1227773f, -0.1560639f
+},
+{ // coefficient C
+-0.5030854f, 0.1194871f, -0.3302179f, 0.2501063f, 0.5845373f, 0.2840033f
+},
+{ // coefficient D
+0.4488704f, 2.002781f, -3.553265f, 2.613712f, 11.05869f, 0.8751565f
+},
+{ // coefficient E
+-0.31868f, -2.006547f, 4.633345f, -13.28142f, 0.03813151f, -3.41182f
+},
+{ // coefficient F
+0.4570763f, 0.4872233f, 0.9696729f, -0.5579527f, 1.330409f, -0.1436564f
+},
+{ // coefficient G
+0.08909201f, -0.02854606f, 0.08799775f, 0.4992081f, 0.01978131f, 0.584658f
+},
+{ // coefficient H
+3.659274f, 0.2662137f, 8.291129f, -3.504402f, 3.95943f, 2.899292f
+},
+{ // coefficient I
+0.5011746f, 0.4611629f, 1.094451f, 0.3022924f, 0.8396439f, 0.6799095f
+},
+{ // radiance
+1.173693f, 3.120604f, -8.491886f, 31.87393f, 7.290615f, 11.80066f
+}
+},
+{ // turbidity 7
+{ // coefficient A
+-1.376715f, -1.953391f, -1.012422f, -0.9706708f, -1.110611f, -1.048334f
+},
+{ // coefficient B
+-0.4541567f, -1.035869f, 0.07136451f, -0.288095f, -0.1789409f, -0.1614087f
+},
+{ // coefficient C
+-1.445491f, 1.690563f, -1.862534f, 1.107797f, 0.2108488f, 0.2475184f
+},
+{ // coefficient D
+1.569898f, -0.196469f, -0.7228653f, -2.731734f, 20.7143f, 0.02146938f
+},
+{ // coefficient E
+-0.1390627f, -0.7787096f, 0.1947997f, -8.445995f, -1.763174f, -2.983901f
+},
+{ // coefficient F
+0.555827f, 0.5799605f, 0.2091805f, 0.4296774f, 0.09554695f, 0.2538224f
+},
+{ // coefficient G
+0.04109877f, 0.02945626f, 0.06399233f, 0.5117648f, -0.02943103f, 0.560137f
+},
+{ // coefficient H
+3.349451f, 0.04217906f, 7.928994f, -3.824277f, 3.422079f, 2.461925f
+},
+{ // coefficient I
+0.5516123f, 0.2451373f, 1.290733f, 0.1761207f, 0.8815496f, 0.6777394f
+},
+{ // radiance
+1.091845f, 3.368888f, -9.722083f, 32.68508f, 10.32424f, 12.36508f
+}
+},
+{ // turbidity 8
+{ // coefficient A
+-1.393719f, -2.128663f, -1.618022f, -0.5669064f, -1.241724f, -1.02167f
+},
+{ // coefficient B
+-0.5002724f, -1.151182f, -0.376649f, -0.1481749f, -0.2519348f, -0.1667327f
+},
+{ // coefficient C
+-2.40894f, 2.923026f, -3.163544f, 2.071817f, -0.1908609f, 0.1789771f
+},
+{ // coefficient D
+2.680983f, -1.931838f, 1.611608f, -8.157422f, 29.52235f, -0.002178108f
+},
+{ // coefficient E
+-0.1362825f, -0.442617f, -0.3967476f, -5.988088f, -3.33366f, -2.641572f
+},
+{ // coefficient F
+0.7395067f, 0.2309983f, 0.393368f, 0.2387202f, -0.01837651f, -0.05641484f
+},
+{ // coefficient G
+-3.300343e-06f, -0.00548589f, 0.3006742f, 0.1447191f, 0.1022249f, 0.5303758f
+},
+{ // coefficient H
+3.260889f, 0.3279529f, 6.835177f, -4.296385f, 2.92932f, 2.138196f
+},
+{ // coefficient I
+0.8132057f, -0.2229467f, 1.613765f, 0.05011258f, 0.8867262f, 0.678035f
+},
+{ // radiance
+0.9858985f, 3.500541f, -10.26328f, 30.92956f, 16.10881f, 13.31222f
+}
+},
+{ // turbidity 9
+{ // coefficient A
+-1.669332f, -1.755806f, -3.720277f, 0.4724641f, -1.5256f, -0.9908649f
+},
+{ // coefficient B
+-0.7588708f, -0.8735348f, -1.73335f, 0.3209828f, -0.4897606f, -0.2008182f
+},
+{ // coefficient C
+-2.993557f, 3.258881f, -3.332272f, 2.051443f, -0.09891121f, 0.1605143f
+},
+{ // coefficient D
+3.17876f, -2.504785f, 1.515869f, -5.105574f, 23.46818f, -0.002463113f
+},
+{ // coefficient E
+-0.08066442f, -0.3300791f, 0.1734218f, -6.509139f, -2.278152f, -2.477349f
+},
+{ // coefficient F
+0.6544672f, 0.1180565f, 0.8011956f, -0.4232041f, 0.1681219f, -0.1218647f
+},
+{ // coefficient G
+-8.08988e-06f, -0.009315982f, 0.199544f, 0.2598931f, -0.04469389f, 0.4750121f
+},
+{ // coefficient H
+2.628924f, 1.785154f, 3.817666f, -2.151756f, 1.051f, 1.460813f
+},
+{ // coefficient I
+0.9001272f, -0.3205824f, 1.638502f, -0.00349391f, 0.9294666f, 0.6661364f
+},
+{ // radiance
+0.8864993f, 3.172888f, -8.68755f, 23.62161f, 26.21851f, 14.74967f
+}
+},
+{ // turbidity 10
+{ // coefficient A
+-2.122119f, -1.528158f, -6.524387f, 0.8886026f, -1.481997f, -1.010943f
+},
+{ // coefficient B
+-1.125475f, -0.9370249f, -2.673507f, -0.09681828f, -0.5897282f, -0.2075134f
+},
+{ // coefficient C
+-3.066599f, 2.567559f, -2.940472f, 1.430554f, 0.2659264f, 0.05066749f
+},
+{ // coefficient D
+3.145078f, -1.591439f, -0.6025609f, 4.993717f, 1.267239f, 14.70708f
+},
+{ // coefficient E
+-0.05411593f, -0.363446f, 0.7852067f, -6.071355f, -0.5741291f, -3.780501f
+},
+{ // coefficient F
+0.5133628f, 0.1763256f, 1.073499f, -0.6053986f, 0.05983011f, 0.07253223f
+},
+{ // coefficient G
+-7.823408e-06f, 0.001119624f, -0.03540435f, 0.5092997f, -0.2217312f, 0.4045458f
+},
+{ // coefficient H
+2.268448f, 1.811848f, 3.517416f, -1.27301f, -0.3016452f, 1.320164f
+},
+{ // coefficient I
+0.9001416f, -0.2637929f, 1.490466f, 0.07491329f, 0.926083f, 0.6559925f
+},
+{ // radiance
+0.7946973f, 2.189355f, -4.207953f, 9.399091f, 40.62849f, 16.81753f
+}
+}
+},
+{ // albedo 1
+{ // turbidity 1
+{ // coefficient A
+-1.129907f, -1.133821f, -1.176518f, -1.043563f, -1.081304f, -1.083774f
+},
+{ // coefficient B
+-0.1884011f, -0.1510781f, -0.3549902f, -0.07520975f, -0.2222253f, -0.1375469f
+},
+{ // coefficient C
+-8.04767f, 3.362822f, 1.729044f, 0.8750644f, 2.517638f, 1.685818f
+},
+{ // coefficient D
+9.035776f, -2.453381f, -0.2160966f, 2.510518f, -4.45382f, 5.63112f
+},
+{ // coefficient E
+-0.05539419f, -0.1463925f, -0.5075865f, 0.007584882f, -8.663691f, -3.100752f
+},
+{ // coefficient F
+0.8823349f, 0.4728708f, 1.675584f, 0.936125f, 0.8662558f, 0.4045941f
+},
+{ // coefficient G
+0.03197135f, 0.0595814f, -0.08906902f, 0.07889083f, -0.04802657f, 0.02346895f
+},
+{ // coefficient H
+4.839388f, 7.6363f, -5.386842f, 6.066644f, -0.8965449f, 3.390321f
+},
+{ // coefficient I
+0.5042822f, 0.4805162f, 0.5452218f, 0.5813108f, 0.4886656f, 0.5008309f
+},
+{ // radiance
+1.711696f, 1.657311f, 0.9328021f, 13.1788f, 15.06751f, 18.63556f
+}
+},
+{ // turbidity 2
+{ // coefficient A
+-1.143158f, -1.146773f, -1.151324f, -1.034258f, -1.096568f, -1.083304f
+},
+{ // coefficient B
+-0.2058334f, -0.1727385f, -0.3099303f, -0.007778759f, -0.2673169f, -0.1528265f
+},
+{ // coefficient C
+-9.660198f, 4.626048f, 0.4125596f, 0.7050094f, 2.575654f, 1.697727f
+},
+{ // coefficient D
+10.62394f, -4.684602f, 2.340752f, -0.8036369f, -0.8057121f, 2.503702f
+},
+{ // coefficient E
+-0.04434119f, -0.08307137f, -0.4214444f, 0.313857f, -8.884928f, -2.885296f
+},
+{ // coefficient F
+0.8607615f, 0.1619616f, 1.987375f, 0.2469452f, 1.41617f, -0.12985f
+},
+{ // coefficient G
+0.03177325f, 0.1484866f, -0.191341f, 0.355997f, -0.2091315f, 0.154887f
+},
+{ // coefficient H
+4.416481f, 7.572868f, -3.845978f, 7.485917f, -1.543494f, 2.479652f
+},
+{ // coefficient I
+0.5918162f, 0.2681126f, 1.337311f, 0.04790329f, 1.065445f, 0.5066496f
+},
+{ // radiance
+1.666968f, 1.849993f, -0.2088601f, 15.86653f, 14.8688f, 19.40719f
+}
+},
+{ // turbidity 3
+{ // coefficient A
+-1.165736f, -1.212422f, -1.070436f, -1.104879f, -1.048969f, -1.106145f
+},
+{ // coefficient B
+-0.2329945f, -0.254591f, -0.2163341f, -0.03013622f, -0.2655317f, -0.1601642f
+},
+{ // coefficient C
+-5.967964f, 2.418626f, 0.7098718f, 0.02976276f, 2.689426f, 1.544544f
+},
+{ // coefficient D
+6.705959f, -2.266104f, 0.7843075f, 1.069707f, -3.941038f, 7.388492f
+},
+{ // coefficient E
+-0.05931355f, -0.1102014f, -0.432393f, 0.141f, -9.506461f, -2.9246f
+},
+{ // coefficient F
+0.7485638f, 0.01363887f, 2.109823f, -0.488002f, 1.837119f, -0.4328453f
+},
+{ // coefficient G
+0.03913878f, 0.1055411f, -0.095897f, 0.4452288f, -0.1892124f, 0.1763161f
+},
+{ // coefficient H
+4.221591f, 5.648062f, -0.1985193f, 6.41859f, -1.562146f, 2.523111f
+},
+{ // coefficient I
+0.6183926f, 0.4557412f, 1.060428f, 0.3195986f, 0.9043414f, 0.5851902f
+},
+{ // radiance
+1.584846f, 2.170022f, -2.019597f, 19.70826f, 14.90684f, 20.45055f
+}
+},
+{ // turbidity 4
+{ // coefficient A
+-1.203666f, -1.340448f, -1.014554f, -1.137388f, -1.021816f, -1.126581f
+},
+{ // coefficient B
+-0.2776587f, -0.423059f, -0.116879f, -0.0985403f, -0.2344957f, -0.1874347f
+},
+{ // coefficient C
+-2.084286f, 0.3462849f, 0.9477794f, -0.2984893f, 2.463671f, 1.454154f
+},
+{ // coefficient D
+2.45084f, 0.4707607f, -1.061218f, 3.64782f, -7.240685f, 10.34398f
+},
+{ // coefficient E
+-0.08746613f, -0.2512626f, -0.419673f, -0.6585571f, -8.862697f, -3.237393f
+},
+{ // coefficient F
+0.5258507f, 0.1530746f, 2.058832f, -1.47918f, 2.514058f, -0.8654927f
+},
+{ // coefficient G
+0.07983316f, 0.02724218f, -0.05989624f, 0.6102932f, -0.2122768f, 0.2457248f
+},
+{ // coefficient H
+3.860055f, 3.035216f, 3.058168f, 3.265914f, -0.03313968f, 1.845769f
+},
+{ // coefficient I
+0.5486167f, 0.5876133f, 0.9763861f, 0.3480333f, 0.9028136f, 0.6002482f
+},
+{ // radiance
+1.469412f, 2.524017f, -4.197267f, 23.65249f, 16.64588f, 21.34477f
+}
+},
+{ // turbidity 5
+{ // coefficient A
+-1.263727f, -1.53001f, -0.9685659f, -1.113925f, -1.046864f, -1.10448f
+},
+{ // coefficient B
+-0.3439354f, -0.6879698f, 0.09480403f, -0.3112382f, -0.1215754f, -0.1940913f
+},
+{ // coefficient C
+-0.1786388f, 0.2380415f, 0.06076844f, 0.3954133f, 1.778308f, 1.343668f
+},
+{ // coefficient D
+0.3980166f, 1.608216f, -3.217561f, 5.105907f, 4.661489f, -0.001759206f
+},
+{ // coefficient E
+-0.3349517f, -1.682679f, 4.568074f, -14.56866f, 0.2565583f, -5.009204f
+},
+{ // coefficient F
+0.3825166f, 0.354636f, 1.069299f, -0.4917378f, 1.35368f, -0.4186951f
+},
+{ // coefficient G
+0.1029225f, -0.00391522f, 0.02083638f, 0.5289909f, -0.1175767f, 0.312571f
+},
+{ // coefficient H
+3.331096f, 0.4517655f, 7.301088f, -2.678374f, 3.415972f, 1.628183f
+},
+{ // coefficient I
+0.4998955f, 0.5128605f, 1.072165f, 0.3014709f, 0.8457746f, 0.6720408f
+},
+{ // radiance
+1.369714f, 2.843548f, -6.059031f, 26.34993f, 18.81361f, 22.32186f
+}
+},
+{ // turbidity 6
+{ // coefficient A
+-1.286902f, -1.712597f, -0.8807283f, -1.147253f, -1.03823f, -1.101026f
+},
+{ // coefficient B
+-0.3781238f, -0.8549112f, 0.1646097f, -0.3538199f, -0.1213475f, -0.1874907f
+},
+{ // coefficient C
+-0.08977253f, 0.4809286f, -0.4437898f, 0.6101836f, 1.547505f, 1.272667f
+},
+{ // coefficient D
+0.3545393f, 1.515398f, -3.188247f, 4.43778f, 5.893176f, 3.596524f
+},
+{ // coefficient E
+-0.4866515f, -2.212211f, 5.984417f, -15.59813f, 1.368738f, -5.007243f
+},
+{ // coefficient F
+0.3843664f, 0.2539029f, 1.334779f, -1.103222f, 1.663127f, -0.6352483f
+},
+{ // coefficient G
+0.08281675f, 0.02335997f, -0.04026975f, 0.6242039f, -0.137713f, 0.3048985f
+},
+{ // coefficient H
+3.122231f, -0.06089466f, 7.546431f, -3.091472f, 3.185279f, 1.931613f
+},
+{ // coefficient I
+0.5046991f, 0.4268444f, 1.175751f, 0.217429f, 0.8736453f, 0.6788844f
+},
+{ // radiance
+1.310477f, 2.984444f, -6.831686f, 26.8234f, 21.23267f, 22.59755f
+}
+},
+{ // turbidity 7
+{ // coefficient A
+-1.342753f, -1.937684f, -0.9302391f, -1.053631f, -1.083629f, -1.09395f
+},
+{ // coefficient B
+-0.4384971f, -1.066019f, 0.1486187f, -0.372705f, -0.1261405f, -0.2067455f
+},
+{ // coefficient C
+-1.213491f, 1.913336f, -1.603835f, 1.114117f, 1.229344f, 1.258035f
+},
+{ // coefficient D
+1.621399f, -0.7347719f, 0.1783713f, -0.9603286f, 11.27825f, 7.548645f
+},
+{ // coefficient E
+-0.1551441f, -0.5916167f, 1.100461f, -10.62469f, 0.131901f, -4.598387f
+},
+{ // coefficient F
+0.5614218f, 0.158759f, 1.174181f, -1.16214f, 1.624729f, -0.8944932f
+},
+{ // coefficient G
+0.02591739f, 0.1092568f, -0.1602361f, 0.7952797f, -0.2825898f, 0.3292634f
+},
+{ // coefficient H
+2.958967f, -0.6275002f, 7.868331f, -4.478765f, 3.661082f, 1.311304f
+},
+{ // coefficient I
+0.5782132f, 0.1599071f, 1.468971f, -0.04440862f, 1.036911f, 0.6291871f
+},
+{ // radiance
+1.222552f, 3.176523f, -7.731496f, 26.7176f, 24.84358f, 23.36863f
+}
+},
+{ // turbidity 8
+{ // coefficient A
+-1.385867f, -2.107367f, -1.475244f, -0.6644372f, -1.211687f, -1.063757f
+},
+{ // coefficient B
+-0.5068139f, -1.175639f, -0.2833055f, -0.2549735f, -0.1653494f, -0.2037563f
+},
+{ // coefficient C
+-1.48649f, 2.313241f, -2.085824f, 1.600273f, 0.83934f, 1.117207f
+},
+{ // coefficient D
+1.969049f, -1.001653f, 1.192563f, -8.589034f, 27.92988f, -0.001252806f
+},
+{ // coefficient E
+-0.1698025f, -0.4843139f, -0.76452f, -6.144718f, -3.395461f, -3.33233f
+},
+{ // coefficient F
+0.6629167f, 0.1124485f, 0.8380081f, -0.7599731f, 0.9933752f, -0.6971409f
+},
+{ // coefficient G
+-5.289365e-06f, 3.901494e-05f, 0.220358f, 0.289837f, -0.03976877f, 0.3388719f
+},
+{ // coefficient H
+2.760315f, -0.3502469f, 7.157885f, -5.770923f, 3.776659f, 1.311398f
+},
+{ // coefficient I
+0.8644368f, -0.320478f, 1.753702f, -0.09656242f, 0.9546526f, 0.6635171f
+},
+{ // radiance
+1.115781f, 3.130635f, -7.581744f, 23.36531f, 31.71048f, 24.13859f
+}
+},
+{ // turbidity 9
+{ // coefficient A
+-1.678889f, -1.692144f, -3.676795f, 0.5424542f, -1.553849f, -1.02065f
+},
+{ // coefficient B
+-0.7992295f, -0.880425f, -1.719207f, 0.3263528f, -0.457686f, -0.2215797f
+},
+{ // coefficient C
+-2.421687f, 3.060895f, -2.534697f, 1.551055f, 0.9324676f, 1.009774f
+},
+{ // coefficient D
+2.871029f, -2.000009f, 1.005285f, -3.841058f, 19.50982f, -0.002056855f
+},
+{ // coefficient E
+-0.07662842f, -0.3183563f, 0.1550407f, -6.598996f, -2.344516f, -2.740338f
+},
+{ // coefficient F
+0.6046208f, 0.08385862f, 1.07291f, -1.201779f, 1.12102f, -0.8122355f
+},
+{ // coefficient G
+-7.598099e-06f, -0.006326713f, 0.1318094f, 0.3530669f, -0.1221537f, 0.3328967f
+},
+{ // coefficient H
+2.002314f, 1.206639f, 3.717018f, -2.542945f, 0.7285496f, 0.8982766f
+},
+{ // coefficient I
+0.9001307f, -0.3369967f, 1.689191f, -0.06482523f, 0.9582816f, 0.6594676f
+},
+{ // radiance
+1.013181f, 2.699342f, -5.602709f, 15.00158f, 42.17613f, 25.15957f
+}
+},
+{ // turbidity 10
+{ // coefficient A
+-2.24736f, -1.248499f, -7.004119f, 1.434882f, -1.559053f, -1.044436f
+},
+{ // coefficient B
+-1.221267f, -0.8442718f, -2.927978f, 0.09114639f, -0.5502302f, -0.2360719f
+},
+{ // coefficient C
+-3.072346f, 3.062611f, -2.649852f, 1.170089f, 1.200396f, 0.7054471f
+},
+{ // coefficient D
+3.385139f, -2.020314f, 0.7971894f, 0.03512808f, 13.47741f, -0.002904518f
+},
+{ // coefficient E
+-0.04387559f, -0.2815341f, 0.5466893f, -5.861915f, -2.344397f, -2.092829f
+},
+{ // coefficient F
+0.5084887f, 0.05254745f, 1.442667f, -1.411843f, 0.8868907f, -0.5119668f
+},
+{ // coefficient G
+-7.418833e-06f, 0.003345008f, -0.06063912f, 0.5400486f, -0.3292661f, 0.4174861f
+},
+{ // coefficient H
+1.750107f, 1.433225f, 2.806194f, -0.7746522f, -1.362105f, 0.9687435f
+},
+{ // coefficient I
+0.9001401f, -0.2835911f, 1.547429f, 0.02386984f, 0.9217826f, 0.6588427f
+},
+{ // radiance
+0.8976323f, 1.726948f, -1.29612f, 1.183675f, 55.03215f, 26.43066f
+}
+}
+}
+},
+{ // Blue
+{ // albedo 0
+{ // turbidity 1
+{ // coefficient A
+-1.372629f, -1.523025f, -1.035567f, -1.271086f, -0.9712598f, -1.087457f
+},
+{ // coefficient B
+-0.4905585f, -0.6497084f, -0.0747874f, -0.558819f, -0.07033926f, -0.1888896f
+},
+{ // coefficient C
+-41.00789f, 6.249857f, 0.922103f, 0.6908023f, 0.9167274f, 0.8156686f
+},
+{ // coefficient D
+41.22169f, -5.662543f, -2.140047f, 2.096832f, -0.9502097f, 0.3101712f
+},
+{ // coefficient E
+-0.00738936f, -0.01908402f, -0.02374146f, -0.2453967f, 0.3004684f, -2.155419f
+},
+{ // coefficient F
+0.4839359f, 0.551281f, 0.3795517f, 1.410648f, 0.4547054f, 1.422205f
+},
+{ // coefficient G
+0.006474757f, -2.181049e-05f, -0.01769134f, 0.04475036f, -0.05929017f, 0.09692261f
+},
+{ // coefficient H
+3.471755f, 2.507663f, 7.479831f, -4.719115f, 5.266196f, 3.122404f
+},
+{ // coefficient I
+0.5092936f, 0.4339598f, 0.7729303f, 0.5741186f, 0.7204135f, 0.499943f
+},
+{ // radiance
+0.9926518f, 1.999494f, -4.136109f, 18.5627f, 13.51028f, 13.90238f
+}
+},
+{ // turbidity 2
+{ // coefficient A
+-1.42528f, -1.688557f, -0.8664152f, -1.319763f, -0.9706008f, -1.08533f
+},
+{ // coefficient B
+-0.5413508f, -0.8070865f, 0.07869125f, -0.5985323f, -0.05914059f, -0.1956105f
+},
+{ // coefficient C
+-34.54883f, 7.018459f, -0.5236535f, 1.253918f, 0.569315f, 0.8019605f
+},
+{ // coefficient D
+34.81142f, -6.244574f, -1.21896f, 1.914706f, -1.175362f, 0.5338101f
+},
+{ // coefficient E
+-0.008686975f, -0.02149341f, -0.02059093f, -0.3216739f, 0.5221644f, -3.423464f
+},
+{ // coefficient F
+0.4914268f, 0.3993971f, 0.6684898f, 0.9011213f, 0.7518213f, 1.110444f
+},
+{ // coefficient G
+-2.479243e-06f, 0.01252502f, -0.05584112f, 0.1324845f, -0.08247655f, 0.1507923f
+},
+{ // coefficient H
+3.239879f, 1.630662f, 8.602299f, -5.252749f, 5.875635f, 2.864942f
+},
+{ // coefficient I
+0.6094201f, 0.109786f, 1.410496f, 0.06231252f, 0.9850863f, 0.4999481f
+},
+{ // radiance
+0.9634366f, 2.119694f, -4.614523f, 19.19701f, 13.76644f, 14.18731f
+}
+},
+{ // turbidity 3
+{ // coefficient A
+-1.431967f, -1.801361f, -0.7905357f, -1.308575f, -0.9829872f, -1.08713f
+},
+{ // coefficient B
+-0.5478935f, -0.9315889f, 0.1451332f, -0.5539232f, -0.08183048f, -0.2038013f
+},
+{ // coefficient C
+-32.86288f, 5.391756f, -0.1605661f, 0.9184133f, 0.4464556f, 0.7260801f
+},
+{ // coefficient D
+33.05288f, -4.588592f, -1.592174f, 2.011479f, -1.442716f, 0.9164376f
+},
+{ // coefficient E
+-0.008380797f, -0.02040076f, 0.0004561348f, -0.3842472f, 1.029641f, -5.006183f
+},
+{ // coefficient F
+0.477205f, 0.4144684f, 0.3380323f, 1.432274f, -0.06991617f, 1.511271f
+},
+{ // coefficient G
+-3.044274e-06f, 0.01814534f, -0.07770275f, 0.1637153f, 0.008702356f, 0.1257134f
+},
+{ // coefficient H
+3.289973f, 1.051795f, 8.775384f, -4.408856f, 5.706417f, 2.715439f
+},
+{ // coefficient I
+0.5976303f, 0.1145651f, 1.489512f, 0.05272957f, 0.9116452f, 0.6201652f
+},
+{ // radiance
+0.9446537f, 2.17161f, -4.915556f, 19.1824f, 15.37135f, 14.0053f
+}
+},
+{ // turbidity 4
+{ // coefficient A
+-1.448662f, -2.061772f, -0.6413755f, -1.304871f, -1.001104f, -1.111552f
+},
+{ // coefficient B
+-0.5799075f, -1.14519f, 0.1780425f, -0.3975581f, -0.1994801f, -0.2487204f
+},
+{ // coefficient C
+-28.33268f, 7.918478f, -2.412919f, 1.219002f, 0.3676742f, 0.7410842f
+},
+{ // coefficient D
+28.58023f, -7.212525f, 1.064484f, 0.7285178f, -1.409737f, 1.703749f
+},
+{ // coefficient E
+-0.009134061f, -0.0202076f, -0.01949986f, -0.2710105f, 0.2901555f, -5.007855f
+},
+{ // coefficient F
+0.4404783f, 0.2962715f, 0.6769741f, 0.7779727f, 0.250694f, 1.057763f
+},
+{ // coefficient G
+-2.709026e-06f, 0.0468967f, -0.175276f, 0.3247139f, 0.002468899f, 0.1354511f
+},
+{ // coefficient H
+3.029357f, 0.8517209f, 7.262714f, -0.8818168f, 3.398923f, 2.088715f
+},
+{ // coefficient I
+0.5540071f, 0.2334587f, 1.325869f, 0.1839517f, 0.8584645f, 0.6600013f
+},
+{ // radiance
+0.9073074f, 2.330536f, -5.577596f, 19.61615f, 16.88365f, 14.46955f
+}
+},
+{ // turbidity 5
+{ // coefficient A
+-1.547227f, -2.04389f, -0.904072f, -1.000013f, -1.171332f, -1.068667f
+},
+{ // coefficient B
+-0.6679466f, -1.149081f, -0.08274472f, -0.1010774f, -0.3768188f, -0.232633f
+},
+{ // coefficient C
+-18.61465f, 2.304118f, -0.2555676f, 0.3699166f, 0.3701377f, 0.6725059f
+},
+{ // coefficient D
+18.84045f, -1.715757f, -0.6326215f, 0.8774526f, -1.470757f, 2.243733f
+},
+{ // coefficient E
+-0.0124221f, -0.02433628f, -0.0277088f, -0.3042007f, 0.5525942f, -4.61437f
+},
+{ // coefficient F
+0.4157339f, 0.2816836f, 0.6676024f, 0.6951053f, 0.02991456f, 1.033677f
+},
+{ // coefficient G
+-2.432805e-06f, 0.07185458f, -0.2513532f, 0.4361813f, 0.01581823f, 0.1376291f
+},
+{ // coefficient H
+2.812423f, 1.06486f, 5.903839f, 0.6793421f, 2.365233f, 2.013334f
+},
+{ // coefficient I
+0.5446957f, 0.2706789f, 1.241452f, 0.2573892f, 0.8214514f, 0.6865304f
+},
+{ // radiance
+0.8739124f, 2.388682f, -5.842995f, 19.23265f, 18.87735f, 14.85698f
+}
+},
+{ // turbidity 6
+{ // coefficient A
+-1.592991f, -2.271349f, -0.636862f, -1.177925f, -1.0785f, -1.108028f
+},
+{ // coefficient B
+-0.7246948f, -1.280884f, -0.007436052f, -0.09628114f, -0.3801779f, -0.2596892f
+},
+{ // coefficient C
+-25.98204f, 6.308739f, -2.230026f, 0.3051152f, 0.4788906f, 0.5162202f
+},
+{ // coefficient D
+26.2196f, -5.75835f, 1.640997f, -0.03749544f, -0.4795969f, 1.557081f
+},
+{ // coefficient E
+-0.008365176f, -0.01977049f, -0.01548497f, -0.2713209f, 0.5977621f, -4.265039f
+},
+{ // coefficient F
+0.4207571f, 0.3671835f, 0.3145331f, 1.164226f, -0.4488535f, 1.182535f
+},
+{ // coefficient G
+-2.742772e-06f, 0.06698038f, -0.2492644f, 0.4559969f, 0.03386874f, 0.1563762f
+},
+{ // coefficient H
+2.623735f, 1.150597f, 5.083843f, 2.175429f, 1.538143f, 2.095084f
+},
+{ // coefficient I
+0.587319f, 0.1759218f, 1.260215f, 0.2874284f, 0.8062054f, 0.6883383f
+},
+{ // radiance
+0.8563688f, 2.391534f, -5.769133f, 18.28709f, 20.97209f, 14.69587f
+}
+},
+{ // turbidity 7
+{ // coefficient A
+-1.668427f, -2.156175f, -1.117051f, -0.744484f, -1.273036f, -1.084192f
+},
+{ // coefficient B
+-0.7908511f, -1.220004f, -0.4101627f, 0.2312078f, -0.5275562f, -0.2936753f
+},
+{ // coefficient C
+-27.7969f, 3.585732f, -0.846373f, -0.5393724f, 0.4902512f, 0.4719432f
+},
+{ // coefficient D
+27.99746f, -3.235988f, 0.7671472f, 0.1574213f, -0.04498436f, 1.384436f
+},
+{ // coefficient E
+-0.007186935f, -0.01086239f, -0.02226609f, -0.1763914f, 0.4339366f, -3.257789f
+},
+{ // coefficient F
+0.3757766f, 0.1846143f, 0.8574943f, 0.2751692f, 0.2386682f, 0.6119543f
+},
+{ // coefficient G
+-3.326858e-06f, 0.1046017f, -0.3434124f, 0.55642f, 0.02380879f, 0.1681884f
+},
+{ // coefficient H
+2.563421f, 1.234427f, 4.475715f, 2.217672f, 1.413444f, 1.650441f
+},
+{ // coefficient I
+0.5439687f, 0.2842191f, 1.154824f, 0.3483932f, 0.7855923f, 0.6936631f
+},
+{ // radiance
+0.8270533f, 2.34279f, -5.558071f, 16.84993f, 23.56498f, 15.05975f
+}
+},
+{ // turbidity 8
+{ // coefficient A
+-1.84849f, -2.300008f, -1.483705f, -0.5348005f, -1.320401f, -1.10104f
+},
+{ // coefficient B
+-0.951267f, -1.252335f, -0.8547575f, 0.3982733f, -0.6043247f, -0.3420019f
+},
+{ // coefficient C
+-30.05251f, -1.218876f, -0.7797146f, -0.4071573f, 0.3019196f, 0.3775661f
+},
+{ // coefficient D
+30.24315f, 1.49373f, 0.6447971f, 0.3265569f, -0.07732911f, 1.769338f
+},
+{ // coefficient E
+-0.005635304f, -0.0061071f, -0.02678052f, -0.08658789f, 0.4768381f, -2.990515f
+},
+{ // coefficient F
+0.344778f, 0.0797486f, 1.091263f, -0.2370892f, 0.6745764f, 0.1649529f
+},
+{ // coefficient G
+-2.782999e-06f, 0.1023449f, -0.3344889f, 0.5369097f, 0.03694098f, 0.1970125f
+},
+{ // coefficient H
+2.309422f, 1.505934f, 3.830416f, 1.478279f, 1.158234f, 1.453355f
+},
+{ // coefficient I
+0.5643559f, 0.2360948f, 1.189425f, 0.3143303f, 0.8169056f, 0.6759757f
+},
+{ // radiance
+0.7908339f, 2.190341f, -4.852571f, 13.74862f, 28.06846f, 15.48444f
+}
+},
+{ // turbidity 9
+{ // coefficient A
+-2.251946f, -1.867834f, -3.398629f, 0.5708381f, -1.705909f, -1.012865f
+},
+{ // coefficient B
+-1.229349f, -0.9531252f, -2.180862f, 0.940603f, -0.8517224f, -0.3495551f
+},
+{ // coefficient C
+-32.71808f, -12.29365f, 2.335213f, -0.6890113f, 0.113116f, 0.3369038f
+},
+{ // coefficient D
+32.83114f, 12.69149f, -3.382823f, 2.746233f, -2.141434f, 3.724205f
+},
+{ // coefficient E
+-0.004252027f, -0.006844772f, -0.008613985f, -0.05772068f, 0.4274043f, -3.089586f
+},
+{ // coefficient F
+0.3372289f, 0.1185107f, 0.8431602f, 0.1096005f, 0.33976f, 0.1266964f
+},
+{ // coefficient G
+-3.001937e-06f, 0.07539587f, -0.2393567f, 0.3491978f, 0.178649f, 0.146179f
+},
+{ // coefficient H
+2.154046f, 1.846381f, 3.11246f, 0.7281453f, 0.9026101f, 1.170199f
+},
+{ // coefficient I
+0.5842674f, 0.1899412f, 1.218556f, 0.3212049f, 0.78828f, 0.6931052f
+},
+{ // radiance
+0.7403619f, 1.783998f, -2.983854f, 7.622563f, 35.0761f, 16.15805f
+}
+},
+{ // turbidity 10
+{ // coefficient A
+-2.890318f, -1.956022f, -5.612198f, 0.8353756f, -1.524329f, -1.070371f
+},
+{ // coefficient B
+-1.665573f, -1.0629f, -3.101371f, 0.4855943f, -0.7388547f, -0.4207858f
+},
+{ // coefficient C
+-34.93756f, -19.19714f, 4.098034f, -1.243589f, 0.3259025f, 0.1739862f
+},
+{ // coefficient D
+35.00369f, 19.75164f, -6.144001f, 5.147385f, -4.050634f, 5.29341f
+},
+{ // coefficient E
+-0.002984251f, -0.008865396f, 0.009944958f, -0.07013963f, 0.4058549f, -3.136757f
+},
+{ // coefficient F
+0.2622419f, 0.216554f, 0.2905472f, 0.938041f, -0.2591384f, 0.2323856f
+},
+{ // coefficient G
+-4.25936e-06f, 0.05475637f, -0.170711f, 0.2335714f, 0.1898299f, 0.1673706f
+},
+{ // coefficient H
+1.947681f, 1.761134f, 3.199107f, 0.1727744f, 0.3556071f, 1.007227f
+},
+{ // coefficient I
+0.6905752f, 0.003164249f, 1.33766f, 0.2802696f, 0.7884126f, 0.6844287f
+},
+{ // radiance
+0.6840111f, 1.154457f, -0.239383f, -0.7896893f, 42.82765f, 17.79469f
+}
+}
+},
+{ // albedo 1
+{ // turbidity 1
+{ // coefficient A
+-1.34172f, -1.529104f, -1.014776f, -1.172413f, -0.9898161f, -1.085111f
+},
+{ // coefficient B
+-0.4834889f, -0.6498631f, -0.1454495f, -0.402632f, -0.05772814f, -0.1882675f
+},
+{ // coefficient C
+-46.33447f, 15.34103f, -4.071085f, 2.960428f, 0.4470024f, 1.223748f
+},
+{ // coefficient D
+46.82148f, -14.50675f, 2.954982f, 0.202071f, -0.5786656f, 0.3565495f
+},
+{ // coefficient E
+-0.006137296f, -0.01531439f, -0.02630348f, -0.2004947f, 0.1158168f, -3.688357f
+},
+{ // coefficient F
+0.4599216f, 0.3280082f, 0.5681531f, 0.9375572f, 0.346804f, 0.5653723f
+},
+{ // coefficient G
+0.007047323f, 0.01682926f, -0.03016505f, 0.05998168f, -0.0504336f, 0.06727646f
+},
+{ // coefficient H
+2.895798f, 1.901587f, 6.773854f, -4.945934f, 6.867947f, 2.69013f
+},
+{ // coefficient I
+0.4999398f, 0.5013227f, 0.5003504f, 0.4502898f, 0.8012363f, 0.49994f
+},
+{ // radiance
+1.1683f, 1.860993f, -2.129074f, 12.51952f, 30.32499f, 29.38716f
+}
+},
+{ // turbidity 2
+{ // coefficient A
+-1.389119f, -1.584641f, -0.9826068f, -1.150423f, -1.016933f, -1.073151f
+},
+{ // coefficient B
+-0.529025f, -0.7200619f, -0.08887254f, -0.4073793f, -0.06311501f, -0.1845444f
+},
+{ // coefficient C
+-40.55774f, 12.48067f, -2.960031f, 2.412991f, 0.5218937f, 1.155394f
+},
+{ // coefficient D
+41.05972f, -11.56028f, 1.808816f, 0.487084f, -0.571643f, 0.3004486f
+},
+{ // coefficient E
+-0.007062577f, -0.01659568f, -0.02478159f, -0.2337902f, 0.1250993f, -3.431711f
+},
+{ // coefficient F
+0.456006f, 0.3050029f, 0.6035733f, 0.8295114f, 0.3601524f, 0.4657031f
+},
+{ // coefficient G
+-1.736334e-06f, 0.01099895f, -0.04868441f, 0.1129914f, -0.05497586f, 0.09401223f
+},
+{ // coefficient H
+2.775512f, 1.438927f, 7.347705f, -5.150045f, 7.060139f, 2.68862f
+},
+{ // coefficient I
+0.6671455f, -0.02138015f, 1.584739f, -0.09016643f, 1.018333f, 0.4999544f
+},
+{ // radiance
+1.150338f, 1.918813f, -2.413527f, 12.74862f, 30.87134f, 29.51432f
+}
+},
+{ // turbidity 3
+{ // coefficient A
+-1.391257f, -1.780062f, -0.7388169f, -1.322387f, -0.9378288f, -1.100832f
+},
+{ // coefficient B
+-0.5365815f, -0.922888f, 0.127567f, -0.5320143f, -0.01599895f, -0.2172313f
+},
+{ // coefficient C
+-42.55881f, 13.76172f, -3.999528f, 2.659359f, 0.3607555f, 1.211561f
+},
+{ // coefficient D
+42.99132f, -12.60946f, 2.223993f, 1.086712f, -1.980561f, 2.002721f
+},
+{ // coefficient E
+-0.005838466f, -0.01507526f, -0.01856853f, -0.2129712f, 0.3791456f, -5.010011f
+},
+{ // coefficient F
+0.4229134f, 0.3117435f, 0.543931f, 0.8704649f, 0.1212268f, 0.5717583f
+},
+{ // coefficient G
+-2.760038e-06f, 0.02205045f, -0.08834054f, 0.1800315f, -0.02845992f, 0.06777702f
+},
+{ // coefficient H
+2.775531f, 0.6093731f, 8.037139f, -4.967241f, 6.825542f, 2.160006f
+},
+{ // coefficient I
+0.6234597f, 0.03463446f, 1.645951f, -0.138372f, 1.059139f, 0.5676392f
+},
+{ // radiance
+1.114719f, 1.964689f, -2.625423f, 12.47837f, 32.37949f, 29.43596f
+}
+},
+{ // turbidity 4
+{ // coefficient A
+-1.409373f, -1.954312f, -0.6772215f, -1.2916f, -0.9750857f, -1.088007f
+},
+{ // coefficient B
+-0.5708751f, -1.11651f, 0.2001396f, -0.4977437f, -0.0877056f, -0.1959301f
+},
+{ // coefficient C
+-30.34974f, 5.399148f, -0.3670523f, 0.9641914f, 0.9054256f, 0.9745799f
+},
+{ // coefficient D
+30.79809f, -4.299553f, -1.014628f, 1.56242f, -1.429236f, 1.260761f
+},
+{ // coefficient E
+-0.007280715f, -0.01724739f, -0.003497152f, -0.3227782f, 0.8974777f, -5.008864f
+},
+{ // coefficient F
+0.3723304f, 0.3742824f, 0.4099858f, 0.9055427f, -0.1217961f, 0.7271248f
+},
+{ // coefficient G
+-2.436279e-06f, 0.04187077f, -0.1584633f, 0.3046444f, -0.05194608f, 0.1096661f
+},
+{ // coefficient H
+2.577348f, 0.1044883f, 7.7504f, -3.385619f, 4.909409f, 2.717295f
+},
+{ // coefficient I
+0.5913377f, 0.1232727f, 1.514559f, 0.009546291f, 0.9589153f, 0.6340731f
+},
+{ // radiance
+1.077948f, 2.006292f, -2.846934f, 11.90195f, 34.59293f, 29.37492f
+}
+},
+{ // turbidity 5
+{ // coefficient A
+-1.45605f, -2.176449f, -0.5789641f, -1.307463f, -0.9698678f, -1.104349f
+},
+{ // coefficient B
+-0.6223072f, -1.302416f, 0.2215407f, -0.4515174f, -0.1307094f, -0.2380323f
+},
+{ // coefficient C
+-22.28088f, 2.222836f, 0.2142291f, 0.6447827f, 0.9389347f, 1.047043f
+},
+{ // coefficient D
+22.69604f, -1.22273f, -1.201725f, 1.223841f, -1.522852f, 1.865421f
+},
+{ // coefficient E
+-0.009340812f, -0.01728051f, -0.01185728f, -0.2902391f, 0.7768797f, -5.011664f
+},
+{ // coefficient F
+0.4118308f, 0.1323513f, 0.8122982f, 0.4986588f, -0.1368595f, 0.7014954f
+},
+{ // coefficient G
+-2.418083e-06f, 0.07027731f, -0.238042f, 0.4073652f, -0.03857426f, 0.09622701f
+},
+{ // coefficient H
+2.442117f, 0.04835745f, 6.706841f, -1.706696f, 3.676935f, 1.89136f
+},
+{ // coefficient I
+0.5589638f, 0.2093351f, 1.404146f, 0.1060885f, 0.8980966f, 0.6687354f
+},
+{ // radiance
+1.035143f, 1.986681f, -2.752584f, 10.60972f, 37.22185f, 29.18594f
+}
+},
+{ // turbidity 6
+{ // coefficient A
+-1.502249f, -2.217125f, -0.6215757f, -1.216317f, -1.030437f, -1.078984f
+},
+{ // coefficient B
+-0.6724523f, -1.364924f, 0.1687995f, -0.3489429f, -0.2034064f, -0.2070549f
+},
+{ // coefficient C
+-28.88092f, 4.048243f, -0.5949131f, 0.7566226f, 0.8335995f, 0.9683145f
+},
+{ // coefficient D
+29.3036f, -3.111333f, -0.1551293f, 0.5409809f, -1.050947f, 1.497022f
+},
+{ // coefficient E
+-0.006685766f, -0.01317747f, 0.0003356129f, -0.2830843f, 0.8689093f, -5.007653f
+},
+{ // coefficient F
+0.3685464f, 0.1921948f, 0.6897657f, 0.6191825f, -0.367231f, 0.7702541f
+},
+{ // coefficient G
+-2.469442e-06f, 0.08627702f, -0.2855053f, 0.4755163f, -0.04056183f, 0.1285822f
+},
+{ // coefficient H
+2.310797f, 0.001981769f, 6.271042f, -0.9131387f, 3.111269f, 2.225188f
+},
+{ // coefficient I
+0.5566754f, 0.2213689f, 1.363084f, 0.1383909f, 0.8856842f, 0.6587911f
+},
+{ // radiance
+1.015992f, 1.992054f, -2.812626f, 10.01416f, 38.473f, 29.24624f
+}
+},
+{ // turbidity 7
+{ // coefficient A
+-1.559291f, -2.356929f, -0.6589752f, -1.161046f, -1.034427f, -1.109954f
+},
+{ // coefficient B
+-0.7374039f, -1.444755f, -0.0292691f, -0.1472506f, -0.3062504f, -0.2740277f
+},
+{ // coefficient C
+-35.96311f, 6.244526f, -1.831779f, 0.6494138f, 0.8975634f, 1.063811f
+},
+{ // coefficient D
+36.3447f, -5.540162f, 1.869962f, -0.8327174f, 0.3203531f, 0.7077398f
+},
+{ // coefficient E
+-0.004667132f, -0.00879451f, -0.002030095f, -0.2320724f, 0.8565142f, -4.695734f
+},
+{ // coefficient F
+0.3277964f, 0.17921f, 0.7552089f, 0.3391212f, -0.1250162f, 0.5621696f
+},
+{ // coefficient G
+-2.487945e-06f, 0.09578517f, -0.3168157f, 0.5269637f, -0.04094017f, 0.1248956f
+},
+{ // coefficient H
+2.215652f, 0.3737676f, 4.632196f, 0.9376341f, 1.861304f, 1.297723f
+},
+{ // coefficient I
+0.5764681f, 0.1922194f, 1.294054f, 0.2458573f, 0.8223468f, 0.678972f
+},
+{ // radiance
+0.9756887f, 1.939897f, -2.533281f, 8.319176f, 40.83907f, 29.25586f
+}
+},
+{ // turbidity 8
+{ // coefficient A
+-1.788293f, -2.268206f, -1.376966f, -0.601754f, -1.278853f, -1.05093f
+},
+{ // coefficient B
+-0.9368751f, -1.312676f, -0.7418582f, 0.2815928f, -0.5245326f, -0.2786331f
+},
+{ // coefficient C
+-43.8298f, 2.863082f, -1.349589f, 0.5424052f, 0.787052f, 1.056344f
+},
+{ // coefficient D
+44.24963f, -2.373727f, 1.563419f, -0.688545f, 0.3125067f, 1.053002f
+},
+{ // coefficient E
+-0.00365253f, -0.00514498f, -0.003124219f, -0.1620001f, 0.7748105f, -4.047789f
+},
+{ // coefficient F
+0.3094331f, 0.1711072f, 0.6967139f, 0.2980046f, -0.07788581f, 0.4432174f
+},
+{ // coefficient G
+-2.810503e-06f, 0.09316041f, -0.3061887f, 0.4995571f, 0.003490956f, 0.1169077f
+},
+{ // coefficient H
+1.904402f, 0.9309598f, 3.602731f, 0.7371203f, 1.283748f, 0.9532621f
+},
+{ // coefficient I
+0.5861599f, 0.1791683f, 1.255669f, 0.2812466f, 0.813019f, 0.6806764f
+},
+{ // radiance
+0.9264164f, 1.716454f, -1.597044f, 4.739725f, 45.07683f, 28.78915f
+}
+},
+{ // turbidity 9
+{ // coefficient A
+-2.084927f, -2.328567f, -2.634632f, 0.06882616f, -1.430918f, -1.037956f
+},
+{ // coefficient B
+-1.203954f, -1.238023f, -1.78946f, 0.5997821f, -0.6439041f, -0.3215402f
+},
+{ // coefficient C
+-48.81638f, -1.891019f, -0.1370558f, 0.1535398f, 0.832598f, 0.9457349f
+},
+{ // coefficient D
+49.2016f, 2.45152f, -0.3326435f, 1.375209f, -1.705612f, 3.178114f
+},
+{ // coefficient E
+-0.002896045f, -0.005847581f, 0.002783737f, -0.1267285f, 0.7236426f, -4.152156f
+},
+{ // coefficient F
+0.2882977f, 0.2084702f, 0.5239451f, 0.4239743f, -0.05567593f, 0.2230992f
+},
+{ // coefficient G
+-3.073517e-06f, 0.0784813f, -0.2548881f, 0.4013122f, 0.06408718f, 0.1156198f
+},
+{ // coefficient H
+1.702211f, 1.211048f, 2.896327f, 0.1794675f, 0.6836524f, 0.7606223f
+},
+{ // coefficient I
+0.637418f, 0.08095008f, 1.324116f, 0.2395382f, 0.8388887f, 0.6656923f
+},
+{ // radiance
+0.8595191f, 1.346034f, -0.02801895f, -0.6582906f, 50.17523f, 28.52953f
+}
+},
+{ // turbidity 10
+{ // coefficient A
+-2.967314f, -2.123311f, -5.443597f, 1.029898f, -1.547574f, -0.9621043f
+},
+{ // coefficient B
+-1.728778f, -1.175148f, -3.156344f, 0.5912521f, -0.7881604f, -0.1991406f
+},
+{ // coefficient C
+-37.30988f, -13.14988f, 2.110838f, -0.3983531f, 1.020902f, 0.6531287f
+},
+{ // coefficient D
+37.55578f, 13.86882f, -3.421556f, 3.286069f, -2.897069f, 3.925839f
+},
+{ // coefficient E
+-0.002588835f, -0.007828537f, 0.0118189f, -0.09252065f, 0.521347f, -3.596904f
+},
+{ // coefficient F
+0.2927966f, 0.1852026f, 0.1196951f, 1.331381f, -0.9242315f, 0.6317332f
+},
+{ // coefficient G
+-3.935038e-06f, 0.05481038f, -0.1742902f, 0.2560642f, 0.1185594f, 0.1531334f
+},
+{ // coefficient H
+1.592161f, 1.294309f, 2.404353f, 0.8001754f, -1.150721f, 1.457846f
+},
+{ // coefficient I
+0.6868694f, 0.02428177f, 1.272805f, 0.3624178f, 0.7317211f, 0.6966285f
+},
+{ // radiance
+0.7754116f, 0.7709245f, 2.200201f, -7.487661f, 54.36622f, 28.93432f
 }
 }
 }

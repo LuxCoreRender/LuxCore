@@ -283,8 +283,8 @@ float3 SkyLight2_ComputeRadiance(__global LightSource *skyLight2, const float3 w
 		Spectrum_Pow(1.f + iTerm * (iTerm - (2.f * cosG)), 1.5f);
 	const float3 zenithTerm = hTerm * sqrt(cosT);
 
-	// 0.00001f is an arbitrary scale factor to match LuxRender intensity output
-	return 0.00001f * (1.f + aTerm * Spectrum_Exp(bTerm / (cosT + .01f))) *
+	// 683 is a scaling factor to convert W to lm
+	return 683.f * (1.f + aTerm * Spectrum_Exp(bTerm / (cosT + .01f))) *
 		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
 }
 
