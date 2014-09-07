@@ -209,7 +209,9 @@ public:
 			kernelDefs << "#define QBVH_USE_LOCAL_MEMORY\n";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel definitions: \n" << kernelDefs.str());
 
-		intersectionKernelSource = kernelDefs.str() + luxrays::ocl::KernelSource_qbvh;
+		intersectionKernelSource = kernelDefs.str() +
+				luxrays::ocl::KernelSource_qbvh_types +
+				luxrays::ocl::KernelSource_qbvh;
 
 		const std::string code(
 			kernelDefs.str() +

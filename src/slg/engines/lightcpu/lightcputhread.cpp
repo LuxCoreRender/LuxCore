@@ -176,7 +176,10 @@ void LightCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	vector<SampleResult> sampleResults;
-	while (!boost::this_thread::interruption_requested()) {
+	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
+		Get<u_int>() * film->GetWidth() * film->GetHeight();
+
+	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		sampleResults.clear();
 
 		const float time = sampler->GetSample(12);
@@ -295,6 +298,9 @@ void LightCPURenderThread::RenderFunc() {
 		// Work around Windows bad scheduling
 		renderThread->yield();
 #endif
+
+		if ((haltDebug > 0u) && (steps >= haltDebug))
+			break;
 	}
 
 	delete sampler;

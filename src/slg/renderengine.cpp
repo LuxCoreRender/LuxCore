@@ -194,7 +194,7 @@ void RenderEngine::UpdateFilm() {
 		UpdateFilmLockLess();
 		UpdateCounters();
 
-		const float haltthreshold = renderConfig->cfg.Get(Property("batch.haltthreshold")(-1.f)).Get<float>();
+		const float haltthreshold = renderConfig->GetProperty("batch.haltthreshold").Get<float>();
 		if (haltthreshold >= 0.f) {
 			// Check if it is time to run the convergence test again
 			const u_int imgWidth = film->GetWidth();
@@ -336,6 +336,10 @@ void CPURenderThread::EndSceneEdit(const EditActionList &editActions) {
 	StartRenderThread();
 }
 
+bool CPURenderThread::HasDone() const {
+	return (renderThread == NULL) || (renderThread->timed_join(boost::posix_time::seconds(0)));
+}
+
 //------------------------------------------------------------------------------
 // CPURenderEngine
 //------------------------------------------------------------------------------
@@ -407,6 +411,15 @@ void CPURenderEngine::BeginSceneEditLockLess() {
 void CPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		renderThreads[i]->EndSceneEdit(editActions);
+}
+
+bool CPURenderEngine::HasDone() const {
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (!renderThreads[i]->HasDone())
+			return false;
+	}
+
+	return true;
 }
 
 //------------------------------------------------------------------------------
@@ -487,6 +500,7 @@ void CPUNoTileRenderEngine::UpdateCounters() {
 TileRepository::TileRepository(const u_int size) {
 	tileSize = size;
 
+	maxPassCount = 0;
 	enableMultipassRendering = false;
 	convergenceTestThreshold = .04f;
 	convergenceTestThresholdReduction = 0.f;
@@ -777,6 +791,15 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 				allTodoTilesDoneCondition.notify_all();
 
 				++pass;
+
+				if ((maxPassCount > 0) && (pass >= maxPassCount)) {
+					done = true;
+
+					// I still need to wake up some waiting thread
+					allTodoTilesDoneCondition.notify_all();
+
+					return false;
+				}
 			}
 		} else {
 			if (pendingTiles.size() == 0) {

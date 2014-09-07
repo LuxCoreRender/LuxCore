@@ -500,9 +500,13 @@ void PathOCLRenderThread::RenderThreadImpl() {
 		// signed int in order to avoid problems with underflows (when computing
 		// iterations - 1)
 		int iterations = 1;
+		u_int totalIterations = 0;
+		const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
+			Get<u_int>();
 
 		double startTime = WallClockTime();
-		while (!boost::this_thread::interruption_requested()) {
+		bool done = false;
+		while (!boost::this_thread::interruption_requested() && !done) {
 			/*if (threadIndex == 0)
 				cerr << "[DEBUG] =================================";*/
 
@@ -542,6 +546,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 							cl::NDRange(advancePathsWorkGroupSize));
 				}
 				oclQueue.flush();
+				totalIterations += (u_int)iterations;
 
 				event.wait();
 				const double t2 = WallClockTime();
@@ -561,6 +566,11 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				if (((t2 - startTime) * 1000.0 > (double)screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
 					break;
+				
+				if ((haltDebug > 0u) && (totalIterations >= haltDebug)) {
+					done = true;
+					break;
+				}
 			}
 
 			startTime = WallClockTime();

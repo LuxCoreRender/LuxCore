@@ -70,7 +70,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	vector<vector<PathVertexVM> > lightPathsVertices(samplers.size());
 	vector<Point> lensPoints(samplers.size());
 	HashGrid hashGrid;
-	while (!boost::this_thread::interruption_requested()) {
+	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").Get<u_int>();
+
+	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Clear the arrays
 		for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex) {
 			samplesResults[samplerIndex].clear();
@@ -250,6 +252,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 #endif
 
 		//hashGrid.PrintStatistics();
+
+		if ((haltDebug > 0u) && (steps >= haltDebug))
+			break;
 	}
 
 	for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex)

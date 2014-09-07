@@ -42,6 +42,8 @@ public:
 		return true;
 	}
 
+	virtual bool HasDone() const { return true; }
+
 protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess() { }

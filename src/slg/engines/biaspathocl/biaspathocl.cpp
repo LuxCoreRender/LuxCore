@@ -105,6 +105,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 		defaultTileSize = 32;
 	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(defaultTileSize)).Get<u_int>(), 8u));
 
+	tileRepository->maxPassCount = renderConfig->GetProperty("batch.haltdebug").Get<u_int>();
 	if (GetEngineType() == RTBIASPATHOCL)
 		tileRepository->enableMultipassRendering = false;
 	else

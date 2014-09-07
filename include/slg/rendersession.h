@@ -38,6 +38,8 @@ public:
 	void BeginSceneEdit();
 	void EndSceneEdit();
 
+	bool HasDone() const;
+	
 	bool NeedPeriodicFilmSave();
 	void SaveFilm();
 

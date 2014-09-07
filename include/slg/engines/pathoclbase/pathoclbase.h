@@ -52,6 +52,8 @@ public:
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
+	virtual bool HasDone() const;
+
 	friend class PathOCLBaseRenderEngine;
 
 protected:
@@ -93,7 +95,6 @@ protected:
 	size_t GetOpenCLBSDFSize() const;
 	size_t GetOpenCLSampleResultSize() const;
 
-	
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
 
 	// OpenCL variables
@@ -173,6 +174,8 @@ public:
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
 	}
+
+	virtual bool HasDone() const;
 
 	friend class PathOCLBaseRenderThread;
 

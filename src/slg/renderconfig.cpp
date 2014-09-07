@@ -62,6 +62,7 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("batch.halttime")(0u));
 			defaultProperties->Set(Property("batch.haltspp")(0u));
 			defaultProperties->Set(Property("batch.haltthreshold")(-1.f));
+			defaultProperties->Set(Property("batch.haltdebug")(0u));
 
 			// Film Filter related Properties
 			defaultProperties->Set(Property("film.filter.type")("BLACKMANHARRIS"));

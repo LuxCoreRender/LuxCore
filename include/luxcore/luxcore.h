@@ -655,6 +655,11 @@ public:
 	void EndSceneEdit();
 
 	/*!
+	 * \brief It can be used to check if the rendering is over.
+	 */
+	bool HasDone() const;
+
+	/*!
 	 * \brief Used to wait for the next frame with real-time render engines like
 	 * RTPATHOCL or RTBIASPATHOCL. It does nothing with other render engines.
 	 */

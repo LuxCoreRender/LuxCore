@@ -216,4 +216,13 @@ void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 		renderThreads[i]->EndSceneEdit(editActions);
 }
 
+bool PathOCLBaseRenderEngine::HasDone() const {
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (!renderThreads[i]->HasDone())
+			return false;
+	}
+
+	return true;
+}
+
 #endif
