@@ -62,6 +62,8 @@ public:
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
+	virtual bool HasDone() const = 0;
+
 	void UpdateFilm();
 	virtual void WaitNewFrame() { }
 
@@ -160,6 +162,8 @@ public:
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
+	virtual bool HasDone() const;
+
 	friend class CPURenderEngine;
 
 protected:
@@ -181,6 +185,8 @@ class CPURenderEngine : public RenderEngine {
 public:
 	CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPURenderEngine();
+
+	virtual bool HasDone() const;
 
 	friend class CPURenderThread;
 
@@ -271,6 +277,7 @@ public:
 	u_int totalSamplesPerPixel;
 	u_int pass;
 
+	u_int maxPassCount;
 	float convergenceTestThreshold, convergenceTestThresholdReduction;
 	bool enableMultipassRendering, enableRenderingDonePrint;
 
@@ -349,6 +356,8 @@ class OCLRenderEngine : public RenderEngine {
 public:
 	OCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
+
+	virtual bool HasDone() const { return false; }
 
 	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
 };
@@ -431,6 +440,9 @@ class HybridRenderEngine : public OCLRenderEngine {
 public:
 	HybridRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~HybridRenderEngine() { }
+
+	// TODO
+	virtual bool HasDone() const { return false; }
 
 	friend class HybridRenderState;
 	friend class HybridRenderThread;

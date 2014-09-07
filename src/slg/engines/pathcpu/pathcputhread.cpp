@@ -154,16 +154,16 @@ void PathCPURenderThread::RenderFunc() {
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
-	const unsigned int filmWidth = film->GetWidth();
-	const unsigned int filmHeight = film->GetHeight();
+	const u_int filmWidth = film->GetWidth();
+	const u_int filmHeight = film->GetHeight();
 
 	// Setup the sampler
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
-	const unsigned int sampleBootSize = 5;
-	const unsigned int sampleStepSize = 9;
-	const unsigned int sampleSize = 
+	const u_int sampleBootSize = 5;
+	const u_int sampleStepSize = 9;
+	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		(engine->maxPathDepth + 1) * sampleStepSize; // For each path vertex
 	sampler->RequestSamples(sampleSize);
@@ -181,7 +181,10 @@ void PathCPURenderThread::RenderFunc() {
 		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT,
 		engine->film->GetRadianceGroupCount());
 
-	while (!boost::this_thread::interruption_requested()) {
+	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
+		Get<u_int>() * filmWidth * filmHeight;
+
+	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Set to 0.0 all result colors
 		sampleResult.emission = Spectrum();
 		for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
@@ -213,7 +216,7 @@ void PathCPURenderThread::RenderFunc() {
 			sampleResult.firstPathVertex = (depth == 1);
 			sampleResult.lastPathVertex = (depth == engine->maxPathDepth);
 
-			const unsigned int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
+			const u_int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
@@ -334,6 +337,9 @@ void PathCPURenderThread::RenderFunc() {
 		// Work around Windows bad scheduling
 		renderThread->yield();
 #endif
+
+		if ((haltDebug > 0u) && (steps >= haltDebug))
+			break;
 	}
 
 	delete sampler;

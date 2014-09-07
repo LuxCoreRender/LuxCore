@@ -478,7 +478,10 @@ void BiDirCPURenderThread::RenderFunc() {
 
 	vector<SampleResult> sampleResults;
 	vector<PathVertexVM> lightPathVertices;
-	while (!boost::this_thread::interruption_requested()) {
+	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
+		Get<u_int>() * pixelCount;
+
+	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		sampleResults.clear();
 		lightPathVertices.clear();
 
@@ -611,10 +614,13 @@ void BiDirCPURenderThread::RenderFunc() {
 		sampleResults.push_back(eyeSampleResult);
 
 		sampler->NextSample(sampleResults);
+
+		if ((haltDebug > 0u) && (steps >= haltDebug))
+			break;
 	}
 
 	delete sampler;
 	delete rndGen;
 
-	//SLG_LOG("[BiDirCPURenderThread::" << renderThread->threadIndex << "] Rendering thread halted");
+	//SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] Rendering thread halted");
 }

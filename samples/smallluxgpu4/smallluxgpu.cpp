@@ -107,12 +107,16 @@ void SLGTerminate(void) {
 }
 #endif
 
-static int BatchSimpleMode(const double haltTime, const u_int haltSpp, const float haltThreshold) {
+static int BatchSimpleMode() {
+	const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
+	const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
+	const float haltThreshold = config->GetProperty("batch.haltthreshold").Get<float>();
+
 	// Start the rendering
 	session->Start();
 
 	const Properties &stats = session->GetStats();
-	for (;;) {
+	while (!session->HasDone()) {
 		boost::this_thread::sleep(boost::posix_time::millisec(1000));
 		session->UpdateStats();
 
@@ -284,7 +288,8 @@ int main(int argc, char *argv[]) {
 		const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
 		const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
 		const float haltThreshold = config->GetProperty("batch.haltthreshold").Get<float>();
-		if ((haltTime > 0) || (haltSpp > 0) || (haltThreshold >= 0.f))
+		const u_int haltDebug = config->GetProperty("batch.haltdebug").Get<u_int>();
+		if ((haltTime > 0) || (haltSpp > 0) || (haltThreshold >= 0.f) || (haltDebug > 0u))
 			batchMode = true;
 		else
 			batchMode = false;
@@ -307,7 +312,7 @@ int main(int argc, char *argv[]) {
 
 			session = new RenderSession(config);
 
-			return BatchSimpleMode(haltTime, haltSpp, haltThreshold);
+			return BatchSimpleMode();
 		} else {
 			// It is important to initialize OpenGL before OpenCL
 			// (require din case of OpenGL/OpenCL inter-operability)

@@ -85,6 +85,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 
 	film->Reset();
 	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(32)).Get<u_int>(), 8u));
+	tileRepository->maxPassCount = renderConfig->GetProperty("batch.haltdebug").Get<u_int>();
 	tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(true)).Get<bool>();
 	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.04f)).Get<float>();
 	tileRepository->convergenceTestThresholdReduction = cfg.Get(Property("tile.multipass.convergencetest.threshold.reduction")(0.f)).Get<float>();
