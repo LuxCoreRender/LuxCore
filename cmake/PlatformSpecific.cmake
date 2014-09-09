@@ -229,6 +229,7 @@ IF(APPLE)
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
 	
 	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
+	SET(UNEXPORTED_SYMBOLS_COMMAND -unexported_symbols_list ${CMAKE_SOURCE_DIR}/osx_locals.map) # Project-relative path to a file that lists the symbols not to export
 	#SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES) #  -dead_strip, disabled for clang 3.4 lto bug
 	if(NOT ${XCODE_VERSION} VERSION_LESS 5.1) # older xcode versions show problems with LTO
 		SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
