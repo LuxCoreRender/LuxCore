@@ -2848,7 +2848,7 @@ float ClothMaterial::EvalIntegrand(const slg::ocl::Yarn *yarn, const UV &uv, flo
     const slg::ocl::WeaveConfig *Weave = &ClothWeaves[Preset];
 
 	if (yarn->yarn_type == slg::ocl::WARP) {
-		if ((bool)(luxrays::Radians(yarn->psi != 0.0f)))
+		if (yarn->psi != 0.0f)
 			return EvalStapleIntegrand(yarn, om_i, om_r, uv.u, uv.v,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->warpArea;
@@ -2863,7 +2863,7 @@ float ClothMaterial::EvalIntegrand(const slg::ocl::Yarn *yarn, const UV &uv, flo
 		swap(om_r.x, om_r.y);
 		om_r.x = -om_r.x;
 
-		if ((bool)(luxrays::Radians(yarn->psi != 0.0f)))
+		if (yarn->psi != 0.0f)
 			return EvalStapleIntegrand(yarn, om_i, om_r, uv.u, uv.v,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->weftArea;

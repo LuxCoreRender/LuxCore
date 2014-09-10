@@ -493,7 +493,7 @@ float EvalStapleIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
 float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float2 uv, float umaxMod, float3 *om_i, float3 *om_r) {
 	if (yarn->yarn_type == WARP) {
-		if (Radians(yarn->psi != 0.0f))
+		if (yarn->psi != 0.0f)
 			return EvalStapleIntegrand(Weave, yarn, *om_i, *om_r, uv.s0, uv.s1,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->warpArea;
@@ -515,7 +515,7 @@ float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         (*om_r).y = tmp;
 		(*om_r).x = -(*om_r).x;
 
-		if (Radians(yarn->psi != 0.0f))
+		if (yarn->psi != 0.0f)
 			return EvalStapleIntegrand(Weave, yarn, *om_i, *om_r, uv.s0, uv.s1,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->weftArea;
