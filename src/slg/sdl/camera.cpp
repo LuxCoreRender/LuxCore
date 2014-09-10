@@ -476,6 +476,7 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 		target.x = prop.Get<float>(3);
 		target.y = prop.Get<float>(4);
 		target.z = prop.Get<float>(5);
+		up = Vector(0.f, 0.f, 1.f);
 	} else {
 		if (!props.IsDefined("scene.camera.lookat.orig")) {
 			// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
