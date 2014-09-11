@@ -1018,8 +1018,8 @@ static const yytype_uint16 yyrline[] =
      722,   729,   734,   745,   780,   793,   797,   806,   809,   842,
      846,   849,   862,  1025,  1032,  1039,  1054,  1058,  1062,  1065,
     1074,  1078,  1082,  1086,  1089,  1092,  1132,  1156,  1159,  1164,
-    1190,  1195,  1198,  1265,  1269,  1295,  1448,  1452,  1461,  1475,
-    1480,  1484,  1488,  1491
+    1190,  1195,  1198,  1284,  1288,  1314,  1467,  1471,  1480,  1494,
+    1499,  1503,  1507,  1510
 };
 #endif
 
@@ -2781,20 +2781,21 @@ yyreduce:
 		*sceneProps <<
 			Property(prefix + ".ply")(props.Get(Property("filename")("none")).Get<string>()) <<
 			Property(prefix + ".transformation")(currentTransform.m);
-	} else 	if (name == "trianglemesh") {
+	} else 	if ((name == "trianglemesh") || (name == "mesh")) {
 		if (!props.IsDefined("P"))
-			throw std::runtime_error("Missing P parameter in trianglemesh: " + objName);
+			throw std::runtime_error("Missing P parameter in trianglemesh/mesh: " + objName);
 		Property pointsProp = props.Get("P");
 		if ((pointsProp.GetSize() == 0) || (pointsProp.GetSize() % 3 != 0))
-			throw std::runtime_error("Wrong trianglemesh point list length: " + objName);
+			throw std::runtime_error("Wrong trianglemesh/mesh point list length: " + objName);
 		// Copy all vertices
 		Property points = pointsProp.Renamed(prefix + ".vertices");
 
-		if (!props.IsDefined("indices"))
-			throw std::runtime_error("Missing indices parameter in trianglemesh: " + objName);
-		Property indicesProp = props.Get("indices");
+		const string indicesName = (name == "trianglemesh") ? "indices" : "triindices";
+		if (!props.IsDefined(indicesName))
+			throw std::runtime_error("Missing indices parameter in trianglemesh/mesh: " + objName);
+		Property indicesProp = props.Get(indicesName);
 		if ((indicesProp.GetSize() == 0) || (indicesProp.GetSize() % 3 != 0))
-			throw std::runtime_error("Wrong trianglemesh indices list length: " + objName);
+			throw std::runtime_error("Wrong trianglemesh/mesh indices list length: " + objName);
 		// Copy all indices
 		Property faces = indicesProp.Renamed(prefix + ".faces");
 
@@ -2802,23 +2803,41 @@ yyreduce:
 			points <<
 			faces <<
 			Property(prefix + ".transformation")(currentTransform.m);
+
+		if (props.IsDefined("N")) {
+			Property normalsProp = props.Get("N");
+			if ((normalsProp.GetSize() == 0) ||	(normalsProp.GetSize() != pointsProp.GetSize()))
+				throw std::runtime_error("Wrong trianglemesh/mesh normal list length: " + objName);
+			// Copy all normals
+			*sceneProps <<
+					normalsProp.Renamed(prefix + ".normals");
+		}
+
+		if (props.IsDefined("uv")) {
+			Property uvsProps = props.Get("uv");
+			if ((uvsProps.GetSize() == 0) || (uvsProps.GetSize() != pointsProp.GetSize()))
+				throw std::runtime_error("Wrong trianglemesh/mesh uv list length: " + objName);
+			// Copy all uvs
+			*sceneProps <<
+					uvsProps.Renamed(prefix + ".uvs");
+		}
 	}
 
 	FreeArgs();
 }
-#line 2810 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 2829 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 63:
-#line 1266 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1285 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	FreeArgs();
 }
-#line 2818 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 2837 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 64:
-#line 1270 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1289 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -2844,11 +2863,11 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 2848 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 2867 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 65:
-#line 1296 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1315 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	Properties props;
 	InitProperties(props, CPS, CP);
@@ -3001,19 +3020,19 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 3005 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3024 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 1449 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1468 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	transformsStack.push_back(currentTransform);
 }
-#line 3013 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3032 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 1453 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1472 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	if (!(transformsStack.size() > graphicsStatesStack.size())) {
 		LC_LOG("Unmatched TransformEnd encountered. Ignoring it.");
@@ -3022,11 +3041,11 @@ yyreduce:
 		transformsStack.pop_back();
 	}
 }
-#line 3026 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3045 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 68:
-#line 1462 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1481 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	if (VerifyArrayLength((yyvsp[0].ribarray), 16, "Transform")) {
 		const float *tr = static_cast<float *>((yyvsp[0].ribarray)->array);
@@ -3040,50 +3059,50 @@ yyreduce:
 
 	ArrayFree((yyvsp[0].ribarray));
 }
-#line 3044 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3063 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 1476 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1495 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	Transform t(Translate(Vector((yyvsp[-2].num), (yyvsp[-1].num), (yyvsp[0].num))));
 	currentTransform = currentTransform * t;
 }
-#line 3053 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3072 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 70:
-#line 1481 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1500 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	FreeArgs();
 }
-#line 3061 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3080 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 1485 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1504 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	FreeArgs();
 }
-#line 3069 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3088 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 72:
-#line 1489 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1508 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 }
-#line 3076 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3095 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 73:
-#line 1492 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1511 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 }
-#line 3083 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3102 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
 
-#line 3087 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3106 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -3311,5 +3330,5 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 1494 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1906  */
+#line 1513 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1906  */
 
