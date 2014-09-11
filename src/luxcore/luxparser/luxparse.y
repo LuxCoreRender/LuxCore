@@ -1237,20 +1237,21 @@ ri_stmt: ACCELERATOR STRING paramlist
 		*sceneProps <<
 			Property(prefix + ".ply")(props.Get(Property("filename")("none")).Get<string>()) <<
 			Property(prefix + ".transformation")(currentTransform.m);
-	} else 	if (name == "trianglemesh") {
+	} else 	if ((name == "trianglemesh") || (name == "mesh")) {
 		if (!props.IsDefined("P"))
-			throw std::runtime_error("Missing P parameter in trianglemesh: " + objName);
+			throw std::runtime_error("Missing P parameter in trianglemesh/mesh: " + objName);
 		Property pointsProp = props.Get("P");
 		if ((pointsProp.GetSize() == 0) || (pointsProp.GetSize() % 3 != 0))
-			throw std::runtime_error("Wrong trianglemesh point list length: " + objName);
+			throw std::runtime_error("Wrong trianglemesh/mesh point list length: " + objName);
 		// Copy all vertices
 		Property points = pointsProp.Renamed(prefix + ".vertices");
 
-		if (!props.IsDefined("indices"))
-			throw std::runtime_error("Missing indices parameter in trianglemesh: " + objName);
-		Property indicesProp = props.Get("indices");
+		const string indicesName = (name == "trianglemesh") ? "indices" : "triindices";
+		if (!props.IsDefined(indicesName))
+			throw std::runtime_error("Missing indices parameter in trianglemesh/mesh: " + objName);
+		Property indicesProp = props.Get(indicesName);
 		if ((indicesProp.GetSize() == 0) || (indicesProp.GetSize() % 3 != 0))
-			throw std::runtime_error("Wrong trianglemesh indices list length: " + objName);
+			throw std::runtime_error("Wrong trianglemesh/mesh indices list length: " + objName);
 		// Copy all indices
 		Property faces = indicesProp.Renamed(prefix + ".faces");
 
@@ -1258,6 +1259,24 @@ ri_stmt: ACCELERATOR STRING paramlist
 			points <<
 			faces <<
 			Property(prefix + ".transformation")(currentTransform.m);
+
+		if (props.IsDefined("N")) {
+			Property normalsProp = props.Get("N");
+			if ((normalsProp.GetSize() == 0) ||	(normalsProp.GetSize() != pointsProp.GetSize()))
+				throw std::runtime_error("Wrong trianglemesh/mesh normal list length: " + objName);
+			// Copy all normals
+			*sceneProps <<
+					normalsProp.Renamed(prefix + ".normals");
+		}
+
+		if (props.IsDefined("uv")) {
+			Property uvsProps = props.Get("uv");
+			if ((uvsProps.GetSize() == 0) || (uvsProps.GetSize() != pointsProp.GetSize()))
+				throw std::runtime_error("Wrong trianglemesh/mesh uv list length: " + objName);
+			// Copy all uvs
+			*sceneProps <<
+					uvsProps.Renamed(prefix + ".uvs");
+		}
 	}
 
 	FreeArgs();

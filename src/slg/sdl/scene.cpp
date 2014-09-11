@@ -1442,19 +1442,49 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 			throw runtime_error("Missing object face list: " + objName);
 		}
 
+		Normal *normals = NULL;
+		if (props.IsDefined(propName + ".normals")) {
+			Property prop = props.Get(propName + ".normals");
+			if ((prop.GetSize() == 0) || (prop.GetSize() / 3 != pointsSize))
+				throw runtime_error("Wrong object normal list length: " + objName);
+
+			normals = new Normal[pointsSize];
+			for (u_int i = 0; i < pointsSize; ++i) {
+				const u_int index = i * 3;
+				normals[i] = Normal(prop.Get<float>(index), prop.Get<float>(index + 1), prop.Get<float>(index + 2));
+			}
+		}
+
+		UV *uvs = NULL;
+		if (props.IsDefined(propName + ".uvs")) {
+			Property prop = props.Get(propName + ".uvs");
+			if ((prop.GetSize() == 0) || (prop.GetSize() / 2 != pointsSize))
+				throw runtime_error("Wrong object uv list length: " + objName);
+
+			uvs = new UV[pointsSize];
+			for (u_int i = 0; i < pointsSize; ++i) {
+				const u_int index = i * 2;
+				uvs[i] = UV(prop.Get<float>(index), prop.Get<float>(index + 1));
+			}
+		}
+
 		if (props.IsDefined(propName + ".transformation")) {
 			const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 			const Transform trans(mat);
 
-			// Transform directly the vertices. This mesh is defined on-the-fly
-			// and can be used only once
+			// Transform directly the vertices and normals. This mesh is 
+			// defined on-the-fly and can be used only once
 			for (u_int i = 0; i < pointsSize; ++i)
 				points[i] = trans * points[i];
+			if (normals) {
+				for (u_int i = 0; i < pointsSize; ++i)
+					normals[i] = trans * normals[i];
+			}
 		}
 
 		extMeshCache.DefineExtMesh("InlinedMesh-" + objName, pointsSize, trisSize,
-				points, tris,
-				NULL, NULL, NULL, NULL);
+				points, tris, normals, uvs,
+				NULL, NULL);
 		mesh = extMeshCache.GetExtMesh("InlinedMesh-" + objName);
 	}
 
