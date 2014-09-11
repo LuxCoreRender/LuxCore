@@ -403,6 +403,12 @@ Properties PerspectiveCamera::ToProperties() const {
 	props.Set(Property("scene.camera.horizontalstereo.enable")(enableHorizStereo));
 	props.Set(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
 
+	if (enableClippingPlane) {
+		props.Set(Property("scene.camera.clippingplane.enable")(enableClippingPlane));
+		props.Set(Property("scene.camera.clippingplane.center")(clippingPlaneCenter));
+		props.Set(Property("scene.camera.clippingplane.normal")(clippingPlaneNormal));
+	}
+
 	return props;
 }
 
