@@ -37,6 +37,13 @@ public:
 		for (int i = 0; i < WAVELENGTH_SAMPLES; ++i)
 			c[i] = v;
 	}
+
+	// VS2013 generates invalid code for the default copy constructor here
+	// when the Inline Function Expansion optimization is enabled.
+#if defined (WIN32)
+	SWCSpectrum(const SWCSpectrum &s) { std::copy(s.c, s.c + WAVELENGTH_SAMPLES, c); }
+#endif
+
 	SWCSpectrum(const SpectrumWavelengths &sw, const RGBColor &s);
 
 	SWCSpectrum(const SpectrumWavelengths &sw, const SPD &s);
