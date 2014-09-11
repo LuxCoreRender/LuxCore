@@ -1277,6 +1277,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 			*sceneProps <<
 					uvsProps.Renamed(prefix + ".uvs");
 		}
+	} else {
+		LC_LOG("LuxCore doesn't support the shape type " + name + ", ignoring the shape definition");
 	}
 
 	FreeArgs();
