@@ -1098,13 +1098,13 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (name == "box") {
 		*renderConfigProps <<
 				Property("film.filter.type")("BOX") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", .5f)).Get<float>());
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", .5f * .5f)).Get<float>()) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", .5f * .5f)).Get<float>());
 	} else if (name == "gaussian") {
 		*renderConfigProps <<
 				Property("film.filter.type")("GAUSSIAN") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f)).Get<float>()) <<
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f * .5f)).Get<float>()) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f * .5f)).Get<float>()) <<
 				Property("film.filter.gaussian.alpha")(props.Get(Property("alpha", 2.f)).Get<float>());
 	} else if (name == "mitchell") {
 		const bool supersample = props.Get(Property("supersample")(false)).Get<bool>();
@@ -1112,15 +1112,15 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 		*renderConfigProps <<
 				Property("film.filter.type")(supersample ? "MITCHELL_SS" : "MITCHELL") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f)).Get<float>()) <<
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f * .5f)).Get<float>()) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f * .5f)).Get<float>()) <<
 				Property("film.filter." + prefix + ".B")(props.Get(Property("B", 1.f / 3.f)).Get<float>()) <<
 				Property("film.filter." + prefix + ".C")(props.Get(Property("C", 1.f / 3.f)).Get<float>());
 	} else if (name == "blackmanharris") {
 		*renderConfigProps <<
 				Property("film.filter.type")("BLACKMANHARRIS") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 4.f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 4.f)).Get<float>());
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 4.f * .5f)).Get<float>()) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 4.f * .5f)).Get<float>());
 	} else {
 		LC_LOG("LuxCore doesn't support the filter type " + name + ", using BLACKMANHARRIS filter instead");
 		*renderConfigProps <<
