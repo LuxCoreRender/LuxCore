@@ -215,7 +215,6 @@ public:
 	template<class T> T Get() const {
 		throw std::runtime_error("Unsupported data type in property: " + name);
 	}
-
 	/*!
 	 * \brief Sets the value at the specified position.
 	 * 

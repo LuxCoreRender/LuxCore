@@ -740,7 +740,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def(init<string, string>())
 		.def("__init__", make_constructor(Property_InitWithList))
 
-		.def("GetName", &luxrays::Property::GetName, return_internal_reference<>())
+		.def("GetName", &luxrays::Property::GetName, return_value_policy<copy_const_reference>())
 		.def("GetSize", &luxrays::Property::GetSize)
 		.def("Clear", &luxrays::Property::Clear, return_internal_reference<>())
 
