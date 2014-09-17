@@ -19,29 +19,29 @@ import unittest
 import pyluxcore
 
 class TestProperty(unittest.TestCase):
-	def test_GetName(self):
+	def test_Property_GetName(self):
 		prop = pyluxcore.Property("test1.prop1", "aa")
 		self.assertEqual(prop.GetName(), "test1.prop1")
 
-	def test_Get(self):
+	def test_Property_Get(self):
 		prop = pyluxcore.Property("test1.prop1", "aa")
 		self.assertEqual(prop.Get(), ["aa"])
 		prop.Add(["bb"])
 		self.assertEqual(prop.Get(), ["aa", "bb"])
 
-	def test_ClearGetSize(self):
+	def test_Property_ClearGetSize(self):
 		prop = pyluxcore.Property("test1.prop1", "aa")
 		self.assertEqual(prop.GetSize(), 1)
 		prop.Clear()
 		self.assertEqual(prop.GetSize(), 0)
 
-	def test_AddSet(self):
+	def test_Property_AddSet(self):
 		prop = pyluxcore.Property("test1.prop1").Add(["aa"]).Add([1, 2, 3]).Add([4])
 		prop.Set(0, 0)
 		self.assertEqual(prop.GetSize(), 5)
 		self.assertEqual(prop.Get(), [0, 1, 2, 3, 4])
 
-	def test_GetTypes(self):
+	def test_Property_GetTypes(self):
 		prop = pyluxcore.Property("test1.prop1", "aa")
 		
 		prop.Set(0, True)
@@ -62,11 +62,11 @@ class TestProperty(unittest.TestCase):
 		prop.Clear().Add(["abc", "def"])
 		self.assertEqual(prop.GetStrings(), ["abc", "def"])
 
-	def test_GetString(self):
+	def test_Property_GetString(self):
 		prop = pyluxcore.Property("test1.prop1", "aa")
 		self.assertEqual(prop.GetString(0), "aa")
 
-	def test_String(self):
+	def test_Property_String(self):
 		prop = pyluxcore.Property("test1.prop1", ["aa", 1])
 		self.assertEqual(prop.GetValuesString(), "aa 1")
 		self.assertEqual(prop.ToString(), "test1.prop1 = \"aa\" 1")

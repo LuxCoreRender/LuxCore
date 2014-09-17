@@ -443,7 +443,7 @@ vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
 			// Check if it has been already defined
 
 			const string s = Property::ExtractPrefix(name, fieldsCount);
-			if (definedNames.count(s) == 0) {
+			if ((s.length() > 0) && (definedNames.count(s) == 0)) {
 				namesSubset.push_back(s);
 				definedNames.insert(s);
 			}
