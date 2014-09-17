@@ -35,7 +35,7 @@
  #define CPP_API
 #endif
 
-#if (defined(__apple_build_version__) &&  (__clang_major__ == 5) && (__clang_minor__ == 1))
+#if (defined(__apple_build_version__) && ((__clang_major__ == 5) && (__clang_minor__ >= 1) || (__clang_major__ == 6)))
  #define CPP_EXPORT extern "C"
 #else
  #define CPP_EXPORT extern "C++"
