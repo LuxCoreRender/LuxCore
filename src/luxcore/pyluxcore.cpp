@@ -808,9 +808,12 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 			("Get", &luxrays::Properties::Get, return_internal_reference<>())
 		.def("Get", &Properties_GetWithDefaultValues)
 	
+		.def("GetSize", &luxrays::Properties::GetSize)
+	
 		.def("IsDefined", &luxrays::Properties::IsDefined)
 		.def("Delete", &luxrays::Properties::Delete)
 		.def("DeleteAll", &Properties_DeleteAll)
+		.def("ToString", &luxrays::Properties::ToString)
 
 		.def(self_ns::str(self))
     ;
