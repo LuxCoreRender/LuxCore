@@ -3,6 +3,7 @@
 ^lib/libluxcore.a
 ^lib/pyluxcore.so
 ^doxygen-luxrays.conf
+syntax: regexp
 ^doxygen/luxrays.template
 ^doxygen-slg.conf
 ^doxygen/slg.template
@@ -15,6 +16,9 @@
 ^src/(Debug|Release)/
 ^(Debug|Release|x64)/
 ^nbproject/*
+^pyunittests/images/*\.png
+^pyunittests/referenceimages/*\.png
+^pyunittests/*\.log
 syntax: glob
 *~
 *CMakeFiles
@@ -26,4 +30,3 @@ ui_*.h
 qrc_*.cxx
 *.sdf
 *.vcxproj*
-

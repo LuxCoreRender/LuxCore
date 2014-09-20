@@ -1,4 +1,3 @@
-#! /usr/bin/python
 # -*- coding: utf-8 -*-
 ################################################################################
 # Copyright 1998-2013 by authors (see AUTHORS.txt)
@@ -16,43 +15,16 @@
 # limitations under the License.
 ################################################################################
 
-import sys
-sys.path.append("../lib")
-# To avoid .pyc files
-sys.dont_write_bytecode = True
-
-import os
 import unittest
 import pyluxcore
+from pyluxcoreunittests.tests.imagetest import ImageTest
 
-def LuxCoreLogHandler(msg):
-	logFile=open("unittests.log","a")
-	print(msg, file=logFile)
-	logFile.close()
+class TestBasicRendering(unittest.TestCase, ImageTest):
+	def CreateRenderConfig(self):
+		props = pyluxcore.Properties("resources/scenes/simple/simple.cfg")
+		config = pyluxcore.RenderConfig(props)
 
-# To run the tests:
-#
-# python3 pyluxcoreunittests/unittests.py
+		return config
 
-def main():
-	print("LuxCore Unit tests")
-
-	# Clear the log file
-	f = open("unittests.log","w")
-	f.close()
-
-	# Delete all images in the images directory
-	folder = 'images'
-	for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
-		filePath = os.path.join(folder, f)
-		os.unlink(filePath)
-
-	pyluxcore.Init(LuxCoreLogHandler)
-
-	print("LuxCore %s" % pyluxcore.Version())
-	
-	suite = unittest.TestLoader().discover(".")
-	unittest.TextTestRunner(verbosity = 2).run(suite)
-
-if __name__ == "__main__":
-    main();
+	def test_BasicRendering(self):
+		self.StandardTest(name="basic-rendering")
