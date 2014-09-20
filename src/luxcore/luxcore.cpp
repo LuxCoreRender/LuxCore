@@ -610,7 +610,11 @@ void RenderSession::EndSceneEdit() {
 }
 
 bool RenderSession::HasDone() const {
-	return renderSession->HasDone();
+	return renderSession->renderEngine->HasDone();
+}
+
+void RenderSession::WaitForDone() const {
+	renderSession->renderEngine->WaitForDone();
 }
 
 void RenderSession::WaitNewFrame() {

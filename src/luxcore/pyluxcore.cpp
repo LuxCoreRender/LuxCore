@@ -931,6 +931,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("UpdateStats", &RenderSession::UpdateStats)
 		.def("GetStats", &RenderSession::GetStats, return_internal_reference<>())
 		.def("WaitNewFrame", &RenderSession::WaitNewFrame)
+		.def("WaitForDone", &RenderSession::WaitForDone)
 		.def("HasDone", &RenderSession::HasDone)
     ;
 }

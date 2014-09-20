@@ -63,6 +63,7 @@ public:
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	virtual bool HasDone() const = 0;
+	virtual void WaitForDone() const = 0;
 
 	void UpdateFilm();
 	virtual void WaitNewFrame() { }
@@ -163,6 +164,7 @@ public:
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	virtual bool HasDone() const;
+	virtual void WaitForDone() const;
 
 	friend class CPURenderEngine;
 
@@ -187,6 +189,7 @@ public:
 	~CPURenderEngine();
 
 	virtual bool HasDone() const;
+	virtual void WaitForDone() const;
 
 	friend class CPURenderThread;
 
@@ -357,8 +360,6 @@ public:
 	OCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
 		bool fatal = true);
 
-	virtual bool HasDone() const { return false; }
-
 	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
 };
 
@@ -442,7 +443,9 @@ public:
 	virtual ~HybridRenderEngine() { }
 
 	// TODO
-	virtual bool HasDone() const { return false; }
+	virtual bool HasDone() const { throw std::runtime_error("Called HybridRenderEngine::HasDone()"); }
+	// TODO
+	virtual void WaitForDone() const { throw std::runtime_error("Called HybridRenderEngine::WaitForDone()"); }
 
 	friend class HybridRenderState;
 	friend class HybridRenderThread;

@@ -53,6 +53,7 @@ public:
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	virtual bool HasDone() const;
+	virtual void WaitForDone() const;
 
 	friend class PathOCLBaseRenderEngine;
 
@@ -176,6 +177,7 @@ public:
 	}
 
 	virtual bool HasDone() const;
+	virtual void WaitForDone() const;
 
 	friend class PathOCLBaseRenderThread;
 

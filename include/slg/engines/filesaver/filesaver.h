@@ -43,6 +43,7 @@ public:
 	}
 
 	virtual bool HasDone() const { return true; }
+	virtual void WaitForDone() const { }
 
 protected:
 	virtual void StartLockLess();

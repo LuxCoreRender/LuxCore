@@ -34,13 +34,7 @@ class ImageTest(object):
 		session = pyluxcore.RenderSession(config)
 
 		session.Start()
-
-		while True:
-			time.sleep(0.25)
-
-			if session.HasDone():
-				break
-		
+		session.WaitForDone()
 		session.Stop()
 		
 		# Get the rendering result
