@@ -28,7 +28,6 @@ import pyluxcore
 #
 # python3 pyluxcoreunittests/unittests.py
 
-
 def main():
 	print("LuxCore Unit tests")
 
