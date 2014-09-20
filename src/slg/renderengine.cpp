@@ -340,6 +340,11 @@ bool CPURenderThread::HasDone() const {
 	return (renderThread == NULL) || (renderThread->timed_join(boost::posix_time::seconds(0)));
 }
 
+void CPURenderThread::WaitForDone() const {
+	if (renderThread)
+		renderThread->join();
+}
+
 //------------------------------------------------------------------------------
 // CPURenderEngine
 //------------------------------------------------------------------------------
@@ -420,6 +425,11 @@ bool CPURenderEngine::HasDone() const {
 	}
 
 	return true;
+}
+
+void CPURenderEngine::WaitForDone() const {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->WaitForDone();
 }
 
 //------------------------------------------------------------------------------

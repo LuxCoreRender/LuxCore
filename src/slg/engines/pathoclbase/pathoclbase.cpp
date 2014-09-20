@@ -225,4 +225,9 @@ bool PathOCLBaseRenderEngine::HasDone() const {
 	return true;
 }
 
+void PathOCLBaseRenderEngine::WaitForDone() const {
+	for (size_t i = 0; i < renderThreads.size(); ++i)
+		renderThreads[i]->WaitForDone();
+}
+
 #endif

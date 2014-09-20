@@ -660,6 +660,11 @@ public:
 	bool HasDone() const;
 
 	/*!
+	 * \brief Used to wait for the end of the rendering.
+	 */
+	void WaitForDone() const;
+
+	/*!
 	 * \brief Used to wait for the next frame with real-time render engines like
 	 * RTPATHOCL or RTBIASPATHOCL. It does nothing with other render engines.
 	 */

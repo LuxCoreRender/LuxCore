@@ -109,10 +109,6 @@ void RenderSession::EndSceneEdit() {
 	editMode = false;
 }
 
-bool RenderSession::HasDone() const {
-	return renderEngine->HasDone();
-}
-
 bool RenderSession::NeedPeriodicFilmSave() {
 	if (periodicSaveEnabled) {
 		const double now = WallClockTime();

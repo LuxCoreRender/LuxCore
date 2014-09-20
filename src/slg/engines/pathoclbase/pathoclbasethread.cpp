@@ -1293,6 +1293,11 @@ bool PathOCLBaseRenderThread::HasDone() const {
 	return (renderThread == NULL) || (renderThread->timed_join(boost::posix_time::seconds(0)));
 }
 
+void PathOCLBaseRenderThread::WaitForDone() const {
+	if (renderThread)
+		renderThread->join();
+}
+
 void PathOCLBaseRenderThread::TransferFilm(cl::CommandQueue &oclQueue) {
 	// Async. transfer of the Film buffers
 
