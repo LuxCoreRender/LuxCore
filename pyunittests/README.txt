@@ -11,3 +11,7 @@ Unit tests
 To run the tests:
 
 python3 pyluxcoreunittests/unittests.py
+
+To have the list of options:
+
+python3 pyluxcoreunittests/unittests.py --help
