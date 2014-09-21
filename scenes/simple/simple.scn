@@ -1,7 +1,8 @@
-#scene.camera.lookat = 5.951 -7.663 6.017 0.0 0.0 1.0
-scene.camera.lookat = 10.951 -20.663 8.017 0.0 0.0 1.0
+scene.camera.lookat.orig = 10.951 -20.663 8.017
+scene.camera.lookat.target = 0.0 0.0 1.0
 # Orthographic-like camera
-#scene.camera.lookat = 50.951 -70.663 60.017 0.0 0.0 1.0
+#scene.camera.lookat.orig = 50.951 -70.663 60.017
+#scene.camera.lookat.target = 0.0 0.0 1.0
 #scene.camera.fieldofview = 5.0
 ################################################################################
 scene.materials.whitematte.type = matte

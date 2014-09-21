@@ -1,4 +1,5 @@
-scene.camera.lookat = 10.951 -20.663 8.017 0.0 0.0 1.0
+scene.camera.lookat.orig = 10.951 -20.663 8.017
+scene.camera.lookat.target = 0.0 0.0 1.0
 ################################################################################
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
@@ -11,6 +12,7 @@ scene.materials.greenmatte.type = matte
 scene.materials.greenmatte.kd = 0.0 0.57 0.0
 scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = 120.0 120.0 120.0
+scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################
 scene.objects.lightplanes.ply = resources/scenes/simple/simple-lights.ply
 scene.objects.lightplanes.material = whitelight
