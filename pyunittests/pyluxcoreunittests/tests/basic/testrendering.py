@@ -17,14 +17,27 @@
 
 import unittest
 import pyluxcore
-from pyluxcoreunittests.tests.imagetest import ImageTest
+from pyluxcoreunittests.tests.imagetest import *
 
-class TestBasicRendering(unittest.TestCase, ImageTest):
-	def CreateRenderConfig(self):
-		props = pyluxcore.Properties("resources/scenes/simple/simple.cfg")
-		config = pyluxcore.RenderConfig(props)
+def CreateRenderConfig():
+	props = pyluxcore.Properties("resources/scenes/simple/simple.cfg")
+	config = pyluxcore.RenderConfig(props)
 
-		return config
+	return config
 
-	def test_BasicRendering(self):
-		self.StandardTest(name="basic-rendering")
+def TestBasicRendering(engineType):
+	# Create the rendering configuration
+	config = CreateRenderConfig()
+
+	# Add halt condition
+	config.GetProperties().Set(pyluxcore.Property("batch.haltdebug", "1"))
+	# Set the engine type
+	config.GetProperties().Set(pyluxcore.Property("renderengine.type", engineType))
+
+	# Run the rendering
+	StandardTest("basic_rendering_" + engineType, config)
+
+class BasicRendering(unittest.TestCase, ImageTest):
+    pass
+
+BasicRendering = AddTests(BasicRendering, TestBasicRendering, ["PATHCPU", "BIDIRCPU"])

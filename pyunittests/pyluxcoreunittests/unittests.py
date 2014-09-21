@@ -27,10 +27,11 @@ import argparse
 import unittest
 import pyluxcore
 
+printLuxCoreLog = False
+
 def LuxCoreLogHandler(msg):
-	logFile=open("unittests.log","a")
-	print(msg, file=logFile)
-	logFile.close()
+	if printLuxCoreLog:
+		print(msg, file=sys.stderr)
 
 def FilterTests(pattern, testSuite):
 	try:
@@ -60,10 +61,6 @@ def ListAllTests(testSuite):
 def main():
 	print("LuxCore Unit tests")
 
-	# Clear the log file
-	f = open("unittests.log","w")
-	f.close()
-
 	# Delete all images in the images directory
 	folder = 'images'
 	for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
@@ -81,8 +78,14 @@ def main():
 		help='select only the tests matching the specified regular expression')
 	parser.add_argument('--list', dest='list', action='store_true',
 		help='list all tests available tests')
+	parser.add_argument('--verbose', dest='verbose', default=2,
+		help='set the verbosity level (i.e 0, 1, 2 or 3)')
 	args = parser.parse_args()
 	
+	global printLuxCoreLog
+	if int(args.verbose) >= 3:
+		printLuxCoreLog = True
+
 	# Discover all tests
 	
 	propertiesSuite = unittest.TestLoader().discover("tests.properties", top_level_dir=".")
@@ -108,7 +111,7 @@ def main():
 		print("Filtering tests by: %s" % args.filter)
 		allTests = unittest.TestSuite(FilterTests(args.filter, allTests))
 
-	unittest.TextTestRunner(verbosity = 2).run(allTests)
+	unittest.TextTestRunner(verbosity=int(args.verbose)).run(allTests)
 
 if __name__ == "__main__":
     main();
