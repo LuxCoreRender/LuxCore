@@ -84,17 +84,22 @@ public:
 	bool IsOpenCL_1_0() const {
 		int major, minor;
 		sscanf(oclDevice.getInfo<CL_DEVICE_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
-		return (major >= 1) && (minor >= 0);
+		return (major > 1) || ((major == 1) && (minor >= 0));
 	}
 	bool IsOpenCL_1_1() const {
 		int major, minor;
 		sscanf(oclDevice.getInfo<CL_DEVICE_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
-		return (major >= 1) && (minor >= 1);
+		return (major > 1) || ((major == 1) && (minor >= 1));
 	}
 	bool IsOpenCL_1_2() const {
 		int major, minor;
 		sscanf(oclDevice.getInfo<CL_DEVICE_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
-		return (major >= 1) && (minor >= 2);
+		return (major > 1) || ((major == 1) && (minor >= 2));
+	}
+	bool IsOpenCL_2_0() const {
+		int major, minor;
+		sscanf(oclDevice.getInfo<CL_DEVICE_VERSION>().c_str(), "OpenCL %d.%d", &major, &minor);
+		return (major >= 2);
 	}
 
 	bool IsAMDPlatform() const {
