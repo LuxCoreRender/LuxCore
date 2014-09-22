@@ -21,21 +21,17 @@ import pyluxcore
 from pyluxcoreunittests.tests.utils import *
 from pyluxcoreunittests.tests.imagetest import *
 
-def TestBasicRendering(cls, engineType):
+def TestSimpleRendering(cls, engineType):
 	# Create the rendering configuration
 	props = pyluxcore.Properties(LuxCoreTest.customConfigProps)
 	props.SetFromFile("resources/scenes/simple/simple.cfg")
+	props.Set(GetEngineProperties(engineType))
 	config = pyluxcore.RenderConfig(props)
 
-	# Add halt condition
-	config.GetProperties().Set(pyluxcore.Property("batch.haltdebug", GetEngineHaltDebugValue(engineType)))
-	# Set the engine type
-	config.GetProperties().Set(pyluxcore.Property("renderengine.type", engineType))
-
 	# Run the rendering
-	StandardImageTest(cls, "basic_rendering_" + engineType, config)
+	StandardImageTest(cls, "simple_rendering_" + engineType, config)
 
-class BasicRendering(ImageTest):
+class SimpleRendering(ImageTest):
     pass
 
-BasicRendering = AddTests(BasicRendering, TestBasicRendering, GetEngineList())
+SimpleRendering = AddTests(SimpleRendering, TestSimpleRendering, GetEngineList())

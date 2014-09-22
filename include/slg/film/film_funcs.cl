@@ -200,7 +200,6 @@ bool AtomicMin(__global float *val, const float val2) {
 		unsigned int i;
 	} newVal;
 
-	bool result = false;
 	do {
 		oldVal.f = *val;
 		if (val2 >= oldVal.f)
@@ -226,7 +225,7 @@ void Film_SetPixel3(__global float *dst, __global  float *val) {
 
 bool Film_MinPixel(__global float *dst, const float val) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicMin(&dst[0], val);
+	return AtomicMin(&dst[0], val);
 #else
 	if (val < dst[0]) {
 		dst[0] = val;
@@ -238,7 +237,7 @@ bool Film_MinPixel(__global float *dst, const float val) {
 
 void Film_AddPixelVal(__global float *dst, const float val) {
 #if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicAdd(&dst, val);
+	AtomicAdd(&dst[0], val);
 #else
 	dst[0] += val;
 #endif
