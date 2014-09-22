@@ -729,11 +729,11 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		if (enableMultipassRendering) {
 			if (pendingTiles.size() > 0) {
 				// I have to wait for any pending tile
-				while ((todoTiles.size() == 0) || done)
+				while ((todoTiles.size() == 0) || !done)
 					allTodoTilesDoneCondition.wait(lock);
 
 				// Check if the rendering is finished
-				if (done)
+				if (done) 
 					return false;
 			} else {
 				// I'm the thread with the last todo tile
@@ -797,18 +797,23 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 					doneTiles.clear();
 				}
 
-				// To wake up other threads
-				allTodoTilesDoneCondition.notify_all();
-
 				++pass;
 
 				if ((maxPassCount > 0) && (pass >= maxPassCount)) {
+					// Rendering done
+					if (enableRenderingDonePrint) {
+						const double elapsedTime = WallClockTime() - startTime;
+						SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+					}
 					done = true;
 
 					// I still need to wake up some waiting thread
 					allTodoTilesDoneCondition.notify_all();
 
 					return false;
+				} else {
+					// To wake up other threads
+					allTodoTilesDoneCondition.notify_all();
 				}
 			}
 		} else {

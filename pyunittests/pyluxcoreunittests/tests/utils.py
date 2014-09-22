@@ -44,16 +44,15 @@ def Render(config):
 	return (film.GetWidth(), film.GetHeight()), imageBufferFloat
 
 def GetEngineList():
-	#return ["PATHCPU", "BIDIRCPU", "BIASPATHCPU", "PATHOCL", "BIASPATHOCL"]
-	return ["PATHCPU", "BIDIRCPU"]
+	return ["PATHCPU", "BIDIRCPU", "BIASPATHCPU", "PATHOCL", "BIASPATHOCL"]
 
 def GetEngineHaltDebugValue(engineType):
 	values = {
 		"PATHCPU" : 1,
 		"BIDIRCPU" : 1,
-		"BIASPATHCPU" : 1,
-		"PATHOCL" : 2,
-		"BIASPATHOCL" : 1
+		"BIASPATHCPU" : 2,
+		"PATHOCL" : 64,
+		"BIASPATHOCL" : 2
 	}
 	
 	return values[engineType]
