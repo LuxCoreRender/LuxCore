@@ -46,13 +46,25 @@ def Render(config):
 def GetEngineList():
 	return ["PATHCPU", "BIDIRCPU", "BIASPATHCPU", "PATHOCL", "BIASPATHOCL"]
 
-def GetEngineHaltDebugValue(engineType):
-	values = {
-		"PATHCPU" : 1,
-		"BIDIRCPU" : 1,
-		"BIASPATHCPU" : 2,
-		"PATHOCL" : 64,
-		"BIASPATHOCL" : 2
-	}
-	
-	return values[engineType]
+engineProperties = {
+	"PATHCPU" : pyluxcore.Properties().SetFromString(
+		"""renderengine.type = PATHCPU
+		batch.haltdebug = 1"""),
+	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
+		"""renderengine.type = BIDIRCPU
+		batch.haltdebug = 1"""),
+	"BIASPATHCPU" : pyluxcore.Properties().SetFromString(
+		# NOTE: native.threads.count = 1 is required otherwise BIASPATHCPU is not deterministic
+		"""renderengine.type = BIASPATHCPU
+		batch.haltdebug = 2
+		native.threads.count = 1
+		"""), 
+	"PATHOCL" : pyluxcore.Properties().SetFromString(
+		"""renderengine.type = PATHOCL
+		batch.haltdebug = 64"""),
+	"BIASPATHOCL" : pyluxcore.Properties().SetFromString(
+		"""renderengine.type = BIASPATHOCL
+		batch.haltdebug = 2"""),
+}
+def GetEngineProperties(engineType):
+	return engineProperties[engineType]
