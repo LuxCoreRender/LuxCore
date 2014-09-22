@@ -60,16 +60,17 @@ def ListAllTests(testSuite):
 
 def main():
 	print("LuxCore Unit tests")
+	print("LuxCore %s" % pyluxcore.Version())
 
 	# Delete all images in the images directory
+	print("Deleteing all images...", end="")
 	folder = 'images'
 	for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
 		filePath = os.path.join(folder, f)
 		os.unlink(filePath)
+	print("ok")
 
 	pyluxcore.Init(LuxCoreLogHandler)
-
-	print("LuxCore %s" % pyluxcore.Version())
 	
 	# Parse command line options
 

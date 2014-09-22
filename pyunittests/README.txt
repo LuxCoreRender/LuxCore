@@ -15,3 +15,9 @@ python3 pyluxcoreunittests/unittests.py
 To have the list of options:
 
 python3 pyluxcoreunittests/unittests.py --help
+
+Reference images
+================
+
+To generate reference images, just run the tests once and copy all *.png from
+images directory to referenceimages directory.

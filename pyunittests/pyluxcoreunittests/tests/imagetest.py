@@ -15,40 +15,53 @@
 # limitations under the License.
 ################################################################################
 
-from array import *
-from PIL import Image
+import os
+from PIL import Image, ImageChops
 
-import pyluxcore
+from pyluxcoreunittests.tests.utils import *
+
+IMAGES_DIR = "images"
+IMAGE_REFERENCE_DIR = "referenceimages"
 
 class ImageTest(object):
 	pass
-
-def AddTests(cls, testFunc, opts):
-	for input in opts:
-		test = lambda self, i=input: testFunc(i)
-		test.__name__ = "test_%s_%s" % (cls.__name__, input)
-		setattr(cls, test.__name__, test)
-	return cls
-
-def Render(config):
-	session = pyluxcore.RenderSession(config)
-
-	session.Start()
-	session.WaitForDone()
-	session.Stop()
-
-	# Get the rendering result
-	film = session.GetFilm()
-	imageBufferFloat = array('f', [0.0] * (film.GetWidth() * film.GetHeight() * 3))
-	session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)
-
-	return (film.GetWidth(), film.GetHeight()), imageBufferFloat
 
 def ConvertToImage(size, imageBufferFloat):
 	imageBufferUChar = array('B', [int(v * 255.0 + 0.5) for v in imageBufferFloat])
 	return Image.frombuffer("RGB", size, bytes(imageBufferUChar), "raw", "RGB", 0, 1).transpose(Image.FLIP_TOP_BOTTOM)
 
-def StandardTest(name, config):
+def ImageDiff(a, b):
+	diff = ImageChops.difference(a, b)
+	diff = diff.convert('L')
+	# Map all no black pixels
+	pointTable = ([0] + ([255] * 255))
+	diff = diff.point(pointTable)
+	new = diff.convert('RGB')
+	new.paste(b, mask=diff)
+	return new
+
+def ImageEquals(a, b):
+	return ImageChops.difference(a, b).getbbox() is None
+
+def StandardImageTest(testCase, name, config):
 	size, imageBufferFloat = Render(config)
 	image = ConvertToImage(size, imageBufferFloat)
-	image.save("images/" + name + ".png")
+
+	# Save the rendering
+	imageName = IMAGES_DIR + "/" + name + ".png" 
+	image.save(imageName)
+
+	# Check if there is a reference image
+	refImageName = IMAGE_REFERENCE_DIR + "/" + name + ".png" 
+	if os.path.isfile(refImageName):
+		# Read the reference image
+		refImage = Image.open(refImageName)
+		# Check if there is a difference
+		if not ImageEquals(image, refImage):
+			# Save the differences
+			ImageDiff(image, refImage).save(IMAGES_DIR + "/diff-" + name + ".png")
+			testCase.fail(refImageName + " differs from " + imageName)
+	else:
+		# I'm missing the reference image
+		print("\nWARNING: missing reference image \"" + refImageName + "\"")
+		

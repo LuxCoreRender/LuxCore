@@ -17,6 +17,8 @@
 
 import unittest
 import pyluxcore
+
+from pyluxcoreunittests.tests.utils import *
 from pyluxcoreunittests.tests.imagetest import *
 
 def CreateRenderConfig():
@@ -25,7 +27,7 @@ def CreateRenderConfig():
 
 	return config
 
-def TestBasicRendering(engineType):
+def TestBasicRendering(cls, engineType):
 	# Create the rendering configuration
 	config = CreateRenderConfig()
 
@@ -35,7 +37,7 @@ def TestBasicRendering(engineType):
 	config.GetProperties().Set(pyluxcore.Property("renderengine.type", engineType))
 
 	# Run the rendering
-	StandardTest("basic_rendering_" + engineType, config)
+	StandardImageTest(cls, "basic_rendering_" + engineType, config)
 
 class BasicRendering(unittest.TestCase, ImageTest):
     pass
