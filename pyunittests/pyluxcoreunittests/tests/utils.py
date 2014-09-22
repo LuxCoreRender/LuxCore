@@ -16,7 +16,11 @@
 ################################################################################
 
 from array import *
+import unittest
 import pyluxcore
+
+class LuxCoreTest(unittest.TestCase):
+	customConfigProps = pyluxcore.Properties()
 
 def AddTests(cls, testFunc, opts):
 	for input in opts:
@@ -38,3 +42,18 @@ def Render(config):
 	session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)
 
 	return (film.GetWidth(), film.GetHeight()), imageBufferFloat
+
+def GetEngineList():
+	#return ["PATHCPU", "BIDIRCPU", "BIASPATHCPU", "PATHOCL", "BIASPATHOCL"]
+	return ["PATHCPU", "BIDIRCPU"]
+
+def GetEngineHaltDebugValue(engineType):
+	values = {
+		"PATHCPU" : 1,
+		"BIDIRCPU" : 1,
+		"BIASPATHCPU" : 1,
+		"PATHOCL" : 2,
+		"BIASPATHOCL" : 1
+	}
+	
+	return values[engineType]

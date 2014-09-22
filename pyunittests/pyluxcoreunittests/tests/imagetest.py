@@ -23,7 +23,7 @@ from pyluxcoreunittests.tests.utils import *
 IMAGES_DIR = "images"
 IMAGE_REFERENCE_DIR = "referenceimages"
 
-class ImageTest(object):
+class ImageTest(LuxCoreTest):
 	pass
 
 def ConvertToImage(size, imageBufferFloat):
