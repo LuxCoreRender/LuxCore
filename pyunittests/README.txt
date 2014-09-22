@@ -10,11 +10,19 @@ Unit tests
 
 To run the tests:
 
-python3 pyluxcoreunittests/unittests.py
+python3 unittests.py
+
+To run only a set of tests:
+
+python3 unittests.py --filter _PATHCPU
 
 To have the list of options:
 
-python3 pyluxcoreunittests/unittests.py --help
+python3 unittests.py --help
+
+To run the test with a custom configuration:
+
+python3 unittests.py --config testconfigs/dade.cfg
 
 Reference images
 ================

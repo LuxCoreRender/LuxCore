@@ -18,14 +18,14 @@
 
 import sys
 sys.path.append("../lib")
-# To avoid .pyc files
-sys.dont_write_bytecode = True
 
 import os
 import re
 import argparse
 import unittest
 import pyluxcore
+
+from pyluxcoreunittests.tests.utils import *
 
 printLuxCoreLog = False
 
@@ -75,6 +75,8 @@ def main():
 	# Parse command line options
 
 	parser = argparse.ArgumentParser(description='Runs LuxCore test suite.')
+	parser.add_argument('--config', dest='config',
+		help='custom configuration properties for the unit tests')
 	parser.add_argument('--filter', dest='filter',
 		help='select only the tests matching the specified regular expression')
 	parser.add_argument('--list', dest='list', action='store_true',
@@ -87,10 +89,14 @@ def main():
 	if int(args.verbose) >= 3:
 		printLuxCoreLog = True
 
+	# Read the custom configuration file
+	if args.config:
+		LuxCoreTest.customConfigProps.SetFromFile(args.config)
+
 	# Discover all tests
 	
-	propertiesSuite = unittest.TestLoader().discover("tests.properties", top_level_dir=".")
-	basicSuite = unittest.TestLoader().discover("tests.basic", top_level_dir=".")
+	propertiesSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.properties", top_level_dir=".")
+	basicSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.basic", top_level_dir=".")
 	
 	allTests = unittest.TestSuite([propertiesSuite, basicSuite])
 	
