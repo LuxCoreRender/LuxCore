@@ -56,15 +56,19 @@ engineProperties = {
 	"BIASPATHCPU" : pyluxcore.Properties().SetFromString(
 		# NOTE: native.threads.count = 1 is required otherwise BIASPATHCPU is not deterministic
 		"""renderengine.type = BIASPATHCPU
-		batch.haltdebug = 2
+		batch.haltdebug = 1
 		native.threads.count = 1
-		"""), 
+		"""),
 	"PATHOCL" : pyluxcore.Properties().SetFromString(
+		# NOTE: path.pixelatomics.enable = 1 is required otherwise PATHOCL is not deterministic
 		"""renderengine.type = PATHOCL
-		batch.haltdebug = 64"""),
+		batch.haltdebug = 64
+		path.pixelatomics.enable = 1"""),
 	"BIASPATHOCL" : pyluxcore.Properties().SetFromString(
+		# NOTE: BIASPATHOCL is deterministic only when used with a single OpenCL device
 		"""renderengine.type = BIASPATHOCL
-		batch.haltdebug = 2"""),
+		batch.haltdebug = 1"""),
 }
+
 def GetEngineProperties(engineType):
 	return engineProperties[engineType]
