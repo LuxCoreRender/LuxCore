@@ -26,6 +26,8 @@
 #include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 
+#include "luxcore/cfg.h"
+
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
@@ -102,7 +104,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	// Check the kind of kernel cache to use
 	string type = renderEngine->renderConfig->cfg.Get(Property("opencl.kernelcache")("PERSISTENT")).Get<string>();
 	if (type == "PERSISTENT")
-		kernelCache = new oclKernelPersistentCache("SLG_" SLG_VERSION_MAJOR "." SLG_VERSION_MINOR);
+		kernelCache = new oclKernelPersistentCache("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
 	else if (type == "VOLATILE")
 		kernelCache = new oclKernelVolatileCache();
 	else if (type == "NONE")

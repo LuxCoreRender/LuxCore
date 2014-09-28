@@ -22,7 +22,6 @@
 #include <sstream>
 
 #include "luxrays/luxrays.h"
-#include "slg/cfg.h"
 
 /*!
  * \namespace slg
@@ -36,9 +35,6 @@ class RenderSession;
 class RenderConfig;
 class RenderEngine;
 class EditActionList;
-
-extern std::string SLG_LABEL;
-extern std::string LUXVR_LABEL;
 
 // The next two functions pointers (plus the one in sdl.h) have to be
 // set by the application using SLG library
