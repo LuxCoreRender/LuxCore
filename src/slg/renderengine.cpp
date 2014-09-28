@@ -729,7 +729,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		if (enableMultipassRendering) {
 			if (pendingTiles.size() > 0) {
 				// I have to wait for any pending tile
-				while ((todoTiles.size() == 0) || !done)
+				while ((todoTiles.size() == 0) && !done)
 					allTodoTilesDoneCondition.wait(lock);
 
 				// Check if the rendering is finished
