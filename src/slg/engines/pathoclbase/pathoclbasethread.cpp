@@ -527,7 +527,7 @@ void PathOCLBaseRenderThread::InitLights() {
 		sizeof(slg::ocl::LightSource) * cscene->lightDefs.size(), "Lights");
 	if (cscene->envLightIndices.size() > 0) {
 		AllocOCLBufferRO(&envLightIndicesBuff, &cscene->envLightIndices[0],
-				sizeof(slg::ocl::LightSource) * cscene->envLightIndices.size(), "Env. light indices");
+				sizeof(u_int) * cscene->envLightIndices.size(), "Env. light indices");
 	} else
 		FreeOCLBuffer(&envLightIndicesBuff);
 
