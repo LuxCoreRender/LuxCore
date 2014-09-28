@@ -28,13 +28,17 @@ def TestSimpleRendering(cls, params):
 	# Create the rendering configuration
 	props = pyluxcore.Properties(LuxCoreTest.customConfigProps)
 	props.SetFromFile("resources/scenes/simple/simple.cfg")
+	
+	# Set the rendering engine
 	props.Set(GetEngineProperties(engineType))
+	# Set the sampler (if required)
 	if samplerType:
 		props.Set(pyluxcore.Property("sampler.type", samplerType))
+
 	config = pyluxcore.RenderConfig(props)
 
 	# Run the rendering
-	StandardImageTest(cls, "simple_rendering_" + engineType + ("" if not samplerType else ("_" + samplerType)), config)
+	StandardImageTest(cls, "SimpleRendering_" + engineType + ("" if not samplerType else ("_" + samplerType)), config)
 
 class SimpleRendering(ImageTest):
     pass
