@@ -25,7 +25,14 @@ class LuxCoreTest(unittest.TestCase):
 def AddTests(cls, testFunc, opts):
 	for input in opts:
 		test = lambda self, i=input: testFunc(self, i)
-		test.__name__ = "test_%s_%s" % (cls.__name__, input)
+		if isinstance(input, tuple):
+			paramName = ""
+			for i in input:
+				if i:
+					paramName += ("" if paramName == "" else "_") + str(i)
+		else:
+			paramName = str(input)
+		test.__name__ = "test_%s_%s" % (cls.__name__, paramName)
 		setattr(cls, test.__name__, test)
 	return cls
 
@@ -45,6 +52,21 @@ def Render(config):
 
 def GetEngineList():
 	return ["PATHCPU", "BIDIRCPU", "BIASPATHCPU", "PATHOCL", "BIASPATHOCL"]
+
+def GetEngineListWithSamplers():
+	return [
+		("PATHCPU", "RANDOM"),
+		("PATHCPU", "SOBOL"),
+		("PATHCPU", "METROPOLIS"),
+		("BIDIRCPU", "RANDOM"),
+		("BIDIRCPU", "SOBOL"),
+		("BIDIRCPU", "METROPOLIS"),
+		("BIASPATHCPU", None),
+		("PATHOCL", "RANDOM"),
+		("PATHOCL", "SOBOL"),
+		("PATHOCL", "METROPOLIS"),
+		("BIASPATHOCL", None)
+		]
 
 engineProperties = {
 	"PATHCPU" : pyluxcore.Properties().SetFromString(

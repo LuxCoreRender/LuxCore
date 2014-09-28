@@ -64,7 +64,7 @@ def main():
 	print("LuxCore %s" % pyluxcore.Version())
 
 	# Delete all images in the images directory
-	print("Deleteing all images...", end="")
+	print("Deleting all images...", end="")
 	folder = 'images'
 	for f in [png for png in os.listdir(folder) if png.endswith(".png")]:
 		filePath = os.path.join(folder, f)
