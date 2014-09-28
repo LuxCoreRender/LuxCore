@@ -76,7 +76,10 @@ void SampleResult_Init(__global SampleResult *sampleResult) {
 
 void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint lightID,
 		const BSDFEvent bsdfEvent, const float3 radiance, const float lightScale) {
-	VADD3F(sampleResult->radiancePerPixelNormalized[lightID].c, radiance);
+	// Avoid out of bound access if the light group doesn't exist. This can happen
+	// with RT modes.
+	const uint id = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+	VADD3F(sampleResult->radiancePerPixelNormalized[id].c, radiance);
 
 	if (sampleResult->firstPathVertex) {
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
@@ -116,7 +119,10 @@ void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint
 
 void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,
 		const float3 emission) {
-	VADD3F(sampleResult->radiancePerPixelNormalized[lightID].c, emission);
+	// Avoid out of bound access if the light group doesn't exist. This can happen
+	// with RT modes.
+	const uint id = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+	VADD3F(sampleResult->radiancePerPixelNormalized[id].c, emission);
 
 	if (sampleResult->firstPathVertex) {
 #if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)

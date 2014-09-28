@@ -302,7 +302,7 @@ std::string KernelSource_pathocl_kernels =
 "				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;\n"
 "\n"
 "			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);\n"
-"			*ID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);\n"
+"			*ID = light->lightID;\n"
 "\n"
 "			// Setup the shadow ray\n"
 "			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);\n"

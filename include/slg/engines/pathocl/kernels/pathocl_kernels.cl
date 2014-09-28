@@ -299,7 +299,7 @@ bool DirectLightSampling(
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);
-			*ID = min(light->lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+			*ID = light->lightID;
 
 			// Setup the shadow ray
 			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
