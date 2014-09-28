@@ -23,6 +23,7 @@ import os
 import re
 import argparse
 import unittest
+from time import gmtime, strftime
 import pyluxcore
 
 from pyluxcoreunittests.tests.utils import *
@@ -31,7 +32,7 @@ printLuxCoreLog = False
 
 def LuxCoreLogHandler(msg):
 	if printLuxCoreLog:
-		print(msg, file=sys.stderr)
+		print("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", gmtime()), msg), file=sys.stderr)
 
 def FilterTests(pattern, testSuite):
 	try:
