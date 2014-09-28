@@ -3,7 +3,6 @@ scene.camera.lookat.target = 0.0 0.0 1.0
 ################################################################################
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
-scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.redmatte.type = matte
 scene.materials.redmatte.kd = 0.75 0.0 0.0
 scene.materials.blumatte.type = matte
