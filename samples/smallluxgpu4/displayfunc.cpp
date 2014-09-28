@@ -44,6 +44,9 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
+const string SLG_LABEL = "SmallLuxGPU v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (LuxCore demo: http://www.luxrender.net)";
+const string LUXVR_LABEL = "LuxVR v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxrender.net)";
+
 static void PrintString(void *font, const char *string) {
 	int len, i;
 
@@ -279,9 +282,9 @@ static void PrintCaptions() {
 	// Title
 	glRasterPos2i(4, session->GetFilm().GetHeight() - 12);
 	if (optUseLuxVRName)
-		PrintString(GLUT_BITMAP_8_BY_13, slg::LUXVR_LABEL.c_str());
+		PrintString(GLUT_BITMAP_8_BY_13, LUXVR_LABEL.c_str());
 	else
-		PrintString(GLUT_BITMAP_8_BY_13, slg::SLG_LABEL.c_str());
+		PrintString(GLUT_BITMAP_8_BY_13, SLG_LABEL.c_str());
 }
 
 void displayFunc(void) {
@@ -872,9 +875,9 @@ void InitGlut(int argc, char *argv[], const u_int width, const u_int height) {
 
 		glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
 		if (optUseLuxVRName)
-			glutCreateWindow(slg::LUXVR_LABEL.c_str());
+			glutCreateWindow(LUXVR_LABEL.c_str());
 		else
-			glutCreateWindow(slg::SLG_LABEL.c_str());
+			glutCreateWindow(SLG_LABEL.c_str());
 	}
 }
 

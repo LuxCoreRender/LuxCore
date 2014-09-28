@@ -26,16 +26,6 @@
 #############################################################################
 #############################################################################
 
-set(SLG_VERSION_MAJOR 4)
-set(SLG_VERSION_MINOR 0devel3)
-
-# Configure a header file to pass some of the CMake settings
-# to the source code
-configure_file(
-  "${LuxRays_SOURCE_DIR}/include/slg/cfg.h.in"
-  "${LuxRays_SOURCE_DIR}/include/slg/cfg.h"
-  )
-
 #############################################################################
 #
 # SLG Docs
