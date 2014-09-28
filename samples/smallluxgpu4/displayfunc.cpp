@@ -721,9 +721,9 @@ void keyFunc(unsigned char key, int x, int y) {
 #if defined(WIN32)
 			std::wstring ws;
 			if (optUseLuxVRName)
-				ws.assign(slg::LUXVR_LABEL.begin (), slg::LUXVR_LABEL.end());
+				ws.assign(LUXVR_LABEL.begin (), LUXVR_LABEL.end());
 			else
-				ws.assign(slg::SLG_LABEL.begin (), slg::SLG_LABEL.end());
+				ws.assign(SLG_LABEL.begin (), SLG_LABEL.end());
 			HWND hWnd = FindWindowW(NULL, ws.c_str());
 			if (GetWindowLongPtr(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
 				SetWindowPos(hWnd, HWND_NOTOPMOST, NULL, NULL, NULL, NULL, SWP_NOMOVE | SWP_NOSIZE);
