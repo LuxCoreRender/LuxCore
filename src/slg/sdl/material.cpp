@@ -69,7 +69,7 @@ void Material::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,
 
         // The above transform keeps the normal in the original normal
         // hemisphere. If they are opposed, it means UVN was indirect and
-        // the normal needs to be reversed
+        // the normal needs to be reversed.
         hitPoint->shadeN *= (Dot(oldShadeN, hitPoint->shadeN) < 0.f) ? -1.f : 1.f;
     }
 }

@@ -65,25 +65,20 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
     // Compute geometry differentials
     Vector geometryDpdu, geometryDpdv;
     Normal geometryDndu, geometryDndv;
-    const bool hasDPDUV = mesh->GetDifferentials(ray.time, rayHit.triangleIndex,
+    mesh->GetDifferentials(ray.time, rayHit.triangleIndex,
             &geometryDpdu, &geometryDpdv,
             &geometryDndu, &geometryDndv);
 
-    if (hasDPDUV) {
-        // Initialize shading differentials
-        Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, geometryDpdu));
-		Vector shadeDpdu = Cross(shadeDpdv, hitPoint.shadeN);
-		shadeDpdv *= (Dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
+	// Initialize shading differentials
+	Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, geometryDpdu));
+	Vector shadeDpdu = Cross(shadeDpdv, hitPoint.shadeN);
+	shadeDpdv *= (Dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
 
-        // Apply bump or normal mapping
-        material->Bump(&hitPoint, shadeDpdu, shadeDpdv, geometryDndu, geometryDndu, 1.f);
+	// Apply bump or normal mapping
+	material->Bump(&hitPoint, shadeDpdu, shadeDpdv, geometryDndu, geometryDndu, 1.f);
 
-        // Build the local reference system
-        mesh->GetFrame(hitPoint.shadeN, geometryDpdu, geometryDpdv, frame);
-    } else {
-        // Build the local reference system
-        frame.SetFromZ(hitPoint.shadeN);
-    }
+	// Build the local reference system
+	mesh->GetFrame(hitPoint.shadeN, geometryDpdu, geometryDpdv, frame);
 }
 
 void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,

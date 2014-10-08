@@ -23,5 +23,6 @@ scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light
 scene.objects.obj_red.ply = scenes/bump/mat_red.ply
 scene.objects.obj_red.material = mat_red
-scene.objects.obj_white.ply = scenes/bump/mat_white.ply
+#scene.objects.obj_white.ply = scenes/bump/mat_white.ply
+scene.objects.obj_white.ply = scenes/bump/mat_white_no_uv.ply
 scene.objects.obj_white.material = mat_white
