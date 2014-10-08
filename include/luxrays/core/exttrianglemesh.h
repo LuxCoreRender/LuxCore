@@ -58,7 +58,7 @@ public:
 	virtual float GetAlpha(const u_int vertIndex) const = 0;
 
 	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
-    bool GetDifferentials(const float time, const u_int triIndex,
+    void GetDifferentials(const float time, const u_int triIndex,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const;
     void GetFrame(const Normal &normal, const Vector &dpdu, const Vector &dpdv, Frame &frame) const;

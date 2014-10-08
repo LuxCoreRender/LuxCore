@@ -28,7 +28,7 @@
 
 using namespace luxrays;
 
-bool ExtMesh::GetDifferentials(const float time, const u_int triIndex,
+void ExtMesh::GetDifferentials(const float time, const u_int triIndex,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const {
     // Compute triangle partial derivatives
@@ -38,8 +38,11 @@ bool ExtMesh::GetDifferentials(const float time, const u_int triIndex,
         uv0 = GetUV(tri.v[0]);
         uv1 = GetUV(tri.v[1]);
         uv2 = GetUV(tri.v[2]);
-    } else
-        return false;
+    } else {
+		uv0 = UV(.5f, .5f);
+		uv1 = UV(.5f, .5f);
+		uv2 = UV(.5f, .5f);
+	}
 
     // Compute deltas for triangle partial derivatives
 	const float du1 = uv0.u - uv2.u;
@@ -47,19 +50,24 @@ bool ExtMesh::GetDifferentials(const float time, const u_int triIndex,
 	const float dv1 = uv0.v - uv2.v;
 	const float dv2 = uv1.v - uv2.v;
 	const float determinant = du1 * dv2 - dv1 * du2;
-	if (determinant == 0.f)
-        return false;
-	else {
+
+	// Using GetVertex() in order to do all computation relative to
+	// the global coordinate system.
+	const Point p0 = GetVertex(time, tri.v[0]);
+	const Point p1 = GetVertex(time, tri.v[1]);
+	const Point p2 = GetVertex(time, tri.v[2]);
+
+	const Vector dp1 = p0 - p2;
+	const Vector dp2 = p1 - p2;
+
+	if (determinant == 0.f) {
+		// Handle 0 determinant for triangle partial derivative matrix
+		CoordinateSystem(Normalize(Cross(dp1, dp2)), dpdu, dpdv);
+		*dndu = Normal();
+		*dndv = Normal();
+	} else {
 		const float invdet = 1.f / determinant;
 
-        // Using GetVertex() in order to do all computation relative to
-        // the global coordinate system.
-        const Point p0 = GetVertex(time, tri.v[0]);
-        const Point p1 = GetVertex(time, tri.v[1]);
-        const Point p2 = GetVertex(time, tri.v[2]);
-
-        const Vector dp1 = p0 - p2;
-        const Vector dp2 = p1 - p2;
 		*dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
 		*dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
 
@@ -78,8 +86,6 @@ bool ExtMesh::GetDifferentials(const float time, const u_int triIndex,
             *dndu = Normal();
             *dndv = Normal();
         }
-
-        return true;
 	}
 }
 
