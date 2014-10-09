@@ -18,6 +18,124 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// TODO: move in a separate extmesh_funcs.h file
+
+void ExtMesh_GetDifferentials(
+		__global Mesh *meshDescs,
+		__global Point *vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		__global Vector *vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+		__global UV *vertUVs,
+#endif
+		__global Triangle *triangles,
+		const uint meshIndex,
+		const uint triangleIndex,
+		float3 *dpdu, float3 *dpdv,
+        float3 *dndu, float3 *dndv) {
+	__global Mesh *meshDesc = &meshDescs[meshIndex];
+	__global Point *iVertices = &vertices[meshDesc->vertsOffset];
+	__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
+
+	// Compute triangle partial derivatives
+	__global Triangle *tri = &iTriangles[triangleIndex];
+	const uint vi0 = tri->v[0];
+	const uint vi1 = tri->v[1];
+	const uint vi2 = tri->v[2];
+
+	float2 uv0, uv1, uv2;
+#if defined(PARAM_HAS_UVS_BUFFER)
+	if (meshDesc->uvsOffset != NULL_INDEX) {
+		// Ok, UV coordinates are available, use them to build the reference
+		// system around the shading normal.
+
+		__global UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
+		uv0 = VLOAD2F(&iVertUVs[vi0].u);
+		uv1 = VLOAD2F(&iVertUVs[vi1].u);
+		uv2 = VLOAD2F(&iVertUVs[vi2].u);
+	} else {
+#endif
+		uv0 = (float2)(.5f, .5f);
+		uv1 = (float2)(.5f, .5f);
+		uv2 = (float2)(.5f, .5f);
+#if defined(PARAM_HAS_UVS_BUFFER)
+	}
+#endif
+
+	// Compute deltas for triangle partial derivatives
+	const float du1 = uv0.s0 - uv2.s0;
+	const float du2 = uv1.s0 - uv2.s0;
+	const float dv1 = uv0.s1 - uv2.s1;
+	const float dv2 = uv1.s1 - uv2.s1;
+	const float determinant = du1 * dv2 - dv1 * du2;
+
+	const float3 p0 = VLOAD3F(&iVertices[vi0].x);
+	const float3 p1 = VLOAD3F(&iVertices[vi1].x);
+	const float3 p2 = VLOAD3F(&iVertices[vi2].x);
+	const float3 dp1 = p0 - p2;
+	const float3 dp2 = p1 - p2;
+
+	if (determinant == 0.f) {
+		// Handle 0 determinant for triangle partial derivative matrix
+		CoordinateSystem(normalize(cross(dp1, dp2)), dpdu, dpdv);
+		*dndu = ZERO;
+		*dndv = ZERO;
+	} else {
+		const float invdet = 1.f / determinant;
+
+		//------------------------------------------------------------------
+		// Compute dpdu and dpdv
+		//------------------------------------------------------------------
+
+		*dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		*dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
+		// Transform to global coordinates
+		*dpdu = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dpdu));
+		*dpdv = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dpdv));
+
+		//------------------------------------------------------------------
+		// Compute dndu and dndv
+		//------------------------------------------------------------------
+
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		if (meshDesc->normalsOffset != NULL_INDEX) {
+			__global Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
+			// Shading normals expressed in local coordinates
+			const float3 n0 = VLOAD3F(&iVertNormals[tri->v[0]].x);
+			const float3 n1 = VLOAD3F(&iVertNormals[tri->v[1]].x);
+			const float3 n2 = VLOAD3F(&iVertNormals[tri->v[2]].x);
+			const float3 dn1 = n0 - n2;
+			const float3 dn2 = n1 - n2;
+
+			*dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
+			*dndv = (-du2 * dn1 + du1 * dn2) * invdet;
+			// Transform to global coordinates
+			*dndu = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dndu));
+			*dndv = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dndv));
+		} else {
+#endif
+			*dndu = ZERO;
+			*dndv = ZERO;
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+		}
+#endif
+	}
+}
+
+void ExtMesh_GetFrame(const float3 normal, const float3 dpdu, const float3 dpdv,
+		__global Frame *frame) {
+	// Build the local reference system
+
+    float3 ts = normalize(cross(normal, dpdu));
+    float3 ss = cross(ts, normal);
+    ts *= (dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
+
+    VSTORE3F(ss, &frame->X.x);
+	VSTORE3F(ts, &frame->Y.x);
+	VSTORE3F(normal, &frame->Z.x);
+}
+
 // Used when hitting a surface
 void BSDF_Init(
 		__global BSDF *bsdf,
@@ -192,100 +310,26 @@ void BSDF_Init(
 	// Build the local reference system
 	//--------------------------------------------------------------------------
 
-	// Compute triangle partial derivatives
-	__global Triangle *tri = &iTriangles[triangleIndex];
-	const uint vi0 = tri->v[0];
-	const uint vi1 = tri->v[1];
-	const uint vi2 = tri->v[2];
-
-	float2 uv0, uv1, uv2;
-	if (meshDesc->uvsOffset != NULL_INDEX) {
-		// Ok, UV coordinates are available, use them to build the reference
-		// system around the shading normal.
-
-		__global UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
-		uv0 = VLOAD2F(&iVertUVs[vi0].u);
-		uv1 = VLOAD2F(&iVertUVs[vi1].u);
-		uv2 = VLOAD2F(&iVertUVs[vi2].u);
-	} else {
-		uv0 = (float2)(0.f, 0.f);
-		uv1 = (float2)(0.f, 0.f);
-		uv2 = (float2)(0.f, 0.f);
-	}
-
-	// Compute deltas for triangle partial derivatives
-	const float du1 = uv0.s0 - uv2.s0;
-	const float du2 = uv1.s0 - uv2.s0;
-	const float dv1 = uv0.s1 - uv2.s1;
-	const float dv2 = uv1.s1 - uv2.s1;
-	const float determinant = du1 * dv2 - dv1 * du2;
-
-	const float3 p0 = VLOAD3F(&iVertices[vi0].x);
-	const float3 p1 = VLOAD3F(&iVertices[vi1].x);
-	const float3 p2 = VLOAD3F(&iVertices[vi2].x);
-	const float3 dp1 = p0 - p2;
-	const float3 dp2 = p1 - p2;
-
-	float3 geometryDndu, geometryDndv, shadeDpdu, shadeDpdv;
-	if (determinant == 0.f) {
-		// Handle 0 determinant for triangle partial derivative matrix
-		CoordinateSystem(normalize(cross(dp1, dp2)), &shadeDpdu, &shadeDpdv);
-		geometryDndu = ZERO;
-		geometryDndv = ZERO;
-	} else {
-		const float invdet = 1.f / determinant;
-
-		//------------------------------------------------------------------
-		// Compute geometryDpdu and geometryDpdv
-		//------------------------------------------------------------------
-
-            const float3 p0 = VLOAD3F(&iVertices[vi0].x);
-            const float3 p1 = VLOAD3F(&iVertices[vi1].x);
-            const float3 p2 = VLOAD3F(&iVertices[vi2].x);
-            const float3 dp1 = p0 - p2;
-            const float3 dp2 = p1 - p2;
-
-            float3 geometryDpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-            float3 geometryDpdv = (-du2 * dp1 + du1 * dp2) * invdet;
-		// Transform to global coordinates
-		geometryDpdu = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryDpdu));
-		geometryDpdv = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryDpdv));
-
-		//------------------------------------------------------------------
-		// Compute shadeDpdu and shadeDpdv
-		//------------------------------------------------------------------
-
-		shadeDpdv = normalize(cross(shadeN, geometryDpdu));
-		shadeDpdu = cross(shadeDpdv, shadeN);
-		shadeDpdv *= (dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
-
-		//------------------------------------------------------------------
-		// Compute geometryDndu and geometryDndv
-		//------------------------------------------------------------------
-
+	float3 geometryDndu, geometryDndv, geometryDpdu, geometryDpdv;
+	ExtMesh_GetDifferentials(
+			meshDescs,
+			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		if (meshDesc->normalsOffset != NULL_INDEX) {
-			__global Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
-			// Shading normals expressed in local coordinates
-			const float3 n0 = VLOAD3F(&iVertNormals[tri->v[0]].x);
-			const float3 n1 = VLOAD3F(&iVertNormals[tri->v[1]].x);
-			const float3 n2 = VLOAD3F(&iVertNormals[tri->v[2]].x);
-			const float3 dn1 = n0 - n2;
-			const float3 dn2 = n1 - n2;
-
-			geometryDndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
-			geometryDndv = (-du2 * dn1 + du1 * dn2) * invdet;
-			// Transform to global coordinates
-			geometryDndu = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryDndu));
-			geometryDndv = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryDndv));
-		} else {
+			vertNormals,
 #endif
-			geometryDndu = ZERO;
-			geometryDndv = ZERO;
-#if defined(PARAM_HAS_NORMALS_BUFFER)
-		}
+#if defined(PARAM_HAS_UVS_BUFFER)
+			vertUVs,
 #endif
-	}
+			triangles,
+			meshIndex,
+			triangleIndex,
+			&geometryDpdu, &geometryDpdv,
+			&geometryDndu, &geometryDndv);
+	
+	// Initialize shading differentials
+	float3 shadeDpdv = normalize(cross(shadeN, geometryDpdu));
+	float3 shadeDpdu = cross(shadeDpdv, shadeN);
+	shadeDpdv *= (dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
 
 	//--------------------------------------------------------------------------
 	// Apply bump or normal mapping
@@ -304,9 +348,7 @@ void BSDF_Init(
 	// Build the local reference system
 	//--------------------------------------------------------------------------
 
-	VSTORE3F(shadeDpdu, &bsdf->frame.X.x);
-	VSTORE3F(shadeDpdv, &bsdf->frame.Y.x);
-	VSTORE3F(shadeN, &bsdf->frame.Z.x);
+	ExtMesh_GetFrame(shadeN, geometryDpdu, geometryDpdv, &bsdf->frame);
 
 #if defined(PARAM_HAS_VOLUMES)
 	bsdf->isVolume = false;
