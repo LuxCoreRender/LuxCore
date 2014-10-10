@@ -432,10 +432,10 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 			imageMap->width, imageMap->height, imageMap->channelCount,
 			uv.s0, uv.s1) / triLight->triangle.avarage;
 
-		*directPdfW = triLight->triangle.invArea * distanceSquared ;
+		*directPdfW = triLight->triangle.invTriangleArea * distanceSquared ;
 	} else
 #endif
-		*directPdfW = triLight->triangle.invArea * distanceSquared / cosAtLight;
+		*directPdfW = triLight->triangle.invTriangleArea * distanceSquared / cosAtLight;
 
 	const float2 uv0 = VLOAD2F(&triLight->triangle.uv0.u);
 	const float2 uv1 = VLOAD2F(&triLight->triangle.uv1.u);
@@ -463,7 +463,7 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 #endif
 
 	return Material_GetEmittedRadiance(triLight->triangle.materialIndex,
-			tmpHitPoint, triLight->triangle.invArea
+			tmpHitPoint, triLight->triangle.invMeshArea
 			MATERIALS_PARAM) * emissionColor;
 }
 
@@ -477,7 +477,7 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 		return BLACK;
 
 	if (directPdfA)
-		*directPdfA = triLight->triangle.invArea;
+		*directPdfA = triLight->triangle.invTriangleArea;
 
 	float3 emissionColor = WHITE;
 #if defined(PARAM_HAS_IMAGEMAPS)
@@ -501,7 +501,7 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 #endif
 
 	return Material_GetEmittedRadiance(triLight->triangle.materialIndex,
-			hitPoint, triLight->triangle.invArea
+			hitPoint, triLight->triangle.invMeshArea
 			MATERIALS_PARAM) * emissionColor;
 }
 

@@ -687,7 +687,8 @@ void CompiledScene::CompileLights() {
 					ASSIGN_UV(oclLight->triangle.uv1, zero);
 					ASSIGN_UV(oclLight->triangle.uv2, zero);
 				}
-				oclLight->triangle.invArea = 1.f / tl->GetArea();
+				oclLight->triangle.invTriangleArea = 1.f / tl->GetTriangleArea();
+				oclLight->triangle.invMeshArea = 1.f / tl->GetMeshArea();
 
 				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->lightMaterial);
 

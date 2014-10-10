@@ -68,6 +68,7 @@ public:
 	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const = 0;
 
+	virtual float GetMeshArea(const float time) const = 0;
 	virtual float GetTriangleArea(const float time, const unsigned int triIndex) const = 0;
 	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1,
 		Point *p, float *b0, float *b1, float *b2) const = 0;
@@ -151,6 +152,10 @@ public:
 			return 1.f;
 	}
 
+	virtual float GetMeshArea(const float time) const {
+		return area;
+	}
+	
 	virtual float GetTriangleArea(const float time, const unsigned int triIndex) const {
 		return tris[triIndex].Area(vertices);
 	}
@@ -173,11 +178,16 @@ private:
 	UV *uvs; // Vertex uvs
 	Spectrum *cols; // Vertex color
 	float *alphas; // Vertex alpha
+	float area;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
-	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) :  InstanceTriangleMesh(m, t) { }
+	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) :  InstanceTriangleMesh(m, t) {
+		instancedArea = 0.f;
+		for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
+			instancedArea += GetTriangleArea(0.f, i);
+	}
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}
 
@@ -224,6 +234,10 @@ public:
 		return ((ExtTriangleMesh *)mesh)->InterpolateTriAlpha(triIndex, b1, b2);
 	}
 
+	virtual float GetMeshArea(const float time) const {
+		return instancedArea;
+	}
+
 	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
@@ -241,13 +255,20 @@ public:
 		trans = t;
 	}
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
+
+private:
+	float instancedArea;
 };
 
 class ExtMotionTriangleMesh : public MotionTriangleMesh, public ExtMesh {
 public:
 	ExtMotionTriangleMesh(ExtTriangleMesh *m, const MotionSystem &ms) :
-		MotionTriangleMesh(m, ms) { }
-	~ExtMotionTriangleMesh() { };
+		MotionTriangleMesh(m, ms) {
+		instancedArea = 0.f;
+		for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
+			instancedArea += GetTriangleArea(0.f, i);
+	}
+	~ExtMotionTriangleMesh() { }
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_MOTION; }
@@ -297,6 +318,10 @@ public:
 		return ((ExtTriangleMesh *)mesh)->InterpolateTriAlpha(triIndex, b1, b2);
 	}
 
+	virtual float GetMeshArea(const float time) const {
+		return instancedArea;
+	}
+
 	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
@@ -311,6 +336,9 @@ public:
 
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
+
+private:
+	float instancedArea;
 };
 
 }
