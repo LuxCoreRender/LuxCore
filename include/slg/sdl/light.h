@@ -108,7 +108,7 @@ public:
 
 class IntersectableLightSource : public LightSource {
 public:
-	IntersectableLightSource() : lightMaterial(NULL), area(0.f), invArea(0.f) { }
+	IntersectableLightSource() : lightMaterial(NULL) { }
 	virtual ~IntersectableLightSource() { }
 
 	virtual bool IsIntersectable() const { return true; }
@@ -122,8 +122,6 @@ public:
 	virtual bool IsVisibleIndirectGlossy() const { return lightMaterial->IsVisibleIndirectGlossy(); }
 	virtual bool IsVisibleIndirectSpecular() const { return lightMaterial->IsVisibleIndirectSpecular(); }
 
-	float GetArea() const { return area; }
-
 	virtual luxrays::Spectrum GetRadiance(const HitPoint &hitPoint,
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const = 0;
@@ -134,9 +132,6 @@ public:
 	}
 
 	const Material *lightMaterial;
-	
-protected:
-	float area, invArea;
 };
 
 //------------------------------------------------------------------------------
@@ -835,6 +830,10 @@ public:
 
 	virtual LightSourceType GetType() const { return TYPE_TRIANGLE; }
 
+	float GetTriangleArea() const { return triangleArea; }
+	float GetMeshArea() const { return meshArea; }
+	
+	virtual float GetArea() const { return triangleArea; }
 	virtual float GetPower(const Scene &scene) const;
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
@@ -853,6 +852,10 @@ public:
 
 	const luxrays::ExtMesh *mesh;
 	u_int meshIndex, triangleIndex;
+	
+private:
+	float triangleArea, invTriangleArea;
+	float meshArea, invMeshArea;
 };
 
 }

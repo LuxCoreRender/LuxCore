@@ -1232,7 +1232,7 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 	*orig = p1;
 	*dir = Normalize((p2 - p1));
 
-	// Compute InfiniteAreaLight ray weight
+	// Compute InfiniteLight ray weight
 	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
@@ -1375,7 +1375,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	*orig = p1;
 	*dir = Normalize(lightToWorld * (p2 - p1));
 
-	// Compute InfiniteAreaLight ray weight
+	// Compute InfiniteLight ray weight
 	*emissionPdfW = distPdf / (4.f * M_PI * M_PI * worldRadius * worldRadius);
 
 	if (directPdfA)
@@ -2242,7 +2242,9 @@ Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight() : mesh(NULL), meshIndex(NULL_INDEX), triangleIndex(NULL_INDEX) {
+TriangleLight::TriangleLight() : mesh(NULL), meshIndex(NULL_INDEX),
+		triangleIndex(NULL_INDEX), triangleArea(0.f), invTriangleArea(0.f),
+		meshArea(0.f), invMeshArea(0.f){
 }
 
 TriangleLight::~TriangleLight() {
@@ -2250,12 +2252,15 @@ TriangleLight::~TriangleLight() {
 }
 
 float TriangleLight::GetPower(const Scene &scene) const {
-	return area * M_PI * lightMaterial->GetEmittedRadianceY();
+	return triangleArea * M_PI * lightMaterial->GetEmittedRadianceY();
 }
 
 void TriangleLight::Preprocess() {
-	area = mesh->GetTriangleArea(0.f, triangleIndex);
-	invArea = 1.f / area;
+	triangleArea = mesh->GetTriangleArea(0.f, triangleIndex);
+	invTriangleArea = 1.f / triangleArea;
+
+	meshArea = mesh->GetMeshArea(0.f);
+	invMeshArea = 1.f / meshArea;
 }
 
 Spectrum TriangleLight::Emit(const Scene &scene,
@@ -2281,7 +2286,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 
 	if (*emissionPdfW == 0.f)
 			return Spectrum();
-	*emissionPdfW *= invArea;
+	*emissionPdfW *= invTriangleArea;
 
 	// Cannot really not emit the particle, so just bias it to the correct angle
 	localDirOut.z = Max(localDirOut.z, DEFAULT_COS_EPSILON_STATIC);
@@ -2290,7 +2295,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	*dir = frame.ToWorld(localDirOut);
 
 	if (directPdfA)
-		*directPdfA = invArea;
+		*directPdfA = invTriangleArea;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = localDirOut.z;
@@ -2301,7 +2306,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	const HitPoint hitPoint = { Vector(-N), *orig, triUV, N, N,
 		color, alpha, passThroughEvent, NULL, NULL, false, false };
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invArea) * localDirOut.z;
+	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * localDirOut.z;
 }
 
 Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
@@ -2338,16 +2343,16 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
 			if (emissionFuncPdf == 0.f)
 				return Spectrum();
-			*emissionPdfW = emissionFuncPdf * invArea;
+			*emissionPdfW = emissionFuncPdf * invTriangleArea;
 		}
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
 		
-		*directPdfW = invArea * distanceSquared;
+		*directPdfW = invTriangleArea * distanceSquared;
 	} else {
 		if (emissionPdfW)
-			*emissionPdfW = invArea * cosAtLight * INV_PI;
+			*emissionPdfW = invTriangleArea * cosAtLight * INV_PI;
 
-		*directPdfW = invArea * distanceSquared / cosAtLight;
+		*directPdfW = invTriangleArea * distanceSquared / cosAtLight;
 	}
 
 	const UV triUV = mesh->InterpolateTriUV(triangleIndex, b1, b2);
@@ -2356,7 +2361,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	const HitPoint hitPoint = { Vector(-sampleN), samplePoint, triUV, sampleN, sampleN,
 		color, alpha, passThroughEvent, NULL, NULL, false, false };
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invArea) * emissionColor;
+	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor;
 }
 
 Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
@@ -2367,7 +2372,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 		return Spectrum();
 
 	if (directPdfA)
-		*directPdfA = invArea;
+		*directPdfA = invTriangleArea;
 
 	Spectrum emissionColor(1.f);
 	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
@@ -2382,13 +2387,13 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
 			if (emissionFuncPdf == 0.f)
 				return Spectrum();
-			*emissionPdfW = emissionFuncPdf * invArea;
+			*emissionPdfW = emissionFuncPdf * invTriangleArea;
 		}
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
 	} else {
 		if (emissionPdfW)
-			*emissionPdfW = invArea * cosOutLight * INV_PI;
+			*emissionPdfW = invTriangleArea * cosOutLight * INV_PI;
 	}
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invArea) * emissionColor;
+	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor;
 }

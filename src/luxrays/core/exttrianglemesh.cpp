@@ -422,10 +422,13 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	cols = meshCols;
 	alphas = meshAlpha;
 
-	// Compute all triangle normals
+	// Compute all triangle normals and mesh area
 	triNormals = new Normal[triCount];
-	for (u_int i = 0; i < triCount; ++i)
-		triNormals[i] = tris[i].GetGeometryNormal(vertices);;
+	area = 0.f;
+	for (u_int i = 0; i < triCount; ++i) {
+		triNormals[i] = tris[i].GetGeometryNormal(vertices);
+		area += tris[i].Area(vertices);
+	}
 }
 
 Normal *ExtTriangleMesh::ComputeNormals() {
