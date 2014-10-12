@@ -44,11 +44,20 @@ namespace luxcore {
 //------------------------------------------------------------------------------
 
 static boost::mutex luxCoreInitMutex;
-static PyObject *luxCoreLogHandler = NULL;
+static boost::python::object luxCoreLogHandler;
 
 static void PythonDebugHandler(const char *msg) {
-	// This can be not thread-safe when called by multiple threads
-	boost::python::call<void>(luxCoreLogHandler, msg);
+	if (PyGILState_Check())
+		luxCoreLogHandler(string(msg));
+	else {
+		// The following code is supposed to work ... but it doesn't (it never
+		// returns). So I'm just avoiding to call Python without the GIL and
+		// I silently discard the message.
+		
+		//PyGILState_STATE state = PyGILState_Ensure();
+		//luxCoreLogHandler(string(msg));
+		//PyGILState_Release(state);
+	}
 }
 
 static void LuxCore_Init() {
@@ -59,7 +68,7 @@ static void LuxCore_Init() {
 static void LuxCore_InitDefaultHandler(boost::python::object &logHandler) {
 	boost::unique_lock<boost::mutex> lock(luxCoreInitMutex);
 	// I wonder if I should increase the reference count for Python
-	luxCoreLogHandler = logHandler.ptr();
+	luxCoreLogHandler = logHandler;
 
 	Init(&PythonDebugHandler);
 }
