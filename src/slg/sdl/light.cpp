@@ -41,7 +41,7 @@ const float slg::LIGHT_WORLD_RADIUS_SCALE = 10.f;
 
 LightSource *LightStrategy::SampleLights(const float u, float *pdf) const {
 		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-		assert ((lightIndex >= 0) && (lightIndex < GetSize()));
+		assert ((lightIndex >= 0) && (lightIndex < scene->lightDefs.GetSize()));
 
 		return  scene->lightDefs.GetLightSources()[lightIndex];
 	}
