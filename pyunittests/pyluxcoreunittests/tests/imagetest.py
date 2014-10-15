@@ -30,38 +30,84 @@ def ConvertToImage(size, imageBufferFloat):
 	imageBufferUChar = array('B', [int(v * 255.0 + 0.5) for v in imageBufferFloat])
 	return Image.frombuffer("RGB", size, bytes(imageBufferUChar), "raw", "RGB", 0, 1).transpose(Image.FLIP_TOP_BOTTOM)
 
-def ImageDiff(a, b):
+def CompareImage(a, b):
 	diff = ImageChops.difference(a, b)
 	diff = diff.convert('L')
 	# Map all no black pixels
 	pointTable = ([0] + ([255] * 255))
 	diff = diff.point(pointTable)
-	new = diff.convert('RGB')
-	new.paste(b, mask=diff)
-	return new
+	
+	(width, height) = diff.size
+	count = 0
+	for y in range(height):
+		for x in range(width):
+			if diff.getpixel((x, y)) != 0:
+				count += 1
 
-def ImageEquals(a, b):
-	return ImageChops.difference(a, b).getbbox() is None
+	if count > 0:
+		new = diff.convert('RGB')
+		new.paste(b, mask=diff)
+		return False, count, new
+	else:
+		return True, 0, None
+	
+
+def CompareResult(testCase, image, name, frame = -1):
+	if frame >= 0:
+		imageName = (name + "-%04d.png") % frame
+	else:
+		imageName = name + ".png"
+		
+	# Save the rendering
+	resultImageName = IMAGES_DIR + "/" + imageName
+	image.save(resultImageName)
+
+	refImageName = IMAGE_REFERENCE_DIR + "/" + imageName
+	if os.path.isfile(refImageName):
+		# Read the reference image
+		refImage = Image.open(refImageName)
+		# Check if there is a difference
+		(sameImage, diffCount, diffImage) = CompareImage(image, refImage)
+		if not sameImage:
+			if diffCount > 5:
+				# Save the differences
+				diffImage.save(IMAGES_DIR + "/diff-" + imageName)
+				testCase.fail(refImageName + " differs from " + resultImageName + " in " + str(diffCount) + " pixels")
+			else:
+				print("\nWARNING: " + str(diffCount) +" different pixels from reference image in: \"" + resultImageName + "\"")
+	else:
+		# I'm missing the reference image
+		print("\nWARNING: missing reference image \"" + refImageName + "\"")
 
 def StandardImageTest(testCase, name, config):
 	size, imageBufferFloat = Render(config)
 	image = ConvertToImage(size, imageBufferFloat)
 
-	# Save the rendering
-	imageName = IMAGES_DIR + "/" + name + ".png" 
-	image.save(imageName)
+	CompareResult(testCase, image, name)
 
-	# Check if there is a reference image
-	refImageName = IMAGE_REFERENCE_DIR + "/" + name + ".png" 
-	if os.path.isfile(refImageName):
-		# Read the reference image
-		refImage = Image.open(refImageName)
-		# Check if there is a difference
-		if not ImageEquals(image, refImage):
-			# Save the differences
-			ImageDiff(image, refImage).save(IMAGES_DIR + "/diff-" + name + ".png")
-			testCase.fail(refImageName + " differs from " + imageName)
-	else:
-		# I'm missing the reference image
-		print("\nWARNING: missing reference image \"" + refImageName + "\"")
+def StandardAnimTest(testCase, name, config, frameCount):
+	session = pyluxcore.RenderSession(config)
+
+	session.Start()
+
+	for i in range(frameCount):
+		session.WaitForDone()
+
+		# This is done also to update the Film
+		session.UpdateStats()
+
+		session.BeginSceneEdit()
 		
+		size, imageBufferFloat = GetRendering(session)
+		image = ConvertToImage(size, imageBufferFloat)
+
+		CompareResult(testCase,image, name, i)
+
+		# Edit the scene
+		testCase.SceneEdit(session, i)
+
+		# Restart the rendering
+		session.EndSceneEdit()
+	
+	session.Stop()
+

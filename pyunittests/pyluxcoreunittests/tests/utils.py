@@ -36,6 +36,14 @@ def AddTests(cls, testFunc, opts):
 		setattr(cls, test.__name__, test)
 	return cls
 
+def GetRendering(session):
+	# Get the rendering result
+	film = session.GetFilm()
+	imageBufferFloat = array('f', [0.0] * (film.GetWidth() * film.GetHeight() * 3))
+	session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)
+
+	return (film.GetWidth(), film.GetHeight()), imageBufferFloat
+
 def Render(config):
 	session = pyluxcore.RenderSession(config)
 
@@ -43,12 +51,7 @@ def Render(config):
 	session.WaitForDone()
 	session.Stop()
 
-	# Get the rendering result
-	film = session.GetFilm()
-	imageBufferFloat = array('f', [0.0] * (film.GetWidth() * film.GetHeight() * 3))
-	session.GetFilm().GetOutputFloat(pyluxcore.FilmOutputType.RGB_TONEMAPPED, imageBufferFloat)
-
-	return (film.GetWidth(), film.GetHeight()), imageBufferFloat
+	return GetRendering(session)
 
 def GetEngineList():
 	return ["PATHCPU", "BIDIRCPU", "BIASPATHCPU", "PATHOCL", "BIASPATHOCL"]
@@ -70,11 +73,15 @@ def GetEngineListWithSamplers():
 
 engineProperties = {
 	"PATHCPU" : pyluxcore.Properties().SetFromString(
-		"""renderengine.type = PATHCPU
-		batch.haltdebug = 1"""),
+		"""
+		renderengine.type = PATHCPU
+		batch.haltdebug = 1
+		"""),
 	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
-		"""renderengine.type = BIDIRCPU
-		batch.haltdebug = 1"""),
+		"""
+		renderengine.type = BIDIRCPU
+		batch.haltdebug = 1
+		"""),
 	"BIASPATHCPU" : pyluxcore.Properties().SetFromString(
 		# NOTE: native.threads.count = 1 is required otherwise BIASPATHCPU is not deterministic
 		"""renderengine.type = BIASPATHCPU
@@ -83,13 +90,17 @@ engineProperties = {
 		"""),
 	"PATHOCL" : pyluxcore.Properties().SetFromString(
 		# NOTE: path.pixelatomics.enable = 1 is required otherwise PATHOCL is not deterministic
-		"""renderengine.type = PATHOCL
+		"""
+		renderengine.type = PATHOCL
 		batch.haltdebug = 64
-		path.pixelatomics.enable = 1"""),
+		path.pixelatomics.enable = 1
+		"""),
 	"BIASPATHOCL" : pyluxcore.Properties().SetFromString(
 		# NOTE: BIASPATHOCL is deterministic only when used with a single OpenCL device
-		"""renderengine.type = BIASPATHOCL
-		batch.haltdebug = 1"""),
+		"""
+		renderengine.type = BIASPATHOCL
+		batch.haltdebug = 1
+		"""),
 }
 
 def GetEngineProperties(engineType):

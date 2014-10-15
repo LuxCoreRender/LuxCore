@@ -29,9 +29,9 @@ def TestGeneratedScene(cls, params):
 	# Create the rendering configuration
 	cfgProps = pyluxcore.Properties(LuxCoreTest.customConfigProps)
 	cfgProps.SetFromString("""
-	film.width = 512
-	film.height = 384
-	""")
+		film.width = 512
+		film.height = 384
+		""")
 	# Set the rendering engine
 	cfgProps.Set(GetEngineProperties(engineType))
 	# Set the sampler (if required)
@@ -43,26 +43,26 @@ def TestGeneratedScene(cls, params):
 	
 	# Set the camera position
 	scnProps.SetFromString("""
-	scene.camera.lookat.orig = 0.0 5.0 2.0
-	scene.camera.lookat.target = 0.0 0.0 0.0
-	""")
+		scene.camera.lookat.orig = 0.0 5.0 2.0
+		scene.camera.lookat.target = 0.0 0.0 0.0
+		""")
 	
 	# Define a white matte material
 	scnProps.SetFromString("""
-	scene.materials.whitematte.type = matte
-	scene.materials.whitematte.kd = 0.75 0.75 0.75
-	""")
+		scene.materials.whitematte.type = matte
+		scene.materials.whitematte.kd = 0.75 0.75 0.75
+		""")
 
 	# Add a plane
 	scnProps.Set(BuildPlane("plane1", "whitematte"))
 	
 	# Add a distant light source
 	scnProps.SetFromString("""
-	scene.lights.distl.type = sharpdistant
-	scene.lights.distl.color = 1.0 1.0 1.0
-	scene.lights.distl.gain = 2.0 2.0 2.0
-	scene.lights.distl.direction = 1.0 1.0 -1.0
-	""")
+		scene.lights.distl.type = sharpdistant
+		scene.lights.distl.color = 1.0 1.0 1.0
+		scene.lights.distl.gain = 2.0 2.0 2.0
+		scene.lights.distl.direction = 1.0 1.0 -1.0
+		""")
 	
 	# Create the scene
 	scene = pyluxcore.Scene()
