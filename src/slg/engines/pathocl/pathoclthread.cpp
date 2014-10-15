@@ -556,17 +556,20 @@ void PathOCLRenderThread::RenderThreadImpl() {
 							"ms (screenRefreshInterval: " << screenRefreshInterval <<
 							" iterations: " << iterations << ")\n";*/
 
-				// Check if I have to adjust the number of kernel enqueued
-				if (t2 - t1 > targetTime)
-					iterations = Max(iterations - 1, 1);
-				else
-					iterations = Min(iterations + 1, 128);
+				// Check if I have to adjust the number of kernel enqueued (only
+				// if haltDebug is not enabled)
+				if (haltDebug == 0u) {
+					if (t2 - t1 > targetTime)
+						iterations = Max(iterations - 1, 1);
+					else
+						iterations = Min(iterations + 1, 128);
+				}
 
 				// Check if it is time to refresh the screen
 				if (((t2 - startTime) * 1000.0 > (double)screenRefreshInterval) ||
 						boost::this_thread::interruption_requested())
 					break;
-				
+
 				if ((haltDebug > 0u) && (totalIterations >= haltDebug)) {
 					done = true;
 					break;
