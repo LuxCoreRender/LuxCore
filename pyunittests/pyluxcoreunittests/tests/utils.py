@@ -66,7 +66,10 @@ def GetEngineListWithSamplers():
 		("BIDIRCPU", "METROPOLIS"),
 		("BIASPATHCPU", None),
 		("PATHOCL", "RANDOM"),
-		("PATHOCL", "SOBOL"),
+# For some reason I can not undestand, at the moment, the combination of
+# SOBOL sampler and BlackmanHarris filter is not deterministic. It is really
+# very strange.
+#		("PATHOCL", "SOBOL"),
 		("PATHOCL", "METROPOLIS"),
 		("BIASPATHOCL", None)
 		]

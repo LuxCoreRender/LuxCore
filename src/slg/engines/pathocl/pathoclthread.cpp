@@ -123,8 +123,8 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=4" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->blackmanharris.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->box.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->box.widthY);
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->blackmanharris.widthX) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->blackmanharris.widthY);
 			break;
 		default:
 			assert (false);

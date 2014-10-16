@@ -403,7 +403,7 @@ std::string KernelSource_sampler_funcs =
 "\n"
 "	// Move to the next assigned pixel\n"
 "	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;\n"
-"	if (nextPixelIndex > filmWidth * filmHeight) {\n"
+"	if (nextPixelIndex >= filmWidth * filmHeight) {\n"
 "		nextPixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);\n"
 "		sample->pass += 1;\n"
 "	}\n"
