@@ -400,7 +400,7 @@ void Sampler_NextSample(
 
 	// Move to the next assigned pixel
 	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
-	if (nextPixelIndex > filmWidth * filmHeight) {
+	if (nextPixelIndex >= filmWidth * filmHeight) {
 		nextPixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
 		sample->pass += 1;
 	}

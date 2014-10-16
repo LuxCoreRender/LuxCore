@@ -88,25 +88,32 @@ def StandardImageTest(testCase, name, config):
 def StandardAnimTest(testCase, name, config, frameCount):
 	session = pyluxcore.RenderSession(config)
 
+	i = 0
+	print("\nFrame 0...")
 	session.Start()
 
-	for i in range(frameCount):
+	while True:
 		session.WaitForDone()
 
 		# This is done also to update the Film
 		session.UpdateStats()
 
-		session.BeginSceneEdit()
-		
 		size, imageBufferFloat = GetRendering(session)
 		image = ConvertToImage(size, imageBufferFloat)
 
 		CompareResult(testCase,image, name, i)
 
+		i += 1
+		if i >= frameCount:
+			break
+
+		session.BeginSceneEdit()
+
 		# Edit the scene
 		testCase.SceneEdit(session, i)
 
 		# Restart the rendering
+		print("Frame %d..." % i)
 		session.EndSceneEdit()
 	
 	session.Stop()
