@@ -98,8 +98,9 @@ def main():
 	
 	propertiesSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.properties", top_level_dir=".")
 	basicSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.basic", top_level_dir=".")
+	lightSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.lights", top_level_dir=".")
 	
-	allTests = unittest.TestSuite([propertiesSuite, basicSuite])
+	allTests = unittest.TestSuite([propertiesSuite, basicSuite, lightSuite])
 	
 	# List the tests if required
 

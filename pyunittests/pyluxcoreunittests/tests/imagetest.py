@@ -85,6 +85,25 @@ def StandardImageTest(testCase, name, config):
 
 	CompareResult(testCase, image, name)
 
+def StandardSceneTest(cls, params, cfgName, testName):
+	engineType = params[0]
+	samplerType = params[1]
+
+	# Create the rendering configuration
+	props = pyluxcore.Properties(LuxCoreTest.customConfigProps)
+	props.SetFromFile("resources/scenes/" + cfgName)
+	
+	# Set the rendering engine
+	props.Set(GetEngineProperties(engineType))
+	# Set the sampler (if required)
+	if samplerType:
+		props.Set(pyluxcore.Property("sampler.type", samplerType))
+
+	config = pyluxcore.RenderConfig(props)
+
+	# Run the rendering
+	StandardImageTest(cls, testName + "_" + engineType + ("" if not samplerType else ("_" + samplerType)), config)
+
 def StandardAnimTest(testCase, name, config, frameCount):
 	session = pyluxcore.RenderSession(config)
 
@@ -117,4 +136,3 @@ def StandardAnimTest(testCase, name, config, frameCount):
 		session.EndSceneEdit()
 	
 	session.Stop()
-
