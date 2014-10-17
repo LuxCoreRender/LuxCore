@@ -1,5 +1,5 @@
-scene.camera.lookat.orig = 10.951 -20.663 8.017
-scene.camera.lookat.target = 0.0 0.0 1.0
+scene.camera.lookat.orig = 7 -15 7
+scene.camera.lookat.target = -1.0 0.0 2.0
 ################################################################################
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
@@ -13,15 +13,17 @@ scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = 120.0 120.0 120.0
 scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################
-scene.objects.lightplanes.ply = resources/scenes/simple/simple-lights.ply
-scene.objects.lightplanes.material = whitelight
 scene.objects.box1.ply = resources/scenes/simple/simple-mat-cube1.ply
 scene.objects.box1.material = redmatte
 scene.objects.box2.ply = resources/scenes/simple/simple-mat-cube2.ply
-# This object position is edited by a test
-scene.objects.box2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
 scene.objects.box2.material = greenmatte
 scene.objects.box3.ply = resources/scenes/simple/simple-mat-back2.ply
 scene.objects.box3.material = blumatte
 scene.objects.box4.ply = resources/scenes/simple/simple-mat-back.ply
 scene.objects.box4.material = whitematte
+################################################################################
+scene.lights.l1.type = mappoint
+scene.lights.l1.position = 0.0 0.0 6.0
+scene.lights.l1.gain = 50.0 50.0 50.0
+scene.lights.l1.iesfile = resources/ies/ASA_15M_R2.ies
+scene.lights.l1.flipz = 1
