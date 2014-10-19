@@ -148,24 +148,26 @@ void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool
 	float Ywa = 0.f;
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i] && !rgbPixels[i].IsInf())
-			Ywa += rgbPixels[i].Y();
+			Ywa += logf(max(rgbPixels[i].Y(), 1e-6f));
 	}
-	Ywa /= pixelCount;
+	if (pixelCount > 0)
+		Ywa = expf(Ywa / pixelCount);
 
 	// Avoid division by zero
 	if (Ywa == 0.f)
 		Ywa = 1.f;
 
-	const float Yw = preScale * alpha * burn;
-	const float invY2 = 1.f / (Yw * Yw);
-	const float pScale = postScale * preScale * alpha / Ywa;
+	const float invB2 = burn > 0.f ? 1.f / (burn * burn) : 1e5f;
+	const float scale = alpha / Ywa;
+	const float preS = scale / preScale;
+	const float postS = scale * postScale;
 
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i]) {
-			const float ys = rgbPixels[i].Y();
+			const float ys = rgbPixels[i].Y() * preS;
 			// Note: I don't need to convert to XYZ and back because I'm only
 			// scaling the value.
-			rgbPixels[i] *= pScale * (1.f + ys * invY2) / (1.f + ys);
+			rgbPixels[i] *= postS * (1.f + ys * invB2) / (1.f + ys);
 		}
 	}
 }
