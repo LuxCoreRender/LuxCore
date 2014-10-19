@@ -375,6 +375,10 @@ public:
 	bool IsImageMapDefined(const std::string &name) const { return mapByName.find(name) != mapByName.end(); }
 
 private:
+	std::string GetCacheKey(const std::string &fileName, const float gamma,
+		const ImageMap::ChannelSelectionType selectionType) const;
+	std::string GetCacheKey(const std::string &fileName) const;
+
 	boost::unordered_map<std::string, ImageMap *> mapByName;
 	// Used to preserve insertion order and to retrieve insertion index
 	std::vector<ImageMap *> maps;
