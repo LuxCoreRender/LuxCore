@@ -273,7 +273,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				Property(prefix + ".type")("glossy2") <<
 				GetTexture(prefix + ".kd", Property("Kd")(.5f), matProps) <<
 				GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
-				GetTexture(prefix + ".ka", Property("Ks")(0.f), matProps) <<
+				GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
 				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
 				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
 				GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
