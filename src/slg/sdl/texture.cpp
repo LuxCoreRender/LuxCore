@@ -21,6 +21,7 @@
 #include <numeric>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
+#include <boost/filesystem.hpp>
 
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebuf.h>
@@ -301,25 +302,28 @@ ImageMap::ImageMap(const string &fileName, const float g) {
 
 	SDL_LOG("Reading texture map: " << fileName);
 
-	ImageInput *in = ImageInput::open(fileName);
-	
-	if (in) {
-	  const ImageSpec &spec = in->spec();
+	if (!boost::filesystem::exists(fileName))
+		throw runtime_error("ImageMap file doesn't exist: " + fileName);
+	else {
+		ImageInput *in = ImageInput::open(fileName);
 
-	  width = spec.width;
-	  height = spec.height;
-	  channelCount = spec.nchannels;
-	  
-	  pixels = new float[width * height * channelCount];
-	  
-	  in->read_image(TypeDesc::FLOAT, &pixels[0]);
-	  in->close();
-	  delete in;
+		if (in) {
+		  const ImageSpec &spec = in->spec();
+
+		  width = spec.width;
+		  height = spec.height;
+		  channelCount = spec.nchannels;
+
+		  pixels = new float[width * height * channelCount];
+
+		  in->read_image(TypeDesc::FLOAT, &pixels[0]);
+		  in->close();
+		  delete in;
+		} else
+		  throw runtime_error("Unknown image file format: " + fileName);
+
+		ReverseGammaCorrection();
 	}
-	else
-	  throw runtime_error("Unknown image file format: " + fileName);
-	
-	ReverseGammaCorrection();
 }
 
 ImageMap::ImageMap(float *p, const float g, const u_int count,
