@@ -194,7 +194,8 @@ public:
 		BLUE,
 		ALPHA,
 		MEAN,
-		WEIGHTED_MEAN
+		WEIGHTED_MEAN,
+		RGB
 	} ChannelSelectionType;
 
 	ImageMap(const std::string &fileName, const float gamma,
