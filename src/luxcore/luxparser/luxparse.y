@@ -1341,6 +1341,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".gamma")(gamma) <<
 				// LuxRender applies gain before gamma correction
 				Property(prefix + ".gain")(powf(gain, gamma)) <<
+				Property(prefix + ".channel")(props.Get(Property("channel")("default")).Get<string>()) <<
 				GetTextureMapping2D(prefix, props);
 	} else if (texType == "add") {
 		*sceneProps <<

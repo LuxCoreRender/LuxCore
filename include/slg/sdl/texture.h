@@ -187,7 +187,18 @@ private:
 
 class ImageMap {
 public:
-	ImageMap(const std::string &fileName, const float gamma);
+	typedef enum {
+		DEFAULT,
+		RED,
+		GREEN,
+		BLUE,
+		ALPHA,
+		MEAN,
+		WEIGHTED_MEAN
+	} ChannelSelectionType;
+
+	ImageMap(const std::string &fileName, const float gamma,
+		const ChannelSelectionType selectionType);
 	ImageMap(float *cols, const float gamma, const u_int channels, const u_int width, const u_int height);
 	~ImageMap();
 
@@ -332,7 +343,8 @@ public:
 
 	void DefineImageMap(const std::string &name, ImageMap *im);
 
-	ImageMap *GetImageMap(const std::string &fileName, const float gamma);
+	ImageMap *GetImageMap(const std::string &fileName, const float gamma,
+		const ImageMap::ChannelSelectionType selectionType);
 
 	// Get a path/name from imageMap object
 	const std::string &GetPath(const ImageMap *im)const {
