@@ -869,7 +869,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (props.IsDefined("name"))
 		lightName = props.Get("name").Get<string>();
 	else
-		lightName = "LUXCORE_LIGHT_" + ToString(freeLightID++);
+		lightName = "LUXCORE_LIGHT";
+	lightName += "_" + ToString(freeLightID++);
 	const string prefix = "scene.lights." + lightName;
 
 	const string name($2);
@@ -1202,10 +1203,12 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 	// Define object name
 	string objName;
-	if (props.IsDefined("name"))
+	if (props.IsDefined("name")) {
+		// LuxRender object names are not unique
 		objName = props.Get("name").Get<string>();
-	else
-		objName = "LUXCORE_OBJECT_" + ToString(freeObjectID++);
+	} else
+		objName = "LUXCORE_OBJECT";
+	objName += "_" + ToString(freeObjectID++);
 	// Replace any "." in the name with 2x"__"
 	boost::replace_all(objName, ".", "__");
 	const string prefix = "scene.objects." + objName;
