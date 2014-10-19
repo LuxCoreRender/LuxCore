@@ -384,6 +384,29 @@ ImageMap::ImageMap(const string &fileName, const float g,
 						channelCount = 1;
 					}
 				}
+				case ImageMap::RGB: {
+					// Nothing to do
+					if ((channelCount == 1) || (channelCount == 3)) {
+						// Nothing to do
+					} else {
+						auto_ptr<float> newPixels(new float[pixelCount * 3]);
+
+						const float *src = pixels;
+						float *dst = newPixels.get();
+
+						for (u_int i = 0; i < pixelCount; ++i) {
+							*dst++ = *src++;
+							*dst++ = *src++;
+							*dst++ = *src++;
+							src++;
+						}
+						
+						delete[] pixels;
+						pixels = newPixels.release();
+						channelCount = 1;
+					}
+					break;
+				}
 				default:
 					throw runtime_error("Unknown channel selection type in an ImageMap: " + ToString(selectionType));
 			}

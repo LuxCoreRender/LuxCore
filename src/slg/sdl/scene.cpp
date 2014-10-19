@@ -780,6 +780,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 			selectionType = ImageMap::MEAN;
 		else if (stype == "colored_mean")
 			selectionType = ImageMap::WEIGHTED_MEAN;
+		else if (stype == "rgb")
+			selectionType = ImageMap::RGB;
 		else
 			throw runtime_error("Unknown channel selection type in imagemap: " + texName);
 			
