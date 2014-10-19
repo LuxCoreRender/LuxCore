@@ -19,6 +19,7 @@
 #include <sstream>
 #include <algorithm>
 #include <numeric>
+#include <memory>
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
@@ -297,7 +298,8 @@ u_int TextureDefinitions::GetTextureIndex(const string &name) {
 // ImageMap
 //------------------------------------------------------------------------------
 
-ImageMap::ImageMap(const string &fileName, const float g) {
+ImageMap::ImageMap(const string &fileName, const float g,
+		const ChannelSelectionType selectionType) {
 	gamma = g;
 
 	SDL_LOG("Reading texture map: " << fileName);
@@ -305,22 +307,88 @@ ImageMap::ImageMap(const string &fileName, const float g) {
 	if (!boost::filesystem::exists(fileName))
 		throw runtime_error("ImageMap file doesn't exist: " + fileName);
 	else {
-		ImageInput *in = ImageInput::open(fileName);
+		auto_ptr<ImageInput> in(ImageInput::open(fileName));
 
-		if (in) {
-		  const ImageSpec &spec = in->spec();
+		if (in.get()) {
+			const ImageSpec &spec = in->spec();
 
-		  width = spec.width;
-		  height = spec.height;
-		  channelCount = spec.nchannels;
+			width = spec.width;
+			height = spec.height;
+			channelCount = spec.nchannels;
 
-		  pixels = new float[width * height * channelCount];
+			if ((channelCount != 1) && (channelCount != 3) && (channelCount != 4))
+				throw runtime_error("Unsupported number of channels in an ImageMap: " + ToString(channelCount));
 
-		  in->read_image(TypeDesc::FLOAT, &pixels[0]);
-		  in->close();
-		  delete in;
+			const u_int pixelCount = width * height;
+			pixels = new float[pixelCount * channelCount];
+
+			in->read_image(TypeDesc::FLOAT, &pixels[0]);
+			in->close();
+			in.reset();
+
+			// Convert the image if required
+			switch (selectionType) {
+				case ImageMap::DEFAULT:
+					// Nothing to do
+					break;
+				case ImageMap::RED:
+				case ImageMap::GREEN:
+				case ImageMap::BLUE:
+				case ImageMap::ALPHA: {
+					// Nothing to do
+					if (channelCount == 1) {
+						// Nothing to do
+					} else {
+						auto_ptr<float> newPixels(new float[pixelCount]);
+
+						const float *src = pixels;
+						float *dst = newPixels.get();
+						const u_int channel = selectionType - ImageMap::RED;
+
+						for (u_int i = 0; i < pixelCount; ++i) {
+							*dst++ = src[channel];
+							src += channelCount;
+						}
+						
+						delete[] pixels;
+						pixels = newPixels.release();
+						channelCount = 1;
+					}
+					break;
+				}
+				case ImageMap::MEAN:
+				case ImageMap::WEIGHTED_MEAN: {
+					// Nothing to do
+					if (channelCount == 1) {
+						// Nothing to do
+					} else {
+						auto_ptr<float> newPixels(new float[pixelCount]);
+
+						const float *src = pixels;
+						float *dst = newPixels.get();
+
+						if (selectionType == ImageMap::MEAN) {
+							for (u_int i = 0; i < pixelCount; ++i) {
+								*dst++ = Spectrum(src).Filter();
+								src += channelCount;
+							}
+						} else {
+							for (u_int i = 0; i < pixelCount; ++i) {
+								*dst++ = Spectrum(src).Y();
+								src += channelCount;
+							}							
+						}
+						
+						delete[] pixels;
+						pixels = newPixels.release();
+						channelCount = 1;
+					}
+				}
+				default:
+					throw runtime_error("Unknown channel selection type in an ImageMap: " + ToString(selectionType));
+			}
 		} else
-		  throw runtime_error("Unknown image file format: " + fileName);
+			throw runtime_error("Unknown image file format: " + fileName);
 
 		ReverseGammaCorrection();
 	}
@@ -519,14 +587,18 @@ ImageMapCache::~ImageMapCache() {
 		delete m;
 }
 
-ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma) {
+ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
+		const ImageMap::ChannelSelectionType selectionType) {
+	// Compose the cache key
+	const string key = fileName + "#-#" + ToString(gamma) + "#-#" + ToString(selectionType);
+
 	// Check if the texture map has been already loaded
-	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(fileName);
+	boost::unordered_map<std::string, ImageMap *>::const_iterator it = mapByName.find(key);
 
 	if (it == mapByName.end()) {
 		// I have yet to load the file
 
-		ImageMap *im = new ImageMap(fileName, gamma);
+		ImageMap *im = new ImageMap(fileName, gamma, selectionType);
 		const u_int width = im->GetWidth();
 		const u_int height = im->GetHeight();
 
@@ -542,15 +614,13 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma) 
 			im->Resize(newWidth, newHeight);
 		}
 
-		mapByName.insert(make_pair(fileName, im));
+		mapByName.insert(make_pair(key, im));
 		maps.push_back(im);
 
 		return im;
 	} else {
 		//SDL_LOG("Cached image map: " << fileName);
 		ImageMap *im = (it->second);
-		if (im->GetGamma() != gamma)
-			throw runtime_error("Image map: " + fileName + " can not be used with 2 different gamma");
 		return im;
 	}
 }
