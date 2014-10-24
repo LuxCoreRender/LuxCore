@@ -53,6 +53,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	advancePathsKernel_MK_GENERATE_DL_RAY = NULL;
 	advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY = NULL;
 	advancePathsKernel_MK_SPLAT_SAMPLE = NULL;
+	advancePathsKernel_MK_GENERATE_CAMERA_RAY = NULL;
 
 	raysBuff = NULL;
 	hitsBuff = NULL;
@@ -77,6 +78,7 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete advancePathsKernel_MK_GENERATE_DL_RAY;
 	delete advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
 	delete advancePathsKernel_MK_SPLAT_SAMPLE;
+	delete advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 
 	delete[] gpuTaskStats;
 }
@@ -226,6 +228,8 @@ void PathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 				"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
 		CompileKernel(program, &advancePathsKernel_MK_SPLAT_SAMPLE, &advancePathsWorkGroupSize,
 				"AdvancePaths_MK_SPLAT_SAMPLE");
+		CompileKernel(program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_GENERATE_CAMERA_RAY");
 	} else {
 		//----------------------------------------------------------------------
 		// AdvancePaths kernel (Mega-Kernel)
@@ -484,6 +488,8 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY);
 	if (advancePathsKernel_MK_SPLAT_SAMPLE)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_SPLAT_SAMPLE);
+	if (advancePathsKernel_MK_GENERATE_CAMERA_RAY)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_CAMERA_RAY);
 
 	//--------------------------------------------------------------------------
 	// initKernel
@@ -535,6 +541,9 @@ void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) 
 				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 				cl::NDRange(advancePathsWorkGroupSize));
 		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_SPLAT_SAMPLE, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_CAMERA_RAY, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 				cl::NDRange(advancePathsWorkGroupSize));
 	} else {

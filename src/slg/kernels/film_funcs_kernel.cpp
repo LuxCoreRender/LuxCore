@@ -315,7 +315,7 @@ std::string KernelSource_film_funcs =
 "		float4 p = VLOAD4F(dst);\n"
 "		const float4 s = (float4)(r * weight, g * weight, b * weight, weight);\n"
 "		p += s;\n"
-"		VSTORE4F(p, dst);\n"
+"//		VSTORE4F(p, dst);\n"
 "#endif\n"
 "	} /*else {\n"
 "		printf(\"NaN/Inf. error: (%f, %f, %f) [%f]\\n\", r, g, b, weight);\n"

@@ -75,6 +75,7 @@ protected:
 	cl::Kernel *advancePathsKernel_MK_GENERATE_DL_RAY;
 	cl::Kernel *advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
 	cl::Kernel *advancePathsKernel_MK_SPLAT_SAMPLE;
+	cl::Kernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
 
 	cl::Buffer *raysBuff;
