@@ -43,11 +43,19 @@
 //------------------------------------------------------------------------------
 
 typedef enum {
-	RT_NEXT_VERTEX,
-	GENERATE_DL_RAY,
-	RT_DL,
-	GENERATE_NEXT_VERTEX_RAY,
-	SPLAT_SAMPLE
+	// Mega-kernel states
+	RT_NEXT_VERTEX = 0,
+	GENERATE_DL_RAY = 1,
+	RT_DL = 2,
+	GENERATE_NEXT_VERTEX_RAY = 3,
+	SPLAT_SAMPLE = 4,
+			
+	// Micro-kernel states
+	MK_RT_NEXT_VERTEX = 0, // Must have the same value of RT_NEXT_VERTEX
+	MK_GENERATE_DL_RAY = 1,
+	MK_RT_DL = 2,
+	MK_GENERATE_NEXT_VERTEX_RAY = 3,
+	MK_SPLAT_SAMPLE = 4
 } PathState;
 
 // This is defined only under OpenCL because of variable size structures

@@ -164,6 +164,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
 
 	usePixelAtomics = cfg.Get(Property("path.pixelatomics.enable")(false)).Get<bool>();
+	useMicroKernels = cfg.Get(Property("path.microkernels.enable")(true)).Get<bool>();
 
 	PathOCLBaseRenderEngine::StartLockLess();
 }
