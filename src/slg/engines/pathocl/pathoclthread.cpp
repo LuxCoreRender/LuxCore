@@ -49,6 +49,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	initKernel = NULL;
 	advancePathsKernel = NULL;
 	advancePathsKernel_MK_RT_NEXT_VERTEX = NULL;
+	advancePathsKernel_MK_HIT_NOTHING = NULL;
+	advancePathsKernel_MK_HIT_OBJECT = NULL;
 	advancePathsKernel_MK_RT_DL = NULL;
 	advancePathsKernel_MK_GENERATE_DL_RAY = NULL;
 	advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY = NULL;
@@ -74,6 +76,8 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete initKernel;
 	delete advancePathsKernel;
 	delete advancePathsKernel_MK_RT_NEXT_VERTEX;
+	delete advancePathsKernel_MK_HIT_NOTHING;
+	delete advancePathsKernel_MK_HIT_OBJECT;
 	delete advancePathsKernel_MK_RT_DL;
 	delete advancePathsKernel_MK_GENERATE_DL_RAY;
 	delete advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
@@ -220,6 +224,10 @@ void PathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 
 		CompileKernel(program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
 				"AdvancePaths_MK_RT_NEXT_VERTEX");
+		CompileKernel(program, &advancePathsKernel_MK_HIT_NOTHING, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_HIT_NOTHING");
+		CompileKernel(program, &advancePathsKernel_MK_HIT_OBJECT, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_HIT_OBJECT");
 		CompileKernel(program, &advancePathsKernel_MK_RT_DL, &advancePathsWorkGroupSize,
 				"AdvancePaths_MK_RT_DL");
 		CompileKernel(program, &advancePathsKernel_MK_GENERATE_DL_RAY, &advancePathsWorkGroupSize,
@@ -480,6 +488,10 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 		SetAdvancePathsKernelArgs(advancePathsKernel);
 	if (advancePathsKernel_MK_RT_NEXT_VERTEX)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_NEXT_VERTEX);
+	if (advancePathsKernel_MK_HIT_NOTHING)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_NOTHING);
+	if (advancePathsKernel_MK_HIT_OBJECT)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_OBJECT);
 	if (advancePathsKernel_MK_RT_DL)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_DL);
 	if (advancePathsKernel_MK_GENERATE_DL_RAY)
@@ -529,6 +541,12 @@ void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) 
 	if (engine->useMicroKernels) {
 		// Micro kernels version
 		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_NOTHING, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_OBJECT, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 				cl::NDRange(advancePathsWorkGroupSize));
 		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_DL, cl::NullRange,

@@ -71,6 +71,8 @@ protected:
 	size_t initWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
 	cl::Kernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
+	cl::Kernel *advancePathsKernel_MK_HIT_NOTHING;
+	cl::Kernel *advancePathsKernel_MK_HIT_OBJECT;
 	cl::Kernel *advancePathsKernel_MK_RT_DL;
 	cl::Kernel *advancePathsKernel_MK_GENERATE_DL_RAY;
 	cl::Kernel *advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;

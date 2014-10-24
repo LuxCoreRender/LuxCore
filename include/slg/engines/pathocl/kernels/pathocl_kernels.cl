@@ -1195,7 +1195,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 // Evaluation of the Path finite state machine.
 //
 // From: MK_RT_NEXT_VERTEX
-// To: MK_SPLAT_SAMPLE or MK_GENERATE_DL_RAY
+// To: MK_HIT_NOTHING or MK_HIT_OBJECT or MK_RT_NEXT_VERTEX
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT_NEXT_VERTEX(
@@ -1305,112 +1305,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			triangles
 			MATERIALS_PARAM
 			);
-	const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
 
 	// If continueToTrace, there is nothing to do, just keep the same state
 	if (!continueToTrace) {
-		if (!rayMiss) {
-			//--------------------------------------------------------------
-			// Something was hit
-			//--------------------------------------------------------------
-
-			if (task->pathStateBase.depth == 1) {
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-				sample->result.alpha = 1.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-				sample->result.depth = rayHit->t;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-				sample->result.position = bsdf->hitPoint.p;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-				sample->result.geometryNormal = bsdf->hitPoint.geometryN;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-				sample->result.shadingNormal = bsdf->hitPoint.shadeN;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-				sample->result.materialID = BSDF_GetMaterialID(bsdf
-						MATERIALS_PARAM);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
-				sample->result.uv = bsdf->hitPoint.uv;
-#endif
-			}
-
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-			// Check if it is a light source (note: I can hit only triangle area light sources)
-			if (BSDF_IsLightSource(bsdf)) {
-				DirectHitFiniteLight(
-						task->directLightState.lastBSDFEvent,
-						&task->pathStateBase.throughput,
-						rayHit->t, bsdf, task->directLightState.lastPdfW,
-						&sample->result
-						LIGHTS_PARAM);
-			}
-#endif
-
-			// Check if this is the last path vertex (but not also the first)
-			//
-			// I handle as a special case when the path vertex is both the first
-			// and the last: I do direct light sampling without MIS.
-			if (sample->result.lastPathVertex && !sample->result.firstPathVertex)
-				pathState = MK_SPLAT_SAMPLE;
-			else {
-				// Direct light sampling
-				pathState = MK_GENERATE_DL_RAY;
-			}
-		} else {
-			//--------------------------------------------------------------
-			// Nothing was hit, add environmental lights radiance
-			//--------------------------------------------------------------
-
-#if defined(PARAM_HAS_ENVLIGHTS)
-			DirectHitInfiniteLight(
-					task->directLightState.lastBSDFEvent,
-					&task->pathStateBase.throughput,
-					VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
-					&sample->result
-					LIGHTS_PARAM);
-#endif
-
-			if (task->pathStateBase.depth == 1) {
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-				sample->result.alpha = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-				sample->result.depth = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-				sample->result.position.x = INFINITY;
-				sample->result.position.y = INFINITY;
-				sample->result.position.z = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-				sample->result.geometryNormal.x = INFINITY;
-				sample->result.geometryNormal.y = INFINITY;
-				sample->result.geometryNormal.z = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-				sample->result.shadingNormal.x = INFINITY;
-				sample->result.shadingNormal.y = INFINITY;
-				sample->result.shadingNormal.z = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-				sample->result.materialID = NULL_INDEX;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
-				sample->result.uv.u = INFINITY;
-				sample->result.uv.v = INFINITY;
-#endif
-			}
-
-			pathState = MK_SPLAT_SAMPLE;
-		}
-
-		// Save the state
-		task->pathStateBase.state = pathState;
+		const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
+		task->pathStateBase.state = rayMiss ? MK_HIT_NOTHING : MK_HIT_OBJECT;
 	}
 #if defined(PARAM_HAS_PASSTHROUGH)
 	else {
@@ -1420,6 +1319,232 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		task->pathStateBase.bsdf.hitPoint.passThroughEvent = fabs(task->pathStateBase.bsdf.hitPoint.passThroughEvent - .5f) * 2.f;
 	}
 #endif
+}
+
+//------------------------------------------------------------------------------
+// Evaluation of the Path finite state machine.
+//
+// From: MK_HIT_NOTHING
+// To: MK_SPLAT_SAMPLE
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HIT_NOTHING(
+		KERNEL_ARGS
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Read the path state
+	__global GPUTask *task = &tasks[gid];
+	PathState pathState = task->pathStateBase.state;
+	if (pathState != MK_HIT_NOTHING)
+		return;
+
+	//--------------------------------------------------------------------------
+	// Start of variables setup
+	//--------------------------------------------------------------------------
+
+	//--------------------------------------------------------------------------
+	// Initialize image maps page pointer table
+	//--------------------------------------------------------------------------
+
+	__global Sample *sample = &samples[gid];
+
+#if defined(PARAM_HAS_IMAGEMAPS)
+	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+	imageMapBuff[0] = imageMapBuff0;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+	imageMapBuff[1] = imageMapBuff1;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+	imageMapBuff[2] = imageMapBuff2;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+	imageMapBuff[3] = imageMapBuff3;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+	imageMapBuff[4] = imageMapBuff4;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+	imageMapBuff[5] = imageMapBuff5;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+	imageMapBuff[6] = imageMapBuff6;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+	imageMapBuff[7] = imageMapBuff7;
+#endif
+#endif
+
+	//--------------------------------------------------------------------------
+
+	__global Ray *ray = &rays[gid];
+	
+	//--------------------------------------------------------------------------
+	// End of variables setup
+	//--------------------------------------------------------------------------
+
+	// Nothing was hit, add environmental lights radiance
+
+#if defined(PARAM_HAS_ENVLIGHTS)
+	DirectHitInfiniteLight(
+			task->directLightState.lastBSDFEvent,
+			&task->pathStateBase.throughput,
+			VLOAD3F(&ray->d.x), task->directLightState.lastPdfW,
+			&sample->result
+			LIGHTS_PARAM);
+#endif
+
+	if (task->pathStateBase.depth == 1) {
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+		sample->result.alpha = 0.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+		sample->result.depth = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+		sample->result.position.x = INFINITY;
+		sample->result.position.y = INFINITY;
+		sample->result.position.z = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+		sample->result.geometryNormal.x = INFINITY;
+		sample->result.geometryNormal.y = INFINITY;
+		sample->result.geometryNormal.z = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+		sample->result.shadingNormal.x = INFINITY;
+		sample->result.shadingNormal.y = INFINITY;
+		sample->result.shadingNormal.z = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+		sample->result.materialID = NULL_INDEX;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+		sample->result.uv.u = INFINITY;
+		sample->result.uv.v = INFINITY;
+#endif
+	}
+
+	task->pathStateBase.state = MK_SPLAT_SAMPLE;
+}
+
+//------------------------------------------------------------------------------
+// Evaluation of the Path finite state machine.
+//
+// From: MK_HIT_OBJECT
+// To: MK_GENERATE_DL_RAY or MK_SPLAT_SAMPLE
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HIT_OBJECT(
+		KERNEL_ARGS
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Read the path state
+	__global GPUTask *task = &tasks[gid];
+	PathState pathState = task->pathStateBase.state;
+	if (pathState != MK_HIT_OBJECT)
+		return;
+
+	//--------------------------------------------------------------------------
+	// Start of variables setup
+	//--------------------------------------------------------------------------
+
+	__global BSDF *bsdf = &task->pathStateBase.bsdf;
+
+	__global Sample *sample = &samples[gid];
+
+	//--------------------------------------------------------------------------
+	// Initialize image maps page pointer table
+	//--------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_IMAGEMAPS)
+	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+	imageMapBuff[0] = imageMapBuff0;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+	imageMapBuff[1] = imageMapBuff1;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+	imageMapBuff[2] = imageMapBuff2;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+	imageMapBuff[3] = imageMapBuff3;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+	imageMapBuff[4] = imageMapBuff4;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+	imageMapBuff[5] = imageMapBuff5;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+	imageMapBuff[6] = imageMapBuff6;
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+	imageMapBuff[7] = imageMapBuff7;
+#endif
+#endif
+
+	//--------------------------------------------------------------------------
+
+	__global RayHit *rayHit = &rayHits[gid];
+	
+	//--------------------------------------------------------------------------
+	// End of variables setup
+	//--------------------------------------------------------------------------
+
+	// Something was hit
+
+	if (task->pathStateBase.depth == 1) {
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+		sample->result.alpha = 1.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+		sample->result.depth = rayHit->t;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+		sample->result.position = bsdf->hitPoint.p;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+		sample->result.geometryNormal = bsdf->hitPoint.geometryN;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+		sample->result.shadingNormal = bsdf->hitPoint.shadeN;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+		sample->result.materialID = BSDF_GetMaterialID(bsdf
+				MATERIALS_PARAM);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+		sample->result.uv = bsdf->hitPoint.uv;
+#endif
+	}
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+	// Check if it is a light source (note: I can hit only triangle area light sources)
+	if (BSDF_IsLightSource(bsdf)) {
+		DirectHitFiniteLight(
+				task->directLightState.lastBSDFEvent,
+				&task->pathStateBase.throughput,
+				rayHit->t, bsdf, task->directLightState.lastPdfW,
+				&sample->result
+				LIGHTS_PARAM);
+	}
+#endif
+
+	// Check if this is the last path vertex (but not also the first)
+	//
+	// I handle as a special case when the path vertex is both the first
+	// and the last: I do direct light sampling without MIS.
+	task->pathStateBase.state = (sample->result.lastPathVertex && !sample->result.firstPathVertex) ?
+		MK_SPLAT_SAMPLE : MK_GENERATE_DL_RAY;
 }
 
 //------------------------------------------------------------------------------

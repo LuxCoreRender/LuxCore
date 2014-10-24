@@ -52,11 +52,13 @@ typedef enum {
 			
 	// Micro-kernel states
 	MK_RT_NEXT_VERTEX = 0, // Must have the same value of RT_NEXT_VERTEX
-	MK_GENERATE_DL_RAY = 1,
-	MK_RT_DL = 2,
-	MK_GENERATE_NEXT_VERTEX_RAY = 3,
-	MK_SPLAT_SAMPLE = 4,
-	MK_GENERATE_CAMERA_RAY = 5
+	MK_HIT_NOTHING = 1,
+	MK_HIT_OBJECT = 2,
+	MK_GENERATE_DL_RAY = 3,
+	MK_RT_DL = 4,
+	MK_GENERATE_NEXT_VERTEX_RAY = 5,
+	MK_SPLAT_SAMPLE = 6,
+	MK_GENERATE_CAMERA_RAY = 7
 } PathState;
 
 // This is defined only under OpenCL because of variable size structures
