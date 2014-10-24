@@ -64,6 +64,7 @@ protected:
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
 	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel);
+	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables
 	cl::Kernel *initKernel;
