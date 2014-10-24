@@ -516,6 +516,35 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&directLightVolInfosBuff);
 }
 
+void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
+	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
+	const u_int taskCount = engine->taskCount;
+	
+	if (engine->useMicroKernels) {
+		// Micro kernels version
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_DL, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_DL_RAY, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_SPLAT_SAMPLE, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+	} else {
+		// Mega kernel version
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+	}
+}
+
 void PathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
@@ -587,29 +616,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 							*(hitsBuff), taskCount, NULL, (i == 0) ? &event : NULL);
 
 					// Advance to next path state
-					if (engine->useMicroKernels) {
-						// Micro kernels version
-						oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
-								cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-								cl::NDRange(advancePathsWorkGroupSize));
-						oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_DL, cl::NullRange,
-								cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-								cl::NDRange(advancePathsWorkGroupSize));
-						oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_DL_RAY, cl::NullRange,
-								cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-								cl::NDRange(advancePathsWorkGroupSize));
-						oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, cl::NullRange,
-								cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-								cl::NDRange(advancePathsWorkGroupSize));
-						oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_SPLAT_SAMPLE, cl::NullRange,
-								cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-								cl::NDRange(advancePathsWorkGroupSize));
-					} else {
-						// Mega kernel version
-						oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
-								cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-								cl::NDRange(advancePathsWorkGroupSize));
-					}
+					EnqueueAdvancePathsKernel(oclQueue);
 				}
 				oclQueue.flush();
 				totalIterations += (u_int)iterations;
