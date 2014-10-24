@@ -1883,7 +1883,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 // Evaluation of the Path finite state machine.
 //
 // From: MK_SPLAT_SAMPLE
-// To: MK_RT_NEXT_VERTEX
+// To: MK_GENERATE_CAMERA_RAY
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SPLAT_SAMPLE(
@@ -1919,8 +1919,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	seedValue.s3 = task->seed.s3;
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
-
-	__global Ray *ray = &rays[gid];
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -1957,8 +1955,66 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 			FILM_PARAM);
 	taskStats[gid].sampleCount += 1;
 
+	// Save the state
+	task->pathStateBase.state = MK_GENERATE_CAMERA_RAY;
+
+	//--------------------------------------------------------------------------
+
+	// Save the seed
+	task->seed.s1 = seed->s1;
+	task->seed.s2 = seed->s2;
+	task->seed.s3 = seed->s3;
+}
+
+//------------------------------------------------------------------------------
+// Evaluation of the Path finite state machine.
+//
+// From: MK_GENERATE_CAMERA_RAY
+// To: MK_RT_NEXT_VERTEX
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_CAMERA_RAY(
+		KERNEL_ARGS
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Read the path state
+	__global GPUTask *task = &tasks[gid];
+	PathState pathState = task->pathStateBase.state;
+	if (pathState != MK_GENERATE_CAMERA_RAY)
+		return;
+
+	//--------------------------------------------------------------------------
+	// Start of variables setup
+	//--------------------------------------------------------------------------
+
+	__global Sample *sample = &samples[gid];
+	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+#if (PARAM_SAMPLER_TYPE != 0)
+	// Used by Sampler_GetSamplePathVertex() macro
+	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
+			sample, sampleDataPathBase, depth);
+#endif
+
+	// Read the seed
+	Seed seedValue;
+	seedValue.s1 = task->seed.s1;
+	seedValue.s2 = task->seed.s2;
+	seedValue.s3 = task->seed.s3;
+	// This trick is required by Sampler_GetSample() macro
+	Seed *seed = &seedValue;
+
+	__global Ray *ray = &rays[gid];
+	
+	//--------------------------------------------------------------------------
+	// End of variables setup
+	//--------------------------------------------------------------------------
+
 	GenerateCameraPath(task, sample, sampleData, camera, filmWidth, filmHeight, ray, seed);
-	// task->pathStateBase.state is set to RT_NEXT_VERTEX inside Sampler_NextSample() => GenerateCameraPath()
+	// task->pathStateBase.state is set to RT_NEXT_VERTEX inside GenerateCameraPath()
 
 	// Re-initialize the volume information
 #if defined(PARAM_HAS_VOLUMES)

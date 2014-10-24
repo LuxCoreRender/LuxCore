@@ -55,7 +55,8 @@ typedef enum {
 	MK_GENERATE_DL_RAY = 1,
 	MK_RT_DL = 2,
 	MK_GENERATE_NEXT_VERTEX_RAY = 3,
-	MK_SPLAT_SAMPLE = 4
+	MK_SPLAT_SAMPLE = 4,
+	MK_GENERATE_CAMERA_RAY = 5
 } PathState;
 
 // This is defined only under OpenCL because of variable size structures
