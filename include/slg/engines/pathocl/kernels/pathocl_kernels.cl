@@ -1220,8 +1220,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	uint depth = task->pathStateBase.depth;
-
 	__global BSDF *bsdf = &task->pathStateBase.bsdf;
 
 	__global Sample *sample = &samples[gid];
@@ -1230,7 +1228,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #if (PARAM_SAMPLER_TYPE != 0)
 	// Used by Sampler_GetSamplePathVertex() macro
 	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, depth);
+			sample, sampleDataPathBase, task->pathStateBase.depth);
 #endif
 
 	//--------------------------------------------------------------------------
@@ -1316,7 +1314,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			// Something was hit
 			//--------------------------------------------------------------
 
-			if (depth == 1) {
+			if (task->pathStateBase.depth == 1) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 				sample->result.alpha = 1.f;
 #endif
@@ -1377,7 +1375,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 					LIGHTS_PARAM);
 #endif
 
-			if (depth == 1) {
+			if (task->pathStateBase.depth == 1) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 				sample->result.alpha = 0.f;
 #endif
@@ -1456,7 +1454,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #if (PARAM_SAMPLER_TYPE != 0)
 	// Used by Sampler_GetSamplePathVertex() macro
 	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, depth);
+			sample, sampleDataPathBase, task->pathStateBase.depth);
 #endif
 
 	// Read the seed
@@ -1905,12 +1903,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
-	// Used by Sampler_GetSamplePathVertex() macro
-	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, depth);
-#endif
 
 	// Read the seed
 	Seed seedValue;
@@ -1993,11 +1985,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
-	// Used by Sampler_GetSamplePathVertex() macro
-	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, depth);
-#endif
 
 	// Read the seed
 	Seed seedValue;
