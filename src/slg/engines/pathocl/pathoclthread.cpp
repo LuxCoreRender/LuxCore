@@ -203,8 +203,14 @@ string PathOCLRenderThread::AdditionalKernelSources() {
 	stringstream ssKernel;
 	ssKernel <<
 		slg::ocl::KernelSource_pathocl_datatypes <<
-		slg::ocl::KernelSource_pathocl_kernels;
+		slg::ocl::KernelSource_pathocl_funcs;
 
+	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
+	if (engine->useMicroKernels)
+		ssKernel << slg::ocl::KernelSource_pathocl_kernels_micro;
+	else
+		ssKernel << slg::ocl::KernelSource_pathocl_kernels_mega;
+	
 	return ssKernel.str();
 }
 
