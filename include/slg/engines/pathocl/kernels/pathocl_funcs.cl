@@ -1,0 +1,698 @@
+#line 2 "patchocl_funcs.cl"
+
+/***************************************************************************
+ * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ *                                                                         *
+ *   This file is part of LuxRender.                                       *
+ *                                                                         *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
+ *                                                                         *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
+ *                                                                         *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
+ ***************************************************************************/
+
+// List of symbols defined at compile time:
+//  PARAM_MAX_PATH_DEPTH
+//  PARAM_RR_DEPTH
+//  PARAM_RR_CAP
+
+// (optional)
+//  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = Blackman-Harris)
+//  PARAM_IMAGE_FILTER_WIDTH_X
+//  PARAM_IMAGE_FILTER_WIDTH_Y
+//  PARAM_IMAGE_FILTER_PIXEL_WIDTH_X
+//  PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y
+// (Box filter)
+// (Gaussian filter)
+//  PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA
+// (Mitchell filter)
+//  PARAM_IMAGE_FILTER_MITCHELL_B
+//  PARAM_IMAGE_FILTER_MITCHELL_C
+
+// (optional)
+//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol)
+// (Metropolis)
+//  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
+//  PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT
+//  PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE
+// (Sobol)
+//  PARAM_SAMPLER_SOBOL_STARTOFFSET
+//  PARAM_SAMPLER_SOBOL_MAXDEPTH
+
+
+//------------------------------------------------------------------------------
+// Init Kernel
+//------------------------------------------------------------------------------
+
+void GenerateCameraPath(
+		__global GPUTask *task,
+		__global Sample *sample,
+		__global float *sampleData,
+		__global Camera *camera,
+		const uint filmWidth,
+		const uint filmHeight,
+		__global Ray *ray,
+		Seed *seed) {
+#if (PARAM_SAMPLER_TYPE == 0)
+	const float time = Rnd_FloatValue(seed);
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Rnd_FloatValue(seed);
+	const float dofSampleY = Rnd_FloatValue(seed);
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	const float eyePassthrough = Rnd_FloatValue(seed);
+#endif
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 1)
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+	
+	const float time = Sampler_GetSamplePath(IDX_EYE_TIME);
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
+#endif
+#endif
+
+#if (PARAM_SAMPLER_TYPE == 2)
+	const float time = Sampler_GetSamplePath(IDX_EYE_TIME);
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	const float dofSampleX = Sampler_GetSamplePath(IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
+#endif
+#if defined(PARAM_HAS_PASSTHROUGH)
+	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
+#endif
+#endif
+
+	Camera_GenerateRay(camera, filmWidth, filmHeight, ray,
+			sample->result.filmX, sample->result.filmY, time
+#if defined(PARAM_CAMERA_HAS_DOF)
+			, dofSampleX, dofSampleY
+#endif
+			);
+
+	// Initialize the path state
+	task->pathStateBase.state = RT_NEXT_VERTEX; // Or MK_RT_NEXT_VERTEX (they have the same value)
+	task->pathStateBase.depth = 1;
+	VSTORE3F(WHITE, task->pathStateBase.throughput.c);
+	task->directLightState.lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
+	task->directLightState.lastPdfW = 1.f;
+#if defined(PARAM_HAS_PASSTHROUGH)
+	// This is a bit tricky. I store the passThroughEvent in the BSDF
+	// before of the initialization because it can be used during the
+	// tracing of next path vertex ray.
+
+	task->pathStateBase.bsdf.hitPoint.passThroughEvent = eyePassthrough;
+#endif
+
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+	sample->result.directShadowMask = 1.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+	sample->result.indirectShadowMask = 1.f;
+#endif
+
+	sample->result.lastPathVertex = (PARAM_MAX_PATH_DEPTH == 1);
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
+		uint seedBase,
+		__global GPUTask *tasks,
+		__global GPUTaskStats *taskStats,
+		__global Sample *samples,
+		__global float *samplesData,
+#if defined(PARAM_HAS_VOLUMES)
+		__global PathVolumeInfo *pathVolInfos,
+#endif
+		__global Ray *rays,
+		__global Camera *camera,
+		const uint filmWidth,
+		const uint filmHeight
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Initialize the task
+	__global GPUTask *task = &tasks[gid];
+
+	// Initialize random number generator
+	Seed seed;
+	Rnd_Init(seedBase + gid, &seed);
+
+	// Initialize the sample and path
+	__global Sample *sample = &samples[gid];
+	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+	Sampler_Init(&seed, sample, sampleData, filmWidth, filmHeight);
+	GenerateCameraPath(task, sample, sampleData, camera, filmWidth, filmHeight, &rays[gid], &seed);
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	taskStat->sampleCount = 0;
+
+#if defined(PARAM_HAS_VOLUMES)
+	PathVolumeInfo_Init(&pathVolInfos[gid]);
+#endif
+}
+
+//------------------------------------------------------------------------------
+// Utility functions
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_ENVLIGHTS)
+void DirectHitInfiniteLight(
+		const BSDFEvent lastBSDFEvent,
+		__global const Spectrum *pathThroughput,
+		const float3 eyeDir, const float lastPdfW,
+		__global SampleResult *sampleResult
+		LIGHTS_PARAM_DECL) {
+	const float3 throughput = VLOAD3F(pathThroughput->c);
+
+	for (uint i = 0; i < envLightCount; ++i) {
+		__global LightSource *light = &lights[envLightIndices[i]];
+
+		float directPdfW;
+		const float3 lightRadiance = EnvLight_GetRadiance(light, -eyeDir, &directPdfW
+				LIGHTS_PARAM);
+
+		if (!Spectrum_IsBlack(lightRadiance)) {
+			// MIS between BSDF sampling and direct light sampling
+			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW));
+			const float3 radiance = weight * throughput * lightRadiance;
+
+			SampleResult_AddEmission(sampleResult, light->lightID, radiance);
+		}
+	}
+}
+#endif
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+void DirectHitFiniteLight(
+		const BSDFEvent lastBSDFEvent,
+		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
+		const float lastPdfW, __global SampleResult *sampleResult
+		LIGHTS_PARAM_DECL) {
+	float directPdfA;
+	const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, &directPdfA
+			LIGHTS_PARAM);
+
+	if (!Spectrum_IsBlack(emittedRadiance)) {
+		// Add emitted radiance
+		float weight = 1.f;
+		if (!(lastBSDFEvent & SPECULAR)) {
+			const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution,
+					lights[bsdf->triangleLightSourceIndex].lightSceneIndex);
+			const float directPdfW = PdfAtoW(directPdfA, distance,
+				fabs(dot(VLOAD3F(&bsdf->hitPoint.fixedDir.x), VLOAD3F(&bsdf->hitPoint.shadeN.x))));
+
+			// MIS between BSDF sampling and direct light sampling
+			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+		}
+		const float3 lightRadiance = weight * VLOAD3F(pathThroughput->c) * emittedRadiance;
+
+		SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
+				MATERIALS_PARAM), lightRadiance);
+	}
+}
+#endif
+
+float RussianRouletteProb(const float3 color) {
+	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
+}
+
+bool DirectLightSampling(
+		__global LightSource *light,
+		const float lightPickPdf,
+#if defined(PARAM_HAS_INFINITELIGHTS)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global HitPoint *tmpHitPoint,
+#endif
+		const float time, const float u0, const float u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float lightPassThroughEvent,
+#endif
+		const bool lastPathVertex, const uint depth,
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		LIGHTS_PARAM_DECL) {
+	float3 lightRayDir;
+	float distance, directPdfW;
+	const float3 lightRadiance = Light_Illuminate(
+			light,
+			VLOAD3F(&bsdf->hitPoint.p.x),
+			u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+			lightPassThroughEvent,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHTS)
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+			tmpHitPoint,
+#endif		
+			&lightRayDir, &distance, &directPdfW
+			LIGHTS_PARAM);
+
+	// Setup the shadow ray
+	if (!Spectrum_IsBlack(lightRadiance)) {
+		BSDFEvent event;
+		float bsdfPdfW;
+		const float3 bsdfEval = BSDF_Evaluate(bsdf,
+				lightRayDir, &event, &bsdfPdfW
+				MATERIALS_PARAM);
+
+		if (!Spectrum_IsBlack(bsdfEval)) {
+			const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
+			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+			const float factor = 1.f / directLightSamplingPdfW;
+
+			// Russian Roulette
+			bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+
+			// MIS between direct light sampling and BSDF sampling
+			//
+			// Note: I have to avoiding MIS on the last path vertex
+			const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
+				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
+
+			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);
+			*ID = light->lightID;
+
+			// Setup the shadow ray
+			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
+			const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
+
+			Ray_Init4(shadowRay, hitPoint, lightRayDir,
+				epsilon,
+				distance - epsilon, time);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool DirectLightSampling_ONE(
+#if defined(PARAM_HAS_INFINITELIGHTS)
+		const float worldCenterX,
+		const float worldCenterY,
+		const float worldCenterZ,
+		const float worldRadius,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		__global HitPoint *tmpHitPoint,
+#endif
+		const float time, const float u0, const float u1, const float u2,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		const float lightPassThroughEvent,
+#endif
+		const bool lastPathVertex, const uint depth,
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		LIGHTS_PARAM_DECL) {
+	// Pick a light source to sample
+	float lightPickPdf;
+	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
+
+	return DirectLightSampling(
+		&lights[lightIndex],
+		lightPickPdf,
+#if defined(PARAM_HAS_INFINITELIGHTS)
+		worldCenterX,
+		worldCenterY,
+		worldCenterZ,
+		worldRadius,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+		tmpHitPoint,
+#endif
+		time, u1, u2,
+#if defined(PARAM_HAS_PASSTHROUGH)
+		lightPassThroughEvent,
+#endif
+		lastPathVertex, depth,
+		pathThroughput, bsdf,
+		shadowRay, radiance, ID
+		LIGHTS_PARAM);
+}
+
+//------------------------------------------------------------------------------
+// Kernel parameters
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_VOLUMES)
+#define KERNEL_ARGS_VOLUMES \
+		, __global PathVolumeInfo *pathVolInfos \
+		, __global PathVolumeInfo *directLightVolInfos
+#else
+#define KERNEL_ARGS_VOLUMES
+#endif
+
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
+		, __global float *filmRadianceGroup0
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
+		, __global float *filmRadianceGroup1
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
+		, __global float *filmRadianceGroup2
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
+		, __global float *filmRadianceGroup3
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
+		, __global float *filmRadianceGroup4
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
+		, __global float *filmRadianceGroup5
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
+		, __global float *filmRadianceGroup6
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
+		, __global float *filmRadianceGroup7
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+#define KERNEL_ARGS_FILM_CHANNELS_ALPHA \
+		, __global float *filmAlpha
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_ALPHA
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+#define KERNEL_ARGS_FILM_CHANNELS_DEPTH \
+		, __global float *filmDepth
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DEPTH
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+#define KERNEL_ARGS_FILM_CHANNELS_POSITION \
+		, __global float *filmPosition
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_POSITION
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
+		, __global float *filmGeometryNormal
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
+		, __global float *filmShadingNormal
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
+		, __global uint *filmMaterialID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
+		, __global float *filmDirectDiffuse
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
+		, __global float *filmDirectGlossy
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+#define KERNEL_ARGS_FILM_CHANNELS_EMISSION \
+		, __global float *filmEmission
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_EMISSION
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
+		, __global float *filmIndirectDiffuse
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
+		, __global float *filmIndirectGlossy
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
+		, __global float *filmIndirectSpecular
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_ID_MASK \
+		, __global float *filmMaterialIDMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_ID_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
+		, __global float *filmDirectShadowMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
+		, __global float *filmIndirectShadowMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+#define KERNEL_ARGS_FILM_CHANNELS_UV \
+		, __global float *filmUV
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_UV
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
+		, __global float *filmRayCount
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
+		, __global float *filmByMaterialID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
+#endif
+
+#define KERNEL_ARGS_FILM \
+		, const uint filmWidth, const uint filmHeight \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
+		KERNEL_ARGS_FILM_CHANNELS_ALPHA \
+		KERNEL_ARGS_FILM_CHANNELS_DEPTH \
+		KERNEL_ARGS_FILM_CHANNELS_POSITION \
+		KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
+		KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
+		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
+		KERNEL_ARGS_FILM_CHANNELS_EMISSION \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
+		KERNEL_ARGS_FILM_CHANNELS_ID_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_UV \
+		KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
+		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
+
+#if defined(PARAM_HAS_INFINITELIGHTS)
+#define KERNEL_ARGS_INFINITELIGHTS \
+		, const float worldCenterX \
+		, const float worldCenterY \
+		, const float worldCenterZ \
+		, const float worldRadius
+#else
+#define KERNEL_ARGS_INFINITELIGHTS
+#endif
+
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+#define KERNEL_ARGS_NORMALS_BUFFER \
+		, __global Vector *vertNormals
+#else
+#define KERNEL_ARGS_NORMALS_BUFFER
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+#define KERNEL_ARGS_UVS_BUFFER \
+		, __global UV *vertUVs
+#else
+#define KERNEL_ARGS_UVS_BUFFER
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+#define KERNEL_ARGS_COLS_BUFFER \
+		, __global Spectrum *vertCols
+#else
+#define KERNEL_ARGS_COLS_BUFFER
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+#define KERNEL_ARGS_ALPHAS_BUFFER \
+		__global float *vertAlphas,
+#else
+#define KERNEL_ARGS_ALPHAS_BUFFER
+#endif
+
+#if defined(PARAM_HAS_ENVLIGHTS)
+#define KERNEL_ARGS_ENVLIGHTS \
+		, __global uint *envLightIndices \
+		, const uint envLightCount
+#else
+#define KERNEL_ARGS_ENVLIGHTS
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+#define KERNEL_ARGS_INFINITELIGHT \
+		, __global float *infiniteLightDistribution
+#else
+#define KERNEL_ARGS_INFINITELIGHT
+#endif
+
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
+		, __global ImageMap *imageMapDescs, __global float *imageMapBuff0
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
+		, __global float *imageMapBuff1
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
+		, __global float *imageMapBuff2
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
+		, __global float *imageMapBuff3
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
+		, __global float *imageMapBuff4
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_4
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
+		, __global float *imageMapBuff5
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_5
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
+		, __global float *imageMapBuff6
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_6
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_7 \
+		, __global float *imageMapBuff7
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_7
+#endif
+#define KERNEL_ARGS_IMAGEMAPS_PAGES \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_7
+
+#define KERNEL_ARGS \
+		__global GPUTask *tasks \
+		, __global GPUTaskStats *taskStats \
+		, __global Sample *samples \
+		, __global float *samplesData \
+		KERNEL_ARGS_VOLUMES \
+		, __global Ray *rays \
+		, __global RayHit *rayHits \
+		/* Film parameters */ \
+		KERNEL_ARGS_FILM \
+		/* Scene parameters */ \
+		KERNEL_ARGS_INFINITELIGHTS \
+		, __global Material *mats \
+		, __global Texture *texs \
+		, __global uint *meshMats \
+		, __global Mesh *meshDescs \
+		, __global Point *vertices \
+		KERNEL_ARGS_NORMALS_BUFFER \
+		KERNEL_ARGS_UVS_BUFFER \
+		KERNEL_ARGS_COLS_BUFFER \
+		KERNEL_ARGS_ALPHAS_BUFFER \
+		, __global Triangle *triangles \
+		, __global Camera *camera \
+		/* Lights */ \
+		, __global LightSource *lights \
+		KERNEL_ARGS_ENVLIGHTS \
+		, __global uint *meshTriLightDefsOffset \
+		KERNEL_ARGS_INFINITELIGHT \
+		, __global float *lightsDistribution \
+		/* Images */ \
+		KERNEL_ARGS_IMAGEMAPS_PAGES
