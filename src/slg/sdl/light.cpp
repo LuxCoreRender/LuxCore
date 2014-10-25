@@ -639,7 +639,7 @@ Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache) const {
 //------------------------------------------------------------------------------
 
 ProjectionLight::ProjectionLight() : color(1.f), power(0.f), efficency(0.f),
-		localPos(Point()), localTarget(Point(0.f, 0.f, 1.f)),
+		localPos(), localTarget(0.f, 0.f, 1.f),
 		fov(45.f), imageMap(NULL) {
 }
 
@@ -821,7 +821,7 @@ Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const
 
 LaserLight::LaserLight() :
 	color(1.f), power(0.f), efficency(0.f),
-	localPos(Point()), localTarget(Point(0.f, 0.f, 1.f)),
+	localPos(), localTarget(0.f, 0.f, 1.f),
 	radius(.01f) {
 }
 
@@ -1065,7 +1065,7 @@ Properties SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache) con
 //------------------------------------------------------------------------------
 
 DistantLight::DistantLight() :
-		color(1.f), localLightDir(0.f, 0.f, 1.f) {
+		color(1.f), localLightDir(0.f, 0.f, 1.f), theta(0.f) {
 }
 
 DistantLight::~DistantLight() {
@@ -1077,7 +1077,7 @@ void DistantLight::Preprocess() {
 		cosThetaMax = 1.f - MachineEpsilon::E(1.f);
 	} else {
 		const float radTheta = Radians(theta);
-		sin2ThetaMax = sinf( Radians(radTheta)) * sinf(radTheta);
+		sin2ThetaMax = sinf(Radians(radTheta)) * sinf(radTheta);
 		cosThetaMax = cosf(radTheta);
 	}
 
@@ -1475,7 +1475,7 @@ static void ChromaticityToSpectrum(float Y, float x, float y, Spectrum *s) {
 	s->c[2] =  0.0556f * X - 0.2040f * Y + 1.0570f * Z;
 }
 
-SkyLight::SkyLight() {
+SkyLight::SkyLight() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f) {
 }
 
 SkyLight::~SkyLight() {
@@ -1813,7 +1813,7 @@ static void ComputeModel(float turbidity, const Spectrum &albedo, float elevatio
 	}
 }
 
-SkyLight2::SkyLight2() {
+SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f) {
 }
 
 SkyLight2::~SkyLight2() {
@@ -2031,7 +2031,7 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
 // SunLight
 //------------------------------------------------------------------------------
 
-SunLight::SunLight() {
+SunLight::SunLight() : color(1.f), localSunDir(0.f, 0.f, 1.f), turbidity(2.2f), relSize(1.f) {
 }
 
 void SunLight::Preprocess() {
