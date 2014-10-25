@@ -316,7 +316,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 			height = spec.height;
 			channelCount = spec.nchannels;
 
-			if ((channelCount != 1) && (channelCount != 3) && (channelCount != 4))
+			if ((channelCount != 1) && (channelCount != 2) && (channelCount != 3) && (channelCount != 4))
 				throw runtime_error("Unsupported number of channels in an ImageMap: " + ToString(channelCount));
 
 			const u_int pixelCount = width * height;
@@ -338,6 +338,24 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					// Nothing to do
 					if (channelCount == 1) {
 						// Nothing to do
+					} else if (channelCount == 2) {
+						auto_ptr<float> newPixels(new float[pixelCount]);
+
+						const float *src = pixels;
+						float *dst = newPixels.get();
+						const u_int channel = (
+							(selectionType == ImageMap::RED) ||
+							(selectionType == ImageMap::GREEN) ||
+							(selectionType == ImageMap::BLUE)) ? 0 : 1;
+
+						for (u_int i = 0; i < pixelCount; ++i) {
+							*dst++ = src[channel];
+							src += channelCount;
+						}
+						
+						delete[] pixels;
+						pixels = newPixels.release();
+						channelCount = 1;
 					} else {
 						auto_ptr<float> newPixels(new float[pixelCount]);
 
@@ -361,6 +379,21 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					// Nothing to do
 					if (channelCount == 1) {
 						// Nothing to do
+					} else if (channelCount == 2) {
+						auto_ptr<float> newPixels(new float[pixelCount]);
+
+						const float *src = pixels;
+						float *dst = newPixels.get();
+						const u_int channel = 0;
+
+						for (u_int i = 0; i < pixelCount; ++i) {
+							*dst++ = src[channel];
+							src += channelCount;
+						}
+
+						delete[] pixels;
+						pixels = newPixels.release();
+						channelCount = 1;
 					} else {
 						auto_ptr<float> newPixels(new float[pixelCount]);
 
@@ -386,7 +419,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 				}
 				case ImageMap::RGB: {
 					// Nothing to do
-					if ((channelCount == 1) || (channelCount == 3)) {
+					if ((channelCount == 1) || (channelCount == 2) || (channelCount == 3)) {
 						// Nothing to do
 					} else {
 						auto_ptr<float> newPixels(new float[pixelCount * 3]);
