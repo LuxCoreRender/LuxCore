@@ -285,7 +285,10 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	// Allocate tasksDirectLightBuff
 	//--------------------------------------------------------------------------
 
-	size_t gpuDirectLightTaskSize = sizeof(Spectrum) + sizeof(u_int) + sizeof(BSDFEvent) + sizeof(float);
+	size_t gpuDirectLightTaskSize = 
+			sizeof(slg::ocl::pathocl::DirectLightIlluminateInfo) + 
+			sizeof(BSDFEvent) + 
+			sizeof(float);
 
 	// Add rayPassThroughEvent memory size
 	if (hasPassThrough)

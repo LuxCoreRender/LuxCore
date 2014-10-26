@@ -245,7 +245,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				taskDirectLight->rayPassThroughEvent,
 #endif
 				ray, rayHit, &task->tmpBsdf,
-				&taskDirectLight->lightRadiance,
+				&taskDirectLight->illumInfo.lightRadiance,
 				NULL,
 				// BSDF_Init parameters
 				meshDescs,
@@ -279,10 +279,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			if (rayMiss) {
 				// Nothing was hit, the light source is visible
 
-				SampleResult_AddDirectLight(&sample->result, taskDirectLight->lightID,
+				SampleResult_AddDirectLight(&sample->result, taskDirectLight->illumInfo.lightID,
 						BSDF_GetEventTypes(bsdf
 							MATERIALS_PARAM),
-						VLOAD3F(taskDirectLight->lightRadiance.c),
+						VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c),
 						1.f);
 			}
 
@@ -313,6 +313,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		if (!BSDF_IsDelta(bsdf
 				MATERIALS_PARAM) &&
 			DirectLightSampling_ONE(
+				&taskDirectLight->illumInfo,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
@@ -326,8 +327,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
 #endif
-				sample->result.lastPathVertex, depth, &taskState->throughput, bsdf,
-				ray, &taskDirectLight->lightRadiance, &taskDirectLight->lightID
+				sample->result.lastPathVertex, depth, &taskState->throughput,
+				bsdf, ray
 				LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
 			// Initialize the pass-through event for the shadow ray

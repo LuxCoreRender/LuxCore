@@ -61,6 +61,18 @@ typedef enum {
 	MK_GENERATE_CAMERA_RAY = 7
 } PathState;
 
+typedef struct {
+	unsigned int lightIndex;	
+	float pickPdf;
+
+	Vector dir;
+	float distance, directPdfW;
+
+	// Radiance to add to the result if light source is visible
+	Spectrum lightRadiance;
+	uint lightID;
+} DirectLightIlluminateInfo;
+
 // This is defined only under OpenCL because of variable size structures
 #if defined(SLG_OPENCL_KERNEL)
 
@@ -74,9 +86,8 @@ typedef struct {
 } GPUTaskState;
 
 typedef struct {
-	// Radiance to add to the result if light source is visible
-	Spectrum lightRadiance;
-	uint lightID;
+	// Used to store some intermediate result
+	DirectLightIlluminateInfo illumInfo;
 
 	BSDFEvent lastBSDFEvent;
 	float lastPdfW;
