@@ -238,9 +238,7 @@ float RussianRouletteProb(const float3 color) {
 	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
 }
 
-bool DirectLightSampling(
-		__global LightSource *light,
-		const float lightPickPdf,
+__global LightSource * DirectLight_Illuminate(
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -250,20 +248,25 @@ bool DirectLightSampling(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
 #endif
-		const float time, const float u0, const float u1,
+		const float u0, const float u1, const float u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
 #endif
-		const bool lastPathVertex, const uint depth,
-		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
-		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		const float3 point,
+		float *lightPickPdf, float3 *lightRayDir,
+		float *distance, float *directPdfW,
+		float3 *lightRadiance
 		LIGHTS_PARAM_DECL) {
-	float3 lightRayDir;
-	float distance, directPdfW;
-	const float3 lightRadiance = Light_Illuminate(
-			light,
-			VLOAD3F(&bsdf->hitPoint.p.x),
-			u0, u1,
+	// Pick a light source to sample
+	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, lightPickPdf);
+	__global LightSource *light = &lights[lightIndex];
+
+	
+	// Illuminate the point
+	*lightRadiance = Light_Illuminate(
+			&lights[lightIndex],
+			point,
+			u1, u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			lightPassThroughEvent,
 #endif
@@ -273,47 +276,56 @@ bool DirectLightSampling(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			tmpHitPoint,
 #endif		
-			&lightRayDir, &distance, &directPdfW
+			lightRayDir, distance, directPdfW
 			LIGHTS_PARAM);
+	
+	return light;
+}
+
+bool DirectLight_BSDFSampling(
+		__global LightSource *light,
+		const float3 lightRadiance, const float lightPickPdf, const float3 lightRayDir,
+		const float distance, const float directPdfW,
+		const float time,
+		const bool lastPathVertex, const uint depth,
+		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		MATERIALS_PARAM_DECL) {
+	// Setup the shadow ray
+	BSDFEvent event;
+	float bsdfPdfW;
+	const float3 bsdfEval = BSDF_Evaluate(bsdf,
+			lightRayDir, &event, &bsdfPdfW
+			MATERIALS_PARAM);
+
+	if (Spectrum_IsBlack(bsdfEval))
+		return;
+
+	const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
+	const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+	const float factor = 1.f / directLightSamplingPdfW;
+
+	// Russian Roulette
+	bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+
+	// MIS between direct light sampling and BSDF sampling
+	//
+	// Note: I have to avoiding MIS on the last path vertex
+	const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
+		PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
+
+	VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);
+	*ID = light->lightID;
 
 	// Setup the shadow ray
-	if (!Spectrum_IsBlack(lightRadiance)) {
-		BSDFEvent event;
-		float bsdfPdfW;
-		const float3 bsdfEval = BSDF_Evaluate(bsdf,
-				lightRayDir, &event, &bsdfPdfW
-				MATERIALS_PARAM);
+	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
+	const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
 
-		if (!Spectrum_IsBlack(bsdfEval)) {
-			const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
-			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-			const float factor = 1.f / directLightSamplingPdfW;
+	Ray_Init4(shadowRay, hitPoint, lightRayDir,
+		epsilon,
+		distance - epsilon, time);
 
-			// Russian Roulette
-			bsdfPdfW *= (depth >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
-
-			// MIS between direct light sampling and BSDF sampling
-			//
-			// Note: I have to avoiding MIS on the last path vertex
-			const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
-				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
-
-			VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);
-			*ID = light->lightID;
-
-			// Setup the shadow ray
-			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
-			const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
-
-			Ray_Init4(shadowRay, hitPoint, lightRayDir,
-				epsilon,
-				distance - epsilon, time);
-
-			return true;
-		}
-	}
-
-	return false;
+	return true;
 }
 
 bool DirectLightSampling_ONE(
@@ -334,30 +346,36 @@ bool DirectLightSampling_ONE(
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
 		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
 		LIGHTS_PARAM_DECL) {
-	// Pick a light source to sample
-	float lightPickPdf;
-	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
+	float lightPickPdf, distance, directPdfW;
+	float3 lightRayDir, lightRadiance;
 
-	return DirectLightSampling(
-		&lights[lightIndex],
-		lightPickPdf,
+	__global LightSource *light = DirectLight_Illuminate(
 #if defined(PARAM_HAS_INFINITELIGHTS)
-		worldCenterX,
-		worldCenterY,
-		worldCenterZ,
-		worldRadius,
+		worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		tmpHitPoint,
 #endif
-		time, u1, u2,
+		u0, u1, u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		lightPassThroughEvent,
 #endif
-		lastPathVertex, depth,
-		pathThroughput, bsdf,
-		shadowRay, radiance, ID
+		VLOAD3F(&bsdf->hitPoint.p.x),
+		&lightPickPdf, &lightRayDir,
+		&distance, &directPdfW,
+		&lightRadiance
 		LIGHTS_PARAM);
+
+	if (Spectrum_IsBlack(lightRadiance))
+		return false;
+
+	return DirectLight_BSDFSampling(
+			light, lightRadiance, lightPickPdf, lightRayDir,
+			distance, directPdfW,
+			time, lastPathVertex, depth,
+			pathThroughput, bsdf,
+			shadowRay, radiance, ID
+			MATERIALS_PARAM);
 }
 
 //------------------------------------------------------------------------------
