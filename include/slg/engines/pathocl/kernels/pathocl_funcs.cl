@@ -696,3 +696,65 @@ bool DirectLightSampling_ONE(
 		, __global float *lightsDistribution \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES
+
+
+//------------------------------------------------------------------------------
+// To initialize image maps page pointer table
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+#define INIT_IMAGEMAPS_PAGE_0 imageMapBuff[0] = imageMapBuff0;
+#else
+#define INIT_IMAGEMAPS_PAGE_0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+#define INIT_IMAGEMAPS_PAGE_1 imageMapBuff[1] = imageMapBuff1;
+#else
+#define INIT_IMAGEMAPS_PAGE_1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+#define INIT_IMAGEMAPS_PAGE_2 imageMapBuff[2] = imageMapBuff2;
+#else
+#define INIT_IMAGEMAPS_PAGE_3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+#define INIT_IMAGEMAPS_PAGE_3 imageMapBuff[3] = imageMapBuff3;
+#else
+#define INIT_IMAGEMAPS_PAGE_3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+#define INIT_IMAGEMAPS_PAGE_4 imageMapBuff[4] = imageMapBuff4;
+#else
+#define INIT_IMAGEMAPS_PAGE_4
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+#define INIT_IMAGEMAPS_PAGE_5 imageMapBuff[5] = imageMapBuff5;
+#else
+#define INIT_IMAGEMAPS_PAGE_5
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+#define INIT_IMAGEMAPS_PAGE_6 imageMapBuff[6] = imageMapBuff6;
+#else
+#define INIT_IMAGEMAPS_PAGE_6
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+#define INIT_IMAGEMAPS_PAGE_7 imageMapBuff[7] = imageMapBuff7;
+#else
+#define INIT_IMAGEMAPS_PAGE_7
+#endif
+
+#if defined(PARAM_HAS_IMAGEMAPS)
+#define INIT_IMAGEMAPS_PAGES \
+	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT]; \
+	INIT_IMAGEMAPS_PAGE_0 \
+	INIT_IMAGEMAPS_PAGE_1 \
+	INIT_IMAGEMAPS_PAGE_2 \
+	INIT_IMAGEMAPS_PAGE_3 \
+	INIT_IMAGEMAPS_PAGE_4 \
+	INIT_IMAGEMAPS_PAGE_5 \
+	INIT_IMAGEMAPS_PAGE_6 \
+	INIT_IMAGEMAPS_PAGE_7
+#else
+#define INIT_IMAGEMAPS_PAGES
+#endif
+
