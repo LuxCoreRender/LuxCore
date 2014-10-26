@@ -79,10 +79,10 @@ void PathOCLRenderEngine::StartLockLess() {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
 	} else {
-		taskCount = cfg.Get(Property("opencl.task.count")(65536)).Get<u_int>();
+		taskCount = cfg.Get(Property("opencl.task.count")(131072)).Get<u_int>();
 		// I don't know yet the workgroup size of each device so I can not
 		// round up task count to be a multiple of workgroups size of all devices
-		// used. rounding to 2048 is a simple trick based on the assumption that
+		// used. Rounding to 2048 is a simple trick based on the assumption that
 		// workgroup size is a power of 2 and <= 8192.
 		taskCount = RoundUp<u_int>(taskCount, 8192);
 		SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);

@@ -60,6 +60,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	raysBuff = NULL;
 	hitsBuff = NULL;
 	tasksBuff = NULL;
+	tasksDirectLightBuff = NULL;
+	tasksStateBuff = NULL;
 	samplesBuff = NULL;
 	sampleDataBuff = NULL;
 	taskStatsBuff = NULL;
@@ -259,34 +261,50 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	const bool hasPassThrough = engine->compiledScene->RequiresPassThrough();
 	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
 
+	//--------------------------------------------------------------------------
+	// Allocate tasksBuff
+	//--------------------------------------------------------------------------
+	
 	// Add Seed memory size
-	size_t gpuTaksSize = sizeof(slg::ocl::Seed);
-
-	// Add PathStateBase memory size
-	gpuTaksSize += sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
-
-	// Add PathStateBase.BSDF memory size
-	gpuTaksSize += openCLBSDFSize;
-
-	// Add PathStateDirectLight memory size
-	gpuTaksSize += sizeof(Spectrum) + sizeof(u_int) + sizeof(BSDFEvent) + sizeof(float);
-
-	// Add directLightRayPassThroughEvent memory size
-	if (hasPassThrough)
-		gpuTaksSize += sizeof(float);
+	size_t gpuTaskSize = sizeof(slg::ocl::Seed);
 
 	// Add temporary storage space
 	
 	// Add tmpBsdf memory size
 	if (hasPassThrough || engine->compiledScene->HasVolumes())
-		gpuTaksSize += openCLBSDFSize;
+		gpuTaskSize += openCLBSDFSize;
 
 	// Add tmpHitPoint memory size
 	if ((engine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0) || engine->compiledScene->HasVolumes())
-		gpuTaksSize += GetOpenCLHitPointSize();
+		gpuTaskSize += GetOpenCLHitPointSize();
 
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
-	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaskSize << "bytes");
+	AllocOCLBufferRW(&tasksBuff, gpuTaskSize * taskCount, "GPUTask");
+
+	//--------------------------------------------------------------------------
+	// Allocate tasksDirectLightBuff
+	//--------------------------------------------------------------------------
+
+	size_t gpuDirectLightTaskSize = sizeof(Spectrum) + sizeof(u_int) + sizeof(BSDFEvent) + sizeof(float);
+
+	// Add rayPassThroughEvent memory size
+	if (hasPassThrough)
+		gpuDirectLightTaskSize += sizeof(float);
+
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask DirectLight: " << gpuDirectLightTaskSize << "bytes");
+	AllocOCLBufferRW(&tasksDirectLightBuff, gpuDirectLightTaskSize * taskCount, "GPUTaskDirectLight");
+
+	//--------------------------------------------------------------------------
+	// Allocate tasksStateBuff
+	//--------------------------------------------------------------------------
+	
+	size_t gpuTaksStateSize = sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
+
+	// Add BSDF memory size
+	gpuTaksStateSize += openCLBSDFSize;
+
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask State: " << gpuTaksStateSize << "bytes");
+	AllocOCLBufferRW(&tasksStateBuff, gpuTaksStateSize * taskCount, "GPUTaskState");
 }
 
 void PathOCLRenderThread::InitSamplesBuffer() {
@@ -422,6 +440,8 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 
 	u_int argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
+	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
+	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
 	advancePathsKernel->setArg(argIndex++, *samplesBuff);
 	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
@@ -516,6 +536,8 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	u_int argIndex = 0;
 	initKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
 	initKernel->setArg(argIndex++, *tasksBuff);
+	initKernel->setArg(argIndex++, *tasksDirectLightBuff);
+	initKernel->setArg(argIndex++, *tasksStateBuff);
 	initKernel->setArg(argIndex++, *taskStatsBuff);
 	initKernel->setArg(argIndex++, *samplesBuff);
 	initKernel->setArg(argIndex++, *sampleDataBuff);
@@ -533,6 +555,8 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&raysBuff);
 	FreeOCLBuffer(&hitsBuff);
 	FreeOCLBuffer(&tasksBuff);
+	FreeOCLBuffer(&tasksDirectLightBuff);
+	FreeOCLBuffer(&tasksStateBuff);
 	FreeOCLBuffer(&samplesBuff);
 	FreeOCLBuffer(&sampleDataBuff);
 	FreeOCLBuffer(&taskStatsBuff);

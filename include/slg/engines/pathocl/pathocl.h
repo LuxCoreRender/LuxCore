@@ -83,6 +83,8 @@ protected:
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 	cl::Buffer *tasksBuff;
+	cl::Buffer *tasksDirectLightBuff;
+	cl::Buffer *tasksStateBuff;
 	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;
