@@ -346,50 +346,6 @@ bool DirectLight_BSDFSampling(
 	return true;
 }
 
-bool DirectLightSampling_ONE(
-	__global DirectLightIlluminateInfo *info,
-#if defined(PARAM_HAS_INFINITELIGHTS)
-		const float worldCenterX,
-		const float worldCenterY,
-		const float worldCenterZ,
-		const float worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		__global HitPoint *tmpHitPoint,
-#endif
-		const float time, const float u0, const float u1, const float u2,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float lightPassThroughEvent,
-#endif
-		const bool lastPathVertex, const uint depth,
-		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
-		__global Ray *shadowRay
-		LIGHTS_PARAM_DECL) {
-	const bool illuminated = DirectLight_Illuminate(
-#if defined(PARAM_HAS_INFINITELIGHTS)
-		worldCenterX, worldCenterY, worldCenterZ, worldRadius,
-#endif
-#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		tmpHitPoint,
-#endif
-		u0, u1, u2,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		lightPassThroughEvent,
-#endif
-		VLOAD3F(&bsdf->hitPoint.p.x), info
-		LIGHTS_PARAM);
-
-	if (!illuminated)
-		return false;
-
-	return DirectLight_BSDFSampling(
-			info,
-			time, lastPathVertex, depth,
-			pathThroughput, bsdf,
-			shadowRay
-			LIGHTS_PARAM);
-}
-
 //------------------------------------------------------------------------------
 // Kernel parameters
 //------------------------------------------------------------------------------
@@ -747,7 +703,7 @@ bool DirectLightSampling_ONE(
 #if defined(PARAM_IMAGEMAPS_PAGE_2)
 #define INIT_IMAGEMAPS_PAGE_2 imageMapBuff[2] = imageMapBuff2;
 #else
-#define INIT_IMAGEMAPS_PAGE_3
+#define INIT_IMAGEMAPS_PAGE_2
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_3)
 #define INIT_IMAGEMAPS_PAGE_3 imageMapBuff[3] = imageMapBuff3;
