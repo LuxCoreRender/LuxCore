@@ -74,7 +74,7 @@ std::string KernelSource_pathocl_datatypes =
 "\n"
 "	// Radiance to add to the result if light source is visible\n"
 "	Spectrum lightRadiance;\n"
-"	uint lightID;\n"
+"	unsigned int lightID;\n"
 "} DirectLightIlluminateInfo;\n"
 "\n"
 "// This is defined only under OpenCL because of variable size structures\n"
