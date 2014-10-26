@@ -52,7 +52,8 @@
 //------------------------------------------------------------------------------
 
 void GenerateCameraPath(
-		__global GPUTask *task,
+		__global GPUTaskDirectLight *taskDirectLight,
+		__global GPUTaskState *taskState,
 		__global Sample *sample,
 		__global float *sampleData,
 		__global Camera *camera,
@@ -68,7 +69,7 @@ void GenerateCameraPath(
 	const float dofSampleY = Rnd_FloatValue(seed);
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Rnd_FloatValue(seed);
+	const float eyePassThrough = Rnd_FloatValue(seed);
 #endif
 #endif
 
@@ -82,7 +83,7 @@ void GenerateCameraPath(
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
+	const float eyePassThrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
 #endif
 #endif
 
@@ -94,7 +95,7 @@ void GenerateCameraPath(
 	const float dofSampleY = Sampler_GetSamplePath(IDX_DOF_Y);
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
-	const float eyePassthrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
+	const float eyePassThrough = Sampler_GetSamplePath(IDX_EYE_PASSTHROUGH);
 #endif
 #endif
 
@@ -106,17 +107,17 @@ void GenerateCameraPath(
 			);
 
 	// Initialize the path state
-	task->pathStateBase.state = RT_NEXT_VERTEX; // Or MK_RT_NEXT_VERTEX (they have the same value)
-	task->pathStateBase.depth = 1;
-	VSTORE3F(WHITE, task->pathStateBase.throughput.c);
-	task->directLightState.lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
-	task->directLightState.lastPdfW = 1.f;
+	taskState->state = RT_NEXT_VERTEX; // Or MK_RT_NEXT_VERTEX (they have the same value)
+	taskState->depth = 1;
+	VSTORE3F(WHITE, taskState->throughput.c);
+	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
+	taskDirectLight->lastPdfW = 1.f;
 #if defined(PARAM_HAS_PASSTHROUGH)
 	// This is a bit tricky. I store the passThroughEvent in the BSDF
 	// before of the initialization because it can be used during the
 	// tracing of next path vertex ray.
 
-	task->pathStateBase.bsdf.hitPoint.passThroughEvent = eyePassthrough;
+	taskState->bsdf.hitPoint.passThroughEvent = eyePassThrough;
 #endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
@@ -132,6 +133,8 @@ void GenerateCameraPath(
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		uint seedBase,
 		__global GPUTask *tasks,
+		__global GPUTaskDirectLight *tasksDirectLight,
+		__global GPUTaskState *tasksState,
 		__global GPUTaskStats *taskStats,
 		__global Sample *samples,
 		__global float *samplesData,
@@ -149,6 +152,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 
 	// Initialize the task
 	__global GPUTask *task = &tasks[gid];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global GPUTaskState *taskState = &tasksState[gid];
 
 	// Initialize random number generator
 	Seed seed;
@@ -158,7 +163,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 	Sampler_Init(&seed, sample, sampleData, filmWidth, filmHeight);
-	GenerateCameraPath(task, sample, sampleData, camera, filmWidth, filmHeight, &rays[gid], &seed);
+	GenerateCameraPath(taskDirectLight, taskState, sample, sampleData, camera, filmWidth, filmHeight, &rays[gid], &seed);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -299,7 +304,7 @@ bool DirectLight_BSDFSampling(
 			MATERIALS_PARAM);
 
 	if (Spectrum_IsBlack(bsdfEval))
-		return;
+		return false;
 
 	const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
 	const float directLightSamplingPdfW = directPdfW * lightPickPdf;
@@ -685,6 +690,8 @@ bool DirectLightSampling_ONE(
 
 #define KERNEL_ARGS \
 		__global GPUTask *tasks \
+		, __global GPUTaskDirectLight *tasksDirectLight \
+		, __global GPUTaskState *tasksState \
 		, __global GPUTaskStats *taskStats \
 		, __global Sample *samples \
 		, __global float *samplesData \

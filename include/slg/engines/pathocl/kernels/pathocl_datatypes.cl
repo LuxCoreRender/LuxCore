@@ -64,13 +64,14 @@ typedef enum {
 // This is defined only under OpenCL because of variable size structures
 #if defined(SLG_OPENCL_KERNEL)
 
+// The state used to keep track of the rendered path
 typedef struct {
 	PathState state;
 	unsigned int depth;
 
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure
-} PathStateBase;
+} GPUTaskState;
 
 typedef struct {
 	// Radiance to add to the result if light source is visible
@@ -79,19 +80,15 @@ typedef struct {
 
 	BSDFEvent lastBSDFEvent;
 	float lastPdfW;
-} PathStateDirectLight;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	float rayPassThroughEvent;
+#endif
+} GPUTaskDirectLight;
 
 typedef struct {
 	// The task seed
 	Seed seed;
-
-	// The state used to keep track of the rendered path
-	PathStateBase pathStateBase;
-	PathStateDirectLight directLightState;
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-	float directLightRayPassThroughEvent;
-#endif
 
 	// Space for temporary storage
 #if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
