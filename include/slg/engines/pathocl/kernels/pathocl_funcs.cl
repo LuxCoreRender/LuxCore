@@ -243,7 +243,7 @@ float RussianRouletteProb(const float3 color) {
 	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
 }
 
-__global LightSource * DirectLight_Illuminate(
+bool DirectLight_Illuminate(
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -258,17 +258,21 @@ __global LightSource * DirectLight_Illuminate(
 		const float lightPassThroughEvent,
 #endif
 		const float3 point,
-		float *lightPickPdf, float3 *lightRayDir,
-		float *distance, float *directPdfW,
-		float3 *lightRadiance
+		__global DirectLightIlluminateInfo *info
 		LIGHTS_PARAM_DECL) {
 	// Pick a light source to sample
-	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, lightPickPdf);
+	float lightPickPdf;
+	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
 	__global LightSource *light = &lights[lightIndex];
 
-	
+	info->lightIndex = lightIndex;
+	info->lightID = light->lightID;
+	info->pickPdf = lightPickPdf;
+
 	// Illuminate the point
-	*lightRadiance = Light_Illuminate(
+	float3 lightRayDir;
+	float distance, directPdfW;
+	const float3 lightRadiance = Light_Illuminate(
 			&lights[lightIndex],
 			point,
 			u1, u2,
@@ -281,22 +285,30 @@ __global LightSource * DirectLight_Illuminate(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			tmpHitPoint,
 #endif		
-			lightRayDir, distance, directPdfW
+			&lightRayDir, &distance, &directPdfW
 			LIGHTS_PARAM);
 	
-	return light;
+	if (Spectrum_IsBlack(lightRadiance))
+		return false;
+	else {
+		VSTORE3F(lightRayDir, &info->dir.x);
+		info->distance = distance;
+		info->directPdfW = directPdfW;
+		VSTORE3F(lightRadiance, info->lightRadiance.c);
+		return true;
+	}
 }
 
 bool DirectLight_BSDFSampling(
-		__global LightSource *light,
-		const float3 lightRadiance, const float lightPickPdf, const float3 lightRayDir,
-		const float distance, const float directPdfW,
+		__global DirectLightIlluminateInfo *info,
 		const float time,
 		const bool lastPathVertex, const uint depth,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
-		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
-		MATERIALS_PARAM_DECL) {
-	// Setup the shadow ray
+		__global Ray *shadowRay
+		LIGHTS_PARAM_DECL) {
+	const float3 lightRayDir = VLOAD3F(&info->dir.x);
+	
+	// Sample the BSDF
 	BSDFEvent event;
 	float bsdfPdfW;
 	const float3 bsdfEval = BSDF_Evaluate(bsdf,
@@ -307,7 +319,7 @@ bool DirectLight_BSDFSampling(
 		return false;
 
 	const float cosThetaToLight = fabs(dot(lightRayDir, VLOAD3F(&bsdf->hitPoint.shadeN.x)));
-	const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+	const float directLightSamplingPdfW = info->directPdfW * info->pickPdf;
 	const float factor = 1.f / directLightSamplingPdfW;
 
 	// Russian Roulette
@@ -316,14 +328,15 @@ bool DirectLight_BSDFSampling(
 	// MIS between direct light sampling and BSDF sampling
 	//
 	// Note: I have to avoiding MIS on the last path vertex
+	__global LightSource *light = &lights[info->lightIndex];
 	const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 		PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-	VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * lightRadiance, radiance->c);
-	*ID = light->lightID;
+	VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * VLOAD3F(info->lightRadiance.c), info->lightRadiance.c);
 
 	// Setup the shadow ray
 	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
+	const float distance = info->distance;
 	const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
 
 	Ray_Init4(shadowRay, hitPoint, lightRayDir,
@@ -334,6 +347,7 @@ bool DirectLight_BSDFSampling(
 }
 
 bool DirectLightSampling_ONE(
+	__global DirectLightIlluminateInfo *info,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
 		const float worldCenterY,
@@ -349,12 +363,9 @@ bool DirectLightSampling_ONE(
 #endif
 		const bool lastPathVertex, const uint depth,
 		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
-		__global Ray *shadowRay, __global Spectrum *radiance, __global uint *ID
+		__global Ray *shadowRay
 		LIGHTS_PARAM_DECL) {
-	float lightPickPdf, distance, directPdfW;
-	float3 lightRayDir, lightRadiance;
-
-	__global LightSource *light = DirectLight_Illuminate(
+	const bool illuminated = DirectLight_Illuminate(
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
@@ -365,22 +376,18 @@ bool DirectLightSampling_ONE(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		lightPassThroughEvent,
 #endif
-		VLOAD3F(&bsdf->hitPoint.p.x),
-		&lightPickPdf, &lightRayDir,
-		&distance, &directPdfW,
-		&lightRadiance
+		VLOAD3F(&bsdf->hitPoint.p.x), info
 		LIGHTS_PARAM);
 
-	if (Spectrum_IsBlack(lightRadiance))
+	if (!illuminated)
 		return false;
 
 	return DirectLight_BSDFSampling(
-			light, lightRadiance, lightPickPdf, lightRayDir,
-			distance, directPdfW,
+			info,
 			time, lastPathVertex, depth,
 			pathThroughput, bsdf,
-			shadowRay, radiance, ID
-			MATERIALS_PARAM);
+			shadowRay
+			LIGHTS_PARAM);
 }
 
 //------------------------------------------------------------------------------
