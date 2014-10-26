@@ -52,7 +52,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	advancePathsKernel_MK_HIT_NOTHING = NULL;
 	advancePathsKernel_MK_HIT_OBJECT = NULL;
 	advancePathsKernel_MK_RT_DL = NULL;
-	advancePathsKernel_MK_GENERATE_DL_RAY = NULL;
+	advancePathsKernel_MK_DL_ILLUMINATE = NULL;
+	advancePathsKernel_MK_DL_SAMPLE_BSDF = NULL;
 	advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY = NULL;
 	advancePathsKernel_MK_SPLAT_SAMPLE = NULL;
 	advancePathsKernel_MK_GENERATE_CAMERA_RAY = NULL;
@@ -81,7 +82,8 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete advancePathsKernel_MK_HIT_NOTHING;
 	delete advancePathsKernel_MK_HIT_OBJECT;
 	delete advancePathsKernel_MK_RT_DL;
-	delete advancePathsKernel_MK_GENERATE_DL_RAY;
+	delete advancePathsKernel_MK_DL_ILLUMINATE;
+	delete advancePathsKernel_MK_DL_SAMPLE_BSDF;
 	delete advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
 	delete advancePathsKernel_MK_SPLAT_SAMPLE;
 	delete advancePathsKernel_MK_GENERATE_CAMERA_RAY;
@@ -238,8 +240,10 @@ void PathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 				"AdvancePaths_MK_HIT_OBJECT");
 		CompileKernel(program, &advancePathsKernel_MK_RT_DL, &advancePathsWorkGroupSize,
 				"AdvancePaths_MK_RT_DL");
-		CompileKernel(program, &advancePathsKernel_MK_GENERATE_DL_RAY, &advancePathsWorkGroupSize,
-				"AdvancePaths_MK_GENERATE_DL_RAY");
+		CompileKernel(program, &advancePathsKernel_MK_DL_ILLUMINATE, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_DL_ILLUMINATE");
+		CompileKernel(program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_DL_SAMPLE_BSDF");
 		CompileKernel(program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &advancePathsWorkGroupSize,
 				"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
 		CompileKernel(program, &advancePathsKernel_MK_SPLAT_SAMPLE, &advancePathsWorkGroupSize,
@@ -523,8 +527,10 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_OBJECT);
 	if (advancePathsKernel_MK_RT_DL)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_DL);
-	if (advancePathsKernel_MK_GENERATE_DL_RAY)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_DL_RAY);
+	if (advancePathsKernel_MK_DL_ILLUMINATE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_ILLUMINATE);
+	if (advancePathsKernel_MK_DL_SAMPLE_BSDF)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_SAMPLE_BSDF);
 	if (advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY);
 	if (advancePathsKernel_MK_SPLAT_SAMPLE)
@@ -570,7 +576,7 @@ void PathOCLRenderThread::Stop() {
 void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
-	
+
 	if (engine->useMicroKernels) {
 		// Micro kernels version
 		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
@@ -585,7 +591,10 @@ void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) 
 		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_DL, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 				cl::NDRange(advancePathsWorkGroupSize));
-		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_DL_RAY, cl::NullRange,
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_ILLUMINATE, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_SAMPLE_BSDF, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 				cl::NDRange(advancePathsWorkGroupSize));
 		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, cl::NullRange,

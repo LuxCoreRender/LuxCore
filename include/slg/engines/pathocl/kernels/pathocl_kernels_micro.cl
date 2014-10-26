@@ -211,7 +211,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 // Evaluation of the Path finite state machine.
 //
 // From: MK_HIT_OBJECT
-// To: MK_GENERATE_DL_RAY or MK_SPLAT_SAMPLE
+// To: MK_DL_ILLUMINATE or MK_SPLAT_SAMPLE
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HIT_OBJECT(
@@ -291,7 +291,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// I handle as a special case when the path vertex is both the first
 	// and the last: I do direct light sampling without MIS.
 	taskState->state = (sample->result.lastPathVertex && !sample->result.firstPathVertex) ?
-		MK_SPLAT_SAMPLE : MK_GENERATE_DL_RAY;
+		MK_SPLAT_SAMPLE : MK_DL_ILLUMINATE;
 }
 
 //------------------------------------------------------------------------------
@@ -431,11 +431,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 //------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
-// From: MK_GENERATE_DL_RAY
-// To: MK_GENERATE_NEXT_VERTEX_RAY or MK_RT_DL or MK_SPLAT_SAMPLE
+// From: MK_DL_ILLUMINATE
+// To: MK_DL_SAMPLE_BSDF or MK_GENERATE_NEXT_VERTEX_RAY
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_DL_RAY(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL_ILLUMINATE(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -445,8 +445,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
-	if (pathState != MK_GENERATE_DL_RAY)
+	if (taskState->state != MK_DL_ILLUMINATE)
 		return;
 
  	//--------------------------------------------------------------------------
@@ -455,7 +454,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 
-	uint depth = taskState->depth;
+	const uint depth = taskState->depth;
 
 	__global BSDF *bsdf = &taskState->bsdf;
 
@@ -487,23 +486,90 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
-		DirectLightSampling_ONE(
-			&taskDirectLight->illumInfo,
+			DirectLight_Illuminate(
 #if defined(PARAM_HAS_INFINITELIGHTS)
-			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-			&task->tmpHitPoint,
+				&task->tmpHitPoint,
 #endif
-			ray->time,
-			Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X),
-			Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
-			Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
+				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_X),
+				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Y),
+				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_Z),
 #if defined(PARAM_HAS_PASSTHROUGH)
-			Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
+				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
 #endif
-			sample->result.lastPathVertex, depth, &taskState->throughput,
-			bsdf, ray
+				VLOAD3F(&bsdf->hitPoint.p.x), &taskDirectLight->illumInfo
+				LIGHTS_PARAM)) {
+		// I have now to evaluate the BSDF
+		taskState->state = MK_DL_SAMPLE_BSDF;
+	} else {
+		// No shadow ray to trace, move to the next vertex ray
+		// however, I have to Check if this is the last path vertex
+		taskState->state = (sample->result.lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
+	}
+
+	//--------------------------------------------------------------------------
+
+	// Save the seed
+	task->seed.s1 = seed->s1;
+	task->seed.s2 = seed->s2;
+	task->seed.s3 = seed->s3;
+}
+
+//------------------------------------------------------------------------------
+// Evaluation of the Path finite state machine.
+//
+// From: MK_DL_SAMPLE_BSDF
+// To: MK_GENERATE_NEXT_VERTEX_RAY or MK_RT_DL or MK_SPLAT_SAMPLE
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL_SAMPLE_BSDF(
+		KERNEL_ARGS
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Read the path state
+	__global GPUTask *task = &tasks[gid];
+	__global GPUTaskState *taskState = &tasksState[gid];
+	PathState pathState = taskState->state;
+	if (pathState != MK_DL_SAMPLE_BSDF)
+		return;
+
+ 	//--------------------------------------------------------------------------
+	// Start of variables setup
+	//--------------------------------------------------------------------------
+
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+
+	const uint depth = taskState->depth;
+	__global BSDF *bsdf = &taskState->bsdf;
+	__global Sample *sample = &samples[gid];
+
+	// Read the seed
+	Seed seedValue;
+	seedValue.s1 = task->seed.s1;
+	seedValue.s2 = task->seed.s2;
+	seedValue.s3 = task->seed.s3;
+	// This trick is required by Sampler_GetSample() macro
+	Seed *seed = &seedValue;
+
+	// Initialize image maps page pointer table
+	INIT_IMAGEMAPS_PAGES
+
+	__global Ray *ray = &rays[gid];
+	
+	//--------------------------------------------------------------------------
+	// End of variables setup
+	//--------------------------------------------------------------------------
+
+	if (DirectLight_BSDFSampling(
+			&taskDirectLight->illumInfo,
+			ray->time, sample->result.lastPathVertex, depth,
+			&taskState->throughput, bsdf,
+			ray
 			LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
 		// Initialize the pass-through event for the shadow ray
@@ -515,18 +581,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		directLightVolInfos[gid] = pathVolInfos[gid];
 #endif
 		// I have to trace the shadow ray
-		pathState = MK_RT_DL;
+		taskState->state = MK_RT_DL;
 	} else {
 		// No shadow ray to trace, move to the next vertex ray
 		// however, I have to Check if this is the last path vertex
-		if (sample->result.lastPathVertex)
-			pathState = MK_SPLAT_SAMPLE;
-		else
-			pathState = MK_GENERATE_NEXT_VERTEX_RAY;
+		taskState->state = (sample->result.lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
 	}
-
-	// Save the state
-	taskState->state = pathState;
 
 	//--------------------------------------------------------------------------
 
