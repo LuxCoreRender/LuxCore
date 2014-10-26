@@ -62,39 +62,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			sample, sampleDataPathBase, task->pathStateBase.depth);
 #endif
 
-	//--------------------------------------------------------------------------
 	// Initialize image maps page pointer table
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_IMAGEMAPS)
-	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	imageMapBuff[0] = imageMapBuff0;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	imageMapBuff[1] = imageMapBuff1;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	imageMapBuff[2] = imageMapBuff2;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	imageMapBuff[3] = imageMapBuff3;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	imageMapBuff[4] = imageMapBuff4;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-	imageMapBuff[5] = imageMapBuff5;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-	imageMapBuff[6] = imageMapBuff6;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-	imageMapBuff[7] = imageMapBuff7;
-#endif
-#endif
-
-	//--------------------------------------------------------------------------
+	INIT_IMAGEMAPS_PAGES
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
@@ -176,41 +145,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	//--------------------------------------------------------------------------
-	// Initialize image maps page pointer table
-	//--------------------------------------------------------------------------
-
 	__global Sample *sample = &samples[gid];
 
-#if defined(PARAM_HAS_IMAGEMAPS)
-	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	imageMapBuff[0] = imageMapBuff0;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	imageMapBuff[1] = imageMapBuff1;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	imageMapBuff[2] = imageMapBuff2;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	imageMapBuff[3] = imageMapBuff3;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	imageMapBuff[4] = imageMapBuff4;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-	imageMapBuff[5] = imageMapBuff5;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-	imageMapBuff[6] = imageMapBuff6;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-	imageMapBuff[7] = imageMapBuff7;
-#endif
-#endif
-
-	//--------------------------------------------------------------------------
+	// Initialize image maps page pointer table
+	INIT_IMAGEMAPS_PAGES
 
 	__global Ray *ray = &rays[gid];
 	
@@ -291,39 +229,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	__global Sample *sample = &samples[gid];
 
-	//--------------------------------------------------------------------------
 	// Initialize image maps page pointer table
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_IMAGEMAPS)
-	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	imageMapBuff[0] = imageMapBuff0;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	imageMapBuff[1] = imageMapBuff1;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	imageMapBuff[2] = imageMapBuff2;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	imageMapBuff[3] = imageMapBuff3;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	imageMapBuff[4] = imageMapBuff4;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-	imageMapBuff[5] = imageMapBuff5;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-	imageMapBuff[6] = imageMapBuff6;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-	imageMapBuff[7] = imageMapBuff7;
-#endif
-#endif
-
-	//--------------------------------------------------------------------------
+	INIT_IMAGEMAPS_PAGES
 
 	__global RayHit *rayHit = &rayHits[gid];
 	
@@ -421,39 +328,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
 
-	//--------------------------------------------------------------------------
 	// Initialize image maps page pointer table
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_IMAGEMAPS)
-	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	imageMapBuff[0] = imageMapBuff0;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	imageMapBuff[1] = imageMapBuff1;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	imageMapBuff[2] = imageMapBuff2;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	imageMapBuff[3] = imageMapBuff3;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	imageMapBuff[4] = imageMapBuff4;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-	imageMapBuff[5] = imageMapBuff5;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-	imageMapBuff[6] = imageMapBuff6;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-	imageMapBuff[7] = imageMapBuff7;
-#endif
-#endif
-
-	//--------------------------------------------------------------------------
+	INIT_IMAGEMAPS_PAGES
 
 	__global Ray *ray = &rays[gid];
 	__global RayHit *rayHit = &rayHits[gid];
@@ -585,39 +461,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
 
-	//--------------------------------------------------------------------------
 	// Initialize image maps page pointer table
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_IMAGEMAPS)
-	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	imageMapBuff[0] = imageMapBuff0;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	imageMapBuff[1] = imageMapBuff1;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	imageMapBuff[2] = imageMapBuff2;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	imageMapBuff[3] = imageMapBuff3;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	imageMapBuff[4] = imageMapBuff4;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-	imageMapBuff[5] = imageMapBuff5;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-	imageMapBuff[6] = imageMapBuff6;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-	imageMapBuff[7] = imageMapBuff7;
-#endif
-#endif
-
-	//--------------------------------------------------------------------------
+	INIT_IMAGEMAPS_PAGES
 
 	__global Ray *ray = &rays[gid];
 	
@@ -720,39 +565,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
 
-	//--------------------------------------------------------------------------
 	// Initialize image maps page pointer table
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_IMAGEMAPS)
-	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT];
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-	imageMapBuff[0] = imageMapBuff0;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-	imageMapBuff[1] = imageMapBuff1;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-	imageMapBuff[2] = imageMapBuff2;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-	imageMapBuff[3] = imageMapBuff3;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-	imageMapBuff[4] = imageMapBuff4;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-	imageMapBuff[5] = imageMapBuff5;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-	imageMapBuff[6] = imageMapBuff6;
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-	imageMapBuff[7] = imageMapBuff7;
-#endif
-#endif
-
-	//--------------------------------------------------------------------------
+	INIT_IMAGEMAPS_PAGES
 
 	__global Ray *ray = &rays[gid];
 	
