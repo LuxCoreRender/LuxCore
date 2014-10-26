@@ -71,7 +71,7 @@ typedef struct {
 
 	// Radiance to add to the result if light source is visible
 	Spectrum lightRadiance;
-	uint lightID;
+	unsigned int lightID;
 } DirectLightIlluminateInfo;
 
 // This is defined only under OpenCL because of variable size structures
