@@ -135,7 +135,7 @@ void voronoi(float x, float y, float z, float* da, float* pa, float me, Distance
 }
 
 /* returns different feature points for use in BLI_gNoise() */
-static float voronoi_F1(float x, float y, float z) {
+float voronoi_F1(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[0];
@@ -166,7 +166,7 @@ float voronoi_F1F2(float x, float y, float z) {
 }
 
 /* Crackle type pattern, just a scale/clamp of F2-F1 */
-static float voronoi_Cr(float x, float y, float z) {
+float voronoi_Cr(float x, float y, float z) {
 	float t = 10.f*voronoi_F1F2(x, y, z);
 	if (t>1.f) return 1.f;
 	return t;
@@ -174,7 +174,7 @@ static float voronoi_Cr(float x, float y, float z) {
 
 /* Signed version of all 6 of the above, just 2x-1, not really correct though (range is potentially (0, sqrt(6)).
    Used in the musgrave functions */
-static float voronoi_F1S(float x, float y, float z) {
+float voronoi_F1S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[0]-1.f);
@@ -220,7 +220,7 @@ float voronoi_CrS(float x, float y, float z) {
 /*************/
 
 /* returns unsigned cellnoise */
-static float cellNoiseU(float x, float y, float z) {
+float cellNoiseU(float x, float y, float z) {
   int xi = (int)(floor(x));
   int yi = (int)(floor(y));
   int zi = (int)(floor(z));
