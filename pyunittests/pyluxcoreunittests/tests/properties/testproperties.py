@@ -141,3 +141,15 @@ class TestProperties(unittest.TestCase):
 		props.Set(pyluxcore.Property("test2.prop1.aa", "cc"))
 
 		self.assertEqual(props.ToString(), 'test1.prop1 = "aa"\ntest1.prop2 = "bb"\ntest2.prop1.aa = "cc"\n')
+
+	def test_Properties_SpaceInName(self):
+		props = pyluxcore.Properties()
+		props.Set(pyluxcore.Property("aa.b b.cc", "123"))
+		
+		self.assertEqual(props.Get("aa.b b.cc").Get(), ["123"])
+		
+		props = pyluxcore.Properties()
+		props.SetFromString("test1.prop1  = 1 2.0 aa \"quoted\"\ntest2.pr op2   = 1 2.0 'quoted' bb\ntest2.prop3 = 1")
+		self.assertEqual(props.Get("test1.prop1").Get(), ["1", "2.0", "aa", "quoted"])
+		self.assertEqual(props.Get("test2.pr op2").Get(), ["1", "2.0", "quoted", "bb"])
+		self.assertEqual(props.Get("test2.prop3").Get(), ["1"])
