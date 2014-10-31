@@ -63,12 +63,15 @@ protected:
 	void InitGPUTaskBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
-	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel);
+	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int offset = 0);
+	void SetAdvancePathsMicroKernelArgs(cl::Kernel *advancePathsKernel);
 	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables
 	cl::Kernel *initKernel;
 	size_t initWorkGroupSize;
+	cl::Kernel *initIndexMappingBufferKernel;
+	size_t initIndexMappingBufferWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
 	cl::Kernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
 	cl::Kernel *advancePathsKernel_MK_HIT_NOTHING;
@@ -91,6 +94,8 @@ protected:
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *pathVolInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
+	
+	cl::Buffer *taskIndexRemappingBuff;
 
 	u_int sampleDimensions;
 

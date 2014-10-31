@@ -111,4 +111,63 @@ void VADD3F(__global float *p, const float3 v) {
 	VSTORE3F(VLOAD3F(p) + v, p);
 }
 
+float AtomicAdd(__global float *val, const float delta) {
+	union {
+		float f;
+		unsigned int i;
+	} oldVal;
+	union {
+		float f;
+		unsigned int i;
+	} newVal;
+
+	do {
+		oldVal.f = *val;
+		newVal.f = oldVal.f + delta;
+	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
+
+	return oldVal.f;
+}
+
+uint AtomicAddUI(__global uint *val, const uint delta) {
+	uint oldVal, newVal;
+	do {
+		oldVal = *val;
+		newVal = oldVal + delta;
+	} while (atomic_cmpxchg(val, oldVal, newVal) != oldVal);
+
+	return oldVal;
+}
+
+uint AtomicAddUIL(__local uint *val, const uint delta) {
+	uint oldVal, newVal;
+	do {
+		oldVal = *val;
+		newVal = oldVal + delta;
+	} while (atomic_cmpxchg(val, oldVal, newVal) != oldVal);
+
+	return oldVal;
+}
+
+bool AtomicMin(__global float *val, const float val2) {
+	union {
+		float f;
+		unsigned int i;
+	} oldVal;
+	union {
+		float f;
+		unsigned int i;
+	} newVal;
+
+	do {
+		oldVal.f = *val;
+		if (val2 >= oldVal.f)
+			return false;
+		else
+			newVal.f = val2;
+	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
+
+	return true;
+}
+
 #endif
