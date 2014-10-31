@@ -1,0 +1,25 @@
+ply
+format ascii 1.0
+comment Created by SmallLuxGPU exporter for Blender 2.5, source file: kitchen.blend
+element vertex 8
+property float x
+property float y
+property float z
+property uchar red
+property uchar green
+property uchar blue
+element face 4
+property list uchar uint vertex_indices
+end_header
+10.002680 -2.694561 1.397624 255 255 255
+10.002680 -2.411054 1.397624 255 255 255
+10.031149 -2.411054 1.397624 255 255 255
+10.031149 -2.694561 1.397624 255 255 255
+9.388212 -0.489535 1.397624 255 255 255
+8.612147 -0.489535 1.397624 255 255 255
+8.612147 -0.475644 1.397624 255 255 255
+9.388212 -0.475644 1.397624 255 255 255
+3 0 1 2
+3 0 2 3
+3 4 5 6
+3 4 6 7
