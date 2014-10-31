@@ -22,6 +22,20 @@
 // AdvancePaths (Micro-Kernels)
 //------------------------------------------------------------------------------
 
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitIndexMappingBuffer(
+		__global uint *taskIndexRemapping) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+	
+	taskIndexRemapping[gid] = NULL_INDEX;
+
+	if (gid == 0) {
+		// Initialize the global counter
+		taskIndexRemapping[PARAM_TASK_COUNT] = 0;
+	}
+}
+
 //------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
@@ -30,6 +44,7 @@
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT_NEXT_VERTEX(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -44,84 +59,121 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	// Read the path state
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
-	PathState pathState = taskState->state;
-	if (pathState != MK_RT_NEXT_VERTEX)
-		return;
+	if (taskState->state == MK_RT_NEXT_VERTEX) {
+		//----------------------------------------------------------------------
+		// Start of variables setup
+		//----------------------------------------------------------------------
 
-	//--------------------------------------------------------------------------
-	// Start of variables setup
-	//--------------------------------------------------------------------------
+		__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+		__global BSDF *bsdf = &taskState->bsdf;
 
-	__global BSDF *bsdf = &taskState->bsdf;
-
-	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+		__global Sample *sample = &samples[gid];
+		__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 #if (PARAM_SAMPLER_TYPE != 0)
-	// Used by Sampler_GetSamplePathVertex() macro
-	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, taskState->depth);
+		// Used by Sampler_GetSamplePathVertex() macro
+		__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
+				sample, sampleDataPathBase, taskState->depth);
 #endif
 
-	// Initialize image maps page pointer table
-	INIT_IMAGEMAPS_PAGES
+		// Initialize image maps page pointer table
+		INIT_IMAGEMAPS_PAGES
 
-	__global Ray *ray = &rays[gid];
-	__global RayHit *rayHit = &rayHits[gid];
-	
-	//--------------------------------------------------------------------------
-	// End of variables setup
-	//--------------------------------------------------------------------------
+		__global Ray *ray = &rays[gid];
+		__global RayHit *rayHit = &rayHits[gid];
 
-	const bool continueToTrace = Scene_Intersect(
+		//----------------------------------------------------------------------
+		// End of variables setup
+		//----------------------------------------------------------------------
+
+		const bool continueToTrace = Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
-			&pathVolInfos[gid],
-			&task->tmpHitPoint,
+				&pathVolInfos[gid],
+				&task->tmpHitPoint,
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
-			taskState->bsdf.hitPoint.passThroughEvent,
+				taskState->bsdf.hitPoint.passThroughEvent,
 #endif
-			ray, rayHit, bsdf,
-			&taskState->throughput,
-			&sample->result,
-			// BSDF_Init parameters
-			meshDescs,
-			meshMats,
+				ray, rayHit, bsdf,
+				&taskState->throughput,
+				&sample->result,
+				// BSDF_Init parameters
+				meshDescs,
+				meshMats,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-			meshTriLightDefsOffset,
+				meshTriLightDefsOffset,
 #endif
-			vertices,
+				vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-			vertNormals,
+				vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-			vertUVs,
+				vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-			vertCols,
+				vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-			vertAlphas,
+				vertAlphas,
 #endif
-			triangles
-			MATERIALS_PARAM
-			);
+				triangles
+				MATERIALS_PARAM
+				);
 
-	// If continueToTrace, there is nothing to do, just keep the same state
-	if (!continueToTrace) {
-		const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
-		taskState->state = rayMiss ? MK_HIT_NOTHING : MK_HIT_OBJECT;
-	}
+		// If continueToTrace, there is nothing to do, just keep the same state
+		if (!continueToTrace) {
+			const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
+			taskState->state = rayMiss ? MK_HIT_NOTHING : MK_HIT_OBJECT;
+		}
 #if defined(PARAM_HAS_PASSTHROUGH)
-	else {
-		// I generate a new random variable starting from the previous one. I'm
-		// not really sure about the kind of correlation introduced by this
-		// trick.
-		taskState->bsdf.hitPoint.passThroughEvent = fabs(taskState->bsdf.hitPoint.passThroughEvent - .5f) * 2.f;
-	}
+		else {
+			// I generate a new random variable starting from the previous one. I'm
+			// not really sure about the kind of correlation introduced by this
+			// trick.
+			taskState->bsdf.hitPoint.passThroughEvent = fabs(taskState->bsdf.hitPoint.passThroughEvent - .5f) * 2.f;
+		}
 #endif
+	}
+	
+	//--------------------------------------------------------------------------
+	// Remap the task indices
+	//--------------------------------------------------------------------------
+
+	const uint workGroupSize = 64;
+	__local uint states[workGroupSize];
+	__local uint globalStartIndex, localCount;
+
+	const size_t lid = get_local_id(0);
+	if (lid == 0)
+		localCount = 0;
+
+	// Synchronize
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	if (taskState->state == MK_HIT_NOTHING) {
+		const uint index = AtomicAddUIL(&localCount, 1);
+		states[index] = gid;
+	}
+
+	// Synchronize
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	if ((lid == 0) && (localCount > 0)) {
+		// Add to the global offsets
+		__global uint *globalOffset = &taskIndexRemapping[PARAM_TASK_COUNT];
+		globalStartIndex = AtomicAddUI(globalOffset, localCount);
+	}
+	
+	// Synchronize
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	// Each work items write a state
+	
+	if (lid < localCount) {
+		// Add to the beginning
+		taskIndexRemapping[globalStartIndex + lid] = states[lid];
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -132,15 +184,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HIT_NOTHING(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
-	if (gid >= PARAM_TASK_COUNT)
+	const uint globalOffset = taskIndexRemapping[PARAM_TASK_COUNT];
+	if ((gid >= PARAM_TASK_COUNT) || (gid >= globalOffset))
 		return;
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskState *taskState = &tasksState[gid];
+	const uint taskIndex = taskIndexRemapping[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 	if (pathState != MK_HIT_NOTHING)
 		return;
@@ -149,14 +204,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[taskIndex];
 
-	__global Sample *sample = &samples[gid];
+	__global Sample *sample = &samples[taskIndex];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
 
-	__global Ray *ray = &rays[gid];
+	__global Ray *ray = &rays[taskIndex];
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -215,6 +270,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HIT_OBJECT(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -302,6 +358,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT_DL(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -436,6 +493,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL_ILLUMINATE(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -525,6 +583,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL_SAMPLE_BSDF(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -604,6 +663,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -734,6 +794,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SPLAT_SAMPLE(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -818,6 +879,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_CAMERA_RAY(
+		__global uint *taskIndexRemapping,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);

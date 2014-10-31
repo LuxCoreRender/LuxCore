@@ -179,45 +179,6 @@ float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {
 	return y;
 }
 
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-void AtomicAdd(__global float *val, const float delta) {
-	union {
-		float f;
-		unsigned int i;
-	} oldVal;
-	union {
-		float f;
-		unsigned int i;
-	} newVal;
-
-	do {
-		oldVal.f = *val;
-		newVal.f = oldVal.f + delta;
-	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
-}
-
-bool AtomicMin(__global float *val, const float val2) {
-	union {
-		float f;
-		unsigned int i;
-	} oldVal;
-	union {
-		float f;
-		unsigned int i;
-	} newVal;
-
-	do {
-		oldVal.f = *val;
-		if (val2 >= oldVal.f)
-			return false;
-		else
-			newVal.f = val2;
-	} while (atomic_cmpxchg((__global unsigned int *)val, oldVal.i, newVal.i) != oldVal.i);
-
-	return true;
-}
-#endif
-
 void Film_SetPixel2(__global float *dst, __global  float *val) {
 	dst[0] = val[0];
 	dst[1] = val[1];

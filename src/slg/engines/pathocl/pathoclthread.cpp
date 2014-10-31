@@ -47,6 +47,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	gpuTaskStats = NULL;
 
 	initKernel = NULL;
+	initIndexMappingBufferKernel = NULL;
 	advancePathsKernel = NULL;
 	advancePathsKernel_MK_RT_NEXT_VERTEX = NULL;
 	advancePathsKernel_MK_HIT_NOTHING = NULL;
@@ -68,6 +69,8 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	taskStatsBuff = NULL;
 	pathVolInfosBuff = NULL;
 	directLightVolInfosBuff = NULL;
+
+	taskIndexRemappingBuff = NULL;
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -77,6 +80,7 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 		Stop();
 
 	delete initKernel;
+	delete initIndexMappingBufferKernel;
 	delete advancePathsKernel;
 	delete advancePathsKernel_MK_RT_NEXT_VERTEX;
 	delete advancePathsKernel_MK_HIT_NOTHING;
@@ -87,6 +91,8 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
 	delete advancePathsKernel_MK_SPLAT_SAMPLE;
 	delete advancePathsKernel_MK_GENERATE_CAMERA_RAY;
+
+	delete taskIndexRemappingBuff;
 
 	delete[] gpuTaskStats;
 }
@@ -228,6 +234,8 @@ void PathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 	CompileKernel(program, &initKernel, &initWorkGroupSize, "Init");
 
 	if (engine->useMicroKernels) {
+		CompileKernel(program, &initIndexMappingBufferKernel, &initIndexMappingBufferWorkGroupSize, "InitIndexMappingBuffer");
+
 		//----------------------------------------------------------------------
 		// AdvancePaths kernel (Micro-Kernels)
 		//----------------------------------------------------------------------
@@ -439,13 +447,20 @@ void PathOCLRenderThread::AdditionalInit() {
 		AllocOCLBufferRW(&pathVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "PathVolumeInfo");
 		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "directLightVolumeInfo");
 	}
+
+	//--------------------------------------------------------------------------
+	// Allocate volume info buffers if required
+	//--------------------------------------------------------------------------
+
+	// 1 global counter added at the end of the list
+	AllocOCLBufferRW(&taskIndexRemappingBuff, sizeof(u_int) * (taskCount + 1), "TaskIndexRemapping");
 }
 
-void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel) {
+void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int offset) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	CompiledScene *cscene = engine->compiledScene;
 
-	u_int argIndex = 0;
+	u_int argIndex = offset;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
 	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
 	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
@@ -504,6 +519,12 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	}
 }
 
+void PathOCLRenderThread::SetAdvancePathsMicroKernelArgs(cl::Kernel *advancePathsKernel) {
+	advancePathsKernel->setArg(0, *taskIndexRemappingBuff);
+
+	SetAdvancePathsKernelArgs(advancePathsKernel, 1);
+}
+
 void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	// Set OpenCL kernel arguments
 
@@ -514,29 +535,30 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
 	//--------------------------------------------------------------------------
-	// advancePathsKernel
+	// advancePathsKernel (Mega and Micro)
 	//--------------------------------------------------------------------------
 
 	if (advancePathsKernel)
 		SetAdvancePathsKernelArgs(advancePathsKernel);
+
 	if (advancePathsKernel_MK_RT_NEXT_VERTEX)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_NEXT_VERTEX);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_RT_NEXT_VERTEX);
 	if (advancePathsKernel_MK_HIT_NOTHING)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_NOTHING);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_HIT_NOTHING);
 	if (advancePathsKernel_MK_HIT_OBJECT)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_OBJECT);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_HIT_OBJECT);
 	if (advancePathsKernel_MK_RT_DL)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_DL);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_RT_DL);
 	if (advancePathsKernel_MK_DL_ILLUMINATE)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_ILLUMINATE);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_DL_ILLUMINATE);
 	if (advancePathsKernel_MK_DL_SAMPLE_BSDF)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_SAMPLE_BSDF);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_DL_SAMPLE_BSDF);
 	if (advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY);
 	if (advancePathsKernel_MK_SPLAT_SAMPLE)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_SPLAT_SAMPLE);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_SPLAT_SAMPLE);
 	if (advancePathsKernel_MK_GENERATE_CAMERA_RAY)
-		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_CAMERA_RAY);
+		SetAdvancePathsMicroKernelArgs(advancePathsKernel_MK_GENERATE_CAMERA_RAY);
 
 	//--------------------------------------------------------------------------
 	// initKernel
@@ -556,6 +578,13 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	initKernel->setArg(argIndex++, *cameraBuff);
 	initKernel->setArg(argIndex++, threadFilm->GetWidth());
 	initKernel->setArg(argIndex++, threadFilm->GetHeight());
+
+	//--------------------------------------------------------------------------
+	// initIndexMappingBufferKernel
+	//--------------------------------------------------------------------------
+
+	if (initIndexMappingBufferKernel)
+		initIndexMappingBufferKernel->setArg(0, *taskIndexRemappingBuff);
 }
 
 void PathOCLRenderThread::Stop() {
@@ -571,6 +600,8 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&pathVolInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
+
+	FreeOCLBuffer(&taskIndexRemappingBuff);
 }
 
 void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
@@ -579,9 +610,13 @@ void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) 
 
 	if (engine->useMicroKernels) {
 		// Micro kernels version
+		oclQueue.enqueueNDRangeKernel(*initIndexMappingBufferKernel, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, initIndexMappingBufferWorkGroupSize)),
+				cl::NDRange(initIndexMappingBufferWorkGroupSize));
 		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 				cl::NDRange(advancePathsWorkGroupSize));
+
 		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_NOTHING, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
 				cl::NDRange(advancePathsWorkGroupSize));
