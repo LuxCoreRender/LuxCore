@@ -345,10 +345,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Trace rays
 				intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
 					*(hitsBuff), engine->taskCount, NULL, NULL);
+
 				// Advance to next path state
-				oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
-					cl::NDRange(RoundUp<u_int>(engine->taskCount, advancePathsWorkGroupSize)),
-					cl::NDRange(advancePathsWorkGroupSize));
+				EnqueueAdvancePathsKernel(oclQueue);
 			}
 
 			// No need to transfer the frame buffer if I'm not the display thread
