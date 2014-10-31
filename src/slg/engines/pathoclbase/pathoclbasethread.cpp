@@ -859,9 +859,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
 
 	if (!renderEngine->useDynamicCodeGenerationForTextures)
-		ss << " -D PARAM_DIASBLE_TEX_DYNAMIC_EVALUATION";
+		ss << " -D PARAM_DISABLE_TEX_DYNAMIC_EVALUATION";
 	if (!renderEngine->useDynamicCodeGenerationForMaterials)
-		ss << " -D PARAM_DIASBLE_MAT_DYNAMIC_EVALUATION";
+		ss << " -D PARAM_DISABLE_MAT_DYNAMIC_EVALUATION";
 
 	ss << AdditionalKernelOptions();
 
