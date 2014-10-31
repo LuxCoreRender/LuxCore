@@ -223,7 +223,7 @@ std::string KernelSource_pathocl_kernels_mega =
 "#if defined(PARAM_HAS_ENVLIGHTS)\n"
 "				DirectHitInfiniteLight(\n"
 "						taskDirectLight->lastBSDFEvent,\n"
-"						&taskDirectLight->throughput,\n"
+"						&taskState->throughput,\n"
 "						VLOAD3F(&ray->d.x), taskDirectLight->lastPdfW,\n"
 "						&sample->result\n"
 "						LIGHTS_PARAM);\n"

@@ -220,7 +220,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_ENVLIGHTS)
 				DirectHitInfiniteLight(
 						taskDirectLight->lastBSDFEvent,
-						&taskDirectLight->throughput,
+						&taskState->throughput,
 						VLOAD3F(&ray->d.x), taskDirectLight->lastPdfW,
 						&sample->result
 						LIGHTS_PARAM);
