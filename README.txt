@@ -9,13 +9,27 @@ and at http://www.luxrender.net/wiki/index.php?title=LuxRays
 LuxCore
 =======
 
-LuxCore is the new LuxRender C++ and Python API.
+LuxCore is the new LuxRender v2.x C++ and Python API. It is released under Apache Public License v2.0
+and can be freely used in open source and commercial applications. You can find more
+information about the API at http://www.luxrender.net/wiki/LuxCore
 
 SLG (SmallLuxGPU)
 =================
 
 SmallLuxGPU is a LuxCore/LuxRays demo and was a LuxRender v0.8 "proof of concept". You can find
 more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
+
+Donate
+======
+
+LuxRender is now part of the Software Freedom Conservancy, which allows us to receive
+donations to foster the development and cover the expenses of the LuxRender project.
+For each donation you'll do, a small amount will go to the Conservancy so that it can
+benefit all the member projects, and the rest will be made available to LuxRender.
+In the United States, you can benefit from tax deductions according to the
+Conservancy 501(c)(3) not for profit organization status.
+
+You can donate at http://www.luxrender.net/en_GB/donate
 
 Authors
 =======
