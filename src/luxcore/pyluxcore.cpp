@@ -469,7 +469,7 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 		}
 	} else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type Film.GetOutputFloat() method: " + objType);
+		throw std::runtime_error("Unsupported data type in Film.GetOutputFloat() method: " + objType);
 	}
 }
 
@@ -494,9 +494,9 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw std::runtime_error("Unable to get a data view in Film.GetOutputUInt() method: " + objType);
 		}
-	}	else {
+	} else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type Film.GetOutputUInt() method: " + objType);
+		throw std::runtime_error("Unsupported data type in Film.GetOutputUInt() method: " + objType);
 	}
 }
 
