@@ -1464,7 +1464,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 				"and hitpointgrey (i.e. not " << texType << ").");
 
 		*sceneProps <<
-				Property(prefix + ".type ")("constfloat1") <<
+				Property(prefix + ".type")("constfloat1") <<
 				Property(prefix + ".value")(.7f);
 	}
 
