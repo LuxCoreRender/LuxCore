@@ -219,9 +219,9 @@ size_t Film::GetOutputSize(const FilmOutputType type) const {
 		case OUTPUT_MATERIAL_ID_MASK:
 			return pixelCount;
 		case OUTPUT_DIRECT_SHADOW_MASK:
-			return 3 * pixelCount;
+			return pixelCount;
 		case OUTPUT_INDIRECT_SHADOW_MASK:
-			return 3 * pixelCount;
+			return pixelCount;
 		case OUTPUT_RADIANCE_GROUP:
 			return 3 * pixelCount;
 		case OUTPUT_UV:
