@@ -22,7 +22,7 @@ more information about SLG at http://www.luxrender.net/wiki/index.php?title=SLG
 Donate
 ======
 
-LuxRender is now part of the Software Freedom Conservancy, which allows us to receive
+LuxRender is now part of the Software Freedom Conservancy (http://sfconservancy.org/), which allows us to receive
 donations to foster the development and cover the expenses of the LuxRender project.
 For each donation you'll do, a small amount will go to the Conservancy so that it can
 benefit all the member projects, and the rest will be made available to LuxRender.
