@@ -457,9 +457,6 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 				float *buffer = (float *)view.buf;
 
 				film->GetOutput<float>(type, buffer, index);
-				buffer[0] = 0.f;
-				buffer[1] = .5f;
-				buffer[2] = 1.f;
 			} else
 				throw std::runtime_error("Not enough space in the buffer of Film.GetOutputFloat() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float)));
