@@ -493,38 +493,41 @@ void Scene::ParseObjects(const Properties &props) {
 		if (objName == "")
 			throw runtime_error("Syntax error in " + key);
 
-		SceneObject *obj = CreateObject(objName, props);
-
 		if (objDefs.IsSceneObjectDefined(objName)) {
 			// A replacement for an existing object
 			const SceneObject *oldObj = objDefs.GetSceneObject(objName);
 			const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
 
-			objDefs.DefineSceneObject(objName, obj);
-
-			// Check if the old material was or the new material is a light source
-			if (wasLightSource || obj->GetMaterial()->IsLightSource())
+			// Check if the old object was a light source
+			if (wasLightSource) {
 				editActions.AddAction(LIGHTS_EDIT);
-		} else {
-			// Only a new object
-			objDefs.DefineSceneObject(objName, obj);
 
-			// Check if it is a light source
-			const Material *mat = obj->GetMaterial();
-			if (mat->IsLightSource()) {
-				const ExtMesh *mesh = obj->GetExtMesh();
-				SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
+				// Delete all old triangle lights
+				const ExtMesh *mesh = oldObj->GetExtMesh();
+				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
+					lightDefs.DeleteLightSource(objName + "_triangle_light_" + ToString(i));
+			}
+		}
 
-				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-					TriangleLight *tl = new TriangleLight();
-					tl->lightMaterial = mat;
-					tl->mesh = mesh;
-					tl->meshIndex = objDefs.GetSize() - 1;
-					tl->triangleIndex = i;
-					tl->Preprocess();
+		SceneObject *obj = CreateObject(objName, props);
+		objDefs.DefineSceneObject(objName, obj);
 
-					lightDefs.DefineLightSource(objName + "_triangle_light_" + ToString(i), tl);
-				}
+		// Check if it is a light source
+		const Material *mat = obj->GetMaterial();
+		if (mat->IsLightSource()) {
+			const ExtMesh *mesh = obj->GetExtMesh();
+			SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
+
+			// Add all new triangle lights
+			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
+				TriangleLight *tl = new TriangleLight();
+				tl->lightMaterial = mat;
+				tl->mesh = mesh;
+				tl->meshIndex = objDefs.GetSize() - 1;
+				tl->triangleIndex = i;
+				tl->Preprocess();
+
+				lightDefs.DefineLightSource(objName + "_triangle_light_" + ToString(i), tl);
 			}
 		}
 
@@ -698,8 +701,18 @@ void Scene::RemoveUnusedMeshes() {
 
 void Scene::DeleteObject(const std::string &objName) {
 	if (objDefs.IsSceneObjectDefined(objName)) {
-		if (objDefs.GetSceneObject(objName)->GetMaterial()->IsLightSource())
+		const SceneObject *oldObj = objDefs.GetSceneObject(objName);
+		const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
+
+		// Check if the old object was a light source
+		if (wasLightSource) {
 			editActions.AddAction(LIGHTS_EDIT);
+
+			// Delete all old triangle lights
+			const ExtMesh *mesh = oldObj->GetExtMesh();
+			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
+				lightDefs.DeleteLightSource(objName + "_triangle_light_" + ToString(i));
+		}
 
 		objDefs.DeleteSceneObject(objName);
 
