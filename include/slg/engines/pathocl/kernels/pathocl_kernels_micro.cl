@@ -546,7 +546,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 	const uint depth = taskState->depth;
 	__global BSDF *bsdf = &taskState->bsdf;
+
 	__global Sample *sample = &samples[gid];
+	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+#if (PARAM_SAMPLER_TYPE != 0)
+	// Used by Sampler_GetSamplePathVertex() macro
+	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
+			sample, sampleDataPathBase, depth);
+#endif
 
 	// Read the seed
 	Seed seedValue;
