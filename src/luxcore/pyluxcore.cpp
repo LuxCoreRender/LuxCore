@@ -112,7 +112,7 @@ static void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const
 		float maxValue = 0.f;
 		for (u_int i = 0; i < width * height * 3; ++i) {
 			const float value = src[i];
-			if (!isinf(value) && (value > maxValue))
+			if (!isinf(value) && !isnan(value) && (value > maxValue))
 				maxValue = value;
 		}
 		const float k = (maxValue == 0.f) ? 0.f : (255.f / maxValue);
@@ -167,6 +167,167 @@ static boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const
 		for (u_int x = 0; x < width; ++x) {
 			l.append(boost::python::make_tuple(src[srcIndex], src[srcIndex + 1], src[srcIndex + 2], 1.f));
 			srcIndex += 3;
+		}
+	}
+
+	return l;
+}
+
+static boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int width, const u_int height,
+		boost::python::object &objSrc, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_1xFloat_To_4xFloatList(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_1xFloat_To_4xFloatList(): " + objType);
+	}	
+
+	const float *src = (float *)srcView.buf;
+	boost::python::list l;
+
+	if (normalize) {
+		// Look for the max. in source buffer
+
+		float maxValue = 0.f;
+		for (u_int i = 0; i < width * height; ++i) {
+			const float value = src[i];
+			if (!isinf(value) && !isnan(value) && (value > maxValue))
+				maxValue = value;
+		}
+		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
+
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width;
+
+			for (u_int x = 0; x < width; ++x) {
+				const float val = src[srcIndex++] * k;
+				l.append(val);
+				l.append(val);
+				l.append(val);
+				l.append(1.f);
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width;
+
+			for (u_int x = 0; x < width; ++x) {
+				const float val = src[srcIndex++];
+				l.append(val);
+				l.append(val);
+				l.append(val);
+				l.append(1.f);
+			}
+		}
+	}
+
+	return l;
+}
+
+static boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int width, const u_int height,
+		boost::python::object &objSrc, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_2xFloat_To_4xFloatList(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_2xFloat_To_4xFloatList(): " + objType);
+	}	
+
+	const float *src = (float *)srcView.buf;
+	boost::python::list l;
+
+	if (normalize) {
+		// Look for the max. in source buffer
+
+		float maxValue = 0.f;
+		for (u_int i = 0; i < width * height * 2; ++i) {
+			const float value = src[i];
+			if (!isinf(value) && !isnan(value) && (value > maxValue))
+				maxValue = value;
+		}
+		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
+
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 2;
+
+			for (u_int x = 0; x < width; ++x) {
+				l.append(src[srcIndex++] * k);
+				l.append(src[srcIndex++] * k);
+				l.append(0.f);
+				l.append(1.f);
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 2;
+
+			for (u_int x = 0; x < width; ++x) {
+				l.append(src[srcIndex++]);
+				l.append(src[srcIndex++]);
+				l.append(0.f);
+				l.append(1.f);
+			}
+		}
+	}
+
+	return l;
+}
+
+static boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int width, const u_int height,
+		boost::python::object &objSrc, const bool normalize) {
+	if (!PyObject_CheckBuffer(objSrc.ptr())) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_4xFloatList(): " + objType);
+	}
+	
+	Py_buffer srcView;
+	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
+		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
+		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xFloatList(): " + objType);
+	}	
+
+	const float *src = (float *)srcView.buf;
+	boost::python::list l;
+
+	if (normalize) {
+		// Look for the max. in source buffer
+
+		float maxValue = 0.f;
+		for (u_int i = 0; i < width * height * 3; ++i) {
+			const float value = src[i];
+			if (!isinf(value) && !isnan(value) && (value > maxValue))
+				maxValue = value;
+		}
+		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
+
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 3;
+
+			for (u_int x = 0; x < width; ++x) {
+				l.append(src[srcIndex++] * k);
+				l.append(src[srcIndex++] * k);
+				l.append(src[srcIndex++] * k);
+				l.append(1.f);
+			}
+		}
+	} else {
+		for (u_int y = 0; y < height; ++y) {
+			u_int srcIndex = y * width * 3;
+
+			for (u_int x = 0; x < width; ++x) {
+				l.append(src[srcIndex++]);
+				l.append(src[srcIndex++]);
+				l.append(src[srcIndex++]);
+				l.append(1.f);
+			}
 		}
 	}
 
@@ -733,6 +894,9 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("ParseLXS", &ParseLXS);
 	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &ConvertFilmChannelOutput_3xFloat_To_4xUChar);
 	def("ConvertFilmChannelOutput_3xFloat_To_3xFloatList", &ConvertFilmChannelOutput_3xFloat_To_3xFloatList);
+	def("ConvertFilmChannelOutput_1xFloat_To_4xFloatList", &ConvertFilmChannelOutput_1xFloat_To_4xFloatList);
+	def("ConvertFilmChannelOutput_2xFloat_To_4xFloatList", &ConvertFilmChannelOutput_2xFloat_To_4xFloatList);
+	def("ConvertFilmChannelOutput_3xFloat_To_4xFloatList", &ConvertFilmChannelOutput_3xFloat_To_4xFloatList);
 
 	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
 	
