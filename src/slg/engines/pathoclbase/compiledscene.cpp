@@ -2387,12 +2387,12 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)\n" +
 						AddTextureSourceCall("Float", mat->glossy2.nvTexIndex) + ", " +
 						"\n#endif\n" +
-						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)\n" +
-						ToString(mat->glossy2.multibounce) + ", " +
-						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)\n" +
 						AddTextureSourceCall("Spectrum", mat->glossy2.kaTexIndex) + ", " +
 						AddTextureSourceCall("Float", mat->glossy2.depthTexIndex) + ", " +
+						"\n#endif\n" +
+						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)\n" +
+						ToString(mat->glossy2.multibounce) + ", " +
 						"\n#endif\n" +
 						AddTextureSourceCall("Spectrum", mat->glossy2.kdTexIndex) + ", " +
 						AddTextureSourceCall("Spectrum", mat->glossy2.ksTexIndex));
