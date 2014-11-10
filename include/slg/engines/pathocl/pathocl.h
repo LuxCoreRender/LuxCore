@@ -63,16 +63,29 @@ protected:
 	void InitGPUTaskBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
+	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel);
+	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables
 	cl::Kernel *initKernel;
 	size_t initWorkGroupSize;
 	cl::Kernel *advancePathsKernel;
+	cl::Kernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
+	cl::Kernel *advancePathsKernel_MK_HIT_NOTHING;
+	cl::Kernel *advancePathsKernel_MK_HIT_OBJECT;
+	cl::Kernel *advancePathsKernel_MK_RT_DL;
+	cl::Kernel *advancePathsKernel_MK_DL_ILLUMINATE;
+	cl::Kernel *advancePathsKernel_MK_DL_SAMPLE_BSDF;
+	cl::Kernel *advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
+	cl::Kernel *advancePathsKernel_MK_SPLAT_SAMPLE;
+	cl::Kernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
 
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
 	cl::Buffer *tasksBuff;
+	cl::Buffer *tasksDirectLightBuff;
+	cl::Buffer *tasksStateBuff;
 	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;
@@ -105,7 +118,7 @@ public:
 	float rrImportanceCap;
 
 	u_int taskCount;
-	bool usePixelAtomics;
+	bool usePixelAtomics, useMicroKernels;
 
 protected:
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);

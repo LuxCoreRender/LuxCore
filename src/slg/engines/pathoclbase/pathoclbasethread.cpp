@@ -878,7 +878,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D __APPLE_CL__";
 	}
 #endif
-
+	
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
