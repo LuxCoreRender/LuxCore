@@ -1889,10 +1889,16 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			}
 			case FRESNEL_APPROX_N:
-				AddTextureSource(source, "FresnelApproxN", i, ToString(tex->fresnelApproxN.texIndex));
+				AddTextureSource(source, "FresnelApproxN", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->fresnelApproxN.texIndex));
+				AddTextureSource(source, "FresnelApproxN", "float3", "Spectrum", i,
+						AddTextureSourceCall("Spectrum", tex->fresnelApproxN.texIndex));
 				break;
 			case FRESNEL_APPROX_K:
-				AddTextureSource(source, "FresnelApproxK", i, ToString(tex->fresnelApproxK.texIndex));
+				AddTextureSource(source, "FresnelApproxK", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->fresnelApproxK.texIndex));
+				AddTextureSource(source, "FresnelApproxK", "float3", "Spectrum", i,
+						AddTextureSourceCall("Spectrum", tex->fresnelApproxK.texIndex));
 				break;
 			case slg::ocl::MIX_TEX: {
 				AddTextureSource(source, "Mix", "float", "Float", i,
