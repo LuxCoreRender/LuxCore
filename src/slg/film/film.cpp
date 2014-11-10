@@ -1286,7 +1286,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR))
 			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, sampleResult.indirectSpecular.c, weight);
 
-		// This is MATERIAL_ID_MASK and BY_MATERIAL_MASK
+		// This is MATERIAL_ID_MASK and BY_MATERIAL_ID
 		if (sampleResult.HasChannel(MATERIAL_ID)) {
 			// MATERIAL_ID_MASK
 			for (u_int i = 0; i < maskMaterialIDs.size(); ++i) {
@@ -1296,7 +1296,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 				channel_MATERIAL_ID_MASKs[i]->AddPixel(x, y, pixel);
 			}
 
-			// BY_MATERIAL_MASK
+			// BY_MATERIAL_ID
 			if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 				for (u_int index = 0; index < byMaterialIDs.size(); ++index) {
 					Spectrum c;
