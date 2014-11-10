@@ -28,8 +28,8 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
-static void CreateBox(Scene *scene, const string &objName, const string &matName,
-		const bool enableUV, const BBox &bbox) {
+static void CreateBox(Scene *scene, const string &objName, const string &meshName,
+		const string &matName, const bool enableUV, const BBox &bbox) {
 	Point *p = new Point[24];
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
@@ -83,7 +83,6 @@ static void CreateBox(Scene *scene, const string &objName, const string &matName
 	vi[11] = Triangle(22, 23, 20);
 
 	// Define the Mesh
-	const string &meshName = "Mesh-" + objName;
 	if (!enableUV) {
 		// Define the object
 		scene->DefineMesh(meshName, 24, 12, p, vi, NULL, NULL, NULL, NULL);
@@ -216,7 +215,7 @@ int main(int argc, char *argv[]) {
 		// Setup materials
 		scene->Parse(
 			Property("scene.materials.whitelight.type")("matte") <<
-			Property("scene.materials.whitelight.emission")(200.f, 200.f, 200.f) <<
+			Property("scene.materials.whitelight.emission")(1000000.f, 1000000.f, 1000000.f) <<
 			Property("scene.materials.mat_white.type")("matte") <<
 			Property("scene.materials.mat_white.kd")("map") <<
 			Property("scene.materials.mat_red.type")("matte") <<
@@ -224,27 +223,43 @@ int main(int argc, char *argv[]) {
 			Property("scene.materials.mat_glass.type")("glass") <<
 			Property("scene.materials.mat_glass.kr")(0.9f, 0.9f, 0.9f) <<
 			Property("scene.materials.mat_glass.kt")(0.9f, 0.9f, 0.9f) <<
-			Property("scene.materials.mat_glass.ioroutside")(1.f) <<
-			Property("scene.materials.mat_glass.iorinside")(1.4f)
+			Property("scene.materials.mat_glass.exteriorior")(1.f) <<
+			Property("scene.materials.mat_glass.interiorior")(1.4f) <<
+			Property("scene.materials.mat_gold.type")("metal2") <<
+			Property("scene.materials.mat_gold.preset")("gold")
 			);
 
 		// Create the ground
-		CreateBox(scene, "ground", "mat_white", true, BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
+		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, BBox(Point(-3.f,-3.f,-.1f), Point(3.f, 3.f, 0.f)));
 		// Create the red box
-		CreateBox(scene, "box01", "mat_red", false, BBox(Point(-.5f,-.5f, .2f), Point(.5f, .5f, 0.7f)));
+		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, BBox(Point(-.5f,-.5f, .2f), Point(.5f, .5f, 0.7f)));
 		// Create the glass box
-		CreateBox(scene, "box02", "mat_glass", false, BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
+		CreateBox(scene, "box02", "mesh-box02", "mat_glass", false, BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
 		// Create the light
-		CreateBox(scene, "box03", "whitelight", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+		CreateBox(scene, "box03", "mesh-box03", "whitelight", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+		//Create a monkey from ply-file
+		Properties props;
+		props.SetFromString(
+			"scene.objects.monkey.ply = samples/luxcorescenedemo/suzanne.ply\n"	// load the ply-file
+			"scene.objects.monkey.material = mat_gold\n"		// set material
+			"scene.objects.monkey.transformation = \
+						0.4 0.0 0.0 0.0 \
+						0.0 0.4 0.0 0.0 \
+						0.0 0.0 0.4 0.0 \
+					    0.0 2.0 0.3 1.0\n"						//scale and translate
+			);
+		scene->Parse(props);
 
 		// Create a SkyLight & SunLight
 		scene->Parse(
-				Property("scene.skylight.dir")(0.166974f, 0.59908f, 0.783085f) <<
-				Property("scene.skylight.turbidity")(2.2f) <<
-				Property("scene.skylight.gain")(0.8f, 0.8f, 0.8f) <<
-				Property("scene.sunlight.dir")(0.166974f, 0.59908f, 0.783085f) <<
-				Property("scene.sunlight.turbidity")(2.2f) <<
-				Property("scene.sunlight.gain")(0.8f, 0.8f, 0.8f)
+				Property("scene.lights.skyl.type")("sky") <<
+				Property("scene.lights.skyl.dir")(0.166974f, 0.59908f, 0.783085f) <<
+				Property("scene.lights.skyl.turbidity")(2.2f) <<
+				Property("scene.lights.skyl.gain")(0.8f, 0.8f, 0.8f) <<
+				Property("scene.lights.sunl.type")("sun") <<
+				Property("scene.lights.sunl.dir")(0.166974f, 0.59908f, 0.783085f) <<
+				Property("scene.lights.sunl.turbidity")(2.2f) <<
+				Property("scene.lights.sunl.gain")(0.8f, 0.8f, 0.8f)
 				);
 
 		//----------------------------------------------------------------------
@@ -308,10 +323,26 @@ int main(int argc, char *argv[]) {
 
 		SLG_LOG("Editing a material and an object...");
 		session->BeginSceneEdit();
+		
 		scene->Parse(
 			Property("scene.materials.mat_white.type")("matte") <<
 			Property("scene.materials.mat_white.kr")(.7f, .7f, .7f));
-		CreateBox(scene, "box03", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
+		CreateBox(scene, "box03", "mesh-box03bis", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
+		// Note: scene->RemoveUnusedMeshes() can be avoided by calling scene->DeleteObject("box03")
+		// before CreateBox()
+		scene->RemoveUnusedMeshes();
+
+		// Rotate the monkey: so he can look what is happen with the light source
+		// Set the initial values
+		Vector t(0.0f, 2.0f, 0.3f);
+		Transform trans(Translate(t));
+		Transform scale(Scale(0.4f, 0.4f, 0.4f));
+		// Set rotate = 90
+		Transform rotate(RotateZ(90));
+		// Put all together and update object
+		trans = trans * scale * rotate;
+		scene->UpdateObjectTransformation("monkey", trans);
+
 		session->EndSceneEdit();
 
 		// And redo the rendering

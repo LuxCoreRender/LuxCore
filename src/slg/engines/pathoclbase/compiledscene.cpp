@@ -1889,10 +1889,16 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			}
 			case FRESNEL_APPROX_N:
-				AddTextureSource(source, "FresnelApproxN", i, ToString(tex->fresnelApproxN.texIndex));
+				AddTextureSource(source, "FresnelApproxN", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->fresnelApproxN.texIndex));
+				AddTextureSource(source, "FresnelApproxN", "float3", "Spectrum", i,
+						AddTextureSourceCall("Spectrum", tex->fresnelApproxN.texIndex));
 				break;
 			case FRESNEL_APPROX_K:
-				AddTextureSource(source, "FresnelApproxK", i, ToString(tex->fresnelApproxK.texIndex));
+				AddTextureSource(source, "FresnelApproxK", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->fresnelApproxK.texIndex));
+				AddTextureSource(source, "FresnelApproxK", "float3", "Spectrum", i,
+						AddTextureSourceCall("Spectrum", tex->fresnelApproxK.texIndex));
 				break;
 			case slg::ocl::MIX_TEX: {
 				AddTextureSource(source, "Mix", "float", "Float", i,
@@ -2387,12 +2393,12 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)\n" +
 						AddTextureSourceCall("Float", mat->glossy2.nvTexIndex) + ", " +
 						"\n#endif\n" +
-						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)\n" +
-						ToString(mat->glossy2.multibounce) + ", " +
-						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)\n" +
 						AddTextureSourceCall("Spectrum", mat->glossy2.kaTexIndex) + ", " +
 						AddTextureSourceCall("Float", mat->glossy2.depthTexIndex) + ", " +
+						"\n#endif\n" +
+						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)\n" +
+						ToString(mat->glossy2.multibounce) + ", " +
 						"\n#endif\n" +
 						AddTextureSourceCall("Spectrum", mat->glossy2.kdTexIndex) + ", " +
 						AddTextureSourceCall("Spectrum", mat->glossy2.ksTexIndex));

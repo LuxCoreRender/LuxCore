@@ -791,16 +791,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	filmRadianceGroup[3] = filmRadianceGroup3;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	filmRadianceGroup[3] = filmRadianceGroup4;
+	filmRadianceGroup[4] = filmRadianceGroup4;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	filmRadianceGroup[3] = filmRadianceGroup5;
+	filmRadianceGroup[5] = filmRadianceGroup5;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	filmRadianceGroup[3] = filmRadianceGroup6;
+	filmRadianceGroup[6] = filmRadianceGroup6;
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	filmRadianceGroup[3] = filmRadianceGroup7;
+	filmRadianceGroup[7] = filmRadianceGroup7;
 #endif
 
 	Sampler_NextSample(seed, sample, sampleData
