@@ -26,7 +26,7 @@ sys.path.append("./lib")
 import pyluxcore
 
 ################################################################################
-## Properties examples
+## Properties example
 ################################################################################
 
 def PropertiesTests():
@@ -71,7 +71,7 @@ def PropertiesTests():
 	print("Get default: %s\n" % props0.Get("doesnt.exist", ["default_value0", "default_value1"]))
 
 ################################################################################
-## LuxRays device information examples
+## LuxRays device information example
 ################################################################################
 
 def LuxRaysDeviceTests():
@@ -80,7 +80,7 @@ def LuxRaysDeviceTests():
 	print("OpenCL device list: %s\n" % str(deviceList))
 
 ################################################################################
-## RenderConfig and RenderSession examples
+## RenderConfig and RenderSession example
 ################################################################################
 
 def SimpleRender():
@@ -126,9 +126,9 @@ def SimpleRender():
 
 	print("Done.")
 
-def getOutputTest():
+def GetOutputTest():
 	################################################################################
-	## Film getOutput() examples
+	## Film getOutput() example
 	################################################################################
 
 	print("Film getOutput() example (requires scenes directory)...")
@@ -203,6 +203,35 @@ def getOutputTest():
 	print("Done.")
 
 ################################################################################
+## Extracting Film configuration example
+################################################################################
+
+def ExtractConfiguration():
+	print("Extracting Film configuration example (requires scenes directory)...")
+
+	# Load the configuration from file
+	props = pyluxcore.Properties("scenes/luxball/luxball-hdr-comp.cfg")
+
+	# Change the render engine to PATHCPU
+	props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+
+	config = pyluxcore.RenderConfig(props)
+	session = pyluxcore.RenderSession(config)
+
+	# Extract the RenderConfig properties (redundant here)
+	props = session.GetRenderConfig().GetProperties()
+	
+	ids = set()
+	for i in props.GetAllUniqueSubNames("film.outputs"):
+		if props.Get(i + ".type").GetString() == "MATERIAL_ID_MASK":
+			ids.add(props.Get(i + ".id").GetInt())
+
+	for i in ids:
+		print("MATERIAL_ID_MASK ID => %d" % i)
+
+	print("Done.")
+
+################################################################################
 
 def main():
 	pyluxcore.Init()
@@ -210,10 +239,11 @@ def main():
 	print("LuxCore %s" % pyluxcore.Version())
 	#print("OS:", os.name)
 	
-	PropertiesTests()
-	LuxRaysDeviceTests()
-	SimpleRender()
-	getOutputTest()
+#	PropertiesTests()
+#	LuxRaysDeviceTests()
+#	SimpleRender()
+#	GetOutputTest()
+	ExtractConfiguration()
 
 	#if (os.name == "posix"):
 	#	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
