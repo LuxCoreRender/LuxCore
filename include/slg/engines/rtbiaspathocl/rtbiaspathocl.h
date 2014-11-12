@@ -112,6 +112,7 @@ protected:
 	float ghostEffect;
 
  	boost::mutex editMutex;
+	boost::condition_variable_any editCanStart;
 	EditActionList updateActions;
 
 	boost::barrier *frameBarrier;

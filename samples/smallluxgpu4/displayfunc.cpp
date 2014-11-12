@@ -393,11 +393,11 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->Start();
 
 			// For some test with lux-hdr scene
-			/*session->BeginSceneEdit();
+			session->BeginSceneEdit();
 			config->GetScene().UpdateObjectTransformation("luxinner", Translate(Vector(0.05f, 0.f, 0.f)));
 			config->GetScene().UpdateObjectTransformation("luxtext", Translate(Vector(0.05f, 0.f, 0.f)));
 			config->GetScene().UpdateObjectTransformation("luxshell", Translate(Vector(0.05f, 0.f, 0.f)));
-			session->EndSceneEdit()*/;
+			session->EndSceneEdit();
 			break;
 		case 'a': {
 			session->BeginSceneEdit();

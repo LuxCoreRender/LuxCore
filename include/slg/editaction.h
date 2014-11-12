@@ -53,6 +53,7 @@ public:
 	void AddActions(const u_int a) { actions |= a; };
 	u_int GetActions() const { return actions; };
 	bool Has(const EditAction a) const { return (actions & a) != 0; };
+	bool HasOnly(const EditAction a) const { return (actions == a); };
 	bool HasAnyAction() const { return actions != 0; };
 
 	friend std::ostream &operator<<(std::ostream &os, const EditActionList &eal);

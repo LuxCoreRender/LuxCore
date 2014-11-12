@@ -276,17 +276,15 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 	const u_int taskCount = engine->taskCount;
 	const u_int engineFilmPixelCount = engine->film->GetWidth() * engine->film->GetHeight();
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-
 	try {
 		//----------------------------------------------------------------------
 		// Execute initialization kernels
 		//----------------------------------------------------------------------
 
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+		cl::CommandQueue &initQueue = intersectionDevice->GetOpenCLQueue();
 
 		// Initialize OpenCL structures
-		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
+		initQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, initSeedWorkGroupSize)),
 				cl::NDRange(initSeedWorkGroupSize));
 
@@ -296,12 +294,14 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 		const bool amiDisplayThread = (engine->displayDeviceIndex == threadIndex);
 		if (amiDisplayThread) {
-			oclQueue.enqueueNDRangeKernel(*clearSBKernel, cl::NullRange,
+			initQueue.enqueueNDRangeKernel(*clearSBKernel, cl::NullRange,
 					cl::NDRange(RoundUp<u_int>(engineFilmPixelCount, clearSBWorkGroupSize)),
 					cl::NDRange(clearSBWorkGroupSize));
 		}
 
 		while (!boost::this_thread::interruption_requested()) {
+			cl::CommandQueue &currentQueue = intersectionDevice->GetOpenCLQueue();
+
 			//------------------------------------------------------------------
 			// Render the tiles
 			//------------------------------------------------------------------
@@ -316,12 +316,12 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				//		"(" << tileWidth << ", " << tileHeight << ") [" << tile->sampleIndex << "]");
 
 				// Clear the frame buffer
-				oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
 					cl::NDRange(RoundUp<u_int>(threadFilmPixelCount, filmClearWorkGroupSize)),
 					cl::NDRange(filmClearWorkGroupSize));
 
 				// Initialize the statistics
-				oclQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
 					cl::NDRange(RoundUp<u_int>(taskCount, initStatWorkGroupSize)),
 					cl::NDRange(initStatWorkGroupSize));
 
@@ -336,27 +336,27 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				}
 
 				// Render all pixel samples
-				oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
 						cl::NDRange(renderSampleWorkGroupSize));
 				// Merge all pixel samples and accumulate statistics
-				oclQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(threadFilmPixelCount, mergePixelSamplesWorkGroupSize)),
 						cl::NDRange(mergePixelSamplesWorkGroupSize));
 
 				// Async. transfer of the Film buffers
-				TransferFilm(oclQueue);
+				TransferFilm(currentQueue);
 				threadFilm->AddSampleCount(taskCount);
 
 				// Async. transfer of GPU task statistics
-				oclQueue.enqueueReadBuffer(
+				currentQueue.enqueueReadBuffer(
 					*(taskStatsBuff),
 					CL_FALSE,
 					0,
 					sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount,
 					gpuTaskStats);
 
-				oclQueue.finish();
+				currentQueue.finish();
 
 				// In order to update the statistics
 				u_int tracedRaysCount = 0;
@@ -381,7 +381,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// Transfer the frame buffer to the display device
 				//--------------------------------------------------------------
 
-				oclQueue.enqueueWriteBuffer(*mergedFrameBufferBuff, CL_FALSE, 0,
+				currentQueue.enqueueWriteBuffer(*mergedFrameBufferBuff, CL_FALSE, 0,
 						mergedFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
 						engine->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetPixels());
 
@@ -389,7 +389,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// Normalize the merged buffer
 				//--------------------------------------------------------------
 
-				oclQueue.enqueueNDRangeKernel(*normalizeFBKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*normalizeFBKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(engineFilmPixelCount, normalizeFBWorkGroupSize)),
 						cl::NDRange(normalizeFBWorkGroupSize));
 
@@ -397,7 +397,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// Apply tone mapping to merged buffer
 				//--------------------------------------------------------------
 
-				oclQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(engineFilmPixelCount, toneMapLinearWorkGroupSize)),
 						cl::NDRange(toneMapLinearWorkGroupSize));
 
@@ -405,7 +405,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// Update the screen buffer
 				//--------------------------------------------------------------
 
-				oclQueue.enqueueNDRangeKernel(*updateScreenBufferKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*updateScreenBufferKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(engineFilmPixelCount, updateScreenBufferWorkGroupSize)),
 						cl::NDRange(updateScreenBufferWorkGroupSize));
 
@@ -422,11 +422,11 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					applyBlurFilterXR1Kernel->setArg(4, weight);
 					applyBlurFilterYR1Kernel->setArg(4, weight);
 					for (u_int i = 0; i < 3; ++i) {
-						oclQueue.enqueueNDRangeKernel(*applyBlurFilterXR1Kernel, cl::NullRange,
+						currentQueue.enqueueNDRangeKernel(*applyBlurFilterXR1Kernel, cl::NullRange,
 								cl::NDRange(RoundUp<unsigned int>(engineFilmPixelCount, applyBlurFilterXR1WorkGroupSize)),
 								cl::NDRange(applyBlurFilterXR1WorkGroupSize));
 
-						oclQueue.enqueueNDRangeKernel(*applyBlurFilterYR1Kernel, cl::NullRange,
+						currentQueue.enqueueNDRangeKernel(*applyBlurFilterYR1Kernel, cl::NullRange,
 								cl::NDRange(RoundUp<unsigned int>(engineFilmPixelCount, applyBlurFilterYR1WorkGroupSize)),
 								cl::NDRange(applyBlurFilterYR1WorkGroupSize));
 					}
@@ -437,29 +437,32 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				//--------------------------------------------------------------
 
 				// The film has been locked before
-				oclQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
+				currentQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
 						screenBufferBuff->getInfo<CL_MEM_SIZE>(), engine->film->channel_RGB_TONEMAPPED->GetPixels());
-				oclQueue.finish();
+				currentQueue.finish();
 			}
 
 			//--------------------------------------------------------------
 			// Update OpenCL buffers if there is any edit action
 			//--------------------------------------------------------------
 
-			if ((amiDisplayThread) && (engine->updateActions.HasAnyAction())) {
+			if (amiDisplayThread) {
+				engine->editCanStart.notify_one();
 				engine->editMutex.lock();
 
-				// Update all threads
-				for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
-					RTBiasPathOCLRenderThread *thread = (RTBiasPathOCLRenderThread *)(engine->renderThreads[i]);
-					thread->UpdateOCLBuffers(engine->updateActions);
+				if (engine->updateActions.HasAnyAction()) {
+					// Update all threads
+					for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
+						RTBiasPathOCLRenderThread *thread = (RTBiasPathOCLRenderThread *)(engine->renderThreads[i]);
+						thread->UpdateOCLBuffers(engine->updateActions);
+					}
+
+					// Reset updateActions
+					engine->updateActions.Reset();
+
+					// Clear the film
+					engine->film->Reset();
 				}
-
-				// Reset updateActions
-				engine->updateActions.Reset();
-
-				// Clear the film
-				engine->film->Reset();
 
 				engine->editMutex.unlock();
 			}
@@ -477,7 +480,8 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 		SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << oclErrorString(err.err()) << ")");
 	}
-	oclQueue.finish();
+
+	intersectionDevice->GetOpenCLQueue().finish();
 }
 
 #endif
