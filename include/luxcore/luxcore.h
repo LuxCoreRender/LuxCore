@@ -206,7 +206,7 @@ public:
 	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
 	 */
-	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const u_int index = 0) const {
+	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const u_int index = 0) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
@@ -230,7 +230,7 @@ public:
 	 * 
 	 * \return a pointer to the requested raw buffer.
 	 */
-	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) const {
+	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
@@ -242,10 +242,10 @@ private:
 	const RenderSession &renderSession;
 };
 
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const;
-template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const;
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) const;
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) const;
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index);
+template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index);
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
+template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index);
 
 class Scene;
 

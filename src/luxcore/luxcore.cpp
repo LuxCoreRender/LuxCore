@@ -182,180 +182,39 @@ bool Film::HasOutput(const FilmOutputType type) const {
 }
 
 size_t Film::GetOutputSize(const FilmOutputType type) const {
-	const u_int pixelCount = renderSession.renderSession->film->GetWidth() * renderSession.renderSession->film->GetHeight();
-	switch (type) {
-		case OUTPUT_RGB:
-			return 3 * pixelCount;
-		case OUTPUT_RGBA:
-			return 3 * pixelCount;
-		case OUTPUT_RGB_TONEMAPPED:
-			return 3 * pixelCount;
-		case OUTPUT_RGBA_TONEMAPPED:
-			return 4 * pixelCount;
-		case OUTPUT_ALPHA:
-			return pixelCount;
-		case OUTPUT_DEPTH:
-			return pixelCount;
-		case OUTPUT_POSITION:
-			return 3 * pixelCount;
-		case OUTPUT_GEOMETRY_NORMAL:
-			return 3 * pixelCount;
-		case OUTPUT_SHADING_NORMAL:
-			return 3 * pixelCount;
-		case OUTPUT_MATERIAL_ID:
-			return pixelCount;
-		case OUTPUT_DIRECT_DIFFUSE:
-			return 3 * pixelCount;
-		case OUTPUT_DIRECT_GLOSSY:
-			return 3 * pixelCount;
-		case OUTPUT_EMISSION:
-			return 3 * pixelCount;
-		case OUTPUT_INDIRECT_DIFFUSE:
-			return 3 * pixelCount;
-		case OUTPUT_INDIRECT_GLOSSY:
-			return 3 * pixelCount;
-		case OUTPUT_INDIRECT_SPECULAR:
-			return 3 * pixelCount;
-		case OUTPUT_MATERIAL_ID_MASK:
-			return pixelCount;
-		case OUTPUT_DIRECT_SHADOW_MASK:
-			return pixelCount;
-		case OUTPUT_INDIRECT_SHADOW_MASK:
-			return pixelCount;
-		case OUTPUT_RADIANCE_GROUP:
-			return 3 * pixelCount;
-		case OUTPUT_UV:
-			return 2 * pixelCount;
-		case OUTPUT_RAYCOUNT:
-			return pixelCount;
-		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
-	}
+	return renderSession.renderSession->film->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
 }
 
 u_int Film::GetRadianceGroupCount() const {
 	return renderSession.renderSession->film->GetRadianceGroupCount();
 }
 
-template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) const {
+template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) {
 	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+
 	renderSession.renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
-template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) const {
+template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) {
 	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+
 	renderSession.renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
 u_int Film::GetChannelCount(const FilmChannelType type) const {
-	switch (type) {
-		case CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED:
-			return renderSession.renderSession->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size();
-		case CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED:
-			return renderSession.renderSession->film->channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size();
-		case CHANNEL_ALPHA:
-			return renderSession.renderSession->film->channel_ALPHA ? 1 : 0;
-		case CHANNEL_RGB_TONEMAPPED:
-			return renderSession.renderSession->film->channel_RGB_TONEMAPPED ? 1 : 0;
-		case CHANNEL_DEPTH:
-			return renderSession.renderSession->film->channel_DEPTH ? 1 : 0;
-		case CHANNEL_POSITION:
-			return renderSession.renderSession->film->channel_POSITION ? 1 : 0;
-		case CHANNEL_GEOMETRY_NORMAL:
-			return renderSession.renderSession->film->channel_GEOMETRY_NORMAL ? 1 : 0;
-		case CHANNEL_SHADING_NORMAL:
-			return renderSession.renderSession->film->channel_SHADING_NORMAL ? 1 : 0;
-		case CHANNEL_MATERIAL_ID:
-			return renderSession.renderSession->film->channel_MATERIAL_ID ? 1 : 0;
-		case CHANNEL_DIRECT_DIFFUSE:
-			return renderSession.renderSession->film->channel_DIRECT_DIFFUSE ? 1 : 0;
-		case CHANNEL_DIRECT_GLOSSY:
-			return renderSession.renderSession->film->channel_DIRECT_GLOSSY ? 1 : 0;
-		case CHANNEL_EMISSION:
-			return renderSession.renderSession->film->channel_EMISSION ? 1 : 0;
-		case CHANNEL_INDIRECT_DIFFUSE:
-			return renderSession.renderSession->film->channel_INDIRECT_DIFFUSE ? 1 : 0;
-		case CHANNEL_INDIRECT_GLOSSY:
-			return renderSession.renderSession->film->channel_INDIRECT_GLOSSY ? 1 : 0;
-		case CHANNEL_INDIRECT_SPECULAR:
-			return renderSession.renderSession->film->channel_INDIRECT_SPECULAR ? 1 : 0;
-		case CHANNEL_MATERIAL_ID_MASK:
-			return renderSession.renderSession->film->channel_MATERIAL_ID_MASKs.size();
-		case CHANNEL_DIRECT_SHADOW_MASK:
-			return renderSession.renderSession->film->channel_DIRECT_SHADOW_MASK ? 1 : 0;
-		case CHANNEL_INDIRECT_SHADOW_MASK:
-			return renderSession.renderSession->film->channel_INDIRECT_SHADOW_MASK ? 1 : 0;
-		case CHANNEL_UV:
-			return renderSession.renderSession->film->channel_UV ? 1 : 0;
-		case CHANNEL_RAYCOUNT:
-			return renderSession.renderSession->film->channel_RAYCOUNT ? 1 : 0;
-		case CHANNEL_BY_MATERIAL_ID:
-			return renderSession.renderSession->film->channel_BY_MATERIAL_IDs.size();
-		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetChannelCount>(): " + ToString(type));
-	}
+	return renderSession.renderSession->film->GetChannelCount((slg::Film::FilmChannelType)type);
 }
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) const {
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) {
 	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
 
-	switch (type) {
-		case CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED:
-			return renderSession.renderSession->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixels();
-		case CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED:
-			return renderSession.renderSession->film->channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixels();
-		case CHANNEL_ALPHA:
-			return renderSession.renderSession->film->channel_ALPHA->GetPixels();
-		case CHANNEL_RGB_TONEMAPPED: {
-			renderSession.renderSession->film->ExecuteImagePipeline();
-			return renderSession.renderSession->film->channel_RGB_TONEMAPPED->GetPixels();
-		}
-		case CHANNEL_DEPTH:
-			return renderSession.renderSession->film->channel_DEPTH->GetPixels();
-		case CHANNEL_POSITION:
-			return renderSession.renderSession->film->channel_POSITION->GetPixels();
-		case CHANNEL_GEOMETRY_NORMAL:
-			return renderSession.renderSession->film->channel_GEOMETRY_NORMAL->GetPixels();
-		case CHANNEL_SHADING_NORMAL:
-			return renderSession.renderSession->film->channel_SHADING_NORMAL->GetPixels();
-		case CHANNEL_DIRECT_DIFFUSE:
-			return renderSession.renderSession->film->channel_DIRECT_DIFFUSE->GetPixels();
-		case CHANNEL_DIRECT_GLOSSY:
-			return renderSession.renderSession->film->channel_DIRECT_GLOSSY->GetPixels();
-		case CHANNEL_EMISSION:
-			return renderSession.renderSession->film->channel_EMISSION->GetPixels();
-		case CHANNEL_INDIRECT_DIFFUSE:
-			return renderSession.renderSession->film->channel_INDIRECT_DIFFUSE->GetPixels();
-		case CHANNEL_INDIRECT_GLOSSY:
-			return renderSession.renderSession->film->channel_INDIRECT_GLOSSY->GetPixels();
-		case CHANNEL_INDIRECT_SPECULAR:
-			return renderSession.renderSession->film->channel_INDIRECT_SPECULAR->GetPixels();
-		case CHANNEL_MATERIAL_ID_MASK:
-			return renderSession.renderSession->film->channel_MATERIAL_ID_MASKs[index]->GetPixels();
-		case CHANNEL_DIRECT_SHADOW_MASK:
-			return renderSession.renderSession->film->channel_DIRECT_SHADOW_MASK->GetPixels();
-		case CHANNEL_INDIRECT_SHADOW_MASK:
-			return renderSession.renderSession->film->channel_INDIRECT_SHADOW_MASK->GetPixels();
-		case CHANNEL_UV:
-			return renderSession.renderSession->film->channel_UV->GetPixels();
-		case CHANNEL_RAYCOUNT:
-			return renderSession.renderSession->film->channel_RAYCOUNT->GetPixels();
-		case CHANNEL_BY_MATERIAL_ID:
-			return renderSession.renderSession->film->channel_BY_MATERIAL_IDs[index]->GetPixels();
-		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<float>(): " + ToString(type));
-	}
+	return renderSession.renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type, index);
 }
 
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) const {
+template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) {
 	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
 
-	switch (type) {
-		case CHANNEL_MATERIAL_ID:
-			return renderSession.renderSession->film->channel_MATERIAL_ID->GetPixels();
-		default:
-			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<u_int>(): " + ToString(type));
-	}
+	return renderSession.renderSession->film->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
 }
 
 //------------------------------------------------------------------------------

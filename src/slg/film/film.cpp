@@ -663,6 +663,108 @@ void Film::AddFilm(const Film &film,
 	}
 }
 
+u_int Film::GetChannelCount(const FilmChannelType type) const {
+	switch (type) {
+		case RADIANCE_PER_PIXEL_NORMALIZED:
+			return channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size();
+		case RADIANCE_PER_SCREEN_NORMALIZED:
+			return channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size();
+		case ALPHA:
+			return channel_ALPHA ? 1 : 0;
+		case RGB_TONEMAPPED:
+			return channel_RGB_TONEMAPPED ? 1 : 0;
+		case DEPTH:
+			return channel_DEPTH ? 1 : 0;
+		case POSITION:
+			return channel_POSITION ? 1 : 0;
+		case GEOMETRY_NORMAL:
+			return channel_GEOMETRY_NORMAL ? 1 : 0;
+		case SHADING_NORMAL:
+			return channel_SHADING_NORMAL ? 1 : 0;
+		case MATERIAL_ID:
+			return channel_MATERIAL_ID ? 1 : 0;
+		case DIRECT_DIFFUSE:
+			return channel_DIRECT_DIFFUSE ? 1 : 0;
+		case DIRECT_GLOSSY:
+			return channel_DIRECT_GLOSSY ? 1 : 0;
+		case EMISSION:
+			return channel_EMISSION ? 1 : 0;
+		case INDIRECT_DIFFUSE:
+			return channel_INDIRECT_DIFFUSE ? 1 : 0;
+		case INDIRECT_GLOSSY:
+			return channel_INDIRECT_GLOSSY ? 1 : 0;
+		case INDIRECT_SPECULAR:
+			return channel_INDIRECT_SPECULAR ? 1 : 0;
+		case MATERIAL_ID_MASK:
+			return channel_MATERIAL_ID_MASKs.size();
+		case DIRECT_SHADOW_MASK:
+			return channel_DIRECT_SHADOW_MASK ? 1 : 0;
+		case INDIRECT_SHADOW_MASK:
+			return channel_INDIRECT_SHADOW_MASK ? 1 : 0;
+		case UV:
+			return channel_UV ? 1 : 0;
+		case RAYCOUNT:
+			return channel_RAYCOUNT ? 1 : 0;
+		case BY_MATERIAL_ID:
+			return channel_BY_MATERIAL_IDs.size();
+		default:
+			throw runtime_error("Unknown FilmOutputType in Film::GetChannelCount>(): " + ToString(type));
+	}
+}
+
+size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
+	switch (type) {
+		case FilmOutputs::RGB:
+			return 3 * pixelCount;
+		case FilmOutputs::RGBA:
+			return 3 * pixelCount;
+		case FilmOutputs::RGB_TONEMAPPED:
+			return 3 * pixelCount;
+		case FilmOutputs::RGBA_TONEMAPPED:
+			return 4 * pixelCount;
+		case FilmOutputs::ALPHA:
+			return pixelCount;
+		case FilmOutputs::DEPTH:
+			return pixelCount;
+		case FilmOutputs::POSITION:
+			return 3 * pixelCount;
+		case FilmOutputs::GEOMETRY_NORMAL:
+			return 3 * pixelCount;
+		case FilmOutputs::SHADING_NORMAL:
+			return 3 * pixelCount;
+		case FilmOutputs::MATERIAL_ID:
+			return pixelCount;
+		case FilmOutputs::DIRECT_DIFFUSE:
+			return 3 * pixelCount;
+		case FilmOutputs::DIRECT_GLOSSY:
+			return 3 * pixelCount;
+		case FilmOutputs::EMISSION:
+			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_DIFFUSE:
+			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_GLOSSY:
+			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_SPECULAR:
+			return 3 * pixelCount;
+		case FilmOutputs::MATERIAL_ID_MASK:
+			return pixelCount;
+		case FilmOutputs::DIRECT_SHADOW_MASK:
+			return pixelCount;
+		case FilmOutputs::INDIRECT_SHADOW_MASK:
+			return pixelCount;
+		case FilmOutputs::RADIANCE_GROUP:
+			return 3 * pixelCount;
+		case FilmOutputs::UV:
+			return 2 * pixelCount;
+		case FilmOutputs::RAYCOUNT:
+			return pixelCount;
+		case FilmOutputs::BY_MATERIAL_ID:
+			return 3 * pixelCount;
+		default:
+			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
+	}
+}
+
 bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 	switch (type) {
 		case FilmOutputs::RGB:
@@ -1014,6 +1116,64 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 	}
 	
 	buffer.write(fileName);
+}
+
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) {
+	switch (type) {
+		case RADIANCE_PER_PIXEL_NORMALIZED:
+			return channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetPixels();
+		case RADIANCE_PER_SCREEN_NORMALIZED:
+			return channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetPixels();
+		case ALPHA:
+			return channel_ALPHA->GetPixels();
+		case RGB_TONEMAPPED: {
+			ExecuteImagePipeline();
+			return channel_RGB_TONEMAPPED->GetPixels();
+		}
+		case DEPTH:
+			return channel_DEPTH->GetPixels();
+		case POSITION:
+			return channel_POSITION->GetPixels();
+		case GEOMETRY_NORMAL:
+			return channel_GEOMETRY_NORMAL->GetPixels();
+		case SHADING_NORMAL:
+			return channel_SHADING_NORMAL->GetPixels();
+		case DIRECT_DIFFUSE:
+			return channel_DIRECT_DIFFUSE->GetPixels();
+		case DIRECT_GLOSSY:
+			return channel_DIRECT_GLOSSY->GetPixels();
+		case EMISSION:
+			return channel_EMISSION->GetPixels();
+		case INDIRECT_DIFFUSE:
+			return channel_INDIRECT_DIFFUSE->GetPixels();
+		case INDIRECT_GLOSSY:
+			return channel_INDIRECT_GLOSSY->GetPixels();
+		case INDIRECT_SPECULAR:
+			return channel_INDIRECT_SPECULAR->GetPixels();
+		case MATERIAL_ID_MASK:
+			return channel_MATERIAL_ID_MASKs[index]->GetPixels();
+		case DIRECT_SHADOW_MASK:
+			return channel_DIRECT_SHADOW_MASK->GetPixels();
+		case INDIRECT_SHADOW_MASK:
+			return channel_INDIRECT_SHADOW_MASK->GetPixels();
+		case UV:
+			return channel_UV->GetPixels();
+		case RAYCOUNT:
+			return channel_RAYCOUNT->GetPixels();
+		case BY_MATERIAL_ID:
+			return channel_BY_MATERIAL_IDs[index]->GetPixels();
+		default:
+			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<float>(): " + ToString(type));
+	}
+}
+
+template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) {
+	switch (type) {
+		case MATERIAL_ID:
+			return channel_MATERIAL_ID->GetPixels();
+		default:
+			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<u_int>(): " + ToString(type));
+	}
 }
 
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index) {
