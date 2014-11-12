@@ -18,14 +18,15 @@
 
 #include <boost/thread/once.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/format.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/virtualdevice.h"
 #include "slg/slg.h"
-#include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/biaspathocl/biaspathocl.h"
-#include "luxcore/luxcore.h"
+#include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
+#include "luxcore/luxcore.h"
 
 using namespace std;
 using namespace luxrays;
@@ -37,38 +38,33 @@ using namespace luxcore;
 
 void (*luxcore::LuxCore_LogHandler)(const char *msg) = NULL;
 
+static double lcInitTime;
+
 static void DefaultDebugHandler(const char *msg) {
 	cerr << msg << endl;
 }
 
 static void LuxRaysDebugHandler(const char *msg) {
-	if (LuxCore_LogHandler) {
-		stringstream ss;
-		ss << "[LuxRays] " << msg;
-		LuxCore_LogHandler(ss.str().c_str());
-	}
+	if (LuxCore_LogHandler)
+		LuxCore_LogHandler((boost::format("[LuxRays][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str().c_str());
 }
 
 static void SDLDebugHandler(const char *msg) {
-	if (LuxCore_LogHandler) {
-		stringstream ss;
-		ss << "[SDL] " << msg;
-		LuxCore_LogHandler(ss.str().c_str());
-	}
+	if (LuxCore_LogHandler)
+		LuxCore_LogHandler((boost::format("[SDL][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str().c_str());
 }
 
 static void SLGDebugHandler(const char *msg) {
-	if (LuxCore_LogHandler) {
-		stringstream ss;
-		ss << "[LuxCore] " << msg;
-		LuxCore_LogHandler(ss.str().c_str());
-	}
+	if (LuxCore_LogHandler)
+		LuxCore_LogHandler((boost::format("[LuxCore][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str().c_str());
 }
 
 void luxcore::Init(void (*LogHandler)(const char *)) {
 	// To be thread safe
 	static boost::mutex initMutex;
 	boost::unique_lock<boost::mutex> lock(initMutex);
+	
+	lcInitTime = WallClockTime();
 	
 	// Set all debug handlers
 	if (LogHandler) {
