@@ -175,7 +175,6 @@ void RTPathOCLRenderThread::BeginSceneEdit() {
 }
 
 void RTPathOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
-
 }
 
 void RTPathOCLRenderThread::InitDisplayThread() {
