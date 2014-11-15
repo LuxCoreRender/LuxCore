@@ -165,11 +165,16 @@ public:
 		AddFilm(film, 0, 0, width, height, 0, 0);
 	}
 
+	u_int GetChannelCount(const FilmChannelType type) const;
+	size_t GetOutputSize(const FilmOutputs::FilmOutputType type) const;
 	bool HasOutput(const FilmOutputs::FilmOutputType type) const;
 	void Output(const FilmOutputs &filmOutputs);
 	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
 		const luxrays::Properties *props = NULL);
 
+	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) {
+		throw std::runtime_error("Called Film::GetChannel() with wrong type");
+	}
 	template<class T> void GetOutput(const FilmOutputs::FilmOutputType type, T *buffer, const u_int index = 0) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
@@ -262,6 +267,8 @@ private:
 	bool initialized, enabledOverlappedScreenBufferUpdate, rgbTonemapUpdate;
 };
 
+template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index);
+template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index);
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index);
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index);
 

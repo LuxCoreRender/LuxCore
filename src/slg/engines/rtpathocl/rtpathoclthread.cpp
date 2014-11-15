@@ -175,7 +175,6 @@ void RTPathOCLRenderThread::BeginSceneEdit() {
 }
 
 void RTPathOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
-
 }
 
 void RTPathOCLRenderThread::InitDisplayThread() {
@@ -301,7 +300,6 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 	boost::barrier *frameBarrier = engine->frameBarrier;
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	const u_int filmBufferPixelCount = engine->film->GetWidth() * engine->film->GetHeight();
 
 	try {
@@ -309,16 +307,16 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		// Execute initialization kernels
 		//----------------------------------------------------------------------
 
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+		cl::CommandQueue &initQueue = intersectionDevice->GetOpenCLQueue();
 
 		// Clear the frame buffer
 		const u_int filmPixelCount = threadFilm->GetWidth() * threadFilm->GetHeight();
-		oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
+		initQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 				cl::NDRange(filmClearWorkGroupSize));
 
 		// Initialize the tasks buffer
-		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
+		initQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(engine->taskCount, initWorkGroupSize)),
 				cl::NDRange(initWorkGroupSize));
 
@@ -328,13 +326,15 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 		const bool amiDisplayThread = (engine->displayDeviceIndex == threadIndex);
 		if (amiDisplayThread) {
-			oclQueue.enqueueNDRangeKernel(*clearSBKernel, cl::NullRange,
+			initQueue.enqueueNDRangeKernel(*clearSBKernel, cl::NullRange,
 					cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, clearSBWorkGroupSize)),
 					cl::NDRange(clearSBWorkGroupSize));
 		}
 
 		double lastEditTime = WallClockTime();
 		while (!boost::this_thread::interruption_requested()) {
+			cl::CommandQueue &currentQueue = intersectionDevice->GetOpenCLQueue();
+
 			//------------------------------------------------------------------
 			// Render a frame (i.e. taskCount * assignedIters samples)
 			//------------------------------------------------------------------
@@ -347,18 +347,18 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					*(hitsBuff), engine->taskCount, NULL, NULL);
 
 				// Advance to next path state
-				EnqueueAdvancePathsKernel(oclQueue);
+				EnqueueAdvancePathsKernel(currentQueue);
 			}
 
 			// No need to transfer the frame buffer if I'm not the display thread
 			if (engine->displayDeviceIndex != threadIndex)
-				TransferFilm(oclQueue);
+				TransferFilm(currentQueue);
 
 			// Async. transfer of GPU task statistics
-			oclQueue.enqueueReadBuffer(*(taskStatsBuff), CL_FALSE, 0,
+			currentQueue.enqueueReadBuffer(*(taskStatsBuff), CL_FALSE, 0,
 				sizeof(slg::ocl::pathocl::GPUTaskStats) * engine->taskCount, gpuTaskStats);
 
-			oclQueue.finish();
+			currentQueue.finish();
 			frameTime = WallClockTime() - startTime;
 
 			//------------------------------------------------------------------
@@ -375,7 +375,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Clear the merged frame buffer
 				//--------------------------------------------------------------
 
-				oclQueue.enqueueNDRangeKernel(*clearFBKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*clearFBKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, clearFBWorkGroupSize)),
 						cl::NDRange(clearFBWorkGroupSize));
 
@@ -394,13 +394,13 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						mergeFBKernel->setArg(argIndex++, threadFilm->GetHeight());
 						mergeFBKernel->setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[0]));
 						mergeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-						oclQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
+						currentQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
 								cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, mergeFBWorkGroupSize)),
 								cl::NDRange(mergeFBWorkGroupSize));
 					} else {
 						// Transfer the frame buffer to the device
 						RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderThreads[i]);
-						oclQueue.enqueueWriteBuffer(*tmpFrameBufferBuff, CL_FALSE, 0,
+						currentQueue.enqueueWriteBuffer(*tmpFrameBufferBuff, CL_FALSE, 0,
 								tmpFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
 								thread->threadFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetPixels());
 
@@ -410,7 +410,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						mergeFBKernel->setArg(argIndex++, threadFilm->GetHeight());
 						mergeFBKernel->setArg(argIndex++, *tmpFrameBufferBuff);
 						mergeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-						oclQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
+						currentQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
 								cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, mergeFBWorkGroupSize)),
 								cl::NDRange(mergeFBWorkGroupSize));
 					}
@@ -420,7 +420,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Normalize the merged buffer
 				//--------------------------------------------------------------
 
-				oclQueue.enqueueNDRangeKernel(*normalizeFBKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*normalizeFBKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, normalizeFBWorkGroupSize)),
 						cl::NDRange(normalizeFBWorkGroupSize));
 
@@ -428,7 +428,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Apply tone mapping to merged buffer
 				//--------------------------------------------------------------
 
-				oclQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, toneMapLinearWorkGroupSize)),
 						cl::NDRange(toneMapLinearWorkGroupSize));
 
@@ -436,7 +436,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Update the screen buffer
 				//--------------------------------------------------------------
 
-				oclQueue.enqueueNDRangeKernel(*updateScreenBufferKernel, cl::NullRange,
+				currentQueue.enqueueNDRangeKernel(*updateScreenBufferKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, updateScreenBufferWorkGroupSize)),
 						cl::NDRange(updateScreenBufferWorkGroupSize));
 
@@ -453,11 +453,11 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					applyBlurFilterXR1Kernel->setArg(4, weight);
 					applyBlurFilterYR1Kernel->setArg(4, weight);
 					for (u_int i = 0; i < 3; ++i) {
-						oclQueue.enqueueNDRangeKernel(*applyBlurFilterXR1Kernel, cl::NullRange,
+						currentQueue.enqueueNDRangeKernel(*applyBlurFilterXR1Kernel, cl::NullRange,
 								cl::NDRange(RoundUp<unsigned int>(filmBufferPixelCount, applyBlurFilterXR1WorkGroupSize)),
 								cl::NDRange(applyBlurFilterXR1WorkGroupSize));
 
-						oclQueue.enqueueNDRangeKernel(*applyBlurFilterYR1Kernel, cl::NullRange,
+						currentQueue.enqueueNDRangeKernel(*applyBlurFilterYR1Kernel, cl::NullRange,
 								cl::NDRange(RoundUp<unsigned int>(filmBufferPixelCount, applyBlurFilterYR1WorkGroupSize)),
 								cl::NDRange(applyBlurFilterYR1WorkGroupSize));
 					}
@@ -468,29 +468,32 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				//--------------------------------------------------------------
 
 				// The film has been locked before
-				oclQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
+				currentQueue.enqueueReadBuffer(*screenBufferBuff, CL_FALSE, 0,
 						screenBufferBuff->getInfo<CL_MEM_SIZE>(), engine->film->channel_RGB_TONEMAPPED->GetPixels());
-				oclQueue.finish();
+				currentQueue.finish();
 			}
 
 			//------------------------------------------------------------------
 			// Update OpenCL buffers if there is any edit action
 			//------------------------------------------------------------------
 
-			if ((amiDisplayThread) && (engine->updateActions.HasAnyAction())) {
+			if (amiDisplayThread) {
+				engine->editCanStart.notify_one();
 				engine->editMutex.lock();
 
-				// Update all threads
-				for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
-					RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderThreads[i]);
-					thread->UpdateOCLBuffers(engine->updateActions);
+				if (engine->updateActions.HasAnyAction()) {
+					// Update all threads
+					for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
+						RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderThreads[i]);
+						thread->UpdateOCLBuffers(engine->updateActions);
+					}
+
+					// Reset updateActions
+					engine->updateActions.Reset();
+
+					// Clear the film
+					engine->film->Reset();
 				}
-
-				// Reset updateActions
-				engine->updateActions.Reset();
-
-				// Clear the film
-				engine->film->Reset();
 
 				engine->editMutex.unlock();
 			}
@@ -508,7 +511,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << oclErrorString(err.err()) << ")");
 	}
-	oclQueue.finish();
+
+	intersectionDevice->GetOpenCLQueue().finish();
 }
 
 #endif
