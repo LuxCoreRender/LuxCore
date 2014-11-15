@@ -745,4 +745,3 @@ bool DirectLight_BSDFSampling(
 #else
 #define INIT_IMAGEMAPS_PAGES
 #endif
-

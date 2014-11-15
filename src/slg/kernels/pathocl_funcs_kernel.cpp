@@ -748,5 +748,4 @@ std::string KernelSource_pathocl_funcs =
 "#else\n"
 "#define INIT_IMAGEMAPS_PAGES\n"
 "#endif\n"
-"\n"
 ; } }
