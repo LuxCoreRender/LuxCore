@@ -52,16 +52,24 @@ protected:
 	virtual void CompileAdditionalKernels(cl::Program *program);
 
 	virtual void Stop();
+	
+	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel);
+	void UpdateRenderSampleKernelArgs(const u_int xStart, const u_int yStart);
+	void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables
 	cl::Kernel *initSeedKernel;
 	size_t initSeedWorkGroupSize;
 	cl::Kernel *initStatKernel;
 	size_t initStatWorkGroupSize;
-	cl::Kernel *renderSampleKernel;
-	size_t renderSampleWorkGroupSize;
 	cl::Kernel *mergePixelSamplesKernel;
 	size_t mergePixelSamplesWorkGroupSize;
+	
+	cl::Kernel *renderSampleKernel;
+	cl::Kernel *renderSampleKernel_MK_GENERATE_CAMERA_RAY;
+	cl::Kernel *renderSampleKernel_MK_TRACE_EYE_RAY;
+	cl::Kernel *renderSampleKernel_MK_ILLUMINATE_EYE_MISS;
+	size_t renderSampleWorkGroupSize;
 
 	cl::Buffer *tasksBuff;
 	cl::Buffer *tasksDirectLightBuff;
@@ -107,6 +115,8 @@ public:
 	// Light settings
 	float lowLightThreashold, nearStartLight;
 	u_int firstVertexLightSampleCount;
+	
+	bool useMicroKernels;
 
 protected:
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
