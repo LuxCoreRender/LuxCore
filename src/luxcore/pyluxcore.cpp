@@ -46,7 +46,9 @@ namespace luxcore {
 static boost::mutex luxCoreInitMutex;
 static boost::python::object luxCoreLogHandler;
 
+#if (PY_VERSION_HEX >= 0x03040000)
 static void PythonDebugHandler(const char *msg) {
+	// PyGILState_Check() is available since Python 3.4
 	if (PyGILState_Check())
 		luxCoreLogHandler(string(msg));
 	else {
@@ -59,6 +61,17 @@ static void PythonDebugHandler(const char *msg) {
 		//PyGILState_Release(state);
 	}
 }
+#else
+static int PyGILState_Check2(void) {
+	PyThreadState *tstate = _PyThreadState_Current;
+	return tstate && (tstate == PyGILState_GetThisThreadState());
+}
+
+static void PythonDebugHandler(const char *msg) {
+	if (PyGILState_Check2())
+		luxCoreLogHandler(string(msg));
+}
+#endif
 
 static void LuxCore_Init() {
 	boost::unique_lock<boost::mutex> lock(luxCoreInitMutex);

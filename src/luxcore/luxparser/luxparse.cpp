@@ -2398,7 +2398,7 @@ yyreduce:
 				Property(prefix + "_SKY2.transformation")(currentTransform.m) <<
 				Property(prefix + "_SKY2.id")(currentGraphicsState.currentLightGroup);
 	} else if ((name == "infinite") || (name == "infinitesample")) {
-		// Check if i have to use infiniete or constantinfinite
+		// Check if to use infinite or constantinfinite
 		if (props.Get(Property("mapname")("")).Get<string>() == "") {
 			*sceneProps <<
 					Property(prefix + ".type")("constantinfinite") <<
