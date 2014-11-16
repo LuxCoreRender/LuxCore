@@ -45,6 +45,8 @@ std::string KernelSource_biaspathocl_kernels_mega =
 "//------------------------------------------------------------------------------\n"
 "\n"
 "__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(\n"
+"		const uint tileStartX,\n"
+"		const uint tileStartY,\n"
 "		KERNEL_ARGS\n"
 "		) {\n"
 "	const size_t gid = get_global_id(0);\n"

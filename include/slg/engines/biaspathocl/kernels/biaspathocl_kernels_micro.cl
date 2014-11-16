@@ -46,6 +46,8 @@
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GENERATE_CAMERA_RAY(
+		const uint tileStartX,
+		const uint tileStartY,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -119,8 +121,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 	if (task->pathState != MK_TRACE_EYE_RAY)
 		return;
 
-	__global GPUTaskStats *taskStat = &taskStats[gid];
-
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
 
@@ -141,7 +141,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 	Ray ray = task->tmpRay;
 	RayHit rayHit;
 
-	taskStat->raysCount += BIASPATHOCL_Scene_Intersect(
+	taskStats[gid].raysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 		&task->volInfoPathVertex1,
 		&task->tmpHitPoint,
@@ -210,7 +210,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 	// Render the eye ray miss
 	//--------------------------------------------------------------------------
 
-	RayHit rayHit = task->tmpRayHit;
+	const RayHit rayHit = task->tmpRayHit;
 	if (rayHit.meshIndex == NULL_INDEX) {
 		// Nothing was hit
 
@@ -258,5 +258,714 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 #endif
 
 		task->pathState = MK_DONE;
+	} else
+		task->pathState = MK_DL_VERTEX_1;
+}
+
+//------------------------------------------------------------------------------
+// RenderSample_MK_DL_VERTEX_1
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL_VERTEX_1(
+		KERNEL_ARGS
+		) {
+	const size_t gid = get_global_id(0);
+
+	__global GPUTask *task = &tasks[gid];
+	if (task->pathState != MK_DL_VERTEX_1)
+		return;
+
+	// Initialize image maps page pointer table
+	INIT_IMAGEMAPS_PAGES
+
+	__global SampleResult *sampleResult = &taskResults[gid];
+
+	//----------------------------------------------------------------------
+	// Something was hit
+	//----------------------------------------------------------------------
+
+	const float rayHitT = task->tmpRayHit.t;
+
+	// Save the path first vertex information
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+	sampleResult->alpha = 1.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+	sampleResult->depth = rayHitT;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+	sampleResult->position = task->bsdfPathVertex1.hitPoint.p;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+	sampleResult->geometryNormal = task->bsdfPathVertex1.hitPoint.geometryN;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+	sampleResult->shadingNormal = task->bsdfPathVertex1.hitPoint.shadeN;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+	sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1
+		MATERIALS_PARAM);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+	sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
+#endif
+
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
+	// Check if it is a light source (note: I can hit only triangle area light sources)
+	if (BSDF_IsLightSource(&task->bsdfPathVertex1) && (rayHitT > PARAM_NEAR_START_LIGHT)) {
+		// SPECULAR is required to avoid MIS
+		DirectHitFiniteLight(SPECULAR,
+				VLOAD3F(task->throughputPathVertex1.c),
+				rayHitT, &task->bsdfPathVertex1, 1.f,
+				sampleResult
+				LIGHTS_PARAM);
 	}
+#endif
+
+	//----------------------------------------------------------------------
+	// First path vertex direct light sampling
+	//----------------------------------------------------------------------
+
+	const BSDFEvent materialEventTypes = BSDF_GetEventTypes(&task->bsdfPathVertex1
+		MATERIALS_PARAM);
+	sampleResult->lastPathVertex = 
+			(PARAM_DEPTH_MAX <= 1) ||
+			(!((PARAM_DEPTH_DIFFUSE_MAX > 0) && (materialEventTypes & DIFFUSE)) &&
+			!((PARAM_DEPTH_GLOSSY_MAX > 0) && (materialEventTypes & GLOSSY)) &&
+			!((PARAM_DEPTH_SPECULAR_MAX > 0) && (materialEventTypes & SPECULAR)));
+	task->materialEventTypesPathVertex1 = materialEventTypes;
+
+	// Only if it is not a SPECULAR BSDF
+	if (!BSDF_IsDelta(&task->bsdfPathVertex1
+			MATERIALS_PARAM)) {
+		// Read the seed
+		Seed seed;
+		seed.s1 = task->seed.s1;
+		seed.s2 = task->seed.s2;
+		seed.s3 = task->seed.s3;
+
+		__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+
+#if defined(PARAM_HAS_VOLUMES)
+		// I need to work on a copy of volume information of the first path vertex
+		taskDirectLight->directLightVolInfo = task->volInfoPathVertex1;
+#endif
+
+		taskStats[gid].raysCount +=
+			DirectLightSampling_ALL(
+			&seed,
+#if defined(PARAM_HAS_VOLUMES)
+			&taskDirectLight->directLightVolInfo,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+			&task->tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHTS)
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+#endif
+			task->currentTime,
+			VLOAD3F(task->throughputPathVertex1.c),
+			&task->bsdfPathVertex1, &taskDirectLight->directLightBSDF,
+			sampleResult,
+			// BSDF_Init parameters
+			meshDescs,
+			meshMats,
+			vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+			vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+			vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+			vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+			vertAlphas,
+#endif
+			triangles
+			// Accelerator_Intersect parameters
+			ACCELERATOR_INTERSECT_PARAM
+			// Light related parameters
+			LIGHTS_PARAM);
+
+		// Save the seed
+		task->seed.s1 = seed.s1;
+		task->seed.s2 = seed.s2;
+		task->seed.s3 = seed.s3;
+	}
+
+	task->pathState = MK_BSDF_SAMPLE;
+
+	sampleResult->firstPathVertex = false;
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+	sampleResult->indirectShadowMask = 0.f;
+#endif
+}
+
+//------------------------------------------------------------------------------
+// RenderSample_MK_BSDF_SAMPLE
+//------------------------------------------------------------------------------
+
+void RenderSample_MK_BSDF_SAMPLE(
+		const BSDFEvent vertex1SampleComponent,
+		KERNEL_ARGS
+		) {
+	const size_t gid = get_global_id(0);
+
+	__global GPUTask *task = &tasks[gid];
+	__global SampleResult *sampleResult = &taskResults[gid];
+	if ((task->pathState != MK_BSDF_SAMPLE) ||
+			(sampleResult->lastPathVertex) ||
+			!(task->materialEventTypesPathVertex1 & vertex1SampleComponent) ||
+			!PathDepthInfo_CheckComponentDepths(vertex1SampleComponent))
+		return;
+
+	// Read the seed
+	Seed seed;
+	seed.s1 = task->seed.s1;
+	seed.s2 = task->seed.s2;
+	seed.s3 = task->seed.s3;
+
+	// Initialize image maps page pointer table
+	INIT_IMAGEMAPS_PAGES
+
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global GPUTaskPathVertexN *taskPathVertexN = &tasksPathVertexN[gid];
+
+	//----------------------------------------------------------------------
+	// Sample the components of the BSDF of the first path vertex
+	//----------------------------------------------------------------------
+
+	const int matSamplesCount = mats[task->bsdfPathVertex1.materialIndex].samples;
+	const uint globalMatSamplesCount = ((vertex1SampleComponent == DIFFUSE) ? PARAM_DIFFUSE_SAMPLES :
+		((vertex1SampleComponent == GLOSSY) ? PARAM_GLOSSY_SAMPLES :
+			PARAM_SPECULAR_SAMPLES));
+	const uint sampleCount = (matSamplesCount < 0) ? globalMatSamplesCount : (uint)matSamplesCount;
+
+	taskStats[gid].raysCount += SampleComponent(
+			&seed,
+#if defined(PARAM_HAS_VOLUMES)
+			&task->volInfoPathVertex1,
+			&taskPathVertexN->volInfoPathVertexN,
+			&taskDirectLight->directLightVolInfo,
+#endif
+#if (PARAM_TRIANGLE_LIGHT_COUNT > 0) || defined(PARAM_HAS_VOLUMES)
+			&task->tmpHitPoint,
+#endif
+#if defined(PARAM_HAS_INFINITELIGHTS)
+			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+#endif
+			task->currentTime,
+			vertex1SampleComponent,
+			sampleCount, VLOAD3F(task->throughputPathVertex1.c),
+			&task->bsdfPathVertex1, &taskPathVertexN->bsdfPathVertexN,
+			&taskDirectLight->directLightBSDF,
+			sampleResult,
+			// BSDF_Init parameters
+			meshDescs,
+			meshMats,
+			vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+			vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+			vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+			vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+			vertAlphas,
+#endif
+			triangles
+			// Accelerator_Intersect parameters
+			ACCELERATOR_INTERSECT_PARAM
+			// Light related parameters
+			LIGHTS_PARAM);
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BSDF_SAMPLE_DIFFUSE(
+		KERNEL_ARGS
+		) {
+	RenderSample_MK_BSDF_SAMPLE(
+			DIFFUSE,
+			engineFilmWidth,engineFilmHeight,
+			tasks,
+			tasksDirectLight,
+			tasksPathVertexN,
+			taskStats,
+			taskResults,
+			pixelFilterDistribution,
+			// Film parameters
+			filmWidth, filmHeight
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+			, filmRadianceGroup0
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+			, filmRadianceGroup1
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+			, filmRadianceGroup2
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+			, filmRadianceGroup3
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+			, filmRadianceGroup4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+			, filmRadianceGroup5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+			, filmRadianceGroup6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+			, filmRadianceGroup7
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+			, filmAlpha
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+			, filmDepth
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+			, filmPosition
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+			, filmGeometryNormal
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+			, filmShadingNormal
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+			, filmMaterialID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+			, filmDirectDiffuse
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+			, filmDirectGlossy
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+			, filmEmission
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+			, filmIndirectDiffuse
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+			, filmIndirectGlossy
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+			, filmIndirectSpecular
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
+			, filmMaterialIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+			, filmDirectShadowMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+			, filmIndirectShadowMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+			, filmUV
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+			, filmRayCount
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+			, filmByMaterialID
+#endif
+			,
+			// Scene parameters
+#if defined(PARAM_HAS_INFINITELIGHTS)
+			worldCenterX,
+			worldCenterY,
+			worldCenterZ,
+			worldRadius,
+#endif
+			mats,
+			texs,
+			meshMats,
+			meshDescs,
+			vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+			vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+			vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+			vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+			vertAlphas,
+#endif
+			triangles,
+			camera,
+			// Lights
+			lights,
+#if defined(PARAM_HAS_ENVLIGHTS)
+			envLightIndices,
+			envLightCount,
+#endif
+			meshTriLightDefsOffset,
+#if defined(PARAM_HAS_INFINITELIGHT)
+			infiniteLightDistribution,
+#endif
+			lightsDistribution
+			// Images
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			, 	imageMapDescs, 	imageMapBuff0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			, imageMapBuff2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			, imageMapBuff3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			, imageMapBuff4
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+			, imageMapBuff5
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+			, imageMapBuff6
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+			, imageMapBuff7
+#endif
+			// Ray intersection accelerator parameters
+			ACCELERATOR_INTERSECT_PARAM
+			);
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BSDF_SAMPLE_GLOSSY(
+		KERNEL_ARGS
+		) {
+	RenderSample_MK_BSDF_SAMPLE(
+			GLOSSY,
+			engineFilmWidth,engineFilmHeight,
+			tasks,
+			tasksDirectLight,
+			tasksPathVertexN,
+			taskStats,
+			taskResults,
+			pixelFilterDistribution,
+			// Film parameters
+			filmWidth, filmHeight
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+			, filmRadianceGroup0
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+			, filmRadianceGroup1
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+			, filmRadianceGroup2
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+			, filmRadianceGroup3
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+			, filmRadianceGroup4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+			, filmRadianceGroup5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+			, filmRadianceGroup6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+			, filmRadianceGroup7
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+			, filmAlpha
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+			, filmDepth
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+			, filmPosition
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+			, filmGeometryNormal
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+			, filmShadingNormal
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+			, filmMaterialID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+			, filmDirectDiffuse
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+			, filmDirectGlossy
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+			, filmEmission
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+			, filmIndirectDiffuse
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+			, filmIndirectGlossy
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+			, filmIndirectSpecular
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
+			, filmMaterialIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+			, filmDirectShadowMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+			, filmIndirectShadowMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+			, filmUV
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+			, filmRayCount
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+			, filmByMaterialID
+#endif
+			,
+			// Scene parameters
+#if defined(PARAM_HAS_INFINITELIGHTS)
+			worldCenterX,
+			worldCenterY,
+			worldCenterZ,
+			worldRadius,
+#endif
+			mats,
+			texs,
+			meshMats,
+			meshDescs,
+			vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+			vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+			vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+			vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+			vertAlphas,
+#endif
+			triangles,
+			camera,
+			// Lights
+			lights,
+#if defined(PARAM_HAS_ENVLIGHTS)
+			envLightIndices,
+			envLightCount,
+#endif
+			meshTriLightDefsOffset,
+#if defined(PARAM_HAS_INFINITELIGHT)
+			infiniteLightDistribution,
+#endif
+			lightsDistribution
+			// Images
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			, 	imageMapDescs, 	imageMapBuff0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			, imageMapBuff2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			, imageMapBuff3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			, imageMapBuff4
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+			, imageMapBuff5
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+			, imageMapBuff6
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+			, imageMapBuff7
+#endif
+			// Ray intersection accelerator parameters
+			ACCELERATOR_INTERSECT_PARAM
+			);
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BSDF_SAMPLE_SPECULAR(
+		KERNEL_ARGS
+		) {
+	RenderSample_MK_BSDF_SAMPLE(
+			SPECULAR,
+			engineFilmWidth,engineFilmHeight,
+			tasks,
+			tasksDirectLight,
+			tasksPathVertexN,
+			taskStats,
+			taskResults,
+			pixelFilterDistribution,
+			// Film parameters
+			filmWidth, filmHeight
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+			, filmRadianceGroup0
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+			, filmRadianceGroup1
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+			, filmRadianceGroup2
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+			, filmRadianceGroup3
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+			, filmRadianceGroup4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+			, filmRadianceGroup5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+			, filmRadianceGroup6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+			, filmRadianceGroup7
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+			, filmAlpha
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+			, filmDepth
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+			, filmPosition
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+			, filmGeometryNormal
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+			, filmShadingNormal
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+			, filmMaterialID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+			, filmDirectDiffuse
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+			, filmDirectGlossy
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+			, filmEmission
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+			, filmIndirectDiffuse
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+			, filmIndirectGlossy
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+			, filmIndirectSpecular
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
+			, filmMaterialIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+			, filmDirectShadowMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+			, filmIndirectShadowMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+			, filmUV
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+			, filmRayCount
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+			, filmByMaterialID
+#endif
+			,
+			// Scene parameters
+#if defined(PARAM_HAS_INFINITELIGHTS)
+			worldCenterX,
+			worldCenterY,
+			worldCenterZ,
+			worldRadius,
+#endif
+			mats,
+			texs,
+			meshMats,
+			meshDescs,
+			vertices,
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+			vertNormals,
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+			vertUVs,
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+			vertCols,
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+			vertAlphas,
+#endif
+			triangles,
+			camera,
+			// Lights
+			lights,
+#if defined(PARAM_HAS_ENVLIGHTS)
+			envLightIndices,
+			envLightCount,
+#endif
+			meshTriLightDefsOffset,
+#if defined(PARAM_HAS_INFINITELIGHT)
+			infiniteLightDistribution,
+#endif
+			lightsDistribution
+			// Images
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+			, 	imageMapDescs, 	imageMapBuff0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+			imageMapBuff1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+			, imageMapBuff2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+			, imageMapBuff3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+			, imageMapBuff4
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+			, imageMapBuff5
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+			, imageMapBuff6
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+			, imageMapBuff7
+#endif
+			// Ray intersection accelerator parameters
+			ACCELERATOR_INTERSECT_PARAM
+			);
 }
