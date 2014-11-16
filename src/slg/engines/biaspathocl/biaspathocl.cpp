@@ -76,9 +76,12 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	maxPathDepth.specularDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.specular")(2)).Get<int>());
 
 	// Samples settings
-	aaSamples = Max(1, cfg.Get(Property("biaspath.sampling.aa.size")(3)).Get<int>());
-	diffuseSamples = Max(0, cfg.Get(Property("biaspath.sampling.diffuse.size")(2)).Get<int>());
-	glossySamples = Max(0, cfg.Get(Property("biaspath.sampling.glossy.size")(2)).Get<int>());
+	aaSamples = Max(1, cfg.Get(Property("biaspath.sampling.aa.size")(
+			(GetEngineType() == RTBIASPATHOCL) ? 1 : 3)).Get<int>());
+	diffuseSamples = Max(0, cfg.Get(Property("biaspath.sampling.diffuse.size")(
+			(GetEngineType() == RTBIASPATHOCL) ? 1 : 2)).Get<int>());
+	glossySamples = Max(0, cfg.Get(Property("biaspath.sampling.glossy.size")(
+			(GetEngineType() == RTBIASPATHOCL) ? 1 : 2)).Get<int>());
 	specularSamples = Max(0, cfg.Get(Property("biaspath.sampling.specular.size")(1)).Get<int>());
 	directLightSamples = Max(1, cfg.Get(Property("biaspath.sampling.directlight.size")(1)).Get<int>());
 

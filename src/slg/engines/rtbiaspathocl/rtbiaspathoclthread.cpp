@@ -326,19 +326,11 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(initStatWorkGroupSize));
 
 				// Render the tile
-				{
-					boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
-					renderSampleKernel->setArg(0, tile->xStart);
-					renderSampleKernel->setArg(1, tile->yStart);
-
-					mergePixelSamplesKernel->setArg(0, tile->xStart);
-					mergePixelSamplesKernel->setArg(1, tile->yStart);
-				}
+				UpdateRenderSampleKernelArgs(tile->xStart, tile->yStart);
 
 				// Render all pixel samples
-				currentQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-						cl::NDRange(renderSampleWorkGroupSize));
+				EnqueueRenderSampleKernel(currentQueue);
+
 				// Merge all pixel samples and accumulate statistics
 				currentQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(threadFilmPixelCount, mergePixelSamplesWorkGroupSize)),
