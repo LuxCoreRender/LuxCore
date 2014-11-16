@@ -1514,9 +1514,7 @@ uint SampleComponent(
 		KERNEL_ARGS_IMAGEMAPS_PAGE_7
 
 #define KERNEL_ARGS \
-		const uint tileStartX \
-		, const uint tileStartY \
-		, const uint engineFilmWidth, const uint engineFilmHeight \
+		const uint engineFilmWidth, const uint engineFilmHeight \
 		, __global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskPathVertexN *tasksPathVertexN \

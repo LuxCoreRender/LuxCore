@@ -53,7 +53,7 @@ protected:
 
 	virtual void Stop();
 	
-	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel);
+	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel, bool firstKernel);
 	void UpdateRenderSampleKernelArgs(const u_int xStart, const u_int yStart);
 	void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
@@ -69,6 +69,10 @@ protected:
 	cl::Kernel *renderSampleKernel_MK_GENERATE_CAMERA_RAY;
 	cl::Kernel *renderSampleKernel_MK_TRACE_EYE_RAY;
 	cl::Kernel *renderSampleKernel_MK_ILLUMINATE_EYE_MISS;
+	cl::Kernel *renderSampleKernel_MK_DL_VERTEX_1;
+	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE;
+	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY;
+	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR;
 	size_t renderSampleWorkGroupSize;
 
 	cl::Buffer *tasksBuff;

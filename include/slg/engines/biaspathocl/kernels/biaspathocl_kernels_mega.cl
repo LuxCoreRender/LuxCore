@@ -42,6 +42,8 @@
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
+		const uint tileStartX,
+		const uint tileStartY,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);

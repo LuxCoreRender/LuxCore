@@ -41,6 +41,10 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY = NULL;
 	renderSampleKernel_MK_TRACE_EYE_RAY = NULL;
 	renderSampleKernel_MK_ILLUMINATE_EYE_MISS = NULL;
+	renderSampleKernel_MK_DL_VERTEX_1 = NULL;
+	renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE = NULL;
+	renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY = NULL;
+	renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR = NULL;
 	mergePixelSamplesKernel = NULL;
 
 	tasksBuff = NULL;
@@ -65,6 +69,10 @@ BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
 	delete renderSampleKernel_MK_GENERATE_CAMERA_RAY;
 	delete renderSampleKernel_MK_TRACE_EYE_RAY;
 	delete renderSampleKernel_MK_ILLUMINATE_EYE_MISS;
+	delete renderSampleKernel_MK_DL_VERTEX_1;
+	delete renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE;
+	delete renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY;
+	delete renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR;
 	delete mergePixelSamplesKernel;
 
 	delete[] gpuTaskStats;
@@ -168,6 +176,14 @@ void BiasPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 				&renderSampleWorkGroupSize, "RenderSample_MK_TRACE_EYE_RAY");
 		CompileKernel(program, &renderSampleKernel_MK_ILLUMINATE_EYE_MISS,
 				&renderSampleWorkGroupSize, "RenderSample_MK_ILLUMINATE_EYE_MISS");
+		CompileKernel(program, &renderSampleKernel_MK_DL_VERTEX_1,
+				&renderSampleWorkGroupSize, "RenderSample_MK_DL_VERTEX_1");
+		CompileKernel(program, &renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE,
+				&renderSampleWorkGroupSize, "RenderSample_MK_BSDF_SAMPLE_DIFFUSE");
+		CompileKernel(program, &renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY,
+				&renderSampleWorkGroupSize, "RenderSample_MK_BSDF_SAMPLE_GLOSSY");
+		CompileKernel(program, &renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR,
+				&renderSampleWorkGroupSize, "RenderSample_MK_BSDF_SAMPLE_SPECULAR");
 	} else {
 		//----------------------------------------------------------------------
 		// RenderSample kernel (Mega-Kernel)
@@ -197,7 +213,7 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 	const size_t GPUTaskSize =
 		// Additional micro-kenrels field
 		(engine->useMicroKernels ?
-			(sizeof(int) + sizeof(float) + sizeof(Spectrum) + sizeof(Ray) + sizeof(RayHit)) : 0) +
+			(sizeof(int) + sizeof(float) + sizeof(int) + sizeof(Spectrum) + sizeof(Ray) + sizeof(RayHit)) : 0) +
 		// Add Seed memory size
 		sizeof(slg::ocl::Seed) +	
 		// BSDF (bsdfPathVertex1) size
@@ -251,13 +267,15 @@ void BiasPathOCLRenderThread::AdditionalInit() {
 			sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 }
 
-void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel) {
+void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bool firstKernel) {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 	CompiledScene *cscene = engine->compiledScene;
 
 	u_int argIndex = 0;
-	rsKernel->setArg(argIndex++, 0);
-	rsKernel->setArg(argIndex++, 0);
+	if (firstKernel) {
+		rsKernel->setArg(argIndex++, 0);
+		rsKernel->setArg(argIndex++, 0);
+	}
 	rsKernel->setArg(argIndex++, engine->film->GetWidth());
 	rsKernel->setArg(argIndex++, engine->film->GetHeight());
 	rsKernel->setArg(argIndex++, *tasksBuff);
@@ -341,13 +359,21 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	//--------------------------------------------------------------------------
 
 	if (renderSampleKernel)
-		SetRenderSampleKernelArgs(renderSampleKernel);
+		SetRenderSampleKernelArgs(renderSampleKernel, true);
 	if (renderSampleKernel_MK_GENERATE_CAMERA_RAY)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_GENERATE_CAMERA_RAY);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_GENERATE_CAMERA_RAY, true);
 	if (renderSampleKernel_MK_TRACE_EYE_RAY)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_TRACE_EYE_RAY);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_TRACE_EYE_RAY, false);
 	if (renderSampleKernel_MK_ILLUMINATE_EYE_MISS)
-		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_MISS);
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_MISS, false);
+	if (renderSampleKernel_MK_DL_VERTEX_1)
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_DL_VERTEX_1, false);
+	if (renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE)
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE, false);
+	if (renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY)
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY, false);
+	if (renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR)
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR, false);
 
 	//--------------------------------------------------------------------------
 	// mergePixelSamplesKernel
@@ -378,6 +404,18 @@ void BiasPathOCLRenderThread::EnqueueRenderSampleKernel(cl::CommandQueue &oclQue
 		oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_ILLUMINATE_EYE_MISS, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
 				cl::NDRange(renderSampleWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_DL_VERTEX_1, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
+				cl::NDRange(renderSampleWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
+				cl::NDRange(renderSampleWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
+				cl::NDRange(renderSampleWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
+				cl::NDRange(renderSampleWorkGroupSize));
 	} else {
 		// Mega kernel version
 		oclQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
@@ -393,10 +431,6 @@ void BiasPathOCLRenderThread::UpdateRenderSampleKernelArgs(const u_int xStart, c
 	if (engine->useMicroKernels) {
 		renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(0, xStart);
 		renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(1, yStart);
-		renderSampleKernel_MK_TRACE_EYE_RAY->setArg(0, xStart);
-		renderSampleKernel_MK_TRACE_EYE_RAY->setArg(1, yStart);
-		renderSampleKernel_MK_ILLUMINATE_EYE_MISS->setArg(0, xStart);
-		renderSampleKernel_MK_ILLUMINATE_EYE_MISS->setArg(1, yStart);
 	} else {
 		renderSampleKernel->setArg(0, xStart);
 		renderSampleKernel->setArg(1, yStart);

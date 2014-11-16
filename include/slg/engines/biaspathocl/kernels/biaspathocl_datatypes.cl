@@ -51,6 +51,8 @@ typedef enum {
 	MK_GENERATE_CAMERA_RAY,
 	MK_TRACE_EYE_RAY,
 	MK_ILLUMINATE_EYE_MISS,
+	MK_DL_VERTEX_1,
+	MK_BSDF_SAMPLE,
 	MK_DONE
 } PathState;
 #endif
@@ -60,6 +62,7 @@ typedef struct {
 	PathState pathState;
 	float currentTime;
 	
+	BSDFEvent materialEventTypesPathVertex1;
 	Spectrum throughputPathVertex1;
 
 	Ray tmpRay;
