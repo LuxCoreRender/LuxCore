@@ -41,6 +41,7 @@ BiasPathOCLRenderThread::BiasPathOCLRenderThread(const u_int index,
 	renderSampleKernel_MK_GENERATE_CAMERA_RAY = NULL;
 	renderSampleKernel_MK_TRACE_EYE_RAY = NULL;
 	renderSampleKernel_MK_ILLUMINATE_EYE_MISS = NULL;
+	renderSampleKernel_MK_ILLUMINATE_EYE_HIT = NULL;
 	renderSampleKernel_MK_DL_VERTEX_1 = NULL;
 	renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE = NULL;
 	renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY = NULL;
@@ -69,6 +70,7 @@ BiasPathOCLRenderThread::~BiasPathOCLRenderThread() {
 	delete renderSampleKernel_MK_GENERATE_CAMERA_RAY;
 	delete renderSampleKernel_MK_TRACE_EYE_RAY;
 	delete renderSampleKernel_MK_ILLUMINATE_EYE_MISS;
+	delete renderSampleKernel_MK_ILLUMINATE_EYE_HIT;
 	delete renderSampleKernel_MK_DL_VERTEX_1;
 	delete renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE;
 	delete renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY;
@@ -176,6 +178,8 @@ void BiasPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 				&renderSampleWorkGroupSize, "RenderSample_MK_TRACE_EYE_RAY");
 		CompileKernel(program, &renderSampleKernel_MK_ILLUMINATE_EYE_MISS,
 				&renderSampleWorkGroupSize, "RenderSample_MK_ILLUMINATE_EYE_MISS");
+		CompileKernel(program, &renderSampleKernel_MK_ILLUMINATE_EYE_HIT,
+				&renderSampleWorkGroupSize, "RenderSample_MK_ILLUMINATE_EYE_HIT");
 		CompileKernel(program, &renderSampleKernel_MK_DL_VERTEX_1,
 				&renderSampleWorkGroupSize, "RenderSample_MK_DL_VERTEX_1");
 		CompileKernel(program, &renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE,
@@ -366,6 +370,8 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 		SetRenderSampleKernelArgs(renderSampleKernel_MK_TRACE_EYE_RAY, false);
 	if (renderSampleKernel_MK_ILLUMINATE_EYE_MISS)
 		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_MISS, false);
+	if (renderSampleKernel_MK_ILLUMINATE_EYE_HIT)
+		SetRenderSampleKernelArgs(renderSampleKernel_MK_ILLUMINATE_EYE_HIT, false);
 	if (renderSampleKernel_MK_DL_VERTEX_1)
 		SetRenderSampleKernelArgs(renderSampleKernel_MK_DL_VERTEX_1, false);
 	if (renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE)
@@ -402,6 +408,9 @@ void BiasPathOCLRenderThread::EnqueueRenderSampleKernel(cl::CommandQueue &oclQue
 				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
 				cl::NDRange(renderSampleWorkGroupSize));
 		oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_ILLUMINATE_EYE_MISS, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
+				cl::NDRange(renderSampleWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_ILLUMINATE_EYE_HIT, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
 				cl::NDRange(renderSampleWorkGroupSize));
 		oclQueue.enqueueNDRangeKernel(*renderSampleKernel_MK_DL_VERTEX_1, cl::NullRange,

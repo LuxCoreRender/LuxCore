@@ -54,6 +54,7 @@ std::string KernelSource_biaspathocl_datatypes =
 "	MK_GENERATE_CAMERA_RAY,\n"
 "	MK_TRACE_EYE_RAY,\n"
 "	MK_ILLUMINATE_EYE_MISS,\n"
+"	MK_ILLUMINATE_EYE_HIT,\n"
 "	MK_DL_VERTEX_1,\n"
 "	MK_BSDF_SAMPLE,\n"
 "	MK_DONE\n"
