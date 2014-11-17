@@ -92,7 +92,8 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	// Light settings
 	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(0.f)).Get<float>());
 	nearStartLight = Max(0.f, cfg.Get(Property("biaspath.lights.nearstart")(.001f)).Get<float>());
-	firstVertexLightSampleCount = Max(1, cfg.Get(Property("biaspath.lights.firstvertexsamples")(4)).Get<int>());
+	firstVertexLightSampleCount = Max(1, cfg.Get(Property("biaspath.lights.firstvertexsamples")(
+			(GetEngineType() == RTBIASPATHOCL) ? 1 : 4)).Get<int>());
 
 	// Tile related parameters
 	u_int defaultTileSize;
