@@ -1675,10 +1675,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	const size_t gid = get_global_id(0);
 
 	uint sampleX, sampleY;
-	sampleX = gid % PARAM_TILE_SIZE;
-	sampleY = gid / PARAM_TILE_SIZE;
+	sampleX = gid % PARAM_TILE_WIDTH;
+	sampleY = gid / PARAM_TILE_WIDTH;
 
-	if ((gid >= PARAM_TILE_SIZE * PARAM_TILE_SIZE) ||
+	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT) ||
 			(tileStartX + sampleX >= engineFilmWidth) ||
 			(tileStartY + sampleY >= engineFilmHeight))
 		return;

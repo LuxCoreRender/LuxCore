@@ -20,7 +20,8 @@
 
 // List of symbols defined at compile time:
 //  PARAM_TASK_COUNT
-//  PARAM_TILE_SIZE
+//  PARAM_TILE_WIDTH
+//  PARAM_TILE_HEIGHT
 //  PARAM_FIRST_VERTEX_DL_COUNT
 //  PARAM_RADIANCE_CLAMP_MAXVALUE
 //  PARAM_PDF_CLAMP_VALUE
@@ -55,10 +56,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GE
 
 	const uint sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
 	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
-	const uint samplePixelX = samplePixelIndex % PARAM_TILE_SIZE;
-	const uint samplePixelY = samplePixelIndex / PARAM_TILE_SIZE;
+	const uint samplePixelX = samplePixelIndex % PARAM_TILE_WIDTH;
+	const uint samplePixelY = samplePixelIndex / PARAM_TILE_WIDTH;
 
-	if ((gid >= PARAM_TILE_SIZE * PARAM_TILE_SIZE * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
+	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
 			(tileStartX + samplePixelX >= engineFilmWidth) ||
 			(tileStartY + samplePixelY >= engineFilmHeight)) {
 		task->pathState = MK_DONE;

@@ -257,7 +257,7 @@ public:
 		u_int pass;
 	};
 
-	TileRepository(const u_int size);
+	TileRepository(const u_int tileWidth, const u_int tileHeight);
 	~TileRepository();
 
 	void HilberCurveTiles(
@@ -276,7 +276,7 @@ public:
 
 	friend class Tile;
 
-	u_int tileSize;
+	u_int tileWidth, tileHeight;
 	u_int totalSamplesPerPixel;
 	u_int pass;
 
@@ -332,7 +332,8 @@ public:
 	void GetPendingTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
 	void GetNotConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
 	void GetConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
-	u_int GetTileSize() const { return tileRepository->tileSize; }
+	u_int GetTileWidth() const { return tileRepository->tileWidth; }
+	u_int GetTileHeight() const { return tileRepository->tileHeight; }
 
 	friend class CPUTileRenderThread;
 
