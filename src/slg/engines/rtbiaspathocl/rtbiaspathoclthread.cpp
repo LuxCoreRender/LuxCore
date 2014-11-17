@@ -271,8 +271,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 	RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
 	boost::barrier *frameBarrier = engine->frameBarrier;
-	const u_int tileSize = engine->tileRepository->tileSize;
-	const u_int threadFilmPixelCount = tileSize * tileSize;
+	const u_int tileWidth = engine->tileRepository->tileWidth;
+	const u_int tileHeight = engine->tileRepository->tileHeight;
+	const u_int threadFilmPixelCount = tileWidth * tileHeight;
 	const u_int taskCount = engine->taskCount;
 	const u_int engineFilmPixelCount = engine->film->GetWidth() * engine->film->GetHeight();
 
@@ -309,11 +310,11 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			TileRepository::Tile *tile = NULL;
 			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilm)) {
 				threadFilm->Reset();
-				//const u_int tileWidth = Min(engine->tileRepository->tileSize, engine->film->GetWidth() - tile->xStart);
-				//const u_int tileHeight = Min(engine->tileRepository->tileSize, engine->film->GetHeight() - tile->yStart);
+				//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tile->xStart);
+				//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tile->yStart);
 				//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 				//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-				//		"(" << tileWidth << ", " << tileHeight << ") [" << tile->sampleIndex << "]");
+				//		"(" << tileW << ", " << tileH << ")");
 
 				// Clear the frame buffer
 				currentQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,

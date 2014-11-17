@@ -96,18 +96,27 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 			(GetEngineType() == RTBIASPATHOCL) ? 1 : 4)).Get<int>());
 
 	// Tile related parameters
-	u_int defaultTileSize;
+	u_int tileWidth = 32;
+	u_int tileHeight = 32;
 	if (GetEngineType() == RTBIASPATHOCL) {
 		// Check if I'm going to use a single device
 		if (intersectionDevices.size() == 1) {
 			// The best configuration, with a single device, is to use a tile
 			// as large as the complete image
-			defaultTileSize = Max(film->GetWidth(), film->GetHeight());
-		} else
-			defaultTileSize = Max(film->GetWidth(), film->GetHeight()) / 4;
-	} else
-		defaultTileSize = 32;
-	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(defaultTileSize)).Get<u_int>(), 8u));
+			tileWidth = film->GetWidth();
+			tileHeight = film->GetHeight();
+		} else {
+			// One slice for each device
+			tileWidth = (film->GetWidth() + 1) / intersectionDevices.size();
+			tileHeight = film->GetHeight();
+		}
+	} else {
+		if (renderConfig->cfg.IsDefined("tile.size"))
+			tileWidth = tileHeight = Max(renderConfig->cfg.Get(Property("tile.size")(32)).Get<u_int>(), 8u);
+		tileWidth = Max(renderConfig->cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>(), 8u);
+		tileHeight = Max(renderConfig->cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>(), 8u);
+	}
+	tileRepository = new TileRepository(tileWidth, tileHeight);
 
 	tileRepository->maxPassCount = renderConfig->GetProperty("batch.haltdebug").Get<u_int>();
 	if (GetEngineType() == RTBIASPATHOCL)
@@ -122,7 +131,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	useMicroKernels = cfg.Get(Property("path.microkernels.enable")(false)).Get<bool>();
 
-	taskCount = tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel;
+	taskCount = tileRepository->tileWidth * tileRepository->tileHeight * tileRepository->totalSamplesPerPixel;
 
 	InitPixelFilterDistribution();
 	

@@ -93,8 +93,8 @@ void BiasPathOCLRenderThread::Stop() {
 
 void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-	*filmWidth = engine->tileRepository->tileSize;
-	*filmHeight = engine->tileRepository->tileSize;
+	*filmWidth = engine->tileRepository->tileWidth;
+	*filmHeight = engine->tileRepository->tileHeight;
 }
 
 string BiasPathOCLRenderThread::AdditionalKernelOptions() {
@@ -108,7 +108,8 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	ss.precision(6);
 	ss << scientific <<
 			" -D PARAM_TASK_COUNT=" <<  engine->taskCount <<
-			" -D PARAM_TILE_SIZE=" << engine->tileRepository->tileSize <<
+			" -D PARAM_TILE_WIDTH=" << engine->tileRepository->tileWidth <<
+			" -D PARAM_TILE_HEIGHT=" << engine->tileRepository->tileHeight <<
 			" -D PARAM_FIRST_VERTEX_DL_COUNT=" << engine->firstVertexLightSampleCount <<
 			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f" <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f" <<
@@ -459,8 +460,9 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
-		const u_int tileSize = engine->tileRepository->tileSize;
-		const u_int filmPixelCount = tileSize * tileSize;
+		const u_int tileWidth = engine->tileRepository->tileWidth;
+		const u_int tileHeight = engine->tileRepository->tileHeight;
+		const u_int filmPixelCount = tileWidth * tileHeight;
 		const u_int taskCount = engine->taskCount;
 
 		// Initialize OpenCL structures
@@ -477,11 +479,11 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 				!boost::this_thread::interruption_requested()) {
 			//const double t0 = WallClockTime();
 			threadFilm->Reset();
-			//const u_int tileWidth = Min(engine->tileRepository->tileSize, engine->film->GetWidth() - tile->xStart);
-			//const u_int tileHeight = Min(engine->tileRepository->tileSize, engine->film->GetHeight() - tile->yStart);
+			//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tile->xStart);
+			//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tile->yStart);
 			//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 			//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-			//		"(" << tileWidth << ", " << tileHeight << ")");
+			//		"(" << tileW << ", " << tileH << ")");
 				
 			// Clear the frame buffer
 			oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
