@@ -259,20 +259,20 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 
 		task->pathState = MK_DONE;
 	} else
-		task->pathState = MK_DL_VERTEX_1;
+		task->pathState = MK_ILLUMINATE_EYE_HIT;
 }
 
 //------------------------------------------------------------------------------
-// RenderSample_MK_DL_VERTEX_1
+// RenderSample_MK_ILLUMINATE_EYE_HIT
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL_VERTEX_1(
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_ILLUMINATE_EYE_HIT(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
 
 	__global GPUTask *task = &tasks[gid];
-	if (task->pathState != MK_DL_VERTEX_1)
+	if (task->pathState != MK_ILLUMINATE_EYE_HIT)
 		return;
 
 	// Initialize image maps page pointer table
@@ -321,6 +321,27 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 				LIGHTS_PARAM);
 	}
 #endif
+
+	task->pathState = MK_DL_VERTEX_1;
+}
+
+//------------------------------------------------------------------------------
+// RenderSample_MK_DL_VERTEX_1
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL_VERTEX_1(
+		KERNEL_ARGS
+		) {
+	const size_t gid = get_global_id(0);
+
+	__global GPUTask *task = &tasks[gid];
+	if (task->pathState != MK_DL_VERTEX_1)
+		return;
+
+	// Initialize image maps page pointer table
+	INIT_IMAGEMAPS_PAGES
+
+	__global SampleResult *sampleResult = &taskResults[gid];
 
 	//----------------------------------------------------------------------
 	// First path vertex direct light sampling
