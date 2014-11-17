@@ -116,7 +116,7 @@ protected:
 	EditActionList updateActions;
 
 	boost::barrier *frameBarrier;
-	double frameTime;
+	double frameStartTime, frameTime;
 };
 
 }

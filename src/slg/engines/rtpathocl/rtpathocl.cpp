@@ -31,6 +31,7 @@ using namespace slg;
 RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		PathOCLRenderEngine(rcfg, flm, flmMutex, true) {
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
+	frameStartTime = 0.f;
 	frameTime = 0.f;
 }
 
@@ -107,7 +108,7 @@ void RTPathOCLRenderEngine::UpdateFilmLockLess() {
 
 void RTPathOCLRenderEngine::WaitNewFrame() {
 	// Threads do the rendering
-	const double t0 = WallClockTime();
+
 	frameBarrier->wait();
 
 	// Display thread merges all frame buffers and does all frame post-processing steps 
@@ -141,7 +142,9 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 	// Update the statistics
 	UpdateCounters();
 
-	frameTime = WallClockTime() - t0;
+	const double currentTime = WallClockTime();
+	frameTime = currentTime - frameStartTime;
+	frameStartTime = currentTime;
 }
 
 #endif

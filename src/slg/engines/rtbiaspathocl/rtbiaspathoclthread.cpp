@@ -309,10 +309,11 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 			TileRepository::Tile *tile = NULL;
 			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilm)) {
+				//const double t0 = WallClockTime();
 				threadFilm->Reset();
 				//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tile->xStart);
 				//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tile->yStart);
-				//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 				//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 				//		"(" << tileW << ", " << tileH << ")");
 
@@ -359,6 +360,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					tracedRaysCount += gpuTaskStats[i].raysCount;
 
 				intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
+				
+				//const double t1 = WallClockTime();
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
 			}
 
 			//------------------------------------------------------------------
@@ -435,9 +439,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				currentQueue.finish();
 			}
 
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 			// Update OpenCL buffers if there is any edit action
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			if (amiDisplayThread) {
 				engine->editCanStart.notify_one();
