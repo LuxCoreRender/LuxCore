@@ -36,6 +36,22 @@
 
 namespace luxrays {
 
+/*
+ * The inheritance scheme used here:
+ * 
+ *         | => TriangleMesh => |
+ * Mesh => |                    |=> ExtTriangleMesh
+ *         | =>      ExtMesh => |
+ * 
+ *         | => InstanceTriangleMesh => |
+ * Mesh => |                            |=> ExtInstanceTriangleMesh
+ *         | =>              ExtMesh => |
+ * 
+ *         | => MotionTriangleMesh => |
+ * Mesh => |                          |=> ExtMotionTriangleMesh
+ *         | =>            ExtMesh => |
+ */
+	
 class ExtMeshCache;
 
 class ExtMesh : virtual public Mesh {

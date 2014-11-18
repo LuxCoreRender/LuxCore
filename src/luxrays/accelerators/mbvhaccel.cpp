@@ -624,10 +624,10 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	// Build the root BVH
 	//--------------------------------------------------------------------------
 
-	std::vector<BVHAccelTreeNode *> bvList;
-	bvList.reserve(nLeafs);
+	std::vector<BVHAccelTreeNode> bvNodes(nLeafs);
+	std::vector<BVHAccelTreeNode *> bvList(nLeafs, NULL);
 	for (u_int i = 0; i < nLeafs; ++i) {
-		BVHAccelTreeNode *node = new BVHAccelTreeNode();
+		BVHAccelTreeNode *node = &bvNodes[i];
 		// Get the bounding box from the mesh so it is in global coordinates
 		node->bbox = meshes[i]->GetBBox();
 		node->bvhLeaf.leafIndex = leafsIndex[i];
@@ -636,7 +636,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 		node->bvhLeaf.meshOffsetIndex = i;
 		node->leftChild = NULL;
 		node->rightSibling = NULL;
-		bvList.push_back(node);
+		bvList[i] = node;
 	}
 
 	nRootNodes = 0;
