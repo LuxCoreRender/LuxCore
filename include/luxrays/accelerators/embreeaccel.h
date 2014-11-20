@@ -48,6 +48,10 @@ public:
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 private:
+	static bool MeshPtrCompare(const Mesh *p0, const Mesh *p1);
+	
+	u_int ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh);
+
 	// Used for Embree initialization
 	static boost::mutex initMutex;
 	// Used to count the number of existing EmbreeAccel instances
