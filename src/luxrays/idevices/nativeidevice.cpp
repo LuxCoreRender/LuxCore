@@ -54,14 +54,10 @@ void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 
 	if (dataSet) {
 		const AcceleratorType accelType = dataSet->GetAcceleratorType();
-		if (accelType != ACCEL_AUTO) {
+		if (accelType != ACCEL_AUTO)
 			accel = dataSet->GetAccelerator(accelType);
-		} else {
-			if (dataSet->RequiresMotionBlurSupport())
-				accel = dataSet->GetAccelerator(ACCEL_MQBVH);
-			else
-				accel = dataSet->GetAccelerator(ACCEL_EMBREE);
-		}
+		else
+			accel = dataSet->GetAccelerator(ACCEL_EMBREE);
 	}
 }
 
