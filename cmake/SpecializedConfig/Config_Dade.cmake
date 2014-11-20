@@ -18,6 +18,7 @@ MESSAGE(STATUS "Using Dade's Linux Configuration settings")
 #set(BOOST_SEARCH_PATH          "/home/david/projects/luxrender-dev/boost_1_53_0")
 set(OPENIMAGEIO_ROOT_DIR        "/home/david/projects/luxrender-dev/oiio-RB-1.3/dist/linux64")
 set(OPENEXR_ROOT                "/usr/local")
+set(EMBREE_SEARCH_PATH           "/home/david/src/embree-bin-2.3.3_linux")
 
 set(OPENCL_SEARCH_PATH        "$ENV{AMDAPPSDKROOT}")
 set(OPENCL_INCLUDEPATH        "${OPENCL_SEARCH_PATH}/include")

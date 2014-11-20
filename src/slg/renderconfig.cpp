@@ -157,6 +157,8 @@ void RenderConfig::Parse(const luxrays::Properties &props) {
 		scene->accelType = ACCEL_QBVH;
 	else if (accelType == "MQBVH")
 		scene->accelType = ACCEL_MQBVH;
+	else if (accelType == "EMBREE")
+		scene->accelType = ACCEL_EMBREE;
 	else {
 		SLG_LOG("Unknown accelerator type (using AUTO instead): " << accelType);
 	}

@@ -735,7 +735,7 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbVerts = size;
 
-		points = new luxrays::Point[size];
+		points = Scene::AllocVerticesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -760,7 +760,7 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbTris = size;
 
-		tris = new luxrays::Triangle[size];
+		tris = Scene::AllocTrianglesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
