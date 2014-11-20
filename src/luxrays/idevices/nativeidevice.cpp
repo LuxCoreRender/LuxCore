@@ -60,7 +60,7 @@ void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 			if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
 				accel = dataSet->GetAccelerator(ACCEL_MQBVH);
 			else
-				accel = dataSet->GetAccelerator(ACCEL_QBVH);
+				accel = dataSet->GetAccelerator(ACCEL_EMBREE);
 		}
 	}
 }

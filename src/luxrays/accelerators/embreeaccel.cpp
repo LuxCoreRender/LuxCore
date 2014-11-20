@@ -99,7 +99,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 		Triangle *meshTris = mesh->GetTriangles();
 		rtcSetBuffer(embreeScene, geomID, RTC_INDEX_BUFFER, meshTris, 0, 3 * sizeof(int));
 	}
-	
+
 	rtcCommit(embreeScene);
 	
 	LR_LOG(ctx, "EmbreeAccel build time: " << int((WallClockTime() - t0) * 1000) << "ms");

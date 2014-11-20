@@ -35,7 +35,7 @@
 
 using namespace luxrays;
 
-static unsigned int DataSetID = 0;
+static u_int DataSetID = 0;
 static boost::mutex DataSetIDMutex;
 
 DataSet::DataSet(const Context *luxRaysContext) {
