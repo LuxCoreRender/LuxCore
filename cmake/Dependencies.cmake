@@ -115,6 +115,14 @@ if (OPENCL_FOUND)
 	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
 endif ()
 
+# Intel Embree
+set(EMBREE_ROOT                "${EMBREE_SEARCH_PATH}")
+find_package(Embree)
+
+if (EMBREE_FOUND)
+	include_directories(SYSTEM ${EMBREE_INCLUDE_PATH})
+endif ()
+
 # Find BISON
 IF (NOT BISON_NOT_AVAILABLE)
 	find_package(BISON)

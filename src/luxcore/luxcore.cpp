@@ -381,6 +381,14 @@ void Scene::RemoveUnusedMeshes() {
 	scene->RemoveUnusedMeshes();
 }
 
+Point *Scene::AllocVerticesBuffer(const u_int meshVertCount) {
+	return TriangleMesh::AllocVerticesBuffer(meshVertCount);
+}
+
+Triangle *Scene::AllocTrianglesBuffer(const u_int meshTriCount) {
+	return TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+}
+
 //------------------------------------------------------------------------------
 // RenderConfig
 //------------------------------------------------------------------------------

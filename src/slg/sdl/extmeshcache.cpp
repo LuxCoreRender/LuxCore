@@ -56,7 +56,7 @@ void ExtMeshCache::DefineExtMesh(const string &fileName, ExtTriangleMesh *mesh) 
 void ExtMeshCache::DefineExtMesh(const string &fileName,
 		const u_int plyNbVerts, const u_int plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas) {
-	ExtTriangleMesh *mesh = ExtTriangleMesh::CreateExtTriangleMesh(
+	ExtTriangleMesh *mesh = new ExtTriangleMesh(
 			plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 
 	DefineExtMesh(fileName, mesh);

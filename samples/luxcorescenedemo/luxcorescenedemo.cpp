@@ -30,7 +30,7 @@ using namespace luxcore;
 
 static void CreateBox(Scene *scene, const string &objName, const string &meshName,
 		const string &matName, const bool enableUV, const BBox &bbox) {
-	Point *p = new Point[24];
+	Point *p = Scene::AllocVerticesBuffer(24);
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
 	p[1] = Point(bbox.pMin.x, bbox.pMax.y, bbox.pMin.z);
@@ -62,7 +62,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 	p[22] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMax.z);
 	p[23] = Point(bbox.pMax.x, bbox.pMax.y, bbox.pMin.z);
 
-	Triangle *vi = new Triangle[12];
+	Triangle *vi = Scene::AllocTrianglesBuffer(12);
 	// Bottom face
 	vi[0] = Triangle(0, 1, 2);
 	vi[1] = Triangle(2, 3, 0);
