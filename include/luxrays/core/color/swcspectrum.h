@@ -44,8 +44,12 @@ public:
 	// Now the problem seems to be present with GCC 4.8 too.
 
 	SWCSpectrum(const SWCSpectrum &s) {
+#if defined (WIN32)
+		std::copy(s.c, s.c + WAVELENGTH_SAMPLES, c);
+#else
 		for (int i = 0; i < WAVELENGTH_SAMPLES; ++i)
 			c[i] = s.c[i];
+#endif
 	}
 
 	SWCSpectrum(const SpectrumWavelengths &sw, const RGBColor &s);
