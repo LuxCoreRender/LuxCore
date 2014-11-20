@@ -32,6 +32,8 @@ std::string Accelerator::AcceleratorType2String(const AcceleratorType type) {
 			return "MQBVH";
 		case ACCEL_MBVH:
 			return "MBVH";
+		case ACCEL_EMBREE:
+			return "EMBREE";
 		default:
 			throw std::runtime_error("Unknown AcceleratorType in AcceleratorType2String()");
 	}
