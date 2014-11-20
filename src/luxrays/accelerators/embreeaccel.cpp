@@ -80,6 +80,21 @@ EmbreeAccel::~EmbreeAccel() {
 	--initCount;
 }
 
+u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) {
+	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
+			mesh->GetTotalTriangleCount(), mesh->GetTotalVertexCount(), 1);
+
+	// Share the mesh vertices
+	Point *meshVerts = mesh->GetVertices();
+	rtcSetBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER, meshVerts, 0, 3 * sizeof(float));
+
+	// Share the mesh triangles
+	Triangle *meshTris = mesh->GetTriangles();
+	rtcSetBuffer(embreeScene, geomID, RTC_INDEX_BUFFER, meshTris, 0, 3 * sizeof(int));
+	
+	return geomID;
+}
+
 void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount) {
@@ -87,22 +102,53 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 
 	embreeScene = rtcNewScene(RTC_SCENE_STATIC, RTC_INTERSECT1);
 
+	std::map<const Mesh *, RTCScene, bool (*)(const Mesh *, const Mesh *)> uniqueRTCSceneByMesh(MeshPtrCompare);
+
 	BOOST_FOREACH(const Mesh *mesh, meshes) {
-		const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
-				mesh->GetTotalTriangleCount(), mesh->GetTotalVertexCount(), 1);
+		switch (mesh->GetType()) {
+			case TYPE_TRIANGLE:
+			case TYPE_EXT_TRIANGLE:
+				ExportTriangleMesh(embreeScene, mesh);
+				break;
+			case TYPE_TRIANGLE_INSTANCE:
+			case TYPE_EXT_TRIANGLE_INSTANCE: {
+				const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(mesh);
 
-		// Share the mesh vertices
-		Point *meshVerts = mesh->GetVertices();
-		rtcSetBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER, meshVerts, 0, 3 * sizeof(float));
+				// Check if a RTCScene has already been created
+				std::map<const Mesh *, RTCScene, bool (*)(const Mesh *, const Mesh *)>::iterator it =
+						uniqueRTCSceneByMesh.find(itm->GetTriangleMesh());
 
-		// Share the mesh triangles
-		Triangle *meshTris = mesh->GetTriangles();
-		rtcSetBuffer(embreeScene, geomID, RTC_INDEX_BUFFER, meshTris, 0, 3 * sizeof(int));
+				RTCScene instScene;
+				if (it == uniqueRTCSceneByMesh.end()) {
+					TriangleMesh *instancedMesh = itm->GetTriangleMesh();
+
+					// Create a new RTCScene
+					instScene = rtcNewScene(RTC_SCENE_STATIC, RTC_INTERSECT1);
+					ExportTriangleMesh(instScene, instancedMesh);
+					rtcCommit(instScene);
+
+					uniqueRTCSceneByMesh[instancedMesh] = instScene;
+				} else
+					instScene = it->second;
+
+				const u_int instID = rtcNewInstance(embreeScene, instScene);
+				rtcSetTransform(embreeScene, instID, RTC_MATRIX_ROW_MAJOR, &(itm->GetTransformation().m.m[0][0]));
+				break;
+			}
+			case TYPE_TRIANGLE_MOTION:
+			case TYPE_EXT_TRIANGLE_MOTION:
+			default:
+				throw std::runtime_error("Unknown Mesh type in EmbreeAccel::Init(): " + ToString(mesh->GetType()));
+		}
 	}
 
 	rtcCommit(embreeScene);
 	
 	LR_LOG(ctx, "EmbreeAccel build time: " << int((WallClockTime() - t0) * 1000) << "ms");
+}
+
+bool EmbreeAccel::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
+	return p0 < p1;
 }
 
 bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
@@ -128,8 +174,13 @@ bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
 	rtcIntersect(embreeScene, embreeRay);
 
 	if (embreeRay.geomID != RTC_INVALID_GEOMETRY_ID) {
-		hit->meshIndex = embreeRay.geomID;
+		hit->meshIndex = (embreeRay.instID == RTC_INVALID_GEOMETRY_ID) ? embreeRay.geomID : embreeRay.instID;
 		hit->triangleIndex = embreeRay.primID;
+//std::cout<<"#####################\n";
+//std::cout<<"#"<<embreeRay.geomID<<"\n";
+//std::cout<<"#"<<embreeRay.primID<<"\n";
+//std::cout<<"#"<<embreeRay.instID<<"\n";
+
 		hit->t = embreeRay.tfar;
 
 		hit->b1 = embreeRay.u;

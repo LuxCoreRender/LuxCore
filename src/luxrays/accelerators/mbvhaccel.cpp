@@ -562,7 +562,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(mesh);
 
 				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
+				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it =
+						uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
 					TriangleMesh *instancedMesh = itm->GetTriangleMesh();
@@ -591,7 +592,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				const MotionTriangleMesh *mtm = dynamic_cast<const MotionTriangleMesh *>(mesh);
 
 				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(mtm->GetTriangleMesh());
+				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it =
+						uniqueLeafIndexByMesh.find(mtm->GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
 					TriangleMesh *motionMesh = mtm->GetTriangleMesh();
