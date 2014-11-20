@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <string>
+#include <limits>
 
 #include <boost/foreach.hpp>
 
@@ -80,7 +81,7 @@ EmbreeAccel::~EmbreeAccel() {
 	--initCount;
 }
 
-u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) {
+u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const {
 	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
 			mesh->GetTotalTriangleCount(), mesh->GetTotalVertexCount(), 1);
 
@@ -95,10 +96,72 @@ u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *me
 	return geomID;
 }
 
+u_int EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const {
+	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
+			mtm->GetTotalTriangleCount(), mtm->GetTotalVertexCount(), 2);
+
+	const MotionSystem &ms = mtm->GetMotionSystem();
+
+	// Copy the mesh start position vertices
+	float *vertices0 = (float *)rtcMapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER0);
+	for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i) {
+		const Point v = mtm->GetVertex(ms.StartTime(), i);
+		*vertices0++ = v.x;
+		*vertices0++ = v.y;
+		*vertices0++ = v.z;
+		++vertices0;
+	}
+	rtcUnmapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER0);
+
+	// Copy the mesh end position vertices
+	float *vertices1 = (float *)rtcMapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER1);
+	for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i) {
+		const Point v = mtm->GetVertex(ms.EndTime(), i);
+		*vertices1++ = v.x;
+		*vertices1++ = v.y;
+		*vertices1++ = v.z;
+		++vertices1;
+	}
+	rtcUnmapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER1);
+
+	// Share the mesh triangles
+	Triangle *meshTris = mtm->GetTriangles();
+	rtcSetBuffer(embreeScene, geomID, RTC_INDEX_BUFFER, meshTris, 0, 3 * sizeof(int));
+	
+	return geomID;
+}
+
 void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount) {
 	const double t0 = WallClockTime();
+
+	//--------------------------------------------------------------------------
+	// Extract the meshes min. and max. time. To normalize between 0.f and 1.f.
+	//--------------------------------------------------------------------------
+
+	minTime = std::numeric_limits<float>::max();
+	maxTime = std::numeric_limits<float>::min();
+	BOOST_FOREACH(const Mesh *mesh, meshes) {
+		const MotionTriangleMesh *mtm = dynamic_cast<const MotionTriangleMesh *>(mesh);
+		
+		if (mtm) {
+			minTime = Min(minTime, mtm->GetMotionSystem().StartTime());
+			maxTime = Min(maxTime, mtm->GetMotionSystem().EndTime());
+		}
+	}
+
+	if ((minTime == std::numeric_limits<float>::max()) ||
+			(maxTime == std::numeric_limits<float>::min())) {
+		minTime = 0.f;
+		maxTime = 1.f;
+		timeScale = 1.f;
+	} else
+		timeScale = 1.f / (maxTime - minTime);
+
+	//--------------------------------------------------------------------------
+	// Convert the meshes to an Embree Scene
+	//--------------------------------------------------------------------------
 
 	embreeScene = rtcNewScene(RTC_SCENE_STATIC, RTC_INTERSECT1);
 
@@ -136,7 +199,11 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 				break;
 			}
 			case TYPE_TRIANGLE_MOTION:
-			case TYPE_EXT_TRIANGLE_MOTION:
+			case TYPE_EXT_TRIANGLE_MOTION: {
+				const MotionTriangleMesh *mtm = dynamic_cast<const MotionTriangleMesh *>(mesh);
+				ExportMotionTriangleMesh(embreeScene, mtm);
+				break;
+			}
 			default:
 				throw std::runtime_error("Unknown Mesh type in EmbreeAccel::Init(): " + ToString(mesh->GetType()));
 		}
@@ -169,17 +236,13 @@ bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
 	embreeRay.primID = RTC_INVALID_GEOMETRY_ID;
 	embreeRay.instID = RTC_INVALID_GEOMETRY_ID;
 	embreeRay.mask = 0xFFFFFFFF;
-	embreeRay.time = ray->time;
+	embreeRay.time = (ray->time - minTime) * timeScale;
 
 	rtcIntersect(embreeScene, embreeRay);
 
 	if (embreeRay.geomID != RTC_INVALID_GEOMETRY_ID) {
 		hit->meshIndex = (embreeRay.instID == RTC_INVALID_GEOMETRY_ID) ? embreeRay.geomID : embreeRay.instID;
 		hit->triangleIndex = embreeRay.primID;
-//std::cout<<"#####################\n";
-//std::cout<<"#"<<embreeRay.geomID<<"\n";
-//std::cout<<"#"<<embreeRay.primID<<"\n";
-//std::cout<<"#"<<embreeRay.instID<<"\n";
 
 		hit->t = embreeRay.tfar;
 

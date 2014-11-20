@@ -171,7 +171,7 @@ public:
 		return motionSystem.Bound(mesh->GetBBox(), true);
 	}
 	virtual Point GetVertex(const float time, const u_int vertIndex) const {
-		return motionSystem.Sample(time) * mesh->GetVertex(time, vertIndex);
+		return motionSystem.Sample(time).Inverse() * mesh->GetVertex(time, vertIndex);
 	}
 
 	virtual Point *GetVertices() const { return mesh->GetVertices(); }

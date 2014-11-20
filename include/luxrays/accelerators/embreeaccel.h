@@ -50,7 +50,8 @@ public:
 private:
 	static bool MeshPtrCompare(const Mesh *p0, const Mesh *p1);
 	
-	u_int ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh);
+	u_int ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const;
+	u_int ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const;
 
 	// Used for Embree initialization
 	static boost::mutex initMutex;
@@ -60,6 +61,8 @@ private:
 	const Context *ctx;
 
 	RTCScene embreeScene;
+	// Used to normalize between 0.f and 1.f
+	float minTime, maxTime, timeScale;
 };
 
 }
