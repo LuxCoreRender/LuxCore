@@ -59,7 +59,8 @@ typedef enum {
 	MK_RT_DL = 5,
 	MK_GENERATE_NEXT_VERTEX_RAY = 6,
 	MK_SPLAT_SAMPLE = 7,
-	MK_GENERATE_CAMERA_RAY = 8
+	MK_NEXT_SAMPLE = 8,
+	MK_GENERATE_CAMERA_RAY = 9
 } PathState;
 
 typedef struct {

@@ -42,7 +42,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #endif
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
 	if (pathState != MK_RT_NEXT_VERTEX)
@@ -52,25 +51,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-
-	__global BSDF *bsdf = &taskState->bsdf;
-
-	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
-	// Used by Sampler_GetSamplePathVertex() macro
-	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, taskState->depth);
-#endif
-
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
 
-	__global Ray *ray = &rays[gid];
-	__global RayHit *rayHit = &rayHits[gid];
-	
 	//--------------------------------------------------------------------------
 	// End of variables setup
 	//--------------------------------------------------------------------------
@@ -78,14 +61,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	const bool continueToTrace = Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 			&pathVolInfos[gid],
-			&task->tmpHitPoint,
+			&tasks[gid].tmpHitPoint,
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
 			taskState->bsdf.hitPoint.passThroughEvent,
 #endif
-			ray, rayHit, bsdf,
+			&rays[gid], &rayHits[gid], &taskState->bsdf,
 			&taskState->throughput,
-			&sample->result,
+			&samples[gid].result,
 			// BSDF_Init parameters
 			meshDescs,
 			meshMats,
@@ -111,7 +94,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	// If continueToTrace, there is nothing to do, just keep the same state
 	if (!continueToTrace) {
-		const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
+		const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
 		taskState->state = rayMiss ? MK_HIT_NOTHING : MK_HIT_OBJECT;
 	}
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -139,7 +122,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		return;
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
 	if (pathState != MK_HIT_NOTHING)
@@ -151,13 +133,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 
-	__global Sample *sample = &samples[gid];
-
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
 
-	__global Ray *ray = &rays[gid];
-	
 	//--------------------------------------------------------------------------
 	// End of variables setup
 	//--------------------------------------------------------------------------
@@ -168,12 +146,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	DirectHitInfiniteLight(
 			taskDirectLight->lastBSDFEvent,
 			&taskState->throughput,
-			VLOAD3F(&ray->d.x), taskDirectLight->lastPdfW,
-			&sample->result
+			VLOAD3F(&rays[gid].d.x), taskDirectLight->lastPdfW,
+			&samples[gid].result
 			LIGHTS_PARAM);
 #endif
 
 	if (taskState->depth == 1) {
+		__global Sample *sample = &samples[gid];
+
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sample->result.alpha = 0.f;
 #endif
@@ -222,7 +202,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		return;
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
 	if (pathState != MK_HIT_OBJECT)
@@ -232,17 +211,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-
 	__global BSDF *bsdf = &taskState->bsdf;
-
 	__global Sample *sample = &samples[gid];
 
-	// Initialize image maps page pointer table
-	INIT_IMAGEMAPS_PAGES
-
-	__global RayHit *rayHit = &rayHits[gid];
-	
 	//--------------------------------------------------------------------------
 	// End of variables setup
 	//--------------------------------------------------------------------------
@@ -254,7 +225,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.alpha = 1.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-		sample->result.depth = rayHit->t;
+		sample->result.depth = rayHits[gid]->t;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
 		sample->result.position = bsdf->hitPoint.p;
@@ -277,10 +248,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	// Check if it is a light source (note: I can hit only triangle area light sources)
 	if (BSDF_IsLightSource(bsdf)) {
+		__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+
+		// Initialize image maps page pointer table
+		INIT_IMAGEMAPS_PAGES
+
 		DirectHitFiniteLight(
 				taskDirectLight->lastBSDFEvent,
 				&taskState->throughput,
-				rayHit->t, bsdf, taskDirectLight->lastPdfW,
+				rayHits[gid].t, bsdf, taskDirectLight->lastPdfW,
 				&sample->result
 				LIGHTS_PARAM);
 	}
@@ -321,30 +297,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 
-	__global BSDF *bsdf = &taskState->bsdf;
-
-	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
-	// Used by Sampler_GetSamplePathVertex() macro
-	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, taskState->depth);
-#endif
-
-	// Read the seed
-	Seed seedValue;
-	seedValue.s1 = task->seed.s1;
-	seedValue.s2 = task->seed.s2;
-	seedValue.s3 = task->seed.s3;
-	// This trick is required by Sampler_GetSample() macro
-	Seed *seed = &seedValue;
-
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
-
-	__global Ray *ray = &rays[gid];
-	__global RayHit *rayHit = &rayHits[gid];
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -360,7 +314,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #if defined(PARAM_HAS_PASSTHROUGH)
 			taskDirectLight->rayPassThroughEvent,
 #endif
-			ray, rayHit, &task->tmpBsdf,
+			&rays[gid], &rayHits[gid], &task->tmpBsdf,
 			&taskDirectLight->illumInfo.lightRadiance,
 			NULL,
 			// BSDF_Init parameters
@@ -388,15 +342,17 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #else
 	false;
 #endif
-	const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
+	const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
 
 	// If continueToTrace, there is nothing to do, just keep the same state
 	if (!continueToTrace) {
+		__global Sample *sample = &samples[gid];
+
 		if (rayMiss) {
 			// Nothing was hit, the light source is visible
 
 			SampleResult_AddDirectLight(&sample->result, taskDirectLight->illumInfo.lightID,
-					BSDF_GetEventTypes(bsdf
+					BSDF_GetEventTypes(&taskState->bsdf
 						MATERIALS_PARAM),
 					VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c),
 					1.f);
@@ -419,13 +375,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		taskDirectLight->rayPassThroughEvent = fabs(taskDirectLight->rayPassThroughEvent - .5f) * 2.f;
 	}
 #endif
-
-	//--------------------------------------------------------------------------
-
-	// Save the seed
-	task->seed.s1 = seed->s1;
-	task->seed.s2 = seed->s2;
-	task->seed.s3 = seed->s3;
 }
 
 //------------------------------------------------------------------------------
@@ -452,8 +401,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-
 	const uint depth = taskState->depth;
 
 	__global BSDF *bsdf = &taskState->bsdf;
@@ -468,17 +415,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 #endif
 
 	// Read the seed
-	Seed seedValue;
-	seedValue.s1 = task->seed.s1;
-	seedValue.s2 = task->seed.s2;
-	seedValue.s3 = task->seed.s3;
+	Seed seedValue = task->seed;
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
 
+
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
-
-	__global Ray *ray = &rays[gid];
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -499,7 +442,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
 #endif
-				VLOAD3F(&bsdf->hitPoint.p.x), &taskDirectLight->illumInfo
+				VLOAD3F(&bsdf->hitPoint.p.x), &tasksDirectLight[gid].illumInfo
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
 		taskState->state = MK_DL_SAMPLE_BSDF;
@@ -512,9 +455,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	//--------------------------------------------------------------------------
 
 	// Save the seed
-	task->seed.s1 = seed->s1;
-	task->seed.s2 = seed->s2;
-	task->seed.s3 = seed->s3;
+	task->seed = seedValue;
 }
 
 //------------------------------------------------------------------------------
@@ -532,7 +473,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		return;
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskState *taskState = &tasksState[gid];
 	PathState pathState = taskState->state;
 	if (pathState != MK_DL_SAMPLE_BSDF)
@@ -542,46 +482,41 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-
 	const uint depth = taskState->depth;
-	__global BSDF *bsdf = &taskState->bsdf;
-
 	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
-#if (PARAM_SAMPLER_TYPE != 0)
-	// Used by Sampler_GetSamplePathVertex() macro
-	__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
-			sample, sampleDataPathBase, depth);
-#endif
-
-	// Read the seed
-	Seed seedValue;
-	seedValue.s1 = task->seed.s1;
-	seedValue.s2 = task->seed.s2;
-	seedValue.s3 = task->seed.s3;
-	// This trick is required by Sampler_GetSample() macro
-	Seed *seed = &seedValue;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
-
-	__global Ray *ray = &rays[gid];
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
 	if (DirectLight_BSDFSampling(
-			&taskDirectLight->illumInfo,
-			ray->time, sample->result.lastPathVertex, depth,
-			&taskState->throughput, bsdf,
-			ray
+			&tasksDirectLight[gid].illumInfo,
+			rays[gid].time, sample->result.lastPathVertex, depth,
+			&taskState->throughput, &taskState->bsdf,
+			&rays[gid]
 			LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
+		__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+#if (PARAM_SAMPLER_TYPE != 0)
+		// Used by Sampler_GetSamplePathVertex() macro
+		__global float *sampleDataPathVertexBase = Sampler_GetSampleDataPathVertex(
+				sample, sampleDataPathBase, depth);
+#endif
+		__global GPUTask *task = &tasks[gid];
+		Seed seedValue = task->seed;
+		// This trick is required by Sampler_GetSample() macro
+		Seed *seed = &seedValue;
+
+
 		// Initialize the pass-through event for the shadow ray
-		taskDirectLight->rayPassThroughEvent = Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A);
+		tasksDirectLight[gid].rayPassThroughEvent = Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_A);
+		
+		// Save the seed
+		task->seed = seedValue;
 #endif
 #if defined(PARAM_HAS_VOLUMES)
 		// Make a copy of current PathVolumeInfo for tracing the
@@ -595,13 +530,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		// however, I have to Check if this is the last path vertex
 		taskState->state = (sample->result.lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
 	}
-
-	//--------------------------------------------------------------------------
-
-	// Save the seed
-	task->seed.s1 = seed->s1;
-	task->seed.s2 = seed->s2;
-	task->seed.s3 = seed->s3;
 }
 
 //------------------------------------------------------------------------------
@@ -629,8 +557,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-
 	uint depth = taskState->depth;
 
 	__global BSDF *bsdf = &taskState->bsdf;
@@ -645,10 +571,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 #endif
 
 	// Read the seed
-	Seed seedValue;
-	seedValue.s1 = task->seed.s1;
-	seedValue.s2 = task->seed.s2;
-	seedValue.s3 = task->seed.s3;
+	Seed seedValue = task->seed;
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
 
@@ -706,8 +629,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 			sample->result.firstPathVertexEvent = event;
 
 		taskState->depth = depth;
-		taskDirectLight->lastBSDFEvent = event;
-		taskDirectLight->lastPdfW = lastPdfW;
+		tasksDirectLight[gid].lastBSDFEvent = event;
+		tasksDirectLight[gid].lastPdfW = lastPdfW;
 #if defined(PARAM_HAS_PASSTHROUGH)
 		// This is a bit tricky. I store the passThroughEvent in the BSDF
 		// before of the initialization because it can be use during the
@@ -729,16 +652,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	//--------------------------------------------------------------------------
 
 	// Save the seed
-	task->seed.s1 = seed->s1;
-	task->seed.s2 = seed->s2;
-	task->seed.s3 = seed->s3;
+	task->seed = seedValue;
 }
 
 //------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
 // From: MK_SPLAT_SAMPLE
-// To: MK_GENERATE_CAMERA_RAY
+// To: MK_NEXT_SAMPLE
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SPLAT_SAMPLE(
@@ -759,18 +680,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 
 	// Read the seed
-	Seed seedValue;
-	seedValue.s1 = task->seed.s1;
-	seedValue.s2 = task->seed.s2;
-	seedValue.s3 = task->seed.s3;
-	// This trick is required by Sampler_GetSample() macro
-	Seed *seed = &seedValue;
+	Seed seedValue = task->seed;
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -803,9 +717,55 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	filmRadianceGroup[7] = filmRadianceGroup7;
 #endif
 
-	Sampler_NextSample(seed, sample, sampleData
+	Sampler_SplatSample(&seedValue, sample, sampleData
 			FILM_PARAM);
 	taskStats[gid].sampleCount += 1;
+
+	// Save the state
+	taskState->state = MK_NEXT_SAMPLE;
+
+	//--------------------------------------------------------------------------
+
+	// Save the seed
+	task->seed = seedValue;
+}
+
+//------------------------------------------------------------------------------
+// Evaluation of the Path finite state machine.
+//
+// From: MK_NEXT_SAMPLE
+// To: MK_GENERATE_CAMERA_RAY
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NEXT_SAMPLE(
+		KERNEL_ARGS
+		) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Read the path state
+	__global GPUTask *task = &tasks[gid];
+	__global GPUTaskState *taskState = &tasksState[gid];
+	PathState pathState = taskState->state;
+	if (pathState != MK_NEXT_SAMPLE)
+		return;
+
+	//--------------------------------------------------------------------------
+	// Start of variables setup
+	//--------------------------------------------------------------------------
+
+	__global Sample *sample = &samples[gid];
+	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
+
+	// Read the seed
+	Seed seedValue = task->seed;
+
+	//--------------------------------------------------------------------------
+	// End of variables setup
+	//--------------------------------------------------------------------------
+
+	Sampler_NextSample(&seedValue, sample, sampleData, filmWidth, filmHeight);
 
 	// Save the state
 	taskState->state = MK_GENERATE_CAMERA_RAY;
@@ -813,9 +773,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	//--------------------------------------------------------------------------
 
 	// Save the seed
-	task->seed.s1 = seed->s1;
-	task->seed.s2 = seed->s2;
-	task->seed.s3 = seed->s3;
+	task->seed = seedValue;
 }
 
 //------------------------------------------------------------------------------
@@ -843,19 +801,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 
 	// Read the seed
-	Seed seedValue;
-	seedValue.s1 = task->seed.s1;
-	seedValue.s2 = task->seed.s2;
-	seedValue.s3 = task->seed.s3;
-	// This trick is required by Sampler_GetSample() macro
-	Seed *seed = &seedValue;
+	Seed seedValue = task->seed;
 
 	__global Ray *ray = &rays[gid];
 	
@@ -863,7 +813,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	GenerateCameraPath(taskDirectLight, taskState, sample, sampleData, camera, filmWidth, filmHeight, ray, seed);
+	GenerateCameraPath(&tasksDirectLight[gid], taskState, sample, sampleData, camera, filmWidth, filmHeight, ray, &seedValue);
 	// taskState->state is set to RT_NEXT_VERTEX inside GenerateCameraPath()
 
 	// Re-initialize the volume information
@@ -874,7 +824,5 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	//--------------------------------------------------------------------------
 
 	// Save the seed
-	task->seed.s1 = seed->s1;
-	task->seed.s2 = seed->s2;
-	task->seed.s3 = seed->s3;
+	task->seed = seedValue;
 }
