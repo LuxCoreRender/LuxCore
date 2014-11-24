@@ -298,6 +298,7 @@ public:
 	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
 
 	void DeleteLightSource(const std::string &name);
+	void DeleteLightSourceStartWith(const std::string &namePrefix);
   
 	u_int GetLightGroupCount() const { return lightGroupCount; }
 	const u_int GetLightTypeCount(const LightSourceType type) const { return lightTypeCount[type]; }
