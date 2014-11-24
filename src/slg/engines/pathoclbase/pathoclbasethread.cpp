@@ -885,7 +885,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	// Check if I have to recompile the kernels
 	string newKernelParameters = ss.str();
-	if (kernelsParameters != newKernelParameters) {
+	if ((kernelsParameters != newKernelParameters) ||
+			renderEngine->useDynamicCodeGenerationForTextures ||
+			renderEngine->useDynamicCodeGenerationForMaterials) {
 		kernelsParameters = newKernelParameters;
 
 		// Compile sources
@@ -1266,7 +1268,12 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	if (editActions.Has(MATERIAL_TYPES_EDIT))
+	// With dynamic code generation for textures and materials, I have to recompile the
+	// kernels even only one of the material/texture parameter change
+	if ((editActions.Has(MATERIALS_EDIT) && (
+			renderEngine->useDynamicCodeGenerationForTextures ||
+			renderEngine->useDynamicCodeGenerationForMaterials)) ||
+			editActions.Has(MATERIAL_TYPES_EDIT))
 		InitKernels();
 
 	if (editActions.HasAnyAction()) {

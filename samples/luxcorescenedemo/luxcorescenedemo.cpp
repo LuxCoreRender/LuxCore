@@ -346,6 +346,8 @@ int main(int argc, char *argv[]) {
 		DoRendering(session);
 		boost::filesystem::rename("image.png", "image3.png");
 
+		//----------------------------------------------------------------------
+
 		// Stop the rendering
 		session->Stop();
 
