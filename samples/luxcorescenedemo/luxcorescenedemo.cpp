@@ -268,7 +268,7 @@ int main(int argc, char *argv[]) {
 
 		RenderConfig *config = new RenderConfig(
 				Property("renderengine.type")("PATHCPU") <<
-				Property("sampler.type")("INLINED_RANDOM") <<
+				Property("sampler.type")("RANDOM") <<
 				Property("opencl.platform.index")(-1) <<
 				Property("opencl.cpu.use")(false) <<
 				Property("opencl.gpu.use")(true) <<
@@ -327,10 +327,7 @@ int main(int argc, char *argv[]) {
 		scene->Parse(
 			Property("scene.materials.mat_white.type")("matte") <<
 			Property("scene.materials.mat_white.kr")(.7f, .7f, .7f));
-		CreateBox(scene, "box03", "mesh-box03bis", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
-		// Note: scene->RemoveUnusedMeshes() can be avoided by calling scene->DeleteObject("box03")
-		// before CreateBox()
-		scene->RemoveUnusedMeshes();
+		CreateBox(scene, "box03", "mesh-box03", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
 
 		// Rotate the monkey: so he can look what is happen with the light source
 		// Set the initial values

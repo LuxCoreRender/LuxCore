@@ -503,9 +503,7 @@ void Scene::ParseObjects(const Properties &props) {
 				editActions.AddAction(LIGHTS_EDIT);
 
 				// Delete all old triangle lights
-				const ExtMesh *mesh = oldObj->GetExtMesh();
-				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-					lightDefs.DeleteLightSource(objName + "_triangle_light_" + ToString(i));
+				lightDefs.DeleteLightSourceStartWith(objName + "__triangle__light__");
 			}
 		}
 
@@ -527,7 +525,7 @@ void Scene::ParseObjects(const Properties &props) {
 				tl->triangleIndex = i;
 				tl->Preprocess();
 
-				lightDefs.DefineLightSource(objName + "_triangle_light_" + ToString(i), tl);
+				lightDefs.DefineLightSource(objName + "__triangle__light__" + ToString(i), tl);
 			}
 		}
 
