@@ -477,18 +477,18 @@ private:
 
 class MixMaterial : public Material {
 public:
-	MixMaterial(const Texture *bump,
+	MixMaterial(const Texture *emitted, const Texture *bump,
 			Material *mA, Material *mB, const Texture *mix) :
-			Material(NULL, bump), matA(mA), matB(mB), mixFactor(mix) { }
+			Material(emitted, bump), matA(mA), matB(mB), mixFactor(mix) { }
 
 	virtual MaterialType GetType() const { return MIX; }
 	virtual BSDFEvent GetEventTypes() const { return (matA->GetEventTypes() | matB->GetEventTypes()); };
 
 	virtual bool IsLightSource() const {
-		return (matA->IsLightSource() || matB->IsLightSource());
+		return (Material::IsLightSource() || matA->IsLightSource() || matB->IsLightSource());
 	}
 	virtual bool HasBumpTex() const { 
-		return (matA->HasBumpTex() || matB->HasBumpTex());
+		return (Material::HasBumpTex() || matA->HasBumpTex() || matB->HasBumpTex());
 	}
 
 	virtual bool IsDelta() const {

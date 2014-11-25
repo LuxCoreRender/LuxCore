@@ -14,6 +14,7 @@ scene.materials.mat1.volume.interior = vol1
 scene.materials.mat2.type = null
 scene.materials.mat2.volume.interior = vol2
 scene.materials.matmix.type = mix
+#scene.materials.matmix.emission = 40 40 40
 scene.materials.matmix.amount = 0.5
 scene.materials.matmix.material1 = mat1
 scene.materials.matmix.material2 = mat2
