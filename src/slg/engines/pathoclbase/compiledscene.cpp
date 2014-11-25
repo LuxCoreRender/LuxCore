@@ -2606,15 +2606,19 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				// Material_IndexN_GetEmittedRadiance()
 				source <<
 						"float3 Material_Index" << i << "_GetEmittedRadiance(__global Material *material, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL) {\n"
-						"\tfloat3 result = BLACK;\n"
-						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
-						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
-						"\tconst float weight1 = 1.f - weight2;\n"
-						"\tif (weight1 > 0.f)\n"
-						"\t	result += weight1 * Material_Index" <<  mat->mix.matAIndex << "_GetEmittedRadiance(&mats[" <<  mat->mix.matAIndex << "], hitPoint, oneOverPrimitiveArea MATERIALS_PARAM);\n"
-						"\tif (weight2 > 0.f)\n"
-						"\t	result += weight2 * Material_Index" <<  mat->mix.matBIndex << "_GetEmittedRadiance(&mats[" <<  mat->mix.matBIndex << "], hitPoint, oneOverPrimitiveArea MATERIALS_PARAM);\n"
-						"\treturn result;\n"
+						"\tif (material->emitTexIndex != NULL_INDEX) {\n"
+						"\t return Material_GetEmittedRadianceNoMix(material, hitPoint TEXTURES_PARAM);\n"
+						"\t} else {\n"
+						"\t float3 result = BLACK;\n"
+						"\t const float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
+						"\t const float weight2 = clamp(factor, 0.f, 1.f);\n"
+						"\t const float weight1 = 1.f - weight2;\n"
+						"\t if (weight1 > 0.f)\n"
+						"\t 	result += weight1 * Material_Index" <<  mat->mix.matAIndex << "_GetEmittedRadiance(&mats[" <<  mat->mix.matAIndex << "], hitPoint, oneOverPrimitiveArea MATERIALS_PARAM);\n"
+						"\t if (weight2 > 0.f)\n"
+						"\t 	result += weight2 * Material_Index" <<  mat->mix.matBIndex << "_GetEmittedRadiance(&mats[" <<  mat->mix.matBIndex << "], hitPoint, oneOverPrimitiveArea MATERIALS_PARAM);\n"
+						"\t return result;\n"
+						"\t}\n"
 						"}\n";
 
 				// Material_IndexN_GetPassThroughTransparency()

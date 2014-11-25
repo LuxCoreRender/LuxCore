@@ -251,46 +251,52 @@ float3 MixMaterial_Sample(__global Material *material,
 
 float3 MixMaterial_GetEmittedRadiance(__global Material *material, __global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
-	__global Material *materialStack[MIX_STACK_SIZE];
-	float totalWeightStack[MIX_STACK_SIZE];
+	if (material->emitTexIndex != NULL_INDEX) {
+        // Use this mix node emission
+        return Material_GetEmittedRadianceNoMix(material, hitPoint
+                TEXTURES_PARAM);
+    } else {
+		__global Material *materialStack[MIX_STACK_SIZE];
+		float totalWeightStack[MIX_STACK_SIZE];
 
-	// Push the root Mix material
-	materialStack[0] = material;
-	totalWeightStack[0] = 1.f;
-	int stackIndex = 0;
+		// Push the root Mix material
+		materialStack[0] = material;
+		totalWeightStack[0] = 1.f;
+		int stackIndex = 0;
 
-	// Setup the results
-	float3 result = BLACK;
+		// Setup the results
+		float3 result = BLACK;
 
-	while (stackIndex >= 0) {
-		// Extract a material from the stack
-		__global Material *m = materialStack[stackIndex];
-		float totalWeight = totalWeightStack[stackIndex--];
+		while (stackIndex >= 0) {
+			// Extract a material from the stack
+			__global Material *m = materialStack[stackIndex];
+			float totalWeight = totalWeightStack[stackIndex--];
 
-		if (m->type == MIX) {
-			const float factor = Texture_GetFloatValue(m->mix.mixFactorTexIndex, hitPoint
+			if (m->type == MIX) {
+				const float factor = Texture_GetFloatValue(m->mix.mixFactorTexIndex, hitPoint
+						TEXTURES_PARAM);
+				const float weight2 = clamp(factor, 0.f, 1.f);
+				const float weight1 = 1.f - weight2;
+
+				if (weight1 > 0.f) {
+					materialStack[++stackIndex] = &mats[m->mix.matAIndex];
+					totalWeightStack[stackIndex] = totalWeight * weight1;
+				}
+
+				if (weight2 > 0.f) {
+					materialStack[++stackIndex] = &mats[m->mix.matBIndex];
+					totalWeightStack[stackIndex] = totalWeight * weight2;
+				}
+			} else {
+				const float3 emitRad = Material_GetEmittedRadianceNoMix(m, hitPoint
 					TEXTURES_PARAM);
-			const float weight2 = clamp(factor, 0.f, 1.f);
-			const float weight1 = 1.f - weight2;
-
-			if (weight1 > 0.f) {
-				materialStack[++stackIndex] = &mats[m->mix.matAIndex];
-				totalWeightStack[stackIndex] = totalWeight * weight1;
+				if (!Spectrum_IsBlack(emitRad))
+					result += totalWeight * emitRad;
 			}
-
-			if (weight2 > 0.f) {
-				materialStack[++stackIndex] = &mats[m->mix.matBIndex];
-				totalWeightStack[stackIndex] = totalWeight * weight2;
-			}
-		} else {
-			const float3 emitRad = Material_GetEmittedRadianceNoMix(m, hitPoint
-				TEXTURES_PARAM);
-			if (!Spectrum_IsBlack(emitRad))
-				result += totalWeight * emitRad;
 		}
+
+		return result;
 	}
-	
-	return result;
 }
 
 #if defined(PARAM_HAS_BUMPMAPS)

@@ -1178,7 +1178,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Material *matB = matDefs.GetMaterial(props.Get(Property(propName + ".material2")("mat2")).Get<string>());
 		const Texture *mix = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
-		MixMaterial *mixMat = new MixMaterial(bumpTex, matA, matB, mix);
+		MixMaterial *mixMat = new MixMaterial(emissionTex, bumpTex, matA, matB, mix);
 
 		// Check if there is a loop in Mix material definition
 		// (Note: this can not really happen at the moment because forward

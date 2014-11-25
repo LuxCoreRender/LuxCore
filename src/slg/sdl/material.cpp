@@ -795,21 +795,28 @@ Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 }
 
 float MixMaterial::GetEmittedRadianceY() const {
-	return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(), matB->GetEmittedRadianceY());
+	if (emittedTex)
+		return Material::GetEmittedRadianceY();
+	else
+		return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(), matB->GetEmittedRadianceY());
 }
 
 Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
-	Spectrum result;
+	if (emittedTex)
+		return Material::GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
+	else {
+		Spectrum result;
 
-	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
-	const float weight1 = 1.f - weight2;
+		const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
 
-	if (matA->IsLightSource() && (weight1 > 0.f))
-		result += weight1 * matA->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
-	if (matB->IsLightSource() && (weight2 > 0.f))
-		result += weight2 * matB->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
+		if (matA->IsLightSource() && (weight1 > 0.f))
+			result += weight1 * matA->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
+		if (matB->IsLightSource() && (weight2 > 0.f))
+			result += weight2 * matB->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
 
-	return result;
+		return result;
+	}
 }
 
 void MixMaterial::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,
