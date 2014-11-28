@@ -228,7 +228,7 @@ std::string KernelSource_pathocl_kernels_micro =
 "		sample->result.alpha = 1.f;\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)\n"
-"		sample->result.depth = rayHits[gid]->t;\n"
+"		sample->result.depth = rayHits[gid].t;\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)\n"
 "		sample->result.position = bsdf->hitPoint.p;\n"

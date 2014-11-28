@@ -225,7 +225,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.alpha = 1.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-		sample->result.depth = rayHits[gid]->t;
+		sample->result.depth = rayHits[gid].t;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
 		sample->result.position = bsdf->hitPoint.p;
