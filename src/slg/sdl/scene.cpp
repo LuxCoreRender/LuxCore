@@ -503,9 +503,7 @@ void Scene::ParseObjects(const Properties &props) {
 				editActions.AddAction(LIGHTS_EDIT);
 
 				// Delete all old triangle lights
-				const ExtMesh *mesh = oldObj->GetExtMesh();
-				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-					lightDefs.DeleteLightSource(objName + "_triangle_light_" + ToString(i));
+				lightDefs.DeleteLightSourceStartWith(objName + "__triangle__light__");
 			}
 		}
 
@@ -527,7 +525,7 @@ void Scene::ParseObjects(const Properties &props) {
 				tl->triangleIndex = i;
 				tl->Preprocess();
 
-				lightDefs.DefineLightSource(objName + "_triangle_light_" + ToString(i), tl);
+				lightDefs.DefineLightSource(objName + "__triangle__light__" + ToString(i), tl);
 			}
 		}
 
@@ -1180,7 +1178,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		Material *matB = matDefs.GetMaterial(props.Get(Property(propName + ".material2")("mat2")).Get<string>());
 		const Texture *mix = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
-		MixMaterial *mixMat = new MixMaterial(bumpTex, matA, matB, mix);
+		MixMaterial *mixMat = new MixMaterial(emissionTex, bumpTex, matA, matB, mix);
 
 		// Check if there is a loop in Mix material definition
 		// (Note: this can not really happen at the moment because forward

@@ -555,8 +555,10 @@ Properties GlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("glass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+	if (exteriorIor)
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	if (interiorIor)
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Material::ToProperties());
 
 	return props;
@@ -795,21 +797,28 @@ Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 }
 
 float MixMaterial::GetEmittedRadianceY() const {
-	return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(), matB->GetEmittedRadianceY());
+	if (emittedTex)
+		return Material::GetEmittedRadianceY();
+	else
+		return luxrays::Lerp(mixFactor->Y(), matA->GetEmittedRadianceY(), matB->GetEmittedRadianceY());
 }
 
 Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
-	Spectrum result;
+	if (emittedTex)
+		return Material::GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
+	else {
+		Spectrum result;
 
-	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
-	const float weight1 = 1.f - weight2;
+		const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
 
-	if (matA->IsLightSource() && (weight1 > 0.f))
-		result += weight1 * matA->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
-	if (matB->IsLightSource() && (weight2 > 0.f))
-		result += weight2 * matB->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
+		if (matA->IsLightSource() && (weight1 > 0.f))
+			result += weight1 * matA->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
+		if (matB->IsLightSource() && (weight2 > 0.f))
+			result += weight2 * matB->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
 
-	return result;
+		return result;
+	}
 }
 
 void MixMaterial::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,
@@ -1855,11 +1864,11 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 	const Spectrum kVal = k->GetSpectrumValue(hitPoint);
 	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
-	float factor = (d / *pdfW) * G * fabsf(cosWH);
+	float factor = (d / specPdf) * G * fabsf(cosWH);
 	if (!hitPoint.fromLight)
-		factor /= 4.f * coso;
+		factor /= coso;
 	else
-		factor /= 4.f * cosi;
+		factor /= cosi;
 
 	*event = GLOSSY | REFLECT;
 
@@ -1869,7 +1878,6 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 void Metal2Material::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
 	const float u2 = u * u;

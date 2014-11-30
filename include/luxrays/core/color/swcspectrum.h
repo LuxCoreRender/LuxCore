@@ -40,9 +40,17 @@ public:
 
 	// VS2013 generates invalid code for the default copy constructor here
 	// when the Inline Function Expansion optimization is enabled.
+	//
+	// Now the problem seems to be present with GCC 4.8 too.
+
+	SWCSpectrum(const SWCSpectrum &s) {
 #if defined (WIN32)
-	SWCSpectrum(const SWCSpectrum &s) { std::copy(s.c, s.c + WAVELENGTH_SAMPLES, c); }
+		std::copy(s.c, s.c + WAVELENGTH_SAMPLES, c);
+#else
+		for (int i = 0; i < WAVELENGTH_SAMPLES; ++i)
+			c[i] = s.c[i];
 #endif
+	}
 
 	SWCSpectrum(const SpectrumWavelengths &sw, const RGBColor &s);
 

@@ -125,9 +125,9 @@ float3 Metal2Material_ConstSample(
 	
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 
-	float factor = (d / *pdfW) * G * fabs(cosWH);
+	float factor = (d / specPdf) * G * fabs(cosWH);
 	//if (!fromLight)
-		factor /= 4.f * coso;
+		factor /= coso;
 	//else
 	//	factor /= cosi;
 

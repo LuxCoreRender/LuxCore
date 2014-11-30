@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <boost/format.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "luxrays/core/geometry/frame.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
@@ -234,6 +235,20 @@ void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
 	--lightTypeCount[lights[index]->GetType()];
 	lights.erase(lights.begin() + index);
 	lightsByName.erase(name);
+}
+
+void LightSourceDefinitions::DeleteLightSourceStartWith(const std::string &namePrefix) {
+	// Build the list of lights to delete
+	vector<const string *> nameList;
+	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
+		const string &name = itr->first;
+
+		if (boost::starts_with(name, namePrefix))
+			nameList.push_back(&name);
+	}
+	
+	BOOST_FOREACH(const string *name, nameList)
+		DeleteLightSource(*name);
 }
 
 void LightSourceDefinitions::SetLightStrategy(const LightStrategyType type) {

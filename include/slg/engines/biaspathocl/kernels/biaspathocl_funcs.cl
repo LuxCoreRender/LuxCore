@@ -1720,7 +1720,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	// Radiance clamping
 	//--------------------------------------------------------------------------
 
-	SR_RadianceClamp(sampleResult);
+	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
+		// Radiance clamping
+		SR_RadianceClamp(sampleResult);
+	}
 
 	//--------------------------------------------------------------------------
 	// Merge all samples and accumulate statistics
