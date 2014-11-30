@@ -426,7 +426,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 		const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath && !maxPathDepth;
 		if (continuePath) {
-			float3 throughput = VLOAD3F(taskState->throughput.c);
+			float3 throughput = VLOAD3F(taskState->throughput.c) *
+					((event & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE));
 			throughput *= bsdfSample;
 			if (rrEnabled)
 				throughput /= rrProb; // Russian Roulette
@@ -502,8 +503,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 		filmRadianceGroup[7] = filmRadianceGroup7;
 #endif
 
-		Sampler_NextSample(seed, sample, sampleData
-				FILM_PARAM);
+		if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
+			// Radiance clamping
+			SampleResult_ClampRadiance(&sample->result, PARAM_RADIANCE_CLAMP_MAXVALUE);
+		}
+
+		Sampler_SplatSample(&seedValue, sample, sampleData
+			FILM_PARAM);
+		Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight);
 		taskStats[gid].sampleCount += 1;
 
 		GenerateCameraPath(taskDirectLight, taskState, sample, sampleData, camera, filmWidth, filmHeight, ray, seed);

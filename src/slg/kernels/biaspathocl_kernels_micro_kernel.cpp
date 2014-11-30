@@ -509,6 +509,8 @@ std::string KernelSource_biaspathocl_kernels_micro =
 "			// Light related parameters\n"
 "			LIGHTS_PARAM);\n"
 "\n"
+"	task->pathState = MK_DONE;\n"
+"\n"
 "	// Save the seed\n"
 "	task->seed.s1 = seed.s1;\n"
 "	task->seed.s2 = seed.s2;\n"

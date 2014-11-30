@@ -606,7 +606,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath && !maxPathDepth;
 	if (continuePath) {
-		float3 throughput = VLOAD3F(taskState->throughput.c);
+		float3 throughput = VLOAD3F(taskState->throughput.c) *
+				((event & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE));
 		throughput *= bsdfSample;
 		if (rrEnabled)
 			throughput /= rrProb; // Russian Roulette
@@ -716,6 +717,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
 	filmRadianceGroup[7] = filmRadianceGroup7;
 #endif
+
+	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
+		// Radiance clamping
+		SampleResult_ClampRadiance(&sample->result, PARAM_RADIANCE_CLAMP_MAXVALUE);
+	}
 
 	Sampler_SplatSample(&seedValue, sample, sampleData
 			FILM_PARAM);

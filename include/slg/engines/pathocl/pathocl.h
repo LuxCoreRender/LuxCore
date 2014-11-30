@@ -118,6 +118,10 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
+	// Clamping settings
+	float radianceClampMaxValue;
+	float pdfClampValue;
+
 	u_int taskCount;
 	bool usePixelAtomics, useMicroKernels;
 
