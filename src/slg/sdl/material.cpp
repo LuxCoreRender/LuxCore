@@ -1864,11 +1864,11 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 	const Spectrum kVal = k->GetSpectrumValue(hitPoint);
 	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
 
-	float factor = (d / *pdfW) * G * fabsf(cosWH);
+	float factor = (d / specPdf) * G * fabsf(cosWH);
 	if (!hitPoint.fromLight)
-		factor /= 4.f * coso;
+		factor /= coso;
 	else
-		factor /= 4.f * cosi;
+		factor /= cosi;
 
 	*event = GLOSSY | REFLECT;
 
@@ -1878,7 +1878,6 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 void Metal2Material::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-
 	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
 	const float u2 = u * u;
