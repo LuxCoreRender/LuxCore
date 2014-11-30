@@ -506,6 +506,8 @@ void RenderSample_MK_BSDF_SAMPLE(
 			// Light related parameters
 			LIGHTS_PARAM);
 
+	task->pathState = MK_DONE;
+
 	// Save the seed
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;

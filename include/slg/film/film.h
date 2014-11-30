@@ -303,6 +303,11 @@ public:
 	void AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
 		const luxrays::Spectrum &radiance, const float lightScale);
 
+	void ClampRadiance(const float cap) {
+		for (u_int i = 0; i < radiancePerPixelNormalized.size(); ++i)
+			radiancePerPixelNormalized[i] = radiancePerPixelNormalized[i].Clamp(0.f, cap);
+	}
+	
 	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
 		const float filmX, const float filmY,
 		const luxrays::Spectrum &radiancePPN,
