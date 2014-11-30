@@ -271,8 +271,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 	RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
 	boost::barrier *frameBarrier = engine->frameBarrier;
-	const u_int tileSize = engine->tileRepository->tileSize;
-	const u_int threadFilmPixelCount = tileSize * tileSize;
+	const u_int tileWidth = engine->tileRepository->tileWidth;
+	const u_int tileHeight = engine->tileRepository->tileHeight;
+	const u_int threadFilmPixelCount = tileWidth * tileHeight;
 	const u_int taskCount = engine->taskCount;
 	const u_int engineFilmPixelCount = engine->film->GetWidth() * engine->film->GetHeight();
 
@@ -308,12 +309,13 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 			TileRepository::Tile *tile = NULL;
 			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilm)) {
+				//const double t0 = WallClockTime();
 				threadFilm->Reset();
-				//const u_int tileWidth = Min(engine->tileRepository->tileSize, engine->film->GetWidth() - tile->xStart);
-				//const u_int tileHeight = Min(engine->tileRepository->tileSize, engine->film->GetHeight() - tile->yStart);
-				//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
+				//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tile->xStart);
+				//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tile->yStart);
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 				//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-				//		"(" << tileWidth << ", " << tileHeight << ") [" << tile->sampleIndex << "]");
+				//		"(" << tileW << ", " << tileH << ")");
 
 				// Clear the frame buffer
 				currentQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
@@ -326,19 +328,11 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(initStatWorkGroupSize));
 
 				// Render the tile
-				{
-					boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
-					renderSampleKernel->setArg(0, tile->xStart);
-					renderSampleKernel->setArg(1, tile->yStart);
-
-					mergePixelSamplesKernel->setArg(0, tile->xStart);
-					mergePixelSamplesKernel->setArg(1, tile->yStart);
-				}
+				UpdateRenderSampleKernelArgs(tile->xStart, tile->yStart);
 
 				// Render all pixel samples
-				currentQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-						cl::NDRange(renderSampleWorkGroupSize));
+				EnqueueRenderSampleKernel(currentQueue);
+
 				// Merge all pixel samples and accumulate statistics
 				currentQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(threadFilmPixelCount, mergePixelSamplesWorkGroupSize)),
@@ -366,6 +360,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					tracedRaysCount += gpuTaskStats[i].raysCount;
 
 				intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
+				
+				//const double t1 = WallClockTime();
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
 			}
 
 			//------------------------------------------------------------------
@@ -442,9 +439,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				currentQueue.finish();
 			}
 
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 			// Update OpenCL buffers if there is any edit action
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			if (amiDisplayThread) {
 				engine->editCanStart.notify_one();

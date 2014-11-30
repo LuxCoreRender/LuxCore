@@ -48,10 +48,22 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 
 	initKernel = NULL;
 	advancePathsKernel = NULL;
+	advancePathsKernel_MK_RT_NEXT_VERTEX = NULL;
+	advancePathsKernel_MK_HIT_NOTHING = NULL;
+	advancePathsKernel_MK_HIT_OBJECT = NULL;
+	advancePathsKernel_MK_RT_DL = NULL;
+	advancePathsKernel_MK_DL_ILLUMINATE = NULL;
+	advancePathsKernel_MK_DL_SAMPLE_BSDF = NULL;
+	advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY = NULL;
+	advancePathsKernel_MK_SPLAT_SAMPLE = NULL;
+	advancePathsKernel_MK_NEXT_SAMPLE = NULL;
+	advancePathsKernel_MK_GENERATE_CAMERA_RAY = NULL;
 
 	raysBuff = NULL;
 	hitsBuff = NULL;
 	tasksBuff = NULL;
+	tasksDirectLightBuff = NULL;
+	tasksStateBuff = NULL;
 	samplesBuff = NULL;
 	sampleDataBuff = NULL;
 	taskStatsBuff = NULL;
@@ -67,6 +79,16 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 
 	delete initKernel;
 	delete advancePathsKernel;
+	delete advancePathsKernel_MK_RT_NEXT_VERTEX;
+	delete advancePathsKernel_MK_HIT_NOTHING;
+	delete advancePathsKernel_MK_HIT_OBJECT;
+	delete advancePathsKernel_MK_RT_DL;
+	delete advancePathsKernel_MK_DL_ILLUMINATE;
+	delete advancePathsKernel_MK_DL_SAMPLE_BSDF;
+	delete advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
+	delete advancePathsKernel_MK_SPLAT_SAMPLE;
+	delete advancePathsKernel_MK_NEXT_SAMPLE;
+	delete advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 
 	delete[] gpuTaskStats;
 }
@@ -187,23 +209,58 @@ string PathOCLRenderThread::AdditionalKernelSources() {
 	stringstream ssKernel;
 	ssKernel <<
 		slg::ocl::KernelSource_pathocl_datatypes <<
-		slg::ocl::KernelSource_pathocl_kernels;
+		slg::ocl::KernelSource_pathocl_funcs;
 
+	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
+	if (engine->useMicroKernels)
+		ssKernel << slg::ocl::KernelSource_pathocl_kernels_micro;
+	else
+		ssKernel << slg::ocl::KernelSource_pathocl_kernels_mega;
+	
 	return ssKernel.str();
 }
 
 void PathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
-	//----------------------------------------------------------------------
+	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
+
+	//--------------------------------------------------------------------------
 	// Init kernel
-	//----------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	CompileKernel(program, &initKernel, &initWorkGroupSize, "Init");
 
-	//----------------------------------------------------------------------
-	// AdvancePaths kernel
-	//----------------------------------------------------------------------
+	if (engine->useMicroKernels) {
+		//----------------------------------------------------------------------
+		// AdvancePaths kernel (Micro-Kernels)
+		//----------------------------------------------------------------------
 
-	CompileKernel(program, &advancePathsKernel, &advancePathsWorkGroupSize, "AdvancePaths");
+		CompileKernel(program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_RT_NEXT_VERTEX");
+		CompileKernel(program, &advancePathsKernel_MK_HIT_NOTHING, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_HIT_NOTHING");
+		CompileKernel(program, &advancePathsKernel_MK_HIT_OBJECT, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_HIT_OBJECT");
+		CompileKernel(program, &advancePathsKernel_MK_RT_DL, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_RT_DL");
+		CompileKernel(program, &advancePathsKernel_MK_DL_ILLUMINATE, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_DL_ILLUMINATE");
+		CompileKernel(program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_DL_SAMPLE_BSDF");
+		CompileKernel(program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
+		CompileKernel(program, &advancePathsKernel_MK_SPLAT_SAMPLE, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_SPLAT_SAMPLE");
+		CompileKernel(program, &advancePathsKernel_MK_NEXT_SAMPLE, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_NEXT_SAMPLE");
+		CompileKernel(program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &advancePathsWorkGroupSize,
+				"AdvancePaths_MK_GENERATE_CAMERA_RAY");
+	} else {
+		//----------------------------------------------------------------------
+		// AdvancePaths kernel (Mega-Kernel)
+		//----------------------------------------------------------------------
+
+		CompileKernel(program, &advancePathsKernel, &advancePathsWorkGroupSize, "AdvancePaths");
+	}
 }
 
 void PathOCLRenderThread::InitGPUTaskBuffer() {
@@ -212,34 +269,53 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	const bool hasPassThrough = engine->compiledScene->RequiresPassThrough();
 	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
 
+	//--------------------------------------------------------------------------
+	// Allocate tasksBuff
+	//--------------------------------------------------------------------------
+	
 	// Add Seed memory size
-	size_t gpuTaksSize = sizeof(slg::ocl::Seed);
-
-	// Add PathStateBase memory size
-	gpuTaksSize += sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
-
-	// Add PathStateBase.BSDF memory size
-	gpuTaksSize += openCLBSDFSize;
-
-	// Add PathStateDirectLight memory size
-	gpuTaksSize += sizeof(Spectrum) + sizeof(u_int) + sizeof(BSDFEvent) + sizeof(float);
-
-	// Add directLightRayPassThroughEvent memory size
-	if (hasPassThrough)
-		gpuTaksSize += sizeof(float);
+	size_t gpuTaskSize = sizeof(slg::ocl::Seed);
 
 	// Add temporary storage space
 	
 	// Add tmpBsdf memory size
 	if (hasPassThrough || engine->compiledScene->HasVolumes())
-		gpuTaksSize += openCLBSDFSize;
+		gpuTaskSize += openCLBSDFSize;
 
 	// Add tmpHitPoint memory size
 	if ((engine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0) || engine->compiledScene->HasVolumes())
-		gpuTaksSize += GetOpenCLHitPointSize();
+		gpuTaskSize += GetOpenCLHitPointSize();
 
-	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaksSize << "bytes");
-	AllocOCLBufferRW(&tasksBuff, gpuTaksSize * taskCount, "GPUTask");
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaskSize << "bytes");
+	AllocOCLBufferRW(&tasksBuff, gpuTaskSize * taskCount, "GPUTask");
+
+	//--------------------------------------------------------------------------
+	// Allocate tasksDirectLightBuff
+	//--------------------------------------------------------------------------
+
+	size_t gpuDirectLightTaskSize = 
+			sizeof(slg::ocl::pathocl::DirectLightIlluminateInfo) + 
+			sizeof(BSDFEvent) + 
+			sizeof(float);
+
+	// Add rayPassThroughEvent memory size
+	if (hasPassThrough)
+		gpuDirectLightTaskSize += sizeof(float);
+
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask DirectLight: " << gpuDirectLightTaskSize << "bytes");
+	AllocOCLBufferRW(&tasksDirectLightBuff, gpuDirectLightTaskSize * taskCount, "GPUTaskDirectLight");
+
+	//--------------------------------------------------------------------------
+	// Allocate tasksStateBuff
+	//--------------------------------------------------------------------------
+	
+	size_t gpuTaksStateSize = sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
+
+	// Add BSDF memory size
+	gpuTaksStateSize += openCLBSDFSize;
+
+	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a GPUTask State: " << gpuTaksStateSize << "bytes");
+	AllocOCLBufferRW(&tasksStateBuff, gpuTaksStateSize * taskCount, "GPUTaskState");
 }
 
 void PathOCLRenderThread::InitSamplesBuffer() {
@@ -369,22 +445,14 @@ void PathOCLRenderThread::AdditionalInit() {
 	}
 }
 
-void PathOCLRenderThread::SetAdditionalKernelArgs() {
-	// Set OpenCL kernel arguments
-
-	// OpenCL kernel setArg() is the only non thread safe function in OpenCL 1.1 so
-	// I need to use a mutex here
+void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
-	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
-
-	//--------------------------------------------------------------------------
-	// advancePathsKernel
-	//--------------------------------------------------------------------------
-
 	CompiledScene *cscene = engine->compiledScene;
 
 	u_int argIndex = 0;
 	advancePathsKernel->setArg(argIndex++, *tasksBuff);
+	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
+	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
 	advancePathsKernel->setArg(argIndex++, *samplesBuff);
 	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
@@ -438,14 +506,53 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 			advancePathsKernel->setArg(argIndex++, *(imageMapsBuff[i]));
 	}
+}
+
+void PathOCLRenderThread::SetAdditionalKernelArgs() {
+	// Set OpenCL kernel arguments
+
+	// OpenCL kernel setArg() is the only non thread safe function in OpenCL 1.1 so
+	// I need to use a mutex here
+	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
+	CompiledScene *cscene = engine->compiledScene;
+	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+
+	//--------------------------------------------------------------------------
+	// advancePathsKernel
+	//--------------------------------------------------------------------------
+
+	if (advancePathsKernel)
+		SetAdvancePathsKernelArgs(advancePathsKernel);
+	if (advancePathsKernel_MK_RT_NEXT_VERTEX)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_NEXT_VERTEX);
+	if (advancePathsKernel_MK_HIT_NOTHING)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_NOTHING);
+	if (advancePathsKernel_MK_HIT_OBJECT)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_OBJECT);
+	if (advancePathsKernel_MK_RT_DL)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_DL);
+	if (advancePathsKernel_MK_DL_ILLUMINATE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_ILLUMINATE);
+	if (advancePathsKernel_MK_DL_SAMPLE_BSDF)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_SAMPLE_BSDF);
+	if (advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY);
+	if (advancePathsKernel_MK_SPLAT_SAMPLE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_SPLAT_SAMPLE);
+	if (advancePathsKernel_MK_NEXT_SAMPLE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_NEXT_SAMPLE);
+	if (advancePathsKernel_MK_GENERATE_CAMERA_RAY)
+		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_CAMERA_RAY);
 
 	//--------------------------------------------------------------------------
 	// initKernel
 	//--------------------------------------------------------------------------
 
-	argIndex = 0;
+	u_int argIndex = 0;
 	initKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
 	initKernel->setArg(argIndex++, *tasksBuff);
+	initKernel->setArg(argIndex++, *tasksDirectLightBuff);
+	initKernel->setArg(argIndex++, *tasksStateBuff);
 	initKernel->setArg(argIndex++, *taskStatsBuff);
 	initKernel->setArg(argIndex++, *samplesBuff);
 	initKernel->setArg(argIndex++, *sampleDataBuff);
@@ -463,11 +570,57 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&raysBuff);
 	FreeOCLBuffer(&hitsBuff);
 	FreeOCLBuffer(&tasksBuff);
+	FreeOCLBuffer(&tasksDirectLightBuff);
+	FreeOCLBuffer(&tasksStateBuff);
 	FreeOCLBuffer(&samplesBuff);
 	FreeOCLBuffer(&sampleDataBuff);
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&pathVolInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
+}
+
+void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
+	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
+	const u_int taskCount = engine->taskCount;
+
+	if (engine->useMicroKernels) {
+		// Micro kernels version
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_NOTHING, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_OBJECT, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_DL, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_ILLUMINATE, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_SAMPLE_BSDF, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_SPLAT_SAMPLE, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_NEXT_SAMPLE, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_CAMERA_RAY, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+	} else {
+		// Mega kernel version
+		oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
+				cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
+				cl::NDRange(advancePathsWorkGroupSize));
+	}
 }
 
 void PathOCLRenderThread::RenderThreadImpl() {
@@ -541,9 +694,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 							*(hitsBuff), taskCount, NULL, (i == 0) ? &event : NULL);
 
 					// Advance to next path state
-					oclQueue.enqueueNDRangeKernel(*advancePathsKernel, cl::NullRange,
-							cl::NDRange(RoundUp<u_int>(taskCount, advancePathsWorkGroupSize)),
-							cl::NDRange(advancePathsWorkGroupSize));
+					EnqueueAdvancePathsKernel(oclQueue);
 				}
 				oclQueue.flush();
 				totalIterations += (u_int)iterations;

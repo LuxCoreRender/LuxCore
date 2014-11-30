@@ -43,44 +43,65 @@
 //------------------------------------------------------------------------------
 
 typedef enum {
-	RT_NEXT_VERTEX,
-	GENERATE_DL_RAY,
-	RT_DL,
-	GENERATE_NEXT_VERTEX_RAY,
-	SPLAT_SAMPLE
+	// Mega-kernel states
+	RT_NEXT_VERTEX = 0,
+	GENERATE_DL_RAY = 1,
+	RT_DL = 2,
+	GENERATE_NEXT_VERTEX_RAY = 3,
+	SPLAT_SAMPLE = 4,
+			
+	// Micro-kernel states
+	MK_RT_NEXT_VERTEX = 0, // Must have the same value of RT_NEXT_VERTEX
+	MK_HIT_NOTHING = 1,
+	MK_HIT_OBJECT = 2,
+	MK_DL_ILLUMINATE = 3,
+	MK_DL_SAMPLE_BSDF = 4,
+	MK_RT_DL = 5,
+	MK_GENERATE_NEXT_VERTEX_RAY = 6,
+	MK_SPLAT_SAMPLE = 7,
+	MK_NEXT_SAMPLE = 8,
+	MK_GENERATE_CAMERA_RAY = 9
 } PathState;
+
+typedef struct {
+	unsigned int lightIndex;	
+	float pickPdf;
+
+	Vector dir;
+	float distance, directPdfW;
+
+	// Radiance to add to the result if light source is visible
+	Spectrum lightRadiance;
+	unsigned int lightID;
+} DirectLightIlluminateInfo;
 
 // This is defined only under OpenCL because of variable size structures
 #if defined(SLG_OPENCL_KERNEL)
 
+// The state used to keep track of the rendered path
 typedef struct {
 	PathState state;
 	unsigned int depth;
 
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure
-} PathStateBase;
+} GPUTaskState;
 
 typedef struct {
-	// Radiance to add to the result if light source is visible
-	Spectrum lightRadiance;
-	uint lightID;
+	// Used to store some intermediate result
+	DirectLightIlluminateInfo illumInfo;
 
 	BSDFEvent lastBSDFEvent;
 	float lastPdfW;
-} PathStateDirectLight;
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	float rayPassThroughEvent;
+#endif
+} GPUTaskDirectLight;
 
 typedef struct {
 	// The task seed
 	Seed seed;
-
-	// The state used to keep track of the rendered path
-	PathStateBase pathStateBase;
-	PathStateDirectLight directLightState;
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-	float directLightRayPassThroughEvent;
-#endif
 
 	// Space for temporary storage
 #if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)

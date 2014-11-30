@@ -76,9 +76,12 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	maxPathDepth.specularDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.specular")(2)).Get<int>());
 
 	// Samples settings
-	aaSamples = Max(1, cfg.Get(Property("biaspath.sampling.aa.size")(3)).Get<int>());
-	diffuseSamples = Max(0, cfg.Get(Property("biaspath.sampling.diffuse.size")(2)).Get<int>());
-	glossySamples = Max(0, cfg.Get(Property("biaspath.sampling.glossy.size")(2)).Get<int>());
+	aaSamples = Max(1, cfg.Get(Property("biaspath.sampling.aa.size")(
+			(GetEngineType() == RTBIASPATHOCL) ? 1 : 3)).Get<int>());
+	diffuseSamples = Max(0, cfg.Get(Property("biaspath.sampling.diffuse.size")(
+			(GetEngineType() == RTBIASPATHOCL) ? 1 : 2)).Get<int>());
+	glossySamples = Max(0, cfg.Get(Property("biaspath.sampling.glossy.size")(
+			(GetEngineType() == RTBIASPATHOCL) ? 1 : 2)).Get<int>());
 	specularSamples = Max(0, cfg.Get(Property("biaspath.sampling.specular.size")(1)).Get<int>());
 	directLightSamples = Max(1, cfg.Get(Property("biaspath.sampling.directlight.size")(1)).Get<int>());
 
@@ -89,21 +92,31 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	// Light settings
 	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(0.f)).Get<float>());
 	nearStartLight = Max(0.f, cfg.Get(Property("biaspath.lights.nearstart")(.001f)).Get<float>());
-	firstVertexLightSampleCount = Max(1, cfg.Get(Property("biaspath.lights.firstvertexsamples")(4)).Get<int>());
+	firstVertexLightSampleCount = Max(1, cfg.Get(Property("biaspath.lights.firstvertexsamples")(
+			(GetEngineType() == RTBIASPATHOCL) ? 1 : 4)).Get<int>());
 
 	// Tile related parameters
-	u_int defaultTileSize;
+	u_int tileWidth = 32;
+	u_int tileHeight = 32;
 	if (GetEngineType() == RTBIASPATHOCL) {
 		// Check if I'm going to use a single device
 		if (intersectionDevices.size() == 1) {
 			// The best configuration, with a single device, is to use a tile
 			// as large as the complete image
-			defaultTileSize = Max(film->GetWidth(), film->GetHeight());
-		} else
-			defaultTileSize = Max(film->GetWidth(), film->GetHeight()) / 4;
-	} else
-		defaultTileSize = 32;
-	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(defaultTileSize)).Get<u_int>(), 8u));
+			tileWidth = film->GetWidth();
+			tileHeight = film->GetHeight();
+		} else {
+			// One slice for each device
+			tileWidth = (film->GetWidth() + 1) / intersectionDevices.size();
+			tileHeight = film->GetHeight();
+		}
+	} else {
+		if (renderConfig->cfg.IsDefined("tile.size"))
+			tileWidth = tileHeight = Max(renderConfig->cfg.Get(Property("tile.size")(32)).Get<u_int>(), 8u);
+		tileWidth = Max(renderConfig->cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>(), 8u);
+		tileHeight = Max(renderConfig->cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>(), 8u);
+	}
+	tileRepository = new TileRepository(tileWidth, tileHeight);
 
 	tileRepository->maxPassCount = renderConfig->GetProperty("batch.haltdebug").Get<u_int>();
 	if (GetEngineType() == RTBIASPATHOCL)
@@ -116,7 +129,9 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	tileRepository->InitTiles(film);
 
-	taskCount = tileRepository->tileSize * tileRepository->tileSize * tileRepository->totalSamplesPerPixel;
+	useMicroKernels = cfg.Get(Property("path.microkernels.enable")(false)).Get<bool>();
+
+	taskCount = tileRepository->tileWidth * tileRepository->tileHeight * tileRepository->totalSamplesPerPixel;
 
 	InitPixelFilterDistribution();
 	

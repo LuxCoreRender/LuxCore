@@ -566,7 +566,8 @@ void RenderSession::UpdateStats() {
 		case slg::BIASPATHOCL: {
 			slg::BiasPathOCLRenderEngine *engine = (slg::BiasPathOCLRenderEngine *)renderSession->renderEngine;
 			
-			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
+			stats.Set(Property("stats.biaspath.tiles.size.x")(engine->GetTileWidth()));
+			stats.Set(Property("stats.biaspath.tiles.size.y")(engine->GetTileHeight()));
 
 			// Pending tiles
 			{
@@ -594,7 +595,8 @@ void RenderSession::UpdateStats() {
 		case slg::BIASPATHCPU: {
 			slg::CPUTileRenderEngine *engine = (slg::CPUTileRenderEngine *)renderSession->renderEngine;
 
-			stats.Set(Property("stats.biaspath.tiles.size")(engine->GetTileSize()));
+			stats.Set(Property("stats.biaspath.tiles.size.x")(engine->GetTileWidth()));
+			stats.Set(Property("stats.biaspath.tiles.size.y")(engine->GetTileHeight()));
 
 			// Pending tiles
 			{

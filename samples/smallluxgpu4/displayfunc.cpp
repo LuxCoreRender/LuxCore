@@ -202,14 +202,14 @@ static void PrintHelpAndSettings() {
 }
 
 static void DrawTiles(const Property &propCoords, const Property &propPasses, 
-		const u_int tileCount, const u_int tileSize) {
+		const u_int tileCount, const u_int tileWidth, const u_int tileHeight) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
 
 	for (u_int i = 0; i < tileCount; ++i) {
 		const u_int xStart = propCoords.Get<u_int>(i * 2);
 		const u_int yStart = propCoords.Get<u_int>(i * 2 + 1);
-		const u_int width = Min(tileSize, session->GetFilm().GetWidth() - xStart - 1);
-		const u_int height = Min(tileSize, session->GetFilm().GetHeight() - yStart - 1);
+		const u_int width = Min(tileWidth, session->GetFilm().GetWidth() - xStart - 1);
+		const u_int height = Min(tileHeight, session->GetFilm().GetHeight() - yStart - 1);
 
 		glBegin(GL_LINE_LOOP);
 		glVertex2i(xStart, yStart);
@@ -232,7 +232,8 @@ static void PrintCaptions() {
 	const Properties &stats = session->GetStats();
 	const string engineType = config->GetProperty("renderengine.type").Get<string>();
 	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
-		const u_int tileSize = stats.Get("stats.biaspath.tiles.size").Get<u_int>();
+		const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
+		const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
 
 		if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
 			// Draw converged tiles borders
@@ -240,7 +241,7 @@ static void PrintCaptions() {
 			DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
 					stats.Get("stats.biaspath.tiles.converged.pass"),
 					stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
-					tileSize);
+					tileWidth, tileHeight);
 		}
 
 		if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
@@ -249,7 +250,7 @@ static void PrintCaptions() {
 			DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
 					stats.Get("stats.biaspath.tiles.notconverged.pass"),
 					stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
-					tileSize);
+					tileWidth, tileHeight);
 		}
 
 		// Draw pending tiles borders
@@ -257,7 +258,7 @@ static void PrintCaptions() {
 		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
 				stats.Get("stats.biaspath.tiles.pending.pass"),
 				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
-				tileSize);
+				tileWidth, tileHeight);
 	}
 
 	glEnable(GL_BLEND);

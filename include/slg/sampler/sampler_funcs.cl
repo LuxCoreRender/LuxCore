@@ -41,8 +41,23 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
-		const uint filmWidth, const uint filmHeight) {
+void Sampler_SplatSample(
+		Seed *seed,
+		__global Sample *sample,
+		__global float *sampleData
+		FILM_PARAM_DECL
+		) {
+	Film_SplatSample(&sample->result, 1.f
+			FILM_PARAM);
+}
+
+void Sampler_NextSample(
+		Seed *seed,
+		__global Sample *sample,
+		__global float *sampleData,
+		const uint filmWidth, const uint filmHeight
+		) {
+	// Move to the next assigned pixel
 	const float u0 = Rnd_FloatValue(seed);
 	const float u1 = Rnd_FloatValue(seed);
 
@@ -55,26 +70,9 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
 }
 
-void Sampler_NextSample(
-		Seed *seed,
-		__global Sample *sample,
-		__global float *sampleData
-		FILM_PARAM_DECL
-		) {
-	Film_SplatSample(&sample->result, 1.f
-			FILM_PARAM);
-
-	// Move to the next assigned pixel
-	const float u0 = Rnd_FloatValue(seed);
-	const float u1 = Rnd_FloatValue(seed);
-
-	// TODO: remove sampleData[]
-	sampleData[IDX_SCREEN_X] = u0;
-	sampleData[IDX_SCREEN_Y] = u1;
-
-	SampleResult_Init(&sample->result);
-	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
-	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight) {
+	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight);
 }
 
 #endif
@@ -179,7 +177,7 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	sample->result.filmY = min(sampleDataPathBase[IDX_SCREEN_Y] * filmHeight, (float)(filmHeight - 1));
 }
 
-void Sampler_NextSample(
+void Sampler_SplatSample(
 		Seed *seed,
 		__global Sample *sample,
 		__global float *sampleData
@@ -294,17 +292,24 @@ void Sampler_NextSample(
 
 	sample->current = current;
 	sample->proposed = proposed;
+}
 
+void Sampler_NextSample(
+		Seed *seed,
+		__global Sample *sample,
+		__global float *sampleData,
+		const uint filmWidth, const uint filmHeight
+		) {
 	//--------------------------------------------------------------------------
 	// Mutate the sample
 	//--------------------------------------------------------------------------
 
-	__global float *proposedU = &sampleData[proposed * TOTAL_U_SIZE];
+	__global float *proposedU = &sampleData[sample->proposed * TOTAL_U_SIZE];
 	if (Rnd_FloatValue(seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
 		LargeStep(seed, proposedU);
 		sample->smallMutationCount = 0;
 	} else {
-		__global float *currentU = &sampleData[current * TOTAL_U_SIZE];
+		__global float *currentU = &sampleData[sample->current * TOTAL_U_SIZE];
 
 		SmallStep(seed, currentU, proposedU);
 		sample->smallMutationCount += 1;
@@ -367,29 +372,7 @@ __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
-		const uint filmWidth, const uint filmHeight) {
-	sample->rng0 = Rnd_FloatValue(seed);
-	sample->rng1 = Rnd_FloatValue(seed);
-	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET;
-
-	const uint pixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
-	sample->pixelIndex = pixelIndex;
-	uint x, y;
-	PixelIndex2XY(filmWidth, pixelIndex, &x, &y);
-
-	const float u0 = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / filmWidth);
-	const float u1 = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / filmHeight);
-
-	sampleData[IDX_SCREEN_X] = u0;
-	sampleData[IDX_SCREEN_Y] = u1;
-
-	SampleResult_Init(&sample->result);
-	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
-	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
-}
-
-void Sampler_NextSample(
+void Sampler_SplatSample(
 		Seed *seed,
 		__global Sample *sample,
 		__global float *sampleData
@@ -397,7 +380,14 @@ void Sampler_NextSample(
 		) {
 	Film_SplatSample(&sample->result, 1.f
 			FILM_PARAM);
+}
 
+void Sampler_NextSample(
+		Seed *seed,
+		__global Sample *sample,
+		__global float *sampleData,
+		const uint filmWidth, const uint filmHeight
+		) {
 	// Move to the next assigned pixel
 	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
 	if (nextPixelIndex >= filmWidth * filmHeight) {
@@ -417,6 +407,17 @@ void Sampler_NextSample(
 	SampleResult_Init(&sample->result);
 	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
 	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
+}
+
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
+		const uint filmWidth, const uint filmHeight) {
+	sample->rng0 = Rnd_FloatValue(seed);
+	sample->rng1 = Rnd_FloatValue(seed);
+	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET;
+
+	sample->pixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
+	
+	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight);
 }
 
 #endif

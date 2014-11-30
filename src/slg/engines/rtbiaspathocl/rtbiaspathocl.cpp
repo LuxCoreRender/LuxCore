@@ -31,6 +31,7 @@ using namespace slg;
 RTBiasPathOCLRenderEngine::RTBiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		BiasPathOCLRenderEngine(rcfg, flm, flmMutex, true) {
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
+	frameStartTime = 0.f;
 	frameTime = 0.f;
 }
 
@@ -111,7 +112,6 @@ void RTBiasPathOCLRenderEngine::UpdateFilmLockLess() {
 
 void RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	// Threads do the rendering
-	const double t0 = WallClockTime();
 
 	frameBarrier->wait();
 
@@ -125,7 +125,9 @@ void RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	// Update the statistics
 	UpdateCounters();
 
-	frameTime = WallClockTime() - t0;
+	const double currentTime = WallClockTime();
+	frameTime = currentTime - frameStartTime;
+	frameStartTime = currentTime;
 }
 
 #endif

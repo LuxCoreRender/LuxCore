@@ -507,8 +507,9 @@ void CPUNoTileRenderEngine::UpdateCounters() {
 // TileRepository
 //------------------------------------------------------------------------------
 
-TileRepository::TileRepository(const u_int size) {
-	tileSize = size;
+TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
+	tileWidth = tileW;
+	tileHeight = tileH;
 
 	maxPassCount = 0;
 	enableMultipassRendering = false;
@@ -567,8 +568,10 @@ void TileRepository::GetConvergedTiles(deque<Tile *> &tiles) {
 }
 
 void TileRepository::HilberCurveTiles(
-		const u_int n, const int xo, const int yo,
-		const int xd, const int yd, const int xp, const int yp,
+		const u_int n,
+		const int xo, const int yo,
+		const int xd, const int yd,
+		const int xp, const int yp,
 		const int xEnd, const int yEnd) {
 	if (n <= 1) {
 		if((xo < xEnd) && (yo < yEnd)) {
@@ -627,10 +630,13 @@ void TileRepository::InitTiles(const Film *film) {
 		evenPassFilm->Init();
 	}
 
-	u_int n = RoundUp(Max(width, height), tileSize) / tileSize;
-	if (!IsPowerOf2(n))
-		n = RoundUpPow2(n);
-	HilberCurveTiles(n, 0, 0, 0, tileSize, tileSize, 0, width, height);
+	const u_int n = RoundUp(width, tileWidth) / tileWidth;
+	const u_int m = RoundUp(height, tileHeight) / tileHeight;
+	HilberCurveTiles(RoundUpPow2(n * m),
+			0, 0,
+			0, tileHeight,
+			tileWidth, 0,
+			width, height);
 
 	done = false;
 	pass = 0;
@@ -643,8 +649,8 @@ bool TileRepository::IsConvergedTile(const Tile *tile, const Spectrum *allPassPi
 
 	// Compare the pixels result only of even passes with the result
 	// of all passes
-	const u_int width = Min(tileSize, evenPassFilm->GetWidth() - tile->xStart);
-	const u_int height = Min(tileSize, evenPassFilm->GetHeight() - tile->yStart);
+	const u_int width = Min(tileWidth, evenPassFilm->GetWidth() - tile->xStart);
+	const u_int height = Min(tileHeight, evenPassFilm->GetHeight() - tile->yStart);
 	for (u_int y = 0; y < height; ++y) {
 		for (u_int x = 0; x < width; ++x) {
 			const u_int index = (x + tile->xStart) + (y + tile->yStart) * evenPassFilm->GetWidth();
@@ -710,8 +716,8 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 				((pass % 2) == 0)) {
 			evenPassFilm->AddFilm(*tileFilm,
 				0, 0,
-				Min(tileSize, evenPassFilm->GetWidth() - (*tile)->xStart),
-				Min(tileSize, evenPassFilm->GetHeight() - (*tile)->yStart),
+				Min(tileWidth, evenPassFilm->GetWidth() - (*tile)->xStart),
+				Min(tileHeight, evenPassFilm->GetHeight() - (*tile)->yStart),
 				(*tile)->xStart, (*tile)->yStart);
 		}
 
@@ -719,8 +725,8 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 
 		film->AddFilm(*tileFilm,
 				0, 0,
-				Min(tileSize, film->GetWidth() - (*tile)->xStart),
-				Min(tileSize, film->GetHeight() - (*tile)->yStart),
+				Min(tileWidth, film->GetWidth() - (*tile)->xStart),
+				Min(tileHeight, film->GetHeight() - (*tile)->yStart),
 				(*tile)->xStart, (*tile)->yStart);
 	}
 
@@ -855,7 +861,7 @@ void CPUTileRenderThread::StartRenderThread() {
 	delete tileFilm;
 
 	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
-	tileFilm = new Film(cpuTileEngine->tileRepository->tileSize, cpuTileEngine->tileRepository->tileSize);
+	tileFilm = new Film(cpuTileEngine->tileRepository->tileWidth, cpuTileEngine->tileRepository->tileHeight);
 	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
 	tileFilm->Init();
 
