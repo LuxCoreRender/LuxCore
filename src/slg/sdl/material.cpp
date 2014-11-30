@@ -555,8 +555,10 @@ Properties GlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("glass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+	if (exteriorIor)
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	if (interiorIor)
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Material::ToProperties());
 
 	return props;
