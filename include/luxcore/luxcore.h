@@ -421,11 +421,15 @@ public:
 	 * memory allocated for the ExtTriangleMesh is always freed by the Scene class,
 	 * however freeing of memory for the vertices, triangle indices, etc. depends
 	 * on the setting of SetDeleteMeshData().
+	 * NOTE: vertices and triangles buffers MUST be allocated with
+	 * Scene::AllocVerticesBuffer() and Scene::AllocTrianglesBuffer().
 	 *
 	 * \param meshName is the name of the defined mesh.
 	 * \param plyNbVerts is the number of mesh vertices.
 	 * \param plyNbTris is the number of mesh triangles.
-	 * \param p is a pointer to an array of vertices.
+	 * \param p is a pointer to an array of vertices. Embree accelerator has
+	 * a very special requirement. The 4 bytes after the z-coordinate of the
+	 * last vertex have to be readable memory, thus padding is required.
 	 * \param vi is a pointer to an array of triangles.
 	 * \param n is a pointer to an array of normals. It can be NULL.
 	 * \param uv is a pointer to an array of UV coordinates. It can be NULL.
@@ -513,6 +517,15 @@ public:
 	 * \brief Removes all unused meshes.
 	 */
 	void RemoveUnusedMeshes();
+
+	/*!
+	 * \brief This must be used to allocate Mesh vertices buffer.
+	 */
+	static luxrays::Point *AllocVerticesBuffer(const u_int meshVertCount);
+	/*!
+	 * \brief This must be used to allocate Mesh triangle buffer.
+	 */
+	static luxrays::Triangle *AllocTrianglesBuffer(const u_int meshTriCount);
 
 	friend class RenderConfig;
 	friend class Camera;

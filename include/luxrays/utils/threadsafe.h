@@ -16,43 +16,64 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_ACCELERATOR_H
-#define	_LUXRAYS_ACCELERATOR_H
+#ifndef _LUXRAYS_THREADSAFE_H
+#define _LUXRAYS_THREADSAFE_H
 
-#include <string>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/trianglemesh.h"
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 namespace luxrays {
 
-typedef enum {
-	ACCEL_AUTO, ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH, ACCEL_MBVH, ACCEL_EMBREE
-} AcceleratorType;
-
-class OpenCLKernels;
-class OpenCLIntersectionDevice;
-
-class Accelerator {
+template <class T> class ThreadSafeQueue {
 public:
-	Accelerator() { }
-	virtual ~Accelerator() { }
+	ThreadSafeQueue() {
+	}
 
-	virtual AcceleratorType GetType() const = 0;
+	virtual ~ThreadSafeQueue() {
+	}
 
-	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const = 0;
-	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const { return true; }
+	void Clear() {
+		boost::unique_lock<boost::mutex> lock(queueMutex);
 
-	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;
-	virtual bool DoesSupportUpdate() const { return false; }
-	virtual void Update() { throw new std::runtime_error("Internal error in Accelerator::Update()"); }
+		itemQueue.clear();
+	}
+	
+	size_t GetSize() {
+		boost::unique_lock<boost::mutex> lock(queueMutex);
 
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
+		return itemQueue.size();
+	}
 
-	static std::string AcceleratorType2String(const AcceleratorType type);
+	void Push(T item) {
+		{
+			boost::unique_lock<boost::mutex> lock(queueMutex);
+			itemQueue.push_back(item);
+		}
+
+		queueCondition.notify_all();
+	}
+
+	T Pop() {
+		boost::unique_lock<boost::mutex> lock(queueMutex);
+
+		while (itemQueue.size() < 1) {
+			// Wait for a new buffer to arrive
+			queueCondition.wait(lock);
+		}
+
+		T item = itemQueue.front();
+		itemQueue.pop_front();
+
+		return item;
+	}
+
+private:
+	boost::mutex queueMutex;
+	boost::condition_variable queueCondition;
+	std::deque<T> itemQueue;
 };
 
 }
 
-#endif	/* _LUXRAYS_ACCELERATOR_H */
+#endif

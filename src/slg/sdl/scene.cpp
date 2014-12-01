@@ -1448,7 +1448,7 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 				throw runtime_error("Wrong object vertex list length: " + objName);
 
 			pointsSize = prop.GetSize() / 3;
-			points = new Point[pointsSize];
+			points = TriangleMesh::AllocVerticesBuffer(pointsSize);
 			for (u_int i = 0; i < pointsSize; ++i) {
 				const u_int index = i * 3;
 				points[i] = Point(prop.Get<float>(index), prop.Get<float>(index + 1), prop.Get<float>(index + 2));
@@ -1464,7 +1464,7 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 				throw runtime_error("Wrong object face list length: " + objName);
 
 			trisSize = prop.GetSize() / 3;
-			tris = new Triangle[trisSize];
+			tris =TriangleMesh::AllocTrianglesBuffer(trisSize);
 			for (u_int i = 0; i < trisSize; ++i) {
 				const u_int index = i * 3;
 				tris[i] = Triangle(prop.Get<u_int>(index), prop.Get<u_int>(index + 1), prop.Get<u_int>(index + 2));

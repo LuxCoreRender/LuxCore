@@ -30,11 +30,12 @@
 #include "luxrays/accelerators/qbvhaccel.h"
 #include "luxrays/accelerators/mqbvhaccel.h"
 #include "luxrays/accelerators/mbvhaccel.h"
+#include "luxrays/accelerators/embreeaccel.h"
 #include "luxrays/core/geometry/bsphere.h"
 
 using namespace luxrays;
 
-static unsigned int DataSetID = 0;
+static u_int DataSetID = 0;
 static boost::mutex DataSetIDMutex;
 
 DataSet::DataSet(const Context *luxRaysContext) {
@@ -146,6 +147,10 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 				const float emptyBonus = 0.5f;
 
 				accel = new MBVHAccel(context, treeType, costSamples, isectCost, travCost, emptyBonus);
+				break;
+			}
+			case ACCEL_EMBREE: {
+				accel = new EmbreeAccel(context);
 				break;
 			}
 			default:
