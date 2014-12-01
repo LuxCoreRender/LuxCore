@@ -66,8 +66,8 @@ TriangleMesh *TriangleMesh::Merge(
 	assert (totalTriangleCount > 0);
 	assert (meshes.size() > 0);
 
-	Point *v = new Point[totalVertexCount];
-	Triangle *i = new Triangle[totalTriangleCount];
+	Point *v = AllocVerticesBuffer(totalVertexCount);
+	Triangle *i = AllocTrianglesBuffer(totalTriangleCount);
 
 	if (preprocessedMeshIDs)
 		*preprocessedMeshIDs = new TriangleMeshID[totalTriangleCount];

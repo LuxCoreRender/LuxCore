@@ -16,43 +16,55 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_ACCELERATOR_H
-#define	_LUXRAYS_ACCELERATOR_H
+#ifndef _LUXRAYS_EMBREEACCEL_H
+#define	_LUXRAYS_EMBREEACCEL_H
 
-#include <string>
+#include <embree2/rtcore.h>
+#include <embree2/rtcore_ray.h>
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/trianglemesh.h"
+#include "luxrays/core/accelerator.h"
 
 namespace luxrays {
 
-typedef enum {
-	ACCEL_AUTO, ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH, ACCEL_MBVH, ACCEL_EMBREE
-} AcceleratorType;
-
-class OpenCLKernels;
-class OpenCLIntersectionDevice;
-
-class Accelerator {
+class EmbreeAccel : public Accelerator {
 public:
-	Accelerator() { }
-	virtual ~Accelerator() { }
+	EmbreeAccel(const Context *context);
+	virtual ~EmbreeAccel();
 
-	virtual AcceleratorType GetType() const = 0;
+	virtual AcceleratorType GetType() const { return ACCEL_EMBREE; }
 
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const = 0;
-	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const { return true; }
+		const u_int kernelCount, const u_int stackSize,
+		const bool enableImageStorage) const { return NULL; }
+	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
+		return false;
+	}
 
-	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;
-	virtual bool DoesSupportUpdate() const { return false; }
-	virtual void Update() { throw new std::runtime_error("Internal error in Accelerator::Update()"); }
+	virtual void Init(const std::deque<const Mesh *> &meshes,
+		const u_longlong totalVertexCount,
+		const u_longlong totalTriangleCount);
 
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
+	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	static std::string AcceleratorType2String(const AcceleratorType type);
+private:
+	static bool MeshPtrCompare(const Mesh *p0, const Mesh *p1);
+	
+	u_int ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const;
+	u_int ExportMotionTriangleMesh(const RTCScene embreeScene, const MotionTriangleMesh *mtm) const;
+
+	// Used for Embree initialization
+	static boost::mutex initMutex;
+	// Used to count the number of existing EmbreeAccel instances
+	static u_int initCount;
+
+	const Context *ctx;
+
+	RTCScene embreeScene;
+	// Used to normalize between 0.f and 1.f
+	float minTime, maxTime, timeScale;
 };
 
 }
 
-#endif	/* _LUXRAYS_ACCELERATOR_H */
+#endif

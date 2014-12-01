@@ -269,10 +269,11 @@ static void PrintCaptions() {
 	glRecti(0, 0, session->GetFilm().GetWidth(), 17);
 	glDisable(GL_BLEND);
 
-	const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sec % 4dK on %.1fK tris]") %
+	const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sample %.2f on %.1fK tris]") %
 		stats.Get("stats.renderengine.pass").Get<int>() %
 		(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
-		int(stats.Get("stats.renderengine.performance.total").Get<double>() / 1000.0) %
+		(stats.Get("stats.renderengine.performance.total").Get<double>() /
+			stats.Get("stats.renderengine.total.samplesec").Get<double>()) %
 		(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0));
 
 	// Caption line 0
