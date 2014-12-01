@@ -447,8 +447,13 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 	VSTORE2F(triUV, &tmpHitPoint->uv.u);
 	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
 	VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
-	VSTORE3F(WHITE, tmpHitPoint->color.c);
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+	const float3 rgb0 = VLOAD3F(triLight->triangle.rgb0.c);
+	const float3 rgb1 = VLOAD3F(triLight->triangle.rgb1.c);
+	const float3 rgb2 = VLOAD3F(triLight->triangle.rgb2.c);
+	const float3 triColor = Triangle_InterpolateColor(rgb0, rgb1, rgb2, b0, b1, b2);
+
+	VSTORE3F(triColor, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	VSTORE2F(1.f, &tmpHitPoint->alpha);

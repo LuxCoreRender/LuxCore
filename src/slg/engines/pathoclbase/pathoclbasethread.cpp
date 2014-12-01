@@ -174,7 +174,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 	// HitPoint memory size
 	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) + 2 * sizeof(Normal);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
-			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY))
+			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY) ||
+			renderEngine->compiledScene->hasTriangleLightWithVertexColors)
 		hitPointSize += sizeof(Spectrum);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
 		hitPointSize += sizeof(float);
@@ -604,6 +605,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << LIGHT_WORLD_RADIUS_SCALE << "f"
 			;
 
+	if (cscene->hasTriangleLightWithVertexColors)
+		ss << " -D PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR";
+	
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
 			ss << " -D PARAM_ACCEL_BVH";
