@@ -648,6 +648,7 @@ void CompiledScene::CompileLights() {
 	infiniteLightDistributions.clear();
 	hasInfiniteLights = false;
 	hasEnvLights = false;
+	hasTriangleLightWithVertexColors = false;
 
 	for (u_int i = 0; i < lightSources.size(); ++i) {
 		const LightSource *l = lightSources[i];
@@ -670,6 +671,10 @@ void CompiledScene::CompileLights() {
 				const ExtMesh *mesh = tl->mesh;
 				const Triangle *tri = &(mesh->GetTriangles()[tl->triangleIndex]);
 
+				// Check if I have a triangle light source with vertex colors
+				if (mesh->HasColors())
+					hasTriangleLightWithVertexColors = true;
+
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_TRIANGLE;
 
@@ -687,6 +692,17 @@ void CompiledScene::CompileLights() {
 					ASSIGN_UV(oclLight->triangle.uv1, zero);
 					ASSIGN_UV(oclLight->triangle.uv2, zero);
 				}
+				if (mesh->HasColors()) {
+					ASSIGN_SPECTRUM(oclLight->triangle.rgb0, mesh->GetColor(tri->v[0]));
+					ASSIGN_SPECTRUM(oclLight->triangle.rgb1, mesh->GetColor(tri->v[1]));
+					ASSIGN_SPECTRUM(oclLight->triangle.rgb2, mesh->GetColor(tri->v[2]));					
+				} else {
+					const Spectrum one(1.f);
+					ASSIGN_SPECTRUM(oclLight->triangle.rgb0, one);
+					ASSIGN_SPECTRUM(oclLight->triangle.rgb1, one);
+					ASSIGN_SPECTRUM(oclLight->triangle.rgb2, one);
+				}
+
 				oclLight->triangle.invTriangleArea = 1.f / tl->GetTriangleArea();
 				oclLight->triangle.invMeshArea = 1.f / tl->GetMeshArea();
 
