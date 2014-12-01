@@ -113,7 +113,7 @@ float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 
 	//CoatingF(sw, *wi, wo, f_);
 	S *= (d / *pdf) * G / (4.f * coso) + 
-			(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
+			(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) / *pdf : 0.f);
 
 	return S;
 }

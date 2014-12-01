@@ -21,7 +21,7 @@
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
-	ROUGHMATTETRANSLUCENT,
+	ROUGHMATTETRANSLUCENT, GLOSSYTRANSLUCENT,
 			
 	// Volumes
 	HOMOGENEOUS_VOL, CLEAR_VOL, HETEROGENEOUS_VOL
@@ -74,7 +74,7 @@ typedef struct {
 } RoughMatteTranslucentParam;
 
 typedef struct {
-    unsigned int kdTexIndex;
+	unsigned int kdTexIndex;
 	unsigned int ksTexIndex;
 	unsigned int nuTexIndex;
 	unsigned int nvTexIndex;
@@ -191,6 +191,25 @@ typedef struct {
 } CarPaintParam;
 
 typedef struct {
+	unsigned int kdTexIndex;
+	unsigned int ktTexIndex;
+	unsigned int ksTexIndex;
+	unsigned int ksbfTexIndex;
+	unsigned int nuTexIndex;
+	unsigned int nubfTexIndex;
+	unsigned int nvTexIndex;
+	unsigned int nvbfTexIndex;
+	unsigned int kaTexIndex;
+	unsigned int kabfTexIndex;
+	unsigned int depthTexIndex;
+	unsigned int depthbfTexIndex;
+	unsigned int indexTexIndex;
+	unsigned int indexbfTexIndex;
+	int multibounce;
+	int multibouncebf;
+} GlossyTranslucentParam;
+
+typedef struct {
 	unsigned int sigmaATexIndex;
 } ClearVolumeParam;
 
@@ -253,8 +272,9 @@ typedef struct {
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
 		VelvetParam velvet;
-        ClothParam cloth;
+        	ClothParam cloth;
 		CarPaintParam carpaint;
+		GlossyTranslucentParam glossytranslucent;
 		VolumeParam volume;
 	};
 } Material;

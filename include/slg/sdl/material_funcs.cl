@@ -146,6 +146,10 @@ bool Material_IsDeltaNoMix(__global Material *material) {
 		case CARPAINT:
 			return CarPaintMaterial_IsDelta();
 #endif
+#if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
+		case GLOSSYTRANSLUCENT:
+			return GlossyTranslucentMaterial_IsDelta();
+#endif
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
 		case CLEAR_VOL:
 			return ClearVolMaterial_IsDelta();
@@ -220,6 +224,10 @@ BSDFEvent Material_GetEventTypesNoMix(__global Material *mat) {
 #if defined (PARAM_ENABLE_MAT_CARPAINT)
 		case CARPAINT:
 			return CarPaintMaterial_GetEventTypes();
+#endif
+#if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
+		case GLOSSYTRANSLUCENT:
+			return GlossyTranslucentMaterial_GetEventTypes();
 #endif
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
 		case CLEAR_VOL:
@@ -388,6 +396,16 @@ float3 Material_SampleNoMix(__global Material *material,
 					pdfW, cosSampledDir, event, requestedEvent
 					TEXTURES_PARAM);
 #endif
+#if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
+		case GLOSSYTRANSLUCENT:
+			return GlossyTranslucentMaterial_Sample(material, hitpoint, fixedDir, sampledDir,
+				u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+				passThroughEvent,
+#endif
+				pdfW, cosSampledDir, event, requestedEvent
+				TEXTURES_PARAM);
+#endif
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
 		case CLEAR_VOL:
 			return ClearVolMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
@@ -477,6 +495,11 @@ float3 Material_EvaluateNoMix(__global Material *material,
 		case CARPAINT:
 			return CarPaintMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 					TEXTURES_PARAM);
+#endif
+#if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
+		case GLOSSYTRANSLUCENT:
+			return GlossyTranslucentMaterial_Evaluate(material, hitpoint, lightDir, eyeDir, event, directPdfW
+				TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
 		case CLEAR_VOL:
