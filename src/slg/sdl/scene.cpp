@@ -1345,12 +1345,32 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			const Texture *m3 = GetTexture(props.Get(Property(propName + ".m3")(CarPaintMaterial::data[0].m3)));
 			mat = new CarPaintMaterial(emissionTex, bumpTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
 		}
+	} else if (matType == "glossytranslucent") {
+		const Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
+		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(.5f, .5f, .5f)));
+		const Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));
+		const Texture *ks_bf = GetTexture(props.Get(Property(propName + ".ks_bf")(.5f, .5f, .5f)));
+		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
+		const Texture *nu_bf = GetTexture(props.Get(Property(propName + ".uroughness_bf")(.1f)));
+		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
+		const Texture *nv_bf = GetTexture(props.Get(Property(propName + ".vroughness_bf")(.1f)));
+		const Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
+		const Texture *ka_bf = GetTexture(props.Get(Property(propName + ".ka_bf")(0.f, 0.f, 0.f)));
+		const Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
+		const Texture *d_bf = GetTexture(props.Get(Property(propName + ".d_bf")(0.f)));
+		const Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f, 0.f, 0.f)));
+		const Texture *index_bf = GetTexture(props.Get(Property(propName + ".index_bf")(0.f, 0.f, 0.f)));
+		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
+		const bool multibounce_bf = props.Get(Property(propName + ".multibounce_bf")(false)).Get<bool>();
+
+		mat = new GlossyTranslucentMaterial(emissionTex, bumpTex, kd, kt, ks, ks_bf, nu, nu_bf, nv, nv_bf,
+			ka, ka_bf, d, d_bf, index, index_bf, multibounce, multibounce_bf);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
 	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
-    mat->SetBumpSampleDistance(bumpSampleDistance);
+	mat->SetBumpSampleDistance(bumpSampleDistance);
 
 	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));

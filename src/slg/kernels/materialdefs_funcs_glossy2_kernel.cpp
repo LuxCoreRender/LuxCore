@@ -116,7 +116,7 @@ std::string KernelSource_materialdefs_funcs_glossy2 =
 "\n"
 "	//CoatingF(sw, *wi, wo, f_);\n"
 "	S *= (d / *pdf) * G / (4.f * coso) + \n"
-"			(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);\n"
+"			(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) / *pdf : 0.f);\n"
 "\n"
 "	return S;\n"
 "}\n"
