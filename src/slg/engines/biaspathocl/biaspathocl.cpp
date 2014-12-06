@@ -127,7 +127,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	tileRepository->convergenceTestThresholdReduction = cfg.Get(Property("tile.multipass.convergencetest.threshold.reduction")(0.f)).Get<float>();
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
 
-	tileRepository->InitTiles(film);
+	tileRepository->InitTiles(*film);
 
 	useMicroKernels = cfg.Get(Property("biaspath.microkernels.enable")(true)).Get<bool>();
 
@@ -151,7 +151,7 @@ void BiasPathOCLRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 	if (GetEngineType() != RTBIASPATHOCL) {
 		// RTBIASPATHOCL will InitTiles() on next frame
 		tileRepository->Clear();
-		tileRepository->InitTiles(film);
+		tileRepository->InitTiles(*film);
 		printedRenderingTime = false;
 	}
 

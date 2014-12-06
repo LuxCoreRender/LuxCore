@@ -99,7 +99,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	tileRepository->convergenceTestThresholdReduction = cfg.Get(Property("tile.multipass.convergencetest.threshold.reduction")(0.f)).Get<float>();
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
 
-	tileRepository->InitTiles(film);
+	tileRepository->InitTiles(*film);
 
 	CPURenderEngine::StartLockLess();
 }

@@ -1344,7 +1344,7 @@ void Film::ExecuteImagePipeline() {
 	vector<bool> frameBufferMask(pixelCount, false);
 	MergeSampleBuffers(p, frameBufferMask);
 
-	// apply the image pipeline if I have one
+	// Apply the image pipeline if I have one
 	if (imagePipeline)
 		imagePipeline->Apply(*this, p, frameBufferMask);
 }
