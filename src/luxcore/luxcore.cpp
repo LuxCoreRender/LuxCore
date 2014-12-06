@@ -493,7 +493,7 @@ Film &RenderSession::GetFilm() {
 }
 
 static void SetTileProperties(Properties &props, const string &prefix,
-		const deque<slg::TileRepository::Tile *> &tiles) {
+		const deque<const slg::TileRepository::Tile *> &tiles) {
 	props.Set(Property(prefix + ".count")((u_int)tiles.size()));
 	Property tileCoordProp(prefix + ".coords");
 	Property tilePassProp(prefix + ".pass");
@@ -579,21 +579,21 @@ void RenderSession::UpdateStats() {
 
 			// Pending tiles
 			{
-				deque<slg::TileRepository::Tile *> tiles;
+				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetPendingTiles(tiles);
 				SetTileProperties(stats, "stats.biaspath.tiles.pending", tiles);
 			}
 
 			// Not converged tiles
 			{
-				deque<slg::TileRepository::Tile *> tiles;
+				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
 				SetTileProperties(stats, "stats.biaspath.tiles.notconverged", tiles);
 			}
 
 			// Converged tiles
 			{
-				deque<slg::TileRepository::Tile *> tiles;
+				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetConvergedTiles(tiles);
 				SetTileProperties(stats, "stats.biaspath.tiles.converged", tiles);
 			}
@@ -608,21 +608,21 @@ void RenderSession::UpdateStats() {
 
 			// Pending tiles
 			{
-				deque<slg::TileRepository::Tile *> tiles;
+				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetPendingTiles(tiles);
 				SetTileProperties(stats, "stats.biaspath.tiles.pending", tiles);
 			}
 
 			// Not converged tiles
 			{
-				deque<slg::TileRepository::Tile *> tiles;
+				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetNotConvergedTiles(tiles);
 				SetTileProperties(stats, "stats.biaspath.tiles.notconverged", tiles);
 			}
 
 			// Converged tiles
 			{
-				deque<slg::TileRepository::Tile *> tiles;
+				deque<const slg::TileRepository::Tile *> tiles;
 				engine->GetConvergedTiles(tiles);
 				SetTileProperties(stats, "stats.biaspath.tiles.converged", tiles);
 			}
