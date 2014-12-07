@@ -43,22 +43,11 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// PathOCLBaseRenderThread
+// ThreadFilm
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
-		OpenCLIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
-	intersectionDevice = device;
-
-	renderThread = NULL;
-
-	threadIndex = index;
-	renderEngine = re;
-	started = false;
-	editMode = false;
-	threadFilm = NULL;
-
-	filmClearKernel = NULL;
+PathOCLBaseRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseRenderThread *thread) {
+	film = NULL;
 
 	// Film buffers
 	channel_ALPHA_Buff = NULL;
@@ -79,6 +68,407 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	channel_UV_Buff = NULL;
 	channel_RAYCOUNT_Buff = NULL;
 	channel_BY_MATERIAL_ID_Buff = NULL;
+
+	renderThread = thread;
+}
+
+PathOCLBaseRenderThread::ThreadFilm::~ThreadFilm() {
+	delete film;
+
+	FreeAllOCLBuffers();
+}
+
+void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
+		const u_int threadFilmWidth, const u_int threadFilmHeight) {
+	const u_int filmPixelCount = threadFilmWidth * threadFilmHeight;
+
+	// Delete previous allocated Film
+	delete film;
+
+	// Allocate the new Film
+	film = new Film(threadFilmWidth, threadFilmHeight);
+	film->CopyDynamicSettings(engineFilm);
+	film->Init();
+
+	//--------------------------------------------------------------------------
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
+		renderThread->FreeOCLBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
+
+	if (film->GetRadianceGroupCount() > 8)
+		throw runtime_error("PathOCL supports only up to 8 Radiance Groups");
+
+	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.resize(film->GetRadianceGroupCount());
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
+		renderThread->AllocOCLBufferRW(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i],
+				sizeof(float[4]) * filmPixelCount, "RADIANCE_PER_PIXEL_NORMALIZEDs[" + ToString(i) + "]");
+	}
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::ALPHA))
+		renderThread->AllocOCLBufferRW(&channel_ALPHA_Buff, sizeof(float[2]) * filmPixelCount, "ALPHA");
+	else
+		renderThread->FreeOCLBuffer(&channel_ALPHA_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::DEPTH))
+		renderThread->AllocOCLBufferRW(&channel_DEPTH_Buff, sizeof(float) * filmPixelCount, "DEPTH");
+	else
+		renderThread->FreeOCLBuffer(&channel_DEPTH_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::POSITION))
+		renderThread->AllocOCLBufferRW(&channel_POSITION_Buff, sizeof(float[3]) * filmPixelCount, "POSITION");
+	else
+		renderThread->FreeOCLBuffer(&channel_POSITION_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::GEOMETRY_NORMAL))
+		renderThread->AllocOCLBufferRW(&channel_GEOMETRY_NORMAL_Buff, sizeof(float[3]) * filmPixelCount, "GEOMETRY_NORMAL");
+	else
+		renderThread->FreeOCLBuffer(&channel_GEOMETRY_NORMAL_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::SHADING_NORMAL))
+		renderThread->AllocOCLBufferRW(&channel_SHADING_NORMAL_Buff, sizeof(float[3]) * filmPixelCount, "SHADING_NORMAL");
+	else
+		renderThread->FreeOCLBuffer(&channel_SHADING_NORMAL_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::MATERIAL_ID))
+		renderThread->AllocOCLBufferRW(&channel_MATERIAL_ID_Buff, sizeof(u_int) * filmPixelCount, "MATERIAL_ID");
+	else
+		renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::DIRECT_DIFFUSE))
+		renderThread->AllocOCLBufferRW(&channel_DIRECT_DIFFUSE_Buff, sizeof(float[4]) * filmPixelCount, "DIRECT_DIFFUSE");
+	else
+		renderThread->FreeOCLBuffer(&channel_DIRECT_DIFFUSE_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::DIRECT_GLOSSY))
+		renderThread->AllocOCLBufferRW(&channel_DIRECT_GLOSSY_Buff, sizeof(float[4]) * filmPixelCount, "DIRECT_GLOSSY");
+	else
+		renderThread->FreeOCLBuffer(&channel_DIRECT_GLOSSY_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::EMISSION))
+		renderThread->AllocOCLBufferRW(&channel_EMISSION_Buff, sizeof(float[4]) * filmPixelCount, "EMISSION");
+	else
+		renderThread->FreeOCLBuffer(&channel_EMISSION_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_DIFFUSE))
+		renderThread->AllocOCLBufferRW(&channel_INDIRECT_DIFFUSE_Buff, sizeof(float[4]) * filmPixelCount, "INDIRECT_DIFFUSE");
+	else
+		renderThread->FreeOCLBuffer(&channel_INDIRECT_DIFFUSE_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_GLOSSY))
+		renderThread->AllocOCLBufferRW(&channel_INDIRECT_GLOSSY_Buff, sizeof(float[4]) * filmPixelCount, "INDIRECT_GLOSSY");
+	else
+		renderThread->FreeOCLBuffer(&channel_INDIRECT_GLOSSY_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_SPECULAR))
+		renderThread->AllocOCLBufferRW(&channel_INDIRECT_SPECULAR_Buff, sizeof(float[4]) * filmPixelCount, "INDIRECT_SPECULAR");
+	else
+		renderThread->FreeOCLBuffer(&channel_INDIRECT_SPECULAR_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::MATERIAL_ID_MASK)) {
+		if (film->GetMaskMaterialIDCount() > 1)
+			throw runtime_error("PathOCL supports only 1 MATERIAL_ID_MASK");
+		else
+			renderThread->AllocOCLBufferRW(&channel_MATERIAL_ID_MASK_Buff,
+					sizeof(float[2]) * filmPixelCount, "MATERIAL_ID_MASK");
+	} else
+		renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_MASK_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::DIRECT_SHADOW_MASK))
+		renderThread->AllocOCLBufferRW(&channel_DIRECT_SHADOW_MASK_Buff, sizeof(float[2]) * filmPixelCount, "DIRECT_SHADOW_MASK");
+	else
+		renderThread->FreeOCLBuffer(&channel_DIRECT_SHADOW_MASK_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_SHADOW_MASK))
+		renderThread->AllocOCLBufferRW(&channel_INDIRECT_SHADOW_MASK_Buff, sizeof(float[2]) * filmPixelCount, "INDIRECT_SHADOW_MASK");
+	else
+		renderThread->FreeOCLBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::UV))
+		renderThread->AllocOCLBufferRW(&channel_UV_Buff, sizeof(float[2]) * filmPixelCount, "UV");
+	else
+		renderThread->FreeOCLBuffer(&channel_UV_Buff);
+	if (film->HasChannel(Film::RAYCOUNT))
+		renderThread->AllocOCLBufferRW(&channel_RAYCOUNT_Buff, sizeof(float) * filmPixelCount, "RAYCOUNT");
+	else
+		renderThread->FreeOCLBuffer(&channel_RAYCOUNT_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::BY_MATERIAL_ID)) {
+		if (film->GetByMaterialIDCount() > 1)
+			throw runtime_error("PathOCL supports only 1 BY_MATERIAL_ID");
+		else
+			renderThread->AllocOCLBufferRW(&channel_BY_MATERIAL_ID_Buff,
+					sizeof(float[4]) * filmPixelCount, "BY_MATERIAL_ID");
+	} else
+		renderThread->FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
+}
+
+void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
+	// Film buffers
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
+		renderThread->FreeOCLBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
+	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.clear();
+	renderThread->FreeOCLBuffer(&channel_ALPHA_Buff);
+	renderThread->FreeOCLBuffer(&channel_DEPTH_Buff);
+	renderThread->FreeOCLBuffer(&channel_POSITION_Buff);
+	renderThread->FreeOCLBuffer(&channel_GEOMETRY_NORMAL_Buff);
+	renderThread->FreeOCLBuffer(&channel_SHADING_NORMAL_Buff);
+	renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_Buff);
+	renderThread->FreeOCLBuffer(&channel_DIRECT_DIFFUSE_Buff);
+	renderThread->FreeOCLBuffer(&channel_DIRECT_GLOSSY_Buff);
+	renderThread->FreeOCLBuffer(&channel_EMISSION_Buff);
+	renderThread->FreeOCLBuffer(&channel_INDIRECT_DIFFUSE_Buff);
+	renderThread->FreeOCLBuffer(&channel_INDIRECT_GLOSSY_Buff);
+	renderThread->FreeOCLBuffer(&channel_INDIRECT_SPECULAR_Buff);
+	renderThread->FreeOCLBuffer(&channel_MATERIAL_ID_MASK_Buff);
+	renderThread->FreeOCLBuffer(&channel_DIRECT_SHADOW_MASK_Buff);
+	renderThread->FreeOCLBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
+	renderThread->FreeOCLBuffer(&channel_UV_Buff);
+	renderThread->FreeOCLBuffer(&channel_RAYCOUNT_Buff);
+	renderThread->FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
+}
+
+u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmClearKernel,
+		u_int argIndex) const {
+	// Film parameters
+	filmClearKernel.setArg(argIndex++, film->GetWidth());
+	filmClearKernel.setArg(argIndex++, film->GetHeight());
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
+		filmClearKernel.setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
+	if (film->HasChannel(Film::ALPHA))
+		filmClearKernel.setArg(argIndex++, *channel_ALPHA_Buff);
+	if (film->HasChannel(Film::DEPTH))
+		filmClearKernel.setArg(argIndex++, *channel_DEPTH_Buff);
+	if (film->HasChannel(Film::POSITION))
+		filmClearKernel.setArg(argIndex++, *channel_POSITION_Buff);
+	if (film->HasChannel(Film::GEOMETRY_NORMAL))
+		filmClearKernel.setArg(argIndex++, *channel_GEOMETRY_NORMAL_Buff);
+	if (film->HasChannel(Film::SHADING_NORMAL))
+		filmClearKernel.setArg(argIndex++, *channel_SHADING_NORMAL_Buff);
+	if (film->HasChannel(Film::MATERIAL_ID))
+		filmClearKernel.setArg(argIndex++, *channel_MATERIAL_ID_Buff);
+	if (film->HasChannel(Film::DIRECT_DIFFUSE))
+		filmClearKernel.setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
+	if (film->HasChannel(Film::DIRECT_GLOSSY))
+		filmClearKernel.setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
+	if (film->HasChannel(Film::EMISSION))
+		filmClearKernel.setArg(argIndex++, *channel_EMISSION_Buff);
+	if (film->HasChannel(Film::INDIRECT_DIFFUSE))
+		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_DIFFUSE_Buff);
+	if (film->HasChannel(Film::INDIRECT_GLOSSY))
+		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_GLOSSY_Buff);
+	if (film->HasChannel(Film::INDIRECT_SPECULAR))
+		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_SPECULAR_Buff);
+	if (film->HasChannel(Film::MATERIAL_ID_MASK))
+		filmClearKernel.setArg(argIndex++, *channel_MATERIAL_ID_MASK_Buff);
+	if (film->HasChannel(Film::DIRECT_SHADOW_MASK))
+		filmClearKernel.setArg(argIndex++, *channel_DIRECT_SHADOW_MASK_Buff);
+	if (film->HasChannel(Film::INDIRECT_SHADOW_MASK))
+		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
+	if (film->HasChannel(Film::UV))
+		filmClearKernel.setArg(argIndex++, *channel_UV_Buff);
+	if (film->HasChannel(Film::RAYCOUNT))
+		filmClearKernel.setArg(argIndex++, *channel_RAYCOUNT_Buff);
+	if (film->HasChannel(Film::BY_MATERIAL_ID))
+		filmClearKernel.setArg(argIndex++, *channel_BY_MATERIAL_ID_Buff);
+
+	return argIndex;
+}
+
+void PathOCLBaseRenderThread::ThreadFilm::TransferFilm(cl::CommandQueue &oclQueue) {
+	// Async. transfer of the Film buffers
+
+	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
+		if (channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]) {
+			oclQueue.enqueueReadBuffer(
+				*(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]),
+				CL_FALSE,
+				0,
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->getInfo<CL_MEM_SIZE>(),
+				film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
+		}
+	}
+
+	if (channel_ALPHA_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_ALPHA_Buff,
+			CL_FALSE,
+			0,
+			channel_ALPHA_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_ALPHA->GetPixels());
+	}
+	if (channel_DEPTH_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_DEPTH_Buff,
+			CL_FALSE,
+			0,
+			channel_DEPTH_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_DEPTH->GetPixels());
+	}
+	if (channel_POSITION_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_POSITION_Buff,
+			CL_FALSE,
+			0,
+			channel_POSITION_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_POSITION->GetPixels());
+	}
+	if (channel_GEOMETRY_NORMAL_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_GEOMETRY_NORMAL_Buff,
+			CL_FALSE,
+			0,
+			channel_GEOMETRY_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_GEOMETRY_NORMAL->GetPixels());
+	}
+	if (channel_SHADING_NORMAL_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_SHADING_NORMAL_Buff,
+			CL_FALSE,
+			0,
+			channel_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_SHADING_NORMAL->GetPixels());
+	}
+	if (channel_MATERIAL_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_MATERIAL_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_MATERIAL_ID->GetPixels());
+	}
+	if (channel_DIRECT_DIFFUSE_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_DIRECT_DIFFUSE_Buff,
+			CL_FALSE,
+			0,
+			channel_DIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_DIRECT_DIFFUSE->GetPixels());
+	}
+	if (channel_MATERIAL_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_MATERIAL_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_MATERIAL_ID->GetPixels());
+	}
+	if (channel_DIRECT_GLOSSY_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_DIRECT_GLOSSY_Buff,
+			CL_FALSE,
+			0,
+			channel_DIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_DIRECT_GLOSSY->GetPixels());
+	}
+	if (channel_EMISSION_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_EMISSION_Buff,
+			CL_FALSE,
+			0,
+			channel_EMISSION_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_EMISSION->GetPixels());
+	}
+	if (channel_INDIRECT_DIFFUSE_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_INDIRECT_DIFFUSE_Buff,
+			CL_FALSE,
+			0,
+			channel_INDIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_INDIRECT_DIFFUSE->GetPixels());
+	}
+	if (channel_INDIRECT_GLOSSY_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_INDIRECT_GLOSSY_Buff,
+			CL_FALSE,
+			0,
+			channel_INDIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_INDIRECT_GLOSSY->GetPixels());
+	}
+	if (channel_INDIRECT_SPECULAR_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_INDIRECT_SPECULAR_Buff,
+			CL_FALSE,
+			0,
+			channel_INDIRECT_SPECULAR_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_INDIRECT_SPECULAR->GetPixels());
+	}
+	if (channel_MATERIAL_ID_MASK_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_MATERIAL_ID_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_MATERIAL_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_MATERIAL_ID_MASKs[0]->GetPixels());
+	}
+	if (channel_DIRECT_SHADOW_MASK_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_DIRECT_SHADOW_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_DIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_DIRECT_SHADOW_MASK->GetPixels());
+	}
+	if (channel_INDIRECT_SHADOW_MASK_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_INDIRECT_SHADOW_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_INDIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_INDIRECT_SHADOW_MASK->GetPixels());
+	}
+	if (channel_UV_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_UV_Buff,
+			CL_FALSE,
+			0,
+			channel_UV_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_UV->GetPixels());
+	}
+	if (channel_RAYCOUNT_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_RAYCOUNT_Buff,
+			CL_FALSE,
+			0,
+			channel_RAYCOUNT_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_RAYCOUNT->GetPixels());
+	}
+	if (channel_BY_MATERIAL_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_BY_MATERIAL_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_BY_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_BY_MATERIAL_IDs[0]->GetPixels());
+	}
+}
+
+void PathOCLBaseRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
+		cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize) {
+	// Set kernel arguments
+	SetFilmKernelArgs(filmClearKernel, 0);
+	
+	// Clear the film
+	const u_int filmPixelCount = film->GetWidth() * film->GetHeight();
+	oclQueue.enqueueNDRangeKernel(filmClearKernel, cl::NullRange,
+			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+			cl::NDRange(filmClearWorkGroupSize));
+}
+
+//------------------------------------------------------------------------------
+// PathOCLBaseRenderThread
+//------------------------------------------------------------------------------
+
+PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
+		OpenCLIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
+	intersectionDevice = device;
+
+	renderThread = NULL;
+
+	threadIndex = index;
+	renderEngine = re;
+	started = false;
+	editMode = false;
+
+	filmClearKernel = NULL;
 
 	// Scene buffers
 	materialsBuff = NULL;
@@ -120,54 +510,7 @@ PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
 		Stop();
 
 	delete filmClearKernel;
-	delete threadFilm;
 	delete kernelCache;
-}
-
-u_int PathOCLBaseRenderThread::SetFilmKernelArgs(cl::Kernel &kernel, u_int argIndex) {
-	// Film parameters
-	kernel.setArg(argIndex++, threadFilm->GetWidth());
-	kernel.setArg(argIndex++, threadFilm->GetHeight());
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		kernel.setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
-	if (threadFilm->HasChannel(Film::ALPHA))
-		kernel.setArg(argIndex++, *channel_ALPHA_Buff);
-	if (threadFilm->HasChannel(Film::DEPTH))
-		kernel.setArg(argIndex++, *channel_DEPTH_Buff);
-	if (threadFilm->HasChannel(Film::POSITION))
-		kernel.setArg(argIndex++, *channel_POSITION_Buff);
-	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		kernel.setArg(argIndex++, *channel_GEOMETRY_NORMAL_Buff);
-	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-		kernel.setArg(argIndex++, *channel_SHADING_NORMAL_Buff);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID))
-		kernel.setArg(argIndex++, *channel_MATERIAL_ID_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		kernel.setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		kernel.setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
-	if (threadFilm->HasChannel(Film::EMISSION))
-		kernel.setArg(argIndex++, *channel_EMISSION_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		kernel.setArg(argIndex++, *channel_INDIRECT_DIFFUSE_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		kernel.setArg(argIndex++, *channel_INDIRECT_GLOSSY_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		kernel.setArg(argIndex++, *channel_INDIRECT_SPECULAR_Buff);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
-		kernel.setArg(argIndex++, *channel_MATERIAL_ID_MASK_Buff);
-	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		kernel.setArg(argIndex++, *channel_DIRECT_SHADOW_MASK_Buff);
-	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		kernel.setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
-	if (threadFilm->HasChannel(Film::UV))
-		kernel.setArg(argIndex++, *channel_UV_Buff);
-	if (threadFilm->HasChannel(Film::RAYCOUNT))
-		kernel.setArg(argIndex++, *channel_RAYCOUNT_Buff);
-	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID))
-		kernel.setArg(argIndex++, *channel_BY_MATERIAL_ID_Buff);
-
-	return argIndex;
 }
 
 size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
@@ -210,6 +553,9 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 	//--------------------------------------------------------------------------
 	// SampleResult size
 	//--------------------------------------------------------------------------
+
+	// All thread films are supposed to have the same parameters
+	const Film *threadFilm = threadFilms[0].film;
 
 	// SampleResult.filmX and SampleResult.filmY
 	size_t sampleResultSize = 2 * sizeof(float);
@@ -339,128 +685,14 @@ void PathOCLBaseRenderThread::FreeOCLBuffer(cl::Buffer **buff) {
 }
 
 void PathOCLBaseRenderThread::InitFilm() {
-	const Film *engineFilm = renderEngine->film;
-	u_int filmWidth, filmHeight;
-	GetThreadFilmSize(&filmWidth, &filmHeight);
-	const u_int filmPixelCount = filmWidth * filmHeight;
+	if (threadFilms.size() == 0)
+		IncThreadFilms();
 
-	// Delete previous allocated Film
-	delete threadFilm;
+	u_int threadFilmWidth, threadFilmHeight;
+	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight);
 
-	// Allocate the new Film
-	threadFilm = new Film(filmWidth, filmHeight);
-	threadFilm->CopyDynamicSettings(*engineFilm);
-	threadFilm->Init();
-
-	//--------------------------------------------------------------------------
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		FreeOCLBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
-
-	if (threadFilm->GetRadianceGroupCount() > 8)
-		throw runtime_error("PathOCL supports only up to 8 Radiance Groups");
-
-	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.resize(threadFilm->GetRadianceGroupCount());
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
-		AllocOCLBufferRW(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i],
-				sizeof(float[4]) * filmPixelCount, "RADIANCE_PER_PIXEL_NORMALIZEDs[" + ToString(i) + "]");
-	}
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::ALPHA))
-		AllocOCLBufferRW(&channel_ALPHA_Buff, sizeof(float[2]) * filmPixelCount, "ALPHA");
-	else
-		FreeOCLBuffer(&channel_ALPHA_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::DEPTH))
-		AllocOCLBufferRW(&channel_DEPTH_Buff, sizeof(float) * filmPixelCount, "DEPTH");
-	else
-		FreeOCLBuffer(&channel_DEPTH_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::POSITION))
-		AllocOCLBufferRW(&channel_POSITION_Buff, sizeof(float[3]) * filmPixelCount, "POSITION");
-	else
-		FreeOCLBuffer(&channel_POSITION_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		AllocOCLBufferRW(&channel_GEOMETRY_NORMAL_Buff, sizeof(float[3]) * filmPixelCount, "GEOMETRY_NORMAL");
-	else
-		FreeOCLBuffer(&channel_GEOMETRY_NORMAL_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-		AllocOCLBufferRW(&channel_SHADING_NORMAL_Buff, sizeof(float[3]) * filmPixelCount, "SHADING_NORMAL");
-	else
-		FreeOCLBuffer(&channel_SHADING_NORMAL_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::MATERIAL_ID))
-		AllocOCLBufferRW(&channel_MATERIAL_ID_Buff, sizeof(u_int) * filmPixelCount, "MATERIAL_ID");
-	else
-		FreeOCLBuffer(&channel_MATERIAL_ID_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		AllocOCLBufferRW(&channel_DIRECT_DIFFUSE_Buff, sizeof(float[4]) * filmPixelCount, "DIRECT_DIFFUSE");
-	else
-		FreeOCLBuffer(&channel_DIRECT_DIFFUSE_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		AllocOCLBufferRW(&channel_DIRECT_GLOSSY_Buff, sizeof(float[4]) * filmPixelCount, "DIRECT_GLOSSY");
-	else
-		FreeOCLBuffer(&channel_DIRECT_GLOSSY_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::EMISSION))
-		AllocOCLBufferRW(&channel_EMISSION_Buff, sizeof(float[4]) * filmPixelCount, "EMISSION");
-	else
-		FreeOCLBuffer(&channel_EMISSION_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		AllocOCLBufferRW(&channel_INDIRECT_DIFFUSE_Buff, sizeof(float[4]) * filmPixelCount, "INDIRECT_DIFFUSE");
-	else
-		FreeOCLBuffer(&channel_INDIRECT_DIFFUSE_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		AllocOCLBufferRW(&channel_INDIRECT_GLOSSY_Buff, sizeof(float[4]) * filmPixelCount, "INDIRECT_GLOSSY");
-	else
-		FreeOCLBuffer(&channel_INDIRECT_GLOSSY_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		AllocOCLBufferRW(&channel_INDIRECT_SPECULAR_Buff, sizeof(float[4]) * filmPixelCount, "INDIRECT_SPECULAR");
-	else
-		FreeOCLBuffer(&channel_INDIRECT_SPECULAR_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK)) {
-		if (threadFilm->GetMaskMaterialIDCount() > 1)
-			throw runtime_error("PathOCL supports only 1 MATERIAL_ID_MASK");
-		else
-			AllocOCLBufferRW(&channel_MATERIAL_ID_MASK_Buff,
-					sizeof(float[2]) * filmPixelCount, "MATERIAL_ID_MASK");
-	} else
-		FreeOCLBuffer(&channel_MATERIAL_ID_MASK_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		AllocOCLBufferRW(&channel_DIRECT_SHADOW_MASK_Buff, sizeof(float[2]) * filmPixelCount, "DIRECT_SHADOW_MASK");
-	else
-		FreeOCLBuffer(&channel_DIRECT_SHADOW_MASK_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		AllocOCLBufferRW(&channel_INDIRECT_SHADOW_MASK_Buff, sizeof(float[2]) * filmPixelCount, "INDIRECT_SHADOW_MASK");
-	else
-		FreeOCLBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::UV))
-		AllocOCLBufferRW(&channel_UV_Buff, sizeof(float[2]) * filmPixelCount, "UV");
-	else
-		FreeOCLBuffer(&channel_UV_Buff);
-	if (threadFilm->HasChannel(Film::RAYCOUNT))
-		AllocOCLBufferRW(&channel_RAYCOUNT_Buff, sizeof(float) * filmPixelCount, "RAYCOUNT");
-	else
-		FreeOCLBuffer(&channel_RAYCOUNT_Buff);
-	//--------------------------------------------------------------------------
-	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID)) {
-		if (threadFilm->GetByMaterialIDCount() > 1)
-			throw runtime_error("PathOCL supports only 1 BY_MATERIAL_ID");
-		else
-			AllocOCLBufferRW(&channel_BY_MATERIAL_ID_Buff,
-					sizeof(float[4]) * filmPixelCount, "BY_MATERIAL_ID");
-	} else
-		FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
+	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
+		threadFilm.Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight);
 }
 
 void PathOCLBaseRenderThread::InitCamera() {
@@ -626,9 +858,13 @@ void PathOCLBaseRenderThread::InitKernels() {
 	}
 
 	// Film related parameters
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
+
+	// All thread films are supposed to have the same parameters
+	const Film *threadFilm = threadFilms[0].film;
+
+	for (u_int i = 0; i < threadFilms[0].channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		ss << " -D PARAM_FILM_RADIANCE_GROUP_" << i;
-	ss << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
+	ss << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << threadFilms[0].channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
 	if (threadFilm->HasChannel(Film::ALPHA))
 		ss << " -D PARAM_FILM_CHANNELS_HAS_ALPHA";
 	if (threadFilm->HasChannel(Film::DEPTH))
@@ -1115,11 +1351,9 @@ void PathOCLBaseRenderThread::InitRender() {
 
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
-	// Clear the film
-	const u_int filmPixelCount = threadFilm->GetWidth() * threadFilm->GetHeight();
-	oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-			cl::NDRange(filmClearWorkGroupSize));
+	// Clear all thread films
+	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
+		threadFilm.ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 
 	oclQueue.finish();
 
@@ -1129,18 +1363,6 @@ void PathOCLBaseRenderThread::InitRender() {
 
 void PathOCLBaseRenderThread::SetKernelArgs() {
 	// Set OpenCL kernel arguments
-
-	{
-		// OpenCL kernel setArg() is the only no thread safe function in OpenCL 1.1 so
-		// I need to use a mutex here
-		boost::unique_lock<boost::mutex> lock(renderEngine->setKernelArgsMutex);
-
-		//--------------------------------------------------------------------------
-		// initFilmKernel
-		//--------------------------------------------------------------------------
-
-		SetFilmKernelArgs(*filmClearKernel, 0);
-	}
 
 	SetAdditionalKernelArgs();
 }
@@ -1160,30 +1382,9 @@ void PathOCLBaseRenderThread::Interrupt() {
 void PathOCLBaseRenderThread::Stop() {
 	StopRenderThread();
 
-	TransferFilm(intersectionDevice->GetOpenCLQueue());
-
-	// Film buffers
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		FreeOCLBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
-	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.clear();
-	FreeOCLBuffer(&channel_ALPHA_Buff);
-	FreeOCLBuffer(&channel_DEPTH_Buff);
-	FreeOCLBuffer(&channel_POSITION_Buff);
-	FreeOCLBuffer(&channel_GEOMETRY_NORMAL_Buff);
-	FreeOCLBuffer(&channel_SHADING_NORMAL_Buff);
-	FreeOCLBuffer(&channel_MATERIAL_ID_Buff);
-	FreeOCLBuffer(&channel_DIRECT_DIFFUSE_Buff);
-	FreeOCLBuffer(&channel_DIRECT_GLOSSY_Buff);
-	FreeOCLBuffer(&channel_EMISSION_Buff);
-	FreeOCLBuffer(&channel_INDIRECT_DIFFUSE_Buff);
-	FreeOCLBuffer(&channel_INDIRECT_GLOSSY_Buff);
-	FreeOCLBuffer(&channel_INDIRECT_SPECULAR_Buff);
-	FreeOCLBuffer(&channel_MATERIAL_ID_MASK_Buff);
-	FreeOCLBuffer(&channel_DIRECT_SHADOW_MASK_Buff);
-	FreeOCLBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
-	FreeOCLBuffer(&channel_UV_Buff);
-	FreeOCLBuffer(&channel_RAYCOUNT_Buff);
-	FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
+	// Transfer the films
+	TransferThreadFilms(intersectionDevice->GetOpenCLQueue());
+	FreeThreadFilmsOCLBuffers();
 
 	// Scene buffers
 	FreeOCLBuffer(&materialsBuff);
@@ -1290,10 +1491,8 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 		// Clear the frame buffer
-		const u_int filmPixelCount = threadFilm->GetWidth() * threadFilm->GetHeight();
-		oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-			cl::NDRange(filmClearWorkGroupSize));
+		BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
+			threadFilm.ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 	}
 
 	// Reset statistics in order to be more accurate
@@ -1311,172 +1510,25 @@ void PathOCLBaseRenderThread::WaitForDone() const {
 		renderThread->join();
 }
 
-void PathOCLBaseRenderThread::TransferFilm(cl::CommandQueue &oclQueue) {
-	// Async. transfer of the Film buffers
+void PathOCLBaseRenderThread::IncThreadFilms() {
+	threadFilms.push_back(ThreadFilm(this));
+}
 
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
-		if (channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]) {
-			oclQueue.enqueueReadBuffer(
-				*(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]),
-				CL_FALSE,
-				0,
-				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->getInfo<CL_MEM_SIZE>(),
-				threadFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
-		}
-	}
+void PathOCLBaseRenderThread::ClearThreadFilms(cl::CommandQueue &oclQueue) {
+	// Clear all thread films
+	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
+		threadFilm.ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+}
 
-	if (channel_ALPHA_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_ALPHA_Buff,
-			CL_FALSE,
-			0,
-			channel_ALPHA_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_ALPHA->GetPixels());
-	}
-	if (channel_DEPTH_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_DEPTH_Buff,
-			CL_FALSE,
-			0,
-			channel_DEPTH_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_DEPTH->GetPixels());
-	}
-	if (channel_POSITION_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_POSITION_Buff,
-			CL_FALSE,
-			0,
-			channel_POSITION_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_POSITION->GetPixels());
-	}
-	if (channel_GEOMETRY_NORMAL_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_GEOMETRY_NORMAL_Buff,
-			CL_FALSE,
-			0,
-			channel_GEOMETRY_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_GEOMETRY_NORMAL->GetPixels());
-	}
-	if (channel_SHADING_NORMAL_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_SHADING_NORMAL_Buff,
-			CL_FALSE,
-			0,
-			channel_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_SHADING_NORMAL->GetPixels());
-	}
-	if (channel_MATERIAL_ID_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_MATERIAL_ID_Buff,
-			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_MATERIAL_ID->GetPixels());
-	}
-	if (channel_DIRECT_DIFFUSE_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_DIRECT_DIFFUSE_Buff,
-			CL_FALSE,
-			0,
-			channel_DIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_DIRECT_DIFFUSE->GetPixels());
-	}
-	if (channel_MATERIAL_ID_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_MATERIAL_ID_Buff,
-			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_MATERIAL_ID->GetPixels());
-	}
-	if (channel_DIRECT_GLOSSY_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_DIRECT_GLOSSY_Buff,
-			CL_FALSE,
-			0,
-			channel_DIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_DIRECT_GLOSSY->GetPixels());
-	}
-	if (channel_EMISSION_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_EMISSION_Buff,
-			CL_FALSE,
-			0,
-			channel_EMISSION_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_EMISSION->GetPixels());
-	}
-	if (channel_INDIRECT_DIFFUSE_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_INDIRECT_DIFFUSE_Buff,
-			CL_FALSE,
-			0,
-			channel_INDIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_INDIRECT_DIFFUSE->GetPixels());
-	}
-	if (channel_INDIRECT_GLOSSY_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_INDIRECT_GLOSSY_Buff,
-			CL_FALSE,
-			0,
-			channel_INDIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_INDIRECT_GLOSSY->GetPixels());
-	}
-	if (channel_INDIRECT_SPECULAR_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_INDIRECT_SPECULAR_Buff,
-			CL_FALSE,
-			0,
-			channel_INDIRECT_SPECULAR_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_INDIRECT_SPECULAR->GetPixels());
-	}
-	if (channel_MATERIAL_ID_MASK_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_MATERIAL_ID_MASK_Buff,
-			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_MATERIAL_ID_MASKs[0]->GetPixels());
-	}
-	if (channel_DIRECT_SHADOW_MASK_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_DIRECT_SHADOW_MASK_Buff,
-			CL_FALSE,
-			0,
-			channel_DIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_DIRECT_SHADOW_MASK->GetPixels());
-	}
-	if (channel_INDIRECT_SHADOW_MASK_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_INDIRECT_SHADOW_MASK_Buff,
-			CL_FALSE,
-			0,
-			channel_INDIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_INDIRECT_SHADOW_MASK->GetPixels());
-	}
-	if (channel_UV_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_UV_Buff,
-			CL_FALSE,
-			0,
-			channel_UV_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_UV->GetPixels());
-	}
-	if (channel_RAYCOUNT_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_RAYCOUNT_Buff,
-			CL_FALSE,
-			0,
-			channel_RAYCOUNT_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_RAYCOUNT->GetPixels());
-	}
-	if (channel_BY_MATERIAL_ID_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_BY_MATERIAL_ID_Buff,
-			CL_FALSE,
-			0,
-			channel_BY_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
-			threadFilm->channel_BY_MATERIAL_IDs[0]->GetPixels());
-	}
+void PathOCLBaseRenderThread::TransferThreadFilms(cl::CommandQueue &oclQueue) {
+	// Clear all thread films
+	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
+		threadFilm.TransferFilm(oclQueue);
+}
+
+void PathOCLBaseRenderThread::FreeThreadFilmsOCLBuffers() {
+	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
+		threadFilm.FreeAllOCLBuffers();
 }
 
 #endif

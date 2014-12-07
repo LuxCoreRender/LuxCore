@@ -466,7 +466,7 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	advancePathsKernel->setArg(argIndex++, *hitsBuff);
 
 	// Film parameters
-	argIndex = SetFilmKernelArgs(*advancePathsKernel, argIndex);
+	argIndex = threadFilms[0].SetFilmKernelArgs(*advancePathsKernel, argIndex);
 
 	// Scene parameters
 	if (cscene->hasInfiniteLights) {
@@ -562,8 +562,8 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 		initKernel->setArg(argIndex++, *pathVolInfosBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
 	initKernel->setArg(argIndex++, *cameraBuff);
-	initKernel->setArg(argIndex++, threadFilm->GetWidth());
-	initKernel->setArg(argIndex++, threadFilm->GetHeight());
+	initKernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
+	initKernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
 }
 
 void PathOCLRenderThread::Stop() {
@@ -638,7 +638,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		// Clear the frame buffer
-		const u_int filmPixelCount = threadFilm->GetWidth() * threadFilm->GetHeight();
+		const u_int filmPixelCount = threadFilms[0].film->GetWidth() * threadFilms[0].film->GetHeight();
 		oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
 			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 			cl::NDRange(filmClearWorkGroupSize));
@@ -666,7 +666,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				cerr << "[DEBUG] =================================";*/
 
 			// Async. transfer of the Film buffers
-			TransferFilm(oclQueue);
+			threadFilms[0].TransferFilm(oclQueue);
 
 			// Async. transfer of GPU task statistics
 			oclQueue.enqueueReadBuffer(
@@ -740,7 +740,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 				"(" << oclErrorString(err.err()) << ")");
 	}
 
-	TransferFilm(oclQueue);
+	threadFilms[0].TransferFilm(oclQueue);
 	oclQueue.finish();
 }
 

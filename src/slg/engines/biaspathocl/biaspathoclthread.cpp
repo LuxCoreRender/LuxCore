@@ -291,7 +291,7 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bo
 	rsKernel->setArg(argIndex++, *pixelFilterBuff);
 
 	// Film parameters
-	argIndex = SetFilmKernelArgs(*rsKernel, argIndex);
+	argIndex = threadFilms[0].SetFilmKernelArgs(*rsKernel, argIndex);
 
 	// Scene parameters
 	if (cscene->hasInfiniteLights) {
@@ -393,7 +393,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetHeight());
 	mergePixelSamplesKernel->setArg(argIndex++, *taskResultsBuff);
 	mergePixelSamplesKernel->setArg(argIndex++, *taskStatsBuff);
-	argIndex = SetFilmKernelArgs(*mergePixelSamplesKernel, argIndex);
+	argIndex = threadFilms[0].SetFilmKernelArgs(*mergePixelSamplesKernel, argIndex);
 }
 
 void BiasPathOCLRenderThread::EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue) {
@@ -475,16 +475,16 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		TileRepository::Tile *tile = NULL;
-		while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilm) &&
+		while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0].film) &&
 				!boost::this_thread::interruption_requested()) {
 			//const double t0 = WallClockTime();
-			threadFilm->Reset();
+			threadFilms[0].film->Reset();
 			//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tile->xStart);
 			//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tile->yStart);
 			//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 			//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 			//		"(" << tileW << ", " << tileH << ")");
-				
+
 			// Clear the frame buffer
 			oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
@@ -507,8 +507,8 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(mergePixelSamplesWorkGroupSize));
 
 			// Async. transfer of the Film buffers
-			TransferFilm(oclQueue);
-			threadFilm->AddSampleCount(taskCount);
+			threadFilms[0].TransferFilm(oclQueue);
+			threadFilms[0].film->AddSampleCount(taskCount);
 
 			// Async. transfer of GPU task statistics
 			oclQueue.enqueueReadBuffer(
