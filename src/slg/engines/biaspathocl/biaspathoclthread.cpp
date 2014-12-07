@@ -392,7 +392,6 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetHeight());
 	mergePixelSamplesKernel->setArg(argIndex++, *taskResultsBuff);
-	mergePixelSamplesKernel->setArg(argIndex++, *taskStatsBuff);
 	argIndex = threadFilms[0]->SetFilmKernelArgs(*mergePixelSamplesKernel, argIndex);
 }
 
@@ -451,7 +450,7 @@ void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const u_int xStart, const 
 	// Update mergePixelSamplesKernel args
 	mergePixelSamplesKernel->setArg(0, xStart);
 	mergePixelSamplesKernel->setArg(1, yStart);
-	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 6);
+	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 5);
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {
@@ -489,6 +488,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 				cl::NDRange(RoundUp<u_int>(taskCount, initStatWorkGroupSize)),
 				cl::NDRange(initStatWorkGroupSize));
 
+			bool allTileDone = true;
 			for (u_int i = 0; i < tiles.size(); ++i) {
 				if (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tiles[i], threadFilms[i]->film)) {
 					//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tiles[i]->xStart);
@@ -516,6 +516,8 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					// Async. transfer of the Film buffers
 					threadFilms[i]->TransferFilm(oclQueue);
 					threadFilms[i]->film->AddSampleCount(taskCount);
+					
+					allTileDone = false;
 				} else
 					tiles[i] = NULL;
 			}
@@ -530,20 +532,11 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			oclQueue.finish();
 
-			bool allTileDone = true;
-			for (u_int i = 0; i < tiles.size(); ++i) {
-				if (tiles[i]) {
-					// In order to update the statistics
-					u_int tracedRaysCount = 0;
-					// Statistics are accumulated by MergePixelSample kernel
-					const u_int step = engine->tileRepository->totalSamplesPerPixel;
-					for (u_int i = 0; i < taskCount; i += step)
-						tracedRaysCount += gpuTaskStats[i].raysCount;
-					intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
-					
-					allTileDone = false;
-				}
-			}
+			// In order to update the statistics
+			u_int tracedRaysCount = 0;
+			for (u_int i = 0; i < taskCount; ++i)
+				tracedRaysCount += gpuTaskStats[i].raysCount;
+			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 
 			const double t1 = WallClockTime();
 			const double renderingTime = t1 - t0;

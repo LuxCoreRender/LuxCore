@@ -1623,7 +1623,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 		, const uint tileStartY
 		, const uint engineFilmWidth, const uint engineFilmHeight
 		, __global SampleResult *taskResults
-		, __global GPUTaskStats *taskStats
 		// Film parameters
 		KERNEL_ARGS_FILM
 		) {
@@ -1688,13 +1687,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
 			FILM_PARAM);
 #else
-	__global GPUTaskStats *taskStat = &taskStats[index];
-
 	SampleResult result = sampleResult[0];
 	uint totalRaysCount = 0;
 	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i) {
 		SR_Accumulate(&sampleResult[i], &result);
-		totalRaysCount += taskStat[i].raysCount;
 	}
 	SR_Normalize(&result, 1.f / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES));
 
@@ -1703,7 +1699,5 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	sampleResult[0] = result;
 	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
 			FILM_PARAM);
-
-	taskStat[0].raysCount = totalRaysCount;
 #endif
 }
