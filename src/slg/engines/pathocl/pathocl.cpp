@@ -198,7 +198,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 	film->Reset();
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
         if (renderThreads[i])
-            film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilms[0].film));
+            film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilms[0]->film));
     }
 }
 

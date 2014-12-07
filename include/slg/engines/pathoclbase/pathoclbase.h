@@ -119,6 +119,7 @@ protected:
 	void ClearThreadFilms(cl::CommandQueue &oclQueue);
 	void TransferThreadFilms(cl::CommandQueue &oclQueue);
 	void FreeThreadFilmsOCLBuffers();
+	void FreeThreadFilms();
 
 	void InitRender();
 
@@ -174,7 +175,7 @@ protected:
 
 	u_int threadIndex;
 	PathOCLBaseRenderEngine *renderEngine;
-	std::vector<ThreadFilm> threadFilms;
+	std::vector<ThreadFilm *> threadFilms;
 
 	bool started, editMode;
 };
