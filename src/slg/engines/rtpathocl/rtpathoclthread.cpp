@@ -178,7 +178,7 @@ void RTPathOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
 }
 
 void RTPathOCLRenderThread::InitDisplayThread() {
-	const u_int filmBufferPixelCount = threadFilms[0].film->GetWidth() * threadFilms[0].film->GetHeight();
+	const u_int filmBufferPixelCount = threadFilms[0]->film->GetWidth() * threadFilms[0]->film->GetHeight();
 	AllocOCLBufferRW(&tmpFrameBufferBuff, sizeof(slg::ocl::Pixel) * filmBufferPixelCount, "Tmp FrameBuffer");
 	AllocOCLBufferRW(&mergedFrameBufferBuff, sizeof(slg::ocl::Pixel) * filmBufferPixelCount, "Merged FrameBuffer");
 
@@ -193,39 +193,39 @@ void RTPathOCLRenderThread::SetAdditionalKernelArgs() {
 		boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
 		u_int argIndex = 0;
-		clearFBKernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
-		clearFBKernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
+		clearFBKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		clearFBKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 		clearFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
-		clearSBKernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
-		clearSBKernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
+		clearSBKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		clearSBKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 		clearSBKernel->setArg(argIndex, *screenBufferBuff);
 
 		argIndex = 0;
-		normalizeFBKernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
-		normalizeFBKernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
+		normalizeFBKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		normalizeFBKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 		normalizeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
-		applyBlurFilterXR1Kernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
-		applyBlurFilterXR1Kernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
+		applyBlurFilterXR1Kernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		applyBlurFilterXR1Kernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 		applyBlurFilterXR1Kernel->setArg(argIndex++, *screenBufferBuff);
 		applyBlurFilterXR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
 		argIndex = 0;
-		applyBlurFilterYR1Kernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
-		applyBlurFilterYR1Kernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
+		applyBlurFilterYR1Kernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		applyBlurFilterYR1Kernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 		applyBlurFilterYR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
 		applyBlurFilterYR1Kernel->setArg(argIndex++, *screenBufferBuff);
 
 		argIndex = 0;
-		toneMapLinearKernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
-		toneMapLinearKernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
+		toneMapLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		toneMapLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
-		updateScreenBufferKernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
-		updateScreenBufferKernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
+		updateScreenBufferKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		updateScreenBufferKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 		updateScreenBufferKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 		updateScreenBufferKernel->setArg(argIndex++, *screenBufferBuff);
 	}
@@ -274,7 +274,7 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 	// Clear the frame buffer
-	const u_int filmPixelCount = threadFilms[0].film->GetWidth() * threadFilms[0].film->GetHeight();
+	const u_int filmPixelCount = threadFilms[0]->film->GetWidth() * threadFilms[0]->film->GetHeight();
 	oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
 			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 			cl::NDRange(filmClearWorkGroupSize));
@@ -310,7 +310,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		cl::CommandQueue &initQueue = intersectionDevice->GetOpenCLQueue();
 
 		// Clear the frame buffer
-		const u_int filmPixelCount = threadFilms[0].film->GetWidth() * threadFilms[0].film->GetHeight();
+		const u_int filmPixelCount = threadFilms[0]->film->GetWidth() * threadFilms[0]->film->GetHeight();
 		initQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
 				cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
 				cl::NDRange(filmClearWorkGroupSize));
@@ -352,7 +352,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 			// No need to transfer the frame buffer if I'm not the display thread
 			if (engine->displayDeviceIndex != threadIndex)
-				threadFilms[0].TransferFilm(currentQueue);
+				threadFilms[0]->TransferFilm(currentQueue);
 
 			// Async. transfer of GPU task statistics
 			currentQueue.enqueueReadBuffer(*(taskStatsBuff), CL_FALSE, 0,
@@ -390,9 +390,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					if (i == threadIndex) {
 						// Normalize and merge the frame buffers
 						u_int argIndex = 0;
-						mergeFBKernel->setArg(argIndex++, threadFilms[0].film->GetWidth());
-						mergeFBKernel->setArg(argIndex++, threadFilms[0].film->GetHeight());
-						mergeFBKernel->setArg(argIndex++, *(threadFilms[0].channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[0]));
+						mergeFBKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+						mergeFBKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
+						mergeFBKernel->setArg(argIndex++, *(threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[0]));
 						mergeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 						currentQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
 								cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, mergeFBWorkGroupSize)),
@@ -402,12 +402,12 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderThreads[i]);
 						currentQueue.enqueueWriteBuffer(*tmpFrameBufferBuff, CL_FALSE, 0,
 								tmpFrameBufferBuff->getInfo<CL_MEM_SIZE>(),
-								thread->threadFilms[0].film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetPixels());
+								thread->threadFilms[0]->film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetPixels());
 
 						// Normalize and merge the frame buffers
 						u_int argIndex = 0;
-						mergeFBKernel->setArg(argIndex++, thread->threadFilms[0].film->GetWidth());
-						mergeFBKernel->setArg(argIndex++, thread->threadFilms[0].film->GetHeight());
+						mergeFBKernel->setArg(argIndex++, thread->threadFilms[0]->film->GetWidth());
+						mergeFBKernel->setArg(argIndex++, thread->threadFilms[0]->film->GetHeight());
 						mergeFBKernel->setArg(argIndex++, *tmpFrameBufferBuff);
 						mergeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 						currentQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,

@@ -308,9 +308,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			//------------------------------------------------------------------
 
 			TileRepository::Tile *tile = NULL;
-			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0].film)) {
+			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film)) {
 				//const double t0 = WallClockTime();
-				threadFilms[0].film->Reset();
+				threadFilms[0]->film->Reset();
 				//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tile->xStart);
 				//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tile->yStart);
 				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile: "
@@ -328,7 +328,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(initStatWorkGroupSize));
 
 				// Render the tile
-				UpdateRenderSampleKernelArgs(tile->xStart, tile->yStart);
+				UpdateKernelArgsForTile(tile->xStart, tile->yStart, 0);
 
 				// Render all pixel samples
 				EnqueueRenderSampleKernel(currentQueue);
@@ -339,8 +339,8 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 						cl::NDRange(mergePixelSamplesWorkGroupSize));
 
 				// Async. transfer of the Film buffers
-				threadFilms[0].TransferFilm(currentQueue);
-				threadFilms[0].film->AddSampleCount(taskCount);
+				threadFilms[0]->TransferFilm(currentQueue);
+				threadFilms[0]->film->AddSampleCount(taskCount);
 
 				// Async. transfer of GPU task statistics
 				currentQueue.enqueueReadBuffer(

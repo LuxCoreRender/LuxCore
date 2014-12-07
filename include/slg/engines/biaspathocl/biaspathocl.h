@@ -54,7 +54,7 @@ protected:
 	virtual void Stop();
 	
 	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel, bool firstKernel);
-	void UpdateRenderSampleKernelArgs(const u_int xStart, const u_int yStart);
+	void UpdateKernelArgsForTile(const u_int xStart, const u_int yStart, const u_int filmIndex);
 	void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables

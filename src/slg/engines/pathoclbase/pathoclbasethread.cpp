@@ -97,7 +97,7 @@ void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
 	if (film->GetRadianceGroupCount() > 8)
 		throw runtime_error("PathOCL supports only up to 8 Radiance Groups");
 
-	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.resize(film->GetRadianceGroupCount());
+	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.resize(film->GetRadianceGroupCount(), NULL);
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
 		renderThread->AllocOCLBufferRW(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i],
 				sizeof(float[4]) * filmPixelCount, "RADIANCE_PER_PIXEL_NORMALIZEDs[" + ToString(i) + "]");
@@ -509,6 +509,8 @@ PathOCLBaseRenderThread::~PathOCLBaseRenderThread() {
 	if (started)
 		Stop();
 
+	FreeThreadFilms();
+
 	delete filmClearKernel;
 	delete kernelCache;
 }
@@ -555,7 +557,7 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 	//--------------------------------------------------------------------------
 
 	// All thread films are supposed to have the same parameters
-	const Film *threadFilm = threadFilms[0].film;
+	const Film *threadFilm = threadFilms[0]->film;
 
 	// SampleResult.filmX and SampleResult.filmY
 	size_t sampleResultSize = 2 * sizeof(float);
@@ -691,8 +693,8 @@ void PathOCLBaseRenderThread::InitFilm() {
 	u_int threadFilmWidth, threadFilmHeight;
 	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight);
 
-	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
-		threadFilm.Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight);
+	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+		threadFilm->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight);
 }
 
 void PathOCLBaseRenderThread::InitCamera() {
@@ -860,11 +862,11 @@ void PathOCLBaseRenderThread::InitKernels() {
 	// Film related parameters
 
 	// All thread films are supposed to have the same parameters
-	const Film *threadFilm = threadFilms[0].film;
+	const Film *threadFilm = threadFilms[0]->film;
 
-	for (u_int i = 0; i < threadFilms[0].channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
+	for (u_int i = 0; i < threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		ss << " -D PARAM_FILM_RADIANCE_GROUP_" << i;
-	ss << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << threadFilms[0].channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
+	ss << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
 	if (threadFilm->HasChannel(Film::ALPHA))
 		ss << " -D PARAM_FILM_CHANNELS_HAS_ALPHA";
 	if (threadFilm->HasChannel(Film::DEPTH))
@@ -1352,8 +1354,8 @@ void PathOCLBaseRenderThread::InitRender() {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
 	// Clear all thread films
-	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
-		threadFilm.ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+		threadFilm->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 
 	oclQueue.finish();
 
@@ -1490,9 +1492,8 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 
-		// Clear the frame buffer
-		BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
-			threadFilm.ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+		// Clear the frame buffers
+		ClearThreadFilms(oclQueue);
 	}
 
 	// Reset statistics in order to be more accurate
@@ -1511,24 +1512,36 @@ void PathOCLBaseRenderThread::WaitForDone() const {
 }
 
 void PathOCLBaseRenderThread::IncThreadFilms() {
-	threadFilms.push_back(ThreadFilm(this));
+	threadFilms.push_back(new ThreadFilm(this));
+
+	// Initialize the new thread film
+	u_int threadFilmWidth, threadFilmHeight;
+	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight);
+
+	threadFilms.back()->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight);
 }
 
 void PathOCLBaseRenderThread::ClearThreadFilms(cl::CommandQueue &oclQueue) {
 	// Clear all thread films
-	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
-		threadFilm.ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+		threadFilm->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 }
 
 void PathOCLBaseRenderThread::TransferThreadFilms(cl::CommandQueue &oclQueue) {
 	// Clear all thread films
-	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
-		threadFilm.TransferFilm(oclQueue);
+	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+		threadFilm->TransferFilm(oclQueue);
 }
 
 void PathOCLBaseRenderThread::FreeThreadFilmsOCLBuffers() {
-	BOOST_FOREACH(ThreadFilm &threadFilm, threadFilms)
-		threadFilm.FreeAllOCLBuffers();
+	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+		threadFilm->FreeAllOCLBuffers();
+}
+
+void PathOCLBaseRenderThread::FreeThreadFilms() {
+	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+		delete threadFilm;
+	threadFilms.clear();
 }
 
 #endif

@@ -62,7 +62,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	__global GPUTask *task = &tasks[gid];
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global GPUTaskPathVertexN *taskPathVertexN = &tasksPathVertexN[gid];
-	__global GPUTaskStats *taskStat = &taskStats[gid];
 
 	//--------------------------------------------------------------------------
 	// Initialize image maps page pointer table
@@ -85,7 +84,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	PathVolumeInfo_Init(&task->volInfoPathVertex1);
 #endif
 
-	uint tracedRaysCount = taskStat->raysCount;
+	uint tracedRaysCount = 0;
 	float3 throughputPathVertex1 = WHITE;
 	
 	__global SampleResult *sampleResult = &taskResults[gid];
@@ -372,7 +371,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	sampleResult->rayCount = tracedRaysCount;
 #endif
 
-	taskStat->raysCount = tracedRaysCount;
+	taskStats[gid]->raysCount += tracedRaysCount;
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
