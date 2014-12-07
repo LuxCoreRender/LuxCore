@@ -237,6 +237,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.shadingNormal = bsdf->hitPoint.shadeN;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+		// Initialize image maps page pointer table
+		INIT_IMAGEMAPS_PAGES
+
 		sample->result.materialID = BSDF_GetMaterialID(bsdf
 				MATERIALS_PARAM);
 #endif
