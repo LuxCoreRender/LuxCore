@@ -508,18 +508,23 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					// Render all pixel samples
 					EnqueueRenderSampleKernel(oclQueue);
 
-					// Merge all pixel samples and accumulate statistics
+					// Merge all pixel samples
 					oclQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
 							cl::NDRange(RoundUp<u_int>(filmPixelCount, mergePixelSamplesWorkGroupSize)),
 							cl::NDRange(mergePixelSamplesWorkGroupSize));
-
-					// Async. transfer of the Film buffers
-					threadFilms[i]->TransferFilm(oclQueue);
-					threadFilms[i]->film->AddSampleCount(taskCount);
 					
 					allTileDone = false;
 				} else
 					tiles[i] = NULL;
+			}
+
+			// Transfer all the results
+			for (u_int i = 0; i < tiles.size(); ++i) {
+				if (tiles[i]) {
+					// Async. transfer of the Film buffers
+					threadFilms[i]->TransferFilm(oclQueue);
+					threadFilms[i]->film->AddSampleCount(taskCount);
+				}
 			}
 
 			// Async. transfer of GPU task statistics
@@ -544,11 +549,15 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			if (allTileDone)
 				break;
-			
-			// Check the the time spent, if it is too small (< 50ms) get more tiles
-			if ((tiles.size() < 8) && (renderingTime < 0.050)) {
+
+			// Check the the time spent, if it is too small (< 100ms) get more tiles
+			// (avoid to increase the number of tiles on CPU devices, it is useless)
+			if ((tiles.size() < engine->maxTilePerDevice) && (renderingTime < 0.1) && 
+					(intersectionDevice->GetDeviceDesc()->GetType() != DEVICE_TYPE_OPENCL_CPU)) {
 				IncThreadFilms();
 				tiles.push_back(NULL);
+
+				SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tiles.size());
 			}
 		}
 
