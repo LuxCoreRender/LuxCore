@@ -547,7 +547,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 
 			const double t1 = WallClockTime();
 			const double renderingTime = t1 - t0;
-			SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] " << tiles.size() << "xTile(s) rendering time: " << (u_int)(renderingTime * 1000.0) << "ms");
+			//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] " << tiles.size() << "xTile(s) rendering time: " << (u_int)(renderingTime * 1000.0) << "ms");
 
 			if (allTileDone)
 				break;
