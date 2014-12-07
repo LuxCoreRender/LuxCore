@@ -129,6 +129,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	tileRepository->InitTiles(*film);
 
+	maxTilePerDevice = cfg.Get(Property("biaspath.devices.maxtiles")(16)).Get<u_int>();
 	useMicroKernels = cfg.Get(Property("biaspath.microkernels.enable")(true)).Get<bool>();
 
 	taskCount = tileRepository->tileWidth * tileRepository->tileHeight * tileRepository->totalSamplesPerPixel;

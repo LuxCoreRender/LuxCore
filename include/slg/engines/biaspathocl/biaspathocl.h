@@ -121,7 +121,8 @@ public:
 	// Light settings
 	float lowLightThreashold, nearStartLight;
 	u_int firstVertexLightSampleCount;
-	
+
+	u_int maxTilePerDevice;
 	bool useMicroKernels;
 
 protected:
