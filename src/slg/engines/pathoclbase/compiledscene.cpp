@@ -464,7 +464,7 @@ void CompiledScene::CompileMaterials() {
 				const Texture *indexTex = g2m->GetIndex();
 				mat->glossy2.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
 				// Check if index is just 0.0
-				if (IsTexConstant(depthTex) && (GetTexConstantFloatValue(indexTex) > 0.f))
+				if (IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f))
 					usedMaterialTypes.insert(GLOSSY2_INDEX);
 
 				mat->glossy2.multibounce = g2m->IsMultibounce() ? 1 : 0;
@@ -555,6 +555,55 @@ void CompiledScene::CompileMaterials() {
 				mat->carpaint.R3TexIndex = scene->texDefs.GetTextureIndex(cm->R3);
 				mat->carpaint.KaTexIndex = scene->texDefs.GetTextureIndex(cm->Ka);
 				mat->carpaint.depthTexIndex = scene->texDefs.GetTextureIndex(cm->depth);
+				break;
+			}
+			case GLOSSYTRANSLUCENT: {
+				const GlossyTranslucentMaterial *gtm = static_cast<GlossyTranslucentMaterial *>(m);
+
+				mat->type = slg::ocl::GLOSSYTRANSLUCENT;
+				mat->glossytranslucent.kdTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKd());
+				mat->glossytranslucent.ktTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKt());
+				mat->glossytranslucent.ksTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKs());
+				mat->glossytranslucent.ksbfTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKs_bf());
+
+				const Texture *nuTex = gtm->GetNu();
+				const Texture *nvTex = gtm->GetNv();
+				mat->glossytranslucent.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
+				mat->glossytranslucent.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
+				const Texture *nubfTex = gtm->GetNu_bf();
+				const Texture *nvbfTex = gtm->GetNv_bf();
+				mat->glossytranslucent.nubfTexIndex = scene->texDefs.GetTextureIndex(nubfTex);
+				mat->glossytranslucent.nvbfTexIndex = scene->texDefs.GetTextureIndex(nvbfTex);
+				// Check if it an anisotropic material
+				if ((IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
+						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex))) ||
+						(IsTexConstant(nubfTex) && IsTexConstant(nvbfTex) &&
+						(GetTexConstantFloatValue(nubfTex) != GetTexConstantFloatValue(nvbfTex))))
+					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ANISOTROPIC);
+
+				const Texture *depthTex = gtm->GetDepth();
+				mat->glossytranslucent.kaTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKa());
+				mat->glossytranslucent.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
+				const Texture *depthbfTex = gtm->GetDepth_bf();
+				mat->glossytranslucent.kabfTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKa_bf());
+				mat->glossytranslucent.depthbfTexIndex = scene->texDefs.GetTextureIndex(depthTex);
+				// Check if depth is just 0.0
+				if ((IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f)) || (IsTexConstant(depthbfTex) && (GetTexConstantFloatValue(depthbfTex) > 0.f)))
+					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ABSORPTION);
+
+				const Texture *indexTex = gtm->GetIndex();
+				mat->glossytranslucent.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
+				const Texture *indexbfTex = gtm->GetIndex_bf();
+				mat->glossytranslucent.indexbfTexIndex = scene->texDefs.GetTextureIndex(indexTex);
+				// Check if index is just 0.0
+				if ((IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f)) || (IsTexConstant(indexbfTex) && GetTexConstantFloatValue(indexbfTex)))
+					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_INDEX);
+
+				mat->glossytranslucent.multibounce = gtm->IsMultibounce() ? 1 : 0;
+				mat->glossytranslucent.multibouncebf = gtm->IsMultibounce_bf() ? 1 : 0;
+				// Check if multibounce is enabled
+				if (gtm->IsMultibounce() || gtm->IsMultibounce_bf())
+					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_MULTIBOUNCE);
 				break;
 			}
 			//------------------------------------------------------------------
@@ -2481,6 +2530,37 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
+			case slg::ocl::GLOSSYTRANSLUCENT: {
+				AddMaterialSource(source, "GlossyTranslucent", i,
+						"\n#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)\n" +
+						AddTextureSourceCall("Float", mat->glossytranslucent.indexTexIndex) + ", " +
+						AddTextureSourceCall("Float", mat->glossytranslucent.indexbfTexIndex) + ", " +
+						"\n#endif\n" +
+						AddTextureSourceCall("Float", mat->glossytranslucent.nuTexIndex) + ", " +
+						AddTextureSourceCall("Float", mat->glossytranslucent.nubfTexIndex) + ", " +
+						"\n#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)\n" +
+						AddTextureSourceCall("Float", mat->glossytranslucent.nvTexIndex) + ", " +
+						AddTextureSourceCall("Float", mat->glossytranslucent.nvbfTexIndex) + ", " +
+						"\n#endif\n" +
+						"\n#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)\n" +
+						AddTextureSourceCall("Spectrum", mat->glossytranslucent.kaTexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->glossytranslucent.kabfTexIndex) + ", " +
+						AddTextureSourceCall("Float", mat->glossytranslucent.depthTexIndex) + ", " +
+						AddTextureSourceCall("Float", mat->glossytranslucent.depthbfTexIndex) + ", " +
+						"\n#endif\n" +
+						"\n#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE)\n" +
+						ToString(mat->glossytranslucent.multibounce) + ", " +
+						ToString(mat->glossytranslucent.multibouncebf) + ", " +
+						"\n#endif\n" +
+						AddTextureSourceCall("Spectrum", mat->glossytranslucent.kdTexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->glossytranslucent.ktTexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->glossytranslucent.ksTexIndex) + ", " +
+						AddTextureSourceCall("Spectrum", mat->glossytranslucent.ksbfTexIndex));
+				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
+				AddMaterialSourceStandardImplBump(source, i);
+				AddMaterialSourceStandardImplGetvolume(source, i);
+				break;
+			}
 			case slg::ocl::CLEAR_VOL: {
 				AddMaterialSource(source, "ClearVol", i, "");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
@@ -2933,6 +3013,7 @@ bool CompiledScene::RequiresPassThrough() const {
 			IsMaterialCompiled(GLOSSY2) ||
 			IsMaterialCompiled(ROUGHGLASS) ||
 			IsMaterialCompiled(CARPAINT) ||
+			IsMaterialCompiled(GLOSSYTRANSLUCENT) ||
 			IsMaterialCompiled(CLEAR_VOL) ||
 			IsMaterialCompiled(HOMOGENEOUS_VOL) ||
 			IsMaterialCompiled(HETEROGENEOUS_VOL));

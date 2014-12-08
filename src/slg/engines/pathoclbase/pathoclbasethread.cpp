@@ -790,6 +790,18 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_MAT_HOMOGENEOUS_VOL";
 	if (cscene->IsMaterialCompiled(HETEROGENEOUS_VOL))
 		ss << " -D PARAM_ENABLE_MAT_HETEROGENEOUS_VOL";
+	if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT)) {
+		ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT";
+
+		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_ANISOTROPIC))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC";
+		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_ABSORPTION))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION";
+		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_INDEX))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX";
+		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_MULTIBOUNCE))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE";
+	}
 
 	if (cscene->RequiresPassThrough())
 		ss << " -D PARAM_HAS_PASSTHROUGH";
@@ -975,6 +987,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
+			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
 			slg::ocl::KernelSource_material_funcs <<
 			// KernelSource_materialdefs_funcs_mix must always be the last one
 			slg::ocl::KernelSource_materialdefs_funcs_mix;

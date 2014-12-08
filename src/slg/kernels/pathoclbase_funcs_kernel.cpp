@@ -51,6 +51,7 @@ std::string KernelSource_pathoclbase_funcs =
 "//  PARAM_ENABLE_MAT_ROUGHGLASS\n"
 "//  PARAM_ENABLE_MAT_CLOTH\n"
 "//  PARAM_ENABLE_MAT_CARPAINT\n"
+"//  PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT\n"
 "//  PARAM_ENABLE_MAT_CLEAR_VOL\n"
 "\n"
 "// To enable single texture support\n"
