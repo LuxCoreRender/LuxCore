@@ -22,6 +22,11 @@
 #include <vector>
 #include <memory>
 #include <typeinfo> 
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/assume_abstract.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
@@ -42,6 +47,12 @@ public:
 	virtual ImagePipelinePlugin *Copy() const = 0;
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const = 0;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -50,7 +61,7 @@ public:
 
 class ImagePipeline {
 public:
-	ImagePipeline() {}
+	ImagePipeline() { }
 	virtual ~ImagePipeline();
 
 	const std::vector<ImagePipelinePlugin *> &GetPlugins() const { return pipeline; }
@@ -62,10 +73,20 @@ public:
 	void AddPlugin(ImagePipelinePlugin *plugin);
 	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & pipeline;
+	}
+
 	std::vector<ImagePipelinePlugin *> pipeline;
 };
 
 }
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImagePipelinePlugin)
+
+BOOST_CLASS_VERSION(slg::ImagePipeline, 1)
 
 #endif	/*  _SLG_IMAGEPIPELINE_H */

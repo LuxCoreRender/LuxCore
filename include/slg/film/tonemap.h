@@ -21,6 +21,11 @@
 
 #include <cmath>
 #include <string>
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
 
 #include "luxrays/luxrays.h"
 #include "slg/film/imagepipeline.h"
@@ -49,6 +54,13 @@ public:
 	virtual ToneMap *Copy() const = 0;
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const = 0;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & boost::serialization::base_object<ImagePipelinePlugin>(*this);
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -66,6 +78,13 @@ public:
 	}
 
 	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & boost::serialization::base_object<ToneMap>(*this);
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -91,6 +110,14 @@ public:
 	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
 	float scale;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & boost::serialization::base_object<ToneMap>(*this);
+		ar & scale;
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -120,6 +147,16 @@ public:
 	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
 	float sensitivity, exposure, fstop;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & boost::serialization::base_object<ToneMap>(*this);
+		ar & sensitivity;
+		ar & exposure;
+		ar & fstop;
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -148,8 +185,31 @@ public:
 	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
 	float preScale, postScale, burn;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & boost::serialization::base_object<ToneMap>(*this);
+		ar & preScale;
+		ar & postScale;
+		ar & burn;
+	}
 };
 
 }
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ToneMap)
+
+BOOST_CLASS_VERSION(slg::ToneMap, 1)
+BOOST_CLASS_VERSION(slg::AutoLinearToneMap, 1)
+BOOST_CLASS_VERSION(slg::LinearToneMap, 1)
+BOOST_CLASS_VERSION(slg::LuxLinearToneMap, 1)
+BOOST_CLASS_VERSION(slg::Reinhard02ToneMap, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::AutoLinearToneMap)
+BOOST_CLASS_EXPORT_KEY(slg::LinearToneMap)
+BOOST_CLASS_EXPORT_KEY(slg::LuxLinearToneMap)
+BOOST_CLASS_EXPORT_KEY(slg::Reinhard02ToneMap)
 
 #endif	/* _SLG_TONEMAPPING_H */

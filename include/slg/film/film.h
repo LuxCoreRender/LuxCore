@@ -29,6 +29,11 @@
 #include <set>
 
 #include <boost/thread/mutex.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/set.hpp>
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
@@ -106,6 +111,8 @@ public:
 		BY_MATERIAL_ID = 1<<20
 	} FilmChannelType;
 
+	// Used by serialization
+	Film() { }
 	Film(const u_int w, const u_int h);
 	~Film();
 
@@ -238,6 +245,8 @@ public:
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
 
+	friend class boost::serialization::access;
+
 private:
 	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
@@ -249,6 +258,55 @@ private:
 		const SampleResult &sampleResult, const float weight);
 	void AddSampleResultData(const u_int x, const u_int y,
 		const SampleResult &sampleResult);
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
+		ar & channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
+		ar & channel_ALPHA;
+		ar & channel_RGB_TONEMAPPED;
+		ar & channel_DEPTH;
+		ar & channel_POSITION;
+		ar & channel_GEOMETRY_NORMAL;
+		ar & channel_SHADING_NORMAL;
+		ar & channel_MATERIAL_ID;
+		ar & channel_DIRECT_DIFFUSE;
+		ar & channel_DIRECT_GLOSSY;
+		ar & channel_EMISSION;
+		ar & channel_INDIRECT_DIFFUSE;
+		ar & channel_INDIRECT_GLOSSY;
+		ar & channel_INDIRECT_SPECULAR;
+		ar & channel_MATERIAL_ID_MASKs;
+		ar & channel_DIRECT_SHADOW_MASK;
+		ar & channel_INDIRECT_SHADOW_MASK;
+		ar & channel_UV;
+		ar & channel_RAYCOUNT;
+		ar & channel_BY_MATERIAL_IDs;
+		
+		ar & channels;
+		ar & width;
+		ar & height;
+		ar & pixelCount;
+		ar & radianceGroupCount;
+		ar & maskMaterialIDs;
+		ar & byMaterialIDs;
+
+		ar & statsTotalSampleCount;
+		ar & statsStartSampleTime;
+		ar & statsAvgSampleSec;
+
+		ar & imagePipeline;
+		ar & convTest;
+		ar & filter;
+		if (filter) {
+			const u_int size = luxrays::Max<u_int>(4, luxrays::Max(filter->xWidth, filter->yWidth) + 1);
+			filterLUTs = new FilterLUTs(*filter, size);
+		} else
+			filterLUTs = NULL;
+
+		ar & initialized;
+		ar & enabledOverlappedScreenBufferUpdate;
+		ar & rgbTonemapUpdate;
+	}
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
@@ -337,7 +395,9 @@ public:
 private:
 	u_int channels;
 };
-
+		
 }
+
+BOOST_CLASS_VERSION(slg::Film, 1)
 
 #endif	/* _SLG_FILM_H */
