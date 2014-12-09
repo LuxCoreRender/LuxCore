@@ -27,6 +27,7 @@
 #include "slg/film/film.h"
 #include "slg/film/tonemap.h"
 #include "slg/film/imagepipelineplugins.h"
+//#include "slg/sdl/scene.h"
 
 using namespace std;
 using namespace luxrays;
@@ -63,7 +64,7 @@ void TestFilmSerialization() {
 		ofstream outFile;
 		outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
 
-		outFile.open("film.flm");
+		outFile.open("film.bfl");
 
 		boost::archive::binary_oarchive outArchive(outFile);
 
@@ -72,12 +73,12 @@ void TestFilmSerialization() {
 
 	// Read the film
 	LC_LOG("Read the film");
-	slg::Film filmCopy;
+	Film filmCopy;
 	{
 		ifstream inFile;
 		inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
 
-		inFile.open("film.flm");
+		inFile.open("film.bfl");
 
 		boost::archive::binary_iarchive inArchive(inFile);
 
@@ -87,12 +88,47 @@ void TestFilmSerialization() {
 	filmCopy.Output(FilmOutputs::RGB_TONEMAPPED, "film-copy.png");
 }
 
+//void TestSceneSerialization() {
+//	// Create a film
+//	LC_LOG("Create a scene");
+//	
+//	Scene scene("scenes/luxball/luxball-hdr.cfg");
+//	
+//	// Write the scene
+//	LC_LOG("Write the scene");
+//	{
+//		ofstream outFile;
+//		outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+//
+//		outFile.open("scene.bsc");
+//
+//		boost::archive::binary_oarchive outArchive(outFile);
+//
+//		outArchive << scene;
+//	}
+//
+//	// Read the scene
+//	LC_LOG("Read the scene");
+//	Scene sceneCopy;
+//	{
+//		ifstream inFile;
+//		inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+//
+//		inFile.open("scene.bsc");
+//
+//		boost::archive::binary_iarchive inArchive(inFile);
+//
+//		inArchive >> sceneCopy;
+//	}
+//}
+
 int main(int argc, char *argv[]) {
 	luxcore::Init();
 
 	cout << "LuxCore " << LUXCORE_VERSION_MAJOR << "." << LUXCORE_VERSION_MINOR << "\n" ;
 
 	TestFilmSerialization();
+	//TestSceneSerialization();
 
 	LC_LOG("Done.");
 
