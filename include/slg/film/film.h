@@ -248,6 +248,10 @@ public:
 	friend class boost::serialization::access;
 
 private:
+	template<class Archive> void load(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const u_int version) const;
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
@@ -258,55 +262,6 @@ private:
 		const SampleResult &sampleResult, const float weight);
 	void AddSampleResultData(const u_int x, const u_int y,
 		const SampleResult &sampleResult);
-
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-		ar & channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-		ar & channel_ALPHA;
-		ar & channel_RGB_TONEMAPPED;
-		ar & channel_DEPTH;
-		ar & channel_POSITION;
-		ar & channel_GEOMETRY_NORMAL;
-		ar & channel_SHADING_NORMAL;
-		ar & channel_MATERIAL_ID;
-		ar & channel_DIRECT_DIFFUSE;
-		ar & channel_DIRECT_GLOSSY;
-		ar & channel_EMISSION;
-		ar & channel_INDIRECT_DIFFUSE;
-		ar & channel_INDIRECT_GLOSSY;
-		ar & channel_INDIRECT_SPECULAR;
-		ar & channel_MATERIAL_ID_MASKs;
-		ar & channel_DIRECT_SHADOW_MASK;
-		ar & channel_INDIRECT_SHADOW_MASK;
-		ar & channel_UV;
-		ar & channel_RAYCOUNT;
-		ar & channel_BY_MATERIAL_IDs;
-		
-		ar & channels;
-		ar & width;
-		ar & height;
-		ar & pixelCount;
-		ar & radianceGroupCount;
-		ar & maskMaterialIDs;
-		ar & byMaterialIDs;
-
-		ar & statsTotalSampleCount;
-		ar & statsStartSampleTime;
-		ar & statsAvgSampleSec;
-
-		ar & imagePipeline;
-		ar & convTest;
-		ar & filter;
-		if (filter) {
-			const u_int size = luxrays::Max<u_int>(4, luxrays::Max(filter->xWidth, filter->yWidth) + 1);
-			filterLUTs = new FilterLUTs(*filter, size);
-		} else
-			filterLUTs = NULL;
-
-		ar & initialized;
-		ar & enabledOverlappedScreenBufferUpdate;
-		ar & rgbTonemapUpdate;
-	}
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
@@ -329,6 +284,9 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index);
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index);
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index);
+
+template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
+template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
 
 //------------------------------------------------------------------------------
 // SampleResult
