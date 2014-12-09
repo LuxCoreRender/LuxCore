@@ -32,6 +32,8 @@ using namespace slg;
 // Gamma correction plugin
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::GammaCorrectionPlugin)
+
 GammaCorrectionPlugin::GammaCorrectionPlugin(const float g, const u_int tableSize) {
 	gamma = g;
 
@@ -71,6 +73,8 @@ void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, std::vecto
 // Nop plugin
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::NopPlugin)
+
 ImagePipelinePlugin *NopPlugin::Copy() const {
 	return new NopPlugin();
 }
@@ -81,6 +85,8 @@ void NopPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pix
 //------------------------------------------------------------------------------
 // OutputSwitcher plugin
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::OutputSwitcherPlugin)
 
 ImagePipelinePlugin *OutputSwitcherPlugin::Copy() const {
 	return new OutputSwitcherPlugin(type, index);
@@ -301,6 +307,8 @@ void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, std::vector
 // GaussianBlur filter plugin
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianBlur3x3FilterPlugin)
+
 ImagePipelinePlugin *GaussianBlur3x3FilterPlugin::Copy() const {
 	return new GaussianBlur3x3FilterPlugin(weight);
 }
@@ -433,6 +441,8 @@ void GaussianBlur3x3FilterPlugin::Apply(const Film &film, Spectrum *pixels, vect
 //------------------------------------------------------------------------------
 // CameraResponse filter plugin
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::CameraResponsePlugin)
 
 ImagePipelinePlugin *CameraResponsePlugin::Copy() const {
 	CameraResponsePlugin *crp = new CameraResponsePlugin();

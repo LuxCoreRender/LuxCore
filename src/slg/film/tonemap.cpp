@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/lexical_cast.hpp>
+#include <boost/serialization/export.hpp>
 
 #include "luxrays/core/color/color.h"
 #include "slg/film/tonemap.h"
@@ -63,6 +64,8 @@ ToneMapType slg::String2ToneMapType(const std::string &type) {
 // Auto-linear tone mapping
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::AutoLinearToneMap)
+
 void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
@@ -85,7 +88,8 @@ void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bo
 	const ImagePipeline *ip = film.GetImagePipeline();
 	if (ip) {
 		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
-		gamma = gc->gamma;
+		if (gc)
+			gamma = gc->gamma;
 	}
 	
 	// Substitute exposure, fstop and sensitivity cancel out; collect constants
@@ -103,6 +107,8 @@ void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bo
 // Linear tone mapping
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::LinearToneMap)
+
 void LinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
@@ -116,6 +122,8 @@ void LinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> 
 // LuxRender Linear tone mapping
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::LuxLinearToneMap)
+
 void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
@@ -123,7 +131,8 @@ void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<boo
 	const ImagePipeline *ip = film.GetImagePipeline();
 	if (ip) {
 		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
-		gamma = gc->gamma;
+		if (gc)
+			gamma = gc->gamma;
 	}
 
 	const float scale = exposure / (fstop * fstop) * sensitivity * 0.65f / 10.f * powf(118.f / 255.f, gamma);
@@ -138,6 +147,8 @@ void LuxLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<boo
 //------------------------------------------------------------------------------
 // Reinhard02 tone mapping
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::Reinhard02ToneMap)
 
 void Reinhard02ToneMap::Apply(const Film &film, Spectrum *pxls, std::vector<bool> &pixelsMask) const {
 	RGBColor *rgbPixels = (RGBColor *)pxls;

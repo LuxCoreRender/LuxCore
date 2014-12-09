@@ -162,7 +162,7 @@ static void DoRendering(RenderSession *session) {
 				stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0,
 				stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0);
 
-		SLG_LOG(buf);
+		LC_LOG(buf);
 	}
 
 	// Save the rendered image
@@ -291,7 +291,7 @@ int main(int argc, char *argv[]) {
 		// Edit a texture
 		//----------------------------------------------------------------------
 
-		SLG_LOG("Editing a texture...");
+		LC_LOG("Editing a texture...");
 		session->BeginSceneEdit();
 		scene->Parse(
 			Property("scene.textures.map.type")("constfloat3") <<
@@ -306,7 +306,7 @@ int main(int argc, char *argv[]) {
 		// Edit a material
 		//----------------------------------------------------------------------
 
-		SLG_LOG("Editing a material...");
+		LC_LOG("Editing a material...");
 		session->BeginSceneEdit();
 		scene->Parse(
 			Property("scene.materials.mat_white.type")("mirror") <<
@@ -321,7 +321,7 @@ int main(int argc, char *argv[]) {
 		// Edit an object
 		//----------------------------------------------------------------------
 
-		SLG_LOG("Editing a material and an object...");
+		LC_LOG("Editing a material and an object...");
 		session->BeginSceneEdit();
 		
 		scene->Parse(
@@ -355,18 +355,18 @@ int main(int argc, char *argv[]) {
 		delete config;
 		delete scene;
 
-		SLG_LOG("Done.");
+		LC_LOG("Done.");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
-		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
+		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
 	} catch (runtime_error err) {
-		SLG_LOG("RUNTIME ERROR: " << err.what());
+		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
 	} catch (exception err) {
-		SLG_LOG("ERROR: " << err.what());
+		LC_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}
 
