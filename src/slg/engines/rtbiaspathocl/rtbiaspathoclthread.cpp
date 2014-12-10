@@ -312,6 +312,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 	RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
 	boost::barrier *frameBarrier = engine->frameBarrier;
+	// To synchronize the start of all threads
+	frameBarrier->wait();
+
 	const u_int tileWidth = engine->tileRepository->tileWidth;
 	const u_int tileHeight = engine->tileRepository->tileHeight;
 	const u_int threadFilmPixelCount = tileWidth * tileHeight;
