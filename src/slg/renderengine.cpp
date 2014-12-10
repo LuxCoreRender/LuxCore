@@ -801,6 +801,18 @@ void TileRepository::InitTiles(const Film &film) {
 	startTime = WallClockTime();
 }
 
+void TileRepository::SetDone() {
+	// Rendering done
+	if (!done) {
+		if (enableRenderingDonePrint) {
+			const double elapsedTime = WallClockTime() - startTime;
+			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+		}
+
+		done = true;
+	}
+}
+
 bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		Tile **tile, const Film *tileFilm) {
 	// Now I have to lock the repository
@@ -834,6 +846,17 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 	}
 
 	if (todoTiles.size() == 0) {
+		if (!enableMultipassRendering) {
+			if (pendingTiles.size() == 0) {
+				// Rendering done
+				SetDone();
+			}
+
+			return false;
+		}
+
+		// Multipass rendering enabled
+		
 		// Check the status of pending tiles (one or more of them could be a
 		// copy of mine and now done)
 		bool pendingAllDone = true;
@@ -848,16 +871,9 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 
 		if (pendingAllDone) {
 			if (pendingTiles.size() == 0) {
-				if ((convergenceTestThresholdReduction == 0.f) || !enableMultipassRendering) {
+				if (convergenceTestThresholdReduction == 0.f) {
 					// Rendering done
-					if (!done) {
-						if (enableRenderingDonePrint) {
-							const double elapsedTime = WallClockTime() - startTime;
-							SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
-						}
-
-						done = true;
-					}
+					SetDone();
 
 					return false;
 				} else {
