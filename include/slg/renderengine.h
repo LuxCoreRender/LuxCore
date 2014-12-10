@@ -254,6 +254,7 @@ public:
 				const u_int xStart, const u_int yStart);
 		virtual ~Tile();
 
+		void Restart();
 		void AddPass(const Film &tileFilm);
 		
 		// Read-only for every one but Tile/TileRepository classes
@@ -280,6 +281,7 @@ public:
 		const int xEnd, const int yEnd);
 
 	void Clear();
+	void Restart();
 	void GetPendingTiles(std::deque<const Tile *> &tiles);
 	void GetNotConvergedTiles(std::deque<const Tile *> &tiles);
 	void GetConvergedTiles(std::deque<const Tile *> &tiles);

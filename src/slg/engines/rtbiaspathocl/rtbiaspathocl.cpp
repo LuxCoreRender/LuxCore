@@ -118,7 +118,7 @@ void RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	// Display thread does all frame post-processing steps 
 
 	// Re-initialize the tile queue for the next frame
-	tileRepository->InitTiles(*film);
+	tileRepository->Restart();
 
 	frameBarrier->wait();
 

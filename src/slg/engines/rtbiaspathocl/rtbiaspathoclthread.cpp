@@ -356,7 +356,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			//------------------------------------------------------------------
 			// Render the tiles
 			//------------------------------------------------------------------
-
+			
 			TileRepository::Tile *tile = NULL;
 			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film)) {
 				//const double t0 = WallClockTime();
