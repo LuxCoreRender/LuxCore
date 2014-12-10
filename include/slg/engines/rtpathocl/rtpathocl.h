@@ -73,8 +73,13 @@ protected:
 	size_t applyBlurFilterXR1WorkGroupSize;
 	cl::Kernel *applyBlurFilterYR1Kernel;
 	size_t applyBlurFilterYR1WorkGroupSize;
+	// For Linear tone mapping
 	cl::Kernel *toneMapLinearKernel;
 	size_t toneMapLinearWorkGroupSize;
+	// For AutoLinear tone mapping (workgroup size is always 256))
+	cl::Kernel *sumRGBValuesReduceKernel;
+	cl::Kernel *sumRGBValueAccumulateKernel;
+	cl::Kernel *toneMapAutoLinearKernel;
 	cl::Kernel *updateScreenBufferKernel;
 	size_t updateScreenBufferWorkGroupSize;
 

@@ -45,6 +45,9 @@ RTPathOCLRenderThread::RTPathOCLRenderThread(const u_int index,
 	applyBlurFilterXR1Kernel = NULL;
 	applyBlurFilterYR1Kernel = NULL;
 	toneMapLinearKernel = NULL;
+	sumRGBValuesReduceKernel = NULL;
+	sumRGBValueAccumulateKernel = NULL;
+	toneMapAutoLinearKernel = NULL;
 	updateScreenBufferKernel = NULL;
 
 	tmpFrameBufferBuff = NULL;
@@ -62,6 +65,9 @@ RTPathOCLRenderThread::~RTPathOCLRenderThread() {
 	delete applyBlurFilterXR1Kernel;
 	delete applyBlurFilterYR1Kernel;
 	delete toneMapLinearKernel;
+	delete sumRGBValuesReduceKernel;
+	delete sumRGBValueAccumulateKernel;
+	delete toneMapAutoLinearKernel;
 	delete updateScreenBufferKernel;
 }
 
@@ -154,6 +160,17 @@ void RTPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 	CompileKernel(program, &toneMapLinearKernel, &toneMapLinearWorkGroupSize, "ToneMapLinear");
 
 	//--------------------------------------------------------------------------
+	// ToneMapAutoLinear kernel
+	//--------------------------------------------------------------------------
+
+	size_t workgroupSize;
+	CompileKernel(program, &sumRGBValuesReduceKernel, &workgroupSize, "SumRGBValuesReduce");
+	if (workgroupSize != 64)
+		throw runtime_error("RTPathOCL requires a workgroup size of 64");
+	CompileKernel(program, &sumRGBValueAccumulateKernel, &workgroupSize, "SumRGBValueAccumulate");
+	CompileKernel(program, &toneMapAutoLinearKernel, &workgroupSize, "ToneMapAutoLinear");
+
+	//--------------------------------------------------------------------------
 	// UpdateScreenBuffer kernel
 	//--------------------------------------------------------------------------
 
@@ -222,6 +239,30 @@ void RTPathOCLRenderThread::SetAdditionalKernelArgs() {
 		toneMapLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		toneMapLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+
+		argIndex = 0;
+		sumRGBValuesReduceKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		sumRGBValuesReduceKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
+		sumRGBValuesReduceKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		sumRGBValuesReduceKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+
+		argIndex = 0;
+		sumRGBValueAccumulateKernel->setArg(argIndex++, 0);
+		sumRGBValueAccumulateKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+
+		argIndex = 0;
+		toneMapAutoLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		toneMapAutoLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
+		toneMapAutoLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		float gamma = 2.2f;
+		const ImagePipeline *ip = engine->film->GetImagePipeline();
+		if (ip) {
+			const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
+			if (gc)
+				gamma = gc->gamma;
+		}
+		toneMapAutoLinearKernel->setArg(argIndex++, gamma);
+		toneMapAutoLinearKernel->setArg(argIndex++, *tmpFrameBufferBuff);
 
 		argIndex = 0;
 		updateScreenBufferKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
@@ -301,6 +342,15 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 	boost::barrier *frameBarrier = engine->frameBarrier;
 
 	const u_int filmBufferPixelCount = engine->film->GetWidth() * engine->film->GetHeight();
+
+	// Check if to use autolinear or linear tonemapping
+	bool useAutoLinearToneMap = true;
+	const ImagePipeline *ip = engine->film->GetImagePipeline();
+	if (ip) {
+		const ToneMap *tm = (const ToneMap *)ip->GetPlugin(typeid(LinearToneMap));
+		if (tm)
+			useAutoLinearToneMap = false;
+	}
 
 	try {
 		//----------------------------------------------------------------------
@@ -428,9 +478,33 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Apply tone mapping to merged buffer
 				//--------------------------------------------------------------
 
-				currentQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, toneMapLinearWorkGroupSize)),
-						cl::NDRange(toneMapLinearWorkGroupSize));
+				if (useAutoLinearToneMap) {
+					// Reduce the pixel sum
+					uint workSize = RoundUpPow2<u_int>(filmBufferPixelCount) / 2;
+					currentQueue.enqueueNDRangeKernel(*sumRGBValuesReduceKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(workSize, 64)),
+						cl::NDRange(64));
+					workSize /= 64;
+					
+					// Accumulate the pixel sum in a single value
+					{
+						boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+						sumRGBValueAccumulateKernel->setArg(0, workSize);	
+					}
+					
+					currentQueue.enqueueNDRangeKernel(*sumRGBValueAccumulateKernel, cl::NullRange,
+						cl::NDRange(64),
+						cl::NDRange(64));
+
+					// Apply the scale
+					currentQueue.enqueueNDRangeKernel(*toneMapAutoLinearKernel, cl::NullRange,
+							cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, 64)),
+							cl::NDRange(64));
+				} else {
+					currentQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
+							cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, toneMapLinearWorkGroupSize)),
+							cl::NDRange(toneMapLinearWorkGroupSize));
+				}
 
 				//--------------------------------------------------------------
 				// Update the screen buffer
