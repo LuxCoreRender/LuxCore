@@ -309,6 +309,8 @@ private:
 		}
 	};
 
+	void SetDone();
+
 	boost::mutex tileMutex;
 	double startTime;
 
