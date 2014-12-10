@@ -65,6 +65,9 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 	BiasPathOCLRenderEngine::StartLockLess();
 
 	tileRepository->enableRenderingDonePrint = false;
+
+	// To synchronize the start of all threads
+	frameBarrier->wait();
 }
 
 void RTBiasPathOCLRenderEngine::StopLockLess() {
