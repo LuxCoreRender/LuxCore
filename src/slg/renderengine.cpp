@@ -561,6 +561,15 @@ void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm)->Init();
 }
 
+void TileRepository::Tile::Restart() {
+	if (allPassFilm)
+		allPassFilm->Reset();
+	if (evenPassFilm)
+		evenPassFilm->Reset();
+
+	done = false;
+}
+
 void TileRepository::Tile::AddPass(const Film &tileFilm) {		
 	// Increase the pass count
 	++pass;
@@ -708,6 +717,19 @@ void TileRepository::Clear() {
 	convergedTiles.clear();
 }
 
+void TileRepository::Restart() {
+	todoTiles.clear();
+	pendingTiles.clear();
+	convergedTiles.clear();
+
+	BOOST_FOREACH(Tile *tile, tileList) {
+		tile->Restart();
+		todoTiles.push(tile);		
+	}
+	
+	done = false;
+}
+
 void TileRepository::GetPendingTiles(deque<const Tile *> &tiles) {
 	boost::unique_lock<boost::mutex> lock(tileMutex);
 
@@ -796,8 +818,9 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 			// All done for this tile
 			convergedTiles.push_back(*tile);
 		} else {
-			// Re-add to the todoTiles priority queue
-			todoTiles.push(*tile);
+			// Re-add to the todoTiles priority queue, if it is not already there
+			if (find(todoTiles.begin(), todoTiles.end(), *tile) == todoTiles.end())
+				todoTiles.push(*tile);
 		}
 
 		// Add the tile also to the global film
@@ -825,7 +848,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 
 		if (pendingAllDone) {
 			if (pendingTiles.size() == 0) {
-				if (convergenceTestThresholdReduction == 0.f) {
+				if ((convergenceTestThresholdReduction == 0.f) || !enableMultipassRendering) {
 					// Rendering done
 					if (!done) {
 						if (enableRenderingDonePrint) {
@@ -847,11 +870,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 					convergenceTestThreshold *= convergenceTestThresholdReduction;
 
 					// Restart the rendering for all tiles
-					convergedTiles.clear();
-					BOOST_FOREACH(Tile *tile, tileList)
-						tile->done = false;
-					BOOST_FOREACH(Tile *tile, tileList)
-						todoTiles.push(tile);
+					Restart();
 
 					// Get the next tile to render
 					*tile = todoTiles.top();
