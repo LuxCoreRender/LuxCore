@@ -29,7 +29,7 @@ using namespace slg;
 // ConvergenceTest class
 //------------------------------------------------------------------------------
 
-ConvergenceTest::ConvergenceTest(const u_int w, const u_int h) : width(w), height(h) {
+ConvergenceTest::ConvergenceTest(const unsigned int w, const unsigned int h) : width(w), height(h) {
 }
 
 ConvergenceTest::~ConvergenceTest() {
@@ -43,21 +43,21 @@ void ConvergenceTest::Reset() {
 	reference.resize(0);
 }
 
-void ConvergenceTest::Reset(const u_int w, const u_int h) {
+void ConvergenceTest::Reset(const unsigned int w, const unsigned int h) {
 	width = w;
 	height = h;
 	reference.resize(0);	
 }
 
-u_int ConvergenceTest::Test(const float *image) {
-	const u_int pixelCount = width * height;
+unsigned int ConvergenceTest::Test(const float *image) {
+	const unsigned int pixelCount = width * height;
 
 	if (reference.size() == 0) {
 		reference.resize(pixelCount * 3);
 		std::copy(image, image + pixelCount * 3, reference.begin());
 		return pixelCount;
 	} else {
-		const u_int count = Yee_Compare(&reference[0], image, NULL, &tvi[0], width, height);
+		const unsigned int count = Yee_Compare(&reference[0], image, NULL, &tvi[0], width, height);
 		std::copy(image, image + pixelCount * 3, reference.begin());
 		return count;
 	}

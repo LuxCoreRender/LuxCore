@@ -30,15 +30,15 @@ namespace slg {
 
 class ConvergenceTest {
 public:
-	ConvergenceTest(const u_int w, const u_int h);
+	ConvergenceTest(const unsigned int w, const unsigned int h);
 	virtual ~ConvergenceTest();
 
 	void NeedTVI();
 	const float *GetTVI() const { return &tvi[0]; }
 	
 	void Reset();
-	void Reset(const u_int w, const u_int h);
-	u_int Test(const float *image);
+	void Reset(const unsigned int w, const unsigned int h);
+	unsigned int Test(const float *image);
 
 	friend class boost::serialization::access;
 
@@ -46,14 +46,14 @@ private:
 	// Used by serialization
 	ConvergenceTest() { }
 
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
 		ar & width;
 		ar & height;
 		ar & reference;
 		ar & tvi;
 	}
 
-	u_int width, height;
+	unsigned int width, height;
 	
 	std::vector<float> reference;
 	std::vector<float> tvi;
