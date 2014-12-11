@@ -480,7 +480,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 				if (useAutoLinearToneMap) {
 					// Reduce the pixel sum
-					uint workSize = RoundUpPow2<u_int>(filmBufferPixelCount) / 2;
+					u_int workSize = RoundUpPow2<u_int>(filmBufferPixelCount) / 2;
 					currentQueue.enqueueNDRangeKernel(*sumRGBValuesReduceKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(workSize, 64)),
 						cl::NDRange(64));
