@@ -19,6 +19,10 @@
 #include <string>
 #include <limits>
 
+#if defined (_MSC_VER) || defined (__INTEL_COMPILER)
+#include <intrin.h>
+#endif
+
 #include <boost/foreach.hpp>
 
 #include "luxrays/core/context.h"
@@ -81,13 +85,94 @@ EmbreeAccel::~EmbreeAccel() {
 	--initCount;
 }
 
+static inline void cpuid(int output[4], int functionnumber) {
+#if defined (_MSC_VER) || defined (__INTEL_COMPILER)       // Microsoft or Intel compiler, intrin.h included
+
+		__cpuidex(output, functionnumber, 0); // intrinsic function for CPUID
+
+#elif defined(__GNUC__) || defined(__clang__) // use inline assembly, Gnu/AT&T syntax
+
+		int a, b, c, d;
+		__asm("cpuid" : "=a"(a), "=b"(b), "=c"(c), "=d"(d) : "a"(functionnumber), "c"(0) :);
+		output[0] = a;
+		output[1] = b;
+		output[2] = c;
+		output[3] = d;
+
+#else                                         // unknown platform. try inline assembly with masm/intel syntax
+
+		__asm{
+			mov eax, functionnumber
+			xor ecx, ecx
+			cpuid;
+			mov esi, output
+			mov [esi], eax
+			mov [esi + 4], ebx
+			mov [esi + 8], ecx
+			mov [esi + 12], edx
+		}
+
+#endif
+}
+
 u_int EmbreeAccel::ExportTriangleMesh(const RTCScene embreeScene, const Mesh *mesh) const {
 	const u_int geomID = rtcNewTriangleMesh(embreeScene, RTC_GEOMETRY_STATIC,
 			mesh->GetTotalTriangleCount(), mesh->GetTotalVertexCount(), 1);
 
-	// Share the mesh vertices
-	Point *meshVerts = mesh->GetVertices();
-	rtcSetBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER, meshVerts, 0, 3 * sizeof(float));
+	//--------------------------------------------------------------------------
+	// I have to check if I'm not running on an AVX-enabled CPU in order to
+	// implement a workaround to this Embree bug: https://software.intel.com/en-us/forums/topic/536085
+	
+	bool avxSupported = false;
+	// Checking for AVX requires 3 things:
+    // 1) CPUID indicates that the OS uses XSAVE and XRSTORE
+    //     instructions (allowing saving YMM registers on context
+    //     switch)
+    // 2) CPUID indicates support for AVX
+    // 3) XGETBV indicates the AVX registers will be saved and
+    //     restored on context switch
+	//
+	// Note: I'm skipping #3. I assume that the OS does.
+    //
+    // Note that XGETBV is only available on 686 or later CPUs, so
+    // the instruction needs to be conditionally run.
+    int cpuInfo[4];
+	cpuid(cpuInfo, 1);
+
+	const bool osUsesXSAVE_XRSTORE = cpuInfo[2] & (1 << 27) || false;
+	const bool cpuAVXSuport = cpuInfo[2] & (1 << 28) || false;
+
+	/*if (osUsesXSAVE_XRSTORE && cpuAVXSuport) {
+		// Check if the OS will save the YMM registers
+		unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
+		avxSupported = (xcrFeatureMask & 0x6) || false;
+	}*/
+	
+	avxSupported = osUsesXSAVE_XRSTORE && cpuAVXSuport;
+
+	//--------------------------------------------------------------------------
+
+	if (avxSupported) {
+		// Share the mesh vertices
+		Point *meshVerts = mesh->GetVertices();
+		rtcSetBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER, meshVerts, 0, 3 * sizeof(float));
+	} else {
+		LR_LOG(ctx, "WARNING: detected a not AVX-capable CPU, using workaround to Embree bug");
+
+		float *vertices = (float *)rtcMapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER);
+
+		const Point *meshVerts = mesh->GetVertices();
+		for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i) {
+			*vertices++ = meshVerts->x;
+			*vertices++ = meshVerts->y;
+			*vertices++ = meshVerts->z;
+			*vertices++ = 0.f;
+
+			++meshVerts;
+		}
+
+		rtcUnmapBuffer(embreeScene, geomID, RTC_VERTEX_BUFFER);
+	}
 
 	// Share the mesh triangles
 	Triangle *meshTris = mesh->GetTriangles();
