@@ -2985,7 +2985,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileGeometry();
 	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT))
 		CompileMaterials();
-	if (editActions.Has(LIGHTS_EDIT))
+	if (editActions.Has(LIGHTS_EDIT) || editActions.Has(LIGHT_TYPES_EDIT))
 		CompileLights();
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();

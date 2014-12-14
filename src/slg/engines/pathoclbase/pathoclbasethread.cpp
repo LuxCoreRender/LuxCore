@@ -1286,7 +1286,8 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 	if ((editActions.Has(MATERIALS_EDIT) && (
 			renderEngine->useDynamicCodeGenerationForTextures ||
 			renderEngine->useDynamicCodeGenerationForMaterials)) ||
-			editActions.Has(MATERIAL_TYPES_EDIT))
+			editActions.Has(MATERIAL_TYPES_EDIT) ||
+			editActions.Has(LIGHT_TYPES_EDIT))
 		InitKernels();
 
 	if (editActions.HasAnyAction()) {

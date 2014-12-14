@@ -129,6 +129,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 			editActions.Has(MATERIALS_EDIT) ||
 			editActions.Has(MATERIAL_TYPES_EDIT) ||
 			editActions.Has(LIGHTS_EDIT) ||
+			editActions.Has(LIGHT_TYPES_EDIT) ||
 			editActions.Has(IMAGEMAPS_EDIT)) {
 		lightDefs.Preprocess(this);
 	}
@@ -361,6 +362,8 @@ void Scene::ParseTextures(const Properties &props) {
 		SDL_LOG("Texture definition: " << texName);
 
 		Texture *tex = CreateTexture(texName, props);
+		if (tex->GetType() == IMAGEMAP)
+			editActions.AddAction(IMAGEMAPS_EDIT);
 
 		if (texDefs.IsTextureDefined(texName)) {
 			// A replacement for an existing texture
@@ -468,7 +471,7 @@ void Scene::ParseMaterials(const Properties &props) {
 
 			// Check if the old material was or the new material is a light source
 			if (wasLightSource || newMat->IsLightSource())
-				editActions.AddAction(LIGHTS_EDIT);
+				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 		} else {
 			// Only a new Material
 			matDefs.DefineMaterial(matName, newMat);
@@ -500,7 +503,7 @@ void Scene::ParseObjects(const Properties &props) {
 
 			// Check if the old object was a light source
 			if (wasLightSource) {
-				editActions.AddAction(LIGHTS_EDIT);
+				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
 				// Delete all old triangle lights
 				lightDefs.DeleteLightSourceStartWith(objName + "__triangle__light__");
@@ -548,19 +551,19 @@ void Scene::ParseLights(const Properties &props) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.skylight", props);
 		lightDefs.DefineLightSource("skylight", newLight);
-		editActions.AddActions(LIGHTS_EDIT);
+		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 	if (props.HaveNames("scene.infinitelight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.infinitelight", props);
 		lightDefs.DefineLightSource("infinitelight", newLight);
-		editActions.AddActions(LIGHTS_EDIT);
+		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 	if (props.HaveNames("scene.sunlight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.sunlight", props);
 		lightDefs.DefineLightSource("sunlight", newLight);
-		editActions.AddActions(LIGHTS_EDIT);
+		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 
 	vector<string> lightKeys = props.GetAllUniqueSubNames("scene.lights");
@@ -579,9 +582,14 @@ void Scene::ParseLights(const Properties &props) {
 
 		LightSource *newLight = CreateLightSource(lightName, props);
 		lightDefs.DefineLightSource(lightName, newLight);
+		
+		if ((newLight->GetType() == TYPE_IL) ||
+				(newLight->GetType() == TYPE_MAPPOINT) ||
+				(newLight->GetType() == TYPE_PROJECTION))
+			editActions.AddActions(IMAGEMAPS_EDIT);
 	}
 
-	editActions.AddActions(LIGHTS_EDIT);
+	editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 }
 
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
@@ -704,7 +712,7 @@ void Scene::DeleteObject(const std::string &objName) {
 
 		// Check if the old object was a light source
 		if (wasLightSource) {
-			editActions.AddAction(LIGHTS_EDIT);
+			editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
 			// Delete all old triangle lights
 			const ExtMesh *mesh = oldObj->GetExtMesh();

@@ -253,7 +253,7 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 		InitMaterials();
 	}
 
-	if (updateActions.Has(LIGHTS_EDIT)) {
+	if (updateActions.Has(LIGHTS_EDIT) || updateActions.Has(LIGHT_TYPES_EDIT)) {
 		// Update Scene Lights
 		InitLights();
 	}
@@ -262,7 +262,7 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------
 
-	if (updateActions.Has(MATERIAL_TYPES_EDIT))
+	if (updateActions.Has(MATERIAL_TYPES_EDIT) || updateActions.Has(LIGHT_TYPES_EDIT))
 		InitKernels();
 
 	SetKernelArgs();
