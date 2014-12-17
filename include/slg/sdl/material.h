@@ -731,7 +731,7 @@ public:
 			Material(emitted, bump), n(nn), k(kk), nu(u), nv(v) { }
 
 	virtual MaterialType GetType() const { return METAL2; }
-	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT; };
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
