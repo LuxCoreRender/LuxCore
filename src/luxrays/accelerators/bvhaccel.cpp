@@ -343,7 +343,7 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 		const u_int triangleCount = mesh->GetTotalTriangleCount();
 
 		#pragma omp parallel for
-		for (u_int i = 0; i < triangleCount; ++i) {
+		for (int i = 0; i < triangleCount; ++i) {
 			const int index = bvListIndex + i;
 			BVHAccelTreeNode *node = &bvNodes[index];
 
