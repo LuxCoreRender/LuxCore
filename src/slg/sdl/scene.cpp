@@ -29,6 +29,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/format.hpp>
+#include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
 #include "luxrays/core/dataset.h"
@@ -444,6 +445,22 @@ void Scene::ParseMaterials(const Properties &props) {
 		return;
 	}
 
+	// Cache isLightSource values before we go deleting materials (required for
+	// updating mix material)
+	boost::unordered_map<const Material *, bool> cachedIsLightSource;
+
+	BOOST_FOREACH(const string &key, matKeys) {
+		const string matName = Property::ExtractField(key, 2);
+		if (matName == "")
+			throw runtime_error("Syntax error in material definition: " + matName);
+
+		if (matDefs.IsMaterialDefined(matName)) {
+			const Material *oldMat = matDefs.GetMaterial(matName);
+			cachedIsLightSource[oldMat] = oldMat->IsLightSource();
+		}
+	}
+
+	// Now I can update the materials
 	BOOST_FOREACH(const string &key, matKeys) {
 		// Extract the material name
 		const string matName = Property::ExtractField(key, 2);
@@ -461,7 +478,6 @@ void Scene::ParseMaterials(const Properties &props) {
 		if (matDefs.IsMaterialDefined(matName)) {
 			// A replacement for an existing material
 			const Material *oldMat = matDefs.GetMaterial(matName);
-			const bool wasLightSource = oldMat->IsLightSource();
 
 			matDefs.DefineMaterial(matName, newMat);
 
@@ -470,7 +486,7 @@ void Scene::ParseMaterials(const Properties &props) {
 			lightDefs.UpdateMaterialReferences(oldMat, newMat);
 
 			// Check if the old material was or the new material is a light source
-			if (wasLightSource || newMat->IsLightSource())
+			if (cachedIsLightSource[oldMat] || newMat->IsLightSource())
 				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 		} else {
 			// Only a new Material
