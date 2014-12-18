@@ -3954,7 +3954,7 @@ Properties GlossyTranslucentMaterial::ToProperties() const  {
 	Properties props;
 
 	const string name = GetName();
-	props.Set(Property("scene.materials." + name + ".type")("glossy2"));
+	props.Set(Property("scene.materials." + name + ".type")("glossytranslucent"));
 	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
 	props.Set(Property("scene.materials." + name + ".ks")(Ks->GetName()));
