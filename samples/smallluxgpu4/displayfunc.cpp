@@ -400,6 +400,16 @@ void keyFunc(unsigned char key, int x, int y) {
 			config->GetScene().UpdateObjectTransformation("luxtext", Translate(Vector(0.05f, 0.f, 0.f)));
 			config->GetScene().UpdateObjectTransformation("luxshell", Translate(Vector(0.05f, 0.f, 0.f)));
 			session->EndSceneEdit();*/
+
+			// For some test with bump scene
+			/*session->BeginSceneEdit();
+			config->GetScene().Parse(Properties().SetFromString(
+				"scene.lights.infinitelight.type = infinite\n"
+				"scene.lights.infinitelight.file = scenes/simple-mat/arch.exr\n"
+				"scene.lights.infinitelight.gamma = 1.0\n"
+				"scene.lights.infinitelight.gain = 3.0 3.0 3.0\n"
+				));
+			session->EndSceneEdit();*/
 			break;
 		case 'a': {
 			session->BeginSceneEdit();

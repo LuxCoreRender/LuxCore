@@ -343,7 +343,12 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 		const u_int triangleCount = mesh->GetTotalTriangleCount();
 
 		#pragma omp parallel for
-		for (int i = 0; i < triangleCount; ++i) {
+		for (
+				// Visusl C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+				unsigned
+#endif
+				int i = 0; i < triangleCount; ++i) {
 			const int index = bvListIndex + i;
 			BVHAccelTreeNode *node = &bvNodes[index];
 

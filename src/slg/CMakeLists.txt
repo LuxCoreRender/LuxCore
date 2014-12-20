@@ -114,6 +114,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_cloth.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glossy2.cl
+	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glossytranslucent.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_heterogeneousvol.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_homogeneousvol.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_matte.cl
@@ -228,6 +229,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_cloth_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glass_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glossy2_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_glossytranslucent_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_heterogeneousvol_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_homogeneousvol_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_matte_kernel.cpp

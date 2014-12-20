@@ -29,6 +29,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/format.hpp>
+#include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
 #include "luxrays/core/dataset.h"
@@ -129,6 +130,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 			editActions.Has(MATERIALS_EDIT) ||
 			editActions.Has(MATERIAL_TYPES_EDIT) ||
 			editActions.Has(LIGHTS_EDIT) ||
+			editActions.Has(LIGHT_TYPES_EDIT) ||
 			editActions.Has(IMAGEMAPS_EDIT)) {
 		lightDefs.Preprocess(this);
 	}
@@ -361,6 +363,8 @@ void Scene::ParseTextures(const Properties &props) {
 		SDL_LOG("Texture definition: " << texName);
 
 		Texture *tex = CreateTexture(texName, props);
+		if (tex->GetType() == IMAGEMAP)
+			editActions.AddAction(IMAGEMAPS_EDIT);
 
 		if (texDefs.IsTextureDefined(texName)) {
 			// A replacement for an existing texture
@@ -441,6 +445,22 @@ void Scene::ParseMaterials(const Properties &props) {
 		return;
 	}
 
+	// Cache isLightSource values before we go deleting materials (required for
+	// updating mix material)
+	boost::unordered_map<const Material *, bool> cachedIsLightSource;
+
+	BOOST_FOREACH(const string &key, matKeys) {
+		const string matName = Property::ExtractField(key, 2);
+		if (matName == "")
+			throw runtime_error("Syntax error in material definition: " + matName);
+
+		if (matDefs.IsMaterialDefined(matName)) {
+			const Material *oldMat = matDefs.GetMaterial(matName);
+			cachedIsLightSource[oldMat] = oldMat->IsLightSource();
+		}
+	}
+
+	// Now I can update the materials
 	BOOST_FOREACH(const string &key, matKeys) {
 		// Extract the material name
 		const string matName = Property::ExtractField(key, 2);
@@ -458,7 +478,6 @@ void Scene::ParseMaterials(const Properties &props) {
 		if (matDefs.IsMaterialDefined(matName)) {
 			// A replacement for an existing material
 			const Material *oldMat = matDefs.GetMaterial(matName);
-			const bool wasLightSource = oldMat->IsLightSource();
 
 			matDefs.DefineMaterial(matName, newMat);
 
@@ -467,8 +486,8 @@ void Scene::ParseMaterials(const Properties &props) {
 			lightDefs.UpdateMaterialReferences(oldMat, newMat);
 
 			// Check if the old material was or the new material is a light source
-			if (wasLightSource || newMat->IsLightSource())
-				editActions.AddAction(LIGHTS_EDIT);
+			if (cachedIsLightSource[oldMat] || newMat->IsLightSource())
+				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 		} else {
 			// Only a new Material
 			matDefs.DefineMaterial(matName, newMat);
@@ -500,7 +519,7 @@ void Scene::ParseObjects(const Properties &props) {
 
 			// Check if the old object was a light source
 			if (wasLightSource) {
-				editActions.AddAction(LIGHTS_EDIT);
+				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
 				// Delete all old triangle lights
 				lightDefs.DeleteLightSourceStartWith(objName + "__triangle__light__");
@@ -548,19 +567,19 @@ void Scene::ParseLights(const Properties &props) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.skylight", props);
 		lightDefs.DefineLightSource("skylight", newLight);
-		editActions.AddActions(LIGHTS_EDIT);
+		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 	if (props.HaveNames("scene.infinitelight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.infinitelight", props);
 		lightDefs.DefineLightSource("infinitelight", newLight);
-		editActions.AddActions(LIGHTS_EDIT);
+		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 	if (props.HaveNames("scene.sunlight")) {
 		// Parse all syntax
 		LightSource *newLight = CreateLightSource("scene.sunlight", props);
 		lightDefs.DefineLightSource("sunlight", newLight);
-		editActions.AddActions(LIGHTS_EDIT);
+		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
 
 	vector<string> lightKeys = props.GetAllUniqueSubNames("scene.lights");
@@ -579,9 +598,14 @@ void Scene::ParseLights(const Properties &props) {
 
 		LightSource *newLight = CreateLightSource(lightName, props);
 		lightDefs.DefineLightSource(lightName, newLight);
+		
+		if ((newLight->GetType() == TYPE_IL) ||
+				(newLight->GetType() == TYPE_MAPPOINT) ||
+				(newLight->GetType() == TYPE_PROJECTION))
+			editActions.AddActions(IMAGEMAPS_EDIT);
 	}
 
-	editActions.AddActions(LIGHTS_EDIT);
+	editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 }
 
 void Scene::UpdateObjectTransformation(const string &objName, const Transform &trans) {
@@ -704,7 +728,7 @@ void Scene::DeleteObject(const std::string &objName) {
 
 		// Check if the old object was a light source
 		if (wasLightSource) {
-			editActions.AddAction(LIGHTS_EDIT);
+			editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
 			// Delete all old triangle lights
 			const ExtMesh *mesh = oldObj->GetExtMesh();
@@ -1345,12 +1369,32 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			const Texture *m3 = GetTexture(props.Get(Property(propName + ".m3")(CarPaintMaterial::data[0].m3)));
 			mat = new CarPaintMaterial(emissionTex, bumpTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
 		}
+	} else if (matType == "glossytranslucent") {
+		const Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
+		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(.5f, .5f, .5f)));
+		const Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));
+		const Texture *ks_bf = GetTexture(props.Get(Property(propName + ".ks_bf")(.5f, .5f, .5f)));
+		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
+		const Texture *nu_bf = GetTexture(props.Get(Property(propName + ".uroughness_bf")(.1f)));
+		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
+		const Texture *nv_bf = GetTexture(props.Get(Property(propName + ".vroughness_bf")(.1f)));
+		const Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
+		const Texture *ka_bf = GetTexture(props.Get(Property(propName + ".ka_bf")(0.f, 0.f, 0.f)));
+		const Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
+		const Texture *d_bf = GetTexture(props.Get(Property(propName + ".d_bf")(0.f)));
+		const Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f, 0.f, 0.f)));
+		const Texture *index_bf = GetTexture(props.Get(Property(propName + ".index_bf")(0.f, 0.f, 0.f)));
+		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
+		const bool multibounce_bf = props.Get(Property(propName + ".multibounce_bf")(false)).Get<bool>();
+
+		mat = new GlossyTranslucentMaterial(emissionTex, bumpTex, kd, kt, ks, ks_bf, nu, nu_bf, nv, nv_bf,
+			ka, ka_bf, d, d_bf, index, index_bf, multibounce, multibounce_bf);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
 	mat->SetSamples(Max(-1, props.Get(Property(propName + ".samples")(-1)).Get<int>()));
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
-    mat->SetBumpSampleDistance(bumpSampleDistance);
+	mat->SetBumpSampleDistance(bumpSampleDistance);
 
 	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
