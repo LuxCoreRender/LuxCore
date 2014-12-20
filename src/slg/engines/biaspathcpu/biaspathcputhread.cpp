@@ -63,18 +63,16 @@ void BiasPathCPURenderThread::DirectLightSampling(
 			(distance > engine->nearStartLight)) {
 		BSDFEvent event;
 		float bsdfPdfW;
-		Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
+		const Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
-		const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-		const float factor = 1.f / directLightSamplingPdfW;
+		if (!bsdfEval.Black()) {
+			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+			const float factor = 1.f / directLightSamplingPdfW;
 
-		// MIS between direct light sampling and BSDF sampling
-		const float weight = (!sampleResult->lastPathVertex && (light->IsEnvironmental() || light->IsIntersectable())) ? 
-						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
+			// MIS between direct light sampling and BSDF sampling
+			const float weight = (!sampleResult->lastPathVertex && (light->IsEnvironmental() || light->IsIntersectable())) ? 
+							PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-		const Spectrum illumRadiance = (weight * factor) * pathThroughput * lightRadiance * bsdfEval;
-
-		if (!illumRadiance.Black()) {
 			const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 			Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 					epsilon,
@@ -88,8 +86,11 @@ void BiasPathCPURenderThread::DirectLightSampling(
 					&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 				// I'm ignoring volume emission because it is not sampled in
 				// direct light step.
-				const Spectrum radiance = connectionThroughput * illumRadiance;
-				sampleResult->AddDirectLight(light->GetID(), event, radiance, lightScale);
+				const Spectrum commonFactor = (weight * factor) * connectionThroughput * lightRadiance;
+				const Spectrum radiance = commonFactor * pathThroughput * bsdfEval;
+				const Spectrum irradiance = commonFactor * (INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)));
+
+				sampleResult->AddDirectLight(light->GetID(), event, radiance, irradiance, lightScale);
 			}
 		}
 	}
@@ -491,7 +492,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT,
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE,
 		engine->film->GetRadianceGroupCount());
 
 	// Set to 0.0 all result colors
@@ -505,6 +506,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	sampleResult.indirectSpecular = Spectrum();
 	sampleResult.directShadowMask = 1.f;
 	sampleResult.indirectShadowMask = 1.f;
+	sampleResult.irradiance = Spectrum();
 
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();

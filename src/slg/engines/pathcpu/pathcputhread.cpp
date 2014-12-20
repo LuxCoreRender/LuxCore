@@ -85,8 +85,10 @@ void PathCPURenderThread::DirectLightSampling(
 					const float weight = (!sampleResult->lastPathVertex &&  (light->IsEnvironmental() || light->IsIntersectable())) ? 
 						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-					const Spectrum radiance = (weight * factor) * pathThroughput * connectionThroughput * lightRadiance * bsdfEval;
-					sampleResult->AddDirectLight(light->GetID(), event, radiance, 1.f);
+					const Spectrum commonFactor = (weight * factor) * connectionThroughput * lightRadiance;
+					const Spectrum radiance = commonFactor * pathThroughput * bsdfEval;
+					const Spectrum irradiance = commonFactor * (INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)));
+					sampleResult->AddDirectLight(light->GetID(), event, radiance, irradiance, 1.f);
 				}
 			}
 		}
@@ -178,7 +180,7 @@ void PathCPURenderThread::RenderFunc() {
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT,
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE,
 		engine->film->GetRadianceGroupCount());
 
 	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
@@ -196,6 +198,7 @@ void PathCPURenderThread::RenderFunc() {
 		sampleResult.indirectSpecular = Spectrum();
 		sampleResult.directShadowMask = 1.f;
 		sampleResult.indirectShadowMask = 1.f;
+		sampleResult.irradiance = Spectrum();
 
 		// To keep track of the number of rays traced
 		const double deviceRayCount = device->GetTotalRaysCount();

@@ -59,7 +59,7 @@ public:
 		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
 		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
 		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
-		RADIANCE_GROUP, UV, RAYCOUNT, BY_MATERIAL_ID
+		RADIANCE_GROUP, UV, RAYCOUNT, BY_MATERIAL_ID, IRRADIANCE
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -108,7 +108,8 @@ public:
 		INDIRECT_SHADOW_MASK = 1<<17,
 		UV = 1<<18,
 		RAYCOUNT = 1<<19,
-		BY_MATERIAL_ID = 1<<20
+		BY_MATERIAL_ID = 1<<20,
+		IRRADIANCE = 1<<21
 	} FilmChannelType;
 
 	// Used by serialization
@@ -241,6 +242,7 @@ public:
 	GenericFrameBuffer<2, 0, float> *channel_UV;
 	GenericFrameBuffer<1, 0, float> *channel_RAYCOUNT;
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_MATERIAL_IDs;
+	GenericFrameBuffer<4, 1, float> *channel_IRRADIANCE;
 
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
@@ -317,7 +319,8 @@ public:
 
 	void AddEmission(const u_int lightID, const luxrays::Spectrum &radiance);
 	void AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
-		const luxrays::Spectrum &radiance, const float lightScale);
+		const luxrays::Spectrum &radiance, const luxrays::Spectrum &irradiance,
+		const float lightScale);
 
 	void ClampRadiance(const float cap) {
 		for (u_int i = 0; i < radiancePerPixelNormalized.size(); ++i)
@@ -346,6 +349,7 @@ public:
 	float directShadowMask, indirectShadowMask;
 	luxrays::UV uv;
 	float rayCount;
+	luxrays::Spectrum irradiance;
 
 	BSDFEvent firstPathVertexEvent;
 	bool firstPathVertex, lastPathVertex;
@@ -356,6 +360,6 @@ private:
 		
 }
 
-BOOST_CLASS_VERSION(slg::Film, 1)
+BOOST_CLASS_VERSION(slg::Film, 2)
 
 #endif	/* _SLG_FILM_H */
