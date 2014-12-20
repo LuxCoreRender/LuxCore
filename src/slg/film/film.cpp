@@ -43,7 +43,7 @@ typedef unsigned char BYTE;
 //------------------------------------------------------------------------------
 
 void FilmOutputs::Add(const FilmOutputType type, const string &fileName,
-		const luxrays::Properties *p) {
+		const Properties *p) {
 	types.push_back(type);
 	fileNames.push_back(fileName);
 	if (p)
@@ -80,6 +80,7 @@ Film::Film(const u_int w, const u_int h) {
 	channel_INDIRECT_SHADOW_MASK = NULL;
 	channel_UV = NULL;
 	channel_RAYCOUNT = NULL;
+	channel_IRRADIANCE = NULL;
 
 	convTest = NULL;
 
@@ -122,6 +123,7 @@ Film::~Film() {
 	delete channel_RAYCOUNT;
 	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
 		delete channel_BY_MATERIAL_IDs[i];
+	delete channel_IRRADIANCE;
 
 	delete filterLUTs;
 	delete filter;
@@ -204,6 +206,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
 		delete channel_BY_MATERIAL_IDs[i];
 	channel_BY_MATERIAL_IDs.clear();
+	delete channel_IRRADIANCE;
 
 	// Allocate all required channels
 	hasDataChannel = false;
@@ -323,6 +326,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		}
 		hasComposingChannel = true;
 	}
+	if (HasChannel(IRRADIANCE)) {
+		channel_IRRADIANCE = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_IRRADIANCE->Clear();
+		hasComposingChannel = true;
+	}
 
 	// Initialize the stats
 	statsTotalSampleCount = 0.0;
@@ -391,6 +399,8 @@ void Film::Reset() {
 		for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
 			channel_BY_MATERIAL_IDs[i]->Clear();
 	}
+	if (HasChannel(IRRADIANCE))
+		channel_IRRADIANCE->Clear();
 
 	// convTest has to be reset explicitly
 
@@ -652,6 +662,15 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(IRRADIANCE) && film.HasChannel(IRRADIANCE)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_IRRADIANCE->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				channel_IRRADIANCE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -707,6 +726,8 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_RAYCOUNT ? 1 : 0;
 		case BY_MATERIAL_ID:
 			return channel_BY_MATERIAL_IDs.size();
+		case IRRADIANCE:
+			return channel_IRRADIANCE ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetChannelCount>(): " + ToString(type));
 	}
@@ -759,6 +780,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 		case FilmOutputs::RAYCOUNT:
 			return pixelCount;
 		case FilmOutputs::BY_MATERIAL_ID:
+			return 3 * pixelCount;
+		case FilmOutputs::IRRADIANCE:
 			return 3 * pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
@@ -813,6 +836,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(RAYCOUNT);
 		case FilmOutputs::BY_MATERIAL_ID:
 			return HasChannel(BY_MATERIAL_ID);
+		case FilmOutputs::IRRADIANCE:
+			return HasChannel(IRRADIANCE);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -962,6 +987,10 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 			} else
 				return;
 			break;
+		case FilmOutputs::IRRADIANCE:
+			if (!HasChannel(IRRADIANCE))
+				return;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -1102,6 +1131,10 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 					channel_BY_MATERIAL_IDs[byMaterialIDsIndex]->GetWeightedPixel(x, y, pixel);
 					break;
 				}
+				case FilmOutputs::IRRADIANCE: {
+					channel_IRRADIANCE->GetWeightedPixel(x, y, pixel);
+					break;
+				}
 				default:
 					throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 			}
@@ -1162,6 +1195,8 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return channel_RAYCOUNT->GetPixels();
 		case BY_MATERIAL_ID:
 			return channel_BY_MATERIAL_IDs[index]->GetPixels();
+		case IRRADIANCE:
+			return channel_IRRADIANCE->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetChannel<float>(): " + ToString(type));
 	}
@@ -1293,6 +1328,11 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::BY_MATERIAL_ID: {
 			for (u_int i = 0; i < pixelCount; ++i)
 				channel_BY_MATERIAL_IDs[index]->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::IRRADIANCE: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_IRRADIANCE->GetWeightedPixel(i, &buffer[i]);
 			break;
 		}
 		default:
@@ -1483,6 +1523,10 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		// Faster than HasChannel(INDIRECT_SHADOW_MASK)
 		if (channel_INDIRECT_SHADOW_MASK && sampleResult.HasChannel(INDIRECT_SHADOW_MASK))
 			channel_INDIRECT_SHADOW_MASK->AddWeightedPixel(x, y, &sampleResult.indirectShadowMask, weight);
+
+		// Faster than HasChannel(IRRADIANCE)
+		if (channel_IRRADIANCE && sampleResult.HasChannel(IRRADIANCE))
+			channel_IRRADIANCE->AddWeightedPixel(x, y, sampleResult.irradiance.c, weight);
 	}
 }
 
@@ -1640,6 +1684,8 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return RAYCOUNT;
 	else if (type == "BY_MATERIAL_ID")
 		return BY_MATERIAL_ID;
+	else if (type == "IRRADIANCE")
+		return IRRADIANCE;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -1686,6 +1732,8 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "RAYCOUNT";
 		case Film::BY_MATERIAL_ID:
 			return "BY_MATERIAL_ID";
+		case Film::IRRADIANCE:
+			return "IRRADIANCE";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}
@@ -1714,6 +1762,7 @@ template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::bina
 	ar >> channel_UV;
 	ar >> channel_RAYCOUNT;
 	ar >> channel_BY_MATERIAL_IDs;
+	ar >> channel_IRRADIANCE;
 
 	ar >> channels;
 	ar >> width;
@@ -1732,7 +1781,7 @@ template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::bina
 	ar >> filter;
 	// filterLUTs is re-built at load time
 	if (filter) {
-		const u_int size = luxrays::Max<u_int>(4, luxrays::Max(filter->xWidth, filter->yWidth) + 1);
+		const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
 		filterLUTs = new FilterLUTs(*filter, size);
 	} else
 		filterLUTs = NULL;
@@ -1765,6 +1814,7 @@ template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::bina
 	ar << channel_UV;
 	ar << channel_RAYCOUNT;
 	ar << channel_BY_MATERIAL_IDs;
+	ar << channel_IRRADIANCE;
 
 	ar << channels;
 	ar << width;
@@ -1810,7 +1860,8 @@ void SampleResult::AddEmission(const u_int lightID, const Spectrum &radiance) {
 }
 
 void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
-		const luxrays::Spectrum &radiance, const float lightScale) {
+		const Spectrum &radiance, const Spectrum &irrad,
+		const float lightScale) {
 	radiancePerPixelNormalized[lightID] += radiance;
 
 	if (firstPathVertex) {
@@ -1821,6 +1872,8 @@ void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent
 			directDiffuse += radiance;
 		else
 			directGlossy += radiance;
+
+		irradiance += irrad;
 	} else {
 		// indirectShadowMask is supposed to be initialized to 1.0
 		indirectShadowMask = Max(0.f, indirectShadowMask - lightScale);
@@ -1836,7 +1889,7 @@ void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent
 
 void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 	const float filmX, const float filmY,
-	const luxrays::Spectrum &radiancePPN,
+	const Spectrum &radiancePPN,
 	const float alpha) {
 	assert(!radiancePPN.IsInf() || !radiancePPN.IsNaN());
 	assert(!isinf(alpha) || !isnan(alpha));
@@ -1853,7 +1906,7 @@ void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 
 void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 	const float filmX, const float filmY,
-	const luxrays::Spectrum &radiancePSN) {
+	const Spectrum &radiancePSN) {
 	assert(!radiancePSN.IsInf() || !radiancePSN.IsNaN());
 
 	const u_int size = sampleResults.size();

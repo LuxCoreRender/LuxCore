@@ -119,7 +119,8 @@ public:
 		OUTPUT_RADIANCE_GROUP = slg::FilmOutputs::RADIANCE_GROUP,
 		OUTPUT_UV = slg::FilmOutputs::UV,
 		OUTPUT_RAYCOUNT = slg::FilmOutputs::RAYCOUNT,
-		BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID
+		BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
+		IRRADIANCE = slg::FilmOutputs::IRRADIANCE
 	} FilmOutputType;
 
 	/*!
@@ -146,7 +147,8 @@ public:
 		CHANNEL_INDIRECT_SHADOW_MASK = slg::Film::INDIRECT_SHADOW_MASK,
 		CHANNEL_UV = slg::Film::UV,
 		CHANNEL_RAYCOUNT = slg::Film::RAYCOUNT,
-		CHANNEL_BY_MATERIAL_ID = slg::Film::BY_MATERIAL_ID
+		CHANNEL_BY_MATERIAL_ID = slg::Film::BY_MATERIAL_ID,
+		CHANNEL_IRRADIANCE = slg::Film::IRRADIANCE
 	} FilmChannelType;
 
 	~Film();

@@ -532,6 +532,9 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			film->AddChannel(Film::MATERIAL_ID);
 			film->AddChannel(Film::BY_MATERIAL_ID, &prop);
 			filmOutputs.Add(FilmOutputs::BY_MATERIAL_ID, fileName, &prop);
+		} else if (type == "IRRADIANCE") {
+			film->AddChannel(Film::IRRADIANCE);
+			filmOutputs.Add(FilmOutputs::IRRADIANCE, fileName);
 		} else
 			throw runtime_error("Unknown type in film output: " + type);
 	}
