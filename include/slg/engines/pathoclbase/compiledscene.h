@@ -79,7 +79,7 @@ public:
 	// Compiled power based light sampling strategy
 	float *lightsDistribution;
 	u_int lightsDistributionSize;
-	bool hasInfiniteLights, hasEnvLights;
+	bool hasInfiniteLights, hasEnvLights, hasTriangleLightWithVertexColors;
 
 	// Compiled Materials (and Volumes))
 	std::set<MaterialType> usedMaterialTypes;

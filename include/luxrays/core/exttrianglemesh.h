@@ -36,6 +36,22 @@
 
 namespace luxrays {
 
+/*
+ * The inheritance scheme used here:
+ * 
+ *         | => TriangleMesh => |
+ * Mesh => |                    |=> ExtTriangleMesh
+ *         | =>      ExtMesh => |
+ * 
+ *         | => InstanceTriangleMesh => |
+ * Mesh => |                            |=> ExtInstanceTriangleMesh
+ *         | =>              ExtMesh => |
+ * 
+ *         | => MotionTriangleMesh => |
+ * Mesh => |                          |=> ExtMotionTriangleMesh
+ *         | =>            ExtMesh => |
+ */
+	
 class ExtMeshCache;
 
 class ExtMesh : virtual public Mesh {
@@ -79,7 +95,6 @@ public:
 
 class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
-	//ExtTriangleMesh(ExtTriangleMesh *mesh);
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = NULL, UV *meshUV = NULL,
 			Spectrum *meshCols = NULL, float *meshAlpha = NULL);
@@ -168,9 +183,6 @@ public:
 	virtual void WritePly(const std::string &fileName) const;
 
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName);
-	static ExtTriangleMesh *CreateExtTriangleMesh(
-		const long plyNbVerts, const long plyNbTris,
-		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas);
 
 private:
 	Normal *normals; // Vertices normals

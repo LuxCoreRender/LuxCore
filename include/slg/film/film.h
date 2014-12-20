@@ -29,6 +29,11 @@
 #include <set>
 
 #include <boost/thread/mutex.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/set.hpp>
 
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/core/geometry/normal.h"
@@ -106,6 +111,8 @@ public:
 		BY_MATERIAL_ID = 1<<20
 	} FilmChannelType;
 
+	// Used by serialization
+	Film() { }
 	Film(const u_int w, const u_int h);
 	~Film();
 
@@ -238,7 +245,13 @@ public:
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void load(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const u_int version) const;
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
@@ -272,6 +285,9 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index);
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index);
 
+template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
+template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
+
 //------------------------------------------------------------------------------
 // SampleResult
 //------------------------------------------------------------------------------
@@ -303,6 +319,11 @@ public:
 	void AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
 		const luxrays::Spectrum &radiance, const float lightScale);
 
+	void ClampRadiance(const float cap) {
+		for (u_int i = 0; i < radiancePerPixelNormalized.size(); ++i)
+			radiancePerPixelNormalized[i] = radiancePerPixelNormalized[i].Clamp(0.f, cap);
+	}
+	
 	static void AddSampleResult(std::vector<SampleResult> &sampleResults,
 		const float filmX, const float filmY,
 		const luxrays::Spectrum &radiancePPN,
@@ -332,7 +353,9 @@ public:
 private:
 	u_int channels;
 };
-
+		
 }
+
+BOOST_CLASS_VERSION(slg::Film, 1)
 
 #endif	/* _SLG_FILM_H */

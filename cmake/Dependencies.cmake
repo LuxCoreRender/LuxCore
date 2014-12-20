@@ -115,6 +115,24 @@ if (OPENCL_FOUND)
 	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
 endif ()
 
+# Intel Embree
+set(EMBREE_ROOT                "${EMBREE_SEARCH_PATH}")
+find_package(Embree)
+
+if (EMBREE_FOUND)
+	include_directories(SYSTEM ${EMBREE_INCLUDE_PATH})
+endif ()
+
+# OpenMP
+find_package(OpenMP)
+if (OPENMP_FOUND)
+	MESSAGE(STATUS "OpenMP found - compiling with")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+else()
+	MESSAGE(WARNING "OpenMP not found - compiling without")
+endif()
+
 # Find BISON
 IF (NOT BISON_NOT_AVAILABLE)
 	find_package(BISON)

@@ -42,21 +42,34 @@
 // GPUTask data types
 //------------------------------------------------------------------------------
 
-#define NEXT_VERTEX_TRACE_RAY (1<<0)
-#define NEXT_VERTEX_GENERATE_RAY (1<<1)
-#define DIRECT_LIGHT_TRACE_RAY (1<<2)
-#define DIRECT_LIGHT_GENERATE_RAY (1<<3)
-#define LOW_STATE_MASK 0xffff
-
-#define PATH_VERTEX_1 (1<<16)
-#define PATH_VERTEX_N (1<<17)
-#define DONE (1<<18)
-#define HIGH_STATE_MASK 0xffff0000
-
 // This is defined only under OpenCL because of variable size structures
 #if defined(SLG_OPENCL_KERNEL)
 
+#if defined(PARAM_MICROKERNELS)
+typedef enum {
+	// Micro-kernel states
+	MK_GENERATE_CAMERA_RAY,
+	MK_TRACE_EYE_RAY,
+	MK_ILLUMINATE_EYE_MISS,
+	MK_ILLUMINATE_EYE_HIT,
+	MK_DL_VERTEX_1,
+	MK_BSDF_SAMPLE,
+	MK_DONE
+} PathState;
+#endif
+
 typedef struct {
+#if defined(PARAM_MICROKERNELS)
+	PathState pathState;
+	float currentTime;
+	
+	BSDFEvent materialEventTypesPathVertex1;
+	Spectrum throughputPathVertex1;
+
+	Ray tmpRay;
+	RayHit tmpRayHit;
+#endif
+
 	// The task seed
 	Seed seed;
 

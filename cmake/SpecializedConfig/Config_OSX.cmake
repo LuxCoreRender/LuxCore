@@ -7,7 +7,7 @@
 
 MESSAGE(STATUS "Using OSX Configuration settings")
 
-set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../macos) # can be macos or usr/local for example
+set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../macos_microkernels) # can be macos or usr/local for example
 MESSAGE(STATUS "OSX_DEPENDENCY_ROOT_PATH : " ${OSX_DEPENDENCY_ROOT})
 set(OSX_SEARCH_PATH     ${OSX_DEPENDENCY_ROOT})
 
@@ -45,6 +45,9 @@ SET(JPEG_FOUND ON)
 SET(PNG_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/libpng14.a ${SYS_LIBRARIES})
 SET(PNG_INCLUDE_DIR ${OSX_DEPENDENCY_ROOT}/include/png)
 SET(PNG_FOUND ON)
+SET(EMBREE_LIBRARY ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.3.3.dylib)
+SET(EMBREE_INCLUDE_PATH ${OSX_DEPENDENCY_ROOT}/include/embree2)
+SET(EMBREE_FOUND ON)
 
 # use Blender python libs for static compiling !
 SET(PYTHON_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py34_intel64/libbf_python_ext.a ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py34_intel64/libbf_python.a)

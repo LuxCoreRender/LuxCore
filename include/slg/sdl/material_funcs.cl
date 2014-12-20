@@ -31,7 +31,11 @@ float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global Hi
 	if (emitTexIndex == NULL_INDEX)
 		return BLACK;
 
-	return Texture_GetSpectrumValue(emitTexIndex, hitPoint
+	return
+#if defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+		VLOAD3F(hitPoint->color.c) *
+#endif
+		Texture_GetSpectrumValue(emitTexIndex, hitPoint
 				TEXTURES_PARAM);
 }
 

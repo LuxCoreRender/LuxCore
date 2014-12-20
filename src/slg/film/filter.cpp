@@ -21,6 +21,12 @@
 using namespace luxrays;
 using namespace slg;
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::BoxFilter)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianFilter)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellFilter)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellFilterSS)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::BlackmanHarrisFilter)
+
 FilterType Filter::String2FilterType(const std::string &type) {
 	if ((type.compare("0") == 0) || (type.compare("NONE") == 0))
 		return FILTER_NONE;

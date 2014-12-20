@@ -19,6 +19,11 @@
 #ifndef _SLG_CONVTEST_H
 #define _SLG_CONVTEST_H
 
+#include <vector>
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+
 #include "slg/utils/convtest/pdiff/metric.h"
 
 namespace slg {
@@ -29,20 +34,34 @@ public:
 	virtual ~ConvergenceTest();
 
 	void NeedTVI();
-	const float *GetTVI() const { return tvi; }
+	const float *GetTVI() const { return &tvi[0]; }
 	
 	void Reset();
 	void Reset(const unsigned int w, const unsigned int h);
 	unsigned int Test(const float *image);
 
+	friend class boost::serialization::access;
+
 private:
+	// Used by serialization
+	ConvergenceTest() { }
+
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+		ar & width;
+		ar & height;
+		ar & reference;
+		ar & tvi;
+	}
+
 	unsigned int width, height;
 	
-	float *reference;
-	float *tvi;
+	std::vector<float> reference;
+	std::vector<float> tvi;
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::ConvergenceTest, 1)
 
 #endif
 

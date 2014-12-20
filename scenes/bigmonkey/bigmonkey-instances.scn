@@ -43,3 +43,8 @@ scene.objects.m10.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5
 scene.objects.l1.material = whitelight
 scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
 scene.objects.l1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -4.0 0.0 0.0 1.0
+################################################################################
+##scene.infinitelight.file = scenes/simple-mat/sky.exr
+#scene.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.infinitelight.gamma = 1.0
+#scene.infinitelight.gain = 3.0 3.0 3.0

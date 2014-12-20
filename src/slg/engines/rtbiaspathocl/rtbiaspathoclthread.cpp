@@ -44,6 +44,9 @@ RTBiasPathOCLRenderThread::RTBiasPathOCLRenderThread(const u_int index,
 	applyBlurFilterXR1Kernel = NULL;
 	applyBlurFilterYR1Kernel = NULL;
 	toneMapLinearKernel = NULL;
+	sumRGBValuesReduceKernel = NULL;
+	sumRGBValueAccumulateKernel = NULL;
+	toneMapAutoLinearKernel = NULL;
 	updateScreenBufferKernel = NULL;
 
 	tmpFrameBufferBuff = NULL;
@@ -58,6 +61,9 @@ RTBiasPathOCLRenderThread::~RTBiasPathOCLRenderThread() {
 	delete applyBlurFilterXR1Kernel;
 	delete applyBlurFilterYR1Kernel;
 	delete toneMapLinearKernel;
+	delete sumRGBValuesReduceKernel;
+	delete sumRGBValueAccumulateKernel;
+	delete toneMapAutoLinearKernel;
 	delete updateScreenBufferKernel;
 }
 
@@ -144,6 +150,17 @@ void RTBiasPathOCLRenderThread::CompileAdditionalKernels(cl::Program *program) {
 	CompileKernel(program, &toneMapLinearKernel, &toneMapLinearWorkGroupSize, "ToneMapLinear");
 
 	//--------------------------------------------------------------------------
+	// ToneMapAutoLinear kernel
+	//--------------------------------------------------------------------------
+
+	size_t workgroupSize;
+	CompileKernel(program, &sumRGBValuesReduceKernel, &workgroupSize, "SumRGBValuesReduce");
+	if (workgroupSize != 64)
+		throw runtime_error("RTBiasPathOCL requires a workgroup size of 64");
+	CompileKernel(program, &sumRGBValueAccumulateKernel, &workgroupSize, "SumRGBValueAccumulate");
+	CompileKernel(program, &toneMapAutoLinearKernel, &workgroupSize, "ToneMapAutoLinear");
+
+	//--------------------------------------------------------------------------
 	// UpdateScreenBuffer kernel
 	//--------------------------------------------------------------------------
 
@@ -215,6 +232,30 @@ void RTBiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
 
 		argIndex = 0;
+		sumRGBValuesReduceKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		sumRGBValuesReduceKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
+		sumRGBValuesReduceKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		sumRGBValuesReduceKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+
+		argIndex = 0;
+		sumRGBValueAccumulateKernel->setArg(argIndex++, 0);
+		sumRGBValueAccumulateKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+
+		argIndex = 0;
+		toneMapAutoLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
+		toneMapAutoLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
+		toneMapAutoLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		float gamma = 2.2f;
+		const ImagePipeline *ip = engine->film->GetImagePipeline();
+		if (ip) {
+			const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
+			if (gc)
+				gamma = gc->gamma;
+		}
+		toneMapAutoLinearKernel->setArg(argIndex++, gamma);
+		toneMapAutoLinearKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+
+		argIndex = 0;
 		updateScreenBufferKernel->setArg(argIndex++, engine->film->GetWidth());
 		updateScreenBufferKernel->setArg(argIndex++, engine->film->GetHeight());
 		updateScreenBufferKernel->setArg(argIndex++, *mergedFrameBufferBuff);
@@ -271,10 +312,23 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 
 	RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
 	boost::barrier *frameBarrier = engine->frameBarrier;
-	const u_int tileSize = engine->tileRepository->tileSize;
-	const u_int threadFilmPixelCount = tileSize * tileSize;
+	// To synchronize the start of all threads
+	frameBarrier->wait();
+
+	const u_int tileWidth = engine->tileRepository->tileWidth;
+	const u_int tileHeight = engine->tileRepository->tileHeight;
+	const u_int threadFilmPixelCount = tileWidth * tileHeight;
 	const u_int taskCount = engine->taskCount;
 	const u_int engineFilmPixelCount = engine->film->GetWidth() * engine->film->GetHeight();
+
+	// Check if to use autolinear or linear tonemapping
+	bool useAutoLinearToneMap = true;
+	const ImagePipeline *ip = engine->film->GetImagePipeline();
+	if (ip) {
+		const ToneMap *tm = (const ToneMap *)ip->GetPlugin(typeid(LinearToneMap));
+		if (tm)
+			useAutoLinearToneMap = false;
+	}
 
 	try {
 		//----------------------------------------------------------------------
@@ -305,15 +359,16 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			//------------------------------------------------------------------
 			// Render the tiles
 			//------------------------------------------------------------------
-
+			
 			TileRepository::Tile *tile = NULL;
-			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilm)) {
-				threadFilm->Reset();
-				//const u_int tileWidth = Min(engine->tileRepository->tileSize, engine->film->GetWidth() - tile->xStart);
-				//const u_int tileHeight = Min(engine->tileRepository->tileSize, engine->film->GetHeight() - tile->yStart);
-				//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
+			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film)) {
+				//const double t0 = WallClockTime();
+				threadFilms[0]->film->Reset();
+				//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tile->xStart);
+				//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tile->yStart);
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 				//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-				//		"(" << tileWidth << ", " << tileHeight << ") [" << tile->sampleIndex << "]");
+				//		"(" << tileW << ", " << tileH << ")");
 
 				// Clear the frame buffer
 				currentQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
@@ -326,27 +381,19 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(initStatWorkGroupSize));
 
 				// Render the tile
-				{
-					boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
-					renderSampleKernel->setArg(0, tile->xStart);
-					renderSampleKernel->setArg(1, tile->yStart);
-
-					mergePixelSamplesKernel->setArg(0, tile->xStart);
-					mergePixelSamplesKernel->setArg(1, tile->yStart);
-				}
+				UpdateKernelArgsForTile(tile->xStart, tile->yStart, 0);
 
 				// Render all pixel samples
-				currentQueue.enqueueNDRangeKernel(*renderSampleKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(taskCount, renderSampleWorkGroupSize)),
-						cl::NDRange(renderSampleWorkGroupSize));
+				EnqueueRenderSampleKernel(currentQueue);
+
 				// Merge all pixel samples and accumulate statistics
 				currentQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
 						cl::NDRange(RoundUp<u_int>(threadFilmPixelCount, mergePixelSamplesWorkGroupSize)),
 						cl::NDRange(mergePixelSamplesWorkGroupSize));
 
 				// Async. transfer of the Film buffers
-				TransferFilm(currentQueue);
-				threadFilm->AddSampleCount(taskCount);
+				threadFilms[0]->TransferFilm(currentQueue);
+				threadFilms[0]->film->AddSampleCount(taskCount);
 
 				// Async. transfer of GPU task statistics
 				currentQueue.enqueueReadBuffer(
@@ -366,6 +413,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					tracedRaysCount += gpuTaskStats[i].raysCount;
 
 				intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
+				
+				//const double t1 = WallClockTime();
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
 			}
 
 			//------------------------------------------------------------------
@@ -397,9 +447,33 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// Apply tone mapping to merged buffer
 				//--------------------------------------------------------------
 
-				currentQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
-						cl::NDRange(RoundUp<u_int>(engineFilmPixelCount, toneMapLinearWorkGroupSize)),
-						cl::NDRange(toneMapLinearWorkGroupSize));
+				if (useAutoLinearToneMap) {
+					// Reduce the pixel sum
+					u_int workSize = RoundUpPow2<u_int>(engineFilmPixelCount) / 2;
+					currentQueue.enqueueNDRangeKernel(*sumRGBValuesReduceKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(workSize, 64)),
+						cl::NDRange(64));
+					workSize /= 64;
+					
+					// Accumulate the pixel sum in a single value
+					{
+						boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
+						sumRGBValueAccumulateKernel->setArg(0, workSize);	
+					}
+					
+					currentQueue.enqueueNDRangeKernel(*sumRGBValueAccumulateKernel, cl::NullRange,
+						cl::NDRange(64),
+						cl::NDRange(64));
+
+					// Apply the scale
+					currentQueue.enqueueNDRangeKernel(*toneMapAutoLinearKernel, cl::NullRange,
+							cl::NDRange(RoundUp<u_int>(engineFilmPixelCount, 64)),
+							cl::NDRange(64));
+				} else {
+					currentQueue.enqueueNDRangeKernel(*toneMapLinearKernel, cl::NullRange,
+							cl::NDRange(RoundUp<u_int>(engineFilmPixelCount, toneMapLinearWorkGroupSize)),
+							cl::NDRange(toneMapLinearWorkGroupSize));
+				}
 
 				//--------------------------------------------------------------
 				// Update the screen buffer
@@ -442,9 +516,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				currentQueue.finish();
 			}
 
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 			// Update OpenCL buffers if there is any edit action
-			//--------------------------------------------------------------
+			//------------------------------------------------------------------
 
 			if (amiDisplayThread) {
 				engine->editCanStart.notify_one();

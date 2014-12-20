@@ -562,7 +562,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(mesh);
 
 				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
+				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it =
+						uniqueLeafIndexByMesh.find(itm->GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
 					TriangleMesh *instancedMesh = itm->GetTriangleMesh();
@@ -591,7 +592,8 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 				const MotionTriangleMesh *mtm = dynamic_cast<const MotionTriangleMesh *>(mesh);
 
 				// Check if a BVH has already been created
-				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it = uniqueLeafIndexByMesh.find(mtm->GetTriangleMesh());
+				std::map<const Mesh *, u_int, bool (*)(const Mesh *, const Mesh *)>::iterator it =
+						uniqueLeafIndexByMesh.find(mtm->GetTriangleMesh());
 
 				if (it == uniqueLeafIndexByMesh.end()) {
 					TriangleMesh *motionMesh = mtm->GetTriangleMesh();
@@ -624,10 +626,10 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 	// Build the root BVH
 	//--------------------------------------------------------------------------
 
-	std::vector<BVHAccelTreeNode *> bvList;
-	bvList.reserve(nLeafs);
+	std::vector<BVHAccelTreeNode> bvNodes(nLeafs);
+	std::vector<BVHAccelTreeNode *> bvList(nLeafs, NULL);
 	for (u_int i = 0; i < nLeafs; ++i) {
-		BVHAccelTreeNode *node = new BVHAccelTreeNode();
+		BVHAccelTreeNode *node = &bvNodes[i];
 		// Get the bounding box from the mesh so it is in global coordinates
 		node->bbox = meshes[i]->GetBBox();
 		node->bvhLeaf.leafIndex = leafsIndex[i];
@@ -636,7 +638,7 @@ void MBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalV
 		node->bvhLeaf.meshOffsetIndex = i;
 		node->leftChild = NULL;
 		node->rightSibling = NULL;
-		bvList.push_back(node);
+		bvList[i] = node;
 	}
 
 	nRootNodes = 0;

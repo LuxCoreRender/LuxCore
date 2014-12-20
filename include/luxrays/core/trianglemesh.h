@@ -95,6 +95,14 @@ public:
 
 	virtual void ApplyTransform(const Transform &trans);
 
+	static Point *AllocVerticesBuffer(const u_int meshVertCount) {
+		// Embree requires a float padding field at the end
+		return (Point *)new float[3 * meshVertCount + 1];
+	}
+	static Triangle *AllocTrianglesBuffer(const u_int meshTriCount) {
+		return new Triangle[meshTriCount];
+	}
+
 	static TriangleMesh *Merge(
 		const std::deque<const Mesh *> &meshes,
 		TriangleMeshID **preprocessedMeshIDs = NULL,
@@ -163,7 +171,7 @@ public:
 		return motionSystem.Bound(mesh->GetBBox(), true);
 	}
 	virtual Point GetVertex(const float time, const u_int vertIndex) const {
-		return motionSystem.Sample(time) * mesh->GetVertex(time, vertIndex);
+		return motionSystem.Sample(time).Inverse() * mesh->GetVertex(time, vertIndex);
 	}
 
 	virtual Point *GetVertices() const { return mesh->GetVertices(); }

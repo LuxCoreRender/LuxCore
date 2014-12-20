@@ -123,6 +123,7 @@ typedef struct {
 typedef struct {
 	Vector v0, v1, v2;
 	UV uv0, uv1, uv2;
+	Spectrum rgb0, rgb1, rgb2;
 	float invTriangleArea, invMeshArea;
 
 	unsigned int materialIndex;

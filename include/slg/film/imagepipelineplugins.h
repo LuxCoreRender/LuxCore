@@ -22,6 +22,12 @@
 #include <vector>
 #include <memory>
 #include <typeinfo> 
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
@@ -37,7 +43,7 @@ class Film;
 
 class GammaCorrectionPlugin : public ImagePipelinePlugin {
 public:
-	GammaCorrectionPlugin(const float gamma, const u_int tableSize);
+	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 4096);
 	virtual ~GammaCorrectionPlugin() { }
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -46,7 +52,14 @@ public:
 
 	float gamma;
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & gammaTable;
+	}
+
 	float Radiance2PixelFloat(const float x) const;
 
 	std::vector<float> gammaTable;
@@ -64,6 +77,13 @@ public:
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -80,7 +100,19 @@ public:
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
 	Film::FilmChannelType type;
-	const u_int index;
+	u_int index;
+
+	friend class boost::serialization::access;
+
+private:
+	// Used by serialization
+	OutputSwitcherPlugin() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & type;
+		ar & index;
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -96,9 +128,19 @@ public:
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
-	const float weight;
+	float weight;
+
+	friend class boost::serialization::access;
 
 private:
+	// Used by serialization
+	GaussianBlur3x3FilterPlugin() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & weight;
+	}
+
 	void ApplyBlurFilterXR1(
 		const u_int filmWidth, const u_int filmHeight,
 		const luxrays::Spectrum *src, luxrays::Spectrum *dst,
@@ -131,9 +173,22 @@ public:
 
 	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
+	friend class boost::serialization::access;
+
 private:
-	// Used by Copy()
+	// Used by Copy() and serialization
 	CameraResponsePlugin() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & RedI;
+		ar & RedB;
+		ar & GreenI;
+		ar & GreenB;
+		ar & BlueI;
+		ar & GreenI;
+		ar & BlueB;
+	}
 
 	bool LoadPreset(const std::string &filmName);
 	void LoadFile(const std::string &filmName);
@@ -141,15 +196,25 @@ private:
 	void Map(luxrays::RGBColor &rgb) const;
 	float ApplyCrf(float point, const vector<float> &from, const vector<float> &to) const;
 
-	bool color;
 	vector<float> RedI; // image irradiance (on the image plane)
 	vector<float> RedB; // measured intensity
 	vector<float> GreenI; // image irradiance (on the image plane)
 	vector<float> GreenB; // measured intensity
 	vector<float> BlueI; // image irradiance (on the image plane)
 	vector<float> BlueB; // measured intensity
+	bool color;
 };
 
 }
+
+BOOST_CLASS_VERSION(slg::GammaCorrectionPlugin, 1)
+BOOST_CLASS_VERSION(slg::NopPlugin, 1)
+BOOST_CLASS_VERSION(slg::GaussianBlur3x3FilterPlugin, 1)
+BOOST_CLASS_VERSION(slg::CameraResponsePlugin, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::GammaCorrectionPlugin)
+BOOST_CLASS_EXPORT_KEY(slg::NopPlugin)
+BOOST_CLASS_EXPORT_KEY(slg::GaussianBlur3x3FilterPlugin)
+BOOST_CLASS_EXPORT_KEY(slg::CameraResponsePlugin)
 
 #endif	/*  _SLG_IMAGEPIPELINE_PLUGINS_H */

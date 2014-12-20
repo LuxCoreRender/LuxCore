@@ -520,10 +520,8 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	TraceEyePath(rndGen, eyeRay, &volInfo, &sampleResult);
 
 	// Radiance clamping
-	if (engine->radianceClampMaxValue > 0.f) {
-		for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
-			sampleResult.radiancePerPixelNormalized[i] = sampleResult.radiancePerPixelNormalized[i].Clamp(0.f, engine->radianceClampMaxValue);
-	}
+	if (engine->radianceClampMaxValue > 0.f)
+		sampleResult.ClampRadiance(engine->radianceClampMaxValue);
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
@@ -553,8 +551,8 @@ void BiasPathCPURenderThread::RenderFunc() {
 	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
 		// Render the tile
 		tileFilm->Reset();
-		const u_int tileWidth = Min(engine->tileRepository->tileSize, filmWidth - tile->xStart);
-		const u_int tileHeight = Min(engine->tileRepository->tileSize, filmHeight - tile->yStart);
+		const u_int tileWidth = Min(engine->tileRepository->tileWidth, filmWidth - tile->xStart);
+		const u_int tileHeight = Min(engine->tileRepository->tileHeight, filmHeight - tile->yStart);
 		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "
 		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 		//		"(" << tileWidth << ", " << tileHeight << ")");

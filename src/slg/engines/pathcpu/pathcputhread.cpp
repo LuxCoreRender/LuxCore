@@ -319,7 +319,7 @@ void PathCPURenderThread::RenderFunc() {
 					break;
 			}
 
-			pathThroughput *= bsdfSample;
+			pathThroughput *= bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
 			// Update volume information
@@ -330,6 +330,10 @@ void PathCPURenderThread::RenderFunc() {
 		}
 
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+		// Radiance clamping
+		if (engine->radianceClampMaxValue > 0.f)
+			sampleResult.ClampRadiance(engine->radianceClampMaxValue);
 
 		sampler->NextSample(sampleResults);
 
