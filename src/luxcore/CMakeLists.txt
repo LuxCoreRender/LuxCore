@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXCORE_VERSION_MAJOR 1)
-set(LUXCORE_VERSION_MINOR 4RC2)
+set(LUXCORE_VERSION_MINOR 4RC3)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -150,7 +150,8 @@ add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
 
 if(APPLE)
 	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden) # prevent symbol clashes
-	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	#target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup ${OSX_DEPENDENCY_ROOT}/lib/liblux.dylib luxcore ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
     SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
 else()
 	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
