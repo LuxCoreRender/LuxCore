@@ -85,10 +85,22 @@ void PathCPURenderThread::DirectLightSampling(
 					const float weight = (!sampleResult->lastPathVertex &&  (light->IsEnvironmental() || light->IsIntersectable())) ? 
 						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-					const Spectrum commonFactor = (weight * factor) * connectionThroughput * lightRadiance;
-					const Spectrum radiance = commonFactor * pathThroughput * bsdfEval;
-					const Spectrum irradiance = commonFactor * (INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)));
-					sampleResult->AddDirectLight(light->GetID(), event, radiance, irradiance, 1.f);
+					const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
+
+					if ((sampleResult->firstPathVertex) && (bsdf.GetMaterialType() == MATTE)) {
+						sampleResult->irradiance =
+								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d))) *
+								incomingRadiance;
+					}
+					sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
+
+					// The first path vertex is not handled by AddDirectLight(). This is valid
+					// for irradiance AOV only if it is a MATTE material and first path vertex
+					if ((sampleResult->firstPathVertex) && (bsdf.GetMaterialType() == MATTE)) {
+						sampleResult->irradiance =
+								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d))) *
+								incomingRadiance;
+					}
 				}
 			}
 		}
@@ -116,8 +128,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 		} else
 			weight = 1.f;
 
-		const Spectrum radiance = weight * pathThroughput * emittedRadiance;
-		sampleResult->AddEmission(bsdf.GetLightID(), radiance);
+		sampleResult->AddEmission(bsdf.GetLightID(), pathThroughput, weight* emittedRadiance);
 	}
 }
 
@@ -138,8 +149,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent,
 			} else
 				weight = 1.f;
 
-			const Spectrum radiance = weight * pathThroughput * envRadiance;
-			sampleResult->AddEmission(envLight->GetID(), radiance);
+			sampleResult->AddEmission(envLight->GetID(), pathThroughput, weight * envRadiance);
 		}
 	}
 }
@@ -226,7 +236,7 @@ void PathCPURenderThread::RenderFunc() {
 			const bool hit = scene->Intersect(device, false,
 					&volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
-					&sampleResult);
+					&pathThroughput, &sampleResult);
 			pathThroughput *= connectionThroughput;
 			// Note: pass-through check is done inside Scene::Intersect()
 
@@ -322,12 +332,24 @@ void PathCPURenderThread::RenderFunc() {
 					break;
 			}
 
-			pathThroughput *= bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+			const float pdfFactor = min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+			const Spectrum throughputFactor = bsdfSample * pdfFactor;
+			pathThroughput *= throughputFactor;
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
+
+			// This is valid for irradiance AOV only if it is a MATTE material and
+			// first path vertex. Set or update sampleResult.irradiancePathThroughput
+			if (sampleResult.firstPathVertex) {
+				if (bsdf.GetMaterialType() == MATTE)
+					sampleResult.irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) * pdfFactor;
+				else
+					sampleResult.irradiancePathThroughput = Spectrum();
+			} else
+				sampleResult.irradiancePathThroughput *= throughputFactor;
 
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
-
+			
 			eyeRay.Update(bsdf.hitPoint.p, sampledDir);
 			++depth;
 		}

@@ -86,11 +86,16 @@ void BiasPathCPURenderThread::DirectLightSampling(
 					&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 				// I'm ignoring volume emission because it is not sampled in
 				// direct light step.
-				const Spectrum commonFactor = (weight * factor) * connectionThroughput * lightRadiance;
-				const Spectrum radiance = commonFactor * pathThroughput * bsdfEval;
-				const Spectrum irradiance = commonFactor * (INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)));
+				const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
+				sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, lightScale);
 
-				sampleResult->AddDirectLight(light->GetID(), event, radiance, irradiance, lightScale);
+				// The first path vertex is not handled by AddDirectLight(). This is valid
+				// for irradiance AOV only if it is a MATTE material and first path vertex
+				if ((sampleResult->firstPathVertex) && (bsdf.GetMaterialType() == MATTE)) {
+					sampleResult->irradiance =
+							(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d))) *
+							incomingRadiance;
+				}
 			}
 		}
 	}
@@ -176,8 +181,7 @@ void BiasPathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent
 		} else
 			weight = 1.f;
 
-		const Spectrum radiance = weight * pathThroughput * emittedRadiance;
-		sampleResult->AddEmission(bsdf.GetLightID(), radiance);
+		sampleResult->AddEmission(bsdf.GetLightID(), pathThroughput, weight * emittedRadiance);
 	}
 }
 
@@ -206,8 +210,7 @@ void BiasPathCPURenderThread::DirectHitEnvLight(const BSDFEvent lastBSDFEvent,
 				} else
 					weight = 1.f;
 
-				const Spectrum radiance = weight * pathThroughput * envRadiance;
-				sampleResult->AddEmission(envLight->GetID(), radiance);
+				sampleResult->AddEmission(envLight->GetID(), pathThroughput, weight * envRadiance);
 			}
 		}
 	}
@@ -227,7 +230,7 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		const bool hit = scene->Intersect(device, false,
 				volInfo, rndGen->floatValue(),
 				&ray, &rayHit, &bsdf, &connectionThroughput,
-				sampleResult);
+				&pathThroughput, sampleResult);
 		pathThroughput *= connectionThroughput;
 		// Note: pass-through check is done inside Scene::Intersect()
 
@@ -283,8 +286,13 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Update volume information
 		volInfo->Update(lastBSDFEvent, bsdf);
 
-		pathThroughput *= bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+		const Spectrum throughputFactor = bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+		pathThroughput *= throughputFactor;
 		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
+
+		// Update irradiance AOV path throughput
+		sampleResult->irradiancePathThroughput *= throughputFactor;
+
 
 		ray.Update(bsdf.hitPoint.p, sampledDir);
 	}
@@ -324,12 +332,20 @@ void BiasPathCPURenderThread::SampleComponent(
 				PathVolumeInfo volInfo = startVolInfo;
 				volInfo.Update(event, bsdf);
 
-				const Spectrum continuePathThroughput = pathThroughput * bsdfSample * scaleFactor *
-					min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
+				const float pdfFactor = scaleFactor * min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
+				const Spectrum continuePathThroughput = pathThroughput * bsdfSample * pdfFactor;
 				assert (!continuePathThroughput.IsNaN() && !continuePathThroughput.IsInf());
 
 				Ray continueRay(bsdf.hitPoint.p, sampledDir);
 				continueRay.time = time;
+				
+				// This is valid for irradiance AOV only if it is a MATTE material and
+				// first path vertex. Set or update sampleResult.irradiancePathThroughput
+				if (bsdf.GetMaterialType() == MATTE)
+					sampleResult->irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) * pdfFactor;
+				else
+					sampleResult->irradiancePathThroughput = Spectrum();
+
 				ContinueTracePath(rndGen, depthInfo, continueRay,
 						continuePathThroughput, event, pdfW, &volInfo, sampleResult);
 			}
@@ -353,12 +369,14 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 
 	Ray eyeRay = ray;
 	RayHit eyeRayHit;
-	Spectrum pathThroughput;
+	Spectrum pathThroughput(1.f);
+	Spectrum connectionThroughput;
 	BSDF bsdf;
 	const bool hit = scene->Intersect(device, false,
 			volInfo, rndGen->floatValue(),
-			&eyeRay, &eyeRayHit, &bsdf, &pathThroughput,
+			&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput, &pathThroughput, 
 			sampleResult);
+	pathThroughput *= connectionThroughput;
 
 	if (!hit) {
 		// Nothing was hit, look for env. lights

@@ -159,7 +159,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				const bool hit = scene->Intersect(device, false,
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
-						&connectionThroughput, NULL, &connectEmission);
+						&connectionThroughput, NULL, NULL, &connectEmission);
 				// I account for volume emission only with path tracing (i.e. here and
 				// not in any other place)
 				eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;

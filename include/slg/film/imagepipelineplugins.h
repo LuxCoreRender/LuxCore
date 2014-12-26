@@ -205,16 +205,50 @@ private:
 	bool color;
 };
 
+//------------------------------------------------------------------------------
+// Contour lines plugin
+//------------------------------------------------------------------------------
+
+class ContourLinesPlugin : public ImagePipelinePlugin {
+public:
+	ContourLinesPlugin(const float range, const u_int steps, const int zeroGridSize);
+	virtual ~ContourLinesPlugin() { }
+
+	virtual ImagePipelinePlugin *Copy() const;
+
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
+
+	friend class boost::serialization::access;
+
+	float range;
+	u_int steps;
+	int zeroGridSize;
+
+private:
+	// Used by Copy() and serialization
+	ContourLinesPlugin() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+	}
+
+	float GetLuminance(const Film &film, const u_int x, const u_int y) const;
+	int GetStep(const Film &film, std::vector<bool> &pixelsMask,
+			const int x, const int y, const int defaultValue) const;
+};
+
 }
 
 BOOST_CLASS_VERSION(slg::GammaCorrectionPlugin, 1)
 BOOST_CLASS_VERSION(slg::NopPlugin, 1)
 BOOST_CLASS_VERSION(slg::GaussianBlur3x3FilterPlugin, 1)
 BOOST_CLASS_VERSION(slg::CameraResponsePlugin, 1)
+BOOST_CLASS_VERSION(slg::ContourLinesPlugin, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::GammaCorrectionPlugin)
 BOOST_CLASS_EXPORT_KEY(slg::NopPlugin)
 BOOST_CLASS_EXPORT_KEY(slg::GaussianBlur3x3FilterPlugin)
 BOOST_CLASS_EXPORT_KEY(slg::CameraResponsePlugin)
+BOOST_CLASS_EXPORT_KEY(slg::ContourLinesPlugin)
 
 #endif	/*  _SLG_IMAGEPIPELINE_PLUGINS_H */

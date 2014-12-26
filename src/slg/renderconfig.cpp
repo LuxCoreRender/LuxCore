@@ -330,6 +330,11 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			} else if (type == "CAMERA_RESPONSE_FUNC") {
 				imagePipeline->AddPlugin(new CameraResponsePlugin(
 					cfg.Get(Property(prefix + ".name")("Advantix_100CD")).Get<string>()));
+			} else if (type == "CONTOUR_LINES") {
+				const float range = Max(0.f, cfg.Get(Property(prefix + ".range")(100.f)).Get<float>());
+				const u_int steps = Max(2u, cfg.Get(Property(prefix + ".steps")(8)).Get<u_int>());
+				const int zeroGridSide = cfg.Get(Property(prefix + ".zerogridsize")(8)).Get<int>();
+				imagePipeline->AddPlugin(new ContourLinesPlugin(range, steps, zeroGridSide));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
