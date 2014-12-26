@@ -57,7 +57,7 @@ float GammaCorrectionPlugin::Radiance2PixelFloat(const float x) const {
 	return gammaTable[index];
 }
 
-void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	for (u_int i = 0; i < pixelCount; ++i) {
@@ -79,7 +79,7 @@ ImagePipelinePlugin *NopPlugin::Copy() const {
 	return new NopPlugin();
 }
 
-void NopPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void NopPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 }
 
 //------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ ImagePipelinePlugin *OutputSwitcherPlugin::Copy() const {
 	return new OutputSwitcherPlugin(type, index);
 }
 
-void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 	// Copy the data from another Film output channel
 
 	// Do nothing if the Film is missing this particular channel
@@ -295,6 +295,16 @@ void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, std::vector
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i])
 					film.channel_BY_MATERIAL_IDs[index]->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::IRRADIANCE: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_IRRADIANCE->GetWeightedPixel(i, v);
+					pixels[i] = Spectrum(v);
+				}
 			}
 			break;
 		}
@@ -582,7 +592,7 @@ float CameraResponsePlugin::ApplyCrf(float point, const vector<float> &from, con
 	if (point >= from.back())
 		return to.back();
 
-	int index = std::upper_bound(from.begin(), from.end(), point) -
+	int index = upper_bound(from.begin(), from.end(), point) -
 		from.begin();
 	float x1 = from[index - 1];
 	float x2 = from[index];
@@ -689,7 +699,7 @@ void CameraResponsePlugin::LoadFile(const string &filmName) {
 		throw runtime_error("No valid Camera Response Functions in: " + filmName);
 }
 
-bool CameraResponsePlugin::LoadPreset(const std::string &filmName) {
+bool CameraResponsePlugin::LoadPreset(const string &filmName) {
 /*  
 	Valid preset names (case sensitive):
 
@@ -1282,4 +1292,105 @@ bool CameraResponsePlugin::LoadPreset(const std::string &filmName) {
 		return false;
 
 	return true;
+}
+
+//------------------------------------------------------------------------------
+// ContourLinesPlugin plugin
+//------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ContourLinesPlugin)
+
+ContourLinesPlugin::ContourLinesPlugin(const float r, const u_int s,
+		const int gridSize) : range(r), steps(s), zeroGridSize(gridSize) {
+}
+
+ImagePipelinePlugin *ContourLinesPlugin::Copy() const {
+	return new ContourLinesPlugin(range, steps, zeroGridSize);
+}
+
+float ContourLinesPlugin::GetLuminance(const Film &film,
+		const u_int x, const u_int y) const {
+	float v;
+	film.channel_IRRADIANCE->GetWeightedPixel(x, y, &v);
+
+	// 683.f to convert Watt/m^2 to Lumen/m^2 (aka lux)
+	return 683.f * Spectrum(v).Y();
+}
+
+int ContourLinesPlugin::GetStep(const Film &film, vector<bool> &pixelsMask,
+		const int x, const int y, const int defaultValue) const {
+	if ((x < 0) || (x >= (int)film.GetWidth()) ||
+			(y < 0) || (y >= (int)film.GetHeight()) ||
+			!pixelsMask[x + y * film.GetWidth()])
+		return defaultValue;
+
+	const float l = GetLuminance(film, x, y);
+	if (l == 0.f)
+		return -1;
+
+	return Floor2UInt((steps - 1) * Clamp(l / range, 0.f, 1.f));
+}
+
+static Spectrum FalseColor(const float v) {
+	static Spectrum falseColors[] = {
+		Spectrum(.5f, 0.f, .5f),
+		Spectrum(0.f, 0.f, .5f),
+		Spectrum(0.f, .75f, 0.f),
+		Spectrum(1.f, 1.f, 0.f),
+		Spectrum(1.f, 0.f, 0.f)
+	};
+	static const u_int falseColorsCount = 5;
+
+	if (v <= 0.f)
+		return falseColors[0];
+	if (v >= 1.f)
+		return falseColors[falseColorsCount - 1];
+
+	const int index = Floor2UInt(v * (falseColorsCount - 1));
+	Spectrum &colorA = falseColors[index];
+	Spectrum &colorB = falseColors[index + 1];
+	const float vAtoB = (v - index / (float)falseColorsCount) * (1.f / (falseColorsCount - 1));
+
+	return Lerp(vAtoB, colorA, colorB);
+}
+
+void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+	// Do nothing if the Film is missing the IRRADIANCE channel
+	if (!film.HasChannel(Film::IRRADIANCE))
+		return;
+
+	#pragma omp parallel for
+	for (int s = 0; s < (int)steps; ++s) {
+		for (int y = 0; y < (int)film.GetHeight(); ++y) {
+			for (int x = 0; x < (int)film.GetWidth(); ++x) {
+				const u_int pixelIndex = x + y * film.GetWidth();
+				if (pixelsMask[pixelIndex]) {
+					bool isBorder = false;
+
+					const int myStep = GetStep(film, pixelsMask, x, y, 0);
+					if (myStep == -1) {
+						// No irradiance information available or black
+						if (zeroGridSize == 0.f)
+							pixels[pixelIndex] = Spectrum();
+						else if ((zeroGridSize > 0.f) && (
+								(x % zeroGridSize == 0) || (y % zeroGridSize == 0)))
+							pixels[pixelIndex] = Spectrum();
+					} else {
+						// Irradiance information available
+						if ((GetStep(film, pixelsMask, x - 1, y, myStep) != myStep) ||
+								(GetStep(film, pixelsMask, x + 1, y, myStep) != myStep) ||
+								(GetStep(film, pixelsMask, x, y - 1, myStep) != myStep) ||
+								(GetStep(film, pixelsMask, x, y + 1, myStep) != myStep))
+							isBorder = true;
+
+						if (isBorder) {
+							const Spectrum c = FalseColor(myStep / (float)(steps - 1.f));
+
+							pixels[pixelIndex] = c;
+						}
+					}
+				}
+			}
+		}
+	}
 }

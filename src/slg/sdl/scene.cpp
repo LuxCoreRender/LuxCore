@@ -1851,8 +1851,8 @@ LightSource *Scene::CreateLightSource(const std::string &lightName, const luxray
 bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
-		Spectrum *connectionThroughput, SampleResult *sampleResult,
-		Spectrum *connectionEmission) const {
+		Spectrum *connectionThroughput, const Spectrum *pathThroughput,
+		SampleResult *sampleResult, Spectrum *connectionEmission) const {
 	*connectionThroughput = Spectrum(1.f);
 	if (connectionEmission)
 		*connectionEmission = Spectrum();
@@ -1886,7 +1886,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 			// Add the volume emitted light to the appropriate light group
 			if (!emis.Black()) {
 				if (sampleResult)
-					sampleResult->AddEmission(rayVolume->GetVolumeLightID(), emis);
+					sampleResult->AddEmission(rayVolume->GetVolumeLightID(), *pathThroughput, emis);
 				if (connectionEmission)
 					*connectionEmission += emis;
 			}

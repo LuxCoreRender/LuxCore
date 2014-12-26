@@ -317,9 +317,10 @@ public:
 	}
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
 
-	void AddEmission(const u_int lightID, const luxrays::Spectrum &radiance);
+	void AddEmission(const u_int lightID, const luxrays::Spectrum &pathThroughput,
+		const luxrays::Spectrum &incomingRadiance);
 	void AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
-		const luxrays::Spectrum &radiance, const luxrays::Spectrum &irradiance,
+		const luxrays::Spectrum &pathThroughput, const luxrays::Spectrum &incomingRadiance,
 		const float lightScale);
 
 	void ClampRadiance(const float cap) {
@@ -350,6 +351,8 @@ public:
 	luxrays::UV uv;
 	float rayCount;
 	luxrays::Spectrum irradiance;
+	// Irradiance requires to store some additional information to be computed
+	luxrays::Spectrum irradiancePathThroughput;
 
 	BSDFEvent firstPathVertexEvent;
 	bool firstPathVertex, lastPathVertex;

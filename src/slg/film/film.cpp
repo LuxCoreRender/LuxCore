@@ -1842,7 +1842,9 @@ template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::bina
 // SampleResult
 //------------------------------------------------------------------------------
 
-void SampleResult::AddEmission(const u_int lightID, const Spectrum &radiance) {
+void SampleResult::AddEmission(const u_int lightID, const Spectrum &pathThroughput,
+		const Spectrum &incomingRadiance) {
+	const Spectrum radiance = pathThroughput * incomingRadiance;
 	radiancePerPixelNormalized[lightID] += radiance;
 
 	if (firstPathVertex)
@@ -1856,12 +1858,14 @@ void SampleResult::AddEmission(const u_int lightID, const Spectrum &radiance) {
 			indirectGlossy += radiance;
 		else if (firstPathVertexEvent & SPECULAR)
 			indirectSpecular += radiance;
+		
+		irradiance += irradiancePathThroughput * incomingRadiance;
 	}
 }
 
 void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
-		const Spectrum &radiance, const Spectrum &irrad,
-		const float lightScale) {
+		const Spectrum &pathThroughput, const Spectrum &incomingRadiance, const float lightScale) {
+	const Spectrum radiance = pathThroughput * incomingRadiance;
 	radiancePerPixelNormalized[lightID] += radiance;
 
 	if (firstPathVertex) {
@@ -1872,8 +1876,6 @@ void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent
 			directDiffuse += radiance;
 		else
 			directGlossy += radiance;
-
-		irradiance += irrad;
 	} else {
 		// indirectShadowMask is supposed to be initialized to 1.0
 		indirectShadowMask = Max(0.f, indirectShadowMask - lightScale);
@@ -1884,6 +1886,8 @@ void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent
 			indirectGlossy += radiance;
 		else if (firstPathVertexEvent & SPECULAR)
 			indirectSpecular += radiance;
+
+		irradiance += irradiancePathThroughput * incomingRadiance;
 	}
 }
 
