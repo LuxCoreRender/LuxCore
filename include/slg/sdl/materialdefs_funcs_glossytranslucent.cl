@@ -143,7 +143,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 		if (directPdfW)
 			*directPdfW = fabs(sampledDir.z) * M_1_PI_F * 0.5f;
 
-		const float3 H = Normalize(float3(lightDir.x + eyeDir.x, lightDir.y + eyeDir.y,
+		const float3 H = normalize((float3)(lightDir.x + eyeDir.x, lightDir.y + eyeDir.y,
 			lightDir.z - eyeDir.z));
 		const float u = fabs(dot(lightDir, H));
 		float3 ks = ksVal;
@@ -165,7 +165,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 #endif
 		ks = Spectrum_Clamp(ks);
 		const float3 S2 = FresnelSchlick_Evaluate(ks, u);
-		float3 S = Spectrum_Sqrt(WHITE - S1) * (WHITE - S2));
+		float3 S = Spectrum_Sqrt((WHITE - S1) * (WHITE - S2));
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 		if (lightDir.z > 0.f) {
 			S *= Spectrum_Exp(Spectrum_Clamp(kaVal) * -(d / cosi) +
@@ -255,7 +255,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 			const float wCoating = SchlickBSDFGT_CoatingWeight(ks, fixedDir);
 			const float wBase = 1.f - wCoating;
 
-			*directPdfW = 0.5f * (wBase * fabsf(sampledDir.z * M_1_PI_F) +
+			*directPdfW = 0.5f * (wBase * fabs(sampledDir.z * M_1_PI_F) +
 				wCoating * SchlickBSDFGT_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir));
 		}
 
@@ -267,7 +267,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 #endif
 
 		// Coating fresnel factor
-		const float3 H = Normalize(fixedDir + sampledDir);
+		const float3 H = normalize(fixedDir + sampledDir);
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
 		const float3 coatingF = SchlickBSDFGT_CoatingF(ks, roughness, anisotropy, mbounce, fixedDir, sampledDir);
@@ -385,7 +385,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 
 		if (2.f * passThroughEvent < wBase) {
 			// Sample base BSDF (Matte BSDF)
-			*sampledDir = signbit(fixedDir.z) * CosineSampleHemisphere(u0, u1, &basePdf);
+			*sampledDir = signbit(fixedDir.z) * CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
 
 			*cosSampledDir = fabs((*sampledDir).z);
 			if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
@@ -431,7 +431,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 #endif
 
 		// Coating fresnel factor
-		const float3 H = Normalize(fixedDir + *sampledDir);
+		const float3 H = normalize(fixedDir + *sampledDir);
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(*sampledDir, H)));
 
 		// Blend in base layer Schlick style
@@ -440,7 +440,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
 	} else {
 		// Transmition
-		*sampledDir = -signbit(fixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
+		*sampledDir = -signbit(fixedDir.z) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 		*pdfW *= 0.5f;
 
 		*cosSampledDir = fabs((*sampledDir).z);
@@ -452,10 +452,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		const float cosi = fabs((*sampledDir).z);
 		const float coso = fabs(fixedDir.z);
 
-		if (directPdfW)
-			*directPdfW = fabs((*sampledDir).z) * M_1_PI_F * 0.5f;
-
-		const float3 H = Normalize(float3((*sampledDir).x + fixedDir.x, (*sampledDir).y + fixedDir.y,
+		const float3 H = normalize((float3)((*sampledDir).x + fixedDir.x, (*sampledDir).y + fixedDir.y,
 			(*sampledDir).z - fixedDir.z));
 		const float u = fabs(dot(*sampledDir, H));
 		float3 ks = ksVal;
@@ -477,7 +474,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 #endif
 		ks = Spectrum_Clamp(ks);
 		const float3 S2 = FresnelSchlick_Evaluate(ks, u);
-		float3 S = Spectrum_Sqrt(WHITE - S1) * (WHITE - S2));
+		float3 S = Spectrum_Sqrt((WHITE - S1) * (WHITE - S2));
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 		if ((*sampledDir).z > 0.f) {
 			S *= Spectrum_Exp(Spectrum_Clamp(kaVal) * -(d / cosi) +
