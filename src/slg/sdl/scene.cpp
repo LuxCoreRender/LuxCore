@@ -401,7 +401,12 @@ void Scene::ParseVolumes(const Properties &props) {
 		if (matDefs.IsMaterialDefined(volName)) {
 			// A replacement for an existing material
 			const Material *oldMat = matDefs.GetMaterial(volName);
-			// Volumes can not (yet) be light sources
+
+			// Check if it is not a volume
+			if (!dynamic_cast<const Volume *>(oldMat))
+				throw runtime_error("You can not replace a volume with the material: " + volName);
+
+			// Volumes can not be a (directly sampled) light source
 			//const bool wasLightSource = oldMat->IsLightSource();
 
 			matDefs.DefineMaterial(volName, newMat);
@@ -478,6 +483,10 @@ void Scene::ParseMaterials(const Properties &props) {
 		if (matDefs.IsMaterialDefined(matName)) {
 			// A replacement for an existing material
 			const Material *oldMat = matDefs.GetMaterial(matName);
+			
+			// Check if it is a volume
+			if (dynamic_cast<const Volume *>(oldMat))
+				throw runtime_error("You can not replace a material with the volume: " + matName);
 
 			matDefs.DefineMaterial(matName, newMat);
 
