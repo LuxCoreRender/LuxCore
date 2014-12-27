@@ -211,7 +211,8 @@ private:
 
 class ContourLinesPlugin : public ImagePipelinePlugin {
 public:
-	ContourLinesPlugin(const float range, const u_int steps, const int zeroGridSize);
+	ContourLinesPlugin(const float scale, const float range, const u_int steps,
+			const int zeroGridSize);
 	virtual ~ContourLinesPlugin() { }
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -220,7 +221,7 @@ public:
 
 	friend class boost::serialization::access;
 
-	float range;
+	float scale, range;
 	u_int steps;
 	int zeroGridSize;
 
