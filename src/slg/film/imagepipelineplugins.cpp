@@ -1300,21 +1300,26 @@ bool CameraResponsePlugin::LoadPreset(const string &filmName) {
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::ContourLinesPlugin)
 
-ContourLinesPlugin::ContourLinesPlugin(const float r, const u_int s,
-		const int gridSize) : range(r), steps(s), zeroGridSize(gridSize) {
+// Scale should be set to 179.0: the value of 179 lm/w is the standard luminous
+// efficacy of equal energy white light that is defined and used by Radiance. It
+// can be used here to produce the same output of Radiance.
+//
+// More information here: http://www.radiance-online.org/pipermail/radiance-general/2006-April/003616.html
+
+ContourLinesPlugin::ContourLinesPlugin(const float scl, const float r, const u_int s,
+		const int gridSize) : scale(scl), range(r), steps(s), zeroGridSize(gridSize) {
 }
 
 ImagePipelinePlugin *ContourLinesPlugin::Copy() const {
-	return new ContourLinesPlugin(range, steps, zeroGridSize);
+	return new ContourLinesPlugin(scale, range, steps, zeroGridSize);
 }
 
 float ContourLinesPlugin::GetLuminance(const Film &film,
 		const u_int x, const u_int y) const {
-	float v;
-	film.channel_IRRADIANCE->GetWeightedPixel(x, y, &v);
+	Spectrum v;
+	film.channel_IRRADIANCE->GetWeightedPixel(x, y, v.c);
 
-	// 683.f to convert Watt/m^2 to Lumen/m^2 (aka lux)
-	return 683.f * Spectrum(v).Y();
+	return scale * v.Y();
 }
 
 int ContourLinesPlugin::GetStep(const Film &film, vector<bool> &pixelsMask,
