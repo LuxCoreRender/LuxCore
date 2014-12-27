@@ -1323,7 +1323,7 @@ float ContourLinesPlugin::GetLuminance(const Film &film,
 }
 
 int ContourLinesPlugin::GetStep(const Film &film, vector<bool> &pixelsMask,
-		const int x, const int y, const int defaultValue) const {
+		const int x, const int y, const int defaultValue, float *normalizedValue) const {
 	if ((x < 0) || (x >= (int)film.GetWidth()) ||
 			(y < 0) || (y >= (int)film.GetHeight()) ||
 			!pixelsMask[x + y * film.GetWidth()])
@@ -1333,7 +1333,11 @@ int ContourLinesPlugin::GetStep(const Film &film, vector<bool> &pixelsMask,
 	if (l == 0.f)
 		return -1;
 
-	return Floor2UInt((steps - 1) * Clamp(l / range, 0.f, 1.f));
+	const float normVal = Clamp(l / range, 0.f, 1.f);
+	if (normalizedValue)
+		*normalizedValue = normVal;
+
+	return Floor2UInt((steps - 1) * normVal);
 }
 
 static Spectrum FalseColor(const float v) {
@@ -1352,9 +1356,9 @@ static Spectrum FalseColor(const float v) {
 		return falseColors[falseColorsCount - 1];
 
 	const int index = Floor2UInt(v * (falseColorsCount - 1));
-	Spectrum &colorA = falseColors[index];
-	Spectrum &colorB = falseColors[index + 1];
-	const float vAtoB = (v - index / (float)falseColorsCount) * (1.f / (falseColorsCount - 1));
+	const float vAtoB = v * (falseColorsCount - 1) - index;
+	const Spectrum &colorA = falseColors[index];
+	const Spectrum &colorB = falseColors[index + 1];
 
 	return Lerp(vAtoB, colorA, colorB);
 }
@@ -1372,7 +1376,8 @@ void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> 
 				if (pixelsMask[pixelIndex]) {
 					bool isBorder = false;
 
-					const int myStep = GetStep(film, pixelsMask, x, y, 0);
+					float normalizedValue;
+					const int myStep = GetStep(film, pixelsMask, x, y, 0, &normalizedValue);
 					if (myStep == -1) {
 						// No irradiance information available or black
 						if (zeroGridSize == 0.f)
@@ -1389,7 +1394,7 @@ void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> 
 							isBorder = true;
 
 						if (isBorder) {
-							const Spectrum c = FalseColor(myStep / (float)(steps - 1.f));
+							const Spectrum c = FalseColor(normalizedValue);
 
 							pixels[pixelIndex] = c;
 						}
