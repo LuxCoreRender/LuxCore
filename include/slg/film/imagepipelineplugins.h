@@ -235,7 +235,8 @@ private:
 
 	float GetLuminance(const Film &film, const u_int x, const u_int y) const;
 	int GetStep(const Film &film, std::vector<bool> &pixelsMask,
-			const int x, const int y, const int defaultValue) const;
+			const int x, const int y, const int defaultValue,
+			float *normalizedValue = NULL) const;
 };
 
 }
