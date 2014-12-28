@@ -219,7 +219,7 @@ private:
 
 }
 
-// BOOST_CLASS_VERSION doesn;t work for template
+// BOOST_CLASS_VERSION doesn't work for template
 
 #endif	/* _SLG_FRAMEBUFFER_H */
 

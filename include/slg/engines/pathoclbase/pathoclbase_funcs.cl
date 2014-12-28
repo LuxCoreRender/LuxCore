@@ -80,6 +80,8 @@
 //  PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
 //  PARAM_FILM_CHANNELS_HAS_UV
 //  PARAM_FILM_CHANNELS_HAS_RAYCOUNT
+//  PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID (and PARAM_FILM_BY_MATERIAL_ID)
+//  PARAM_FILM_CHANNELS_HAS_IRRADIANCE
 
 // (optional)
 //  PARAM_CAMERA_HAS_DOF
@@ -131,12 +133,7 @@ bool Scene_Intersect(
 #endif
 		RayHit *rayHit,
 		__global BSDF *bsdf,
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		__global Spectrum *pathThroughput,
-#else
-		float3 *pathThroughput,
-#endif
-		
+		float3 *connectionThroughput,  const float3 pathThroughput,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global Mesh *meshDescs,
@@ -160,6 +157,7 @@ bool Scene_Intersect(
 		__global Triangle *triangles
 		MATERIALS_PARAM_DECL
 		) {
+	*connectionThroughput = WHITE;
 	const bool hit = (rayHit->meshIndex != NULL_INDEX);
 
 #if defined(PARAM_HAS_VOLUMES)
@@ -213,26 +211,20 @@ bool Scene_Intersect(
 		// This applies volume transmittance too
 		// Note: by using passThrough here, I introduce subtle correlation
 		// between scattering events and pass-through events
-		float3 connectionThroughput = WHITE;
 		float3 connectionEmission = BLACK;
 
 		const float t = Volume_Scatter(&mats[rayVolumeIndex], ray,
 				hit ? rayHit->t : ray->maxt,
 				passThrough, volInfo->scatteredStart,
-				&connectionThroughput, &connectionEmission,
+				connectionThroughput, &connectionEmission,
 				tmpHitPoint
 				TEXTURES_PARAM);
-
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-		VSTORE3F(VLOAD3F(pathThroughput->c) * connectionThroughput, pathThroughput->c);
-#else
-		*pathThroughput *= connectionThroughput;
-#endif
 
 		// Add the volume emitted light to the appropriate light group
 		if (!Spectrum_IsBlack(connectionEmission) && sampleResult)
 			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
-				MATERIALS_PARAM), connectionEmission);
+				MATERIALS_PARAM),
+					pathThroughput, connectionEmission);
 
 		if (t > 0.f) {
 			// There was a volume scatter event
@@ -269,11 +261,8 @@ bool Scene_Intersect(
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf
 				MATERIALS_PARAM);
 			if (!Spectrum_IsBlack(passThroughTrans)) {
-#if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
-				VSTORE3F(VLOAD3F(pathThroughput->c) * passThroughTrans, pathThroughput->c);
-#else
-				*pathThroughput *= passThroughTrans;
-#endif
+				*connectionThroughput *= passThroughTrans;
+
 				// It is a pass through point, continue to trace the ray
 				continueToTrace = true;
 			}

@@ -130,6 +130,12 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	dst->rayCount += src->rayCount;
 #endif
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+	dst->irradiance.c[0] += src->irradiance.c[0];
+	dst->irradiance.c[1] += src->irradiance.c[1];
+	dst->irradiance.c[2] += src->irradiance.c[2];
+#endif
 }
 
 void SR_Normalize(SampleResult *dst, const float k) {
@@ -213,6 +219,11 @@ void SR_Normalize(SampleResult *dst, const float k) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	dst->indirectShadowMask *= k;
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+	dst->irradiance.c[0] *= k;
+	dst->irradiance.c[1] *= k;
+	dst->irradiance.c[2] *= k;
+#endif
 }
 
 void SampleGrid(Seed *seed, const uint size,
@@ -249,10 +260,10 @@ void PathDepthInfo_IncDepths(PathDepthInfo *depthInfo, const BSDFEvent event) {
 }
 
 bool PathDepthInfo_IsLastPathVertex(const PathDepthInfo *depthInfo, const BSDFEvent event) {
-	return (depthInfo->depth == PARAM_DEPTH_MAX) ||
-			((event & DIFFUSE) && (depthInfo->diffuseDepth == PARAM_DEPTH_DIFFUSE_MAX)) ||
-			((event & GLOSSY) && (depthInfo->glossyDepth == PARAM_DEPTH_GLOSSY_MAX)) ||
-			((event & SPECULAR) && (depthInfo->specularDepth == PARAM_DEPTH_SPECULAR_MAX));
+	return (depthInfo->depth + 1 == PARAM_DEPTH_MAX) ||
+			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 == PARAM_DEPTH_DIFFUSE_MAX)) ||
+			((event & GLOSSY) && (depthInfo->glossyDepth + 1 == PARAM_DEPTH_GLOSSY_MAX)) ||
+			((event & SPECULAR) && (depthInfo->specularDepth + 1 == PARAM_DEPTH_SPECULAR_MAX));
 }
 
 bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
@@ -322,7 +333,7 @@ uint BIASPATHOCL_Scene_Intersect(
 #endif
 		RayHit *rayHit,
 		__global BSDF *bsdf,
-		float3 *pathThroughput,
+		float3 *connectionThroughput,  const float3 pathThroughput,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global Mesh *meshDescs,
@@ -348,6 +359,7 @@ uint BIASPATHOCL_Scene_Intersect(
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
+	*connectionThroughput = WHITE;
 	uint tracedRaysCount = 0;
 #if defined(PARAM_HAS_PASSTHROUGH)
 	float passThrough = initialPassThrough;
@@ -358,6 +370,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			ACCELERATOR_INTERSECT_PARAM);
 		++tracedRaysCount;
 
+		float3 connectionSegmentThroughput;
 		const bool continueToTrace = Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 			volInfo,
@@ -367,7 +380,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			passThrough,
 #endif
 			ray, rayHit, bsdf,
-			pathThroughput,
+			&connectionSegmentThroughput, pathThroughput * (*connectionThroughput),
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
@@ -391,6 +404,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			triangles
 			MATERIALS_PARAM
 			);
+		*connectionThroughput *= connectionSegmentThroughput;
 		if (!continueToTrace)
 			break;
 
@@ -402,41 +416,12 @@ uint BIASPATHOCL_Scene_Intersect(
 #endif
 	}
 	
-
 	return tracedRaysCount;
 }
 
 //------------------------------------------------------------------------------
-// Direct light sampling
+// Direct hit  on lights
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_ENVLIGHTS)
-void DirectHitInfiniteLight(
-		const BSDFEvent lastBSDFEvent,
-		const float3 pathThroughput,
-		const float3 eyeDir, const float lastPdfW,
-		__global SampleResult *sampleResult
-		LIGHTS_PARAM_DECL) {
-	for (uint i = 0; i < envLightCount; ++i) {
-		__global LightSource *light = &lights[envLightIndices[i]];
-
-		if (sampleResult->firstPathVertex || (light->visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
-			float directPdfW;
-			const float3 lightRadiance = EnvLight_GetRadiance(light, eyeDir, &directPdfW
-					LIGHTS_PARAM);
-
-			if (!Spectrum_IsBlack(lightRadiance)) {
-				// MIS between BSDF sampling and direct light sampling
-				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, light->lightSceneIndex);
-				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-				const float3 radiance = weight * pathThroughput * lightRadiance;
-
-				SampleResult_AddEmission(sampleResult, light->lightID, radiance);
-			}
-		}
-	}
-}
-#endif
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
@@ -463,14 +448,44 @@ void DirectHitFiniteLight(
 				// MIS between BSDF sampling and direct light sampling
 				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 			}
-			const float3 lightRadiance = weight * pathThroughput * emittedRadiance;
 
 			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
-					MATERIALS_PARAM), lightRadiance);
+					MATERIALS_PARAM), pathThroughput, weight * emittedRadiance);
 		}
 	}
 }
 #endif
+
+#if defined(PARAM_HAS_ENVLIGHTS)
+void DirectHitInfiniteLight(
+		const BSDFEvent lastBSDFEvent,
+		const float3 pathThroughput,
+		const float3 eyeDir, const float lastPdfW,
+		__global SampleResult *sampleResult
+		LIGHTS_PARAM_DECL) {
+	for (uint i = 0; i < envLightCount; ++i) {
+		__global LightSource *light = &lights[envLightIndices[i]];
+
+		if (sampleResult->firstPathVertex || (light->visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+			float directPdfW;
+			const float3 envRadiance = EnvLight_GetRadiance(light, eyeDir, &directPdfW
+					LIGHTS_PARAM);
+
+			if (!Spectrum_IsBlack(envRadiance)) {
+				// MIS between BSDF sampling and direct light sampling
+				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, light->lightSceneIndex);
+				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+
+				SampleResult_AddEmission(sampleResult, light->lightID, pathThroughput, weight * envRadiance);
+			}
+		}
+	}
+}
+#endif
+
+//------------------------------------------------------------------------------
+// Direct light sampling
+//------------------------------------------------------------------------------
 
 bool DirectLightSamplingInit(
 		__global LightSource *light,
@@ -488,7 +503,7 @@ bool DirectLightSamplingInit(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		const float3 pathThroughput, __global BSDF *bsdf, BSDFEvent *event,
+		__global BSDF *bsdf, BSDFEvent *event,
 		__global SampleResult *sampleResult,
 		Ray *shadowRay, float3 *radiance, uint *ID
 		LIGHTS_PARAM_DECL) {
@@ -527,7 +542,7 @@ bool DirectLightSamplingInit(
 			const float weight = (!sampleResult->lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			*radiance = (weight * factor) * pathThroughput * bsdfEval * lightRadiance;
+			*radiance = bsdfEval * (weight * factor) * lightRadiance;
 			*ID = light->lightID;
 
 			// Setup the shadow ray
@@ -610,7 +625,7 @@ uint DirectLightSampling_ONE(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		Rnd_FloatValue(seed),
 #endif
-		pathThroughput, bsdf, &event, sampleResult,
+		bsdf, &event, sampleResult,
 		&shadowRay, &lightRadiance, &lightID
 		LIGHTS_PARAM);
 
@@ -618,7 +633,7 @@ uint DirectLightSampling_ONE(
 	if (illuminated) {
 		// Trace the shadow ray
 
-		float3 directLightThroughput = WHITE;
+		float3 connectionThroughput;
 		RayHit shadowRayHit;
 		tracedRaysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
@@ -630,7 +645,7 @@ uint DirectLightSampling_ONE(
 #endif
 				&shadowRay, &shadowRayHit,
 				directLightBSDF,
-				&directLightThroughput,
+				&connectionThroughput, pathThroughput,
 				sampleResult,
 				// BSDF_Init parameters
 				meshDescs,
@@ -659,7 +674,19 @@ uint DirectLightSampling_ONE(
 
 		if (shadowRayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
-			SampleResult_AddDirectLight(sampleResult, lightID, event, directLightThroughput * lightRadiance, 1.f);
+			const float3 incomingRadiance = connectionThroughput * lightRadiance;
+			SampleResult_AddDirectLight(sampleResult, lightID, event, pathThroughput, incomingRadiance, 1.f);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			// The first path vertex is not handled by AddDirectLight(). This is valid
+			// for irradiance AOV only if it is a MATTE material and first path vertex.
+			if ((sampleResult->firstPathVertex) && (mats[bsdf->materialIndex].type == MATTE)) {
+				VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
+						M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+							(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * incomingRadiance,
+						sampleResult->irradiance.c);
+			}
+#endif
 		}
 	}
 	
@@ -744,14 +771,14 @@ uint DirectLightSampling_ALL(
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Rnd_FloatValue(seed),
 #endif
-				pathThroughput, bsdf, &event, sampleResult,
+				bsdf, &event, sampleResult,
 				&shadowRay, &lightRadiance, &lightID
 				LIGHTS_PARAM);
 
 			if (illuminated) {
 				// Trace the shadow ray
 
-				float3 directLightThroughput = WHITE;
+				float3 connectionThroughput;
 				RayHit shadowRayHit;
 				tracedRaysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
@@ -763,7 +790,7 @@ uint DirectLightSampling_ALL(
 #endif
 						&shadowRay, &shadowRayHit,
 						directLightBSDF,
-						&directLightThroughput,
+						&connectionThroughput, pathThroughput,
 						sampleResult,
 						// BSDF_Init parameters
 						meshDescs,
@@ -792,8 +819,20 @@ uint DirectLightSampling_ALL(
 
 				if (shadowRayHit.meshIndex == NULL_INDEX) {
 					// Nothing was hit, the light source is visible
+					const float3 incomingRadiance = scaleFactor * connectionThroughput * lightRadiance;
 					SampleResult_AddDirectLight(sampleResult, lightID, event,
-							scaleFactor * directLightThroughput * lightRadiance, scaleFactor);
+							pathThroughput, incomingRadiance, scaleFactor);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+					// The first path vertex is not handled by AddDirectLight(). This is valid
+					// for irradiance AOV only if it is a MATTE material and first path vertex
+					if ((sampleResult->firstPathVertex) && (mats[bsdf->materialIndex].type == MATTE)) {
+						VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
+								M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+									(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * incomingRadiance,
+								sampleResult->irradiance.c);
+					}
+#endif
 				}
 			}
 		}
@@ -856,6 +895,7 @@ uint ContinueTracePath(
 		// Trace the ray
 		//----------------------------------------------------------------------
 
+		float3 connectionThroughput;
 		RayHit rayHit;
 		tracedRaysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
@@ -867,7 +907,7 @@ uint ContinueTracePath(
 #endif
 			ray, &rayHit,
 			bsdfPathVertexN,
-			&pathThroughput,
+			&connectionThroughput, pathThroughput,
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
@@ -892,7 +932,12 @@ uint ContinueTracePath(
 			MATERIALS_PARAM
 			// Accelerator_Intersect parameters
 			ACCELERATOR_INTERSECT_PARAM);
-		
+		pathThroughput *= connectionThroughput;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		// Update also irradiance AOV path throughput
+		VSTORE3F(VLOAD3F(sampleResult->irradiancePathThroughput.c) * connectionThroughput, sampleResult->irradiancePathThroughput.c);
+#endif
+
 		if (rayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, look for env. lights
 
@@ -1013,8 +1058,13 @@ uint ContinueTracePath(
 #endif
 
 		// Continue to trace the path
-		pathThroughput *= bsdfSample *
+		const float3 throughputFactor = bsdfSample *
 			((lastBSDFEvent & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE));
+		pathThroughput *= throughputFactor;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		// Update also irradiance AOV path throughput
+		VSTORE3F(VLOAD3F(sampleResult->irradiancePathThroughput.c) * throughputFactor, sampleResult->irradiancePathThroughput.c);
+#endif
 
 		Ray_Init2_Private(ray, VLOAD3F(&bsdfPathVertexN->hitPoint.p.x), sampledDir, time);
 	}
@@ -1112,8 +1162,20 @@ uint SampleComponent(
 #endif
 
 			// Continue to trace the path
-			const float3 continuePathThroughput = throughputPathVertex1 * bsdfSample *
-				(scaleFactor * ((event & SPECULAR) ? 1.f : min(1.f, pdfW / PARAM_PDF_CLAMP_VALUE)));
+			const float pdfFactor = scaleFactor * ((event & SPECULAR) ? 1.f : min(1.f, pdfW / PARAM_PDF_CLAMP_VALUE));
+			const float3 continuePathThroughput = throughputPathVertex1 * bsdfSample * pdfFactor;
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			// This is valid for irradiance AOV only if it is a MATTE material and
+			// first path vertex. Set or update sampleResult->irradiancePathThroughput
+			if (mats[bsdfPathVertex1->materialIndex].type == MATTE)
+				VSTORE3F(M_1_PI_F * fabs(dot(
+						VLOAD3F(&bsdfPathVertex1->hitPoint.shadeN.x),
+						sampledDir)) * pdfFactor,
+						sampleResult->irradiancePathThroughput.c);
+			else
+				VSTORE3F(BLACK, sampleResult->irradiancePathThroughput.c);
+#endif
 
 			Ray continueRay;
 			Ray_Init2_Private(&continueRay, VLOAD3F(&bsdfPathVertex1->hitPoint.p.x), sampledDir, time);
@@ -1333,6 +1395,12 @@ uint SampleComponent(
 #else
 #define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
+		, __global float *filmIrradiance
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
+#endif
 
 #define KERNEL_ARGS_FILM \
 		, const uint filmWidth, const uint filmHeight \
@@ -1361,7 +1429,8 @@ uint SampleComponent(
 		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
 		KERNEL_ARGS_FILM_CHANNELS_UV \
 		KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
-		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
+		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
+		KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
 
 #if defined(PARAM_HAS_INFINITELIGHTS)
 #define KERNEL_ARGS_INFINITELIGHTS \

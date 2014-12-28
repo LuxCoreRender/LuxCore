@@ -142,6 +142,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 	Ray ray = task->tmpRay;
 	RayHit rayHit;
 
+	float3 connectionThroughput;
 	taskStats[gid].raysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 		&task->volInfoPathVertex1,
@@ -152,7 +153,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 #endif
 		&ray, &rayHit,
 		&task->bsdfPathVertex1,
-		&throughputPathVertex1,
+		&connectionThroughput, throughputPathVertex1,
 		sampleResult,
 		// BSDF_Init parameters
 		meshDescs,
@@ -177,6 +178,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 		MATERIALS_PARAM
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM);
+	throughputPathVertex1 *= connectionThroughput;
 
 	VSTORE3F(throughputPathVertex1, task->throughputPathVertex1.c);
 	task->tmpRayHit = rayHit;
@@ -506,8 +508,6 @@ void RenderSample_MK_BSDF_SAMPLE(
 			// Light related parameters
 			LIGHTS_PARAM);
 
-	task->pathState = MK_DONE;
-
 	// Save the seed
 	task->seed.s1 = seed.s1;
 	task->seed.s2 = seed.s2;
@@ -605,6 +605,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
 			, filmByMaterialID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			, filmIrradiance
 #endif
 			,
 			// Scene parameters
@@ -766,6 +769,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
 			, filmByMaterialID
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			, filmIrradiance
+#endif
 			,
 			// Scene parameters
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -926,6 +932,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
 			, filmByMaterialID
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			, filmIrradiance
+#endif
 			,
 			// Scene parameters
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -992,4 +1001,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			// Ray intersection accelerator parameters
 			ACCELERATOR_INTERSECT_PARAM
 			);
+	
+	// All done
+	tasks[get_global_id(0)].pathState = MK_DONE;
 }

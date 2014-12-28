@@ -201,9 +201,8 @@ void DirectHitInfiniteLight(
 		if (!Spectrum_IsBlack(lightRadiance)) {
 			// MIS between BSDF sampling and direct light sampling
 			const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW));
-			const float3 radiance = weight * throughput * lightRadiance;
 
-			SampleResult_AddEmission(sampleResult, light->lightID, radiance);
+			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * lightRadiance);
 		}
 	}
 }
@@ -231,10 +230,9 @@ void DirectHitFiniteLight(
 			// MIS between BSDF sampling and direct light sampling
 			weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 		}
-		const float3 lightRadiance = weight * VLOAD3F(pathThroughput->c) * emittedRadiance;
 
 		SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
-				MATERIALS_PARAM), lightRadiance);
+				MATERIALS_PARAM), VLOAD3F(pathThroughput->c), weight * emittedRadiance);
 	}
 }
 #endif
@@ -303,7 +301,7 @@ bool DirectLight_BSDFSampling(
 		__global DirectLightIlluminateInfo *info,
 		const float time,
 		const bool lastPathVertex, const uint depth,
-		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+		__global BSDF *bsdf,
 		__global Ray *shadowRay
 		LIGHTS_PARAM_DECL) {
 	const float3 lightRayDir = VLOAD3F(&info->dir.x);
@@ -332,7 +330,7 @@ bool DirectLight_BSDFSampling(
 	const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 		PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-	VSTORE3F((weight * factor) * VLOAD3F(pathThroughput->c) * bsdfEval * VLOAD3F(info->lightRadiance.c), info->lightRadiance.c);
+	VSTORE3F((weight * factor) * bsdfEval * VLOAD3F(info->lightRadiance.c), info->lightRadiance.c);
 
 	// Setup the shadow ray
 	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
@@ -514,6 +512,12 @@ bool DirectLight_BSDFSampling(
 #else
 #define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
+		, __global float *filmIrradiance
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
+#endif
 
 #define KERNEL_ARGS_FILM \
 		, const uint filmWidth, const uint filmHeight \
@@ -542,7 +546,8 @@ bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
 		KERNEL_ARGS_FILM_CHANNELS_UV \
 		KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
-		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
+		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
+		KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
 
 #if defined(PARAM_HAS_INFINITELIGHTS)
 #define KERNEL_ARGS_INFINITELIGHTS \
