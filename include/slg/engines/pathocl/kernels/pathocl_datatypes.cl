@@ -71,6 +71,7 @@ typedef struct {
 	float distance, directPdfW;
 
 	// Radiance to add to the result if light source is visible
+	// Note: it doesn't include the pathThroughput
 	Spectrum lightRadiance;
 	unsigned int lightID;
 } DirectLightIlluminateInfo;

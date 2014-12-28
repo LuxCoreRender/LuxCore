@@ -121,9 +121,9 @@ void PathDepthInfo::IncDepths(const BSDFEvent event) {
 		++specularDepth;
 }
 
-bool PathDepthInfo::IsLastPathVertex(const PathDepthInfo &maxPathDepth, const BSDFEvent event) const {
-	return (depth == maxPathDepth.depth) ||
-			((event & DIFFUSE) && (diffuseDepth == maxPathDepth.diffuseDepth)) ||
-			((event & GLOSSY) && (glossyDepth == maxPathDepth.glossyDepth)) ||
-			((event & SPECULAR) && (specularDepth == maxPathDepth.specularDepth));
+bool PathDepthInfo::IsLastPathVertex(const PathDepthInfo &maxPathDepth, const BSDFEvent possibleEvents) const {
+	return (depth + 1 == maxPathDepth.depth) ||
+			((possibleEvents & DIFFUSE) && (diffuseDepth + 1 == maxPathDepth.diffuseDepth)) ||
+			((possibleEvents & GLOSSY) && (glossyDepth + 1 == maxPathDepth.glossyDepth)) ||
+			((possibleEvents & SPECULAR) && (specularDepth + 1 == maxPathDepth.specularDepth));
 }

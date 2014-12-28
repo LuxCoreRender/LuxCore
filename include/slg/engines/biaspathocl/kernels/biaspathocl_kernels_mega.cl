@@ -109,6 +109,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	// Trace the eye ray
 	//--------------------------------------------------------------------------
 
+	float3 connectionThroughput;
 	tracedRaysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 		&task->volInfoPathVertex1,
@@ -119,7 +120,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 #endif
 		&ray, &rayHit,
 		&task->bsdfPathVertex1,
-		&throughputPathVertex1,
+		&connectionThroughput, throughputPathVertex1,
 		sampleResult,
 		// BSDF_Init parameters
 		meshDescs,
@@ -144,6 +145,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 		MATERIALS_PARAM
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM);
+	throughputPathVertex1 *= connectionThroughput;
 
 	//--------------------------------------------------------------------------
 	// Render the eye ray hit point
@@ -371,7 +373,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample(
 	sampleResult->rayCount = tracedRaysCount;
 #endif
 
-	taskStats[gid]->raysCount += tracedRaysCount;
+	taskStats[gid].raysCount += tracedRaysCount;
 
 	// Save the seed
 	task->seed.s1 = seed.s1;

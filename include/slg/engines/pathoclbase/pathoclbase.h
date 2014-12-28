@@ -93,6 +93,7 @@ protected:
 		cl::Buffer *channel_UV_Buff;
 		cl::Buffer *channel_RAYCOUNT_Buff;
 		cl::Buffer *channel_BY_MATERIAL_ID_Buff;
+		cl::Buffer *channel_IRRADIANCE_Buff;
 
 	private:
 		PathOCLBaseRenderThread *renderThread;

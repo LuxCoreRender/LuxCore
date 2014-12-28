@@ -34,7 +34,7 @@ bool DirectLightSampling_ONE(
 		const float lightPassThroughEvent,
 #endif
 		const bool lastPathVertex, const uint depth,
-		__global const Spectrum *pathThroughput, __global BSDF *bsdf,
+		__global BSDF *bsdf,
 		__global Ray *shadowRay
 		LIGHTS_PARAM_DECL) {
 	const bool illuminated = DirectLight_Illuminate(
@@ -57,7 +57,7 @@ bool DirectLightSampling_ONE(
 	return DirectLight_BSDFSampling(
 			info,
 			time, lastPathVertex, depth,
-			pathThroughput, bsdf,
+			bsdf,
 			shadowRay
 			LIGHTS_PARAM);
 }
@@ -123,6 +123,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == RT_NEXT_VERTEX) {
+		float3 connectionThroughput;
 		const bool continueToTrace = Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 			&pathVolInfos[gid],
@@ -132,7 +133,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			taskState->bsdf.hitPoint.passThroughEvent,
 #endif
 			ray, rayHit, bsdf,
-			&taskState->throughput,
+			&connectionThroughput, VLOAD3F(taskState->throughput.c),
 			&sample->result,
 			// BSDF_Init parameters
 			meshDescs,
@@ -156,6 +157,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			triangles
 			MATERIALS_PARAM
 			);
+		VSTORE3F(connectionThroughput * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
 		const bool rayMiss = (rayHit->meshIndex == NULL_INDEX);
 
 		// If continueToTrace, there is nothing to do, just keep the same state
@@ -278,6 +280,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 	//--------------------------------------------------------------------------
 
 	if (pathState == RT_DL) {
+		float3 connectionThroughput;
 		const bool continueToTrace = 
 #if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
 			Scene_Intersect(
@@ -289,7 +292,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				taskDirectLight->rayPassThroughEvent,
 #endif
 				ray, rayHit, &task->tmpBsdf,
-				&taskDirectLight->illumInfo.lightRadiance,
+				&connectionThroughput, VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c),
 				NULL,
 				// BSDF_Init parameters
 				meshDescs,
@@ -313,6 +316,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 				triangles
 				MATERIALS_PARAM
 				);
+		VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c), taskDirectLight->illumInfo.lightRadiance.c);
 #else
 		false;
 #endif
@@ -323,11 +327,25 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 			if (rayMiss) {
 				// Nothing was hit, the light source is visible
 
+				const float3 incomingRadiance = VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c);
 				SampleResult_AddDirectLight(&sample->result, taskDirectLight->illumInfo.lightID,
 						BSDF_GetEventTypes(bsdf
 							MATERIALS_PARAM),
-						VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c),
+						VLOAD3F(taskState->throughput.c), incomingRadiance,
 						1.f);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+				// The first path vertex is not handled by AddDirectLight(). This is valid
+				// for irradiance AOV only if it is a MATTE material and first path vertex
+				if ((sample->result.firstPathVertex) && (mats[taskState->bsdf.materialIndex].type == MATTE)) {
+					const float3 irradiance =
+							(M_1_PI_F * fabs(dot(
+								VLOAD3F(&taskState->bsdf.hitPoint.shadeN.x),
+								VLOAD3F(&rays[gid].d.x)))) *
+							incomingRadiance;
+					VSTORE3F(irradiance, sample->result.irradiance.c);
+				}
+#endif
 			}
 
 			// Check if this is the last path vertex
@@ -371,7 +389,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Sampler_GetSamplePathVertex(depth, IDX_DIRECTLIGHT_W),
 #endif
-				sample->result.lastPathVertex, depth, &taskState->throughput,
+				sample->result.lastPathVertex, depth,
 				bsdf, ray
 				LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -426,13 +444,27 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths(
 
 		const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath && !maxPathDepth;
 		if (continuePath) {
-			float3 throughput = VLOAD3F(taskState->throughput.c) *
-					((event & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE));
-			throughput *= bsdfSample;
 			if (rrEnabled)
-				throughput /= rrProb; // Russian Roulette
+				lastPdfW *= rrProb; // Russian Roulette
+			const float pdfFactor = (event & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE);
+			const float3 throughputFactor = bsdfSample * pdfFactor;
 
-			VSTORE3F(throughput, taskState->throughput.c);
+			VSTORE3F(throughputFactor * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		// This is valid for irradiance AOV only if it is a MATTE material and
+		// first path vertex. Set or update sampleResult.irradiancePathThroughput
+		if (sample->result.firstPathVertex) {
+			if (mats[bsdf->materialIndex].type == MATTE)
+				VSTORE3F(M_1_PI_F * fabs(dot(
+						VLOAD3F(&bsdf->hitPoint.shadeN.x),
+						sampledDir)) * pdfFactor,
+						sample->result.irradiancePathThroughput.c);
+			else
+				VSTORE3F(BLACK, sample->result.irradiancePathThroughput.c);
+		} else
+			VSTORE3F(throughputFactor * VLOAD3F(sample->result.irradiancePathThroughput.c), sample->result.irradiancePathThroughput.c);
+#endif
 
 #if defined(PARAM_HAS_VOLUMES)
 			// Update volume information

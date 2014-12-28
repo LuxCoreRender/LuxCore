@@ -1368,6 +1368,8 @@ void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> 
 	if (!film.HasChannel(Film::IRRADIANCE))
 		return;
 
+	// Draw the contour lines
+	
 	#pragma omp parallel for
 	for (int s = 0; s < (int)steps; ++s) {
 		for (int y = 0; y < (int)film.GetHeight(); ++y) {

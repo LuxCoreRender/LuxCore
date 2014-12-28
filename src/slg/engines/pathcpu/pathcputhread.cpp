@@ -87,11 +87,6 @@ void PathCPURenderThread::DirectLightSampling(
 
 					const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
 
-					if ((sampleResult->firstPathVertex) && (bsdf.GetMaterialType() == MATTE)) {
-						sampleResult->irradiance =
-								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d))) *
-								incomingRadiance;
-					}
 					sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
 
 					// The first path vertex is not handled by AddDirectLight(). This is valid

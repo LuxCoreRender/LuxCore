@@ -74,6 +74,7 @@ std::string KernelSource_pathocl_datatypes =
 "	float distance, directPdfW;\n"
 "\n"
 "	// Radiance to add to the result if light source is visible\n"
+"	// Note: it doesn't include the pathThroughput\n"
 "	Spectrum lightRadiance;\n"
 "	unsigned int lightID;\n"
 "} DirectLightIlluminateInfo;\n"

@@ -68,6 +68,7 @@ PathOCLBaseRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseRenderThread *thread)
 	channel_UV_Buff = NULL;
 	channel_RAYCOUNT_Buff = NULL;
 	channel_BY_MATERIAL_ID_Buff = NULL;
+	channel_IRRADIANCE_Buff = NULL;
 
 	renderThread = thread;
 }
@@ -199,6 +200,11 @@ void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
 					sizeof(float[4]) * filmPixelCount, "BY_MATERIAL_ID");
 	} else
 		renderThread->FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::IRRADIANCE))
+		renderThread->AllocOCLBufferRW(&channel_IRRADIANCE_Buff, sizeof(float[4]) * filmPixelCount, "IRRADIANCE");
+	else
+		renderThread->FreeOCLBuffer(&channel_IRRADIANCE_Buff);
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
@@ -224,6 +230,7 @@ void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_UV_Buff);
 	renderThread->FreeOCLBuffer(&channel_RAYCOUNT_Buff);
 	renderThread->FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
+	renderThread->FreeOCLBuffer(&channel_IRRADIANCE_Buff);
 }
 
 u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmClearKernel,
@@ -269,6 +276,8 @@ u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmCle
 		filmClearKernel.setArg(argIndex++, *channel_RAYCOUNT_Buff);
 	if (film->HasChannel(Film::BY_MATERIAL_ID))
 		filmClearKernel.setArg(argIndex++, *channel_BY_MATERIAL_ID_Buff);
+	if (film->HasChannel(Film::IRRADIANCE))
+		filmClearKernel.setArg(argIndex++, *channel_IRRADIANCE_Buff);
 
 	return argIndex;
 }
@@ -439,6 +448,14 @@ void PathOCLBaseRenderThread::ThreadFilm::TransferFilm(cl::CommandQueue &oclQueu
 			channel_BY_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_BY_MATERIAL_IDs[0]->GetPixels());
 	}
+	if (channel_IRRADIANCE_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_IRRADIANCE_Buff,
+			CL_FALSE,
+			0,
+			channel_IRRADIANCE_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_IRRADIANCE->GetPixels());
+	}
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
@@ -597,6 +614,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(UV);
 	if (threadFilm->HasChannel(Film::RAYCOUNT))
 		sampleResultSize += sizeof(Film::RAYCOUNT);
+	if (threadFilm->HasChannel(Film::IRRADIANCE))
+		sampleResultSize += 2 * sizeof(Spectrum);
 
 	sampleResultSize += sizeof(BSDFEvent) +
 			2 * sizeof(int);
@@ -907,6 +926,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID" <<
 				" -D PARAM_FILM_BY_MATERIAL_ID=" << threadFilm->GetByMaterialID(0);
 	}
+	if (threadFilm->HasChannel(Film::IRRADIANCE))
+		ss << " -D PARAM_FILM_CHANNELS_HAS_IRRADIANCE";
 
 	if (normalsBuff)
 		ss << " -D PARAM_HAS_NORMALS_BUFFER";
