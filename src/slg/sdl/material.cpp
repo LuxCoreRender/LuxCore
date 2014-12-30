@@ -3645,6 +3645,10 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
 		}
+		if (directPdfW)
+			*directPdfW = 0.5f * fabsf(localSampledDir.z * INV_PI);
+		if (reversePdfW)
+			*reversePdfW = 0.5f * fabsf(localFixedDir.z * INV_PI);
 		ks = ks.Clamp();
 		const Spectrum S2 = FresnelSchlick_Evaluate(ks, u);
 		Spectrum S(Sqrt((Spectrum(1.f) - S1) * (Spectrum(1.f) - S2)));
@@ -3811,7 +3815,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			*event = GLOSSY | REFLECT;
 		}
 
-		*pdfW = coatingPdf * wCoating + basePdf * wBase;
+		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
 
 		// Absorption
 		const float cosi = fabsf(localSampledDir->z);
@@ -3835,9 +3839,9 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 		if (hitPoint.fromLight)
-			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL);
+			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL) / *pdfW;
 		else
-			return Evaluate(hitPoint, *localSampledDir, localFixedDir, event, pdfW, NULL);
+			return Evaluate(hitPoint, *localSampledDir, localFixedDir, event, pdfW, NULL) / *pdfW;
 	}
 }
 

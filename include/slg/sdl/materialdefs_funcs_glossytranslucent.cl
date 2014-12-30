@@ -163,6 +163,8 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 			ks *= ti * ti;
 		}
 #endif
+		if (directPdfW)
+			*directPdfW = 0.5f * fabs(sampledDir.z * M_1_PI_F);
 		ks = Spectrum_Clamp(ks);
 		const float3 S2 = FresnelSchlick_Evaluate(ks, u);
 		float3 S = Spectrum_Sqrt((WHITE - S1) * (WHITE - S2));
@@ -419,7 +421,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 			*event = GLOSSY | REFLECT;
 		}
 
-		*pdfW = coatingPdf * wCoating + basePdf * wBase;
+		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
 
 		// Absorption
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
@@ -484,7 +486,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 				Spectrum_Clamp(kaVal_bf) * -(d_bf / cosi));
 		}
 #endif
-		return (M_1_PI_F * coso) * S * Spectrum_Clamp(ktVal) *
+		return (M_1_PI_F * coso / *pdfW) * S * Spectrum_Clamp(ktVal) *
 			(WHITE - Spectrum_Clamp(kdVal));
 	}
 }
