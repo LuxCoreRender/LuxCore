@@ -293,6 +293,9 @@ bool DirectLight_Illuminate(
 		info->distance = distance;
 		info->directPdfW = directPdfW;
 		VSTORE3F(lightRadiance, info->lightRadiance.c);
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		VSTORE3F(lightRadiance, info->lightIrradiance.c);
+#endif
 		return true;
 	}
 }
@@ -330,7 +333,11 @@ bool DirectLight_BSDFSampling(
 	const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 		PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-	VSTORE3F((weight * factor) * bsdfEval * VLOAD3F(info->lightRadiance.c), info->lightRadiance.c);
+	const float3 lightRadiance = VLOAD3F(info->lightRadiance.c);
+	VSTORE3F(bsdfEval * (weight * factor) * lightRadiance, info->lightRadiance.c);
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+	VSTORE3F(factor * lightRadiance, info->lightIrradiance.c);
+#endif
 
 	// Setup the shadow ray
 	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);

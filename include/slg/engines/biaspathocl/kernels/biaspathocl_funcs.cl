@@ -505,7 +505,12 @@ bool DirectLightSamplingInit(
 #endif
 		__global BSDF *bsdf, BSDFEvent *event,
 		__global SampleResult *sampleResult,
-		Ray *shadowRay, float3 *radiance, uint *ID
+		Ray *shadowRay,
+		float3 *radiance,
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		float3 *irradiance,
+#endif
+		uint *ID
 		LIGHTS_PARAM_DECL) {
 	float3 lightRayDir;
 	float distance, directPdfW;
@@ -543,6 +548,9 @@ bool DirectLightSamplingInit(
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
 			*radiance = bsdfEval * (weight * factor) * lightRadiance;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			*irradiance = factor * lightRadiance;
+#endif
 			*ID = light->lightID;
 
 			// Setup the shadow ray
@@ -609,6 +617,9 @@ uint DirectLightSampling_ONE(
 	uint lightID;
 	BSDFEvent event;
 	float3 lightRadiance;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+	float3 lightIrradiance;
+#endif
 	const bool illuminated = DirectLightSamplingInit(
 		&lights[lightIndex],
 		lightPickPdf,
@@ -626,7 +637,11 @@ uint DirectLightSampling_ONE(
 		Rnd_FloatValue(seed),
 #endif
 		bsdf, &event, sampleResult,
-		&shadowRay, &lightRadiance, &lightID
+		&shadowRay, &lightRadiance,
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		&lightIrradiance,
+#endif
+		&lightID
 		LIGHTS_PARAM);
 
 	uint tracedRaysCount = 0;
@@ -674,18 +689,19 @@ uint DirectLightSampling_ONE(
 
 		if (shadowRayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
-			const float3 incomingRadiance = connectionThroughput * lightRadiance;
-			SampleResult_AddDirectLight(sampleResult, lightID, event, pathThroughput, incomingRadiance, 1.f);
+			SampleResult_AddDirectLight(sampleResult, lightID, event, pathThroughput,
+					connectionThroughput * lightRadiance, 1.f);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 			// The first path vertex is not handled by AddDirectLight(). This is valid
-			// for irradiance AOV only if it is a MATTE material and first path vertex.
-			if ((sampleResult->firstPathVertex) && (mats[bsdf->materialIndex].type == MATTE)) {
+			// for irradiance AOV only if it is not a SPECULAR material and first path vertex
+			if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+						MATERIALS_PARAM) & SPECULAR))
 				VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
 						M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
-							(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * incomingRadiance,
+						(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) *
+							connectionThroughput * lightIrradiance,
 						sampleResult->irradiance.c);
-			}
 #endif
 		}
 	}
@@ -753,6 +769,9 @@ uint DirectLightSampling_ALL(
 
 			Ray shadowRay;
 			float3 lightRadiance;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			float3 lightIrradiance;
+#endif
 			uint lightID;
 			BSDFEvent event;
 			const bool illuminated = DirectLightSamplingInit(
@@ -772,7 +791,11 @@ uint DirectLightSampling_ALL(
 				Rnd_FloatValue(seed),
 #endif
 				bsdf, &event, sampleResult,
-				&shadowRay, &lightRadiance, &lightID
+				&shadowRay, &lightRadiance,
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+				&lightIrradiance,
+#endif
+				&lightID
 				LIGHTS_PARAM);
 
 			if (illuminated) {
@@ -825,13 +848,14 @@ uint DirectLightSampling_ALL(
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 					// The first path vertex is not handled by AddDirectLight(). This is valid
-					// for irradiance AOV only if it is a MATTE material and first path vertex
-					if ((sampleResult->firstPathVertex) && (mats[bsdf->materialIndex].type == MATTE)) {
+					// for irradiance AOV only if it is not a SPECULAR material and first path vertex
+					if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+								MATERIALS_PARAM) & SPECULAR))
 						VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
-								M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
-									(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * incomingRadiance,
+								(M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+								(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * scaleFactor) *
+									connectionThroughput * lightIrradiance,
 								sampleResult->irradiance.c);
-					}
 #endif
 				}
 			}
@@ -1166,12 +1190,13 @@ uint SampleComponent(
 			const float3 continuePathThroughput = throughputPathVertex1 * bsdfSample * pdfFactor;
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-			// This is valid for irradiance AOV only if it is a MATTE material and
-			// first path vertex. Set or update sampleResult->irradiancePathThroughput
-			if (mats[bsdfPathVertex1->materialIndex].type == MATTE)
+			// This is valid for irradiance AOV only if it is not a SPECULAR material and
+			// first path vertex. Set or update sampleResult.irradiancePathThroughput
+			if (!(BSDF_GetEventTypes(bsdfPathVertex1
+						MATERIALS_PARAM) & SPECULAR))
 				VSTORE3F(M_1_PI_F * fabs(dot(
-						VLOAD3F(&bsdfPathVertex1->hitPoint.shadeN.x),
-						sampledDir)) * pdfFactor,
+							VLOAD3F(&bsdfPathVertex1->hitPoint.shadeN.x),
+							sampledDir)),
 						sampleResult->irradiancePathThroughput.c);
 			else
 				VSTORE3F(BLACK, sampleResult->irradiancePathThroughput.c);

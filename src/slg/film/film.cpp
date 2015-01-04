@@ -1858,8 +1858,6 @@ void SampleResult::AddEmission(const u_int lightID, const Spectrum &pathThroughp
 			indirectGlossy += radiance;
 		else if (firstPathVertexEvent & SPECULAR)
 			indirectSpecular += radiance;
-		
-		irradiance += irradiancePathThroughput * incomingRadiance;
 	}
 }
 

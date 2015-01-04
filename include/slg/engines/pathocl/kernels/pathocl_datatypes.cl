@@ -73,6 +73,10 @@ typedef struct {
 	// Radiance to add to the result if light source is visible
 	// Note: it doesn't include the pathThroughput
 	Spectrum lightRadiance;
+	// This is used only if PARAM_FILM_CHANNELS_HAS_IRRADIANCE is defined and
+	// only for the first path vertex
+	Spectrum lightIrradiance;
+
 	unsigned int lightID;
 } DirectLightIlluminateInfo;
 
