@@ -309,7 +309,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	float3 connectionThroughput;
+	float3 connectionThroughput = WHITE;
+#if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
 	const bool continueToTrace =
 		Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
@@ -347,6 +348,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c), taskDirectLight->illumInfo.lightRadiance.c);
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c), taskDirectLight->illumInfo.lightIrradiance.c);
+#endif
+#else
+	const bool continueToTrace = false;
 #endif
 
 	const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
@@ -551,7 +555,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		taskState->state = MK_RT_DL;
 	} else {
 		// No shadow ray to trace, move to the next vertex ray
-		// however, I have to Check if this is the last path vertex
+		// however, I have to check if this is the last path vertex
 		taskState->state = (sample->result.lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
 	}
 }
