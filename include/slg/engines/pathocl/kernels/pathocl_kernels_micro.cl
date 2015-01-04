@@ -310,8 +310,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	//--------------------------------------------------------------------------
 
 	float3 connectionThroughput;
-	const bool continueToTrace = 
-#if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
+	const bool continueToTrace =
 		Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 			&directLightVolInfos[gid],
@@ -321,7 +320,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			taskDirectLight->rayPassThroughEvent,
 #endif
 			&rays[gid], &rayHits[gid], &task->tmpBsdf,
-			&connectionThroughput, VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c),
+			&connectionThroughput, WHITE,
 			NULL,
 			// BSDF_Init parameters
 			meshDescs,
@@ -346,9 +345,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			MATERIALS_PARAM
 			);
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c), taskDirectLight->illumInfo.lightRadiance.c);
-#else
-	false;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c), taskDirectLight->illumInfo.lightIrradiance.c);
 #endif
+
 	const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
 
 	// If continueToTrace, there is nothing to do, just keep the same state
@@ -358,22 +358,25 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		if (rayMiss) {
 			// Nothing was hit, the light source is visible
 
-			const float3 incomingRadiance = VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c);
+			const float3 lightRadiance = VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c);
 			SampleResult_AddDirectLight(&sample->result, taskDirectLight->illumInfo.lightID,
 					BSDF_GetEventTypes(&taskState->bsdf
 						MATERIALS_PARAM),
-					VLOAD3F(taskState->throughput.c), incomingRadiance,
+					VLOAD3F(taskState->throughput.c), lightRadiance,
 					1.f);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 			// The first path vertex is not handled by AddDirectLight(). This is valid
-			// for irradiance AOV only if it is a MATTE material and first path vertex
-			if ((sample->result.firstPathVertex) && (mats[taskState->bsdf.materialIndex].type == MATTE)) {
-				const float3 irradiance =
-						(M_1_PI_F * fabs(dot(
+			// for irradiance AOV only if it is not a SPECULAR material.
+			//
+			// Note: irradiance samples the light sources only here (i.e. no
+			// direct hit, no MIS, it would be useless)
+			if ((sample->result.firstPathVertex) && !(BSDF_GetEventTypes(&taskState->bsdf
+						MATERIALS_PARAM) & SPECULAR)) {
+				const float3 irradiance = (M_1_PI_F * fabs(dot(
 							VLOAD3F(&taskState->bsdf.hitPoint.shadeN.x),
 							VLOAD3F(&rays[gid].d.x)))) *
-						incomingRadiance;
+						VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c);
 				VSTORE3F(irradiance, sample->result.irradiance.c);
 			}
 #endif
@@ -618,8 +621,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 			MATERIALS_PARAM);
 
 	// Russian Roulette
-	const float rrProb = RussianRouletteProb(bsdfSample);
 	const bool rrEnabled = (depth >= PARAM_RR_DEPTH) && !(event & SPECULAR);
+	float rrProb = rrEnabled ? RussianRouletteProb(bsdfSample) : 1.f;
 	const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(depth, IDX_RR) < rrProb);
 
 	// Max. path depth
@@ -627,21 +630,21 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath && !maxPathDepth;
 	if (continuePath) {
-		if (rrEnabled)
-			lastPdfW *= rrProb; // Russian Roulette
+		lastPdfW *= rrProb; // Russian Roulette
 		const float pdfFactor = (event & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE);
 		const float3 throughputFactor = bsdfSample * pdfFactor;
 
 		VSTORE3F(throughputFactor * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-		// This is valid for irradiance AOV only if it is a MATTE material and
+		// This is valid for irradiance AOV only if it is not a SPECULAR material and
 		// first path vertex. Set or update sampleResult.irradiancePathThroughput
 		if (sample->result.firstPathVertex) {
-			if (mats[bsdf->materialIndex].type == MATTE)
+			if (!(BSDF_GetEventTypes(&taskState->bsdf
+						MATERIALS_PARAM) & SPECULAR))
 				VSTORE3F(M_1_PI_F * fabs(dot(
 						VLOAD3F(&bsdf->hitPoint.shadeN.x),
-						sampledDir)) * pdfFactor,
+						sampledDir)) / rrProb,
 						sample->result.irradiancePathThroughput.c);
 			else
 				VSTORE3F(BLACK, sample->result.irradiancePathThroughput.c);

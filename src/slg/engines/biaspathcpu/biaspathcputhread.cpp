@@ -90,12 +90,14 @@ void BiasPathCPURenderThread::DirectLightSampling(
 				sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, lightScale);
 
 				// The first path vertex is not handled by AddDirectLight(). This is valid
-				// for irradiance AOV only if it is a MATTE material and first path vertex
-				if ((sampleResult->firstPathVertex) && (bsdf.GetMaterialType() == MATTE)) {
+				// for irradiance AOV only if it is not a SPECULAR material.
+				//
+				// Note: irradiance samples the light sources only here (i.e. no
+				// direct hit, no MIS, it would be useless)
+				if ((sampleResult->firstPathVertex) && !(bsdf.GetEventTypes() & SPECULAR))
 					sampleResult->irradiance +=
-							(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d))) *
-							incomingRadiance;
-				}
+								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)) *
+								lightScale * factor) * connectionThroughput * lightRadiance;
 			}
 		}
 	}
@@ -336,11 +338,11 @@ void BiasPathCPURenderThread::SampleComponent(
 				const float pdfFactor = scaleFactor * min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
 				const Spectrum continuePathThroughput = pathThroughput * bsdfSample * pdfFactor;
 				assert (!continuePathThroughput.IsNaN() && !continuePathThroughput.IsInf());
-				
-				// This is valid for irradiance AOV only if it is a MATTE
+
+				// This is valid for irradiance AOV only if it is not a SPECULAR
 				// material. Set sampleResult.irradiancePathThroughput
-				if (bsdf.GetMaterialType() == MATTE)
-					sampleResult->irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) * pdfFactor;
+				if (!(bsdf.GetEventTypes() & SPECULAR))
+					sampleResult->irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) * scaleFactor;
 				else
 					sampleResult->irradiancePathThroughput = Spectrum();
 

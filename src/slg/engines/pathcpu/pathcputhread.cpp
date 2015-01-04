@@ -90,12 +90,16 @@ void PathCPURenderThread::DirectLightSampling(
 					sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
 
 					// The first path vertex is not handled by AddDirectLight(). This is valid
-					// for irradiance AOV only if it is a MATTE material and first path vertex
-					if ((sampleResult->firstPathVertex) && (bsdf.GetMaterialType() == MATTE)) {
+					// for irradiance AOV only if it is not a SPECULAR material.
+					//
+					// Note: irradiance samples the light sources only here (i.e. no
+					// direct hit, no MIS, it would be useless)
+					//
+					// Note: RR is ignored here because it can not happen on first path vertex
+					if ((sampleResult->firstPathVertex) && !(bsdf.GetEventTypes() & SPECULAR))
 						sampleResult->irradiance =
-								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d))) *
-								incomingRadiance;
-					}
+								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)) *
+								factor) * connectionThroughput * lightRadiance;
 				}
 			}
 		}
@@ -318,25 +322,26 @@ void PathCPURenderThread::RenderFunc() {
 			if (sampleResult.firstPathVertex)
 				sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
+			float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
 			if ((depth >= engine->rrDepth) && !(lastBSDFEvent & SPECULAR)) {
 				// Russian Roulette
-				const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-				if (sampler->GetSample(sampleOffset + 8) < prob)
-					lastPdfW *= prob;
+				if (sampler->GetSample(sampleOffset + 8) < rrProb)
+					lastPdfW *= rrProb;
 				else
 					break;
-			}
+			} else
+				rrProb = 1.f;
 
 			const float pdfFactor = min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
 			const Spectrum throughputFactor = bsdfSample * pdfFactor;
 			pathThroughput *= throughputFactor;
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 
-			// This is valid for irradiance AOV only if it is a MATTE material and
+			// This is valid for irradiance AOV only if it is not a SPECULAR material and
 			// first path vertex. Set or update sampleResult.irradiancePathThroughput
 			if (sampleResult.firstPathVertex) {
-				if (bsdf.GetMaterialType() == MATTE)
-					sampleResult.irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) * pdfFactor;
+				if (!(bsdf.GetEventTypes() & SPECULAR))
+					sampleResult.irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) / rrProb;
 				else
 					sampleResult.irradiancePathThroughput = Spectrum();
 			} else

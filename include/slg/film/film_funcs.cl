@@ -108,10 +108,6 @@ void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint li
 			VADD3F(sampleResult->indirectSpecular.c, radiance);
 #endif
 		}
-
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-		VADD3F(sampleResult->irradiance.c, VLOAD3F(sampleResult->irradiancePathThroughput.c) * incomingRadiance);
-#endif
 	}
 }
 
