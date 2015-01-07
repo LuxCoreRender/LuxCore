@@ -340,13 +340,12 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 //	MCol *blenderCols = reinterpret_cast<MCol *>(blenderColsPtr);
 //	MTFace *blenderUVs = reinterpret_cast<MTFace *>(blenderUVsPtr);
 
-	u_int meshTriCount = 0;
-	u_int meshVertCount = 0;
-
+	const float normalScale = 1.f / 32767.f;
+	u_int vertFreeIndex = 0;
 	boost::unordered_map<u_int, u_int> vertexMap;
-
-	// Fill vertexMap and count vertices/triangles
 	vector<Point> tmpMeshVerts;
+	vector<Normal> tmpMeshNorms;
+	vector<Triangle> tmpMeshTris;
 	for (u_int faceIndex = 0; faceIndex < blenderFaceCount; ++faceIndex) {
 		const MFace &face = blenderFaces[faceIndex];
 
@@ -355,71 +354,90 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 			const bool triangle = (face.v[3] == 0);
 			const u_int nVertices = triangle ? 3 : 4;
 
-			for (u_int j = 0; j < nVertices; ++j) {
-				const u_int index = face.v[j];
+			u_int vertIndices[4];
+			if (face.flag & ME_SMOOTH) {
+				//--------------------------------------------------------------
+				// Use the Blender vertex normal
+				//--------------------------------------------------------------
 
-				if (vertexMap.find(index) == vertexMap.end()) {
+				for (u_int j = 0; j < nVertices; ++j) {
+					const u_int index = face.v[j];
+					const MVert &vertex = blenderFVertices[index];
+
+					// Check if it has been already defined
+					if (vertexMap.find(index) == vertexMap.end()) {
+						// Add the vertex
+						tmpMeshVerts.push_back(Point(vertex.co[0], vertex.co[1], vertex.co[2]));
+						// Add the normal
+						tmpMeshNorms.push_back(Normalize(Normal(
+							vertex.no[0] * normalScale,
+							vertex.no[1] * normalScale,
+							vertex.no[2] * normalScale)));
+
+						// Add the vertex mapping
+						const u_int vertIndex = vertFreeIndex++;
+						vertexMap[index] = vertIndex;
+						vertIndices[j] = vertIndex;
+					} else
+						vertIndices[j] = vertexMap[index];
+				}
+			} else {
+				//--------------------------------------------------------------
+				// Use the Blender face normal
+				//--------------------------------------------------------------
+
+				const Point p0(blenderFVertices[face.v[0]].co[0], blenderFVertices[face.v[0]].co[1], blenderFVertices[face.v[0]].co[2]);
+				const Point p1(blenderFVertices[face.v[1]].co[0], blenderFVertices[face.v[1]].co[1], blenderFVertices[face.v[1]].co[2]);
+				const Point p2(blenderFVertices[face.v[2]].co[0], blenderFVertices[face.v[2]].co[1], blenderFVertices[face.v[2]].co[2]);
+
+				const Vector e1 = p1 - p0;
+				const Vector e2 = p2 - p0;
+				Normal faceNormal(Cross(e1, e2));
+
+				if ((faceNormal.x != 0.f) || (faceNormal.y != 0.f) || (faceNormal.z != 0.f))
+					faceNormal /= faceNormal.Length();
+
+				u_int vertIndices[4];
+				for (u_int j = 0; j < nVertices; ++j) {
+					const MVert &vertex = blenderFVertices[face.v[j]];
+
 					// Add the vertex
-					tmpMeshVerts.push_back(Point(
-						blenderFVertices[index].co[0],
-						blenderFVertices[index].co[1],
-						blenderFVertices[index].co[2]));
-					// Add the vertex mapping
-					vertexMap[index] = meshVertCount++;
+					tmpMeshVerts.push_back(Point(vertex.co[0], vertex.co[1], vertex.co[2]));
+					// Add the normal
+					tmpMeshNorms.push_back(faceNormal);
+
+					vertIndices[j] = vertFreeIndex++;
 				}
 			}
-
-			meshTriCount += triangle ? 1 : 2;
+				
+			tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
+			if (!triangle)
+				tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[2], vertIndices[3]));
 		}
 	}
 
-	cout << "meshTriCount = " << meshTriCount << "\n";
-	cout << "meshVertCount = " << meshVertCount << "\n";
+	cout << "meshTriCount = " << tmpMeshTris.size() << "\n";
+	cout << "meshVertCount = " << tmpMeshVerts.size() << "\n";
 
 	// Check if there wasn't any triangles with matIndex
-	if (meshTriCount == 0)
+	if (tmpMeshTris.size() == 0)
 		return;
 
 	// Allocate memory for LuxCore mesh data
-	Triangle *meshTris = new Triangle[meshTriCount];
-	Triangle *currentTri = meshTris;
+	Triangle *meshTris = new Triangle[tmpMeshTris.size()];
+	copy(tmpMeshTris.begin(), tmpMeshTris.end(), meshTris);
 
-	Point *meshVerts = new Point[meshVertCount];
+	Point *meshVerts = new Point[tmpMeshVerts.size()];
 	copy(tmpMeshVerts.begin(), tmpMeshVerts.end(), meshVerts);
-	
 
-//	Normal *meshNorms = new Normal[meshVertCount];
-//	Normal *currentNorm = meshNorms;
-//
+	Normal *meshNorms = new Normal[tmpMeshVerts.size()];
+	copy(tmpMeshNorms.begin(), tmpMeshNorms.end(), meshNorms);
+
 //	Spectrum *meshCols = (blenderCols == NULL) ? NULL : (new Spectrum[meshVertCount]);
-//	Spectrum *currentCol = meshCols;
-//	
 //	UV *meshUVs = (blenderUVs == NULL) ? NULL : (new UV[vertexCount]);
-//	UV *currentUV = meshUVs;
 
-	// Copy the face information
-	for (u_int faceIndex = 0; faceIndex < blenderFaceCount; ++faceIndex) {
-		const MFace &face = blenderFaces[faceIndex];
-
-		// Is a face with the selected material ?
-		if (face.mat_nr == matIndex) {
-			currentTri->v[0] = vertexMap[face.v[0]];
-			currentTri->v[1] = vertexMap[face.v[1]];
-			currentTri->v[2] = vertexMap[face.v[2]];
-			++currentTri;
-
-			if (face.v[3] != 0) {
-				// It is a quad
-				currentTri->v[0] = vertexMap[face.v[0]];
-				currentTri->v[1] = vertexMap[face.v[2]];
-				currentTri->v[2] = vertexMap[face.v[3]];				
-				++currentTri;
-			}
-		}
-	}
-	
 	cout << "Defining mesh: " << name << "\n";
-	scene->DefineMesh(name, meshVertCount, meshTriCount, meshVerts, meshTris, NULL, NULL, NULL, NULL);
+	scene->DefineMesh(name, tmpMeshVerts.size(), tmpMeshTris.size(), meshVerts, meshTris, meshNorms, NULL, NULL, NULL);
 }
 
 boost::python::list Scene_DefineBlenderMesh(Scene *scene, const string &name,
