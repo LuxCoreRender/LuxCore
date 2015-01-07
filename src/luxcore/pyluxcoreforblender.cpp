@@ -63,7 +63,7 @@ struct MVert {
 };
 
 struct MCol {
-	char a, r, g, b;
+	u_char a, r, g, b;
 };
 
 struct MTFace {
@@ -338,14 +338,16 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 	MFace *blenderFaces = reinterpret_cast<MFace *>(blenderFacesPtr);
 	MVert *blenderFVertices = reinterpret_cast<MVert *>(blenderVerticesPtr);
 	MTFace *blenderUVs = reinterpret_cast<MTFace *>(blenderUVsPtr);
-	//MCol *blenderCols = reinterpret_cast<MCol *>(blenderColsPtr);
+	MCol *blenderCols = reinterpret_cast<MCol *>(blenderColsPtr);
 
 	const float normalScale = 1.f / 32767.f;
+	const float rgbScale = 1.0f / 255.0f;
 	u_int vertFreeIndex = 0;
 	boost::unordered_map<u_int, u_int> vertexMap;
 	vector<Point> tmpMeshVerts;
 	vector<Normal> tmpMeshNorms;
 	vector<UV> tmpMeshUVs;
+	vector<Spectrum> tmpMeshCols;
 	vector<Triangle> tmpMeshTris;
 	for (u_int faceIndex = 0; faceIndex < blenderFaceCount; ++faceIndex) {
 		const MFace &face = blenderFaces[faceIndex];
@@ -374,9 +376,15 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 							vertex.no[0] * normalScale,
 							vertex.no[1] * normalScale,
 							vertex.no[2] * normalScale)));
-						// Add UV
+						// Add the UV
 						if (blenderUVs)
 							tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
+						// Add the color
+						if (blenderCols)
+							tmpMeshCols.push_back(Spectrum(
+								blenderCols[faceIndex].r * rgbScale,
+								blenderCols[faceIndex].g * rgbScale,
+								blenderCols[faceIndex].b * rgbScale));
 
 						// Add the vertex mapping
 						const u_int vertIndex = vertFreeIndex++;
@@ -412,6 +420,12 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					// Add UV
 					if (blenderUVs)
 						tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
+					// Add the color
+					if (blenderCols)
+						tmpMeshCols.push_back(Spectrum(
+							blenderCols[faceIndex].r,
+							blenderCols[faceIndex].g,
+							blenderCols[faceIndex].b));
 
 					vertIndices[j] = vertFreeIndex++;
 				}
@@ -446,10 +460,15 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		copy(tmpMeshUVs.begin(), tmpMeshUVs.end(), meshUVs);
 	}
 
-	//Spectrum *meshCols = (blenderCols == NULL) ? NULL : (new Spectrum[meshVertCount]);
+	Spectrum *meshCols = NULL;
+	if (blenderCols) {
+		meshCols = new Spectrum[tmpMeshVerts.size()];
+		copy(tmpMeshCols.begin(), tmpMeshCols.end(), meshCols);
+	}
 
 	//cout << "Defining mesh: " << name << "\n";
-	scene->DefineMesh(name, tmpMeshVerts.size(), tmpMeshTris.size(), meshVerts, meshTris, meshNorms, meshUVs, NULL, NULL);
+	scene->DefineMesh(name, tmpMeshVerts.size(), tmpMeshTris.size(), meshVerts, meshTris,
+			meshNorms, meshUVs, meshCols, NULL);
 }
 
 boost::python::list Scene_DefineBlenderMesh(Scene *scene, const string &name,
