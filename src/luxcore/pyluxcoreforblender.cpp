@@ -337,14 +337,15 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex) {
 	MFace *blenderFaces = reinterpret_cast<MFace *>(blenderFacesPtr);
 	MVert *blenderFVertices = reinterpret_cast<MVert *>(blenderVerticesPtr);
-//	MCol *blenderCols = reinterpret_cast<MCol *>(blenderColsPtr);
-//	MTFace *blenderUVs = reinterpret_cast<MTFace *>(blenderUVsPtr);
+	MTFace *blenderUVs = reinterpret_cast<MTFace *>(blenderUVsPtr);
+	//MCol *blenderCols = reinterpret_cast<MCol *>(blenderColsPtr);
 
 	const float normalScale = 1.f / 32767.f;
 	u_int vertFreeIndex = 0;
 	boost::unordered_map<u_int, u_int> vertexMap;
 	vector<Point> tmpMeshVerts;
 	vector<Normal> tmpMeshNorms;
+	vector<UV> tmpMeshUVs;
 	vector<Triangle> tmpMeshTris;
 	for (u_int faceIndex = 0; faceIndex < blenderFaceCount; ++faceIndex) {
 		const MFace &face = blenderFaces[faceIndex];
@@ -373,6 +374,9 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 							vertex.no[0] * normalScale,
 							vertex.no[1] * normalScale,
 							vertex.no[2] * normalScale)));
+						// Add UV
+						if (blenderUVs)
+							tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
 
 						// Add the vertex mapping
 						const u_int vertIndex = vertFreeIndex++;
@@ -397,27 +401,30 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 				if ((faceNormal.x != 0.f) || (faceNormal.y != 0.f) || (faceNormal.z != 0.f))
 					faceNormal /= faceNormal.Length();
 
-				u_int vertIndices[4];
 				for (u_int j = 0; j < nVertices; ++j) {
-					const MVert &vertex = blenderFVertices[face.v[j]];
+					const u_int index = face.v[j];
+					const MVert &vertex = blenderFVertices[index];
 
 					// Add the vertex
 					tmpMeshVerts.push_back(Point(vertex.co[0], vertex.co[1], vertex.co[2]));
 					// Add the normal
 					tmpMeshNorms.push_back(faceNormal);
+					// Add UV
+					if (blenderUVs)
+						tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
 
 					vertIndices[j] = vertFreeIndex++;
 				}
 			}
-				
+
 			tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
 			if (!triangle)
 				tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[2], vertIndices[3]));
 		}
 	}
 
-	cout << "meshTriCount = " << tmpMeshTris.size() << "\n";
-	cout << "meshVertCount = " << tmpMeshVerts.size() << "\n";
+	//cout << "meshTriCount = " << tmpMeshTris.size() << "\n";
+	//cout << "meshVertCount = " << tmpMeshVerts.size() << "\n";
 
 	// Check if there wasn't any triangles with matIndex
 	if (tmpMeshTris.size() == 0)
@@ -433,11 +440,16 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 	Normal *meshNorms = new Normal[tmpMeshVerts.size()];
 	copy(tmpMeshNorms.begin(), tmpMeshNorms.end(), meshNorms);
 
-//	Spectrum *meshCols = (blenderCols == NULL) ? NULL : (new Spectrum[meshVertCount]);
-//	UV *meshUVs = (blenderUVs == NULL) ? NULL : (new UV[vertexCount]);
+	UV *meshUVs = NULL;
+	if (blenderUVs) {
+		meshUVs = new UV[tmpMeshVerts.size()];
+		copy(tmpMeshUVs.begin(), tmpMeshUVs.end(), meshUVs);
+	}
 
-	cout << "Defining mesh: " << name << "\n";
-	scene->DefineMesh(name, tmpMeshVerts.size(), tmpMeshTris.size(), meshVerts, meshTris, meshNorms, NULL, NULL, NULL);
+	//Spectrum *meshCols = (blenderCols == NULL) ? NULL : (new Spectrum[meshVertCount]);
+
+	//cout << "Defining mesh: " << name << "\n";
+	scene->DefineMesh(name, tmpMeshVerts.size(), tmpMeshTris.size(), meshVerts, meshTris, meshNorms, meshUVs, NULL, NULL);
 }
 
 boost::python::list Scene_DefineBlenderMesh(Scene *scene, const string &name,
