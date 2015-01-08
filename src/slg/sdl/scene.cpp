@@ -401,7 +401,12 @@ void Scene::ParseVolumes(const Properties &props) {
 		if (matDefs.IsMaterialDefined(volName)) {
 			// A replacement for an existing material
 			const Material *oldMat = matDefs.GetMaterial(volName);
-			// Volumes can not (yet) be light sources
+
+			// Check if it is not a volume
+			if (!dynamic_cast<const Volume *>(oldMat))
+				throw runtime_error("You can not replace a volume with the material: " + volName);
+
+			// Volumes can not be a (directly sampled) light source
 			//const bool wasLightSource = oldMat->IsLightSource();
 
 			matDefs.DefineMaterial(volName, newMat);
@@ -478,6 +483,10 @@ void Scene::ParseMaterials(const Properties &props) {
 		if (matDefs.IsMaterialDefined(matName)) {
 			// A replacement for an existing material
 			const Material *oldMat = matDefs.GetMaterial(matName);
+			
+			// Check if it is a volume
+			if (dynamic_cast<const Volume *>(oldMat))
+				throw runtime_error("You can not replace a material with the volume: " + matName);
 
 			matDefs.DefineMaterial(matName, newMat);
 
@@ -536,11 +545,12 @@ void Scene::ParseObjects(const Properties &props) {
 			SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
 
 			// Add all new triangle lights
+			const u_int meshIndex = objDefs.GetSceneObjectIndex(obj);
 			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 				TriangleLight *tl = new TriangleLight();
 				tl->lightMaterial = mat;
 				tl->mesh = mesh;
-				tl->meshIndex = objDefs.GetSize() - 1;
+				tl->meshIndex = meshIndex;
 				tl->triangleIndex = i;
 				tl->Preprocess();
 

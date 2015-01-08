@@ -1443,94 +1443,6 @@ Properties RoughMatteTranslucentMaterial::ToProperties() const  {
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-float Glossy2Material::SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &localFixedDir) const {
-	// No sampling on the back face
-	if (localFixedDir.z <= 0.f)
-		return 0.f;
-
-	// Approximate H by using reflection direction for wi
-	const float u = fabsf(localFixedDir.z);
-	const Spectrum S = FresnelSchlick_Evaluate(ks, u);
-
-	// Ensures coating is never sampled less than half the time
-	// unless we are on the back face
-	return .5f * (1.f + S.Filter());
-}
-
-Spectrum Glossy2Material::SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, const float roughness,
-		const float anisotropy, const Vector &localFixedDir, const Vector &localSampledDir) const {
-	// No sampling on the back face
-	if (localFixedDir.z <= 0.f)
-		return Spectrum();
-
-	const float coso = fabsf(localFixedDir.z);
-	const float cosi = fabsf(localSampledDir.z);
-
-	const Vector wh(Normalize(localFixedDir + localSampledDir));
-	const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(localSampledDir, wh));
-
-	const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
-
-	// Multibounce - alternative with interreflection in the coating creases
-	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
-	if (!fromLight)
-		factor = factor / 4.f * coso +
-				(multibounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
-	else
-		factor = factor / (4.f * cosi) + 
-				(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
-
-	return factor * S;
-}
-
-Spectrum Glossy2Material::SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
-		const float roughness, const float anisotropy, const Vector &localFixedDir, Vector *localSampledDir,
-		float u0, float u1, float *pdf) const {
-	// No sampling on the back face
-	if (localFixedDir.z <= 0.f)
-		return Spectrum();
-
-	Vector wh;
-	float d, specPdf;
-	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
-	const float cosWH = Dot(localFixedDir, wh);
-	*localSampledDir = 2.f * cosWH * wh - localFixedDir;
-
-	if ((localSampledDir->z < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
-		return Spectrum();
-
-	const float coso = fabsf(localFixedDir.z);
-	const float cosi = fabsf(localSampledDir->z);
-
-	*pdf = specPdf / (4.f * cosWH);
-	if (*pdf <= 0.f)
-		return Spectrum();
-
-	Spectrum S = FresnelSchlick_Evaluate(ks, cosWH);
-
-	const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
-	if (!fromLight)
-		//CoatingF(sw, *wi, wo, f_);
-		S *= (d / *pdf) * G / (4.f * coso) + 
-				(multibounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) / *pdf : 0.f);
-	else
-		//CoatingF(sw, wo, *wi, f_);
-		S *= (d / *pdf) * G / (4.f * cosi) + 
-				(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) / *pdf : 0.f);
-
-	return S;
-}
-
-float Glossy2Material::SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
-		const Vector &localFixedDir, const Vector &localSampledDir) const {
-	// No sampling on the back face
-	if (localFixedDir.z <= 0.f)
-		return 0.f;
-
-	const Vector wh(Normalize(localFixedDir + localSampledDir));
-	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localFixedDir, wh));
-}
-
 Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
@@ -1570,19 +1482,35 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const float roughness = u * v;
 
 	if (directPdfW) {
-		const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
-		const float wBase = 1.f - wCoating;
+		if (localFixedDir.z < 0.f) {
+			// Backface
+			*directPdfW = fabsf(localSampledDir.z * INV_PI);
+		} else {
+			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
+			const float wBase = 1.f - wCoating;
 
-		*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
+			*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir);
+		}
 	}
 
 	if (reversePdfW) {
-		const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
-		const float wBaseR = 1.f - wCoatingR;
+		if (localSampledDir.z < 0.f) {
+			// Backface
+			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
+		} else {
+			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
+			const float wBaseR = 1.f - wCoatingR;
 
-		*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
+			*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
 				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir);
+		}
+	}
+
+	if (localFixedDir.z < 0.f)
+	{
+		// Backface, no coating
+		return baseF;
 	}
 
 	// Absorption
@@ -1596,7 +1524,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector H(Normalize(localFixedDir + localSampledDir));
 	const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(localSampledDir, H));
 
-	const Spectrum coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, localFixedDir, localSampledDir);
+	const Spectrum coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce, localFixedDir, localSampledDir);
 
 	// Blend in base layer Schlick style
 	// assumes coating bxdf takes fresnel factor S into account
@@ -1616,7 +1544,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 
 	if (localFixedDir.z <= 0.f) {
 		// Back face
-		*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
+		*localSampledDir = -CosineSampleHemisphere(u0, u1, pdfW);
 
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
@@ -1661,13 +1589,13 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		baseF = Kd->GetSpectrumValue(hitPoint).Clamp() * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
 
 		// Evaluate coating BSDF (Schlick BSDF)
-		coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, localFixedDir, *localSampledDir);
+		coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce, localFixedDir, *localSampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, *localSampledDir);
 
 		*event = GLOSSY | REFLECT;
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
-		coatingF = SchlickBSDF_CoatingSampleF(hitPoint.fromLight, ks, roughness, anisotropy,
+		coatingF = SchlickBSDF_CoatingSampleF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce,
 				localFixedDir, localSampledDir, u0, u1, &coatingPdf);
 		if (coatingF.Black())
 			return Spectrum();
@@ -1726,19 +1654,29 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	const float roughness = u * v;
 
 	if (directPdfW) {
-		const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
-		const float wBase = 1.f - wCoating;
+		if (localFixedDir.z < 0.f) {
+			// Backface
+			*directPdfW = fabsf(localSampledDir.z * INV_PI);
+		} else {
+			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
+			const float wBase = 1.f - wCoating;
 
-		*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
+			*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir);
+		}
 	}
 
 	if (reversePdfW) {
-		const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
-		const float wBaseR = 1.f - wCoatingR;
+		if (localSampledDir.z < 0.f) {
+			// Backface
+			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
+		} else {
+			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
+			const float wBaseR = 1.f - wCoatingR;
 
-		*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
+			*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
 				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir);
+		}
 	}
 }
 
@@ -3539,77 +3477,6 @@ const struct CarPaintMaterial::CarPaintData CarPaintMaterial::data[8] = {
 // LuxRender GlossyTranslucent material porting.
 //------------------------------------------------------------------------------
 
-float GlossyTranslucentMaterial::SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &localFixedDir) const {
-	// Approximate H by using reflection direction for wi
-	const float u = fabsf(localFixedDir.z);
-	const Spectrum S = FresnelSchlick_Evaluate(ks, u);
-
-	// Ensures coating is never sampled less than half the time
-	return .5f * (1.f + S.Filter());
-}
-
-Spectrum GlossyTranslucentMaterial::SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, const float roughness,
-		const float anisotropy, const bool mbounce, const Vector &localFixedDir, const Vector &localSampledDir) const {
-	const float coso = fabsf(localFixedDir.z);
-	const float cosi = fabsf(localSampledDir.z);
-
-	const Vector wh(Normalize(localFixedDir + localSampledDir));
-	const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(localSampledDir, wh));
-
-	const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
-
-	// Multibounce - alternative with interreflection in the coating creases
-	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
-	if (!fromLight)
-		factor = factor / 4.f * coso +
-				(mbounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
-	else
-		factor = factor / (4.f * cosi) + 
-				(mbounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
-
-	return factor * S;
-}
-
-Spectrum GlossyTranslucentMaterial::SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
-		const float roughness, const float anisotropy, const bool mbounce,
-		const Vector &localFixedDir, Vector *localSampledDir, float u0, float u1, float *pdf) const {
-	Vector wh;
-	float d, specPdf;
-	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
-	const float cosWH = Dot(localFixedDir, wh);
-	*localSampledDir = 2.f * cosWH * wh - localFixedDir;
-
-	if ((fabsf(localSampledDir->z) < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
-		return Spectrum();
-
-	const float coso = fabsf(localFixedDir.z);
-	const float cosi = fabsf(localSampledDir->z);
-
-	*pdf = specPdf / (4.f * fabsf(cosWH));
-	if (*pdf <= 0.f)
-		return Spectrum();
-
-	Spectrum S = FresnelSchlick_Evaluate(ks, fabsf(cosWH));
-
-	const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
-	if (!fromLight)
-		//CoatingF(sw, *wi, wo, f_);
-		S *= (d / *pdf) * G / (4.f * coso) + 
-				(mbounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) / *pdf : 0.f);
-	else
-		//CoatingF(sw, wo, *wi, f_);
-		S *= (d / *pdf) * G / (4.f * cosi) + 
-				(mbounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) / *pdf : 0.f);
-
-	return S;
-}
-
-float GlossyTranslucentMaterial::SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
-		const Vector &localFixedDir, const Vector &localSampledDir) const {
-	const Vector wh(Normalize(localFixedDir + localSampledDir));
-	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localFixedDir, wh));
-}
-
 Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
@@ -3645,6 +3512,10 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
 		}
+		if (directPdfW)
+			*directPdfW = 0.5f * fabsf(localSampledDir.z * INV_PI);
+		if (reversePdfW)
+			*reversePdfW = 0.5f * fabsf(localFixedDir.z * INV_PI);
 		ks = ks.Clamp();
 		const Spectrum S2 = FresnelSchlick_Evaluate(ks, u);
 		Spectrum S(Sqrt((Spectrum(1.f) - S1) * (Spectrum(1.f) - S2)));
@@ -3811,7 +3682,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			*event = GLOSSY | REFLECT;
 		}
 
-		*pdfW = coatingPdf * wCoating + basePdf * wBase;
+		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
 
 		// Absorption
 		const float cosi = fabsf(localSampledDir->z);
@@ -3835,9 +3706,9 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 		if (hitPoint.fromLight)
-			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL);
+			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL) / *pdfW;
 		else
-			return Evaluate(hitPoint, *localSampledDir, localFixedDir, event, pdfW, NULL);
+			return Evaluate(hitPoint, *localSampledDir, localFixedDir, event, pdfW, NULL) / *pdfW;
 	}
 }
 
@@ -4066,6 +3937,81 @@ void slg::SchlickDistribution_SampleH(const float roughness, const float anisotr
 float slg::SchlickDistribution_Pdf(const float roughness, const Vector &wh,
 		const float anisotropy) {
 	return SchlickDistribution_D(roughness, wh, anisotropy);
+}
+
+//------------------------------------------------------------------------------
+// Schlick BSDF
+//------------------------------------------------------------------------------
+
+float slg::SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &localFixedDir) {
+	// Approximate H by using reflection direction for wi
+	const float u = fabsf(localFixedDir.z);
+	const Spectrum S = FresnelSchlick_Evaluate(ks, u);
+
+	// Ensures coating is never sampled less than half the time
+	return .5f * (1.f + S.Filter());
+}
+
+Spectrum slg::SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, const float roughness,
+		const float anisotropy, const bool mbounce, const Vector &localFixedDir, const Vector &localSampledDir) {
+	const float coso = fabsf(localFixedDir.z);
+	const float cosi = fabsf(localSampledDir.z);
+
+	const Vector wh(Normalize(localFixedDir + localSampledDir));
+	const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(localSampledDir, wh));
+
+	const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
+
+	// Multibounce - alternative with interreflection in the coating creases
+	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
+	if (!fromLight)
+		factor = factor / 4.f * coso +
+				(mbounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
+	else
+		factor = factor / (4.f * cosi) + 
+				(mbounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
+
+	return factor * S;
+}
+
+Spectrum slg::SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks,
+		const float roughness, const float anisotropy, const bool mbounce,
+		const Vector &localFixedDir, Vector *localSampledDir, float u0, float u1, float *pdf) {
+	Vector wh;
+	float d, specPdf;
+	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
+	const float cosWH = Dot(localFixedDir, wh);
+	*localSampledDir = 2.f * cosWH * wh - localFixedDir;
+
+	if ((fabsf(localSampledDir->z) < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
+		return Spectrum();
+
+	const float coso = fabsf(localFixedDir.z);
+	const float cosi = fabsf(localSampledDir->z);
+
+	*pdf = specPdf / (4.f * fabsf(cosWH));
+	if (*pdf <= 0.f)
+		return Spectrum();
+
+	Spectrum S = FresnelSchlick_Evaluate(ks, fabsf(cosWH));
+
+	const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
+	if (!fromLight)
+		//CoatingF(sw, *wi, wo, f_);
+		S *= (d / *pdf) * G / (4.f * coso) + 
+				(mbounce ? cosi * Clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) / *pdf : 0.f);
+	else
+		//CoatingF(sw, wo, *wi, f_);
+		S *= (d / *pdf) * G / (4.f * cosi) + 
+				(mbounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) / *pdf : 0.f);
+
+	return S;
+}
+
+float slg::SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
+		const Vector &localFixedDir, const Vector &localSampledDir) {
+	const Vector wh(Normalize(localFixedDir + localSampledDir));
+	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localFixedDir, wh));
 }
 
 //------------------------------------------------------------------------------

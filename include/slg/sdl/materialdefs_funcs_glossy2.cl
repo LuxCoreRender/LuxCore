@@ -42,92 +42,6 @@ float3 Glossy2Material_GetPassThroughTransparency(__global Material *material,
 }
 #endif
 
-float SchlickBSDF_CoatingWeight(const float3 ks, const float3 fixedDir) {
-	// No sampling on the back face
-	if (fixedDir.z <= 0.f)
-		return 0.f;
-
-	// Approximate H by using reflection direction for wi
-	const float u = fabs(fixedDir.z);
-	const float3 S = FresnelSchlick_Evaluate(ks, u);
-
-	// Ensures coating is never sampled less than half the time
-	// unless we are on the back face
-	return .5f * (1.f + Spectrum_Filter(S));
-}
-
-float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
-		const float anisotropy, const int multibounce, const float3 fixedDir,
-		const float3 sampledDir) {
-	// No sampling on the back face
-	if (fixedDir.z <= 0.f)
-		return BLACK;
-
-	const float coso = fabs(fixedDir.z);
-	const float cosi = fabs(sampledDir.z);
-
-	const float3 wh = normalize(fixedDir + sampledDir);
-	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, wh)));
-
-	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
-
-	// Multibounce - alternative with interreflection in the coating creases
-	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
-	//if (!fromLight)
-		factor = factor / 4.f * coso +
-				(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
-	//else
-	//	factor = factor / (4.f * cosi) + 
-	//			(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
-
-	return factor * S;
-}
-
-float3 SchlickBSDF_CoatingSampleF(const float3 ks,
-		const float roughness, const float anisotropy, const int multibounce,
-		const float3 fixedDir, float3 *sampledDir,
-		float u0, float u1, float *pdf) {
-	// No sampling on the back face
-	if (fixedDir.z <= 0.f)
-		return BLACK;
-
-	float3 wh;
-	float d, specPdf;
-	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
-	const float cosWH = dot(fixedDir, wh);
-	*sampledDir = 2.f * cosWH * wh - fixedDir;
-
-	if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
-		return BLACK;
-
-	const float coso = fabs(fixedDir.z);
-	const float cosi = fabs((*sampledDir).z);
-
-	*pdf = specPdf / (4.f * cosWH);
-	if (*pdf <= 0.f)
-		return BLACK;
-
-	float3 S = FresnelSchlick_Evaluate(ks, cosWH);
-
-	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
-
-	//CoatingF(sw, *wi, wo, f_);
-	S *= (d / *pdf) * G / (4.f * coso) + 
-			(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) / *pdf : 0.f);
-
-	return S;
-}
-
-float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
-		const float3 fixedDir, const float3 sampledDir) {
-	// No sampling on the back face
-	if (fixedDir.z <= 0.f)
-		return 0.f;
-
-	const float3 wh = normalize(fixedDir + sampledDir);
-	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
-}
-
 float3 Glossy2Material_ConstEvaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
@@ -185,24 +99,32 @@ float3 Glossy2Material_ConstEvaluate(
 #endif
 
 	if (directPdfW) {
-		const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
-		const float wBase = 1.f - wCoating;
+		if (fixedDir.z < 0.f)
+			*directPdfW = fabs(sampledDir.z * M_1_PI_F);
+		else {
+			const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
+			const float wBase = 1.f - wCoating;
 
-		*directPdfW = wBase * fabs(sampledDir.z * M_1_PI_F) +
+			*directPdfW = wBase * fabs(sampledDir.z * M_1_PI_F) +
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir);
+		}
 	}
 
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	// Absorption
 	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	const float3 alpha = Spectrum_Clamp(kaVal);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 #else
 	const float3 absorption = WHITE;
 #endif
 
+	if (fixedDir.z < 0.f) {
+		// Backface, no coating
+		return baseF;
+	}
 	// Coating fresnel factor
 	const float3 H = normalize(fixedDir + sampledDir);
 	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
@@ -251,7 +173,7 @@ float3 Glossy2Material_ConstSample(
 
 	if (fixedDir.z <= 0.f) {
 		// Back Face
-		*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
+		*sampledDir = -1.f * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 		*cosSampledDir = fabs((*sampledDir).z);
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return BLACK;
@@ -329,11 +251,11 @@ float3 Glossy2Material_ConstSample(
 
 	*pdfW = coatingPdf * wCoating + basePdf * wBase;
 
+#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	// Absorption
 	const float cosi = fabs((*sampledDir).z);
 	const float coso = fabs(fixedDir.z);
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	const float3 alpha = Spectrum_Clamp(kaVal);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 #else

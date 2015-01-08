@@ -110,6 +110,76 @@ float3 CoatingAbsorption(const float cosi, const float coso,
 		return WHITE;
 }
 
+float SchlickBSDF_CoatingWeight(const float3 ks, const float3 fixedDir) {
+	// Approximate H by using reflection direction for wi
+	const float u = fabs(fixedDir.z);
+	const float3 S = FresnelSchlick_Evaluate(ks, u);
+
+	// Ensures coating is never sampled less than half the time
+	// unless we are on the back face
+	return .5f * (1.f + Spectrum_Filter(S));
+}
+
+float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
+		const float anisotropy, const int multibounce, const float3 fixedDir,
+		const float3 sampledDir) {
+	const float coso = fabs(fixedDir.z);
+	const float cosi = fabs(sampledDir.z);
+
+	const float3 wh = normalize(fixedDir + sampledDir);
+	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, wh)));
+
+	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
+
+	// Multibounce - alternative with interreflection in the coating creases
+	float factor = SchlickDistribution_D(roughness, wh, anisotropy) * G;
+	//if (!fromLight)
+		factor = factor / 4.f * coso +
+				(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) : 0.f);
+	//else
+	//	factor = factor / (4.f * cosi) + 
+	//			(multibounce ? coso * Clamp((1.f - G) / (4.f * cosi * coso), 0.f, 1.f) : 0.f);
+
+	return factor * S;
+}
+
+float3 SchlickBSDF_CoatingSampleF(const float3 ks,
+		const float roughness, const float anisotropy, const int multibounce,
+		const float3 fixedDir, float3 *sampledDir,
+		float u0, float u1, float *pdf) {
+	float3 wh;
+	float d, specPdf;
+	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
+	const float cosWH = dot(fixedDir, wh);
+	*sampledDir = 2.f * cosWH * wh - fixedDir;
+
+	if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
+		return BLACK;
+
+	const float coso = fabs(fixedDir.z);
+	const float cosi = fabs((*sampledDir).z);
+
+	*pdf = specPdf / (4.f * cosWH);
+	if (*pdf <= 0.f)
+		return BLACK;
+
+	float3 S = FresnelSchlick_Evaluate(ks, fabs(cosWH));
+
+	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
+
+	//CoatingF(sw, *wi, wo, f_);
+	S *= (d / *pdf) * G / (4.f * coso) + 
+			(multibounce ? cosi * clamp((1.f - G) / (4.f * coso * cosi), 0.f, 1.f) / *pdf : 0.f);
+
+	return S;
+}
+
+float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
+		const float3 fixedDir, const float3 sampledDir) {
+	const float3 wh = normalize(fixedDir + sampledDir);
+	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
+}
+
 float3 FrDiel2(const float cosi, const float3 cost, const float3 eta) {
 	float3 Rparl = eta * cosi;
 	Rparl = (cost - Rparl) / (cost + Rparl);
