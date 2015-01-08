@@ -701,15 +701,6 @@ public:
 	const bool IsMultibounce() const { return multibounce; }
 
 private:
-	float SchlickBSDF_CoatingWeight(const luxrays::Spectrum &ks, const luxrays::Vector &localFixedDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingF(const bool fromLight, const luxrays::Spectrum &ks, const float roughness, const float anisotropy,
-		const luxrays::Vector &localFixedDir,	const luxrays::Vector &localSampledDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const luxrays::Spectrum ks,
-		const float roughness, const float anisotropy, const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
-		float u0, float u1, float *pdf) const;
-	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
-		const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir) const;
-
 	const Texture *Kd;
 	const Texture *Ks;
 	const Texture *nu;
@@ -1034,17 +1025,6 @@ public:
 	const bool IsMultibounce_bf() const { return multibounce_bf; }
 
 private:
-	float SchlickBSDF_CoatingWeight(const luxrays::Spectrum &ks, const luxrays::Vector &localFixedDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingF(const bool fromLight, const luxrays::Spectrum &ks,
-		const float roughness, const float anisotropy, const bool mbounce,
-		const luxrays::Vector &localFixedDir,	const luxrays::Vector &localSampledDir) const;
-	luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const luxrays::Spectrum ks,
-		const float roughness, const float anisotropy, const bool mbounce,
-		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
-		float u0, float u1, float *pdf) const;
-	float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
-		const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir) const;
-
 	const Texture *Kd;
 	const Texture *Kt;
 	const Texture *Ks;
@@ -1083,6 +1063,18 @@ extern void SchlickDistribution_SampleH(const float roughness, const float aniso
 extern float SchlickDistribution_Pdf(const float roughness, const luxrays::Vector &wh, const float anisotropy);
 extern float SchlickDistribution_G(const float roughness, const luxrays::Vector &localFixedDir,
 	const luxrays::Vector &localSampledDir);
+
+//------------------------------------------------------------------------------
+// SchlickBSDF related functions
+//------------------------------------------------------------------------------
+extern float SchlickBSDF_CoatingWeight(const luxrays::Spectrum &ks, const luxrays::Vector &localFixedDir);
+extern luxrays::Spectrum SchlickBSDF_CoatingF(const bool fromLight, const luxrays::Spectrum &ks, const float roughness, const float anisotropy, const bool mbounce,
+	const luxrays::Vector &localFixedDir,	const luxrays::Vector &localSampledDir);
+extern luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const luxrays::Spectrum ks,
+	const float roughness, const float anisotropy, const bool mbounce, const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+	float u0, float u1, float *pdf);
+extern float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
+	const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir);
 
 //------------------------------------------------------------------------------
 // Fresnel related functions

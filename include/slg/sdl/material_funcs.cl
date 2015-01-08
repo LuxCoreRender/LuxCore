@@ -402,7 +402,7 @@ float3 Material_SampleNoMix(__global Material *material,
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
 		case GLOSSYTRANSLUCENT:
-			return GlossyTranslucentMaterial_Sample(material, hitpoint, fixedDir, sampledDir,
+			return GlossyTranslucentMaterial_Sample(material, hitPoint, fixedDir, sampledDir,
 				u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent,
@@ -502,7 +502,7 @@ float3 Material_EvaluateNoMix(__global Material *material,
 #endif
 #if defined (PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT)
 		case GLOSSYTRANSLUCENT:
-			return GlossyTranslucentMaterial_Evaluate(material, hitpoint, lightDir, eyeDir, event, directPdfW
+			return GlossyTranslucentMaterial_Evaluate(material, hitPoint, lightDir, eyeDir, event, directPdfW
 				TEXTURES_PARAM);
 #endif
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
