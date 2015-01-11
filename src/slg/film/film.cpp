@@ -717,7 +717,7 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 		case FilmOutputs::RGB:
 			return 3 * pixelCount;
 		case FilmOutputs::RGBA:
-			return 3 * pixelCount;
+			return 4 * pixelCount;
 		case FilmOutputs::RGB_TONEMAPPED:
 			return 3 * pixelCount;
 		case FilmOutputs::RGBA_TONEMAPPED:
