@@ -334,8 +334,8 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 				const float scale = cfg.Get(Property(prefix + ".scale")(179.f)).Get<float>();
 				const float range = Max(0.f, cfg.Get(Property(prefix + ".range")(100.f)).Get<float>());
 				const u_int steps = Max(2u, cfg.Get(Property(prefix + ".steps")(8)).Get<u_int>());
-				const int zeroGridSide = cfg.Get(Property(prefix + ".zerogridsize")(8)).Get<int>();
-				imagePipeline->AddPlugin(new ContourLinesPlugin(scale, range, steps, zeroGridSide));
+				const int zeroGridSize = cfg.Get(Property(prefix + ".zerogridsize")(8)).Get<int>();
+				imagePipeline->AddPlugin(new ContourLinesPlugin(scale, range, steps, zeroGridSize));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
