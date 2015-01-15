@@ -525,7 +525,7 @@ public:
 	 */
 	static luxrays::Point *AllocVerticesBuffer(const u_int meshVertCount);
 	/*!
-	 * \brief This must be used to allocate Mesh triangle buffer.
+	 * \brief This must be used to allocate Mesh triangles buffer.
 	 */
 	static luxrays::Triangle *AllocTrianglesBuffer(const u_int meshTriCount);
 

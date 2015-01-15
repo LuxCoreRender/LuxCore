@@ -445,10 +445,10 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		return;
 
 	// Allocate memory for LuxCore mesh data
-	Triangle *meshTris = new Triangle[tmpMeshTris.size()];
+	Triangle *meshTris = TriangleMesh::AllocTrianglesBuffer(tmpMeshTris.size());
 	copy(tmpMeshTris.begin(), tmpMeshTris.end(), meshTris);
 
-	Point *meshVerts = new Point[tmpMeshVerts.size()];
+	Point *meshVerts = TriangleMesh::AllocVerticesBuffer(tmpMeshVerts.size());
 	copy(tmpMeshVerts.begin(), tmpMeshVerts.end(), meshVerts);
 
 	Normal *meshNorms = new Normal[tmpMeshVerts.size()];

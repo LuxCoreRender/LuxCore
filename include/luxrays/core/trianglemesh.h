@@ -72,6 +72,11 @@ public:
 		assert (meshVertices != NULL);
 		assert (meshTris != NULL);
 
+		// Check if the buffer has been really allocated with AllocVerticesBuffer() or not.
+		const float *vertBuff = (float *)meshVertices;
+		if (vertBuff[3 * meshVertCount] != 1234.1234f)
+			throw std::runtime_error("luxrays::TriangleMesh() used with a vertex buffer not allocated with luxrays::TriangleMesh::AllocVerticesBuffer()");
+
 		vertCount = meshVertCount;
 		triCount = meshTriCount;
 		vertices = meshVertices;
@@ -97,7 +102,14 @@ public:
 
 	static Point *AllocVerticesBuffer(const u_int meshVertCount) {
 		// Embree requires a float padding field at the end
-		return (Point *)new float[3 * meshVertCount + 1];
+		float *buffer = new float[3 * meshVertCount + 1];
+
+		// This is a trick so I can check if the buffer has been really allocated
+		// with AllocVerticesBuffer() or not. It is useful for debugging LuxCore
+		// applications.
+		buffer[3 * meshVertCount] = 1234.1234f;
+		
+		return (Point *)buffer;
 	}
 	static Triangle *AllocTrianglesBuffer(const u_int meshTriCount) {
 		return new Triangle[meshTriCount];
