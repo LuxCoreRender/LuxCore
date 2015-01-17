@@ -234,7 +234,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		const int multibounceVal, const int multibounceVal_bf,
 #endif
 		const float3 kdVal, const float3 ktVal, const float3 ksVal, const float3 ksVal_bf) {
-	if (!(requestedEvent & (GLOSSY | REFLECT)) || !(requestedEvent & (DIFFUSE | TRANSMIT)) ||
+	if ((!(requestedEvent & (GLOSSY | REFLECT)) && !(requestedEvent & (DIFFUSE | TRANSMIT))) ||
 		(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
@@ -317,7 +317,8 @@ float3 GlossyTranslucentMaterial_ConstSample(
 
 		if (2.f * passThroughEvent < wBase) {
 			// Sample base BSDF (Matte BSDF)
-			*sampledDir = signbit(fixedDir.z) * CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
+			*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
+			*sampledDir *= signbit(fixedDir.z) ? -1.f : 1.f;
 
 			*cosSampledDir = fabs((*sampledDir).z);
 			if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
@@ -372,7 +373,8 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
 	} else {
 		// Transmition
-		*sampledDir = -signbit(fixedDir.z) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
+		*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
+		*sampledDir *= signbit(fixedDir.z) ? 1.f : -1.f;
 		*pdfW *= 0.5f;
 
 		*cosSampledDir = fabs((*sampledDir).z);

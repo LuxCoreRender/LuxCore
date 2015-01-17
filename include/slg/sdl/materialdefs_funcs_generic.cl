@@ -116,7 +116,6 @@ float SchlickBSDF_CoatingWeight(const float3 ks, const float3 fixedDir) {
 	const float3 S = FresnelSchlick_Evaluate(ks, u);
 
 	// Ensures coating is never sampled less than half the time
-	// unless we are on the back face
 	return .5f * (1.f + Spectrum_Filter(S));
 }
 
@@ -153,7 +152,7 @@ float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 	const float cosWH = dot(fixedDir, wh);
 	*sampledDir = 2.f * cosWH * wh - fixedDir;
 
-	if (((*sampledDir).z < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
+	if ((fabs((*sampledDir).z) < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
 		return BLACK;
 
 	const float coso = fabs(fixedDir.z);
