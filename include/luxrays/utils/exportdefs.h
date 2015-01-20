@@ -31,8 +31,12 @@
  #else
   #define CPP_API __declspec(dllimport)
  #endif
-#else
- #define CPP_API
+#else // linux/osx
+ #ifdef CPP_API_EXPORTS
+  #define CPP_API __attribute__ ((visibility ("default")))
+ #else
+  #define CPP_API
+ #endif
 #endif
 
 #if (defined(__apple_build_version__) && ((__clang_major__ == 5) && (__clang_minor__ >= 1) || (__clang_major__ == 6)))
