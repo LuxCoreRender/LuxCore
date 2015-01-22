@@ -567,6 +567,7 @@ void TileRepository::Tile::Restart() {
 	if (evenPassFilm)
 		evenPassFilm->Reset();
 
+	pass = 0;
 	done = false;
 }
 
@@ -813,6 +814,22 @@ void TileRepository::SetDone() {
 	}
 }
 
+bool TileRepository::GetToDoTile(Tile **tile) {
+	if (todoTiles.size() > 0) {
+		// Get the next tile to render
+		*tile = todoTiles.top();
+		todoTiles.pop();
+		pendingTiles.push_back(*tile);
+
+		return true;
+	} else {
+		// This should never happen
+		SLG_LOG("WARNING: out of tiles to render");
+
+		return false;
+	}
+}
+
 bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		Tile **tile, const Film *tileFilm) {
 	// Now I have to lock the repository
@@ -855,7 +872,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 			return false;
 		}
 
-		// Multipass rendering enabled
+		// Multi-pass rendering enabled
 		
 		// Check the status of pending tiles (one or more of them could be a
 		// copy of mine and now done)
@@ -870,33 +887,33 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		}
 
 		if (pendingAllDone) {
-			if (pendingTiles.size() == 0) {
-				if (convergenceTestThresholdReduction == 0.f) {
+			if (convergenceTestThresholdReduction > 0.f) {
+				// Reduce the target threshold and continue the rendering				
+				if (enableRenderingDonePrint) {
+					const double elapsedTime = WallClockTime() - startTime;
+					SLG_LOG(boost::format("Threshold %.4f reached: %.2f secs") % convergenceTestThreshold % elapsedTime);
+				}
+
+				convergenceTestThreshold *= convergenceTestThresholdReduction;
+
+				// Restart the rendering for all tiles
+
+				// I need to save a copy of the current pending tile list because
+				// it can be not empty. I could just avoid to clear the list but is
+				// more readable (an safer for the Restart() method) to work in this
+				// way.
+				deque<Tile *> currentPendingTiles = pendingTiles;
+				Restart();
+				pendingTiles = currentPendingTiles;
+
+				// Get the next tile to render
+				return GetToDoTile(tile);
+			} else {
+				if (pendingTiles.size() == 0) {
 					// Rendering done
 					SetDone();
-
-					return false;
-				} else {
-					// Reduce the target threshold and continue the rendering				
-					if (enableRenderingDonePrint) {
-						const double elapsedTime = WallClockTime() - startTime;
-						SLG_LOG(boost::format("Threshold %.4f reached: %.2f secs") % convergenceTestThreshold % elapsedTime);
-					}
-
-					convergenceTestThreshold *= convergenceTestThresholdReduction;
-
-					// Restart the rendering for all tiles
-					Restart();
-
-					// Get the next tile to render
-					*tile = todoTiles.top();
-					todoTiles.pop();
-					pendingTiles.push_back(*tile);
-
-					return true;
 				}
-			} else {
-				// Rendering done, nothing else to do
+
 				return false;
 			}
 		} else {
@@ -911,11 +928,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		}
 	} else {
 		// Get the next tile to render
-		*tile = todoTiles.top();
-		todoTiles.pop();
-		pendingTiles.push_back(*tile);
-
-		return true;
+		return GetToDoTile(tile);
 	}
 }
 
