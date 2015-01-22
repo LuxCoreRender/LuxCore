@@ -21,6 +21,7 @@
 
 #include <deque>
 #include <boost/heap/priority_queue.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 #include "luxrays/core/utils.h"
 
@@ -310,6 +311,7 @@ private:
 	};
 
 	void SetDone();
+	bool GetToDoTile(Tile **tile);
 
 	boost::mutex tileMutex;
 	double startTime;
