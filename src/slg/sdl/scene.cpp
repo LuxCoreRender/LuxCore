@@ -1518,7 +1518,7 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 				throw runtime_error("Wrong object face list length: " + objName);
 
 			trisSize = prop.GetSize() / 3;
-			tris =TriangleMesh::AllocTrianglesBuffer(trisSize);
+			tris = TriangleMesh::AllocTrianglesBuffer(trisSize);
 			for (u_int i = 0; i < trisSize; ++i) {
 				const u_int index = i * 3;
 				tris[i] = Triangle(prop.Get<u_int>(index), prop.Get<u_int>(index + 1), prop.Get<u_int>(index + 2));

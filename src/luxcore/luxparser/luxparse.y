@@ -901,26 +901,39 @@ ri_stmt: ACCELERATOR STRING paramlist
 			Property("film.width")(props.Get(Property("xresolution")(800)).Get<u_int>()) <<
 			Property("film.height")(props.Get(Property("yresolution")(600)).Get<u_int>());
 
-	// Define the image pipeline
+	// Define the image pipeline (classic LuxRender has a fixed image pipeline)
+	u_int pluginNumber = 0;
 
 	// Tone mapping
+	string pluginPrefix = "film.imagepipeline." + ToString(pluginNumber++);
 	const string toneMapType = props.Get(Property("tonemapkernel")("autolinear")).Get<string>();
 	if (toneMapType == "autolinear") {
 		*renderConfigProps <<
-			Property("film.imagepipeline.0.type")("TONEMAP_AUTOLINEAR");
+			Property(pluginPrefix + ".type")("TONEMAP_AUTOLINEAR");
 	} else if (toneMapType == "linear") {
 		*renderConfigProps <<
-			Property("film.imagepipeline.0.type")("TONEMAP_LUXLINEAR") <<
-			Property("film.imagepipeline.0.sensitivity")(props.Get(Property("linear_sensitivity")(100.f)).Get<float>()) <<
-			Property("film.imagepipeline.0.exposure")(props.Get(Property("linear_exposure")(1.f / 1000.f)).Get<float>()) <<
-			Property("film.imagepipeline.0.fstop")(props.Get(Property("linear_fstop")(2.8f)).Get<float>());
+			Property(pluginPrefix + ".type")("TONEMAP_LUXLINEAR") <<
+			Property(pluginPrefix + ".sensitivity")(props.Get(Property("linear_sensitivity")(100.f)).Get<float>()) <<
+			Property(pluginPrefix + ".exposure")(props.Get(Property("linear_exposure")(1.f / 1000.f)).Get<float>()) <<
+			Property(pluginPrefix + ".fstop")(props.Get(Property("linear_fstop")(2.8f)).Get<float>());
 	} else {
 		LC_LOG("LuxCore supports only linear tone mapping, ignoring tone mapping settings");
 	}
 
+	// Camera response
+	const string cameraResponse = props.Get(Property("cameraresponse")("")).Get<string>();
+	if (cameraResponse != "") {
+		pluginPrefix = "film.imagepipeline." + ToString(pluginNumber++);
+		*renderConfigProps <<
+			Property(pluginPrefix + ".type")("CAMERA_RESPONSE_FUNC") <<
+			Property(pluginPrefix + ".name")(cameraResponse);
+	}
+
+	// Gamma correction
+	pluginPrefix = "film.imagepipeline." + ToString(pluginNumber++);
 	*renderConfigProps <<
-		Property("film.imagepipeline.1.type")("GAMMA_CORRECTION") <<
-		Property("film.imagepipeline.1.value")(props.Get(Property("gamma")(2.2f)).Get<float>());
+		Property(pluginPrefix + ".type")("GAMMA_CORRECTION") <<
+		Property(pluginPrefix + ".value")(props.Get(Property("gamma")(2.2f)).Get<float>());
 
 	FreeArgs();
 }
@@ -1184,13 +1197,13 @@ ri_stmt: ACCELERATOR STRING paramlist
 	if (name == "box") {
 		*renderConfigProps <<
 				Property("film.filter.type")("BOX") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", .5f * .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", .5f * .5f)).Get<float>());
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", .5f)).Get<float>() * .5f) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", .5f)).Get<float>() * .5f);
 	} else if (name == "gaussian") {
 		*renderConfigProps <<
 				Property("film.filter.type")("GAUSSIAN") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f * .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f * .5f)).Get<float>()) <<
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f)).Get<float>() * .5f) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f)).Get<float>() * .5f) <<
 				Property("film.filter.gaussian.alpha")(props.Get(Property("alpha", 2.f)).Get<float>());
 	} else if (name == "mitchell") {
 		const bool supersample = props.Get(Property("supersample")(false)).Get<bool>();
@@ -1198,15 +1211,15 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 		*renderConfigProps <<
 				Property("film.filter.type")(supersample ? "MITCHELL_SS" : "MITCHELL") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f * .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f * .5f)).Get<float>()) <<
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 2.f)).Get<float>() * .5f) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 2.f)).Get<float>() * .5f) <<
 				Property("film.filter." + prefix + ".B")(props.Get(Property("B", 1.f / 3.f)).Get<float>()) <<
 				Property("film.filter." + prefix + ".C")(props.Get(Property("C", 1.f / 3.f)).Get<float>());
 	} else if (name == "blackmanharris") {
 		*renderConfigProps <<
 				Property("film.filter.type")("BLACKMANHARRIS") <<
-				Property("film.filter.xwidth")(props.Get(Property("xwidth", 4.f * .5f)).Get<float>()) <<
-				Property("film.filter.ywidth")(props.Get(Property("ywidth", 4.f * .5f)).Get<float>());
+				Property("film.filter.xwidth")(props.Get(Property("xwidth", 4.f)).Get<float>() * .5f) <<
+				Property("film.filter.ywidth")(props.Get(Property("ywidth", 4.f)).Get<float>() * .5f);
 	} else {
 		LC_LOG("LuxCore doesn't support the filter type " + name + ", using BLACKMANHARRIS filter instead");
 		*renderConfigProps <<
