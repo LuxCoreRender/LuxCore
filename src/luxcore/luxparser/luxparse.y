@@ -249,12 +249,11 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
 				Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
 	} else if (type == "metal2") {
-		const string colTexName = matProps.Get(Property("fresnel")(5.f)).Get<string>();
 		*sceneProps <<
 					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".type")("fresnelapproxn") <<
-					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".texture")(colTexName) <<
+					GetTexture("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".texture", Property("fresnel")(Spectrum(.5f)), matProps) <<
 					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".type")("fresnelapproxk") <<
-					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".texture")(colTexName);
+					GetTexture("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".texture", Property("fresnel")(Spectrum(.5f)), matProps);
 
 		*sceneProps <<
 				Property(prefix + ".type")("metal2") <<
@@ -1556,10 +1555,16 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".type")("hitpointgrey") <<
 				Property(prefix + ".channel")(((channel != 0) && (channel != 1) && (channel != 2)) ?
 						-1 : channel);
+	} else if (texType == "fresnelcolor") {
+		// This is a trick to be able to reference another texture
+		*sceneProps <<
+				Property(prefix + ".type")("scale") <<
+				Property(prefix + ".texture1")(1.f) <<
+				GetTexture(prefix + ".texture1", Property("Kr")(Spectrum(.5f)), props);
 	} else {
 		LC_LOG("LuxCore supports only imagemap, add, scale, mix, checkerboard, brick, "
-				"fbm, marble, dots, windy, wrinkled, uv, band, hitpointcolor, hitpointalpha "
-				"and hitpointgrey (i.e. not " << texType << ").");
+				"fbm, marble, dots, windy, wrinkled, uv, band, hitpointcolor, hitpointalpha, "
+				"hitpointgrey and fresnelcolor(i.e. not " << texType << ").");
 
 		*sceneProps <<
 				Property(prefix + ".type")("constfloat1") <<
