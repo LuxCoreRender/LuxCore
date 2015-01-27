@@ -1125,7 +1125,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	*sceneProps <<
 			Property("scene.camera.lookat.orig")($2, $3, $4) <<
 			Property("scene.camera.lookat.target")($5, $6, $7) <<
-			Property("scene.camera.lookat.up")($8, $9, $10);
+			Property("scene.camera.up")($8, $9, $10);
 }
 | MATERIAL STRING paramlist
 {
