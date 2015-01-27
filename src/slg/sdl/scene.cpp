@@ -248,30 +248,30 @@ Properties Scene::ToProperties(const string &directoryName) {
 // Methods to build and edit a scene
 //--------------------------------------------------------------------------
 
-void Scene::DefineImageMap(const std::string &name, ImageMap *im) {
+void Scene::DefineImageMap(const string &name, ImageMap *im) {
 	imgMapCache.DefineImageMap(name, im);
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
 
-void Scene::DefineImageMap(const std::string &name, float *cols, const float gamma,
+void Scene::DefineImageMap(const string &name, float *cols, const float gamma,
 	const u_int channels, const u_int width, const u_int height) {
 	DefineImageMap(name, new ImageMap(cols, gamma, channels, width, height));
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
 
-bool Scene::IsImageMapDefined(const std::string &imgMapName) const {
+bool Scene::IsImageMapDefined(const string &imgMapName) const {
 	return imgMapCache.IsImageMapDefined(imgMapName);
 }
 
-void Scene::DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh) {
+void Scene::DefineMesh(const string &meshName, luxrays::ExtTriangleMesh *mesh) {
 	extMeshCache.DefineExtMesh(meshName, mesh);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }
 
-void Scene::DefineMesh(const std::string &meshName,
+void Scene::DefineMesh(const string &meshName,
 	const long plyNbVerts, const long plyNbTris,
 	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 	luxrays::Spectrum *cols, float *alphas) {
@@ -280,15 +280,15 @@ void Scene::DefineMesh(const std::string &meshName,
 	editActions.AddAction(GEOMETRY_EDIT);
 }
 
-bool Scene::IsMeshDefined(const std::string &meshName) const {
+bool Scene::IsMeshDefined(const string &meshName) const {
 	return extMeshCache.IsExtMeshDefined(meshName);
 }
 
-bool Scene::IsTextureDefined(const std::string &texName) const {
+bool Scene::IsTextureDefined(const string &texName) const {
 	return texDefs.IsTextureDefined(texName);
 }
 
-bool Scene::IsMaterialDefined(const std::string &matName) const {
+bool Scene::IsMaterialDefined(const string &matName) const {
 	return matDefs.IsMaterialDefined(matName);
 }
 
@@ -653,7 +653,7 @@ void Scene::RemoveUnusedImageMaps() {
 		m->AddReferencedImageMaps(referencedImgMaps);
 
 	// Get the list of all defined image maps
-	std::vector<const ImageMap *> ims;
+	vector<const ImageMap *> ims;
 	imgMapCache.GetImageMaps(ims);
 	BOOST_FOREACH(const ImageMap *im, ims) {
 		if (referencedImgMaps.count(im) == 0) {
@@ -731,7 +731,7 @@ void Scene::RemoveUnusedMeshes() {
 	}
 }
 
-void Scene::DeleteObject(const std::string &objName) {
+void Scene::DeleteObject(const string &objName) {
 	if (objDefs.IsSceneObjectDefined(objName)) {
 		const SceneObject *oldObj = objDefs.GetSceneObject(objName);
 		const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
@@ -877,16 +877,16 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new MarbleTexture(CreateTextureMapping3D(propName + ".mapping", props), octaves, omega, scale, variation);
 	} else if (texType == "blender_blend") {
-		const std::string progressiontype = props.Get(Property(propName + ".progressiontype")("linear")).Get<string>();
-		const std::string direct = props.Get(Property(propName + ".direction")("horizontal")).Get<string>();
+		const string progressiontype = props.Get(Property(propName + ".progressiontype")("linear")).Get<string>();
+		const string direct = props.Get(Property(propName + ".direction")("horizontal")).Get<string>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
 		return new BlenderBlendTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				progressiontype, (direct=="vertical"), bright, contrast);
 	} else if (texType == "blender_clouds") {
-		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
-		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
@@ -895,8 +895,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisebasis, noisesize, noisedepth,(hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_distortednoise") {
-		const std::string noisedistortion = props.Get(Property(propName + ".noise_distortion")("blender_original")).Get<string>();
-		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const string noisedistortion = props.Get(Property(propName + ".noise_distortion")("blender_original")).Get<string>();
+		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
 		const float distortion = props.Get(Property(propName + ".distortion")(1.f)).Get<float>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
@@ -913,12 +913,12 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new BlenderMagicTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisedepth, turbulence, bright, contrast);
 	} else if (texType == "blender_marble") {
-		const std::string marbletype = props.Get(Property(propName + ".marbletype")("soft")).Get<string>();
-		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
-		const std::string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
+		const string marbletype = props.Get(Property(propName + ".marbletype")("soft")).Get<string>();
+		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
 		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
-		const float noisesize = props.Get(Property(propName + ".noisesize")(0.25f)).Get<float>();
-		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
+		const string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
@@ -926,15 +926,15 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new BlenderMarbleTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				marbletype, noisebasis, noisebasis2, noisesize, turbulence, noisedepth, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_musgrave") {
-		const std::string musgravetype = props.Get(Property(propName + ".musgravetype")("multifractal")).Get<string>();
-		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const string musgravetype = props.Get(Property(propName + ".musgravetype")("multifractal")).Get<string>();
+		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
 		const float dimension = props.Get(Property(propName + ".dimension")(1.f)).Get<float>();
 		const float intensity = props.Get(Property(propName + ".intensity")(1.f)).Get<float>();
 		const float lacunarity = props.Get(Property(propName + ".lacunarity")(1.f)).Get<float>();
 		const float offset = props.Get(Property(propName + ".offset")(1.f)).Get<float>();
 		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 		const float octaves = props.Get(Property(propName + ".octaves")(2.f)).Get<float>();
-		const float noisesize = props.Get(Property(propName + ".noisesize")(0.25f)).Get<float>();
+		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
@@ -947,9 +947,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new BlenderNoiseTexture(noisedepth, bright, contrast);
 	} else if (texType == "blender_stucci") {
-		const std::string woodtype = props.Get(Property(propName + ".stuccitype")("plastic")).Get<string>();
-		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
-		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const string woodtype = props.Get(Property(propName + ".stuccitype")("plastic")).Get<string>();
+		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
 		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
@@ -958,10 +958,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new BlenderStucciTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				woodtype, noisebasis, noisesize, turbulence, (hard=="hard_noise"), bright, contrast);
 	} else if (texType == "blender_wood") {
-		const std::string woodtype = props.Get(Property(propName + ".woodtype")("bands")).Get<string>();
-		const std::string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
-		const std::string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
-		const std::string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
+		const string woodtype = props.Get(Property(propName + ".woodtype")("bands")).Get<string>();
+		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
+		const string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
+		const string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
 		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
@@ -972,7 +972,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "blender_voronoi") {
 		const float intensity = props.Get(Property(propName + ".intensity")(1.f)).Get<float>();
 		const float exponent = props.Get(Property(propName + ".exponent")(2.f)).Get<float>();
-		const std::string distmetric = props.Get(Property(propName + ".distmetric")("actual_distance")).Get<string>();
+		const string distmetric = props.Get(Property(propName + ".distmetric")("actual_distance")).Get<string>();
 		const float fw1 = props.Get(Property(propName + ".w1")(1.f)).Get<float>();
 		const float fw2 = props.Get(Property(propName + ".w2")(0.f)).Get<float>();
 		const float fw3 = props.Get(Property(propName + ".w3")(0.f)).Get<float>();
@@ -1582,7 +1582,7 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 	return new SceneObject(mesh, mat);
 }
 
-ImageMap *Scene::CreateEmissionMap(const std::string &propName, const luxrays::Properties &props) {
+ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Properties &props) {
 	const string imgMapName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 	const string iesName = props.Get(Property(propName + ".iesfile")("")).Get<string>();
 	const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
@@ -1649,7 +1649,7 @@ ImageMap *Scene::CreateEmissionMap(const std::string &propName, const luxrays::P
 	return map;
 }
 
-LightSource *Scene::CreateLightSource(const std::string &lightName, const luxrays::Properties &props) {
+LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Properties &props) {
 	string propName, lightType;
 
 	// The following code is used only for compatibility with the past syntax
