@@ -127,7 +127,7 @@ MaterialDefinitions::~MaterialDefinitions() {
 
 void MaterialDefinitions::DefineMaterial(const string &name, Material *newMat) {
 	if (IsMaterialDefined(name)) {
-		const Material *oldMat = GetMaterial(name);
+		Material *oldMat = GetMaterial(name);
 
 		// Update name/material definition
 		const u_int index = GetMaterialIndex(name);
@@ -1507,8 +1507,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 		}
 	}
 
-	if (localFixedDir.z < 0.f)
-	{
+	if (localFixedDir.z < 0.f) {
 		// Backface, no coating
 		return baseF;
 	}

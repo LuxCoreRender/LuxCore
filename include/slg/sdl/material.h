@@ -164,7 +164,7 @@ public:
 		float *directPdfW, float *reversePdfW) const = 0;
 
 	// Update any reference to oldMat with newMat (mostly used for updating Mix material)
-	virtual void UpdateMaterialReferences(const Material *oldMat, const Material *newMat) { }
+	virtual void UpdateMaterialReferences(Material *oldMat, Material *newMat) { }
 	// Return true if the material is referencing the specified material
 	virtual bool IsReferencing(const Material *mat) const { return (this == mat); }
 	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
