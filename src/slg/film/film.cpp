@@ -1307,15 +1307,30 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			break;
 		}
 		case FilmOutputs::RADIANCE_GROUP: {
-			float *dst = buffer;
-			for (u_int i = 0; i < pixelCount; ++i) {
-				Spectrum c;
-				channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
-				channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
+			fill(buffer, buffer + 3 * pixelCount, 0.f);
 
-				*dst++ = c.c[0];
-				*dst++ = c.c[1];
-				*dst++ = c.c[2];
+			if (index < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()) {
+				float *dst = buffer;
+				for (u_int i = 0; i < pixelCount; ++i) {
+					Spectrum c;
+					channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
+
+					*dst++ += c.c[0];
+					*dst++ += c.c[1];
+					*dst++ += c.c[2];
+				}
+			}
+
+			if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+				float *dst = buffer;
+				for (u_int i = 0; i < pixelCount; ++i) {
+					Spectrum c;
+					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, c.c);
+
+					*dst++ += c.c[0];
+					*dst++ += c.c[1];
+					*dst++ += c.c[2];
+				}
 			}
 			break;
 		}
