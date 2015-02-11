@@ -2765,8 +2765,8 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"}\n";
 				source <<
 						"uint Material_Index" << i << "_GetExteriorVolume(__global Material *material, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
-						"\tif (material->interiorVolumeIndex != NULL_INDEX)\n"
-						"\t	return material->interiorVolumeIndex;\n"
+						"\tif (material->exteriorVolumeIndex != NULL_INDEX)\n"
+						"\t	return material->exteriorVolumeIndex;\n"
 						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
 						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
 						"\tconst float weight1 = 1.f - weight2;\n"
