@@ -114,6 +114,13 @@ void Material::UpdateEmittedFactor() {
 	}
 }
 
+void Material::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
+	if (oldMat == interiorVolume)
+		interiorVolume = (Volume *)newMat;
+	if (oldMat == exteriorVolume)
+		exteriorVolume = (Volume *)oldMat;
+}
+
 //------------------------------------------------------------------------------
 // MaterialDefinitions
 //------------------------------------------------------------------------------
@@ -954,6 +961,9 @@ void MixMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 
 	if (matB == oldMat)
 		matB = newMat;
+	
+	// Update volumes too
+	Material::UpdateMaterialReferences(oldMat, newMat);
 }
 
 bool MixMaterial::IsReferencing(const Material *mat) const {
