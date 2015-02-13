@@ -382,11 +382,12 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 						if (blenderUVs)
 							tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
 						// Add the color
-						if (blenderCols)
+						if (blenderCols) {
 							tmpMeshCols.push_back(Spectrum(
-								blenderCols[faceIndex].b * rgbScale,
-								blenderCols[faceIndex].g * rgbScale,
-								blenderCols[faceIndex].r * rgbScale));
+								blenderCols[faceIndex * 4 + j].b * rgbScale,
+								blenderCols[faceIndex * 4 + j].g * rgbScale,
+								blenderCols[faceIndex * 4 + j].r * rgbScale));
+						}
 
 						// Add the vertex mapping
 						const u_int vertIndex = vertFreeIndex++;
@@ -423,11 +424,12 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					if (blenderUVs)
 						tmpMeshUVs.push_back(UV(blenderUVs[faceIndex].uv[j]));
 					// Add the color
-					if (blenderCols)
+					if (blenderCols) {
 						tmpMeshCols.push_back(Spectrum(
-							blenderCols[faceIndex].b * rgbScale,
-							blenderCols[faceIndex].g * rgbScale,
-							blenderCols[faceIndex].r * rgbScale));
+							blenderCols[faceIndex * 4 + j].b * rgbScale,
+							blenderCols[faceIndex * 4 + j].g * rgbScale,
+							blenderCols[faceIndex * 4 + j].r * rgbScale));
+					}
 
 					vertIndices[j] = vertFreeIndex++;
 				}
