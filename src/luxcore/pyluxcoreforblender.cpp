@@ -423,9 +423,9 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					// Add the color
 					if (blenderCols)
 						tmpMeshCols.push_back(Spectrum(
-							blenderCols[faceIndex].r,
-							blenderCols[faceIndex].g,
-							blenderCols[faceIndex].b));
+							blenderCols[faceIndex].r * rgbScale,
+							blenderCols[faceIndex].g * rgbScale,
+							blenderCols[faceIndex].b * rgbScale));
 
 					vertIndices[j] = vertFreeIndex++;
 				}
