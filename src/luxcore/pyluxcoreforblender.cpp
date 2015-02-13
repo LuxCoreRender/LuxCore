@@ -62,6 +62,8 @@ struct MVert {
 	char flag, bweight;
 };
 
+// At the moment alpha is abused for vertex painting
+// and not used for transparency, note that red and blue are swapped
 struct MCol {
 	u_char a, r, g, b;
 };
@@ -382,9 +384,9 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 						// Add the color
 						if (blenderCols)
 							tmpMeshCols.push_back(Spectrum(
-								blenderCols[faceIndex].r * rgbScale,
+								blenderCols[faceIndex].b * rgbScale,
 								blenderCols[faceIndex].g * rgbScale,
-								blenderCols[faceIndex].b * rgbScale));
+								blenderCols[faceIndex].r * rgbScale));
 
 						// Add the vertex mapping
 						const u_int vertIndex = vertFreeIndex++;
@@ -423,9 +425,9 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					// Add the color
 					if (blenderCols)
 						tmpMeshCols.push_back(Spectrum(
-							blenderCols[faceIndex].r * rgbScale,
+							blenderCols[faceIndex].b * rgbScale,
 							blenderCols[faceIndex].g * rgbScale,
-							blenderCols[faceIndex].b * rgbScale));
+							blenderCols[faceIndex].r * rgbScale));
 
 					vertIndices[j] = vertFreeIndex++;
 				}
