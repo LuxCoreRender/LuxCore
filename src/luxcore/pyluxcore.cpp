@@ -573,8 +573,8 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 
 	// Translate all colors
 	luxrays::Spectrum *colors = NULL;
-	if (!uv.is_none()) {
-		extract<boost::python::list> getColList(uv);
+	if (!cols.is_none()) {
+		extract<boost::python::list> getColList(cols);
 		if (getColList.check()) {
 			const boost::python::list &l = getColList();
 			const boost::python::ssize_t size = len(l);
@@ -584,7 +584,7 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 				extract<boost::python::tuple> getTuple(l[i]);
 				if (getTuple.check()) {
 					const boost::python::tuple &t = getTuple();
-					colors[i] = luxrays::Spectrum(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[1]));
+					colors[i] = luxrays::Spectrum(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
 				} else {
 					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
 					throw runtime_error("Wrong data type in the list of colors of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
