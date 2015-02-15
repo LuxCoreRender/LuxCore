@@ -128,6 +128,7 @@ if(APPLE)
 	target_link_libraries(luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 
 	if(${CMAKE_GENERATOR} MATCHES "Xcode")
+		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_LD_DYLIB_INSTALL_NAME @loader_path/libluxcore.dylib)
 		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_DYLIB_COMPATIBILITY_VERSION 2.0.0)
 		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_DYLIB_CURRENT_VERSION 2.0.0)
 	else()
@@ -144,8 +145,8 @@ IF(OSX_UPDATE_LUXRAYS_REPO)
 	ADD_CUSTOM_COMMAND(
 	TARGET luxcore POST_BUILD
 	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays/luxcore # clean first to assure update
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
-	COMMAND install_name_tool -id @loader_path/libluxcore.dylib ${OSX_DEPENDENCY_ROOT}/lib/LuxRays/libluxcore.dylib
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${OSX_DEPENDENCY_ROOT}/lib/LuxRays # for repo
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE} # for slg4
 	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxcore ${OSX_DEPENDENCY_ROOT}/include/LuxRays
 	)
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
