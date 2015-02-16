@@ -22,8 +22,9 @@
 #include "slg/renderengine.h"
 #include "slg/renderconfig.h"
 #include "slg/sdl/bsdf.h"
-#include "slg/film/imagepipelineplugins.h"
-#include "slg/film/tonemap.h"
+#include "slg/film/film.h"
+#include "slg/film/imagepipeline/plugins/gammacorrection.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)

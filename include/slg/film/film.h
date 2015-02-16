@@ -41,8 +41,8 @@
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/sdl/bsdf.h"
-#include "slg/film/filter.h"
-#include "slg/film/imagepipeline.h"
+#include "slg/film/filters/filter.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/utils/convtest/convtest.h"
 

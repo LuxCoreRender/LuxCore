@@ -22,8 +22,8 @@
 
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
-#include "slg/film/tonemap.h"
-#include "slg/film/imagepipelineplugins.h"
+#include "slg/film/imagepipeline/plugins/gammacorrection.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/engines/biaspathocl/biaspathocl_datatypes.h"
 

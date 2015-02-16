@@ -25,8 +25,8 @@
 #include "luxcore/luxcore.h"
 
 #include "slg/film/film.h"
-#include "slg/film/tonemap.h"
-#include "slg/film/imagepipelineplugins.h"
+#include "slg/film/imagepipeline/plugins/gammacorrection.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
 //#include "slg/sdl/scene.h"
 
 using namespace std;

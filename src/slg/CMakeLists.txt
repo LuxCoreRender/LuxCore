@@ -93,8 +93,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels_micro.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/film/filter_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/film/filter_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/scene_funcs.cl
@@ -181,10 +181,19 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filter.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipelineplugins.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/tonemap.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/contourlines.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gammacorrection.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gaussianblur3x3.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/nop.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/outputswitcher.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/autolinear.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/linear.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/luxlinear.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/reinhard02.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
