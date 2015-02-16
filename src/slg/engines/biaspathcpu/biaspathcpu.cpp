@@ -84,14 +84,22 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	film->Reset();
-	tileRepository = new TileRepository(Max(renderConfig->cfg.Get(Property("tile.size")(32)).Get<u_int>(), 8u));
+
+	u_int tileWidth = 32;
+	u_int tileHeight = 32;
+	if (renderConfig->cfg.IsDefined("tile.size"))
+		tileWidth = tileHeight = Max(renderConfig->cfg.Get(Property("tile.size")(32)).Get<u_int>(), 8u);
+	tileWidth = Max(renderConfig->cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>(), 8u);
+	tileHeight = Max(renderConfig->cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>(), 8u);
+	tileRepository = new TileRepository(tileWidth, tileHeight);
+
 	tileRepository->maxPassCount = renderConfig->GetProperty("batch.haltdebug").Get<u_int>();
 	tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(true)).Get<bool>();
 	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.04f)).Get<float>();
 	tileRepository->convergenceTestThresholdReduction = cfg.Get(Property("tile.multipass.convergencetest.threshold.reduction")(0.f)).Get<float>();
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
 
-	tileRepository->InitTiles(film);
+	tileRepository->InitTiles(*film);
 
 	CPURenderEngine::StartLockLess();
 }
@@ -113,9 +121,9 @@ void PathDepthInfo::IncDepths(const BSDFEvent event) {
 		++specularDepth;
 }
 
-bool PathDepthInfo::IsLastPathVertex(const PathDepthInfo &maxPathDepth, const BSDFEvent event) const {
-	return (depth == maxPathDepth.depth) ||
-			((event & DIFFUSE) && (diffuseDepth == maxPathDepth.diffuseDepth)) ||
-			((event & GLOSSY) && (glossyDepth == maxPathDepth.glossyDepth)) ||
-			((event & SPECULAR) && (specularDepth == maxPathDepth.specularDepth));
+bool PathDepthInfo::IsLastPathVertex(const PathDepthInfo &maxPathDepth, const BSDFEvent possibleEvents) const {
+	return (depth + 1 == maxPathDepth.depth) ||
+			((possibleEvents & DIFFUSE) && (diffuseDepth + 1 == maxPathDepth.diffuseDepth)) ||
+			((possibleEvents & GLOSSY) && (glossyDepth + 1 == maxPathDepth.glossyDepth)) ||
+			((possibleEvents & SPECULAR) && (specularDepth + 1 == maxPathDepth.specularDepth));
 }

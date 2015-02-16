@@ -72,6 +72,7 @@ public:
 	const Volume *GetMaterialExteriorVolume() const { return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent); }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
+	MaterialType GetMaterialType() const { return material->GetType(); }
 
 	luxrays::Spectrum GetPassThroughTransparency() const;
 

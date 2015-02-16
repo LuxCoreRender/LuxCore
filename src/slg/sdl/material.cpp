@@ -43,7 +43,7 @@ void Material::SetEmissionMap(const ImageMap *map) {
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	if (emittedTex) {
 		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
-				emittedTex->GetSpectrumValue(hitPoint);
+				emittedTex->GetSpectrumValue(hitPoint) * hitPoint.color;
 	} else
 		return Spectrum();
 }
@@ -114,6 +114,13 @@ void Material::UpdateEmittedFactor() {
 	}
 }
 
+void Material::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
+	if (oldMat == interiorVolume)
+		interiorVolume = (Volume *)newMat;
+	if (oldMat == exteriorVolume)
+		exteriorVolume = (Volume *)oldMat;
+}
+
 //------------------------------------------------------------------------------
 // MaterialDefinitions
 //------------------------------------------------------------------------------
@@ -127,7 +134,7 @@ MaterialDefinitions::~MaterialDefinitions() {
 
 void MaterialDefinitions::DefineMaterial(const string &name, Material *newMat) {
 	if (IsMaterialDefined(name)) {
-		const Material *oldMat = GetMaterial(name);
+		Material *oldMat = GetMaterial(name);
 
 		// Update name/material definition
 		const u_int index = GetMaterialIndex(name);
@@ -744,8 +751,10 @@ Properties ArchGlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("archglass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+	if (exteriorIor)
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	if (interiorIor)
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Material::ToProperties());
 
 	return props;
@@ -954,6 +963,9 @@ void MixMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 
 	if (matB == oldMat)
 		matB = newMat;
+	
+	// Update volumes too
+	Material::UpdateMaterialReferences(oldMat, newMat);
 }
 
 bool MixMaterial::IsReferencing(const Material *mat) const {
@@ -1507,8 +1519,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 		}
 	}
 
-	if (localFixedDir.z < 0.f)
-	{
+	if (localFixedDir.z < 0.f) {
 		// Backface, no coating
 		return baseF;
 	}
@@ -2189,8 +2200,10 @@ Properties RoughGlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("roughglass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+	if (exteriorIor)
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	if (interiorIor)
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
 	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
 	props.Set(Material::ToProperties());

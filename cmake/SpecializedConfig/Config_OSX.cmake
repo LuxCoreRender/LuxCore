@@ -45,6 +45,9 @@ SET(JPEG_FOUND ON)
 SET(PNG_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/libpng14.a ${SYS_LIBRARIES})
 SET(PNG_INCLUDE_DIR ${OSX_DEPENDENCY_ROOT}/include/png)
 SET(PNG_FOUND ON)
+SET(EMBREE_LIBRARY ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.4.0.dylib)
+SET(EMBREE_INCLUDE_PATH ${OSX_DEPENDENCY_ROOT}/include/embree2)
+SET(EMBREE_FOUND ON)
 
 # use Blender python libs for static compiling !
 SET(PYTHON_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py34_intel64/libbf_python_ext.a ${OSX_DEPENDENCY_ROOT}/lib/BF_pythonlibs/py34_intel64/libbf_python.a)

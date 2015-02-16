@@ -271,7 +271,7 @@ void BSDF_Init(
 	// Get color value
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	float3 hitPointColor;
 #if defined(PARAM_HAS_COLS_BUFFER)
 	if (meshDesc->colsOffset != NULL_INDEX) {
@@ -392,7 +392,7 @@ void BSDF_InitVolume(
 	bsdf->hitPoint.interiorIorTexIndex = iorTexIndex;
 	bsdf->hitPoint.exteriorIorTexIndex = iorTexIndex;
 
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	VSTORE3F(WHITE, bsdf->hitPoint.color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)

@@ -348,7 +348,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		throw std::runtime_error(ss.str());
 	}
 
-	p = new Point[plyNbVerts];
+	p = TriangleMesh::AllocVerticesBuffer(plyNbVerts);
 	if (plyNbNormals == 0)
 		n = NULL;
 	else
@@ -382,36 +382,15 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	ply_close(plyfile);
 
 	// Copy triangle indices vector
-	Triangle *tris = new Triangle[vi.size()];
+	Triangle *tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
 	std::copy(vi.begin(), vi.end(), tris);
 
-	return CreateExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
-}
-
-ExtTriangleMesh *ExtTriangleMesh::CreateExtTriangleMesh(
-	const long plyNbVerts, const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas) {
-	return new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
+	return new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
 }
 
 //------------------------------------------------------------------------------
 // ExtTriangleMesh
 //------------------------------------------------------------------------------
-
-//ExtTriangleMesh::ExtTriangleMesh(ExtTriangleMesh *mesh) {
-//	assert (mesh != NULL);
-//
-//	vertCount = mesh->vertCount;
-//	triCount = mesh->triCount;
-//	vertices = mesh->vertices;
-//	tris = mesh->tris;
-//
-//	normals = mesh->normals;
-//	triNormals = mesh->triNormals;
-//	uvs = mesh->uvs;
-//	cols = mesh->cols;
-//	alphas = mesh->alphas;
-//}
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,

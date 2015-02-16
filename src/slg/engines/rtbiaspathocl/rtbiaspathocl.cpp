@@ -31,6 +31,7 @@ using namespace slg;
 RTBiasPathOCLRenderEngine::RTBiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		BiasPathOCLRenderEngine(rcfg, flm, flmMutex, true) {
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
+	frameStartTime = 0.f;
 	frameTime = 0.f;
 }
 
@@ -64,6 +65,9 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 	BiasPathOCLRenderEngine::StartLockLess();
 
 	tileRepository->enableRenderingDonePrint = false;
+
+	// To synchronize the start of all threads
+	frameBarrier->wait();
 }
 
 void RTBiasPathOCLRenderEngine::StopLockLess() {
@@ -111,21 +115,22 @@ void RTBiasPathOCLRenderEngine::UpdateFilmLockLess() {
 
 void RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	// Threads do the rendering
-	const double t0 = WallClockTime();
 
 	frameBarrier->wait();
 
 	// Display thread does all frame post-processing steps 
 
 	// Re-initialize the tile queue for the next frame
-	tileRepository->InitTiles(film);
+	tileRepository->Restart();
 
 	frameBarrier->wait();
 
 	// Update the statistics
 	UpdateCounters();
 
-	frameTime = WallClockTime() - t0;
+	const double currentTime = WallClockTime();
+	frameTime = currentTime - frameStartTime;
+	frameStartTime = currentTime;
 }
 
 #endif

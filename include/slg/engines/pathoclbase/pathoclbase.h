@@ -58,6 +58,48 @@ public:
 	friend class PathOCLBaseRenderEngine;
 
 protected:
+	class ThreadFilm {
+	public:
+		ThreadFilm(PathOCLBaseRenderThread *renderThread);
+		virtual ~ThreadFilm();
+		
+		void Init(const Film &engineFilm,
+			const u_int threadFilmWidth, const u_int threadFilmHeight);
+		void FreeAllOCLBuffers();
+		u_int SetFilmKernelArgs(cl::Kernel &filmClearKernel, u_int argIndex) const;
+		void ClearFilm(cl::CommandQueue &oclQueue,
+			cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize);
+		void TransferFilm(cl::CommandQueue &oclQueue);
+
+		Film *film;
+
+		// Film buffers
+		std::vector<cl::Buffer *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff;
+		cl::Buffer *channel_ALPHA_Buff;
+		cl::Buffer *channel_DEPTH_Buff;
+		cl::Buffer *channel_POSITION_Buff;
+		cl::Buffer *channel_GEOMETRY_NORMAL_Buff;
+		cl::Buffer *channel_SHADING_NORMAL_Buff;
+		cl::Buffer *channel_MATERIAL_ID_Buff;
+		cl::Buffer *channel_DIRECT_DIFFUSE_Buff;
+		cl::Buffer *channel_DIRECT_GLOSSY_Buff;
+		cl::Buffer *channel_EMISSION_Buff;
+		cl::Buffer *channel_INDIRECT_DIFFUSE_Buff;
+		cl::Buffer *channel_INDIRECT_GLOSSY_Buff;
+		cl::Buffer *channel_INDIRECT_SPECULAR_Buff;
+		cl::Buffer *channel_MATERIAL_ID_MASK_Buff;
+		cl::Buffer *channel_DIRECT_SHADOW_MASK_Buff;
+		cl::Buffer *channel_INDIRECT_SHADOW_MASK_Buff;
+		cl::Buffer *channel_UV_Buff;
+		cl::Buffer *channel_RAYCOUNT_Buff;
+		cl::Buffer *channel_BY_MATERIAL_ID_Buff;
+		cl::Buffer *channel_IRRADIANCE_Buff;
+
+	private:
+		PathOCLBaseRenderThread *renderThread;
+	};
+
+	// Implementation specific methods
 	virtual void RenderThreadImpl() = 0;
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) = 0;
 	virtual void AdditionalInit() = 0;
@@ -74,6 +116,12 @@ protected:
 	void StartRenderThread();
 	void StopRenderThread();
 
+	void IncThreadFilms();
+	void ClearThreadFilms(cl::CommandQueue &oclQueue);
+	void TransferThreadFilms(cl::CommandQueue &oclQueue);
+	void FreeThreadFilmsOCLBuffers();
+	void FreeThreadFilms();
+
 	void InitRender();
 
 	void InitFilm();
@@ -88,9 +136,6 @@ protected:
 	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
 	void SetKernelArgs();
 
-	u_int SetFilmKernelArgs(cl::Kernel &kernel, u_int argIndex);
-	void TransferFilm(cl::CommandQueue &oclQueue);
-
 	// OpenCL structure size
 	size_t GetOpenCLHitPointSize() const;
 	size_t GetOpenCLBSDFSize() const;
@@ -101,27 +146,6 @@ protected:
 	// OpenCL variables
 	cl::Kernel *filmClearKernel;
 	size_t filmClearWorkGroupSize;
-
-	// Film buffers
-	std::vector<cl::Buffer *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff;
-	cl::Buffer *channel_ALPHA_Buff;
-	cl::Buffer *channel_DEPTH_Buff;
-	cl::Buffer *channel_POSITION_Buff;
-	cl::Buffer *channel_GEOMETRY_NORMAL_Buff;
-	cl::Buffer *channel_SHADING_NORMAL_Buff;
-	cl::Buffer *channel_MATERIAL_ID_Buff;
-	cl::Buffer *channel_DIRECT_DIFFUSE_Buff;
-	cl::Buffer *channel_DIRECT_GLOSSY_Buff;
-	cl::Buffer *channel_EMISSION_Buff;
-	cl::Buffer *channel_INDIRECT_DIFFUSE_Buff;
-	cl::Buffer *channel_INDIRECT_GLOSSY_Buff;
-	cl::Buffer *channel_INDIRECT_SPECULAR_Buff;
-	cl::Buffer *channel_MATERIAL_ID_MASK_Buff;
-	cl::Buffer *channel_DIRECT_SHADOW_MASK_Buff;
-	cl::Buffer *channel_INDIRECT_SHADOW_MASK_Buff;
-	cl::Buffer *channel_UV_Buff;
-	cl::Buffer *channel_RAYCOUNT_Buff;
-	cl::Buffer *channel_BY_MATERIAL_ID_Buff;
 
 	// Scene buffers
 	cl::Buffer *materialsBuff;
@@ -152,7 +176,7 @@ protected:
 
 	u_int threadIndex;
 	PathOCLBaseRenderEngine *renderEngine;
-	Film *threadFilm;
+	std::vector<ThreadFilm *> threadFilms;
 
 	bool started, editMode;
 };

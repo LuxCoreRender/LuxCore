@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/foreach.hpp>
+#include <boost/serialization/export.hpp>
 
 #include "slg/film/imagepipelineplugins.h"
 

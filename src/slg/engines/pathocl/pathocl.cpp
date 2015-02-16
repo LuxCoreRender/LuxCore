@@ -79,10 +79,29 @@ void PathOCLRenderEngine::StartLockLess() {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
 	} else {
-		taskCount = cfg.Get(Property("opencl.task.count")(65536)).Get<u_int>();
+		const u_int defaultTaskCount = 1024u * 1024u;
+
+		// Compute the cap to the number of tasks
+		u_int taskCap = defaultTaskCount;
+		BOOST_FOREACH(DeviceDescription *devDescs, selectedDeviceDescs) {
+			if (devDescs->GetMaxMemoryAllocSize() >= 1024u * 1024u * 1024u)
+				taskCap = min(taskCap, 1024u * 1024u);
+			else if (devDescs->GetMaxMemoryAllocSize() >= 512u * 1024u * 1024u)
+				taskCap = min(taskCap, 512u * 1024u);
+			else if (devDescs->GetMaxMemoryAllocSize() >= 256u * 1024u * 1024u)
+				taskCap = min(taskCap, 256u * 1024u);
+			else if (devDescs->GetMaxMemoryAllocSize() >= 128u * 1024u * 1024u)
+				taskCap = min(taskCap, 128u * 1024u);
+			else
+				taskCap = min(taskCap, 64u * 1024u);
+		}
+
+		taskCount = cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<u_int>();
+		taskCount = min(taskCount, taskCap);
+
 		// I don't know yet the workgroup size of each device so I can not
 		// round up task count to be a multiple of workgroups size of all devices
-		// used. rounding to 2048 is a simple trick based on the assumption that
+		// used. Rounding to 2048 is a simple trick based on the assumption that
 		// workgroup size is a power of 2 and <= 8192.
 		taskCount = RoundUp<u_int>(taskCount, 8192);
 		SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
@@ -95,6 +114,10 @@ void PathOCLRenderEngine::StartLockLess() {
 	maxPathDepth = Max(1, cfg.Get(Property("path.maxdepth")(5)).Get<int>());
 	rrDepth = Max(1, cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>());
 	rrImportanceCap = Clamp(cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>(), 0.f, 1.f);
+
+	// Clamping settings
+	radianceClampMaxValue = Max(0.f, cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>());
+	pdfClampValue = Max(0.f, cfg.Get(Property("path.clamping.pdf.value")(0.f)).Get<float>());
 
 	//--------------------------------------------------------------------------
 	// Sampler
@@ -164,6 +187,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
 
 	usePixelAtomics = cfg.Get(Property("path.pixelatomics.enable")(false)).Get<bool>();
+	useMicroKernels = cfg.Get(Property("path.microkernels.enable")(true)).Get<bool>();
 
 	PathOCLBaseRenderEngine::StartLockLess();
 }
@@ -174,7 +198,7 @@ void PathOCLRenderEngine::UpdateFilmLockLess() {
 	film->Reset();
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
         if (renderThreads[i])
-            film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilm));
+            film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilms[0]->film));
     }
 }
 

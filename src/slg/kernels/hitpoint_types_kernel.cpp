@@ -33,7 +33,7 @@ std::string KernelSource_hitpoint_types =
 "	Normal geometryN;\n"
 "	Normal shadeN;\n"
 "\n"
-"#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)\n"
+"#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)\n"
 "	Spectrum color;\n"
 "#endif\n"
 "#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)\n"

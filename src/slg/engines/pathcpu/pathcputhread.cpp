@@ -85,8 +85,21 @@ void PathCPURenderThread::DirectLightSampling(
 					const float weight = (!sampleResult->lastPathVertex &&  (light->IsEnvironmental() || light->IsIntersectable())) ? 
 						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-					const Spectrum radiance = (weight * factor) * pathThroughput * connectionThroughput * lightRadiance * bsdfEval;
-					sampleResult->AddDirectLight(light->GetID(), event, radiance, 1.f);
+					const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
+
+					sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
+
+					// The first path vertex is not handled by AddDirectLight(). This is valid
+					// for irradiance AOV only if it is not a SPECULAR material.
+					//
+					// Note: irradiance samples the light sources only here (i.e. no
+					// direct hit, no MIS, it would be useless)
+					//
+					// Note: RR is ignored here because it can not happen on first path vertex
+					if ((sampleResult->firstPathVertex) && !(bsdf.GetEventTypes() & SPECULAR))
+						sampleResult->irradiance =
+								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)) *
+								factor) * connectionThroughput * lightRadiance;
 				}
 			}
 		}
@@ -114,8 +127,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 		} else
 			weight = 1.f;
 
-		const Spectrum radiance = weight * pathThroughput * emittedRadiance;
-		sampleResult->AddEmission(bsdf.GetLightID(), radiance);
+		sampleResult->AddEmission(bsdf.GetLightID(), pathThroughput, weight* emittedRadiance);
 	}
 }
 
@@ -136,8 +148,7 @@ void PathCPURenderThread::DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent,
 			} else
 				weight = 1.f;
 
-			const Spectrum radiance = weight * pathThroughput * envRadiance;
-			sampleResult->AddEmission(envLight->GetID(), radiance);
+			sampleResult->AddEmission(envLight->GetID(), pathThroughput, weight * envRadiance);
 		}
 	}
 }
@@ -178,7 +189,7 @@ void PathCPURenderThread::RenderFunc() {
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT,
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE,
 		engine->film->GetRadianceGroupCount());
 
 	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
@@ -196,6 +207,7 @@ void PathCPURenderThread::RenderFunc() {
 		sampleResult.indirectSpecular = Spectrum();
 		sampleResult.directShadowMask = 1.f;
 		sampleResult.indirectShadowMask = 1.f;
+		sampleResult.irradiance = Spectrum();
 
 		// To keep track of the number of rays traced
 		const double deviceRayCount = device->GetTotalRaysCount();
@@ -223,7 +235,7 @@ void PathCPURenderThread::RenderFunc() {
 			const bool hit = scene->Intersect(device, false,
 					&volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
-					&sampleResult);
+					&pathThroughput, &sampleResult);
 			pathThroughput *= connectionThroughput;
 			// Note: pass-through check is done inside Scene::Intersect()
 
@@ -310,26 +322,43 @@ void PathCPURenderThread::RenderFunc() {
 			if (sampleResult.firstPathVertex)
 				sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
+			float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
 			if ((depth >= engine->rrDepth) && !(lastBSDFEvent & SPECULAR)) {
 				// Russian Roulette
-				const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-				if (sampler->GetSample(sampleOffset + 8) < prob)
-					lastPdfW *= prob;
+				if (sampler->GetSample(sampleOffset + 8) < rrProb)
+					lastPdfW *= rrProb;
 				else
 					break;
-			}
+			} else
+				rrProb = 1.f;
 
-			pathThroughput *= bsdfSample;
+			const float pdfFactor = min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+			const Spectrum throughputFactor = bsdfSample * pdfFactor;
+			pathThroughput *= throughputFactor;
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
+
+			// This is valid for irradiance AOV only if it is not a SPECULAR material and
+			// first path vertex. Set or update sampleResult.irradiancePathThroughput
+			if (sampleResult.firstPathVertex) {
+				if (!(bsdf.GetEventTypes() & SPECULAR))
+					sampleResult.irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) / rrProb;
+				else
+					sampleResult.irradiancePathThroughput = Spectrum();
+			} else
+				sampleResult.irradiancePathThroughput *= throughputFactor;
 
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
-
+			
 			eyeRay.Update(bsdf.hitPoint.p, sampledDir);
 			++depth;
 		}
 
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+		// Radiance clamping
+		if (engine->radianceClampMaxValue > 0.f)
+			sampleResult.ClampRadiance(engine->radianceClampMaxValue);
 
 		sampler->NextSample(sampleResults);
 
