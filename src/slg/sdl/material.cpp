@@ -751,8 +751,10 @@ Properties ArchGlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("archglass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+	if (exteriorIor)
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	if (interiorIor)
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Material::ToProperties());
 
 	return props;
@@ -2198,8 +2200,10 @@ Properties RoughGlassMaterial::ToProperties() const  {
 	props.Set(Property("scene.materials." + name + ".type")("roughglass"));
 	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
 	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+	if (exteriorIor)
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+	if (interiorIor)
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
 	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
 	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
 	props.Set(Material::ToProperties());
