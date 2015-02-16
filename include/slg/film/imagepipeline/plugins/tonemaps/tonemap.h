@@ -16,48 +16,56 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/foreach.hpp>
+#ifndef _SLG_TONEMAP_H
+#define	_SLG_TONEMAP_H
+
+#include <cmath>
+#include <string>
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 
-#include "slg/film/imagepipelineplugins.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 
-using namespace luxrays;
-using namespace slg;
+namespace slg {
 
 //------------------------------------------------------------------------------
-// ImagePipeline
+// Tone mapping
 //------------------------------------------------------------------------------
 
-ImagePipeline::~ImagePipeline() {
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline)
-		delete plugin;
-}
+typedef enum {
+	TONEMAP_LINEAR, TONEMAP_REINHARD02, TONEMAP_AUTOLINEAR, TONEMAP_LUXLINEAR
+} ToneMapType;
 
-ImagePipeline *ImagePipeline::Copy() const {
-	ImagePipeline *ip = new ImagePipeline();
+extern std::string ToneMapType2String(const ToneMapType type);
+extern ToneMapType String2ToneMapType(const std::string &type);
 
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
-		ip->AddPlugin(plugin->Copy());
+class Film;
+
+class ToneMap : public ImagePipelinePlugin {
+public:
+	ToneMap() {}
+	virtual ~ToneMap() {}
+
+	virtual ToneMapType GetType() const = 0;
+	virtual ToneMap *Copy() const = 0;
+
+	virtual void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const = 0;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & boost::serialization::base_object<ImagePipelinePlugin>(*this);
 	}
+};
 
-	return ip;
 }
 
-void ImagePipeline::AddPlugin(ImagePipelinePlugin *plugin) {
-	pipeline.push_back(plugin);
-}
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ToneMap)
 
-void ImagePipeline::Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const {
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
-		plugin->Apply(film, pixels, pixelsMask);
-	}
-}
+BOOST_CLASS_VERSION(slg::ToneMap, 1)
 
-const ImagePipelinePlugin *ImagePipeline::GetPlugin(const std::type_info &type) const {
-	BOOST_FOREACH(const ImagePipelinePlugin *plugin, pipeline) {
-		if (typeid(*plugin) == type)
-			return plugin;
-	}
-
-	return NULL;
-}
+#endif	/* _SLG_TONEMAP_H */

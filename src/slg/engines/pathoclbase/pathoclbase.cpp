@@ -37,7 +37,7 @@
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
-#include "slg/film/filter.h"
+#include "slg/film/filters/filter.h"
 #include "slg/sdl/scene.h"
 
 using namespace luxrays;

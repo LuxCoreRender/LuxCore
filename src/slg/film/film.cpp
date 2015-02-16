@@ -27,10 +27,11 @@
 #include <OpenImageIO/imagebuf.h>
 OIIO_NAMESPACE_USING
 
-#include "slg/film/film.h"
 #include "luxrays/core/geometry/point.h"
-#include "slg/editaction.h"
 #include "luxrays/utils/properties.h"
+#include "slg/film/film.h"
+#include "slg/film/filters/gaussian.h"
+#include "slg/editaction.h"
 
 using namespace std;
 using namespace luxrays;

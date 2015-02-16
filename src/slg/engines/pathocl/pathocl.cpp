@@ -37,7 +37,11 @@
 #include "slg/engines/pathocl/pathocl.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
-#include "slg/film/filter.h"
+#include "slg/film/filters/box.h"
+#include "slg/film/filters/gaussian.h"
+#include "slg/film/filters/mitchell.h"
+#include "slg/film/filters/mitchellss.h"
+#include "slg/film/filters/blackmanharris.h"
 #include "slg/sdl/scene.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 

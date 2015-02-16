@@ -24,11 +24,30 @@
 
 #include "slg/renderconfig.h"
 #include "slg/renderengine.h"
+#include "slg/film/film.h"
+
 #include "slg/samplers/random.h"
 #include "slg/samplers/sobol.h"
 #include "slg/samplers/metropolis.h"
-#include "slg/film/tonemap.h"
-#include "slg/film/imagepipelineplugins.h"
+
+#include "slg/film/filters/box.h"
+#include "slg/film/filters/gaussian.h"
+#include "slg/film/filters/mitchell.h"
+#include "slg/film/filters/mitchellss.h"
+#include "slg/film/filters/blackmanharris.h"
+
+#include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/luxlinear.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/reinhard02.h"
+
+#include "slg/film/imagepipeline/plugins/cameraresponse.h"
+#include "slg/film/imagepipeline/plugins/contourlines.h"
+#include "slg/film/imagepipeline/plugins/gammacorrection.h"
+#include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
+#include "slg/film/imagepipeline/plugins/nop.h"
+#include "slg/film/imagepipeline/plugins/outputswitcher.h"
+
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 #include "slg/engines/lightcpu/lightcpu.h"

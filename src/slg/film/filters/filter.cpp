@@ -16,7 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/film/filter.h"
+#include "slg/film/filters/filter.h"
+#include "slg/film/filters/box.h"
+#include "slg/film/filters/gaussian.h"
+#include "slg/film/filters/mitchell.h"
+#include "slg/film/filters/mitchellss.h"
+#include "slg/film/filters/blackmanharris.h"
 
 using namespace luxrays;
 using namespace slg;
