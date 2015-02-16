@@ -95,8 +95,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filter_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sampler/sampler_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sampler/sampler_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/scene_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/mapping_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/mapping_funcs.cl
@@ -188,8 +188,11 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sampler/sampler.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sampler/sobol.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobol.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/samplers/soboldata.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/extmeshcache.cpp

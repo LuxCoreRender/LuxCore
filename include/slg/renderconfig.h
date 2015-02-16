@@ -24,7 +24,7 @@
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
-#include "slg/sampler/sampler.h"
+#include "slg/samplers/sampler.h"
 #include "slg/sdl/scene.h"
 
 namespace slg {

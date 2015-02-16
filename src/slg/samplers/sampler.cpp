@@ -16,50 +16,39 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILESAVER_H
-#define	_SLG_FILESAVER_H
+#include <boost/lexical_cast.hpp>
 
-#include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "luxrays/core/color/color.h"
 #include "slg/samplers/sampler.h"
-#include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
 
-namespace slg {
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
-// Scene FileSaver render engine
+// Sampler
 //------------------------------------------------------------------------------
 
-class FileSaverRenderEngine : public RenderEngine {
-public:
-	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+SamplerType Sampler::String2SamplerType(const std::string &type) {
+	if ((type.compare("INLINED_RANDOM") == 0) ||
+			(type.compare("RANDOM") == 0))
+		return RANDOM;
+	if (type.compare("METROPOLIS") == 0)
+		return METROPOLIS;
+	if (type.compare("SOBOL") == 0)
+		return SOBOL;
 
-	RenderEngineType GetEngineType() const { return FILESAVER; }
-
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
-	virtual bool HasDone() const { return true; }
-	virtual void WaitForDone() const { }
-
-protected:
-	virtual void StartLockLess();
-	virtual void StopLockLess() { }
-
-	virtual void BeginSceneEditLockLess() { }
-	virtual void EndSceneEditLockLess(const EditActionList &editActions) { SaveScene(); }
-
-	virtual void UpdateFilmLockLess() { }
-	virtual void UpdateCounters() { }
-
-private:
-	void SaveScene();
-
-	std::string directoryName, renderEngineType;
-};
-
+	throw std::runtime_error("Unknown sampler type: " + type);
 }
 
-#endif	/* _SLG_FILESAVER_H */
+const std::string Sampler::SamplerType2String(const SamplerType type) {
+	switch (type) {
+		case RANDOM:
+			return "RANDOM";
+		case METROPOLIS:
+			return "METROPOLIS";
+		case SOBOL:
+			return "SOBOL";
+		default:
+			throw std::runtime_error("Unknown sampler type: " + boost::lexical_cast<std::string>(type));
+	}
+}

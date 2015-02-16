@@ -16,50 +16,35 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILESAVER_H
-#define	_SLG_FILESAVER_H
+#ifndef _SLG_RANDOM_SAMPLER_H
+#define	_SLG_RANDOM_SAMPLER_H
 
+#include <string>
+#include <vector>
+
+#include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/samplers/sampler.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Scene FileSaver render engine
+// Random sampler
 //------------------------------------------------------------------------------
 
-class FileSaverRenderEngine : public RenderEngine {
+class RandomSampler : public Sampler {
 public:
-	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm) { }
+	virtual ~RandomSampler() { }
 
-	RenderEngineType GetEngineType() const { return FILESAVER; }
+	virtual SamplerType GetType() const { return RANDOM; }
+	virtual void RequestSamples(const u_int size) { }
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
-	virtual bool HasDone() const { return true; }
-	virtual void WaitForDone() const { }
-
-protected:
-	virtual void StartLockLess();
-	virtual void StopLockLess() { }
-
-	virtual void BeginSceneEditLockLess() { }
-	virtual void EndSceneEditLockLess(const EditActionList &editActions) { SaveScene(); }
-
-	virtual void UpdateFilmLockLess() { }
-	virtual void UpdateCounters() { }
-
-private:
-	void SaveScene();
-
-	std::string directoryName, renderEngineType;
+	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 };
 
 }
 
-#endif	/* _SLG_FILESAVER_H */
+#endif	/* _SLG_RANDOM_SAMPLER_H */

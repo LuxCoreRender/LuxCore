@@ -19,10 +19,9 @@
 #ifndef _SLG_LIGHTCPU_H
 #define	_SLG_LIGHTCPU_H
 
-#include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
 #include "slg/renderengine.h"
-#include "slg/sampler/sampler.h"
+#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/sdl/bsdf.h"
 

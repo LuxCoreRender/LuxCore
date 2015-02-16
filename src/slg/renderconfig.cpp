@@ -24,6 +24,9 @@
 
 #include "slg/renderconfig.h"
 #include "slg/renderengine.h"
+#include "slg/samplers/random.h"
+#include "slg/samplers/sobol.h"
+#include "slg/samplers/metropolis.h"
 #include "slg/film/tonemap.h"
 #include "slg/film/imagepipelineplugins.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"

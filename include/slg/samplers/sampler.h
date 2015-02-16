@@ -16,50 +16,61 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILESAVER_H
-#define	_SLG_FILESAVER_H
+#ifndef _SLG_SAMPLER_H
+#define	_SLG_SAMPLER_H
 
+#include <string>
+#include <vector>
+
+#include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Scene FileSaver render engine
+// OpenCL data types
 //------------------------------------------------------------------------------
 
-class FileSaverRenderEngine : public RenderEngine {
+namespace ocl {
+#include "slg/samplers/sampler_types.cl"
+}
+
+//------------------------------------------------------------------------------
+// Sampler
+//------------------------------------------------------------------------------
+
+typedef enum {
+	RANDOM = 0,
+	METROPOLIS = 1,
+	SOBOL = 2
+} SamplerType;
+
+class Sampler {
 public:
-	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	Sampler(luxrays::RandomGenerator *rnd, Film *flm) : rndGen(rnd), film(flm) { }
+	virtual ~Sampler() { }
 
-	RenderEngineType GetEngineType() const { return FILESAVER; }
+	virtual SamplerType GetType() const = 0;
+	virtual void RequestSamples(const u_int size) = 0;
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
+	// index 0 and 1 are always image X and image Y
+	virtual float GetSample(const u_int index) = 0;
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
 
-	virtual bool HasDone() const { return true; }
-	virtual void WaitForDone() const { }
+	static SamplerType String2SamplerType(const std::string &type);
+	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
-	virtual void StartLockLess();
-	virtual void StopLockLess() { }
+	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const {
+		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
+			film->SplatSample(*sr, weight);
+	}
 
-	virtual void BeginSceneEditLockLess() { }
-	virtual void EndSceneEditLockLess(const EditActionList &editActions) { SaveScene(); }
-
-	virtual void UpdateFilmLockLess() { }
-	virtual void UpdateCounters() { }
-
-private:
-	void SaveScene();
-
-	std::string directoryName, renderEngineType;
+	luxrays::RandomGenerator *rndGen;
+	Film *film;
 };
 
 }
 
-#endif	/* _SLG_FILESAVER_H */
+#endif	/* _SLG_SAMPLER_H */
