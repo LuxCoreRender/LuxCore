@@ -30,6 +30,7 @@
 #include "slg/renderconfig.h"
 #include "slg/engines/pathocl/pathocl.h"
 #include "slg/engines/pathocl/pathocl_datatypes.h"
+#include "slg/samplers/sobol.h"
 
 using namespace std;
 using namespace luxrays;

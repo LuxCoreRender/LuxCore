@@ -16,50 +16,20 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILESAVER_H
-#define	_SLG_FILESAVER_H
+#include <boost/lexical_cast.hpp>
 
-#include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "luxrays/core/color/color.h"
 #include "slg/samplers/sampler.h"
-#include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/samplers/random.h"
 
-namespace slg {
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
-// Scene FileSaver render engine
+// Random sampler
 //------------------------------------------------------------------------------
 
-class FileSaverRenderEngine : public RenderEngine {
-public:
-	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-
-	RenderEngineType GetEngineType() const { return FILESAVER; }
-
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
-	virtual bool HasDone() const { return true; }
-	virtual void WaitForDone() const { }
-
-protected:
-	virtual void StartLockLess();
-	virtual void StopLockLess() { }
-
-	virtual void BeginSceneEditLockLess() { }
-	virtual void EndSceneEditLockLess(const EditActionList &editActions) { SaveScene(); }
-
-	virtual void UpdateFilmLockLess() { }
-	virtual void UpdateCounters() { }
-
-private:
-	void SaveScene();
-
-	std::string directoryName, renderEngineType;
-};
-
+void RandomSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+	film->AddSampleCount(1.0);
+	AddSamplesToFilm(sampleResults);
 }
-
-#endif	/* _SLG_FILESAVER_H */

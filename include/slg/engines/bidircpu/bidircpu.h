@@ -22,8 +22,7 @@
 #include "slg/slg.h"
 #include "slg/renderengine.h"
 
-#include "luxrays/core/randomgen.h"
-#include "slg/sampler/sampler.h"
+#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/volume.h"

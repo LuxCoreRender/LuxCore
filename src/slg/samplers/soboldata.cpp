@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/sampler/sampler.h"
+#include "slg/samplers/sobol.h"
 
 using namespace luxrays;
 using namespace slg;

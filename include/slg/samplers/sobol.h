@@ -16,50 +16,51 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILESAVER_H
-#define	_SLG_FILESAVER_H
+#ifndef _SLG_SOBOL_SAMPLER_H
+#define	_SLG_SOBOL_SAMPLER_H
 
+#include <string>
+#include <vector>
+
+#include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/samplers/sampler.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Scene FileSaver render engine
+// Sobol sampler
+//
+// This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
-class FileSaverRenderEngine : public RenderEngine {
+#define SOBOL_STARTOFFSET 32
+
+extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions);
+
+class SobolSampler : public Sampler {
 public:
-	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm),
+			directions(NULL), rng0(rnd->floatValue()), rng1(rnd->floatValue()),
+			pass(SOBOL_STARTOFFSET) { }
+	virtual ~SobolSampler() { delete directions; }
 
-	RenderEngineType GetEngineType() const { return FILESAVER; }
+	virtual SamplerType GetType() const { return SOBOL; }
+	virtual void RequestSamples(const u_int size);
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
-	virtual bool HasDone() const { return true; }
-	virtual void WaitForDone() const { }
-
-protected:
-	virtual void StartLockLess();
-	virtual void StopLockLess() { }
-
-	virtual void BeginSceneEditLockLess() { }
-	virtual void EndSceneEditLockLess(const EditActionList &editActions) { SaveScene(); }
-
-	virtual void UpdateFilmLockLess() { }
-	virtual void UpdateCounters() { }
+	virtual float GetSample(const u_int index);
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 private:
-	void SaveScene();
+	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
-	std::string directoryName, renderEngineType;
+	u_int *directions;
+
+	float rng0, rng1;
+	u_int pass;
 };
 
 }
 
-#endif	/* _SLG_FILESAVER_H */
+#endif	/* _SLG_SOBOL_SAMPLER_H */

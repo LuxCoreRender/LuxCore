@@ -16,50 +16,63 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILESAVER_H
-#define	_SLG_FILESAVER_H
+#ifndef _SLG_METROPOLIS_SAMPLER_H
+#define	_SLG_METROPOLIS_SAMPLER_H
 
+#include <string>
+#include <vector>
+
+#include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
-#include "slg/renderengine.h"
-#include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/samplers/sampler.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Scene FileSaver render engine
+// Metropolis sampler
 //------------------------------------------------------------------------------
 
-class FileSaverRenderEngine : public RenderEngine {
+class MetropolisSampler : public Sampler {
 public:
-	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film, const u_int maxRej,
+			const float pLarge, const float imgRange,
+			double *sharedTotalLuminance, double *sharedSampleCount);
+	virtual ~MetropolisSampler();
 
-	RenderEngineType GetEngineType() const { return FILESAVER; }
+	virtual SamplerType GetType() const { return METROPOLIS; }
+	virtual void RequestSamples(const u_int size);
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
-	virtual bool HasDone() const { return true; }
-	virtual void WaitForDone() const { }
-
-protected:
-	virtual void StartLockLess();
-	virtual void StopLockLess() { }
-
-	virtual void BeginSceneEditLockLess() { }
-	virtual void EndSceneEditLockLess(const EditActionList &editActions) { SaveScene(); }
-
-	virtual void UpdateFilmLockLess() { }
-	virtual void UpdateCounters() { }
+	virtual float GetSample(const u_int index);
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 private:
-	void SaveScene();
+	u_int maxRejects;
+	float largeMutationProbability, imageMutationRange;
 
-	std::string directoryName, renderEngineType;
+	// I'm storing totalLuminance and sampleCount on external (shared) variables
+	// in order to have far more accurate estimation in the image mean intensity
+	// computation
+	double *sharedTotalLuminance, *sharedSampleCount;
+
+	u_int sampleSize;
+	float *samples;
+	u_int *sampleStamps;
+
+	float weight;
+	u_int consecRejects;
+	u_int stamp;
+
+	// Data saved for the current sample
+	u_int currentStamp;
+	double currentLuminance;
+	float *currentSamples;
+	u_int *currentSampleStamps;
+	std::vector<SampleResult> currentSampleResult;
+
+	bool isLargeMutation, cooldown;
 };
 
 }
 
-#endif	/* _SLG_FILESAVER_H */
+#endif	/* _SLG_METROPOLIS_SAMPLER_H */

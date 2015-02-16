@@ -16,50 +16,52 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILESAVER_H
-#define	_SLG_FILESAVER_H
+#include <boost/lexical_cast.hpp>
 
-#include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "luxrays/core/color/color.h"
 #include "slg/samplers/sampler.h"
-#include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/samplers/sobol.h"
 
-namespace slg {
+using namespace luxrays;
+using namespace slg;
 
 //------------------------------------------------------------------------------
-// Scene FileSaver render engine
+// Sobol sampler
+//
+// This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
-class FileSaverRenderEngine : public RenderEngine {
-public:
-	FileSaverRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-
-	RenderEngineType GetEngineType() const { return FILESAVER; }
-
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
-	virtual bool HasDone() const { return true; }
-	virtual void WaitForDone() const { }
-
-protected:
-	virtual void StartLockLess();
-	virtual void StopLockLess() { }
-
-	virtual void BeginSceneEditLockLess() { }
-	virtual void EndSceneEditLockLess(const EditActionList &editActions) { SaveScene(); }
-
-	virtual void UpdateFilmLockLess() { }
-	virtual void UpdateCounters() { }
-
-private:
-	void SaveScene();
-
-	std::string directoryName, renderEngineType;
-};
-
+void SobolSampler::RequestSamples(const u_int size) {
+	directions = new u_int[size * SOBOL_BITS];
+	SobolGenerateDirectionVectors(directions, size);
 }
 
-#endif	/* _SLG_FILESAVER_H */
+u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) const {
+	const u_int offset = dimension * SOBOL_BITS;
+	u_int result = 0;
+	u_int i = index;
+
+	for (u_int j = 0; i; i >>= 1, j++) {
+		if (i & 1)
+			result ^= directions[offset + j];
+	}
+
+	return result;
+}
+
+float SobolSampler::GetSample(const u_int index) {
+	const u_int result = SobolDimension(pass, index);
+	const float r = result * (1.f / 0xffffffffu);
+
+	// Cranley-Patterson rotation to reduce visible regular patterns
+	const float shift = (index & 1) ? rng0 : rng1;
+
+	return r + shift - floorf(r + shift);
+}
+
+void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+	film->AddSampleCount(1.0);
+	AddSamplesToFilm(sampleResults);
+
+	++pass;
+}

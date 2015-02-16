@@ -32,11 +32,12 @@
 #include <boost/unordered_map.hpp>
 #include <boost/unordered_set.hpp>
 
+#include "luxrays/core/randomgen.h"
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
 #include "slg/editaction.h"
-#include "slg/sampler/sampler.h"
+#include "slg/samplers/sampler.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/scene.h"
 #include "slg/sdl/blender_texture.h"
