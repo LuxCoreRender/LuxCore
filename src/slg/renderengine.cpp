@@ -22,6 +22,8 @@
 #include "slg/renderengine.h"
 #include "slg/renderconfig.h"
 #include "slg/sdl/bsdf.h"
+#include "slg/film/imagepipelineplugins.h"
+#include "slg/film/tonemap.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -272,7 +274,7 @@ const string RenderEngine::RenderEngineType2String(const RenderEngineType type) 
 		case RTBIASPATHOCL:
 			return "RTBIASPATHOCL";
 		default:
-			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<std::string>(type));
+			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<string>(type));
 	}
 }
 
@@ -504,157 +506,148 @@ void CPUNoTileRenderEngine::UpdateCounters() {
 }
 
 //------------------------------------------------------------------------------
-// TileRepository
+// Tile
 //------------------------------------------------------------------------------
 
-TileRepository::TileRepository(const u_int size) {
-	tileSize = size;
-
-	maxPassCount = 0;
-	enableMultipassRendering = false;
-	convergenceTestThreshold = .04f;
-	convergenceTestThresholdReduction = 0.f;
-	enableRenderingDonePrint = true;
-
-	done = false;
-	evenPassFilm = NULL;
-	pass = 0;
-}
-
-TileRepository::~TileRepository() {
-	Clear();
-}
-
-void TileRepository::Clear() {
-	// Free all tiles in the 3 lists
-
-	BOOST_FOREACH(Tile *tile, todoTiles) {
-		delete tile;
-	}
-	todoTiles.clear();
-
-	BOOST_FOREACH(Tile *tile, pendingTiles) {
-		delete tile;
-	}
-	pendingTiles.clear();
-
-	BOOST_FOREACH(Tile *tile, doneTiles) {
-		delete tile;
-	}
-	doneTiles.clear();
-
-	delete evenPassFilm;
-	evenPassFilm = NULL;
-}
-
-void TileRepository::GetPendingTiles(deque<Tile *> &tiles) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
-
-	tiles = pendingTiles;
-}
-
-void TileRepository::GetNotConvergedTiles(deque<Tile *> &tiles) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
-
-	tiles = todoTiles;
-	tiles.insert(tiles.end(), doneTiles.begin(), doneTiles.end());
-}
-
-void TileRepository::GetConvergedTiles(deque<Tile *> &tiles) {
-	boost::unique_lock<boost::mutex> lock(tileMutex);
-
-	tiles = convergedTiles;
-}
-
-void TileRepository::HilberCurveTiles(
-		const u_int n, const int xo, const int yo,
-		const int xd, const int yd, const int xp, const int yp,
-		const int xEnd, const int yEnd) {
-	if (n <= 1) {
-		if((xo < xEnd) && (yo < yEnd)) {
-			Tile *tile = new Tile(xo, yo);
-			todoTiles.push_back(tile);
-		}
+TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
+			xStart(tileX), yStart(tileY), pass(0), done(false),
+			tileRepository(repo), allPassFilm(NULL), evenPassFilm(NULL) {
+	if (tileRepository->enableMultipassRendering && (tileRepository->convergenceTestThreshold > 0.f)) {
+		InitTileFilm(film, &allPassFilm);
+		InitTileFilm(film, &evenPassFilm);
 	} else {
-		const u_int n2 = n >> 1;
-
-		HilberCurveTiles(n2,
-			xo,
-			yo,
-			xp, yp, xd, yd, xEnd, yEnd);
-		HilberCurveTiles(n2,
-			xo + xd * static_cast<int>(n2),
-			yo + yd * static_cast<int>(n2),
-			xd, yd, xp, yp, xEnd, yEnd);
-		HilberCurveTiles(n2,
-			xo + (xp + xd) * static_cast<int>(n2),
-			yo + (yp + yd) * static_cast<int>(n2),
-			xd, yd, xp, yp, xEnd, yEnd);
-		HilberCurveTiles(n2,
-			xo + xd * static_cast<int>(n2 - 1) + xp * static_cast<int>(n - 1),
-			yo + yd * static_cast<int>(n2 - 1) + yp * static_cast<int>(n - 1),
-			-xp, -yp, -xd, -yd, xEnd, yEnd);
-	}	
+		allPassFilm = NULL;
+		evenPassFilm = NULL;
+	}
 }
 
-void TileRepository::InitTiles(const Film *film) {
-	const u_int width = film->GetWidth();
-	const u_int height = film->GetHeight();
+TileRepository::Tile::~Tile() {
+	delete allPassFilm;
+	delete evenPassFilm;
+}
 
-	if (enableMultipassRendering && (convergenceTestThreshold > 0.f)) {
-		delete evenPassFilm;
+void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
+	(*tileFilm) = new Film(tileRepository->tileWidth, tileRepository->tileHeight);
+	(*tileFilm)->CopyDynamicSettings(film);
+	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and RGB_TONEMAPPED
+	(*tileFilm)->RemoveChannel(Film::ALPHA);
+	(*tileFilm)->RemoveChannel(Film::DEPTH);
+	(*tileFilm)->RemoveChannel(Film::POSITION);
+	(*tileFilm)->RemoveChannel(Film::GEOMETRY_NORMAL);
+	(*tileFilm)->RemoveChannel(Film::SHADING_NORMAL);
+	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID);
+	(*tileFilm)->RemoveChannel(Film::DIRECT_GLOSSY);
+	(*tileFilm)->RemoveChannel(Film::EMISSION);
+	(*tileFilm)->RemoveChannel(Film::INDIRECT_DIFFUSE);
+	(*tileFilm)->RemoveChannel(Film::INDIRECT_GLOSSY);
+	(*tileFilm)->RemoveChannel(Film::INDIRECT_SPECULAR);
+	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID_MASK);
+	(*tileFilm)->RemoveChannel(Film::DIRECT_SHADOW_MASK);
+	(*tileFilm)->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
+	(*tileFilm)->RemoveChannel(Film::UV);
+	(*tileFilm)->RemoveChannel(Film::RAYCOUNT);
+	(*tileFilm)->RemoveChannel(Film::BY_MATERIAL_ID);
 
-		evenPassFilm = new Film(width, height);
-		evenPassFilm->CopyDynamicSettings(*film);
-		// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and RGB_TONEMAPPED
-		evenPassFilm->RemoveChannel(Film::ALPHA);
-		evenPassFilm->RemoveChannel(Film::DEPTH);
-		evenPassFilm->RemoveChannel(Film::POSITION);
-		evenPassFilm->RemoveChannel(Film::GEOMETRY_NORMAL);
-		evenPassFilm->RemoveChannel(Film::SHADING_NORMAL);
-		evenPassFilm->RemoveChannel(Film::MATERIAL_ID);
-		evenPassFilm->RemoveChannel(Film::DIRECT_GLOSSY);
-		evenPassFilm->RemoveChannel(Film::EMISSION);
-		evenPassFilm->RemoveChannel(Film::INDIRECT_DIFFUSE);
-		evenPassFilm->RemoveChannel(Film::INDIRECT_GLOSSY);
-		evenPassFilm->RemoveChannel(Film::INDIRECT_SPECULAR);
-		evenPassFilm->RemoveChannel(Film::MATERIAL_ID_MASK);
-		evenPassFilm->RemoveChannel(Film::DIRECT_SHADOW_MASK);
-		evenPassFilm->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
-		evenPassFilm->RemoveChannel(Film::UV);
-		evenPassFilm->RemoveChannel(Film::RAYCOUNT);
-		evenPassFilm->RemoveChannel(Film::BY_MATERIAL_ID);
-		evenPassFilm->Init();
+	// Disable any kind of pixel filter
+	(*tileFilm)->SetFilter(NULL);
+
+	// Build an image pipeline with only an auto-linear tone mapping and
+	// gamma correction.
+	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
+	imagePipeline->AddPlugin(new LinearToneMap(1.f));
+	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f, 4096));
+	(*tileFilm)->SetImagePipeline(imagePipeline.release());
+
+	(*tileFilm)->Init();
+}
+
+void TileRepository::Tile::Restart() {
+	if (allPassFilm)
+		allPassFilm->Reset();
+	if (evenPassFilm)
+		evenPassFilm->Reset();
+
+	pass = 0;
+	done = false;
+}
+
+void TileRepository::Tile::AddPass(const Film &tileFilm) {		
+	// Increase the pass count
+	++pass;
+
+	// Update the done flag
+	if (tileRepository->enableMultipassRendering) {
+		// Check if convergence test is enable
+		if (tileRepository->convergenceTestThreshold > 0.f) {
+			// Add the tile to the all pass film
+			allPassFilm->AddFilm(tileFilm,
+					0, 0,
+					tileFilm.GetWidth(),
+					tileFilm.GetHeight(),
+					0, 0);
+
+			if (pass % 2 == 1) {
+				// If it is an odd pass, add also to the even pass film
+				evenPassFilm->AddFilm(tileFilm,
+					0, 0,
+					tileFilm.GetWidth(),
+					tileFilm.GetHeight(),
+					0, 0);
+			} else {
+				// Update tileRepository->tileMaxPixelValue before to check the
+				// convergence
+				UpdateMaxPixelValue();
+
+				// Update linear tone mapping plugin
+				LinearToneMap *allLT = (LinearToneMap *)allPassFilm->GetImagePipeline()->GetPlugin(typeid(LinearToneMap));
+				allLT->scale = 1.f / tileRepository->tileMaxPixelValue;
+				LinearToneMap *evenLT = (LinearToneMap *)evenPassFilm->GetImagePipeline()->GetPlugin(typeid(LinearToneMap));
+				evenLT->scale = allLT->scale;
+
+				// If it is an even pass, check convergence status
+				CheckConvergence();
+			}
+		}
+
+		if ((tileRepository->maxPassCount > 0) && (pass >= tileRepository->maxPassCount))
+			done = true;
+	} else
+		done = true;
+}
+
+void TileRepository::Tile::UpdateMaxPixelValue() {
+	float maxVal = 0.f;
+	const size_t channelCount = allPassFilm->GetRadianceGroupCount();
+	for (u_int i = 0; i < tileRepository->tileWidth * tileRepository->tileHeight; ++i) {
+		for (u_int j = 0; j < channelCount; ++j) {
+			const float *pixel = allPassFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[j]->GetPixel(i);
+			if (pixel[3] > 0.f) {
+				const float w = 1.f / pixel[3];
+				maxVal = max(maxVal, pixel[0] * w);
+				maxVal = max(maxVal, pixel[1] * w);
+				maxVal = max(maxVal, pixel[2] * w);
+			}
+		}
 	}
 
-	u_int n = RoundUp(Max(width, height), tileSize) / tileSize;
-	if (!IsPowerOf2(n))
-		n = RoundUpPow2(n);
-	HilberCurveTiles(n, 0, 0, 0, tileSize, tileSize, 0, width, height);
-
-	done = false;
-	pass = 0;
-	startTime = WallClockTime();
+	tileRepository->tileMaxPixelValue = max(tileRepository->tileMaxPixelValue, maxVal);
 }
 
-bool TileRepository::IsConvergedTile(const Tile *tile, const Spectrum *allPassPixels,
-		const Spectrum *evenPassPixels) const {
+void TileRepository::Tile::CheckConvergence() {
 	float maxError2 = 0.f;
+
+	// Get the even pass pixel values
+	evenPassFilm->ExecuteImagePipeline();
+	const Spectrum *evenPassPixel = (const Spectrum *)evenPassFilm->channel_RGB_TONEMAPPED->GetPixels();
+
+	// Get the all pass pixel values
+	allPassFilm->ExecuteImagePipeline();
+	const Spectrum *allPassPixel = (const Spectrum *)allPassFilm->channel_RGB_TONEMAPPED->GetPixels();
 
 	// Compare the pixels result only of even passes with the result
 	// of all passes
-	const u_int width = Min(tileSize, evenPassFilm->GetWidth() - tile->xStart);
-	const u_int height = Min(tileSize, evenPassFilm->GetHeight() - tile->yStart);
-	for (u_int y = 0; y < height; ++y) {
-		for (u_int x = 0; x < width; ++x) {
-			const u_int index = (x + tile->xStart) + (y + tile->yStart) * evenPassFilm->GetWidth();
-
-			// The pixel value result of all passes
-			const Spectrum &allPassPixel = allPassPixels[index];
-
-			// The pixel value result of only of even passes
-			const Spectrum &evenPassPixel = evenPassPixels[index];
-
+	for (u_int y = 0; y < tileRepository->tileHeight; ++y) {
+		for (u_int x = 0; x < tileRepository->tileWidth; ++x) {
 			// This is an variance estimation as defined in:
 			//
 			// "Progressive Path Tracing with Lightweight Local Error Estimation" paper
@@ -672,7 +665,7 @@ bool TileRepository::IsConvergedTile(const Tile *tile, const Spectrum *allPassPi
 				// where Pfull is the total pixel value while Peven is the value made
 				// only of even samples.
 
-				const float diff = allPassPixel.c[k] - evenPassPixel.c[k];
+				const float diff = allPassPixel->c[k] - evenPassPixel->c[k];
 				// I'm using variance^2 to avoid a sqrtf())
 				//const float variance = diff *diff;
 				const float variance2 = fabsf(diff);
@@ -682,10 +675,159 @@ bool TileRepository::IsConvergedTile(const Tile *tile, const Spectrum *allPassPi
 
 				maxError2 = Max(error2, maxError2);
 			}
+
+			++evenPassPixel;
+			++allPassPixel;
 		}
 	}
+	done = (maxError2 < tileRepository->convergenceTestThreshold);
+}
 
-	return ((maxError2) < convergenceTestThreshold);
+//------------------------------------------------------------------------------
+// TileRepository
+//------------------------------------------------------------------------------
+
+TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
+	tileWidth = tileW;
+	tileHeight = tileH;
+
+	maxPassCount = 0;
+	enableMultipassRendering = false;
+	convergenceTestThreshold = .04f;
+	convergenceTestThresholdReduction = 0.f;
+	enableRenderingDonePrint = true;
+
+	done = false;
+	tileMaxPixelValue = 0.f;
+}
+
+TileRepository::~TileRepository() {
+	Clear();
+}
+
+void TileRepository::Clear() {
+	// Free all tiles in the 3 lists
+
+	BOOST_FOREACH(Tile *tile, tileList) {
+		delete tile;
+	}
+	
+	tileList.clear();
+	todoTiles.clear();
+	pendingTiles.clear();
+	convergedTiles.clear();
+}
+
+void TileRepository::Restart() {
+	todoTiles.clear();
+	pendingTiles.clear();
+	convergedTiles.clear();
+
+	BOOST_FOREACH(Tile *tile, tileList) {
+		tile->Restart();
+		todoTiles.push(tile);		
+	}
+	
+	done = false;
+}
+
+void TileRepository::GetPendingTiles(deque<const Tile *> &tiles) {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	tiles.insert(tiles.end(), pendingTiles.begin(), pendingTiles.end());
+}
+
+void TileRepository::GetNotConvergedTiles(deque<const Tile *> &tiles) {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	tiles.insert(tiles.end(), todoTiles.begin(), todoTiles.end());
+}
+
+void TileRepository::GetConvergedTiles(deque<const Tile *> &tiles) {
+	boost::unique_lock<boost::mutex> lock(tileMutex);
+
+	tiles.insert(tiles.end(), convergedTiles.begin(), convergedTiles.end());
+}
+
+void TileRepository::HilberCurveTiles(
+		const Film &film,
+		const u_int n,
+		const int xo, const int yo,
+		const int xd, const int yd,
+		const int xp, const int yp,
+		const int xEnd, const int yEnd) {
+	if (n <= 1) {
+		if((xo < xEnd) && (yo < yEnd)) {
+			Tile *tile = new Tile(this, film, xo, yo);
+			tileList.push_back(tile);
+		}
+	} else {
+		const u_int n2 = n >> 1;
+
+		HilberCurveTiles(film, n2,
+			xo,
+			yo,
+			xp, yp, xd, yd, xEnd, yEnd);
+		HilberCurveTiles(film, n2,
+			xo + xd * static_cast<int>(n2),
+			yo + yd * static_cast<int>(n2),
+			xd, yd, xp, yp, xEnd, yEnd);
+		HilberCurveTiles(film, n2,
+			xo + (xp + xd) * static_cast<int>(n2),
+			yo + (yp + yd) * static_cast<int>(n2),
+			xd, yd, xp, yp, xEnd, yEnd);
+		HilberCurveTiles(film, n2,
+			xo + xd * static_cast<int>(n2 - 1) + xp * static_cast<int>(n - 1),
+			yo + yd * static_cast<int>(n2 - 1) + yp * static_cast<int>(n - 1),
+			-xp, -yp, -xd, -yd, xEnd, yEnd);
+	}	
+}
+
+void TileRepository::InitTiles(const Film &film) {
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();
+	const u_int n = RoundUp(width, tileWidth) / tileWidth;
+	const u_int m = RoundUp(height, tileHeight) / tileHeight;
+
+	HilberCurveTiles(film, RoundUpPow2(n * m),
+			0, 0,
+			0, tileHeight,
+			tileWidth, 0,
+			width, height);
+
+	BOOST_FOREACH(Tile *tile, tileList)
+		todoTiles.push(tile);
+
+	done = false;
+	startTime = WallClockTime();
+}
+
+void TileRepository::SetDone() {
+	// Rendering done
+	if (!done) {
+		if (enableRenderingDonePrint) {
+			const double elapsedTime = WallClockTime() - startTime;
+			SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
+		}
+
+		done = true;
+	}
+}
+
+bool TileRepository::GetToDoTile(Tile **tile) {
+	if (todoTiles.size() > 0) {
+		// Get the next tile to render
+		*tile = todoTiles.top();
+		todoTiles.pop();
+		pendingTiles.push_back(*tile);
+
+		return true;
+	} else {
+		// This should never happen
+		SLG_LOG("WARNING: out of tiles to render");
+
+		return false;
+	}
 }
 
 bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
@@ -695,146 +837,99 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 
 	// Check if I have to add the tile to the film
 	if (*tile) {
-		// Remove the tile from pending list
-		pendingTiles.erase(std::remove(pendingTiles.begin(), pendingTiles.end(), *tile), pendingTiles.end());
+		// Add the pass to the tile
+		(*tile)->AddPass(*tileFilm);
 
-		// Increase the pass count
-		(*tile)->pass += 1;
+		// Remove the first copy of tile from pending list (there can be multiple copy of the same tile)
+		pendingTiles.erase(find(pendingTiles.begin(), pendingTiles.end(), *tile));
 
-		/// Add to the done list
-		doneTiles.push_back(*tile);
-
-		// If convergence test is enable and it is an even pass, add the tile
-		// film also to the even pass film
-		if (enableMultipassRendering && (convergenceTestThreshold > 0.f) &&
-				((pass % 2) == 0)) {
-			evenPassFilm->AddFilm(*tileFilm,
-				0, 0,
-				Min(tileSize, evenPassFilm->GetWidth() - (*tile)->xStart),
-				Min(tileSize, evenPassFilm->GetHeight() - (*tile)->yStart),
-				(*tile)->xStart, (*tile)->yStart);
+		if ((*tile)->done) {
+			// All done for this tile
+			convergedTiles.push_back(*tile);
+		} else {
+			// Re-add to the todoTiles priority queue, if it is not already there
+			if (find(todoTiles.begin(), todoTiles.end(), *tile) == todoTiles.end())
+				todoTiles.push(*tile);
 		}
 
+		// Add the tile also to the global film
 		boost::unique_lock<boost::mutex> lock(*filmMutex);
 
 		film->AddFilm(*tileFilm,
 				0, 0,
-				Min(tileSize, film->GetWidth() - (*tile)->xStart),
-				Min(tileSize, film->GetHeight() - (*tile)->yStart),
+				Min(tileWidth, film->GetWidth() - (*tile)->xStart),
+				Min(tileHeight, film->GetHeight() - (*tile)->yStart),
 				(*tile)->xStart, (*tile)->yStart);
 	}
 
 	if (todoTiles.size() == 0) {
-		// Check if multi-pass is enabled
-		if (enableMultipassRendering) {
-			if (pendingTiles.size() > 0) {
-				// I have to wait for any pending tile
-				while ((todoTiles.size() == 0) && !done)
-					allTodoTilesDoneCondition.wait(lock);
-
-				// Check if the rendering is finished
-				if (done) 
-					return false;
-			} else {
-				// I'm the thread with the last todo tile
-
-				// Check if I have to run the convergence test and it is an odd pass
-				if ((convergenceTestThreshold > 0.f) &&	((pass % 2) == 1)) {
-					//const double t0 = WallClockTime();
-
-					// Get the even pass pixel values
-					evenPassFilm->ExecuteImagePipeline();
-					const Spectrum *evenPassPixels = (const Spectrum *)evenPassFilm->channel_RGB_TONEMAPPED->GetPixels();
-
-					// Get the all pass pixel values
-					boost::unique_lock<boost::mutex> lock(*filmMutex);
-					film->ExecuteImagePipeline();
-					const Spectrum *allPassPixels = (const Spectrum *)film->channel_RGB_TONEMAPPED->GetPixels();
-
-					// Now for each tile in the done list, check the convergence
-					BOOST_FOREACH(Tile *t, doneTiles) {
-						if (IsConvergedTile(t, allPassPixels, evenPassPixels))
-							convergedTiles.push_back(t);
-						else
-							todoTiles.push_back(t);
-					}
-
-					// Now, I can clear the done list
-					doneTiles.clear();
-					
-					//const double t1 = WallClockTime();
-					//SLG_LOG(boost::format("Convergence test time: %.2fms") % (100.0 * (t1 - t0)));
-
-					if (todoTiles.size() == 0) {
-						if (convergenceTestThresholdReduction == 0.f) {
-							// All tiles have converged, nothing else to render
-							if (enableRenderingDonePrint) {
-								const double elapsedTime = WallClockTime() - startTime;
-								SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
-							}
-							done = true;
-
-							// I still need to wake up some waiting thread
-							allTodoTilesDoneCondition.notify_all();
-
-							return false;
-						} else {
-							// Reduce the target threshold and continue the rendering				
-							if (enableRenderingDonePrint) {
-								const double elapsedTime = WallClockTime() - startTime;
-								SLG_LOG(boost::format("Threshold %.4f reached: %.2f secs") % convergenceTestThreshold % elapsedTime);
-							}
-
-							convergenceTestThreshold *= convergenceTestThresholdReduction;
-
-							// Re-start the rendering for all tiles with the new error
-							todoTiles = convergedTiles;
-							convergedTiles.clear();
-						}
-					}
-				} else {
-					todoTiles = doneTiles;
-					doneTiles.clear();
-				}
-
-				++pass;
-
-				if ((maxPassCount > 0) && (pass >= maxPassCount)) {
-					// Rendering done
-					if (enableRenderingDonePrint) {
-						const double elapsedTime = WallClockTime() - startTime;
-						SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
-					}
-					done = true;
-
-					// I still need to wake up some waiting thread
-					allTodoTilesDoneCondition.notify_all();
-
-					return false;
-				} else {
-					// To wake up other threads
-					allTodoTilesDoneCondition.notify_all();
-				}
-			}
-		} else {
+		if (!enableMultipassRendering) {
 			if (pendingTiles.size() == 0) {
 				// Rendering done
-				if (enableRenderingDonePrint) {
-					const double elapsedTime = WallClockTime() - startTime;
-					SLG_LOG(boost::format("Rendering time: %.2f secs") % elapsedTime);
-				}
-				done = true;
+				SetDone();
 			}
 
 			return false;
 		}
+
+		// Multi-pass rendering enabled
+		
+		// Check the status of pending tiles (one or more of them could be a
+		// copy of mine and now done)
+		bool pendingAllDone = true;
+		Tile *pendingNotYetDoneTile = NULL;
+		BOOST_FOREACH(Tile *tile, pendingTiles) {
+			if (!tile->done) {
+				pendingNotYetDoneTile = tile;
+				pendingAllDone = false;
+				break;
+			}
+		}
+
+		if (pendingAllDone) {
+			if (convergenceTestThresholdReduction > 0.f) {
+				// Reduce the target threshold and continue the rendering				
+				if (enableRenderingDonePrint) {
+					const double elapsedTime = WallClockTime() - startTime;
+					SLG_LOG(boost::format("Threshold %.4f reached: %.2f secs") % convergenceTestThreshold % elapsedTime);
+				}
+
+				convergenceTestThreshold *= convergenceTestThresholdReduction;
+
+				// Restart the rendering for all tiles
+
+				// I need to save a copy of the current pending tile list because
+				// it can be not empty. I could just avoid to clear the list but is
+				// more readable (an safer for the Restart() method) to work in this
+				// way.
+				deque<Tile *> currentPendingTiles = pendingTiles;
+				Restart();
+				pendingTiles = currentPendingTiles;
+
+				// Get the next tile to render
+				return GetToDoTile(tile);
+			} else {
+				if (pendingTiles.size() == 0) {
+					// Rendering done
+					SetDone();
+				}
+
+				return false;
+			}
+		} else {
+			// No todo tiles but some still pending, I will just return one of the
+			// not yet done pending tiles to render
+
+			*tile = pendingNotYetDoneTile;
+			// I add again the tile to the list so it is counted multiple times
+			pendingTiles.push_back(*tile);
+
+			return true;
+		}
+	} else {
+		// Get the next tile to render
+		return GetToDoTile(tile);
 	}
-
-	*tile = todoTiles.front();
-	todoTiles.pop_front();
-	pendingTiles.push_back(*tile);
-
-	return true;
 }
 
 //------------------------------------------------------------------------------
@@ -855,7 +950,7 @@ void CPUTileRenderThread::StartRenderThread() {
 	delete tileFilm;
 
 	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
-	tileFilm = new Film(cpuTileEngine->tileRepository->tileSize, cpuTileEngine->tileRepository->tileSize);
+	tileFilm = new Film(cpuTileEngine->tileRepository->tileWidth, cpuTileEngine->tileRepository->tileHeight);
 	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
 	tileFilm->Init();
 
@@ -884,7 +979,7 @@ void CPUTileRenderEngine::StopLockLess() {
 
 void CPUTileRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	tileRepository->Clear();
-	tileRepository->InitTiles(film);
+	tileRepository->InitTiles(*film);
 
 	CPURenderEngine::EndSceneEditLockLess(editActions);
 }
@@ -930,7 +1025,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 	const string oclDeviceConfig = cfg.Get(Property("opencl.devices.select")("")).Get<string>();
 
 	// Start OpenCL devices
-	std::vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
+	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, descs);
 
 	// Device info

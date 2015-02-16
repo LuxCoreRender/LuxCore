@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXCORE_VERSION_MAJOR 1)
-set(LUXCORE_VERSION_MINOR 4)
+set(LUXCORE_VERSION_MINOR 5dev)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code
@@ -122,16 +122,31 @@ set(LUXCORE_LIB_SRCS
 	${LUXCORE_SRCS}
 )
 
-add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-add_definitions(-DCPP_API_EXPORTS) # for controlling visibility
+if(APPLE)
+	add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+	add_dependencies(luxcore luxrays smallluxgpu) # build these first
+	target_link_libraries(luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 
+	if(${CMAKE_GENERATOR} MATCHES "Xcode")
+		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_LD_DYLIB_INSTALL_NAME @loader_path/libluxcore.dylib)
+		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_DYLIB_COMPATIBILITY_VERSION 2.0.0)
+		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_DYLIB_CURRENT_VERSION 2.0.0)
+	else()
+		SET_TARGET_PROPERTIES(luxcore PROPERTIES LINK_FLAGS "-compatibility_version 2.0.0 -current_version 2.0.0")
+	endif()
+else(APPLE)
+	add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+endif(APPLE)
+
+add_definitions(-DCPP_API_EXPORTS) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
 IF(OSX_UPDATE_LUXRAYS_REPO)
 	ADD_CUSTOM_COMMAND(
 	TARGET luxcore POST_BUILD
 	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays/luxcore # clean first to assure update
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${OSX_DEPENDENCY_ROOT}/lib/LuxRays # for repo
+	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE} # for slg4
 	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxcore ${OSX_DEPENDENCY_ROOT}/include/LuxRays
 	)
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
@@ -144,6 +159,7 @@ ENDIF(OSX_UPDATE_LUXRAYS_REPO)
 
 set(PYLUXCORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
+	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
 )
 
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
@@ -153,7 +169,7 @@ if(APPLE)
 	#target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup ${OSX_DEPENDENCY_ROOT}/lib/liblux.dylib luxcore ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
     SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
 else()
-	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
 endif()
 
 set_target_properties(pyluxcore PROPERTIES PREFIX "")

@@ -69,7 +69,7 @@ float ClearVolume_Scatter(__global Volume *vol,
 	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
@@ -150,7 +150,7 @@ float HomogeneousVolume_Scatter(__global Volume *vol,
 	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
@@ -291,7 +291,7 @@ float HeterogeneousVolume_Scatter(__global Volume *vol,
 	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)

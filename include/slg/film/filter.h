@@ -19,6 +19,13 @@
 #ifndef _SLG_FILTER_H
 #define	_SLG_FILTER_H
 
+#include <boost/serialization/version.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/vector.hpp>
+
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/utils.h"
 #include "luxrays/utils/mc.h"
@@ -59,8 +66,21 @@ public:
 	static FilterType String2FilterType(const std::string &type);
 
 	// Filter Public Data
-	const float xWidth, yWidth;
-	const float invXWidth, invYWidth;
+	float xWidth, yWidth;
+	float invXWidth, invYWidth;
+
+	friend class boost::serialization::access;
+
+private:
+	// Used by serialization
+	Filter() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & xWidth;
+		ar & yWidth;
+		ar & invXWidth;
+		ar & invYWidth;
+	}
 };
 
 class FilterDistribution {
@@ -97,6 +117,13 @@ public:
 	}
 
 	virtual Filter *Clone() const { return new BoxFilter(xWidth, yWidth); }
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
+	}
 };
 
 //------------------------------------------------------------------------------
@@ -124,7 +151,16 @@ public:
 
 	float alpha;
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
+		ar & alpha;
+		ar & expX;
+		ar & expY;
+	}
+
 	// GaussianFilter Private Data
 	float expX, expY;
 
@@ -158,9 +194,17 @@ public:
 
 	virtual Filter *Clone() const { return new MitchellFilter(xWidth, yWidth, B, C); }
 
-	const float B, C;
+	float B, C;
+
+	friend class boost::serialization::access;
 
 private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
+		ar & B;
+		ar & C;
+	}
+
 	float Mitchell1D(float x) const {
 		if (x >= 1.f)
 			return 0.f;
@@ -202,9 +246,17 @@ public:
 
 	virtual Filter *Clone() const { return new MitchellFilterSS(xWidth, yWidth, B, C); }
 
-	const float B, C;
+	float B, C;
+
+	friend class boost::serialization::access;
 
 private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
+		ar & B;
+		ar & C;
+	}
+
 	float Mitchell1D(float x) const {
 		if (x >= 1.f)
 			return 0.f;
@@ -240,7 +292,13 @@ public:
 
 	virtual Filter *Clone() const { return new BlackmanHarrisFilter(xWidth, yWidth); }
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
+	}
+
 	float BlackmanHarris1D(float x) const {
 		if (x < -1.f || x > 1.f)
 			return 0.f;
@@ -316,5 +374,20 @@ private:
 };
 
 }
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::Filter)
+
+BOOST_CLASS_VERSION(slg::Filter, 1)
+BOOST_CLASS_VERSION(slg::BoxFilter, 1)
+BOOST_CLASS_VERSION(slg::GaussianFilter, 1)
+BOOST_CLASS_VERSION(slg::MitchellFilter, 1)
+BOOST_CLASS_VERSION(slg::MitchellFilterSS, 1)
+BOOST_CLASS_VERSION(slg::BlackmanHarrisFilter, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::BoxFilter)
+BOOST_CLASS_EXPORT_KEY(slg::GaussianFilter)
+BOOST_CLASS_EXPORT_KEY(slg::MitchellFilter)
+BOOST_CLASS_EXPORT_KEY(slg::MitchellFilterSS)
+BOOST_CLASS_EXPORT_KEY(slg::BlackmanHarrisFilter)
 
 #endif	/* _SLG_FILTER_H */

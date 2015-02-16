@@ -324,18 +324,33 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 		const u_longlong totTri) {
 	assert (!initialized);
 
+	const double t0 = WallClockTime();
+
 	meshes = ms;
 	totalVertexCount = totVert;
 	totalTriangleCount = totTri;
 
-	std::vector<BVHAccelTreeNode *> bvList;
-	bvList.reserve(totalTriangleCount);
+	//--------------------------------------------------------------------------
+	// Build the list of triangles
+	//--------------------------------------------------------------------------
+	
+	std::vector<BVHAccelTreeNode> bvNodes(totalTriangleCount);
+	std::vector<BVHAccelTreeNode *> bvList(totalTriangleCount, NULL);
 	u_int meshIndex = 0;
+	u_int bvListIndex = 0;
 	BOOST_FOREACH(const Mesh *mesh, meshes) {
 		const Triangle *p = mesh->GetTriangles();
+		const u_int triangleCount = mesh->GetTotalTriangleCount();
 
-		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-			BVHAccelTreeNode *node = new BVHAccelTreeNode();
+		#pragma omp parallel for
+		for (
+				// Visusl C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+				unsigned
+#endif
+				int i = 0; i < triangleCount; ++i) {
+			const int index = bvListIndex + i;
+			BVHAccelTreeNode *node = &bvNodes[index];
 
 			node->bbox = Union(
 					BBox(mesh->GetVertex(0.f, p[i].v[0]), mesh->GetVertex(0.f, p[i].v[1])),
@@ -347,25 +362,46 @@ void BVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totVert
 
 			node->leftChild = NULL;
 			node->rightSibling = NULL;
-			bvList.push_back(node);
+
+			bvList[index] = node;
 		}
 		
+		bvListIndex += triangleCount;
 		++meshIndex;
 	}
 
-	LR_LOG(ctx, "Building Bounding Volume Hierarchy, primitives: " << totalTriangleCount);
+	LR_LOG(ctx, "BVH Dataset preprocessing time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
+	//--------------------------------------------------------------------------
+	// Build the BVH hierarchy
+	//--------------------------------------------------------------------------
+
+	const double t1 = WallClockTime();
+
+	LR_LOG(ctx, "Building BVH, primitives: " << totalTriangleCount);
 	nNodes = 0;
 	BVHAccelTreeNode *rootNode = BuildHierarchy(&nNodes, params, bvList, 0, bvList.size(), 2);
 
-	LR_LOG(ctx, "Pre-processing Bounding Volume Hierarchy, total nodes: " << nNodes);
+	LR_LOG(ctx, "BVH build hierarchy time: " << int((WallClockTime() - t1) * 1000) << "ms");
 
+	//--------------------------------------------------------------------------
+	// Pack the BVH hierarchy in an array
+	//--------------------------------------------------------------------------
+
+	const double t2 = WallClockTime();
+
+	LR_LOG(ctx, "Pre-processing BVH, total nodes: " << nNodes);
 	bvhTree = new luxrays::ocl::BVHAccelArrayNode[nNodes];
 	BuildArray(&meshes, rootNode, 0, bvhTree);
 	FreeHierarchy(rootNode);
+	LR_LOG(ctx, "BVH build array time: " << int((WallClockTime() - t2) * 1000) << "ms");
+
+	//--------------------------------------------------------------------------
+	// Done
+	//--------------------------------------------------------------------------
 
 	LR_LOG(ctx, "Total BVH memory usage: " << nNodes * sizeof(luxrays::ocl::BVHAccelArrayNode) / 1024 << "Kbytes");
-	//LR_LOG(ctx, "Finished building Bounding Volume Hierarchy array");
+	LR_LOG(ctx, "BVH build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
 	initialized = true;
 }
@@ -379,8 +415,6 @@ void BVHAccel::FreeHierarchy(BVHAccelTreeNode *node) {
 	if (node) {
 		FreeHierarchy(node->leftChild);
 		FreeHierarchy(node->rightSibling);
-
-		delete node;
 	}
 }
 

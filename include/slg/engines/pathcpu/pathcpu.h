@@ -78,6 +78,10 @@ public:
 	int rrDepth;
 	float rrImportanceCap;
 
+	// Clamping settings
+	float radianceClampMaxValue;
+	float pdfClampValue;
+
 	friend class PathCPURenderThread;
 
 protected:

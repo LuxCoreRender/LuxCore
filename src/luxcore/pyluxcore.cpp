@@ -32,6 +32,7 @@
 #include <Python.h>
 
 #include <luxcore/luxcore.h>
+#include <luxcore/pyluxcore/pyluxcoreforblender.h>
 
 using namespace std;
 using namespace luxcore;
@@ -91,262 +92,6 @@ static const char *LuxCoreVersion() {
 	return luxCoreVersion;
 }
 
-static void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
-		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}
-	if (!PyObject_CheckBuffer(objDst.ptr())) {
-		const string objType = extract<string>((objDst.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in destination object of ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}	
-	Py_buffer dstView;
-	if (PyObject_GetBuffer(objDst.ptr(), &dstView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
-	}
-
-	if (srcView.len / (3 * 4) != dstView.len / 4)
-		throw std::runtime_error("Wrong buffer size in ConvertFilmChannelOutput_3xFloat_To_4xUChar()");
-
-	const float *src = (float *)srcView.buf;
-	unsigned char *dst = (unsigned char *)dstView.buf;
-
-	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height * 3; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
-				maxValue = value;
-		}
-		const float k = (maxValue == 0.f) ? 0.f : (255.f / maxValue);
-
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = (height - y - 1) * width * 3;
-			u_int dstIndex = y * width * 4;
-
-			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * k + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * k + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * k + .5f));
-				dst[dstIndex++] = 0xff;
-				srcIndex += 3;
-			}
-		}
-	} else {
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = (height - y - 1) * width * 3;
-			u_int dstIndex = y * width * 4;
-
-			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
-				dst[dstIndex++] = 0xff;
-				srcIndex += 3;
-			}
-		}
-	}
-}
-
-static boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_int height,
-		boost::python::object &objSrc) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_3xFloatList(): " + objType);
-	}	
-
-	const float *src = (float *)srcView.buf;
-	boost::python::list l;
-
-	for (u_int y = 0; y < height; ++y) {
-		u_int srcIndex = y * width * 3;
-
-		for (u_int x = 0; x < width; ++x) {
-			l.append(boost::python::make_tuple(src[srcIndex], src[srcIndex + 1], src[srcIndex + 2], 1.f));
-			srcIndex += 3;
-		}
-	}
-
-	return l;
-}
-
-static boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int width, const u_int height,
-		boost::python::object &objSrc, const bool normalize) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_1xFloat_To_4xFloatList(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_1xFloat_To_4xFloatList(): " + objType);
-	}	
-
-	const float *src = (float *)srcView.buf;
-	boost::python::list l;
-
-	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
-				maxValue = value;
-		}
-		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
-
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = y * width;
-
-			for (u_int x = 0; x < width; ++x) {
-				const float val = src[srcIndex++] * k;
-				l.append(val);
-				l.append(val);
-				l.append(val);
-				l.append(1.f);
-			}
-		}
-	} else {
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = y * width;
-
-			for (u_int x = 0; x < width; ++x) {
-				const float val = src[srcIndex++];
-				l.append(val);
-				l.append(val);
-				l.append(val);
-				l.append(1.f);
-			}
-		}
-	}
-
-	return l;
-}
-
-static boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int width, const u_int height,
-		boost::python::object &objSrc, const bool normalize) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_2xFloat_To_4xFloatList(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_2xFloat_To_4xFloatList(): " + objType);
-	}	
-
-	const float *src = (float *)srcView.buf;
-	boost::python::list l;
-
-	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height * 2; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
-				maxValue = value;
-		}
-		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
-
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = y * width * 2;
-
-			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++] * k);
-				l.append(src[srcIndex++] * k);
-				l.append(0.f);
-				l.append(1.f);
-			}
-		}
-	} else {
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = y * width * 2;
-
-			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++]);
-				l.append(src[srcIndex++]);
-				l.append(0.f);
-				l.append(1.f);
-			}
-		}
-	}
-
-	return l;
-}
-
-static boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int width, const u_int height,
-		boost::python::object &objSrc, const bool normalize) {
-	if (!PyObject_CheckBuffer(objSrc.ptr())) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in source object of ConvertFilmChannelOutput_3xFloat_To_4xFloatList(): " + objType);
-	}
-	
-	Py_buffer srcView;
-	if (PyObject_GetBuffer(objSrc.ptr(), &srcView, PyBUF_SIMPLE)) {
-		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xFloatList(): " + objType);
-	}	
-
-	const float *src = (float *)srcView.buf;
-	boost::python::list l;
-
-	if (normalize) {
-		// Look for the max. in source buffer
-
-		float maxValue = 0.f;
-		for (u_int i = 0; i < width * height * 3; ++i) {
-			const float value = src[i];
-			if (!isinf(value) && !isnan(value) && (value > maxValue))
-				maxValue = value;
-		}
-		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
-
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = y * width * 3;
-
-			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++] * k);
-				l.append(src[srcIndex++] * k);
-				l.append(src[srcIndex++] * k);
-				l.append(1.f);
-			}
-		}
-	} else {
-		for (u_int y = 0; y < height; ++y) {
-			u_int srcIndex = y * width * 3;
-
-			for (u_int x = 0; x < width; ++x) {
-				l.append(src[srcIndex++]);
-				l.append(src[srcIndex++]);
-				l.append(src[srcIndex++]);
-				l.append(1.f);
-			}
-		}
-	}
-
-	return l;
-}
-
 static boost::python::list GetOpenCLDeviceList() {
 	luxrays::Context ctx;
 	vector<luxrays::DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
@@ -395,7 +140,7 @@ static luxrays::Property *Property_InitWithList(const str &name, const boost::py
 			const string v = extract<string>(l[i]);
 			prop->Add(v);
 		} else
-			throw std::runtime_error("Unsupported data type included in a Property constructor list: " + objType);
+			throw runtime_error("Unsupported data type included in a Property constructor list: " + objType);
 	}
 
 	return prop;
@@ -415,7 +160,7 @@ static boost::python::list Property_Get(luxrays::Property *prop) {
 		else if (tinfo == typeid(string))
 			l.append(prop->Get<string>(i));
 		else
-			throw std::runtime_error("Unsupported data type in list extraction of a Property: " + prop->GetName());
+			throw runtime_error("Unsupported data type in list extraction of a Property: " + prop->GetName());
 	}
 
 	return l;
@@ -483,7 +228,7 @@ static luxrays::Property &Property_Add(luxrays::Property *prop, const boost::pyt
 			const string v = extract<string>(l[i]);
 			prop->Add(v);
 		} else
-			throw std::runtime_error("Unsupported data type included in Property.Set() method list: " + objType);
+			throw runtime_error("Unsupported data type included in Property.Set() method list: " + objType);
 	}
 
 	return *prop;
@@ -507,7 +252,7 @@ static luxrays::Property &Property_Set(luxrays::Property *prop, const boost::pyt
 			const string v = extract<string>(l[i]);
 			prop->Set(i, v);
 		} else
-			throw std::runtime_error("Unsupported data type included in Property.Set() method list: " + objType);
+			throw runtime_error("Unsupported data type included in Property.Set() method list: " + objType);
 	}
 
 	return *prop;
@@ -530,7 +275,7 @@ static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
 		const string v = extract<string>(obj);
 		prop->Set(i, v);
 	} else
-		throw std::runtime_error("Unsupported data type used for Property.Set() method: " + objType);
+		throw runtime_error("Unsupported data type used for Property.Set() method: " + objType);
 
 	return *prop;
 }
@@ -600,7 +345,7 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 			const string v = extract<string>(l[i]);
 			values.push_back(v);
 		} else
-			throw std::runtime_error("Unsupported data type included in Properties Get with default method: " + objType);
+			throw runtime_error("Unsupported data type included in Properties Get with default method: " + objType);
 	}
 
 	return luxrays::Property(name, values);
@@ -614,7 +359,7 @@ void Properties_DeleteAll(luxrays::Properties *props, const boost::python::list 
 		if (objType == "str")
 			props->Delete(extract<string>(l[i]));
 		else
-			throw std::runtime_error("Unsupported data type included in Properties.DeleteAll() list: " + objType);
+			throw runtime_error("Unsupported data type included in Properties.DeleteAll() list: " + objType);
 	}
 }
 
@@ -632,15 +377,15 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 
 				film->GetOutput<float>(type, buffer, index);
 			} else
-				throw std::runtime_error("Not enough space in the buffer of Film.GetOutputFloat() method: " +
+				throw runtime_error("Not enough space in the buffer of Film.GetOutputFloat() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float)));
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw std::runtime_error("Unable to get a data view in Film.GetOutputFloat() method: " + objType);
+			throw runtime_error("Unable to get a data view in Film.GetOutputFloat() method: " + objType);
 		}
 	} else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in Film.GetOutputFloat() method: " + objType);
+		throw runtime_error("Unsupported data type in Film.GetOutputFloat() method: " + objType);
 	}
 }
 
@@ -659,15 +404,15 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 
 				film->GetOutput<u_int>(type, buffer, index);
 			} else
-				throw std::runtime_error("Not enough space in the buffer of Film.GetOutputUInt() method: " +
+				throw runtime_error("Not enough space in the buffer of Film.GetOutputUInt() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(u_int)));
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw std::runtime_error("Unable to get a data view in Film.GetOutputUInt() method: " + objType);
+			throw runtime_error("Unable to get a data view in Film.GetOutputUInt() method: " + objType);
 		}
 	} else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type in Film.GetOutputUInt() method: " + objType);
+		throw runtime_error("Unsupported data type in Film.GetOutputUInt() method: " + objType);
 	}
 }
 
@@ -706,15 +451,15 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 
 				scene->DefineImageMap(imgMapName, cols, gamma, channels, width, height);
 			} else
-				throw std::runtime_error("Not enough space in the buffer of Scene.DefineImageMap() method: " +
+				throw runtime_error("Not enough space in the buffer of Scene.DefineImageMap() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * channels * sizeof(float)));
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-			throw std::runtime_error("Unable to get a data view in Scene.DefineImageMap() method: " + objType);
+			throw runtime_error("Unable to get a data view in Scene.DefineImageMap() method: " + objType);
 		}
 	}	else {
 		const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Unsupported data type Scene.DefineImageMap() method: " + objType);
+		throw runtime_error("Unsupported data type Scene.DefineImageMap() method: " + objType);
 	}
 }
 
@@ -722,7 +467,7 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 		const boost::python::object &p, const boost::python::object &vi,
 		const boost::python::object &n, const boost::python::object &uv,
 		const boost::python::object &cols, const boost::python::object &alphas) {
-	// NOTE: I would like to use boost::scoped_array because but
+	// NOTE: I would like to use boost::scoped_array but
 	// some guy has decided that boost::scoped_array must not have
 	// a release() method for some ideological reason...
 
@@ -735,7 +480,7 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbVerts = size;
 
-		points = new luxrays::Point[size];
+		points = Scene::AllocVerticesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -743,12 +488,12 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 				points[i] = luxrays::Point(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
 			} else {
 				const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
-				throw std::runtime_error("Wrong data type in the list of vertices of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+				throw runtime_error("Wrong data type in the list of vertices of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
 			}
 		}
 	} else {
 		const string objType = extract<string>((p.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Wrong data type for the list of vertices of method Scene.DefineMesh(): " + objType);
+		throw runtime_error("Wrong data type for the list of vertices of method Scene.DefineMesh(): " + objType);
 	}
 
 	// Translate all triangles
@@ -760,7 +505,7 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 		const boost::python::ssize_t size = len(l);
 		plyNbTris = size;
 
-		tris = new luxrays::Triangle[size];
+		tris = Scene::AllocTrianglesBuffer(size);
 		for (boost::python::ssize_t i = 0; i < size; ++i) {
 			extract<boost::python::tuple> getTuple(l[i]);
 			if (getTuple.check()) {
@@ -768,12 +513,12 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 				tris[i] = luxrays::Triangle(extract<u_int>(t[0]), extract<u_int>(t[1]), extract<u_int>(t[2]));
 			} else {
 				const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
-				throw std::runtime_error("Wrong data type in the list of triangles of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+				throw runtime_error("Wrong data type in the list of triangles of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
 			}
 		}
 	} else {
 		const string objType = extract<string>((vi.attr("__class__")).attr("__name__"));
-		throw std::runtime_error("Wrong data type for the list of triangles of method Scene.DefineMesh(): " + objType);
+		throw runtime_error("Wrong data type for the list of triangles of method Scene.DefineMesh(): " + objType);
 	}
 
 	// Translate all normals
@@ -792,12 +537,12 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 					normals[i] = luxrays::Normal(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
 				} else {
 					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
-					throw std::runtime_error("Wrong data type in the list of triangles of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+					throw runtime_error("Wrong data type in the list of triangles of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
 				}
 			}
 		} else {
 			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
-			throw std::runtime_error("Wrong data type for the list of triangles of method Scene.DefineMesh(): " + objType);
+			throw runtime_error("Wrong data type for the list of triangles of method Scene.DefineMesh(): " + objType);
 		}
 	}
 
@@ -817,19 +562,19 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 					uvs[i] = luxrays::UV(extract<float>(t[0]), extract<float>(t[1]));
 				} else {
 					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
-					throw std::runtime_error("Wrong data type in the list of UVs of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+					throw runtime_error("Wrong data type in the list of UVs of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
 				}
 			}
 		} else {
 			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
-			throw std::runtime_error("Wrong data type for the list of UVs of method Scene.DefineMesh(): " + objType);
+			throw runtime_error("Wrong data type for the list of UVs of method Scene.DefineMesh(): " + objType);
 		}
 	}
 
 	// Translate all colors
 	luxrays::Spectrum *colors = NULL;
-	if (!uv.is_none()) {
-		extract<boost::python::list> getColList(uv);
+	if (!cols.is_none()) {
+		extract<boost::python::list> getColList(cols);
 		if (getColList.check()) {
 			const boost::python::list &l = getColList();
 			const boost::python::ssize_t size = len(l);
@@ -839,15 +584,15 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 				extract<boost::python::tuple> getTuple(l[i]);
 				if (getTuple.check()) {
 					const boost::python::tuple &t = getTuple();
-					colors[i] = luxrays::Spectrum(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[1]));
+					colors[i] = luxrays::Spectrum(extract<float>(t[0]), extract<float>(t[1]), extract<float>(t[2]));
 				} else {
 					const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
-					throw std::runtime_error("Wrong data type in the list of colors of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
+					throw runtime_error("Wrong data type in the list of colors of method Scene.DefineMesh() at position " + luxrays::ToString(i) +": " + objType);
 				}
 			}
 		} else {
 			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
-			throw std::runtime_error("Wrong data type for the list of colors of method Scene.DefineMesh(): " + objType);
+			throw runtime_error("Wrong data type for the list of colors of method Scene.DefineMesh(): " + objType);
 		}
 	}
 
@@ -864,7 +609,7 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 				as[i] = extract<float>(l[i]);
 		} else {
 			const string objType = extract<string>((n.attr("__class__")).attr("__name__"));
-			throw std::runtime_error("Wrong data type for the list of alphas of method Scene.DefineMesh(): " + objType);
+			throw runtime_error("Wrong data type for the list of alphas of method Scene.DefineMesh(): " + objType);
 		}
 	}
 
@@ -905,11 +650,6 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("Init", &LuxCore_Init);
 	def("Init", &LuxCore_InitDefaultHandler);
 	def("ParseLXS", &ParseLXS);
-	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &ConvertFilmChannelOutput_3xFloat_To_4xUChar);
-	def("ConvertFilmChannelOutput_3xFloat_To_3xFloatList", &ConvertFilmChannelOutput_3xFloat_To_3xFloatList);
-	def("ConvertFilmChannelOutput_1xFloat_To_4xFloatList", &ConvertFilmChannelOutput_1xFloat_To_4xFloatList);
-	def("ConvertFilmChannelOutput_2xFloat_To_4xFloatList", &ConvertFilmChannelOutput_2xFloat_To_4xFloatList);
-	def("ConvertFilmChannelOutput_3xFloat_To_4xFloatList", &ConvertFilmChannelOutput_3xFloat_To_4xFloatList);
 
 	def("GetOpenCLDeviceList", &GetOpenCLDeviceList);
 	
@@ -974,7 +714,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 			("Set", &luxrays::Properties::Set, return_internal_reference<>())
 		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &)>
 			("Set", &luxrays::Properties::Set, return_internal_reference<>())
-		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &, const std::string &)>
+		.def<luxrays::Properties &(luxrays::Properties::*)(const luxrays::Properties &, const string &)>
 			("Set", &luxrays::Properties::Set, return_internal_reference<>())
 		.def("SetFromFile", &luxrays::Properties::SetFromFile, return_internal_reference<>())
 		.def("SetFromString", &luxrays::Properties::SetFromString, return_internal_reference<>())
@@ -988,7 +728,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("HaveNamesRE", &luxrays::Properties::HaveNamesRE)
 		.def("GetAllProperties", &luxrays::Properties::GetAllProperties)
 
-		.def<const luxrays::Property &(luxrays::Properties::*)(const std::string &) const>
+		.def<const luxrays::Property &(luxrays::Properties::*)(const string &) const>
 			("Get", &luxrays::Properties::Get, return_internal_reference<>())
 		.def("Get", &Properties_GetWithDefaultValues)
 	
@@ -1030,6 +770,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("UV", Film::OUTPUT_UV)
 		.value("RAYCOUNT", Film::OUTPUT_RAYCOUNT)
 		.value("BY_MATERIAL_ID", Film::BY_MATERIAL_ID)
+		.value("IRRADIANCE", Film::IRRADIANCE)
 	;
 
     class_<Film>("Film", no_init)
@@ -1074,6 +815,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("DefineImageMap", &Scene_DefineImageMap)
 		.def("IsImageMapDefined", &Scene::IsImageMapDefined)
 		.def("DefineMesh", &Scene_DefineMesh)
+		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh)
 		.def("IsMeshDefined", &Scene::IsMeshDefined)
 		.def("IsTextureDefined", &Scene::IsTextureDefined)
 		.def("IsMaterialDefined", &Scene::IsMaterialDefined)
@@ -1118,6 +860,16 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("WaitForDone", &RenderSession::WaitForDone)
 		.def("HasDone", &RenderSession::HasDone)
     ;
+	
+	//--------------------------------------------------------------------------
+	// Blender related functions
+	//--------------------------------------------------------------------------
+
+	def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &blender::ConvertFilmChannelOutput_3xFloat_To_4xUChar);
+	def("ConvertFilmChannelOutput_3xFloat_To_3xFloatList", &blender::ConvertFilmChannelOutput_3xFloat_To_3xFloatList);
+	def("ConvertFilmChannelOutput_1xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_1xFloat_To_4xFloatList);
+	def("ConvertFilmChannelOutput_2xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_2xFloat_To_4xFloatList);
+	def("ConvertFilmChannelOutput_3xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_3xFloat_To_4xFloatList);
 }
 
 }

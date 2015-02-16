@@ -52,16 +52,29 @@ protected:
 	virtual void CompileAdditionalKernels(cl::Program *program);
 
 	virtual void Stop();
+	
+	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel, bool firstKernel);
+	void UpdateKernelArgsForTile(const u_int xStart, const u_int yStart, const u_int filmIndex);
+	void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables
 	cl::Kernel *initSeedKernel;
 	size_t initSeedWorkGroupSize;
 	cl::Kernel *initStatKernel;
 	size_t initStatWorkGroupSize;
-	cl::Kernel *renderSampleKernel;
-	size_t renderSampleWorkGroupSize;
 	cl::Kernel *mergePixelSamplesKernel;
 	size_t mergePixelSamplesWorkGroupSize;
+	
+	cl::Kernel *renderSampleKernel;
+	cl::Kernel *renderSampleKernel_MK_GENERATE_CAMERA_RAY;
+	cl::Kernel *renderSampleKernel_MK_TRACE_EYE_RAY;
+	cl::Kernel *renderSampleKernel_MK_ILLUMINATE_EYE_MISS;
+	cl::Kernel *renderSampleKernel_MK_ILLUMINATE_EYE_HIT;
+	cl::Kernel *renderSampleKernel_MK_DL_VERTEX_1;
+	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_DIFFUSE;
+	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_GLOSSY;
+	cl::Kernel *renderSampleKernel_MK_BSDF_SAMPLE_SPECULAR;
+	size_t renderSampleWorkGroupSize;
 
 	cl::Buffer *tasksBuff;
 	cl::Buffer *tasksDirectLightBuff;
@@ -87,10 +100,11 @@ public:
 
 	virtual RenderEngineType GetEngineType() const { return BIASPATHOCL; }
 
-	void GetPendingTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
-	void GetNotConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
-	void GetConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
-	u_int GetTileSize() const { return tileRepository->tileSize; }
+	void GetPendingTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetNotConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
+	void GetConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
+	u_int GetTileWidth() const { return tileRepository->tileWidth; }
+	u_int GetTileHeight() const { return tileRepository->tileHeight; }
 
 	friend class BiasPathOCLRenderThread;
 
@@ -107,6 +121,9 @@ public:
 	// Light settings
 	float lowLightThreashold, nearStartLight;
 	u_int firstVertexLightSampleCount;
+
+	u_int maxTilePerDevice;
+	bool useMicroKernels;
 
 protected:
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,

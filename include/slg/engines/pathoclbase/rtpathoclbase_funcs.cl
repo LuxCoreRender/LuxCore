@@ -239,6 +239,73 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void ToneMapLinear(
 }
 
 //------------------------------------------------------------------------------
+// Compute the sum of all frame buffer RGB values
+//------------------------------------------------------------------------------
+
+__attribute__((reqd_work_group_size(64, 1, 1))) __kernel void SumRGBValuesReduce(
+		const uint filmWidth, const uint filmHeight,
+		__global float4 *src, __global float4 *dst) {
+	// Workgroup local shared memory
+	__local float4 localMemBuffer[64];
+
+	const uint tid = get_local_id(0);
+	const uint gid = get_global_id(0);
+
+	const uint localSize = get_local_size(0);
+	const uint stride = gid * 2;
+	const uint pixelCount = filmWidth * filmHeight;
+	localMemBuffer[tid] = 0.f;
+	if (stride < pixelCount)
+		localMemBuffer[tid] += src[stride];
+	if (stride + 1 < pixelCount)
+		localMemBuffer[tid] += src[stride + 1];	
+
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	// Do reduction in local memory
+	for (uint s = localSize >> 1; s > 0; s >>= 1) {
+		if (tid < s)
+			localMemBuffer[tid] += localMemBuffer[tid + s];
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+	}
+
+	// Write result for this block to global memory
+	if (tid == 0) {
+		const uint bid = get_group_id(0);
+
+		dst[bid] = localMemBuffer[0];
+	}
+}
+
+__attribute__((reqd_work_group_size(64, 1, 1))) __kernel void SumRGBValueAccumulate(
+		const uint size, __global float4 *buff) {
+	if (get_local_id(0) == 0) {
+		float4 totalRGBValue = 0.f;
+		for(uint i = 0; i < size; ++i)
+			totalRGBValue += buff[i];
+		buff[0] = totalRGBValue;
+	}
+}
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void ToneMapAutoLinear(
+		const uint filmWidth, const uint filmHeight,
+		__global Pixel *pixels, const float gamma, __global float4 *totalRGB) {
+	const int gid = get_global_id(0);
+	const uint pixelCount = filmWidth * filmHeight;
+	if (gid >= pixelCount)
+		return;
+
+	const float totalLuminance = .212671f * (*totalRGB).x + .715160f * (*totalRGB).y + .072169f * (*totalRGB).z;
+	const float avgLuminance = totalLuminance / pixelCount;
+	const float scale = (avgLuminance > 0.f) ? (1.25f / avgLuminance * pow(118.f / 255.f, gamma)) : 1.f;
+
+	const float4 sp = VLOAD4F(pixels[gid].c.c);
+
+	VSTORE4F(scale * sp, pixels[gid].c.c);
+}
+
+//------------------------------------------------------------------------------
 // UpdateScreenBuffer Kernel
 //------------------------------------------------------------------------------
 

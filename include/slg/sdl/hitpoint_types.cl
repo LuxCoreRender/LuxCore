@@ -30,7 +30,7 @@ typedef struct {
 	Normal geometryN;
 	Normal shadeN;
 
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY)
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	Spectrum color;
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)

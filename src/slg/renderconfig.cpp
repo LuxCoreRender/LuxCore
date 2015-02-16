@@ -157,6 +157,8 @@ void RenderConfig::Parse(const luxrays::Properties &props) {
 		scene->accelType = ACCEL_QBVH;
 	else if (accelType == "MQBVH")
 		scene->accelType = ACCEL_MQBVH;
+	else if (accelType == "EMBREE")
+		scene->accelType = ACCEL_EMBREE;
 	else {
 		SLG_LOG("Unknown accelerator type (using AUTO instead): " << accelType);
 	}
@@ -328,6 +330,12 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			} else if (type == "CAMERA_RESPONSE_FUNC") {
 				imagePipeline->AddPlugin(new CameraResponsePlugin(
 					cfg.Get(Property(prefix + ".name")("Advantix_100CD")).Get<string>()));
+			} else if (type == "CONTOUR_LINES") {
+				const float scale = cfg.Get(Property(prefix + ".scale")(179.f)).Get<float>();
+				const float range = Max(0.f, cfg.Get(Property(prefix + ".range")(100.f)).Get<float>());
+				const u_int steps = Max(2u, cfg.Get(Property(prefix + ".steps")(8)).Get<u_int>());
+				const int zeroGridSize = cfg.Get(Property(prefix + ".zerogridsize")(8)).Get<int>();
+				imagePipeline->AddPlugin(new ContourLinesPlugin(scale, range, steps, zeroGridSize));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
@@ -530,6 +538,9 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 			film->AddChannel(Film::MATERIAL_ID);
 			film->AddChannel(Film::BY_MATERIAL_ID, &prop);
 			filmOutputs.Add(FilmOutputs::BY_MATERIAL_ID, fileName, &prop);
+		} else if (type == "IRRADIANCE") {
+			film->AddChannel(Film::IRRADIANCE);
+			filmOutputs.Add(FilmOutputs::IRRADIANCE, fileName);
 		} else
 			throw runtime_error("Unknown type in film output: " + type);
 	}

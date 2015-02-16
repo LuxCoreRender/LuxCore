@@ -18,51 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void SR_RadianceClamp(__global SampleResult *sampleResult) {
-	// Initialize only Spectrum fields
-
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	sampleResult->radiancePerPixelNormalized[0].c[0] = clamp(sampleResult->radiancePerPixelNormalized[0].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[0].c[1] = clamp(sampleResult->radiancePerPixelNormalized[0].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[0].c[2] = clamp(sampleResult->radiancePerPixelNormalized[0].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	sampleResult->radiancePerPixelNormalized[1].c[0] = clamp(sampleResult->radiancePerPixelNormalized[1].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[1].c[1] = clamp(sampleResult->radiancePerPixelNormalized[1].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[1].c[2] = clamp(sampleResult->radiancePerPixelNormalized[1].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	sampleResult->radiancePerPixelNormalized[2].c[0] = clamp(sampleResult->radiancePerPixelNormalized[2].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[2].c[1] = clamp(sampleResult->radiancePerPixelNormalized[2].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[2].c[2] = clamp(sampleResult->radiancePerPixelNormalized[2].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	sampleResult->radiancePerPixelNormalized[3].c[0] = clamp(sampleResult->radiancePerPixelNormalized[3].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[3].c[1] = clamp(sampleResult->radiancePerPixelNormalized[3].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[3].c[2] = clamp(sampleResult->radiancePerPixelNormalized[3].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	sampleResult->radiancePerPixelNormalized[4].c[0] = clamp(sampleResult->radiancePerPixelNormalized[4].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[4].c[1] = clamp(sampleResult->radiancePerPixelNormalized[4].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[4].c[2] = clamp(sampleResult->radiancePerPixelNormalized[4].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	sampleResult->radiancePerPixelNormalized[5].c[0] = clamp(sampleResult->radiancePerPixelNormalized[5].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[5].c[1] = clamp(sampleResult->radiancePerPixelNormalized[5].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[5].c[2] = clamp(sampleResult->radiancePerPixelNormalized[5].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	sampleResult->radiancePerPixelNormalized[6].c[0] = clamp(sampleResult->radiancePerPixelNormalized[6].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[6].c[1] = clamp(sampleResult->radiancePerPixelNormalized[6].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[6].c[2] = clamp(sampleResult->radiancePerPixelNormalized[6].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	sampleResult->radiancePerPixelNormalized[7].c[0] = clamp(sampleResult->radiancePerPixelNormalized[7].c[0], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[7].c[1] = clamp(sampleResult->radiancePerPixelNormalized[7].c[1], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-	sampleResult->radiancePerPixelNormalized[7].c[2] = clamp(sampleResult->radiancePerPixelNormalized[7].c[2], 0.f, PARAM_RADIANCE_CLAMP_MAXVALUE);
-#endif
-}
-
 void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 	dst->radiancePerPixelNormalized[0].c[0] += src->radiancePerPixelNormalized[0].c[0];
@@ -175,6 +130,12 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 #if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	dst->rayCount += src->rayCount;
 #endif
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+	dst->irradiance.c[0] += src->irradiance.c[0];
+	dst->irradiance.c[1] += src->irradiance.c[1];
+	dst->irradiance.c[2] += src->irradiance.c[2];
+#endif
 }
 
 void SR_Normalize(SampleResult *dst, const float k) {
@@ -258,6 +219,11 @@ void SR_Normalize(SampleResult *dst, const float k) {
 #if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	dst->indirectShadowMask *= k;
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+	dst->irradiance.c[0] *= k;
+	dst->irradiance.c[1] *= k;
+	dst->irradiance.c[2] *= k;
+#endif
 }
 
 void SampleGrid(Seed *seed, const uint size,
@@ -294,10 +260,10 @@ void PathDepthInfo_IncDepths(PathDepthInfo *depthInfo, const BSDFEvent event) {
 }
 
 bool PathDepthInfo_IsLastPathVertex(const PathDepthInfo *depthInfo, const BSDFEvent event) {
-	return (depthInfo->depth == PARAM_DEPTH_MAX) ||
-			((event & DIFFUSE) && (depthInfo->diffuseDepth == PARAM_DEPTH_DIFFUSE_MAX)) ||
-			((event & GLOSSY) && (depthInfo->glossyDepth == PARAM_DEPTH_GLOSSY_MAX)) ||
-			((event & SPECULAR) && (depthInfo->specularDepth == PARAM_DEPTH_SPECULAR_MAX));
+	return (depthInfo->depth + 1 == PARAM_DEPTH_MAX) ||
+			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 == PARAM_DEPTH_DIFFUSE_MAX)) ||
+			((event & GLOSSY) && (depthInfo->glossyDepth + 1 == PARAM_DEPTH_GLOSSY_MAX)) ||
+			((event & SPECULAR) && (depthInfo->specularDepth + 1 == PARAM_DEPTH_SPECULAR_MAX));
 }
 
 bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
@@ -367,7 +333,7 @@ uint BIASPATHOCL_Scene_Intersect(
 #endif
 		RayHit *rayHit,
 		__global BSDF *bsdf,
-		float3 *pathThroughput,
+		float3 *connectionThroughput,  const float3 pathThroughput,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global Mesh *meshDescs,
@@ -393,6 +359,7 @@ uint BIASPATHOCL_Scene_Intersect(
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
+	*connectionThroughput = WHITE;
 	uint tracedRaysCount = 0;
 #if defined(PARAM_HAS_PASSTHROUGH)
 	float passThrough = initialPassThrough;
@@ -403,6 +370,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			ACCELERATOR_INTERSECT_PARAM);
 		++tracedRaysCount;
 
+		float3 connectionSegmentThroughput;
 		const bool continueToTrace = Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
 			volInfo,
@@ -412,7 +380,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			passThrough,
 #endif
 			ray, rayHit, bsdf,
-			pathThroughput,
+			&connectionSegmentThroughput, pathThroughput * (*connectionThroughput),
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
@@ -436,6 +404,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			triangles
 			MATERIALS_PARAM
 			);
+		*connectionThroughput *= connectionSegmentThroughput;
 		if (!continueToTrace)
 			break;
 
@@ -447,41 +416,12 @@ uint BIASPATHOCL_Scene_Intersect(
 #endif
 	}
 	
-
 	return tracedRaysCount;
 }
 
 //------------------------------------------------------------------------------
-// Direct light sampling
+// Direct hit  on lights
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_ENVLIGHTS)
-void DirectHitInfiniteLight(
-		const BSDFEvent lastBSDFEvent,
-		const float3 pathThroughput,
-		const float3 eyeDir, const float lastPdfW,
-		__global SampleResult *sampleResult
-		LIGHTS_PARAM_DECL) {
-	for (uint i = 0; i < envLightCount; ++i) {
-		__global LightSource *light = &lights[envLightIndices[i]];
-
-		if (sampleResult->firstPathVertex || (light->visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
-			float directPdfW;
-			const float3 lightRadiance = EnvLight_GetRadiance(light, eyeDir, &directPdfW
-					LIGHTS_PARAM);
-
-			if (!Spectrum_IsBlack(lightRadiance)) {
-				// MIS between BSDF sampling and direct light sampling
-				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, light->lightSceneIndex);
-				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
-				const float3 radiance = weight * pathThroughput * lightRadiance;
-
-				SampleResult_AddEmission(sampleResult, light->lightID, radiance);
-			}
-		}
-	}
-}
-#endif
 
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
@@ -489,7 +429,9 @@ void DirectHitFiniteLight(
 		const float3 pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
-	if (sampleResult->firstPathVertex || (lights[bsdf->triangleLightSourceIndex].visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+	if (sampleResult->firstPathVertex ||
+			(lights[bsdf->triangleLightSourceIndex].visibility &
+			(sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 		float directPdfA;
 		const float3 emittedRadiance = BSDF_GetEmittedRadiance(bsdf, &directPdfA
 				LIGHTS_PARAM);
@@ -506,14 +448,44 @@ void DirectHitFiniteLight(
 				// MIS between BSDF sampling and direct light sampling
 				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
 			}
-			const float3 lightRadiance = weight * pathThroughput * emittedRadiance;
 
 			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
-					MATERIALS_PARAM), lightRadiance);
+					MATERIALS_PARAM), pathThroughput, weight * emittedRadiance);
 		}
 	}
 }
 #endif
+
+#if defined(PARAM_HAS_ENVLIGHTS)
+void DirectHitInfiniteLight(
+		const BSDFEvent lastBSDFEvent,
+		const float3 pathThroughput,
+		const float3 eyeDir, const float lastPdfW,
+		__global SampleResult *sampleResult
+		LIGHTS_PARAM_DECL) {
+	for (uint i = 0; i < envLightCount; ++i) {
+		__global LightSource *light = &lights[envLightIndices[i]];
+
+		if (sampleResult->firstPathVertex || (light->visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
+			float directPdfW;
+			const float3 envRadiance = EnvLight_GetRadiance(light, eyeDir, &directPdfW
+					LIGHTS_PARAM);
+
+			if (!Spectrum_IsBlack(envRadiance)) {
+				// MIS between BSDF sampling and direct light sampling
+				const float lightPickProb = Scene_SampleAllLightPdf(lightsDistribution, light->lightSceneIndex);
+				const float weight = ((lastBSDFEvent & SPECULAR) ? 1.f : PowerHeuristic(lastPdfW, directPdfW * lightPickProb));
+
+				SampleResult_AddEmission(sampleResult, light->lightID, pathThroughput, weight * envRadiance);
+			}
+		}
+	}
+}
+#endif
+
+//------------------------------------------------------------------------------
+// Direct light sampling
+//------------------------------------------------------------------------------
 
 bool DirectLightSamplingInit(
 		__global LightSource *light,
@@ -531,9 +503,14 @@ bool DirectLightSamplingInit(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		const float3 pathThroughput, __global BSDF *bsdf, BSDFEvent *event,
+		__global BSDF *bsdf, BSDFEvent *event,
 		__global SampleResult *sampleResult,
-		Ray *shadowRay, float3 *radiance, uint *ID
+		Ray *shadowRay,
+		float3 *radiance,
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		float3 *irradiance,
+#endif
+		uint *ID
 		LIGHTS_PARAM_DECL) {
 	float3 lightRayDir;
 	float distance, directPdfW;
@@ -570,7 +547,10 @@ bool DirectLightSamplingInit(
 			const float weight = (!sampleResult->lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 				PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			*radiance = (weight * factor) * pathThroughput * bsdfEval * lightRadiance;
+			*radiance = bsdfEval * (weight * factor) * lightRadiance;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			*irradiance = factor * lightRadiance;
+#endif
 			*ID = light->lightID;
 
 			// Setup the shadow ray
@@ -637,6 +617,9 @@ uint DirectLightSampling_ONE(
 	uint lightID;
 	BSDFEvent event;
 	float3 lightRadiance;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+	float3 lightIrradiance;
+#endif
 	const bool illuminated = DirectLightSamplingInit(
 		&lights[lightIndex],
 		lightPickPdf,
@@ -653,15 +636,19 @@ uint DirectLightSampling_ONE(
 #if defined(PARAM_HAS_PASSTHROUGH)
 		Rnd_FloatValue(seed),
 #endif
-		pathThroughput, bsdf, &event, sampleResult,
-		&shadowRay, &lightRadiance, &lightID
+		bsdf, &event, sampleResult,
+		&shadowRay, &lightRadiance,
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		&lightIrradiance,
+#endif
+		&lightID
 		LIGHTS_PARAM);
 
 	uint tracedRaysCount = 0;
 	if (illuminated) {
 		// Trace the shadow ray
 
-		float3 directLightThroughput = WHITE;
+		float3 connectionThroughput;
 		RayHit shadowRayHit;
 		tracedRaysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
@@ -673,7 +660,7 @@ uint DirectLightSampling_ONE(
 #endif
 				&shadowRay, &shadowRayHit,
 				directLightBSDF,
-				&directLightThroughput,
+				&connectionThroughput, pathThroughput,
 				sampleResult,
 				// BSDF_Init parameters
 				meshDescs,
@@ -702,7 +689,20 @@ uint DirectLightSampling_ONE(
 
 		if (shadowRayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, the light source is visible
-			SampleResult_AddDirectLight(sampleResult, lightID, event, directLightThroughput * lightRadiance, 1.f);
+			SampleResult_AddDirectLight(sampleResult, lightID, event, pathThroughput,
+					connectionThroughput * lightRadiance, 1.f);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			// The first path vertex is not handled by AddDirectLight(). This is valid
+			// for irradiance AOV only if it is not a SPECULAR material and first path vertex
+			if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+						MATERIALS_PARAM) & SPECULAR))
+				VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
+						M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+						(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) *
+							connectionThroughput * lightIrradiance,
+						sampleResult->irradiance.c);
+#endif
 		}
 	}
 	
@@ -769,6 +769,9 @@ uint DirectLightSampling_ALL(
 
 			Ray shadowRay;
 			float3 lightRadiance;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			float3 lightIrradiance;
+#endif
 			uint lightID;
 			BSDFEvent event;
 			const bool illuminated = DirectLightSamplingInit(
@@ -787,14 +790,18 @@ uint DirectLightSampling_ALL(
 #if defined(PARAM_HAS_PASSTHROUGH)
 				Rnd_FloatValue(seed),
 #endif
-				pathThroughput, bsdf, &event, sampleResult,
-				&shadowRay, &lightRadiance, &lightID
+				bsdf, &event, sampleResult,
+				&shadowRay, &lightRadiance,
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+				&lightIrradiance,
+#endif
+				&lightID
 				LIGHTS_PARAM);
 
 			if (illuminated) {
 				// Trace the shadow ray
 
-				float3 directLightThroughput = WHITE;
+				float3 connectionThroughput;
 				RayHit shadowRayHit;
 				tracedRaysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
@@ -806,7 +813,7 @@ uint DirectLightSampling_ALL(
 #endif
 						&shadowRay, &shadowRayHit,
 						directLightBSDF,
-						&directLightThroughput,
+						&connectionThroughput, pathThroughput,
 						sampleResult,
 						// BSDF_Init parameters
 						meshDescs,
@@ -835,8 +842,21 @@ uint DirectLightSampling_ALL(
 
 				if (shadowRayHit.meshIndex == NULL_INDEX) {
 					// Nothing was hit, the light source is visible
+					const float3 incomingRadiance = scaleFactor * connectionThroughput * lightRadiance;
 					SampleResult_AddDirectLight(sampleResult, lightID, event,
-							scaleFactor * directLightThroughput * lightRadiance, scaleFactor);
+							pathThroughput, incomingRadiance, scaleFactor);
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+					// The first path vertex is not handled by AddDirectLight(). This is valid
+					// for irradiance AOV only if it is not a SPECULAR material and first path vertex
+					if ((sampleResult->firstPathVertex) && !(BSDF_GetEventTypes(bsdf
+								MATERIALS_PARAM) & SPECULAR))
+						VSTORE3F(VLOAD3F(sampleResult->irradiance.c) +
+								(M_1_PI_F * fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x),
+								(float3)(shadowRay.d.x, shadowRay.d.y, shadowRay.d.z))) * scaleFactor) *
+									connectionThroughput * lightIrradiance,
+								sampleResult->irradiance.c);
+#endif
 				}
 			}
 		}
@@ -899,6 +919,7 @@ uint ContinueTracePath(
 		// Trace the ray
 		//----------------------------------------------------------------------
 
+		float3 connectionThroughput;
 		RayHit rayHit;
 		tracedRaysCount += BIASPATHOCL_Scene_Intersect(
 #if defined(PARAM_HAS_VOLUMES)
@@ -910,7 +931,7 @@ uint ContinueTracePath(
 #endif
 			ray, &rayHit,
 			bsdfPathVertexN,
-			&pathThroughput,
+			&connectionThroughput, pathThroughput,
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
@@ -935,7 +956,12 @@ uint ContinueTracePath(
 			MATERIALS_PARAM
 			// Accelerator_Intersect parameters
 			ACCELERATOR_INTERSECT_PARAM);
-		
+		pathThroughput *= connectionThroughput;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		// Update also irradiance AOV path throughput
+		VSTORE3F(VLOAD3F(sampleResult->irradiancePathThroughput.c) * connectionThroughput, sampleResult->irradiancePathThroughput.c);
+#endif
+
 		if (rayHit.meshIndex == NULL_INDEX) {
 			// Nothing was hit, look for env. lights
 
@@ -1056,8 +1082,13 @@ uint ContinueTracePath(
 #endif
 
 		// Continue to trace the path
-		pathThroughput *= bsdfSample *
+		const float3 throughputFactor = bsdfSample *
 			((lastBSDFEvent & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE));
+		pathThroughput *= throughputFactor;
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+		// Update also irradiance AOV path throughput
+		VSTORE3F(VLOAD3F(sampleResult->irradiancePathThroughput.c) * throughputFactor, sampleResult->irradiancePathThroughput.c);
+#endif
 
 		Ray_Init2_Private(ray, VLOAD3F(&bsdfPathVertexN->hitPoint.p.x), sampledDir, time);
 	}
@@ -1155,8 +1186,21 @@ uint SampleComponent(
 #endif
 
 			// Continue to trace the path
-			const float3 continuePathThroughput = throughputPathVertex1 * bsdfSample *
-				(scaleFactor * ((event & SPECULAR) ? 1.f : min(1.f, pdfW / PARAM_PDF_CLAMP_VALUE)));
+			const float pdfFactor = scaleFactor * ((event & SPECULAR) ? 1.f : min(1.f, pdfW / PARAM_PDF_CLAMP_VALUE));
+			const float3 continuePathThroughput = throughputPathVertex1 * bsdfSample * pdfFactor;
+
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+			// This is valid for irradiance AOV only if it is not a SPECULAR material and
+			// first path vertex. Set or update sampleResult.irradiancePathThroughput
+			if (!(BSDF_GetEventTypes(bsdfPathVertex1
+						MATERIALS_PARAM) & SPECULAR))
+				VSTORE3F(M_1_PI_F * fabs(dot(
+							VLOAD3F(&bsdfPathVertex1->hitPoint.shadeN.x),
+							sampledDir)),
+						sampleResult->irradiancePathThroughput.c);
+			else
+				VSTORE3F(BLACK, sampleResult->irradiancePathThroughput.c);
+#endif
 
 			Ray continueRay;
 			Ray_Init2_Private(&continueRay, VLOAD3F(&bsdfPathVertex1->hitPoint.p.x), sampledDir, time);
@@ -1214,4 +1258,540 @@ uint SampleComponent(
 #endif
 
 	return tracedRaysCount;
+}
+
+//------------------------------------------------------------------------------
+// Kernel parameters
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
+		, __global float *filmRadianceGroup0
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
+		, __global float *filmRadianceGroup1
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
+		, __global float *filmRadianceGroup2
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
+		, __global float *filmRadianceGroup3
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
+		, __global float *filmRadianceGroup4
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
+		, __global float *filmRadianceGroup5
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
+		, __global float *filmRadianceGroup6
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
+		, __global float *filmRadianceGroup7
+#else
+#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
+#define KERNEL_ARGS_FILM_CHANNELS_ALPHA \
+		, __global float *filmAlpha
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_ALPHA
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
+#define KERNEL_ARGS_FILM_CHANNELS_DEPTH \
+		, __global float *filmDepth
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DEPTH
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
+#define KERNEL_ARGS_FILM_CHANNELS_POSITION \
+		, __global float *filmPosition
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_POSITION
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
+#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
+		, __global float *filmGeometryNormal
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
+#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
+		, __global float *filmShadingNormal
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
+		, __global uint *filmMaterialID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
+		, __global float *filmDirectDiffuse
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
+		, __global float *filmDirectGlossy
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
+#define KERNEL_ARGS_FILM_CHANNELS_EMISSION \
+		, __global float *filmEmission
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_EMISSION
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
+		, __global float *filmIndirectDiffuse
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
+		, __global float *filmIndirectGlossy
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
+		, __global float *filmIndirectSpecular
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_ID_MASK \
+		, __global float *filmMaterialIDMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_ID_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
+		, __global float *filmDirectShadowMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
+		, __global float *filmIndirectShadowMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_UV)
+#define KERNEL_ARGS_FILM_CHANNELS_UV \
+		, __global float *filmUV
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_UV
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
+#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
+		, __global float *filmRayCount
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
+		, __global float *filmByMaterialID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
+#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
+		, __global float *filmIrradiance
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
+#endif
+
+#define KERNEL_ARGS_FILM \
+		, const uint filmWidth, const uint filmHeight \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
+		KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
+		KERNEL_ARGS_FILM_CHANNELS_ALPHA \
+		KERNEL_ARGS_FILM_CHANNELS_DEPTH \
+		KERNEL_ARGS_FILM_CHANNELS_POSITION \
+		KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
+		KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
+		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
+		KERNEL_ARGS_FILM_CHANNELS_EMISSION \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
+		KERNEL_ARGS_FILM_CHANNELS_ID_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_UV \
+		KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
+		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
+		KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
+
+#if defined(PARAM_HAS_INFINITELIGHTS)
+#define KERNEL_ARGS_INFINITELIGHTS \
+		, const float worldCenterX \
+		, const float worldCenterY \
+		, const float worldCenterZ \
+		, const float worldRadius
+#else
+#define KERNEL_ARGS_INFINITELIGHTS
+#endif
+
+#if defined(PARAM_HAS_NORMALS_BUFFER)
+#define KERNEL_ARGS_NORMALS_BUFFER \
+		, __global Vector *vertNormals
+#else
+#define KERNEL_ARGS_NORMALS_BUFFER
+#endif
+#if defined(PARAM_HAS_UVS_BUFFER)
+#define KERNEL_ARGS_UVS_BUFFER \
+		, __global UV *vertUVs
+#else
+#define KERNEL_ARGS_UVS_BUFFER
+#endif
+#if defined(PARAM_HAS_COLS_BUFFER)
+#define KERNEL_ARGS_COLS_BUFFER \
+		, __global Spectrum *vertCols
+#else
+#define KERNEL_ARGS_COLS_BUFFER
+#endif
+#if defined(PARAM_HAS_ALPHAS_BUFFER)
+#define KERNEL_ARGS_ALPHAS_BUFFER \
+		__global float *vertAlphas,
+#else
+#define KERNEL_ARGS_ALPHAS_BUFFER
+#endif
+
+#if defined(PARAM_HAS_ENVLIGHTS)
+#define KERNEL_ARGS_ENVLIGHTS \
+		, __global uint *envLightIndices \
+		, const uint envLightCount
+#else
+#define KERNEL_ARGS_ENVLIGHTS
+#endif
+#if defined(PARAM_HAS_INFINITELIGHT)
+#define KERNEL_ARGS_INFINITELIGHT \
+		, __global float *infiniteLightDistribution
+#else
+#define KERNEL_ARGS_INFINITELIGHT
+#endif
+
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
+		, __global ImageMap *imageMapDescs, __global float *imageMapBuff0
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
+		, __global float *imageMapBuff1
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
+		, __global float *imageMapBuff2
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
+		, __global float *imageMapBuff3
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
+		, __global float *imageMapBuff4
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_4
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
+		, __global float *imageMapBuff5
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_5
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
+		, __global float *imageMapBuff6
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_6
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_7 \
+		, __global float *imageMapBuff7
+#else
+#define KERNEL_ARGS_IMAGEMAPS_PAGE_7
+#endif
+#define KERNEL_ARGS_IMAGEMAPS_PAGES \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
+		KERNEL_ARGS_IMAGEMAPS_PAGE_7
+
+#define KERNEL_ARGS \
+		const uint engineFilmWidth, const uint engineFilmHeight \
+		, __global GPUTask *tasks \
+		, __global GPUTaskDirectLight *tasksDirectLight \
+		, __global GPUTaskPathVertexN *tasksPathVertexN \
+		, __global GPUTaskStats *taskStats \
+		, __global SampleResult *taskResults \
+		, __global float *pixelFilterDistribution \
+		/* Film parameters */ \
+		KERNEL_ARGS_FILM \
+		/* Scene parameters */ \
+		KERNEL_ARGS_INFINITELIGHTS \
+		, __global Material *mats \
+		, __global Texture *texs \
+		, __global uint *meshMats \
+		, __global Mesh *meshDescs \
+		, __global Point *vertices \
+		KERNEL_ARGS_NORMALS_BUFFER \
+		KERNEL_ARGS_UVS_BUFFER \
+		KERNEL_ARGS_COLS_BUFFER \
+		KERNEL_ARGS_ALPHAS_BUFFER \
+		, __global Triangle *triangles \
+		, __global Camera *camera \
+		/* Lights */ \
+		, __global LightSource *lights \
+		KERNEL_ARGS_ENVLIGHTS \
+		, __global uint *meshTriLightDefsOffset \
+		KERNEL_ARGS_INFINITELIGHT \
+		, __global float *lightsDistribution \
+		/* Images */ \
+		KERNEL_ARGS_IMAGEMAPS_PAGES \
+		ACCELERATOR_INTERSECT_PARAM_DECL
+
+
+//------------------------------------------------------------------------------
+// To initialize image maps page pointer table
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_IMAGEMAPS_PAGE_0)
+#define INIT_IMAGEMAPS_PAGE_0 imageMapBuff[0] = imageMapBuff0;
+#else
+#define INIT_IMAGEMAPS_PAGE_0
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_1)
+#define INIT_IMAGEMAPS_PAGE_1 imageMapBuff[1] = imageMapBuff1;
+#else
+#define INIT_IMAGEMAPS_PAGE_1
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_2)
+#define INIT_IMAGEMAPS_PAGE_2 imageMapBuff[2] = imageMapBuff2;
+#else
+#define INIT_IMAGEMAPS_PAGE_2
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_3)
+#define INIT_IMAGEMAPS_PAGE_3 imageMapBuff[3] = imageMapBuff3;
+#else
+#define INIT_IMAGEMAPS_PAGE_3
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_4)
+#define INIT_IMAGEMAPS_PAGE_4 imageMapBuff[4] = imageMapBuff4;
+#else
+#define INIT_IMAGEMAPS_PAGE_4
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_5)
+#define INIT_IMAGEMAPS_PAGE_5 imageMapBuff[5] = imageMapBuff5;
+#else
+#define INIT_IMAGEMAPS_PAGE_5
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_6)
+#define INIT_IMAGEMAPS_PAGE_6 imageMapBuff[6] = imageMapBuff6;
+#else
+#define INIT_IMAGEMAPS_PAGE_6
+#endif
+#if defined(PARAM_IMAGEMAPS_PAGE_7)
+#define INIT_IMAGEMAPS_PAGE_7 imageMapBuff[7] = imageMapBuff7;
+#else
+#define INIT_IMAGEMAPS_PAGE_7
+#endif
+
+#if defined(PARAM_HAS_IMAGEMAPS)
+#define INIT_IMAGEMAPS_PAGES \
+	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT]; \
+	INIT_IMAGEMAPS_PAGE_0 \
+	INIT_IMAGEMAPS_PAGE_1 \
+	INIT_IMAGEMAPS_PAGE_2 \
+	INIT_IMAGEMAPS_PAGE_3 \
+	INIT_IMAGEMAPS_PAGE_4 \
+	INIT_IMAGEMAPS_PAGE_5 \
+	INIT_IMAGEMAPS_PAGE_6 \
+	INIT_IMAGEMAPS_PAGE_7
+#else
+#define INIT_IMAGEMAPS_PAGES
+#endif
+
+//------------------------------------------------------------------------------
+// InitSeed Kernel
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(
+		uint seedBase,
+		__global GPUTask *tasks) {
+	//if (get_global_id(0) == 0)
+	//	printf("sizeof(BSDF) = %dbytes\n", sizeof(BSDF));
+	//if (get_global_id(0) == 0)
+	//	printf("sizeof(HitPoint) = %dbytes\n", sizeof(HitPoint));
+	//if (get_global_id(0) == 0)
+	//	printf("sizeof(GPUTask) = %dbytes\n", sizeof(GPUTask));
+	//if (get_global_id(0) == 0)
+	//	printf("sizeof(SampleResult) = %dbytes\n", sizeof(SampleResult));
+
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	// Initialize the task
+	__global GPUTask *task = &tasks[gid];
+
+	// For testing/debugging
+	//MangleMemory((__global unsigned char *)task, sizeof(GPUTask));
+
+	// Initialize random number generator
+	Seed seed;
+	Rnd_Init(seedBase + gid, &seed);
+
+	// Save the seed
+	task->seed.s1 = seed.s1;
+	task->seed.s2 = seed.s2;
+	task->seed.s3 = seed.s3;
+}
+
+//------------------------------------------------------------------------------
+// InitStats Kernel
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
+		__global GPUTaskStats *taskStats) {
+	const size_t gid = get_global_id(0);
+	if (gid >= PARAM_TASK_COUNT)
+		return;
+
+	__global GPUTaskStats *taskStat = &taskStats[gid];
+	taskStat->raysCount = 0;
+}
+
+//------------------------------------------------------------------------------
+// MergePixelSamples
+//------------------------------------------------------------------------------
+
+__kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
+		const uint tileStartX
+		, const uint tileStartY
+		, const uint engineFilmWidth, const uint engineFilmHeight
+		, __global SampleResult *taskResults
+		// Film parameters
+		KERNEL_ARGS_FILM
+		) {
+	const size_t gid = get_global_id(0);
+
+	uint sampleX, sampleY;
+	sampleX = gid % PARAM_TILE_WIDTH;
+	sampleY = gid / PARAM_TILE_WIDTH;
+
+	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT) ||
+			(tileStartX + sampleX >= engineFilmWidth) ||
+			(tileStartY + sampleY >= engineFilmHeight))
+		return;
+
+	const uint index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
+	__global SampleResult *sampleResult = &taskResults[index];
+
+	//--------------------------------------------------------------------------
+	// Initialize Film radiance group pointer table
+	//--------------------------------------------------------------------------
+
+	__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
+#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+	filmRadianceGroup[0] = filmRadianceGroup0;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_1)
+	filmRadianceGroup[1] = filmRadianceGroup1;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_2)
+	filmRadianceGroup[2] = filmRadianceGroup2;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_3)
+	filmRadianceGroup[3] = filmRadianceGroup3;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_4)
+	filmRadianceGroup[4] = filmRadianceGroup4;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_5)
+	filmRadianceGroup[5] = filmRadianceGroup5;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_6)
+	filmRadianceGroup[6] = filmRadianceGroup6;
+#endif
+#if defined(PARAM_FILM_RADIANCE_GROUP_7)
+	filmRadianceGroup[7] = filmRadianceGroup7;
+#endif
+
+	//--------------------------------------------------------------------------
+	// Radiance clamping
+	//--------------------------------------------------------------------------
+
+	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
+		for (uint i = 0; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
+			SampleResult_ClampRadiance(&sampleResult[i], PARAM_RADIANCE_CLAMP_MAXVALUE);
+	}
+
+	//--------------------------------------------------------------------------
+	// Merge all samples and accumulate statistics
+	//--------------------------------------------------------------------------
+
+#if (PARAM_AA_SAMPLES == 1)
+	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
+			FILM_PARAM);
+#else
+	SampleResult result = sampleResult[0];
+	uint totalRaysCount = 0;
+	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i) {
+		SR_Accumulate(&sampleResult[i], &result);
+	}
+	SR_Normalize(&result, 1.f / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES));
+
+	// I have to save result in __global space in order to be able
+	// to use Film_AddSample(). OpenCL can be so stupid some time...
+	sampleResult[0] = result;
+	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
+			FILM_PARAM);
+#endif
 }

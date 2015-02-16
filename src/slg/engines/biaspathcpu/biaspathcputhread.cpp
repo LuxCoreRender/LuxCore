@@ -63,18 +63,16 @@ void BiasPathCPURenderThread::DirectLightSampling(
 			(distance > engine->nearStartLight)) {
 		BSDFEvent event;
 		float bsdfPdfW;
-		Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
+		const Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
 
-		const float directLightSamplingPdfW = directPdfW * lightPickPdf;
-		const float factor = 1.f / directLightSamplingPdfW;
+		if (!bsdfEval.Black()) {
+			const float directLightSamplingPdfW = directPdfW * lightPickPdf;
+			const float factor = 1.f / directLightSamplingPdfW;
 
-		// MIS between direct light sampling and BSDF sampling
-		const float weight = (!sampleResult->lastPathVertex && (light->IsEnvironmental() || light->IsIntersectable())) ? 
-						PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
+			// MIS between direct light sampling and BSDF sampling
+			const float weight = (!sampleResult->lastPathVertex && (light->IsEnvironmental() || light->IsIntersectable())) ? 
+							PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-		const Spectrum illumRadiance = (weight * factor) * pathThroughput * lightRadiance * bsdfEval;
-
-		if (!illumRadiance.Black()) {
 			const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 			Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 					epsilon,
@@ -88,8 +86,18 @@ void BiasPathCPURenderThread::DirectLightSampling(
 					&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 				// I'm ignoring volume emission because it is not sampled in
 				// direct light step.
-				const Spectrum radiance = connectionThroughput * illumRadiance;
-				sampleResult->AddDirectLight(light->GetID(), event, radiance, lightScale);
+				const Spectrum incomingRadiance = bsdfEval * (lightScale * weight * factor) * connectionThroughput * lightRadiance;
+				sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, lightScale);
+
+				// The first path vertex is not handled by AddDirectLight(). This is valid
+				// for irradiance AOV only if it is not a SPECULAR material.
+				//
+				// Note: irradiance samples the light sources only here (i.e. no
+				// direct hit, no MIS, it would be useless)
+				if ((sampleResult->firstPathVertex) && !(bsdf.GetEventTypes() & SPECULAR))
+					sampleResult->irradiance +=
+								(INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, shadowRay.d)) *
+								lightScale * factor) * connectionThroughput * lightRadiance;
 			}
 		}
 	}
@@ -131,7 +139,6 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 		const u_int samplesToDo = (samples < 0) ? engine->directLightSamples : ((u_int)samples);
 
 		const float scaleFactor = 1.f / (samplesToDo * samplesToDo * sampleCount);
-		const Spectrum lightPathTrough = pathThroughput * scaleFactor;
 		for (u_int sampleY = 0; sampleY < samplesToDo; ++sampleY) {
 			for (u_int sampleX = 0; sampleX < samplesToDo; ++sampleX) {
 				float u0, u1;
@@ -140,7 +147,7 @@ void BiasPathCPURenderThread::DirectLightSamplingALL(
 				DirectLightSampling(
 						light, lightPickPdf, u0, u1,
 						rndGen->floatValue(), rndGen->floatValue(), time,
-						lightPathTrough, bsdf, volInfo, sampleResult, scaleFactor);
+						pathThroughput, bsdf, volInfo, sampleResult, scaleFactor);
 			}
 		}
 	}
@@ -175,8 +182,7 @@ void BiasPathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent
 		} else
 			weight = 1.f;
 
-		const Spectrum radiance = weight * pathThroughput * emittedRadiance;
-		sampleResult->AddEmission(bsdf.GetLightID(), radiance);
+		sampleResult->AddEmission(bsdf.GetLightID(), pathThroughput, weight * emittedRadiance);
 	}
 }
 
@@ -205,8 +211,7 @@ void BiasPathCPURenderThread::DirectHitEnvLight(const BSDFEvent lastBSDFEvent,
 				} else
 					weight = 1.f;
 
-				const Spectrum radiance = weight * pathThroughput * envRadiance;
-				sampleResult->AddEmission(envLight->GetID(), radiance);
+				sampleResult->AddEmission(envLight->GetID(), pathThroughput, weight * envRadiance);
 			}
 		}
 	}
@@ -226,8 +231,11 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		const bool hit = scene->Intersect(device, false,
 				volInfo, rndGen->floatValue(),
 				&ray, &rayHit, &bsdf, &connectionThroughput,
-				sampleResult);
+				&pathThroughput, sampleResult);
 		pathThroughput *= connectionThroughput;
+		// Update also irradiance AOV path throughput
+		sampleResult->irradiancePathThroughput *= connectionThroughput;
+
 		// Note: pass-through check is done inside Scene::Intersect()
 
 		if (!hit) {
@@ -282,8 +290,12 @@ void BiasPathCPURenderThread::ContinueTracePath(RandomGenerator *rndGen,
 		// Update volume information
 		volInfo->Update(lastBSDFEvent, bsdf);
 
-		pathThroughput *= bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+		const Spectrum throughputFactor = bsdfSample * min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+		pathThroughput *= throughputFactor;
 		assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
+
+		// Update also irradiance AOV path throughput
+		sampleResult->irradiancePathThroughput *= throughputFactor;
 
 		ray.Update(bsdf.hitPoint.p, sampledDir);
 	}
@@ -323,12 +335,20 @@ void BiasPathCPURenderThread::SampleComponent(
 				PathVolumeInfo volInfo = startVolInfo;
 				volInfo.Update(event, bsdf);
 
-				const Spectrum continuePathThroughput = pathThroughput * bsdfSample * scaleFactor *
-					min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
+				const float pdfFactor = scaleFactor * min(1.f, (event & SPECULAR) ? 1.f : (pdfW / engine->pdfClampValue));
+				const Spectrum continuePathThroughput = pathThroughput * bsdfSample * pdfFactor;
 				assert (!continuePathThroughput.IsNaN() && !continuePathThroughput.IsInf());
+
+				// This is valid for irradiance AOV only if it is not a SPECULAR
+				// material. Set sampleResult.irradiancePathThroughput
+				if (!(bsdf.GetEventTypes() & SPECULAR))
+					sampleResult->irradiancePathThroughput = INV_PI * fabsf(Dot(bsdf.hitPoint.shadeN, sampledDir)) * scaleFactor;
+				else
+					sampleResult->irradiancePathThroughput = Spectrum();
 
 				Ray continueRay(bsdf.hitPoint.p, sampledDir);
 				continueRay.time = time;
+
 				ContinueTracePath(rndGen, depthInfo, continueRay,
 						continuePathThroughput, event, pdfW, &volInfo, sampleResult);
 			}
@@ -352,12 +372,14 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 
 	Ray eyeRay = ray;
 	RayHit eyeRayHit;
-	Spectrum pathThroughput;
+	Spectrum pathThroughput(1.f);
+	Spectrum connectionThroughput;
 	BSDF bsdf;
 	const bool hit = scene->Intersect(device, false,
 			volInfo, rndGen->floatValue(),
-			&eyeRay, &eyeRayHit, &bsdf, &pathThroughput,
+			&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput, &pathThroughput, 
 			sampleResult);
+	pathThroughput *= connectionThroughput;
 
 	if (!hit) {
 		// Nothing was hit, look for env. lights
@@ -491,7 +513,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT,
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE,
 		engine->film->GetRadianceGroupCount());
 
 	// Set to 0.0 all result colors
@@ -505,6 +527,7 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	sampleResult.indirectSpecular = Spectrum();
 	sampleResult.directShadowMask = 1.f;
 	sampleResult.indirectShadowMask = 1.f;
+	sampleResult.irradiance = Spectrum();
 
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
@@ -520,10 +543,8 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	TraceEyePath(rndGen, eyeRay, &volInfo, &sampleResult);
 
 	// Radiance clamping
-	if (engine->radianceClampMaxValue > 0.f) {
-		for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
-			sampleResult.radiancePerPixelNormalized[i] = sampleResult.radiancePerPixelNormalized[i].Clamp(0.f, engine->radianceClampMaxValue);
-	}
+	if (engine->radianceClampMaxValue > 0.f)
+		sampleResult.ClampRadiance(engine->radianceClampMaxValue);
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
@@ -553,8 +574,8 @@ void BiasPathCPURenderThread::RenderFunc() {
 	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
 		// Render the tile
 		tileFilm->Reset();
-		const u_int tileWidth = Min(engine->tileRepository->tileSize, filmWidth - tile->xStart);
-		const u_int tileHeight = Min(engine->tileRepository->tileSize, filmHeight - tile->yStart);
+		const u_int tileWidth = Min(engine->tileRepository->tileWidth, filmWidth - tile->xStart);
+		const u_int tileHeight = Min(engine->tileRepository->tileHeight, filmHeight - tile->yStart);
 		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "
 		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
 		//		"(" << tileWidth << ", " << tileHeight << ")");

@@ -534,10 +534,10 @@ void BiDirCPURenderThread::RenderFunc() {
 			const bool hit = scene->Intersect(device, false,
 					&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
-					&connectionThroughput, NULL, &connectEmission);
+					&connectionThroughput, NULL, NULL, &connectEmission);
 			// I account for volume emission only with path tracing (i.e. here and
 			// not in any other place)
-			eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
+			eyeSampleResult.radiancePerPixelNormalized[0] += eyeVertex.throughput * connectEmission;
 
 			if (!hit) {
 				// Nothing was hit, look for infinitelight

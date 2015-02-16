@@ -19,6 +19,8 @@
 #ifndef _SLG_FRAMEBUFFER_H
 #define	_SLG_FRAMEBUFFER_H
 
+#include <boost/serialization/vector.hpp>
+
 #include "luxrays/core/utils.h"
 
 namespace slg {
@@ -26,20 +28,16 @@ namespace slg {
 template<u_int CHANNELS, u_int WEIGHT_CHANNELS, class T> class GenericFrameBuffer {
 public:
 	GenericFrameBuffer(const u_int w, const u_int h)
-		: width(w), height(h) {
-		pixels = new T[width * height * CHANNELS];
-
-		Clear();
+		: width(w), height(h), pixels(width * height * CHANNELS, (T)0) {
 	}
-	~GenericFrameBuffer() {
-		delete[] pixels;
-	}
+	~GenericFrameBuffer() { }
 
 	void Clear(const T value = 0) {
-		std::fill(pixels, pixels + width * height * CHANNELS, value);
+		std::fill(pixels.begin(), pixels.begin() + width * height * CHANNELS, value);
 	};
 
-	T *GetPixels() const { return pixels; }
+	const T *GetPixels() const { return &pixels[0]; }
+	T *GetPixels() { return &pixels[0]; }
 
 	bool MinPixel(const u_int x, const u_int y, const T *v) {
 		assert (x >= 0);
@@ -110,7 +108,7 @@ public:
 		pixel[CHANNELS - 1] = weight;
 	}
 
-	T *GetPixel(const u_int x, const u_int y) const {
+	const T *GetPixel(const u_int x, const u_int y) const {
 		assert (x >= 0);
 		assert (x < width);
 		assert (y >= 0);
@@ -119,7 +117,23 @@ public:
 		return &pixels[(x + y * width) * CHANNELS];
 	}
 
-	T *GetPixel(const u_int index) const {
+	T *GetPixel(const u_int x, const u_int y) {
+		assert (x >= 0);
+		assert (x < width);
+		assert (y >= 0);
+		assert (y < height);
+
+		return &pixels[(x + y * width) * CHANNELS];
+	}
+
+	const T *GetPixel(const u_int index) const {
+		assert (index >= 0);
+		assert (index < width * height);
+
+		return &pixels[index * CHANNELS];
+	}
+
+	T *GetPixel(const u_int index) {
 		assert (index >= 0);
 		assert (index < width * height);
 
@@ -186,13 +200,26 @@ public:
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
 
-private:
-	const u_int width, height;
+	friend class boost::serialization::access;
 
-	T *pixels;
+private:
+	// Used by serialization
+	GenericFrameBuffer() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & width;
+		ar & height;
+		ar & pixels;
+	}
+
+	u_int width, height;
+
+	std::vector<T> pixels;
 };
 
 }
+
+// BOOST_CLASS_VERSION doesn't work for template
 
 #endif	/* _SLG_FRAMEBUFFER_H */
 

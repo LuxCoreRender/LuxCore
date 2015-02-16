@@ -32,6 +32,8 @@ using namespace slg;
 // Gamma correction plugin
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::GammaCorrectionPlugin)
+
 GammaCorrectionPlugin::GammaCorrectionPlugin(const float g, const u_int tableSize) {
 	gamma = g;
 
@@ -55,7 +57,7 @@ float GammaCorrectionPlugin::Radiance2PixelFloat(const float x) const {
 	return gammaTable[index];
 }
 
-void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
 	for (u_int i = 0; i < pixelCount; ++i) {
@@ -71,22 +73,26 @@ void GammaCorrectionPlugin::Apply(const Film &film, Spectrum *pixels, std::vecto
 // Nop plugin
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::NopPlugin)
+
 ImagePipelinePlugin *NopPlugin::Copy() const {
 	return new NopPlugin();
 }
 
-void NopPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void NopPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 }
 
 //------------------------------------------------------------------------------
 // OutputSwitcher plugin
 //------------------------------------------------------------------------------
 
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::OutputSwitcherPlugin)
+
 ImagePipelinePlugin *OutputSwitcherPlugin::Copy() const {
 	return new OutputSwitcherPlugin(type, index);
 }
 
-void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
+void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
 	// Copy the data from another Film output channel
 
 	// Do nothing if the Film is missing this particular channel
@@ -292,6 +298,16 @@ void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, std::vector
 			}
 			break;
 		}
+		case Film::IRRADIANCE: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v[3];
+					film.channel_IRRADIANCE->GetWeightedPixel(i, v);
+					pixels[i] = Spectrum(v);
+				}
+			}
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in OutputSwitcherPlugin::Apply(): " + ToString(type));
 	}
@@ -300,6 +316,8 @@ void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, std::vector
 //------------------------------------------------------------------------------
 // GaussianBlur filter plugin
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianBlur3x3FilterPlugin)
 
 ImagePipelinePlugin *GaussianBlur3x3FilterPlugin::Copy() const {
 	return new GaussianBlur3x3FilterPlugin(weight);
@@ -433,6 +451,8 @@ void GaussianBlur3x3FilterPlugin::Apply(const Film &film, Spectrum *pixels, vect
 //------------------------------------------------------------------------------
 // CameraResponse filter plugin
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::CameraResponsePlugin)
 
 ImagePipelinePlugin *CameraResponsePlugin::Copy() const {
 	CameraResponsePlugin *crp = new CameraResponsePlugin();
@@ -572,7 +592,7 @@ float CameraResponsePlugin::ApplyCrf(float point, const vector<float> &from, con
 	if (point >= from.back())
 		return to.back();
 
-	int index = std::upper_bound(from.begin(), from.end(), point) -
+	int index = upper_bound(from.begin(), from.end(), point) -
 		from.begin();
 	float x1 = from[index - 1];
 	float x2 = from[index];
@@ -679,7 +699,7 @@ void CameraResponsePlugin::LoadFile(const string &filmName) {
 		throw runtime_error("No valid Camera Response Functions in: " + filmName);
 }
 
-bool CameraResponsePlugin::LoadPreset(const std::string &filmName) {
+bool CameraResponsePlugin::LoadPreset(const string &filmName) {
 /*  
 	Valid preset names (case sensitive):
 
@@ -1272,4 +1292,117 @@ bool CameraResponsePlugin::LoadPreset(const std::string &filmName) {
 		return false;
 
 	return true;
+}
+
+//------------------------------------------------------------------------------
+// ContourLinesPlugin plugin
+//------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ContourLinesPlugin)
+
+// Scale should be set to 179.0: the value of 179 lm/w is the standard luminous
+// efficacy of equal energy white light that is defined and used by Radiance. It
+// can be used here to produce the same output of Radiance.
+//
+// More information here: http://www.radiance-online.org/pipermail/radiance-general/2006-April/003616.html
+
+ContourLinesPlugin::ContourLinesPlugin(const float scl, const float r, const u_int s,
+		const int gridSize) : scale(scl), range(r), steps(s), zeroGridSize(gridSize) {
+}
+
+ImagePipelinePlugin *ContourLinesPlugin::Copy() const {
+	return new ContourLinesPlugin(scale, range, steps, zeroGridSize);
+}
+
+float ContourLinesPlugin::GetLuminance(const Film &film,
+		const u_int x, const u_int y) const {
+	Spectrum v;
+	film.channel_IRRADIANCE->GetWeightedPixel(x, y, v.c);
+
+	return scale * v.Y();
+}
+
+int ContourLinesPlugin::GetStep(const Film &film, vector<bool> &pixelsMask,
+		const int x, const int y, const int defaultValue, float *normalizedValue) const {
+	if ((x < 0) || (x >= (int)film.GetWidth()) ||
+			(y < 0) || (y >= (int)film.GetHeight()) ||
+			!pixelsMask[x + y * film.GetWidth()])
+		return defaultValue;
+
+	const float l = GetLuminance(film, x, y);
+	if (l == 0.f)
+		return -1;
+
+	const float normVal = Clamp(l / range, 0.f, 1.f);
+	if (normalizedValue)
+		*normalizedValue = normVal;
+
+	return Floor2UInt((steps - 1) * normVal);
+}
+
+static Spectrum FalseColor(const float v) {
+	static Spectrum falseColors[] = {
+		Spectrum(.5f, 0.f, .5f),
+		Spectrum(0.f, 0.f, .5f),
+		Spectrum(0.f, .75f, 0.f),
+		Spectrum(1.f, 1.f, 0.f),
+		Spectrum(1.f, 0.f, 0.f)
+	};
+	static const u_int falseColorsCount = 5;
+
+	if (v <= 0.f)
+		return falseColors[0];
+	if (v >= 1.f)
+		return falseColors[falseColorsCount - 1];
+
+	const int index = Floor2UInt(v * (falseColorsCount - 1));
+	const float vAtoB = v * (falseColorsCount - 1) - index;
+	const Spectrum &colorA = falseColors[index];
+	const Spectrum &colorB = falseColors[index + 1];
+
+	return Lerp(vAtoB, colorA, colorB);
+}
+
+void ContourLinesPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool> &pixelsMask) const {
+	// Do nothing if the Film is missing the IRRADIANCE channel
+	if (!film.HasChannel(Film::IRRADIANCE))
+		return;
+
+	// Draw the contour lines
+	
+	#pragma omp parallel for
+	for (int s = 0; s < (int)steps; ++s) {
+		for (int y = 0; y < (int)film.GetHeight(); ++y) {
+			for (int x = 0; x < (int)film.GetWidth(); ++x) {
+				const u_int pixelIndex = x + y * film.GetWidth();
+				if (pixelsMask[pixelIndex]) {
+					bool isBorder = false;
+
+					float normalizedValue;
+					const int myStep = GetStep(film, pixelsMask, x, y, 0, &normalizedValue);
+					if (myStep == -1) {
+						// No irradiance information available or black
+						if (zeroGridSize == 0.f)
+							pixels[pixelIndex] = Spectrum();
+						else if ((zeroGridSize > 0.f) && (
+								(x % zeroGridSize == 0) || (y % zeroGridSize == 0)))
+							pixels[pixelIndex] = Spectrum();
+					} else {
+						// Irradiance information available
+						if ((GetStep(film, pixelsMask, x - 1, y, myStep) != myStep) ||
+								(GetStep(film, pixelsMask, x + 1, y, myStep) != myStep) ||
+								(GetStep(film, pixelsMask, x, y - 1, myStep) != myStep) ||
+								(GetStep(film, pixelsMask, x, y + 1, myStep) != myStep))
+							isBorder = true;
+
+						if (isBorder) {
+							const Spectrum c = FalseColor(normalizedValue);
+
+							pixels[pixelIndex] = c;
+						}
+					}
+				}
+			}
+		}
+	}
 }

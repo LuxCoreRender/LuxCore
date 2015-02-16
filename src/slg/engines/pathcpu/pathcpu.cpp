@@ -44,5 +44,9 @@ void PathCPURenderEngine::StartLockLess() {
 	rrDepth = Max(1, cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>());
 	rrImportanceCap = Clamp(cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>(), 0.f, 1.f);
 
+	// Clamping settings
+	radianceClampMaxValue = Max(0.f, cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>());
+	pdfClampValue = Max(0.f, cfg.Get(Property("path.clamping.pdf.value")(0.f)).Get<float>());
+
 	CPUNoTileRenderEngine::StartLockLess();
 }

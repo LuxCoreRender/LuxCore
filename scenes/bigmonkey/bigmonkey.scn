@@ -10,19 +10,25 @@ scene.materials.mat2.type = mirror
 scene.materials.mat2.kd = 0.75 0.75 0.75
 #scene.materials.mat2.type = matte
 #scene.materials.mat2.kd = 0.0 0.75 0.0
-#scene.materials.shell.type = glossy2
-#scene.materials.shell.kd = 0.5 0.0 0.0
-#scene.materials.shell.ks = 0.5 0.5 0.5
-#scene.materials.shell.uroughness = 0.1
-#scene.materials.shell.vroughness = 0.2
 scene.materials.redmat.type = mix
 scene.materials.redmat.amount = 0.2
 scene.materials.redmat.material1 = mat1
 scene.materials.redmat.material2 = mat2
+##
 #scene.materials.redmat.type = archglass
 #scene.materials.redmat.kr = 1.0 1.0 1.0
 #scene.materials.redmat.kt = 1.0 0.0 0.0
 #scene.materials.redmat.iorinside = 1.51
+##
+#scene.materials.redmat.type = glossy2
+#scene.materials.redmat.kd = 0.0 0.0 0.5
+#scene.materials.redmat.ks = 0.5 0.5 0.5
+#scene.materials.redmat.uroughness = 0.01
+#scene.materials.redmat.vroughness = 0.01
+##
+#scene.materials.redmat.type = matte
+#scene.materials.redmat.kd = 0.0 0.0 0.5
+##
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.whitelight.type = matte

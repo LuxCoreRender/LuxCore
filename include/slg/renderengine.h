@@ -20,6 +20,8 @@
 #define	_SLG_RENDERENGINE_H
 
 #include <deque>
+#include <boost/heap/priority_queue.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 #include "luxrays/core/utils.h"
 
@@ -249,36 +251,50 @@ class TileRepository {
 public:
 	class Tile {
 	public:
-		Tile(const u_int x, const u_int y) :
-			xStart(x), yStart(y), pass(0) { }
-		virtual ~Tile() { }
+		Tile(TileRepository *tileRepository, const Film &film,
+				const u_int xStart, const u_int yStart);
+		virtual ~Tile();
 
+		void Restart();
+		void AddPass(const Film &tileFilm);
+		
+		// Read-only for every one but Tile/TileRepository classes
 		u_int xStart, yStart;
 		u_int pass;
+		bool done;
+
+	private:
+		void InitTileFilm(const Film &film, Film **tileFilm);
+		void CheckConvergence();
+		void UpdateMaxPixelValue();
+
+		TileRepository *tileRepository;
+		Film *allPassFilm, *evenPassFilm;
 	};
 
-	TileRepository(const u_int size);
+	TileRepository(const u_int tileWidth, const u_int tileHeight);
 	~TileRepository();
 
 	void HilberCurveTiles(
+		const Film &film,
 		const u_int n, const int xo, const int yo,
 		const int xd, const int yd, const int xp, const int yp,
 		const int xEnd, const int yEnd);
 
 	void Clear();
-	void GetPendingTiles(std::deque<Tile *> &tiles);
-	void GetNotConvergedTiles(std::deque<Tile *> &tiles);
-	void GetConvergedTiles(std::deque<Tile *> &tiles);
+	void Restart();
+	void GetPendingTiles(std::deque<const Tile *> &tiles);
+	void GetNotConvergedTiles(std::deque<const Tile *> &tiles);
+	void GetConvergedTiles(std::deque<const Tile *> &tiles);
 
-	void InitTiles(const Film *film);
+	void InitTiles(const Film &film);
 	bool NextTile(Film *film, boost::mutex *filmMutex,
 		Tile **tile, const Film *tileFilm);
 
 	friend class Tile;
 
-	u_int tileSize;
+	u_int tileWidth, tileHeight;
 	u_int totalSamplesPerPixel;
-	u_int pass;
 
 	u_int maxPassCount;
 	float convergenceTestThreshold, convergenceTestThresholdReduction;
@@ -287,21 +303,29 @@ public:
 	bool done;
 
 private:
-	bool IsConvergedTile(const Tile *tile, const luxrays::Spectrum *allPassPixels,
-			const luxrays::Spectrum *evenPassPixels) const;
+	class CompareTilesPtr {
+	public:
+		bool operator()(const TileRepository::Tile *lt, const TileRepository::Tile *rt) const {
+			return lt->pass > rt->pass;
+		}
+	};
+
+	void SetDone();
+	bool GetToDoTile(Tile **tile);
 
 	boost::mutex tileMutex;
 	double startTime;
 
-	std::deque<Tile *> todoTiles;
+	float tileMaxPixelValue; // Updated only if convergence test is enabled
+
+	std::vector<Tile *> tileList;
+
+	boost::heap::priority_queue<Tile *,
+			boost::heap::compare<CompareTilesPtr>,
+			boost::heap::stable<true>
+		> todoTiles;
 	std::deque<Tile *> pendingTiles;
-	std::deque<Tile *> doneTiles;
-
 	std::deque<Tile *> convergedTiles;
-
-	// Using Boost conditional variable to wakeup all other waiting threads
-	boost::condition_variable allTodoTilesDoneCondition;
-	Film *evenPassFilm;
 };
 
 //------------------------------------------------------------------------------
@@ -329,10 +353,11 @@ public:
 	CPUTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPUTileRenderEngine();
 
-	void GetPendingTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
-	void GetNotConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
-	void GetConvergedTiles(std::deque<TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
-	u_int GetTileSize() const { return tileRepository->tileSize; }
+	void GetPendingTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
+	void GetNotConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
+	void GetConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
+	u_int GetTileWidth() const { return tileRepository->tileWidth; }
+	u_int GetTileHeight() const { return tileRepository->tileHeight; }
 
 	friend class CPUTileRenderThread;
 
