@@ -44,7 +44,7 @@ LightSource *LightStrategy::SampleLights(const float u, float *pdf) const {
 		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
 		assert ((lightIndex >= 0) && (lightIndex < scene->lightDefs.GetSize()));
 
-		return  scene->lightDefs.GetLightSources()[lightIndex];
+		return scene->lightDefs.GetLightSources()[lightIndex];
 	}
 
 float LightStrategy::SampleLightPdf(const LightSource *light) const {
@@ -233,6 +233,8 @@ void LightSourceDefinitions::UpdateMaterialReferences(const Material *oldMat, co
 void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
 	const u_int index = GetLightSourceIndex(name);
 	--lightTypeCount[lights[index]->GetType()];
+	delete lights[index];
+
 	lights.erase(lights.begin() + index);
 	lightsByName.erase(name);
 }
@@ -2263,7 +2265,6 @@ TriangleLight::TriangleLight() : mesh(NULL), meshIndex(NULL_INDEX),
 }
 
 TriangleLight::~TriangleLight() {
-	
 }
 
 float TriangleLight::GetPower(const Scene &scene) const {
