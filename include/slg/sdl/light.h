@@ -273,7 +273,7 @@ public:
 
 	void SetLightStrategy(const LightStrategyType type);
 
-	// Update lightGroupCount, infiniteLightSources, intersectableLightSources,
+	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexByMeshIndex and lightStrategyType
 	void Preprocess(const Scene *scene);
 
@@ -319,9 +319,15 @@ public:
 private:
 	std::vector<LightSource *> lights;
 	boost::unordered_map<std::string, LightSource *> lightsByName;
+	vector<u_int> lightTypeCount;
+
+	LightStrategy *lightStrategy;
+
+	//--------------------------------------------------------------------------
+	// Following fields are updated with Preprocess() method
+	//--------------------------------------------------------------------------
 
 	u_int lightGroupCount;
-	vector<u_int> lightTypeCount;
 
 	std::vector<u_int> lightIndexByMeshIndex;
 
@@ -329,8 +335,6 @@ private:
 	std::vector<TriangleLight *> intersectableLightSources;
 	// Only env. light sources (i.e. sky, sun and infinite light, etc.)
 	std::vector<EnvLightSource *> envLightSources;
-
-	LightStrategy *lightStrategy;
 };
 
 //------------------------------------------------------------------------------
