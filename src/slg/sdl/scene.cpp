@@ -756,6 +756,17 @@ void Scene::DeleteObject(const string &objName) {
 	}
 }
 
+void Scene::DeleteLight(const string &lightName) {
+	if (lightDefs.IsLightSourceDefined(lightName)) {
+		lightDefs.DeleteLightSource(lightName);
+
+		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
+
+		// Delete the light definition from the properties
+		sceneProperties.DeleteAll(sceneProperties.GetAllNames("scene.lights." + lightName));
+	}
+}
+
 //------------------------------------------------------------------------------
 
 TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const Properties &props) {

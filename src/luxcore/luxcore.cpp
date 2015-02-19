@@ -365,6 +365,10 @@ void Scene::DeleteObject(const string &objName) {
 	scene->DeleteObject(objName);
 }
 
+void Scene::DeleteLight(const string &lightName) {
+	scene->DeleteObject(lightName);
+}
+
 void Scene::RemoveUnusedImageMaps() {
 	scene->RemoveUnusedImageMaps();
 }
