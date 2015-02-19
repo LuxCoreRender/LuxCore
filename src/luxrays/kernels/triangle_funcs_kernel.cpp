@@ -74,7 +74,6 @@ std::string KernelSource_triangle_funcs =
 "		const float3 v0,\n"
 "		const float3 v1,\n"
 "		const float3 v2) {\n"
-"\n"
 "	// Calculate intersection\n"
 "	const float3 e1 = v1 - v0;\n"
 "	const float3 e2 = v2 - v0;\n"

@@ -71,7 +71,6 @@ void Triangle_Intersect(
 		const float3 v0,
 		const float3 v1,
 		const float3 v2) {
-
 	// Calculate intersection
 	const float3 e1 = v1 - v0;
 	const float3 e2 = v2 - v0;
