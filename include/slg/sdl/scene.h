@@ -87,6 +87,7 @@ public:
 
 	void Parse(const luxrays::Properties &props);
 	void DeleteObject(const std::string &objName);
+	void DeleteLight(const std::string &lightName);
 
 	void UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans);
 

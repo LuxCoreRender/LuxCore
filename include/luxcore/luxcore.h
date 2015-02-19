@@ -504,6 +504,14 @@ public:
 	void DeleteObject(const std::string &objName);
 
 	/*!
+	 * \brief Deletes a light from the scene.
+	 *
+	 * \param lightName is the name of the object to delete. Note: to delete
+	 * area lights, use DeleteObject().
+	 */
+	void DeleteLight(const std::string &lightName);
+
+	/*!
 	 * \brief Removes all unused image maps.
 	 */
 	void RemoveUnusedImageMaps();
