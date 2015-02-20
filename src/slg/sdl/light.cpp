@@ -298,7 +298,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene) {
 		// Build lightIndexByMeshIndex
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
 		if (tl) {
-			lightIndexByMeshIndex[tl->meshIndex] = i;
+			lightIndexByMeshIndex[scene->objDefs.GetSceneObjectIndex(tl->mesh)] = i;
 			intersectableLightSources.push_back(tl);
 		}
 	}
@@ -2259,8 +2259,8 @@ Properties SunLight::ToProperties(const ImageMapCache &imgMapCache) const {
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight() : mesh(NULL), meshIndex(NULL_INDEX),
-		triangleIndex(NULL_INDEX), triangleArea(0.f), invTriangleArea(0.f),
+TriangleLight::TriangleLight() : mesh(NULL), triangleIndex(NULL_INDEX),
+		triangleArea(0.f), invTriangleArea(0.f),
 		meshArea(0.f), invMeshArea(0.f){
 }
 

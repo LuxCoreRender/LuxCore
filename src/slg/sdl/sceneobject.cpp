@@ -125,6 +125,15 @@ u_int SceneObjectDefinitions::GetSceneObjectIndex(const SceneObject *m) const {
 	throw std::runtime_error("Reference to an undefined SceneObject: " + boost::lexical_cast<std::string>(m));
 }
 
+u_int SceneObjectDefinitions::GetSceneObjectIndex(const ExtMesh *mesh) const {
+	for (u_int i = 0; i < objs.size(); ++i) {
+		if (mesh == objs[i]->GetExtMesh())
+			return i;
+	}
+
+	throw std::runtime_error("Reference to an undefined ExtMesh in a SceneObject: " + boost::lexical_cast<std::string>(mesh));
+}
+
 std::vector<std::string> SceneObjectDefinitions::GetSceneObjectNames() const {
 	std::vector<std::string> names;
 	names.reserve(objs.size());

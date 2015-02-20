@@ -856,7 +856,7 @@ public:
 			float *emissionPdfW = NULL) const;
 
 	const luxrays::ExtMesh *mesh;
-	u_int meshIndex, triangleIndex;
+	u_int triangleIndex;
 	
 private:
 	float triangleArea, invTriangleArea;

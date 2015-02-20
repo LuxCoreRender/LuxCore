@@ -88,6 +88,7 @@ public:
 	}
 	u_int GetSceneObjectIndex(const std::string &name) const;
 	u_int GetSceneObjectIndex(const SceneObject *m) const;
+	u_int GetSceneObjectIndex(const luxrays::ExtMesh *mesh) const;
 
 	u_int GetSize() const { return static_cast<u_int>(objs.size()); }
 	std::vector<std::string> GetSceneObjectNames() const;
