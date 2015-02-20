@@ -118,7 +118,7 @@ void Material::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 	if (oldMat == interiorVolume)
 		interiorVolume = (Volume *)newMat;
 	if (oldMat == exteriorVolume)
-		exteriorVolume = (Volume *)oldMat;
+		exteriorVolume = (Volume *)newMat;
 }
 
 //------------------------------------------------------------------------------
