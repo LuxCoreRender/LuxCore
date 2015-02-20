@@ -546,12 +546,10 @@ void Scene::ParseObjects(const Properties &props) {
 			SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
 
 			// Add all new triangle lights
-			const u_int meshIndex = objDefs.GetSceneObjectIndex(obj);
 			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 				TriangleLight *tl = new TriangleLight();
 				tl->lightMaterial = mat;
 				tl->mesh = mesh;
-				tl->meshIndex = meshIndex;
 				tl->triangleIndex = i;
 				tl->Preprocess();
 
