@@ -57,7 +57,7 @@ void Sampler_NextSample(
 		__global float *sampleData,
 		const uint filmWidth, const uint filmHeight
 		) {
-	// Move to the next assigned pixel
+	// Move to the next sample
 	const float u0 = Rnd_FloatValue(seed);
 	const float u1 = Rnd_FloatValue(seed);
 
@@ -344,13 +344,14 @@ uint SobolSampler_SobolDimension(const uint index, const uint dimension) {
 float SobolSampler_GetSample(__global Sample *sample, const uint index) {
 	const uint pass = sample->pass;
 
-	const uint result = SobolSampler_SobolDimension(pass, index);
-	const float r = result * (1.f / 0xffffffffu);
+	const uint iResult = SobolSampler_SobolDimension(pass, index);
+	const float fResult = iResult * (1.f / 0xffffffffu);
 
 	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? sample->rng0 : sample->rng1;
+	const float shift = (index & 1) ? PARAM_SAMPLER_SOBOL_RNG0 : PARAM_SAMPLER_SOBOL_RNG1;
+	const float val = fResult + shift;
 
-	return r + shift - floor(r + shift);
+	return val - floor(val);
 }
 
 #define Sampler_GetSamplePath(index) (SobolSampler_GetSample(sample, index))
@@ -388,18 +389,11 @@ void Sampler_NextSample(
 		__global float *sampleData,
 		const uint filmWidth, const uint filmHeight
 		) {
-	// Move to the next assigned pixel
-	uint nextPixelIndex = sample->pixelIndex + PARAM_TASK_COUNT;
-	if (nextPixelIndex >= filmWidth * filmHeight) {
-		nextPixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
-		sample->pass += 1;
-	}
-	sample->pixelIndex = nextPixelIndex;
-	uint x, y;
-	PixelIndex2XY(filmWidth, nextPixelIndex, &x, &y);
+	// Move to the next sample
+	sample->pass += get_global_size(0);
 
-	const float u0 = (x + Sampler_GetSamplePath(IDX_SCREEN_X)) * (1.f / filmWidth);
-	const float u1 = (y + Sampler_GetSamplePath(IDX_SCREEN_Y)) * (1.f / filmHeight);
+	const float u0 = Sampler_GetSamplePath(IDX_SCREEN_X);
+	const float u1 = Sampler_GetSamplePath(IDX_SCREEN_Y);
 
 	sampleData[IDX_SCREEN_X] = u0;
 	sampleData[IDX_SCREEN_Y] = u1;
@@ -411,12 +405,8 @@ void Sampler_NextSample(
 
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
 		const uint filmWidth, const uint filmHeight) {
-	sample->rng0 = Rnd_FloatValue(seed);
-	sample->rng1 = Rnd_FloatValue(seed);
-	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET;
+	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET + get_global_id(0);
 
-	sample->pixelIndex = get_global_id(0) + (PARAM_TASK_COUNT * PARAM_DEVICE_INDEX / PARAM_DEVICE_COUNT);
-	
 	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight);
 }
 

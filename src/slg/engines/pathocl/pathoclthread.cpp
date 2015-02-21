@@ -21,6 +21,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
+#include "luxrays/core/randomgen.h"
 #include "luxrays/utils/ocl.h"
 #include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
@@ -169,11 +170,16 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << sampler->metropolis.imageMutationRange << "f" <<
 					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
 			break;
-		case slg::ocl::SOBOL:
+		case slg::ocl::SOBOL: {
+			RandomGenerator rndGen(engine->seedBase + threadIndex);
+					
 			ss << " -D PARAM_SAMPLER_TYPE=2" <<
+					" -D PARAM_SAMPLER_SOBOL_RNG0=" << rndGen.floatValue() << "f" <<
+					" -D PARAM_SAMPLER_SOBOL_RNG1=" << rndGen.floatValue() << "f" <<
 					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET <<
 					" -D PARAM_SAMPLER_SOBOL_MAXDEPTH=" << max(SOBOL_MAXDEPTH, engine->maxPathDepth);
 			break;
+		}
 		default:
 			assert (false);
 	}
@@ -330,7 +336,7 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	//--------------------------------------------------------------------------
 
 	const size_t sampleResultSize = GetOpenCLSampleResultSize();
-	
+
 	//--------------------------------------------------------------------------
 	// Sample size
 	//--------------------------------------------------------------------------
@@ -342,7 +348,7 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	} else if (engine->sampler->type == slg::ocl::METROPOLIS) {
 		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
 	} else if (engine->sampler->type == slg::ocl::SOBOL) {
-		sampleSize += 2 * sizeof(float) + 2 * sizeof(u_int);
+		sampleSize += sizeof(u_int);
 	} else
 		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(engine->sampler->type));
 

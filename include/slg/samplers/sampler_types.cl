@@ -106,8 +106,7 @@ typedef struct {
 } MetropolisSample;
 
 typedef struct {
-	float rng0, rng1;
-	unsigned int pixelIndex, pass;
+	unsigned int pass;
 
 	SampleResult result;
 } SobolSample;
