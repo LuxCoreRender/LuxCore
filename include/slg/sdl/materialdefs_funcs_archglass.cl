@@ -85,7 +85,6 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 			material->archglass.interiorIorTexIndex
 			TEXTURES_PARAM);
 	const float ntc = nt / nc;
-	const float eta = nc / nt;
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
@@ -95,6 +94,7 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 
 		// Compute transmitted ray direction
 		const float sini2 = SinTheta2(localFixedDir);
+		const float eta = nc / nt;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
 
@@ -117,7 +117,8 @@ float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
 		result *= 1.f + (1.f - result) * (1.f - result);
 		result = 1.f - result;
 
-		return kt * result;
+		// The "2.f*" is there in place of "/threshold" (aka "/pdf")
+		return 2.f * kt * result;
 	} else
 		return BLACK;
 }
