@@ -71,7 +71,6 @@ float3 GlassMaterial_ConstSample(
 
 	const bool entering = (CosTheta(localFixedDir) > 0.f);
 	const float ntc = nt / nc;
-	const float eta = entering ? (nc / nt) : ntc;
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
@@ -94,6 +93,7 @@ float3 GlassMaterial_ConstSample(
 	
 		// Compute transmitted ray direction
 		const float sini2 = SinTheta2(localFixedDir);
+		const float eta = entering ? (nc / nt) : ntc;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
 

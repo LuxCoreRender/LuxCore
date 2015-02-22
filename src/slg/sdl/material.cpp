@@ -476,7 +476,6 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
-	const float eta = entering ? (nc / nt) : ntc;
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
@@ -499,6 +498,7 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	
 		// Compute transmitted ray direction
 		const float sini2 = SinTheta2(localFixedDir);
+		const float eta = entering ? (nc / nt) : ntc;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
 
@@ -602,7 +602,6 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
-	const float eta = nc / nt;
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
@@ -625,6 +624,7 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 
 		// Compute transmitted ray direction
 		const float sini2 = SinTheta2(localFixedDir);
+		const float eta = nc / nt;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
 
@@ -685,7 +685,6 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
-	const float eta = nc / nt;
 	const float costheta = CosTheta(localFixedDir);
 
 	// Decide to transmit or reflect
@@ -695,6 +694,7 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	
 		// Compute transmitted ray direction
 		const float sini2 = SinTheta2(localFixedDir);
+		const float eta = nc / nt;
 		const float eta2 = eta * eta;
 		const float sint2 = eta2 * sini2;
 
@@ -717,7 +717,8 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		result *= Spectrum(1.f) + (Spectrum(1.f) - result) * (Spectrum(1.f) - result);
 		result = Spectrum(1.f) - result;
 
-		return kt * result;
+		// The "2.f*" is there in place of "/threshold" (aka "/pdf")
+		return 2.f * kt * result;
 	} else
 		return Spectrum();
 }
