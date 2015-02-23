@@ -1431,7 +1431,25 @@ ri_stmt: ACCELERATOR STRING paramlist
 	const string texType($4);
 	const string prefix = "scene.textures." + name;
 
-	if (texType == "imagemap") {
+	if (texType == "constant") {
+		const string channels($3);
+
+		if (channels == "float") {
+			*sceneProps <<
+				Property(prefix + ".type")("constfloat1") <<
+				Property(prefix + ".value")(props.Get(Property("value")(1.f)).Get<float>());
+		} else if ((channels == "color") || (channels == "spectrum")) {
+			*sceneProps <<
+				Property(prefix + ".type")("constfloat3") <<
+				Property(prefix + ".value")(props.Get(Property("value")(Spectrum(1.f))).Get<Spectrum>());
+		} else  {
+			LC_LOG("LuxCore doesn't support the constant texture type: " << channels);
+
+			*sceneProps <<
+					Property(prefix + ".type")("constfloat1") <<
+					Property(prefix + ".value")(.1f);
+		}
+	} else if (texType == "imagemap") {
 		const float gamma = props.Get(Property("gamma")(2.2f)).Get<float>();
 		const float gain = props.Get(Property("gain")(1.f)).Get<float>();
 		*sceneProps <<
@@ -1675,7 +1693,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".texture1")(1.f) <<
 				GetTexture(prefix + ".texture2", Property("Kr")(Spectrum(.5f)), props);
 	} else {
-		LC_LOG("LuxCore doesn't support: " << texType);
+		LC_LOG("LuxCore doesn't support the texture type: " << texType);
 
 		*sceneProps <<
 				Property(prefix + ".type")("constfloat1") <<
