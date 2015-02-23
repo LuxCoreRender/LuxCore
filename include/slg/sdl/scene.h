@@ -29,7 +29,7 @@
 #include "luxrays/core/accelerator.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
-#include "slg/camera/camera.h"
+#include "slg/cameras/camera.h"
 #include "slg/editaction.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/light.h"
