@@ -38,11 +38,21 @@ using namespace luxrays;
 using namespace luxcore;
 
 namespace luxcore { namespace parselxs {
+
 Properties *renderConfigProps = NULL;
 Properties *sceneProps = NULL;
 
 Properties overwriteProps;
 Transform worldToCamera;
+
+static string GetLuxCoreValidName(const string &name) {
+	string validName = name;
+
+	// Replace any "." in the name with 2x"__"
+	boost::replace_all(validName, ".", "__");
+
+	return validName;
+}
 
 //------------------------------------------------------------------------------
 // RenderOptions
@@ -141,9 +151,7 @@ static Property GetTexture(const string &luxCoreName, const Property defaultProp
 	Property prop = props.Get(defaultProp);
 	if (prop.GetValueType(0) == typeid(string)) {
 		// It is a texture name
-		string texName = prop.Get<string>();
-		// Replace any "." in the name with 2x"__"
-		boost::replace_all(texName, ".", "__");
+		string texName = GetLuxCoreValidName(prop.Get<string>());
 
 		return Property(luxCoreName)(texName);
 	} else
@@ -235,8 +243,8 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 		*sceneProps <<
 				Property(prefix + ".type")("mix") <<
 				GetTexture(prefix + ".amount", Property("amount")(.5f), matProps) <<
-				Property(prefix + ".material1")(matProps.Get(Property("namedmaterial1")("")).Get<string>()) <<
-				Property(prefix + ".material2")(matProps.Get(Property("namedmaterial2")("")).Get<string>());
+				Property(prefix + ".material1")(GetLuxCoreValidName(matProps.Get(Property("namedmaterial1")("")).Get<string>())) <<
+				Property(prefix + ".material2")(GetLuxCoreValidName(matProps.Get(Property("namedmaterial2")("")).Get<string>()));
 	} else if (type == "glossy") {
 		*sceneProps <<
 				Property(prefix + ".type")("glossy2") <<
@@ -1136,9 +1144,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | MAKENAMEDMATERIAL STRING paramlist
 {
-	string name($2);
-	// Replace any "." in the name with 2x"__"
-	boost::replace_all(name, ".", "__");
+	string name = GetLuxCoreValidName($2);
 	if (namedMaterials.count(name))
 		throw runtime_error("Named material '" + name + "' already defined");
 
@@ -1162,7 +1168,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 }
 | NAMEDMATERIAL STRING
 {
-	const string name($2);
+	const string name = GetLuxCoreValidName($2);
 	if (!namedMaterials.count(name))
 		throw runtime_error("Named material '" + name + "' unknown");
 
@@ -1306,8 +1312,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	} else
 		objName = "LUXCORE_OBJECT";
 	objName += "_" + ToString(freeObjectID++);
-	// Replace any "." in the name with 2x"__"
-	boost::replace_all(objName, ".", "__");
+	objName = GetLuxCoreValidName(objName);
 	const string prefix = "scene.objects." + objName;
 
 	// Define object material
@@ -1418,12 +1423,9 @@ ri_stmt: ACCELERATOR STRING paramlist
 	Properties props;
 	InitProperties(props, CPS, CP);
 
-	string name($2);
-	// Replace any "." in the name with 2x"__"
-	boost::replace_all(name, ".", "__");
-	if (namedTextures.count(name)) {
+	string name = GetLuxCoreValidName($2);
+	if (namedTextures.count(name))
 		LC_LOG("Texture '" << name << "' being redefined.");
-	}
 	namedTextures.insert(name);
 
 	const string texType($4);
