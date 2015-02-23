@@ -24,6 +24,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/cameras/perspective.h"
 #include "slg/sdl/blender_texture.h"
 
 using namespace std;
