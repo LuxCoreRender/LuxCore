@@ -217,11 +217,16 @@ IF(APPLE)
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
 	set(LUXRAYS_CUSTOM_CONFIG Config_OSX)
 
+	if(NOT CMAKE_BUILD_TYPE) # Assure something is set, default is "Release"
+		SET(CMAKE_BUILD_TYPE Release)
+	endif(NOT CMAKE_BUILD_TYPE)
 	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # will be set later in XCode
 #		SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE)
 		# Setup binaries output directory in Xcode manner
 		SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
 		SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE} CACHE PATH "per configuration" FORCE)
+	else() # replace CMAKE_BUILD_TYPE with XCode env var $(CONFIGURATION) globally
+		SET(CMAKE_BUILD_TYPE "$(CONFIGURATION)" )
 	endif()
 	#### OSX-flags by jensverwiebe
 	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H -fvisibility=hidden -fvisibility-inlines-hidden) # global compile definitions
