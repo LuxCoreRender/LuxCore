@@ -1351,7 +1351,7 @@ void CompiledScene::CompileTextures() {
 				break;
 			}
 			case ADD_TEX: {
-				ScaleTexture *st = static_cast<ScaleTexture *>(t);
+				AddTexture *st = static_cast<AddTexture *>(t);
 
 				tex->type = slg::ocl::ADD_TEX;
 				const Texture *tex1 = st->GetTexture1();
@@ -1362,7 +1362,7 @@ void CompiledScene::CompileTextures() {
 				break;
 			}
 			case SUBTRACT_TEX: {
-				ScaleTexture *st = static_cast<ScaleTexture *>(t);
+				SubtractTexture *st = static_cast<SubtractTexture *>(t);
 				
 				tex->type = slg::ocl::SUBTRACT_TEX;
 				const Texture *tex1 = st->GetTexture1();
