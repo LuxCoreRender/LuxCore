@@ -95,14 +95,14 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/light_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/lights/light_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/scene_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/mapping_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/mapping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/hitpoint_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/light_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/light_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdf_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdf_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdfutils_funcs.cl
@@ -196,6 +196,22 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/luxlinear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/reinhard02.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/constantinfinitelight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/distantlight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/infinitelight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/laserlight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/light.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/lightsourcedefinitions.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/lightstrategy.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/mappointlight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/pointlight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/projectionlight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/sharpdistantlight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/sky2light.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/skylight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/spotlight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/sunlight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/lights/trianglelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
@@ -206,7 +222,6 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/extmeshcache.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/light.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/material.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp

@@ -25,6 +25,19 @@
 
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/cameras/perspective.h"
+#include "slg/lights/constantinfinitelight.h"
+#include "slg/lights/distantlight.h"
+#include "slg/lights/infinitelight.h"
+#include "slg/lights/laserlight.h"
+#include "slg/lights/mappointlight.h"
+#include "slg/lights/pointlight.h"
+#include "slg/lights/projectionlight.h"
+#include "slg/lights/sharpdistantlight.h"
+#include "slg/lights/sky2light.h"
+#include "slg/lights/skylight.h"
+#include "slg/lights/spotlight.h"
+#include "slg/lights/sunlight.h"
+#include "slg/lights/trianglelight.h"
 #include "slg/sdl/blender_texture.h"
 
 using namespace std;
