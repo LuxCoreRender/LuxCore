@@ -1016,6 +1016,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		return new AddTexture(tex1, tex2);
+	} else if (texType == "subtract") {
+		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		return new SubtractTexture(tex1, tex2);
 	} else if (texType == "windy") {
 		return new WindyTexture(CreateTextureMapping3D(propName + ".mapping", props));
 	} else if (texType == "wrinkled") {

@@ -1415,6 +1415,29 @@ Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 }
 
 //------------------------------------------------------------------------------
+// Subtract texture
+//------------------------------------------------------------------------------
+
+float SubtractTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return tex1->GetFloatValue(hitPoint) - tex2->GetFloatValue(hitPoint);
+}
+
+Spectrum SubtractTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return tex1->GetSpectrumValue(hitPoint) - tex2->GetSpectrumValue(hitPoint);
+}
+
+Properties SubtractTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+	Properties props;
+	
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("substract"));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
+	
+	return props;
+}
+
+//------------------------------------------------------------------------------
 // Windy texture
 //------------------------------------------------------------------------------
 
