@@ -123,6 +123,10 @@ set(LUXCORE_LIB_SRCS
 )
 
 if(APPLE)
+	# rpath policy
+	IF(NOT (${CMAKE_VERSION} VERSION_LESS 3.0))
+		cmake_policy(SET CMP0042 OLD)
+	ENDIF()
 	add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 	add_dependencies(luxcore luxrays smallluxgpu) # build these first
 	target_link_libraries(luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
