@@ -966,6 +966,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_BRICK";
 	if (cscene->IsTextureCompiled(ADD_TEX))
 		ss << " -D PARAM_ENABLE_TEX_ADD";
+	if (cscene->IsTextureCompiled(SUBTRACT_TEX))
+		ss << " -D PARAM_ENABLE_TEX_SUBTRACT";
 	if (cscene->IsTextureCompiled(WINDY))
 		ss << " -D PARAM_ENABLE_WINDY";
 	if (cscene->IsTextureCompiled(WRINKLED))
