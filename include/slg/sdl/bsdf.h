@@ -23,10 +23,11 @@
 #include "luxrays/core/geometry/frame.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/core/color/color.h"
+#include "slg/lights/light.h"
+#include "slg/lights/trianglelight.h"
 #include "slg/sdl/bsdfevents.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/volume.h"
-#include "slg/sdl/light.h"
 #include "slg/sdl/hitpoint.h"
 
 namespace slg {
