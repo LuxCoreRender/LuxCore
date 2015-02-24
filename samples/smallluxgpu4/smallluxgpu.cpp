@@ -265,9 +265,6 @@ int main(int argc, char *argv[]) {
 			SLG_LOG("Scene: \n" << sceneProps);
 
 			renderConfigProps.Set(cmdLineProp);
-			// Delete scene.camera.screenwindow so window resize will
-			// automatically adjust the ratio
-			sceneProps.DeleteAll(sceneProps.GetAllNames("scene.camera.screenwindow"));
 
 			scene = new Scene(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
 			scene->Parse(sceneProps);
