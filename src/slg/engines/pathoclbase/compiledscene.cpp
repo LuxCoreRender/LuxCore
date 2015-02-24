@@ -1348,6 +1348,17 @@ void CompiledScene::CompileTextures() {
 				tex->addTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+			case SUBTRACT_TEX: {
+				ScaleTexture *st = static_cast<ScaleTexture *>(t);
+				
+				tex->type = slg::ocl::SUBTRACT_TEX;
+				const Texture *tex1 = st->GetTexture1();
+				tex->subtractTex.tex1Index = scene->texDefs.GetTextureIndex(tex1);
+				
+				const Texture *tex2 = st->GetTexture2();
+				tex->subtractTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
+				break;
+			}
 			case WINDY: {
 				WindyTexture *wt = static_cast<WindyTexture *>(t);
 
@@ -1984,6 +1995,15 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "Add", "float3", "Spectrum", i,
 						AddTextureSourceCall("Spectrum", tex->addTex.tex1Index) + ", " +
 						AddTextureSourceCall("Spectrum", tex->addTex.tex2Index));
+				break;
+			}
+			case slg::ocl::SUBTRACT_TEX: {
+				AddTextureSource(source, "Subtract", "float", "Float", i,
+								 AddTextureSourceCall("Float", tex->subtractTex.tex1Index) + ", " +
+								 AddTextureSourceCall("Float", tex->subtractTex.tex2Index));
+				AddTextureSource(source, "Subtract", "float3", "Spectrum", i,
+								 AddTextureSourceCall("Spectrum", tex->subtractTex.tex1Index) + ", " +
+								 AddTextureSourceCall("Spectrum", tex->subtractTex.tex2Index));
 				break;
 			}
 			case slg::ocl::HITPOINTCOLOR:

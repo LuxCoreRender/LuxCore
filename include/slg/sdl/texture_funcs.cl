@@ -945,6 +945,42 @@ void AddTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *h
 #endif
 
 //------------------------------------------------------------------------------
+// Subtract texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_SUBTRACT)
+
+float SubtractTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+const float value1, const float value2) {
+	return value1 - value2;
+}
+
+float3 SubtractTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+const float3 value1, const float3 value2) {
+	return value1 - value2;
+}
+
+#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
+void SubtractTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float value1 = texValues[--(*texValuesSize)];
+	const float value2 = texValues[--(*texValuesSize)];
+	
+	texValues[(*texValuesSize)++] = SubtractTexture_ConstEvaluateFloat(hitPoint, value1, value2);
+}
+
+void SubtractTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
+	const float3 value1 = texValues[--(*texValuesSize)];
+	const float3 value2 = texValues[--(*texValuesSize)];
+	
+	texValues[(*texValuesSize)++] = SubtractTexture_ConstEvaluateSpectrum(hitPoint, value1, value2);
+}
+#endif
+
+#endif
+
+//------------------------------------------------------------------------------
 // Windy texture
 //------------------------------------------------------------------------------
 
@@ -1335,6 +1371,12 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->addTex.tex2Index];
 			return 2;
 #endif
+#if defined(PARAM_ENABLE_TEX_SUBTRACT)
+		case SUBTRACT_TEX:
+			todoTex[(*todoTexSize)++] = &texs[texture->subtractTex.tex1Index];
+			todoTex[(*todoTexSize)++] = &texs[texture->subtractTex.tex2Index];
+			return 2;
+#endif
 #if defined(PARAM_ENABLE_TEX_BAND)
 		case BAND_TEX:
 			todoTex[(*todoTexSize)++] = &texs[texture->band.amountTexIndex];
@@ -1470,6 +1512,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 			AddTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined(PARAM_ENABLE_TEX_SUBTRACT)
+		case SUBTRACT_TEX:
+			SubtractTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+			#endif
 #if defined(PARAM_ENABLE_WINDY)
 		case WINDY:
 			WindyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
@@ -1685,6 +1732,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 #if defined(PARAM_ENABLE_TEX_ADD)
 		case ADD_TEX:
 			AddTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_SUBTRACT)
+		case SUBTRACT_TEX:
+			SubtractTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 #if defined(PARAM_ENABLE_WINDY)
