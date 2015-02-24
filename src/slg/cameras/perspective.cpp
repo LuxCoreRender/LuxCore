@@ -31,8 +31,8 @@ using namespace slg;
 // PerspectiveCamera
 //------------------------------------------------------------------------------
 
-PerspectiveCamera::PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
-		const luxrays::Vector &u, const float *region) : Camera(PERSPECTIVE),
+PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
+		const Vector &u, const float *region) : Camera(PERSPECTIVE),
 		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f) {
 	if (region) {
 		autoUpdateFilmRegion = false;
@@ -199,8 +199,8 @@ void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const floa
 		trans->cameraToWorld = Transform();
 	else {
 		// Shift from camera to eye position
-		const Point eyeOrig = orig + eyeOffset * luxrays::Normalize(x);
-		const Point eyeTarget = target + eyeOffset * luxrays::Normalize(x);
+		const Point eyeOrig = orig + eyeOffset * Normalize(x);
+		const Point eyeTarget = target + eyeOffset * Normalize(x);
 		const Transform worldToCamera = LookAt(eyeOrig, eyeTarget, up);
 		trans->cameraToWorld = Inverse(worldToCamera);
 	}

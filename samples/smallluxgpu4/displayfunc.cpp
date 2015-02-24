@@ -336,6 +336,13 @@ void reshapeFunc(int newWidth, int newHeight) {
 		config->Parse(
 				Property("film.width")(newWidth) <<
 				Property("film.height")(newHeight));
+
+		// Delete scene.camera.screenwindow so window resize will
+		// automatically adjust the ratio
+		Properties cameraProps = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+		config->GetScene().Parse(cameraProps);
+		
 		session = new RenderSession(config);
 
 		// Re-start the rendering
