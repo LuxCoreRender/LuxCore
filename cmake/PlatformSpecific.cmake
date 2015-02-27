@@ -217,9 +217,6 @@ IF(APPLE)
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
 	set(LUXRAYS_CUSTOM_CONFIG Config_OSX)
 
-	if(NOT CMAKE_BUILD_TYPE) # Assure something is set, default is "Release"
-		SET(CMAKE_BUILD_TYPE Release)
-	endif(NOT CMAKE_BUILD_TYPE)
 	if(NOT ${CMAKE_GENERATOR} MATCHES "Xcode") # will be set later in XCode
 		SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE)
 		# Setup binaries output directory in Xcode manner
