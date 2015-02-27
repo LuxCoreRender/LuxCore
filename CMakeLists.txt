@@ -50,16 +50,6 @@ set(CMAKE_MODULE_PATH
 	"${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
-INCLUDE(PlatformSpecific)
-INCLUDE(Configuration)
-INCLUDE(KernelPreprocess)
-
-# Install CMake modules
-#add_subdirectory(CMake)
-
-SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
-include_directories("${LuxRays_INCLUDE_DIR}")
-
 # When using single configuration generators like make
 # cmake does need to know which of the possible configurations
 # to generate
@@ -69,6 +59,16 @@ endif(NOT CMAKE_BUILD_TYPE)
 SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # makes sure type is shown in cmake gui
 
 message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
+
+INCLUDE(PlatformSpecific)
+INCLUDE(Configuration)
+INCLUDE(KernelPreprocess)
+
+# Install CMake modules
+#add_subdirectory(CMake)
+
+SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
+include_directories("${LuxRays_INCLUDE_DIR}")
 
 # Find dependencies
 include(Dependencies)
