@@ -897,6 +897,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 //		
 //		return new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
 //								sharpness, noiseoffset, spheres octaves, omega, variability, baseflatness, spheresize);
+//	} else if (texType == "blackbody") {
+//		const Spectrum v = props.Get(Property(propName + ".temperature")(6500.f)).Get<Spectrum>();
+//		return new BlackBodyTexture(v);
+//	} else if (texType == "fresnelcolor") {
+//		const Spectrum v = props.Get(Property(propName + ".value")(0.5f)).Get<Spectrum>();
+//		return new FresnelColorTexture(v);
+// Fresnelname
+// Lampspectrum
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
