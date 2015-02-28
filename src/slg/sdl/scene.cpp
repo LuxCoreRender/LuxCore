@@ -881,6 +881,22 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
+//	} else if (texType == "cloud") {
+//		TextureMapping3D *imap = TextureMapping3D::Create(tex2world, tp);
+//		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
+//		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
+//		const float turbulence = props.Get(Property(propName + ".turbulence")(0.01f)).Get<float>();
+//		const float sharpness = props.Get(Property(propName + ".sharpness")(6.0f)).Get<float>();
+//		const float noiseoffset = props.Get(Property(propName + ".noiseoffset")(.0f)).Get<float>();
+//		const int spheres = props.Get(Property(propName + ".spheres")(0)).Get<int>();
+//		const int octaves = props.Get(Property(propName + ".octaves")(1)).Get<int>();
+//		const float omega = props.Get(Property(propName + ".roughness")(.5f)).Get<float>();
+//		const float variability = props.Get(Property(propName + ".variability")(.9f)).Get<float>();
+//		const float baseflatness = props.Get(Property(propName + ".baseflatness")(.8f)).Get<float>();
+//		const float spheresize = props.Get(Property(propName + ".spheresize")(.15f)).Get<float>();
+//		
+//		return new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
+//								sharpness, noiseoffset, spheres octaves, omega, variability, baseflatness, spheresize);
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
