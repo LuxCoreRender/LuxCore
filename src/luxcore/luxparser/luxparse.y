@@ -1465,6 +1465,11 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".type")("add") <<
 				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(1.f)), props) <<
 				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(1.f)), props);
+	} else if (texType == "subtract") {
+		*sceneProps <<
+				Property(prefix + ".type")("subtract") <<
+				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(1.f)), props) <<
+				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(1.f)), props);
 	} else if (texType == "scale") {
 		*sceneProps <<
 				Property(prefix + ".type")("scale") <<
