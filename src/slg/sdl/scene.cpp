@@ -270,7 +270,7 @@ void Scene::DefineImageMap(const string &name, ImageMap *im) {
 
 void Scene::DefineImageMap(const string &name, float *cols, const float gamma,
 	const u_int channels, const u_int width, const u_int height) {
-	DefineImageMap(name, new ImageMap(cols, gamma, channels, width, height));
+	DefineImageMap(name, ImageMap::AllocImageMap<float>(cols, gamma, channels, width, height));
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }

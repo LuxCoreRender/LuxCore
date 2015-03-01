@@ -3016,8 +3016,9 @@ void CompiledScene::CompileImageMaps() {
 		imd->channelCount = im->GetChannelCount();
 		imd->pageIndex = page;
 		imd->pixelsIndex = (u_int)imageMapMemBlocks[page].size();
-		imageMapMemBlocks[page].insert(imageMapMemBlocks[page].end(), im->GetPixels(),
-				im->GetPixels() + pixelCount * im->GetChannelCount());
+		// Assuming FLOAT image maps for the moment
+		imageMapMemBlocks[page].insert(imageMapMemBlocks[page].end(), (float *)im->GetStorage()->GetPixelsData(),
+				((float *)im->GetStorage()->GetPixelsData()) + pixelCount * imd->channelCount);
 	}
 
 	SLG_LOG("Image maps page count: " << imageMapMemBlocks.size());
