@@ -172,7 +172,8 @@ Properties Scene::ToProperties(const string &directoryName) {
 		vector<const ImageMap *> ims;
 		imgMapCache.GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
-			const string fileName = directoryName + "/imagemap-" + (boost::format("%05d") % i).str() + ".exr";
+			const string fileName = directoryName + "/imagemap-" + (boost::format("%05d") % i).str() +
+				"." + ims[i]->GetFileExtension();
 			SDL_LOG("  " + fileName);
 			ims[i]->WriteImage(fileName);
 		}
