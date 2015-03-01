@@ -889,7 +889,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 //		const float noiseoffset = props.Get(Property(propName + ".noiseoffset")(.0f)).Get<float>();
 //		const int spheres = props.Get(Property(propName + ".spheres")(0)).Get<int>();
 //		const int octaves = props.Get(Property(propName + ".octaves")(1)).Get<int>();
-//		const float omega = props.Get(Property(propName + ".roughness")(.5f)).Get<float>();
+//		const float omega = props.Get(Property(propName + ".omega")(.5f)).Get<float>();
 //		const float variability = props.Get(Property(propName + ".variability")(.9f)).Get<float>();
 //		const float baseflatness = props.Get(Property(propName + ".baseflatness")(.8f)).Get<float>();
 //		const float spheresize = props.Get(Property(propName + ".spheresize")(.15f)).Get<float>();
