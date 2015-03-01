@@ -26,6 +26,7 @@
 
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/dassert.h>
 
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/texture.h"
@@ -295,6 +296,120 @@ u_int TextureDefinitions::GetTextureIndex(const string &name) {
 }
 
 //------------------------------------------------------------------------------
+// ImageMapStorageImpl
+//------------------------------------------------------------------------------
+
+template <class T, u_int CHANNELS>
+float ImageMapStorageImpl<T, CHANNELS>::GetFloat(const UV &uv) const {
+	const float s = uv.u * width - .5f;
+	const float t = uv.v * height - .5f;
+
+	const int s0 = Floor2Int(s);
+	const int t0 = Floor2Int(t);
+
+	const float ds = s - s0;
+	const float dt = t - t0;
+
+	const float ids = 1.f - ds;
+	const float idt = 1.f - dt;
+
+	return ids * idt * GetTexel(s0, t0)->GetFloat() +
+			ids * dt * GetTexel(s0, t0 + 1)->GetFloat() +
+			ds * idt * GetTexel(s0 + 1, t0)->GetFloat() +
+			ds * dt * GetTexel(s0 + 1, t0 + 1)->GetFloat();
+}
+
+template <class T, u_int CHANNELS>
+float ImageMapStorageImpl<T, CHANNELS>::GetFloat(const u_int index) const {
+	assert (index >= 0);
+	assert (index < width * height);
+
+	return pixels[index].GetFloat();
+}
+
+template <class T, u_int CHANNELS>
+Spectrum ImageMapStorageImpl<T, CHANNELS>::GetSpectrum(const UV &uv) const {
+	const float s = uv.u * width - .5f;
+	const float t = uv.v * height - .5f;
+
+	const int s0 = Floor2Int(s);
+	const int t0 = Floor2Int(t);
+
+	const float ds = s - s0;
+	const float dt = t - t0;
+
+	const float ids = 1.f - ds;
+	const float idt = 1.f - dt;
+
+	return ids * idt * GetTexel(s0, t0)->GetSpectrum() +
+			ids * dt * GetTexel(s0, t0 + 1)->GetSpectrum() +
+			ds * idt * GetTexel(s0 + 1, t0)->GetSpectrum() +
+			ds * dt * GetTexel(s0 + 1, t0 + 1)->GetSpectrum();
+}
+
+template <class T, u_int CHANNELS>
+Spectrum ImageMapStorageImpl<T, CHANNELS>::GetSpectrum(const u_int index) const {
+	assert (index >= 0);
+	assert (index < width * height);
+
+	return pixels[index].GetSpectrum();
+}
+
+template <class T, u_int CHANNELS>
+float ImageMapStorageImpl<T, CHANNELS>::GetAlpha(const UV &uv) const {
+	const float s = uv.u * width - .5f;
+	const float t = uv.v * height - .5f;
+
+	const int s0 = Floor2Int(s);
+	const int t0 = Floor2Int(t);
+
+	const float ds = s - s0;
+	const float dt = t - t0;
+
+	const float ids = 1.f - ds;
+	const float idt = 1.f - dt;
+
+	return ids * idt * GetTexel(s0, t0)->GetAlpha() +
+			ids * dt * GetTexel(s0, t0 + 1)->GetAlpha() +
+			ds * idt * GetTexel(s0 + 1, t0)->GetAlpha() +
+			ds * dt * GetTexel(s0 + 1, t0 + 1)->GetAlpha();
+}
+
+template <class T, u_int CHANNELS>
+float ImageMapStorageImpl<T, CHANNELS>::GetAlpha(const u_int index) const {
+	assert (index >= 0);
+	assert (index < width * height);
+
+	return pixels[index].GetAlpha();
+}
+
+template <class T, u_int CHANNELS>
+const ImageMapPixel<T, CHANNELS> *ImageMapStorageImpl<T, CHANNELS>::GetTexel(const int s, const int t) const {
+	const u_int u = Mod<int>(s, width);
+	const u_int v = Mod<int>(t, height);
+
+	const u_int index = v * width + u;
+	assert (index >= 0);
+	assert (index < width * height);
+
+	return &pixels[index];
+}
+
+template <class T, u_int CHANNELS>
+void ImageMapStorageImpl<T, CHANNELS>::ReverseGammaCorrection(const float gamma) {
+	if (gamma != 1.f) {
+		#pragma omp parallel for
+		for (
+				// Visusl C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+				unsigned
+#endif
+				int i = 0; i < width * height; i++)
+			pixels[i].ReverseGammaCorrection(gamma);
+	}
+}
+
+//------------------------------------------------------------------------------
 // ImageMap
 //------------------------------------------------------------------------------
 
@@ -312,17 +427,17 @@ ImageMap::ImageMap(const string &fileName, const float g,
 		if (in.get()) {
 			const ImageSpec &spec = in->spec();
 
-			width = spec.width;
-			height = spec.height;
-			channelCount = spec.nchannels;
+			u_int width = spec.width;
+			u_int height = spec.height;
+			u_int channelCount = spec.nchannels;
 
 			if ((channelCount != 1) && (channelCount != 2) && (channelCount != 3) && (channelCount != 4))
 				throw runtime_error("Unsupported number of channels in an ImageMap: " + ToString(channelCount));
 
 			const u_int pixelCount = width * height;
-			pixels = new float[pixelCount * channelCount];
+			auto_ptr<float> pixels(new float[pixelCount * channelCount]);
 
-			in->read_image(TypeDesc::FLOAT, &pixels[0]);
+			in->read_image(TypeDesc::FLOAT, pixels.get());
 			in->close();
 			in.reset();
 
@@ -341,7 +456,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					} else if (channelCount == 2) {
 						auto_ptr<float> newPixels(new float[pixelCount]);
 
-						const float *src = pixels;
+						const float *src = pixels.get();
 						float *dst = newPixels.get();
 						const u_int channel = (
 							(selectionType == ImageMap::RED) ||
@@ -353,13 +468,12 @@ ImageMap::ImageMap(const string &fileName, const float g,
 							src += channelCount;
 						}
 						
-						delete[] pixels;
-						pixels = newPixels.release();
+						pixels.reset(newPixels.release());
 						channelCount = 1;
 					} else {
 						auto_ptr<float> newPixels(new float[pixelCount]);
 
-						const float *src = pixels;
+						const float *src = pixels.get();
 						float *dst = newPixels.get();
 						const u_int channel = selectionType - ImageMap::RED;
 
@@ -368,8 +482,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 							src += channelCount;
 						}
 						
-						delete[] pixels;
-						pixels = newPixels.release();
+						pixels.reset(newPixels.release());
 						channelCount = 1;
 					}
 					break;
@@ -382,7 +495,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					} else if (channelCount == 2) {
 						auto_ptr<float> newPixels(new float[pixelCount]);
 
-						const float *src = pixels;
+						const float *src = pixels.get();
 						float *dst = newPixels.get();
 						const u_int channel = 0;
 
@@ -391,13 +504,12 @@ ImageMap::ImageMap(const string &fileName, const float g,
 							src += channelCount;
 						}
 
-						delete[] pixels;
-						pixels = newPixels.release();
+						pixels.reset(newPixels.release());
 						channelCount = 1;
 					} else {
 						auto_ptr<float> newPixels(new float[pixelCount]);
 
-						const float *src = pixels;
+						const float *src = pixels.get();
 						float *dst = newPixels.get();
 
 						if (selectionType == ImageMap::MEAN) {
@@ -412,8 +524,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 							}							
 						}
 						
-						delete[] pixels;
-						pixels = newPixels.release();
+						pixels.reset(newPixels.release());
 						channelCount = 1;
 					}
 				}
@@ -424,7 +535,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					} else {
 						auto_ptr<float> newPixels(new float[pixelCount * 3]);
 
-						const float *src = pixels;
+						const float *src = pixels.get();
 						float *dst = newPixels.get();
 
 						for (u_int i = 0; i < pixelCount; ++i) {
@@ -434,8 +545,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 							src++;
 						}
 						
-						delete[] pixels;
-						pixels = newPixels.release();
+						pixels.reset(newPixels.release());
 						channelCount = 1;
 					}
 					break;
@@ -443,116 +553,126 @@ ImageMap::ImageMap(const string &fileName, const float g,
 				default:
 					throw runtime_error("Unknown channel selection type in an ImageMap: " + ToString(selectionType));
 			}
+			
+			pixelStorage = AllocImageMapStorage<float>(pixels.release(), channelCount, width, height);
 		} else
 			throw runtime_error("Unknown image file format: " + fileName);
 
-		ReverseGammaCorrection();
+		pixelStorage->ReverseGammaCorrection(gamma);
 	}
 }
 
-ImageMap::ImageMap(float *p, const float g, const u_int count,
-		const u_int w, const u_int h) {
+ImageMap::ImageMap(ImageMapStorage *pixels, const float g) {
+	pixelStorage = pixels;
 	gamma = g;
-
-	pixels = p;
-
-	channelCount = count;
-	width = w;
-	height = h;
 }
 
 ImageMap::~ImageMap() {
-	delete[] pixels;
-}
-
-void ImageMap::ReverseGammaCorrection() {
-	if (gamma != 1.0) {
-		if (channelCount < 4) {
-			for (u_longlong i=0; i<(width * height * channelCount); i++)
-				pixels[i] = powf(pixels[i], gamma);
-		}
-		else {
-			for (u_longlong i=0; i<(width * height * channelCount); i+=4) {
-				pixels[i] = powf(pixels[i], gamma);
-				pixels[i+1] = powf(pixels[i+1], gamma);
-				pixels[i+2] = powf(pixels[i+2], gamma);
-			}
-		}
-	}
+	delete pixelStorage;
 }
 
 void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
+	const u_int width = pixelStorage->width;
+	const u_int height = pixelStorage->height;
 	if ((width == newHeight) && (height == newHeight))
 		return;
 
-	ImageSpec spec(width, height, channelCount, TypeDesc::FLOAT);
+	ImageMapStorage::StorageType storageType = pixelStorage->GetStorageType();
+	const u_int channelCount = pixelStorage->GetChannelCount();
 	
-	ImageBuf source(spec, (void *)pixels);
+	TypeDesc::BASETYPE baseType;
+	switch (storageType) {
+		case ImageMapStorage::BYTE:
+			baseType = TypeDesc::CHAR;
+			break;
+		case ImageMapStorage::HALF:
+			baseType = TypeDesc::HALF;
+			break;
+		case ImageMapStorage::FLOAT:
+			baseType = TypeDesc::FLOAT;
+			break;
+		default:
+			throw runtime_error("Unsupported storage type in ImageMap::Resize(): " + ToString(storageType));
+	}
+	
+	ImageSpec spec(width, height, channelCount, baseType);
+	
+	ImageBuf source(spec, (void *)pixelStorage->GetPixelsData());
 	ImageBuf dest;
 	
-	ROI roi(0,newWidth, 0,newHeight, 0, 1, 0, source.nchannels());
-	ImageBufAlgo::resize(dest,source,"",0,roi);
-	
-	// I can delete the current image
-	delete[] pixels;
+	ROI roi(0, newWidth, 0,newHeight, 0, 1, 0, source.nchannels());
+	ImageBufAlgo::resize(dest, source, "", 0, roi);
 
-	width = newWidth;
-	height = newHeight;
-	
-	pixels = new float[width * height * channelCount];
-	
-	dest.get_pixels(0,width, 0,height, 0,1, TypeDesc::FLOAT, pixels);
+	// I can delete the current image
+	delete pixelStorage;
+
+	// Allocate the new image map storage
+	switch (storageType) {
+		case ImageMapStorage::BYTE: {
+			u_char *pixels = new u_char[newWidth * newHeight * channelCount];
+			dest.get_pixels(0, newHeight, 0, newHeight, 0, 1, baseType, pixels);
+
+			pixelStorage = AllocImageMapStorage<u_char>(pixels, channelCount, newWidth, newHeight);
+			break;
+		}
+		case ImageMapStorage::HALF: {
+			half *pixels = new half[newWidth * newHeight * channelCount];
+			dest.get_pixels(0, newHeight, 0, newHeight, 0, 1, baseType, pixels);
+
+			pixelStorage = AllocImageMapStorage<half>(pixels, channelCount, newWidth, newHeight);
+			break;
+		}
+		case ImageMapStorage::FLOAT: {
+			float *pixels = new float[newWidth * newHeight * channelCount];
+			dest.get_pixels(0, newHeight, 0, newHeight, 0, 1, baseType, pixels);
+
+			pixelStorage = AllocImageMapStorage<float>(pixels, channelCount, newWidth, newHeight);
+			break;
+		}
+		default:
+			throw runtime_error("Unsupported storage type in ImageMap::Resize(): " + ToString(storageType));
+	}
 }
 
 void ImageMap::WriteImage(const string &fileName) const {
-	ImageOutput *out = ImageOutput::create(fileName);
-	if (out) {
-		ImageSpec spec(width, height, channelCount, TypeDesc::HALF);
-		out->open(fileName, spec);
-		out->write_image(TypeDesc::FLOAT, pixels);
-		out->close();
-		delete out;
-	}
-	else
-		throw runtime_error("Failed image save");
+//	ImageOutput *out = ImageOutput::create(fileName);
+//	if (out) {
+//		ImageSpec spec(width, height, channelCount, TypeDesc::HALF);
+//		out->open(fileName, spec);
+//		out->write_image(TypeDesc::FLOAT, pixels);
+//		out->close();
+//		delete out;
+//	}
+//	else
+//		throw runtime_error("Failed image save");
 }
 
 float ImageMap::GetSpectrumMean() const {
 	float mean = 0.f;	
-	for (u_int y = 0; y < height; ++y) {
-		for (u_int x = 0; x < width; ++x) {
-			const u_int index = x + y * width;
+	for (u_int y = 0; y < pixelStorage->height; ++y) {
+		for (u_int x = 0; x < pixelStorage->width; ++x) {
+			const u_int index = x + y * pixelStorage->width;
 			
-			if (channelCount == 1) 
-				mean += pixels[index];
-			else {
-				// channelCount = (3 or 4)
-				const float *pixel = &pixels[index * channelCount];
-				mean += (pixel[0] + pixel[1] + pixel[2]) * (1.f / 3.f);
-			}
+			const Spectrum s = pixelStorage->GetSpectrum(index);
+			mean += (s.c[0] + s.c[1] + s.c[2]) * (1.f / 3.f);
 		}
 	}
 
-	return mean / (width * height);
+	return mean / (pixelStorage->width * pixelStorage->height);
 }
 
 float ImageMap::GetSpectrumMeanY() const {
 	float mean = 0.f;	
-	for (u_int y = 0; y < height; ++y) {
-		for (u_int x = 0; x < width; ++x) {
-			const u_int index = x + y * width;
+	for (u_int y = 0; y < pixelStorage->height; ++y) {
+		for (u_int x = 0; x < pixelStorage->width; ++x) {
+			const u_int index = x + y * pixelStorage->width;
 			
-			if (channelCount == 1) 
-				mean += pixels[index];
-			else {
-				// channelCount = (3 or 4)
-				const float *pixel = &pixels[index * channelCount];
-				mean += Spectrum(pixel[0], pixel[1], pixel[2]).Y();
-			}
+			const Spectrum s = pixelStorage->GetSpectrum(index);
+			mean += s.Y();
 		}
 	}
 
-	return mean / (width * height);
+	return mean / (pixelStorage->width * pixelStorage->height);
 }
 
 ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
@@ -568,7 +688,7 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 		}
 
 		// I assume the images have the same gamma
-		return new ImageMap(mergedImg, map0->GetGamma(), 1, width, height);
+		return AllocImageMap<float>(mergedImg, map0->GetGamma(), 1, width, height);
 	} else if (channels == 3) {
 		float *mergedImg = new float[width * height * 3];
 
@@ -577,15 +697,15 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 				const UV uv((x + .5f) / width, (y + .5f) / height);
 				const Spectrum c = map0->GetSpectrum(uv) * map1->GetSpectrum(uv);
 
-				const u_int index = (x + y * width) * 3;
-				mergedImg[index] = c.c[0];
-				mergedImg[index + 1] = c.c[1];
-				mergedImg[index + 2] = c.c[2];
+				const u_int dstIndex = (x + y * width) * 3;
+				mergedImg[dstIndex] = c.c[0];
+				mergedImg[dstIndex + 1] = c.c[1];
+				mergedImg[dstIndex + 2] = c.c[2];
 			}
 		}
 
 		// I assume the images have the same gamma
-		return new ImageMap(mergedImg, map0->GetGamma(), 3, width, height);
+		return AllocImageMap<float>(mergedImg, map0->GetGamma(), 3, width, height);
 	} else
 		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
 }
@@ -609,7 +729,7 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 			}
 		}
 
-		return new ImageMap(newImg, map->GetGamma(), 1, width, height);
+		return AllocImageMap<float>(newImg, map->GetGamma(), 1, width, height);
 	} else if (channels == 3) {
 		float *newImg = new float[width * height * 3];
 
@@ -625,7 +745,7 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 			}
 		}
 
-		return new ImageMap(newImg, map->GetGamma(), 3, width, height);
+		return AllocImageMap<float>(newImg, map->GetGamma(), 3, width, height);
 	} else
 		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
 }
@@ -970,11 +1090,11 @@ Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache)
 //------------------------------------------------------------------------------
 
 float MixTexture::Y() const {
-	return luxrays::Lerp(amount->Y(), tex1->Y(), tex2->Y());
+	return Lerp(amount->Y(), tex1->Y(), tex2->Y());
 }
 
 float MixTexture::Filter() const {
-	return luxrays::Lerp(amount->Filter(), tex1->Filter(), tex2->Filter());
+	return Lerp(amount->Filter(), tex1->Filter(), tex2->Filter());
 }
 
 float MixTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -1075,10 +1195,10 @@ float MarbleTexture::Y() const {
 	static float c[][3] = { { .58f, .58f, .6f }, { .58f, .58f, .6f }, { .58f, .58f, .6f },
 		{ .5f, .5f, .5f }, { .6f, .59f, .58f }, { .58f, .58f, .6f },
 		{ .58f, .58f, .6f }, {.2f, .2f, .33f }, { .58f, .58f, .6f }, };
-	luxrays::Spectrum cs;
+	Spectrum cs;
 #define NC  sizeof(c) / sizeof(c[0])
 	for (u_int i = 0; i < NC; ++i)
-		cs += luxrays::Spectrum(c[i]);
+		cs += Spectrum(c[i]);
 	return cs.Y() / NC;
 #undef NC
 }
@@ -1087,10 +1207,10 @@ float MarbleTexture::Filter() const {
 	static float c[][3] = { { .58f, .58f, .6f }, { .58f, .58f, .6f }, { .58f, .58f, .6f },
 		{ .5f, .5f, .5f }, { .6f, .59f, .58f }, { .58f, .58f, .6f },
 		{ .58f, .58f, .6f }, {.2f, .2f, .33f }, { .58f, .58f, .6f }, };
-	luxrays::Spectrum cs;
+	Spectrum cs;
 #define NC  sizeof(c) / sizeof(c[0])
 	for (u_int i = 0; i < NC; ++i)
-		cs += luxrays::Spectrum(c[i]);
+		cs += Spectrum(c[i]);
 	return cs.Filter() / NC;
 #undef NC
 }
@@ -1623,9 +1743,9 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache) c
 // NormalMap textures
 //------------------------------------------------------------------------------
 
-luxrays::UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
-        const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
-        const luxrays::Normal &dndu, const luxrays::Normal &dndv,
+UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
+        const Vector &dpdu, const Vector &dpdv,
+        const Normal &dndu, const Normal &dndv,
         const float sampleDistance) const {
     Spectrum rgb = tex->GetSpectrumValue(hitPoint);
     rgb.Clamp(-1.f, 1.f);

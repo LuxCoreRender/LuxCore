@@ -38,23 +38,18 @@ InfiniteLight::~InfiniteLight() {
 }
 
 void InfiniteLight::Preprocess() {
-	if (imageMap->GetChannelCount() == 1)
-		imageMapDistribution = new Distribution2D(imageMap->GetPixels(), imageMap->GetWidth(), imageMap->GetHeight());
-	else {
-		const float *pixels = imageMap->GetPixels();
-		float *data = new float[imageMap->GetWidth() * imageMap->GetHeight()];
-		for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
-			for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
-				const u_int index = x + y * imageMap->GetWidth();
-				const float *pixel = &pixels[index * imageMap->GetChannelCount()];
-				
-				data[index] = Spectrum(pixel).Y();
-			}
-		}
+	const ImageMapStorage *imageMapStorage = imageMap->GetStorage();
 
-		imageMapDistribution = new Distribution2D(data, imageMap->GetWidth(), imageMap->GetHeight());
-		delete data;
+	vector<float> data(imageMap->GetWidth() * imageMap->GetHeight());
+	for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
+		for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
+			const u_int index = x + y * imageMap->GetWidth();
+
+			data[index] = imageMapStorage->GetFloat(index);
+		}
 	}
+
+	imageMapDistribution = new Distribution2D(&data[0], imageMap->GetWidth(), imageMap->GetHeight());
 }
 
 void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistributionData) const {

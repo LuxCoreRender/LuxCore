@@ -247,5 +247,5 @@ ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, con
 		delete vFuncs[i];
 	delete[] vFuncs;
 
-	return new ImageMap(img, 1.f, 1, xRes, yRes);
+	return ImageMap::AllocImageMap<float>(img, 1.f, 1, xRes, yRes);
 }
