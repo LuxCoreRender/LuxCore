@@ -409,6 +409,7 @@ public:
 
 	void Resize(const u_int newWidth, const u_int newHeight);
 
+	std::string GetFileExtension() const;
 	void WriteImage(const std::string &fileName) const;
 
 	float GetSpectrumMean() const;

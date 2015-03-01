@@ -374,17 +374,54 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	}
 }
 
+string ImageMap::GetFileExtension() const {
+	ImageMapStorage::StorageType storageType = pixelStorage->GetStorageType();
+
+	switch (pixelStorage->GetStorageType()) {
+		case ImageMapStorage::BYTE:
+			return "png";
+		case ImageMapStorage::HALF:
+		case ImageMapStorage::FLOAT:
+			return "exr";
+		default:
+			throw runtime_error("Unsupported storage type in ImageMap::GetFileExtension(): " + ToString(storageType));
+	}
+}
+
 void ImageMap::WriteImage(const string &fileName) const {
-//	ImageOutput *out = ImageOutput::create(fileName);
-//	if (out) {
-//		ImageSpec spec(width, height, channelCount, TypeDesc::HALF);
-//		out->open(fileName, spec);
-//		out->write_image(TypeDesc::FLOAT, pixels);
-//		out->close();
-//		delete out;
-//	}
-//	else
-//		throw runtime_error("Failed image save");
+	ImageOutput *out = ImageOutput::create(fileName);
+	if (out) {
+		ImageMapStorage::StorageType storageType = pixelStorage->GetStorageType();
+
+		switch (storageType) {
+			case ImageMapStorage::BYTE: {
+				ImageSpec spec(pixelStorage->width, pixelStorage->height, pixelStorage->GetChannelCount(), TypeDesc::CHAR);
+				out->open(fileName, spec);
+				out->write_image(TypeDesc::CHAR, pixelStorage->GetPixelsData());
+				out->close();
+				break;
+			}
+			case ImageMapStorage::HALF: {
+				ImageSpec spec(pixelStorage->width, pixelStorage->height, pixelStorage->GetChannelCount(), TypeDesc::HALF);
+				out->open(fileName, spec);
+				out->write_image(TypeDesc::HALF, pixelStorage->GetPixelsData());
+				out->close();
+				break;
+			}
+			case ImageMapStorage::FLOAT: {
+				ImageSpec spec(pixelStorage->width, pixelStorage->height, pixelStorage->GetChannelCount(), TypeDesc::FLOAT);
+				out->open(fileName, spec);
+				out->write_image(TypeDesc::FLOAT, pixelStorage->GetPixelsData());
+				out->close();
+				break;
+			}
+			default:
+				throw runtime_error("Unsupported storage type in ImageMap::WriteImage(): " + ToString(storageType));
+		}
+
+		delete out;
+	} else
+		throw runtime_error("Failed image save: " + fileName);
 }
 
 float ImageMap::GetSpectrumMean() const {
