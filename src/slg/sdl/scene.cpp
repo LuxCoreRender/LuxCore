@@ -882,7 +882,6 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
 //	} else if (texType == "cloud") {
-//		TextureMapping3D *imap = TextureMapping3D::Create(tex2world, tp);
 //		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
 //		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
 //		const float turbulence = props.Get(Property(propName + ".turbulence")(0.01f)).Get<float>();
@@ -903,8 +902,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 //	} else if (texType == "fresnelcolor") {
 //		const Spectrum v = props.Get(Property(propName + ".value")(0.5f)).Get<Spectrum>();
 //		return new FresnelColorTexture(v);
-// Fresnelname
-// Lampspectrum
+//	} else if (texType == "fresnelname") {
+// Todo: Fresnelname
+//		const string name = props.Get(Property(propName + ".file")("fresnel.nk")).Get<string>();
+//		return new FresnelNameTexture(v);
+//	} else if (texType == "lampspectrum") {
+// Todo: Lampspectrum
+//		const string direct = props.Get(Property(propName + ".name")("Incandescent2")).Get<string>();
+//		return new LampSpectrumTexture(v);
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
