@@ -903,12 +903,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 //		const Spectrum v = props.Get(Property(propName + ".value")(0.5f)).Get<Spectrum>();
 //		return new FresnelColorTexture(v);
 //	} else if (texType == "fresnelname") {
-// Todo: Fresnelname
 //		const string name = props.Get(Property(propName + ".file")("fresnel.nk")).Get<string>();
 //		return new FresnelNameTexture(v);
 //	} else if (texType == "lampspectrum") {
-// Todo: Lampspectrum
-//		const string direct = props.Get(Property(propName + ".name")("Incandescent2")).Get<string>();
+//		const string name = props.Get(Property(propName + ".name")("Incandescent2")).Get<string>();
 //		return new LampSpectrumTexture(v);
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
