@@ -19,6 +19,8 @@
 #ifndef _SLG_SDL_H
 #define	_SLG_SDL_H
 
+#include <sstream>
+
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
 

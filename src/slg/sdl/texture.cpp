@@ -16,7 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <sstream>
 #include <algorithm>
 #include <numeric>
 #include <memory>

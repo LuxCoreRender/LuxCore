@@ -196,6 +196,8 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/luxlinear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/reinhard02.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemap.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/constantinfinitelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/distantlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/infinitelight.cpp
