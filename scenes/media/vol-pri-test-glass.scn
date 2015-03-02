@@ -1,0 +1,46 @@
+scene.camera.lookat.orig = 1 -5.443411 1.72403
+scene.camera.lookat.target = 1 0.311952 0.805705
+scene.camera.fieldofview = 56.145
+################################################################################
+scene.volumes.vol1.type = clear
+scene.volumes.vol1.absorption = 0.1 0.1 0.1
+scene.volumes.vol1.ior = 1.45
+scene.volumes.vol1.priority = 1
+scene.volumes.vol2.type = clear
+scene.volumes.vol2.absorption = 0.1 4 4
+scene.volumes.vol2.ior = 1.45
+scene.volumes.vol2.priority = 2
+################################################################################
+scene.materials.Matte.type = matte
+scene.materials.Matte.kd = 0.40197 0.40197 0.40197
+scene.materials.mat1.type = glass
+scene.materials.mat1.kr = 0.9 0.9 0.9
+scene.materials.mat1.kt = 0.9 0.9 0.9
+scene.materials.mat1.volume.interior = vol1
+#scene.materials.mat1.exteriorior = 1.0
+#scene.materials.mat1.interiorior = 1.45
+scene.materials.mat2.type = glass
+scene.materials.mat2.kr = 0.9 0.9 0.9
+scene.materials.mat2.kt = 0.9 0.9 0.9
+scene.materials.mat2.volume.interior = vol2
+################################################################################
+scene.objects.Matte.material = Matte
+scene.objects.Matte.ply = scenes/sky/Matte.ply
+scene.objects.vol1.material = mat1
+scene.objects.vol1.ply = scenes/sky/Mirror.ply
+scene.objects.vol1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -0.5 0 0 1
+scene.objects.vol2.material = mat2
+scene.objects.vol2.ply = scenes/sky/Mirror.ply
+scene.objects.vol2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0.5 0 0 1
+scene.objects.vol2bis.material = mat2
+scene.objects.vol2bis.ply = scenes/sky/Mirror.ply
+scene.objects.vol2bis.transformation = 0.25 0 0 0  0 0.25 0 0  0 0 0.25 0  -0.5 0 0.75 1
+################################################################################
+scene.lights.skylight.type = sky
+scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+scene.lights.skylight.turbidity = 2.2
+scene.lights.skylight.gain = .00005 .00005 .00005
+scene.lights.distl.type = sharpdistant
+scene.lights.distl.color = 1.0 1.0 1.0
+scene.lights.distl.gain = 2 2 2
+scene.lights.distl.direction = 1 1 -1
