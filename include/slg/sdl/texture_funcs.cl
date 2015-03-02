@@ -30,36 +30,173 @@
 
 #if defined(PARAM_HAS_IMAGEMAPS)
 
-__global float *ImageMap_GetPixelsAddress(__global float **imageMapBuff,
+__global void *ImageMap_GetPixelsAddress(__global float **imageMapBuff,
 		const uint page, const uint offset) {
 	return &imageMapBuff[page][offset];
 }
 
-float ImageMap_GetTexel_Float(__global float *pixels,
+float ImageMap_GetTexel_Float(
+		const ImageMapStorageType storageType,
+		__global void *pixels,
 		const uint width, const uint height, const uint channelCount,
 		const int s, const int t) {
 	const uint u = Mod(s, width);
 	const uint v = Mod(t, height);
 
-	const uint index = channelCount * (v * width + u);
+	const uint index = v * width + u;
 
-	return (channelCount == 1) ? pixels[index] : Spectrum_Y(VLOAD3F(&pixels[index]));
+	switch (storageType) {
+		case BYTE: {
+			switch (channelCount) {
+				case 1: {
+					const uchar a = ((__global uchar *)pixels)[index];
+					return a * (1.f / 255.f);
+				}
+				case 3: {
+					__global uchar *rgb = &((__global uchar *)pixels)[index * 3];
+					return Spectrum_Y((float3)(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f)));
+				}
+				case 4: {
+					__global uchar *rgba = &((__global uchar *)pixels)[index * 4];
+					return Spectrum_Y((float3)(rgba[0] * (1.f / 255.f), rgba[1] * (1.f / 255.f), rgba[2] * (1.f / 255.f)));
+				}
+				default:
+					return 0.f;
+			}
+			break;
+		}
+		case HALF: {
+			switch (channelCount) {
+				case 1: {
+					return vload_half(index, (__global half *)pixels);
+				}
+				case 3: {
+					return Spectrum_Y((float3)(
+							vload_half(index * 3, (__global half *)pixels),
+							vload_half(index * 3 + 1, (__global half *)pixels),
+							vload_half(index * 3 + 2, (__global half *)pixels)));
+				}
+				case 4: {
+					return Spectrum_Y((float3)(
+							vload_half(index * 4, (__global half *)pixels),
+							vload_half(index * 4 + 1, (__global half *)pixels),
+							vload_half(index * 4 + 2, (__global half *)pixels)));
+				}
+				default:
+					return 0.f;
+			}
+			break;
+		}
+		case FLOAT: {
+			switch (channelCount) {
+				case 1: {
+					const float a = ((__global float *)pixels)[index];
+					return a;
+				}
+				case 3: {
+					__global float *rgb = &((__global float *)pixels)[index * 3];
+					return Spectrum_Y((float3)(rgb[0], rgb[1], rgb[2]));
+				}
+				case 4: {
+					__global float *rgba = &((__global float *)pixels)[index * 4];
+					return Spectrum_Y((float3)(rgba[0], rgba[1], rgba[2]));
+				}
+				default:
+					return 0.f;
+			}
+			break;
+		}
+		default:
+			return 0.f;
+	}
 }
 
-float3 ImageMap_GetTexel_Spectrum(__global float *pixels,
+float3 ImageMap_GetTexel_Spectrum(
+		const ImageMapStorageType storageType,
+		__global void *pixels,
 		const uint width, const uint height, const uint channelCount,
 		const int s, const int t) {
 	const uint u = Mod(s, width);
 	const uint v = Mod(t, height);
 
-	const uint index = channelCount * (v * width + u);
+	const uint index = v * width + u;
 
-	return (channelCount == 1) ? pixels[index] : VLOAD3F(&pixels[index]);
+	switch (storageType) {
+		case BYTE: {
+			switch (channelCount) {
+				case 1: {
+					const uchar a = ((__global uchar *)pixels)[index];
+					return a * (1.f / 255.f);
+				}
+				case 3: {
+					__global uchar *rgb = &((__global uchar *)pixels)[index * 3];
+					return (float3)(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f));
+				}
+				case 4: {
+					__global uchar *rgba = &((__global uchar *)pixels)[index * 4];
+					return (float3)(rgba[0] * (1.f / 255.f), rgba[1] * (1.f / 255.f), rgba[2] * (1.f / 255.f));
+				}
+				default:
+					return 0.f;
+			}
+			break;
+		}
+		case HALF: {
+			switch (channelCount) {
+				case 1: {
+					return vload_half(index, (__global half *)pixels);
+				}
+				case 3: {
+					return (float3)(
+							vload_half(index * 3, (__global half *)pixels),
+							vload_half(index * 3 + 1, (__global half *)pixels),
+							vload_half(index * 3 + 2, (__global half *)pixels));
+				}
+				case 4: {
+					return (float3)(
+							vload_half(index * 4, (__global half *)pixels),
+							vload_half(index * 4 + 1, (__global half *)pixels),
+							vload_half(index * 4 + 2, (__global half *)pixels));
+				}
+				default:
+					return 0.f;
+			}
+			break;
+		}
+		case FLOAT: {
+			switch (channelCount) {
+				case 1: {
+					const float a = ((__global float *)pixels)[index];
+					return a;
+				}
+				case 3: {
+					__global float *rgb = &((__global float *)pixels)[index * 3];
+					return (float3)(rgb[0], rgb[1], rgb[2]);
+				}
+				case 4: {
+					__global float *rgba = &((__global float *)pixels)[index * 4];
+					return (float3)(rgba[0], rgba[1], rgba[2]);
+				}
+				default:
+					return 0.f;
+			}
+			break;
+		}
+		default:
+			return 0.f;
+	}
 }
 
-float ImageMap_GetFloat(__global float *pixels,
-		const uint width, const uint height, const uint channelCount,
-		const float u, const float v) {
+float ImageMap_GetFloat(__global ImageMap *imageMap,
+		const float u, const float v
+		IMAGEMAPS_PARAM_DECL) {
+	__global void *pixels = ImageMap_GetPixelsAddress(
+		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->storageType;
+	const uint channelCount = imageMap->channelCount;
+	const uint width = imageMap->width;
+	const uint height = imageMap->height;
+
 	const float s = u * width - 0.5f;
 	const float t = v * height - 0.5f;
 
@@ -72,10 +209,10 @@ float ImageMap_GetFloat(__global float *pixels,
 	const float ids = 1.f - ds;
 	const float idt = 1.f - dt;
 
-	const float c0 = ImageMap_GetTexel_Float(pixels, width, height, channelCount, s0, t0);
-	const float c1 = ImageMap_GetTexel_Float(pixels, width, height, channelCount, s0, t0 + 1);
-	const float c2 = ImageMap_GetTexel_Float(pixels, width, height, channelCount, s0 + 1, t0);
-	const float c3 = ImageMap_GetTexel_Float(pixels, width, height, channelCount, s0 + 1, t0 + 1);
+	const float c0 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0, t0);
+	const float c1 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0, t0 + 1);
+	const float c2 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0 + 1, t0);
+	const float c3 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0 + 1, t0 + 1);
 
 	const float k0 = ids * idt;
 	const float k1 = ids * dt;
@@ -85,9 +222,16 @@ float ImageMap_GetFloat(__global float *pixels,
 	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
 }
 
-float3 ImageMap_GetSpectrum(__global float *pixels,
-		const uint width, const uint height, const uint channelCount,
-		const float u, const float v) {
+float3 ImageMap_GetSpectrum(__global ImageMap *imageMap,
+		const float u, const float v
+		IMAGEMAPS_PARAM_DECL) {
+	__global void *pixels = ImageMap_GetPixelsAddress(
+		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->storageType;
+	const uint channelCount = imageMap->channelCount;
+	const uint width = imageMap->width;
+	const uint height = imageMap->height;
+
 	const float s = u * width - 0.5f;
 	const float t = v * height - 0.5f;
 
@@ -100,10 +244,10 @@ float3 ImageMap_GetSpectrum(__global float *pixels,
 	const float ids = 1.f - ds;
 	const float idt = 1.f - dt;
 
-	const float3 c0 = ImageMap_GetTexel_Spectrum(pixels, width, height, channelCount, s0, t0);
-	const float3 c1 = ImageMap_GetTexel_Spectrum(pixels, width, height, channelCount, s0, t0 + 1);
-	const float3 c2 = ImageMap_GetTexel_Spectrum(pixels, width, height, channelCount, s0 + 1, t0);
-	const float3 c3 = ImageMap_GetTexel_Spectrum(pixels, width, height, channelCount, s0 + 1, t0 + 1);
+	const float3 c0 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, s0, t0);
+	const float3 c1 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, s0, t0 + 1);
+	const float3 c2 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, s0 + 1, t0);
+	const float3 c3 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, s0 + 1, t0 + 1);
 
 	const float k0 = ids * idt;
 	const float k1 = ids * dt;
@@ -189,16 +333,14 @@ float ImageMapTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float gain, const uint imageMapIndex, __global TextureMapping2D *mapping
 		IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[imageMapIndex];
-	__global float *pixels = ImageMap_GetPixelsAddress(
-			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
 
 	return gain * ImageMap_GetFloat(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			mapUV.s0, mapUV.s1);
+			imageMap,
+			mapUV.s0, mapUV.s1
+			IMAGEMAPS_PARAM);
 }
 
 float3 ImageMapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
@@ -212,9 +354,9 @@ float3 ImageMapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
 
 	return gain * ImageMap_GetSpectrum(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			mapUV.s0, mapUV.s1);
+			imageMap,
+			mapUV.s0, mapUV.s1
+			IMAGEMAPS_PARAM);
 }
 
 #if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)

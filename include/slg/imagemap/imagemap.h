@@ -275,7 +275,11 @@ public:
 	typedef enum {
 		BYTE,
 		HALF,
-		FLOAT
+		FLOAT,
+		
+		// This one isn't a real storage type and is used only as argument
+		// of ImageMap constructor
+		AUTO
 	} StorageType;
 
 	ImageMapStorage(const u_int w, const u_int h) {
@@ -393,7 +397,8 @@ public:
 	} ChannelSelectionType;
 
 	ImageMap(const std::string &fileName, const float gamma,
-		const ChannelSelectionType selectionType);
+		const ChannelSelectionType selectionType,
+		const ImageMapStorage::StorageType storageType);
 	ImageMap(ImageMapStorage *pixels, const float gamma);
 	~ImageMap();
 

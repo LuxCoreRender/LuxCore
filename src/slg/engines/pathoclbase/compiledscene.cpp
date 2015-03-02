@@ -3011,14 +3011,45 @@ void CompiledScene::CompileImageMaps() {
 			page = imageMapMemBlocks.size() - 1;
 		}
 
+		vector<float> &imageMapMemBlock = imageMapMemBlocks[page];
+
+		imd->channelCount = im->GetChannelCount();
 		imd->width = im->GetWidth();
 		imd->height = im->GetHeight();
-		imd->channelCount = im->GetChannelCount();
 		imd->pageIndex = page;
-		imd->pixelsIndex = (u_int)imageMapMemBlocks[page].size();
-		// Assuming FLOAT image maps for the moment
-		imageMapMemBlocks[page].insert(imageMapMemBlocks[page].end(), (float *)im->GetStorage()->GetPixelsData(),
-				((float *)im->GetStorage()->GetPixelsData()) + pixelCount * imd->channelCount);
+		imd->pixelsIndex = (u_int)imageMapMemBlock.size();
+
+		if (im->GetStorage()->GetStorageType() == ImageMapStorage::BYTE) {
+			imd->storageType = slg::ocl::BYTE;
+
+			// Copy the image map data
+			const size_t start = imageMapMemBlock.size();
+			const size_t dataSize = pixelCount * imd->channelCount * sizeof(u_char);
+			const size_t dataSizeInFloat = dataSize / sizeof(float) +
+				((dataSize % sizeof(float) == 0) ? 0 : 1);
+			imageMapMemBlock.resize(start + dataSizeInFloat);
+			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
+		} else if (im->GetStorage()->GetStorageType() == ImageMapStorage::HALF) {
+			imd->storageType = slg::ocl::HALF;
+
+			// Copy the image map data
+			const size_t start = imageMapMemBlock.size();
+			const size_t dataSize = pixelCount * imd->channelCount * sizeof(half);
+			const size_t dataSizeInFloat = dataSize / sizeof(float) +
+				((dataSize % sizeof(float) == 0) ? 0 : 1);
+			imageMapMemBlock.resize(start + dataSizeInFloat);
+
+			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
+		} else if (im->GetStorage()->GetStorageType() == ImageMapStorage::FLOAT) {
+			imd->storageType = slg::ocl::FLOAT;
+
+			// Copy the image map data
+			const size_t start = imageMapMemBlock.size();
+			const size_t dataSize = pixelCount * imd->channelCount * sizeof(float);
+			const size_t dataSizeInFloat = dataSize / sizeof(float);
+			imageMapMemBlock.resize(start + dataSizeInFloat);
+			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
+		}
 	}
 
 	SLG_LOG("Image maps page count: " << imageMapMemBlocks.size());
