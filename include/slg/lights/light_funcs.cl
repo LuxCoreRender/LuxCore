@@ -76,8 +76,6 @@ float3 InfiniteLight_GetRadiance(__global LightSource *infiniteLight,
 		const float3 dir, float *directPdfA
 		IMAGEMAPS_PARAM_DECL) {
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
-	__global float *pixels = ImageMap_GetPixelsAddress(
-			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float3 localDir = normalize(Transform_InvApplyVector(&infiniteLight->notIntersectable.light2World, -dir));
 	const float2 uv = (float2)(
@@ -93,9 +91,9 @@ float3 InfiniteLight_GetRadiance(__global LightSource *infiniteLight,
 	*directPdfA = distPdf / (4.f * M_PI_F);
 
 	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			mapUV.s0, mapUV.s1);
+			imageMap,
+			mapUV.s0, mapUV.s1
+			IMAGEMAPS_PARAM);
 }
 
 float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
@@ -134,8 +132,6 @@ float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
 
 	// InfiniteLight_GetRadiance is expended here
 	__global ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
-	__global float *pixels = ImageMap_GetPixelsAddress(
-			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = (float2)(sampleUV.s0, sampleUV.s1);
 
@@ -145,9 +141,9 @@ float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
 	const float2 mapUV = uv * scale + delta;
 	
 	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			mapUV.s0, mapUV.s1);
+			imageMap,
+			mapUV.s0, mapUV.s1
+			IMAGEMAPS_PARAM);
 }
 
 #endif
@@ -424,13 +420,11 @@ float3 TriangleLight_Illuminate(__global LightSource *triLight,
 
 		// Retrieve the image map information
 		__global ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
-		__global float *pixels = ImageMap_GetPixelsAddress(
-				imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 		const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 		emissionColor = ImageMap_GetSpectrum(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			uv.s0, uv.s1) / triLight->triangle.avarage;
+				imageMap,
+				uv.s0, uv.s1
+				IMAGEMAPS_PARAM) / triLight->triangle.avarage;
 
 		*directPdfW = triLight->triangle.invTriangleArea * distanceSquared ;
 	} else
@@ -495,13 +489,11 @@ float3 TriangleLight_GetRadiance(__global LightSource *triLight,
 
 		// Retrieve the image map information
 		__global ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
-		__global float *pixels = ImageMap_GetPixelsAddress(
-				imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 		const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 		emissionColor = ImageMap_GetSpectrum(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			uv.s0, uv.s1) / triLight->triangle.avarage;
+				imageMap,
+				uv.s0, uv.s1
+				IMAGEMAPS_PARAM) / triLight->triangle.avarage;
 	}
 #endif
 
@@ -550,16 +542,14 @@ float3 MapPointLight_Illuminate(__global LightSource *mapPointLight,
 
 	// Retrieve the image map information
 	__global ImageMap *imageMap = &imageMapDescs[mapPointLight->notIntersectable.mapPoint.imageMapIndex];
-	__global float *pixels = ImageMap_GetPixelsAddress(
-			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float3 localFromLight = normalize(Transform_InvApplyVector(&mapPointLight->notIntersectable.light2World, p) - 
 		VLOAD3F(&mapPointLight->notIntersectable.mapPoint.localPos.x));
 	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 	const float3 emissionColor = ImageMap_GetSpectrum(
-			pixels,
-			imageMap->width, imageMap->height, imageMap->channelCount,
-			uv.s0, uv.s1) / mapPointLight->notIntersectable.mapPoint.avarage;
+			imageMap,
+			uv.s0, uv.s1
+			IMAGEMAPS_PARAM) / mapPointLight->notIntersectable.mapPoint.avarage;
 
 	return VLOAD3F(mapPointLight->notIntersectable.mapPoint.emittedFactor.c) * emissionColor;
 }
@@ -648,13 +638,11 @@ float3 ProjectionLight_Illuminate(__global LightSource *projectionLight,
 		
 		// Retrieve the image map information
 		__global ImageMap *imageMap = &imageMapDescs[imageMapIndex];
-		__global float *pixels = ImageMap_GetPixelsAddress(
-				imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 		c *= ImageMap_GetSpectrum(
-				pixels,
-				imageMap->width, imageMap->height, imageMap->channelCount,
-				u, v);
+				imageMap,
+				u, v
+				IMAGEMAPS_PARAM);
 	}
 #endif
 

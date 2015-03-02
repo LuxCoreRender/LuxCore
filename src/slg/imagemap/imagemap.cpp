@@ -154,7 +154,8 @@ void ImageMapStorageImpl<T, CHANNELS>::ReverseGammaCorrection(const float gamma)
 //------------------------------------------------------------------------------
 
 ImageMap::ImageMap(const string &fileName, const float g,
-		const ChannelSelectionType selectionType) {
+		const ChannelSelectionType selectionType,
+		const ImageMapStorage::StorageType storageType) {
 	gamma = g;
 
 	SDL_LOG("Reading texture map: " << fileName);
@@ -171,130 +172,169 @@ ImageMap::ImageMap(const string &fileName, const float g,
 			u_int height = spec.height;
 			u_int channelCount = spec.nchannels;
 
-			if ((channelCount != 1) && (channelCount != 2) && (channelCount != 3) && (channelCount != 4))
+			if ((channelCount != 1) && (channelCount != 3) && (channelCount != 4))
 				throw runtime_error("Unsupported number of channels in an ImageMap: " + ToString(channelCount));
 
+			ImageMapStorage::StorageType selectedStorageType = storageType;
+			if (selectedStorageType == ImageMapStorage::AUTO) {
+				// Automatically select the storage type
+
+				if (spec.format == TypeDesc::UCHAR)
+					selectedStorageType = ImageMapStorage::BYTE;
+				else if (spec.format == TypeDesc::HALF)
+					selectedStorageType = ImageMapStorage::HALF;
+				else
+					selectedStorageType = ImageMapStorage::FLOAT;
+			}
+			
 			const u_int pixelCount = width * height;
-			auto_ptr<float> pixels(new float[pixelCount * channelCount]);
+			switch (selectedStorageType) {
+				case ImageMapStorage::BYTE: {
+					u_char *pixels = new u_char[pixelCount * channelCount];
+					in->read_image(TypeDesc::UCHAR, pixels);
+					in->close();
+					in.reset();
 
-			in->read_image(TypeDesc::FLOAT, pixels.get());
-			in->close();
-			in.reset();
-
-			// Convert the image if required
-			switch (selectionType) {
-				case ImageMap::DEFAULT:
-					// Nothing to do
-					break;
-				case ImageMap::RED:
-				case ImageMap::GREEN:
-				case ImageMap::BLUE:
-				case ImageMap::ALPHA: {
-					// Nothing to do
-					if (channelCount == 1) {
-						// Nothing to do
-					} else if (channelCount == 2) {
-						auto_ptr<float> newPixels(new float[pixelCount]);
-
-						const float *src = pixels.get();
-						float *dst = newPixels.get();
-						const u_int channel = (
-							(selectionType == ImageMap::RED) ||
-							(selectionType == ImageMap::GREEN) ||
-							(selectionType == ImageMap::BLUE)) ? 0 : 1;
-
-						for (u_int i = 0; i < pixelCount; ++i) {
-							*dst++ = src[channel];
-							src += channelCount;
-						}
-						
-						pixels.reset(newPixels.release());
-						channelCount = 1;
-					} else {
-						auto_ptr<float> newPixels(new float[pixelCount]);
-
-						const float *src = pixels.get();
-						float *dst = newPixels.get();
-						const u_int channel = selectionType - ImageMap::RED;
-
-						for (u_int i = 0; i < pixelCount; ++i) {
-							*dst++ = src[channel];
-							src += channelCount;
-						}
-						
-						pixels.reset(newPixels.release());
-						channelCount = 1;
-					}
+					pixelStorage = AllocImageMapStorage<u_char>(pixels, channelCount, width, height);
 					break;
 				}
-				case ImageMap::MEAN:
-				case ImageMap::WEIGHTED_MEAN: {
-					// Nothing to do
-					if (channelCount == 1) {
-						// Nothing to do
-					} else if (channelCount == 2) {
-						auto_ptr<float> newPixels(new float[pixelCount]);
+				case ImageMapStorage::HALF: {
+					half *pixels = new half[pixelCount * channelCount];
+					in->read_image(TypeDesc::HALF, pixels);
+					in->close();
+					in.reset();
 
-						const float *src = pixels.get();
-						float *dst = newPixels.get();
-						const u_int channel = 0;
-
-						for (u_int i = 0; i < pixelCount; ++i) {
-							*dst++ = src[channel];
-							src += channelCount;
-						}
-
-						pixels.reset(newPixels.release());
-						channelCount = 1;
-					} else {
-						auto_ptr<float> newPixels(new float[pixelCount]);
-
-						const float *src = pixels.get();
-						float *dst = newPixels.get();
-
-						if (selectionType == ImageMap::MEAN) {
-							for (u_int i = 0; i < pixelCount; ++i) {
-								*dst++ = Spectrum(src).Filter();
-								src += channelCount;
-							}
-						} else {
-							for (u_int i = 0; i < pixelCount; ++i) {
-								*dst++ = Spectrum(src).Y();
-								src += channelCount;
-							}							
-						}
-						
-						pixels.reset(newPixels.release());
-						channelCount = 1;
-					}
+					pixelStorage = AllocImageMapStorage<half>(pixels, channelCount, width, height);
+					break;
 				}
-				case ImageMap::RGB: {
-					// Nothing to do
-					if ((channelCount == 1) || (channelCount == 2) || (channelCount == 3)) {
-						// Nothing to do
-					} else {
-						auto_ptr<float> newPixels(new float[pixelCount * 3]);
+				case ImageMapStorage::FLOAT: {
+					float *pixels = new float[pixelCount * channelCount];
+					in->read_image(TypeDesc::FLOAT, pixels);
+					in->close();
+					in.reset();
 
-						const float *src = pixels.get();
-						float *dst = newPixels.get();
-
-						for (u_int i = 0; i < pixelCount; ++i) {
-							*dst++ = *src++;
-							*dst++ = *src++;
-							*dst++ = *src++;
-							src++;
-						}
-						
-						pixels.reset(newPixels.release());
-						channelCount = 1;
-					}
+					pixelStorage = AllocImageMapStorage<float>(pixels, channelCount, width, height);
 					break;
 				}
 				default:
-					throw runtime_error("Unknown channel selection type in an ImageMap: " + ToString(selectionType));
+					throw runtime_error("Unsupported selected storage type in an ImageMap: " + ToString(selectedStorageType));
 			}
-			
-			pixelStorage = AllocImageMapStorage<float>(pixels.release(), channelCount, width, height);
+
+// TODO
+// TODO
+// TODO
+			// Convert the image if required
+//			switch (selectionType) {
+//				case ImageMap::DEFAULT:
+//					// Nothing to do
+//					break;
+//				case ImageMap::RED:
+//				case ImageMap::GREEN:
+//				case ImageMap::BLUE:
+//				case ImageMap::ALPHA: {
+//					// Nothing to do
+//					if (channelCount == 1) {
+//						// Nothing to do
+//					} else if (channelCount == 2) {
+//						auto_ptr<float> newPixels(new float[pixelCount]);
+//
+//						const float *src = pixels.get();
+//						float *dst = newPixels.get();
+//						const u_int channel = (
+//							(selectionType == ImageMap::RED) ||
+//							(selectionType == ImageMap::GREEN) ||
+//							(selectionType == ImageMap::BLUE)) ? 0 : 1;
+//
+//						for (u_int i = 0; i < pixelCount; ++i) {
+//							*dst++ = src[channel];
+//							src += channelCount;
+//						}
+//						
+//						pixels.reset(newPixels.release());
+//						channelCount = 1;
+//					} else {
+//						auto_ptr<float> newPixels(new float[pixelCount]);
+//
+//						const float *src = pixels.get();
+//						float *dst = newPixels.get();
+//						const u_int channel = selectionType - ImageMap::RED;
+//
+//						for (u_int i = 0; i < pixelCount; ++i) {
+//							*dst++ = src[channel];
+//							src += channelCount;
+//						}
+//						
+//						pixels.reset(newPixels.release());
+//						channelCount = 1;
+//					}
+//					break;
+//				}
+//				case ImageMap::MEAN:
+//				case ImageMap::WEIGHTED_MEAN: {
+//					// Nothing to do
+//					if (channelCount == 1) {
+//						// Nothing to do
+//					} else if (channelCount == 2) {
+//						auto_ptr<float> newPixels(new float[pixelCount]);
+//
+//						const float *src = pixels.get();
+//						float *dst = newPixels.get();
+//						const u_int channel = 0;
+//
+//						for (u_int i = 0; i < pixelCount; ++i) {
+//							*dst++ = src[channel];
+//							src += channelCount;
+//						}
+//
+//						pixels.reset(newPixels.release());
+//						channelCount = 1;
+//					} else {
+//						auto_ptr<float> newPixels(new float[pixelCount]);
+//
+//						const float *src = pixels.get();
+//						float *dst = newPixels.get();
+//
+//						if (selectionType == ImageMap::MEAN) {
+//							for (u_int i = 0; i < pixelCount; ++i) {
+//								*dst++ = Spectrum(src).Filter();
+//								src += channelCount;
+//							}
+//						} else {
+//							for (u_int i = 0; i < pixelCount; ++i) {
+//								*dst++ = Spectrum(src).Y();
+//								src += channelCount;
+//							}							
+//						}
+//						
+//						pixels.reset(newPixels.release());
+//						channelCount = 1;
+//					}
+//				}
+//				case ImageMap::RGB: {
+//					// Nothing to do
+//					if ((channelCount == 1) || (channelCount == 2) || (channelCount == 3)) {
+//						// Nothing to do
+//					} else {
+//						auto_ptr<float> newPixels(new float[pixelCount * 3]);
+//
+//						const float *src = pixels.get();
+//						float *dst = newPixels.get();
+//
+//						for (u_int i = 0; i < pixelCount; ++i) {
+//							*dst++ = *src++;
+//							*dst++ = *src++;
+//							*dst++ = *src++;
+//							src++;
+//						}
+//						
+//						pixels.reset(newPixels.release());
+//						channelCount = 1;
+//					}
+//					break;
+//				}
+//				default:
+//					throw runtime_error("Unknown channel selection type in an ImageMap: " + ToString(selectionType));
+//			}
 		} else
 			throw runtime_error("Unknown image file format: " + fileName);
 
@@ -323,7 +363,7 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	TypeDesc::BASETYPE baseType;
 	switch (storageType) {
 		case ImageMapStorage::BYTE:
-			baseType = TypeDesc::CHAR;
+			baseType = TypeDesc::UCHAR;
 			break;
 		case ImageMapStorage::HALF:
 			baseType = TypeDesc::HALF;
@@ -395,9 +435,9 @@ void ImageMap::WriteImage(const string &fileName) const {
 
 		switch (storageType) {
 			case ImageMapStorage::BYTE: {
-				ImageSpec spec(pixelStorage->width, pixelStorage->height, pixelStorage->GetChannelCount(), TypeDesc::CHAR);
+				ImageSpec spec(pixelStorage->width, pixelStorage->height, pixelStorage->GetChannelCount(), TypeDesc::UCHAR);
 				out->open(fileName, spec);
-				out->write_image(TypeDesc::CHAR, pixelStorage->GetPixelsData());
+				out->write_image(TypeDesc::UCHAR, pixelStorage->GetPixelsData());
 				out->close();
 				break;
 			}

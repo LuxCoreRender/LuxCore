@@ -832,29 +832,42 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
 		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
-		const string stype = props.Get(Property(propName + ".channel")("default")).Get<string>();
 
+		const string stringSelectionType = props.Get(Property(propName + ".channel")("default")).Get<string>();
 		ImageMap::ChannelSelectionType selectionType;
-		if (stype == "default")
+		if (stringSelectionType == "default")
 			selectionType = ImageMap::DEFAULT;
-		else if (stype == "red")
+		else if (stringSelectionType == "red")
 			selectionType = ImageMap::RED;
-		else if (stype == "green")
+		else if (stringSelectionType == "green")
 			selectionType = ImageMap::GREEN;
-		else if (stype == "blue")
+		else if (stringSelectionType == "blue")
 			selectionType = ImageMap::BLUE;
-		else if (stype == "alpha")
+		else if (stringSelectionType == "alpha")
 			selectionType = ImageMap::ALPHA;
-		else if (stype == "mean")
+		else if (stringSelectionType == "mean")
 			selectionType = ImageMap::MEAN;
-		else if (stype == "colored_mean")
+		else if (stringSelectionType == "colored_mean")
 			selectionType = ImageMap::WEIGHTED_MEAN;
-		else if (stype == "rgb")
+		else if (stringSelectionType == "rgb")
 			selectionType = ImageMap::RGB;
 		else
-			throw runtime_error("Unknown channel selection type in imagemap: " + texName);
+			throw runtime_error("Unknown channel selection type in imagemap: " + stringSelectionType);
+
+		const string stringStorageType = props.Get(Property(propName + ".storage")("auto")).Get<string>();
+		ImageMapStorage::StorageType storageType;
+		if (stringStorageType == "auto")
+			storageType = ImageMapStorage::AUTO;
+		else if (stringStorageType == "byte")
+			storageType = ImageMapStorage::BYTE;
+		else if (stringStorageType == "half")
+			storageType = ImageMapStorage::HALF;
+		else if (stringStorageType == "float")
+			storageType = ImageMapStorage::FLOAT;
+		else
+			throw runtime_error("Unknown storage type in imagemap: " + stringStorageType);
 			
-		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType);
+		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType);
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
 	} else if (texType == "constfloat1") {
 		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
@@ -1646,7 +1659,8 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 
 	ImageMap *map = NULL;
 	if ((imgMapName != "") && (iesName != "")) {
-		ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, gamma, ImageMap::DEFAULT);
+		ImageMap *imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
+				ImageMap::DEFAULT, ImageMapStorage::FLOAT);
 
 		ImageMap *iesMap;
 		PhotometricDataIES data(iesName.c_str());
@@ -1676,7 +1690,8 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		// Add the image map to the cache
 		imgMapCache.DefineImageMap("LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName, map);
 	} else if (imgMapName != "") {
-		map = imgMapCache.GetImageMap(imgMapName, gamma, ImageMap::DEFAULT);
+		map = imgMapCache.GetImageMap(imgMapName, gamma,
+				ImageMap::DEFAULT, ImageMapStorage::FLOAT);
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
@@ -1763,7 +1778,8 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma, ImageMap::DEFAULT);
+		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma,
+				ImageMap::DEFAULT, ImageMapStorage::FLOAT);
 
 		InfiniteLight *il = new InfiniteLight();
 		il->lightToWorld = light2World;
@@ -1843,7 +1859,9 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 
 		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const ImageMap *imgMap = (imageName == "") ? NULL : imgMapCache.GetImageMap(imageName, gamma, ImageMap::DEFAULT);
+		const ImageMap *imgMap = (imageName == "") ?
+			NULL :
+			imgMapCache.GetImageMap(imageName, gamma, ImageMap::DEFAULT, ImageMapStorage::FLOAT);
 
 		ProjectionLight *pl = new ProjectionLight();
 		pl->lightToWorld = light2World;
