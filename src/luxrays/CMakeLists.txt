@@ -233,20 +233,6 @@ IF(GCC AND NOT APPLE)
 	SET_SOURCE_FILES_PROPERTIES(${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mqbvhaccel.cpp COMPILE_FLAGS "-O2")
 ENDIF(GCC AND NOT APPLE)
 
-#
-# Copy needed files for compiling LuxRender to dependencies directory, to find 
-# them also if builddir name is not "luxrays"
-#
-IF(OSX_UPDATE_LUXRAYS_REPO)
-	ADD_CUSTOM_COMMAND(
-	TARGET luxrays POST_BUILD
-	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays/luxrays # clean first to assure update
-	COMMAND rm ${OSX_DEPENDENCY_ROOT}/lib/LuxRays/libluxrays.a
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxrays.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
-	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxrays ${OSX_DEPENDENCY_ROOT}/include/LuxRays
-	)
-ENDIF(OSX_UPDATE_LUXRAYS_REPO)
-
 TARGET_LINK_LIBRARIES(luxrays ${Boost_LIBRARIES})
 TARGET_LINK_LIBRARIES(luxrays ${OPENIMAGEIO_LIBRARIES})
 
