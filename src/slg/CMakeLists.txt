@@ -310,16 +310,6 @@ add_library(smallluxgpu STATIC ${SLG_LIB_SRCS})
 
 link_directories (${LuxRays_LIB_DIR})
 
-IF(OSX_UPDATE_LUXRAYS_REPO)
-	ADD_CUSTOM_COMMAND(
-	TARGET smallluxgpu POST_BUILD
-	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays/slg # clean first to assure update
-	COMMAND rm ${OSX_DEPENDENCY_ROOT}/lib/LuxRays/libsmallluxgpu.a
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libsmallluxgpu.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
-	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/slg ${OSX_DEPENDENCY_ROOT}/include/LuxRays
-	)
-ENDIF(OSX_UPDATE_LUXRAYS_REPO)
-
 ###########################################################################
 #
 # Predefines

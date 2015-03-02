@@ -30,7 +30,7 @@ set(SMALLLUXGPU_SRCS
 add_executable(slg4 ${SMALLLUXGPU_SRCS})
 
 if(APPLE)
-	add_dependencies(slg4 luxcore)
+	add_dependencies(slg4 luxcore luxrays smallluxgpu)
 	TARGET_LINK_LIBRARIES(slg4 luxcore ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY})
 else(APPLE)
 	TARGET_LINK_LIBRARIES(slg4 luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${OPENGL_LIBRARIES} ${GLEW_LIBRARY} ${GLUT_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
@@ -47,13 +47,18 @@ IF(APPLE AND EMBREE_FOUND)
 ENDIF()
 
 IF(OSX_UPDATE_LUXRAYS_REPO)
-	ADD_CUSTOM_COMMAND(
-	TARGET slg4 POST_BUILD
-	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/bin/slg4 # clean first to assure update
-	COMMAND cp ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/slg4 ${OSX_DEPENDENCY_ROOT}/bin/slg4
-	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays/luxcore # clean first to assure update
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${OSX_DEPENDENCY_ROOT}/lib/LuxRays # for repo
-	COMMAND cp ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE} # for slg4
-	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/luxcore ${OSX_DEPENDENCY_ROOT}/include/LuxRays
-	)
+#
+# Copy needed files for compiling LuxRender to dependencies directory, to find
+# them also if builddir name is not "luxrays"
+#
+ADD_CUSTOM_COMMAND(
+TARGET slg4 POST_BUILD
+	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays # clean first to assure update
+	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/ ${OSX_DEPENDENCY_ROOT}/include/LuxRays
+	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxrays.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
+	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libsmallluxgpu.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
+	COMMAND cp -f ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/slg4 ${OSX_DEPENDENCY_ROOT}/bin/slg4
+	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${OSX_DEPENDENCY_ROOT}/lib/LuxRays # for repo
+	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE} # for slg4
+)
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
