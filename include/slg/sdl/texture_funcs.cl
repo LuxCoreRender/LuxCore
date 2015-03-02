@@ -52,6 +52,10 @@ float ImageMap_GetTexel_Float(
 					const uchar a = ((__global uchar *)pixels)[index];
 					return a * (1.f / 255.f);
 				}
+				case 2: {
+					const uchar a = ((__global uchar *)pixels)[index * 2];
+					return a * (1.f / 255.f);
+				}
 				case 3: {
 					__global uchar *rgb = &((__global uchar *)pixels)[index * 3];
 					return Spectrum_Y((float3)(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f)));
@@ -63,13 +67,15 @@ float ImageMap_GetTexel_Float(
 				default:
 					return 0.f;
 			}
-			break;
 		}
 		case HALF: {
 			switch (channelCount) {
 				case 1: {
 					return vload_half(index, (__global half *)pixels);
 				}
+				case 2: {
+					return vload_half(index * 2, (__global half *)pixels);
+				}				
 				case 3: {
 					return Spectrum_Y((float3)(
 							vload_half(index * 3, (__global half *)pixels),
@@ -85,12 +91,15 @@ float ImageMap_GetTexel_Float(
 				default:
 					return 0.f;
 			}
-			break;
 		}
 		case FLOAT: {
 			switch (channelCount) {
 				case 1: {
 					const float a = ((__global float *)pixels)[index];
+					return a;
+				}
+				case 2: {
+					const float a = ((__global float *)pixels)[index * 2];
 					return a;
 				}
 				case 3: {
@@ -104,7 +113,6 @@ float ImageMap_GetTexel_Float(
 				default:
 					return 0.f;
 			}
-			break;
 		}
 		default:
 			return 0.f;
@@ -128,6 +136,10 @@ float3 ImageMap_GetTexel_Spectrum(
 					const uchar a = ((__global uchar *)pixels)[index];
 					return a * (1.f / 255.f);
 				}
+				case 2: {
+					const uchar a = ((__global uchar *)pixels)[index * 2] * (1.f / 255.f);
+					return a;
+				}
 				case 3: {
 					__global uchar *rgb = &((__global uchar *)pixels)[index * 3];
 					return (float3)(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f));
@@ -139,12 +151,14 @@ float3 ImageMap_GetTexel_Spectrum(
 				default:
 					return 0.f;
 			}
-			break;
 		}
 		case HALF: {
 			switch (channelCount) {
 				case 1: {
 					return vload_half(index, (__global half *)pixels);
+				}
+				case 2: {
+					return vload_half(index * 2, (__global half *)pixels);
 				}
 				case 3: {
 					return (float3)(
@@ -161,12 +175,15 @@ float3 ImageMap_GetTexel_Spectrum(
 				default:
 					return 0.f;
 			}
-			break;
 		}
 		case FLOAT: {
 			switch (channelCount) {
 				case 1: {
 					const float a = ((__global float *)pixels)[index];
+					return a;
+				}
+				case 2: {
+					const float a = ((__global float *)pixels)[index * 2];
 					return a;
 				}
 				case 3: {
@@ -180,7 +197,6 @@ float3 ImageMap_GetTexel_Spectrum(
 				default:
 					return 0.f;
 			}
-			break;
 		}
 		default:
 			return 0.f;

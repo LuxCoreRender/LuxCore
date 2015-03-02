@@ -86,6 +86,31 @@ template<> inline void ImageMapPixel<u_char, 1>::ReverseGammaCorrection(const fl
 }
 
 //------------------------------------------------------------------------------
+// u_char x 2 specialization
+//------------------------------------------------------------------------------
+
+template<> inline float ImageMapPixel<u_char, 2>::GetFloat() const {
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
+	return c[0] * norm;
+}
+
+template<> inline luxrays::Spectrum ImageMapPixel<u_char, 2>::GetSpectrum() const {
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
+	return luxrays::Spectrum(c[0] * norm);
+}
+
+template<> inline float ImageMapPixel<u_char, 2>::GetAlpha() const {
+	const float norm = 1.f / std::numeric_limits<u_char>::max();
+	return c[1] * norm;
+}
+
+template<> inline void ImageMapPixel<u_char, 2>::ReverseGammaCorrection(const float gamma) {
+	const u_char maxv = std::numeric_limits<u_char>::max();
+	const float norm = 1.f / maxv;
+	c[0] = (u_char)floorf(powf(c[0] * norm, gamma) * maxv + .5f);
+}
+
+//------------------------------------------------------------------------------
 // u_char x 3 specialization
 //------------------------------------------------------------------------------
 
@@ -159,6 +184,26 @@ template<> inline void ImageMapPixel<half, 1>::ReverseGammaCorrection(const floa
 }
 
 //------------------------------------------------------------------------------
+// half x 2 specialization
+//------------------------------------------------------------------------------
+
+template<> inline float ImageMapPixel<half, 2>::GetFloat() const {
+	return c[0];
+}
+
+template<> inline luxrays::Spectrum ImageMapPixel<half, 2>::GetSpectrum() const {
+	return luxrays::Spectrum(c[0]);
+}
+
+template<> inline float ImageMapPixel<half, 2>::GetAlpha() const {
+	return c[1];
+}
+
+template<> inline void ImageMapPixel<half, 2>::ReverseGammaCorrection(const float gamma) {
+	c[0] = powf(c[0], gamma);
+}
+
+//------------------------------------------------------------------------------
 // half x 3 specialization
 //------------------------------------------------------------------------------
 
@@ -219,6 +264,26 @@ template<> inline float ImageMapPixel<float, 1>::GetAlpha() const {
 }
 
 template<> inline void ImageMapPixel<float, 1>::ReverseGammaCorrection(const float gamma) {
+	c[0] = powf(c[0], gamma);
+}
+
+//------------------------------------------------------------------------------
+// float x 2 specialization
+//------------------------------------------------------------------------------
+
+template<> inline float ImageMapPixel<float, 2>::GetFloat() const {
+	return c[0];
+}
+
+template<> inline luxrays::Spectrum ImageMapPixel<float, 2>::GetSpectrum() const {
+	return luxrays::Spectrum(c[0]);
+}
+
+template<> inline float ImageMapPixel<float, 2>::GetAlpha() const {
+	return c[1];
+}
+
+template<> inline void ImageMapPixel<float, 2>::ReverseGammaCorrection(const float gamma) {
 	c[0] = powf(c[0], gamma);
 }
 
