@@ -301,6 +301,8 @@ public:
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
 
+	static StorageType String2StorageType(const std::string &type);
+
 	u_int width, height;	
 };
 

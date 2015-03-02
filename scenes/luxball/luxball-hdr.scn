@@ -31,4 +31,5 @@ scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
 scene.infinitelight.file = scenes/simple-mat/arch.exr
 scene.infinitelight.gamma = 1.0
 scene.infinitelight.gain = 3.0 3.0 3.0
+scene.infinitelight.storage = byte
 #scene.infinitelight.shift = 0.25 0.0

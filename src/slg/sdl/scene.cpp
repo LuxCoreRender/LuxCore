@@ -854,18 +854,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		else
 			throw runtime_error("Unknown channel selection type in imagemap: " + stringSelectionType);
 
-		const string stringStorageType = props.Get(Property(propName + ".storage")("auto")).Get<string>();
-		ImageMapStorage::StorageType storageType;
-		if (stringStorageType == "auto")
-			storageType = ImageMapStorage::AUTO;
-		else if (stringStorageType == "byte")
-			storageType = ImageMapStorage::BYTE;
-		else if (stringStorageType == "half")
-			storageType = ImageMapStorage::HALF;
-		else if (stringStorageType == "float")
-			storageType = ImageMapStorage::FLOAT;
-		else
-			throw runtime_error("Unknown storage type in imagemap: " + stringStorageType);
+		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
+			props.Get(Property(propName + ".storage")("auto")).Get<string>());
 			
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType);
 		return new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
@@ -1778,8 +1768,11 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
+		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
+			props.Get(Property(propName + ".storage")("auto")).Get<string>());
+
 		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma,
-				ImageMap::DEFAULT, ImageMapStorage::FLOAT);
+				ImageMap::DEFAULT, storageType);
 
 		InfiniteLight *il = new InfiniteLight();
 		il->lightToWorld = light2World;
@@ -1859,9 +1852,12 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 
 		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
 		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
+		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
+			props.Get(Property(propName + ".storage")("auto")).Get<string>());
+
 		const ImageMap *imgMap = (imageName == "") ?
 			NULL :
-			imgMapCache.GetImageMap(imageName, gamma, ImageMap::DEFAULT, ImageMapStorage::FLOAT);
+			imgMapCache.GetImageMap(imageName, gamma, ImageMap::DEFAULT, storageType);
 
 		ProjectionLight *pl = new ProjectionLight();
 		pl->lightToWorld = light2World;

@@ -36,6 +36,23 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// ImageMapStorage
+//------------------------------------------------------------------------------
+
+ImageMapStorage::StorageType ImageMapStorage::String2StorageType(const std::string &type) {
+	if (type == "auto")
+		return ImageMapStorage::AUTO;
+	else if (type == "byte")
+		return ImageMapStorage::BYTE;
+	else if (type == "half")
+		return ImageMapStorage::HALF;
+	else if (type == "float")
+		return ImageMapStorage::FLOAT;
+	else
+		throw runtime_error("Unknown storage type: " + type);
+}
+
+//------------------------------------------------------------------------------
 // ImageMapStorageImpl
 //------------------------------------------------------------------------------
 
