@@ -143,7 +143,7 @@ else(APPLE)
 	add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 endif(APPLE)
 
-add_definitions(-DCPP_API_EXPORTS) # for controlling visibility
+add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
 ################################################################################
@@ -158,7 +158,7 @@ set(PYLUXCORE_SRCS
 )
 
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
-
+add_definitions(${VISIBILITY_FLAGS})
 if(APPLE)
 	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore ${PYTHON_LIBRARIES})
     SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
