@@ -20,4 +20,5 @@ include_directories(${LuxRays_INCLUDE_DIR})
 link_directories (${LuxRays_LIB_DIR})
 
 add_executable(benchsimple benchsimple.cpp)
+add_definitions(${VISIBILITY_FLAGS})
 target_link_libraries(benchsimple luxrays ${EMBREE_LIBRARY})

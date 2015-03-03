@@ -28,6 +28,7 @@ set(SMALLLUXGPU_SRCS
 	)
 
 add_executable(slg4 ${SMALLLUXGPU_SRCS})
+add_definitions(${VISIBILITY_FLAGS})
 
 if(APPLE)
 	add_dependencies(slg4 luxcore luxrays smallluxgpu)
