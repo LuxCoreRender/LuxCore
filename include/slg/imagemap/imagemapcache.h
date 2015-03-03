@@ -42,7 +42,7 @@ public:
 	void DefineImageMap(const std::string &name, ImageMap *im);
 
 	ImageMap *GetImageMap(const std::string &fileName, const float gamma,
-		const ImageMap::ChannelSelectionType selectionType,
+		const ImageMapStorage::ChannelSelectionType selectionType,
 		const ImageMapStorage::StorageType storageType);
 
 	// Get a path/name from imageMap object
@@ -74,7 +74,7 @@ public:
 
 private:
 	std::string GetCacheKey(const std::string &fileName, const float gamma,
-		const ImageMap::ChannelSelectionType selectionType,
+		const ImageMapStorage::ChannelSelectionType selectionType,
 		const ImageMapStorage::StorageType storageType) const;
 	std::string GetCacheKey(const std::string &fileName) const;
 
