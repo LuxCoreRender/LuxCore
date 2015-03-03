@@ -230,10 +230,10 @@ IF(APPLE)
 	set(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}") # cmake emits "-O3 -DNDEBUG" for Release by default, "-O0 -g" for Debug
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl, src/luxcore/unexported_symbols.map" CACHE STRING "assure config" FORCE)
-	set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl, src/luxcore/unexported_symbols.map" CACHE STRING "assure config" FORCE)
-	set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl, src/luxcore/unexported_symbols.map" CACHE STRING "assure config" FORCE)
-	set(VISIBILITY_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden" CACHE STRING "assure config" FORCE)
+	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl, include/luxrays/utils/unexported_symbols.map")
+	set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl, include/luxrays/utils/unexported_symbols.map")
+	set(CMAKE_SHARED_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl, include/luxrays/utils/unexported_symbols.map")
+	set(VISIBILITY_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden")
 	
 	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
 	if(${CMAKE_C_COMPILER_ID} MATCHES "Clang" AND NOT ${CMAKE_C_COMPILER_VERSION} LESS 6.0) # Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)
