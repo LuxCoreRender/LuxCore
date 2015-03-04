@@ -503,6 +503,7 @@ public:
 
 	virtual StorageType GetStorageType() const = 0;
 	virtual u_int GetChannelCount() const = 0;
+	virtual size_t GetMemorySize() const = 0;
 	virtual void *GetPixelsData() const = 0;
 
 	virtual float GetFloat(const luxrays::UV &uv) const = 0;
@@ -530,6 +531,7 @@ public:
 
 	virtual StorageType GetStorageType() const;
 	virtual u_int GetChannelCount() const { return CHANNELS; }
+	virtual size_t GetMemorySize() const { return width * height * CHANNELS * sizeof(T); };
 	virtual void *GetPixelsData() const { return pixels; }
 
 	virtual float GetFloat(const luxrays::UV &uv) const;
