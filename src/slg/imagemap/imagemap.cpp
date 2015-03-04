@@ -206,10 +206,10 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else if (CHANNELS == 2) {
-				auto_ptr<T> newPixels(new T[pixelCount]);
+				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
-				const ImageMapPixel<T, CHANNELS> *src = (ImageMapPixel<T, CHANNELS> *)pixels;
-				ImageMapPixel<T, 1> *dst = (ImageMapPixel<T, 1> *)newPixels.get();
+				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				ImageMapPixel<T, 1> *dst = newPixels.get();
 				const u_int channel = (
 					(selectionType == ImageMapStorage::RED) ||
 					(selectionType == ImageMapStorage::GREEN) ||
@@ -222,12 +222,12 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>((ImageMapPixel<T, 1> *)newPixels.release(), width, height);
+				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height);
 			} else {
-				auto_ptr<T> newPixels(new T[pixelCount]);
+				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
-				const ImageMapPixel<T, CHANNELS> *src = (ImageMapPixel<T, CHANNELS> *)pixels;
-				ImageMapPixel<T, 1> *dst = (ImageMapPixel<T, 1> *)newPixels.get();
+				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				ImageMapPixel<T, 1> *dst = newPixels.get();
 				const u_int channel = selectionType - ImageMapStorage::RED;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
@@ -237,7 +237,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>((ImageMapPixel<T, 1> *)newPixels.release(), width, height);
+				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height);
 			}
 		}
 		case ImageMapStorage::MEAN:
@@ -247,10 +247,10 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else if (CHANNELS == 2) {
-				auto_ptr<T> newPixels(new T[pixelCount]);
+				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
-				const ImageMapPixel<T, CHANNELS> *src = (ImageMapPixel<T, CHANNELS> *)pixels;
-				ImageMapPixel<T, 1> *dst = (ImageMapPixel<T, 1> *)newPixels.get();
+				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				ImageMapPixel<T, 1> *dst = newPixels.get();
 				const u_int channel = 0;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
@@ -260,12 +260,12 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>((ImageMapPixel<T, 1> *)newPixels.release(), width, height);
+				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height);
 			} else {
-				auto_ptr<T> newPixels(new T[pixelCount]);
+				auto_ptr<ImageMapPixel<T, 1> > newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
-				const ImageMapPixel<T, CHANNELS> *src = (ImageMapPixel<T, CHANNELS> *)pixels;
-				ImageMapPixel<T, 1> *dst = (ImageMapPixel<T, 1> *)newPixels.get();
+				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				ImageMapPixel<T, 1> *dst = newPixels.get();
 
 				if (selectionType == ImageMapStorage::MEAN) {
 					for (u_int i = 0; i < pixelCount; ++i) {
@@ -283,7 +283,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					}							
 				}
 
-				return new ImageMapStorageImpl<T, 1>((ImageMapPixel<T, 1> *)newPixels.release(), width, height);
+				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height);
 			}
 		}
 		case ImageMapStorage::RGB: {
@@ -292,10 +292,10 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				// Nothing to do
 				return NULL;
 			} else {
-				auto_ptr<T> newPixels(new T[pixelCount * 3]);
+				auto_ptr<ImageMapPixel<T, 3> > newPixels(new ImageMapPixel<T, 3>[pixelCount]);
 
-				const ImageMapPixel<T, CHANNELS> *src = (ImageMapPixel<T, CHANNELS> *)pixels;
-				ImageMapPixel<T, 3> *dst = (ImageMapPixel<T, 3> *)newPixels.get();
+				const ImageMapPixel<T, CHANNELS> *src = pixels;
+				ImageMapPixel<T, 3> *dst = newPixels.get();
 
 				for (u_int i = 0; i < pixelCount; ++i) {
 					dst->Set((T *)src);
@@ -304,7 +304,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 3>((ImageMapPixel<T, 3> *)newPixels.release(), width, height);
+				return new ImageMapStorageImpl<T, 3>(newPixels.release(), width, height);
 			}
 		}
 		default:
