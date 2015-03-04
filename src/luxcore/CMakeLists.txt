@@ -163,7 +163,7 @@ if(APPLE)
 	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore ${PYTHON_LIBRARIES})
     SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
 else()
-	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
+	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${OPENEXR_LIBRARIES} ${EMBREE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
 endif()
 
 set_target_properties(pyluxcore PROPERTIES PREFIX "")
