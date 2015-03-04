@@ -2985,7 +2985,7 @@ void CompiledScene::CompileImageMaps() {
 		slg::ocl::ImageMap *imd = &imageMapDescs[i];
 
 		const u_int pixelCount = im->GetWidth() * im->GetHeight();
-		const u_int memSize = pixelCount * im->GetChannelCount() * sizeof(float);
+		const size_t memSize = RoundUp(im->GetStorage()->GetMemorySize(), sizeof(float));
 
 		if (memSize > maxMemPageSize)
 			throw runtime_error("An image map is too big to fit in a single block of memory");
@@ -3025,8 +3025,7 @@ void CompiledScene::CompileImageMaps() {
 			// Copy the image map data
 			const size_t start = imageMapMemBlock.size();
 			const size_t dataSize = pixelCount * imd->channelCount * sizeof(u_char);
-			const size_t dataSizeInFloat = dataSize / sizeof(float) +
-				((dataSize % sizeof(float) == 0) ? 0 : 1);
+			const size_t dataSizeInFloat = RoundUp(dataSize, sizeof(float)) / sizeof(float);
 			imageMapMemBlock.resize(start + dataSizeInFloat);
 			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
 		} else if (im->GetStorage()->GetStorageType() == ImageMapStorage::HALF) {
@@ -3035,8 +3034,7 @@ void CompiledScene::CompileImageMaps() {
 			// Copy the image map data
 			const size_t start = imageMapMemBlock.size();
 			const size_t dataSize = pixelCount * imd->channelCount * sizeof(half);
-			const size_t dataSizeInFloat = dataSize / sizeof(float) +
-				((dataSize % sizeof(float) == 0) ? 0 : 1);
+			const size_t dataSizeInFloat = RoundUp(dataSize, sizeof(float)) / sizeof(float);
 			imageMapMemBlock.resize(start + dataSizeInFloat);
 
 			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
@@ -3046,13 +3044,13 @@ void CompiledScene::CompileImageMaps() {
 			// Copy the image map data
 			const size_t start = imageMapMemBlock.size();
 			const size_t dataSize = pixelCount * imd->channelCount * sizeof(float);
-			const size_t dataSizeInFloat = dataSize / sizeof(float);
+			const size_t dataSizeInFloat = RoundUp(dataSize, sizeof(float)) / sizeof(float);
 			imageMapMemBlock.resize(start + dataSizeInFloat);
 			memcpy(&imageMapMemBlock[start], im->GetStorage()->GetPixelsData(), dataSize);
 		}
 	}
 
-	SLG_LOG("Image maps page count: " << imageMapMemBlocks.size());
+	SLG_LOG("Image maps page(s) count: " << imageMapMemBlocks.size());
 	for (u_int i = 0; i < imageMapMemBlocks.size(); ++i)
 		SLG_LOG(" RGB channel page " << i << " size: " << imageMapMemBlocks[i].size() * sizeof(float) / 1024 << "Kbytes");
 
