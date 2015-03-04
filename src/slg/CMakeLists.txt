@@ -95,6 +95,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/imagemap/imagemap_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/imagemap/imagemap_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/light_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/light_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
@@ -251,6 +253,8 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdfutils_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/imagemap_types_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/imagemap_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_generic_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_archglass_kernel.cpp
