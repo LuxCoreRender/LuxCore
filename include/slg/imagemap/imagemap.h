@@ -32,6 +32,11 @@ OIIO_NAMESPACE_USING
 
 namespace slg {
 
+// OpenCL data types
+namespace ocl {
+#include "slg/imagemap/imagemap_types.cl"
+}
+
 //------------------------------------------------------------------------------
 // ImageMapPixel
 //------------------------------------------------------------------------------

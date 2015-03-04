@@ -44,6 +44,8 @@ extern std::string KernelSource_camera_funcs;
 extern std::string KernelSource_bsdf_types;
 extern std::string KernelSource_bsdf_funcs;
 extern std::string KernelSource_bsdfutils_funcs;
+extern std::string KernelSource_imagemap_types;
+extern std::string KernelSource_imagemap_funcs;
 extern std::string KernelSource_material_types;
 extern std::string KernelSource_materialdefs_funcs_generic;
 extern std::string KernelSource_materialdefs_funcs_archglass;

@@ -1219,6 +1219,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_triangle_funcs <<
 			slg::ocl::KernelSource_trianglemesh_funcs <<
 			slg::ocl::KernelSource_mapping_funcs <<
+			slg::ocl::KernelSource_imagemap_types <<
+			slg::ocl::KernelSource_imagemap_funcs <<
 			slg::ocl::KernelSource_texture_noise_funcs <<
 			slg::ocl::KernelSource_texture_blender_noise_funcs <<
 			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<

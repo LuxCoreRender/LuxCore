@@ -38,16 +38,6 @@ typedef struct {
 	Spectrum color;
 } ConstFloat3Param;
 
-typedef enum {
-	BYTE, HALF, FLOAT
-} ImageMapStorageType;
-
-typedef struct {
-	ImageMapStorageType storageType;
-	unsigned int channelCount, width, height;
-	unsigned int pageIndex, pixelsIndex;
-} ImageMap;
-
 typedef struct {
 	TextureMapping2D mapping;
 	float gain;
