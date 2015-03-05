@@ -129,7 +129,7 @@ if(APPLE)
 	ENDIF()
 	add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 	add_dependencies(luxcore luxrays smallluxgpu) # build these first
-	target_link_libraries(luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	target_link_libraries(luxcore luxrays smallluxgpu ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 
 	if(${CMAKE_GENERATOR} MATCHES "Xcode")
 		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_LD_DYLIB_INSTALL_NAME @loader_path/libluxcore.dylib)
