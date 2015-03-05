@@ -21,17 +21,17 @@
 void InterpolatedTransform_Sample(__global InterpolatedTransform *interpolatedTransform,
 		const float time, Matrix4x4 *result) {
 	if (!interpolatedTransform->isActive) {
-		*result = interpolatedTransform->start.mInv;
+		*result = interpolatedTransform->start.m;
 		return;
 	}
 
 	// Determine interpolation value
 	if (time <= interpolatedTransform->startTime) {
-		*result = interpolatedTransform->start.mInv;
+		*result = interpolatedTransform->start.m;
 		return;
 	}
 	if (time >= interpolatedTransform->endTime) {
-		*result = interpolatedTransform->end.mInv;
+		*result = interpolatedTransform->end.m;
 		return;
 	}
 
