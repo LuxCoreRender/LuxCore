@@ -42,6 +42,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/imagemaptex.h"
+#include "slg/textures/irregulardata.h"
 #include "slg/textures/blender_texture.h"
 
 using namespace std;
@@ -1920,6 +1921,13 @@ void CompiledScene::CompileTextures() {
 				ASSIGN_SPECTRUM(tex->blackbody.rgb, bbt->GetRGB());
 				break;
 			}
+			case IRREGULARDATA_TEX: {
+				IrregularDataTexture *idt = static_cast<IrregularDataTexture *>(t);
+
+				tex->type = slg::ocl::IRREGULARDATA_TEX;
+				ASSIGN_SPECTRUM(tex->irregulardata.rgb, idt->GetRGB());
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -2257,6 +2265,9 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::BLACKBODY_TEX:
 				AddTextureSource(source, "BlackBody", i, ToOCLString(tex->blackbody.rgb));
+				break;
+			case slg::ocl::IRREGULARDATA_TEX:
+				AddTextureSource(source, "IrregularData", i, ToOCLString(tex->irregulardata.rgb));
 				break;
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::GetTexturesEvaluationSourceCode(): " + boost::lexical_cast<string>(tex->type));

@@ -140,6 +140,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
@@ -240,6 +241,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/irregulardata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp
@@ -290,6 +292,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bump_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_noise_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blackbody_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_irregulardata_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volumeinfo_funcs_kernel.cpp

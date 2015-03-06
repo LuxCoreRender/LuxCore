@@ -1004,6 +1004,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_NORMALMAP";
 	if (cscene->IsTextureCompiled(BLACKBODY_TEX))
 		ss << " -D PARAM_ENABLE_TEX_BLACKBODY";
+	if (cscene->IsTextureCompiled(IRREGULARDATA_TEX))
+		ss << " -D PARAM_ENABLE_TEX_IRREGULARDATA";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -1228,6 +1230,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
 			slg::ocl::KernelSource_texture_blender_funcs <<
 			slg::ocl::KernelSource_texture_blackbody_funcs <<
+			slg::ocl::KernelSource_texture_irregulardata_funcs <<
 			slg::ocl::KernelSource_texture_funcs;
 
 		if (renderEngine->useDynamicCodeGenerationForTextures) {

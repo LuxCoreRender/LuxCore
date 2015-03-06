@@ -29,6 +29,7 @@
 #include <boost/variant.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/type_traits.hpp>
+#include <boost/foreach.hpp>
 
 #include "luxrays/luxrays.h"
 #include <luxrays/utils/properties.h>
@@ -319,6 +320,19 @@ public:
 	 */
 	template<class T0, class T1, class T2, class T3> Property &operator()(const T0 &val0, const T1 &val1, const T2 &val2, const T3 &val3) {
 		return Add(val0).Add(val1).Add(val2).Add(val3);
+	}
+	/*!
+	 * \brief Adds a vector of values to a property.
+	 * 
+	 * \param vals is the value to assign.
+	 * 
+	 * \return a reference to the modified property.
+	 */
+	template<class T0> Property &operator()(const std::vector<T0> &vals) {
+		BOOST_FOREACH(T0 v, vals)
+			values.push_back(v);
+
+		return *this; 
 	}
 	/*!
 	 * \brief Initializes a property with (only) the given value.

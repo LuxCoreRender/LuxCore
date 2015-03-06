@@ -1289,48 +1289,6 @@ uint Texture_AddSubTexture(__global Texture *texture,
 			todoTex[(*todoTexSize)++] = &texs[texture->band.amountTexIndex];
 			return 1;
 #endif
-#if defined(PARAM_ENABLE_TEX_NORMALMAP)
-		case NORMALMAP_TEX:
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
-		case HITPOINTGREY:
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-		case HITPOINTALPHA:
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
-		case HITPOINTCOLOR:
-#endif
-#if defined(PARAM_ENABLE_TEX_UV)
-		case UV_TEX:
-#endif
-#if defined(PARAM_ENABLE_WRINKLED)
-		case WRINKLED:
-#endif
-#if defined(PARAM_ENABLE_BLENDER_WOOD)
-		case BLENDER_WOOD:
-#endif
-#if defined(PARAM_ENABLE_BLENDER_CLOUDS)
-		case BLENDER_CLOUDS:
-#endif
-#if defined(PARAM_ENABLE_WINDY)
-		case WINDY:
-#endif
-#if defined(PARAM_ENABLE_MARBLE)
-		case MARBLE:
-#endif
-#if defined(PARAM_ENABLE_FBM_TEX)
-		case FBM_TEX:
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
-		case CONST_FLOAT:
-#endif
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
-		case CONST_FLOAT3:
-#endif
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
-		case IMAGEMAP:
-#endif
 		default:
 			return 0;
 	}
@@ -1501,6 +1459,16 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 		case NORMALMAP_TEX:
 			NormalMapTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_BLACKBODY)
+		case BLACKBODY_TEX:
+			BlackBodyTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_IRREGULARDATA)
+		case IRREGULARDATA_TEX:
+			IrregularDataTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
@@ -1724,6 +1692,16 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 		case NORMALMAP_TEX:
 			NormalMapTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_BLACKBODY)
+		case BLACKBODY_TEX:
+			BlackBodyTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_IRREGULARDATA)
+		case IRREGULARDATA_TEX:
+			IrregularDataTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
