@@ -58,6 +58,7 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/imagemaptex.h"
+#include "slg/textures/irregulardata.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;
@@ -875,33 +876,6 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(0.f)));
 
 		return new CheckerBoard3DTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2);
-//	} else if (texType == "cloud") {
-//		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
-//		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
-//		const float turbulence = props.Get(Property(propName + ".turbulence")(0.01f)).Get<float>();
-//		const float sharpness = props.Get(Property(propName + ".sharpness")(6.0f)).Get<float>();
-//		const float noiseoffset = props.Get(Property(propName + ".noiseoffset")(.0f)).Get<float>();
-//		const int spheres = props.Get(Property(propName + ".spheres")(0)).Get<int>();
-//		const int octaves = props.Get(Property(propName + ".octaves")(1)).Get<int>();
-//		const float omega = props.Get(Property(propName + ".omega")(.5f)).Get<float>();
-//		const float variability = props.Get(Property(propName + ".variability")(.9f)).Get<float>();
-//		const float baseflatness = props.Get(Property(propName + ".baseflatness")(.8f)).Get<float>();
-//		const float spheresize = props.Get(Property(propName + ".spheresize")(.15f)).Get<float>();
-//		
-//		return new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
-//								sharpness, noiseoffset, spheres octaves, omega, variability, baseflatness, spheresize);
-	} else if (texType == "blackbody") {
-		const float v = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
-		return new BlackBodyTexture(v);
-//	} else if (texType == "fresnelcolor") {
-//		const Spectrum v = props.Get(Property(propName + ".value")(0.5f)).Get<Spectrum>();
-//		return new FresnelColorTexture(v);
-//	} else if (texType == "fresnelname") {
-//		const string name = props.Get(Property(propName + ".file")("fresnel.nk")).Get<string>();
-//		return new FresnelNameTexture(v);
-//	} else if (texType == "lampspectrum") {
-//		const string name = props.Get(Property(propName + ".name")("Incandescent2")).Get<string>();
-//		return new LampSpectrumTexture(v);
 	} else if (texType == "mix") {
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(0.f)));
@@ -1088,6 +1062,54 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ?
 			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
+//	} else if (texType == "cloud") {
+//		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
+//		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
+//		const float turbulence = props.Get(Property(propName + ".turbulence")(0.01f)).Get<float>();
+//		const float sharpness = props.Get(Property(propName + ".sharpness")(6.0f)).Get<float>();
+//		const float noiseoffset = props.Get(Property(propName + ".noiseoffset")(.0f)).Get<float>();
+//		const int spheres = props.Get(Property(propName + ".spheres")(0)).Get<int>();
+//		const int octaves = props.Get(Property(propName + ".octaves")(1)).Get<int>();
+//		const float omega = props.Get(Property(propName + ".omega")(.5f)).Get<float>();
+//		const float variability = props.Get(Property(propName + ".variability")(.9f)).Get<float>();
+//		const float baseflatness = props.Get(Property(propName + ".baseflatness")(.8f)).Get<float>();
+//		const float spheresize = props.Get(Property(propName + ".spheresize")(.15f)).Get<float>();
+//		
+//		return new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
+//								sharpness, noiseoffset, spheres octaves, omega, variability, baseflatness, spheresize);
+	} else if (texType == "blackbody") {
+		const float v = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
+		return new BlackBodyTexture(v);
+//	} else if (texType == "fresnelcolor") {
+//		const Spectrum v = props.Get(Property(propName + ".value")(0.5f)).Get<Spectrum>();
+//		return new FresnelColorTexture(v);
+//	} else if (texType == "fresnelname") {
+//		const string name = props.Get(Property(propName + ".file")("fresnel.nk")).Get<string>();
+//		return new FresnelNameTexture(v);
+//	} else if (texType == "lampspectrum") {
+//		const string name = props.Get(Property(propName + ".name")("Incandescent2")).Get<string>();
+//		return new LampSpectrumTexture(v);
+	} else if (texType == "irregulardata") {
+		if (!props.IsDefined(propName + ".wavelengths"))
+			throw runtime_error("Missing wavelengths property in irregulardata texture: " + propName);
+		if (!props.IsDefined(propName + ".data"))
+			throw runtime_error("Missing data property in irregulardata texture: " + propName);
+			
+		Property wl = props.Get(Property(propName + ".wavelengths"));
+		Property dt = props.Get(Property(propName + ".data"));
+		if (wl.GetSize() < 2)
+			throw runtime_error("Insufficient data in irregulardata texture: " + propName);
+		if (wl.GetSize() != dt.GetSize())
+			throw runtime_error("Number of wavelengths doesn't match number of data values in irregulardata texture: " + propName);
+
+		vector<float> waveLengths, data;
+		for (u_int i = 0; i < wl.GetSize(); ++i) {
+			waveLengths.push_back(wl.Get<float>(i));
+			data.push_back(dt.Get<float>(i));
+		}
+
+		const float resolution = props.Get(Property(propName + ".resolution")(5.f)).Get<float>();
+		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }
