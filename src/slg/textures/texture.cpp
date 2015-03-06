@@ -28,9 +28,9 @@
 #include <OpenImageIO/dassert.h>
 
 #include "slg/sdl/sdl.h"
-#include "slg/sdl/texture.h"
 #include "slg/sdl/bsdf.h"
-#include "slg/sdl/blender_texture.h"
+#include "slg/textures/texture.h"
+#include "slg/textures/blender_texture.h"
 
 using namespace std;
 using namespace luxrays;
@@ -219,140 +219,6 @@ float slg::tex_tri(float a) {
     a = rmax - 2.0f * fabs(floor((a * (1.0f / b)) + 0.5f) - (a * (1.0f / b)));
 
     return a;
-}
-
-//------------------------------------------------------------------------------
-// TextureDefinitions
-//------------------------------------------------------------------------------
-
-TextureDefinitions::TextureDefinitions() { }
-
-TextureDefinitions::~TextureDefinitions() {
-	BOOST_FOREACH(Texture *t, texs)
-		delete t;
-}
-
-void TextureDefinitions::DefineTexture(const string &name, Texture *newTex) {
-	if (IsTextureDefined(name)) {
-		const Texture *oldTex = GetTexture(name);
-
-		// Update name/texture definition
-		const u_int index = GetTextureIndex(name);
-		texs[index] = newTex;
-		texsByName.erase(name);
-		texsByName.insert(std::make_pair(name, newTex));
-
-		// Update all references
-		BOOST_FOREACH(Texture *tex, texs)
-			tex->UpdateTextureReferences(oldTex, newTex);
-
-		// Delete the old texture definition
-		delete oldTex;
-	} else {
-		// Add the new texture
-		texs.push_back(newTex);
-		texsByName.insert(make_pair(name, newTex));
-	}
-}
-
-Texture *TextureDefinitions::GetTexture(const string &name) {
-	// Check if the texture has been already defined
-	boost::unordered_map<string, Texture *>::const_iterator it = texsByName.find(name);
-
-	if (it == texsByName.end())
-		throw runtime_error("Reference to an undefined texture: " + name);
-	else
-		return it->second;
-}
-
-vector<string> TextureDefinitions::GetTextureNames() const {
-	vector<string> names;
-	names.reserve(texs.size());
-
-	for (boost::unordered_map<string, Texture *>::const_iterator it = texsByName.begin(); it != texsByName.end(); ++it)
-		names.push_back(it->first);
-
-	return names;
-}
-
-void TextureDefinitions::DeleteTexture(const string &name) {
-	const u_int index = GetTextureIndex(name);
-	texs.erase(texs.begin() + index);
-	texsByName.erase(name);
-}
-
-u_int TextureDefinitions::GetTextureIndex(const Texture *t) const {
-	for (u_int i = 0; i < texs.size(); ++i) {
-		if (t == texs[i])
-			return i;
-	}
-
-	throw runtime_error("Reference to an undefined texture: " + boost::lexical_cast<string>(t));
-}
-
-u_int TextureDefinitions::GetTextureIndex(const string &name) {
-	return GetTextureIndex(GetTexture(name));
-}
-
-//------------------------------------------------------------------------------
-// ConstFloat texture
-//------------------------------------------------------------------------------
-
-Properties ConstFloatTexture::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
-
-	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("constfloat1"));
-	props.Set(Property("scene.textures." + name + ".value")(value));
-
-	return props;
-}
-
-//------------------------------------------------------------------------------
-// ConstFloat3 texture
-//------------------------------------------------------------------------------
-
-Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
-
-	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("constfloat3"));
-	props.Set(Property("scene.textures." + name + ".value")(color));
-
-	return props;
-}
-
-//------------------------------------------------------------------------------
-// ImageMap texture
-//------------------------------------------------------------------------------
-
-ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping2D *mp, const float g) :
-	imgMap(im), mapping(mp), gain(g) {
-	imageY = gain * imgMap->GetSpectrumMeanY();
-	imageFilter = gain * imgMap->GetSpectrumMean();
-}
-
-float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetFloat(mapping->Map(hitPoint));
-}
-
-Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetSpectrum(mapping->Map(hitPoint));
-}
-
-Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
-
-	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("imagemap"));
-	props.Set(Property("scene.textures." + name + ".file")("imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() +
-		"." + imgMap->GetFileExtension()));
-	props.Set(Property("scene.textures." + name + ".gamma")("1.0"));
-	props.Set(Property("scene.textures." + name + ".gain")(gain));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
-
-	return props;
 }
 
 //------------------------------------------------------------------------------

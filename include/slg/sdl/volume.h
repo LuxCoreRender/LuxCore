@@ -21,7 +21,7 @@
 
 #include "luxrays/luxrays.h"
 #include "slg/sdl/material.h"
-#include "slg/sdl/texture.h"
+#include "slg/textures/texture.h"
 
 namespace slg {
 

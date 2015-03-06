@@ -21,7 +21,7 @@
 
 #include "luxrays/utils/mcdistribution.h"
 #include "slg/core/sphericalfunction/photometricdataies.h"
-#include "slg/sdl/texture.h"
+#include "slg/textures/texture.h"
 
 namespace slg {
 

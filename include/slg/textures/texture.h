@@ -42,7 +42,7 @@ namespace slg {
 // OpenCL data types
 namespace ocl {
 using luxrays::ocl::Spectrum;
-#include "slg/sdl/texture_types.cl"
+#include "slg/textures/texture_types.cl"
 }
 
 //------------------------------------------------------------------------------
@@ -100,114 +100,6 @@ float tex_sin(float a);
 float tex_saw(float a);
 float tex_tri(float a);
 float Turbulence(const luxrays::Point &P, const float omega, const int maxOctaves);
-
-//------------------------------------------------------------------------------
-// TextureDefinitions
-//------------------------------------------------------------------------------
-
-class TextureDefinitions {
-public:
-	TextureDefinitions();
-	~TextureDefinitions();
-
-	bool IsTextureDefined(const std::string &name) const {
-		return (texsByName.count(name) > 0);
-	}
-
-	void DefineTexture(const std::string &name, Texture *t);
-
-	Texture *GetTexture(const std::string &name);
-	Texture *GetTexture(const u_int index) {
-		return texs[index];
-	}
-	u_int GetTextureIndex(const std::string &name);
-	u_int GetTextureIndex(const Texture *t) const;
-
-	u_int GetSize()const { return static_cast<u_int>(texs.size()); }
-	std::vector<std::string> GetTextureNames() const;
-
-	void DeleteTexture(const std::string &name);
-
-private:
-
-	std::vector<Texture *> texs;
-	boost::unordered_map<std::string, Texture *> texsByName;
-};
-
-//------------------------------------------------------------------------------
-// Constant textures
-//------------------------------------------------------------------------------
-
-class ConstFloatTexture : public Texture {
-public:
-	ConstFloatTexture(const float v) : value(v) { }
-	virtual ~ConstFloatTexture() { }
-
-	virtual TextureType GetType() const { return CONST_FLOAT; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const { return value; }
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return luxrays::Spectrum(value); }
-	virtual float Y() const { return value; }
-	virtual float Filter() const { return value; }
-
-	float GetValue() const { return value; };
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	float value;
-};
-
-class ConstFloat3Texture : public Texture {
-public:
-	ConstFloat3Texture(const luxrays::Spectrum &c) : color(c) { }
-	virtual ~ConstFloat3Texture() { }
-
-	virtual TextureType GetType() const { return CONST_FLOAT3; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const { return color.Y(); }
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
-	virtual float Y() const { return color.Y(); }
-	virtual float Filter() const { return color.Filter(); }
-
-	const luxrays::Spectrum &GetColor() const { return color; };
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	luxrays::Spectrum color;
-};
-
-//------------------------------------------------------------------------------
-// ImageMap texture
-//------------------------------------------------------------------------------
-
-class ImageMapTexture : public Texture {
-public:
-	ImageMapTexture(const ImageMap* im, const TextureMapping2D *mp, const float g);
-	virtual ~ImageMapTexture() { delete mapping; }
-
-	virtual TextureType GetType() const { return IMAGEMAP; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { return imageY; }
-	virtual float Filter() const { return imageFilter; }
-
-	const ImageMap *GetImageMap() const { return imgMap; }
-	const TextureMapping2D *GetTextureMapping() const { return mapping; }
-	const float GetGain() const { return gain; }
-
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		referencedImgMaps.insert(imgMap);
-	}
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	const ImageMap *imgMap;
-	const TextureMapping2D *mapping;
-	float gain;
-	// Cached image information
-	float imageY, imageFilter;
-};
 
 //------------------------------------------------------------------------------
 // Scale texture

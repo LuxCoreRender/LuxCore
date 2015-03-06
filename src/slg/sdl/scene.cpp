@@ -53,7 +53,10 @@
 #include "slg/samplers/sampler.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/scene.h"
-#include "slg/sdl/blender_texture.h"
+#include "slg/textures/blender_texture.h"
+#include "slg/textures/constfloat.h"
+#include "slg/textures/constfloat3.h"
+#include "slg/textures/imagemaptex.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;

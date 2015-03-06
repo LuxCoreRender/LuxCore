@@ -129,16 +129,16 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_roughmatte_translucent.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_velvet.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/material_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_blender_noise_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_blender_noise_funcs2.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_blender_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_bump_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/texture_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/volume_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/volume_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/volumeinfo_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs2.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
@@ -230,10 +230,14 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/blender_noiselib.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/blender_texture.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/volume.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp
