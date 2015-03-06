@@ -54,6 +54,7 @@
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/scene.h"
 #include "slg/textures/blender_texture.h"
+#include "slg/textures/blackbody.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/imagemaptex.h"
@@ -889,9 +890,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 //		
 //		return new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
 //								sharpness, noiseoffset, spheres octaves, omega, variability, baseflatness, spheresize);
-//	} else if (texType == "blackbody") {
-//		const Spectrum v = props.Get(Property(propName + ".temperature")(6500.f)).Get<Spectrum>();
-//		return new BlackBodyTexture(v);
+	} else if (texType == "blackbody") {
+		const float v = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
+		return new BlackBodyTexture(v);
 //	} else if (texType == "fresnelcolor") {
 //		const Spectrum v = props.Get(Property(propName + ".value")(0.5f)).Get<Spectrum>();
 //		return new FresnelColorTexture(v);

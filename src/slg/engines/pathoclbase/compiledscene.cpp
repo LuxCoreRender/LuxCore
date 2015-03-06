@@ -40,6 +40,7 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/blackbody.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/blender_texture.h"
 
@@ -1912,6 +1913,13 @@ void CompiledScene::CompileTextures() {
 				tex->normalMap.texIndex = scene->texDefs.GetTextureIndex(normalTex);
 				break;
             }
+			case BLACKBODY_TEX: {
+				BlackBodyTexture *bbt = static_cast<BlackBodyTexture *>(t);
+
+				tex->type = slg::ocl::BLACKBODY_TEX;
+				ASSIGN_SPECTRUM(tex->blackbody.rgb, bbt->GetRGB());
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -2246,6 +2254,9 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::NORMALMAP_TEX:
 				AddTextureSource(source, "NormalMap", i, "");
+				break;
+			case slg::ocl::BLACKBODY_TEX:
+				AddTextureSource(source, "BlackBody", i, ToOCLString(tex->blackbody.rgb));
 				break;
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::GetTexturesEvaluationSourceCode(): " + boost::lexical_cast<string>(tex->type));

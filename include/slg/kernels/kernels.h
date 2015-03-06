@@ -73,6 +73,7 @@ extern std::string KernelSource_texture_blender_noise_funcs2;
 extern std::string KernelSource_texture_blender_funcs;
 extern std::string KernelSource_texture_bump_funcs;
 extern std::string KernelSource_texture_types;
+extern std::string KernelSource_texture_blackbody_funcs;
 extern std::string KernelSource_texture_funcs;
 extern std::string KernelSource_volume_types;
 extern std::string KernelSource_volume_funcs;
