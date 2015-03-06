@@ -1002,6 +1002,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
 	if (cscene->IsTextureCompiled(NORMALMAP_TEX))
 		ss << " -D PARAM_ENABLE_TEX_NORMALMAP";
+	if (cscene->IsTextureCompiled(BLACKBODY_TEX))
+		ss << " -D PARAM_ENABLE_TEX_BLACKBODY";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -1225,6 +1227,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_blender_noise_funcs <<
 			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
 			slg::ocl::KernelSource_texture_blender_funcs <<
+			slg::ocl::KernelSource_texture_blackbody_funcs <<
 			slg::ocl::KernelSource_texture_funcs;
 
 		if (renderEngine->useDynamicCodeGenerationForTextures) {

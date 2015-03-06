@@ -1481,6 +1481,10 @@ ri_stmt: ACCELERATOR STRING paramlist
 				GetTexture(prefix + ".amount", Property("amount")(.5f), props) <<
 				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(0.f)), props) <<
 				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(1.f)), props);
+	} else if (texType == "blackbody") {
+		*sceneProps <<
+				Property(prefix + ".type")("blackbody") <<
+				GetTexture(prefix + ".temperature", Property("temperature")(6500.f), props);
 	} else
 	//--------------------------------------------------------------------------
 	// Procedural textures
