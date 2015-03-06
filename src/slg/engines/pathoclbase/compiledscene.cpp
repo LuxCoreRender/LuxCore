@@ -38,7 +38,10 @@
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
-#include "slg/sdl/blender_texture.h"
+#include "slg/textures/constfloat.h"
+#include "slg/textures/constfloat3.h"
+#include "slg/textures/imagemaptex.h"
+#include "slg/textures/blender_texture.h"
 
 using namespace std;
 using namespace luxrays;

@@ -33,8 +33,8 @@
 #include "luxrays/core/geometry/point.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/sdl/bsdfevents.h"
-#include "slg/sdl/texture.h"
 #include "slg/sdl/hitpoint.h"
+#include "slg/textures/texture.h"
 
 namespace slg {
 

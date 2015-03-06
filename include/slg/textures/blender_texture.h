@@ -19,8 +19,8 @@
 #ifndef _SLG_BLENDER_TEXTURE_H
 #define	_SLG_BLENDER_TEXTURE_H
 
-#include "slg/sdl/texture.h"
-#include "slg/sdl/blender_noiselib.h"
+#include "slg/textures/texture.h"
+#include "slg/textures/blender_noiselib.h"
 
 namespace slg {
  

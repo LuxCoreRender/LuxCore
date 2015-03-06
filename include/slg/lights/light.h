@@ -30,7 +30,7 @@
 #include "luxrays/core/color/spds/regular.h"
 #include "luxrays/core/color/spds/irregular.h"
 #include "luxrays/utils/mcdistribution.h"
-#include "slg/sdl/texture.h"
+#include "slg/textures/texture.h"
 #include "slg/sdl/material.h"
 #include "slg/sdl/mapping.h"
 
