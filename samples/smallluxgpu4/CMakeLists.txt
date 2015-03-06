@@ -57,7 +57,6 @@ TARGET slg4 POST_BUILD
 	COMMAND rm -rf ${OSX_DEPENDENCY_ROOT}/include/LuxRays # clean first to assure update
 	COMMAND cp -R ${CMAKE_SOURCE_DIR}/include/ ${OSX_DEPENDENCY_ROOT}/include/LuxRays
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxrays.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
-	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libsmallluxgpu.a ${OSX_DEPENDENCY_ROOT}/lib/LuxRays
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/slg4 ${OSX_DEPENDENCY_ROOT}/bin/slg4
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${OSX_DEPENDENCY_ROOT}/lib/LuxRays # for repo
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE} # for slg4
