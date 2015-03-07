@@ -30,3 +30,4 @@ ui_*.h
 qrc_*.cxx
 *.sdf
 *.vcxproj*
+build
