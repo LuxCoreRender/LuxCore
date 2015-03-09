@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include "slg/lights/sunlight.h"
-#include "slg/lights/lightdata/sunspect.h"
+#include "slg/lights/data/sunspect.h"
 #include "slg/sdl/scene.h"
 
 using namespace std;

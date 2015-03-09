@@ -4,8 +4,10 @@ scene.camera.lookat.target = 1.0 0.0 1.0
 #scene.camera.clippingplane.center = 2.0 0.0 0.0
 #scene.camera.clippingplane.normal = -1.0 -0.5 0.0
 ################################################################################
-scene.textures.bblight.type = blackbody
-scene.textures.bblight.temperature = 6500
+#scene.textures.lighttex.type = blackbody
+#scene.textures.lighttex.temperature = 6500
+scene.textures.lighttex.type = lampspectrum
+scene.textures.lighttex.name = Daylight
 scene.textures.red_tex.type = irregulardata
 scene.textures.red_tex.wavelengths = 580 620 660
 scene.textures.red_tex.data = 0.0 0.000015 0.0
@@ -39,7 +41,7 @@ scene.materials.redmat.kd = red_tex
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.whitelight.type = matte
-scene.materials.whitelight.emission = bblight
+scene.materials.whitelight.emission = lighttex
 scene.materials.whitelight.emission.gain = 0.00015 0.00015 0.00015
 scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################

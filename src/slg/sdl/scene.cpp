@@ -59,6 +59,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
+#include "slg/textures/lampspectrum.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;
@@ -1110,6 +1111,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		const float resolution = props.Get(Property(propName + ".resolution")(5.f)).Get<float>();
 		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution);
+	} else if (texType == "lampspectrum") {
+		return AllocLampSpectrumTex(props, propName);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }

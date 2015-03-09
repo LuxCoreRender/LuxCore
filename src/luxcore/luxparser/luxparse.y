@@ -1484,7 +1484,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	} else if (texType == "blackbody") {
 		*sceneProps <<
 				Property(prefix + ".type")("blackbody") <<
-				GetTexture(prefix + ".temperature", Property("temperature")(6500.f), props);
+				Property(prefix + ".temperature")(props.Get(Property("temperature")(6500.f)).Get<float>());
 	} else if (texType == "irregulardata") {
 		const Property &wl = props.Get(Property("wavelengths"));
 		if (wl.GetSize() < 2)
@@ -1503,12 +1503,16 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".type")("irregulardata") <<
 				wl.Renamed(prefix + ".wavelengths") <<
 				dt.Renamed(prefix + ".data");
+	} else if (texType == "lampspectrum") {
+		*sceneProps <<
+				Property(prefix + ".type")("lampspectrum") <<
+				Property(prefix + ".name")(props.Get(Property("name")("Incandescent2")).Get<string>());
 	} else
 	//--------------------------------------------------------------------------
 	// Procedural textures
 	//--------------------------------------------------------------------------
 	if (texType == "checkerboard") {
-		const u_int dimesion = props.Get(Property("dimesion")(2)).Get<u_int>();
+		const u_int dimesion = props.Get(Property("dimension")(2)).Get<u_int>();
 
 		*sceneProps <<
 				Property(prefix + ".type")((dimesion == 2) ? "checkerboard2d" : "checkerboard3d") <<
