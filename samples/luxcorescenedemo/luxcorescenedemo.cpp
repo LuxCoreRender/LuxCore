@@ -189,23 +189,23 @@ int main(int argc, char *argv[]) {
 
 		// Define texture maps
 		const u_int size = 500;
-		float *img = new float[size * size * 3];
-		float *ptr = img;
+		vector<u_char> img(size * size * 3);
+		u_char *ptr = &img[0];
 		for (u_int y = 0; y < size; ++y) {
 			for (u_int x = 0; x < size; ++x) {
 				if ((x % 50 < 25) ^ (y % 50 < 25)) {
-					*ptr++ = 1.f;
-					*ptr++ = 0.f;
-					*ptr++ = 0.f;
+					*ptr++ = 255;
+					*ptr++ = 0;
+					*ptr++ = 0;
 				} else {
-					*ptr++ = 1.f;
-					*ptr++ = 1.f;
-					*ptr++ = 0.f;
+					*ptr++ = 255;
+					*ptr++ = 255;
+					*ptr++ = 0;
 				}
 			}
 		}
 
-		scene->DefineImageMap("check_texmap", img, 1.f, 3, size, size);
+		scene->DefineImageMap<u_char>("check_texmap", &img[0], 1.f, 3, size, size, Scene::DEFAULT);
 		scene->Parse(
 			Property("scene.textures.map.type")("imagemap") <<
 			Property("scene.textures.map.file")("check_texmap") <<
@@ -331,11 +331,11 @@ int main(int argc, char *argv[]) {
 
 		// Rotate the monkey: so he can look what is happen with the light source
 		// Set the initial values
-		Vector t(0.0f, 2.0f, 0.3f);
+		Vector t(0.f, 2.f, 0.3f);
 		Transform trans(Translate(t));
-		Transform scale(Scale(0.4f, 0.4f, 0.4f));
+		Transform scale(Scale(.4f, .4f, .4f));
 		// Set rotate = 90
-		Transform rotate(RotateZ(90));
+		Transform rotate(RotateZ(90.f));
 		// Put all together and update object
 		trans = trans * scale * rotate;
 		scene->UpdateObjectTransformation("monkey", trans);

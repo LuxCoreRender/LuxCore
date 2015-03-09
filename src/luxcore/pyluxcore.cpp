@@ -445,11 +445,8 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
 			if ((size_t)view.len >= width * height * channels * sizeof(float)) {
 				float *buffer = (float *)view.buf;
-				// Make a copy of the buffer
-				float *cols = new float[width * height * channels];
-				copy(buffer, buffer + width * height * channels, cols);
-
-				scene->DefineImageMap(imgMapName, cols, gamma, channels, width, height);
+				scene->DefineImageMap(imgMapName, buffer, gamma, channels,
+						width, height, Scene::DEFAULT);
 			} else
 				throw runtime_error("Not enough space in the buffer of Scene.DefineImageMap() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * channels * sizeof(float)));

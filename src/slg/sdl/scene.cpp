@@ -275,17 +275,6 @@ void Scene::DefineImageMap(const string &name, ImageMap *im) {
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
 
-void Scene::DefineImageMap(const string &name, float *cols, const float gamma,
-	const u_int channels, const u_int width, const u_int height) {
-	ImageMap *imgMap = ImageMap::AllocImageMap<float>(gamma, channels, width, height);
-	memcpy(cols, imgMap->GetStorage()->GetPixelsData(), width * height * channels * sizeof(float));
-	delete[] cols;
-	
-	DefineImageMap(name, imgMap);
-
-	editActions.AddAction(IMAGEMAPS_EDIT);
-}
-
 bool Scene::IsImageMapDefined(const string &imgMapName) const {
 	return imgMapCache.IsImageMapDefined(imgMapName);
 }

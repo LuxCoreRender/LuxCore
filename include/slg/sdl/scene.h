@@ -73,8 +73,18 @@ public:
 	//--------------------------------------------------------------------------
 
 	void DefineImageMap(const std::string &name, ImageMap *im);
-	void DefineImageMap(const std::string &name, float *cols, const float gamma,
-		const u_int channels, const u_int width, const u_int height);
+	template <class T> void DefineImageMap(const std::string &name, T *pixels, const float gamma,
+		const u_int channels, const u_int width, const u_int height,
+		ImageMapStorage::ChannelSelectionType selectionType) {
+		ImageMap *imgMap = ImageMap::AllocImageMap<T>(gamma, channels, width, height);
+		memcpy(imgMap->GetStorage()->GetPixelsData(), pixels, width * height * channels * sizeof(T));
+		imgMap->SelectChannel(selectionType);
+
+		DefineImageMap(name, imgMap);
+
+		editActions.AddAction(IMAGEMAPS_EDIT);
+	}
+
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 
 	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);

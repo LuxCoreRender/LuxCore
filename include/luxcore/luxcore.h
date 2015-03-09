@@ -94,7 +94,7 @@ class RenderSession;
 CPP_EXPORT class CPP_API Film {
 public:
 	/*!
-	* \brief Types of Film channel  available.
+	* \brief Types of Film channel available.
 	*/
 	typedef enum {
 		OUTPUT_RGB = slg::FilmOutputs::RGB,
@@ -124,7 +124,7 @@ public:
 	} FilmOutputType;
 
 	/*!
-	 * \brief Types of Film channel  available.
+	 * \brief Types of Film channel available.
 	 */
 	typedef enum {
 		CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED = slg::Film::RADIANCE_PER_PIXEL_NORMALIZED,
@@ -343,7 +343,21 @@ private:
  * \brief Scene stores textures, materials and objects definitions.
  */
 CPP_EXPORT class CPP_API Scene {
-public:
+public:	
+	/*!
+	* \brief Types of image map channel selection.
+	*/
+	typedef enum {
+		DEFAULT = slg::ImageMapStorage::DEFAULT,
+		RED = slg::ImageMapStorage::RED,
+		GREEN = slg::ImageMapStorage::GREEN,
+		BLUE = slg::ImageMapStorage::BLUE,
+		ALPHA = slg::ImageMapStorage::ALPHA,
+		MEAN = slg::ImageMapStorage::MEAN,
+		WEIGHTED_MEAN = slg::ImageMapStorage::WEIGHTED_MEAN,
+		RGB = slg::ImageMapStorage::RGB
+	} ChannelSelectionType;
+
 	/*!
 	 * \brief Constructs a new empty Scene.
 	 *
@@ -384,6 +398,9 @@ public:
 	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
 	 * The memory allocated for cols array is always freed by the Scene class.
 	 *
+	 * NOTE: the use of this method is deprecated. NOTICE THE DIFFERENCE IN
+	 *  MEMORY HANDLING BETWEEN THE OLD DefineImageMap() AND THE NEW ONE.
+	 *
 	 * \param imgMapName is the name of the defined image map.
 	 * \param cols is a pointer to an array of float.
 	 * \param gamma is the gamma correction value of the image.
@@ -391,8 +408,27 @@ public:
 	 * \param width is the width of the image map.
 	 * \param height is the height of the image map.
 	 */
-	void DefineImageMap(const std::string &imgMapName, float *cols, const float gamma,
-		const u_int channels, const u_int width, const u_int height);
+	//void DefineImageMap(const std::string &imgMapName, float *cols, const float gamma,
+	//	const u_int channels, const u_int width, const u_int height);
+	/*!
+	 * \brief Defines an image map (to be later used in textures, infinite lights, etc.).
+	 * The memory allocated for cols array is NOT freed by the Scene class nor
+	 * is used after the execution of this method.
+	 *
+	 * \param imgMapName is the name of the defined image map.
+	 * \param pixels is a pointer to an array of image map pixels.
+	 * \param gamma is the gamma correction value of the image.
+	 * \param channels is the number of data used for each pixel (1 or 3).
+	 * \param width is the width of the image map.
+	 * \param height is the height of the image map.
+	 */
+	template<class T> void DefineImageMap(const std::string &imgMapName,
+			T *pixels, const float gamma, const u_int channels,
+			const u_int width, const u_int height,
+			ChannelSelectionType selectionType) {
+		scene->DefineImageMap<T>(imgMapName, pixels, gamma, channels,
+				width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType);
+	}
 	/*!
 	 * \brief Check if an image map with the given name has been defined.
 	 *

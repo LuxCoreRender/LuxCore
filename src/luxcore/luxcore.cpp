@@ -309,11 +309,6 @@ const Camera &Scene::GetCamera() const {
 	return camera;
 }
 
-void Scene::DefineImageMap(const string &imgMapName, float *cols, const float gamma,
-		const u_int channels, const u_int width, const u_int height) {
-	scene->DefineImageMap(imgMapName, cols, gamma, channels, width, height);
-}
-
 bool Scene::IsImageMapDefined(const std::string &imgMapName) const {
 	return scene->IsImageMapDefined(imgMapName);
 }
