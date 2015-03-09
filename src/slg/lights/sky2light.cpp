@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include "slg/lights/sky2light.h"
-#include "slg/lights/lightdata/ArHosekSkyModelData.h"
+#include "slg/lights/data/ArHosekSkyModelData.h"
 #include "slg/sdl/scene.h"
 
 using namespace std;
