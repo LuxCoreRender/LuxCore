@@ -1095,11 +1095,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		if (!props.IsDefined(propName + ".data"))
 			throw runtime_error("Missing data property in irregulardata texture: " + propName);
 			
-		Property wl = props.Get(Property(propName + ".wavelengths"));
-		Property dt = props.Get(Property(propName + ".data"));
+		const Property &wl = props.Get(Property(propName + ".wavelengths"));
+		const Property &dt = props.Get(Property(propName + ".data"));
 		if (wl.GetSize() < 2)
 			throw runtime_error("Insufficient data in irregulardata texture: " + propName);
-		if (wl.GetSize() != dt.GetSize())
+		if (dt.GetSize() != dt.GetSize())
 			throw runtime_error("Number of wavelengths doesn't match number of data values in irregulardata texture: " + propName);
 
 		vector<float> waveLengths, data;

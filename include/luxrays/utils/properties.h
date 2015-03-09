@@ -93,7 +93,7 @@ public:
 	/*!
 	 * \brief Constructs a new property with a given name and value.
 	 *
-	 * Constructs a new empty property where the property name is initialized to
+	 * Constructs a new property where the property name is initialized to
 	 * \p propName and the vector of values has one single element with the value
 	 * of \p val.
 	 *
@@ -104,7 +104,7 @@ public:
 	/*!
 	 * \brief Constructs a new property with a given name and values.
 	 *
-	 * Constructs a new empty property where the property name is initialized to
+	 * Constructs a new property where the property name is initialized to
 	 * \p propName and the vector of values is initialize with the values
 	 * of \p vals.
 	 *
