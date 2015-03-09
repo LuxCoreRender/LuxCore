@@ -1485,6 +1485,24 @@ ri_stmt: ACCELERATOR STRING paramlist
 		*sceneProps <<
 				Property(prefix + ".type")("blackbody") <<
 				GetTexture(prefix + ".temperature", Property("temperature")(6500.f), props);
+	} else if (texType == "irregulardata") {
+		const Property &wl = props.Get(Property("wavelengths"));
+		if (wl.GetSize() < 2)
+			throw runtime_error("Insufficient wavelenghts in an irregulardata texture");
+
+		const Property &dt = props.Get(Property("data"));
+		if (dt.GetSize() < 2)
+			throw runtime_error("Insufficient data in an irregulardata texture");
+
+		if (wl.GetSize() != dt.GetSize())
+			throw runtime_error("Number of wavelengths doesn't match number of data values in irregulardata texture");
+
+		Property(prefix + ".wavelengths");
+
+		*sceneProps <<
+				Property(prefix + ".type")("irregulardata") <<
+				wl.Renamed(prefix + ".wavelengths") <<
+				dt.Renamed(prefix + ".data");
 	} else
 	//--------------------------------------------------------------------------
 	// Procedural textures
