@@ -874,8 +874,10 @@ void PathOCLBaseRenderThread::InitKernels() {
 		case ACCEL_MBVH:
 			ss << " -D PARAM_ACCEL_MBVH";
 			break;
+		case ACCEL_EMBREE:
+			throw runtime_error("EMBRRE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
 		default:
-			throw new runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
+			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
 
 	// Film related parameters

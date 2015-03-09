@@ -168,9 +168,9 @@ void UpdateMoveStep() {
 }
 
 int main(int argc, char *argv[]) {
-#if defined(__GNUC__) && !defined(__CYGWIN__)
-	set_terminate(SLGTerminate);
-#endif
+//#if defined(__GNUC__) && !defined(__CYGWIN__)
+//	set_terminate(SLGTerminate);
+//#endif
 
 	// This is required to run AMD GPU profiler
 	//XInitThreads();
