@@ -1,0 +1,36 @@
+scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
+#scene.camera.screenwindow = 0.5 1.0 0.0 1.0
+################################################################################
+#scene.materials.shell.type = mattetranslucent
+#scene.materials.shell.kr = 0.15 0.0 0.0
+#scene.materials.shell.kt = 0.75 0.0 0.0
+scene.materials.shell.type = roughmattetranslucent
+scene.materials.shell.kr = 0.15 0.0 0.0
+scene.materials.shell.kt = 0.75 0.0 0.0
+scene.materials.shell.sigma = 0.5
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.kd = 0.0 0.0 0.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 40.0 40.0 40.0
+scene.materials.whitelight.kd = 0.0 0.0 0.0
+################################################################################
+scene.objects.room.ply = scenes/luxball/room.ply
+scene.objects.room.material = whitematte
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxshell.material = shell
+scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+scene.objects.blacktext.material = blacktext
+scene.objects.l1.ply = scenes/luxball/luxball-light1.ply
+scene.objects.l1.material = whitelight
+scene.objects.l2.ply = scenes/luxball/luxball-light2.ply
+scene.objects.l2.material = whitelight
