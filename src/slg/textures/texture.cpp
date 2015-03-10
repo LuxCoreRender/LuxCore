@@ -78,6 +78,26 @@ UV Texture::GetDuv(const HitPoint &hitPoint,
 // Texture utility functions
 //------------------------------------------------------------------------------
 
+void slg::FresnelPreset(const string &presetName, Spectrum *eta, Spectrum *k) {
+	if (presetName == "amorphous carbon") {
+		*eta = Spectrum(2.94553471f, 2.22816062f, 1.98665321f);
+		*k = Spectrum(.876640677f, .799504995f, .821194172f);
+	} else if (presetName == "silver") {
+		*eta = Spectrum(.155706137f, .115924977f, .138897374f);
+		*k = Spectrum(4.88647795f, 3.12787175f, 2.17797375f);
+	} else if (presetName == "gold") {
+		*eta = Spectrum(.117958963f, .354153246f, 1.4389739f);
+		*k = Spectrum(4.03164577f, 2.39416027f, 1.61966884f);
+	} else if (presetName == "copper") {
+		*eta = Spectrum(.134794354f, .928983212f, 1.10887861f);
+		*k = Spectrum(3.98125982f, 2.440979f, 2.16473627f);
+	} else if (presetName == "aluminium") {
+		*eta = Spectrum(.69700277f, .879832864f, .5301736f);
+		*k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
+	} else
+		throw runtime_error("Unknown Fresnel preset name: " + presetName);
+}
+
 // Perlin Noise Data
 #define NOISE_PERM_SIZE 256
 static const int NoisePerm[2 * NOISE_PERM_SIZE] = {

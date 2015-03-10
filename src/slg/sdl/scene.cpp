@@ -1311,33 +1311,21 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
 
-		const Texture *eta, *k;
+		const Texture *n, *k;
 		if (props.IsDefined(propName + ".preset")) {
 			const string type = props.Get(Property(propName + ".preset")("aluminium")).Get<string>();
 
-			if (type == "aluminium") {
-				eta = GetTexture(Property("Implicit-Aluminium-eta")("1.697 0.879833 0.530174"));
-				k = GetTexture(Property("Implicit-Aluminium-k")("9.30201 6.27604 4.89434"));
-			} else if (type == "silver") {
-				eta = GetTexture(Property("Implicit-Silver-eta")("0.155706 0.115925 0.138897"));
-				k = GetTexture(Property("Implicit-Silver-k")("4.88648 3.12787 2.17797"));
-			} else if (type == "gold") {
-				eta = GetTexture(Property("Implicit-Gold-eta")("0.117959 0.354153 1.43897"));
-				k = GetTexture(Property("Implicit-gold-k")("4.03165 2.39416 1.61967"));
-			} else if (type == "copper") {
-				eta = GetTexture(Property("Implicit-Copper-eta")("0.134794 0.928983 1.10888"));
-				k = GetTexture(Property("Implicit-Copper-k")("3.98126 2.44098 2.16474"));
-			} else if (type == "amorphous carbon") {
-				eta = GetTexture(Property("Implicit-Amorphous-Carbon-eta")("2.94553 2.22816 1.98665"));
-				k = GetTexture(Property("Implicit-Amorphous-Carbon-k")("0.876641 0.799505 0.821194"));
-			} else
-				throw runtime_error("Unknown Metal2 preset: " + type);
+			Spectrum nRGB, kRGB;
+			FresnelPreset(type, &nRGB, &kRGB);
+
+			n = GetTexture(Property(matName + "-Implicit-FresnelPreset-n")(nRGB));
+			k = GetTexture(Property(matName + "-Implicit-FresnelPreset-k")(kRGB));
 		} else {
-			eta = GetTexture(props.Get(Property(propName + ".n")(.5f, .5f, .5f)));
+			n = GetTexture(props.Get(Property(propName + ".n")(.5f, .5f, .5f)));
 			k = GetTexture(props.Get(Property(propName + ".k")(.5f, .5f, .5f)));
 		}
 
-		mat = new Metal2Material(emissionTex, bumpTex, eta, k, nu, nv);
+		mat = new Metal2Material(emissionTex, bumpTex, n, k, nu, nv);
 	} else if (matType == "roughglass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));
@@ -1413,16 +1401,16 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			if (i == numPaints)
 				preset = "";
 			else {
-				const Texture *kd = GetTexture(Property("Implicit-" + preset + "-kd")(CarPaintMaterial::data[i].kd[0], CarPaintMaterial::data[i].kd[1], CarPaintMaterial::data[i].kd[2]));
-				const Texture *ks1 = GetTexture(Property("Implicit-" + preset + "-ks1")(CarPaintMaterial::data[i].ks1[0], CarPaintMaterial::data[i].ks1[1], CarPaintMaterial::data[i].ks1[2]));
-				const Texture *ks2 = GetTexture(Property("Implicit-" + preset + "-ks2")(CarPaintMaterial::data[i].ks2[0], CarPaintMaterial::data[i].ks2[1], CarPaintMaterial::data[i].ks2[2]));
-				const Texture *ks3 = GetTexture(Property("Implicit-" + preset + "-ks3")(CarPaintMaterial::data[i].ks3[0], CarPaintMaterial::data[i].ks3[1], CarPaintMaterial::data[i].ks3[2]));
-				const Texture *r1 = GetTexture(Property("Implicit-" + preset + "-r1")(CarPaintMaterial::data[i].r1));
-				const Texture *r2 = GetTexture(Property("Implicit-" + preset + "-r2")(CarPaintMaterial::data[i].r2));
-				const Texture *r3 = GetTexture(Property("Implicit-" + preset + "-r3")(CarPaintMaterial::data[i].r3));
-				const Texture *m1 = GetTexture(Property("Implicit-" + preset + "-m1")(CarPaintMaterial::data[i].m1));
-				const Texture *m2 = GetTexture(Property("Implicit-" + preset + "-m2")(CarPaintMaterial::data[i].m2));
-				const Texture *m3 = GetTexture(Property("Implicit-" + preset + "-m3")(CarPaintMaterial::data[i].m3));
+				const Texture *kd = GetTexture(Property(matName + "-Implicit-" + preset + "-kd")(CarPaintMaterial::data[i].kd[0], CarPaintMaterial::data[i].kd[1], CarPaintMaterial::data[i].kd[2]));
+				const Texture *ks1 = GetTexture(Property(matName + "-Implicit-" + preset + "-ks1")(CarPaintMaterial::data[i].ks1[0], CarPaintMaterial::data[i].ks1[1], CarPaintMaterial::data[i].ks1[2]));
+				const Texture *ks2 = GetTexture(Property(matName + "-Implicit-" + preset + "-ks2")(CarPaintMaterial::data[i].ks2[0], CarPaintMaterial::data[i].ks2[1], CarPaintMaterial::data[i].ks2[2]));
+				const Texture *ks3 = GetTexture(Property(matName + "-Implicit-" + preset + "-ks3")(CarPaintMaterial::data[i].ks3[0], CarPaintMaterial::data[i].ks3[1], CarPaintMaterial::data[i].ks3[2]));
+				const Texture *r1 = GetTexture(Property(matName + "-Implicit-" + preset + "-r1")(CarPaintMaterial::data[i].r1));
+				const Texture *r2 = GetTexture(Property(matName + "-Implicit-" + preset + "-r2")(CarPaintMaterial::data[i].r2));
+				const Texture *r3 = GetTexture(Property(matName + "-Implicit-" + preset + "-r3")(CarPaintMaterial::data[i].r3));
+				const Texture *m1 = GetTexture(Property(matName + "-Implicit-" + preset + "-m1")(CarPaintMaterial::data[i].m1));
+				const Texture *m2 = GetTexture(Property(matName + "-Implicit-" + preset + "-m2")(CarPaintMaterial::data[i].m2));
+				const Texture *m3 = GetTexture(Property(matName + "-Implicit-" + preset + "-m3")(CarPaintMaterial::data[i].m3));
 				mat = new CarPaintMaterial(emissionTex, bumpTex, kd, ks1, ks2, ks3, m1, m2, m3, r1, r2, r3, ka, d);
 			}
 		}

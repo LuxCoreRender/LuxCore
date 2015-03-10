@@ -747,7 +747,7 @@ public:
 	const Texture *GetK() const { return k; }
 	const Texture *GetNu() const { return nu; }
 	const Texture *GetNv() const { return nv; }
-
+	
 private:
 	const Texture *n;
 	const Texture *k;

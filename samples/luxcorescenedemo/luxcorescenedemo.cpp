@@ -331,7 +331,7 @@ int main(int argc, char *argv[]) {
 
 		// Rotate the monkey: so he can look what is happen with the light source
 		// Set the initial values
-		Vector t(0.f, 2.f, 0.3f);
+		Vector t(0.f, 2.f, .3f);
 		Transform trans(Translate(t));
 		Transform scale(Scale(.4f, .4f, .4f));
 		// Set rotate = 90

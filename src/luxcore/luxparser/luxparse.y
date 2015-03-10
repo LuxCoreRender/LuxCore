@@ -54,6 +54,32 @@ static string GetLuxCoreValidName(const string &name) {
 	return validName;
 }
 
+// This is a copy of slg::FresnelPreset() but with different behavior when the
+// preset is unknown.
+void FresnelPreset(const string &presetName, Spectrum *eta, Spectrum *k) {
+	if (presetName == "amorphous carbon") {
+		*eta = Spectrum(2.94553471f, 2.22816062f, 1.98665321f);
+		*k = Spectrum(.876640677f, .799504995f, .821194172f);
+	} else if (presetName == "silver") {
+		*eta = Spectrum(.155706137f, .115924977f, .138897374f);
+		*k = Spectrum(4.88647795f, 3.12787175f, 2.17797375f);
+	} else if (presetName == "gold") {
+		*eta = Spectrum(.117958963f, .354153246f, 1.4389739f);
+		*k = Spectrum(4.03164577f, 2.39416027f, 1.61966884f);
+	} else if (presetName == "copper") {
+		*eta = Spectrum(.134794354f, .928983212f, 1.10887861f);
+		*k = Spectrum(3.98125982f, 2.440979f, 2.16473627f);
+	} else if (presetName == "aluminium") {
+		*eta = Spectrum(.69700277f, .879832864f, .5301736f);
+		*k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
+	} else {
+		LC_LOG("Unknown metal type '" << presetName << "'. Using default (aluminium).");
+
+		*eta = Spectrum(.69700277f, .879832864f, .5301736f);
+		*k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
+	}
+}
+
 //------------------------------------------------------------------------------
 // RenderOptions
 //------------------------------------------------------------------------------
@@ -191,29 +217,9 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				Property(prefix +".ioroutside")(1.f) <<
 				GetTexture(prefix + ".iorinside", Property("index")(1.5f), matProps);
 	} else if (type == "metal") {
-		Spectrum n, k;
 		string presetName = matProps.Get("name").Get<string>();
-		if (presetName == "amorphous carbon") {
-			n = Spectrum(2.94553471f, 2.22816062f, 1.98665321f);
-			k = Spectrum(0.876640677f, 0.799504995f, 0.821194172f);
-		} else if (presetName == "silver") {
-			n = Spectrum(0.155706137f, 0.115924977f, 0.138897374f);
-			k = Spectrum(4.88647795f, 3.12787175f, 2.17797375f);
-		} else if (presetName == "gold") {
-			n = Spectrum(0.117958963f, 0.354153246f, 1.4389739f);
-			k = Spectrum(4.03164577f, 2.39416027f, 1.61966884f);
-		} else if (presetName == "copper") {
-			n = Spectrum(0.134794354f, 0.928983212f, 1.10887861f);
-			k = Spectrum(3.98125982f, 2.440979f, 2.16473627f);
-		} else if (presetName == "aluminium") {
-			n = Spectrum(1.69700277f, 0.879832864f, 0.5301736f);
-			k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
-		} else {
-			LC_LOG("Unknown metal type '" << presetName << "'. Using default (aluminium).");
-
-			n = Spectrum(1.69700277f, 0.879832864f, 0.5301736f);
-			k = Spectrum(9.30200672f, 6.27604008f, 4.89433956f);
-		}			
+		Spectrum n, k;
+		FresnelPreset(presetName, &n, &k);
 
 		*sceneProps <<
 				Property(prefix + ".type")("metal2") <<
@@ -257,16 +263,20 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
 				Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
 	} else if (type == "metal2") {
-		*sceneProps <<
-					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".type")("fresnelapproxn") <<
-					GetTexture("scene.textures.LUXCORE_PARSERLXS_fresnelapproxn-" + name + ".texture", Property("fresnel")(Spectrum(.5f)), matProps) <<
-					Property("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".type")("fresnelapproxk") <<
-					GetTexture("scene.textures.LUXCORE_PARSERLXS_fresnelapproxk-" + name + ".texture", Property("fresnel")(Spectrum(.5f)), matProps);
+		const string fresnelTexName = GetLuxCoreValidName(matProps.Get(Property("fresnel")("")).Get<string>());
+		if (fresnelTexName == "") {
+			const string texPrefix = "scene.textures." + name;
+			*sceneProps <<
+					Property(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxn.type")("fresnelapproxn") <<
+					GetTexture(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxn.texture", Property("Kr")(Spectrum(.5f)), matProps) <<
+					Property(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("fresnelapproxk") <<
+					GetTexture(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxk.texture", Property("Kr")(Spectrum(.5f)), matProps);
+		}
 
 		*sceneProps <<
 				Property(prefix + ".type")("metal2") <<
-				Property(prefix + ".n")("LUXCORE_PARSERLXS_fresnelapproxn-" + name) <<
-				Property(prefix + ".k")("LUXCORE_PARSERLXS_fresnelapproxk-" + name) <<
+				Property(prefix + ".n")(fresnelTexName + "_LUXCORE_PARSERLXS_fresnelapproxn") <<
+				Property(prefix + ".k")(fresnelTexName + "_LUXCORE_PARSERLXS_fresnelapproxk") <<
 				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
 				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps);
 	} else if (type == "roughglass") {
@@ -1718,11 +1728,21 @@ ri_stmt: ACCELERATOR STRING paramlist
 				Property(prefix + ".channel")(((channel != 0) && (channel != 1) && (channel != 2)) ?
 						-1 : channel);
 	} else if (texType == "fresnelcolor") {
-		// This is a trick to be able to reference another texture
 		*sceneProps <<
-				Property(prefix + ".type")("scale") <<
-				Property(prefix + ".texture1")(1.f) <<
-				GetTexture(prefix + ".texture2", Property("Kr")(Spectrum(.5f)), props);
+				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.type")("fresnelapproxn") <<
+				GetTexture(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.texture", Property("Kr")(Spectrum(.5f)), props) <<
+				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("fresnelapproxk") <<
+				GetTexture(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.texture", Property("Kr")(Spectrum(.5f)), props);
+	} else if (texType == "preset") {
+		string presetName = props.Get("name").Get<string>();
+		Spectrum n, k;
+		FresnelPreset(presetName, &n, &k);
+
+		*sceneProps <<
+				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.type")("constfloat3") <<
+				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.value")(n) <<
+				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("constfloat3") <<
+				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.value")(k);
 	} else {
 		LC_LOG("LuxCore doesn't support the texture type: " << texType);
 

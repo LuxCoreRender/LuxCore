@@ -91,6 +91,12 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const = 0;
 };
 
+//------------------------------------------------------------------------------
+// Texture utility functions
+//------------------------------------------------------------------------------
+
+extern void FresnelPreset(const std::string &type, luxrays::Spectrum *eta, luxrays::Spectrum *k);
+
 float Noise(float x, float y = .5f, float z = .5f);
 inline float Noise(const luxrays::Point &P) {
 	return Noise(P.x, P.y, P.z);
