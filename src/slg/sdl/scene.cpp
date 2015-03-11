@@ -57,6 +57,8 @@
 #include "slg/textures/blackbody.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/fresneltexture.h"
+#include "slg/textures/fresnelcolor.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/lampspectrum.h"
@@ -383,6 +385,10 @@ void Scene::ParseTextures(const Properties &props) {
 		if (texDefs.IsTextureDefined(texName)) {
 			// A replacement for an existing texture
 			const Texture *oldTex = texDefs.GetTexture(texName);
+
+			// Check if it is not a FresnelTexture but must be
+			if (dynamic_cast<const FresnelTexture *>(oldTex) && !dynamic_cast<const FresnelTexture *>(tex))
+				throw runtime_error("You can not replace a fresnel texture with the texture: " + texName);
 
 			texDefs.DefineTexture(texName, tex);
 			matDefs.UpdateTextureReferences(oldTex, tex);
@@ -1070,15 +1076,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "blackbody") {
 		const float v = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
 		return new BlackBodyTexture(v);
-//	} else if (texType == "fresnelcolor") {
-//		const Spectrum v = props.Get(Property(propName + ".value")(0.5f)).Get<Spectrum>();
-//		return new FresnelColorTexture(v);
 //	} else if (texType == "fresnelname") {
 //		const string name = props.Get(Property(propName + ".file")("fresnel.nk")).Get<string>();
 //		return new FresnelNameTexture(v);
-//	} else if (texType == "lampspectrum") {
-//		const string name = props.Get(Property(propName + ".name")("Incandescent2")).Get<string>();
-//		return new LampSpectrumTexture(v);
 	} else if (texType == "irregulardata") {
 		if (!props.IsDefined(propName + ".wavelengths"))
 			throw runtime_error("Missing wavelengths property in irregulardata texture: " + propName);
@@ -1102,6 +1102,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution);
 	} else if (texType == "lampspectrum") {
 		return AllocLampSpectrumTex(props, propName);
+	} else if (texType == "fresnelcolor") {
+		const Texture *col = GetTexture(props.Get(Property(propName + ".kr")(.5f)));
+
+		return new FresnelColorTexture(col);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }
@@ -1316,16 +1320,25 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			const string type = props.Get(Property(propName + ".preset")("aluminium")).Get<string>();
 
 			Spectrum nRGB, kRGB;
-			FresnelPreset(type, &nRGB, &kRGB);
+			FresnelTexture::Preset(type, &nRGB, &kRGB);
 
 			n = GetTexture(Property(matName + "-Implicit-FresnelPreset-n")(nRGB));
 			k = GetTexture(Property(matName + "-Implicit-FresnelPreset-k")(kRGB));
+			mat = new Metal2Material(emissionTex, bumpTex, n, k, nu, nv);
+		} else if (props.IsDefined(propName + ".fresnel")) {
+			const Texture *tex = GetTexture(props.Get(Property(propName + ".fresnel")(5.f)));
+			if (!dynamic_cast<const FresnelTexture *>(tex))
+				throw runtime_error("Metal2 fresnel property requires a fresnel texture: " + matName);
+
+			const FresnelTexture *fresnelTex = (const FresnelTexture *)tex;
+			mat = new Metal2Material(emissionTex, bumpTex, fresnelTex, nu, nv);
 		} else {
+			SLG_LOG("WARNING: deprecated property " + propName + ".n/k");
+
 			n = GetTexture(props.Get(Property(propName + ".n")(.5f, .5f, .5f)));
 			k = GetTexture(props.Get(Property(propName + ".k")(.5f, .5f, .5f)));
+			mat = new Metal2Material(emissionTex, bumpTex, n, k, nu, nv);
 		}
-
-		mat = new Metal2Material(emissionTex, bumpTex, n, k, nu, nv);
 	} else if (matType == "roughglass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));

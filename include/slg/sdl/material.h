@@ -35,6 +35,7 @@
 #include "slg/sdl/bsdfevents.h"
 #include "slg/sdl/hitpoint.h"
 #include "slg/textures/texture.h"
+#include "slg/textures/fresneltexture.h"
 
 namespace slg {
 
@@ -721,7 +722,10 @@ class Metal2Material : public Material {
 public:
 	Metal2Material(const Texture *emitted, const Texture *bump,
 			const Texture *nn, const Texture *kk, const Texture *u, const Texture *v) :
-			Material(emitted, bump), n(nn), k(kk), nu(u), nv(v) { }
+			Material(emitted, bump), fresnelTex(NULL), n(nn), k(kk), nu(u), nv(v) { }
+	Metal2Material(const Texture *emitted, const Texture *bump,
+			const FresnelTexture *ft, const Texture *u, const Texture *v) :
+			Material(emitted, bump), fresnelTex(ft), nu(u), nv(v) { }
 
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
@@ -743,14 +747,17 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
+	const FresnelTexture *GetFresnel() const { return fresnelTex; }
 	const Texture *GetN() const { return n; }
 	const Texture *GetK() const { return k; }
 	const Texture *GetNu() const { return nu; }
 	const Texture *GetNv() const { return nv; }
 	
 private:
-	const Texture *n;
-	const Texture *k;
+	const FresnelTexture *fresnelTex;
+	// For compatibility with the past
+	const Texture *n, *k;
+
 	const Texture *nu;
 	const Texture *nv;
 };
@@ -1077,14 +1084,6 @@ extern luxrays::Spectrum SchlickBSDF_CoatingSampleF(const bool fromLight, const 
 	float u0, float u1, float *pdf);
 extern float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 	const luxrays::Vector &localFixedDir, const luxrays::Vector &localSampledDir);
-
-//------------------------------------------------------------------------------
-// Fresnel related functions
-//------------------------------------------------------------------------------
-
-extern luxrays::Spectrum FresnelSchlick_Evaluate(const luxrays::Spectrum &ks, const float cosi);
-extern luxrays::Spectrum FresnelGeneral_Evaluate(const luxrays::Spectrum &eta, const luxrays::Spectrum &k, const float cosi);
-extern luxrays::Spectrum FresnelCauchy_Evaluate(const float eta, const float cosi);
 
 }
 

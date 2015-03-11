@@ -233,16 +233,18 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/volume.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresneltexture.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelcolor.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/irregulardata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/lampspectrum.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp

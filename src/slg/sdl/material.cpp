@@ -22,6 +22,7 @@
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/material.h"
 #include "slg/textures/texture.h"
+#include "slg/textures/fresneltexture.h"
 
 using namespace std;
 using namespace luxrays;
@@ -514,9 +515,9 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		*pdfW = threshold;
 
 		if (!hitPoint.fromLight)
-			result = (Spectrum(1.f) - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
+			result = (Spectrum(1.f) - FresnelTexture::CauchyEvaluate(ntc, cost)) * eta2;
 		else
-			result = (Spectrum(1.f) - FresnelCauchy_Evaluate(ntc, costheta)) * fabsf(localFixedDir.z / *absCosSampledDir);
+			result = (Spectrum(1.f) - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / *absCosSampledDir);
 
 		result *= kt;
 	} else {
@@ -527,7 +528,7 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
 
-		result = kr * FresnelCauchy_Evaluate(ntc, costheta);
+		result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
 	}
 
 	return result / *pdfW;
@@ -642,10 +643,10 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 			if (entering)
 				result = Spectrum();
 			else
-				result = FresnelCauchy_Evaluate(ntc, -costheta);
+				result = FresnelTexture::CauchyEvaluate(ntc, -costheta);
 		} else {
 			if (entering)
-				result = FresnelCauchy_Evaluate(ntc, costheta);
+				result = FresnelTexture::CauchyEvaluate(ntc, costheta);
 			else
 				result = Spectrum();
 		}
@@ -664,7 +665,7 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 		*event = SPECULAR | REFLECT;
 		*pdfW = 1.f - threshold;
 
-		result = kr * FresnelCauchy_Evaluate(ntc, costheta);
+		result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
 	}
 
 	return result / *pdfW;
@@ -707,10 +708,10 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 			if (entering)
 				result = Spectrum();
 			else
-				result = FresnelCauchy_Evaluate(ntc, -costheta);
+				result = FresnelTexture::CauchyEvaluate(ntc, -costheta);
 		} else {
 			if (entering)
-				result = FresnelCauchy_Evaluate(ntc, costheta);
+				result = FresnelTexture::CauchyEvaluate(ntc, costheta);
 			else
 				result = Spectrum();
 		}
@@ -1534,7 +1535,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 
 	// Coating fresnel factor
 	const Vector H(Normalize(localFixedDir + localSampledDir));
-	const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(localSampledDir, H));
+	const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localSampledDir, H));
 
 	const Spectrum coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce, localFixedDir, localSampledDir);
 
@@ -1636,7 +1637,7 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 
 	// Coating fresnel factor
 	const Vector H(Normalize(localFixedDir + *localSampledDir));
-	const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(*localSampledDir, H));
+	const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(*localSampledDir, H));
 
 	// Blend in base layer Schlick style
 	// coatingF already takes fresnel factor S into account
@@ -1766,9 +1767,15 @@ Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 	if (reversePdfW)
 		*reversePdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
 
-	const Spectrum etaVal = n->GetSpectrumValue(hitPoint);
-	const Spectrum kVal = k->GetSpectrumValue(hitPoint);
-	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+	Spectrum F;
+	if (fresnelTex)
+		F = fresnelTex->Evaluate(hitPoint, cosWH);
+	else {
+		// For compatibility with the past
+		const Spectrum etaVal = n->GetSpectrumValue(hitPoint);
+		const Spectrum kVal = k->GetSpectrumValue(hitPoint);
+		F = FresnelTexture::GeneralEvaluate(etaVal, kVal, cosWH);
+	}
 
 	const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 
@@ -1810,9 +1817,15 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 
 	const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 
-	const Spectrum etaVal = n->GetSpectrumValue(hitPoint);
-	const Spectrum kVal = k->GetSpectrumValue(hitPoint);
-	const Spectrum F = FresnelGeneral_Evaluate(etaVal, kVal, cosWH);
+	Spectrum F;
+	if (fresnelTex)
+		F = fresnelTex->Evaluate(hitPoint, cosWH);
+	else {
+		// For compatibility with the past
+		const Spectrum etaVal = n->GetSpectrumValue(hitPoint);
+		const Spectrum kVal = k->GetSpectrumValue(hitPoint);
+		F = FresnelTexture::GeneralEvaluate(etaVal, kVal, cosWH);
+	}
 
 	float factor = (d / specPdf) * G * fabsf(cosWH);
 	if (!hitPoint.fromLight)
@@ -1856,6 +1869,8 @@ void Metal2Material::AddReferencedTextures(boost::unordered_set<const Texture *>
 void Metal2Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
 	Material::UpdateTextureReferences(oldTex, newTex);
 
+	if (fresnelTex == oldTex)
+		fresnelTex = (FresnelTexture *)newTex;
 	if (n == oldTex)
 		n = newTex;
 	if (k == oldTex)
@@ -1871,8 +1886,12 @@ Properties Metal2Material::ToProperties() const  {
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("metal2"));
-	props.Set(Property("scene.materials." + name + ".n")(n->GetName()));
-	props.Set(Property("scene.materials." + name + ".k")(k->GetName()));
+	if (fresnelTex)
+		props.Set(Property("scene.materials." + name + ".fresnel")(fresnelTex->GetName()));
+	if (n)
+		props.Set(Property("scene.materials." + name + ".n")(n->GetName()));
+	if (k)
+		props.Set(Property("scene.materials." + name + ".k")(k->GetName()));
 	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
 	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
 	props.Set(Material::ToProperties());
@@ -1930,7 +1949,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
 		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
-		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+		const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
 
 		if (directPdfW)
 			*directPdfW = threshold * specPdf * (hitPoint.fromLight ? fabsf(cosThetaIH) : (fabsf(cosThetaOH) * eta * eta)) / lengthSquared;
@@ -1960,7 +1979,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 		const float D = SchlickDistribution_D(roughness, wh, anisotropy);
 		const float G = SchlickDistribution_G(roughness, localLightDir, localEyeDir);
 		const float specPdf = SchlickDistribution_Pdf(roughness, wh, anisotropy);
-		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaH);
+		const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaH);
 
 		if (directPdfW)
 			*directPdfW = (1.f - threshold) * specPdf / (4.f * AbsDot(localLightDir, wh));
@@ -2053,10 +2072,10 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		float factor = (d / specPdf) * G * fabsf(cosThetaOH) / threshold;
 
 		if (!hitPoint.fromLight) {
-			const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaIH);
+			const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaIH);
 			result = (factor / coso) * kt * (Spectrum(1.f) - F);
 		} else {
-			const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+			const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
 			result = (factor / cosi) * kt * (Spectrum(1.f) - F);
 		}
 
@@ -2078,7 +2097,7 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 		float factor = (d / specPdf) * G * fabsf(cosThetaOH) / (1.f - threshold);
 
-		const Spectrum F = FresnelCauchy_Evaluate(ntc, cosThetaOH);
+		const Spectrum F = FresnelTexture::CauchyEvaluate(ntc, cosThetaOH);
 		factor /= (!hitPoint.fromLight) ? coso : cosi;
 		result = factor * F * kr;
 
@@ -3047,7 +3066,8 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 	{
 		const float rough1 = m1 * m1;
 		const float r1 = R1->GetFloatValue(hitPoint);
-		result += (SchlickDistribution_D(rough1, H, 0.f) * SchlickDistribution_G(rough1, localLightDir, localEyeDir) / (4.f * coso)) * (ks1 * FresnelSchlick_Evaluate(r1, Dot(localEyeDir, H)));
+		result += (SchlickDistribution_D(rough1, H, 0.f) * SchlickDistribution_G(rough1, localLightDir, localEyeDir) / (4.f * coso)) *
+				(ks1 * FresnelTexture::SchlickEvaluate(r1, Dot(localEyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough1, H, 0.f);
 		++n;
 	}
@@ -3057,7 +3077,8 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 	{
 		const float rough2 = m2 * m2;
 		const float r2 = R2->GetFloatValue(hitPoint);
-		result += (SchlickDistribution_D(rough2, H, 0.f) * SchlickDistribution_G(rough2, localLightDir, localEyeDir) / (4.f * coso)) * (ks2 * FresnelSchlick_Evaluate(r2, Dot(localEyeDir, H)));
+		result += (SchlickDistribution_D(rough2, H, 0.f) * SchlickDistribution_G(rough2, localLightDir, localEyeDir) / (4.f * coso)) *
+				(ks2 * FresnelTexture::SchlickEvaluate(r2, Dot(localEyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough2, H, 0.f);
 		++n;
 	}
@@ -3067,7 +3088,8 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 	{
 		const float rough3 = m3 * m3;
 		const float r3 = R3->GetFloatValue(hitPoint);
-		result += (SchlickDistribution_D(rough3, H, 0.f) * SchlickDistribution_G(rough3, localLightDir, localEyeDir) / (4.f * coso)) * (ks3 * FresnelSchlick_Evaluate(r3, Dot(localEyeDir, H)));
+		result += (SchlickDistribution_D(rough3, H, 0.f) * SchlickDistribution_G(rough3, localLightDir, localEyeDir) / (4.f * coso)) *
+				(ks3 * FresnelTexture::SchlickEvaluate(r3, Dot(localEyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough3, H, 0.f);
 		++n;
 	}
@@ -3170,7 +3192,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		if (pdf <= 0.f)
 			return Spectrum();
 
-		result = FresnelSchlick_Evaluate(R1->GetFloatValue(hitPoint), cosWH);
+		result = FresnelTexture::SchlickEvaluate(R1->GetFloatValue(hitPoint), cosWH);
 
 		const float G = SchlickDistribution_G(rough1, localFixedDir, *localSampledDir);
 		if (!hitPoint.fromLight)
@@ -3199,7 +3221,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		if (pdf <= 0.f)
 			return Spectrum();
 
-		result = FresnelSchlick_Evaluate(R2->GetFloatValue(hitPoint), cosWH);
+		result = FresnelTexture::SchlickEvaluate(R2->GetFloatValue(hitPoint), cosWH);
 
 		const float G = SchlickDistribution_G(rough2, localFixedDir, *localSampledDir);
 		if (!hitPoint.fromLight)
@@ -3227,7 +3249,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 		if (pdf <= 0.f)
 			return Spectrum();
 
-		result = FresnelSchlick_Evaluate(R3->GetFloatValue(hitPoint), cosWH);
+		result = FresnelTexture::SchlickEvaluate(R3->GetFloatValue(hitPoint), cosWH);
 
 		const float G = SchlickDistribution_G(rough3, localFixedDir, *localSampledDir);
 		if (!hitPoint.fromLight)
@@ -3264,7 +3286,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 			result += (d1 *
 				SchlickDistribution_G(rough1, localFixedDir, *localSampledDir) /
 				(4.f * (hitPoint.fromLight ? fabsf(localSampledDir->z) : fabsf(localFixedDir.z)))) *
-				FresnelSchlick_Evaluate(R1->GetFloatValue(hitPoint), cosWH);
+				FresnelTexture::SchlickEvaluate(R1->GetFloatValue(hitPoint), cosWH);
 			pdf += pdf1;
 		}
 	}
@@ -3277,7 +3299,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 			result += (d2 *
 				SchlickDistribution_G(rough2, localFixedDir, *localSampledDir) /
 				(4.f * (hitPoint.fromLight ? fabsf(localSampledDir->z) : fabsf(localFixedDir.z)))) *
-				FresnelSchlick_Evaluate(R2->GetFloatValue(hitPoint), cosWH);
+				FresnelTexture::SchlickEvaluate(R2->GetFloatValue(hitPoint), cosWH);
 			pdf += pdf2;
 		}
 	}
@@ -3290,7 +3312,7 @@ Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 			result += (d3 *
 				SchlickDistribution_G(rough3, localFixedDir, *localSampledDir) /
 				(4.f * (hitPoint.fromLight ? fabsf(localSampledDir->z) : fabsf(localFixedDir.z)))) *
-				FresnelSchlick_Evaluate(R3->GetFloatValue(hitPoint), cosWH);
+				FresnelTexture::SchlickEvaluate(R3->GetFloatValue(hitPoint), cosWH);
 			pdf += pdf3;
 		}
 	}
@@ -3518,7 +3540,7 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			ks *= ti * ti;
 		}
 		ks = ks.Clamp();
-		const Spectrum S1 = FresnelSchlick_Evaluate(ks, u);
+		const Spectrum S1 = FresnelTexture::SchlickEvaluate(ks, u);
 
 		ks = Ks_bf->GetSpectrumValue(hitPoint);
 		i = index_bf->GetFloatValue(hitPoint);
@@ -3531,7 +3553,7 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		if (reversePdfW)
 			*reversePdfW = 0.5f * fabsf(localFixedDir.z * INV_PI);
 		ks = ks.Clamp();
-		const Spectrum S2 = FresnelSchlick_Evaluate(ks, u);
+		const Spectrum S2 = FresnelTexture::SchlickEvaluate(ks, u);
 		Spectrum S(Sqrt((Spectrum(1.f) - S1) * (Spectrum(1.f) - S2)));
 		if (localLightDir.z > 0.f) {
 			S *= Exp(Ka->GetSpectrumValue(hitPoint).Clamp() * -(depth->GetFloatValue(hitPoint) / cosi) +
@@ -3600,7 +3622,7 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 
 		// Coating fresnel factor
 		const Vector H(Normalize(localFixedDir + localSampledDir));
-		const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(localSampledDir, H));
+		const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localSampledDir, H));
 
 		const Spectrum coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, mbounce,
 			localFixedDir, localSampledDir);
@@ -3705,7 +3727,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 
 		// Coating fresnel factor
 		const Vector H(Normalize(localFixedDir + *localSampledDir));
-		const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(*localSampledDir, H));
+		const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(*localSampledDir, H));
 
 		// Blend in base layer Schlick style
 		// coatingF already takes fresnel factor S into account
@@ -3960,7 +3982,7 @@ float slg::SchlickDistribution_Pdf(const float roughness, const Vector &wh,
 float slg::SchlickBSDF_CoatingWeight(const Spectrum &ks, const Vector &localFixedDir) {
 	// Approximate H by using reflection direction for wi
 	const float u = fabsf(localFixedDir.z);
-	const Spectrum S = FresnelSchlick_Evaluate(ks, u);
+	const Spectrum S = FresnelTexture::SchlickEvaluate(ks, u);
 
 	// Ensures coating is never sampled less than half the time
 	return .5f * (1.f + S.Filter());
@@ -3972,7 +3994,7 @@ Spectrum slg::SchlickBSDF_CoatingF(const bool fromLight, const Spectrum &ks, con
 	const float cosi = fabsf(localSampledDir.z);
 
 	const Vector wh(Normalize(localFixedDir + localSampledDir));
-	const Spectrum S = FresnelSchlick_Evaluate(ks, AbsDot(localSampledDir, wh));
+	const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localSampledDir, wh));
 
 	const float G = SchlickDistribution_G(roughness, localFixedDir, localSampledDir);
 
@@ -4007,7 +4029,7 @@ Spectrum slg::SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks
 	if (*pdf <= 0.f)
 		return Spectrum();
 
-	Spectrum S = FresnelSchlick_Evaluate(ks, fabsf(cosWH));
+	Spectrum S = FresnelTexture::SchlickEvaluate(ks, fabsf(cosWH));
 
 	const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 	if (!fromLight)
@@ -4026,90 +4048,4 @@ float slg::SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 		const Vector &localFixedDir, const Vector &localSampledDir) {
 	const Vector wh(Normalize(localFixedDir + localSampledDir));
 	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * AbsDot(localFixedDir, wh));
-}
-
-//------------------------------------------------------------------------------
-// FresnelSlick BSDF
-//------------------------------------------------------------------------------
-
-Spectrum slg::FresnelSchlick_Evaluate(const Spectrum &normalIncidence, const float cosi) {
-	return normalIncidence + (Spectrum(1.f) - normalIncidence) *
-		powf(1.f - cosi, 5.f);
-}
-
-//------------------------------------------------------------------------------
-// FresnelGeneral material
-//------------------------------------------------------------------------------
-
-static Spectrum FrDiel2(const float cosi, const Spectrum &cost,
-		const Spectrum &eta) {
-	Spectrum Rparl(eta * cosi);
-	Rparl = (cost - Rparl) / (cost + Rparl);
-	Spectrum Rperp(eta * cost);
-	Rperp = (Spectrum(cosi) - Rperp) / (Spectrum(cosi) + Rperp);
-
-	return (Rparl * Rparl + Rperp * Rperp) * .5f;
-}
-
-//static Spectrum FrDiel(const float cosi, const float cost,
-//		const Spectrum &etai, const Spectrum &etat) {
-//	return FrDiel2(cosi, Spectrum(cost), etat / etai);
-//}
-//
-//static Spectrum FrCond(const float cosi, const Spectrum &eta,
-//		const Spectrum &k) {
-//	const Spectrum tmp = (eta * eta + k*k) * (cosi * cosi) + 1;
-//	const Spectrum Rparl2 = 
-//		(tmp - (2.f * eta * cosi)) /
-//		(tmp + (2.f * eta * cosi));
-//	const Spectrum tmp_f = eta * eta + k*k + (cosi * cosi);
-//	const Spectrum Rperp2 =
-//		(tmp_f - (2.f * eta * cosi)) /
-//		(tmp_f + (2.f * eta * cosi));
-//	return (Rparl2 + Rperp2) * .5f;
-//}
-
-static Spectrum FrFull(const float cosi, const Spectrum &cost, const Spectrum &eta, const Spectrum &k) {
-	const Spectrum tmp = (eta * eta + k * k) * (cosi * cosi) + (cost * cost);
-	const Spectrum Rparl2 = (tmp - (2.f * cosi * cost) * eta) /
-		(tmp + (2.f * cosi * cost) * eta);
-	const Spectrum tmp_f = (eta * eta + k * k) * (cost * cost) + Spectrum(cosi * cosi);
-	const Spectrum Rperp2 = (tmp_f - (2.f * cosi * cost) * eta) /
-		(tmp_f + (2.f * cosi * cost) * eta);
-	return (Rparl2 + Rperp2) * .5f;
-}
-
-Spectrum slg::FresnelGeneral_Evaluate(const Spectrum &eta, const Spectrum &k, const float cosi) {
-	Spectrum sint2(Max(0.f, 1.f - cosi * cosi));
-	if (cosi > 0.f)
-		sint2 /= eta * eta;
-	else
-		sint2 *= eta * eta;
-	sint2 = sint2.Clamp();
-
-	const Spectrum cost2 = (Spectrum(1.f) - sint2);
-	if (cosi > 0.f) {
-		const Spectrum a(2.f * k * k * sint2);
-		return FrFull(cosi, Sqrt((cost2 + Sqrt(cost2 * cost2 + a * a)) / 2.f), eta, k);
-	} else {
-		const Spectrum a(2.f * k * k * sint2);
-		const Spectrum d2 = eta * eta + k * k;
-		return FrFull(-cosi, Sqrt((cost2 + Sqrt(cost2 * cost2 + a * a)) / 2.f), eta / d2, -k / d2);
-	}
-}
-
-Spectrum slg::FresnelCauchy_Evaluate(const float eta, const float cosi) {
-	// Compute indices of refraction for dielectric
-	const bool entering = (cosi > 0.f);
-
-	// Compute _sint_ using Snell's law
-	const float eta2 = eta * eta;
-	const float sint2 = (entering ? 1.f / eta2 : eta2) *
-		Max(0.f, 1.f - cosi * cosi);
-	// Handle total internal reflection
-	if (sint2 >= 1.f)
-		return Spectrum(1.f);
-	else
-		return FrDiel2(fabsf(cosi), Spectrum(sqrtf(Max(0.f, 1.f - sint2))),
-			entering ? eta : Spectrum(1.f / eta));
 }
