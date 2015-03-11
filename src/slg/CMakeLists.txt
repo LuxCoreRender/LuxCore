@@ -322,7 +322,6 @@ set(SLG_LIB_SRCS
 )
 
 add_library(smallluxgpu STATIC ${SLG_LIB_SRCS})
-add_definitions(${VISIBILITY_FLAGS})
 
 link_directories (${LuxRays_LIB_DIR})
 

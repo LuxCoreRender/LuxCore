@@ -225,7 +225,6 @@ set(LUXRAYS_LIB_SRCS
 )
 
 add_library(luxrays STATIC ${LUXRAYS_LIB_SRCS})
-add_definitions(${VISIBILITY_FLAGS})
 
 IF(GCC AND NOT APPLE)
 	# These accelerators needs to be compiled with much reduced optimizations
