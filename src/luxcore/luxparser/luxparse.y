@@ -380,7 +380,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 
 	if (matProps.IsDefined("bumpmap")) {
 		// TODO: check the kind of texture to understand if it is a bump map or a normal map
-		*sceneProps << Property(prefix + ".bumptex")(matProps.Get("bumpmap").Get<string>());
+		*sceneProps << Property(prefix + ".bumptex")(GetLuxCoreValidName(matProps.Get("bumpmap").Get<string>()));
 		//*sceneProps << Property(prefix + ".normaltex")(props.Get("bumpmap").Get<string>());
 	}
 
