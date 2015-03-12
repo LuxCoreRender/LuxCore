@@ -40,13 +40,6 @@ endif(APPLE)
 # This instructs FREEGLUT to emit a pragma for the static version
 SET_TARGET_PROPERTIES(slg4 PROPERTIES COMPILE_DEFINITIONS FREEGLUT_STATIC)
 
-IF(APPLE AND EMBREE_FOUND)
-	ADD_CUSTOM_COMMAND(
-	TARGET slg4 POST_BUILD
-	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.4.0.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/libembree.2.4.0.dylib
-	)
-ENDIF()
-
 IF(OSX_UPDATE_LUXRAYS_REPO)
 #
 # Copy needed files for compiling LuxRender to dependencies directory, to find
@@ -60,5 +53,7 @@ TARGET slg4 POST_BUILD
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/slg4 ${OSX_DEPENDENCY_ROOT}/bin/slg4
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${OSX_DEPENDENCY_ROOT}/lib/LuxRays # for repo
 	COMMAND cp -f ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libluxcore.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE} # for slg4
+	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.4.0.dylib ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE}/libembree.2.4.0.dylib # for slg4
+	COMMAND cp ${OSX_DEPENDENCY_ROOT}/lib/embree2/libembree.2.4.0.dylib ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/libembree.2.4.0.dylib # for libluxcore
 )
 ENDIF(OSX_UPDATE_LUXRAYS_REPO)
