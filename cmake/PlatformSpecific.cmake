@@ -212,7 +212,7 @@ IF(APPLE)
 #	INCLUDE_DIRECTORIES( ${OSX_DEPENDENCY_ROOT}/include )
 
 	### options
-	option(OSX_UPDATE_LUXRAYS_REPO "Copy LuxRays dependencies over to macos repo after compile" FALSE)
+	option(OSX_UPDATE_LUXRAYS_REPO "Copy LuxRays dependencies over to macos repo after compile" TRUE)
 
 	set(LUXRAYS_NO_DEFAULT_CONFIG true)
 	set(LUXRAYS_CUSTOM_CONFIG Config_OSX)
