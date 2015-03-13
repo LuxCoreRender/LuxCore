@@ -85,6 +85,7 @@ typedef struct {
 } Glossy2Param;
 
 typedef struct {
+    unsigned int fresnelTexIndex;
     unsigned int nTexIndex;
 	unsigned int kTexIndex;
 	unsigned int nuTexIndex;

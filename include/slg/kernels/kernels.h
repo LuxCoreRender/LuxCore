@@ -74,6 +74,7 @@ extern std::string KernelSource_texture_blender_funcs;
 extern std::string KernelSource_texture_bump_funcs;
 extern std::string KernelSource_texture_types;
 extern std::string KernelSource_texture_blackbody_funcs;
+extern std::string KernelSource_texture_fresnelcolor_funcs;
 extern std::string KernelSource_texture_irregulardata_funcs;
 extern std::string KernelSource_texture_funcs;
 extern std::string KernelSource_volume_types;

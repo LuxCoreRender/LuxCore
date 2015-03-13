@@ -1,10 +1,10 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
-#scene.textures.fntex.type = fresnelapproxn
-#scene.textures.fntex.texture = 0.5 0.0 0.0
-#scene.textures.fktex.type = fresnelapproxk
-#scene.textures.fktex.texture = 0.5 0.0 0.0
+scene.textures.fntex.type = fresnelapproxn
+scene.textures.fntex.texture = 0.5 0.0 0.0
+scene.textures.fktex.type = fresnelapproxk
+scene.textures.fktex.texture = 0.5 0.0 0.0
 #scene.textures.fcol.type = fresnelcolor
 #scene.textures.fcol.kr = 0.5 0.0 0.0
 ################################################################################
