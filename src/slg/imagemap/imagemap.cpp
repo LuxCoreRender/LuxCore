@@ -337,6 +337,9 @@ ImageMap::ImageMap(const string &fileName, const float g,
 			if ((channelCount != 1) && (channelCount != 1) &&
 					(channelCount != 3) && (channelCount != 4))
 				throw runtime_error("Unsupported number of channels in an ImageMap: " + ToString(channelCount));
+			if ((spec.format != TypeDesc::UCHAR) && (spec.format != TypeDesc::HALF) &&
+					(spec.format != TypeDesc::FLOAT))
+				throw runtime_error("Unsupported file channel size in an ImageMap: " + ToString(channelCount));
 
 			ImageMapStorage::StorageType selectedStorageType = storageType;
 			if (selectedStorageType == ImageMapStorage::AUTO) {
