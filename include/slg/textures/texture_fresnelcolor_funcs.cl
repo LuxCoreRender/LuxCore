@@ -18,33 +18,63 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// BlackBody texture
-//------------------------------------------------------------------------------
+float FresnelApproxN(const float Fr) {
+	const float sqrtReflectance = sqrt(clamp(Fr, 0.f, .999f));
 
-#if defined(PARAM_ENABLE_TEX_BLACKBODY)
-
-float BlackBodyTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float3 rgb) {
-	return Spectrum_Y(rgb);
+	return (1.f + sqrtReflectance) /
+		(1.f - sqrtReflectance);
 }
 
-float3 BlackBodyTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float3 rgb) {
-	return rgb;
+float3 FresnelApproxN3(const float3 Fr) {
+	const float3 sqrtReflectance = Spectrum_Sqrt(clamp(Fr, 0.f, .999f));
+
+	return (WHITE + sqrtReflectance) /
+		(WHITE - sqrtReflectance);
+}
+
+float FresnelApproxK(const float Fr) {
+	const float reflectance = clamp(Fr, 0.f, .999f);
+
+	return 2.f * sqrt(reflectance /
+		(1.f - reflectance));
+}
+
+float3 FresnelApproxK3(const float3 Fr) {
+	const float3 reflectance = clamp(Fr, 0.f, .999f);
+
+	return 2.f * Spectrum_Sqrt(reflectance /
+		(WHITE - reflectance));
+}
+
+//------------------------------------------------------------------------------
+// FresnelColor texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
+
+float FresnelColorTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float3 kr) {
+	return Spectrum_Y(kr);
+}
+
+float3 FresnelColorTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 kr) {
+	return kr;
 }
 
 #if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlackBodyTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
+void FresnelColorTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlackBodyTexture_ConstEvaluateFloat(hitPoint,
-			VLOAD3F(texture->blackBody.rgb.c));
+	const float value = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = FresnelColorTexture_ConstEvaluateFloat(hitPoint, value);
 }
 
-void BlackBodyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
+void FresnelColorTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlackBodyTexture_ConstEvaluateSpectrum(hitPoint,
-			VLOAD3F(texture->blackBody.rgb.c));
+	const float3 value = texValues[--(*texValuesSize)];
+
+	texValues[(*texValuesSize)++] = FresnelColorTexture_ConstEvaluateSpectrum(hitPoint, value);
 }
 #endif
 

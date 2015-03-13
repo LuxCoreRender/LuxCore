@@ -41,6 +41,7 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/blackbody.h"
+#include "slg/textures/fresnelcolor.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/blender_texture.h"
@@ -496,8 +497,18 @@ void CompiledScene::CompileMaterials() {
 				const Metal2Material *m2m = static_cast<Metal2Material *>(m);
 
 				mat->type = slg::ocl::METAL2;
-				mat->metal2.nTexIndex = scene->texDefs.GetTextureIndex(m2m->GetN());
-				mat->metal2.kTexIndex = scene->texDefs.GetTextureIndex(m2m->GetK());
+				if (m2m->GetFresnel())
+					mat->metal2.fresnelTexIndex = scene->texDefs.GetTextureIndex(m2m->GetFresnel());
+				else
+					mat->metal2.fresnelTexIndex = NULL_INDEX;
+				if (m2m->GetN())
+					mat->metal2.nTexIndex = scene->texDefs.GetTextureIndex(m2m->GetN());
+				else
+					mat->metal2.nTexIndex = NULL_INDEX;
+				if (m2m->GetK())
+					mat->metal2.kTexIndex = scene->texDefs.GetTextureIndex(m2m->GetK());
+				else
+					mat->metal2.kTexIndex = NULL_INDEX;
 
 				const Texture *nuTex = m2m->GetNu();
 				const Texture *nvTex = m2m->GetNv();
@@ -1918,14 +1929,22 @@ void CompiledScene::CompileTextures() {
 				BlackBodyTexture *bbt = static_cast<BlackBodyTexture *>(t);
 
 				tex->type = slg::ocl::BLACKBODY_TEX;
-				ASSIGN_SPECTRUM(tex->blackbody.rgb, bbt->GetRGB());
+				ASSIGN_SPECTRUM(tex->blackBody.rgb, bbt->GetRGB());
 				break;
 			}
 			case IRREGULARDATA_TEX: {
 				IrregularDataTexture *idt = static_cast<IrregularDataTexture *>(t);
 
 				tex->type = slg::ocl::IRREGULARDATA_TEX;
-				ASSIGN_SPECTRUM(tex->irregulardata.rgb, idt->GetRGB());
+				ASSIGN_SPECTRUM(tex->irregularData.rgb, idt->GetRGB());
+				break;
+			}
+			case FRESNELCOLOR_TEX: {
+				FresnelColorTexture *fct = static_cast<FresnelColorTexture *>(t);
+
+				tex->type = slg::ocl::FRESNELCOLOR_TEX;
+				const Texture *krTex = fct->GetKr();
+				tex->fresnelColor.krIndex = scene->texDefs.GetTextureIndex(krTex);
 				break;
 			}
 			default:
@@ -2264,10 +2283,16 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "NormalMap", i, "");
 				break;
 			case slg::ocl::BLACKBODY_TEX:
-				AddTextureSource(source, "BlackBody", i, ToOCLString(tex->blackbody.rgb));
+				AddTextureSource(source, "BlackBody", i, ToOCLString(tex->blackBody.rgb));
 				break;
 			case slg::ocl::IRREGULARDATA_TEX:
-				AddTextureSource(source, "IrregularData", i, ToOCLString(tex->irregulardata.rgb));
+				AddTextureSource(source, "IrregularData", i, ToOCLString(tex->irregularData.rgb));
+				break;
+			case slg::ocl::FRESNELCOLOR_TEX:
+				AddTextureSource(source, "FresnelColor", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->fresnelColor.krIndex));
+				AddTextureSource(source, "FresnelColor", "float3", "Spectrum", i,
+						AddTextureSourceCall("Spectrum", tex->fresnelColor.krIndex));
 				break;
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::GetTexturesEvaluationSourceCode(): " + boost::lexical_cast<string>(tex->type));
@@ -2551,13 +2576,31 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				break;
 			}
 			case slg::ocl::METAL2: {
+				string nTexString, kTexString;
+				if (mat->metal2.fresnelTexIndex != NULL_INDEX) {
+					// Get the fresnel texture used
+					const slg::ocl::Texture &fresnelTex = texs[mat->metal2.fresnelTexIndex];
+
+					switch (fresnelTex.type) {
+						case slg::ocl::FRESNELCOLOR_TEX:
+							nTexString = "FresnelApproxN3(" + AddTextureSourceCall("Spectrum", fresnelTex.fresnelColor.krIndex) + ")";
+							kTexString = "FresnelApproxK3(" + AddTextureSourceCall("Spectrum", fresnelTex.fresnelColor.krIndex) + ")";
+							break;
+						default:
+							throw runtime_error("Unknown fresnel texture type in CompiledScene::GetMaterialsEvaluationSourceCode(): " + boost::lexical_cast<string>(fresnelTex.type));
+							break;
+					}
+				} else {
+					nTexString = AddTextureSourceCall("Spectrum", mat->metal2.nTexIndex);
+					kTexString = AddTextureSourceCall("Spectrum", mat->metal2.kTexIndex);
+				}
 				AddMaterialSource(source, "Metal2", i,
 						AddTextureSourceCall("Float", mat->metal2.nuTexIndex) + ", " +
 						"\n#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)\n" +
 						AddTextureSourceCall("Float", mat->metal2.nvTexIndex) + ", " +
 						"\n#endif\n" +
-						AddTextureSourceCall("Spectrum", mat->metal2.nTexIndex) + ", " +
-						AddTextureSourceCall("Spectrum", mat->metal2.kTexIndex));
+						nTexString + ", " +
+						kTexString);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplBump(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);

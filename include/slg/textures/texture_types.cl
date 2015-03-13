@@ -27,7 +27,9 @@ typedef enum {
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
 	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX
+	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX,
+	// Fresnel textures
+	FRESNELCOLOR_TEX
 } TextureType;
 
 typedef struct {
@@ -280,6 +282,10 @@ typedef struct {
 } IrregularDataParam;
 
 typedef struct {
+	unsigned int krIndex;
+} FresnelColorParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		BlenderBlendTexParam blenderBlend;
@@ -313,8 +319,9 @@ typedef struct {
 		BandTexParam band;
 		HitPointGreyTexParam hitPointGrey;
         NormalMapTexParam normalMap;
-		BlackBodyParam blackbody;
-		IrregularDataParam irregulardata;
+		BlackBodyParam blackBody;
+		IrregularDataParam irregularData;
+		FresnelColorParam fresnelColor;
 	};
 } Texture;
 

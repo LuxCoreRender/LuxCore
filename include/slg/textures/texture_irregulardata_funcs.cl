@@ -38,13 +38,13 @@ float3 IrregularDataTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 void IrregularDataTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	texValues[(*texValuesSize)++] = IrregularDataTexture_ConstEvaluateFloat(hitPoint,
-			VLOAD3F(texture->irregulardata.rgb.c));
+			VLOAD3F(texture->irregularData.rgb.c));
 }
 
 void IrregularDataTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
 		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	texValues[(*texValuesSize)++] = IrregularDataTexture_ConstEvaluateSpectrum(hitPoint,
-			VLOAD3F(texture->irregulardata.rgb.c));
+			VLOAD3F(texture->irregularData.rgb.c));
 }
 #endif
 

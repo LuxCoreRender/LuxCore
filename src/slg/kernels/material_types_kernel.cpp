@@ -88,6 +88,7 @@ std::string KernelSource_material_types =
 "} Glossy2Param;\n"
 "\n"
 "typedef struct {\n"
+"    unsigned int fresnelTexIndex;\n"
 "    unsigned int nTexIndex;\n"
 "	unsigned int kTexIndex;\n"
 "	unsigned int nuTexIndex;\n"

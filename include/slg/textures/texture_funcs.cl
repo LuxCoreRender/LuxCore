@@ -163,7 +163,6 @@ float3 ScaleTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 }
 
 #if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-
 void ScaleTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
 		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
 	const float tex1 = texValues[--(*texValuesSize)];
@@ -179,7 +178,6 @@ void ScaleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 	
 	texValues[(*texValuesSize)++] = ScaleTexture_ConstEvaluateSpectrum(hitPoint, tex1, tex2);
 }
-
 #endif
 
 #endif
@@ -189,20 +187,6 @@ void ScaleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint 
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
-
-float FresnelApproxN(const float Fr) {
-	const float sqrtReflectance = sqrt(clamp(Fr, 0.f, .999f));
-
-	return (1.f + sqrtReflectance) /
-		(1.f - sqrtReflectance);
-}
-
-float3 FresnelApproxN3(const float3 Fr) {
-	const float3 sqrtReflectance = Spectrum_Sqrt(clamp(Fr, 0.f, .999f));
-
-	return (WHITE + sqrtReflectance) /
-		(WHITE - sqrtReflectance);
-}
 
 float FresnelApproxNTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float value) {
@@ -233,20 +217,6 @@ void FresnelApproxNTexture_EvaluateSpectrum(__global Texture *texture, __global 
 #endif
 
 #if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
-
-float FresnelApproxK(const float Fr) {
-	const float reflectance = clamp(Fr, 0.f, .999f);
-
-	return 2.f * sqrt(reflectance /
-		(1.f - reflectance));
-}
-
-float3 FresnelApproxK3(const float3 Fr) {
-	const float3 reflectance = clamp(Fr, 0.f, .999f);
-
-	return 2.f * Spectrum_Sqrt(reflectance /
-		(WHITE - reflectance));
-}
 
 float FresnelApproxKTexture_ConstEvaluateFloat( __global HitPoint *hitPoint,
 		const float value) {
@@ -1471,6 +1441,11 @@ void Texture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoin
 			IrregularDataTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
+#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
+		case IRREGULARDATA_TEX:
+			FresnelColorTexture_EvaluateFloat(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
 		default:
 			// Do nothing
 			break;
@@ -1702,6 +1677,11 @@ void Texture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitP
 #if defined(PARAM_ENABLE_TEX_IRREGULARDATA)
 		case IRREGULARDATA_TEX:
 			IrregularDataTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
+			break;
+#endif
+#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
+		case IRREGULARDATA_TEX:
+			FresnelColorTexture_EvaluateSpectrum(texture, hitPoint, texValues, texValuesSize);
 			break;
 #endif
 		default:
