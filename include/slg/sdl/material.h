@@ -49,7 +49,7 @@ class Scene;
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
-	ROUGHMATTETRANSLUCENT, GLOSSYTRANSLUCENT,
+	ROUGHMATTETRANSLUCENT, GLOSSYTRANSLUCENT, GLOSSYCOATING,
 
 	// Volumes
 	HOMOGENEOUS_VOL, CLEAR_VOL, HETEROGENEOUS_VOL,
@@ -1050,6 +1050,91 @@ private:
 	const Texture *index_bf;
 	const bool multibounce;
 	const bool multibounce_bf;
+};
+
+//------------------------------------------------------------------------------
+// GlossyCoating material
+//------------------------------------------------------------------------------
+
+class GlossyCoatingMaterial : public Material {
+public:
+	GlossyCoatingMaterial(const Texture *emitted, const Texture *bump,
+			Material *mB, const Texture *ks, const Texture *u, const Texture *v,
+			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
+			Material(emitted, bump), matBase(mB), Ks(ks), nu(u), nv(v),
+			Ka(ka), depth(d), index(i), multibounce(mbounce) { }
+
+	virtual MaterialType GetType() const { return GLOSSYCOATING; }
+	virtual BSDFEvent GetEventTypes() const { return (GLOSSY | REFLECT | matBase->GetEventTypes()); };
+
+	virtual bool IsLightSource() const {
+		return (Material::IsLightSource() || matBase->IsLightSource());
+	}
+	virtual bool HasBumpTex() const { 
+		return (Material::HasBumpTex() || matBase->HasBumpTex());
+	}
+
+	virtual bool IsDelta() const {
+		return (false);
+	}
+	virtual bool IsPassThrough() const {
+		return (matBase->IsPassThrough());
+	}
+	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
+
+	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,
+		const float passThroughEvent) const;
+	virtual const Volume *GetExteriorVolume(const HitPoint &hitPoint,
+		const float passThroughEvent) const;
+
+	virtual float GetEmittedRadianceY() const;
+	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
+		const float oneOverPrimitiveArea) const;
+
+    virtual void Bump(HitPoint *hitPoint,
+        const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
+        const luxrays::Normal &dndu, const luxrays::Normal &dndv,
+        const float weight) const;
+
+	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
+		float *directPdfW = NULL, float *reversePdfW = NULL) const;
+	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
+		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
+		const float u0, const float u1, const float passThroughEvent,
+		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
+		const BSDFEvent requestedEvent) const;
+	void Pdf(const HitPoint &hitPoint,
+		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const;
+
+	virtual void UpdateMaterialReferences(Material *oldMat, Material *newMat);
+	virtual bool IsReferencing(const Material *mat) const;
+	virtual void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const;
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
+
+	virtual luxrays::Properties ToProperties() const;
+
+	const Material *GetMaterialBase() const { return matBase; }
+	const Texture *GetKs() const { return Ks; }
+	const Texture *GetNu() const { return nu; }
+	const Texture *GetNv() const { return nv; }
+	const Texture *GetKa() const { return Ka; }
+	const Texture *GetDepth() const { return depth; }
+	const Texture *GetIndex() const { return index; }
+	const bool IsMultibounce() const { return multibounce; }
+
+private:
+	Material *matBase;
+	const Texture *Ks;
+	const Texture *nu;
+	const Texture *nv;
+	const Texture *Ka;
+	const Texture *depth;
+	const Texture *index;
+	const bool multibounce;
 };
 
 //------------------------------------------------------------------------------

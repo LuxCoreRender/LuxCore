@@ -252,16 +252,39 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				Property(prefix + ".material1")(GetLuxCoreValidName(matProps.Get(Property("namedmaterial1")("")).Get<string>())) <<
 				Property(prefix + ".material2")(GetLuxCoreValidName(matProps.Get(Property("namedmaterial2")("")).Get<string>()));
 	} else if (type == "glossy") {
-		*sceneProps <<
-				Property(prefix + ".type")("glossy2") <<
-				GetTexture(prefix + ".kd", Property("Kd")(.5f), matProps) <<
-				GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
-				GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
-				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
-				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
-				GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
-				GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
-				Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
+		if (matProps.Get(Property("separable")(true)).Get<bool>()) {
+			if (matProps.IsDefined("sigma")) {
+				*sceneProps <<
+					Property(prefix + "~~base.type")("roughmatte") <<
+					GetTexture(prefix + "~~base.kd", Property("Kd")(Spectrum(.9f)), matProps) <<
+					GetTexture(prefix + "~~base.sigma", Property("sigma")(0.f), matProps);
+			} else {
+				*sceneProps <<
+					Property(prefix + "~~base.type")("matte") <<
+					GetTexture(prefix + "~~base.kd", Property("Kd")(Spectrum(.9f)), matProps);
+			}
+			*sceneProps <<
+					Property(prefix + ".type")("glossycoating") <<
+					Property(prefix + ".base")(name + "~~base") <<
+					GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
+					GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
+					GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+					GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
+					GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
+					GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
+					Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
+		} else {
+			*sceneProps <<
+					Property(prefix + ".type")("glossy2") <<
+					GetTexture(prefix + ".kd", Property("Kd")(.5f), matProps) <<
+					GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
+					GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
+					GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+					GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
+					GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
+					GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
+					Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
+		}
 	} else if (type == "metal2") {
 		const string fresnelTexName = GetLuxCoreValidName(matProps.Get(Property("fresnel")("")).Get<string>());
 		if (fresnelTexName == "") {
@@ -335,7 +358,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 			*sceneProps << GetTexture(prefix + ".m3", Property("M3")(0.f), matProps);
 	} else if (type == "glossytranslucent") {
 		*sceneProps <<
-				Property(prefix + ".type")("glossy2") <<
+				Property(prefix + ".type")("glossytranslucent") <<
 				GetTexture(prefix + ".kd", Property("Kd")(.5f), matProps) <<
 				GetTexture(prefix + ".kt", Property("Kt")(.5f), matProps) <<
 				GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
@@ -364,9 +387,21 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				GetTexture(prefix + ".index_bf", Property("backface_index")(0.f), matProps) <<
 				Property(prefix +".multibounce_bf")(matProps.Get(Property("backface_multibounce")(false)).Get<bool>());
 		}
+	} else if (type == "glossycoating") {
+		*sceneProps <<
+				Property(prefix + ".type")("glossycoating") <<
+				Property(prefix + ".base")(GetLuxCoreValidName(matProps.Get(Property("basematerial")("")).Get<string>())) <<
+				GetTexture(prefix + ".ks", Property("Ks")(.5f), matProps) <<
+				GetTexture(prefix + ".ka", Property("Ka")(0.f), matProps) <<
+				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps) <<
+				GetTexture(prefix + ".d", Property("d")(0.f), matProps) <<
+				GetTexture(prefix + ".index", Property("index")(0.f), matProps) <<
+				Property(prefix +".multibounce")(matProps.Get(Property("multibounce")(false)).Get<bool>());
 	} else {
 		LC_LOG("LuxCore::ParserLXS supports only Matte, Mirror, Glass, Metal, MatteTranslucent, Null, "
-				"Mix, Glossy2, Metal2, RoughGlass, Velvet, Cloth, Carpaint and GlossyTranslucent material (i.e. not " <<
+				"Mix, Glossy2, Metal2, RoughGlass, Velvet, Cloth, Carpaint, GlossyTranslucent "
+				"and GlossyCoating materials (i.e. not " <<
 				type << "). Replacing an unsupported material with matte.");
 
 		*sceneProps <<
