@@ -1462,6 +1462,17 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 		mat = new GlossyTranslucentMaterial(emissionTex, bumpTex, kd, kt, ks, ks_bf, nu, nu_bf, nv, nv_bf,
 			ka, ka_bf, d, d_bf, index, index_bf, multibounce, multibounce_bf);
+	} else if (matType == "glossycoating") {
+		Material *matBase = matDefs.GetMaterial(props.Get(Property(propName + ".base")("")).Get<string>());
+		const Texture *ks = GetTexture(props.Get(Property(propName + ".ks")(.5f, .5f, .5f)));
+		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
+		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
+		const Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
+		const Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
+		const Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f, 0.f, 0.f)));
+		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
+
+		mat = new GlossyCoatingMaterial(emissionTex, bumpTex, matBase, ks, nu, nv, ka, d, index, multibounce);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
