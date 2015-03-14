@@ -334,7 +334,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 			u_int height = spec.height;
 			u_int channelCount = spec.nchannels;
 
-			if ((channelCount != 1) && (channelCount != 1) &&
+			if ((channelCount != 1) && (channelCount != 2) &&
 					(channelCount != 3) && (channelCount != 4))
 				throw runtime_error("Unsupported number of channels in an ImageMap: " + ToString(channelCount));
 			if ((spec.format != TypeDesc::UCHAR) && (spec.format != TypeDesc::HALF) &&
