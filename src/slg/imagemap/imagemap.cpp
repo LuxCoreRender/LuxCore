@@ -619,20 +619,3 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 	} else
 		throw runtime_error("Unsupported number of channels in ImageMap::Merge(): " + ToString(channels));
 }
-
-#if defined(__APPLE__)
-/**
- * Instantiate classes for the supported template type parameters
- * this is needed for dynamic linked libluxcore (further liblux linking)
- * Another solution can be moving the function definitions to header file
- * http://stackoverflow.com/questions/1022623/c-shared-library-with-templates-undefined-symbols-error
- */
-template class ImageMapStorageImpl<float, 1u>;
-template class ImageMapStorageImpl<float, 2u>;
-template class ImageMapStorageImpl<float, 3u>;
-template class ImageMapStorageImpl<float, 4u>;
-template class ImageMapStorageImpl<unsigned char, 1u>;
-template class ImageMapStorageImpl<unsigned char, 2u>;
-template class ImageMapStorageImpl<unsigned char, 3u>;
-template class ImageMapStorageImpl<unsigned char, 4u>;
-#endif

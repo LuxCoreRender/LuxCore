@@ -122,26 +122,7 @@ set(LUXCORE_LIB_SRCS
 	${LUXCORE_SRCS}
 )
 
-if(APPLE)
-	# rpath policy
-	IF(NOT (${CMAKE_VERSION} VERSION_LESS 3.0))
-		cmake_policy(SET CMP0042 OLD)
-	ENDIF()
-	add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-	add_dependencies(luxcore luxrays smallluxgpu) # build these first
-	target_link_libraries(luxcore luxrays smallluxgpu ${EMBREE_LIBRARY} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
-
-	if(${CMAKE_GENERATOR} MATCHES "Xcode")
-		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_LD_DYLIB_INSTALL_NAME @loader_path/libluxcore.dylib)
-		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_DYLIB_COMPATIBILITY_VERSION 2.0.0)
-		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_DYLIB_CURRENT_VERSION 2.0.0)
-		SET_TARGET_PROPERTIES(luxcore PROPERTIES XCODE_ATTRIBUTE_STRIP_STYLE non-global) # wip testing !
-	else()
-		SET_TARGET_PROPERTIES(luxcore PROPERTIES LINK_FLAGS "-compatibility_version 2.0.0 -current_version 2.0.0")
-	endif()
-else(APPLE)
-	add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-endif(APPLE)
+add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
@@ -160,8 +141,7 @@ set(PYLUXCORE_SRCS
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS})
 add_definitions(${VISIBILITY_FLAGS})
 if(APPLE)
-	add_dependencies(pyluxcore luxcore)
-	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore)
+	target_link_libraries(pyluxcore -Wl,-undefined -Wl,dynamic_lookup luxcore smallluxgpu luxrays ${EMBREE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
     SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
 else()
 	target_link_libraries(pyluxcore luxcore smallluxgpu luxrays ${OPENEXR_LIBRARIES} ${EMBREE_LIBRARY} ${PYTHON_LIBRARIES} ${Boost_LIBRARIES})
