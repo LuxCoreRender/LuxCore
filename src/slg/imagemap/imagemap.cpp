@@ -325,8 +325,9 @@ ImageMap::ImageMap(const string &fileName, const float g,
 	if (!boost::filesystem::exists(fileName))
 		throw runtime_error("ImageMap file doesn't exist: " + fileName);
 	else {
-		auto_ptr<ImageInput> in(ImageInput::open(fileName));
-
+		ImageSpec config;
+		config.attribute ("oiio:UnassociatedAlpha", 1);
+		auto_ptr<ImageInput> in(ImageInput::open(fileName, &config));
 		if (in.get()) {
 			const ImageSpec &spec = in->spec();
 
