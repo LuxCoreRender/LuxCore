@@ -971,13 +971,10 @@ void MixMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 }
 
 bool MixMaterial::IsReferencing(const Material *mat) const {
-	if (mat == this)
+	if (matA->IsReferencing(this))
 		return true;
-
-	if (matA->IsReferencing(mat))
-		return true;
-
-	return matB->IsReferencing(mat);
+	
+	return matB->IsReferencing(this);
 }
 
 void MixMaterial::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
