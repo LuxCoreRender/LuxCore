@@ -41,9 +41,11 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/blackbody.h"
+#include "slg/textures/fresnelapprox.h"
 #include "slg/textures/fresnelcolor.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
+#include "slg/textures/scale.h"
 #include "slg/textures/blender_texture.h"
 
 using namespace std;
