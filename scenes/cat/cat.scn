@@ -2,8 +2,7 @@ scene.camera.lookat = 2.296051 -4.236989 2.681252 -2.15708 4.261834 -0.136483
 scene.camera.fieldofview = 45
 ################################################################################
 scene.textures.cat_png.type = imagemap
-#scene.textures.cat_png.file = scenes/cat/EgyptCat.png
-scene.textures.cat_png.file = aa.png
+scene.textures.cat_png.file = scenes/cat/EgyptCat.png
 scene.textures.cat_png.gain = 1.0
 scene.textures.cat_png.storage = byte
 #scene.textures.cat_png.channel = mean
