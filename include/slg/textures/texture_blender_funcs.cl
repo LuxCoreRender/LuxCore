@@ -89,22 +89,6 @@ float3 BlenderBlendTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 	return BlenderBlendTexture_Evaluate(hitPoint, type, direction, contrast, bright, mapping);
 }
 
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderBlendTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderBlendTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderBlend.type, texture->blenderBlend.direction,
-			texture->blenderBlend.contrast, texture->blenderBlend.bright, &texture->blenderBlend.mapping);
-}
-
-void BlenderCloudsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderCloudsTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderBlend.type, texture->blenderBlend.direction,
-			texture->blenderBlend.contrast, texture->blenderBlend.bright, &texture->blenderBlend.mapping);
-}
-#endif
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -139,24 +123,6 @@ float3 BlenderCloudsTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 	return BlenderCloudsTexture_Evaluate(hitPoint, noisebasis, noisesize, noisedepth,
 			contrast, bright, hard, mapping);
 }
-
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderCloudsTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderCloudsTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderClouds.noisebasis, texture->blenderClouds.noisesize, texture->blenderClouds.noisedepth,
-			texture->blenderClouds.contrast, texture->blenderClouds.bright, texture->blenderClouds.hard,
-			&texture->blenderClouds.mapping);
-}
-
-void BlenderCloudsTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderCloudsTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderClouds.noisebasis, texture->blenderClouds.noisesize, texture->blenderClouds.noisedepth,
-			texture->blenderClouds.contrast, texture->blenderClouds.bright, texture->blenderClouds.hard,
-			&texture->blenderClouds.mapping);
-}
-#endif
 
 #endif
 
@@ -198,24 +164,6 @@ float3 BlenderDistortedNoiseTexture_ConstEvaluateSpectrum(__global HitPoint *hit
 	return BlenderDistortedNoiseTexture_Evaluate(hitPoint, noisedistortion, noisebasis, distortion, noisesize,
 			contrast, bright, mapping);
 }
-
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderDistortedNoiseTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderDistortedNoiseTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderDistortedNoise.noisedistortion, texture->blenderDistortedNoise.noisebasis, texture->blenderDistortedNoise.distortion,
-			texture->blenderDistortedNoise.noisesize, texture->blenderDistortedNoise.contrast, texture->blenderDistortedNoise.bright,
-			&texture->blenderDistortedNoise.mapping);
-}
-
-void BlenderDistortedNoiseTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderDistortedNoiseTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderDistortedNoise.noisedistortion, texture->blenderDistortedNoise.noisebasis, texture->blenderDistortedNoise.distortion,
-			texture->blenderDistortedNoise.noisesize, texture->blenderDistortedNoise.contrast, texture->blenderDistortedNoise.bright,
-			&texture->blenderDistortedNoise.mapping);
-}
-#endif
 
 #endif
 
@@ -324,22 +272,6 @@ float3 BlenderMagicTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, co
 	return BlenderMagicTexture_Evaluate(hitPoint, noisedepth, turbulence, contrast, bright, mapping);
 }
 
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderMagicTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderMagicTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderMagic.noisedepth, texture->blenderMagic.turbulence, texture->blenderMagic.contrast, 
-			texture->blenderMagic.bright, &texture->blenderMagic.mapping);
-}
-
-void BlenderMagicTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderMagicTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderMagic.noisedepth, texture->blenderMagic.turbulence, texture->blenderMagic.contrast, 
-			texture->blenderMagic.bright, &texture->blenderMagic.mapping);
-}
-#endif
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -394,24 +326,6 @@ float3 BlenderMarbleTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, c
 		const bool hard, __global TextureMapping3D *mapping) {
 	return BlenderMarbleTexture_Evaluate(hitPoint, type, noisebasis, noisebasis2, noisesize, turbulence, noisedepth, contrast, bright, hard, mapping);
 }
-
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderMarbleTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderMarbleTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderMarble.type, texture->blenderMarble.noisebasis, texture->blenderMarble.noisebasis2, texture->blenderMarble.noisesize, 
-			texture->blenderMarble.turbulence, texture->blenderMarble.noisedepth, texture->blenderMarble.contrast,
-			texture->blenderMarble.bright, texture->blenderMarble.hard, &texture->blenderMarble.mapping);
-}
-
-void BlenderMarbleTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderMarbleTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderMarble.type, texture->blenderMarble.noisebasis, texture->blenderMarble.noisebasis2, texture->blenderMarble.noisesize, 
-			texture->blenderMarble.turbulence, texture->blenderMarble.noisedepth, texture->blenderMarble.contrast,
-			texture->blenderMarble.bright, texture->blenderMarble.hard, &texture->blenderMarble.mapping);
-}
-#endif
 
 #endif
 
@@ -474,28 +388,6 @@ float3 BlenderMusgraveTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 			offset, gain, octaves, noisesize, contrast, bright, mapping);
 }
 
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderMusgraveTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderMusgraveTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderMusgrave.type, texture->blenderMusgrave.noisebasis, texture->blenderMusgrave.dimension,
-			texture->blenderMusgrave.intensity, texture->blenderMusgrave.lacunarity, texture->blenderMusgrave.offset,
-			texture->blenderMusgrave.gain, texture->blenderMusgrave.octaves, texture->blenderMusgrave.noisesize,
-			texture->blenderMusgrave.contrast, texture->blenderMusgrave.bright,
-			&texture->blenderMusgrave.mapping);
-}
-
-void BlenderMusgraveTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderMusgraveTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderMusgrave.type, texture->blenderMusgrave.noisebasis, texture->blenderMusgrave.dimension,
-			texture->blenderMusgrave.intensity, texture->blenderMusgrave.lacunarity, texture->blenderMusgrave.offset,
-			texture->blenderMusgrave.gain, texture->blenderMusgrave.octaves, texture->blenderMusgrave.noisesize,
-			texture->blenderMusgrave.contrast, texture->blenderMusgrave.bright,
-			&texture->blenderMusgrave.mapping);
-}
-#endif
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -549,26 +441,6 @@ float3 BlenderStucciTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, c
 	return BlenderStucciTexture_Evaluate(hitPoint, type, noisebasis, noisesize, turbulence,
 			contrast, bright, hard, mapping);
 }
-
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderStucciTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderStucciTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderStucci.type, texture->blenderStucci.noisebasis, texture->blenderStucci.noisesize,
-			texture->blenderStucci.turbulence, texture->blenderStucci.contrast, 
-			texture->blenderStucci.bright, texture->blenderStucci.hard,
-			&texture->blenderStucci.mapping);
-}
-
-void BlenderStucciTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderStucciTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderStucci.type, texture->blenderStucci.noisesize,
-			texture->blenderStucci.turbulence, texture->blenderStucci.contrast, 
-			texture->blenderStucci.bright, texture->blenderStucci.hard,
-			&texture->blenderStucci.mapping);
-}
-#endif
 
 #endif
 
@@ -659,26 +531,6 @@ float3 BlenderWoodTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		noisesize, turbulence, contrast, bright, hard, mapping);
 }
 
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderWoodTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderWoodTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderWood.type, texture->blenderWood.noisebasis2,
-			texture->blenderWood.noisebasis, texture->blenderWood.noisesize, texture->blenderWood.turbulence, 
-			texture->blenderWood.contrast, texture->blenderWood.bright,
-			texture->blenderWood.hard, &texture->blenderWood.mapping);
-}
-
-void BlenderWoodTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-	float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-    texValues[(*texValuesSize)++] = BlenderWoodTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderWood.type, texture->blenderWood.noisebasis2,
-			texture->blenderWood.noisebasis, texture->blenderWood.noisesize, texture->blenderWood.turbulence, 
-			texture->blenderWood.contrast, texture->blenderWood.bright,
-			texture->blenderWood.hard, &texture->blenderWood.mapping);
-}
-#endif
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -731,21 +583,5 @@ float3 BlenderVoronoiTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint, 
 	return BlenderVoronoiTexture_Evaluate(hitPoint, distancemetric, feature_weight1, feature_weight2, feature_weight3, feature_weight4,
 		noisesize, intensity, exponent, contrast, bright, mapping);
 }
- 
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlenderVoronoiTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlenderVoronoiTexture_ConstEvaluateFloat(hitPoint,
-			texture->blenderVoronoi.distancemetric, texture->blenderWood.noisesize, texture->blenderVoronoi.intensity, texture->blenderVoronoi.exponent,
-			texture->blenderVoronoi.contrast, texture->blenderWood.bright, &texture->blenderWood.mapping);
-}
- 
-void BlenderVoronoiTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-	float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-    texValues[(*texValuesSize)++] = BlenderVoronoiTexture_ConstEvaluateSpectrum(hitPoint,
-			texture->blenderVoronoi.distancemetric, texture->blenderWood.noisesize, texture->blenderVoronoi.intensity, texture->blenderVoronoi.exponent,
-			texture->blenderVoronoi.contrast, texture->blenderWood.bright, &texture->blenderWood.mapping);
-}
-#endif
  
 #endif

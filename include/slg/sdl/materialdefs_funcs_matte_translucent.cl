@@ -141,43 +141,4 @@ float3 MatteTranslucentMaterial_ConstSample(
 	}
 }
 
-#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
-float3 MatteTranslucentMaterial_Evaluate(__global Material *material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
-	const float3 krVal = Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float3 ktVal = Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint
-			TEXTURES_PARAM);
-
-	return MatteTranslucentMaterial_ConstEvaluate(hitPoint, lightDir, eyeDir,
-			event, directPdfW,
-			krVal, ktVal);
-}
-
-float3 MatteTranslucentMaterial_Sample(__global Material *material,
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThroughEvent,
-#endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
-	const float3 krVal = Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float3 ktVal = Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint
-			TEXTURES_PARAM);
-	
-	return MatteTranslucentMaterial_ConstSample(hitPoint, fixedDir, sampledDir,
-			u0, u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-			passThroughEvent,
-#endif
-			pdfW, cosSampledDir, event, requestedEvent,
-			krVal, ktVal);
-}
-#endif
-
 #endif

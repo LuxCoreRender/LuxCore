@@ -163,49 +163,4 @@ float3 HeterogeneousVolMaterial_ConstSample(
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
 
-#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
-float3 HeterogeneousVolMaterial_Evaluate(__global Material *material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
-	const float3 sigmaSTexVal = Texture_GetSpectrumValue(material->volume.heterogenous.sigmaSTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float3 sigmaATexVal = Texture_GetSpectrumValue(material->volume.heterogenous.sigmaATexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float3 gTexVal = Texture_GetSpectrumValue(material->volume.heterogenous.gTexIndex, hitPoint
-			TEXTURES_PARAM);
-	
-	return HeterogeneousVolMaterial_ConstEvaluate(hitPoint, lightDir, eyeDir,
-			event, directPdfW,
-			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
-}
-
-float3 HeterogeneousVolMaterial_Sample(__global Material *material,
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThroughEvent,
-#endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
-	const float3 sigmaSTexVal = Texture_GetSpectrumValue(material->volume.heterogenous.sigmaSTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float3 sigmaATexVal = Texture_GetSpectrumValue(material->volume.heterogenous.sigmaATexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float3 gTexVal = Texture_GetSpectrumValue(material->volume.heterogenous.gTexIndex, hitPoint
-			TEXTURES_PARAM);
-
-	return SchlickScatter_ConstSample(
-			hitPoint, fixedDir, sampledDir,
-			u0, u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-			passThroughEvent,
-#endif
-			pdfW, cosSampledDir, event,
-			requestedEvent,
-			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
-}
-#endif
-
 #endif

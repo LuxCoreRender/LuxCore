@@ -1143,11 +1143,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 	ss << " -D PARAM_DEVICE_INDEX=" << threadIndex;
 	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
 
-	if (!renderEngine->useDynamicCodeGenerationForTextures)
-		ss << " -D PARAM_DISABLE_TEX_DYNAMIC_EVALUATION";
-	if (!renderEngine->useDynamicCodeGenerationForMaterials)
-		ss << " -D PARAM_DISABLE_MAT_DYNAMIC_EVALUATION";
-
 	ss << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
@@ -1168,178 +1163,167 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	const double tStart = WallClockTime();
 
-	// Check if I have to recompile the kernels
-	string newKernelParameters = ss.str();
-	if ((kernelsParameters != newKernelParameters) ||
-			renderEngine->useDynamicCodeGenerationForTextures ||
-			renderEngine->useDynamicCodeGenerationForMaterials) {
-		kernelsParameters = newKernelParameters;
+	kernelsParameters = ss.str();
 
-		// Compile sources
-		stringstream ssKernel;
-		ssKernel <<
-			AdditionalKernelDefinitions() <<
-			// OpenCL LuxRays Types
-			luxrays::ocl::KernelSource_luxrays_types <<
-			luxrays::ocl::KernelSource_uv_types <<
-			luxrays::ocl::KernelSource_point_types <<
-			luxrays::ocl::KernelSource_vector_types <<
-			luxrays::ocl::KernelSource_normal_types <<
-			luxrays::ocl::KernelSource_triangle_types <<
-			luxrays::ocl::KernelSource_ray_types <<
-			luxrays::ocl::KernelSource_bbox_types <<
-			luxrays::ocl::KernelSource_epsilon_types <<
-			luxrays::ocl::KernelSource_color_types <<
-			luxrays::ocl::KernelSource_frame_types <<
-			luxrays::ocl::KernelSource_matrix4x4_types <<
-			luxrays::ocl::KernelSource_quaternion_types <<
-			luxrays::ocl::KernelSource_transform_types <<
-			luxrays::ocl::KernelSource_motionsystem_types <<
-			// OpenCL LuxRays Funcs
-			luxrays::ocl::KernelSource_epsilon_funcs <<
-			luxrays::ocl::KernelSource_utils_funcs <<
-			luxrays::ocl::KernelSource_vector_funcs <<
-			luxrays::ocl::KernelSource_ray_funcs <<
-			luxrays::ocl::KernelSource_bbox_funcs <<
-			luxrays::ocl::KernelSource_color_funcs <<
-			luxrays::ocl::KernelSource_frame_funcs <<
-			luxrays::ocl::KernelSource_matrix4x4_funcs <<
-			luxrays::ocl::KernelSource_quaternion_funcs <<
-			luxrays::ocl::KernelSource_transform_funcs <<
-			luxrays::ocl::KernelSource_motionsystem_funcs <<
-			// OpenCL SLG Types
-			slg::ocl::KernelSource_randomgen_types <<
-			slg::ocl::KernelSource_trianglemesh_types <<
-			slg::ocl::KernelSource_hitpoint_types <<
-			slg::ocl::KernelSource_mapping_types <<
-			slg::ocl::KernelSource_texture_types <<
-			slg::ocl::KernelSource_bsdf_types <<
-			slg::ocl::KernelSource_material_types <<
-			slg::ocl::KernelSource_volume_types <<
-			slg::ocl::KernelSource_film_types <<
-			slg::ocl::KernelSource_filter_types <<
-			slg::ocl::KernelSource_sampler_types <<
-			slg::ocl::KernelSource_camera_types <<
-			slg::ocl::KernelSource_light_types <<
-			// OpenCL SLG Funcs
-			slg::ocl::KernelSource_mc_funcs <<
-			slg::ocl::KernelSource_randomgen_funcs <<
-			slg::ocl::KernelSource_triangle_funcs <<
-			slg::ocl::KernelSource_trianglemesh_funcs <<
-			slg::ocl::KernelSource_mapping_funcs <<
-			slg::ocl::KernelSource_imagemap_types <<
-			slg::ocl::KernelSource_imagemap_funcs <<
-			slg::ocl::KernelSource_texture_noise_funcs <<
-			slg::ocl::KernelSource_texture_blender_noise_funcs <<
-			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
-			slg::ocl::KernelSource_texture_blender_funcs <<
-			slg::ocl::KernelSource_texture_blackbody_funcs <<
-			slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
-			slg::ocl::KernelSource_texture_irregulardata_funcs <<
-			slg::ocl::KernelSource_texture_funcs;
+	// Compile sources
+	stringstream ssKernel;
+	ssKernel <<
+		AdditionalKernelDefinitions() <<
+		// OpenCL LuxRays Types
+		luxrays::ocl::KernelSource_luxrays_types <<
+		luxrays::ocl::KernelSource_uv_types <<
+		luxrays::ocl::KernelSource_point_types <<
+		luxrays::ocl::KernelSource_vector_types <<
+		luxrays::ocl::KernelSource_normal_types <<
+		luxrays::ocl::KernelSource_triangle_types <<
+		luxrays::ocl::KernelSource_ray_types <<
+		luxrays::ocl::KernelSource_bbox_types <<
+		luxrays::ocl::KernelSource_epsilon_types <<
+		luxrays::ocl::KernelSource_color_types <<
+		luxrays::ocl::KernelSource_frame_types <<
+		luxrays::ocl::KernelSource_matrix4x4_types <<
+		luxrays::ocl::KernelSource_quaternion_types <<
+		luxrays::ocl::KernelSource_transform_types <<
+		luxrays::ocl::KernelSource_motionsystem_types <<
+		// OpenCL LuxRays Funcs
+		luxrays::ocl::KernelSource_epsilon_funcs <<
+		luxrays::ocl::KernelSource_utils_funcs <<
+		luxrays::ocl::KernelSource_vector_funcs <<
+		luxrays::ocl::KernelSource_ray_funcs <<
+		luxrays::ocl::KernelSource_bbox_funcs <<
+		luxrays::ocl::KernelSource_color_funcs <<
+		luxrays::ocl::KernelSource_frame_funcs <<
+		luxrays::ocl::KernelSource_matrix4x4_funcs <<
+		luxrays::ocl::KernelSource_quaternion_funcs <<
+		luxrays::ocl::KernelSource_transform_funcs <<
+		luxrays::ocl::KernelSource_motionsystem_funcs <<
+		// OpenCL SLG Types
+		slg::ocl::KernelSource_randomgen_types <<
+		slg::ocl::KernelSource_trianglemesh_types <<
+		slg::ocl::KernelSource_hitpoint_types <<
+		slg::ocl::KernelSource_mapping_types <<
+		slg::ocl::KernelSource_texture_types <<
+		slg::ocl::KernelSource_bsdf_types <<
+		slg::ocl::KernelSource_material_types <<
+		slg::ocl::KernelSource_volume_types <<
+		slg::ocl::KernelSource_film_types <<
+		slg::ocl::KernelSource_filter_types <<
+		slg::ocl::KernelSource_sampler_types <<
+		slg::ocl::KernelSource_camera_types <<
+		slg::ocl::KernelSource_light_types <<
+		// OpenCL SLG Funcs
+		slg::ocl::KernelSource_mc_funcs <<
+		slg::ocl::KernelSource_randomgen_funcs <<
+		slg::ocl::KernelSource_triangle_funcs <<
+		slg::ocl::KernelSource_trianglemesh_funcs <<
+		slg::ocl::KernelSource_mapping_funcs <<
+		slg::ocl::KernelSource_imagemap_types <<
+		slg::ocl::KernelSource_imagemap_funcs <<
+		slg::ocl::KernelSource_texture_noise_funcs <<
+		slg::ocl::KernelSource_texture_blender_noise_funcs <<
+		slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
+		slg::ocl::KernelSource_texture_blender_funcs <<
+		slg::ocl::KernelSource_texture_blackbody_funcs <<
+		slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
+		slg::ocl::KernelSource_texture_irregulardata_funcs <<
+		slg::ocl::KernelSource_texture_funcs;
 
-		if (renderEngine->useDynamicCodeGenerationForTextures) {
-			// Generate the code to evaluate the textures
-			ssKernel <<
-				"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
-				cscene->GetTexturesEvaluationSourceCode() <<
-				"\n";
-		}
+	// Generate the code to evaluate the textures
+	ssKernel <<
+		"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
+		cscene->GetTexturesEvaluationSourceCode() <<
+		"\n";
 
-		ssKernel <<
-			slg::ocl::KernelSource_texture_bump_funcs <<
-			slg::ocl::KernelSource_materialdefs_funcs_generic <<
-			slg::ocl::KernelSource_materialdefs_funcs_archglass <<
-			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
-			slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
-			slg::ocl::KernelSource_materialdefs_funcs_glass <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
-			slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_matte <<
-			slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
-			slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
-			slg::ocl::KernelSource_materialdefs_funcs_mirror <<
-			slg::ocl::KernelSource_materialdefs_funcs_null <<
-			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
-			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
-			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
-			slg::ocl::KernelSource_material_funcs <<
-			// KernelSource_materialdefs_funcs_mix must always be the last one
-			slg::ocl::KernelSource_materialdefs_funcs_mix;
+	ssKernel <<
+		slg::ocl::KernelSource_texture_bump_funcs <<
+		slg::ocl::KernelSource_materialdefs_funcs_generic <<
+		slg::ocl::KernelSource_materialdefs_funcs_archglass <<
+		slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
+		slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
+		slg::ocl::KernelSource_materialdefs_funcs_cloth <<
+		slg::ocl::KernelSource_materialdefs_funcs_glass <<
+		slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+		slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
+		slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
+		slg::ocl::KernelSource_materialdefs_funcs_matte <<
+		slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
+		slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
+		slg::ocl::KernelSource_materialdefs_funcs_mirror <<
+		slg::ocl::KernelSource_materialdefs_funcs_null <<
+		slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
+		slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
+		slg::ocl::KernelSource_materialdefs_funcs_velvet <<
+		slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
+		slg::ocl::KernelSource_material_funcs <<
+		// KernelSource_materialdefs_funcs_mix must always be the last one
+		slg::ocl::KernelSource_materialdefs_funcs_mix;
 
-		if (renderEngine->useDynamicCodeGenerationForMaterials) {
-			// Generate the code to evaluate the textures
-			ssKernel <<
-				"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
-				cscene->GetMaterialsEvaluationSourceCode() <<
-				"\n";
-		}
+	// Generate the code to evaluate the textures
+	ssKernel <<
+		"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
+		cscene->GetMaterialsEvaluationSourceCode() <<
+		"\n";
 
-		ssKernel <<
-			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
-			slg::ocl::KernelSource_volume_funcs <<
-			slg::ocl::KernelSource_volumeinfo_funcs <<
-			slg::ocl::KernelSource_camera_funcs <<
-			slg::ocl::KernelSource_light_funcs <<
-			slg::ocl::KernelSource_filter_funcs <<
-			slg::ocl::KernelSource_film_funcs <<
-			slg::ocl::KernelSource_sampler_funcs <<
-			slg::ocl::KernelSource_bsdf_funcs <<
-			slg::ocl::KernelSource_scene_funcs <<
-			// PathOCL Funcs
-			slg::ocl::KernelSource_pathoclbase_funcs;
+	ssKernel <<
+		slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
+		slg::ocl::KernelSource_volume_funcs <<
+		slg::ocl::KernelSource_volumeinfo_funcs <<
+		slg::ocl::KernelSource_camera_funcs <<
+		slg::ocl::KernelSource_light_funcs <<
+		slg::ocl::KernelSource_filter_funcs <<
+		slg::ocl::KernelSource_film_funcs <<
+		slg::ocl::KernelSource_sampler_funcs <<
+		slg::ocl::KernelSource_bsdf_funcs <<
+		slg::ocl::KernelSource_scene_funcs <<
+		// PathOCL Funcs
+		slg::ocl::KernelSource_pathoclbase_funcs;
 
-		ssKernel << AdditionalKernelSources();
+	ssKernel << AdditionalKernelSources();
 
-		string kernelSource = ssKernel.str();
+	string kernelSource = ssKernel.str();
 
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
 
-		if (renderEngine->writeKernelsToFile) {
-			// Some debug code to write the OpenCL kernel source to a file
-			const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".cl";
-			ofstream kernelFile(kernelFileName.c_str());
-			string kernelDefs = kernelsParameters;
-			boost::replace_all(kernelDefs, "-D", "\n#define");
-			boost::replace_all(kernelDefs, "=", " ");
-			kernelFile << kernelDefs << endl << endl << kernelSource << endl;
-			kernelFile.close();
-		}
+	if (renderEngine->writeKernelsToFile) {
+		// Some debug code to write the OpenCL kernel source to a file
+		const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".cl";
+		ofstream kernelFile(kernelFileName.c_str());
+		string kernelDefs = kernelsParameters;
+		boost::replace_all(kernelDefs, "-D", "\n#define");
+		boost::replace_all(kernelDefs, "=", " ");
+		kernelFile << kernelDefs << endl << endl << kernelSource << endl;
+		kernelFile.close();
+	}
 
-		bool cached;
-		cl::STRING_CLASS error;
-		cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
-				kernelsParameters, kernelSource,
-				&cached, &error);
+	bool cached;
+	cl::STRING_CLASS error;
+	cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
+			kernelsParameters, kernelSource,
+			&cached, &error);
 
-		if (!program) {
-			SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] PathOCL kernel compilation error" << endl << error);
+	if (!program) {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] PathOCL kernel compilation error" << endl << error);
 
-			throw runtime_error("PathOCLBase kernel compilation error");
-		}
+		throw runtime_error("PathOCLBase kernel compilation error");
+	}
 
-		if (cached) {
-			SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels cached");
-		} else {
-			SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels not cached");
-		}
+	if (cached) {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels cached");
+	} else {
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels not cached");
+	}
 
-		// Film clear kernel
-		CompileKernel(program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
+	// Film clear kernel
+	CompileKernel(program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
 
-		// Additional kernels
-		CompileAdditionalKernels(program);
+	// Additional kernels
+	CompileAdditionalKernels(program);
 
-		const double tEnd = WallClockTime();
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	const double tEnd = WallClockTime();
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
-		delete program;
-	} else
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Using cached kernels");
+	delete program;
 }
 
 void PathOCLBaseRenderThread::InitRender() {
@@ -1526,11 +1510,7 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 
 	// With dynamic code generation for textures and materials, I have to recompile the
 	// kernels even only one of the material/texture parameter change
-	if ((editActions.Has(MATERIALS_EDIT) && (
-			renderEngine->useDynamicCodeGenerationForTextures ||
-			renderEngine->useDynamicCodeGenerationForMaterials)) ||
-			editActions.Has(MATERIAL_TYPES_EDIT) ||
-			editActions.Has(LIGHT_TYPES_EDIT))
+	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT) || editActions.Has(LIGHT_TYPES_EDIT))
 		InitKernels();
 
 	if (editActions.HasAnyAction()) {

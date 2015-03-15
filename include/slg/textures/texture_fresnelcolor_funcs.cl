@@ -62,20 +62,4 @@ float3 FresnelColorTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 	return kr;
 }
 
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void FresnelColorTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float value = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = FresnelColorTexture_ConstEvaluateFloat(hitPoint, value);
-}
-
-void FresnelColorTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	const float3 value = texValues[--(*texValuesSize)];
-
-	texValues[(*texValuesSize)++] = FresnelColorTexture_ConstEvaluateSpectrum(hitPoint, value);
-}
-#endif
-
 #endif
