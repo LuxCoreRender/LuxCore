@@ -81,8 +81,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
 	writeKernelsToFile = false;
-	useDynamicCodeGenerationForTextures = false;
-	useDynamicCodeGenerationForMaterials = false;
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
@@ -156,14 +154,6 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
-	useDynamicCodeGenerationForTextures = cfg.Get(Property(
-			"opencl.kernel.dynamiccodegeneration.textures.enable")(true)).Get<bool>();
-	useDynamicCodeGenerationForMaterials = cfg.Get(Property(
-			"opencl.kernel.dynamiccodegeneration.materials.enable")(true)).Get<bool>();
-	// Dynamic code generation for materials requires dynamic code generation
-	// for textures
-	if (useDynamicCodeGenerationForMaterials)
-		useDynamicCodeGenerationForTextures = true;
 
 	//--------------------------------------------------------------------------
 	// Compile the scene

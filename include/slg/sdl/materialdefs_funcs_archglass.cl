@@ -223,43 +223,4 @@ float3 ArchGlassMaterial_ConstSample(
 	return result / *pdfW;
 }
 
-#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
-float3 ArchGlassMaterial_Evaluate(__global Material *material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
-	return BLACK;
-}
-
-float3 ArchGlassMaterial_Sample(__global Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
-		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThroughEvent,
-#endif
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
-	const float3 kt = Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint
-		TEXTURES_PARAM);
-	const float3 kr = Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint
-		TEXTURES_PARAM);
-
-	const float nc = ExtractExteriorIors(hitPoint,
-			material->archglass.exteriorIorTexIndex
-			TEXTURES_PARAM);
-	const float nt = ExtractInteriorIors(hitPoint,
-			material->archglass.interiorIorTexIndex
-			TEXTURES_PARAM);
-
-	return ArchGlassMaterial_ConstSample(hitPoint, localFixedDir, localSampledDir,
-			u0, u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-			passThroughEvent,
-#endif
-			pdfW, absCosSampledDir, event, requestedEvent,
-			kt, kr, nc, nt);
-}
-#endif
-
 #endif

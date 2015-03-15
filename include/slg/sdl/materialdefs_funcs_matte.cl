@@ -75,41 +75,6 @@ float3 MatteMaterial_ConstSample(__global HitPoint *hitPoint, const float3 fixed
 	return Spectrum_Clamp(kdVal);
 }
 
-#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
-float3 MatteMaterial_Sample(__global Material *material,
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThroughEvent,
-#endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
-	const float3 kdVal = Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint
-			TEXTURES_PARAM);
-	
-	return MatteMaterial_ConstSample(hitPoint, fixedDir, sampledDir,
-			u0, u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-			passThroughEvent,
-#endif
-			pdfW, cosSampledDir, event, requestedEvent,
-			kdVal);
-}
-
-float3 MatteMaterial_Evaluate(__global Material *material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
-	const float3 kdVal = Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint
-			TEXTURES_PARAM);
-
-	return MatteMaterial_ConstEvaluate(hitPoint, lightDir, eyeDir,
-			event, directPdfW,
-			kdVal);
-}
-#endif
-
 #endif
 
 //------------------------------------------------------------------------------
@@ -194,46 +159,5 @@ float3 RoughMatteMaterial_ConstSample(
 	return Spectrum_Clamp(kdVal) *
 		(A + B * maxcos * sinthetai * sinthetao / fmax(fabs(CosTheta(*sampledDir)), fabs(CosTheta(fixedDir))));
 }
-
-#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
-float3 RoughMatteMaterial_Evaluate(__global Material *material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
-	const float s = Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURES_PARAM);
-	const float3 kdVal = Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint
-			TEXTURES_PARAM);
-
-	return RoughMatteMaterial_ConstEvaluate(
-			hitPoint, lightDir, eyeDir,
-			event, directPdfW,
-			s, kdVal);
-}
-
-float3 RoughMatteMaterial_Sample(__global Material *material,
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThroughEvent,
-#endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
-
-	const float s = Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURES_PARAM);
-	const float3 kdVal = Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint
-			TEXTURES_PARAM);
-
-	return RoughMatteMaterial_ConstSample(
-			hitPoint, fixedDir, sampledDir,
-			u0, u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-			passThroughEvent,
-#endif
-			pdfW, cosSampledDir, event,
-			requestedEvent,
-			s, kdVal);
-}
-#endif
 
 #endif

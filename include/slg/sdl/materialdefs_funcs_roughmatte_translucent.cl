@@ -169,47 +169,4 @@ float3 RoughMatteTranslucentMaterial_ConstSample(
 	}
 }
 
-#if defined(PARAM_DISABLE_MAT_DYNAMIC_EVALUATION)
-float3 RoughMatteTranslucentMaterial_Evaluate(__global Material *material,
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW
-		TEXTURES_PARAM_DECL) {
-	const float3 krVal = Texture_GetSpectrumValue(material->roughmatteTranslucent.krTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float3 ktVal = Texture_GetSpectrumValue(material->roughmatteTranslucent.ktTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float sigmaVal = Texture_GetFloatValue(material->roughmatteTranslucent.sigmaTexIndex, hitPoint
-			TEXTURES_PARAM);
-
-	return RoughMatteTranslucentMaterial_ConstEvaluate(hitPoint, lightDir, eyeDir,
-			event, directPdfW,
-			krVal, ktVal, sigmaVal);
-}
-
-float3 RoughMatteTranslucentMaterial_Sample(__global Material *material,
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThroughEvent,
-#endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const BSDFEvent requestedEvent
-		TEXTURES_PARAM_DECL) {
-	const float3 krVal = Texture_GetSpectrumValue(material->roughmatteTranslucent.krTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float3 ktVal = Texture_GetSpectrumValue(material->roughmatteTranslucent.ktTexIndex, hitPoint
-			TEXTURES_PARAM);
-	const float sigmaVal = Texture_GetFloatValue(material->roughmatteTranslucent.sigmaTexIndex, hitPoint
-			TEXTURES_PARAM);
-	
-	return RoughMatteTranslucentMaterial_ConstSample(hitPoint, fixedDir, sampledDir,
-			u0, u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-			passThroughEvent,
-#endif
-			pdfW, cosSampledDir, event, requestedEvent,
-			krVal, ktVal, sigmaVal);
-}
-#endif
-
 #endif

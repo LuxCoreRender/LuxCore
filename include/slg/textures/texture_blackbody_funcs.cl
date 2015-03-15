@@ -34,18 +34,4 @@ float3 BlackBodyTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 	return rgb;
 }
 
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-void BlackBodyTexture_EvaluateFloat(__global Texture *texture, __global HitPoint *hitPoint,
-		float texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlackBodyTexture_ConstEvaluateFloat(hitPoint,
-			VLOAD3F(texture->blackBody.rgb.c));
-}
-
-void BlackBodyTexture_EvaluateSpectrum(__global Texture *texture, __global HitPoint *hitPoint,
-		float3 texValues[TEXTURE_STACK_SIZE], uint *texValuesSize) {
-	texValues[(*texValuesSize)++] = BlackBodyTexture_ConstEvaluateSpectrum(hitPoint,
-			VLOAD3F(texture->blackBody.rgb.c));
-}
-#endif
-
 #endif
