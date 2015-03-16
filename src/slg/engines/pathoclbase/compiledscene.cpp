@@ -42,7 +42,8 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/fresnelapprox.h"
-#include "slg/textures/fresnelcolor.h"
+#include "slg/textures/fresnel/fresnelcolor.h"
+#include "slg/textures/fresnel/fresnelconst.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/scale.h"
@@ -1949,6 +1950,14 @@ void CompiledScene::CompileTextures() {
 				tex->fresnelColor.krIndex = scene->texDefs.GetTextureIndex(krTex);
 				break;
 			}
+			case FRESNELCONST_TEX: {
+				FresnelConstTexture *fct = static_cast<FresnelConstTexture *>(t);
+
+				tex->type = slg::ocl::FRESNELCONST_TEX;
+				ASSIGN_SPECTRUM(tex->fresnelConst.n, fct->GetN());
+				ASSIGN_SPECTRUM(tex->fresnelConst.k, fct->GetK());
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -2296,6 +2305,10 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "FresnelColor", "float3", "Spectrum", i,
 						AddTextureSourceCall("Spectrum", tex->fresnelColor.krIndex));
 				break;
+			case slg::ocl::FRESNELCONST_TEX:
+				AddTextureSource(source, "FresnelConst", "float", "Float", i, "");
+				AddTextureSource(source, "FresnelConst", "float3", "Spectrum", i, "");
+				break;
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::GetTexturesEvaluationSourceCode(): " + boost::lexical_cast<string>(tex->type));
 				break;
@@ -2587,6 +2600,10 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						case slg::ocl::FRESNELCOLOR_TEX:
 							nTexString = "FresnelApproxN3(" + AddTextureSourceCall("Spectrum", fresnelTex.fresnelColor.krIndex) + ")";
 							kTexString = "FresnelApproxK3(" + AddTextureSourceCall("Spectrum", fresnelTex.fresnelColor.krIndex) + ")";
+							break;
+						case slg::ocl::FRESNELCONST_TEX:
+							nTexString = ToOCLString(fresnelTex.fresnelConst.n);
+							kTexString = ToOCLString(fresnelTex.fresnelConst.k);
 							break;
 						default:
 							throw runtime_error("Unknown fresnel texture type in CompiledScene::GetMaterialsEvaluationSourceCode(): " + boost::lexical_cast<string>(fresnelTex.type));

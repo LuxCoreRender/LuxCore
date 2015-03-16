@@ -21,8 +21,6 @@
 #include "luxrays/core/geometry/frame.h"
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/material.h"
-#include "slg/textures/texture.h"
-#include "slg/textures/fresneltexture.h"
 
 using namespace std;
 using namespace luxrays;
