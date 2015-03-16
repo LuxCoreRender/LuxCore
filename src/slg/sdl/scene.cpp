@@ -61,6 +61,7 @@
 #include "slg/textures/fresnel/fresnelcolor.h"
 #include "slg/textures/fresnel/fresnelconst.h"
 #include "slg/textures/fresnel/fresnelluxpop.h"
+#include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/textures/imagemaptex.h"
@@ -1117,6 +1118,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return AllocFresnelLuxPopTex(props, propName);
 	} else if (texType == "fresnelsopra") {
 		return AllocFresnelSopraTex(props, propName);
+	} else if (texType == "fresnelpreset") {
+		return AllocFresnelPresetTex(props, propName);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }
@@ -1328,14 +1331,10 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 		const Texture *n, *k;
 		if (props.IsDefined(propName + ".preset")) {
-			const string type = props.Get(Property(propName + ".preset")("aluminium")).Get<string>();
-
-			Spectrum nRGB, kRGB;
-			FresnelTexture::Preset(type, &nRGB, &kRGB);
-
-			n = GetTexture(Property(matName + "-Implicit-FresnelPreset-n")(nRGB));
-			k = GetTexture(Property(matName + "-Implicit-FresnelPreset-k")(kRGB));
-			mat = new Metal2Material(emissionTex, bumpTex, n, k, nu, nv);
+			FresnelTexture *presetTex = AllocFresnelPresetTex(props, propName);
+			texDefs.DefineTexture(matName + "-Implicit-FresnelPreset-" + boost::lexical_cast<string>(presetTex), presetTex);
+			
+			mat = new Metal2Material(emissionTex, bumpTex, presetTex, nu, nv);
 		} else if (props.IsDefined(propName + ".fresnel")) {
 			const Texture *tex = GetTexture(props.Get(Property(propName + ".fresnel")(5.f)));
 			if (!dynamic_cast<const FresnelTexture *>(tex))

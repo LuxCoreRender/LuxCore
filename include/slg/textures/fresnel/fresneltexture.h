@@ -33,8 +33,7 @@ public:
 	virtual ~FresnelTexture() { }
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint, const float cosi) const = 0;
-		
-	static void Preset(const std::string &type, luxrays::Spectrum *eta, luxrays::Spectrum *k);
+
 	static float ApproxN(const float Fr);
 	static luxrays::Spectrum ApproxN(const luxrays::Spectrum &Fr);
 	static float ApproxK(const float Fr);

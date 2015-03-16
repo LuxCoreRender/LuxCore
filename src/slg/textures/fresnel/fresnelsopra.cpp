@@ -55,7 +55,7 @@ static float nmtolambda(const float nm) {
 	return nm;
 }
 
-Texture *slg::AllocFresnelSopraTex(const Properties &props, const string &propName) {
+FresnelTexture *slg::AllocFresnelSopraTex(const Properties &props, const string &propName) {
 	const string fileName = props.Get(Property(propName + ".file")("sopra.nk")).Get<string>();
 
 	ifstream fs;
