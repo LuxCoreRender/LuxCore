@@ -16,47 +16,21 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/fresnelcolor.h"
+#ifndef _SLG_FRESNELSOPRATEX_H
+#define	_SLG_FRESNELSOPRATEX_H
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include <string>
+
+#include "slg/textures/fresnel/fresneltexture.h"
+
+namespace slg {
 
 //------------------------------------------------------------------------------
-// Fresnel color texture
+// Fresnel Sopra texture
 //------------------------------------------------------------------------------
 
-float FresnelColorTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return kr->GetFloatValue(hitPoint);
+extern Texture *AllocFresnelSopraTex(const luxrays::Properties &props, const std::string &propName);
+
 }
 
-Spectrum FresnelColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return kr->GetSpectrumValue(hitPoint);
-}
-
-float FresnelColorTexture::Y() const {
-	return kr->Y();
-}
-
-float FresnelColorTexture::Filter() const {
-	return kr->Filter();
-}
-
-Spectrum FresnelColorTexture::Evaluate(const HitPoint &hitPoint, const float cosi) const {
-	const Spectrum c = kr->GetSpectrumValue(hitPoint);
-
-	const Spectrum n = ApproxN(c);
-	const Spectrum k = ApproxK(c);
-
-	return GeneralEvaluate(n, k, cosi);
-}
-
-Properties FresnelColorTexture::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
-
-	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("fresnelcolor"));
-	props.Set(Property("scene.textures." + name + ".kr")(kr->GetName()));
-
-	return props;
-}
+#endif	/* _SLG_FRESNELSOPRATEX_H */

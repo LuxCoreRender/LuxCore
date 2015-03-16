@@ -1,3 +1,5 @@
+#line 2 "texture_funcs.cl"
+
 /***************************************************************************
  * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -16,38 +18,18 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FRESNELCOLORTEX_H
-#define	_SLG_FRESNELCOLORTEX_H
-
-#include "slg/textures/fresneltexture.h"
-
-namespace slg {
-
 //------------------------------------------------------------------------------
-// Fresnel color texture
+// FresnelConst texture
 //------------------------------------------------------------------------------
 
-class FresnelColorTexture : public FresnelTexture {
-public:
-	FresnelColorTexture(const Texture *c) : kr(c) { }
-	virtual ~FresnelColorTexture() { }
+#if defined(PARAM_ENABLE_TEX_FRESNELCONST)
 
-	virtual TextureType GetType() const { return FRESNELCOLOR_TEX; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const;
-	virtual float Filter() const;
-
-	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint, const float cosi) const;
-
-	const Texture *GetKr() const { return kr; };
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	const Texture *kr;
-};
-
+float FresnelConstTexture_ConstEvaluateFloat(__global HitPoint *hitPoint) {
+	return 0.f;
 }
 
-#endif	/* _SLG_FRESNELCOLORTEX_H */
+float3 FresnelConstTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
+	return 0.f;
+}
+
+#endif

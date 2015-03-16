@@ -58,8 +58,11 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/fresnelapprox.h"
-#include "slg/textures/fresnelcolor.h"
-#include "slg/textures/fresneltexture.h"
+#include "slg/textures/fresnel/fresnelcolor.h"
+#include "slg/textures/fresnel/fresnelconst.h"
+#include "slg/textures/fresnel/fresnelluxpop.h"
+#include "slg/textures/fresnel/fresnelsopra.h"
+#include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/lampspectrum.h"
@@ -1078,9 +1081,6 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "blackbody") {
 		const float v = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
 		return new BlackBodyTexture(v);
-//	} else if (texType == "fresnelname") {
-//		const string name = props.Get(Property(propName + ".file")("fresnel.nk")).Get<string>();
-//		return new FresnelNameTexture(v);
 	} else if (texType == "irregulardata") {
 		if (!props.IsDefined(propName + ".wavelengths"))
 			throw runtime_error("Missing wavelengths property in irregulardata texture: " + propName);
@@ -1108,6 +1108,15 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *col = GetTexture(props.Get(Property(propName + ".kr")(.5f)));
 
 		return new FresnelColorTexture(col);
+	} else if (texType == "fresnelconst") {
+		const Spectrum n = props.Get(Property(propName + ".n")(1.f, 1.f, 1.f)).Get<Spectrum>();
+		const Spectrum k = props.Get(Property(propName + ".k")(1.f, 1.f, 1.f)).Get<Spectrum>();
+
+		return new FresnelConstTexture(n, k);
+	} else if (texType == "fresnelluxpop") {
+		return AllocFresnelLuxPopTex(props, propName);
+	} else if (texType == "fresnelsopra") {
+		return AllocFresnelSopraTex(props, propName);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }

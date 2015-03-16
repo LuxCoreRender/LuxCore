@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/textures/fresneltexture.h"
+#include "slg/textures/fresnel/fresneltexture.h"
 
 using namespace std;
 using namespace luxrays;

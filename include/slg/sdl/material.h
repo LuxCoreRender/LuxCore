@@ -35,7 +35,7 @@
 #include "slg/sdl/bsdfevents.h"
 #include "slg/sdl/hitpoint.h"
 #include "slg/textures/texture.h"
-#include "slg/textures/fresneltexture.h"
+#include "slg/textures/fresnel/fresneltexture.h"
 
 namespace slg {
 
@@ -725,7 +725,7 @@ public:
 			Material(emitted, bump), fresnelTex(NULL), n(nn), k(kk), nu(u), nv(v) { }
 	Metal2Material(const Texture *emitted, const Texture *bump,
 			const FresnelTexture *ft, const Texture *u, const Texture *v) :
-			Material(emitted, bump), fresnelTex(ft), nu(u), nv(v) { }
+			Material(emitted, bump), fresnelTex(ft), n(NULL), k(NULL), nu(u), nv(v) { }
 
 	virtual MaterialType GetType() const { return METAL2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };

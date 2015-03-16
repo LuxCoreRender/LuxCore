@@ -1010,6 +1010,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_IRREGULARDATA";
 	if (cscene->IsTextureCompiled(FRESNELCOLOR_TEX))
 		ss << " -D PARAM_ENABLE_TEX_FRESNELCOLOR";
+	if (cscene->IsTextureCompiled(FRESNELCONST_TEX))
+		ss << " -D PARAM_ENABLE_TEX_FRESNELCONST";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -1225,6 +1227,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_texture_blender_funcs <<
 		slg::ocl::KernelSource_texture_blackbody_funcs <<
 		slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
+		slg::ocl::KernelSource_texture_fresnelconst_funcs <<
 		slg::ocl::KernelSource_texture_irregulardata_funcs <<
 		slg::ocl::KernelSource_texture_funcs;
 

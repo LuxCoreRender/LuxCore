@@ -30,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 Texture *slg::AllocLampSpectrumTex(const Properties &props, const string &propName) {
-	string name = props.Get(Property(propName + ".name")("Incandescent2")).Get<string>();
+	const string name = props.Get(Property(propName + ".name")("Incandescent2")).Get<string>();
 	const int wlCount = 250;
 
 	float *wl;

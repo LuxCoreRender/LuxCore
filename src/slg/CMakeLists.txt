@@ -140,8 +140,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
@@ -240,8 +241,11 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelapprox.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/fresneltexture.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelcolor.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcolor.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelconst.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelluxpop.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelsopra.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresneltexture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/irregulardata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/lampspectrum.cpp
@@ -299,6 +303,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_noise_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blackbody_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelcolor_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelconst_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_irregulardata_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_funcs_kernel.cpp

@@ -29,7 +29,7 @@ typedef enum {
 	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
 	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX,
 	// Fresnel textures
-	FRESNELCOLOR_TEX
+	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
 
 typedef struct {
@@ -286,6 +286,10 @@ typedef struct {
 } FresnelColorParam;
 
 typedef struct {
+	Spectrum n, k;
+} FresnelConstParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		BlenderBlendTexParam blenderBlend;
@@ -322,6 +326,7 @@ typedef struct {
 		BlackBodyParam blackBody;
 		IrregularDataParam irregularData;
 		FresnelColorParam fresnelColor;
+		FresnelConstParam fresnelConst;
 	};
 } Texture;
 
