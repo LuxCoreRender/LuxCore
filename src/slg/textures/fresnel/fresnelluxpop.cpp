@@ -32,7 +32,7 @@ using namespace slg;
 // Fresnel LuxPop texture
 //------------------------------------------------------------------------------
 
-Texture *slg::AllocFresnelLuxPopTex(const Properties &props, const string &propName) {
+FresnelTexture *slg::AllocFresnelLuxPopTex(const Properties &props, const string &propName) {
 	const string fileName = props.Get(Property(propName + ".file")("luxpop.nk")).Get<string>();
 
 	ifstream fs;

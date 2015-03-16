@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FRESNELSOPRATEX_H
-#define	_SLG_FRESNELSOPRATEX_H
+#ifndef _SLG_FRESNELPRESETTEX_H
+#define	_SLG_FRESNELPRESETTEX_H
 
 #include <string>
 
@@ -26,10 +26,10 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Fresnel Sopra texture
+// Fresnel preset texture
 //------------------------------------------------------------------------------
 
-extern FresnelTexture *AllocFresnelSopraTex(const luxrays::Properties &props, const std::string &propName);
+extern FresnelTexture *AllocFresnelPresetTex(const luxrays::Properties &props, const std::string &propName);
 
 }
 
