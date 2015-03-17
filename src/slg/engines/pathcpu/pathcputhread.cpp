@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include "slg/engines/pathcpu/pathcpu.h"
-#include "slg/sdl/volume.h"
+#include "slg/volumes/volume.h"
 
 using namespace std;
 using namespace luxrays;

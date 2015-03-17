@@ -19,8 +19,8 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/frame.h"
+#include "slg/materials/material.h"
 #include "slg/sdl/bsdf.h"
-#include "slg/sdl/material.h"
 
 using namespace std;
 using namespace luxrays;

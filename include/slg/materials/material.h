@@ -41,7 +41,7 @@ namespace slg {
 
 // OpenCL data types
 namespace ocl {
-#include "slg/sdl/material_types.cl"
+#include "slg/materials/material_types.cl"
 }
 
 class Scene;

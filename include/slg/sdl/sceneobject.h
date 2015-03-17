@@ -28,8 +28,8 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/utils/mc.h"
+#include "slg/materials/material.h"
 #include "slg/sdl/bsdfevents.h"
-#include "slg/sdl/material.h"
 #include "slg/sdl/hitpoint.h"
 
 namespace slg {

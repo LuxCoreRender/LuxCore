@@ -36,6 +36,7 @@
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/properties.h"
+#include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/editaction.h"
 #include "slg/lights/constantinfinitelight.h"
 #include "slg/lights/distantlight.h"
@@ -55,8 +56,10 @@
 #include "slg/sdl/scene.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/blackbody.h"
+#include "slg/textures/checkerboard.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
 #include "slg/textures/fresnel/fresnelcolor.h"
 #include "slg/textures/fresnel/fresnelconst.h"
@@ -67,8 +70,9 @@
 #include "slg/textures/imagemaptex.h"
 #include "slg/textures/irregulardata.h"
 #include "slg/textures/lampspectrum.h"
+#include "slg/textures/marble.h"
+#include "slg/textures/mix.h"
 #include "slg/textures/scale.h"
-#include "slg/core/sphericalfunction/sphericalfunction.h"
 
 using namespace std;
 using namespace luxrays;

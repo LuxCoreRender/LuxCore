@@ -108,30 +108,27 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdf_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdf_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdfutils_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/material_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_generic.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_archglass.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_carpaint.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_clearvol.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_cloth.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glass.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glossy2.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_glossytranslucent.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_heterogeneousvol.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_homogeneousvol.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_matte.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_matte_translucent.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_mix.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_metal2.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_mirror.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_null.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_roughglass.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_roughmatte_translucent.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/materialdefs_funcs_velvet.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/material_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/volume_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/volume_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/volumeinfo_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/material_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_generic.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_archglass.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_carpaint.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_clearvol.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_cloth.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glass.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossy2.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossytranslucent.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_heterogeneousvol.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_homogeneousvol.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_matte.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_matte_translucent.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_mix.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_metal2.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_mirror.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_null.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughglass.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/material_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
@@ -143,6 +140,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/volumes/volumeinfo_funcs.cl
 )
 
 PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
@@ -220,6 +220,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/spotlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/sunlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/trianglelight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/material.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
@@ -230,16 +231,16 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/extmeshcache.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/material.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/volume.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/checkerboard.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelapprox.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcolor.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelconst.cpp
@@ -250,12 +251,15 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/irregulardata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/lampspectrum.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/marble.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/mix.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/scale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/volumes/volume.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Library" FILES ${SLG_LIB_SRCS})	
 
