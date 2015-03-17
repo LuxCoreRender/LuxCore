@@ -35,12 +35,12 @@
 #include "slg/lights/lightsourcedefinition.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/texturedefs.h"
+#include "slg/materials/material.h"
 #include "slg/sdl/sdl.h"
-#include "slg/sdl/material.h"
 #include "slg/sdl/sceneobject.h"
 #include "slg/sdl/bsdf.h"
 #include "slg/sdl/mapping.h"
-#include "slg/sdl/volume.h"
+#include "slg/volumes/volume.h"
 
 namespace slg {
 

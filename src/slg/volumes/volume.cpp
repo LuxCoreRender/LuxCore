@@ -18,7 +18,7 @@
 
 #include <cstddef>
 
-#include "slg/sdl/volume.h"
+#include "slg/volumes/volume.h"
 #include "slg/sdl/bsdf.h"
 
 using namespace std;

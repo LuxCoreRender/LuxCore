@@ -31,7 +31,7 @@
 #include "luxrays/core/color/spds/irregular.h"
 #include "luxrays/utils/mcdistribution.h"
 #include "slg/textures/texture.h"
-#include "slg/sdl/material.h"
+#include "slg/materials/material.h"
 #include "slg/sdl/mapping.h"
 
 namespace slg {

@@ -26,8 +26,8 @@
 #include "slg/lights/light.h"
 #include "slg/lights/trianglelight.h"
 #include "slg/sdl/bsdfevents.h"
-#include "slg/sdl/material.h"
-#include "slg/sdl/volume.h"
+#include "slg/materials/material.h"
+#include "slg/volumes/volume.h"
 #include "slg/sdl/hitpoint.h"
 
 namespace slg {

@@ -20,14 +20,14 @@
 #define	_SLG_VOLUME_H
 
 #include "luxrays/luxrays.h"
-#include "slg/sdl/material.h"
+#include "slg/materials/material.h"
 #include "slg/textures/texture.h"
 
 namespace slg {
 
 // OpenCL data types
 namespace ocl {
-#include "slg/sdl/volume_types.cl"
+#include "slg/volumes/volume_types.cl"
 }
 
 class BSDF;
