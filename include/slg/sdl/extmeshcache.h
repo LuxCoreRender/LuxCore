@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_EXTMESHCACHE_H
-#define	_LUXRAYS_EXTMESHCACHE_H
+#ifndef _SLG_EXTMESHCACHE_H
+#define	_SLG_EXTMESHCACHE_H
 
 #include <string>
 #include <vector>
@@ -31,7 +31,7 @@
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
 
-namespace luxrays {
+namespace slg {
 
 class ExtMeshCache {
 public:
@@ -40,35 +40,35 @@ public:
 
 	void SetDeleteMeshData(const bool v) { deleteMeshData = v; }
 
-	void DefineExtMesh(const std::string &fileName,
+	void DefineExtMesh(const std::string &meshName,
 		const u_int plyNbVerts, const u_int plyNbTris,
-		Point *p, Triangle *vi, Normal *n, UV *uv,
-		Spectrum *cols, float *alphas);
-	void DefineExtMesh(const std::string &fileName, ExtTriangleMesh *mesh);
+		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
+		luxrays::Spectrum *cols, float *alphas);
+	void DefineExtMesh(const std::string &meshName, luxrays::ExtMesh *mesh);
 
-	bool IsExtMeshDefined(const std::string &name) const { return meshByName.find(name) != meshByName.end(); }
+	bool IsExtMeshDefined(const std::string &meshName) const { return meshByName.find(meshName) != meshByName.end(); }
 
-	ExtMesh *GetExtMesh(const std::string &fileName);
-	ExtMesh *GetExtMesh(const std::string &fileName, const Transform &trans);
-	ExtMesh *GetExtMesh(const std::string &fileName, const MotionSystem &ms);
+	luxrays::ExtMesh *GetExtMesh(const std::string &meshName);
+	luxrays::ExtMesh *GetExtMesh(const std::string &meshName, const luxrays::Transform &trans);
+	luxrays::ExtMesh *GetExtMesh(const std::string &meshName, const luxrays::MotionSystem &ms);
 
-	// Note: before call to DeleteExtMesh, be sore to not have any instance referencing
+	// Note: before call to DeleteExtMesh, be sure to not have any instance referencing
 	// the geometry
-	void DeleteExtMesh(const std::string &fileName);
+	void DeleteExtMesh(const std::string &meshName);
 
-	u_int GetExtMeshIndex(const std::string &fileName) const;
-	u_int GetExtMeshIndex(const ExtMesh *m) const;
+	u_int GetExtMeshIndex(const std::string &meshName) const;
+	u_int GetExtMeshIndex(const luxrays::ExtMesh *m) const;
 
-	const std::vector<ExtMesh *> &GetMeshes() const { return meshes; }
+	const std::vector<luxrays::ExtMesh *> &GetMeshes() const { return meshes; }
 
 public:
-	boost::unordered_map<std::string, ExtTriangleMesh *> meshByName;
+	boost::unordered_map<std::string, luxrays::ExtMesh *> meshByName;
 	// Used to preserve insertion order and to retrieve insertion index
-	std::vector<ExtMesh *> meshes;
+	std::vector<luxrays::ExtMesh *> meshes;
 
 	bool deleteMeshData;
 };
 
 }
 
-#endif	/* _LUXRAYS_EXTMESHCACHE_H */
+#endif	/* _SLG_EXTMESHCACHE_H */

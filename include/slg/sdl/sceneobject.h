@@ -19,6 +19,7 @@
 #ifndef _SLG_SCENEOBJECT_H
 #define	_SLG_SCENEOBJECT_H
 
+#include <string>
 #include <vector>
 
 #include <boost/unordered_set.hpp>
@@ -30,6 +31,7 @@
 #include "luxrays/utils/mc.h"
 #include "slg/materials/material.h"
 #include "slg/sdl/bsdfevents.h"
+#include "slg/sdl/extmeshcache.h"
 #include "slg/sdl/hitpoint.h"
 
 namespace slg {
@@ -57,7 +59,11 @@ public:
 	// Update any reference to oldMat with newMat
 	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
 
-	luxrays::Properties ToProperties(const luxrays::ExtMeshCache &extMeshCache) const;
+	// Update any reference to oldMesh with newMesh. It returns also if the
+	// referenced mesh has been updated or not.
+	bool UpdateMeshReference(const luxrays::ExtMesh *oldMesh, luxrays::ExtMesh *newMesh);
+
+	luxrays::Properties ToProperties(const ExtMeshCache &extMeshCache) const;
 
 private:
 	luxrays::ExtMesh *mesh;
@@ -95,6 +101,10 @@ public:
 
 	// Update any reference to oldMat with newMat
 	void UpdateMaterialReferences(const Material *oldMat, const Material *newMat);
+	// Update any reference to oldMesh with newMesh. It returns also the
+	// list of modified objects
+	void UpdateMeshReferences(const luxrays::ExtMesh *oldMesh, luxrays::ExtMesh *newMesh,
+		boost::unordered_set<SceneObject *> &modifiedObjsList);
 
 	void DeleteSceneObject(const std::string &name);
   

@@ -73,11 +73,14 @@
 #include "slg/textures/marble.h"
 #include "slg/textures/mix.h"
 #include "slg/textures/scale.h"
+#include "slg/shapes/meshshape.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 using namespace slg::blender;
+
+#define TRIANGLE_LIGHT_POSTFIX "__triangle__light__"
 
 Scene::Scene(const float imageScale) {
 	defaultWorldVolume = NULL;
@@ -346,7 +349,13 @@ void Scene::Parse(const Properties &props) {
 	ParseMaterials(props);
 
 	//--------------------------------------------------------------------------
-	// Read all objects .ply file
+	// Read all shapes
+	//--------------------------------------------------------------------------
+
+	ParseShapes(props);
+
+	//--------------------------------------------------------------------------
+	// Read all objects
 	//--------------------------------------------------------------------------
 
 	ParseObjects(props);
@@ -536,6 +545,62 @@ void Scene::ParseMaterials(const Properties &props) {
 	editActions.AddActions(MATERIALS_EDIT | MATERIAL_TYPES_EDIT);
 }
 
+void Scene::ParseShapes(const Properties &props) {
+	vector<string> shapeKeys = props.GetAllUniqueSubNames("scene.shapes");
+	if (shapeKeys.size() == 0) {
+		// There are not shape definitions
+		return;
+	}
+
+	BOOST_FOREACH(const string &key, shapeKeys) {
+		// Extract the shape name
+		const string shapeName = Property::ExtractField(key, 2);
+		if (shapeName == "")
+			throw runtime_error("Syntax error in shape definition: " + shapeName);
+
+		ExtMesh *mesh = CreateShape(shapeName, props);
+		if (extMeshCache.IsExtMeshDefined(shapeName)) {
+			// A replacement for an existing mesh
+			const ExtMesh *oldMesh = extMeshCache.GetExtMesh(shapeName);
+
+			// Replace old mesh direct references with new one and get the list
+			// of scene objects referencing the old mesh
+			boost::unordered_set<SceneObject *> modifiedObjsList;
+			objDefs.UpdateMeshReferences(oldMesh, mesh, modifiedObjsList);
+
+			// For each scene object
+			BOOST_FOREACH(SceneObject *o, modifiedObjsList) {
+				// Check if is a light source
+				if (o->GetMaterial()->IsLightSource()) {
+					const string objName = o->GetName();
+
+					// Delete all old triangle lights
+					lightDefs.DeleteLightSourceStartWith(objName + TRIANGLE_LIGHT_POSTFIX);
+
+					// Add all new triangle lights
+					SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
+
+					for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
+						TriangleLight *tl = new TriangleLight();
+						tl->lightMaterial = o->GetMaterial();
+						tl->mesh = mesh;
+						tl->triangleIndex = i;
+						tl->Preprocess();
+
+						lightDefs.DefineLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i), tl);
+					}
+
+					editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
+				}
+			}
+		}
+
+		extMeshCache.DefineExtMesh(shapeName, mesh);
+	}
+
+	editActions.AddActions(GEOMETRY_EDIT);
+}
+
 void Scene::ParseObjects(const Properties &props) {
 	vector<string> objKeys = props.GetAllUniqueSubNames("scene.objects");
 	if (objKeys.size() == 0) {
@@ -561,7 +626,7 @@ void Scene::ParseObjects(const Properties &props) {
 				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
 				// Delete all old triangle lights
-				lightDefs.DeleteLightSourceStartWith(objName + "__triangle__light__");
+				lightDefs.DeleteLightSourceStartWith(objName + TRIANGLE_LIGHT_POSTFIX);
 			}
 		}
 
@@ -582,7 +647,7 @@ void Scene::ParseObjects(const Properties &props) {
 				tl->triangleIndex = i;
 				tl->Preprocess();
 
-				lightDefs.DefineLightSource(objName + "__triangle__light__" + ToString(i), tl);
+				lightDefs.DefineLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i), tl);
 			}
 		}
 
@@ -590,7 +655,7 @@ void Scene::ParseObjects(const Properties &props) {
 
 		const double now = WallClockTime();
 		if (now - lastPrint > 2.0) {
-			SDL_LOG("PLY object count: " << objCount);
+			SDL_LOG("Mesh objects count: " << objCount);
 			lastPrint = now;
 		}
 	}
@@ -660,7 +725,7 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 	if (obj->GetMaterial()->IsLightSource()) {
 		// Have to update all light sources using this mesh
 		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-			lightDefs.GetLightSource(objName + "__triangle__light__" + ToString(i))->Preprocess();
+			lightDefs.GetLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
 	}
 
 	editActions.AddAction(GEOMETRY_EDIT);
@@ -771,7 +836,7 @@ void Scene::DeleteObject(const string &objName) {
 			// Delete all old triangle lights
 			const ExtMesh *mesh = oldObj->GetExtMesh();
 			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-				lightDefs.DeleteLightSource(objName + "__triangle__light__" + ToString(i));
+				lightDefs.DeleteLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i));
 		}
 
 		objDefs.DeleteSceneObject(objName);
@@ -1535,6 +1600,94 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	return mat;
 }
 
+static ExtMesh *CreateInlinedMesh(const string &shapeName, const string &propName, const Properties &props) {
+	// The mesh definition is in-lined
+	u_int pointsSize;
+	Point *points;
+	if (props.IsDefined(propName + ".vertices")) {
+		Property prop = props.Get(propName + ".vertices");
+		if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
+			throw runtime_error("Wrong shape vertex list length: " + shapeName);
+
+		pointsSize = prop.GetSize() / 3;
+		points = TriangleMesh::AllocVerticesBuffer(pointsSize);
+		for (u_int i = 0; i < pointsSize; ++i) {
+			const u_int index = i * 3;
+			points[i] = Point(prop.Get<float>(index), prop.Get<float>(index + 1), prop.Get<float>(index + 2));
+		}
+	} else
+		throw runtime_error("Missing shape vertex list: " + shapeName);
+
+	u_int trisSize;
+	Triangle *tris;
+	if (props.IsDefined(propName + ".faces")) {
+		Property prop = props.Get(propName + ".faces");
+		if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
+			throw runtime_error("Wrong shape face list length: " + shapeName);
+
+		trisSize = prop.GetSize() / 3;
+		tris = TriangleMesh::AllocTrianglesBuffer(trisSize);
+		for (u_int i = 0; i < trisSize; ++i) {
+			const u_int index = i * 3;
+			tris[i] = Triangle(prop.Get<u_int>(index), prop.Get<u_int>(index + 1), prop.Get<u_int>(index + 2));
+		}
+	} else {
+		delete[] points;
+		throw runtime_error("Missing shape face list: " + shapeName);
+	}
+
+	Normal *normals = NULL;
+	if (props.IsDefined(propName + ".normals")) {
+		Property prop = props.Get(propName + ".normals");
+		if ((prop.GetSize() == 0) || (prop.GetSize() / 3 != pointsSize))
+			throw runtime_error("Wrong shape normal list length: " + shapeName);
+
+		normals = new Normal[pointsSize];
+		for (u_int i = 0; i < pointsSize; ++i) {
+			const u_int index = i * 3;
+			normals[i] = Normal(prop.Get<float>(index), prop.Get<float>(index + 1), prop.Get<float>(index + 2));
+		}
+	}
+
+	UV *uvs = NULL;
+	if (props.IsDefined(propName + ".uvs")) {
+		Property prop = props.Get(propName + ".uvs");
+		if ((prop.GetSize() == 0) || (prop.GetSize() / 2 != pointsSize))
+			throw runtime_error("Wrong shape uv list length: " + shapeName);
+
+		uvs = new UV[pointsSize];
+		for (u_int i = 0; i < pointsSize; ++i) {
+			const u_int index = i * 2;
+			uvs[i] = UV(prop.Get<float>(index), prop.Get<float>(index + 1));
+		}
+	}
+
+	return new ExtTriangleMesh(pointsSize, trisSize, points, tris, normals, uvs);
+}
+
+ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
+	const string propName = "scene.shapes." + shapeName;
+
+	// Get the shape type
+	const string shapeType = props.Get(Property(propName + ".type")("mesh")).Get<string>();
+
+	// Define the shape
+	Shape *shape;
+	if (shapeType == "mesh") {
+		const string meshName = props.Get(Property(propName + ".ply")("")).Get<string>();
+
+		shape = new MeshShape(meshName);
+	} else if (shapeType == "inlinedmesh")
+		shape = new MeshShape(CreateInlinedMesh(shapeName, propName, props));
+	else
+		throw runtime_error("Unknown shape type: " + shapeType);
+
+	ExtMesh *mesh = shape->Refine(this);
+	delete shape;
+
+	return mesh;
+}
+
 SceneObject *Scene::CreateObject(const string &objName, const Properties &props) {
 	const string propName = "scene.objects." + objName;
 
@@ -1543,130 +1696,71 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 	if (matName == "")
 		throw runtime_error("Syntax error in object material reference: " + objName);
 
-	// Build the object
-	ExtMesh *mesh;
-	if (props.IsDefined(propName + ".ply")) {
-		// The mesh definition is in a PLY file
-		const string plyFileName = props.Get(Property(propName + ".ply")("")).Get<string>();
-		if (plyFileName == "")
-			throw runtime_error("Syntax error in object .ply file name: " + objName);
-
-		// Check if I have to use a motion mesh, instance mesh or normal mesh
-		if (props.IsDefined(propName + ".motion.0.time")) {
-			// Build the motion system
-			vector<float> times;
-			vector<Transform> transforms;
-			for (u_int i =0;; ++i) {
-				const string prefix = propName + ".motion." + ToString(i);
-				if (!props.IsDefined(prefix +".time"))
-					break;
-
-				const float t = props.Get(prefix +".time").Get<float>();
-				if (i > 0 && t <= times.back())
-					throw runtime_error(objName + " motion time must be monotonic");
-				times.push_back(t);
-
-				const Matrix4x4 mat = props.Get(Property(prefix +
-					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-				transforms.push_back(Transform(mat));
-			}
-
-			MotionSystem ms(times, transforms);
-			mesh = extMeshCache.GetExtMesh(plyFileName, ms);
-		} else if (props.IsDefined(propName + ".transformation")) {
-			const Matrix4x4 mat = props.Get(Property(propName +
-				".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-
-			mesh = extMeshCache.GetExtMesh(plyFileName, Transform(mat));
-		} else
-			mesh = extMeshCache.GetExtMesh(plyFileName);
-	} else {
-		// The mesh definition is in-lined
-		u_int pointsSize;
-		Point *points;
-		if (props.IsDefined(propName + ".vertices")) {
-			Property prop = props.Get(propName + ".vertices");
-			if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
-				throw runtime_error("Wrong object vertex list length: " + objName);
-
-			pointsSize = prop.GetSize() / 3;
-			points = TriangleMesh::AllocVerticesBuffer(pointsSize);
-			for (u_int i = 0; i < pointsSize; ++i) {
-				const u_int index = i * 3;
-				points[i] = Point(prop.Get<float>(index), prop.Get<float>(index + 1), prop.Get<float>(index + 2));
-			}
-		} else
-			throw runtime_error("Missing object vertex list: " + objName);
-
-		u_int trisSize;
-		Triangle *tris;
-		if (props.IsDefined(propName + ".faces")) {
-			Property prop = props.Get(propName + ".faces");
-			if ((prop.GetSize() == 0) || (prop.GetSize() % 3 != 0))
-				throw runtime_error("Wrong object face list length: " + objName);
-
-			trisSize = prop.GetSize() / 3;
-			tris = TriangleMesh::AllocTrianglesBuffer(trisSize);
-			for (u_int i = 0; i < trisSize; ++i) {
-				const u_int index = i * 3;
-				tris[i] = Triangle(prop.Get<u_int>(index), prop.Get<u_int>(index + 1), prop.Get<u_int>(index + 2));
-			}
-		} else {
-			delete[] points;
-			throw runtime_error("Missing object face list: " + objName);
-		}
-
-		Normal *normals = NULL;
-		if (props.IsDefined(propName + ".normals")) {
-			Property prop = props.Get(propName + ".normals");
-			if ((prop.GetSize() == 0) || (prop.GetSize() / 3 != pointsSize))
-				throw runtime_error("Wrong object normal list length: " + objName);
-
-			normals = new Normal[pointsSize];
-			for (u_int i = 0; i < pointsSize; ++i) {
-				const u_int index = i * 3;
-				normals[i] = Normal(prop.Get<float>(index), prop.Get<float>(index + 1), prop.Get<float>(index + 2));
-			}
-		}
-
-		UV *uvs = NULL;
-		if (props.IsDefined(propName + ".uvs")) {
-			Property prop = props.Get(propName + ".uvs");
-			if ((prop.GetSize() == 0) || (prop.GetSize() / 2 != pointsSize))
-				throw runtime_error("Wrong object uv list length: " + objName);
-
-			uvs = new UV[pointsSize];
-			for (u_int i = 0; i < pointsSize; ++i) {
-				const u_int index = i * 2;
-				uvs[i] = UV(prop.Get<float>(index), prop.Get<float>(index + 1));
-			}
-		}
-
-		if (props.IsDefined(propName + ".transformation")) {
-			const Matrix4x4 mat = props.Get(Property(propName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-			const Transform trans(mat);
-
-			// Transform directly the vertices and normals. This mesh is 
-			// defined on-the-fly and can be used only once
-			for (u_int i = 0; i < pointsSize; ++i)
-				points[i] = trans * points[i];
-			if (normals) {
-				for (u_int i = 0; i < pointsSize; ++i)
-					normals[i] = trans * normals[i];
-			}
-		}
-
-		extMeshCache.DefineExtMesh("InlinedMesh-" + objName, pointsSize, trisSize,
-				points, tris, normals, uvs,
-				NULL, NULL);
-		mesh = extMeshCache.GetExtMesh("InlinedMesh-" + objName);
-	}
-
 	// Get the material
 	if (!matDefs.IsMaterialDefined(matName))
 		throw runtime_error("Unknown material: " + matName);
 	const Material *mat = matDefs.GetMaterial(matName);
 
+	// Get the mesh
+	string meshName;
+	if (props.IsDefined(propName + ".ply")) {
+		// For compatibility with the past SDL syntax
+		meshName = props.Get(Property(propName + ".ply")("")).Get<string>();
+
+		if (!extMeshCache.IsExtMeshDefined(meshName)) {
+			// It is a mesh to define
+			ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(meshName);
+			extMeshCache.DefineExtMesh(meshName, mesh);
+		}
+	} else if (props.IsDefined(propName + ".vertices")) {
+		// For compatibility with the past SDL syntax
+		meshName = "InlinedMesh-" + objName;
+		
+		if (!extMeshCache.IsExtMeshDefined(meshName)) {
+			// It is a mesh to define
+			ExtMesh *mesh = CreateInlinedMesh(meshName, propName, props);
+			extMeshCache.DefineExtMesh(meshName, mesh);
+		}
+	} else if (props.IsDefined(propName + ".shape")) {
+		meshName = props.Get(Property(propName + ".shape")("")).Get<string>();
+
+		if (!extMeshCache.IsExtMeshDefined(meshName))
+			throw runtime_error("Unknown shape: " + meshName);
+	} else
+		throw runtime_error("Missing shape in object definition: " + objName);
+
+	// Check if I have to use a motion mesh, instance mesh or normal mesh
+	ExtMesh *mesh;
+	if (props.IsDefined(propName + ".motion.0.time")) {
+		// Build the motion system
+		vector<float> times;
+		vector<Transform> transforms;
+		for (u_int i =0;; ++i) {
+			const string prefix = propName + ".motion." + ToString(i);
+			if (!props.IsDefined(prefix +".time"))
+				break;
+
+			const float t = props.Get(prefix +".time").Get<float>();
+			if (i > 0 && t <= times.back())
+				throw runtime_error(objName + " motion time must be monotonic");
+			times.push_back(t);
+
+			const Matrix4x4 mat = props.Get(Property(prefix +
+				".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			transforms.push_back(Transform(mat));
+		}
+
+		MotionSystem ms(times, transforms);
+		mesh = extMeshCache.GetExtMesh(meshName, ms);
+	} else if (props.IsDefined(propName + ".transformation")) {
+		const Matrix4x4 mat = props.Get(Property(propName +
+			".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+
+		mesh = extMeshCache.GetExtMesh(meshName, Transform(mat));
+	} else
+		mesh = extMeshCache.GetExtMesh(meshName);
+
+	// Build the scene object
 	return new SceneObject(mesh, mat);
 }
 
