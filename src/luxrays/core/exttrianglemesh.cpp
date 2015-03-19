@@ -23,7 +23,6 @@
 #include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/core/extmeshcache.h"
 #include "luxrays/utils/ply/rply.h"
 
 using namespace luxrays;

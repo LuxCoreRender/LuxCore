@@ -40,8 +40,8 @@ scene.materials.redmat.vroughness = 0.01
 ##
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
-scene.materials.whitelight.type = null
-#scene.materials.whitelight.type = matte
+#scene.materials.whitelight.type = null
+scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = lighttex
 scene.materials.whitelight.emission.gain = 0.00015 0.00015 0.00015
 scene.materials.whitelight.kd = 0.0 0.0 0.0

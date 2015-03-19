@@ -403,6 +403,14 @@ void keyFunc(unsigned char key, int x, int y) {
 
 			// For some test with lux-hdr scene
 			/*session->BeginSceneEdit();
+			config->GetScene().Parse(Properties().SetFromString(
+				"scene.shapes.luxshell.type = mesh\n"
+				"scene.shapes.luxshell.ply = scenes/luxball/cube-shell.ply\n"
+				));
+			session->EndSceneEdit();*/
+
+			// For some test with lux-hdr scene
+			/*session->BeginSceneEdit();
 			config->GetScene().UpdateObjectTransformation("luxinner", Translate(Vector(0.05f, 0.f, 0.f)));
 			config->GetScene().UpdateObjectTransformation("luxtext", Translate(Vector(0.05f, 0.f, 0.f)));
 			config->GetScene().UpdateObjectTransformation("luxshell", Translate(Vector(0.05f, 0.f, 0.f)));

@@ -19,10 +19,15 @@
 #include <boost/format.hpp>
 
 #include "slg/sdl/sceneobject.h"
-#include "luxrays/core/extmeshcache.h"
+#include "slg/sdl/extmeshcache.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// SceneObject
+//------------------------------------------------------------------------------
 
 void SceneObject::AddReferencedMeshes(boost::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const {
 	referencedMesh.insert(mesh);
@@ -37,6 +42,14 @@ void SceneObject::AddReferencedMeshes(boost::unordered_set<const luxrays::ExtMes
 void SceneObject::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
 	if (mat == oldMat)
 		mat = newMat;
+}
+
+bool SceneObject::UpdateMeshReference(const luxrays::ExtMesh *oldMesh, luxrays::ExtMesh *newMesh) {
+	if (mesh == oldMesh) {
+		mesh = newMesh;
+		return true;
+	} else
+		return false;
 }
 
 Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache) const {
@@ -147,6 +160,14 @@ void SceneObjectDefinitions::UpdateMaterialReferences(const Material *oldMat, co
 	// Replace old material direct references with new ones
 	BOOST_FOREACH(SceneObject *o, objs)
 		o->UpdateMaterialReferences(oldMat, newMat);
+}
+
+void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh *oldMesh, ExtMesh *newMesh,
+		boost::unordered_set<SceneObject *> &modifiedObjsList) {
+	BOOST_FOREACH(SceneObject *o, objs) {
+		if (o->UpdateMeshReference(oldMesh, newMesh))
+			modifiedObjsList.insert(o);
+	}
 }
 
 void SceneObjectDefinitions::DeleteSceneObject(const std::string &name) {

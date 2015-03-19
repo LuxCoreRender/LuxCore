@@ -126,7 +126,7 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 	// Add the object to the scene
 	Properties props;
 	props.SetFromString(
-		"scene.objects." + objName + ".ply = " + meshName + "\n"
+		"scene.objects." + objName + ".shape = " + meshName + "\n"
 		"scene.objects." + objName + ".material = " + matName + "\n"
 		);
 	scene->Parse(props);
@@ -237,10 +237,12 @@ int main(int argc, char *argv[]) {
 		CreateBox(scene, "box02", "mesh-box02", "mat_glass", false, BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
 		// Create the light
 		CreateBox(scene, "box03", "mesh-box03", "whitelight", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
-		//Create a monkey from ply-file
+		// Create a monkey from ply-file
 		Properties props;
 		props.SetFromString(
-			"scene.objects.monkey.ply = samples/luxcorescenedemo/suzanne.ply\n"	// load the ply-file
+			"scene.shapes.monkey.type = mesh\n"
+			"scene.shapes.monkey.ply = samples/luxcorescenedemo/suzanne.ply\n"	// load the ply-file
+			"scene.objects.monkey.shape = monkey\n"		// set shape
 			"scene.objects.monkey.material = mat_gold\n"		// set material
 			"scene.objects.monkey.transformation = \
 						0.4 0.0 0.0 0.0 \

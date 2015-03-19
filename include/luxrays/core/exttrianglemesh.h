@@ -52,8 +52,6 @@ namespace luxrays {
  *         | =>            ExtMesh => |
  */
 	
-class ExtMeshCache;
-
 class ExtMesh : virtual public Mesh {
 public:
 	ExtMesh() { }

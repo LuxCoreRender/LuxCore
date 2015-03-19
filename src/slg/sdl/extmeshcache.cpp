@@ -16,10 +16,11 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/extmeshcache.h"
+#include "slg/sdl/extmeshcache.h"
 
 using namespace std;
 using namespace luxrays;
+using namespace slg;
 
 ExtMeshCache::ExtMeshCache() {
 	deleteMeshData = true;
@@ -33,19 +34,19 @@ ExtMeshCache::~ExtMeshCache() {
 	}
 }
 
-void ExtMeshCache::DefineExtMesh(const string &fileName, ExtTriangleMesh *mesh) {
-	if (meshByName.count(fileName) == 0) {
+void ExtMeshCache::DefineExtMesh(const string &meshName, ExtMesh *mesh) {
+	if (meshByName.count(meshName) == 0) {
 		// It is a new mesh
-		meshByName.insert(make_pair(fileName, mesh));
+		meshByName.insert(make_pair(meshName, mesh));
 		meshes.push_back(mesh);
 	} else {
 		// Replace an old mesh
-		const u_int index = GetExtMeshIndex(fileName);
+		const u_int index = GetExtMeshIndex(meshName);
 		ExtMesh *oldMesh = meshes[index];
 
 		meshes[index] = mesh;
-		meshByName.erase(fileName);
-		meshByName.insert(make_pair(fileName, mesh));
+		meshByName.erase(meshName);
+		meshByName.insert(make_pair(meshName, mesh));
 
 		if (deleteMeshData)
 			oldMesh->Delete();
@@ -53,64 +54,70 @@ void ExtMeshCache::DefineExtMesh(const string &fileName, ExtTriangleMesh *mesh) 
 	}
 }
 
-void ExtMeshCache::DefineExtMesh(const string &fileName,
+void ExtMeshCache::DefineExtMesh(const string &meshName,
 		const u_int plyNbVerts, const u_int plyNbTris,
 		Point *p, Triangle *vi, Normal *n, UV *uv, Spectrum *cols, float *alphas) {
 	ExtTriangleMesh *mesh = new ExtTriangleMesh(
 			plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 
-	DefineExtMesh(fileName, mesh);
+	DefineExtMesh(meshName, mesh);
 }
 
-void ExtMeshCache::DeleteExtMesh(const string &fileName) {
-	const u_int index = GetExtMeshIndex(fileName);
+void ExtMeshCache::DeleteExtMesh(const string &meshName) {
+	const u_int index = GetExtMeshIndex(meshName);
 
 	if (deleteMeshData)
 		meshes[index]->Delete();
 	delete meshes[index];
 
 	meshes.erase(meshes.begin() + index);
-	meshByName.erase(fileName);
+	meshByName.erase(meshName);
 }
 
-ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName) {
+ExtMesh *ExtMeshCache::GetExtMesh(const string &meshName) {
 	// Check if the mesh has been already loaded
-	boost::unordered_map<string, ExtTriangleMesh *>::const_iterator it = meshByName.find(fileName);
+	boost::unordered_map<string, ExtMesh *>::const_iterator it = meshByName.find(meshName);
 
-	if (it == meshByName.end()) {
-		// I have yet to load the file
-		ExtTriangleMesh *mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName);
-
-		meshByName.insert(make_pair(fileName, mesh));
-		meshes.push_back(mesh);
-
-		return mesh;
-	} else {
-		//SDL_LOG("Cached mesh object: " << fileName << ")");
+	if (it == meshByName.end())
+		throw runtime_error("Unknown mesh: " + meshName);
+	else {
+		//SDL_LOG("Cached mesh object: " << meshName << ")");
 		return it->second;
 	}
 }
 
-ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName, const Transform &trans) {
-	ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName);
+ExtMesh *ExtMeshCache::GetExtMesh(const string &meshName, const Transform &trans) {
+	ExtMesh *mesh = GetExtMesh(meshName);
+	if (!mesh)
+		throw runtime_error("Unknown mesh: " + meshName);
 
-	ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(mesh, trans);
+	ExtTriangleMesh *tmesh = dynamic_cast<ExtTriangleMesh *>(mesh);
+	if (!tmesh)
+		throw runtime_error("Wrong mesh type: " + meshName);
+
+	ExtInstanceTriangleMesh *imesh = new ExtInstanceTriangleMesh(tmesh, trans);
 	meshes.push_back(imesh);
 
 	return imesh;
 }
 
-ExtMesh *ExtMeshCache::GetExtMesh(const string &fileName, const MotionSystem &ms) {
-	ExtTriangleMesh *mesh = (ExtTriangleMesh *)GetExtMesh(fileName);
+ExtMesh *ExtMeshCache::GetExtMesh(const string &meshName, const MotionSystem &ms) {
+	ExtMesh *mesh = GetExtMesh(meshName);
+	if (!mesh)
+		throw runtime_error("Unknown mesh: " + meshName);
 
-	ExtMotionTriangleMesh *mmesh = new ExtMotionTriangleMesh(mesh, ms);
+	ExtTriangleMesh *tmesh = dynamic_cast<ExtTriangleMesh *>(mesh);
+	if (!tmesh)
+		throw runtime_error("Wrong mesh type: " + meshName);
+	
+	ExtMotionTriangleMesh *mmesh = new ExtMotionTriangleMesh(tmesh, ms);
 	meshes.push_back(mmesh);
 
 	return mmesh;
 }
 
-u_int ExtMeshCache::GetExtMeshIndex(const string &fileName) const {
-	boost::unordered_map<string, ExtTriangleMesh *>::const_iterator it = meshByName.find(fileName);
+u_int ExtMeshCache::GetExtMeshIndex(const string &meshName) const {
+	boost::unordered_map<string, ExtMesh *>::const_iterator it = meshByName.find(meshName);
 
 	return GetExtMeshIndex(it->second);
 }

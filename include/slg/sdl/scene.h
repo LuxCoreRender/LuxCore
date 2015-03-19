@@ -23,12 +23,11 @@
 #include <iostream>
 #include <fstream>
 
-#include "luxrays/utils/properties.h"
-#include "luxrays/core/extmeshcache.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/core/accelerator.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
+#include "luxrays/utils/properties.h"
 #include "slg/cameras/camera.h"
 #include "slg/editaction.h"
 #include "slg/lights/light.h"
@@ -39,6 +38,7 @@
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/sceneobject.h"
 #include "slg/sdl/bsdf.h"
+#include "slg/sdl/extmeshcache.h"
 #include "slg/sdl/mapping.h"
 #include "slg/volumes/volume.h"
 
@@ -115,7 +115,7 @@ public:
 
 	Camera *camera;
 
-	luxrays::ExtMeshCache extMeshCache; // Mesh objects cache
+	ExtMeshCache extMeshCache; // Mesh objects cache
 	ImageMapCache imgMapCache; // Image maps cache
 
 	TextureDefinitions texDefs; // Texture definitions
@@ -134,6 +134,7 @@ protected:
 	void ParseTextures(const luxrays::Properties &props);
 	void ParseVolumes(const luxrays::Properties &props);
 	void ParseMaterials(const luxrays::Properties &props);
+	void ParseShapes(const luxrays::Properties &props);
 	void ParseObjects(const luxrays::Properties &props);
 	void ParseLights(const luxrays::Properties &props);
 
@@ -143,6 +144,7 @@ protected:
 	Texture *GetTexture(const luxrays::Property &name);
 	Volume *CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
+	luxrays::ExtMesh *CreateShape(const std::string &shapeName, const luxrays::Properties &props);
 	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
 	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
