@@ -589,7 +589,7 @@ std::string KernelSource_pathocl_funcs =
 "#endif\n"
 "#if defined(PARAM_HAS_ALPHAS_BUFFER)\n"
 "#define KERNEL_ARGS_ALPHAS_BUFFER \\\n"
-"		__global float *vertAlphas,\n"
+"		, __global float *vertAlphas\n"
 "#else\n"
 "#define KERNEL_ARGS_ALPHAS_BUFFER\n"
 "#endif\n"
