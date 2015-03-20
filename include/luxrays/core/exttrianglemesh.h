@@ -180,6 +180,12 @@ public:
 
 	virtual void WritePly(const std::string &fileName) const;
 
+	ExtTriangleMesh *Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
+			Spectrum *meshCols, float *meshAlpha) const;
+	ExtTriangleMesh *Copy() const {
+		return Copy(NULL, NULL, NULL, NULL, NULL, NULL);
+	}
+
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName);
 
 private:

@@ -54,6 +54,8 @@
 #include "slg/samplers/sampler.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/scene.h"
+#include "slg/shapes/meshshape.h"
+#include "slg/shapes/pointiness.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/checkerboard.h"
@@ -73,7 +75,6 @@
 #include "slg/textures/marble.h"
 #include "slg/textures/mix.h"
 #include "slg/textures/scale.h"
-#include "slg/shapes/meshshape.h"
 
 using namespace std;
 using namespace luxrays;
@@ -552,6 +553,8 @@ void Scene::ParseShapes(const Properties &props) {
 		return;
 	}
 
+	double lastPrint = WallClockTime();
+	u_int shapeCount = 0;
 	BOOST_FOREACH(const string &key, shapeKeys) {
 		// Extract the shape name
 		const string shapeName = Property::ExtractField(key, 2);
@@ -596,7 +599,16 @@ void Scene::ParseShapes(const Properties &props) {
 		}
 
 		extMeshCache.DefineExtMesh(shapeName, mesh);
+
+		++shapeCount;
+
+		const double now = WallClockTime();
+		if (now - lastPrint > 2.0) {
+			SDL_LOG("Shape count: " << shapeCount);
+			lastPrint = now;
+		}
 	}
+	SDL_LOG("Shape count: " << shapeCount);
 
 	editActions.AddActions(GEOMETRY_EDIT);
 }
@@ -655,11 +667,11 @@ void Scene::ParseObjects(const Properties &props) {
 
 		const double now = WallClockTime();
 		if (now - lastPrint > 2.0) {
-			SDL_LOG("Mesh objects count: " << objCount);
+			SDL_LOG("Scene objects count: " << objCount);
 			lastPrint = now;
 		}
 	}
-	SDL_LOG("PLY object count: " << objCount);
+	SDL_LOG("Scene objects count: " << objCount);
 
 	editActions.AddActions(GEOMETRY_EDIT);
 }
@@ -1679,7 +1691,13 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 		shape = new MeshShape(meshName);
 	} else if (shapeType == "inlinedmesh")
 		shape = new MeshShape(CreateInlinedMesh(shapeName, propName, props));
-	else
+	else if (shapeType == "pointiness") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a pointiness shape: " + shapeName);
+		
+		shape = new PointinessShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
+	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 
 	ExtMesh *mesh = shape->Refine(this);

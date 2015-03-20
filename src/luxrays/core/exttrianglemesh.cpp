@@ -25,7 +25,12 @@
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
 
+using namespace std;
 using namespace luxrays;
+
+//------------------------------------------------------------------------------
+// ExtMesh
+//------------------------------------------------------------------------------
 
 void ExtMesh::GetDifferentials(const float time, const u_int triIndex,
         Vector *dpdu, Vector *dpdv,
@@ -509,4 +514,45 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 		throw std::runtime_error("Unable to write PLY face data to: " + fileName);
 
 	plyFile.close();
+}
+
+ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
+			Spectrum *meshCols, float *meshAlpha) const {
+	Point *vs = meshVertices;
+	if (!vs) {
+		vs = AllocVerticesBuffer(vertCount);
+		copy(vertices, vertices + vertCount, vs);
+	}
+
+	Triangle *ts = meshTris;
+	if (!ts) {
+		ts = AllocTrianglesBuffer(triCount);
+		copy(tris, tris + triCount, ts);
+	}
+
+	Normal *ns = meshNormals;
+	if (!ns && HasNormals()) {
+		ns = new Normal[vertCount];
+		copy(normals, normals + vertCount, ns);
+	}
+
+	UV *us = meshUV;
+	if (!us && HasUVs()) {
+		us = new UV[vertCount];
+		copy(uvs, uvs + vertCount, us);
+	}
+
+	Spectrum *cs = meshCols;
+	if (!cs && HasColors()) {
+		cs = new Spectrum[vertCount];
+		copy(cols, cols + vertCount, cs);
+	}
+	
+	float *as = meshAlpha;
+	if (!as && HasAlphas()) {
+		as = new float[vertCount];
+		copy(alphas, alphas + vertCount, as);
+	}
+
+	return new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, us, cs, as);
 }
