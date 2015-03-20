@@ -1487,7 +1487,7 @@ uint SampleComponent(
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 #define KERNEL_ARGS_ALPHAS_BUFFER \
-		__global float *vertAlphas,
+		, __global float *vertAlphas
 #else
 #define KERNEL_ARGS_ALPHAS_BUFFER
 #endif

@@ -290,7 +290,7 @@ void BSDF_Init(
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	float hitPointAlpha;
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-	if (meshDesc->colsOffset != NULL_INDEX) {
+	if (meshDesc->alphasOffset != NULL_INDEX) {
 		__global float *iVertAlphas = &vertAlphas[meshDesc->alphasOffset];
 		hitPointAlpha = Mesh_InterpolateAlpha(iVertAlphas, iTriangles, triangleIndex, b1, b2);
 	} else

@@ -293,7 +293,7 @@ std::string KernelSource_bsdf_funcs =
 "#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)\n"
 "	float hitPointAlpha;\n"
 "#if defined(PARAM_HAS_ALPHAS_BUFFER)\n"
-"	if (meshDesc->colsOffset != NULL_INDEX) {\n"
+"	if (meshDesc->alphasOffset != NULL_INDEX) {\n"
 "		__global float *iVertAlphas = &vertAlphas[meshDesc->alphasOffset];\n"
 "		hitPointAlpha = Mesh_InterpolateAlpha(iVertAlphas, iTriangles, triangleIndex, b1, b2);\n"
 "	} else\n"
