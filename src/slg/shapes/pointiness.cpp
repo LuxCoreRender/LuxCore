@@ -69,18 +69,34 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) : Shape() {
 	}
 
 	// Build the curvature information
-	float *curvature = new float[vertCount];
+	vector<float> rawCurvature(vertCount);
 	for (u_int i = 0; i < vertCount; ++i) {
 		if (vertexCounters[i] > 0)
-			curvature[i] = fabs(-Dot(srcMesh->GetShadeNormal(0.f, i), vertexEdgeVecs[i] / vertexCounters[i]));
+			rawCurvature[i] = fabs(-Dot(srcMesh->GetShadeNormal(0.f, i), vertexEdgeVecs[i] / vertexCounters[i]));
 		else
-			curvature[i] = 0.f;
+			rawCurvature[i] = 0.f;
+	}
+	
+	// Blur the curvature information
+	float *curvature = new float[vertCount];
+	fill(curvature, curvature + vertCount, 0.f);
+	fill(vertexCounters.begin(), vertexCounters.end(), 1);
+	BOOST_FOREACH(const Edge &e, edges) {
+		curvature[e.v0] += rawCurvature[e.v1];
+		vertexCounters[e.v0]++;
+
+		curvature[e.v1] += rawCurvature[e.v0];
+		vertexCounters[e.v1]++;
 	}
 
-	// Factor also old vertex alphas
-	if (srcMesh->HasAlphas())
+	// normalize and factor also old vertex alphas
+	if (srcMesh->HasAlphas()) {
 		for (u_int i = 0; i < vertCount; ++i)
-			curvature[i] *= srcMesh->GetAlpha(i);
+			curvature[i] *= srcMesh->GetAlpha(i) / vertexCounters[i];
+	} else {
+		for (u_int i = 0; i < vertCount; ++i)
+			curvature[i] /= vertexCounters[i];		
+	}
 
 	// Make a copy of the original mesh and overwrite vertex color informations
 	mesh = srcMesh->Copy(NULL, NULL, NULL, NULL, NULL, curvature);
