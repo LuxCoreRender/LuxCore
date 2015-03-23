@@ -660,22 +660,31 @@ float3 BandTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 	else if (a >= offsets[last])
 		return VLOAD3F(values[last].c);
 	else {
-		uint p = 0;
+		int p = 0;
 		for (; p <= last; ++p) {
 			if (a < offsets[p])
 				break;
 		}
 
-		const float3 p1 = VLOAD3F(values[p - 1].c);
-		const float3 p0 = VLOAD3F(values[p].c);
 		const float o1 = offsets[p - 1];
 		const float o0 = offsets[p];
+		const float factor = (a - o1) / (o0 - o1);
 
 		if (interpType == INTERP_NONE)
-			return p1;
-		else if (interpType == INTERP_LINEAR)
-			return Lerp3((a - o1) / (o0 - o1), p1, p0);
-		else
+			return VLOAD3F(values[p - 1].c);
+		else if (interpType == INTERP_LINEAR) {
+			const float3 p0 = VLOAD3F(values[p - 1].c);
+			const float3 p1 = VLOAD3F(values[p].c);
+
+			return Lerp3(factor, p0, p1);
+		} else if (interpType == INTERP_CUBIC) {
+			const float3 p0 = VLOAD3F(values[max(p - 2, 0)].c);
+			const float3 p1 = VLOAD3F(values[p - 1].c);
+			const float3 p2 = VLOAD3F(values[p].c);
+			const float3 p3 = VLOAD3F(values[min(p + 1, (int)last)].c);
+
+			return Cerp3(factor, p0, p1, p2, p3);
+		} else
 			return 0.f;
 	}
 }

@@ -260,7 +260,8 @@ typedef struct {
 
 typedef enum {
 	INTERP_NONE,
-	INTERP_LINEAR
+	INTERP_LINEAR,
+	INTERP_CUBIC
 } InterpolationType;
 
 typedef struct {

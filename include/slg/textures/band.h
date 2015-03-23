@@ -31,7 +31,8 @@ class BandTexture : public Texture {
 public:
 	typedef enum {
 		NONE,
-		LINEAR
+		LINEAR,
+		CUBIC
 	} InterpolationType;
 
 	BandTexture(const InterpolationType interp,

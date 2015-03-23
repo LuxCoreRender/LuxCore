@@ -34,6 +34,7 @@ float BandTexture::Y() const {
 				ret += (offsets[i + 1] - offsets[i]) * values[i].Y();
 			return ret;
 		}
+		case CUBIC: // Just an approximation
 		case LINEAR: {
 			float ret = offsets[0] * values[0].Y();
 			for (u_int i = 0; i < offsets.size() - 1; ++i)
@@ -54,6 +55,7 @@ float BandTexture::Filter() const {
 				ret += (offsets[i + 1] - offsets[i]) * values[i].Filter();
 			return ret;
 		}
+		case CUBIC: // Just an approximation
 		case LINEAR: {
 			float ret = offsets[0] * values[0].Filter();
 			for (u_int i = 0; i < offsets.size() - 1; ++i)
@@ -79,8 +81,8 @@ Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		return values.back();
 	// upper_bound is not available on OpenCL
 	//const u_int p = upper_bound(offsets.begin(), offsets.end(), a) - offsets.begin();
-	u_int p = 0;
-	for (; p < offsets.size(); ++p) {
+	int p = 0;
+	for (; p < (int)offsets.size(); ++p) {
 		if (a < offsets[p])
 			break;
 	}
@@ -92,6 +94,8 @@ Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 			return values[p - 1];
 		case LINEAR:
 			return Lerp(factor,	values[p - 1], values[p]);
+		case CUBIC:
+			return Cerp(factor,	values[Max<int>(p - 2, 0)], values[p - 1], values[p], values[Min<int>(p + 1, values.size() - 1)]);
 		default:
 			return Spectrum();
 	}
@@ -118,6 +122,8 @@ BandTexture::InterpolationType BandTexture::String2InterpolationType(const std::
 		return NONE;
 	else if (type == "linear")
 		return LINEAR;
+	else if (type == "cubic")
+		return CUBIC;
 	else
 		throw runtime_error("Unknown BandTexture interpolation type: " + type);
 }
@@ -129,6 +135,9 @@ string BandTexture::InterpolationType2String(const BandTexture::InterpolationTyp
 			break;
 		case LINEAR:
 			return "linear";
+			break;
+		case CUBIC:
+			return "cubic";
 			break;
 		default:
 			throw runtime_error("Unknown BandTexture interpolation type: " + type);
