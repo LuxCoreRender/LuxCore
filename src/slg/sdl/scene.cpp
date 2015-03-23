@@ -56,8 +56,9 @@
 #include "slg/sdl/scene.h"
 #include "slg/shapes/meshshape.h"
 #include "slg/shapes/pointiness.h"
-#include "slg/textures/blender_texture.h"
+#include "slg/textures/band.h"
 #include "slg/textures/blackbody.h"
+#include "slg/textures/blender_texture.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
@@ -1121,6 +1122,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "uv") {
 		return new UVTexture(CreateTextureMapping2D(propName + ".mapping", props));
 	} else if (texType == "band") {
+		const string interpTypeString = props.Get(Property(propName + ".interpolation")("linear")).Get<string>();
+		const BandTexture::InterpolationType interpType = BandTexture::String2InterpolationType(interpTypeString);
+		
 		const Texture *amtTex = GetTexture(props.Get(Property(propName + ".amount")(.5f)));
 
 		vector<float> offsets;
@@ -1135,7 +1139,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		if (offsets.size() == 0)
 			throw runtime_error("Empty Band texture: " + texName);
 
-		return new BandTexture(amtTex, offsets, values);
+		return new BandTexture(interpType, amtTex, offsets, values);
 	} else if (texType == "hitpointcolor") {
 		return new HitPointColorTexture();
 	} else if (texType == "hitpointalpha") {

@@ -40,6 +40,7 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/band.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/fbm.h"
@@ -1888,6 +1889,17 @@ void CompiledScene::CompileTextures() {
 				BandTexture *bt = static_cast<BandTexture *>(t);
 
 				tex->type = slg::ocl::BAND_TEX;
+				
+				switch (bt->GetInterpolationType()) {
+					case BandTexture::NONE:
+						tex->band.interpType = slg::ocl::INTERP_NONE;
+						break;
+					default:
+					case BandTexture::LINEAR:
+						tex->band.interpType = slg::ocl::INTERP_LINEAR;
+						break;
+				}
+				
 				const Texture *amount = bt->GetAmountTexture();
 				tex->band.amountTexIndex = scene->texDefs.GetTextureIndex(amount);
 
@@ -2284,11 +2296,13 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::BAND_TEX:
 				AddTextureSource(source, "Band", "float", "Float", i,
+						"texture->band.interpType, " +
 						ToString(tex->band.size) + ", " +
 						"texture->band.offsets, "
 						"texture->band.values, " +
 						AddTextureSourceCall("Float", tex->band.amountTexIndex));
 				AddTextureSource(source, "Band", "float3", "Spectrum", i,
+						"texture->band.interpType, " +
 						ToString(tex->band.size) + ", " +
 						"texture->band.offsets, "
 						"texture->band.values, " +

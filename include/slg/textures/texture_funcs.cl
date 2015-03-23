@@ -648,32 +648,8 @@ float3 UVTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 
 #if defined(PARAM_ENABLE_TEX_BAND)
 
-float BandTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const uint size, __global float *offsets,
-		__global Spectrum *values, const float amt) {
-	const float a = clamp(amt, 0.f, 1.f);
-
-	const uint last = size - 1;
-	if (a < offsets[0])
-		return Spectrum_Y(VLOAD3F(values[0].c));
-	else if (a >= offsets[last])
-		return Spectrum_Y(VLOAD3F(values[last].c));
-	else {
-		uint p = 0;
-		for (; p <= last; ++p) {
-			if (a < offsets[p])
-				break;
-		}
-
-		const float p1 = Spectrum_Y(VLOAD3F(values[p - 1].c));
-		const float p0 = Spectrum_Y(VLOAD3F(values[p].c));
-		const float o1 = offsets[p - 1];
-		const float o0 = offsets[p];
-		return Lerp((a - o1) / (o0 - o1), p1, p0);
-	}
-}
-
 float3 BandTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const InterpolationType interpType,
 		const uint size, __global float *offsets,
 		__global Spectrum *values, const float3 amt) {
 	const float a = clamp(Spectrum_Y(amt), 0.f, 1.f);
@@ -694,8 +670,22 @@ float3 BandTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float3 p0 = VLOAD3F(values[p].c);
 		const float o1 = offsets[p - 1];
 		const float o0 = offsets[p];
-		return Lerp3((a - o1) / (o0 - o1), p1, p0);
+
+		if (interpType == INTERP_NONE)
+			return p1;
+		else if (interpType == INTERP_LINEAR)
+			return Lerp3((a - o1) / (o0 - o1), p1, p0);
+		else
+			return 0.f;
 	}
+}
+
+float BandTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const InterpolationType interpType,
+		const uint size, __global float *offsets,
+		__global Spectrum *values, const float amt) {
+	return Spectrum_Y(BandTexture_ConstEvaluateSpectrum(hitPoint,
+			interpType, size, offsets, values, amt));
 }
 
 #endif

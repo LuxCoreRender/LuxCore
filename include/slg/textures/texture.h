@@ -429,60 +429,6 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// Band texture
-//------------------------------------------------------------------------------
-
-class BandTexture : public Texture {
-public:
-	BandTexture(const Texture *amnt, const std::vector<float> &os, const std::vector<luxrays::Spectrum> &vs) :
-		amount(amnt), offsets(os), values(vs) { }
-	virtual ~BandTexture() { }
-
-	virtual TextureType GetType() const { return BAND_TEX; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const {
-		float ret = offsets[0] * values[0].Y();
-		for (u_int i = 0; i < offsets.size() - 1; ++i)
-			ret += .5f * (offsets[i + 1] - offsets[i]) *
-				(values[i + 1].Y() + values[i].Y());
-		return ret;
-	}
-	virtual float Filter() const {
-		float ret = offsets[0] * values[0].Filter();
-		for (u_int i = 0; i < offsets.size() - 1; ++i)
-			ret += .5f * (offsets[i + 1] - offsets[i]) *
-				(values[i + 1].Filter() + values[i].Filter());
-		return ret;
-	}
-
-	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
-		Texture::AddReferencedTextures(referencedTexs);
-
-		amount->AddReferencedTextures(referencedTexs);
-	}
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		amount->AddReferencedImageMaps(referencedImgMaps);
-	}
-
-	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-		if (amount == oldTex)
-			amount = newTex;
-	}
-
-	const Texture *GetAmountTexture() const { return amount; }
-	const std::vector<float> &GetOffsets() const { return offsets; }
-	const std::vector<luxrays::Spectrum> &GetValues() const { return values; }
-
-	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
-
-private:
-	const Texture *amount;
-	const std::vector<float> offsets;
-	const std::vector<luxrays::Spectrum> values; 
-};
-
-//------------------------------------------------------------------------------
 // HitPointColor texture
 //------------------------------------------------------------------------------
 
