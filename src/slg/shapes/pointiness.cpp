@@ -89,7 +89,7 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) : Shape() {
 		vertexCounters[e.v1]++;
 	}
 
-	// normalize and factor also old vertex alphas
+	// Normalize and factor also old vertex alphas
 	if (srcMesh->HasAlphas()) {
 		for (u_int i = 0; i < vertCount; ++i)
 			curvature[i] *= srcMesh->GetAlpha(i) / vertexCounters[i];

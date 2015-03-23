@@ -620,48 +620,6 @@ Properties UVTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 }
 
 //------------------------------------------------------------------------------
-// Band texture
-//------------------------------------------------------------------------------
-
-float BandTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return GetSpectrumValue(hitPoint).Y();
-}
-
-Spectrum BandTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float a = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
-
-	if (a < offsets.front())
-		return values.front();
-	if (a >= offsets.back())
-		return values.back();
-	// upper_bound is not available on OpenCL
-	//const u_int p = upper_bound(offsets.begin(), offsets.end(), a) - offsets.begin();
-	u_int p = 0;
-	for (; p < offsets.size(); ++p) {
-		if (a < offsets[p])
-			break;
-	}
-
-	return Lerp((a - offsets[p - 1]) / (offsets[p] - offsets[p - 1]),
-			values[p - 1], values[p]);
-}
-
-Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache) const {
-	Properties props;
-
-	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("band"));
-	props.Set(Property("scene.textures." + name + ".amount")(amount->GetName()));
-
-	for (u_int i = 0; i < offsets.size(); ++i) {
-		props.Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));
-		props.Set(Property("scene.textures." + name + ".value" + ToString(i))(values[i]));
-	}
-
-	return props;
-}
-
-//------------------------------------------------------------------------------
 // HitPointColor texture
 //------------------------------------------------------------------------------
 

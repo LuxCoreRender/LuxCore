@@ -258,7 +258,13 @@ typedef struct {
 
 #define BAND_TEX_MAX_SIZE 16
 
+typedef enum {
+	INTERP_NONE,
+	INTERP_LINEAR
+} InterpolationType;
+
 typedef struct {
+	InterpolationType interpType;
 	unsigned int amountTexIndex;
 	unsigned int size;
 	float offsets[BAND_TEX_MAX_SIZE];

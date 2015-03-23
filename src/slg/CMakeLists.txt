@@ -237,6 +237,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/shape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
