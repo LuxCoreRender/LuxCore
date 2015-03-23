@@ -1898,6 +1898,9 @@ void CompiledScene::CompileTextures() {
 					case BandTexture::LINEAR:
 						tex->band.interpType = slg::ocl::INTERP_LINEAR;
 						break;
+					case BandTexture::CUBIC:
+						tex->band.interpType = slg::ocl::INTERP_CUBIC;
+						break;
 				}
 				
 				const Texture *amount = bt->GetAmountTexture();
