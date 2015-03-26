@@ -140,6 +140,6 @@ string BandTexture::InterpolationType2String(const BandTexture::InterpolationTyp
 			return "cubic";
 			break;
 		default:
-			throw runtime_error("Unknown BandTexture interpolation type: " + type);
+			throw runtime_error(&"Unknown BandTexture interpolation type: " [type]);
 	}
 }
