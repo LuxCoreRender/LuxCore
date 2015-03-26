@@ -1,0 +1,18 @@
+ply
+format ascii 1.0
+comment Created by Blender 2.69 (sub 0) - www.blender.org, source file: 'cornell.blend'
+element vertex 4
+property float x
+property float y
+property float z
+property float nx
+property float ny
+property float nz
+element face 1
+property list uchar uint vertex_indices
+end_header
+-2.942428 2.668178 5.464813 0.000000 -0.000796 -1.000000
+-2.942428 2.930561 5.464604 0.000000 -0.000796 -1.000000
+-2.617572 2.930561 5.464604 0.000000 -0.000796 -1.000000
+-2.617572 2.668178 5.464813 0.000000 -0.000796 -1.000000
+4 0 1 2 3
