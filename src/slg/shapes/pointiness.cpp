@@ -72,7 +72,7 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) : Shape() {
 	vector<float> rawCurvature(vertCount);
 	for (u_int i = 0; i < vertCount; ++i) {
 		if (vertexCounters[i] > 0)
-			rawCurvature[i] = fabs(-Dot(srcMesh->GetShadeNormal(0.f, i), vertexEdgeVecs[i] / vertexCounters[i]));
+			rawCurvature[i] = -Dot(srcMesh->GetShadeNormal(0.f, i), vertexEdgeVecs[i] / vertexCounters[i]);
 		else
 			rawCurvature[i] = 0.f;
 	}

@@ -56,10 +56,12 @@
 #include "slg/sdl/scene.h"
 #include "slg/shapes/meshshape.h"
 #include "slg/shapes/pointiness.h"
+#include "slg/textures/abs.h"
 #include "slg/textures/band.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/checkerboard.h"
+#include "slg/textures/clamp.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/fbm.h"
@@ -1205,6 +1207,16 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return AllocFresnelSopraTex(props, propName);
 	} else if (texType == "fresnelpreset") {
 		return AllocFresnelPresetTex(props, propName);
+	} else if (texType == "abs") {
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+
+		return new AbsTexture(tex);
+	} else if (texType == "clamp") {
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const float minVal = props.Get(Property(propName + ".min")(0.f)).Get<float>();
+		const float maxVal = props.Get(Property(propName + ".max")(0.f)).Get<float>();
+
+		return new ClampTexture(tex, minVal, maxVal);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }
