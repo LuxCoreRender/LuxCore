@@ -31,7 +31,8 @@ class Shape {
 public:
 	typedef enum {
 		MESH,
-		POINTINESS
+		POINTINESS,
+		STRANDS
 	} ShapeType;
 
 	Shape() : refined(false) { }

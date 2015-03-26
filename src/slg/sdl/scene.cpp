@@ -56,6 +56,7 @@
 #include "slg/sdl/scene.h"
 #include "slg/shapes/meshshape.h"
 #include "slg/shapes/pointiness.h"
+#include "slg/shapes/strands.h"
 #include "slg/textures/abs.h"
 #include "slg/textures/band.h"
 #include "slg/textures/blackbody.h"
@@ -1713,6 +1714,41 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 			throw runtime_error("Unknown shape name in a pointiness shape: " + shapeName);
 		
 		shape = new PointinessShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
+	} else if (shapeType == "strands") {
+		const string filename = props.Get(Property(propName + ".file")("strands.hair")).Get<string>();
+
+		const string tessellationTypeStr = props.Get(Property(propName + ".tesselation.type")("ribbon")).Get<string>();
+		StrendsShape::TessellationType tessellationType;
+		if (tessellationTypeStr == "ribbon")
+			tessellationType = StrendsShape::TESSEL_RIBBON;
+		else if (tessellationTypeStr == "ribbonadaptive")
+			tessellationType = StrendsShape::TESSEL_RIBBON_ADAPTIVE;
+		else if (tessellationTypeStr == "solid")
+			tessellationType = StrendsShape::TESSEL_SOLID;
+		else if (tessellationTypeStr == "solidadaptive")
+			tessellationType = StrendsShape::TESSEL_SOLID_ADAPTIVE;
+		else
+			throw runtime_error("Tessellation type unknown: " + tessellationTypeStr);
+
+		const u_int adaptiveMaxDepth = Max(0, props.Get(Property(propName + ".tesselation.adaptive.maxdepth")(8)).Get<int>());
+		const float adaptiveError = props.Get(Property(propName + ".tesselation.adaptive.error")(.1f)).Get<float>();
+
+		const u_int solidSideCount = Max(0, props.Get(Property(propName + ".tesselation.solid.sidecount")(3)).Get<int>());
+		const bool solidCapBottom = props.Get(Property(propName + ".tesselation.solid.capbottom")(false)).Get<bool>();
+		const bool solidCapTop = props.Get(Property(propName + ".tesselation.solid.captop")(false)).Get<bool>();
+		
+		const bool useCameraPosition = props.Get(Property(propName + ".tesselation.usecameraposition")(false)).Get<bool>();
+
+		cyHairFile hairFile;
+		const int hairCount = hairFile.LoadFromFile(filename.c_str());
+		if (hairCount <= 0)
+			throw runtime_error("Unable to read strands file: " + filename);
+
+		shape = new StrendsShape(this,
+				&hairFile, tessellationType,
+				adaptiveMaxDepth, adaptiveError,
+				solidSideCount, solidCapBottom, solidCapTop,
+				useCameraPosition);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 
