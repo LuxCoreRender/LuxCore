@@ -16,6 +16,7 @@ syntax: regexp
 ^src/(Debug|Release)/
 ^(Debug|Release|x64)/
 ^nbproject/*
+^scenes/strands/.*\.hair
 ^pyunittests/images/.*\.png
 ^pyunittests/referenceimages/.*\.png
 ^pyunittests/.*\.log
