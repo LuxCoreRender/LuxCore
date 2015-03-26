@@ -21,12 +21,6 @@ std::string KernelSource_texture_funcs =
 " * limitations under the License.                                          *\n"
 " ***************************************************************************/\n"
 "\n"
-"#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)\n"
-"#ifndef TEXTURE_STACK_SIZE\n"
-"#define TEXTURE_STACK_SIZE 16\n"
-"#endif\n"
-"#endif\n"
-"\n"
 "//------------------------------------------------------------------------------\n"
 "// ConstFloat texture\n"
 "//------------------------------------------------------------------------------\n"
@@ -791,5 +785,4 @@ std::string KernelSource_texture_funcs =
 "}\n"
 "\n"
 "#endif\n"
-"\n"
 ; } }

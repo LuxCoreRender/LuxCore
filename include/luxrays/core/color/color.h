@@ -123,6 +123,13 @@ public:
 	bool operator!=(const Color &sp) const {
 		return !(*this == sp);
 	}
+	Color Abs() const {
+		Color ret;
+		ret.c[0] = fabsf(c[0]);
+		ret.c[1] = fabsf(c[1]);
+		ret.c[2] = fabsf(c[2]);
+		return ret;
+	}
 	bool Black() const {
 		if (c[0] != 0.) return false;
 		if (c[1] != 0.) return false;

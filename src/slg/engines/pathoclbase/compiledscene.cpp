@@ -38,11 +38,13 @@
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
-#include "slg/textures/constfloat.h"
-#include "slg/textures/constfloat3.h"
+#include "slg/textures/abs.h"
 #include "slg/textures/band.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/checkerboard.h"
+#include "slg/textures/clamp.h"
+#include "slg/textures/constfloat.h"
+#include "slg/textures/constfloat3.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
 #include "slg/textures/fresnel/fresnelcolor.h"
@@ -1977,6 +1979,24 @@ void CompiledScene::CompileTextures() {
 				ASSIGN_SPECTRUM(tex->fresnelConst.k, fct->GetK());
 				break;
 			}
+			case ABS_TEX: {
+				AbsTexture *at = static_cast<AbsTexture *>(t);
+
+				tex->type = slg::ocl::ABS_TEX;
+				const Texture *refTex = at->GetTexture();
+				tex->absTex.texIndex = scene->texDefs.GetTextureIndex(refTex);
+				break;
+			}
+			case CLAMP_TEX: {
+				ClampTexture *ct = static_cast<ClampTexture *>(t);
+
+				tex->type = slg::ocl::CLAMP_TEX;
+				const Texture *refTex = ct->GetTexture();
+				tex->clampTex.texIndex = scene->texDefs.GetTextureIndex(refTex);
+				tex->clampTex.minVal = ct->GetMinVal();
+				tex->clampTex.maxVal = ct->GetMaxVal();
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -2330,6 +2350,24 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "FresnelConst", "float", "Float", i, "");
 				AddTextureSource(source, "FresnelConst", "float3", "Spectrum", i, "");
 				break;
+			case slg::ocl::ABS_TEX: {
+				AddTextureSource(source, "Abs", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->absTex.texIndex));
+				AddTextureSource(source, "Abs", "float3", "Spectrum", i,
+						AddTextureSourceCall("Spectrum", tex->absTex.texIndex));
+				break;
+			}
+			case slg::ocl::CLAMP_TEX: {
+				AddTextureSource(source, "Clamp", "float", "Float", i,
+						AddTextureSourceCall("Float", tex->clampTex.texIndex) + ", " +
+						ToString(tex->clampTex.minVal) + ", " +
+						ToString(tex->clampTex.maxVal));
+				AddTextureSource(source, "Clamp", "float3", "Spectrum", i,
+						AddTextureSourceCall("Spectrum", tex->clampTex.texIndex) + ", " +
+						ToString(tex->clampTex.minVal) + ", " +
+						ToString(tex->clampTex.maxVal));
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::GetTexturesEvaluationSourceCode(): " + boost::lexical_cast<string>(tex->type));
 				break;

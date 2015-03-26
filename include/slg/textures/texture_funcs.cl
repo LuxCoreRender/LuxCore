@@ -18,12 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_DISABLE_TEX_DYNAMIC_EVALUATION)
-#ifndef TEXTURE_STACK_SIZE
-#define TEXTURE_STACK_SIZE 16
-#endif
-#endif
-
 //------------------------------------------------------------------------------
 // ConstFloat texture
 //------------------------------------------------------------------------------
@@ -788,4 +782,3 @@ float3 NormalMapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint) {
 }
 
 #endif
-

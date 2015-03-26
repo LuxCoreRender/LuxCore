@@ -3,7 +3,27 @@ scene.camera.lookat.target = 0.0 0.0 0.4
 #scene.camera.lensradius = 0.015
 #scene.camera.focaldistance = 3.0
 ################################################################################
-scene.textures.curvature.type = hitpointalpha
+scene.textures.curvature_orig.type = hitpointalpha
+##
+# Work only on convex side
+#scene.textures.curvature.type = clamp
+#scene.textures.curvature.texture = curvature_orig
+#scene.textures.curvature.min = 0.0
+#scene.textures.curvature.max = 1.0
+##
+# Work only on concave side
+scene.textures.flipped_curvature.type = scale
+scene.textures.flipped_curvature.texture1 = curvature_orig
+scene.textures.flipped_curvature.texture2 = -1.0
+scene.textures.curvature.type = clamp
+scene.textures.curvature.texture = flipped_curvature
+scene.textures.curvature.min = 0.0
+scene.textures.curvature.max = 1.0
+##
+# Work on both
+#scene.textures.curvature.type = abs
+#scene.textures.curvature.texture = curvature_orig
+##
 scene.textures.scaled_curvature.type = scale
 scene.textures.scaled_curvature.texture1 = curvature
 scene.textures.scaled_curvature.texture2 = 9.0
