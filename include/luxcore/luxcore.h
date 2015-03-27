@@ -44,6 +44,7 @@
 #include <luxcore/cfg.h>
 #include <luxrays/utils/properties.h>
 #include <luxrays/utils/exportdefs.h>
+#include "luxrays/utils/cyhair/cyHairFile.h"
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
 #include <slg/sdl/scene.h>
@@ -357,6 +358,15 @@ public:
 		WEIGHTED_MEAN = slg::ImageMapStorage::WEIGHTED_MEAN,
 		RGB = slg::ImageMapStorage::RGB
 	} ChannelSelectionType;
+	/*!
+	* \brief Types of strands tessellation.
+	*/
+	typedef enum {
+		TESSEL_RIBBON = slg::StrendsShape::TESSEL_RIBBON,
+		TESSEL_RIBBON_ADAPTIVE = slg::StrendsShape::TESSEL_RIBBON_ADAPTIVE,
+		TESSEL_SOLID = slg::StrendsShape::TESSEL_SOLID,
+		TESSEL_SOLID_ADAPTIVE = slg::StrendsShape::TESSEL_SOLID_ADAPTIVE
+	} StrandsTessellationType;
 
 	/*!
 	 * \brief Constructs a new empty Scene.
@@ -478,6 +488,26 @@ public:
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas);
+	/*!
+	 * \brief Defines a mesh (to be later used in one or more scene objects) starting
+	 * from the strands/hairs definition included in strandsFile.
+	 *
+	 * \param shapeName is the name of the defined shape.
+	 * \param strandsFile includes all information about the strands .
+	 * \param tesselType is the tessellation used to transform the strands in a triangle mesh.
+	 * \param adaptiveMaxDepth is maximum number of subdivisions for adaptive tessellation.
+	 * \param adaptiveError is the error threshold for adaptive tessellation.
+	 * \param solidSideCount is the number of sides for solid tessellation.
+	 * \param solidCapBottom is a flag to set if strands has to have a bottom cap.
+	 * \param solidCapTop is a flag to set if strands has to have a top cap.
+	 * \param useCameraPosition is a flag to set if ribbon tessellation has to
+	 * be faced toward the camera.
+	 */
+	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
+		const StrandsTessellationType tesselType,
+		const u_int adaptiveMaxDepth, const float adaptiveError,
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition);
 	/*!
 	 * \brief Check if a mesh with the given name has been defined.
 	 *

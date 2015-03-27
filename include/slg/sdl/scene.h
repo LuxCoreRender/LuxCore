@@ -35,6 +35,7 @@
 #include "slg/textures/texture.h"
 #include "slg/textures/texturedefs.h"
 #include "slg/materials/material.h"
+#include "slg/shapes/strands.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/sceneobject.h"
 #include "slg/sdl/bsdf.h"
@@ -87,15 +88,22 @@ public:
 
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 
-	void DefineMesh(const std::string &meshName, luxrays::ExtTriangleMesh *mesh);
-	void DefineMesh(const std::string &meshName,
+	// Mesh shape
+	void DefineMesh(const std::string &shapeName, luxrays::ExtTriangleMesh *mesh);
+	void DefineMesh(const std::string &shapeName,
 		const long plyNbVerts, const long plyNbTris,
 		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 		luxrays::Spectrum *cols, float *alphas);
-	bool IsMeshDefined(const std::string &meshName) const;
+	// Strands shape
+	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
+		const StrendsShape::TessellationType tesselType,
+		const u_int adaptiveMaxDepth, const float adaptiveError,
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition);
 
 	bool IsTextureDefined(const std::string &texName) const;
 	bool IsMaterialDefined(const std::string &matName) const;
+	bool IsMeshDefined(const std::string &meshName) const;
 
 	void Parse(const luxrays::Properties &props);
 	void DeleteObject(const std::string &objName);

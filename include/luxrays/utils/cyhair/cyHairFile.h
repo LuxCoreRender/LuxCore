@@ -9,6 +9,8 @@
 ///
 /// \brief class for HAIR file type
 ///
+/// Extended with a couple of additional features for LuxRender project.
+///
 //-------------------------------------------------------------------------------
 
 #ifndef _CY_HAIR_FILE_H_INCLUDED_
@@ -18,6 +20,9 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
+
+namespace luxrays {
 
 //-------------------------------------------------------------------------------
 
@@ -412,5 +417,7 @@ namespace cy {
 }
 
 //-------------------------------------------------------------------------------
+
+}
 
 #endif
