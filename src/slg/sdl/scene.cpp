@@ -305,17 +305,30 @@ void Scene::DefineMesh(const string &meshName, luxrays::ExtTriangleMesh *mesh) {
 	editActions.AddAction(GEOMETRY_EDIT);
 }
 
-void Scene::DefineMesh(const string &meshName,
+void Scene::DefineMesh(const string &shapeName,
 	const long plyNbVerts, const long plyNbTris,
 	luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
 	luxrays::Spectrum *cols, float *alphas) {
-	extMeshCache.DefineExtMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
+	extMeshCache.DefineExtMesh(shapeName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 
 	editActions.AddAction(GEOMETRY_EDIT);
 }
 
-bool Scene::IsMeshDefined(const string &meshName) const {
-	return extMeshCache.IsExtMeshDefined(meshName);
+void Scene::DefineStrands(const string &shapeName, const cyHairFile &strandsFile,
+		const StrendsShape::TessellationType tesselType,
+		const u_int adaptiveMaxDepth, const float adaptiveError,
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition) {
+	StrendsShape shape(this,
+			&strandsFile, tesselType,
+			adaptiveMaxDepth, adaptiveError,
+			solidSideCount, solidCapBottom, solidCapTop,
+			useCameraPosition);
+
+	ExtMesh *mesh = shape.Refine(this);
+	extMeshCache.DefineExtMesh(shapeName, mesh);
+
+	editActions.AddAction(GEOMETRY_EDIT);
 }
 
 bool Scene::IsTextureDefined(const string &texName) const {
@@ -325,6 +338,12 @@ bool Scene::IsTextureDefined(const string &texName) const {
 bool Scene::IsMaterialDefined(const string &matName) const {
 	return matDefs.IsMaterialDefined(matName);
 }
+
+bool Scene::IsMeshDefined(const string &meshName) const {
+	return extMeshCache.IsExtMeshDefined(meshName);
+}
+
+//------------------------------------------------------------------------------
 
 void Scene::Parse(const Properties &props) {
 	sceneProperties.Set(props);
@@ -1715,7 +1734,7 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 		
 		shape = new PointinessShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
 	} else if (shapeType == "strands") {
-		const string filename = props.Get(Property(propName + ".file")("strands.hair")).Get<string>();
+		const string fileName = props.Get(Property(propName + ".file")("strands.hair")).Get<string>();
 
 		const string tessellationTypeStr = props.Get(Property(propName + ".tesselation.type")("ribbon")).Get<string>();
 		StrendsShape::TessellationType tessellationType;
@@ -1739,13 +1758,13 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 		
 		const bool useCameraPosition = props.Get(Property(propName + ".tesselation.usecameraposition")(false)).Get<bool>();
 
-		cyHairFile hairFile;
-		const int hairCount = hairFile.LoadFromFile(filename.c_str());
-		if (hairCount <= 0)
-			throw runtime_error("Unable to read strands file: " + filename);
+		cyHairFile strandsFile;
+		const int strandsCount = strandsFile.LoadFromFile(fileName.c_str());
+		if (strandsCount <= 0)
+			throw runtime_error("Unable to read strands file: " + fileName);
 
 		shape = new StrendsShape(this,
-				&hairFile, tessellationType,
+				&strandsFile, tessellationType,
 				adaptiveMaxDepth, adaptiveError,
 				solidSideCount, solidCapBottom, solidCapTop,
 				useCameraPosition);
