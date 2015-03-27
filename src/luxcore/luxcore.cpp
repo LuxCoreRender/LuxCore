@@ -328,6 +328,17 @@ void Scene::DefineMesh(const string &meshName,
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 }
 
+void Scene::DefineStrands(const string &shapeName, const luxrays::cyHairFile &strandsFile,
+		const StrandsTessellationType tesselType,
+		const u_int adaptiveMaxDepth, const float adaptiveError,
+		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+		const bool useCameraPosition) {
+	scene->DefineStrands(shapeName, strandsFile,
+			(slg::StrendsShape::TessellationType)tesselType, adaptiveMaxDepth, adaptiveError,
+			solidSideCount, solidCapBottom, solidCapTop,
+			useCameraPosition);
+}
+
 bool Scene::IsMeshDefined(const std::string &meshName) const {
 	return scene->IsMeshDefined(meshName);
 }
