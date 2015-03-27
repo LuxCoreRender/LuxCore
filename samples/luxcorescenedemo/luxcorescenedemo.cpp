@@ -349,6 +349,39 @@ int main(int argc, char *argv[]) {
 		boost::filesystem::rename("image.png", "image3.png");
 
 		//----------------------------------------------------------------------
+		// Add a strands object
+		//----------------------------------------------------------------------
+
+		LC_LOG("Adding a strands object...");
+		session->BeginSceneEdit();
+
+		{
+			const string fileName = "scenes/strands/straight.hair";
+			luxrays::cyHairFile strandsFile;
+			const int strandsCount = strandsFile.LoadFromFile(fileName.c_str());
+			if (strandsCount <= 0)
+				throw runtime_error("Unable to read strands file: " + fileName);
+			scene->DefineStrands("hairs_shape", strandsFile, Scene::TESSEL_RIBBON,
+					0, 0.f, 0, false, false, true);
+
+			// Add the object to the scene
+			Properties props;
+			props.SetFromString(
+				"scene.objects.hairs_obj.shape = hairs_shape\n"
+				"scene.objects.hairs_obj.material = mat_white\n"
+				"scene.objects.hairs_obj.transformation = 0.01 0.0 0.0 0.0  0.0 0.01 0.0 0.0  0.0 0.0 0.01 0.0  -1.5 0.0 0.3 1.0"
+				);
+			scene->Parse(props);
+		}
+
+		session->EndSceneEdit();
+			
+
+		// And redo the rendering
+		DoRendering(session);
+		boost::filesystem::rename("image.png", "image4.png");
+
+		//----------------------------------------------------------------------
 
 		// Stop the rendering
 		session->Stop();

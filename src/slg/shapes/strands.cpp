@@ -376,7 +376,7 @@ StrendsShape::StrendsShape(const Scene *scene,
 							meshCols, meshTransps);
 					break;
 				default:
-					SLG_LOG(&"Unknown tessellation  type in an Strands Shape: " [tesselType]);
+					SLG_LOG("Unknown tessellation  type in an Strands Shape: " + ToString(tesselType));
 			}
 		}
 

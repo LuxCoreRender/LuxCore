@@ -22,8 +22,9 @@
 #include <string>
 #include <vector>
 
+#include "luxrays/utils/cyhair/cyHairFile.h"
+
 #include "slg/shapes/shape.h"
-#include "slg/shapes/cyhair/cyHairFile.h"
 
 namespace slg {
 
@@ -35,7 +36,7 @@ public:
 	};
 
 	StrendsShape(const Scene *scene,
-			const cyHairFile *hairFile, const TessellationType tesselType,
+			const luxrays::cyHairFile *hairFile, const TessellationType tesselType,
 			const u_int adaptiveMaxDepth, const float adaptiveError, 
 			const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
 			const bool useCameraPosition);
