@@ -30,12 +30,12 @@
 #define ACCELERATOR_INTERSECT_PARAM_DECL , __read_only image2d_t nodes, __read_only image2d_t quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
 #define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris QBVH_LOCAL_MEMORY_PARAM
 #else
-#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global QBVHNode *nodes, __global QuadTiangle *quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const QuadTiangle* restrict quadTris QBVH_LOCAL_MEMORY_PARAM_DECL
 #define ACCELERATOR_INTERSECT_PARAM , nodes, quadTris QBVH_LOCAL_MEMORY_PARAM
 #endif
-				
+
 void Accelerator_Intersect(
-		Ray *ray,
+		const Ray *ray,
 		RayHit *rayHit
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
@@ -122,7 +122,7 @@ void Accelerator_Intersect(
                 &ray4,
 				invDir0, invDir1, invDir2);
 #else
-			__global QBVHNode *node = &nodes[nodeData];
+			__global const QBVHNode *node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
                 node->bboxes[signs0][0], node->bboxes[isigns0][0],
                 node->bboxes[signs1][1], node->bboxes[isigns1][1],
@@ -174,7 +174,7 @@ void Accelerator_Intersect(
                     iny++;
                 }
 #else
-                __global QuadTiangle *quadTri = &quadTris[primNumber];
+                __global const QuadTiangle *quadTri = &quadTris[primNumber];
                 const float4 origx = quadTri->origx;
                 const float4 origy = quadTri->origy;
                 const float4 origz = quadTri->origz;
@@ -201,7 +201,7 @@ void Accelerator_Intersect(
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(
-		__global Ray *rays,
+		__global const Ray* restrict rays,
 		__global RayHit *rayHits,
 		const uint rayCount
 		ACCELERATOR_INTERSECT_PARAM_DECL
