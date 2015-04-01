@@ -241,14 +241,17 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/strands.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/abs.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/add.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/brick.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/checkerboard.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/clamp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelapprox.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcolor.cpp
@@ -263,8 +266,12 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/marble.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/mix.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/scale.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/subtract.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/windy.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp

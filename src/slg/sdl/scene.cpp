@@ -58,13 +58,16 @@
 #include "slg/shapes/pointiness.h"
 #include "slg/shapes/strands.h"
 #include "slg/textures/abs.h"
+#include "slg/textures/add.h"
 #include "slg/textures/band.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
+#include "slg/textures/brick.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/clamp.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
 #include "slg/textures/fresnel/fresnelcolor.h"
@@ -79,6 +82,10 @@
 #include "slg/textures/marble.h"
 #include "slg/textures/mix.h"
 #include "slg/textures/scale.h"
+#include "slg/textures/subtract.h"
+#include "slg/textures/windy.h"
+#include "slg/textures/wrinkled.h"
+#include "slg/textures/uv.h"
 
 using namespace std;
 using namespace luxrays;
