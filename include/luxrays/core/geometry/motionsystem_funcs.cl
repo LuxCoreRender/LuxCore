@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void InterpolatedTransform_Sample(__global InterpolatedTransform *interpolatedTransform,
+void InterpolatedTransform_Sample(__global const InterpolatedTransform *interpolatedTransform,
 		const float time, Matrix4x4 *result) {
 	if (!interpolatedTransform->isActive) {
 		*result = interpolatedTransform->start.m;
@@ -97,8 +97,8 @@ void InterpolatedTransform_Sample(__global InterpolatedTransform *interpolatedTr
 		result->m[2][3] = interpolatedTransform->startT.Tz;
 }
 
-void MotionSystem_Sample(__global MotionSystem *motionSystem, const float time,
-		__global InterpolatedTransform *interpolatedTransforms, Matrix4x4 *result) {
+void MotionSystem_Sample(__global const MotionSystem *motionSystem, const float time,
+		__global const InterpolatedTransform *interpolatedTransforms, Matrix4x4 *result) {
 	const uint interpolatedTransformFirstIndex = motionSystem->interpolatedTransformFirstIndex;
 	const uint interpolatedTransformLastIndex = motionSystem->interpolatedTransformLastIndex;
 
