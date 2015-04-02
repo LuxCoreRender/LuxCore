@@ -260,11 +260,13 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelpreset.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelsopra.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresneltexture.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/hitpoint.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/imagemaptex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/irregulardata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/lampspectrum.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/marble.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/mix.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/normalmap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/scale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/subtract.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
