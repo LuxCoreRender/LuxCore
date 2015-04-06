@@ -64,23 +64,22 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	// Interpolate UV coordinates
 	hitPoint.uv = mesh->InterpolateTriUV(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
 
-    // Compute geometry differentials
-    Vector geometryDpdu, geometryDpdv;
-    Normal geometryDndu, geometryDndv;
-    mesh->GetDifferentials(ray.time, rayHit.triangleIndex,
-            &geometryDpdu, &geometryDpdv,
-            &geometryDndu, &geometryDndv);
+	// Compute geometry differentials
+	mesh->GetDifferentials(ray.time, rayHit.triangleIndex,
+		&hitPoint.dpdu, &hitPoint.dpdv,
+		&hitPoint.dndu, &hitPoint.dndv);
 
 	// Initialize shading differentials
-	Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, geometryDpdu));
-	Vector shadeDpdu = Cross(shadeDpdv, hitPoint.shadeN);
-	shadeDpdv *= (Dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
+	Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, hitPoint.dpdu));
+	hitPoint.dpdu = Cross(shadeDpdv, hitPoint.shadeN);
+	shadeDpdv *= (Dot(hitPoint.dpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
+	hitPoint.dpdv = shadeDpdv;
 
 	// Apply bump or normal mapping
-	material->Bump(&hitPoint, shadeDpdu, shadeDpdv, geometryDndu, geometryDndu, 1.f);
+	material->Bump(&hitPoint, 1.f);
 
 	// Build the local reference system
-	mesh->GetFrame(hitPoint.shadeN, geometryDpdu, geometryDpdv, frame);
+	mesh->GetFrame(hitPoint.shadeN, hitPoint.dpdu, hitPoint.dpdv, frame);
 }
 
 void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
@@ -96,6 +95,8 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 
 	hitPoint.geometryN = Normal(-ray.d);
 	hitPoint.shadeN = hitPoint.geometryN;
+	CoordinateSystem(Vector(hitPoint.shadeN), &hitPoint.dpdu, &hitPoint.dpdv);
+	hitPoint.dndu = hitPoint.dndv = Normal(0.f, 0.f, 0.f);
 
 	hitPoint.intoObject = true;
 	hitPoint.interiorVolume = &volume;

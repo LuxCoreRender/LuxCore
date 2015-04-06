@@ -27,8 +27,6 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
-        const Vector &dpdu, const Vector &dpdv,
-        const Normal &dndu, const Normal &dndv,
         const float sampleDistance) const {
     Spectrum rgb = tex->GetSpectrumValue(hitPoint);
     rgb.Clamp(-1.f, 1.f);
@@ -40,9 +38,9 @@ UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
 	const Vector k = Vector(hitPoint.shadeN);
 
 	// Transform n from tangent to object space
-	const Vector &t1 = dpdu;
-	const Vector &t2 = dpdv;
-    const float btsign = (Dot(dpdv, hitPoint.shadeN) > 0.f) ? 1.f : -1.f;
+	const Vector &t1 = hitPoint.dpdu;
+	const Vector &t2 = hitPoint.dpdv;
+	const float btsign = (Dot(hitPoint.dpdv, hitPoint.shadeN) > 0.f) ? 1.f : -1.f;
 
 	// Magnitude of btsign is the magnitude of the interpolated normal
 	const Vector kk = k * fabsf(btsign);
@@ -78,7 +76,7 @@ UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
 	// yields the same result.
 	const Vector nn = (-1.f / Dot(k, n)) * n;
 
-	return UV(Dot(dpdu, nn), Dot(dpdv, nn));
+	return UV(Dot(hitPoint.dpdu, nn), Dot(hitPoint.dpdv, nn));
 }
 
 Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
