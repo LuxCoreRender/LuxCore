@@ -39,8 +39,6 @@ public:
 	virtual float Filter() const { return 0.f; }
 
     virtual luxrays::UV GetDuv(const HitPoint &hitPoint,
-        const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
-        const luxrays::Normal &dndu, const luxrays::Normal &dndv,
         const float sampleDistance) const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {

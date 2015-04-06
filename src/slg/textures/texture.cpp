@@ -41,10 +41,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 // The generic implementation
-UV Texture::GetDuv(const HitPoint &hitPoint,
-        const Vector &dpdu, const Vector &dpdv,
-        const Normal &dndu, const Normal &dndv,
-        const float sampleDistance) const {
+UV Texture::GetDuv(const HitPoint &hitPoint, const float sampleDistance) const {
     // Calculate bump map value at intersection point
     const float base = GetFloatValue(hitPoint);
 
@@ -57,18 +54,18 @@ UV Texture::GetDuv(const HitPoint &hitPoint,
     HitPoint hitPointTmp = hitPoint;
 
     // Shift hitPointTmp.du in the u direction and calculate value
-    const float uu = sampleDistance / dpdu.Length();
-    hitPointTmp.p += uu * dpdu;
+    const float uu = sampleDistance / hitPoint.dpdu.Length();
+    hitPointTmp.p += uu * hitPoint.dpdu;
     hitPointTmp.uv.u += uu;
-    hitPointTmp.shadeN = Normalize(origShadeN + uu * dndu);
+    hitPointTmp.shadeN = Normalize(origShadeN + uu * hitPoint.dndu);
     duv.u = (GetFloatValue(hitPointTmp) - base) / uu;
 
     // Shift hitPointTmp.dv in the v direction and calculate value
-    const float vv = sampleDistance / dpdv.Length();
-    hitPointTmp.p = origP + vv * dpdv;
+    const float vv = sampleDistance / hitPoint.dpdv.Length();
+    hitPointTmp.p = origP + vv * hitPoint.dpdv;
     hitPointTmp.uv.u = origU;
     hitPointTmp.uv.v += vv;
-    hitPointTmp.shadeN = Normalize(origShadeN + vv * dndv);
+    hitPointTmp.shadeN = Normalize(origShadeN + vv * hitPoint.dndv);
     duv.v = (GetFloatValue(hitPointTmp) - base) / vv;
 
     return duv;

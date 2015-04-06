@@ -54,17 +54,15 @@ float Material::GetEmittedRadianceY() const {
 		return 0.f;
 }
 
-void Material::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,
-        const Normal &dndu, const Normal &dndv, const float weight) const {
+void Material::Bump(HitPoint *hitPoint, const float weight) const {
     if (bumpTex && (weight > 0.f)) {
-        const UV duv = weight * bumpTex->GetDuv(*hitPoint, dpdu, dpdv, dndu, dndv,
-                bumpSampleDistance);
+        const UV duv = weight * bumpTex->GetDuv(*hitPoint, bumpSampleDistance);
 
-        const Vector bumpDpdu = dpdu + duv.u * Vector(hitPoint->shadeN);
-        const Vector bumpDpdv = dpdv + duv.v * Vector(hitPoint->shadeN);
+        hitPoint->dpdu += duv.u * Vector(hitPoint->shadeN);
+        hitPoint->dpdv += duv.v * Vector(hitPoint->shadeN);
 
         const Normal oldShadeN = hitPoint->shadeN;
-        hitPoint->shadeN = Normal(Normalize(Cross(bumpDpdu, bumpDpdv)));
+        hitPoint->shadeN = Normal(Normalize(Cross(hitPoint->dpdu, hitPoint->dpdv)));
 
         // The above transform keeps the normal in the original normal
         // hemisphere. If they are opposed, it means UVN was indirect and
@@ -830,21 +828,20 @@ Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float o
 	}
 }
 
-void MixMaterial::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,
-        const Normal &dndu, const Normal &dndv, const float weight) const {
+void MixMaterial::Bump(HitPoint *hitPoint, const float weight) const {
     if (weight == 0.f)
         return;
 
     if (bumpTex) {
         // Use this mix node bump mapping
-        Material::Bump(hitPoint, dpdu, dpdv, dndu, dndv, weight);
+        Material::Bump(hitPoint, weight);
     } else {
         // Mix the child bump mapping
         const float weight2 = Clamp(mixFactor->GetFloatValue(*hitPoint), 0.f, 1.f);
         const float weight1 = 1.f - weight2;
 
-        matA->Bump(hitPoint, dpdu, dpdv, dndu, dndv, weight * weight1);
-        matB->Bump(hitPoint, dpdu, dpdv, dndu, dndv, weight * weight2);
+        matA->Bump(hitPoint, weight * weight1);
+        matB->Bump(hitPoint, weight * weight2);
     }
 }
 
@@ -3909,12 +3906,11 @@ Spectrum GlossyCoatingMaterial::GetEmittedRadiance(const HitPoint &hitPoint, con
 		return matBase->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
 }
 
-void GlossyCoatingMaterial::Bump(HitPoint *hitPoint, const Vector &dpdu, const Vector &dpdv,
-		const Normal &dndu, const Normal &dndv, const float weight) const {
+void GlossyCoatingMaterial::Bump(HitPoint *hitPoint, const float weight) const {
 	if (bumpTex)
-		Material::Bump(hitPoint, dpdu, dpdv, dndu, dndv, weight);
+		Material::Bump(hitPoint, weight);
 	else
-		matBase->Bump(hitPoint, dpdu, dpdv, dndu, dndv, weight);
+		matBase->Bump(hitPoint, weight);
 }
 
 Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,

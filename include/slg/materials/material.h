@@ -145,10 +145,7 @@ public:
 	const Volume *GetInteriorVolume() const { return interiorVolume; }
 	const Volume *GetExteriorVolume() const { return exteriorVolume; }	
 	
-    virtual void Bump(HitPoint *hitPoint,
-        const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
-        const luxrays::Normal &dndu, const luxrays::Normal &dndv,
-        const float weight) const;
+	virtual void Bump(HitPoint *hitPoint, const float weight) const;
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
@@ -513,10 +510,7 @@ public:
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
 
-    virtual void Bump(HitPoint *hitPoint,
-        const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
-        const luxrays::Normal &dndu, const luxrays::Normal &dndv,
-        const float weight) const;
+	virtual void Bump(HitPoint *hitPoint, const float weight) const;
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
@@ -1092,10 +1086,7 @@ public:
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
 
-    virtual void Bump(HitPoint *hitPoint,
-        const luxrays::Vector &dpdu, const luxrays::Vector &dpdv,
-        const luxrays::Normal &dndu, const luxrays::Normal &dndv,
-        const float weight) const;
+	virtual void Bump(HitPoint *hitPoint, const float weight) const;
 
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,

@@ -39,6 +39,8 @@ typedef struct {
 	luxrays::Normal geometryN;
 	luxrays::Normal shadeN;
 	luxrays::Spectrum color;
+	luxrays::Vector dpdu, dpdv;
+	luxrays::Normal dndu, dndv;
 	float alpha;
 	float passThroughEvent;
 	// Interior and exterior volume (this includes volume priority system

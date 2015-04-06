@@ -377,10 +377,12 @@ float ClearVolume::Scatter(const Ray &ray, const float u,
 		Normal(-ray.d),
 		Normal(-ray.d),
 		Spectrum(1.f),
+		Vector(0.f, 0.f, 0.f), Vector(0.f, 0.f, 0.f),
+		Normal(0.f, 0.f, 0.f), Normal(0.f, 0.f, 0.f),
 		1.f,
 		0.f, // It doesn't matter here
-		NULL, NULL, // It doesn't matter here
-		true // It doesn't matter here
+		this, this, // It doesn't matter here
+		true, true // It doesn't matter here
 	};
 	
 	const float distance = ray.maxt - ray.mint;	
@@ -496,10 +498,12 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 		Normal(-ray.d),
 		Normal(-ray.d),
 		Spectrum(1.f),
+		Vector(0.f, 0.f, 0.f), Vector(0.f, 0.f, 0.f),
+		Normal(0.f, 0.f, 0.f), Normal(0.f, 0.f, 0.f),
 		1.f,
 		0.f, // It doesn't matter here
-		NULL, NULL, // It doesn't matter here
-		true // It doesn't matter here
+		this, this, // It doesn't matter here
+		true, true // It doesn't matter here
 	};
 
 	const Spectrum sigmaT = SigmaT(hitPoint);
@@ -633,10 +637,12 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
 		Normal(-ray.d),
 		Normal(-ray.d),
 		Spectrum(1.f),
+		Vector(0.f, 0.f, 0.f), Vector(0.f, 0.f, 0.f),
+		Normal(0.f, 0.f, 0.f), Normal(0.f, 0.f, 0.f),
 		1.f,
 		0.f, // It doesn't matter here
-		NULL, NULL, // It doesn't matter here
-		true // It doesn't matter here
+		this, this, // It doesn't matter here
+		true, true // It doesn't matter here
 	};
 
 	const bool scatterAllowed = (!scatteredStart || multiScattering);
