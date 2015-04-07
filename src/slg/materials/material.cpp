@@ -773,7 +773,7 @@ const Volume *MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		if (passThroughEvent < weight1)
 			return matA->GetInteriorVolume(hitPoint, passThroughEvent / weight1);
 		else
-			return matB->GetInteriorVolume(hitPoint, (passThroughEvent - weight2) / weight2);
+			return matB->GetInteriorVolume(hitPoint, (passThroughEvent - weight1) / weight2);
 	}
 }
 
@@ -788,7 +788,7 @@ const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 		if (passThroughEvent < weight1)
 			return matA->GetExteriorVolume(hitPoint, passThroughEvent / weight1);
 		else
-			return matB->GetExteriorVolume(hitPoint, (passThroughEvent - weight2) / weight2);
+			return matB->GetExteriorVolume(hitPoint, (passThroughEvent - weight1) / weight2);
 	}
 }
 
@@ -800,7 +800,7 @@ Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 	if (passThroughEvent < weight1)
 		return matA->GetPassThroughTransparency(hitPoint, localFixedDir, passThroughEvent / weight1);
 	else
-		return matB->GetPassThroughTransparency(hitPoint, localFixedDir, (passThroughEvent - weight2) / weight2);
+		return matB->GetPassThroughTransparency(hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2);
 }
 
 float MixMaterial::GetEmittedRadianceY() const {

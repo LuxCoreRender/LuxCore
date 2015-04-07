@@ -2921,7 +2921,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\tif (passThroughEvent < weight1)\n"
 						"\t	return Material_Index" <<  mat->mix.matAIndex << "_GetPassThroughTransparency(&mats[" <<  mat->mix.matAIndex << "], hitPoint, localFixedDir, passThroughEvent / weight1 MATERIALS_PARAM);\n"
 						"\telse\n"
-						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetPassThroughTransparency(&mats[" <<  mat->mix.matBIndex << "], hitPoint, localFixedDir, (passThroughEvent - weight2) / weight2 MATERIALS_PARAM);\n"
+						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetPassThroughTransparency(&mats[" <<  mat->mix.matBIndex << "], hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);\n"
 						"}\n";
 				source << "#endif\n";
 
@@ -2955,7 +2955,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\tif (passThroughEvent < weight1)\n"
 						"\t	return Material_Index" <<  mat->mix.matAIndex << "_GetInteriorVolume(&mats[" <<  mat->mix.matAIndex << "], hitPoint, passThroughEvent / weight1 MATERIALS_PARAM);\n"
 						"\telse\n"
-						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetInteriorVolume(&mats[" <<  mat->mix.matBIndex << "], hitPoint, (passThroughEvent - weight2) / weight2 MATERIALS_PARAM);\n"
+						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetInteriorVolume(&mats[" <<  mat->mix.matBIndex << "], hitPoint, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);\n"
 						"}\n";
 				source <<
 						"uint Material_Index" << i << "_GetExteriorVolume(__global Material *material, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
@@ -2967,7 +2967,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\tif (passThroughEvent < weight1)\n"
 						"\t	return Material_Index" <<  mat->mix.matAIndex << "_GetExteriorVolume(&mats[" <<  mat->mix.matAIndex << "], hitPoint, passThroughEvent / weight1 MATERIALS_PARAM);\n"
 						"\telse\n"
-						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetExteriorVolume(&mats[" <<  mat->mix.matBIndex << "], hitPoint, (passThroughEvent - weight2) / weight2 MATERIALS_PARAM);\n"
+						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetExteriorVolume(&mats[" <<  mat->mix.matBIndex << "], hitPoint, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);\n"
 						"}\n";
 				source << "#endif\n";
 				break;
