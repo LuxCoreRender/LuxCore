@@ -40,9 +40,9 @@ typedef struct {
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
 	// MIS weight computation works (http://www.iliyan.com/publications/ImplementingVCM)
-	float dVC; // MIS quantity used for vertex connection
-	float dVCM; // MIS quantity used for vertex connection (and merging in a future)
-	float dVM; // MIS quantity used for vertex merging
+	float dVCM; // MIS quantity used for vertex connection and merging
+	float dVC;  // MIS quantity used for vertex connection
+	float dVM;  // MIS quantity used for vertex merging
 
 	// Volume rendering information
 	PathVolumeInfo volInfo;

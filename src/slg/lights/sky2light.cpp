@@ -255,7 +255,7 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
 }
 
 float SkyLight2::GetPower(const Scene &scene) const {
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 	
 	const u_int steps = 100;
 	const float deltaStep = 1.f / steps;
@@ -267,7 +267,7 @@ float SkyLight2::GetPower(const Scene &scene) const {
 	}
 	power /= steps * steps;
 
-	return gain.Y() * power * (4.f * M_PI * worldRadius * worldRadius) * 2.f * M_PI;
+	return gain.Y() * power * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
 }
 
 Spectrum SkyLight2::Emit(const Scene &scene,
@@ -276,17 +276,17 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	// Choose two points p1 and p2 on scene bounding sphere
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
-	Point p1 = worldCenter + worldRadius * UniformSampleSphere(u0, u1);
-	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+	Point p1 = worldCenter + envRadius * UniformSampleSphere(u0, u1);
+	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
 	// Construct ray between p1 and p2
 	*orig = p1;
 	*dir = Normalize(lightToWorld * (p2 - p1));
 
 	// Compute SkyLight2 ray weight
-	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = 1.f / (4.f * M_PI);
@@ -302,14 +302,14 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
         Vector *dir, float *distance, float *directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
 	*dir = Normalize(lightToWorld * UniformSampleSphere(u0, u1));
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const Point emisPoint(p + (*distance) * (*dir));
@@ -324,7 +324,7 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
 	*directPdfW = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW)
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
 
 	return GetRadiance(scene, -(*dir));
 }
@@ -337,8 +337,8 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		*directPdfA = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW) {
-		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+		const float envRadius = GetEnvRadius(scene);
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
 	}
 
 	return gain * ComputeRadiance(-dir);

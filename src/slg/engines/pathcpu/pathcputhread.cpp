@@ -169,7 +169,8 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int filmHeight = film->GetHeight();
 
 	// Setup the sampler
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
+	double metropolisSharedTotalLuminance = 0.;
+	double metropolisSharedSampleCount = 0.;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const u_int sampleBootSize = 5;
