@@ -17,14 +17,11 @@
  ***************************************************************************/
 
 #include "slg/lights/light.h"
+#include "slg/sdl/scene.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
-
-// This is used to scale the world radius in sun/sky/infinite lights in order to
-// avoid problems with objects that are near the borderline of the world bounding sphere
-const float slg::LIGHT_WORLD_RADIUS_SCALE = 10.f;
 
 //------------------------------------------------------------------------------
 // NotIntersectableLightSource
@@ -45,6 +42,14 @@ Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMap
 //------------------------------------------------------------------------------
 // InfiniteLightSource
 //------------------------------------------------------------------------------
+
+// This is used to scale the world radius in sun/sky/infinite lights in order to
+// avoid problems with objects that are near the borderline of the world bounding sphere
+const float slg::LIGHT_WORLD_RADIUS_SCALE = 10.f;
+
+float InfiniteLightSource::GetEnvRadius(const Scene &scene) {
+	return LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+}
 
 Properties InfiniteLightSource::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string prefix = "scene.lights." + GetName();

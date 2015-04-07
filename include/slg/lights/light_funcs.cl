@@ -18,6 +18,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+float InfiniteLightSource_GetEnvRadius(const float sceneRadius) {
+	// This is used to scale the world radius in sun/sky/infinite lights in order to
+	// avoid problems with objects that are near the borderline of the world bounding sphere
+	return PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius;
+}
+
 //------------------------------------------------------------------------------
 // ConstantInfiniteLight
 //------------------------------------------------------------------------------
@@ -42,12 +48,12 @@ float3 ConstantInfiniteLight_Illuminate(__global LightSource *constantInfiniteLi
 	*dir = SphericalDirection(sin(theta), cos(theta), phi);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const float3 emisPoint = p + (*distance) * (*dir);
@@ -113,12 +119,12 @@ float3 InfiniteLight_Illuminate(__global LightSource *infiniteLight,
 			SphericalDirection(sin(theta), cos(theta), phi)));
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const float3 emisPoint = p + (*distance) * (*dir);
@@ -222,7 +228,7 @@ float3 SkyLight_Illuminate(__global LightSource *skyLight,
 		const float u0, const float u1, const float3 p,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 localDir = normalize(Transform_ApplyVector(&skyLight->notIntersectable.light2World, -(*dir)));
 	*dir = normalize(Transform_ApplyVector(&skyLight->notIntersectable.light2World,  UniformSampleSphere(u0, u1)));
@@ -230,7 +236,7 @@ float3 SkyLight_Illuminate(__global LightSource *skyLight,
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const float3 emisPoint = p + (*distance) * (*dir);
@@ -298,7 +304,7 @@ float3 SkyLight2_Illuminate(__global LightSource *skyLight2,
 		const float u0, const float u1, const float3 p,
 		float3 *dir, float *distance, float *directPdfW) {
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 localDir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World, -(*dir)));
 	*dir = normalize(Transform_ApplyVector(&skyLight2->notIntersectable.light2World,  UniformSampleSphere(u0, u1)));
@@ -306,7 +312,7 @@ float3 SkyLight2_Illuminate(__global LightSource *skyLight2,
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const float3 emisPoint = p + (*distance) * (*dir);
@@ -342,11 +348,11 @@ float3 SunLight_Illuminate(__global LightSource *sunLight,
 		return BLACK;
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	*directPdfW = UniformConePdf(cosThetaMax);
@@ -664,11 +670,11 @@ float3 SharpDistantLight_Illuminate(__global LightSource *sharpDistantLight,
 	*dir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	*directPdfW = 1.f;
@@ -697,11 +703,11 @@ float3 DistantLight_Illuminate(__global LightSource *distantLight,
 	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
-	const float worldRadius = PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius * 1.01f;
+	const float envRadius = InfiniteLightSource_GetEnvRadius(sceneRadius);
 	const float3 toCenter = worldCenter - p;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, *dir);
-	*distance = approach + sqrt(max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
@@ -831,7 +837,7 @@ float3 Light_Illuminate(
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
-		const float worldRadius,
+		const float envRadius,
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global HitPoint *tmpHitPoint,
@@ -843,7 +849,7 @@ float3 Light_Illuminate(
 		case TYPE_IL_CONSTANT:
 			return ConstantInfiniteLight_Illuminate(
 				light,
-				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				u0, u1,
 				point,
 				lightRayDir, distance, directPdfW);
@@ -853,7 +859,7 @@ float3 Light_Illuminate(
 			return InfiniteLight_Illuminate(
 				light,
 				&infiniteLightDistribution[light->notIntersectable.infinite.distributionOffset],
-				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				u0, u1,
 				point,
 				lightRayDir, distance, directPdfW
@@ -863,7 +869,7 @@ float3 Light_Illuminate(
 		case TYPE_IL_SKY:
 			return SkyLight_Illuminate(
 				light,
-				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				u0, u1,
 				point,
 				lightRayDir, distance, directPdfW);
@@ -872,7 +878,7 @@ float3 Light_Illuminate(
 		case TYPE_IL_SKY2:
 			return SkyLight2_Illuminate(
 				light,
-				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				u0, u1,
 				point,
 				lightRayDir, distance, directPdfW);
@@ -881,7 +887,7 @@ float3 Light_Illuminate(
 		case TYPE_SUN:
 			return SunLight_Illuminate(
 				light,
-				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				point, u0, u1, lightRayDir, distance, directPdfW);
 #endif
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
@@ -927,14 +933,14 @@ float3 Light_Illuminate(
 		case TYPE_SHARPDISTANT:
 			return SharpDistantLight_Illuminate(
 				light,
-				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				point, lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_DISTANTLIGHT)
 		case TYPE_DISTANT:
 			return DistantLight_Illuminate(
 				light,
-				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
+				worldCenterX, worldCenterY, worldCenterZ, envRadius,
 				point, u0, u1, lightRayDir, distance, directPdfW);
 #endif
 #if defined(PARAM_HAS_LASERLIGHT)

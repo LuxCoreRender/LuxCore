@@ -61,9 +61,9 @@ void SharpDistantLight::GetPreprocessedData(float *absoluteLightDirData,
 }
 
 float SharpDistantLight::GetPower(const Scene &scene) const {
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
-	return gain.Y() * color.Y() * M_PI * worldRadius * worldRadius;
+	return gain.Y() * color.Y() * M_PI * envRadius * envRadius;
 }
 
 Spectrum SharpDistantLight::Emit(const Scene &scene,
@@ -76,13 +76,13 @@ Spectrum SharpDistantLight::Emit(const Scene &scene,
 		*cosThetaAtLight = 1.f;
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	*orig = worldCenter - worldRadius * (absoluteLightDir + d1 * x + d2 * y);
+	*orig = worldCenter - envRadius * (absoluteLightDir + d1 * x + d2 * y);
 
-	*emissionPdfW = 1.f / (M_PI * worldRadius * worldRadius);
+	*emissionPdfW = 1.f / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
@@ -97,12 +97,12 @@ Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
 	*dir = -absoluteLightDir;
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	*directPdfW = 1.f;
@@ -111,7 +111,7 @@ Spectrum SharpDistantLight::Illuminate(const Scene &scene, const Point &p,
 		*cosThetaAtLight = 1.f;
 
 	if (emissionPdfW)
-		*emissionPdfW = 1.f / (M_PI * worldRadius * worldRadius);
+		*emissionPdfW = 1.f / (M_PI * envRadius * envRadius);
 
 	return gain * color;
 }

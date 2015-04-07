@@ -51,8 +51,6 @@ typedef enum {
 	LIGHT_SOURCE_TYPE_COUNT
 } LightSourceType;
 
-extern const float LIGHT_WORLD_RADIUS_SCALE;
-
 //------------------------------------------------------------------------------
 // Generic LightSource interface
 //------------------------------------------------------------------------------
@@ -169,6 +167,10 @@ protected:
 // Infinite LightSource interface
 //------------------------------------------------------------------------------
 
+// This is used to scale the world radius in sun/sky/infinite lights in order to
+// avoid problems with objects that are near the borderline of the world bounding sphere
+extern const float LIGHT_WORLD_RADIUS_SCALE;
+
 class InfiniteLightSource : public NotIntersectableLightSource {
 public:
 	InfiniteLightSource() : isVisibleIndirectDiffuse(true),
@@ -188,16 +190,14 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 protected:
+	static float GetEnvRadius(const Scene &scene);
+
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
 };
 
 //------------------------------------------------------------------------------
 // Env. LightSource interface
 //------------------------------------------------------------------------------
-
-// This is used to scale the world radius in sun/sky/infinite lights in order to
-// avoid problems with objects that are near the borderline of the world bounding sphere
-extern const float LIGHT_WORLD_RADIUS_SCALE;
 
 class EnvLightSource : public InfiniteLightSource {
 public:

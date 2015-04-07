@@ -56,7 +56,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		sampleBootSizeVM + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
+	double metropolisSharedTotalLuminance = 0.;
+	double metropolisSharedSampleCount = 0.;
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 				&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
@@ -128,7 +129,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 		for (u_int samplerIndex = 0; samplerIndex < samplers.size(); ++samplerIndex) {
 			Sampler *sampler = samplers[samplerIndex];
-			const vector<PathVertexVM> &lightPathVertices = lightPathsVertices[samplerIndex];
 
 			PathVertexVM eyeVertex;
 			SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
@@ -210,7 +210,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					//----------------------------------------------------------
 					// Connect vertex path ray with all light path vertices
 					//----------------------------------------------------------
-
+			
+					const vector<PathVertexVM> &lightPathVertices = lightPathsVertices[samplerIndex];
 					for (vector<PathVertexVM>::const_iterator lightPathVertex = lightPathVertices.begin();
 							lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
 						ConnectVertices(time,

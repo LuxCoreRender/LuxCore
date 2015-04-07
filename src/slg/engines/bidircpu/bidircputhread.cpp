@@ -463,7 +463,8 @@ void BiDirCPURenderThread::RenderFunc() {
 	pixelCount = filmWidth * filmHeight;
 
 	// Setup the sampler
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
+	double metropolisSharedTotalLuminance = 0.;
+	double metropolisSharedSampleCount = 0.;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const u_int sampleSize = 

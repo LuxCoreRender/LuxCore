@@ -34,9 +34,9 @@ ConstantInfiniteLight::~ConstantInfiniteLight() {
 }
 
 float ConstantInfiniteLight::GetPower(const Scene &scene) const {
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
-	return gain.Y() * (4.f * M_PI * M_PI * worldRadius * worldRadius) *
+	return gain.Y() * (4.f * M_PI * M_PI * envRadius * envRadius) *
 		color.Y();
 }
 
@@ -48,8 +48,8 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 		*directPdfA = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW) {
-		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+		const float envRadius = GetEnvRadius(scene);
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
 	}
 
 	return gain * color;
@@ -60,22 +60,22 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
 	// Choose p1 on scene bounding sphere
 	const float phi = u0 * 2.f * M_PI;
 	const float theta = u1 * M_PI;
-	Point p1 = worldCenter + worldRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
+	Point p1 = worldCenter + envRadius * SphericalDirection(sinf(theta), cosf(theta), phi);
 
 	// Choose p2 on scene bounding sphere
-	Point p2 = worldCenter + worldRadius * UniformSampleSphere(u2, u3);
+	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
 	// Construct ray between p1 and p2
 	*orig = p1;
 	*dir = Normalize((p2 - p1));
 
 	// Compute InfiniteLight ray weight
-	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+	*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = 1.f / (4.f * M_PI);
@@ -95,12 +95,12 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	*dir = Normalize(SphericalDirection(sinf(theta), cosf(theta), phi));
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const Point emisPoint(p + (*distance) * (*dir));
@@ -115,7 +115,7 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	*directPdfW = 1.f / (4.f * M_PI);
 
 	if (emissionPdfW)
-		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * worldRadius * worldRadius);
+		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
 
 	return gain * color;
 }

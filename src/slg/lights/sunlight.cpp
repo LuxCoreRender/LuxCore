@@ -139,9 +139,9 @@ void SunLight::GetPreprocessedData(float *absoluteSunDirData,
 }
 
 float SunLight::GetPower(const Scene &scene) const {
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
-	return color.Y() * (M_PI * worldRadius * worldRadius) * 2.f * M_PI * sin2ThetaMax;
+	return color.Y() * (M_PI * envRadius * envRadius) * 2.f * M_PI * sin2ThetaMax;
 }
 
 Spectrum SunLight::Emit(const Scene &scene,
@@ -149,16 +149,16 @@ Spectrum SunLight::Emit(const Scene &scene,
 		Point *orig, Vector *dir,
 		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
+	const float envRadius = GetEnvRadius(scene);
 
 	// Set ray origin and direction for infinite light ray
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	*orig = worldCenter + worldRadius * (absoluteSunDir + d1 * x + d2 * y);
+	*orig = worldCenter + envRadius * (absoluteSunDir + d1 * x + d2 * y);
 	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
-	*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
+	*emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = uniformConePdf;
@@ -181,12 +181,12 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 		return Spectrum();
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 	
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
@@ -196,7 +196,7 @@ Spectrum SunLight::Illuminate(const Scene &scene, const Point &p,
 		*cosThetaAtLight = cosAtLight;
 
 	if (emissionPdfW)
-		*emissionPdfW =  uniformConePdf / (M_PI * worldRadius * worldRadius);
+		*emissionPdfW =  uniformConePdf / (M_PI * envRadius * envRadius);
 	
 	return color;
 }
@@ -216,8 +216,8 @@ Spectrum SunLight::GetRadiance(const Scene &scene,
 		*directPdfA = uniformConePdf;
 
 	if (emissionPdfW) {
-		const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad;
-		*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
+		const float envRadius = GetEnvRadius(scene);
+		*emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
 	}
 
 	return color;

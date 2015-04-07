@@ -75,9 +75,9 @@ void DistantLight::GetPreprocessedData(float *absoluteLightDirData, float *xData
 }
 
 float DistantLight::GetPower(const Scene &scene) const {
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
-	return gain.Y() * color.Y() * M_PI * worldRadius * worldRadius;
+	return gain.Y() * color.Y() * M_PI * envRadius * envRadius;
 }
 
 Spectrum DistantLight::Emit(const Scene &scene,
@@ -91,13 +91,13 @@ Spectrum DistantLight::Emit(const Scene &scene,
 		*cosThetaAtLight = Dot(*dir, absoluteLightDir);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
 	float d1, d2;
 	ConcentricSampleDisk(u2, u3, &d1, &d2);
-	*orig = worldCenter - worldRadius * (absoluteLightDir + d1 * x + d2 * y);
+	*orig = worldCenter - envRadius * (absoluteLightDir + d1 * x + d2 * y);
 
-	*emissionPdfW = uniformConePdf / (M_PI * worldRadius * worldRadius);
+	*emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = uniformConePdf;
@@ -112,12 +112,12 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
 	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene.dataSet->GetBSphere().rad * 1.01f;
+	const float envRadius = GetEnvRadius(scene);
 
 	const Vector toCenter(worldCenter - p);
 	const float centerDistance = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, worldRadius * worldRadius -
+	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
@@ -127,7 +127,7 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
 		*cosThetaAtLight = Dot(-absoluteLightDir, *dir);
 
 	if (emissionPdfW)
-		*emissionPdfW =  uniformConePdf / (M_PI * worldRadius * worldRadius);
+		*emissionPdfW =  uniformConePdf / (M_PI * envRadius * envRadius);
 
 	return gain * color;
 }
