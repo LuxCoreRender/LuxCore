@@ -3931,27 +3931,25 @@ Spectrum GlossyCoatingMaterial::GetEmittedRadiance(const HitPoint &hitPoint, con
 		return matBase->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
 }
 
-void GlossyCoatingMaterial::Bump(HitPoint *hitPoint, const float weight) const {
-	if (bumpTex)
-		Material::Bump(hitPoint, weight);
-	else
-		matBase->Bump(hitPoint, weight);
-}
-
 Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
+	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
 	const float cosi = fabsf(localLightDir.z);
 	const float coso = fabsf(localEyeDir.z);
 
 	// If Dot(woW, ng) is too small, set sideTest to 0 to discard the result
 	// and avoid numerical instability
-	// FIXME: the tests in the following 2 lines should be done with the geometric normal, not the shading normal
-	const float cosWi = localLightDir.z;
+	const float cosWi = Dot(frame.ToWorld(localLightDir), hitPoint.geometryN);
 	const float sideTest = fabsf(cosWi) < MachineEpsilon::E(1.f) ? 0.f : localEyeDir.z / cosWi;
 	if (sideTest > 0.f) {
+		HitPoint hitPointBase(hitPoint);
+		matBase->Bump(&hitPointBase, 1.f);
+		const Frame frameBase(hitPointBase.dpdu, hitPointBase.dpdv, Vector(hitPointBase.shadeN));
+		const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
+		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
 		// Reflection
-		const Spectrum baseF = matBase->Evaluate(hitPoint, localLightDir, localEyeDir, event, directPdfW, reversePdfW);
+		const Spectrum baseF = matBase->Evaluate(hitPointBase, lightDirBase, eyeDirBase, event, directPdfW, reversePdfW);
 		if (!(localLightDir.z > 0.f)) {
 			// Back face: no coating
 			return baseF;
@@ -4006,8 +4004,13 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 
 		return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
 	} else if (sideTest < 0.f) {
+		HitPoint hitPointBase(hitPoint);
+		matBase->Bump(&hitPointBase, 1.f);
+		const Frame frameBase(hitPointBase.dpdu, hitPointBase.dpdv, Vector(hitPointBase.shadeN));
+		const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
+		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
 		// Transmission
-		const Spectrum baseF = matBase->Evaluate(hitPoint, localLightDir, localEyeDir, event, directPdfW, reversePdfW);
+		const Spectrum baseF = matBase->Evaluate(hitPointBase, lightDirBase, eyeDirBase, event, directPdfW, reversePdfW);
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 		const float i = index->GetFloatValue(hitPoint);
 		if (i > 0.f) {
@@ -4055,6 +4058,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
+	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 	const float i = index->GetFloatValue(hitPoint);
 	if (i > 0.f) {
@@ -4078,13 +4082,18 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	Spectrum baseF, coatingF;
 
 	if (passThroughEvent < wBase) {
+		HitPoint hitPointBase(hitPoint);
+		matBase->Bump(&hitPointBase, 1.f);
+		const Frame frameBase(hitPointBase.dpdu, hitPointBase.dpdv, Vector(hitPointBase.shadeN));
+		const Vector fixedDirBase = frameBase.ToLocal(frame.ToWorld(localFixedDir));
 		// Sample base layer
-		baseF = matBase->Sample(hitPoint, localFixedDir, localSampledDir, u0, u1, passThroughEvent / wBase,
+		baseF = matBase->Sample(hitPointBase, fixedDirBase, localSampledDir, u0, u1, passThroughEvent / wBase,
 			&basePdf, absCosSampledDir, event, requestedEvent);
 		if (baseF.Black())
 			return Spectrum();
 
 		baseF *= basePdf;
+		*localSampledDir = frame.ToLocal(frameBase.ToWorld(*localSampledDir));
 
 		// Don't add the coating scattering if the base sampled
 		// component is specular
@@ -4108,11 +4117,14 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 
 		coatingF *= coatingPdf;
 
-		const Vector localLightDir = hitPoint.fromLight ? localFixedDir : *localSampledDir;
-		const Vector localEyeDir = hitPoint.fromLight ? *localSampledDir : localFixedDir;
+		HitPoint hitPointBase(hitPoint);
+		matBase->Bump(&hitPointBase, 1.f);
+		const Frame frameBase(hitPointBase.dpdu, hitPointBase.dpdv, Vector(hitPointBase.shadeN));
+		const Vector localLightDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? localFixedDir : *localSampledDir));
+		const Vector localEyeDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? *localSampledDir : localFixedDir));
 
 		BSDFEvent eventBase;
-		baseF = matBase->Evaluate(hitPoint, localLightDir, localEyeDir, &eventBase, &basePdf);
+		baseF = matBase->Evaluate(hitPointBase, localLightDir, localEyeDir, &eventBase, &basePdf);
 	}
 
 	// Absorption
@@ -4124,8 +4136,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 
 	// If Dot(woW, ng) is too small, set sideTest to 0 to discard the result
 	// and avoid numerical instability
-	// FIXME: the tests in the following 2 lines should be done with the geometric normal, not the shading normal
-	const float cosWo = localFixedDir.z;
+	const float cosWo = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN);
 	const float sideTest = fabsf(cosWo) < MachineEpsilon::E(1.f) ? 0.f : localSampledDir->z / cosWo;
 	Spectrum result;
 	if (sideTest > 0.f) {
@@ -4166,7 +4177,13 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	matBase->Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, reversePdfW);
+	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
+	HitPoint hitPointBase(hitPoint);
+	matBase->Bump(&hitPointBase, 1.f);
+	const Frame frameBase(hitPointBase.dpdu, hitPointBase.dpdv, Vector(hitPointBase.shadeN));
+	const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
+	const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
+	matBase->Pdf(hitPointBase, lightDirBase, eyeDirBase, directPdfW, reversePdfW);
 	const Vector localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
 	if (!(localFixedDir.z > 0.f))
 	{
