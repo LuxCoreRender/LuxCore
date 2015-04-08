@@ -1084,8 +1084,6 @@ public:
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
 
-	virtual void Bump(HitPoint *hitPoint, const float weight) const;
-
 	virtual luxrays::Spectrum Evaluate(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW = NULL, float *reversePdfW = NULL) const;
