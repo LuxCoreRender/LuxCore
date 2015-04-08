@@ -1114,8 +1114,8 @@ HybridRenderThread::HybridRenderThread(HybridRenderEngine *re,
 	currentRayBufferToSend = NULL;
 	currentReceivedRayBuffer = NULL;
 
-	metropolisSharedTotalLuminance = 0.f;
-	metropolisSharedSampleCount = 0.f;
+	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
+	// initialized inside MetropolisSampler::RequestSamples()
 
 	started = false;
 	editMode = false;

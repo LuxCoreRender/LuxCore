@@ -56,8 +56,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		sampleBootSizeVM + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
-	double metropolisSharedTotalLuminance = 0.;
-	double metropolisSharedSampleCount = 0.;
+	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
+	// initialized inside MetropolisSampler::RequestSamples()
+	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 				&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);

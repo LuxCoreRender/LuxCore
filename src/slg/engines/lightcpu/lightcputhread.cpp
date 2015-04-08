@@ -162,8 +162,10 @@ void LightCPURenderThread::RenderFunc() {
 	Film *film = threadFilm;
 
 	// Setup the sampler
-	double metropolisSharedTotalLuminance = 0.;
-	double metropolisSharedSampleCount = 0.;
+
+	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
+	// initialized inside MetropolisSampler::RequestSamples()
+	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const u_int sampleSize = 
