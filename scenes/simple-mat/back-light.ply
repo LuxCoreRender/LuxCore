@@ -1,0 +1,18 @@
+ply
+format ascii 1.0
+comment Created by Blender3D 249 - www.blender.org, source file: simple-mat.blend
+element vertex 6
+property float x
+property float y
+property float z
+element face 2
+property list uchar uint vertex_indices
+end_header
+-0.573581 9.342102 4.280405 
+0.724418 9.342103 4.280405 
+0.724418 8.601794 5.346588 
+-0.573581 9.342102 4.280405 
+0.724418 8.601794 5.346588 
+-0.573581 8.601794 5.346588 
+3 0 1 2 
+3 3 4 5 
