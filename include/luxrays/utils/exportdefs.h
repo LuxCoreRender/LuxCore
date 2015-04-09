@@ -39,7 +39,7 @@
  #endif
 #endif
 
-#if (defined(__apple_build_version__) && ((__clang_major__ == 5) && (__clang_minor__ >= 1) || (__clang_major__ == 6)))
+#if (defined(__apple_build_version__) && ((__clang_major__ == 5) && (__clang_minor__ >= 1) || ((__clang_major__ == 6) && (__clang_minor__ < 1))))
  #define CPP_EXPORT extern "C"
 #else
  #define CPP_EXPORT extern "C++"
