@@ -38,6 +38,7 @@
 #include "luxrays/utils/properties.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/editaction.h"
+
 #include "slg/lights/constantinfinitelight.h"
 #include "slg/lights/distantlight.h"
 #include "slg/lights/infinitelight.h"
@@ -51,12 +52,15 @@
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
+
 #include "slg/samplers/sampler.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/scene.h"
+
 #include "slg/shapes/meshshape.h"
 #include "slg/shapes/pointiness.h"
 #include "slg/shapes/strands.h"
+
 #include "slg/textures/abs.h"
 #include "slg/textures/add.h"
 #include "slg/textures/band.h"
@@ -88,6 +92,14 @@
 #include "slg/textures/windy.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
+
+#include "slg/materials/archglass.h"
+#include "slg/materials/glass.h"
+#include "slg/materials/matte.h"
+#include "slg/materials/mirror.h"
+#include "slg/materials/mix.h"
+#include "slg/materials/null.h"
+#include "slg/materials/roughmatte.h"
 
 using namespace std;
 using namespace luxrays;

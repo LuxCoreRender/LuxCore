@@ -25,6 +25,7 @@
 
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/cameras/perspective.h"
+
 #include "slg/lights/constantinfinitelight.h"
 #include "slg/lights/distantlight.h"
 #include "slg/lights/infinitelight.h"
@@ -38,6 +39,7 @@
 #include "slg/lights/spotlight.h"
 #include "slg/lights/sunlight.h"
 #include "slg/lights/trianglelight.h"
+
 #include "slg/textures/abs.h"
 #include "slg/textures/add.h"
 #include "slg/textures/band.h"
@@ -69,6 +71,14 @@
 #include "slg/textures/windy.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
+
+#include "slg/materials/archglass.h"
+#include "slg/materials/glass.h"
+#include "slg/materials/matte.h"
+#include "slg/materials/mirror.h"
+#include "slg/materials/mix.h"
+#include "slg/materials/null.h"
+#include "slg/materials/roughmatte.h"
 
 using namespace std;
 using namespace luxrays;

@@ -222,7 +222,15 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/spotlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/sunlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/trianglelight.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/archglass.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/glass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/material.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/materialdefs.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/matte.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/mirror.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/mix.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/null.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmatte.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp

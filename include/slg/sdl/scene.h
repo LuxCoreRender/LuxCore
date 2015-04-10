@@ -34,7 +34,7 @@
 #include "slg/lights/lightsourcedefinition.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/texturedefs.h"
-#include "slg/materials/material.h"
+#include "slg/materials/materialdefs.h"
 #include "slg/shapes/strands.h"
 #include "slg/sdl/sdl.h"
 #include "slg/sdl/sceneobject.h"
