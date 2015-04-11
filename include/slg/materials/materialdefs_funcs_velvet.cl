@@ -33,7 +33,7 @@ bool VelvetMaterial_IsDelta() {
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 VelvetMaterial_GetPassThroughTransparency(__global Material *material,
+float3 VelvetMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
 	return BLACK;

@@ -71,7 +71,7 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 
 #if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
 void Camera_ApplyArbitraryClippingPlane(
-		__global Camera *camera,
+		__global const Camera *camera,
 #if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
 		__global
 #endif
@@ -124,7 +124,7 @@ void Camera_ApplyArbitraryClippingPlane(
 #endif
 
 void Camera_GenerateRay(
-		__global Camera *camera,
+		__global const Camera *camera,
 		const uint filmWidth, const uint filmHeight,
 #if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
 		__global

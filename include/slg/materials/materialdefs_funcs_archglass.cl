@@ -63,7 +63,7 @@ bool ArchGlassMaterial_IsDelta() {
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,
+float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
 	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint

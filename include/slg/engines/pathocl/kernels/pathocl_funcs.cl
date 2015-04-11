@@ -56,7 +56,7 @@ void GenerateCameraPath(
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
 		__global float *sampleData,
-		__global Camera *camera,
+		__global const Camera *camera,
 		const uint filmWidth,
 		const uint filmHeight,
 		__global Ray *ray,
@@ -192,7 +192,7 @@ void DirectHitInfiniteLight(
 	const float3 throughput = VLOAD3F(pathThroughput->c);
 
 	for (uint i = 0; i < envLightCount; ++i) {
-		__global LightSource *light = &lights[envLightIndices[i]];
+		__global const LightSource *light = &lights[envLightIndices[i]];
 
 		float directPdfW;
 		const float3 lightRadiance = EnvLight_GetRadiance(light, -eyeDir, &directPdfW
@@ -261,7 +261,7 @@ bool DirectLight_Illuminate(
 	// Pick a light source to sample
 	float lightPickPdf;
 	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
-	__global LightSource *light = &lights[lightIndex];
+	__global const LightSource *light = &lights[lightIndex];
 
 	info->lightIndex = lightIndex;
 	info->lightID = light->lightID;
@@ -329,7 +329,7 @@ bool DirectLight_BSDFSampling(
 	// MIS between direct light sampling and BSDF sampling
 	//
 	// Note: I have to avoiding MIS on the last path vertex
-	__global LightSource *light = &lights[info->lightIndex];
+	__global const LightSource *light = &lights[info->lightIndex];
 	const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 		PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
@@ -568,88 +568,88 @@ bool DirectLight_BSDFSampling(
 
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 #define KERNEL_ARGS_NORMALS_BUFFER \
-		, __global Vector *vertNormals
+		, __global const Vector* restrict vertNormals
 #else
 #define KERNEL_ARGS_NORMALS_BUFFER
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 #define KERNEL_ARGS_UVS_BUFFER \
-		, __global UV *vertUVs
+		, __global const UV* restrict vertUVs
 #else
 #define KERNEL_ARGS_UVS_BUFFER
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 #define KERNEL_ARGS_COLS_BUFFER \
-		, __global Spectrum *vertCols
+		, __global const Spectrum* restrict vertCols
 #else
 #define KERNEL_ARGS_COLS_BUFFER
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 #define KERNEL_ARGS_ALPHAS_BUFFER \
-		, __global float *vertAlphas
+		, __global const float* restrict vertAlphas
 #else
 #define KERNEL_ARGS_ALPHAS_BUFFER
 #endif
 
 #if defined(PARAM_HAS_ENVLIGHTS)
 #define KERNEL_ARGS_ENVLIGHTS \
-		, __global uint *envLightIndices \
+		, __global const uint* restrict envLightIndices \
 		, const uint envLightCount
 #else
 #define KERNEL_ARGS_ENVLIGHTS
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT)
 #define KERNEL_ARGS_INFINITELIGHT \
-		, __global float *infiniteLightDistribution
+		, __global const float* restrict infiniteLightDistribution
 #else
 #define KERNEL_ARGS_INFINITELIGHT
 #endif
 
 #if defined(PARAM_IMAGEMAPS_PAGE_0)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
-		, __global ImageMap *imageMapDescs, __global float *imageMapBuff0
+		, __global const ImageMap* restrict imageMapDescs, __global const float* restrict imageMapBuff0
 #else
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_0
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_1)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
-		, __global float *imageMapBuff1
+		, __global const float* restrict imageMapBuff1
 #else
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_1
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_2)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
-		, __global float *imageMapBuff2
+		, __global const float* restrict imageMapBuff2
 #else
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_2
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_3)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
-		, __global float *imageMapBuff3
+		, __global const float* restrict imageMapBuff3
 #else
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_3
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_4)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
-		, __global float *imageMapBuff4
+		, __global const float* restrict imageMapBuff4
 #else
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_4
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_5)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
-		, __global float *imageMapBuff5
+		, __global const float* restrict imageMapBuff5
 #else
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_5
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_6)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
-		, __global float *imageMapBuff6
+		, __global const float* restrict imageMapBuff6
 #else
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_6
 #endif
 #if defined(PARAM_IMAGEMAPS_PAGE_7)
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_7 \
-		, __global float *imageMapBuff7
+		, __global const float* restrict imageMapBuff7
 #else
 #define KERNEL_ARGS_IMAGEMAPS_PAGE_7
 #endif
@@ -677,23 +677,23 @@ bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_FILM \
 		/* Scene parameters */ \
 		KERNEL_ARGS_INFINITELIGHTS \
-		, __global Material *mats \
-		, __global Texture *texs \
-		, __global uint *meshMats \
-		, __global Mesh *meshDescs \
-		, __global Point *vertices \
+		, __global const Material* restrict mats \
+		, __global const Texture* restrict texs \
+		, __global const uint* restrict meshMats \
+		, __global const Mesh* restrict meshDescs \
+		, __global const Point* restrict vertices \
 		KERNEL_ARGS_NORMALS_BUFFER \
 		KERNEL_ARGS_UVS_BUFFER \
 		KERNEL_ARGS_COLS_BUFFER \
 		KERNEL_ARGS_ALPHAS_BUFFER \
-		, __global Triangle *triangles \
-		, __global Camera *camera \
+		, __global const Triangle* restrict triangles \
+		, __global const Camera* restrict camera \
 		/* Lights */ \
-		, __global LightSource *lights \
+		, __global const LightSource* restrict lights \
 		KERNEL_ARGS_ENVLIGHTS \
-		, __global uint *meshTriLightDefsOffset \
+		, __global const uint* restrict meshTriLightDefsOffset \
 		KERNEL_ARGS_INFINITELIGHT \
-		, __global float *lightsDistribution \
+		, __global const float* restrict lightsDistribution \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES
 
@@ -745,7 +745,7 @@ bool DirectLight_BSDFSampling(
 
 #if defined(PARAM_HAS_IMAGEMAPS)
 #define INIT_IMAGEMAPS_PAGES \
-	__global float *imageMapBuff[PARAM_IMAGEMAPS_COUNT]; \
+	__global const float* restrict imageMapBuff[PARAM_IMAGEMAPS_COUNT]; \
 	INIT_IMAGEMAPS_PAGE_0 \
 	INIT_IMAGEMAPS_PAGE_1 \
 	INIT_IMAGEMAPS_PAGE_2 \

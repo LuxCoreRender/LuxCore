@@ -2037,7 +2037,7 @@ static string ToOCLString(const slg::ocl::Spectrum &v) {
 
 static void AddTextureSource(stringstream &source,  const string &texName, const string &returnType,
 		const string &type, const u_int i, const string &texArgs) {
-	source << returnType << " Texture_Index" << i << "_Evaluate" << type << "(__global Texture *texture, "
+	source << returnType << " Texture_Index" << i << "_Evaluate" << type << "(__global const Texture *texture, "
 			"__global HitPoint *hitPoint\n"
 			"\t\tTEXTURES_PARAM_DECL) {\n"
 			"\treturn " << texName << "Texture_ConstEvaluate" << type << "(hitPoint" <<
@@ -2400,7 +2400,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 
 	// Generate the code for evaluating a generic float texture
 	source << "float Texture_GetFloatValue(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
-			"\t __global Texture *tex = &texs[texIndex];\n"
+			"\t __global const Texture *tex = &texs[texIndex];\n"
 			"\tswitch (texIndex) {\n";
 	for (u_int i = 0; i < texturesCount; ++i) {
 		source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateFloat(tex, hitPoint TEXTURES_PARAM);\n";
@@ -2411,7 +2411,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 
 	// Generate the code for evaluating a generic spectrum texture
 	source << "float3 Texture_GetSpectrumValue(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
-			"\t __global Texture *tex = &texs[texIndex];\n"
+			"\t __global const Texture *tex = &texs[texIndex];\n"
 			"\tswitch (texIndex) {\n";
 	for (u_int i = 0; i < texturesCount; ++i) {
 		source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateSpectrum(tex, hitPoint TEXTURES_PARAM);\n";
@@ -2437,18 +2437,18 @@ static void AddMaterialSourceGlue(stringstream &source,
 static void AddMaterialSource(stringstream &source,
 		const string &matName, const u_int i, const string &params) {
 	AddMaterialSourceGlue(source, matName, i, "GetEventTypes", "GetEventTypes", "BSDFEvent",
-			"__global Material *material MATERIALS_PARAM_DECL", "");
+			"__global const Material *material MATERIALS_PARAM_DECL", "");
 	AddMaterialSourceGlue(source, matName, i, "IsDelta", "IsDelta", "bool",
-			"__global Material *material MATERIALS_PARAM_DECL", "");
+			"__global const Material *material MATERIALS_PARAM_DECL", "");
 	AddMaterialSourceGlue(source, matName, i, "Evaluate", "ConstEvaluate", "float3",
-			"__global Material *material, "
+			"__global const Material *material, "
 				"__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
 				"BSDFEvent *event, float *directPdfW "
 				"MATERIALS_PARAM_DECL",
 			"hitPoint, lightDir, eyeDir, event, directPdfW" +
 				((params.length() > 0) ? (", " + params) : ""));
 	AddMaterialSourceGlue(source, matName, i, "Sample", "ConstSample", "float3",
-			"__global Material *material, __global HitPoint *hitPoint, "
+			"__global const Material *material, __global HitPoint *hitPoint, "
 				"const float3 fixedDir, float3 *sampledDir, "
 				"const float u0, const float u1,\n"
 				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
@@ -2466,7 +2466,7 @@ static void AddMaterialSource(stringstream &source,
 
 	source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
 	AddMaterialSourceGlue(source, matName, i, "GetPassThroughTransparency", "GetPassThroughTransparency", "float3",
-			"__global Material *material, __global HitPoint *hitPoint, "
+			"__global const Material *material, __global HitPoint *hitPoint, "
 				"const float3 localFixedDir, const float passThroughEvent "
 				"MATERIALS_PARAM_DECL",
 			"material, hitPoint, localFixedDir, passThroughEvent TEXTURES_PARAM");
@@ -2475,14 +2475,14 @@ static void AddMaterialSource(stringstream &source,
 
 static void AddMaterialSourceStandardImplGetEmittedRadiance(stringstream &source, const u_int i) {
 	AddMaterialSourceGlue(source, "", i, "GetEmittedRadiance", "GetEmittedRadianceNoMix", "float3",
-			"__global Material *material, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL",
+			"__global const Material *material, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL",
 			"material, hitPoint TEXTURES_PARAM");
 }
 
 static void AddMaterialSourceStandardImplBump(stringstream &source, const u_int i) {
 	source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 	AddMaterialSourceGlue(source, "", i, "Bump", "BumpNoMix", "void",
-			"__global Material *material, __global HitPoint *hitPoint, "
+			"__global const Material *material, __global HitPoint *hitPoint, "
 				"const float3 dpdu, const float3 dpdv, "
 				"const float3 dndu, const float3 dndv, const float weight "
 				"MATERIALS_PARAM_DECL",
@@ -2493,11 +2493,11 @@ static void AddMaterialSourceStandardImplBump(stringstream &source, const u_int 
 static void AddMaterialSourceStandardImplGetvolume(stringstream &source, const u_int i) {
 	source << "#if defined(PARAM_HAS_VOLUMES)\n";
 	AddMaterialSourceGlue(source, "", i, "GetInteriorVolume", "GetInteriorVolumeNoMix", "uint",
-			"__global Material *material, __global HitPoint *hitPoint, "
+			"__global const Material *material, __global HitPoint *hitPoint, "
 				"const float passThroughEvent MATERIALS_PARAM_DECL",
 			"material");
 	AddMaterialSourceGlue(source, "", i, "GetExteriorVolume", "GetExteriorVolumeNoMix", "uint",
-			"__global Material *material, __global HitPoint *hitPoint, "
+			"__global const Material *material, __global HitPoint *hitPoint, "
 				"const float passThroughEvent MATERIALS_PARAM_DECL",
 			"material");
 	source << "#endif\n";
@@ -2508,7 +2508,7 @@ static void AddMaterialSourceSwitch(stringstream &source,
 		const string &returnType, const string &defaultReturnValue,
 		const string &args,  const string &params, const bool hasReturn = true) {
 	source << returnType << " Material_" << funcName << "(" << args << ") { \n"
-			"\t__global Material *mat = &mats[index];\n"
+			"\t__global const Material *mat = &mats[index];\n"
 			"\tswitch (index) {\n";
 	for (u_int i = 0; i < count; ++i) {
 		source << "\t\tcase " << i << ":\n";
@@ -2813,21 +2813,21 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 
 				// Material_IndexN_GetEventTypes()
 				source <<
-						"BSDFEvent Material_Index" << i << "_GetEventTypes(__global Material *material MATERIALS_PARAM_DECL) {\n"
+						"BSDFEvent Material_Index" << i << "_GetEventTypes(__global const Material *material MATERIALS_PARAM_DECL) {\n"
 						"\treturn Material_Index" << mat->mix.matAIndex << "_GetEventTypes(&mats[" << mat->mix.matAIndex << "] MATERIALS_PARAM) |\n"
 						"\t\tMaterial_Index" << mat->mix.matBIndex << "_GetEventTypes(&mats[" << mat->mix.matBIndex << "] MATERIALS_PARAM);\n"
 						"}\n";
 
 				// Material_IndexN_IsDelta()
 				source <<
-						"bool Material_Index" << i << "_IsDelta(__global Material *material MATERIALS_PARAM_DECL) {\n"
+						"bool Material_Index" << i << "_IsDelta(__global const Material *material MATERIALS_PARAM_DECL) {\n"
 						"\treturn Material_Index" << mat->mix.matAIndex << "_IsDelta(&mats[" << mat->mix.matAIndex << "] MATERIALS_PARAM) &&\n"
 						"\t\tMaterial_Index" << mat->mix.matBIndex << "_IsDelta(&mats[" << mat->mix.matBIndex << "] MATERIALS_PARAM);\n"
 						"}\n";
 
 				// Material_IndexN_Evaluate()
 				source <<
-						"float3 Material_Index" << i << "_Evaluate(__global Material *material, __global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, BSDFEvent *event, float *directPdfW MATERIALS_PARAM_DECL) {\n"
+						"float3 Material_Index" << i << "_Evaluate(__global const Material *material, __global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, BSDFEvent *event, float *directPdfW MATERIALS_PARAM_DECL) {\n"
 						"\tfloat3 result = BLACK;\n"
 						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
 						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
@@ -2860,7 +2860,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 
 				// Material_IndexN_Sample()
 				source <<
-						"float3 Material_Index" << i << "_Sample(__global Material *material, __global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,\n"
+						"float3 Material_Index" << i << "_Sample(__global const Material *material, __global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,\n"
 						"#if defined(PARAM_HAS_PASSTHROUGH)\n"
 						"\t		const float passThroughEvent,\n"
 						"#endif\n"
@@ -2872,8 +2872,8 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\tconst float weightFirst = sampleMatA ? weight1 : weight2;\n"
 						"\tconst float weightSecond = sampleMatA ? weight2 : weight1;\n"
 						"\tconst float passThroughEventFirst = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;\n"
-						"\t__global Material *matA = &mats[" <<  mat->mix.matAIndex << "];\n"
-						"\t__global Material *matB = &mats[" <<  mat->mix.matBIndex << "];\n"
+						"\t__global const Material *matA = &mats[" <<  mat->mix.matAIndex << "];\n"
+						"\t__global const Material *matB = &mats[" <<  mat->mix.matBIndex << "];\n"
 						"\tfloat3 result = sampleMatA ?\n"
 						"\t		Material_Index" <<  mat->mix.matAIndex << "_Sample(matA, hitPoint, fixedDir, sampledDir,\n"
 						"\t			u0, u1,\n"
@@ -2905,7 +2905,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 
 				// Material_IndexN_GetEmittedRadiance()
 				source <<
-						"float3 Material_Index" << i << "_GetEmittedRadiance(__global Material *material, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL) {\n"
+						"float3 Material_Index" << i << "_GetEmittedRadiance(__global const Material *material, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL) {\n"
 						"\tif (material->emitTexIndex != NULL_INDEX) {\n"
 						"\t return Material_GetEmittedRadianceNoMix(material, hitPoint TEXTURES_PARAM);\n"
 						"\t} else {\n"
@@ -2924,7 +2924,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				// Material_IndexN_GetPassThroughTransparency()
 				source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
 				source <<
-						"float3 Material_Index" << i << "_GetPassThroughTransparency(__global Material *material, __global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
+						"float3 Material_Index" << i << "_GetPassThroughTransparency(__global const Material *material, __global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
 						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
 						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
 						"\tconst float weight1 = 1.f - weight2;\n"
@@ -2938,7 +2938,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				// Material_IndexN_Bump()
 				source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 				source <<
-						"void Material_Index" << i << "_Bump(__global Material *material, __global HitPoint *hitPoint, const float3 dpdu, const float3 dpdv, const float3 dndu, const float3 dndv, const float weight MATERIALS_PARAM_DECL) {\n"
+						"void Material_Index" << i << "_Bump(__global const Material *material, __global HitPoint *hitPoint, const float3 dpdu, const float3 dpdv, const float3 dndu, const float3 dndv, const float weight MATERIALS_PARAM_DECL) {\n"
 						"\tif (weight == 0.f)\n"
 						"\t	return;\n"
 						"\tif (material->bumpTexIndex != NULL_INDEX)\n"
@@ -2956,7 +2956,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				// Material_IndexN_GetInteriorVolume() and Material_IndexN_GetExteriorVolume()
 				source << "#if defined(PARAM_HAS_VOLUMES)\n";
 				source <<
-						"uint Material_Index" << i << "_GetInteriorVolume(__global Material *material, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
+						"uint Material_Index" << i << "_GetInteriorVolume(__global const Material *material, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
 						"\tif (material->interiorVolumeIndex != NULL_INDEX)\n"
 						"\t	return material->interiorVolumeIndex;\n"
 						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
@@ -2968,7 +2968,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetInteriorVolume(&mats[" <<  mat->mix.matBIndex << "], hitPoint, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);\n"
 						"}\n";
 				source <<
-						"uint Material_Index" << i << "_GetExteriorVolume(__global Material *material, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
+						"uint Material_Index" << i << "_GetExteriorVolume(__global const Material *material, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
 						"\tif (material->exteriorVolumeIndex != NULL_INDEX)\n"
 						"\t	return material->exteriorVolumeIndex;\n"
 						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
@@ -3062,7 +3062,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"float3 Material_GetEmittedRadiance(const uint matIndex,\n"
 			"		__global HitPoint *hitPoint, const float oneOverPrimitiveArea\n"
 			"		MATERIALS_PARAM_DECL) {\n"
-			"	__global Material *material = &mats[matIndex];\n"
+			"	__global const Material *material = &mats[matIndex];\n"
 			"	float3 result;\n"
 			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
 			"	if (material->type == MIX)\n"
@@ -3079,7 +3079,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"        const float3 dpdu, const float3 dpdv,\n"
 			"        const float3 dndu, const float3 dndv, const float weight\n"
 			"        MATERIALS_PARAM_DECL) {\n"
-			"	__global Material *material = &mats[matIndex];\n"
+			"	__global const Material *material = &mats[matIndex];\n"
 			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
 			"	if (material->type == MIX)\n"
 			"		Material_BumpWithMix(matIndex, hitPoint,\n"
@@ -3099,7 +3099,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"		, const float passThroughEvent\n"
 			"#endif\n"
 			"		MATERIALS_PARAM_DECL) {\n"
-			"	__global Material *material = &mats[matIndex];\n"
+			"	__global const Material *material = &mats[matIndex];\n"
 			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
 			"	if (material->type == MIX)\n"
 			"		return Material_GetInteriorVolumeWithMix(matIndex, hitPoint\n"
@@ -3117,7 +3117,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"		, const float passThroughEvent\n"
 			"#endif\n"
 			"		MATERIALS_PARAM_DECL) {\n"
-			"	__global Material *material = &mats[matIndex];\n"
+			"	__global const Material *material = &mats[matIndex];\n"
 			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
 			"	if (material->type == MIX)\n"
 			"		return Material_GetExteriorVolumeWithMix(matIndex, hitPoint\n"

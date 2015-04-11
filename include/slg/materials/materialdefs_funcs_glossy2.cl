@@ -35,7 +35,7 @@ bool Glossy2Material_IsDelta() {
 }
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 Glossy2Material_GetPassThroughTransparency(__global Material *material,
+float3 Glossy2Material_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
 	return BLACK;

@@ -21,25 +21,25 @@
 // TODO: move in a separate extmesh_funcs.h file
 
 void ExtMesh_GetDifferentials(
-		__global Mesh *meshDescs,
-		__global Point *vertices,
+		__global const Mesh *meshDescs,
+		__global const Point *vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global Vector *vertNormals,
+		__global const Vector *vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global UV *vertUVs,
+		__global const UV *vertUVs,
 #endif
-		__global Triangle *triangles,
+		__global const Triangle *triangles,
 		const uint meshIndex,
 		const uint triangleIndex,
 		float3 *dpdu, float3 *dpdv,
         float3 *dndu, float3 *dndv) {
-	__global Mesh *meshDesc = &meshDescs[meshIndex];
-	__global Point *iVertices = &vertices[meshDesc->vertsOffset];
-	__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
+	__global const Mesh *meshDesc = &meshDescs[meshIndex];
+	__global const Point *iVertices = &vertices[meshDesc->vertsOffset];
+	__global const Triangle *iTriangles = &triangles[meshDesc->trisOffset];
 
 	// Compute triangle partial derivatives
-	__global Triangle *tri = &iTriangles[triangleIndex];
+	__global const Triangle *tri = &iTriangles[triangleIndex];
 	const uint vi0 = tri->v[0];
 	const uint vi1 = tri->v[1];
 	const uint vi2 = tri->v[2];
@@ -50,7 +50,7 @@ void ExtMesh_GetDifferentials(
 		// Ok, UV coordinates are available, use them to build the reference
 		// system around the shading normal.
 
-		__global UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
+		__global const UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
 		uv0 = VLOAD2F(&iVertUVs[vi0].u);
 		uv1 = VLOAD2F(&iVertUVs[vi1].u);
 		uv2 = VLOAD2F(&iVertUVs[vi2].u);
@@ -100,7 +100,7 @@ void ExtMesh_GetDifferentials(
 
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		if (meshDesc->normalsOffset != NULL_INDEX) {
-			__global Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
+			__global const Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
 			// Shading normals expressed in local coordinates
 			const float3 n0 = VLOAD3F(&iVertNormals[tri->v[0]].x);
 			const float3 n1 = VLOAD3F(&iVertNormals[tri->v[1]].x);
@@ -140,25 +140,25 @@ void ExtMesh_GetFrame(const float3 normal, const float3 dpdu, const float3 dpdv,
 void BSDF_Init(
 		__global BSDF *bsdf,
 		//const bool fromL,
-		__global Mesh *meshDescs,
-		__global uint *meshMats,
+		__global const Mesh *meshDescs,
+		__global const uint *meshMats,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
-		__global uint *meshTriLightDefsOffset,
+		__global const uint *meshTriLightDefsOffset,
 #endif
-		__global Point *vertices,
+		__global const Point *vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global Vector *vertNormals,
+		__global const Vector *vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global UV *vertUVs,
+		__global const UV *vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global Spectrum *vertCols,
+		__global const Spectrum *vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global float *vertAlphas,
+		__global const float *vertAlphas,
 #endif
-		__global Triangle *triangles,
+		__global const Triangle *triangles,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
@@ -166,7 +166,7 @@ void BSDF_Init(
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
-		RayHit *rayHit
+		const RayHit *rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, const float u0
 #endif
@@ -194,9 +194,9 @@ void BSDF_Init(
 	const uint meshIndex = rayHit->meshIndex;
 	const uint triangleIndex = rayHit->triangleIndex;
 
-	__global Mesh *meshDesc = &meshDescs[meshIndex];
-	__global Point *iVertices = &vertices[meshDesc->vertsOffset];
-	__global Triangle *iTriangles = &triangles[meshDesc->trisOffset];
+	__global const Mesh *meshDesc = &meshDescs[meshIndex];
+	__global const Point *iVertices = &vertices[meshDesc->vertsOffset];
+	__global const Triangle *iTriangles = &triangles[meshDesc->trisOffset];
 
 	// Get the material
 	const uint matIndex = meshMats[meshIndex];
@@ -220,7 +220,7 @@ void BSDF_Init(
 	float3 shadeN;
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 	if (meshDesc->normalsOffset != NULL_INDEX) {
-		__global Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
+		__global const Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
 		// Shading normal expressed in local coordinates
 		shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleIndex, b1, b2);
 		// Transform to global coordinates
@@ -260,7 +260,7 @@ void BSDF_Init(
 	float2 hitPointUV;
 #if defined(PARAM_HAS_UVS_BUFFER)
 	if (meshDesc->uvsOffset != NULL_INDEX) {
-		__global UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
+		__global const UV *iVertUVs = &vertUVs[meshDesc->uvsOffset];
 		hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleIndex, b1, b2);
 	} else
 #endif
@@ -275,7 +275,7 @@ void BSDF_Init(
 	float3 hitPointColor;
 #if defined(PARAM_HAS_COLS_BUFFER)
 	if (meshDesc->colsOffset != NULL_INDEX) {
-		__global Spectrum *iVertCols = &vertCols[meshDesc->colsOffset];
+		__global const Spectrum *iVertCols = &vertCols[meshDesc->colsOffset];
 		hitPointColor = Mesh_InterpolateColor(iVertCols, iTriangles, triangleIndex, b1, b2);
 	} else
 #endif
@@ -291,7 +291,7 @@ void BSDF_Init(
 	float hitPointAlpha;
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 	if (meshDesc->alphasOffset != NULL_INDEX) {
-		__global float *iVertAlphas = &vertAlphas[meshDesc->alphasOffset];
+		__global const float *iVertAlphas = &vertAlphas[meshDesc->alphasOffset];
 		hitPointAlpha = Mesh_InterpolateAlpha(iVertAlphas, iTriangles, triangleIndex, b1, b2);
 	} else
 #endif
@@ -359,7 +359,7 @@ void BSDF_Init(
 // Used when hitting a volume scatter point
 void BSDF_InitVolume(
 		__global BSDF *bsdf,
-		__global Material *mats,
+		__global const Material *mats,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
