@@ -18,11 +18,11 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float Scene_SampleAllLightPdf(__global float *distribution1D, const uint lightIndex) {
+float Scene_SampleAllLightPdf(__global const float *distribution1D, const uint lightIndex) {
 	return Distribution1D_Pdf_UINT(distribution1D, lightIndex);
 }
 
-uint Scene_SampleAllLights(__global float *distribution1D, const float u, float *pdf) {
+uint Scene_SampleAllLights(__global const float *distribution1D, const float u, float *pdf) {
 	// Power based light strategy
 	return Distribution1D_SampleDiscrete(distribution1D, u, pdf);
 }

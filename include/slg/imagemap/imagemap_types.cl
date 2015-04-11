@@ -27,3 +27,23 @@ typedef struct {
 	unsigned int channelCount, width, height;
 	unsigned int pageIndex, pixelsIndex;
 } ImageMap;
+
+//------------------------------------------------------------------------------
+// Some macro trick in order to have more readable code
+//------------------------------------------------------------------------------
+
+#if defined(SLG_OPENCL_KERNEL)
+
+#if defined(PARAM_HAS_IMAGEMAPS)
+
+#define IMAGEMAPS_PARAM_DECL , __global const ImageMap* restrict imageMapDescs, __global const float* restrict* restrict imageMapBuff
+#define IMAGEMAPS_PARAM , imageMapDescs, imageMapBuff
+
+#else
+
+#define IMAGEMAPS_PARAM_DECL
+#define IMAGEMAPS_PARAM
+
+#endif
+
+#endif

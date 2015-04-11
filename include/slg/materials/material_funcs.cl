@@ -25,7 +25,7 @@
 // (because OpenCL doesn't support recursion)
 //------------------------------------------------------------------------------
 
-float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global HitPoint *hitPoint
+float3 Material_GetEmittedRadianceNoMix(__global const Material *material, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	const uint emitTexIndex = material->emitTexIndex;
 	if (emitTexIndex == NULL_INDEX)
@@ -40,7 +40,7 @@ float3 Material_GetEmittedRadianceNoMix(__global Material *material, __global Hi
 }
 
 #if defined(PARAM_HAS_BUMPMAPS)
-void Material_BumpNoMix(__global Material *material, __global HitPoint *hitPoint,
+void Material_BumpNoMix(__global const Material *material, __global HitPoint *hitPoint,
         const float3 dpdu, const float3 dpdv,
         const float3 dndu, const float3 dndv, const float weight
         TEXTURES_PARAM_DECL) {
@@ -76,11 +76,11 @@ void Material_BumpNoMix(__global Material *material, __global HitPoint *hitPoint
 #endif
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolumeNoMix(__global Material *material) {
+uint Material_GetInteriorVolumeNoMix(__global const Material *material) {
 	return material->interiorVolumeIndex;
 }
 
-uint Material_GetExteriorVolumeNoMix(__global Material *material) {
+uint Material_GetExteriorVolumeNoMix(__global const Material *material) {
 	return material->exteriorVolumeIndex;
 }
 #endif

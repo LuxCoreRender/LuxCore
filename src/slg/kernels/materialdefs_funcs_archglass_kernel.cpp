@@ -66,7 +66,7 @@ std::string KernelSource_materialdefs_funcs_archglass =
 "}\n"
 "\n"
 "#if defined(PARAM_HAS_PASSTHROUGH)\n"
-"float3 ArchGlassMaterial_GetPassThroughTransparency(__global Material *material,\n"
+"float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *material,\n"
 "		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent\n"
 "		TEXTURES_PARAM_DECL) {\n"
 "	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint\n"

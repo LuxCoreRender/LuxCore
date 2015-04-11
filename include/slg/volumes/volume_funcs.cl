@@ -25,7 +25,7 @@
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
-float3 ClearVolume_SigmaA(__global Volume *vol, __global HitPoint *hitPoint
+float3 ClearVolume_SigmaA(__global const Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.clear.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -33,12 +33,12 @@ float3 ClearVolume_SigmaA(__global Volume *vol, __global HitPoint *hitPoint
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-float3 ClearVolume_SigmaS(__global Volume *vol, __global HitPoint *hitPoint
+float3 ClearVolume_SigmaS(__global const Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return BLACK;
 }
 
-float3 ClearVolume_SigmaT(__global Volume *vol, __global HitPoint *hitPoint
+float3 ClearVolume_SigmaT(__global const Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return
 			ClearVolume_SigmaA(vol, hitPoint
@@ -47,7 +47,7 @@ float3 ClearVolume_SigmaT(__global Volume *vol, __global HitPoint *hitPoint
 				TEXTURES_PARAM);
 }
 
-float ClearVolume_Scatter(__global Volume *vol,
+float ClearVolume_Scatter(__global const Volume *vol,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
@@ -112,7 +112,7 @@ float ClearVolume_Scatter(__global Volume *vol,
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
-float3 HomogeneousVolume_SigmaA(__global Volume *vol, __global HitPoint *hitPoint
+float3 HomogeneousVolume_SigmaA(__global const Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.homogenous.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -120,7 +120,7 @@ float3 HomogeneousVolume_SigmaA(__global Volume *vol, __global HitPoint *hitPoin
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-float3 HomogeneousVolume_SigmaS(__global Volume *vol, __global HitPoint *hitPoint
+float3 HomogeneousVolume_SigmaS(__global const Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaS = Texture_GetSpectrumValue(vol->volume.homogenous.sigmaSTexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -128,7 +128,7 @@ float3 HomogeneousVolume_SigmaS(__global Volume *vol, __global HitPoint *hitPoin
 	return clamp(sigmaS, 0.f, INFINITY);
 }
 
-float HomogeneousVolume_Scatter(__global Volume *vol,
+float HomogeneousVolume_Scatter(__global const Volume *vol,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
@@ -215,7 +215,7 @@ float HomogeneousVolume_Scatter(__global Volume *vol,
 //------------------------------------------------------------------------------
 
 #if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
-float3 HeterogeneousVolume_SigmaA(__global Volume *vol, __global HitPoint *hitPoint
+float3 HeterogeneousVolume_SigmaA(__global const Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.heterogenous.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -223,7 +223,7 @@ float3 HeterogeneousVolume_SigmaA(__global Volume *vol, __global HitPoint *hitPo
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-float3 HeterogeneousVolume_SigmaS(__global Volume *vol, __global HitPoint *hitPoint
+float3 HeterogeneousVolume_SigmaS(__global const Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaS = Texture_GetSpectrumValue(vol->volume.heterogenous.sigmaSTexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -231,13 +231,13 @@ float3 HeterogeneousVolume_SigmaS(__global Volume *vol, __global HitPoint *hitPo
 	return clamp(sigmaS, 0.f, INFINITY);
 }
 
-float3 HeterogeneousVolume_SigmaT(__global Volume *vol, __global HitPoint *hitPoint
+float3 HeterogeneousVolume_SigmaT(__global const Volume *vol, __global HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	return HeterogeneousVolume_SigmaA(vol, hitPoint TEXTURES_PARAM) +
 			HeterogeneousVolume_SigmaS(vol, hitPoint TEXTURES_PARAM);
 }
 
-float HeterogeneousVolume_Scatter(__global Volume *vol,
+float HeterogeneousVolume_Scatter(__global const Volume *vol,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif
@@ -401,7 +401,7 @@ float HeterogeneousVolume_Scatter(__global Volume *vol,
 // Volume scatter
 //------------------------------------------------------------------------------
 
-float Volume_Scatter(__global Volume *vol,
+float Volume_Scatter(__global const Volume *vol,
 #if !defined(RENDER_ENGINE_BIASPATHOCL) && !defined(RENDER_ENGINE_RTBIASPATHOCL)
 		__global
 #endif

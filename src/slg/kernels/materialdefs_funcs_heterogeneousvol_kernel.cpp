@@ -129,7 +129,7 @@ std::string KernelSource_materialdefs_funcs_heterogeneousvol =
 "}\n"
 "\n"
 "#if defined(PARAM_HAS_PASSTHROUGH)\n"
-"float3 HeterogeneousVolMaterial_GetPassThroughTransparency(__global Material *material,\n"
+"float3 HeterogeneousVolMaterial_GetPassThroughTransparency(__global const Material *material,\n"
 "		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent\n"
 "		TEXTURES_PARAM_DECL) {\n"
 "	return BLACK;\n"

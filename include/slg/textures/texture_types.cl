@@ -355,19 +355,7 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#if defined(PARAM_HAS_IMAGEMAPS)
-
-#define IMAGEMAPS_PARAM_DECL , __global ImageMap *imageMapDescs, __global float **imageMapBuff
-#define IMAGEMAPS_PARAM , imageMapDescs, imageMapBuff
-
-#else
-
-#define IMAGEMAPS_PARAM_DECL
-#define IMAGEMAPS_PARAM
-
-#endif
-
-#define TEXTURES_PARAM_DECL , __global Texture *texs IMAGEMAPS_PARAM_DECL
+#define TEXTURES_PARAM_DECL , __global const Texture* restrict texs IMAGEMAPS_PARAM_DECL
 #define TEXTURES_PARAM , texs IMAGEMAPS_PARAM
 
 #endif

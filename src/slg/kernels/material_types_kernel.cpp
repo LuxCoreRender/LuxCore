@@ -289,7 +289,7 @@ std::string KernelSource_material_types =
 "\n"
 "#if defined(SLG_OPENCL_KERNEL)\n"
 "\n"
-"#define MATERIALS_PARAM_DECL , __global Material *mats TEXTURES_PARAM_DECL\n"
+"#define MATERIALS_PARAM_DECL , __global const Material* restrict mats TEXTURES_PARAM_DECL\n"
 "#define MATERIALS_PARAM , mats TEXTURES_PARAM\n"
 "\n"
 "#endif\n"
