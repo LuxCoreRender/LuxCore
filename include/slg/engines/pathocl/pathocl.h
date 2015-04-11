@@ -69,7 +69,6 @@ protected:
 	// OpenCL variables
 	cl::Kernel *initKernel;
 	size_t initWorkGroupSize;
-	cl::Kernel *advancePathsKernel;
 	cl::Kernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
 	cl::Kernel *advancePathsKernel_MK_HIT_NOTHING;
 	cl::Kernel *advancePathsKernel_MK_HIT_OBJECT;
@@ -123,7 +122,7 @@ public:
 	float pdfClampValue;
 
 	u_int taskCount;
-	bool usePixelAtomics, useMicroKernels;
+	bool usePixelAtomics;
 
 protected:
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);

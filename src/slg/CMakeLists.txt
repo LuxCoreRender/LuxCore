@@ -85,11 +85,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/rtpathoclbase_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_kernels_mega.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathocl/kernels/pathocl_kernels_micro.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels_mega.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels_micro.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
@@ -298,7 +296,6 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/camera_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/camera_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/mc_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdf_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/bsdfutils_funcs_kernel.cpp
@@ -351,11 +348,9 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/rtpathoclbase_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_datatypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_kernels_mega_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/pathocl_kernels_micro_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_datatypes_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_funcs_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_kernels_mega_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/biaspathocl_kernels_micro_kernel.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Kernels" FILES ${SLG_SRCS_KERNELS})

@@ -65,7 +65,6 @@ protected:
 	cl::Kernel *mergePixelSamplesKernel;
 	size_t mergePixelSamplesWorkGroupSize;
 	
-	cl::Kernel *renderSampleKernel;
 	cl::Kernel *renderSampleKernel_MK_GENERATE_CAMERA_RAY;
 	cl::Kernel *renderSampleKernel_MK_TRACE_EYE_RAY;
 	cl::Kernel *renderSampleKernel_MK_ILLUMINATE_EYE_MISS;
@@ -123,7 +122,6 @@ public:
 	u_int firstVertexLightSampleCount;
 
 	u_int maxTilePerDevice;
-	bool useMicroKernels;
 
 protected:
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
