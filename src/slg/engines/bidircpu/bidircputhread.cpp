@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
-// (http://www.davidovic.cz) and http://www.smallvcm.com)
+// (http://www.davidovic.cz and http://www.smallvcm.com)
 
 #include "slg/engines/bidircpu/bidircpu.h"
 
@@ -81,14 +81,14 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				if (eyeVertex.depth >= engine->rrDepth) {
+				if (eyeVertex.noSpecularVertexDepth >= engine->rrDepth) {
 					// Russian Roulette
 					const float prob = RenderEngine::RussianRouletteProb(eyeBsdfEval, engine->rrImportanceCap);
 					eyeBsdfPdfW *= prob;
 					eyeBsdfRevPdfW *= prob;
 				}
 
-				if (lightVertex.depth >= engine->rrDepth) {
+				if (lightVertex.noSpecularVertexDepth >= engine->rrDepth) {
 					// Russian Roulette
 					const float prob = RenderEngine::RussianRouletteProb(lightBsdfEval, engine->rrImportanceCap);
 					lightBsdfPdfW *= prob;
@@ -151,7 +151,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				if (lightVertex.depth >= engine->rrDepth) {
+				if (lightVertex.noSpecularVertexDepth >= engine->rrDepth) {
 					// Russian Roulette
 					const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 					bsdfRevPdfW *= prob;
@@ -221,7 +221,8 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 					// I'm ignoring volume emission because it is not sampled in
 					// direct light step.
 
-					if (eyeVertex.depth >= engine->rrDepth) {
+					// The +1 is there to account the current path vertex used for DL
+					if (eyeVertex.noSpecularVertexDepth + 1 >= engine->rrDepth) {
 						// Russian Roulette
 						const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 						bsdfPdfW *= prob;
@@ -326,6 +327,7 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 		lightVertex.dVM = lightVertex.dVC * misVcWeightFactor;
 
 		lightVertex.depth = 1;
+		lightVertex.noSpecularVertexDepth = 0;
 		while (lightVertex.depth <= engine->maxLightPathDepth) {
 			const u_int sampleOffset = sampleBootSize + (lightVertex.depth - 1) * sampleLightStepSize;
 
@@ -370,8 +372,6 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 
 				if (!Bounce(time, sampler, sampleOffset + 2, &lightVertex, &lightRay))
 					break;
-
-				++(lightVertex.depth);
 			} else {
 				// Ray lost in space...
 				break;
@@ -397,10 +397,12 @@ bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
 	float bsdfRevPdfW;
 	if (event & SPECULAR)
 		bsdfRevPdfW = bsdfPdfW;
-	else
+	else {
 		pathVertex->bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
+		++(pathVertex->noSpecularVertexDepth);
+	}
 
-	if (pathVertex->depth >= engine->rrDepth) {
+	if (pathVertex->noSpecularVertexDepth >= engine->rrDepth) {
 		// Russian Roulette
 		const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
 		if (sampler->GetSample(sampleOffset + 2) < prob) {
@@ -442,6 +444,8 @@ bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
 
 	*nextEventRay = Ray(pathVertex->bsdf.hitPoint.p, sampledDir);
 	nextEventRay->time = time;
+
+	++pathVertex->depth;
 
 	return true;
 }
@@ -528,6 +532,7 @@ void BiDirCPURenderThread::RenderFunc() {
 		eyeVertex.dVM = 0.f;
 
 		eyeVertex.depth = 1;
+		eyeVertex.noSpecularVertexDepth = 0;
 		while (eyeVertex.depth <= engine->maxEyePathDepth) {
 			const u_int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
 				(eyeVertex.depth - 1) * sampleEyeStepSize;
@@ -605,8 +610,6 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			if (!Bounce(time, sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
 				break;
-
-			++(eyeVertex.depth);
 
 #ifdef WIN32
 			// Work around Windows bad scheduling

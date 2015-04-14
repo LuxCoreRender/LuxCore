@@ -50,7 +50,7 @@ private:
 		const float u1, const float u2,
 		const float u3, const float u4,
 		const luxrays::Spectrum &pathThrouput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, const int depth,
+		PathVolumeInfo volInfo, const u_int depth,
 		SampleResult *sampleResult);
 
 	void DirectHitFiniteLight(const BSDFEvent lastBSDFEvent, const luxrays::Spectrum &pathThrouput,
@@ -72,9 +72,9 @@ public:
 	}
 
 	// Signed because of the delta parameter
-	int maxPathDepth;
+	u_int maxPathDepth;
 
-	int rrDepth;
+	u_int rrDepth;
 	float rrImportanceCap;
 
 	// Clamping settings

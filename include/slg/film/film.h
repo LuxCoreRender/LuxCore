@@ -309,11 +309,11 @@ public:
 		if (channels | Film::RADIANCE_PER_SCREEN_NORMALIZED)
 			radiancePerScreenNormalized.resize(radianceGroupCount);
 
+		firstPathVertexEvent = NONE;
 		firstPathVertex = true;
 		// lastPathVertex can not be really initialized here without knowing
 		// the max. path depth.
 		lastPathVertex = false;
-		firstPathVertexEvent = NONE;
 	}
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
 
