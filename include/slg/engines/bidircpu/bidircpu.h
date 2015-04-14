@@ -36,7 +36,7 @@ namespace slg {
 typedef struct {
 	BSDF bsdf;
 	luxrays::Spectrum throughput;
-	int depth;
+	u_int depth, noSpecularVertexDepth;
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
 	// MIS weight computation works (http://www.iliyan.com/publications/ImplementingVCM)
@@ -111,14 +111,14 @@ public:
 	RenderEngineType GetEngineType() const { return BIDIRCPU; }
 
 	// Signed because of the delta parameter
-	int maxEyePathDepth, maxLightPathDepth;
+	u_int maxEyePathDepth, maxLightPathDepth;
 
 	// Used for vertex merging, it enables VM if it is > 0
 	u_int lightPathsCount;
 	float baseRadius; // VM (i.e. SPPM) start radius parameter
 	float radiusAlpha; // VM (i.e. SPPM) alpha parameter
 
-	int rrDepth;
+	u_int rrDepth;
 	float rrImportanceCap;
 
 	friend class BiDirCPURenderThread;

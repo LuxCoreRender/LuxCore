@@ -151,6 +151,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			eyeVertex.dVM = 1.f;
 
 			eyeVertex.depth = 1;
+			eyeVertex.noSpecularVertexDepth = 0;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
 				const u_int sampleOffset = sampleBootSizeVM + engine->maxLightPathDepth * sampleLightStepSize +
 					(eyeVertex.depth - 1) * sampleEyeStepSize;
@@ -232,8 +233,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 				if (!Bounce(time, sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
 					break;
-
-				++(eyeVertex.depth);
 			}
 
 			samplesResults[samplerIndex].push_back(eyeSampleResult);

@@ -40,8 +40,6 @@ Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	if (!(requestedEvent & (SPECULAR | TRANSMIT)))
 		return Spectrum();
 
-	//throw runtime_error("Internal error, called NullMaterial::Sample()");
-
 	*localSampledDir = -localFixedDir;
 	*absCosSampledDir = 1.f;
 

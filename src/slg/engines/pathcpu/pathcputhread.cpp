@@ -37,7 +37,7 @@ void PathCPURenderThread::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, const int depth,
+		PathVolumeInfo volInfo, const u_int noSpecularPathVertexCount,
 		SampleResult *sampleResult) {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -74,7 +74,8 @@ void PathCPURenderThread::DirectLightSampling(
 					const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 					const float factor = 1.f / directLightSamplingPdfW;
 
-					if (depth >= engine->rrDepth) {
+					// The +1 is there to account the current path vertex used for DL
+					if (noSpecularPathVertexCount + 1 >= engine->rrDepth) {
 						// Russian Roulette
 						bsdfPdfW *= RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 					}
@@ -221,17 +222,18 @@ void PathCPURenderThread::RenderFunc() {
 		camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
 			sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 
-		int depth = 1;
+		u_int pathVertexCount = 1;
+		u_int noSpecularPathVertexCount = 0;
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 		float lastPdfW = 1.f;
 		Spectrum pathThroughput(1.f);
 		PathVolumeInfo volInfo;
 		BSDF bsdf;
 		for (;;) {
-			sampleResult.firstPathVertex = (depth == 1);
-			sampleResult.lastPathVertex = (depth == engine->maxPathDepth);
+			sampleResult.firstPathVertex = (pathVertexCount == 1);
+			sampleResult.lastPathVertex = (pathVertexCount == engine->maxPathDepth);
 
-			const u_int sampleOffset = sampleBootSize + (depth - 1) * sampleStepSize;
+			const u_int sampleOffset = sampleBootSize + (pathVertexCount - 1) * sampleStepSize;
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
@@ -304,7 +306,7 @@ void PathCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					pathThroughput, bsdf, volInfo, depth, &sampleResult);
+					pathThroughput, bsdf, volInfo, noSpecularPathVertexCount, &sampleResult);
 
 			if (sampleResult.lastPathVertex)
 				break;
@@ -325,15 +327,19 @@ void PathCPURenderThread::RenderFunc() {
 			if (sampleResult.firstPathVertex)
 				sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
-			float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-			if ((depth >= engine->rrDepth) && !(lastBSDFEvent & SPECULAR)) {
-				// Russian Roulette
-				if (sampler->GetSample(sampleOffset + 8) < rrProb)
-					lastPdfW *= rrProb;
-				else
-					break;
-			} else
-				rrProb = 1.f;
+			float rrProb = 1.f;
+			if (!(lastBSDFEvent & SPECULAR)) {
+				++noSpecularPathVertexCount;
+
+				const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
+				if (noSpecularPathVertexCount >= engine->rrDepth) {
+					// Russian Roulette
+					if (sampler->GetSample(sampleOffset + 8) < rrProb)
+						lastPdfW *= rrProb;
+					else
+						break;
+				}
+			}
 
 			const float pdfFactor = min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
 			const Spectrum throughputFactor = bsdfSample * pdfFactor;
@@ -352,9 +358,9 @@ void PathCPURenderThread::RenderFunc() {
 
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
-			
+
 			eyeRay.Update(bsdf.hitPoint.p, sampledDir);
-			++depth;
+			++pathVertexCount;
 		}
 
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);

@@ -301,7 +301,11 @@ void PathOCLRenderThread::InitGPUTaskBuffer() {
 	// Allocate tasksStateBuff
 	//--------------------------------------------------------------------------
 	
-	size_t gpuTaksStateSize = sizeof(int) + sizeof(u_int) + sizeof(Spectrum);
+	size_t gpuTaksStateSize =
+			sizeof(int) + // state
+			sizeof(u_int) + // pathVertexCount
+			sizeof(u_int) + // noSpecularPathVertexCount
+			sizeof(Spectrum);
 
 	// Add BSDF memory size
 	gpuTaksStateSize += openCLBSDFSize;
