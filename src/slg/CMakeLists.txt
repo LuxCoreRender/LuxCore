@@ -226,7 +226,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/materialdefs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/matte.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/mirror.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/materials/mix.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/mixmat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/null.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmatte.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
@@ -271,7 +271,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/irregulardata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/lampspectrum.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/marble.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/mix.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/mixtex.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/normalmap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/scale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/subtract.cpp
