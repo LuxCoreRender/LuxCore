@@ -99,13 +99,10 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/lights/light_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/scene_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/mapping_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/mapping_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/hitpoint_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdf_types.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdf_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/sdl/bsdfutils_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdf_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdf_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdfutils_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/bsdf/hitpoint_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_generic.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_archglass.cl
@@ -127,6 +124,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
@@ -154,8 +154,10 @@ PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
 #############################################################################
 
 set(SLG_SRCS
+	${LuxRays_SOURCE_DIR}/src/slg/bsdf/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/perspective.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/core/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/sphericalfunction.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/photometricdataies.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
@@ -242,11 +244,9 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobol.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/soboldata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/bsdf.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/extmeshcache.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/sceneobject.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/scene.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/sdl/sdl.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/extmeshcache.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneobject.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/shape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp

@@ -21,7 +21,7 @@
 
 #include "slg/renderengine.h"
 #include "slg/renderconfig.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"

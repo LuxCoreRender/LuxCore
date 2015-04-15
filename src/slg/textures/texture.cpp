@@ -27,8 +27,8 @@
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/dassert.h>
 
-#include "slg/sdl/sdl.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/core/sdl.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/blender_texture.h"
 

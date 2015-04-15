@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/sdl/sdl.h"
+#include "slg/core/sdl.h"
 #include "slg/textures/blender_noiselib.h"
 
 namespace slg {

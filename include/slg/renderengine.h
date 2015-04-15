@@ -30,7 +30,7 @@
 #include "slg/editaction.h"
 
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/bsdf/bsdf.h"
 
 namespace slg {
 

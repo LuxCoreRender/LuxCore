@@ -25,7 +25,7 @@
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/samplers/sampler.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 
 namespace slg {
 

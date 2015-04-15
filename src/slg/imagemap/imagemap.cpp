@@ -29,7 +29,7 @@
 #include <OpenImageIO/dassert.h>
 
 #include "slg/imagemap/imagemap.h"
-#include "slg/sdl/sdl.h"
+#include "slg/core/sdl.h"
 
 using namespace std;
 using namespace luxrays;

@@ -34,8 +34,8 @@
 #include "luxrays/core/color/color.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
-#include "slg/sdl/mapping.h"
-#include "slg/sdl/hitpoint.h"
+#include "slg/textures/mapping/mapping.h"
+#include "slg/bsdf/hitpoint.h"
 
 namespace slg {
 

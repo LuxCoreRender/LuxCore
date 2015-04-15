@@ -20,7 +20,7 @@
 
 #include "luxrays/core/geometry/frame.h"
 #include "slg/materials/material.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/bsdf/bsdf.h"
 
 using namespace std;
 using namespace luxrays;

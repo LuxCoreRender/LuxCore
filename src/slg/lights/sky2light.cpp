@@ -18,7 +18,7 @@
 
 #include "slg/lights/sky2light.h"
 #include "slg/lights/data/ArHosekSkyModelData.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;

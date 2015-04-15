@@ -19,7 +19,7 @@
 #include <boost/format.hpp>
 
 #include "slg/lights/infinitelight.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;

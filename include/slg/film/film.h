@@ -40,7 +40,7 @@
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/film/filters/filter.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"

@@ -20,8 +20,8 @@
 
 #include "slg/cameras/perspective.h"
 #include "slg/film/film.h"
-#include "slg/sdl/sdl.h"
-#include "slg/sdl/scene.h"
+#include "slg/core/sdl.h"
+#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;

@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/sdl/sdl.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/core/sdl.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/textures/blender_texture.h"
 
 using namespace luxrays;

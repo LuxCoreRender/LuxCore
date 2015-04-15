@@ -18,7 +18,7 @@
 
 #include "slg/lights/sunlight.h"
 #include "slg/lights/data/sunspect.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;

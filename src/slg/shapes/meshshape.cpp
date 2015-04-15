@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include "slg/shapes/meshshape.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;

@@ -20,7 +20,7 @@
 
 #include "slg/lights/lightsourcedefinition.h"
 #include "slg/lights/trianglelight.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;
