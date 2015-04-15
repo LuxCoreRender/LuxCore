@@ -4,7 +4,7 @@ std::string KernelSource_biaspathocl_datatypes =
 "#line 2 \"biaspathocl_datatypes.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *\n"
+" * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRender.                                       *\n"
 " *                                                                         *\n"
