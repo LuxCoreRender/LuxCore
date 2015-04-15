@@ -29,8 +29,8 @@
 #include "luxrays/utils/mc.h"
 #include "luxrays/core/geometry/point.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
-#include "slg/sdl/bsdfevents.h"
-#include "slg/sdl/hitpoint.h"
+#include "slg/bsdf/bsdfevents.h"
+#include "slg/bsdf/hitpoint.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/fresnel/fresneltexture.h"
 

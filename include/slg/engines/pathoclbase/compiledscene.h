@@ -27,7 +27,7 @@
 #include "slg/editaction.h"
 
 #include "slg/film/film.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 
 namespace slg {
 

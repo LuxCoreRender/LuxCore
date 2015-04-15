@@ -18,8 +18,8 @@
 
 #include <boost/format.hpp>
 
-#include "slg/sdl/sceneobject.h"
-#include "slg/sdl/extmeshcache.h"
+#include "slg/scene/sceneobject.h"
+#include "slg/scene/extmeshcache.h"
 
 using namespace std;
 using namespace luxrays;

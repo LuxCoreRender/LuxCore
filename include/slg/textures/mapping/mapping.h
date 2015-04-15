@@ -25,14 +25,14 @@
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
 #include "slg/slg.h"
-#include "slg/sdl/hitpoint.h"
+#include "slg/bsdf/hitpoint.h"
 
 namespace slg {
 
 // OpenCL data types
 namespace ocl {
 using namespace luxrays::ocl;
-#include "slg/sdl/mapping_types.cl"
+#include "slg/textures/mapping/mapping_types.cl"
 }
 
 typedef enum {

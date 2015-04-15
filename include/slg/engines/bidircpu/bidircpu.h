@@ -24,7 +24,7 @@
 
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/volumes/volume.h"
 
 namespace slg {

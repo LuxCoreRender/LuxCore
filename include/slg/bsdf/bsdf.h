@@ -25,16 +25,16 @@
 #include "luxrays/core/color/color.h"
 #include "slg/lights/light.h"
 #include "slg/lights/trianglelight.h"
-#include "slg/sdl/bsdfevents.h"
 #include "slg/materials/material.h"
 #include "slg/volumes/volume.h"
-#include "slg/sdl/hitpoint.h"
+#include "slg/bsdf/bsdfevents.h"
+#include "slg/bsdf/hitpoint.h"
 
 namespace slg {
 
 // OpenCL data types
 namespace ocl {
-#include "slg/sdl/bsdf_types.cl"
+#include "slg/bsdf/bsdf_types.cl"
 }
 
 class Scene;

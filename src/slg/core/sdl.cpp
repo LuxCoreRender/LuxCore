@@ -16,39 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_HITPOINT_H
-#define	_SLG_HITPOINT_H
+#include <cstddef>
 
-#include "luxrays/luxrays.h"
+#include "slg/core/sdl.h"
 
-namespace slg {
-
-// OpenCL data types
-namespace ocl {
-#include "slg/sdl/hitpoint_types.cl"
-}
-
-class Volume;
-
-typedef struct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
-	luxrays::Vector fixedDir;
-	luxrays::Point p;
-	luxrays::UV uv;
-	luxrays::Normal geometryN;
-	luxrays::Normal shadeN;
-	luxrays::Spectrum color;
-	luxrays::Vector dpdu, dpdv;
-	luxrays::Normal dndu, dndv;
-	float alpha;
-	float passThroughEvent;
-	// Interior and exterior volume (this includes volume priority system
-	// computation and scene default world volume)
-	const Volume *interiorVolume, *exteriorVolume;
-	bool fromLight, intoObject;
-} HitPoint;
-
-}
-
-#endif	/* _SLG_HITPOINT_H */
+void (*slg::SLG_SDLDebugHandler)(const char *msg) = NULL;

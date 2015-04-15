@@ -19,7 +19,7 @@
 #include <cstddef>
 
 #include "slg/volumes/volume.h"
-#include "slg/sdl/bsdf.h"
+#include "slg/bsdf/bsdf.h"
 
 using namespace std;
 using namespace luxrays;

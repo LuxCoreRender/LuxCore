@@ -20,7 +20,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "slg/imagemap/imagemapcache.h"
-#include "slg/sdl/sdl.h"
+#include "slg/core/sdl.h"
 
 using namespace std;
 using namespace luxrays;

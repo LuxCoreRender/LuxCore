@@ -30,9 +30,9 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/utils/mc.h"
 #include "slg/materials/material.h"
-#include "slg/sdl/bsdfevents.h"
-#include "slg/sdl/extmeshcache.h"
-#include "slg/sdl/hitpoint.h"
+#include "slg/bsdf/bsdfevents.h"
+#include "slg/bsdf/hitpoint.h"
+#include "slg/scene/extmeshcache.h"
 
 namespace slg {
 

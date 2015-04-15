@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #include "slg/shapes/strands.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 #include "slg/cameras/perspective.h"
 
 using namespace std;

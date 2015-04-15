@@ -36,12 +36,12 @@
 #include "slg/textures/texturedefs.h"
 #include "slg/materials/materialdefs.h"
 #include "slg/shapes/strands.h"
-#include "slg/sdl/sdl.h"
-#include "slg/sdl/sceneobject.h"
-#include "slg/sdl/bsdf.h"
-#include "slg/sdl/extmeshcache.h"
-#include "slg/sdl/mapping.h"
+#include "slg/core/sdl.h"
+#include "slg/bsdf/bsdf.h"
+#include "slg/textures/mapping//mapping.h"
 #include "slg/volumes/volume.h"
+#include "slg/scene/sceneobject.h"
+#include "slg/scene/extmeshcache.h"
 
 namespace slg {
 

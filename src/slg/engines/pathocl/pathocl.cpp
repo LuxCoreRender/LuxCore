@@ -42,7 +42,7 @@
 #include "slg/film/filters/mitchell.h"
 #include "slg/film/filters/mitchellss.h"
 #include "slg/film/filters/blackmanharris.h"
-#include "slg/sdl/scene.h"
+#include "slg/scene/scene.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 
 using namespace std;

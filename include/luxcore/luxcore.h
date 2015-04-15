@@ -47,7 +47,7 @@
 #include "luxrays/utils/cyhair/cyHairFile.h"
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
-#include <slg/sdl/scene.h>
+#include <slg/scene/scene.h>
 #include <slg/film/film.h>
 
 /*! \mainpage LuxCore

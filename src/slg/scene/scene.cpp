@@ -54,8 +54,8 @@
 #include "slg/lights/trianglelight.h"
 
 #include "slg/samplers/sampler.h"
-#include "slg/sdl/sdl.h"
-#include "slg/sdl/scene.h"
+#include "slg/core/sdl.h"
+#include "slg/scene/scene.h"
 
 #include "slg/shapes/meshshape.h"
 #include "slg/shapes/pointiness.h"

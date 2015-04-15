@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/sdl/bsdf.h"
-#include "slg/sdl/scene.h"
+#include "slg/bsdf/bsdf.h"
+#include "slg/scene/scene.h"
 
 using namespace luxrays;
 using namespace slg;

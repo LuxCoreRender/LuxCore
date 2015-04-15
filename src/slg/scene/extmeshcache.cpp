@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/sdl/extmeshcache.h"
+#include "slg/scene/extmeshcache.h"
 
 using namespace std;
 using namespace luxrays;
