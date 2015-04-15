@@ -95,11 +95,16 @@
 
 #include "slg/materials/archglass.h"
 #include "slg/materials/glass.h"
+#include "slg/materials/glossy2.h"
 #include "slg/materials/matte.h"
+#include "slg/materials/mattetranslucent.h"
+#include "slg/materials/metal2.h"
 #include "slg/materials/mirror.h"
 #include "slg/materials/mix.h"
 #include "slg/materials/null.h"
+#include "slg/materials/roughglass.h"
 #include "slg/materials/roughmatte.h"
+#include "slg/materials/roughmattetranslucent.h"
 
 using namespace std;
 using namespace luxrays;
