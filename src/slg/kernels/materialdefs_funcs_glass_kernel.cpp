@@ -4,7 +4,7 @@ std::string KernelSource_materialdefs_funcs_glass =
 "#line 2 \"materialdefs_funcs_glass.cl\"\n"
 "\n"
 "/***************************************************************************\n"
-" * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *\n"
+" * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
 " *                                                                         *\n"
 " *   This file is part of LuxRender.                                       *\n"
 " *                                                                         *\n"

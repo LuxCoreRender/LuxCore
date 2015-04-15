@@ -1,7 +1,7 @@
 #line 2 "biaspatchocl_kernels_mega.cl"
 
 /***************************************************************************
- * Copyright 1998-2013 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxRender.                                       *
  *                                                                         *
