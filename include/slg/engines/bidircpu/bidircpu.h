@@ -36,7 +36,7 @@ namespace slg {
 typedef struct {
 	BSDF bsdf;
 	luxrays::Spectrum throughput;
-	u_int depth, noSpecularVertexDepth;
+	u_int depth;
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
 	// MIS weight computation works (http://www.iliyan.com/publications/ImplementingVCM)

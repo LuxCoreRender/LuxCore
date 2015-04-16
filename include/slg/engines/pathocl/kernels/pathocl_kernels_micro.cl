@@ -522,7 +522,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 	if (DirectLight_BSDFSampling(
 			&tasksDirectLight[gid].illumInfo,
-			rays[gid].time, sample->result.lastPathVertex, taskState->noSpecularPathVertexCount,
+			rays[gid].time, sample->result.lastPathVertex, taskState->pathVertexCount,
 			&taskState->bsdf,
 			&rays[gid]
 			LIGHTS_PARAM)) {
@@ -624,21 +624,23 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 			&sampledDir, &lastPdfW, &cosSampledDir, &event, ALL
 			MATERIALS_PARAM);
 
-	taskState->noSpecularPathVertexCount += (event & SPECULAR) ? 0 : 1;
-
 	// Russian Roulette
-	const bool rrEnabled = (taskState->noSpecularPathVertexCount >= PARAM_RR_DEPTH) && !(event & SPECULAR);
+	const bool rrEnabled = (pathVertexCount >= PARAM_RR_DEPTH);
 	const float rrProb = rrEnabled ? RussianRouletteProb(bsdfSample) : 1.f;
-	const bool rrContinuePath = !rrEnabled || (Sampler_GetSamplePathVertex(pathVertexCount, IDX_RR) < rrProb);
+	const bool rrContinuePath = !rrEnabled || !(rrProb < Sampler_GetSamplePathVertex(pathVertexCount, IDX_RR));
 
 	// Max. path depth
 	const bool maxPathDepth = (pathVertexCount >= PARAM_MAX_PATH_DEPTH);
 
 	const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath && !maxPathDepth;
 	if (continuePath) {
-		lastPdfW *= rrProb; // Russian Roulette
+		float3 throughputFactor = WHITE;
+
+		// RR increases path contribution
+		throughputFactor /= rrProb;
+		// PDF clamping (or better: scaling)
 		const float pdfFactor = (event & SPECULAR) ? 1.f : min(1.f, lastPdfW / PARAM_PDF_CLAMP_VALUE);
-		const float3 throughputFactor = bsdfSample * pdfFactor;
+		throughputFactor *= bsdfSample * pdfFactor;
 
 		VSTORE3F(throughputFactor * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
 
