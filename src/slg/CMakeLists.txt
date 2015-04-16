@@ -223,8 +223,12 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/lights/sunlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/trianglelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/archglass.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/carpaint.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/cloth.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/glass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/glossy2.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/glossycoatting.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/glossytranslucent.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/material.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/materialdefs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/matte.cpp
@@ -236,6 +240,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughglass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmatte.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmattetranslucent.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/velvet.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
