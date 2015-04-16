@@ -250,6 +250,13 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/soboldata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/extmeshcache.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/parsecamera.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/parselights.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/parsematerials.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/parseobjects.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/parseshapes.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/parsetextures.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/parsevolumes.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/scene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/shape.cpp

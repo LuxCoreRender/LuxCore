@@ -45,6 +45,8 @@
 
 namespace slg {
 
+#define TRIANGLE_LIGHT_POSTFIX "__triangle__light__"
+
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods
@@ -138,6 +140,9 @@ public:
 	EditActionList editActions;
 
 protected:
+	luxrays::ExtMesh *CreateInlinedMesh(const std::string &shapeName,
+			const std::string &propName, const luxrays::Properties &props);
+
 	void ParseCamera(const luxrays::Properties &props);
 	void ParseTextures(const luxrays::Properties &props);
 	void ParseVolumes(const luxrays::Properties &props);
@@ -149,13 +154,14 @@ protected:
 	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
 	TextureMapping3D *CreateTextureMapping3D(const std::string &prefixName, const luxrays::Properties &props);
 	Texture *CreateTexture(const std::string &texName, const luxrays::Properties &props);
-	Texture *GetTexture(const luxrays::Property &name);
 	Volume *CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 	luxrays::ExtMesh *CreateShape(const std::string &shapeName, const luxrays::Properties &props);
 	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
 	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
+
+	Texture *GetTexture(const luxrays::Property &name);
 
 	luxrays::Properties sceneProperties;
 };
