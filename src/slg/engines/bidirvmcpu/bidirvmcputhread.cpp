@@ -151,7 +151,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			eyeVertex.dVM = 1.f;
 
 			eyeVertex.depth = 1;
-			eyeVertex.noSpecularVertexDepth = 0;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
 				const u_int sampleOffset = sampleBootSizeVM + engine->maxLightPathDepth * sampleLightStepSize +
 					(eyeVertex.depth - 1) * sampleEyeStepSize;
