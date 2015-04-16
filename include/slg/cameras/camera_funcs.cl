@@ -153,6 +153,9 @@ void Camera_GenerateRay(
 	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera[transIndex], Pras);
 	float3 rayDir = rayOrig;
 
+	if(camera->type == ORTHOGRAPHIC) 
+		rayDir = (float3)(0.f, 0.f, 1.f);
+
 	const float hither = camera->hither;
 
 #if defined(PARAM_CAMERA_HAS_DOF)

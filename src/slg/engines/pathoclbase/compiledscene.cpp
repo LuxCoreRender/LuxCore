@@ -24,6 +24,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/cameras/orthographic.h"
 #include "slg/cameras/perspective.h"
 
 #include "slg/lights/constantinfinitelight.h"
@@ -131,8 +132,28 @@ void CompiledScene::CompileCamera() {
 	camera.shutterClose = sceneCamera->shutterClose;
 
 	switch (sceneCamera->GetType()) {
+		case Camera::ORTHOGRAPHIC: {
+			const OrthographicCamera *orthoCamera = (OrthographicCamera *)sceneCamera;
+			camera.type = slg::ocl::ORTHOGRAPHIC;
+
+			memcpy(camera.rasterToCamera[0].m.m, orthoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
+			memcpy(camera.cameraToWorld[0].m.m, orthoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
+
+			enableCameraHorizStereo = false;
+			enableOculusRiftBarrel = false;
+
+
+			if (orthoCamera->IsClippingPlaneEnabled()) {
+				enableCameraClippingPlane = true;
+				ASSIGN_VECTOR(camera.clippingPlaneCenter, orthoCamera->clippingPlaneCenter);
+				ASSIGN_VECTOR(camera.clippingPlaneNormal, orthoCamera->clippingPlaneNormal);
+			} else
+				enableCameraClippingPlane = false;
+			break;
+		}
 		case Camera::PERSPECTIVE: {
 			const PerspectiveCamera *perspCamera = (PerspectiveCamera *)sceneCamera;
+			camera.type = slg::ocl::PERSPECTIVE;
 
 			memcpy(camera.rasterToCamera[0].m.m, perspCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
 			memcpy(camera.cameraToWorld[0].m.m, perspCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
