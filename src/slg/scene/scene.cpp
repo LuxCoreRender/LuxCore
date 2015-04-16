@@ -111,6 +111,10 @@
 #include "slg/materials/roughmattetranslucent.h"
 #include "slg/materials/velvet.h"
 
+#include "slg/volumes/clear.h"
+#include "slg/volumes/heterogenous.h"
+#include "slg/volumes/homogenous.h"
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
