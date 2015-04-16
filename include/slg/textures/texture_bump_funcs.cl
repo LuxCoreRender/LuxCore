@@ -25,62 +25,65 @@
 #if defined(PARAM_HAS_BUMPMAPS)
 
 float2 Texture_GetDuv(
-        const uint texIndex,
-        __global HitPoint *hitPoint,
-        const float3 dpdu, const float3 dpdv,
-        const float3 dndu, const float3 dndv,
-        const float sampleDistance
-        TEXTURES_PARAM_DECL) {
-    // Calculate bump map value at intersection point
-    const float base = Texture_GetFloatValue(texIndex, hitPoint
+		const uint texIndex,
+		__global HitPoint *hitPoint,
+		const float sampleDistance
+		TEXTURES_PARAM_DECL) {
+	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
+	const float3 dndu = VLOAD3F(&hitPoint->dndu.x);
+	const float3 dndv = VLOAD3F(&hitPoint->dndv.x);
+
+	// Calculate bump map value at intersection point
+	const float base = Texture_GetFloatValue(texIndex, hitPoint
 			TEXTURES_PARAM);
 
-    // Compute offset positions and evaluate displacement texIndex
-    const float3 origP = VLOAD3F(&hitPoint->p.x);
-    const float3 origShadeN = VLOAD3F(&hitPoint->shadeN.x);
-    const float2 origUV = VLOAD2F(&hitPoint->uv.u);
+	// Compute offset positions and evaluate displacement texIndex
+	const float3 origP = VLOAD3F(&hitPoint->p.x);
+	const float3 origShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float2 origUV = VLOAD2F(&hitPoint->uv.u);
 
-    float2 duv;
+	float2 duv;
 
-    // Shift hitPointTmp.du in the u direction and calculate value
-    const float uu = sampleDistance / length(dpdu);
-    VSTORE3F(origP + uu * dpdu, &hitPoint->p.x);
-    hitPoint->uv.u += uu;
-    VSTORE3F(normalize(origShadeN + uu * dndu), &hitPoint->shadeN.x);
-    const float duValue = Texture_GetFloatValue(texIndex, hitPoint
+	// Shift hitPointTmp.du in the u direction and calculate value
+	const float uu = sampleDistance / length(dpdu);
+	VSTORE3F(origP + uu * dpdu, &hitPoint->p.x);
+	hitPoint->uv.u += uu;
+	VSTORE3F(normalize(origShadeN + uu * dndu), &hitPoint->shadeN.x);
+	const float duValue = Texture_GetFloatValue(texIndex, hitPoint
 			TEXTURES_PARAM);
-    duv.s0 = (duValue - base) / uu;
+	duv.s0 = (duValue - base) / uu;
 
-    // Shift hitPointTmp.dv in the v direction and calculate value
-    const float vv = sampleDistance / length(dpdv);
-    VSTORE3F(origP + vv * dpdv, &hitPoint->p.x);
-    hitPoint->uv.u = origUV.s0;
-    hitPoint->uv.v += vv;
-    VSTORE3F(normalize(origShadeN + vv * dndv), &hitPoint->shadeN.x);
-    const float dvValue = Texture_GetFloatValue(texIndex, hitPoint
+	// Shift hitPointTmp.dv in the v direction and calculate value
+	const float vv = sampleDistance / length(dpdv);
+	VSTORE3F(origP + vv * dpdv, &hitPoint->p.x);
+	hitPoint->uv.u = origUV.s0;
+	hitPoint->uv.v += vv;
+	VSTORE3F(normalize(origShadeN + vv * dndv), &hitPoint->shadeN.x);
+	const float dvValue = Texture_GetFloatValue(texIndex, hitPoint
 			TEXTURES_PARAM);
-    duv.s1 = (dvValue - base) / vv;
+	duv.s1 = (dvValue - base) / vv;
 
-    // Restore HitPoint
-    VSTORE3F(origP, &hitPoint->p.x);
-    VSTORE2F(origUV, &hitPoint->uv.u);
-    VSTORE3F(origShadeN, &hitPoint->shadeN.x);
+	// Restore HitPoint
+	VSTORE3F(origP, &hitPoint->p.x);
+	VSTORE2F(origUV, &hitPoint->uv.u);
+	VSTORE3F(origShadeN, &hitPoint->shadeN.x);
 
-    return duv;
+	return duv;
 }
 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 float2 NormalMapTexture_GetDuv(
 		const uint texIndex,
-        __global HitPoint *hitPoint,
-        const float3 dpdu, const float3 dpdv,
-        const float3 dndu, const float3 dndv,
-        const float sampleDistance
-        TEXTURES_PARAM_DECL) {
+		__global HitPoint *hitPoint,
+		const float sampleDistance
+		TEXTURES_PARAM_DECL) {
+	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
 	__global Texture *texture = &texs[texIndex];
-    float3 rgb = Texture_GetSpectrumValue(texture->normalMap.texIndex, hitPoint
+	float3 rgb = Texture_GetSpectrumValue(texture->normalMap.texIndex, hitPoint
 			TEXTURES_PARAM);
-    rgb = clamp(rgb, -1.f, 1.f);
+	rgb = clamp(rgb, -1.f, 1.f);
 
 	// Normal from normal map
 	float3 n = 2.f * rgb - (float3)(1.f, 1.f, 1.f);
@@ -88,13 +91,13 @@ float2 NormalMapTexture_GetDuv(
 	const float3 k = VLOAD3F(&hitPoint->shadeN.x);
 
 	// Transform n from tangent to object space
-    const float btsign = (dot(dpdv, k) > 0.f) ? 1.f : -1.f;
+	const float btsign = (dot(dpdv, k) > 0.f) ? 1.f : -1.f;
 
 	// Magnitude of btsign is the magnitude of the interpolated normal
 	const float3 kk = k * fabs(btsign);
 
 	// tangent -> object
-	n = normalize(n.x * dpdu + n.y * btsign * dpdv + n.z * kk);	
+	n = normalize(n.x * dpdu + n.y * btsign * dpdv + n.z * kk);
 
 	// Since n is stored normalized in the normal map
 	// we need to recover the original length (lambda).
@@ -120,7 +123,7 @@ float2 NormalMapTexture_GetDuv(
 	// and similar for dh/dv
 	// 
 	// Since the recovered dh/du will be in units of ||k||, we must divide
-	// by ||k|| to get normalized results. Using dg.nn as k in the last eq 
+	// by ||k|| to get normalized results. Using dg.nn as k in the last eq
 	// yields the same result.
 	const float3 nn = (-1.f / dot(k, n)) * n;
 

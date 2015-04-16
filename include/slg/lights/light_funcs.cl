@@ -403,9 +403,6 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 			p0, p1, p2,
 			u0, u1,
 			&b0, &b1, &b2);
-
-	const float3 sampleN = Triangle_GetGeometryNormal(p0, p1, p2); // Light sources are supposed to be flat
-
 	*dir = samplePoint - p;
 	const float distanceSquared = dot(*dir, *dir);;
 	*distance = sqrt(distanceSquared);
@@ -414,6 +411,61 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 	const float cosAtLight = dot(sampleN, -(*dir));
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
+
+	VSTORE3F(samplePoint, &tmpHitPoint->p.x);
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	tmpHitPoint->passThroughEvent = passThroughEvent;
+#endif
+
+	const float3 sampleN = Triangle_GetGeometryNormal(p0, p1, p2); // Light sources are supposed to be flat
+	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
+	VSTORE3F(-sampleN, &tmpHitPoint->fixedDir.x);
+
+	// FIXME: use correct shading normal
+//	float3 shadeN;
+//#if defined(PARAM_HAS_NORMALS_BUFFER)
+//	if (meshDesc->normalsOffset != NULL_INDEX) {
+//		__global const Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
+//		// Shading normal expressed in local coordinates
+//		shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleIndex, b1, b2);
+//		// Transform to global coordinates
+//		shadeN = normalize(Transform_InvApplyNormal(&meshDesc->trans, shadeN));
+//	} else
+//#endif
+//		shadeN = geometryN;
+    VSTORE3F(sampleN, &bsdf->hitPoint.shadeN.x);
+
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+	const float3 rgb0 = VLOAD3F(triLight->triangle.rgb0.c);
+	const float3 rgb1 = VLOAD3F(triLight->triangle.rgb1.c);
+	const float3 rgb2 = VLOAD3F(triLight->triangle.rgb2.c);
+	const float3 triColor = Triangle_InterpolateColor(rgb0, rgb1, rgb2, b0, b1, b2);
+
+	VSTORE3F(triColor, tmpHitPoint->color.c);
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+	VSTORE2F(1.f, &tmpHitPoint->alpha);
+#endif
+#if defined(PARAM_HAS_VOLUMES)
+	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
+	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
+	tmpHitPoint->intoObject = true;
+#endif
+
+	const float2 uv0 = VLOAD2F(&triLight->triangle.uv0.u);
+	const float2 uv1 = VLOAD2F(&triLight->triangle.uv1.u);
+	const float2 uv2 = VLOAD2F(&triLight->triangle.uv2.u);
+	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
+	VSTORE2F(triUV, &tmpHitPoint->uv.u);
+
+	// Apply Bump mapping and get proper differentials?
+#if defined(PARAM_HAS_BUMPMAPS)
+	float3 dpdu, dpdv;
+	CoordinateSystem(sampleN, &dpdu, &dpdv);
+	VSTORE3F(dpdu, &tmpHitPoint->dpdu.x);
+	VSTORE3F(dpdv, &tmpHitPoint->dpdv.x);
+#endif
 
 	float3 emissionColor = WHITE;
 #if defined(PARAM_HAS_IMAGEMAPS)
@@ -436,36 +488,6 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 	} else
 #endif
 		*directPdfW = triLight->triangle.invTriangleArea * distanceSquared / cosAtLight;
-
-	const float2 uv0 = VLOAD2F(&triLight->triangle.uv0.u);
-	const float2 uv1 = VLOAD2F(&triLight->triangle.uv1.u);
-	const float2 uv2 = VLOAD2F(&triLight->triangle.uv2.u);
-	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
-
-	VSTORE3F(-sampleN, &tmpHitPoint->fixedDir.x);
-	VSTORE3F(samplePoint, &tmpHitPoint->p.x);
-	VSTORE2F(triUV, &tmpHitPoint->uv.u);
-	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
-	VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	const float3 rgb0 = VLOAD3F(triLight->triangle.rgb0.c);
-	const float3 rgb1 = VLOAD3F(triLight->triangle.rgb1.c);
-	const float3 rgb2 = VLOAD3F(triLight->triangle.rgb2.c);
-	const float3 triColor = Triangle_InterpolateColor(rgb0, rgb1, rgb2, b0, b1, b2);
-
-	VSTORE3F(triColor, tmpHitPoint->color.c);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	VSTORE2F(1.f, &tmpHitPoint->alpha);
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-	tmpHitPoint->passThroughEvent = passThroughEvent;
-#endif
-#if defined(PARAM_HAS_VOLUMES)
-	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->intoObject = true;
-#endif
 
 	return Material_GetEmittedRadiance(triLight->triangle.materialIndex,
 			tmpHitPoint, triLight->triangle.invMeshArea

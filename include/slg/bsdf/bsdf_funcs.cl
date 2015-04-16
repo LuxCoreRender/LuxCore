@@ -336,19 +336,24 @@ void BSDF_Init(
 	//--------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_BUMPMAPS)
+	VSTORE3F(shadeDpdu, &bsdf->hitPoint.dpdu.x);
+	VSTORE3F(shadeDpdv, &bsdf->hitPoint.dpdv.x);
+	VSTORE3F(geometryDndu, &bsdf->hitPoint.dndu.x);
+	VSTORE3F(geometryDndv, &bsdf->hitPoint.dndv.x);
 	Material_Bump(matIndex,
-			&bsdf->hitPoint, shadeDpdu, shadeDpdv,
-			geometryDndu, geometryDndu, 1.f
+			&bsdf->hitPoint, 1.f
 			MATERIALS_PARAM);
 	// Re-read the shadeN modified by Material_Bump()
 	shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
+	shadeDpdu = VLOAD3F(&bsdf->hitPoint.dpdu.x);
+	shadeDpdv = VLOAD3F(&bsdf->hitPoint.dpdv.x);
 #endif
 
 	//--------------------------------------------------------------------------
 	// Build the local reference system
 	//--------------------------------------------------------------------------
 
-	ExtMesh_GetFrame(shadeN, geometryDpdu, geometryDpdv, &bsdf->frame);
+	ExtMesh_GetFrame(shadeN, shadeDpdu, shadeDpdv, &bsdf->frame);
 
 #if defined(PARAM_HAS_VOLUMES)
 	bsdf->isVolume = false;
@@ -383,6 +388,14 @@ void BSDF_InitVolume(
 
 	VSTORE3F(shadeN, &bsdf->hitPoint.geometryN.x);
 	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
+#if defined(PARAM_HAS_BUMPMAPS)
+	float3 dpdu, dpdv;
+	CoordinateSystem(shadeN, &dpdu, &dpdv);
+	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
+	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
+#endif
 
 	bsdf->hitPoint.intoObject = true;
 	bsdf->hitPoint.interiorVolumeIndex = volumeIndex;

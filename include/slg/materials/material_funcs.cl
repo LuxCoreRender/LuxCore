@@ -40,38 +40,40 @@ float3 Material_GetEmittedRadianceNoMix(__global const Material *material, __glo
 }
 
 #if defined(PARAM_HAS_BUMPMAPS)
-void Material_BumpNoMix(__global const Material *material, __global HitPoint *hitPoint,
-        const float3 dpdu, const float3 dpdv,
-        const float3 dndu, const float3 dndv, const float weight
-        TEXTURES_PARAM_DECL) {
-    if ((material->bumpTexIndex != NULL_INDEX) && (weight > 0.f)) {
-        const float2 duv = weight * 
+void Material_BumpNoMix(__global const Material *material, __global HitPoint *hitPoint, const float weight
+		TEXTURES_PARAM_DECL) {
+	if ((material->bumpTexIndex != NULL_INDEX) && (weight > 0.f)) {
+		const float2 duv = weight * 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
-            ((texs[material->bumpTexIndex].type == NORMALMAP_TEX) ?
-                NormalMapTexture_GetDuv(material->bumpTexIndex,
-                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                    TEXTURES_PARAM) :
-                Texture_GetDuv(material->bumpTexIndex,
-                    hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                    TEXTURES_PARAM));
+			((texs[material->bumpTexIndex].type == NORMALMAP_TEX) ?
+				NormalMapTexture_GetDuv(material->bumpTexIndex,
+					hitPoint, material->bumpSampleDistance
+					TEXTURES_PARAM) :
+				Texture_GetDuv(material->bumpTexIndex,
+					hitPoint, material->bumpSampleDistance
+					TEXTURES_PARAM));
 #else
-            Texture_GetDuv(material->bumpTexIndex,
-                hitPoint, dpdu, dpdv, dndu, dndv, material->bumpSampleDistance
-                TEXTURES_PARAM);
+			Texture_GetDuv(material->bumpTexIndex,
+				hitPoint, material->bumpSampleDistance
+				TEXTURES_PARAM);
 #endif
 
-        const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
-        const float3 bumpDpdu = dpdu + duv.s0 * oldShadeN;
-        const float3 bumpDpdv = dpdv + duv.s1 * oldShadeN;
-        float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
+		const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
+		const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+		const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
+		const float3 bumpDpdu = dpdu + duv.s0 * oldShadeN;
+		const float3 bumpDpdv = dpdv + duv.s1 * oldShadeN;
+		float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
 
-        // The above transform keeps the normal in the original normal
-        // hemisphere. If they are opposed, it means UVN was indirect and
-        // the normal needs to be reversed
-        newShadeN *= (dot(oldShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
+		// The above transform keeps the normal in the original normal
+		// hemisphere. If they are opposed, it means UVN was indirect and
+		// the normal needs to be reversed
+		newShadeN *= (dot(oldShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
 
-        VSTORE3F(newShadeN, &hitPoint->shadeN.x);
-    }
+		VSTORE3F(newShadeN, &hitPoint->shadeN.x);
+		VSTORE3F(bumpDpdu, &hitPoint->dpdu.x);
+		VSTORE3F(bumpDpdu, &hitPoint->dpdv.x);
+	}
 }
 #endif
 
