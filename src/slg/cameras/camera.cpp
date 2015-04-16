@@ -18,6 +18,7 @@
 
 #include <cstddef>
 
+#include "slg/cameras/orthographic.h"
 #include "slg/cameras/perspective.h"
 #include "slg/film/film.h"
 #include "slg/core/sdl.h"
@@ -79,89 +80,154 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 		}
 	}
 
+	const std::string type = props.Get(Property("scene.camera.type")("perspective")).Get<std::string>();		
+
+	SDL_LOG("Camera type: " << type);
 	SDL_LOG("Camera position: " << orig);
 	SDL_LOG("Camera target: " << target);
 
-	auto_ptr<PerspectiveCamera> camera;
-	if (props.IsDefined("scene.camera.screenwindow")) {
-		float screenWindow[4];
+	if(type == "orthographic") {
+		auto_ptr<OrthographicCamera> camera;
 
-		const Property &prop = props.Get(Property("scene.camera.screenwindow")(0.f, 1.f, 0.f, 1.f));
-		screenWindow[0] = prop.Get<float>(0);
-		screenWindow[1] = prop.Get<float>(1);
-		screenWindow[2] = prop.Get<float>(2);
-		screenWindow[3] = prop.Get<float>(3);
+		if (props.IsDefined("scene.camera.screenwindow")) {
+			float screenWindow[4];
 
-		camera.reset(new PerspectiveCamera(orig, target, up, &screenWindow[0]));
-	} else
-		camera.reset(new PerspectiveCamera(orig, target, up));
+			const Property &prop = props.Get(Property("scene.camera.screenwindow")(0.f, 1.f, 0.f, 1.f));
+			screenWindow[0] = prop.Get<float>(0);
+			screenWindow[1] = prop.Get<float>(1);
+			screenWindow[2] = prop.Get<float>(2);
+			screenWindow[3] = prop.Get<float>(3);
 
-	camera->clipHither = props.Get(Property("scene.camera.cliphither")(1e-3f)).Get<float>();
-	camera->clipYon = props.Get(Property("scene.camera.clipyon")(1e30f)).Get<float>();
-	camera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
-	camera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
-	camera->shutterOpen = props.Get(Property("scene.camera.shutteropen")(0.f)).Get<float>();
-	camera->shutterClose = props.Get(Property("scene.camera.shutterclose")(1.f)).Get<float>();
-	camera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
-	camera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
+			camera.reset(new OrthographicCamera(orig, target, up, &screenWindow[0]));
+		} else 
+			camera.reset(new OrthographicCamera(orig, target, up));
 
-	if (props.Get(Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>()) {
-		SDL_LOG("Camera horizontal stereo enabled");
-		camera->SetHorizontalStereo(true);
-
-		const float eyesDistance = props.Get(Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
-		SDL_LOG("Camera horizontal stereo eyes distance: " << eyesDistance);
-		camera->SetHorizontalStereoEyesDistance(eyesDistance);
-		const float lesnDistance = props.Get(Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
-		SDL_LOG("Camera horizontal stereo lens distance: " << lesnDistance);
-		camera->SetHorizontalStereoLensDistance(lesnDistance);
-
-		// Check if I have to enable Oculus Rift Barrel post-processing
-		if (props.Get(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(false)).Get<bool>()) {
-			SDL_LOG("Camera Oculus Rift Barrel post-processing enabled");
-			camera->SetOculusRiftBarrel(true);
-		} else {
-			SDL_LOG("Camera Oculus Rift Barrel post-processing disabled");
-			camera->SetOculusRiftBarrel(false);
-		}
-	} else {
-		SDL_LOG("Camera horizontal stereo disabled");
-		camera->SetHorizontalStereo(false);
-	}
+		camera->clipHither = props.Get(Property("scene.camera.cliphither")(1e-3f)).Get<float>();
+		camera->clipYon = props.Get(Property("scene.camera.clipyon")(1e30f)).Get<float>();
+		camera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
+		camera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
+		camera->shutterOpen = props.Get(Property("scene.camera.shutteropen")(0.f)).Get<float>();
+		camera->shutterClose = props.Get(Property("scene.camera.shutterclose")(1.f)).Get<float>();
+		camera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
 	
-	if (props.Get(Property("scene.camera.clippingplane.enable")(false)).Get<bool>()) {
-		camera->clippingPlaneCenter = props.Get(Property("scene.camera.clippingplane.center")(Point())).Get<Point>();
-		camera->clippingPlaneNormal = props.Get(Property("scene.camera.clippingplane.normal")(Normal())).Get<Normal>();
+		if (props.Get(Property("scene.camera.clippingplane.enable")(false)).Get<bool>()) {
+			camera->clippingPlaneCenter = props.Get(Property("scene.camera.clippingplane.center")(Point())).Get<Point>();
+			camera->clippingPlaneNormal = props.Get(Property("scene.camera.clippingplane.normal")(Normal())).Get<Normal>();
 
-		SDL_LOG("Camera clipping plane enabled");
-		camera->SetClippingPlane(true);
-	} else {
-		SDL_LOG("Camera clipping plane disabled");
-		camera->SetClippingPlane(false);
-	}
-
-	// Check if I have to use a motion system
-	if (props.IsDefined("scene.camera.motion.0.time")) {
-		// Build the motion system
-		vector<float> times;
-		vector<Transform> transforms;
-		for (u_int i =0;; ++i) {
-			const string prefix = "scene.camera.motion." + ToString(i);
-			if (!props.IsDefined(prefix +".time"))
-				break;
-
-			const float t = props.Get(prefix +".time").Get<float>();
-			if (i > 0 && t <= times.back())
-				throw runtime_error("Motion camera time must be monotonic");
-			times.push_back(t);
-
-			const Matrix4x4 mat = props.Get(Property(prefix +
-				".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
-			transforms.push_back(Transform(mat));
+			SDL_LOG("Camera clipping plane enabled");
+			camera->SetClippingPlane(true);
+		} else {
+			SDL_LOG("Camera clipping plane disabled");
+			camera->SetClippingPlane(false);
 		}
 
-		camera->motionSystem = new MotionSystem(times, transforms);
-	}
+		// Check if I have to use a motion system
+		if (props.IsDefined("scene.camera.motion.0.time")) {
+			// Build the motion system
+			vector<float> times;
+			vector<Transform> transforms;
+			for (u_int i =0;; ++i) {
+				const string prefix = "scene.camera.motion." + ToString(i);
+				if (!props.IsDefined(prefix +".time"))
+					break;
 
-	return camera.release();
+				const float t = props.Get(prefix +".time").Get<float>();
+				if (i > 0 && t <= times.back())
+					throw runtime_error("Motion camera time must be monotonic");
+				times.push_back(t);
+
+				const Matrix4x4 mat = props.Get(Property(prefix +
+					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+				transforms.push_back(Transform(mat));
+			}
+
+			camera->motionSystem = new MotionSystem(times, transforms);
+		}
+
+		return camera.release();
+	} else {
+		auto_ptr<PerspectiveCamera> camera;
+	
+		if (props.IsDefined("scene.camera.screenwindow")) {
+			float screenWindow[4];
+
+			const Property &prop = props.Get(Property("scene.camera.screenwindow")(0.f, 1.f, 0.f, 1.f));
+			screenWindow[0] = prop.Get<float>(0);
+			screenWindow[1] = prop.Get<float>(1);
+			screenWindow[2] = prop.Get<float>(2);
+			screenWindow[3] = prop.Get<float>(3);
+
+			camera.reset(new PerspectiveCamera(orig, target, up, &screenWindow[0]));
+		} else 
+			camera.reset(new PerspectiveCamera(orig, target, up));
+
+		camera->clipHither = props.Get(Property("scene.camera.cliphither")(1e-3f)).Get<float>();
+		camera->clipYon = props.Get(Property("scene.camera.clipyon")(1e30f)).Get<float>();
+		camera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
+		camera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
+		camera->shutterOpen = props.Get(Property("scene.camera.shutteropen")(0.f)).Get<float>();
+		camera->shutterClose = props.Get(Property("scene.camera.shutterclose")(1.f)).Get<float>();
+		camera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
+		camera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
+
+		if (props.Get(Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>()) {
+			SDL_LOG("Camera horizontal stereo enabled");
+			camera->SetHorizontalStereo(true);
+
+			const float eyesDistance = props.Get(Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
+			SDL_LOG("Camera horizontal stereo eyes distance: " << eyesDistance);
+			camera->SetHorizontalStereoEyesDistance(eyesDistance);
+			const float lesnDistance = props.Get(Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
+			SDL_LOG("Camera horizontal stereo lens distance: " << lesnDistance);
+			camera->SetHorizontalStereoLensDistance(lesnDistance);
+
+			// Check if I have to enable Oculus Rift Barrel post-processing
+			if (props.Get(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(false)).Get<bool>()) {
+				SDL_LOG("Camera Oculus Rift Barrel post-processing enabled");
+				camera->SetOculusRiftBarrel(true);
+			} else {
+				SDL_LOG("Camera Oculus Rift Barrel post-processing disabled");
+				camera->SetOculusRiftBarrel(false);
+			}
+		} else {
+			SDL_LOG("Camera horizontal stereo disabled");
+			camera->SetHorizontalStereo(false);
+		}
+	
+		if (props.Get(Property("scene.camera.clippingplane.enable")(false)).Get<bool>()) {
+			camera->clippingPlaneCenter = props.Get(Property("scene.camera.clippingplane.center")(Point())).Get<Point>();
+			camera->clippingPlaneNormal = props.Get(Property("scene.camera.clippingplane.normal")(Normal())).Get<Normal>();
+
+			SDL_LOG("Camera clipping plane enabled");
+			camera->SetClippingPlane(true);
+		} else {
+			SDL_LOG("Camera clipping plane disabled");
+			camera->SetClippingPlane(false);
+		}
+
+		// Check if I have to use a motion system
+		if (props.IsDefined("scene.camera.motion.0.time")) {
+			// Build the motion system
+			vector<float> times;
+			vector<Transform> transforms;
+			for (u_int i =0;; ++i) {
+				const string prefix = "scene.camera.motion." + ToString(i);
+				if (!props.IsDefined(prefix +".time"))
+					break;
+
+				const float t = props.Get(prefix +".time").Get<float>();
+				if (i > 0 && t <= times.back())
+					throw runtime_error("Motion camera time must be monotonic");
+				times.push_back(t);
+
+				const Matrix4x4 mat = props.Get(Property(prefix +
+					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+				transforms.push_back(Transform(mat));
+			}
+
+			camera->motionSystem = new MotionSystem(times, transforms);
+		}
+
+		return camera.release();
+	}
 }

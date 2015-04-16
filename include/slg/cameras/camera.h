@@ -42,7 +42,7 @@ class Scene;
 class Camera {
 public:
 	typedef enum {
-		PERSPECTIVE
+		ORTHOGRAPHIC, PERSPECTIVE
 	} CameraType;
 
 	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),

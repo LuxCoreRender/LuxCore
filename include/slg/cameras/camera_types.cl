@@ -19,6 +19,9 @@
  ***************************************************************************/
 
 #define CAMERA_MAX_INTERPOLATED_TRANSFORM 8
+typedef enum {
+		ORTHOGRAPHIC, PERSPECTIVE
+	} CameraType;
 
 typedef struct {
 	Transform rasterToCamera[2]; // 2 used for stereo rendering
@@ -33,6 +36,7 @@ typedef struct {
 	float focalDistance;
 	float yon, hither;
 	float shutterOpen, shutterClose;
+	CameraType type;
 
 	// Used for camera motion blur
 	MotionSystem motionSystem;

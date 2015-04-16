@@ -166,7 +166,12 @@ void Camera_GenerateRay(
 	// Compute point on plane of focus
 	const float focalDistance = camera->focalDistance;
 	const float dist = focalDistance - hither;
-	const float ft = dist / rayDir.z;
+
+	float ft = dist;
+
+	if(camera->type == PERSPECTIVE)
+		ft = ft / rayDir.z;
+
 	float3 Pfocus;
 	Pfocus = rayOrig + rayDir * ft;
 
@@ -179,7 +184,11 @@ void Camera_GenerateRay(
 #endif
 
 	rayDir = normalize(rayDir);
-	const float maxt = (camera->yon - hither) / rayDir.z;
+	float maxt = (camera->yon - hither);
+	
+	if(camera->type == PERSPECTIVE)
+		maxt = maxt / rayDir.z;
+
 	const float time = mix(camera->shutterOpen, camera->shutterClose, timeSample);
 
 	// Transform ray in world coordinates

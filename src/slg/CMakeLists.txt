@@ -156,6 +156,7 @@ PreprocessOCLKernels(${LuxRays_SOURCE_DIR}/src/slg/kernels slg ${SLG_KERNELS})
 set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/bsdf/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/camera.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/cameras/orthographic.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/perspective.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/sphericalfunction.cpp
