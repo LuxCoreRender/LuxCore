@@ -2497,10 +2497,9 @@ static void AddMaterialSourceStandardImplBump(stringstream &source, const u_int 
 	source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 	AddMaterialSourceGlue(source, "", i, "Bump", "BumpNoMix", "void",
 			"__global const Material *material, __global HitPoint *hitPoint, "
-				"const float3 dpdu, const float3 dpdv, "
-				"const float3 dndu, const float3 dndv, const float weight "
+				"const float weight "
 				"MATERIALS_PARAM_DECL",
-			"material, hitPoint, dpdu, dpdv, dndu, dndv, weight TEXTURES_PARAM", false);
+			"material, hitPoint, weight TEXTURES_PARAM", false);
 	source << "#endif\n";
 }
 
@@ -2952,17 +2951,17 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				// Material_IndexN_Bump()
 				source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 				source <<
-						"void Material_Index" << i << "_Bump(__global const Material *material, __global HitPoint *hitPoint, const float3 dpdu, const float3 dpdv, const float3 dndu, const float3 dndv, const float weight MATERIALS_PARAM_DECL) {\n"
+						"void Material_Index" << i << "_Bump(__global const Material *material, __global HitPoint *hitPoint, const float weight MATERIALS_PARAM_DECL) {\n"
 						"\tif (weight == 0.f)\n"
 						"\t	return;\n"
 						"\tif (material->bumpTexIndex != NULL_INDEX)\n"
-						"\t	Material_BumpNoMix(material, hitPoint, dpdu, dpdv, dndu, dndv, weight TEXTURES_PARAM);\n"
+						"\t	Material_BumpNoMix(material, hitPoint, weight TEXTURES_PARAM);\n"
 						"\telse {\n"
 						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
 						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
 						"\tconst float weight1 = 1.f - weight2;\n"
-						"\t	Material_Index" << mat->mix.matAIndex << "_Bump(&mats[" <<  mat->mix.matAIndex << "], hitPoint, dpdu, dpdv, dndu, dndv, weight * weight1 MATERIALS_PARAM);\n"
-						"\t	Material_Index" << mat->mix.matBIndex << "_Bump(&mats[" <<  mat->mix.matBIndex << "], hitPoint, dpdu, dpdv, dndu, dndv, weight * weight2 MATERIALS_PARAM);\n"
+						"\t	Material_Index" << mat->mix.matAIndex << "_Bump(&mats[" <<  mat->mix.matAIndex << "], hitPoint, weight * weight1 MATERIALS_PARAM);\n"
+						"\t	Material_Index" << mat->mix.matBIndex << "_Bump(&mats[" <<  mat->mix.matBIndex << "], hitPoint, weight * weight2 MATERIALS_PARAM);\n"
 						"\t}\n"
 						"}\n";
 				source << "#endif\n";
@@ -3047,10 +3046,9 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 	AddMaterialSourceSwitch(source, materialsCount, "BumpWithMix", "Bump", "void", "",
 			"const uint index, __global HitPoint *hitPoint, "
-				"const float3 dpdu, const float3 dpdv, "
-				"const float3 dndu, const float3 dndv, const float weight "
+				"const float weight "
 				"MATERIALS_PARAM_DECL",
-			"mat, hitPoint, dpdu, dpdv, dndu, dndv, weight MATERIALS_PARAM", false);
+			"mat, hitPoint, weight MATERIALS_PARAM", false);
 	source << "#endif\n";
 
 	// Generate the code for generic Material_GetPassThroughTransparency()
@@ -3090,19 +3088,18 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"}\n"
 			"#if defined(PARAM_HAS_BUMPMAPS)\n"
 			"void Material_Bump(const uint matIndex, __global HitPoint *hitPoint,\n"
-			"        const float3 dpdu, const float3 dpdv,\n"
-			"        const float3 dndu, const float3 dndv, const float weight\n"
+			"        const float weight\n"
 			"        MATERIALS_PARAM_DECL) {\n"
 			"	__global const Material *material = &mats[matIndex];\n"
 			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
 			"	if (material->type == MIX)\n"
 			"		Material_BumpWithMix(matIndex, hitPoint,\n"
-			"                dpdu, dpdv, dndu, dndv, weight\n"
+			"                weight\n"
 			"                MATERIALS_PARAM);\n"
 			"	else\n"
 			"#endif\n"
 			"		Material_BumpNoMix(material, hitPoint,\n"
-			"                dpdu, dpdv, dndu, dndv, weight\n"
+			"                weight\n"
 			"                TEXTURES_PARAM);\n"
 			"}\n"
 			"#endif\n"
