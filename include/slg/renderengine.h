@@ -39,12 +39,9 @@ typedef enum {
 	LIGHTCPU = 5,
 	PATHCPU = 6,
 	BIDIRCPU = 7,
-	BIDIRHYBRID = 8,
-	CBIDIRHYBRID = 9,
 	BIDIRVMCPU = 10,
 	FILESAVER = 11,
 	RTPATHOCL = 12,
-	PATHHYBRID = 13,
 	BIASPATHCPU = 14,
 	BIASPATHOCL = 15,
 	RTBIASPATHOCL = 16
@@ -386,109 +383,6 @@ public:
 		bool fatal = true);
 
 	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
-};
-
-//------------------------------------------------------------------------------
-// Base class for Hybrid render engines
-//------------------------------------------------------------------------------
-
-class HybridRenderThread;
-class HybridRenderEngine;
-
-class HybridRenderState {
-public:
-	HybridRenderState(HybridRenderThread *rendeThread, Film *film, luxrays::RandomGenerator *rndGen);
-	virtual ~HybridRenderState();
-
-	virtual void GenerateRays(HybridRenderThread *renderThread) = 0;
-	// Returns the number of rendered samples (mostly for statistics)
-	virtual double CollectResults(HybridRenderThread *renderThread) = 0;
-
-	friend class HybridRenderThread;
-	friend class HybridRenderEngine;
-
-protected:
-	Sampler *sampler;
-};
-
-class HybridRenderThread {
-public:
-	HybridRenderThread(HybridRenderEngine *re, const u_int index,
-			luxrays::IntersectionDevice *device);
-	~HybridRenderThread();
-
-	void Start();
-    void Interrupt();
-	void Stop();
-
-	void BeginSceneEdit();
-	void EndSceneEdit(const EditActionList &editActions);
-
-	friend class HybridRenderState;
-	friend class HybridRenderEngine;
-
-protected:
-	virtual HybridRenderState *AllocRenderState(luxrays::RandomGenerator *rndGen) = 0;
-	virtual boost::thread *AllocRenderThread() = 0;
-
-	void RenderFunc();
-
-	void StartRenderThread();
-	void StopRenderThread();
-
-	size_t PushRay(const luxrays::Ray &ray);
-	void PopRay(const luxrays::Ray **ray, const luxrays::RayHit **rayHit);
-
-	boost::thread *renderThread;
-	Film *threadFilm;
-	luxrays::IntersectionDevice *device;
-
-	u_int threadIndex;
-	HybridRenderEngine *renderEngine;
-	u_int pixelCount;
-
-	double samplesCount;
-
-	u_int pendingRayBuffers;
-	luxrays::RayBuffer *currentRayBufferToSend;
-	std::deque<luxrays::RayBuffer *> freeRayBuffers;
-
-	luxrays::RayBuffer *currentReceivedRayBuffer;
-	size_t currentReceivedRayBufferIndex;
-
-	// Used to store values shared among all metropolis samplers
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
-
-	bool started, editMode;
-};
-
-class HybridRenderEngine : public OCLRenderEngine {
-public:
-	HybridRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
-	virtual ~HybridRenderEngine() { }
-
-	// TODO
-	virtual bool HasDone() const { throw std::runtime_error("Called HybridRenderEngine::HasDone()"); }
-	// TODO
-	virtual void WaitForDone() const { throw std::runtime_error("Called HybridRenderEngine::WaitForDone()"); }
-
-	friend class HybridRenderState;
-	friend class HybridRenderThread;
-
-protected:
-	virtual HybridRenderThread *NewRenderThread(const u_int index,
-			luxrays::IntersectionDevice *device) = 0;
-
-	virtual void StartLockLess();
-	virtual void StopLockLess();
-
-	virtual void BeginSceneEditLockLess();
-	virtual void EndSceneEditLockLess(const EditActionList &editActions);
-
-	virtual void UpdateFilmLockLess();
-	virtual void UpdateCounters();
-
-	vector<HybridRenderThread *> renderThreads;
 };
 
 }

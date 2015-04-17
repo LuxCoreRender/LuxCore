@@ -163,13 +163,9 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/photometricdataies.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircputhread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirhybrid/bidirhybrid.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirhybrid/bidirhybridthread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirhybrid/bidirstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/hashgrid.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/cbidirhybrid/cbidirhybrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledscene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
@@ -182,9 +178,6 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathcpu/pathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/filesaver/filesaver.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathhybrid.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathhybridthread.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/engines/pathhybrid/pathstate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathcpu/biaspathcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/biaspathocl/biaspathocl.cpp

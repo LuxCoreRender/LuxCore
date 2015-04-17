@@ -53,11 +53,8 @@
 #include "slg/engines/lightcpu/lightcpu.h"
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/engines/bidircpu/bidircpu.h"
-#include "slg/engines/bidirhybrid/bidirhybrid.h"
-#include "slg/engines/cbidirhybrid/cbidirhybrid.h"
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 #include "slg/engines/filesaver/filesaver.h"
-#include "slg/engines/pathhybrid/pathhybrid.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
 #include "slg/engines/biaspathocl/biaspathocl.h"
 
@@ -619,10 +616,6 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 			return new PathCPURenderEngine(this, film, filmMutex);
 		case BIDIRCPU:
 			return new BiDirCPURenderEngine(this, film, filmMutex);
-		case BIDIRHYBRID:
-			return new BiDirHybridRenderEngine(this, film, filmMutex);
-		case CBIDIRHYBRID:
-			return new CBiDirHybridRenderEngine(this, film, filmMutex);
 		case BIDIRVMCPU:
 			return new BiDirVMCPURenderEngine(this, film, filmMutex);
 		case FILESAVER:
@@ -634,8 +627,6 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
 			return new PathCPURenderEngine(this, film, filmMutex);
 #endif
-		case PATHHYBRID:
-			return new PathHybridRenderEngine(this, film, filmMutex);
 		case BIASPATHCPU:
 			return new BiasPathCPURenderEngine(this, film, filmMutex);
 		case BIASPATHOCL:
