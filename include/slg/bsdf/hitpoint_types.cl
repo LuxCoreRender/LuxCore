@@ -29,13 +29,13 @@ typedef struct {
 	UV uv;
 	Normal geometryN;
 	Normal shadeN;
-
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	Spectrum color;
-#endif
 #if defined(PARAM_HAS_BUMPMAPS)
 	Vector dpdu, dpdv;
 	Normal dndu, dndv;
+#endif
+
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+	Spectrum color;
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	float alpha;
