@@ -2957,7 +2957,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\tconst float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);\n"
 						"\tFrame frame;\n"
 						"\tExtMesh_GetFrame(shadeN, dpdu, dpdv, &frame);\n"
-						"\tFrame frameFirst;
+						"\tFrame frameFirst;\n"
 						"\tif (sampleMatA) {\n"
 						"\t\tMaterial_Index" << mat->mix.matAIndex << "_Bump(matA, hitPoint, 1.f MATERIALS_PARAM);\n"
 						"\t\tconst float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);\n"
@@ -3000,7 +3000,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\tBSDFEvent eventSecond;\n"
 						"\tfloat pdfWSecond;\n"
 						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\tFrame frameSecond;
+						"\tFrame frameSecond;\n"
 						"\tif (sampleMatA) {\n"
 						"\t\tMaterial_Index" << mat->mix.matBIndex << "_Bump(matB, hitPoint, 1.f MATERIALS_PARAM);\n"
 						"\t\tconst float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);\n"

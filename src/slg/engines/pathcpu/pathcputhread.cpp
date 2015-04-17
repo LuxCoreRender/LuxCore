@@ -37,7 +37,7 @@ void PathCPURenderThread::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const Spectrum &pathThroughput, const BSDF &bsdf,
-		PathVolumeInfo volInfo, const u_int noSpecularPathVertexCount,
+		PathVolumeInfo volInfo, const u_int pathVertexCount,
 		SampleResult *sampleResult) {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
@@ -75,7 +75,7 @@ void PathCPURenderThread::DirectLightSampling(
 					const float factor = 1.f / directLightSamplingPdfW;
 
 					// The +1 is there to account the current path vertex used for DL
-					if (noSpecularPathVertexCount + 1 >= engine->rrDepth) {
+					if (pathVertexCount + 1 >= engine->rrDepth) {
 						// Russian Roulette
 						bsdfPdfW *= RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 					}
@@ -223,7 +223,6 @@ void PathCPURenderThread::RenderFunc() {
 			sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 
 		u_int pathVertexCount = 1;
-		u_int noSpecularPathVertexCount = 0;
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 		float lastPdfW = 1.f;
 		Spectrum pathThroughput(1.f);
@@ -306,7 +305,7 @@ void PathCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					pathThroughput, bsdf, volInfo, noSpecularPathVertexCount, &sampleResult);
+					pathThroughput, bsdf, volInfo, pathVertexCount, &sampleResult);
 
 			if (sampleResult.lastPathVertex)
 				break;
@@ -327,22 +326,21 @@ void PathCPURenderThread::RenderFunc() {
 			if (sampleResult.firstPathVertex)
 				sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
-			float rrProb = 1.f;
-			if (!(lastBSDFEvent & SPECULAR)) {
-				++noSpecularPathVertexCount;
+			Spectrum throughputFactor(1.f);
+			const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
+			if (pathVertexCount >= engine->rrDepth) {
+				// Russian Roulette
+				if (rrProb < sampler->GetSample(sampleOffset + 8))
+					break;
 
-				const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-				if (noSpecularPathVertexCount >= engine->rrDepth) {
-					// Russian Roulette
-					if (sampler->GetSample(sampleOffset + 8) < rrProb)
-						lastPdfW *= rrProb;
-					else
-						break;
-				}
+				// Increase path contribution
+				throughputFactor /= rrProb;
 			}
 
-			const float pdfFactor = min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
-			const Spectrum throughputFactor = bsdfSample * pdfFactor;
+			// PDF clamping (or better: scaling)
+			throughputFactor *= min(1.f, (lastBSDFEvent & SPECULAR) ? 1.f : (lastPdfW / engine->pdfClampValue));
+			throughputFactor *= bsdfSample;
+
 			pathThroughput *= throughputFactor;
 			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
 

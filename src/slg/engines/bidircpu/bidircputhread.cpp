@@ -81,14 +81,14 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				if (eyeVertex.noSpecularVertexDepth >= engine->rrDepth) {
+				if (eyeVertex.depth >= engine->rrDepth) {
 					// Russian Roulette
 					const float prob = RenderEngine::RussianRouletteProb(eyeBsdfEval, engine->rrImportanceCap);
 					eyeBsdfPdfW *= prob;
 					eyeBsdfRevPdfW *= prob;
 				}
 
-				if (lightVertex.noSpecularVertexDepth >= engine->rrDepth) {
+				if (lightVertex.depth >= engine->rrDepth) {
 					// Russian Roulette
 					const float prob = RenderEngine::RussianRouletteProb(lightBsdfEval, engine->rrImportanceCap);
 					lightBsdfPdfW *= prob;
@@ -151,7 +151,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				if (lightVertex.noSpecularVertexDepth >= engine->rrDepth) {
+				if (lightVertex.depth >= engine->rrDepth) {
 					// Russian Roulette
 					const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 					bsdfRevPdfW *= prob;
@@ -222,7 +222,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 					// direct light step.
 
 					// The +1 is there to account the current path vertex used for DL
-					if (eyeVertex.noSpecularVertexDepth + 1 >= engine->rrDepth) {
+					if (eyeVertex.depth + 1 >= engine->rrDepth) {
 						// Russian Roulette
 						const float prob = RenderEngine::RussianRouletteProb(bsdfEval, engine->rrImportanceCap);
 						bsdfPdfW *= prob;
@@ -327,7 +327,6 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 		lightVertex.dVM = lightVertex.dVC * misVcWeightFactor;
 
 		lightVertex.depth = 1;
-		lightVertex.noSpecularVertexDepth = 0;
 		while (lightVertex.depth <= engine->maxLightPathDepth) {
 			const u_int sampleOffset = sampleBootSize + (lightVertex.depth - 1) * sampleLightStepSize;
 
@@ -397,19 +396,16 @@ bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
 	float bsdfRevPdfW;
 	if (event & SPECULAR)
 		bsdfRevPdfW = bsdfPdfW;
-	else {
+	else
 		pathVertex->bsdf.Pdf(sampledDir, NULL, &bsdfRevPdfW);
-		++(pathVertex->noSpecularVertexDepth);
-	}
 
-	if (pathVertex->noSpecularVertexDepth >= engine->rrDepth) {
+	if (pathVertex->depth >= engine->rrDepth) {
 		// Russian Roulette
 		const float prob = RenderEngine::RussianRouletteProb(bsdfSample, engine->rrImportanceCap);
-		if (sampler->GetSample(sampleOffset + 2) < prob) {
-			bsdfPdfW *= prob;
-			bsdfRevPdfW *= prob;
-		} else
+		if (prob < sampler->GetSample(sampleOffset + 2))
 			return false;
+
+		pathVertex->throughput /= prob;
 	}
 
 	// Was:
@@ -532,7 +528,6 @@ void BiDirCPURenderThread::RenderFunc() {
 		eyeVertex.dVM = 0.f;
 
 		eyeVertex.depth = 1;
-		eyeVertex.noSpecularVertexDepth = 0;
 		while (eyeVertex.depth <= engine->maxEyePathDepth) {
 			const u_int sampleOffset = sampleBootSize + engine->maxLightPathDepth * sampleLightStepSize +
 				(eyeVertex.depth - 1) * sampleEyeStepSize;

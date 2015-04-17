@@ -167,10 +167,6 @@ protected:
 // Infinite LightSource interface
 //------------------------------------------------------------------------------
 
-// This is used to scale the world radius in sun/sky/infinite lights in order to
-// avoid problems with objects that are near the borderline of the world bounding sphere
-extern const float LIGHT_WORLD_RADIUS_SCALE;
-
 class InfiniteLightSource : public NotIntersectableLightSource {
 public:
 	InfiniteLightSource() : isVisibleIndirectDiffuse(true),
@@ -189,9 +185,12 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
-protected:
+	// This is used to scale the world radius in sun/sky/infinite lights in order to
+	// avoid problems with objects that are near the borderline of the world bounding sphere
+	static const float LIGHT_WORLD_RADIUS_SCALE;
 	static float GetEnvRadius(const Scene &scene);
 
+protected:
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
 };
 
