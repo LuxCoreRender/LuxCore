@@ -109,7 +109,6 @@ void GenerateCameraPath(
 	// Initialize the path state
 	taskState->state = RT_NEXT_VERTEX; // Or MK_RT_NEXT_VERTEX (they have the same value)
 	taskState->pathVertexCount = 1;
-	taskState->noSpecularPathVertexCount = 0;
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	taskDirectLight->lastPdfW = 1.f;
@@ -304,7 +303,7 @@ bool DirectLight_Illuminate(
 bool DirectLight_BSDFSampling(
 		__global DirectLightIlluminateInfo *info,
 		const float time,
-		const bool lastPathVertex, const uint noSpecularPathVertexCount,
+		const bool lastPathVertex, const uint pathVertexCount,
 		__global BSDF *bsdf,
 		__global Ray *shadowRay
 		LIGHTS_PARAM_DECL) {
@@ -326,7 +325,7 @@ bool DirectLight_BSDFSampling(
 
 	// Russian Roulette
 	// The +1 is there to account the current path vertex used for DL
-	bsdfPdfW *= (noSpecularPathVertexCount + 1 >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+	bsdfPdfW *= (pathVertexCount + 1 >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
 
 	// MIS between direct light sampling and BSDF sampling
 	//

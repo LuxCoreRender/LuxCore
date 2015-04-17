@@ -524,7 +524,10 @@ float ImageMap::GetSpectrumMean() const {
 		}
 	}
 
-	return mean / (pixelStorage->width * pixelStorage->height);
+	const float result = mean / (pixelStorage->width * pixelStorage->height);
+	assert (!isnan(result) && !isinf(result));
+
+	return result;
 }
 
 float ImageMap::GetSpectrumMeanY() const {
@@ -532,13 +535,16 @@ float ImageMap::GetSpectrumMeanY() const {
 	for (u_int y = 0; y < pixelStorage->height; ++y) {
 		for (u_int x = 0; x < pixelStorage->width; ++x) {
 			const u_int index = x + y * pixelStorage->width;
-			
+
 			const Spectrum s = pixelStorage->GetSpectrum(index);
 			mean += s.Y();
 		}
 	}
 
-	return mean / (pixelStorage->width * pixelStorage->height);
+	const float result = mean / (pixelStorage->width * pixelStorage->height);
+	assert (!isnan(result) && !isinf(result));
+
+	return result;
 }
 
 ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
