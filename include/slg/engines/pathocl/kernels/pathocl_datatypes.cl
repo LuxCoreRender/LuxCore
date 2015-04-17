@@ -86,7 +86,7 @@ typedef struct {
 // The state used to keep track of the rendered path
 typedef struct {
 	PathState state;
-	unsigned int pathVertexCount, noSpecularPathVertexCount;
+	unsigned int pathVertexCount;
 
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure

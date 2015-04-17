@@ -66,11 +66,10 @@ void LightStrategyUniform::Preprocess(const Scene *scn) {
 void LightStrategyPower::Preprocess(const Scene *scn) {
 	LightStrategy::Preprocess(scn);
 
-	const float worldRadius = LIGHT_WORLD_RADIUS_SCALE * scene->dataSet->GetBSphere().rad * 1.01f;
-	const float iWorldRadius2 = 1.f / (worldRadius * worldRadius);
+	const float envRadius = InfiniteLightSource::GetEnvRadius(*scene);
+	const float invEnvRadius2 = 1.f / (envRadius * envRadius);
 
 	const u_int lightCount = scene->lightDefs.GetSize();
-	float totalPower = 0.f;
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
@@ -80,9 +79,8 @@ void LightStrategyPower::Preprocess(const Scene *scn) {
 		float power = l->GetPower(*scene);
 		// In order to avoid over-sampling of distant lights
 		if (l->IsInfinite())
-			power *= iWorldRadius2;			
+			power *= invEnvRadius2;			
 		lightPower.push_back(power * l->GetImportance());
-		totalPower += power;
 	}
 
 	// Build the data to power based light sampling
@@ -98,7 +96,6 @@ void LightStrategyLogPower::Preprocess(const Scene *scn) {
 	LightStrategy::Preprocess(scn);
 
 	const u_int lightCount = scene->lightDefs.GetSize();
-	float totalPower = 0.f;
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
@@ -108,7 +105,6 @@ void LightStrategyLogPower::Preprocess(const Scene *scn) {
 		float power = logf(1.f + l->GetPower(*scene));
 
 		lightPower.push_back(power * l->GetImportance());
-		totalPower += power;
 	}
 
 	// Build the data to power based light sampling

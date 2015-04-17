@@ -164,6 +164,7 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property(prefix + ".type")("infinite"));
 	props.Set(Property(prefix + ".file")("imagemap-" + 
 		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+	props.Set(Property(prefix + ".gamma")(1.f));
 	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
 
 	return props;
