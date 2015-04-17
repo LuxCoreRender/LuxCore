@@ -98,13 +98,13 @@ static void PrintHelpAndSettings() {
 	PrintHelpString(15, fontOffset, "3", "CPU path tracing");
 	PrintHelpString(320, fontOffset, "4", "CPU bidir. path tracing");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "5", "Hybrid bidir. path tracing");
-	PrintHelpString(320, fontOffset, "6", "Hybrid combinatorial bidir. path tracing");
+	PrintHelpString(15, fontOffset, "5", "CPU bidir. VM path tracing");
+	PrintHelpString(320, fontOffset, "6", "RT OpenCL path tracing");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "7", "CPU bidir. VM path tracing");
-	PrintHelpString(320, fontOffset, "8", "RT OpenCL path tracing");
+	PrintHelpString(15, fontOffset, "7", "CPU bias path tracing");
+	PrintHelpString(320, fontOffset, "8", "OpenCL bias path tracing");
 	fontOffset -= 15;
-	PrintHelpString(15, fontOffset, "9", "Hybrid path tracing");
+	PrintHelpString(15, fontOffset, "9", "RT OpenCL bias path tracing");
 	fontOffset -= 15;
 #if defined(WIN32)
 	PrintHelpString(15, fontOffset, "o", "windows always on top");
@@ -693,25 +693,13 @@ void keyFunc(unsigned char key, int x, int y) {
 			optRealTimeMode = false;
 			break;
 		case '5':
-			SetRenderingEngineType("BIDIRHYBRID");
-			glutIdleFunc(NULL);
-			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
-			optRealTimeMode = false;
-			break;
-		case '6':
-			SetRenderingEngineType("CBIDIRHYBRID");
-			glutIdleFunc(NULL);
-			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
-			optRealTimeMode = false;
-			break;
-		case '7':
 			SetRenderingEngineType("BIDIRVMCPU");
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		case '8':
+		case '6':
 			SetRenderingEngineType("RTPATHOCL");
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
@@ -719,26 +707,20 @@ void keyFunc(unsigned char key, int x, int y) {
 				config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
 			break;
 #endif
-		case '9':
-			SetRenderingEngineType("PATHHYBRID");
-			glutIdleFunc(NULL);
-			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
-			optRealTimeMode = false;
-			break;
-		case '0':
+		case '7':
 			SetRenderingEngineType("BIASPATHCPU");
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
-		case '-':
+		case '8':
 			SetRenderingEngineType("BIASPATHOCL");
 			glutIdleFunc(NULL);
 			glutTimerFunc(config->GetProperty("screen.refresh.interval").Get<u_int>(), timerFunc, 0);
 			optRealTimeMode = false;
 			break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-		case '=':
+		case '9':
 			SetRenderingEngineType("RTBIASPATHOCL");
 			glutIdleFunc(idleFunc);
 			optRealTimeMode = true;
