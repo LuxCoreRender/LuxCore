@@ -408,19 +408,11 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 	*distance = sqrt(distanceSquared);
 	*dir /= (*distance);
 
+	const float3 sampleN = Triangle_GetGeometryNormal(p0, p1, p2); // Light sources are supposed to be flat
+
 	const float cosAtLight = dot(sampleN, -(*dir));
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
-
-	VSTORE3F(samplePoint, &tmpHitPoint->p.x);
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-	tmpHitPoint->passThroughEvent = passThroughEvent;
-#endif
-
-	const float3 sampleN = Triangle_GetGeometryNormal(p0, p1, p2); // Light sources are supposed to be flat
-	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
-	VSTORE3F(-sampleN, &tmpHitPoint->fixedDir.x);
 
 	// FIXME: use correct shading normal
 //	float3 shadeN;
@@ -434,7 +426,16 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 //	} else
 //#endif
 //		shadeN = geometryN;
-    VSTORE3F(sampleN, &bsdf->hitPoint.shadeN.x);
+
+	VSTORE3F(samplePoint, &tmpHitPoint->p.x);
+
+#if defined(PARAM_HAS_PASSTHROUGH)
+	tmpHitPoint->passThroughEvent = passThroughEvent;
+#endif
+
+	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
+    VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);
+	VSTORE3F(-sampleN, &tmpHitPoint->fixedDir.x);
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	const float3 rgb0 = VLOAD3F(triLight->triangle.rgb0.c);

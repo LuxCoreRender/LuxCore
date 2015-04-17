@@ -89,7 +89,7 @@ std::string KernelSource_pathocl_datatypes =
 "// The state used to keep track of the rendered path\n"
 "typedef struct {\n"
 "	PathState state;\n"
-"	unsigned int pathVertexCount, noSpecularPathVertexCount;\n"
+"	unsigned int pathVertexCount;\n"
 "\n"
 "	Spectrum throughput;\n"
 "	BSDF bsdf; // Variable size structure\n"

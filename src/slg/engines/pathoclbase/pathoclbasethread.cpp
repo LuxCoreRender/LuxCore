@@ -543,6 +543,9 @@ size_t PathOCLBaseRenderThread::GetOpenCLHitPointSize() const {
 		hitPointSize += sizeof(float);
 	if (renderEngine->compiledScene->RequiresPassThrough())
 		hitPointSize += sizeof(float);
+	// Fields dpdu, dpdv, dndu, dndv
+	if (renderEngine->compiledScene->HasBumpMaps())
+		hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
 	// Volume fields
 	if (renderEngine->compiledScene->HasVolumes())
 		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int) +
@@ -855,7 +858,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetEngineType()) <<
 			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
-			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << LIGHT_WORLD_RADIUS_SCALE << "f"
+			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << InfiniteLightSource::LIGHT_WORLD_RADIUS_SCALE << "f"
 			;
 
 	if (cscene->hasTriangleLightWithVertexColors)
