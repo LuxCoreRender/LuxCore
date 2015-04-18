@@ -31,7 +31,7 @@ float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 v) {
 	return X * v.x + Y * v.y + Z * v.z;
 }
 
-float3 Frame_ToWorld(__global Frame *frame, const float3 v) {
+float3 Frame_ToWorld(__global const Frame *frame, const float3 v) {
 	return ToWorld(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
 }
 
@@ -39,6 +39,6 @@ float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
 	return (float3)(dot(a, X), dot(a, Y), dot(a, Z));
 }
 
-float3 Frame_ToLocal(__global Frame *frame, const float3 v) {
+float3 Frame_ToLocal(__global const Frame *frame, const float3 v) {
 	return ToLocal(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
 }

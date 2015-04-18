@@ -57,7 +57,6 @@ extern std::string KernelSource_materialdefs_funcs_heterogeneousvol;
 extern std::string KernelSource_materialdefs_funcs_homogeneousvol;
 extern std::string KernelSource_materialdefs_funcs_matte;
 extern std::string KernelSource_materialdefs_funcs_matte_translucent;
-extern std::string KernelSource_materialdefs_funcs_mix;
 extern std::string KernelSource_materialdefs_funcs_metal2;
 extern std::string KernelSource_materialdefs_funcs_mirror;
 extern std::string KernelSource_materialdefs_funcs_null;
@@ -87,6 +86,9 @@ extern std::string KernelSource_scene_funcs;
 extern std::string KernelSource_mapping_types;
 extern std::string KernelSource_mapping_funcs;
 extern std::string KernelSource_hitpoint_types;
+
+// This is string is preprocessed in CompiledScene class
+extern std::string KernelSource_materialdefs_template_mix;
 
 } }
 

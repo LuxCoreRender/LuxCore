@@ -63,7 +63,7 @@ float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 float ImageMapTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float gain, const uint imageMapIndex, __global const TextureMapping2D *mapping
 		IMAGEMAPS_PARAM_DECL) {
-	__global ImageMap *imageMap = &imageMapDescs[imageMapIndex];
+	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
@@ -77,8 +77,8 @@ float ImageMapTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 float3 ImageMapTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float gain, const uint imageMapIndex, __global const TextureMapping2D *mapping
 		IMAGEMAPS_PARAM_DECL) {
-	__global ImageMap *imageMap = &imageMapDescs[imageMapIndex];
-	__global float *pixels = ImageMap_GetPixelsAddress(
+	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
+	__global const float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);

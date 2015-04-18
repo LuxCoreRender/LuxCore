@@ -34,7 +34,7 @@ std::string KernelSource_frame_funcs =
 "	return X * v.x + Y * v.y + Z * v.z;\n"
 "}\n"
 "\n"
-"float3 Frame_ToWorld(__global Frame *frame, const float3 v) {\n"
+"float3 Frame_ToWorld(__global const Frame *frame, const float3 v) {\n"
 "	return ToWorld(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);\n"
 "}\n"
 "\n"
@@ -42,7 +42,7 @@ std::string KernelSource_frame_funcs =
 "	return (float3)(dot(a, X), dot(a, Y), dot(a, Z));\n"
 "}\n"
 "\n"
-"float3 Frame_ToLocal(__global Frame *frame, const float3 v) {\n"
+"float3 Frame_ToLocal(__global const Frame *frame, const float3 v) {\n"
 "	return ToLocal(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);\n"
 "}\n"
 ; } }

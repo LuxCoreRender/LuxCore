@@ -22,10 +22,12 @@
 #include <limits>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/cameras/orthographic.h"
 #include "slg/cameras/perspective.h"
+#include "slg/kernels/kernels.h"
 
 #include "slg/lights/constantinfinitelight.h"
 #include "slg/lights/distantlight.h"
@@ -2843,262 +2845,16 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				break;
 			}
 			case slg::ocl::MIX: {
-				// MIX material requires ad hoc code
-
-				// Material_IndexN_GetEventTypes()
-				source <<
-						"BSDFEvent Material_Index" << i << "_GetEventTypes(__global const Material *material MATERIALS_PARAM_DECL) {\n"
-						"\treturn Material_Index" << mat->mix.matAIndex << "_GetEventTypes(&mats[" << mat->mix.matAIndex << "] MATERIALS_PARAM) |\n"
-						"\t\tMaterial_Index" << mat->mix.matBIndex << "_GetEventTypes(&mats[" << mat->mix.matBIndex << "] MATERIALS_PARAM);\n"
-						"}\n";
-
-				// Material_IndexN_IsDelta()
-				source <<
-						"bool Material_Index" << i << "_IsDelta(__global const Material *material MATERIALS_PARAM_DECL) {\n"
-						"\treturn Material_Index" << mat->mix.matAIndex << "_IsDelta(&mats[" << mat->mix.matAIndex << "] MATERIALS_PARAM) &&\n"
-						"\t\tMaterial_Index" << mat->mix.matBIndex << "_IsDelta(&mats[" << mat->mix.matBIndex << "] MATERIALS_PARAM);\n"
-						"}\n";
-
-				// Material_IndexN_Evaluate()
-				source <<
-						"float3 Material_Index" << i << "_Evaluate(__global const Material *material, __global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, BSDFEvent *event, float *directPdfW MATERIALS_PARAM_DECL) {\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\tconst float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\tconst float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);\n"
-						"\tconst float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);\n"
-						"\tFrame frame;\n"
-						"\tExtMesh_GetFrame(shadeN, dpdu, dpdv, &frame);\n"
-						"#endif\n"
-						"\tfloat3 result = BLACK;\n"
-						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
-						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
-						"\tconst float weight1 = 1.f - weight2;\n"
-						"\tif (directPdfW)\n"
-						"\t	*directPdfW = 0.f;\n"
-						"\tBSDFEvent eventMatA = NONE;\n"
-						"\tif (weight1 > 0.f) {\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\t\tMaterial_Index" << mat->mix.matAIndex << "_Bump(&mats[" <<  mat->mix.matAIndex << "], hitPoint, 1.f MATERIALS_PARAM);\n"
-						"\t\tconst float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\t\tconst float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);\n"
-						"\t\tconst float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);\n"
-						"\t\tFrame frameA;\n"
-						"\t\tExtMesh_GetFrame(shadeNA, dpduA, dpdvA, &frameA);\n"
-						"\t\tconst float3 lightDirA = Frame_ToLocal(frameA, Frame_ToWorld(frame, lightDir));\n"
-						"\t\tconst float3 eyeDirA = Frame_ToLocal(frameA, Frame_ToWorld(frame, eyeDir));\n"
-						"#else\n"
-						"\t\tconst float3 lightDirA = lightDir;\n"
-						"\t\tconst float3 eyeDirA = eyeDir;\n"
-						"#endif\n"
-						"\t	float directPdfWMatA;\n"
-						"\t	const float3 matAResult = Material_Index" <<  mat->mix.matAIndex << "_Evaluate(&mats[" <<  mat->mix.matAIndex << "], hitPoint, lightDirA, eyeDirA, &eventMatA, &directPdfWMatA MATERIALS_PARAM);\n"
-						"\t	if (!Spectrum_IsBlack(matAResult)) {\n"
-						"\t		result += weight1 * matAResult;\n"
-						"\t		if (directPdfW)\n"
-						"\t			*directPdfW += weight1 * directPdfWMatA;\n"
-						"\t	}\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\t\tVSTORE3F(shadeN, &hitPoint->shadeN.x);\n"
-						"\t\tVSTORE3F(dpdu, &hitPoint->dpdu.x);\n"
-						"\t\tVSTORE3F(dpdv, &hitPoint->dpdv.x);\n"
-						"#endif\n"
-						"\t}\n"
-						"\tBSDFEvent eventMatB = NONE;\n"
-						"\tif (weight2 > 0.f) {\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\t\tMaterial_Index" << mat->mix.matBIndex << "_Bump(&mats[" <<  mat->mix.matBIndex << "], hitPoint, 1.f MATERIALS_PARAM);\n"
-						"\t\tconst float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\t\tconst float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);\n"
-						"\t\tconst float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);\n"
-						"\t\tFrame frameB;\n"
-						"\t\tExtMesh_GetFrame(shadeNB, dpduB, dpdvB, &frameB);\n"
-						"\t\tconst float3 lightDirB = Frame_ToLocal(frameB, Frame_ToWorld(frame, lightDir));\n"
-						"\t\tconst float3 eyeDirB = Frame_ToLocal(frameB, Frame_ToWorld(frame, eyeDir));\n"
-						"#else\n"
-						"\t\tconst float3 lightDirB = lightDir;\n"
-						"\t\tconst float3 eyeDirB = eyeDir;\n"
-						"#endif\n"
-						"\t	float directPdfWMatB;\n"
-						"\t	const float3 matBResult = Material_Index" <<  mat->mix.matBIndex << "_Evaluate(&mats[" <<  mat->mix.matBIndex << "], hitPoint, lightDirB, eyeDirB, &eventMatB, &directPdfWMatB MATERIALS_PARAM);\n"
-						"\t	if (!Spectrum_IsBlack(matBResult)) {\n"
-						"\t		result += weight2 * matBResult;\n"
-						"\t		if (directPdfW)\n"
-						"\t			*directPdfW += weight2 * directPdfWMatB;\n"
-						"\t	}\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\t\tVSTORE3F(shadeN, &hitPoint->shadeN.x);\n"
-						"\t\tVSTORE3F(dpdu, &hitPoint->dpdu.x);\n"
-						"\t\tVSTORE3F(dpdv, &hitPoint->dpdv.x);\n"
-						"#endif\n"
-						"\t}\n"
-						"\t*event = eventMatA | eventMatB;\n"
-						"\treturn result;\n"
-						"}\n";
-
-				// Material_IndexN_Sample()
-				source <<
-						"float3 Material_Index" << i << "_Sample(__global const Material *material, __global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,\n"
-						"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-						"\t		const float passThroughEvent,\n"
-						"#endif\n"
-						"\t		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent MATERIALS_PARAM_DECL) {\n"
-						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
-						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
-						"\tconst float weight1 = 1.f - weight2;\n"
-						"\tconst bool sampleMatA = (passThroughEvent < weight1);\n"
-						"\tconst float weightFirst = sampleMatA ? weight1 : weight2;\n"
-						"\tconst float weightSecond = sampleMatA ? weight2 : weight1;\n"
-						"\tconst float passThroughEventFirst = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;\n"
-						"\t__global const Material *matA = &mats[" <<  mat->mix.matAIndex << "];\n"
-						"\t__global const Material *matB = &mats[" <<  mat->mix.matBIndex << "];\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\tconst float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\tconst float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);\n"
-						"\tconst float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);\n"
-						"\tFrame frame;\n"
-						"\tExtMesh_GetFrame(shadeN, dpdu, dpdv, &frame);\n"
-						"\tFrame frameFirst;\n"
-						"\tif (sampleMatA) {\n"
-						"\t\tMaterial_Index" << mat->mix.matAIndex << "_Bump(matA, hitPoint, 1.f MATERIALS_PARAM);\n"
-						"\t\tconst float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\t\tconst float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);\n"
-						"\t\tconst float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);\n"
-						"\t\tExtMesh_GetFrame(shadeNA, dpduA, dpdvA, &frameFirst);\n"
-						"\t} else {\n"
-						"\t\tMaterial_Index" << mat->mix.matBIndex << "_Bump(matB, hitPoint, 1.f MATERIALS_PARAM);\n"
-						"\t\tconst float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\t\tconst float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);\n"
-						"\t\tconst float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);\n"
-						"\t\tExtMesh_GetFrame(shadeNB, dpduB, dpdvB, &frameFirst);\n"
-						"\t}\n"
-						"\tconst float3 fixedDirFirst = Frame_ToLocal(frameFirst, Frame_ToWorld(frame, fixedDir));\n"
-						"#else\n"
-						"\tconst float3 fixedDirFirst = fixedDir;\n"
-						"#endif\n"
-						"\tfloat3 result = sampleMatA ?\n"
-						"\t		Material_Index" <<  mat->mix.matAIndex << "_Sample(matA, hitPoint, fixedDirFirst, sampledDir,\n"
-						"\t			u0, u1,\n"
-						"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-						"\t			passThroughEventFirst,\n"
-						"#endif\n"
-						"\t			pdfW, cosSampledDir, event, requestedEvent MATERIALS_PARAM):\n"
-						"\t		Material_Index" <<  mat->mix.matBIndex << "_Sample(matB, hitPoint, fixedDirFirst, sampledDir,\n"
-						"\t			u0, u1,\n"
-						"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-						"\t			passThroughEventFirst,\n"
-						"#endif\n"
-						"\t			pdfW, cosSampledDir, event, requestedEvent MATERIALS_PARAM);\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\tVSTORE3F(shadeN, &hitPoint->shadeN.x);\n"
-						"\tVSTORE3F(dpdu, &hitPoint->dpdu.x);\n"
-						"\tVSTORE3F(dpdv, &hitPoint->dpdv.x);\n"
-						"#endif\n"
-						"\tif (Spectrum_IsBlack(result))\n"
-						"\t	return BLACK;\n"
-						"\t*pdfW *= weightFirst;\n"
-						"\tresult *= *pdfW;\n"
-						"\tBSDFEvent eventSecond;\n"
-						"\tfloat pdfWSecond;\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\tFrame frameSecond;\n"
-						"\tif (sampleMatA) {\n"
-						"\t\tMaterial_Index" << mat->mix.matBIndex << "_Bump(matB, hitPoint, 1.f MATERIALS_PARAM);\n"
-						"\t\tconst float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\t\tconst float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);\n"
-						"\t\tconst float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);\n"
-						"\t\tExtMesh_GetFrame(shadeNB, dpduB, dpdvB, &frameSecond);\n"
-						"\t} else {\n"
-						"\t\tMaterial_Index" << mat->mix.matAIndex << "_Bump(matA, hitPoint, 1.f MATERIALS_PARAM);\n"
-						"\t\tconst float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\t\tconst float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);\n"
-						"\t\tconst float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);\n"
-						"\t\tExtMesh_GetFrame(shadeNA, dpduA, dpdvA, &frameSecond);\n"
-						"\t}\n"
-						"\tconst float3 fixedDirSecond = Frame_ToLocal(frameSecond, Frame_ToWorld(frame, fixedDir));\n"
-						"\t*sampledDir = Frame_ToWorld(frameFirst, *sampledDir);\n"
-						"\tconst float3 sampledDirSecond = Frame_ToLocal(frameSecond, *sampledDir);\n"
-						"\t*sampledDir = Frame_ToLocal(frame, *sampledDir);\n"
-						"#else\n"
-						"\tconst float3 fixedDirSecond = fixedDir;\n"
-						"\tconst float3 sampledDirSecond = *sampledDir;\n"
-						"#endif\n"
-						"\tfloat3 evalSecond = sampleMatA ?\n"
-						"\t		Material_Index" <<  mat->mix.matBIndex << "_Evaluate(matB, hitPoint, sampledDirSecond, fixedDirSecond, &eventSecond, &pdfWSecond MATERIALS_PARAM) :\n"
-						"\t		Material_Index" <<  mat->mix.matAIndex << "_Evaluate(matA, hitPoint, sampledDirSecond, fixedDirSecond, &eventSecond, &pdfWSecond MATERIALS_PARAM);\n"
-						"\tif (!Spectrum_IsBlack(evalSecond)) {\n"
-						"\t	result += weightSecond * evalSecond;\n"
-						"\t	*pdfW += weightSecond * pdfWSecond;\n"
-						"\t}\n"
-						"#if defined(PARAM_HAS_BUMPMAPS)\n"
-						"\tVSTORE3F(shadeN, &hitPoint->shadeN.x);\n"
-						"\tVSTORE3F(dpdu, &hitPoint->dpdu.x);\n"
-						"\tVSTORE3F(dpdv, &hitPoint->dpdv.x);\n"
-						"#endif\n"
-						"\treturn result / *pdfW;\n"
-						"}\n";
-
-				// Material_IndexN_GetEmittedRadiance()
-				source <<
-						"float3 Material_Index" << i << "_GetEmittedRadiance(__global const Material *material, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL) {\n"
-						"\tif (material->emitTexIndex != NULL_INDEX) {\n"
-						"\t return Material_GetEmittedRadianceNoMix(material, hitPoint TEXTURES_PARAM);\n"
-						"\t} else {\n"
-						"\t float3 result = BLACK;\n"
-						"\t const float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
-						"\t const float weight2 = clamp(factor, 0.f, 1.f);\n"
-						"\t const float weight1 = 1.f - weight2;\n"
-						"\t if (weight1 > 0.f)\n"
-						"\t 	result += weight1 * Material_Index" <<  mat->mix.matAIndex << "_GetEmittedRadiance(&mats[" <<  mat->mix.matAIndex << "], hitPoint, oneOverPrimitiveArea MATERIALS_PARAM);\n"
-						"\t if (weight2 > 0.f)\n"
-						"\t 	result += weight2 * Material_Index" <<  mat->mix.matBIndex << "_GetEmittedRadiance(&mats[" <<  mat->mix.matBIndex << "], hitPoint, oneOverPrimitiveArea MATERIALS_PARAM);\n"
-						"\t return result;\n"
-						"\t}\n"
-						"}\n";
-
-				// Material_IndexN_GetPassThroughTransparency()
-				source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
-				source <<
-						"float3 Material_Index" << i << "_GetPassThroughTransparency(__global const Material *material, __global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
-						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
-						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
-						"\tconst float weight1 = 1.f - weight2;\n"
-						"\tif (passThroughEvent < weight1)\n"
-						"\t	return Material_Index" <<  mat->mix.matAIndex << "_GetPassThroughTransparency(&mats[" <<  mat->mix.matAIndex << "], hitPoint, localFixedDir, passThroughEvent / weight1 MATERIALS_PARAM);\n"
-						"\telse\n"
-						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetPassThroughTransparency(&mats[" <<  mat->mix.matBIndex << "], hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);\n"
-						"}\n";
-				source << "#endif\n";
-
+				// MIX material uses a template .cl file
+				string mixSrc = slg::ocl::KernelSource_materialdefs_template_mix;
+				boost::replace_all(mixSrc, "<<CS_MIX_MATERIAL_INDEX>>", ToString(i));
+				boost::replace_all(mixSrc, "<<CS_MAT_A_MATERIAL_INDEX>>", ToString(mat->mix.matAIndex));
+				boost::replace_all(mixSrc, "<<CS_MAT_B_MATERIAL_INDEX>>", ToString(mat->mix.matBIndex));
+				boost::replace_all(mixSrc, "<<CS_FACTOR_TEXTURE_INDEX>>", ToString(mat->mix.mixFactorTexIndex));
+				source << mixSrc;
+cout<<mixSrc;
 				// Material_IndexN_Bump()
 				AddMaterialSourceStandardImplBump(source, i);
-
-				// Material_IndexN_GetInteriorVolume() and Material_IndexN_GetExteriorVolume()
-				source << "#if defined(PARAM_HAS_VOLUMES)\n";
-				source <<
-						"uint Material_Index" << i << "_GetInteriorVolume(__global const Material *material, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
-						"\tif (material->interiorVolumeIndex != NULL_INDEX)\n"
-						"\t	return material->interiorVolumeIndex;\n"
-						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
-						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
-						"\tconst float weight1 = 1.f - weight2;\n"
-						"\tif (passThroughEvent < weight1)\n"
-						"\t	return Material_Index" <<  mat->mix.matAIndex << "_GetInteriorVolume(&mats[" <<  mat->mix.matAIndex << "], hitPoint, passThroughEvent / weight1 MATERIALS_PARAM);\n"
-						"\telse\n"
-						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetInteriorVolume(&mats[" <<  mat->mix.matBIndex << "], hitPoint, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);\n"
-						"}\n";
-				source <<
-						"uint Material_Index" << i << "_GetExteriorVolume(__global const Material *material, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL) {\n"
-						"\tif (material->exteriorVolumeIndex != NULL_INDEX)\n"
-						"\t	return material->exteriorVolumeIndex;\n"
-						"\tconst float factor = " + AddTextureSourceCall("Float", mat->mix.mixFactorTexIndex) + ";\n"
-						"\tconst float weight2 = clamp(factor, 0.f, 1.f);\n"
-						"\tconst float weight1 = 1.f - weight2;\n"
-						"\tif (passThroughEvent < weight1)\n"
-						"\t	return Material_Index" <<  mat->mix.matAIndex << "_GetExteriorVolume(&mats[" <<  mat->mix.matAIndex << "], hitPoint, passThroughEvent / weight1 MATERIALS_PARAM);\n"
-						"\telse\n"
-						"\t	return Material_Index" <<  mat->mix.matBIndex << "_GetExteriorVolume(&mats[" <<  mat->mix.matBIndex << "], hitPoint, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);\n"
-						"}\n";
-				source << "#endif\n";
 				break;
 			}
 			default:
