@@ -1266,9 +1266,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 		slg::ocl::KernelSource_materialdefs_funcs_velvet <<
 		slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
-		slg::ocl::KernelSource_material_funcs <<
-		// KernelSource_materialdefs_funcs_mix must always be the last one
-		slg::ocl::KernelSource_materialdefs_funcs_mix;
+		slg::ocl::KernelSource_material_funcs;
 
 	// Generate the code to evaluate the textures
 	ssKernel <<
