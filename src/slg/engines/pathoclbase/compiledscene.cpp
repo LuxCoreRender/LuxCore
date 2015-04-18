@@ -2852,7 +2852,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				boost::replace_all(mixSrc, "<<CS_MAT_B_MATERIAL_INDEX>>", ToString(mat->mix.matBIndex));
 				boost::replace_all(mixSrc, "<<CS_FACTOR_TEXTURE_INDEX>>", ToString(mat->mix.mixFactorTexIndex));
 				source << mixSrc;
-cout<<mixSrc;
+
 				// Material_IndexN_Bump()
 				AddMaterialSourceStandardImplBump(source, i);
 				break;

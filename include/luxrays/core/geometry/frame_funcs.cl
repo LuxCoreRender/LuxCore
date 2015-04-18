@@ -31,14 +31,28 @@ float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 v) {
 	return X * v.x + Y * v.y + Z * v.z;
 }
 
-float3 Frame_ToWorld(__global const Frame *frame, const float3 v) {
-	return ToWorld(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
-}
-
 float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
 	return (float3)(dot(a, X), dot(a, Y), dot(a, Z));
 }
 
+float3 Frame_ToWorld(__global const Frame *frame, const float3 v) {
+	return ToWorld(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
+}
+
+float3 Frame_ToWorld_Private(const Frame *frame, const float3 v) {
+	return ToWorld(
+			(float3)(frame->X.x, frame->X.y, frame->X.z),
+			(float3)(frame->Y.x, frame->Y.y, frame->Y.z),
+			(float3)(frame->Z.x, frame->Z.y, frame->Z.z), v);
+}
+
 float3 Frame_ToLocal(__global const Frame *frame, const float3 v) {
 	return ToLocal(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
+}
+
+float3 Frame_ToLocal_Private(const Frame *frame, const float3 v) {
+	return ToLocal(
+			(float3)(frame->X.x, frame->X.y, frame->X.z),
+			(float3)(frame->Y.x, frame->Y.y, frame->Y.z),
+			(float3)(frame->Z.x, frame->Z.y, frame->Z.z), v);
 }
