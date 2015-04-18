@@ -78,7 +78,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
 	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
 	Frame frame;
-	ExtMesh_GetFrame(shadeN, dpdu, dpdv, &frame);
+	ExtMesh_GetFrame_Private(shadeN, dpdu, dpdv, &frame);
 #endif
 
 	float3 result = BLACK;
@@ -108,10 +108,10 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
 
 		Frame frameA;
-		ExtMesh_GetFrame(shadeNA, dpduA, dpdvA, &frameA);
+		ExtMesh_GetFrame_Private(shadeNA, dpduA, dpdvA, &frameA);
 
-		const float3 lightDirA = Frame_ToLocal(frameA, Frame_ToWorld(frame, lightDir));
-		const float3 eyeDirA = Frame_ToLocal(frameA, Frame_ToWorld(frame, eyeDir));
+		const float3 lightDirA = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frame, lightDir));
+		const float3 eyeDirA = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frame, eyeDir));
 #else
 		const float3 lightDirA = lightDir;
 		const float3 eyeDirA = eyeDir;
@@ -149,10 +149,10 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
 
 		Frame frameB;
-		ExtMesh_GetFrame(shadeNB, dpduB, dpdvB, &frameB);
+		ExtMesh_GetFrame_Private(shadeNB, dpduB, dpdvB, &frameB);
 
-		const float3 lightDirB = Frame_ToLocal(frameB, Frame_ToWorld(frame, lightDir));
-		const float3 eyeDirB = Frame_ToLocal(frameB, Frame_ToWorld(frame, eyeDir));
+		const float3 lightDirB = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frame, lightDir));
+		const float3 eyeDirB = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frame, eyeDir));
 #else
 		const float3 lightDirB = lightDir;
 		const float3 eyeDirB = eyeDir;
@@ -207,7 +207,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
 
 	Frame frame;
-	ExtMesh_GetFrame(shadeN, dpdu, dpdv, &frame);
+	ExtMesh_GetFrame_Private(shadeN, dpdu, dpdv, &frame);
 
 	Frame frameFirst;
 	if (sampleMatA) {
@@ -217,7 +217,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 		const float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);
 		const float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);
 		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
-		ExtMesh_GetFrame(shadeNA, dpduA, dpdvA, &frameFirst);
+		ExtMesh_GetFrame_Private(shadeNA, dpduA, dpdvA, &frameFirst);
 	} else {
 
 		Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Bump(matB, hitPoint, 1.f
@@ -225,10 +225,10 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 		const float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);
 		const float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);
 		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
-		ExtMesh_GetFrame(shadeNB, dpduB, dpdvB, &frameFirst);
+		ExtMesh_GetFrame_Private(shadeNB, dpduB, dpdvB, &frameFirst);
 	}
 
-	const float3 fixedDirFirst = Frame_ToLocal(frameFirst, Frame_ToWorld(frame, fixedDir));
+	const float3 fixedDirFirst = Frame_ToLocal_Private(&frameFirst, Frame_ToWorld_Private(&frame, fixedDir));
 #else
 	const float3 fixedDirFirst = fixedDir;
 #endif
@@ -270,7 +270,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 		const float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);
 		const float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);
 		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
-		ExtMesh_GetFrame(shadeNB, dpduB, dpdvB, &frameSecond);
+		ExtMesh_GetFrame_Private(shadeNB, dpduB, dpdvB, &frameSecond);
 	} else {
 		Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Bump(matA, hitPoint, 1.f
 				MATERIALS_PARAM);
@@ -278,13 +278,13 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 		const float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);
 		const float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);
 		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
-		ExtMesh_GetFrame(shadeNA, dpduA, dpdvA, &frameSecond);
+		ExtMesh_GetFrame_Private(shadeNA, dpduA, dpdvA, &frameSecond);
 	}
 
-	const float3 fixedDirSecond = Frame_ToLocal(frameSecond, Frame_ToWorld(frame, fixedDir));
-	*sampledDir = Frame_ToWorld(frameFirst, *sampledDir);
-	const float3 sampledDirSecond = Frame_ToLocal(frameSecond, *sampledDir);
-	*sampledDir = Frame_ToLocal(frame, *sampledDir);
+	const float3 fixedDirSecond = Frame_ToLocal_Private(&frameSecond, Frame_ToWorld_Private(&frame, fixedDir));
+	*sampledDir = Frame_ToWorld_Private(&frameFirst, *sampledDir);
+	const float3 sampledDirSecond = Frame_ToLocal_Private(&frameSecond, *sampledDir);
+	*sampledDir = Frame_ToLocal_Private(&frame, *sampledDir);
 #else
 	const float3 fixedDirSecond = fixedDir;
 	const float3 sampledDirSecond = *sampledDir;

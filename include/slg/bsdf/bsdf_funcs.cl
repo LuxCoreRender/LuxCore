@@ -123,19 +123,6 @@ void ExtMesh_GetDifferentials(
 	}
 }
 
-void ExtMesh_GetFrame(const float3 normal, const float3 dpdu, const float3 dpdv,
-		__global Frame *frame) {
-	// Build the local reference system
-
-    float3 ts = normalize(cross(normal, dpdu));
-    float3 ss = cross(ts, normal);
-    ts *= (dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
-
-    VSTORE3F(ss, &frame->X.x);
-	VSTORE3F(ts, &frame->Y.x);
-	VSTORE3F(normal, &frame->Z.x);
-}
-
 // Used when hitting a surface
 void BSDF_Init(
 		__global BSDF *bsdf,
