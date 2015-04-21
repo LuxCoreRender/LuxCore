@@ -32,20 +32,30 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 OrthographicCamera::OrthographicCamera(const Point &o, const Point &t,
-		const Vector &u, const float *region) : Camera(ORTHOGRAPHIC),
-		orig(o), target(t), up(Normalize(u)) {
-	if (region) {
-		autoUpdateFilmRegion = false;
-		filmRegion[0] = region[0];
-		filmRegion[1] = region[1];
-		filmRegion[2] = region[2];
-		filmRegion[3] = region[3];
-	} else
-		autoUpdateFilmRegion = true;
+		const Vector &u, const float *region) :
+		ProjectiveCamera(ORTHOGRAPHIC, region, o, t, u) {
+}
 
-	enableClippingPlane = true;
-	clippingPlaneCenter = Point();
-	clippingPlaneNormal = Normal(1.f, 0.f, 0.f);
+void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4],
+		const float screenOffsetX, const float screenOffsetY) {
+	// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
+	// identity matrix.
+	if (orig == target)
+		trans->cameraToWorld = Transform();
+	else {
+		const Transform worldToCamera = LookAt(orig, target, up);
+		trans->cameraToWorld = Inverse(worldToCamera);
+	}
+
+	// Compute orthographic camera transformations
+	trans->screenToCamera = Inverse(Orthographic(clipHither, clipYon));
+	trans->screenToWorld = trans->cameraToWorld * trans->screenToCamera;
+	// Compute orthographic camera screen transformations
+	trans->rasterToScreen = luxrays::Translate(Vector(screen[0] + screenOffsetX, screen[3] + screenOffsetY, 0.f)) *
+		Scale(screen[1] - screen[0], screen[2] - screen[3], 1.f) *
+		Scale(1.f / filmWidth, 1.f / filmHeight, 1.f);
+	trans->rasterToCamera = trans->screenToCamera * trans->rasterToScreen;
+	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
 }
 
 void OrthographicCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
@@ -116,7 +126,8 @@ void OrthographicCamera::Update(const u_int width, const u_int height, const u_i
 	}
 
 	// Initialize camera transformations
-	InitCameraTransforms(&camTrans, screen, 0.f, 0.f);
+	camTrans.resize(1);
+	InitCameraTransforms(&camTrans[0], screen, 0.f, 0.f);
 
 	// Initialize pixel information
 	const float xPixelWidth = ((screen[1] - screen[0]) / 2.f);
@@ -127,62 +138,13 @@ void OrthographicCamera::Update(const u_int width, const u_int height, const u_i
 		clippingPlaneNormal = Normalize(clippingPlaneNormal);
 }
 
-void OrthographicCamera::UpdateFocus(const Scene *scene) {
-	if (autoFocus) {
-		// Trace a ray in the middle of the screen
-		const Point Pras(filmWidth / 2, filmHeight / 2, 0.f);
-
-		const Point Pcamera(camTrans.rasterToCamera * Pras);
-		Ray ray;
-		ray.o = Pcamera;
-		ray.d = Vector(0.f, 0.f, 1.f);
-		ray.d = Normalize(ray.d);
-		
-		ray.mint = 0.f;
-		ray.maxt = (clipYon - clipHither);
-
-		if (motionSystem)
-			ray = motionSystem->Sample(0.f) * (camTrans.cameraToWorld * ray);
-		else
-			ray = camTrans.cameraToWorld * ray;
-		
-		// Trace the ray. If there isn't an intersection just use the current
-		// focal distance
-		RayHit rayHit;
-		if (scene->dataSet->GetAccelerator()->Intersect(&ray, &rayHit))
-			focalDistance = rayHit.t;
-	}
-}
-
-void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4],
-		const float screenOffsetX, const float screenOffsetY) {
-	// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
-	// identity matrix.
-	if (orig == target)
-		trans->cameraToWorld = Transform();
-	else {
-		const Transform worldToCamera = LookAt(orig, target, up);
-		trans->cameraToWorld = Inverse(worldToCamera);
-	}
-
-	// Compute orthographic camera transformations
-	trans->screenToCamera = Inverse(Orthographic(clipHither, clipYon));
-	trans->screenToWorld = trans->cameraToWorld * trans->screenToCamera;
-	// Compute orthographic camera screen transformations
-	trans->rasterToScreen = luxrays::Translate(Vector(screen[0] + screenOffsetX, screen[3] + screenOffsetY, 0.f)) *
-		Scale(screen[1] - screen[0], screen[2] - screen[3], 1.f) *
-		Scale(1.f / filmWidth, 1.f / filmHeight, 1.f);
-	trans->rasterToCamera = trans->screenToCamera * trans->rasterToScreen;
-	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
-}
-
 void OrthographicCamera::GenerateRay(
 	const float filmX, const float filmY,
 	Ray *ray, const float u1, const float u2, const float u3) const {
 	Point Pras, Pcamera;
 
 	Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
-	Pcamera = Point(camTrans.rasterToCamera * Pras);
+	Pcamera = Point(camTrans[0].rasterToCamera * Pras);
 
 	ray->o = Pcamera;
 	ray->d = Vector(0.f, 0.f, 1.f);
@@ -210,54 +172,13 @@ void OrthographicCamera::GenerateRay(
 	ray->time = Lerp(u3, shutterOpen, shutterClose);
 
 	if (motionSystem)
-		*ray = motionSystem->Sample(ray->time) * (camTrans.cameraToWorld * (*ray));
+		*ray = motionSystem->Sample(ray->time) * (camTrans[0].cameraToWorld * (*ray));
 	else
-		*ray = camTrans.cameraToWorld * (*ray);
+		*ray = camTrans[0].cameraToWorld * (*ray);
 
 	// World arbitrary clipping plane support
 	if (enableClippingPlane)
 		ApplyArbitraryClippingPlane(ray);
-}
-
-void OrthographicCamera::ApplyArbitraryClippingPlane(Ray *ray) const {
-	// Intersect the ray with clipping plane
-	const float denom = Dot(clippingPlaneNormal, ray->d);
-	const Vector pr = clippingPlaneCenter - ray->o;
-	float d = Dot(pr, clippingPlaneNormal);
-
-	if (fabsf(denom) > DEFAULT_COS_EPSILON_STATIC) {
-		// There is a valid intersection
-		d /= denom; 
-
-		if (d > 0.f) {
-			// The plane is in front of the camera
-			if (denom < 0.f) {
-				// The plane points toward the camera
-				ray->maxt = Clamp(d, ray->mint, ray->maxt);
-			} else {
-				// The plane points away from the camera
-				ray->mint = Clamp(d, ray->mint, ray->maxt);
-			}
-		} else {
-			if ((denom < 0.f) && (d < 0.f)) {
-				// No intersection possible, I use a trick here to avoid any
-				// intersection by setting mint=maxt
-				ray->mint = ray->maxt;
-			} else {
-				// Nothing to do
-			}
-		}
-	} else {
-		// The plane is parallel to the view directions. Check if I'm on the
-		// visible side of the plane or not
-		if (d >= 0.f) {
-			// No intersection possible, I use a trick here to avoid any
-			// intersection by setting mint=maxt
-			ray->mint = ray->maxt;
-		} else {
-			// Nothing to do
-		}
-	}
 }
 
 bool OrthographicCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
@@ -266,7 +187,7 @@ bool OrthographicCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 		ray->maxt * cosi > clipYon)))
 		return false;
 
-	Point pO(Inverse(camTrans.rasterToWorld) * ray->o);
+	Point pO(Inverse(camTrans[0].rasterToWorld) * ray->o);
 
 	if (motionSystem)
 		pO *= motionSystem->Sample(ray->time);
@@ -304,31 +225,17 @@ bool OrthographicCamera::SampleLens(const float time,
 	}
 
 	if (motionSystem)
-		*lensp = motionSystem->Sample(time) * (camTrans.cameraToWorld * lensPoint);
+		*lensp = motionSystem->Sample(time) * (camTrans[0].cameraToWorld * lensPoint);
 	else
-		*lensp = camTrans.cameraToWorld * lensPoint;
+		*lensp = camTrans[0].cameraToWorld * lensPoint;
 
 	return true;
 }
 
 Properties OrthographicCamera::ToProperties() const {
-	Properties props;
-
-	props.Set(Camera::ToProperties());
+	Properties props = ProjectiveCamera::ToProperties();
 
 	props.Set(Property("scene.camera.type")("orthographic"));
-	props.Set(Property("scene.camera.lookat.orig")(orig));
-	props.Set(Property("scene.camera.lookat.target")(target));
-	props.Set(Property("scene.camera.up")(up));
-
-	if (!autoUpdateFilmRegion)
-		props.Set(Property("scene.camera.screenwindow")(filmRegion[0], filmRegion[1], filmRegion[2], filmRegion[3]));
-
-	if (enableClippingPlane) {
-		props.Set(Property("scene.camera.clippingplane.enable")(enableClippingPlane));
-		props.Set(Property("scene.camera.clippingplane.center")(clippingPlaneCenter));
-		props.Set(Property("scene.camera.clippingplane.normal")(clippingPlaneNormal));
-	}
 
 	return props;
 }

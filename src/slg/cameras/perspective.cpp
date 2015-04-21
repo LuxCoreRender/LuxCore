@@ -32,25 +32,37 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
-		const Vector &u, const float *region) : Camera(PERSPECTIVE),
-		orig(o), target(t), up(Normalize(u)), fieldOfView(45.f) {
-	if (region) {
-		autoUpdateFilmRegion = false;
-		filmRegion[0] = region[0];
-		filmRegion[1] = region[1];
-		filmRegion[2] = region[2];
-		filmRegion[3] = region[3];
-	} else
-		autoUpdateFilmRegion = true;
-
+		const Vector &u, const float *region) :
+		ProjectiveCamera(PERSPECTIVE, region, o, t, u), fieldOfView(45.f) {
 	enableHorizStereo = false;
 	enableOculusRiftBarrel = false;
 	horizStereoEyesDistance = .0626f;
 	horizStereoLensDistance = .2779f;
+}
 
-	enableClippingPlane = true;
-	clippingPlaneCenter = Point();
-	clippingPlaneNormal = Normal(1.f, 0.f, 0.f);
+void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4],
+		const float eyeOffset, const float screenOffsetX, const float screenOffsetY) {
+	// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
+	// identity matrix.
+	if (orig == target)
+		trans->cameraToWorld = Transform();
+	else {
+		// Shift from camera to eye position
+		const Point eyeOrig = orig + eyeOffset * Normalize(x);
+		const Point eyeTarget = target + eyeOffset * Normalize(x);
+		const Transform worldToCamera = LookAt(eyeOrig, eyeTarget, up);
+		trans->cameraToWorld = Inverse(worldToCamera);
+	}
+
+	// Compute projective camera transformations
+	trans->screenToCamera = Inverse(Perspective(fieldOfView, clipHither, clipYon));
+	trans->screenToWorld = trans->cameraToWorld * trans->screenToCamera;
+	// Compute projective camera screen transformations
+	trans->rasterToScreen = luxrays::Translate(Vector(screen[0] + screenOffsetX, screen[3] + screenOffsetY, 0.f)) *
+		Scale(screen[1] - screen[0], screen[2] - screen[3], 1.f) *
+		Scale(1.f / filmWidth, 1.f / filmHeight, 1.f);
+	trans->rasterToCamera = trans->screenToCamera * trans->rasterToScreen;
+	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
 }
 
 void PerspectiveCamera::Update(const u_int width, const u_int height, const u_int *subRegion) {
@@ -162,60 +174,6 @@ void PerspectiveCamera::Update(const u_int width, const u_int height, const u_in
 		clippingPlaneNormal = Normalize(clippingPlaneNormal);
 }
 
-void PerspectiveCamera::UpdateFocus(const Scene *scene) {
-	if (autoFocus) {
-		// Trace a ray in the middle of the screen
-		// Note: for stereo, I'm just using the left eyes as main camera
-		const Point Pras(filmWidth / 2, filmHeight / 2, 0.f);
-
-		const Point Pcamera(camTrans[0].rasterToCamera * Pras);
-		Ray ray;
-		ray.o = Pcamera;
-		ray.d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
-		ray.d = Normalize(ray.d);
-		
-		ray.mint = 0.f;
-		ray.maxt = (clipYon - clipHither) / ray.d.z;
-
-		if (motionSystem)
-			ray = motionSystem->Sample(0.f) * (camTrans[0].cameraToWorld * ray);
-		else
-			ray = camTrans[0].cameraToWorld * ray;
-		
-		// Trace the ray. If there isn't an intersection just use the current
-		// focal distance
-		RayHit rayHit;
-		if (scene->dataSet->GetAccelerator()->Intersect(&ray, &rayHit))
-			focalDistance = rayHit.t;
-	}
-}
-
-void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4],
-		const float eyeOffset,
-		const float screenOffsetX, const float screenOffsetY) {
-	// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
-	// identity matrix.
-	if (orig == target)
-		trans->cameraToWorld = Transform();
-	else {
-		// Shift from camera to eye position
-		const Point eyeOrig = orig + eyeOffset * Normalize(x);
-		const Point eyeTarget = target + eyeOffset * Normalize(x);
-		const Transform worldToCamera = LookAt(eyeOrig, eyeTarget, up);
-		trans->cameraToWorld = Inverse(worldToCamera);
-	}
-
-	// Compute projective camera transformations
-	trans->screenToCamera = Inverse(Perspective(fieldOfView, clipHither, clipYon));
-	trans->screenToWorld = trans->cameraToWorld * trans->screenToCamera;
-	// Compute projective camera screen transformations
-	trans->rasterToScreen = luxrays::Translate(Vector(screen[0] + screenOffsetX, screen[3] + screenOffsetY, 0.f)) *
-		Scale(screen[1] - screen[0], screen[2] - screen[3], 1.f) *
-		Scale(1.f / filmWidth, 1.f / filmHeight, 1.f);
-	trans->rasterToCamera = trans->screenToCamera * trans->rasterToScreen;
-	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
-}
-
 void PerspectiveCamera::GenerateRay(
 	const float filmX, const float filmY,
 	Ray *ray, const float u1, const float u2, const float u3) const {
@@ -274,47 +232,6 @@ void PerspectiveCamera::GenerateRay(
 		ApplyArbitraryClippingPlane(ray);
 }
 
-void PerspectiveCamera::ApplyArbitraryClippingPlane(Ray *ray) const {
-	// Intersect the ray with clipping plane
-	const float denom = Dot(clippingPlaneNormal, ray->d);
-	const Vector pr = clippingPlaneCenter - ray->o;
-	float d = Dot(pr, clippingPlaneNormal);
-
-	if (fabsf(denom) > DEFAULT_COS_EPSILON_STATIC) {
-		// There is a valid intersection
-		d /= denom; 
-
-		if (d > 0.f) {
-			// The plane is in front of the camera
-			if (denom < 0.f) {
-				// The plane points toward the camera
-				ray->maxt = Clamp(d, ray->mint, ray->maxt);
-			} else {
-				// The plane points away from the camera
-				ray->mint = Clamp(d, ray->mint, ray->maxt);
-			}
-		} else {
-			if ((denom < 0.f) && (d < 0.f)) {
-				// No intersection possible, I use a trick here to avoid any
-				// intersection by setting mint=maxt
-				ray->mint = ray->maxt;
-			} else {
-				// Nothing to do
-			}
-		}
-	} else {
-		// The plane is parallel to the view directions. Check if I'm on the
-		// visible side of the plane or not
-		if (d >= 0.f) {
-			// No intersection possible, I use a trick here to avoid any
-			// intersection by setting mint=maxt
-			ray->mint = ray->maxt;
-		} else {
-			// Nothing to do
-		}
-	}
-}
-
 bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	const float cosi = Dot(ray->d, dir);
 	if ((cosi <= 0.f) || (!isinf(ray->maxt) && (ray->maxt * cosi < clipHither ||
@@ -366,27 +283,13 @@ bool PerspectiveCamera::SampleLens(const float time,
 }
 
 Properties PerspectiveCamera::ToProperties() const {
-	Properties props;
-
-	props.Set(Camera::ToProperties());
+	Properties props = ProjectiveCamera::ToProperties();
 
 	props.Set(Property("scene.camera.type")("perspective"));
-	props.Set(Property("scene.camera.lookat.orig")(orig));
-	props.Set(Property("scene.camera.lookat.target")(target));
-	props.Set(Property("scene.camera.up")(up));
-
-	if (!autoUpdateFilmRegion)
-		props.Set(Property("scene.camera.screenwindow")(filmRegion[0], filmRegion[1], filmRegion[2], filmRegion[3]));
 
 	props.Set(Property("scene.camera.fieldofview")(fieldOfView));
 	props.Set(Property("scene.camera.horizontalstereo.enable")(enableHorizStereo));
 	props.Set(Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
-
-	if (enableClippingPlane) {
-		props.Set(Property("scene.camera.clippingplane.enable")(enableClippingPlane));
-		props.Set(Property("scene.camera.clippingplane.center")(clippingPlaneCenter));
-		props.Set(Property("scene.camera.clippingplane.normal")(clippingPlaneNormal));
-	}
 
 	return props;
 }

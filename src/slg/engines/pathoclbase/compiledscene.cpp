@@ -128,8 +128,6 @@ void CompiledScene::CompileCamera() {
 	const Camera *sceneCamera = scene->camera;
 	camera.yon = sceneCamera->clipYon;
 	camera.hither = sceneCamera->clipHither;
-	camera.lensRadius = sceneCamera->lensRadius;
-	camera.focalDistance = sceneCamera->focalDistance;
 	camera.shutterOpen = sceneCamera->shutterOpen;
 	camera.shutterClose = sceneCamera->shutterClose;
 
@@ -137,6 +135,9 @@ void CompiledScene::CompileCamera() {
 		case Camera::ORTHOGRAPHIC: {
 			const OrthographicCamera *orthoCamera = (OrthographicCamera *)sceneCamera;
 			camera.type = slg::ocl::ORTHOGRAPHIC;
+
+			camera.lensRadius = orthoCamera->lensRadius;
+			camera.focalDistance = orthoCamera->focalDistance;
 
 			memcpy(camera.rasterToCamera[0].m.m, orthoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
 			memcpy(camera.cameraToWorld[0].m.m, orthoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
@@ -156,6 +157,9 @@ void CompiledScene::CompileCamera() {
 		case Camera::PERSPECTIVE: {
 			const PerspectiveCamera *perspCamera = (PerspectiveCamera *)sceneCamera;
 			camera.type = slg::ocl::PERSPECTIVE;
+
+			camera.lensRadius = perspCamera->lensRadius;
+			camera.focalDistance = perspCamera->focalDistance;
 
 			memcpy(camera.rasterToCamera[0].m.m, perspCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
 			memcpy(camera.cameraToWorld[0].m.m, perspCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));

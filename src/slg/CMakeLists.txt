@@ -158,6 +158,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/orthographic.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/perspective.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/cameras/projective.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/sphericalfunction.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/photometricdataies.cpp
