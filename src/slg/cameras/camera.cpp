@@ -37,11 +37,8 @@ Properties Camera::ToProperties() const {
 
 	props.Set(Property("scene.camera.cliphither")(clipHither));
 	props.Set(Property("scene.camera.clipyon")(clipYon));
-	props.Set(Property("scene.camera.lensradius")(lensRadius));
-	props.Set(Property("scene.camera.focaldistance")(focalDistance));
 	props.Set(Property("scene.camera.shutteropen")(shutterOpen));
 	props.Set(Property("scene.camera.shutterclose")(shutterClose));
-	props.Set(Property("scene.camera.autofocus.enable")(autoFocus));
 
 	if (motionSystem)
 		props.Set(motionSystem->ToProperties("scene.camera."));
