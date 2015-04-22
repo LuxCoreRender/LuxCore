@@ -44,44 +44,12 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
-	//--------------------------------------------------------------------------
-	// Stereo support
-	//--------------------------------------------------------------------------
-
-	void SetHorizontalStereo(const bool v) {
-		if (v && !autoUpdateFilmRegion)
-			throw std::runtime_error("Can not enable horizontal stereo support without film region auto-update");
-
-		enableHorizStereo = v;
-	}
-	bool IsHorizontalStereoEnabled() const { return enableHorizStereo; }
-	void SetOculusRiftBarrel(const bool v) {
-		if (v && !enableHorizStereo)
-			throw std::runtime_error("Can not enable Oculus Rift Barrel post-processing without horizontal stereo");
-
-		enableOculusRiftBarrel = v;
-	}
-	bool IsOculusRiftBarrelEnabled() const { return enableOculusRiftBarrel; }
-	void SetHorizontalStereoEyesDistance(const float v) { horizStereoEyesDistance = v; }
-	float GetHorizontalStereoEyesDistance() const { return horizStereoEyesDistance; }
-	void SetHorizontalStereoLensDistance(const float v) { horizStereoLensDistance = v; }
-	float GetHorizontalStereoLensDistance() const { return horizStereoLensDistance; }
-
-	//--------------------------------------------------------------------------
-	// Oculus Rift post-processing pixel shader
-	//--------------------------------------------------------------------------
-	
-	static void OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY);
-
 	float fieldOfView;
 
 private:
 	void InitCameraTransforms(CameraTransforms *trans, const float screen[4],
 		const float eyeOffset,
 		const float screenOffsetX, const float screenOffsetY);
-
-	float horizStereoEyesDistance, horizStereoLensDistance;
-	bool enableHorizStereo, enableOculusRiftBarrel;
 };
 
 }

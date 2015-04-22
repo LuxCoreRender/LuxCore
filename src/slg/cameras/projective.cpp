@@ -52,10 +52,9 @@ ProjectiveCamera::ProjectiveCamera(const CameraType type, const float *region,
 void ProjectiveCamera::UpdateFocus(const Scene *scene) {
 	if (autoFocus) {
 		// Trace a ray in the middle of the screen
-		// Note: for stereo, I'm just using the left eyes as main camera
 		const Point Pras(filmWidth / 2, filmHeight / 2, 0.f);
 
-		const Point Pcamera(camTrans[0].rasterToCamera * Pras);
+		const Point Pcamera(camTrans.rasterToCamera * Pras);
 		Ray ray;
 		ray.o = Pcamera;
 		ray.d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
@@ -65,9 +64,9 @@ void ProjectiveCamera::UpdateFocus(const Scene *scene) {
 		ray.maxt = (clipYon - clipHither) / ray.d.z;
 
 		if (motionSystem)
-			ray = motionSystem->Sample(0.f) * (camTrans[0].cameraToWorld * ray);
+			ray = motionSystem->Sample(0.f) * (camTrans.cameraToWorld * ray);
 		else
-			ray = camTrans[0].cameraToWorld * ray;
+			ray = camTrans.cameraToWorld * ray;
 		
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance

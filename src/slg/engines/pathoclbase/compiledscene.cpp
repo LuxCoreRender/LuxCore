@@ -146,7 +146,7 @@ void CompiledScene::CompileCamera() {
 			enableOculusRiftBarrel = false;
 
 
-			if (orthoCamera->IsClippingPlaneEnabled()) {
+			if (orthoCamera->enableClippingPlane) {
 				enableCameraClippingPlane = true;
 				ASSIGN_VECTOR(camera.clippingPlaneCenter, orthoCamera->clippingPlaneCenter);
 				ASSIGN_VECTOR(camera.clippingPlaneNormal, orthoCamera->clippingPlaneNormal);
@@ -164,18 +164,18 @@ void CompiledScene::CompileCamera() {
 			memcpy(camera.rasterToCamera[0].m.m, perspCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
 			memcpy(camera.cameraToWorld[0].m.m, perspCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
 
-			if (perspCamera->IsHorizontalStereoEnabled()) {
-				enableCameraHorizStereo = true;
-				enableOculusRiftBarrel = perspCamera->IsOculusRiftBarrelEnabled();
-
-				memcpy(camera.rasterToCamera[1].m.m, perspCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
-				memcpy(camera.cameraToWorld[1].m.m, perspCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
-			} else {
+//			if (perspCamera->IsHorizontalStereoEnabled()) {
+//				enableCameraHorizStereo = true;
+//				enableOculusRiftBarrel = perspCamera->IsOculusRiftBarrelEnabled();
+//
+//				memcpy(camera.rasterToCamera[1].m.m, perspCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
+//				memcpy(camera.cameraToWorld[1].m.m, perspCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
+//			} else {
 				enableCameraHorizStereo = false;
 				enableOculusRiftBarrel = false;
-			}
+//			}
 
-			if (perspCamera->IsClippingPlaneEnabled()) {
+			if (perspCamera->enableClippingPlane) {
 				enableCameraClippingPlane = true;
 				ASSIGN_VECTOR(camera.clippingPlaneCenter, perspCamera->clippingPlaneCenter);
 				ASSIGN_VECTOR(camera.clippingPlaneNormal, perspCamera->clippingPlaneNormal);

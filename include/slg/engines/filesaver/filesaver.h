@@ -37,10 +37,6 @@ public:
 
 	RenderEngineType GetEngineType() const { return FILESAVER; }
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
 	virtual bool HasDone() const { return true; }
 	virtual void WaitForDone() const { }
 
