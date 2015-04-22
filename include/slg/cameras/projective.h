@@ -31,10 +31,6 @@ public:
 	virtual ~ProjectiveCamera() {
 	}
 
-	virtual void UpdateFocus(const Scene *scene);
-
-	//--------------------------------------------------------------------------
-
 	const luxrays::Vector GetDir() const { return dir; }
 	float GetPixelArea() const { return pixelArea; }
 	const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const {
@@ -44,7 +40,7 @@ public:
 		return camTrans.cameraToWorld.GetMatrix();
 	}
 
-	//--------------------------------------------------------------------------
+	// Mostly used by GUIs
 	
 	void Translate(const luxrays::Vector &t) {
 		orig += t;
@@ -93,7 +89,18 @@ public:
 		Rotate(-angle, x);
 	}
 
-	//--------------------------------------------------------------------------
+	// Preprocess/update methods
+	virtual void UpdateFocus(const Scene *scene);
+	virtual void Update(const u_int filmWidth, const u_int filmHeight,
+		const u_int *filmSubRegion = NULL);
+
+	// Rendering methods
+	virtual void GenerateRay(
+		const float filmX, const float filmY,
+		luxrays::Ray *ray, const float u1, const float u2, const float u4) const;
+	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
+	virtual bool SampleLens(const float time, const float u1, const float u2,
+		luxrays::Point *lensPoint) const;
 
 	virtual luxrays::Properties ToProperties() const;
 
@@ -118,6 +125,10 @@ protected:
 		luxrays::Transform rasterToScreen, rasterToWorld;
 		luxrays::Transform rasterToCamera;
 	} CameraTransforms;
+	
+	virtual void InitCameraTransforms(CameraTransforms *trans, const float screen[4]) = 0;
+	virtual void InitPixelArea() = 0;
+	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const = 0;
 
 	void ApplyArbitraryClippingPlane(luxrays::Ray *ray) const;
 

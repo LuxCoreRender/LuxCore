@@ -32,21 +32,12 @@ public:
 	OrthographicCamera(const luxrays::Point &o, const luxrays::Point &t,
 			const luxrays::Vector &u, const float *region = NULL);
 
-	virtual void Update(const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion = NULL);
-	void GenerateRay(
-		const float filmX, const float filmY,
-		luxrays::Ray *ray, const float u1, const float u2, const float u4) const;
-	bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
-
-	bool SampleLens(const float time, const float u1, const float u2,
-		luxrays::Point *lensPoint) const;
-
 	luxrays::Properties ToProperties() const;
 
 private:
-	void InitCameraTransforms(CameraTransforms *trans, const float screen[4],
-		const float screenOffsetX, const float screenOffsetY);
+	virtual void InitCameraTransforms(CameraTransforms *trans, const float screen[4]);
+	virtual void InitPixelArea();
+	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
 };
 
 }
