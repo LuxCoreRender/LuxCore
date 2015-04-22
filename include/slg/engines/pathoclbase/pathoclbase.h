@@ -192,10 +192,6 @@ public:
 		const bool realTime = false);
 	virtual ~PathOCLBaseRenderEngine();
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
 	}

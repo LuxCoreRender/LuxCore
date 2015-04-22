@@ -126,8 +126,7 @@ void OrthographicCamera::Update(const u_int width, const u_int height, const u_i
 	}
 
 	// Initialize camera transformations
-	camTrans.resize(1);
-	InitCameraTransforms(&camTrans[0], screen, 0.f, 0.f);
+	InitCameraTransforms(&camTrans, screen, 0.f, 0.f);
 
 	// Initialize pixel information
 	const float xPixelWidth = ((screen[1] - screen[0]) / 2.f);
@@ -144,7 +143,7 @@ void OrthographicCamera::GenerateRay(
 	Point Pras, Pcamera;
 
 	Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
-	Pcamera = Point(camTrans[0].rasterToCamera * Pras);
+	Pcamera = Point(camTrans.rasterToCamera * Pras);
 
 	ray->o = Pcamera;
 	ray->d = Vector(0.f, 0.f, 1.f);
@@ -172,9 +171,9 @@ void OrthographicCamera::GenerateRay(
 	ray->time = Lerp(u3, shutterOpen, shutterClose);
 
 	if (motionSystem)
-		*ray = motionSystem->Sample(ray->time) * (camTrans[0].cameraToWorld * (*ray));
+		*ray = motionSystem->Sample(ray->time) * (camTrans.cameraToWorld * (*ray));
 	else
-		*ray = camTrans[0].cameraToWorld * (*ray);
+		*ray = camTrans.cameraToWorld * (*ray);
 
 	// World arbitrary clipping plane support
 	if (enableClippingPlane)
@@ -187,7 +186,7 @@ bool OrthographicCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 		ray->maxt * cosi > clipYon)))
 		return false;
 
-	Point pO(Inverse(camTrans[0].rasterToWorld) * ray->o);
+	Point pO(Inverse(camTrans.rasterToWorld) * ray->o);
 
 	if (motionSystem)
 		pO *= motionSystem->Sample(ray->time);
@@ -225,9 +224,9 @@ bool OrthographicCamera::SampleLens(const float time,
 	}
 
 	if (motionSystem)
-		*lensp = motionSystem->Sample(time) * (camTrans[0].cameraToWorld * lensPoint);
+		*lensp = motionSystem->Sample(time) * (camTrans.cameraToWorld * lensPoint);
 	else
-		*lensp = camTrans[0].cameraToWorld * lensPoint;
+		*lensp = camTrans.cameraToWorld * lensPoint;
 
 	return true;
 }

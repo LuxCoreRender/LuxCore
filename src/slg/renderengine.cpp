@@ -74,10 +74,6 @@ RenderEngine::~RenderEngine() {
 void RenderEngine::Start() {
 	boost::unique_lock<boost::mutex> lock(engineMutex);
 
-	// A safety check for stereo support
-	if (renderConfig->scene->camera->IsHorizontalStereoEnabled() && !IsHorizontalStereoSupported())
-		throw runtime_error("Horizontal stereo is not supported by " + RenderEngineType2String(GetEngineType()) + " render engine");
-
 	assert (!started);
 	started = true;
 

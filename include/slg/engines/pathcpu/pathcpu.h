@@ -67,10 +67,6 @@ public:
 
 	RenderEngineType GetEngineType() const { return PATHCPU; }
 
-	virtual bool IsHorizontalStereoSupported() const {
-		return true;
-	}
-
 	// Signed because of the delta parameter
 	u_int maxPathDepth;
 

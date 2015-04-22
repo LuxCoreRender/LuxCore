@@ -75,9 +75,6 @@ public:
 	virtual bool IsMaterialCompiled(const MaterialType type) const {
 		return true;
 	}
-	virtual bool IsHorizontalStereoSupported() const {
-		return false;
-	}
 
 	const vector<luxrays::IntersectionDevice *> &GetIntersectionDevices() const {
 		return intersectionDevices;

@@ -31,16 +31,21 @@ public:
 	virtual ~ProjectiveCamera() {
 	}
 
-	void SetClippingPlane(const bool v) {
-		enableClippingPlane = v;
-	}
-	bool IsClippingPlaneEnabled() const { return enableClippingPlane; }
-
 	virtual void UpdateFocus(const Scene *scene);
+
+	//--------------------------------------------------------------------------
 
 	const luxrays::Vector GetDir() const { return dir; }
 	float GetPixelArea() const { return pixelArea; }
+	const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const {
+		return camTrans.rasterToCamera.GetMatrix();
+	}
+	const luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index) const {
+		return camTrans.cameraToWorld.GetMatrix();
+	}
 
+	//--------------------------------------------------------------------------
+	
 	void Translate(const luxrays::Vector &t) {
 		orig += t;
 		target += t;
@@ -88,15 +93,9 @@ public:
 		Rotate(-angle, x);
 	}
 
+	//--------------------------------------------------------------------------
+
 	virtual luxrays::Properties ToProperties() const;
-
-	const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const {
-		return camTrans[index].rasterToCamera.GetMatrix();
-	}
-
-	const luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index) const {
-		return camTrans[index].cameraToWorld.GetMatrix();
-	}
 
 	// User defined values
 	luxrays::Point orig, target;
@@ -105,6 +104,7 @@ public:
 	// World clipping plane
 	luxrays::Point clippingPlaneCenter;
 	luxrays::Normal clippingPlaneNormal;
+	bool enableClippingPlane;
 
 	// User defined values
 	float lensRadius, focalDistance;
@@ -130,9 +130,9 @@ protected:
 	float screen[4];
 	float pixelArea;
 	luxrays::Vector dir, x, y;
-	std::vector<CameraTransforms> camTrans;
+	CameraTransforms camTrans;
 
-	bool autoUpdateFilmRegion, enableClippingPlane;
+	bool autoUpdateFilmRegion;
 };
 
 }

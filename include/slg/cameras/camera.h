@@ -51,14 +51,12 @@ public:
 		delete motionSystem;
 	}
 
-	void SetMotionSystem(const luxrays::MotionSystem *ms) { motionSystem = ms; }
-
 	CameraType GetType() const { return type; }
-	
-	virtual bool IsHorizontalStereoEnabled() const { return false; }
-
 	virtual const luxrays::Vector GetDir() const = 0;
 	virtual float GetPixelArea() const = 0;
+	// Used for compiling camera information for OpenCL
+	virtual const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const = 0;
+	virtual const luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index) const = 0;
 
 	// Mostly used by GUIs
 	virtual void Translate(const luxrays::Vector &t) = 0;
@@ -88,9 +86,6 @@ public:
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const = 0;
 
-	virtual const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const = 0;
-	virtual const luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index) const = 0;
-
 	virtual luxrays::Properties ToProperties() const;
 
 	static Camera *AllocCamera(const luxrays::Properties &props);
@@ -98,6 +93,7 @@ public:
 	// User defined values
 	float clipHither, clipYon, shutterOpen, shutterClose;
 
+	// For motion blur
 	const luxrays::MotionSystem *motionSystem;
 
 protected:
