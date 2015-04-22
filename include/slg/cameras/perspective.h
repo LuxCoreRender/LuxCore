@@ -32,24 +32,14 @@ public:
 	PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
 			const luxrays::Vector &u, const float *region = NULL);
 
-	virtual void Update(const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion = NULL);
-
-	virtual void GenerateRay(
-		const float filmX, const float filmY,
-		luxrays::Ray *ray, const float u1, const float u2, const float u4) const;
-	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
-	virtual bool SampleLens(const float time, const float u1, const float u2,
-		luxrays::Point *lensPoint) const;
-
 	virtual luxrays::Properties ToProperties() const;
 
 	float fieldOfView;
 
 private:
-	void InitCameraTransforms(CameraTransforms *trans, const float screen[4],
-		const float eyeOffset,
-		const float screenOffsetX, const float screenOffsetY);
+	virtual void InitCameraTransforms(CameraTransforms *trans, const float screen[4]);
+	virtual void InitPixelArea();
+	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
 };
 
 }
