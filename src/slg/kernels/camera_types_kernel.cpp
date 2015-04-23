@@ -23,7 +23,7 @@ std::string KernelSource_camera_types =
 "\n"
 "#define CAMERA_MAX_INTERPOLATED_TRANSFORM 8\n"
 "typedef enum {\n"
-"	ORTHOGRAPHIC, PERSPECTIVE\n"
+"	ORTHOGRAPHIC, PERSPECTIVE, STEREO\n"
 "} CameraType;\n"
 "\n"
 "typedef struct {\n"

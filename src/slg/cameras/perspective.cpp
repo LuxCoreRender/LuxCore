@@ -41,8 +41,9 @@ PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
 PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 		const Point &o, const Point &t,
 		const Vector &u, const float *region) :
-		ProjectiveCamera(camType, region, o, t, u), fieldOfView(45.f),
-		enableOculusRiftBarrel(false) {
+		ProjectiveCamera(camType, region, o, t, u),
+		screenOffsetX(0.f), screenOffsetY(0.f),
+		fieldOfView(45.f), enableOculusRiftBarrel(false) {
 }
 
 void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4]) {
@@ -66,7 +67,7 @@ void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const floa
 	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
 }
 
-void PerspectiveCamera::InitPixelArea() {
+void PerspectiveCamera::InitPixelArea(const float screen[4]) {
 	const float tanAngle = tanf(Radians(fieldOfView) / 2.f) * 2.f;
 	const float xPixelWidth = tanAngle * ((screen[1] - screen[0]) / 2.f);
 	const float yPixelHeight = tanAngle * ((screen[3] - screen[2]) / 2.f);

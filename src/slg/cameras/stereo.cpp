@@ -57,9 +57,6 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	if (filmSubRegion)
 		throw runtime_error("Stereo camera doesn't support subregion rendering");
 
-	delete leftEye;
-	delete rightEye;
-	
 	filmWidth = width;
 	filmHeight = height;
 
@@ -74,6 +71,7 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	y = Normalize(y);
 
 	// Create left eye camera
+	delete leftEye;
 	leftEye = new PerspectiveCamera(orig - .5f * horizStereoEyesDistance * x, target, up);
 	leftEye->clipHither = clipHither;
 	leftEye->clipYon = clipYon;
@@ -88,15 +86,14 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	leftEye->focalDistance = focalDistance;
 	leftEye->autoFocus = autoFocus;
 
+	leftEye->screenOffsetX = -horizStereoLensDistance * .5f;
 	leftEye->fieldOfView = fieldOfView;
 	leftEye->enableOculusRiftBarrel = enableOculusRiftBarrel;
 	
-	const float offset = (screen[1] - screen[0]) * .25f  - horizStereoLensDistance * .5f;
-	leftEye->screenOffsetX = offset;
-
 	leftEye->Update(filmWidth / 2, filmHeight);
 
 	// Create right eye camera
+	delete rightEye;
 	rightEye = new PerspectiveCamera(orig + .5f * horizStereoEyesDistance * x, target, up);
 
 	rightEye->clipHither = clipHither;
@@ -112,8 +109,7 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	rightEye->focalDistance = focalDistance;
 	rightEye->autoFocus = autoFocus;
 
-	rightEye->screenOffsetX = -offset;
-
+	rightEye->screenOffsetX = horizStereoLensDistance * .5f;
 	rightEye->fieldOfView = fieldOfView;
 	rightEye->enableOculusRiftBarrel = enableOculusRiftBarrel;
 

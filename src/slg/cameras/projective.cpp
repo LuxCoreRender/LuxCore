@@ -147,7 +147,7 @@ void ProjectiveCamera::Update(const u_int width, const u_int height, const u_int
 	InitCameraTransforms(&camTrans, screen);
 
 	// Initialize pixel information
-	InitPixelArea();
+	InitPixelArea(screen);
 	
 	if (enableClippingPlane)
 		clippingPlaneNormal = Normalize(clippingPlaneNormal);

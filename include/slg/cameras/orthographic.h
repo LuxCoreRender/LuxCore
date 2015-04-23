@@ -37,7 +37,7 @@ public:
 
 private:
 	virtual void InitCameraTransforms(CameraTransforms *trans, const float screen[4]);
-	virtual void InitPixelArea();
+	virtual void InitPixelArea(const float screen[4]);
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
 };
 
