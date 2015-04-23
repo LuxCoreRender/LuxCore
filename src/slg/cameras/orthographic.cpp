@@ -57,7 +57,7 @@ void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans, const flo
 	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
 }
 
-void OrthographicCamera::InitPixelArea() {
+void OrthographicCamera::InitPixelArea(const float screen[4]) {
 	const float xPixelWidth = ((screen[1] - screen[0]) / 2.f);
 	const float yPixelHeight = ((screen[3] - screen[2]) / 2.f);
 	pixelArea = xPixelWidth * yPixelHeight;

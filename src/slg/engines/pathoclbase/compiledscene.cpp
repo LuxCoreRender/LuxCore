@@ -25,9 +25,11 @@
 #include <boost/algorithm/string.hpp>
 
 #include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/kernels/kernels.h"
+
 #include "slg/cameras/orthographic.h"
 #include "slg/cameras/perspective.h"
-#include "slg/kernels/kernels.h"
+#include "slg/cameras/stereo.h"
 
 #include "slg/lights/constantinfinitelight.h"
 #include "slg/lights/distantlight.h"
@@ -139,12 +141,11 @@ void CompiledScene::CompileCamera() {
 			camera.lensRadius = orthoCamera->lensRadius;
 			camera.focalDistance = orthoCamera->focalDistance;
 
-			memcpy(camera.rasterToCamera[0].m.m, orthoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
-			memcpy(camera.cameraToWorld[0].m.m, orthoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
+			memcpy(camera.rasterToCamera[0].m.m, orthoCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.cameraToWorld[0].m.m, orthoCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
 
 			enableCameraHorizStereo = false;
 			enableOculusRiftBarrel = false;
-
 
 			if (orthoCamera->enableClippingPlane) {
 				enableCameraClippingPlane = true;
@@ -161,19 +162,11 @@ void CompiledScene::CompileCamera() {
 			camera.lensRadius = perspCamera->lensRadius;
 			camera.focalDistance = perspCamera->focalDistance;
 
-			memcpy(camera.rasterToCamera[0].m.m, perspCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
-			memcpy(camera.cameraToWorld[0].m.m, perspCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
+			memcpy(camera.rasterToCamera[0].m.m, perspCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.cameraToWorld[0].m.m, perspCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
 
-//			if (perspCamera->IsHorizontalStereoEnabled()) {
-//				enableCameraHorizStereo = true;
-//				enableOculusRiftBarrel = perspCamera->IsOculusRiftBarrelEnabled();
-//
-//				memcpy(camera.rasterToCamera[1].m.m, perspCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
-//				memcpy(camera.cameraToWorld[1].m.m, perspCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
-//			} else {
-				enableCameraHorizStereo = false;
-				enableOculusRiftBarrel = false;
-//			}
+			enableCameraHorizStereo = false;
+			enableOculusRiftBarrel = perspCamera->enableOculusRiftBarrel;
 
 			if (perspCamera->enableClippingPlane) {
 				enableCameraClippingPlane = true;
@@ -183,6 +176,30 @@ void CompiledScene::CompileCamera() {
 				enableCameraClippingPlane = false;
 			break;
 		}
+//		case Camera::STEREO: {
+//			const PerspectiveCamera *stereoCamera = (PerspectiveCamera *)sceneCamera;
+//			camera.type = slg::ocl::STEREO;
+//
+//			camera.lensRadius = stereoCamera->lensRadius;
+//			camera.focalDistance = stereoCamera->focalDistance;
+//
+//			memcpy(camera.rasterToCamera[0].m.m, stereoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
+//			memcpy(camera.cameraToWorld[0].m.m, stereoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
+//
+//			enableCameraHorizStereo = true;
+//			enableOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
+//
+//			memcpy(camera.rasterToCamera[1].m.m, stereoCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
+//			memcpy(camera.cameraToWorld[1].m.m, stereoCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
+//
+//			if (stereoCamera->enableClippingPlane) {
+//				enableCameraClippingPlane = true;
+//				ASSIGN_VECTOR(camera.clippingPlaneCenter, stereoCamera->clippingPlaneCenter);
+//				ASSIGN_VECTOR(camera.clippingPlaneNormal, stereoCamera->clippingPlaneNormal);
+//			} else
+//				enableCameraClippingPlane = false;
+//			break;
+//		}
 		default:
 			throw std::runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + boost::lexical_cast<std::string>(sceneCamera->GetType()));
 	}

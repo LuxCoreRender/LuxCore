@@ -127,7 +127,7 @@ protected:
 	} CameraTransforms;
 	
 	virtual void InitCameraTransforms(CameraTransforms *trans, const float screen[4]) = 0;
-	virtual void InitPixelArea() = 0;
+	virtual void InitPixelArea(const float screen[4]) = 0;
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const = 0;
 
 	void ApplyArbitraryClippingPlane(luxrays::Ray *ray) const;
@@ -138,7 +138,6 @@ protected:
 	float filmRegion[4];
 
 	// Calculated values
-	float screen[4];
 	float pixelArea;
 	luxrays::Vector dir, x, y;
 	CameraTransforms camTrans;
