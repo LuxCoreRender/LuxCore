@@ -101,6 +101,7 @@ void ExtMesh::GetFrame(const Normal &normal, const Vector &dpdu, const Vector &d
     Vector ss = Cross(ts, normal);
     ts *= (Dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
 
+	
     frame = Frame(ss, ts, Vector(normal));
 }
 

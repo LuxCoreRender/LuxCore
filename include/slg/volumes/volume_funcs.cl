@@ -70,10 +70,10 @@ float ClearVolume_Scatter(__global const Volume *vol,
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
 #if defined(PARAM_HAS_BUMPMAPS)
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
@@ -157,10 +157,10 @@ float HomogeneousVolume_Scatter(__global const Volume *vol,
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
 #if defined(PARAM_HAS_BUMPMAPS)
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
@@ -304,10 +304,10 @@ float HeterogeneousVolume_Scatter(__global const Volume *vol,
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
 #if defined(PARAM_HAS_BUMPMAPS)
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
-	VSTOREF((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
