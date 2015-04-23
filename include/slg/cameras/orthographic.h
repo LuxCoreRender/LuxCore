@@ -31,6 +31,7 @@ class OrthographicCamera : public ProjectiveCamera {
 public:
 	OrthographicCamera(const luxrays::Point &o, const luxrays::Point &t,
 			const luxrays::Vector &u, const float *region = NULL);
+	virtual ~OrthographicCamera() { }
 
 	luxrays::Properties ToProperties() const;
 

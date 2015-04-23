@@ -223,6 +223,10 @@ Camera::Camera(const Scene &scn) : scene(scn) {
 Camera::~Camera() {
 }
 
+const Camera::CameraType Camera::GetType() const {
+	return (Camera::CameraType)scene.scene->camera->GetType();
+}
+
 void Camera::Translate(const Vector &t) const {
 	scene.scene->camera->Translate(t);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);

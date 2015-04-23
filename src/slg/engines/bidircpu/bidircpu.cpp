@@ -27,6 +27,9 @@ using namespace slg;
 
 BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
+	if (rcfg->scene->camera->GetType() == Camera::STEREO)
+		throw std::runtime_error("BiDir render engine doesn't support stereo camera");
+
 	lightPathsCount = 1;
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;

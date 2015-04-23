@@ -20,6 +20,7 @@
 
 #include "slg/cameras/orthographic.h"
 #include "slg/cameras/perspective.h"
+#include "slg/cameras/stereo.h"
 #include "slg/film/film.h"
 #include "slg/core/sdl.h"
 #include "slg/scene/scene.h"
@@ -84,7 +85,7 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 	SDL_LOG("Camera target: " << target);
 
 	auto_ptr<Camera> camera;
-	if ((type == "orthographic") || (type == "perspective")) {
+	if ((type == "orthographic") || (type == "perspective") || (type == "stereo")) {
 		if (type == "orthographic") {
 			OrthographicCamera *orthoCamera;
 
@@ -102,7 +103,7 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 				orthoCamera = new OrthographicCamera(orig, target, up);
 
 			camera.reset(orthoCamera);
-		} else {
+		} else if (type == "perspective") {
 			PerspectiveCamera *perspCamera;
 
 			if (props.IsDefined("scene.camera.screenwindow")) {
@@ -117,8 +118,16 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 				perspCamera = new PerspectiveCamera(orig, target, up, &screenWindow[0]);
 			} else 
 				perspCamera = new PerspectiveCamera(orig, target, up);
-
 			camera.reset(perspCamera);
+
+			perspCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
+		} else {
+			StereoCamera *stereoCamera = new StereoCamera(orig, target, up);
+			camera.reset(stereoCamera);
+
+			stereoCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
+			stereoCamera->horizStereoEyesDistance = props.Get(Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
+			stereoCamera->horizStereoLensDistance = props.Get(Property("scene.camera.lensdistance")(.2779f)).Get<float>();
 		}
 
 		ProjectiveCamera *projCamera = (ProjectiveCamera *)camera.get();
