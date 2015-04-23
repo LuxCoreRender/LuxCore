@@ -31,61 +31,61 @@ public:
 	virtual ~ProjectiveCamera() {
 	}
 
-	const luxrays::Vector GetDir() const { return dir; }
-	float GetPixelArea() const { return pixelArea; }
-	const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const {
+	virtual const luxrays::Vector GetDir() const { return dir; }
+	virtual float GetPixelArea() const { return pixelArea; }
+	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const {
 		return camTrans.rasterToCamera.GetMatrix();
 	}
-	const luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index) const {
+	virtual luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const {
 		return camTrans.cameraToWorld.GetMatrix();
 	}
 
 	// Mostly used by GUIs
 	
-	void Translate(const luxrays::Vector &t) {
+	virtual void Translate(const luxrays::Vector &t) {
 		orig += t;
 		target += t;
 	}
 
-	void TranslateLeft(const float k) {
+	virtual void TranslateLeft(const float k) {
 		luxrays::Vector t = -k * luxrays::Normalize(x);
 		Translate(t);
 	}
 
-	void TranslateRight(const float k) {
+	virtual void TranslateRight(const float k) {
 		luxrays::Vector t = k * luxrays::Normalize(x);
 		Translate(t);
 	}
 
-	void TranslateForward(const float k) {
+	virtual void TranslateForward(const float k) {
 		luxrays::Vector t = k * dir;
 		Translate(t);
 	}
 
-	void TranslateBackward(const float k) {
+	virtual void TranslateBackward(const float k) {
 		luxrays::Vector t = -k * dir;
 		Translate(t);
 	}
 
-	void Rotate(const float angle, const luxrays::Vector &axis) {
+	virtual void Rotate(const float angle, const luxrays::Vector &axis) {
 		luxrays::Vector p = target - orig;
 		luxrays::Transform t = luxrays::Rotate(angle, axis);
 		target = orig + t * p;
 	}
 
-	void RotateLeft(const float angle) {
+	virtual void RotateLeft(const float angle) {
 		Rotate(angle, y);
 	}
 
-	void RotateRight(const float angle) {
+	virtual void RotateRight(const float angle) {
 		Rotate(-angle, y);
 	}
 
-	void RotateUp(const float angle) {
+	virtual void RotateUp(const float angle) {
 		Rotate(angle, x);
 	}
 
-	void RotateDown(const float angle) {
+	virtual void RotateDown(const float angle) {
 		Rotate(-angle, x);
 	}
 
@@ -97,7 +97,7 @@ public:
 	// Rendering methods
 	virtual void GenerateRay(
 		const float filmX, const float filmY,
-		luxrays::Ray *ray, const float u1, const float u2, const float u4) const;
+		luxrays::Ray *ray, const float u1, const float u2, const float u3) const;
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const;

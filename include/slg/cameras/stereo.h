@@ -1,5 +1,3 @@
-#line 2 "camera_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,27 +16,44 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#define CAMERA_MAX_INTERPOLATED_TRANSFORM 8
-typedef enum {
-	ORTHOGRAPHIC, PERSPECTIVE
-} CameraType;
+#ifndef _SLG_STEREO_CAMERA_H
+#define	_SLG_STEREO_CAMERA_H
 
-typedef struct {
-	Transform rasterToCamera[2]; // 2 used for stereo rendering
-	Transform cameraToWorld[2]; // 2 used for stereo rendering
+#include "slg/cameras/camera.h"
+#include "slg/cameras/perspective.h"
 
-	// Used for camera clipping plane
-	Point clippingPlaneCenter;
-	Normal clippingPlaneNormal;
+namespace slg {
 
-	// Placed here for Transform memory alignement
-	float lensRadius;
-	float focalDistance;
-	float yon, hither;
-	float shutterOpen, shutterClose;
-	CameraType type;
+class StereoCamera : public PerspectiveCamera {
+public:
+	StereoCamera(const luxrays::Point &orig, const luxrays::Point &target,
+			const luxrays::Vector &up);
+	virtual ~StereoCamera();
 
-	// Used for camera motion blur
-	MotionSystem motionSystem;
-	InterpolatedTransform interpolatedTransforms[CAMERA_MAX_INTERPOLATED_TRANSFORM];
-} Camera;
+	luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const;
+	luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const;
+
+	// Preprocess/update methods
+	virtual void Update(const u_int filmWidth, const u_int filmHeight,
+		const u_int *filmSubRegion = NULL);
+
+	// Rendering methods
+	virtual void GenerateRay(
+		const float filmX, const float filmY,
+		luxrays::Ray *ray, const float u1, const float u2, const float u3) const;
+	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
+	virtual bool SampleLens(const float time, const float u1, const float u2,
+		luxrays::Point *lensPoint) const;
+
+	virtual luxrays::Properties ToProperties() const;
+
+	float horizStereoEyesDistance, horizStereoLensDistance;
+
+private:
+	PerspectiveCamera *leftEye;
+	PerspectiveCamera *rightEye;
+};
+
+}
+
+#endif	/* _SLG_CAMERA_H */

@@ -257,8 +257,23 @@ class Scene;
  */
 CPP_EXPORT class CPP_API Camera {
 public:
+	/*!
+	* \brief Types of cameras.
+	*/
+	typedef enum {
+		ORTHOGRAPHIC = slg::Camera::ORTHOGRAPHIC,
+		PERSPECTIVE = slg::Camera::PERSPECTIVE,
+		STEREO = slg::Camera::STEREO
+	} CameraType;
+
 	~Camera();
 
+	/*!
+	 * \brief Returns the camera type.
+	 *
+	 * \return a camera type.
+	 */
+	const CameraType GetType() const;
 	/*!
 	 * \brief Translates by vector t. This method can be used only when
 	 * the Scene is not in use by a RenderSession.

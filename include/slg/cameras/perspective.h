@@ -31,12 +31,22 @@ class PerspectiveCamera : public ProjectiveCamera {
 public:
 	PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
 			const luxrays::Vector &u, const float *region = NULL);
+	virtual ~PerspectiveCamera() { }
 
 	virtual luxrays::Properties ToProperties() const;
 
+	float screenOffsetX, screenOffsetY;
 	float fieldOfView;
+	bool enableOculusRiftBarrel;
+
+protected:
+	// Used by sub-classes
+	PerspectiveCamera(const CameraType type, const luxrays::Point &o, const luxrays::Point &t,
+			const luxrays::Vector &u, const float *region = NULL);
 
 private:
+	static void OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY);
+
 	virtual void InitCameraTransforms(CameraTransforms *trans, const float screen[4]);
 	virtual void InitPixelArea();
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;

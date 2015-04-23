@@ -522,152 +522,103 @@ void keyFunc(unsigned char key, int x, int y) {
 			UpdateMoveStep();
 			SLG_LOG("Camera move scale: " << optMoveScale);
 			break;
-//		case 'y': {
-//			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-//				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-//			if (stereoEnabled) {
-//				// Stop the session
-//				session->Stop();
-//
-//				// Delete the session
-//				delete session;
-//
-//				const bool barrelPostPro = config->GetScene().GetProperties().Get(
-//					Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
-//				config->GetScene().Parse(
-//						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-//						Property("scene.camera.horizontalstereo.oculusrift.barrelpostpro.enable")(!barrelPostPro));
-//
-//				session = new RenderSession(config);
-//
-//				// Re-start the rendering
-//				session->Start();
-//			}
-//			break;
-//		}
-//		case 'u': {
-//			// Stop the session
-//			session->Stop();
-//
-//			// Delete the session
-//			delete session;
-//
-//			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-//				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-//			config->GetScene().Parse(
-//					config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-//					Property("scene.camera.horizontalstereo.enable")(!stereoEnabled));
-//
-//			session = new RenderSession(config);
-//
-//			// Re-start the rendering
-//			session->Start();
-//			break;
-//		}
-//		case 'k': {
-//			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-//				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-//			if (stereoEnabled) {
-//				// Stop the session
-//				session->Stop();
-//
-//				// Delete the session
-//				delete session;
-//
-//				const float currentEyeDistance = config->GetScene().GetProperties().Get(
-//					Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
-//				const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
-//				SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
-//
-//				config->GetScene().Parse(
-//						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-//						Property("scene.camera.horizontalstereo.eyesdistance")(newEyeDistance));
-//
-//				session = new RenderSession(config);
-//
-//				// Re-start the rendering
-//				session->Start();
-//			}
-//			break;
-//		}
-//		case 'l': {
-//			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-//				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-//			if (stereoEnabled) {
-//				// Stop the session
-//				session->Stop();
-//
-//				// Delete the session
-//				delete session;
-//
-//				const float currentEyeDistance = config->GetScene().GetProperties().Get(
-//					Property("scene.camera.horizontalstereo.eyesdistance")(.0626f)).Get<float>();
-//				const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
-//				SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
-//
-//				config->GetScene().Parse(
-//						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-//						Property("scene.camera.horizontalstereo.eyesdistance")(newEyeDistance));
-//
-//				session = new RenderSession(config);
-//
-//				// Re-start the rendering
-//				session->Start();
-//			}
-//			break;
-//		}
-//		case ',': {
-//			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-//				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-//			if (stereoEnabled) {
-//				// Stop the session
-//				session->Stop();
-//
-//				// Delete the session
-//				delete session;
-//
-//				const float currentLensDistance = config->GetScene().GetProperties().Get(
-//					Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
-//				const float newLensDistance = currentLensDistance + ((currentLensDistance == 0.f) ? .1f : (currentLensDistance * 0.05f));
-//				SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
-//
-//				config->GetScene().Parse(
-//						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-//						Property("scene.camera.horizontalstereo.lensdistance")(newLensDistance));
-//
-//				session = new RenderSession(config);
-//
-//				// Re-start the rendering
-//				session->Start();
-//			}
-//			break;
-//		}
-//		case '.': {
-//			const bool stereoEnabled = config->GetScene().GetProperties().Get(
-//				Property("scene.camera.horizontalstereo.enable")(false)).Get<bool>();
-//			if (stereoEnabled) {
-//				// Stop the session
-//				session->Stop();
-//
-//				// Delete the session
-//				delete session;
-//
-//				const float currentLensDistance = config->GetScene().GetProperties().Get(
-//					Property("scene.camera.horizontalstereo.lensdistance")(.1f)).Get<float>();
-//				const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
-//				SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
-//
-//				config->GetScene().Parse(
-//						config->GetScene().GetProperties().GetAllProperties("scene.camera") <<
-//						Property("scene.camera.horizontalstereo.lensdistance")(newLensDistance));
-//
-//				session = new RenderSession(config);
-//
-//				// Re-start the rendering
-//				session->Start();
-//			}
-//			break;
-//		}
+		case 'y': {
+			session->BeginSceneEdit();
+			
+			Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO)
+				props.Set(Property("scene.camera.type")("perspective"));
+			else
+				props.Set(Property("scene.camera.type")("stereo"));
+			config->GetScene().Parse(props);
+
+			session->EndSceneEdit();
+			break;
+		}
+		case 'u': {
+			if ((config->GetScene().GetCamera().GetType() == Camera::STEREO) ||
+				(config->GetScene().GetCamera().GetType() == Camera::PERSPECTIVE)) {
+				session->BeginSceneEdit();
+
+				const bool barrelPostPro = config->GetScene().GetProperties().Get(
+					Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
+				
+				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.oculusrift.barrelpostpro.enable")(!barrelPostPro));
+				config->GetScene().Parse(props);
+
+				session->EndSceneEdit();
+			}
+			break;
+		}
+		case 'k': {
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
+				session->BeginSceneEdit();
+
+				const float currentEyeDistance = config->GetScene().GetProperties().Get(
+					Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
+				const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
+				SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+				
+				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.eyesdistance")(newEyeDistance));
+				config->GetScene().Parse(props);
+
+				session->EndSceneEdit();
+			}
+			break;
+		}
+		case 'l': {
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
+				session->BeginSceneEdit();
+
+				const float currentEyeDistance = config->GetScene().GetProperties().Get(
+					Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
+				const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
+				SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+				
+				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.eyesdistance")(newEyeDistance));
+				config->GetScene().Parse(props);
+
+				session->EndSceneEdit();
+			}
+			break;
+		}
+		case ',': {
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
+				session->BeginSceneEdit();
+
+				const float currentLensDistance = config->GetScene().GetProperties().Get(
+					Property("scene.camera.lensdistance")(.1f)).Get<float>();
+				const float newLensDistance = currentLensDistance + ((currentLensDistance == 0.f) ? .1f : (currentLensDistance * 0.05f));
+				SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+				
+				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.lensdistance")(newLensDistance));
+				config->GetScene().Parse(props);
+
+				session->EndSceneEdit();
+			}
+			break;
+		}
+		case '.': {
+			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
+				session->BeginSceneEdit();
+
+				const float currentLensDistance = config->GetScene().GetProperties().Get(
+					Property("scene.camera.lensdistance")(.1f)).Get<float>();
+				const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
+				SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+				
+				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				props.Set(Property("scene.camera.lensdistance")(newLensDistance));
+				config->GetScene().Parse(props);
+
+				session->EndSceneEdit();
+			}
+			break;
+		}
 		case '1':
 			SetRenderingEngineType("PATHOCL");
 			glutIdleFunc(NULL);

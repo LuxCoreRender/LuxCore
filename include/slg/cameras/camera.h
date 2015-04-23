@@ -42,7 +42,7 @@ class Scene;
 class Camera {
 public:
 	typedef enum {
-		ORTHOGRAPHIC, PERSPECTIVE
+		ORTHOGRAPHIC, PERSPECTIVE, STEREO
 	} CameraType;
 
 	Camera(const CameraType t) : clipHither(1e-3f), clipYon(1e30f),
@@ -55,8 +55,8 @@ public:
 	virtual const luxrays::Vector GetDir() const = 0;
 	virtual float GetPixelArea() const = 0;
 	// Used for compiling camera information for OpenCL
-	virtual const luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index) const = 0;
-	virtual const luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index) const = 0;
+	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const = 0;
+	virtual luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const = 0;
 
 	// Mostly used by GUIs
 	virtual void Translate(const luxrays::Vector &t) = 0;

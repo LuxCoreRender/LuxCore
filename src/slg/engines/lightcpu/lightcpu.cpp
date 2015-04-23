@@ -27,6 +27,9 @@ using namespace slg;
 
 LightCPURenderEngine::LightCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
 		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
+	if (rcfg->scene->camera->GetType() == Camera::STEREO)
+		throw std::runtime_error("Light render engine doesn't support stereo camera");
+
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);

@@ -33,7 +33,16 @@ using namespace slg;
 
 PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
 		const Vector &u, const float *region) :
-		ProjectiveCamera(PERSPECTIVE, region, o, t, u), fieldOfView(45.f) {
+		ProjectiveCamera(PERSPECTIVE, region, o, t, u),
+		screenOffsetX(0.f), screenOffsetY(0.f),
+		fieldOfView(45.f), enableOculusRiftBarrel(false) {
+}
+
+PerspectiveCamera::PerspectiveCamera(const CameraType camType,
+		const Point &o, const Point &t,
+		const Vector &u, const float *region) :
+		ProjectiveCamera(camType, region, o, t, u), fieldOfView(45.f),
+		enableOculusRiftBarrel(false) {
 }
 
 void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4]) {
@@ -50,7 +59,7 @@ void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const floa
 	trans->screenToCamera = Inverse(Perspective(fieldOfView, clipHither, clipYon));
 	trans->screenToWorld = trans->cameraToWorld * trans->screenToCamera;
 	// Compute projective camera screen transformations
-	trans->rasterToScreen = luxrays::Translate(Vector(screen[0], screen[3], 0.f)) *
+	trans->rasterToScreen = luxrays::Translate(Vector(screen[0] + screenOffsetX, screen[3] + screenOffsetY, 0.f)) *
 		Scale(screen[1] - screen[0], screen[2] - screen[3], 1.f) *
 		Scale(1.f / filmWidth, 1.f / filmHeight, 1.f);
 	trans->rasterToCamera = trans->screenToCamera * trans->rasterToScreen;
@@ -65,7 +74,16 @@ void PerspectiveCamera::InitPixelArea() {
 }
 
 void PerspectiveCamera::InitRay(Ray *ray, const float filmX, const float filmY) const {
-	const Point Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
+	Point Pras;
+	if (enableOculusRiftBarrel) {
+		OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight,
+				&Pras.x, &Pras.y);
+
+		Pras.x = Min(Pras.x * filmWidth, (float)(filmWidth - 1));
+		Pras.y = Min(Pras.y * filmHeight, (float)(filmHeight - 1));
+	} else
+		Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
+
 	const Point Pcamera = Point(camTrans.rasterToCamera * Pras);
 
 	ray->o = Pcamera;
@@ -76,7 +94,48 @@ Properties PerspectiveCamera::ToProperties() const {
 	Properties props = ProjectiveCamera::ToProperties();
 
 	props.Set(Property("scene.camera.type")("perspective"));
+	props.Set(Property("scene.camera.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
 	props.Set(Property("scene.camera.fieldofview")(fieldOfView));
 
 	return props;
+}
+
+//------------------------------------------------------------------------------
+// Oculus Rift post-processing pixel shader
+//------------------------------------------------------------------------------
+
+void PerspectiveCamera::OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY) {
+	// Express the sample in coordinates relative to the eye center
+	float ex = x * 2.f - 1.f;
+	float ey = y * 2.f - 1.f;
+
+	if ((ex == 0.f) && (ey == 0.f)) {
+		*barrelX = 0.f;
+		*barrelY = 0.f;
+		return;
+	}
+
+	// Distance from the eye center
+	const float distance = sqrtf(ex * ex + ey * ey);
+
+	// "Push" the sample away based on the distance from the center
+	const float scale = 1.f / 1.4f;
+	const float k0 = 1.f;
+	const float k1 = .22f;
+	const float k2 = .23f;
+	const float k3 = 0.f;
+	const float distance2 = distance * distance;
+	const float distance4 = distance2 * distance2;
+	const float distance6 = distance2 * distance4;
+	const float fr = scale * (k0 + k1 * distance2 + k2 * distance4 + k3 * distance6);
+
+	ex *= fr;
+	ey *= fr;
+
+	// Clamp the coordinates
+	ex = Clamp(ex, -1.f, 1.f);
+	ey = Clamp(ey, -1.f, 1.f);
+
+	*barrelX = (ex + 1.f) * .5f;
+	*barrelY = (ey + 1.f) * .5f;
 }
