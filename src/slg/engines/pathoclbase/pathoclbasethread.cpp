@@ -1088,16 +1088,26 @@ void PathOCLBaseRenderThread::InitKernels() {
 	if (cscene->RequiresPassThrough())
 		ss << " -D PARAM_HAS_PASSTHROUGH";
 
-	if (cscene->camera.lensRadius > 0.f)
-		ss << " -D PARAM_CAMERA_HAS_DOF";
-	if (cscene->enableCameraHorizStereo) {
-		ss << " -D PARAM_CAMERA_ENABLE_HORIZ_STEREO";
-
-		if (cscene->enableOculusRiftBarrel)
-			ss << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
+	switch (cscene->cameraType) {
+		case slg::ocl::PERSPECTIVE:
+			ss << " -D PARAM_CAMERA_TYPE=0";
+			break;
+		case slg::ocl::ORTHOGRAPHIC:
+			ss << " -D PARAM_CAMERA_TYPE=1";
+			break;
+		case slg::ocl::STEREO:
+			ss << " -D PARAM_CAMERA_TYPE=2";
+			break;
+		default:
+			throw runtime_error("Unknown camera type in PathOCLBaseRenderThread::InitKernels()");
 	}
+
+	if (cscene->enableCameraDOF)
+		ss << " -D PARAM_CAMERA_HAS_DOF";
 	if (cscene->enableCameraClippingPlane)
 		ss << " -D PARAM_CAMERA_ENABLE_CLIPPING_PLANE";
+	if (cscene->enableCameraOculusRiftBarrel)
+		ss << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
 
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_IL] > 0)
 		ss << " -D PARAM_HAS_INFINITELIGHT";

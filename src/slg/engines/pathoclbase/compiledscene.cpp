@@ -128,85 +128,17 @@ void CompiledScene::CompileCamera() {
 	//--------------------------------------------------------------------------
 
 	const Camera *sceneCamera = scene->camera;
-	camera.yon = sceneCamera->clipYon;
-	camera.hither = sceneCamera->clipHither;
-	camera.shutterOpen = sceneCamera->shutterOpen;
-	camera.shutterClose = sceneCamera->shutterClose;
 
-	switch (sceneCamera->GetType()) {
-		case Camera::ORTHOGRAPHIC: {
-			const OrthographicCamera *orthoCamera = (OrthographicCamera *)sceneCamera;
-			camera.type = slg::ocl::ORTHOGRAPHIC;
+	// Initialize CameraBase
 
-			camera.lensRadius = orthoCamera->lensRadius;
-			camera.focalDistance = orthoCamera->focalDistance;
-
-			memcpy(camera.rasterToCamera[0].m.m, orthoCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-			memcpy(camera.cameraToWorld[0].m.m, orthoCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
-
-			enableCameraHorizStereo = false;
-			enableOculusRiftBarrel = false;
-
-			if (orthoCamera->enableClippingPlane) {
-				enableCameraClippingPlane = true;
-				ASSIGN_VECTOR(camera.clippingPlaneCenter, orthoCamera->clippingPlaneCenter);
-				ASSIGN_VECTOR(camera.clippingPlaneNormal, orthoCamera->clippingPlaneNormal);
-			} else
-				enableCameraClippingPlane = false;
-			break;
-		}
-		case Camera::PERSPECTIVE: {
-			const PerspectiveCamera *perspCamera = (PerspectiveCamera *)sceneCamera;
-			camera.type = slg::ocl::PERSPECTIVE;
-
-			camera.lensRadius = perspCamera->lensRadius;
-			camera.focalDistance = perspCamera->focalDistance;
-
-			memcpy(camera.rasterToCamera[0].m.m, perspCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-			memcpy(camera.cameraToWorld[0].m.m, perspCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
-
-			enableCameraHorizStereo = false;
-			enableOculusRiftBarrel = perspCamera->enableOculusRiftBarrel;
-
-			if (perspCamera->enableClippingPlane) {
-				enableCameraClippingPlane = true;
-				ASSIGN_VECTOR(camera.clippingPlaneCenter, perspCamera->clippingPlaneCenter);
-				ASSIGN_VECTOR(camera.clippingPlaneNormal, perspCamera->clippingPlaneNormal);
-			} else
-				enableCameraClippingPlane = false;
-			break;
-		}
-//		case Camera::STEREO: {
-//			const PerspectiveCamera *stereoCamera = (PerspectiveCamera *)sceneCamera;
-//			camera.type = slg::ocl::STEREO;
-//
-//			camera.lensRadius = stereoCamera->lensRadius;
-//			camera.focalDistance = stereoCamera->focalDistance;
-//
-//			memcpy(camera.rasterToCamera[0].m.m, stereoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
-//			memcpy(camera.cameraToWorld[0].m.m, stereoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
-//
-//			enableCameraHorizStereo = true;
-//			enableOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
-//
-//			memcpy(camera.rasterToCamera[1].m.m, stereoCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
-//			memcpy(camera.cameraToWorld[1].m.m, stereoCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
-//
-//			if (stereoCamera->enableClippingPlane) {
-//				enableCameraClippingPlane = true;
-//				ASSIGN_VECTOR(camera.clippingPlaneCenter, stereoCamera->clippingPlaneCenter);
-//				ASSIGN_VECTOR(camera.clippingPlaneNormal, stereoCamera->clippingPlaneNormal);
-//			} else
-//				enableCameraClippingPlane = false;
-//			break;
-//		}
-		default:
-			throw std::runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + boost::lexical_cast<std::string>(sceneCamera->GetType()));
-	}
+	camera.base.yon = sceneCamera->clipYon;
+	camera.base.hither = sceneCamera->clipHither;
+	camera.base.shutterOpen = sceneCamera->shutterOpen;
+	camera.base.shutterClose = sceneCamera->shutterClose;
 
 	if (sceneCamera->motionSystem) {
 		if (sceneCamera->motionSystem->interpolatedTransforms.size() > CAMERA_MAX_INTERPOLATED_TRANSFORM)
-			throw std::runtime_error("Too many interpolated transformations in camera motion system: " +
+			throw runtime_error("Too many interpolated transformations in camera motion system: " +
 					ToString(sceneCamera->motionSystem->interpolatedTransforms.size()));
 
 		for (u_int i = 0; i < sceneCamera->motionSystem->interpolatedTransforms.size(); ++i) {
@@ -214,14 +146,86 @@ void CompiledScene::CompileCamera() {
 
 			// Here, I assume that luxrays::ocl::InterpolatedTransform and
 			// luxrays::InterpolatedTransform are the same
-			camera.interpolatedTransforms[i] = *((const luxrays::ocl::InterpolatedTransform *)&it);
+			camera.base.interpolatedTransforms[i] = *((const luxrays::ocl::InterpolatedTransform *)&it);
 		}
 
-		camera.motionSystem.interpolatedTransformFirstIndex = 0;
-		camera.motionSystem.interpolatedTransformLastIndex = sceneCamera->motionSystem->interpolatedTransforms.size() - 1;
+		camera.base.motionSystem.interpolatedTransformFirstIndex = 0;
+		camera.base.motionSystem.interpolatedTransformLastIndex = sceneCamera->motionSystem->interpolatedTransforms.size() - 1;
 	} else {
-		camera.motionSystem.interpolatedTransformFirstIndex = NULL_INDEX;
-		camera.motionSystem.interpolatedTransformLastIndex = NULL_INDEX;
+		camera.base.motionSystem.interpolatedTransformFirstIndex = NULL_INDEX;
+		camera.base.motionSystem.interpolatedTransformLastIndex = NULL_INDEX;
+	}
+
+	// Initialize Camera specific data
+
+	switch (sceneCamera->GetType()) {
+		case Camera::ORTHOGRAPHIC: {
+			const OrthographicCamera *orthoCamera = (OrthographicCamera *)sceneCamera;
+			cameraType = slg::ocl::ORTHOGRAPHIC;
+
+			memcpy(camera.base.rasterToCamera.m.m, orthoCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, orthoCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+
+			camera.ortho.projCamera.lensRadius = orthoCamera->lensRadius;
+			camera.ortho.projCamera.focalDistance = orthoCamera->focalDistance;
+			enableCameraDOF = (orthoCamera->lensRadius > 0.f) ? true : false;
+
+			enableCameraOculusRiftBarrel = false;
+			if (orthoCamera->enableClippingPlane) {
+				enableCameraClippingPlane = true;
+				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneCenter, orthoCamera->clippingPlaneCenter);
+				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneNormal, orthoCamera->clippingPlaneNormal);
+			} else
+				enableCameraClippingPlane = false;
+			break;
+		}
+		case Camera::PERSPECTIVE: {
+			const PerspectiveCamera *perspCamera = (PerspectiveCamera *)sceneCamera;
+			cameraType = slg::ocl::PERSPECTIVE;
+
+			memcpy(camera.base.rasterToCamera.m.m, perspCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, perspCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+
+			camera.persp.projCamera.lensRadius = perspCamera->lensRadius;
+			camera.persp.projCamera.focalDistance = perspCamera->focalDistance;
+			enableCameraDOF = (perspCamera->lensRadius > 0.f) ? true : false;
+
+			camera.persp.screenOffsetX = perspCamera->screenOffsetX;
+			camera.persp.screenOffsetY = perspCamera->screenOffsetY;
+
+			enableCameraOculusRiftBarrel = perspCamera->enableOculusRiftBarrel;
+			if (perspCamera->enableClippingPlane) {
+				enableCameraClippingPlane = true;
+				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneCenter, perspCamera->clippingPlaneCenter);
+				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneNormal, perspCamera->clippingPlaneNormal);
+			} else
+				enableCameraClippingPlane = false;
+			break;
+		}
+		case Camera::STEREO: {
+			const StereoCamera *stereoCamera = (StereoCamera *)sceneCamera;
+			cameraType = slg::ocl::STEREO;
+
+			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera->lensRadius;
+			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera->focalDistance;
+			enableCameraDOF = (stereoCamera->lensRadius > 0.f) ? true : false;
+
+			memcpy(camera.stereo.leftEyeRasterToCamera.m.m, stereoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.leftEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.rightEyeRasterToCamera.m.m, stereoCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.rightEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
+
+			enableCameraOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
+			if (stereoCamera->enableClippingPlane) {
+				enableCameraClippingPlane = true;
+				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneCenter, stereoCamera->clippingPlaneCenter);
+				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneNormal, stereoCamera->clippingPlaneNormal);
+			} else
+				enableCameraClippingPlane = false;
+			break;
+		}
+		default:
+			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + boost::lexical_cast<string>(sceneCamera->GetType()));
 	}
 }
 
@@ -811,7 +815,7 @@ void CompiledScene::CompileLights() {
 
 	const double tStart = WallClockTime();
 
-	const std::vector<LightSource *> &lightSources = scene->lightDefs.GetLightSources();
+	const vector<LightSource *> &lightSources = scene->lightDefs.GetLightSources();
 
 	const u_int lightCount = lightSources.size();
 	lightDefs.resize(lightCount);
