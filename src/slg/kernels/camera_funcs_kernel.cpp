@@ -315,7 +315,6 @@ std::string KernelSource_camera_funcs =
 "		cameraToWorld = &camera->stereo.rightEyeCameraToWorld;\n"
 "		filmX = origFilmX - filmWidth;\n"
 "	}\n"
-"	\n"
 "\n"
 "#if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)\n"
 "	float ssx, ssy;\n"

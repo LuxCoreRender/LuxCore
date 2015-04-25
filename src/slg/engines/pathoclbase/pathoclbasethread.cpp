@@ -485,6 +485,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	started = false;
 	editMode = false;
 
+	kernelSrcHash = "";
 	filmClearKernel = NULL;
 
 	// Scene buffers
@@ -1302,6 +1303,15 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	string kernelSource = ssKernel.str();
 
+	// Build the kernel source/parameters hash
+	const string newKernelSrcHash = oclKernelPersistentCache::HashString(kernelsParameters) + "-" +
+			oclKernelPersistentCache::HashString(kernelSource);
+	if (newKernelSrcHash == kernelSrcHash) {
+		// There is no need to re-compile the kernel
+		return;
+	} else
+		kernelSrcHash = newKernelSrcHash;
+
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
 
@@ -1530,7 +1540,10 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 
 	// With dynamic code generation for textures and materials, I have to recompile the
 	// kernels even only one of the material/texture parameter change
-	if (editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT) || editActions.Has(LIGHT_TYPES_EDIT))
+	if (editActions.Has(CAMERA_EDIT) ||
+			editActions.Has(MATERIALS_EDIT) ||
+			editActions.Has(MATERIAL_TYPES_EDIT) ||
+			editActions.Has(LIGHT_TYPES_EDIT))
 		InitKernels();
 
 	if (editActions.HasAnyAction()) {
