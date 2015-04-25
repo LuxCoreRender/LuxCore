@@ -55,8 +55,9 @@ public:
 	u_int maxMemPageSize;
 
 	// Compiled Camera
+	slg::ocl::CameraType cameraType;
 	slg::ocl::Camera camera;
-	bool enableCameraHorizStereo, enableOculusRiftBarrel, enableCameraClippingPlane;
+	bool enableCameraDOF, enableCameraClippingPlane, enableCameraOculusRiftBarrel;
 
 	// Compiled Scene Geometry
 	vector<luxrays::Point> verts;

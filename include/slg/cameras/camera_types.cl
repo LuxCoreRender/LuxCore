@@ -19,26 +19,67 @@
  ***************************************************************************/
 
 #define CAMERA_MAX_INTERPOLATED_TRANSFORM 8
+
 typedef enum {
-	ORTHOGRAPHIC, PERSPECTIVE, STEREO
+	PERSPECTIVE, ORTHOGRAPHIC, STEREO
 } CameraType;
 
 typedef struct {
-	Transform rasterToCamera[2]; // 2 used for stereo rendering
-	Transform cameraToWorld[2]; // 2 used for stereo rendering
+	// Placed here for Transform memory alignment
+	Transform rasterToCamera;
+	Transform cameraToWorld;
 
-	// Used for camera clipping plane
-	Point clippingPlaneCenter;
-	Normal clippingPlaneNormal;
-
-	// Placed here for Transform memory alignement
-	float lensRadius;
-	float focalDistance;
 	float yon, hither;
 	float shutterOpen, shutterClose;
-	CameraType type;
 
 	// Used for camera motion blur
 	MotionSystem motionSystem;
 	InterpolatedTransform interpolatedTransforms[CAMERA_MAX_INTERPOLATED_TRANSFORM];
+} CameraBase;
+
+typedef struct {
+	// Used for camera clipping plane
+	Point clippingPlaneCenter;
+	Normal clippingPlaneNormal;
+	// Note: preprocessor macro PARAM_CAMERA_ENABLE_CLIPPING_PLANE set if to use
+	// the user defined clipping plane
+
+	float lensRadius;
+	float focalDistance;
+} ProjectiveCamera;
+
+typedef struct {
+	ProjectiveCamera projCamera;
+	
+	float screenOffsetX, screenOffsetY;
+	float fieldOfView;
+	// Note: preprocessor macro PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL set if to use
+	// Oculus Rift barrel effect
+} PerspectiveCamera;
+
+typedef struct {
+	ProjectiveCamera projCamera;
+} OrthographicCamera;
+
+typedef struct {
+	PerspectiveCamera perspCamera;
+
+	Transform leftEyeRasterToCamera;
+	Transform leftEyeCameraToWorld;
+
+	Transform rightEyeRasterToCamera;
+	Transform rightEyeCameraToWorld;
+} StereoCamera;
+
+typedef struct {
+	// The type of camera in use is defined by preprocessor macro:
+	//  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo)
+
+	CameraBase base;
+
+	union {
+		PerspectiveCamera persp;
+		OrthographicCamera ortho;
+		StereoCamera stereo;
+	};
 } Camera;

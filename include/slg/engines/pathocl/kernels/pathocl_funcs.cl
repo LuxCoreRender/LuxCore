@@ -24,6 +24,12 @@
 //  PARAM_RR_CAP
 
 // (optional)
+//  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo)
+//  PARAM_CAMERA_HAS_DOF
+//  PARAM_CAMERA_ENABLE_CLIPPING_PLANE
+//  PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL
+
+// (optional)
 //  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = Blackman-Harris)
 //  PARAM_IMAGE_FILTER_WIDTH_X
 //  PARAM_IMAGE_FILTER_WIDTH_Y

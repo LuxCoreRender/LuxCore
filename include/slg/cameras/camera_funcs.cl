@@ -21,16 +21,8 @@
 #if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
 void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY) {
 	// Express the sample in coordinates relative to the eye center
-	float ex, ey;
-	if (x < .5f) {
-		// A left eye sample
-		ex = x * 4.f - 1.f;
-		ey = y * 2.f - 1.f;
-	} else {
-		// A right eye sample
-		ex = (x - .5f) * 4.f - 1.f;
-		ey = y * 2.f - 1.f;
-	}
+	float ex = x * 2.f - 1.f;
+	float ey = y * 2.f - 1.f;
 
 	if ((ex == 0.f) && (ey == 0.f)) {
 		*barrelX = 0.f;
@@ -59,13 +51,8 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 	ex = clamp(ex, -1.f, 1.f);
 	ey = clamp(ey, -1.f, 1.f);
 
-	if (x < .5f) {
-		*barrelX = (ex + 1.f) * .25f;
-		*barrelY = (ey + 1.f) * .5f;
-	} else {
-		*barrelX = (ex + 1.f) * .25f + .5f;
-		*barrelY = (ey + 1.f) * .5f;
-	}
+	*barrelX = (ex + 1.f) * .5f;
+	*barrelY = (ey + 1.f) * .5f;
 }
 #endif
 
@@ -123,6 +110,12 @@ void Camera_ApplyArbitraryClippingPlane(
 }
 #endif
 
+//------------------------------------------------------------------------------
+// Perspective camera
+//------------------------------------------------------------------------------
+
+#if (PARAM_CAMERA_TYPE == 0)
+
 void Camera_GenerateRay(
 		__global const Camera *camera,
 		const uint filmWidth, const uint filmHeight,
@@ -135,48 +128,33 @@ void Camera_GenerateRay(
 		, const float dofSampleX, const float dofSampleY
 #endif
 		) {
-#if defined(PARAM_CAMERA_ENABLE_HORIZ_STEREO)
-	// Left eye or right eye
-	const uint transIndex = (filmX < filmWidth * .5f) ? 0 : 1;
-#else
-	const uint transIndex = 0;
-#endif
-
-#if defined(PARAM_CAMERA_ENABLE_HORIZ_STEREO) && defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
+#if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
 	float ssx, ssy;
 	Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
-	float3 Pras = (float3)(min(ssx * filmWidth, (float)(filmWidth - 1)), min(ssy * filmHeight, (float)(filmHeight - 1)), 0.f);
+	const float3 Pras = (float3) (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
 #else
-	float3 Pras = (float3)(filmX, filmHeight - filmY - 1.f, 0.f);
+	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
 #endif
 
-	float3 rayOrig = Transform_ApplyPoint(&camera->rasterToCamera[transIndex], Pras);
+	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
 	float3 rayDir = rayOrig;
 
-	if(camera->type == ORTHOGRAPHIC) 
-		rayDir = (float3)(0.f, 0.f, 1.f);
-
-	const float hither = camera->hither;
+	const float hither = camera->base.hither;
 
 #if defined(PARAM_CAMERA_HAS_DOF)
 	// Sample point on lens
 	float lensU, lensV;
 	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-	const float lensRadius = camera->lensRadius;
+	const float lensRadius = camera->persp.projCamera.lensRadius;
 	lensU *= lensRadius;
 	lensV *= lensRadius;
 
 	// Compute point on plane of focus
-	const float focalDistance = camera->focalDistance;
+	const float focalDistance = camera->persp.projCamera.focalDistance;
 	const float dist = focalDistance - hither;
 
-	float ft = dist;
-
-	if(camera->type == PERSPECTIVE)
-		ft = ft / rayDir.z;
-
-	float3 Pfocus;
-	Pfocus = rayOrig + rayDir * ft;
+	const float ft = dist / rayDir.z;
+	const float3 Pfocus = rayOrig + rayDir * ft;
 
 	// Update ray for effect of lens
 	const float k = dist / focalDistance;
@@ -187,24 +165,21 @@ void Camera_GenerateRay(
 #endif
 
 	rayDir = normalize(rayDir);
-	float maxt = (camera->yon - hither);
-	
-	if(camera->type == PERSPECTIVE)
-		maxt = maxt / rayDir.z;
 
-	const float time = mix(camera->shutterOpen, camera->shutterClose, timeSample);
+	const float maxt = (camera->base.yon - hither) / rayDir.z;
+	const float time = mix(camera->base.shutterOpen, camera->base.shutterClose, timeSample);
 
 	// Transform ray in world coordinates
-	rayOrig = Transform_ApplyPoint(&camera->cameraToWorld[transIndex], rayOrig);
-	rayDir = Transform_ApplyVector(&camera->cameraToWorld[transIndex], rayDir);
+	rayOrig = Transform_ApplyPoint(&camera->base.cameraToWorld, rayOrig);
+	rayDir = Transform_ApplyVector(&camera->base.cameraToWorld, rayDir);
 
-	const uint interpolatedTransformFirstIndex = camera->motionSystem.interpolatedTransformFirstIndex;
+	const uint interpolatedTransformFirstIndex = camera->base.motionSystem.interpolatedTransformFirstIndex;
 	if (interpolatedTransformFirstIndex != NULL_INDEX) {
 		Matrix4x4 m;
-		MotionSystem_Sample(&camera->motionSystem, time, camera->interpolatedTransforms, &m);
+		MotionSystem_Sample(&camera->base.motionSystem, time, camera->base.interpolatedTransforms, &m);
 
 		rayOrig = Matrix4x4_ApplyPoint_Private(&m, rayOrig);
-		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);		
+		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
 	}
 
 #if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
@@ -221,3 +196,190 @@ void Camera_GenerateRay(
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
 		ray->mint, ray->maxt);*/
 }
+
+#endif
+
+//------------------------------------------------------------------------------
+// Orthographic camera
+//------------------------------------------------------------------------------
+
+#if (PARAM_CAMERA_TYPE == 1)
+
+void Camera_GenerateRay(
+		__global const Camera *camera,
+		const uint filmWidth, const uint filmHeight,
+#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray,
+		const float filmX, const float filmY, const float timeSample
+#if defined(PARAM_CAMERA_HAS_DOF)
+		, const float dofSampleX, const float dofSampleY
+#endif
+		) {
+	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
+	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
+	float3 rayDir = (float3)(0.f, 0.f, 1.f);
+
+	const float hither = camera->base.hither;
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	// Sample point on lens
+	float lensU, lensV;
+	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+	const float lensRadius = camera->ortho.projCamera.lensRadius;
+	lensU *= lensRadius;
+	lensV *= lensRadius;
+
+	// Compute point on plane of focus
+	const float focalDistance = camera->ortho.projCamera.focalDistance;
+	const float dist = focalDistance - hither;
+
+	const float ft = dist;
+	const float3 Pfocus = rayOrig + rayDir * ft;
+
+	// Update ray for effect of lens
+	const float k = dist / focalDistance;
+	rayOrig.x += lensU * k;
+	rayOrig.y += lensV * k;
+
+	rayDir = Pfocus - rayOrig;
+#endif
+
+	rayDir = normalize(rayDir);
+
+	const float maxt = (camera->base.yon - hither);
+	const float time = mix(camera->base.shutterOpen, camera->base.shutterClose, timeSample);
+
+	// Transform ray in world coordinates
+	rayOrig = Transform_ApplyPoint(&camera->base.cameraToWorld, rayOrig);
+	rayDir = Transform_ApplyVector(&camera->base.cameraToWorld, rayDir);
+
+	const uint interpolatedTransformFirstIndex = camera->base.motionSystem.interpolatedTransformFirstIndex;
+	if (interpolatedTransformFirstIndex != NULL_INDEX) {
+		Matrix4x4 m;
+		MotionSystem_Sample(&camera->base.motionSystem, time, camera->base.interpolatedTransforms, &m);
+
+		rayOrig = Matrix4x4_ApplyPoint_Private(&m, rayOrig);
+		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
+	}
+
+#if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+	Ray_Init3_Private(ray, rayOrig, rayDir, maxt, time);
+#else
+	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
+#endif
+
+#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
+	Camera_ApplyArbitraryClippingPlane(camera, ray);
+#endif
+
+	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
+		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
+		ray->mint, ray->maxt);*/
+}
+
+#endif
+
+//------------------------------------------------------------------------------
+// Stereo camera
+//------------------------------------------------------------------------------
+
+#if (PARAM_CAMERA_TYPE == 2)
+
+void Camera_GenerateRay(
+		__global const Camera *camera,
+		const uint origFilmWidth, const uint filmHeight,
+#if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+		__global
+#endif
+		Ray *ray,
+		const float origFilmX, const float filmY, const float timeSample
+#if defined(PARAM_CAMERA_HAS_DOF)
+		, const float dofSampleX, const float dofSampleY
+#endif
+		) {
+	__global const Transform *rasterToCamera;
+	__global const Transform *cameraToWorld;
+	float filmX;
+	const float filmWidth = origFilmWidth /2 ;
+	if (origFilmX < filmWidth) {
+		rasterToCamera = &camera->stereo.leftEyeRasterToCamera;
+		cameraToWorld = &camera->stereo.leftEyeCameraToWorld;
+		filmX = origFilmX;
+	} else {
+		rasterToCamera = &camera->stereo.rightEyeRasterToCamera;
+		cameraToWorld = &camera->stereo.rightEyeCameraToWorld;
+		filmX = origFilmX - filmWidth;
+	}
+
+#if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
+	float ssx, ssy;
+	Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
+	const float3 Pras = (float3) (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
+#else
+	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
+#endif
+
+	float3 rayOrig = Transform_ApplyPoint(rasterToCamera, Pras);
+	float3 rayDir = rayOrig;
+
+	const float hither = camera->base.hither;
+
+#if defined(PARAM_CAMERA_HAS_DOF)
+	// Sample point on lens
+	float lensU, lensV;
+	ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
+	const float lensRadius = camera->persp.projCamera.lensRadius;
+	lensU *= lensRadius;
+	lensV *= lensRadius;
+
+	// Compute point on plane of focus
+	const float focalDistance = camera->persp.projCamera.focalDistance;
+	const float dist = focalDistance - hither;
+
+	const float ft = dist / rayDir.z;
+	const float3 Pfocus = rayOrig + rayDir * ft;
+
+	// Update ray for effect of lens
+	const float k = dist / focalDistance;
+	rayOrig.x += lensU * k;
+	rayOrig.y += lensV * k;
+
+	rayDir = Pfocus - rayOrig;
+#endif
+
+	rayDir = normalize(rayDir);
+
+	const float maxt = (camera->base.yon - hither) / rayDir.z;
+	const float time = mix(camera->base.shutterOpen, camera->base.shutterClose, timeSample);
+
+	// Transform ray in world coordinates
+	rayOrig = Transform_ApplyPoint(cameraToWorld, rayOrig);
+	rayDir = Transform_ApplyVector(cameraToWorld, rayDir);
+
+	const uint interpolatedTransformFirstIndex = camera->base.motionSystem.interpolatedTransformFirstIndex;
+	if (interpolatedTransformFirstIndex != NULL_INDEX) {
+		Matrix4x4 m;
+		MotionSystem_Sample(&camera->base.motionSystem, time, camera->base.interpolatedTransforms, &m);
+
+		rayOrig = Matrix4x4_ApplyPoint_Private(&m, rayOrig);
+		rayDir = Matrix4x4_ApplyVector_Private(&m, rayDir);
+	}
+
+#if defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
+	Ray_Init3_Private(ray, rayOrig, rayDir, maxt, time);
+#else
+	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
+#endif
+
+#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
+	Camera_ApplyArbitraryClippingPlane(camera, ray);
+#endif
+
+	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
+		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
+		ray->mint, ray->maxt);*/
+}
+
+#endif

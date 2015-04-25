@@ -151,7 +151,7 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->blackmanharris.widthY);
 			break;
 		default:
-			assert (false);
+			throw runtime_error("Unknown pixel filter type: "  + boost::lexical_cast<string>(filter->type));
 	}
 
 	if (engine->usePixelAtomics)
@@ -179,7 +179,7 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			break;
 		}
 		default:
-			assert (false);
+			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(sampler->type));
 	}
 
 	return ss.str();
@@ -336,7 +336,7 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	} else if (engine->sampler->type == slg::ocl::SOBOL) {
 		sampleSize += sizeof(u_int);
 	} else
-		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(engine->sampler->type));
+		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->sampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
 	AllocOCLBufferRW(&samplesBuff, sampleSize * taskCount, "Sample");
@@ -353,7 +353,7 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 		// IDX_EYE_PASSTROUGHT
 		(hasPassThrough ? 1 : 0) +
 		// IDX_DOF_X, IDX_DOF_Y
-		((engine->compiledScene->camera.lensRadius > 0.f) ? 2 : 0);
+		((engine->compiledScene->enableCameraDOF) ? 2 : 0);
 	const size_t PerPathVertexDimension =
 		// IDX_PASSTHROUGH,
 		(hasPassThrough ? 1 : 0) +
@@ -380,7 +380,7 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else
-		throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(engine->sampler->type));
+		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->sampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");

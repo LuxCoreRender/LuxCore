@@ -207,7 +207,9 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 		lensV *= lensRadius;
 
 		// Compute point on plane of focus
-		const float ft = (focalDistance - clipHither) / ray->d.z;
+		float ft = (focalDistance - clipHither);
+		if (type != ORTHOGRAPHIC)
+			ft /= ray->d.z;
 		Point Pfocus = (*ray)(ft);
 		// Update ray for effect of lens
 		ray->o.x += lensU * (focalDistance - clipHither) / focalDistance;
@@ -217,7 +219,9 @@ void ProjectiveCamera::GenerateRay(const float filmX, const float filmY,
 
 	ray->d = Normalize(ray->d);
 	ray->mint = MachineEpsilon::E(ray->o);
-	ray->maxt = (clipYon - clipHither) / ray->d.z;
+	ray->maxt = (clipYon - clipHither);
+	if (type != ORTHOGRAPHIC)
+		ray->maxt /= ray->d.z;
 	ray->time = Lerp(u3, shutterOpen, shutterClose);
 
 	if (motionSystem)
