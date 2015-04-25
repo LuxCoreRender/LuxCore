@@ -144,6 +144,7 @@ protected:
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
 
 	// OpenCL variables
+	std::string kernelSrcHash;
 	cl::Kernel *filmClearKernel;
 	size_t filmClearWorkGroupSize;
 
