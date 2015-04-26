@@ -120,6 +120,7 @@ Camera *Camera::AllocCamera(const luxrays::Properties &props) {
 				perspCamera = new PerspectiveCamera(orig, target, up);
 			camera.reset(perspCamera);
 
+			perspCamera->fieldOfView = props.Get(Property("scene.camera.fieldofview")(45.f)).Get<float>();
 			perspCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
 		} else {
 			StereoCamera *stereoCamera = new StereoCamera(orig, target, up);
