@@ -68,11 +68,30 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) : Shape() {
 		vertexCounters[e.v1]++;
 	}
 
+	// Build the normal information
+	vector<Normal> vertexNormal(vertCount);
+	if (srcMesh->HasNormals()) {
+		for (u_int i = 0; i < vertCount; ++i)
+			vertexNormal[i] = srcMesh->GetShadeNormal(0.f, i);
+	} else {
+		fill(vertexNormal.begin(), vertexNormal.end(), Normal());
+
+		for (u_int i = 0; i < triCount; ++i) {
+			const Normal triNormal = srcMesh->GetGeometryNormal(0.f, i);
+
+			vertexNormal[tris[i].v[0]] += triNormal;
+			vertexNormal[tris[i].v[1]] += triNormal;
+			vertexNormal[tris[i].v[2]] += triNormal;
+		}
+		for (u_int i = 0; i < vertCount; ++i)
+			vertexNormal[i] = Normalize(vertexNormal[i]);
+	}
+
 	// Build the curvature information
 	vector<float> rawCurvature(vertCount);
 	for (u_int i = 0; i < vertCount; ++i) {
 		if (vertexCounters[i] > 0)
-			rawCurvature[i] = -Dot(srcMesh->GetShadeNormal(0.f, i), vertexEdgeVecs[i] / vertexCounters[i]);
+			rawCurvature[i] = -Dot(vertexNormal[i], vertexEdgeVecs[i] / vertexCounters[i]);
 		else
 			rawCurvature[i] = 0.f;
 	}
