@@ -390,7 +390,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	Triangle *tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
 	std::copy(vi.begin(), vi.end(), tris);
 
-	return new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, NULL /*n*/, uv, cols, alphas);
+	return new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
 }
 
 //------------------------------------------------------------------------------
