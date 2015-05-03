@@ -7,11 +7,11 @@ scene.textures.tex.gain = 0.6
 scene.textures.tex.mapping.uvscale = 16 -16
 ################################################################################
 scene.materials.basemat.type = matte
-scene.materials.basemat.kd = tex
+scene.materials.basemat.kd = 0.5 0.0 0.0
 scene.materials.shell.type = glossycoating
 scene.materials.shell.base = basemat
 scene.materials.shell.kd = 0.5 0.0 0.0
-scene.materials.shell.ks = 0.5 0.5 0.5
+scene.materials.shell.ks = 0.05 0.05 0.05
 scene.materials.shell.uroughness = 0.1
 scene.materials.shell.vroughness = 0.2
 scene.materials.shell.visibility.indirect.diffuse.enable = 0
