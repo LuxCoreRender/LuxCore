@@ -382,10 +382,11 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 				
 				PyBuffer_Release(&view);
 			} else {
+				const string errorMsg = "Not enough space in the buffer of Film.GetOutputFloat() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float));
 				PyBuffer_Release(&view);
 
-				throw runtime_error("Not enough space in the buffer of Film.GetOutputFloat() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float)));
+				throw runtime_error(errorMsg);
 			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
@@ -414,10 +415,11 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 				
 				PyBuffer_Release(&view);
 			} else {
+				const string errorMsg = "Not enough space in the buffer of Film.GetOutputUInt() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(u_int));
 				PyBuffer_Release(&view);
 
-				throw runtime_error("Not enough space in the buffer of Film.GetOutputUInt() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(u_int)));
+				throw runtime_error(errorMsg);
 			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
@@ -463,10 +465,11 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 
 				PyBuffer_Release(&view);
 			} else {
+				const string errorMsg = "Not enough space in the buffer of Scene.DefineImageMap() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * channels * sizeof(float));
 				PyBuffer_Release(&view);
 
-				throw runtime_error("Not enough space in the buffer of Scene.DefineImageMap() method: " +
-						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * channels * sizeof(float)));
+				throw runtime_error(errorMsg);
 			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
