@@ -95,15 +95,20 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 	}	
 	Py_buffer dstView;
 	if (PyObject_GetBuffer(objDst.ptr(), &dstView, PyBUF_SIMPLE)) {
+		PyBuffer_Release(&srcView);
+
 		const string objType = extract<string>((objSrc.attr("__class__")).attr("__name__"));
 		throw runtime_error("Unable to get a source data view in ConvertFilmChannelOutput_3xFloat_To_4xUChar(): " + objType);
 	}
 
-	if (srcView.len / (3 * 4) != dstView.len / 4)
+	if (srcView.len / (3 * 4) != dstView.len / 4) {
+		PyBuffer_Release(&srcView);
+		PyBuffer_Release(&dstView);
 		throw runtime_error("Wrong buffer size in ConvertFilmChannelOutput_3xFloat_To_4xUChar()");
+	}
 
 	const float *src = (float *)srcView.buf;
-	unsigned char *dst = (unsigned char *)dstView.buf;
+	u_char *dst = (u_char *)dstView.buf;
 
 	if (normalize) {
 		// Look for the max. in source buffer
@@ -121,9 +126,9 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 			u_int dstIndex = y * width * 4;
 
 			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * k + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * k + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * k + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 2] * k + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 1] * k + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex] * k + .5f));
 				dst[dstIndex++] = 0xff;
 				srcIndex += 3;
 			}
@@ -134,14 +139,17 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 			u_int dstIndex = y * width * 4;
 
 			for (u_int x = 0; x < width; ++x) {
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 2] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex + 1] * 255.f + .5f));
-				dst[dstIndex++] = (unsigned char)floor((src[srcIndex] * 255.f + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 2] * 255.f + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex + 1] * 255.f + .5f));
+				dst[dstIndex++] = (u_char)floor((src[srcIndex] * 255.f + .5f));
 				dst[dstIndex++] = 0xff;
 				srcIndex += 3;
 			}
 		}
 	}
+	
+	PyBuffer_Release(&srcView);
+	PyBuffer_Release(&dstView);
 }
 
 boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int width, const u_int height,
@@ -168,6 +176,8 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_3xFloatList(const u_int 
 			srcIndex += 3;
 		}
 	}
+
+	PyBuffer_Release(&srcView);
 
 	return l;
 }
@@ -224,6 +234,8 @@ boost::python::list ConvertFilmChannelOutput_1xFloat_To_4xFloatList(const u_int 
 		}
 	}
 
+	PyBuffer_Release(&srcView);
+
 	return l;
 }
 
@@ -276,6 +288,8 @@ boost::python::list ConvertFilmChannelOutput_2xFloat_To_4xFloatList(const u_int 
 			}
 		}
 	}
+	
+	PyBuffer_Release(&srcView);
 
 	return l;
 }
@@ -329,6 +343,8 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int 
 			}
 		}
 	}
+
+	PyBuffer_Release(&srcView);
 
 	return l;
 }
