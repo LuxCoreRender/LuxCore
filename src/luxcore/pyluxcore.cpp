@@ -379,9 +379,14 @@ static void Film_GetOutputFloat1(Film *film, const Film::FilmOutputType type,
 				float *buffer = (float *)view.buf;
 
 				film->GetOutput<float>(type, buffer, index);
-			} else
+				
+				PyBuffer_Release(&view);
+			} else {
+				PyBuffer_Release(&view);
+
 				throw runtime_error("Not enough space in the buffer of Film.GetOutputFloat() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(float)));
+			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unable to get a data view in Film.GetOutputFloat() method: " + objType);
@@ -406,9 +411,14 @@ static void Film_GetOutputUInt1(Film *film, const Film::FilmOutputType type,
 				u_int *buffer = (u_int *)view.buf;
 
 				film->GetOutput<u_int>(type, buffer, index);
-			} else
+				
+				PyBuffer_Release(&view);
+			} else {
+				PyBuffer_Release(&view);
+
 				throw runtime_error("Not enough space in the buffer of Film.GetOutputUInt() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(film->GetOutputSize(type) * sizeof(u_int)));
+			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unable to get a data view in Film.GetOutputUInt() method: " + objType);
@@ -450,9 +460,14 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 				float *buffer = (float *)view.buf;
 				scene->DefineImageMap(imgMapName, buffer, gamma, channels,
 						width, height, Scene::DEFAULT);
-			} else
+
+				PyBuffer_Release(&view);
+			} else {
+				PyBuffer_Release(&view);
+
 				throw runtime_error("Not enough space in the buffer of Scene.DefineImageMap() method: " +
 						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(width * height * channels * sizeof(float)));
+			}
 		} else {
 			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
 			throw runtime_error("Unable to get a data view in Scene.DefineImageMap() method: " + objType);
