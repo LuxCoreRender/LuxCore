@@ -251,8 +251,6 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			const FresnelTexture *fresnelTex = (const FresnelTexture *)tex;
 			mat = new Metal2Material(emissionTex, bumpTex, fresnelTex, nu, nv);
 		} else {
-			SLG_LOG("WARNING: deprecated property " + propName + ".n/k");
-
 			n = GetTexture(props.Get(Property(propName + ".n")(.5f, .5f, .5f)));
 			k = GetTexture(props.Get(Property(propName + ".k")(.5f, .5f, .5f)));
 			mat = new Metal2Material(emissionTex, bumpTex, n, k, nu, nv);
