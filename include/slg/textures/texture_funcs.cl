@@ -203,20 +203,138 @@ float3 CheckerBoard3DTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 #endif
 
 //------------------------------------------------------------------------------
+// Cloud texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_CLOUD_TEX)
+
+float CloudTexture_CloudNoise(const float3 p, const float omegaValue, const uint octaves) {
+	// Compute sum of octaves of noise
+	float sum = 0.f, lambda = 1.f, o = 1.f;
+	for (uint i = 0; i < octaves; ++i) {
+		sum += o * Noise3(lambda * p);
+		lambda *= 1.99f;
+		o *= omegaValue;
+	}
+	return sum;
+}
+
+float CloudTexture_NoiseMask(const float3 p, const float radius, const float omega) {
+	return CloudTexture_CloudNoise(p / radius * 1.4f, omega, 1);
+}
+
+float3 CloudTexture_Turbulence(const float3 p, const float noiseScale, const float noiseOffset, const float variability, 
+                               const uint octaves, const float radius, const float omega, const float baseFlatness, const float3 sphereCentre) {
+	float3 noiseCoords[3];	
+	const float baseFadeDistance = 1.f - baseFlatness;
+
+	noiseCoords[0] = p / noiseScale;
+	noiseCoords[1] = noiseCoords[0] + (float3)(noiseOffset, noiseOffset, noiseOffset);
+	noiseCoords[2] = noiseCoords[1] + (float3)(noiseOffset, noiseOffset, noiseOffset);
+
+	float noiseAmount = 1.f;
+
+	if (variability < 1.f)	
+		noiseAmount = Lerp(variability, 1.f, CloudTexture_NoiseMask(p + (float3)(noiseOffset * 4.f, 0.f, 0.f), radius, omega));
+
+
+	noiseAmount = clamp(noiseAmount, 0.f, 1.f);
+
+	float3 turbulence;
+
+	turbulence.x = CloudTexture_CloudNoise(noiseCoords[0], omega, octaves) - 0.15f;
+	turbulence.y = CloudTexture_CloudNoise(noiseCoords[1], omega, octaves) - 0.15f;
+	turbulence.z = -CloudTexture_CloudNoise(noiseCoords[2], omega, octaves);
+	if (p.z < sphereCentre.z + baseFadeDistance)
+		turbulence.z *= (p.z - sphereCentre.z) / (2.f * baseFadeDistance);
+
+	turbulence *= noiseAmount;	
+		
+	return turbulence;
+}
+
+float CloudTexture_CloudShape(const float3 p, const float baseFadeDistance, const float3 sphereCentre, const uint numSpheres, const float radius) {	
+/*	if (numSpheres > 0) {
+		if (SphereFunction(p, numSpheres))		//shows cumulus spheres
+			return 1.f;
+		else
+			return 0.f;
+	}
+*/
+	const float3 fromCentre = p - sphereCentre;
+
+	float amount = 1.f - sqrt(fromCentre.x*fromCentre.x + fromCentre.y*fromCentre.y + fromCentre.z*fromCentre.z) / radius;
+	if (amount < 0.f)
+		return 0.f;
+
+	// The base below the cloud's height fades out
+	if (p.z < sphereCentre.z) {
+		if (p.z < sphereCentre.z - radius * 0.4f)
+			return 0.f;
+
+		amount *= 1.f - cos((fromCentre.z + baseFadeDistance) /
+			baseFadeDistance * M_PI_F * 0.5f);
+	}
+	return max(amount, 0.f);
+}
+
+/*
+bool CloudTexture_SphereFunction(const float3 p, uint numSpheres) const {
+// Returns whether a point is inside one of the cumulus spheres
+	for (uint i = 0; i < numSpheres; ++i) {
+		if ((p - spheres[i].position).Length() < spheres[i].radius)
+			return true;
+	}
+	return false;
+}
+*/
+
+float CloudTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float radius, const uint numSpheres, const uint spheresize, const float sharpness,
+		const float baseFadeDistance, const float baseFlatness, const float variability,
+		const float omega, const float firstNoiseScale, const float noiseOffset, const float turbulenceAmount,
+		const uint numOctaves, __global const TextureMapping3D *mapping) {
+
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 sphereCentre = (float3)(.5f, .5f, 1.f / 3.f);
+	const float amount = CloudTexture_CloudShape(mapP + turbulenceAmount * CloudTexture_Turbulence(mapP, firstNoiseScale, noiseOffset, variability, numOctaves, radius, omega, baseFlatness, sphereCentre), baseFadeDistance, sphereCentre, numSpheres, radius);
+	const float finalValue = pow(amount * pow(10.f, .7f), sharpness);
+
+	return min(finalValue, 1.f);
+}
+
+float3 CloudTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float radius, const uint numSpheres, const uint spheresize, const float sharpness,
+		const float baseFadeDistance, const float baseFlatness, const float variability,
+		const float omega, const float firstNoiseScale, const float noiseOffset, const float turbulenceAmount,
+		const uint numOctaves, __global const TextureMapping3D *mapping) {
+
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 sphereCentre = (float3)(.5f, .5f, 1.f / 3.f);
+	const float amount = CloudTexture_CloudShape(mapP + turbulenceAmount * CloudTexture_Turbulence(mapP, firstNoiseScale, noiseOffset, variability, numOctaves, radius, omega, baseFlatness, sphereCentre), baseFadeDistance, sphereCentre, numSpheres, radius);
+	const float finalValue = pow(amount * pow(10.f, .7f), sharpness);
+
+	return min(finalValue, 1.f);
+}
+
+
+#endif
+
+//------------------------------------------------------------------------------
 // FBM texture
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_FBM_TEX)
 
 float FBMTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float omega, const int octaves, __global const TextureMapping3D *mapping) {
+	const float omega, const int octaves, __global const TextureMapping3D *mapping) {
 	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
 
 	return FBm(mapP, omega, octaves);
 }
 
 float3 FBMTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float omega, const int octaves, __global const TextureMapping3D *mapping) {
+	const float omega, const int octaves, __global const TextureMapping3D *mapping) {
 	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
 
 	return FBm(mapP, omega, octaves);
@@ -334,7 +452,7 @@ float3 DotsTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 #if defined(PARAM_ENABLE_BRICK)
 
 bool BrickTexture_RunningAlternate(const float3 p, float3 *i, float3 *b,
-		const float run , const float mortarwidth,
+		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth,
 		int nWhole) {
 	const float sub = nWhole + 0.5f;
@@ -400,7 +518,7 @@ bool BrickTexture_Herringbone(const float3 p, float3 *i,
 }
 
 bool BrickTexture_Running(const float3 p, float3 *i, float3 *b,
-		const float run , const float mortarwidth,
+		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth) {
 	(*i).z = floor(p.z);
 	(*b).x = p.x + (*i).z * run;
@@ -415,7 +533,7 @@ bool BrickTexture_Running(const float3 p, float3 *i, float3 *b,
 }
 
 bool BrickTexture_English(const float3 p, float3 *i, float3 *b,
-		const float run , const float mortarwidth,
+		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth) {
 	(*i).z = floor(p.z);
 	(*b).x = p.x + (*i).z * run;
@@ -435,7 +553,7 @@ bool BrickTexture_Evaluate(__global HitPoint *hitPoint,
 		const float brickwidth, const float brickheight,
 		const float brickdepth, const float mortarsize,
 		const float3 offset,
-		const float run , const float mortarwidth,
+		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
 		__global const TextureMapping3D *mapping) {
@@ -495,7 +613,7 @@ float BrickTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float brickwidth, const float brickheight,
 		const float brickdepth, const float mortarsize,
 		const float3 offset,
-		const float run , const float mortarwidth,
+		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
 		__global const TextureMapping3D *mapping) {
@@ -504,7 +622,7 @@ float BrickTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 			brickwidth, brickheight,
 			brickdepth, mortarsize,
 			offset,
-			run , mortarwidth,
+			run, mortarwidth,
 			mortarheight, mortardepth,
 			proportion, invproportion,
 			mapping) ? (value1 * value3) : value2;
@@ -516,7 +634,7 @@ float3 BrickTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 		const float brickwidth, const float brickheight,
 		const float brickdepth, const float mortarsize,
 		const float3 offset,
-		const float run , const float mortarwidth,
+		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
 		__global const TextureMapping3D *mapping) {

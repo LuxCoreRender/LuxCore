@@ -36,6 +36,7 @@
 #include "slg/textures/clamp.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/cloud.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
@@ -333,21 +334,21 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ?
 			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
-//	} else if (texType == "cloud") {
-//		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
-//		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
-//		const float turbulence = props.Get(Property(propName + ".turbulence")(0.01f)).Get<float>();
-//		const float sharpness = props.Get(Property(propName + ".sharpness")(6.0f)).Get<float>();
-//		const float noiseoffset = props.Get(Property(propName + ".noiseoffset")(.0f)).Get<float>();
-//		const int spheres = props.Get(Property(propName + ".spheres")(0)).Get<int>();
-//		const int octaves = props.Get(Property(propName + ".octaves")(1)).Get<int>();
-//		const float omega = props.Get(Property(propName + ".omega")(.5f)).Get<float>();
-//		const float variability = props.Get(Property(propName + ".variability")(.9f)).Get<float>();
-//		const float baseflatness = props.Get(Property(propName + ".baseflatness")(.8f)).Get<float>();
-//		const float spheresize = props.Get(Property(propName + ".spheresize")(.15f)).Get<float>();
-//		
-//		return new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
-//								sharpness, noiseoffset, spheres octaves, omega, variability, baseflatness, spheresize);
+	} else if (texType == "cloud") {
+		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
+		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
+		const float turbulence = props.Get(Property(propName + ".turbulence")(0.01f)).Get<float>();
+		const float sharpness = props.Get(Property(propName + ".sharpness")(6.0f)).Get<float>();
+		const float noiseoffset = props.Get(Property(propName + ".noiseoffset")(.0f)).Get<float>();
+		const int spheres = props.Get(Property(propName + ".spheres")(0)).Get<int>();
+		const int octaves = props.Get(Property(propName + ".octaves")(1)).Get<int>();
+		const float omega = props.Get(Property(propName + ".omega")(.5f)).Get<float>();
+		const float variability = props.Get(Property(propName + ".variability")(.9f)).Get<float>();
+		const float baseflatness = props.Get(Property(propName + ".baseflatness")(.8f)).Get<float>();
+		const float spheresize = props.Get(Property(propName + ".spheresize")(.15f)).Get<float>();
+
+		return new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
+								sharpness, noiseoffset, spheres, octaves, omega, variability, baseflatness, spheresize);
 	} else if (texType == "blackbody") {
 		const float v = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
 		return new BlackBodyTexture(v);

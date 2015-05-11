@@ -55,6 +55,7 @@
 #include "slg/textures/clamp.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/cloud.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
@@ -1377,6 +1378,26 @@ void CompiledScene::CompileTextures() {
 				tex->mixTex.tex2Index = scene->texDefs.GetTextureIndex(tex2);
 				break;
 			}
+			case CLOUD_TEX: {
+				CloudTexture *ft = static_cast<CloudTexture *>(t);
+							
+				tex->type = slg::ocl::CLOUD_TEX;
+				CompileTextureMapping3D(&tex->cloud.mapping, ft->GetTextureMapping());
+
+				tex->cloud.radius = ft->GetRadius();
+				tex->cloud.numspheres = ft->GetNumSpheres();
+				tex->cloud.spheresize = ft->GetSphereSize();
+				tex->cloud.sharpness = ft->GetSharpness();
+				tex->cloud.basefadedistance = ft->GetBaseFadeDistance();
+				tex->cloud.baseflatness = ft->GetBaseFlatness();
+				tex->cloud.variability = ft->GetVariability();
+				tex->cloud.omega = ft->GetOmega();
+				tex->cloud.noisescale = ft->GetNoiseScale();
+				tex->cloud.noiseoffset = ft->GetNoiseOffset();
+				tex->cloud.turbulence = ft->GetTurbulenceAmount();
+				tex->cloud.octaves = ft->GetNumOctaves();
+				break;
+			}
 			case FBM_TEX: {
 				FBMTexture *ft = static_cast<FBMTexture *>(t);
 
@@ -2329,6 +2350,22 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall("Spectrum", tex->checkerBoard3D.tex2Index) + ", " +
 						"&texture->checkerBoard3D.mapping");
 				break;
+			case slg::ocl::CLOUD_TEX:
+				AddTextureSource(source, "Cloud", i,
+					ToString(tex->cloud.radius) + ", " +
+					ToString(tex->cloud.numspheres) + ", " +
+					ToString(tex->cloud.spheresize) + ", " +
+					ToString(tex->cloud.sharpness) + ", " +
+					ToString(tex->cloud.basefadedistance) + ", " +
+					ToString(tex->cloud.baseflatness) + ", " +
+					ToString(tex->cloud.variability) + ", " +
+					ToString(tex->cloud.omega) + ", " +
+					ToString(tex->cloud.noisescale) + ", " +
+					ToString(tex->cloud.noiseoffset) + ", " +
+					ToString(tex->cloud.turbulence) + ", " +
+					ToString(tex->cloud.octaves) + ", " +
+					"&texture->cloud.mapping");
+				break;			
 			case slg::ocl::FBM_TEX:
 				AddTextureSource(source, "FBM", i,
 						ToString(tex->fbm.omega) + ", " +
