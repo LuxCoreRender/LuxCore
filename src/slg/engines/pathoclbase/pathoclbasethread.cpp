@@ -962,6 +962,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_CHECKERBOARD3D";
 	if (cscene->IsTextureCompiled(MIX_TEX))
 		ss << " -D PARAM_ENABLE_TEX_MIX";
+	if (cscene->IsTextureCompiled(CLOUD_TEX))
+		ss << " -D PARAM_ENABLE_CLOUD_TEX";
 	if (cscene->IsTextureCompiled(FBM_TEX))
 		ss << " -D PARAM_ENABLE_FBM_TEX";
 	if (cscene->IsTextureCompiled(MARBLE))

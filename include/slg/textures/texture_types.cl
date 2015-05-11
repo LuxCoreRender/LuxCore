@@ -28,7 +28,7 @@ typedef enum {
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
 	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
-	CHECKERBOARD2D, CHECKERBOARD3D, FBM_TEX, MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX,
+	CHECKERBOARD2D, CHECKERBOARD3D, CLOUD_TEX, FBM_TEX, MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX,
 	// Fresnel textures
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
@@ -79,6 +79,24 @@ typedef struct {
 	int octaves;
 	float omega;
 } FBMTexParam;
+
+typedef struct {
+	TextureMapping3D mapping;
+	float radius;
+	unsigned int numspheres;
+	float spheresize;
+	float sharpness;
+	float basefadedistance;
+	float baseflatness;
+	float variability;
+	float omega;
+	float noisescale;
+	float noiseoffset;
+	float turbulence;
+	int octaves;
+//	CumulusSphere *spheres;
+} CloudTexParam;
+
 
 typedef struct {
 	TextureMapping3D mapping;
@@ -328,6 +346,7 @@ typedef struct {
 		MixTexParam mixTex;
 		CheckerBoard2DTexParam checkerBoard2D;
 		CheckerBoard3DTexParam checkerBoard3D;
+		CloudTexParam cloud;
 		FBMTexParam fbm;
 		MarbleTexParam marble;
 		DotsTexParam dots;
