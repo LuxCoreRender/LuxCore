@@ -280,18 +280,18 @@ static int FaceCB(p_ply_argument argument) {
 	return 1;
 }
 
-ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileName) {
+ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const string &fileName) {
 	p_ply plyfile = ply_open(fileName.c_str(), NULL);
 	if (!plyfile) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Unable to read PLY mesh file '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	if (!ply_read_header(plyfile)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Unable to read PLY header from '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	Point *p;
@@ -299,17 +299,17 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	ply_set_read_cb(plyfile, "vertex", "y", VertexCB, &p, 1);
 	ply_set_read_cb(plyfile, "vertex", "z", VertexCB, &p, 2);
 	if (plyNbVerts <= 0) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "No vertices found in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	vector<Triangle> vi;
 	const long plyNbFaces = ply_set_read_cb(plyfile, "face", "vertex_indices", FaceCB, &vi, 0);
 	if (plyNbFaces <= 0) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "No faces found in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	// Check if the file includes normal informations
@@ -318,9 +318,9 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
 	ply_set_read_cb(plyfile, "vertex", "nz", NormalCB, &n, 2);
 	if ((plyNbNormals > 0) && (plyNbNormals != plyNbVerts)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Wrong count of normals in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	// Check if the file includes uv informations
@@ -328,9 +328,9 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	const long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
 	ply_set_read_cb(plyfile, "vertex", "t", UVCB, &uv, 1);
 	if ((plyNbUVs > 0) && (plyNbUVs != plyNbVerts)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Wrong count of uvs in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	// Check if the file includes color informations
@@ -339,18 +339,18 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 	ply_set_read_cb(plyfile, "vertex", "green", ColorCB, &cols, 1);
 	ply_set_read_cb(plyfile, "vertex", "blue", ColorCB, &cols, 2);
 	if ((plyNbColors > 0) && (plyNbColors != plyNbVerts)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Wrong count of colors in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	// Check if the file includes alpha informations
 	float *alphas;
 	const long plyNbAlphas = ply_set_read_cb(plyfile, "vertex", "alpha", AlphaCB, &alphas, 0);
 	if ((plyNbAlphas > 0) && (plyNbAlphas != plyNbVerts)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Wrong count of alphas in '" << fileName << "'";
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	p = TriangleMesh::AllocVerticesBuffer(plyNbVerts);
@@ -372,7 +372,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		alphas = new float[plyNbAlphas];
 
 	if (!ply_read(plyfile)) {
-		std::stringstream ss;
+		stringstream ss;
 		ss << "Unable to parse PLY file '" << fileName << "'";
 
 		delete[] p;
@@ -381,14 +381,14 @@ ExtTriangleMesh *ExtTriangleMesh::LoadExtTriangleMesh(const std::string &fileNam
 		delete[] cols;
 		delete[] alphas;
 
-		throw std::runtime_error(ss.str());
+		throw runtime_error(ss.str());
 	}
 
 	ply_close(plyfile);
 
 	// Copy triangle indices vector
 	Triangle *tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
-	std::copy(vi.begin(), vi.end(), tris);
+	copy(vi.begin(), vi.end(), tris);
 
 	return new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
 }
@@ -452,16 +452,16 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 	return allocated ? normals : NULL;
 }
 
-void ExtTriangleMesh::WritePly(const std::string &fileName) const {
-	BOOST_OFSTREAM plyFile(fileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+void ExtTriangleMesh::WritePly(const string &fileName) const {
+	BOOST_OFSTREAM plyFile(fileName.c_str(), ofstream::out | ofstream::binary | ofstream::trunc);
 	if(!plyFile.is_open())
-		throw std::runtime_error("Unable to open: " + fileName);
+		throw runtime_error("Unable to open: " + fileName);
 
 	// Write the PLY header
 	plyFile << "ply\n"
-			"format " + std::string(ply_storage_mode_list[ply_arch_endian()]) + " 1.0\n"
+			"format " + string(ply_storage_mode_list[ply_arch_endian()]) + " 1.0\n"
 			"comment Created by LuxRays v" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR "\n"
-			"element vertex " + boost::lexical_cast<std::string>(vertCount) + "\n"
+			"element vertex " + boost::lexical_cast<string>(vertCount) + "\n"
 			"property float x\n"
 			"property float y\n"
 			"property float z\n";
@@ -483,12 +483,12 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 	if (HasAlphas())
 		plyFile << "property float alpha\n";
 
-	plyFile << "element face " + boost::lexical_cast<std::string>(triCount) + "\n"
+	plyFile << "element face " + boost::lexical_cast<string>(triCount) + "\n"
 				"property list uchar uint vertex_indices\n"
 				"end_header\n";
 
 	if (!plyFile.good())
-		throw std::runtime_error("Unable to write PLY header to: " + fileName);
+		throw runtime_error("Unable to write PLY header to: " + fileName);
 
 	// Write all vertex data
 	for (u_int i = 0; i < vertCount; ++i) {
@@ -503,7 +503,7 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 			plyFile.write((char *)&alphas[i], sizeof(float));
 	}
 	if (!plyFile.good())
-		throw std::runtime_error("Unable to write PLY vertex data to: " + fileName);
+		throw runtime_error("Unable to write PLY vertex data to: " + fileName);
 
 	// Write all face data
 	const u_char len = 3;
@@ -512,7 +512,7 @@ void ExtTriangleMesh::WritePly(const std::string &fileName) const {
 		plyFile.write((char *)&tris[i], sizeof(Triangle));
 	}
 	if (!plyFile.good())
-		throw std::runtime_error("Unable to write PLY face data to: " + fileName);
+		throw runtime_error("Unable to write PLY face data to: " + fileName);
 
 	plyFile.close();
 }
