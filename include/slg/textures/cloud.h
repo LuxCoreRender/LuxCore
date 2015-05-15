@@ -29,10 +29,10 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 // Sphere for cumulus shape
-typedef struct CumulusSphere {
+typedef struct {
 	luxrays::Point position;
 	float radius;
-};
+} CumulusSphere;
 
 class CloudTexture : public Texture {
 public:
