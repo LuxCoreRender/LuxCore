@@ -98,7 +98,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 
 	BSDFEvent eventMatA = NONE;
 	if (weight1 > 0.f) {
-#if defined(PARAM_HAS_BUMPMAPS)
+/*#if defined(PARAM_HAS_BUMPMAPS)
 		Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Bump(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
 				hitPoint, 1.f
 				MATERIALS_PARAM);
@@ -112,10 +112,10 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 
 		const float3 lightDirA = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frame, lightDir));
 		const float3 eyeDirA = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frame, eyeDir));
-#else
+#else*/
 		const float3 lightDirA = lightDir;
 		const float3 eyeDirA = eyeDir;
-#endif
+/*#endif*/
 		float directPdfWMatA;
 		const float3 matAResult = Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
 				hitPoint, lightDirA, eyeDirA, &eventMatA, &directPdfWMatA
@@ -126,11 +126,11 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 				*directPdfW += weight1 * directPdfWMatA;
 		}
 
-#if defined(PARAM_HAS_BUMPMAPS)
+/*#if defined(PARAM_HAS_BUMPMAPS)
 		VSTORE3F(shadeN, &hitPoint->shadeN.x);
 		VSTORE3F(dpdu, &hitPoint->dpdu.x);
 		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif
+#endif*/
 	}
 	
 	//--------------------------------------------------------------------------
@@ -139,7 +139,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 	
 	BSDFEvent eventMatB = NONE;
 	if (weight2 > 0.f) {
-#if defined(PARAM_HAS_BUMPMAPS)
+/*#if defined(PARAM_HAS_BUMPMAPS)
 		Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Bump(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
 				hitPoint, 1.f
 				MATERIALS_PARAM);
@@ -153,10 +153,10 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 
 		const float3 lightDirB = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frame, lightDir));
 		const float3 eyeDirB = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frame, eyeDir));
-#else
+#else*/
 		const float3 lightDirB = lightDir;
 		const float3 eyeDirB = eyeDir;
-#endif
+/*#endif*/
 		float directPdfWMatB;
 		const float3 matBResult = Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
 				hitPoint, lightDirB, eyeDirB, &eventMatB, &directPdfWMatB
@@ -166,11 +166,12 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 			if (directPdfW)
 				*directPdfW += weight2 * directPdfWMatB;
 		}
-#if defined(PARAM_HAS_BUMPMAPS)
+
+/*#if defined(PARAM_HAS_BUMPMAPS)
 		VSTORE3F(shadeN, &hitPoint->shadeN.x);
 		VSTORE3F(dpdu, &hitPoint->dpdu.x);
 		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif
+#endif*/
 	}
 
 	*event = eventMatA | eventMatB;
@@ -201,7 +202,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 	__global const Material *matA = &mats[<<CS_MAT_A_MATERIAL_INDEX>>];
 	__global const Material *matB = &mats[<<CS_MAT_B_MATERIAL_INDEX>>];
 
-#if defined(PARAM_HAS_BUMPMAPS)
+/*#if defined(PARAM_HAS_BUMPMAPS)
 	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
 	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
 	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
@@ -229,9 +230,9 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 	}
 
 	const float3 fixedDirFirst = Frame_ToLocal_Private(&frameFirst, Frame_ToWorld_Private(&frame, fixedDir));
-#else
+#else*/
 	const float3 fixedDirFirst = fixedDir;
-#endif
+/*#endif*/
 
 	float3 result = sampleMatA ?
 			Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Sample(matA, hitPoint, fixedDirFirst, sampledDir,
@@ -247,11 +248,11 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 #endif
 				pdfW, cosSampledDir, event, requestedEvent MATERIALS_PARAM);
 
-#if defined(PARAM_HAS_BUMPMAPS)
+/*#if defined(PARAM_HAS_BUMPMAPS)
 	VSTORE3F(shadeN, &hitPoint->shadeN.x);
 	VSTORE3F(dpdu, &hitPoint->dpdu.x);
 	VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif
+#endif*/
 
 	if (Spectrum_IsBlack(result))
 		return BLACK;
@@ -261,7 +262,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 
 	BSDFEvent eventSecond;
 	float pdfWSecond;
-#if defined(PARAM_HAS_BUMPMAPS)
+/*#if defined(PARAM_HAS_BUMPMAPS)
 	Frame frameSecond;
 	if (sampleMatA) {
 		Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Bump(matB, hitPoint, 1.f
@@ -285,10 +286,10 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 	*sampledDir = Frame_ToWorld_Private(&frameFirst, *sampledDir);
 	const float3 sampledDirSecond = Frame_ToLocal_Private(&frameSecond, *sampledDir);
 	*sampledDir = Frame_ToLocal_Private(&frame, *sampledDir);
-#else
+#else*/
 	const float3 fixedDirSecond = fixedDir;
 	const float3 sampledDirSecond = *sampledDir;
-#endif
+/*#endif*/
 
 	float3 evalSecond = sampleMatA ?
 			Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Evaluate(matB, hitPoint,
@@ -302,11 +303,11 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 		*pdfW += weightSecond * pdfWSecond;
 	}
 
-#if defined(PARAM_HAS_BUMPMAPS)
+/*#if defined(PARAM_HAS_BUMPMAPS)
 	VSTORE3F(shadeN, &hitPoint->shadeN.x);
 	VSTORE3F(dpdu, &hitPoint->dpdu.x);
 	VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif
+#endif*/
 
 	return result / *pdfW;
 }
