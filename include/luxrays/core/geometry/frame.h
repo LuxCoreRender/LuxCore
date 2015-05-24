@@ -39,7 +39,9 @@ public:
 		Z = Vector(0.f, 0.f, 1.f);
 	};
 
-	Frame(const Vector &x, const Vector &y, const Vector &z) : X(x), Y(y), Z(z) {
+	Frame(const Vector &x, const Vector &y, const Normal &z) : Z(Vector(z)) {
+		Y = Normalize(Cross(Z, x));
+		X = Cross(Y, Z);
 	}
 
 	Frame(const Vector &z) {

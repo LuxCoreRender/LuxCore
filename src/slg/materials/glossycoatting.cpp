@@ -64,7 +64,7 @@ Spectrum GlossyCoatingMaterial::GetEmittedRadiance(const HitPoint &hitPoint, con
 Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
+	const Frame frame(hitPoint.GetFrame());
 	const float cosi = fabsf(localLightDir.z);
 	const float coso = fabsf(localEyeDir.z);
 
@@ -75,9 +75,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 	if (sideTest > 0.f) {
 		HitPoint hitPointBase(hitPoint);
 		matBase->Bump(&hitPointBase, 1.f);
-		const Vector shadeDpdv = Normalize(Cross(hitPointBase.shadeN, hitPointBase.dpdu));
-		const Vector shadeDpdu = Cross(shadeDpdv, hitPointBase.shadeN);
-		const Frame frameBase(shadeDpdu, shadeDpdv, Vector(hitPointBase.shadeN));
+		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
 		// Reflection
@@ -138,9 +136,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 	} else if (sideTest < 0.f) {
 		HitPoint hitPointBase(hitPoint);
 		matBase->Bump(&hitPointBase, 1.f);
-		const Vector shadeDpdv = Normalize(Cross(hitPointBase.shadeN, hitPointBase.dpdu));
-		const Vector shadeDpdu = Cross(shadeDpdv, hitPointBase.shadeN);
-		const Frame frameBase(shadeDpdu, shadeDpdv, Vector(hitPointBase.shadeN));
+		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
 		// Transmission
@@ -192,7 +188,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
+	const Frame frame(hitPoint.GetFrame());
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 	const float i = index->GetFloatValue(hitPoint);
 	if (i > 0.f) {
@@ -218,9 +214,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	if (passThroughEvent < wBase) {
 		HitPoint hitPointBase(hitPoint);
 		matBase->Bump(&hitPointBase, 1.f);
-		const Vector shadeDpdv = Normalize(Cross(hitPointBase.shadeN, hitPointBase.dpdu));
-		const Vector shadeDpdu = Cross(shadeDpdv, hitPointBase.shadeN);
-		const Frame frameBase(shadeDpdu, shadeDpdv, Vector(hitPointBase.shadeN));
+		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector fixedDirBase = frameBase.ToLocal(frame.ToWorld(localFixedDir));
 		// Sample base layer
 		baseF = matBase->Sample(hitPointBase, fixedDirBase, localSampledDir, u0, u1, passThroughEvent / wBase,
@@ -255,9 +249,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 
 		HitPoint hitPointBase(hitPoint);
 		matBase->Bump(&hitPointBase, 1.f);
-		const Vector shadeDpdv = Normalize(Cross(hitPointBase.shadeN, hitPointBase.dpdu));
-		const Vector shadeDpdu = Cross(shadeDpdv, hitPointBase.shadeN);
-		const Frame frameBase(shadeDpdu, shadeDpdv, Vector(hitPointBase.shadeN));
+		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector localLightDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? localFixedDir : *localSampledDir));
 		const Vector localEyeDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? *localSampledDir : localFixedDir));
 
@@ -315,12 +307,10 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
+	const Frame frame(hitPoint.GetFrame());
 	HitPoint hitPointBase(hitPoint);
 	matBase->Bump(&hitPointBase, 1.f);
-	const Vector shadeDpdv = Normalize(Cross(hitPointBase.shadeN, hitPointBase.dpdu));
-	const Vector shadeDpdu = Cross(shadeDpdv, hitPointBase.shadeN);
-	const Frame frameBase(shadeDpdu, shadeDpdv, Vector(hitPointBase.shadeN));
+	const Frame frameBase(hitPointBase.GetFrame());
 	const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
 	const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
 	matBase->Pdf(hitPointBase, lightDirBase, eyeDirBase, directPdfW, reversePdfW);

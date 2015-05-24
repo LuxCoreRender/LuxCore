@@ -20,6 +20,7 @@
 #define	_SLG_HITPOINT_H
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/geometry/frame.h"
 
 namespace slg {
 
@@ -47,6 +48,8 @@ typedef struct {
 	// computation and scene default world volume)
 	const Volume *interiorVolume, *exteriorVolume;
 	bool fromLight, intoObject;
+
+	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
 } HitPoint;
 
 }

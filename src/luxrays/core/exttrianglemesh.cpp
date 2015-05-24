@@ -93,18 +93,6 @@ void ExtMesh::GetDifferentials(const float time, const u_int triIndex,
 	}
 }
 
-void ExtMesh::GetFrame(const Normal &normal, const Vector &dpdu, const Vector &dpdv,
-        Frame &frame) const {
-    // Build the local reference system
-
-    Vector ts = Normalize(Cross(normal, dpdu));
-    Vector ss = Cross(ts, normal);
-    ts *= (Dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
-
-	
-    frame = Frame(ss, ts, Vector(normal));
-}
-
 // rply vertex callback
 static int VertexCB(p_ply_argument argument) {
 	long userIndex = 0;

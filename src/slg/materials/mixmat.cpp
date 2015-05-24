@@ -95,7 +95,7 @@ Spectrum MixMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float o
 Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 	float *directPdfW, float *reversePdfW) const {
-	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
+	const Frame frame(hitPoint.GetFrame());
 	Spectrum result;
 
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
@@ -108,19 +108,13 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 
 	BSDFEvent eventMatA = NONE;
 	if (weight1 > 0.f) {
-		/*HitPoint hitPointA(hitPoint);
+		HitPoint hitPointA(hitPoint);
 		matA->Bump(&hitPointA, 1.f);
-		const Vector shadeDpdv = Normalize(Cross(hitPointA.shadeN, hitPointA.dpdu));
-		const Vector shadeDpdu = Cross(shadeDpdv, hitPointA.shadeN);
-		const Frame frameA(shadeDpdu, shadeDpdv, Vector(hitPointA.shadeN));
+		const Frame frameA(hitPointA.GetFrame());
 		const Vector lightDirA = frameA.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirA = frameA.ToLocal(frame.ToWorld(localEyeDir));
 		float directPdfWMatA, reversePdfWMatA;
-		const Spectrum matAResult = matA->Evaluate(hitPointA, lightDirA, eyeDirA, &eventMatA, &directPdfWMatA, &reversePdfWMatA);*/
-
-		float directPdfWMatA, reversePdfWMatA;
-		const Spectrum matAResult = matA->Evaluate(hitPoint, localLightDir, localEyeDir, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
-
+		const Spectrum matAResult = matA->Evaluate(hitPointA, lightDirA, eyeDirA, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
 		if (!matAResult.Black()) {
 			result += weight1 * matAResult;
 
@@ -133,19 +127,13 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 
 	BSDFEvent eventMatB = NONE;
 	if (weight2 > 0.f) {
-		/*HitPoint hitPointB(hitPoint);
+		HitPoint hitPointB(hitPoint);
 		matB->Bump(&hitPointB, 1.f);
-		const Vector shadeDpdv = Normalize(Cross(hitPointB.shadeN, hitPointB.dpdu));
-		const Vector shadeDpdu = Cross(shadeDpdv, hitPointB.shadeN);
-		const Frame frameB(shadeDpdu, shadeDpdv, Vector(hitPointB.shadeN));
+		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
 		float directPdfWMatB, reversePdfWMatB;
-		const Spectrum matBResult = matB->Evaluate(hitPointB, lightDirB, eyeDirB, &eventMatB, &directPdfWMatB, &reversePdfWMatB);*/
-		
-		float directPdfWMatB, reversePdfWMatB;
-		const Spectrum matBResult = matB->Evaluate(hitPoint, localLightDir, localEyeDir, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
-		
+		const Spectrum matBResult = matB->Evaluate(hitPointB, lightDirB, eyeDirB, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
 		if (!matBResult.Black()) {
 			result += weight2 * matBResult;
 
@@ -166,19 +154,15 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	/*const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
+	const Frame frame(hitPoint.GetFrame());
 	HitPoint hitPointA(hitPoint);
 	matA->Bump(&hitPointA, 1.f);
-	Vector shadeDpdv = Normalize(Cross(hitPointA.shadeN, hitPointA.dpdu));
-	Vector shadeDpdu = Cross(shadeDpdv, hitPointA.shadeN);
-	const Frame frameA(shadeDpdu, shadeDpdv, Vector(hitPointA.shadeN));
+	const Frame frameA(hitPointA.GetFrame());
 	const Vector fixedDirA = frameA.ToLocal(frame.ToWorld(localFixedDir));
 	HitPoint hitPointB(hitPoint);
 	matB->Bump(&hitPointB, 1.f);
-	shadeDpdv = Normalize(Cross(hitPointB.shadeN, hitPointB.dpdu));
-	shadeDpdu = Cross(shadeDpdv, hitPointB.shadeN);
-	const Frame frameB(shadeDpdu, shadeDpdv, Vector(hitPointB.shadeN));
-	const Vector fixedDirB = frameB.ToLocal(frame.ToWorld(localFixedDir));*/
+	const Frame frameB(hitPointB.GetFrame());
+	const Vector fixedDirB = frameB.ToLocal(frame.ToWorld(localFixedDir));
 
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
@@ -194,26 +178,7 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Material *matFirst = sampleMatA ? matA : matB;
 	const Material *matSecond = sampleMatA ? matB : matA;
 
-	// Sample the first material
-	Spectrum result = matFirst->Sample(hitPoint, localFixedDir, localSampledDir,
-			u0, u1, passThroughEventFirst, pdfW, absCosSampledDir, event, requestedEvent);
-	if (result.Black())
-		return Spectrum();
-	*pdfW *= weightFirst;
-	result *= *pdfW;
-
-	// Evaluate the second material
-	const Vector &localLightDir = (hitPoint.fromLight) ? localFixedDir : *localSampledDir;
-	const Vector &localEyeDir = (hitPoint.fromLight) ? *localSampledDir : localFixedDir;
-	BSDFEvent eventSecond;
-	float pdfWSecond;
-	Spectrum evalSecond = matSecond->Evaluate(hitPoint, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
-	if (!evalSecond.Black()) {
-		result += weightSecond * evalSecond;
-		*pdfW += weightSecond * pdfWSecond;
-	}
-	
-	/*HitPoint &hitPoint1 = sampleMatA ? hitPointA : hitPointB;
+	HitPoint &hitPoint1 = sampleMatA ? hitPointA : hitPointB;
 	HitPoint &hitPoint2 = sampleMatA ? hitPointB : hitPointA;
 	const Frame &frame1 = sampleMatA ? frameA : frameB;
 	const Frame &frame2 = sampleMatA ? frameB : frameA;
@@ -232,15 +197,15 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	result *= *pdfW;
 
 	// Evaluate the second material
-	const Vector &localLightDir = (hitPoint.fromLight) ? fixedDir2 : sampledDir2;
-	const Vector &localEyeDir = (hitPoint.fromLight) ? sampledDir2 : fixedDir2;
+	const Vector &localLightDir = (hitPoint2.fromLight) ? fixedDir2 : sampledDir2;
+	const Vector &localEyeDir = (hitPoint2.fromLight) ? sampledDir2 : fixedDir2;
 	BSDFEvent eventSecond;
 	float pdfWSecond;
-	Spectrum evalSecond = matSecond->Evaluate(hitPoint, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
+	Spectrum evalSecond = matSecond->Evaluate(hitPoint2, localLightDir, localEyeDir, &eventSecond, &pdfWSecond);
 	if (!evalSecond.Black()) {
 		result += weightSecond * evalSecond;
 		*pdfW += weightSecond * pdfWSecond;
-	}*/
+	}
 
 	return result / *pdfW;
 }
@@ -248,38 +213,30 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 void MixMaterial::Pdf(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, Vector(hitPoint.shadeN));
+	const Frame frame(hitPoint.GetFrame());
 	const float weight2 = Clamp(mixFactor->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	float directPdfWMatA = 1.f;
 	float reversePdfWMatA = 1.f;
 	if (weight1 > 0.f) {
-		/*HitPoint hitPointA(hitPoint);
+		HitPoint hitPointA(hitPoint);
 		matA->Bump(&hitPointA, 1.f);
-		const Vector shadeDpdv = Normalize(Cross(hitPointA.shadeN, hitPointA.dpdu));
-		const Vector shadeDpdu = Cross(shadeDpdv, hitPointA.shadeN);
-		const Frame frameA(shadeDpdu, shadeDpdv, Vector(hitPointA.shadeN));
+		const Frame frameA(hitPointA.GetFrame());
 		const Vector lightDirA = frameA.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirA = frameA.ToLocal(frame.ToWorld(localEyeDir));
-		matA->Pdf(hitPointA, lightDirA, eyeDirA, &directPdfWMatA, &reversePdfWMatA);*/
-		
-		matA->Pdf(hitPoint, localLightDir, localEyeDir, &directPdfWMatA, &reversePdfWMatA);
+		matA->Pdf(hitPointA, lightDirA, eyeDirA, &directPdfWMatA, &reversePdfWMatA);
 	}
 
 	float directPdfWMatB = 1.f;
 	float reversePdfWMatB = 1.f;
 	if (weight2 > 0.f) {
-		/*HitPoint hitPointB(hitPoint);
+		HitPoint hitPointB(hitPoint);
 		matB->Bump(&hitPointB, 1.f);
-		const Vector shadeDpdv = Normalize(Cross(hitPointB.shadeN, hitPointB.dpdu));
-		const Vector shadeDpdu = Cross(shadeDpdv, hitPointB.shadeN);
-		const Frame frameB(shadeDpdu, shadeDpdv, Vector(hitPointB.shadeN));
+		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
-		matB->Pdf(hitPointB, lightDirB, eyeDirB, &directPdfWMatB, &reversePdfWMatB);*/
-
-		matB->Pdf(hitPoint, localLightDir, localEyeDir, &directPdfWMatB, &reversePdfWMatB);
+		matB->Pdf(hitPointB, lightDirB, eyeDirB, &directPdfWMatB, &reversePdfWMatB);
 	}
 
 	if (directPdfW)
