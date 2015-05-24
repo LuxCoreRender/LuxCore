@@ -72,12 +72,8 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	// Apply bump or normal mapping
 	material->Bump(&hitPoint, 1.f);
 
-	// Initialize shading differentials
-	const Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, hitPoint.dpdu));
-	const Vector shadeDpdu = Cross(shadeDpdv, hitPoint.shadeN);
-
 	// Build the local reference system
-	mesh->GetFrame(hitPoint.shadeN, shadeDpdu, shadeDpdv, frame);
+	frame = hitPoint.GetFrame();
 }
 
 void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,

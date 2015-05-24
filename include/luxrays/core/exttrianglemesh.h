@@ -75,7 +75,6 @@ public:
     void GetDifferentials(const float time, const u_int triIndex,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const;
-    void GetFrame(const Normal &normal, const Vector &dpdu, const Vector &dpdv, Frame &frame) const;
 
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const = 0;

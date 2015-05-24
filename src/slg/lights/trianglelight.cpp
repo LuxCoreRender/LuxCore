@@ -75,14 +75,9 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	mesh->GetDifferentials(0.f, triangleIndex,
 		&hitPoint.dpdu, &hitPoint.dpdv,
 		&hitPoint.dndu, &hitPoint.dndv);
-	Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, hitPoint.dpdu));
-	hitPoint.dpdu = Cross(shadeDpdv, hitPoint.shadeN);
-	shadeDpdv *= (Dot(hitPoint.dpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
-	hitPoint.dpdv = shadeDpdv;
 	// Add bump?
 	// lightMaterial->Bump(&hitPoint, 1.f);
-	Frame frame;
-	mesh->GetFrame(hitPoint.shadeN, hitPoint.dpdu, hitPoint.dpdv, frame);
+	Frame frame(hitPoint.GetFrame());
 
 	Spectrum emissionColor(1.f);
 	Vector localDirOut;
@@ -139,14 +134,9 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	mesh->GetDifferentials(0.f, triangleIndex,
 		&hitPoint.dpdu, &hitPoint.dpdv,
 		&hitPoint.dndu, &hitPoint.dndv);
-	Vector shadeDpdv = Normalize(Cross(hitPoint.shadeN, hitPoint.dpdu));
-	hitPoint.dpdu = Cross(shadeDpdv, hitPoint.shadeN);
-	shadeDpdv *= (Dot(hitPoint.dpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
-	hitPoint.dpdv = shadeDpdv;
 	// Add bump?
 	// lightMaterial->Bump(&hitPoint, 1.f);
-	Frame frame;
-	mesh->GetFrame(hitPoint.shadeN, hitPoint.dpdu, hitPoint.dpdv, frame);
+	Frame frame(hitPoint.GetFrame());
 
 	*dir = hitPoint.p - p;
 	const float distanceSquared = dir->LengthSquared();
