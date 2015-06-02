@@ -72,7 +72,7 @@ public:
 	virtual float GetAlpha(const u_int vertIndex) const = 0;
 
 	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
-    void GetDifferentials(const float time, const u_int triIndex,
+    void GetDifferentials(const float time, const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const;
 

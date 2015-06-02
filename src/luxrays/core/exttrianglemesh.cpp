@@ -32,7 +32,7 @@ using namespace luxrays;
 // ExtMesh
 //------------------------------------------------------------------------------
 
-void ExtMesh::GetDifferentials(const float time, const u_int triIndex,
+void ExtMesh::GetDifferentials(const float time, const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const {
     // Compute triangle partial derivatives
@@ -55,41 +55,45 @@ void ExtMesh::GetDifferentials(const float time, const u_int triIndex,
 	const float dv2 = uv1.v - uv2.v;
 	const float determinant = du1 * dv2 - dv1 * du2;
 
-	// Using GetVertex() in order to do all computation relative to
-	// the global coordinate system.
-	const Point p0 = GetVertex(time, tri.v[0]);
-	const Point p1 = GetVertex(time, tri.v[1]);
-	const Point p2 = GetVertex(time, tri.v[2]);
-
-	const Vector dp1 = p0 - p2;
-	const Vector dp2 = p1 - p2;
-
 	if (determinant == 0.f) {
 		// Handle 0 determinant for triangle partial derivative matrix
-		CoordinateSystem(Normalize(Cross(dp1, dp2)), dpdu, dpdv);
+		CoordinateSystem(Vector(shadeNormal), dpdu, dpdv);
 		*dndu = Normal();
 		*dndv = Normal();
 	} else {
 		const float invdet = 1.f / determinant;
 
-		*dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		*dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
+		// Using GetVertex() in order to do all computation relative to
+		// the global coordinate system.
+		const Point p0 = GetVertex(time, tri.v[0]);
+		const Point p1 = GetVertex(time, tri.v[1]);
+		const Point p2 = GetVertex(time, tri.v[2]);
 
-        if (HasNormals()) {
-            // Using GetNormal() in order to do all computation relative to
-            // the global coordinate system.
-            const Normal n0 = GetShadeNormal(time, tri.v[0]);
-            const Normal n1 = GetShadeNormal(time, tri.v[1]);
-            const Normal n2 = GetShadeNormal(time, tri.v[2]);
+		const Vector dp1 = p0 - p2;
+		const Vector dp2 = p1 - p2;
 
-            const Normal dn1 = n0 - n2;
-            const Normal dn2 = n1 - n2;
-            *dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
-            *dndv = (-du2 * dn1 + du1 * dn2) * invdet;
-        } else {
-            *dndu = Normal();
-            *dndv = Normal();
-        }
+		const Vector ss = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		const Vector ts = (-du2 * dp1 + du1 * dp2) * invdet;
+
+		*dpdv = Normalize(Cross(shadeNormal, ss));
+		*dpdu = Cross(*dpdv, shadeNormal) * ss.Length();
+		*dpdv *= ts.Length() * (Dot(ts, *dpdv) > 0.f ? 1.f : -1.f);
+
+		if (HasNormals()) {
+			// Using GetNormal() in order to do all computation relative to
+			// the global coordinate system.
+			const Normal n0 = GetShadeNormal(time, tri.v[0]);
+			const Normal n1 = GetShadeNormal(time, tri.v[1]);
+			const Normal n2 = GetShadeNormal(time, tri.v[2]);
+
+			const Normal dn1 = n0 - n2;
+			const Normal dn2 = n1 - n2;
+			*dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
+			*dndv = (-du2 * dn1 + du1 * dn2) * invdet;
+		} else {
+			*dndu = Normal();
+			*dndv = Normal();
+		}
 	}
 }
 
