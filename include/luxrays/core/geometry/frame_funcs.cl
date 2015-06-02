@@ -18,6 +18,32 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+void Frame_Set(__global Frame *frame, const float3 x, const float3 y, const float3 z)
+{
+	const float3 Y = normalize(cross(z, x));
+	const float3 X = cross(Y, z);
+
+	VSTORE3F(X, &frame->X.x);
+	VSTORE3F(Y, &frame->Y.x);
+	VSTORE3F(z, &frame->Z.x);
+}
+
+void Frame_Set_Private(Frame *frame, const float3 x, const float3 y, const float3 z)
+{
+	const float3 Y = normalize(cross(z, x));
+	const float3 X = cross(Y, z);
+
+	frame->X.x = X.x;
+	frame->X.y = X.y;
+	frame->X.z = X.z;
+	frame->Y.x = Y.x;
+	frame->Y.y = Y.y;
+	frame->Y.z = Y.z;
+	frame->Z.x = z.x;
+	frame->Z.y = z.y;
+	frame->Z.z = z.z;
+}
+
 void Frame_SetFromZ(__global Frame *frame, const float3 Z) {
 	float3 X, Y;
 	CoordinateSystem(Z, &X, &Y);

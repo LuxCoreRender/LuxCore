@@ -73,13 +73,13 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
-#if defined(PARAM_HAS_BUMPMAPS)
+/*#if defined(PARAM_HAS_BUMPMAPS)
 	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
 	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
 	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
 	Frame frame;
-	ExtMesh_GetFrame_Private(shadeN, dpdu, dpdv, &frame);
-#endif
+	Frame_Set_Private(&frame, dpdu, dpdv, shadeN);
+#endif*/
 
 	float3 result = BLACK;
 	const float factor = Texture_Index<<CS_FACTOR_TEXTURE_INDEX>>_EvaluateFloat(
@@ -108,7 +108,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
 
 		Frame frameA;
-		ExtMesh_GetFrame_Private(shadeNA, dpduA, dpdvA, &frameA);
+		Frame_Set_Private(&frameA, dpduA, dpdvA, shadeNA);
 
 		const float3 lightDirA = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frame, lightDir));
 		const float3 eyeDirA = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frame, eyeDir));
@@ -149,7 +149,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
 
 		Frame frameB;
-		ExtMesh_GetFrame_Private(shadeNB, dpduB, dpdvB, &frameB);
+		Frame_Set_Private(&frameB, dpduB, dpdvB, shadeNB);
 
 		const float3 lightDirB = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frame, lightDir));
 		const float3 eyeDirB = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frame, eyeDir));
@@ -208,7 +208,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
 
 	Frame frame;
-	ExtMesh_GetFrame_Private(shadeN, dpdu, dpdv, &frame);
+	Frame_Set_Private(&frame, dpdu, dpdv, shadeN);
 
 	Frame frameFirst;
 	if (sampleMatA) {
@@ -218,15 +218,14 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 		const float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);
 		const float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);
 		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
-		ExtMesh_GetFrame_Private(shadeNA, dpduA, dpdvA, &frameFirst);
+		Frame_Set_Private(&frameFirst, dpduA, dpdvA, shadeNA);
 	} else {
-
 		Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Bump(matB, hitPoint, 1.f
 				MATERIALS_PARAM);
 		const float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);
 		const float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);
 		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
-		ExtMesh_GetFrame_Private(shadeNB, dpduB, dpdvB, &frameFirst);
+		Frame_Set_Private(&frameFirst, dpduB, dpdvB, shadeNB);
 	}
 
 	const float3 fixedDirFirst = Frame_ToLocal_Private(&frameFirst, Frame_ToWorld_Private(&frame, fixedDir));
@@ -271,7 +270,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 		const float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);
 		const float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);
 		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
-		ExtMesh_GetFrame_Private(shadeNB, dpduB, dpdvB, &frameSecond);
+		Frame_Set_Private(&frameSecond, dpduB, dpdvB, shadeNB);
 	} else {
 		Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Bump(matA, hitPoint, 1.f
 				MATERIALS_PARAM);
@@ -279,7 +278,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 		const float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);
 		const float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);
 		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
-		ExtMesh_GetFrame_Private(shadeNA, dpduA, dpdvA, &frameSecond);
+		Frame_Set_Private(&frameSecond, dpduA, dpdvA, shadeNA);
 	}
 
 	const float3 fixedDirSecond = Frame_ToLocal_Private(&frameSecond, Frame_ToWorld_Private(&frame, fixedDir));

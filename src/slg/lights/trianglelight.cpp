@@ -72,7 +72,7 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	hitPoint.interiorVolume = NULL;
 	hitPoint.exteriorVolume = NULL;
 	hitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
-	mesh->GetDifferentials(0.f, triangleIndex,
+	mesh->GetDifferentials(0.f, triangleIndex, hitPoint.shadeN,
 		&hitPoint.dpdu, &hitPoint.dpdv,
 		&hitPoint.dndu, &hitPoint.dndv);
 	// Add bump?
@@ -131,7 +131,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const Point &p,
 	hitPoint.interiorVolume = NULL;
 	hitPoint.exteriorVolume = NULL;
 	hitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
-	mesh->GetDifferentials(0.f, triangleIndex,
+	mesh->GetDifferentials(0.f, triangleIndex, hitPoint.shadeN,
 		&hitPoint.dpdu, &hitPoint.dpdv,
 		&hitPoint.dndu, &hitPoint.dndv);
 	// Add bump?

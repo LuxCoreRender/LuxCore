@@ -72,37 +72,3 @@ float Mesh_InterpolateAlpha(__global const float *vertAlphas, __global const Tri
 	return Triangle_InterpolateAlpha(a0, a1, a2, b0, b1, b2);
 }
 
-void ExtMesh_GetFrame(const float3 normal, const float3 dpdu, const float3 dpdv,
-		__global Frame *frame) {
-	// Build the local reference system
-
-    float3 ts = normalize(cross(normal, dpdu));
-    float3 ss = cross(ts, normal);
-    ts *= (dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
-
-    VSTORE3F(ss, &frame->X.x);
-	VSTORE3F(ts, &frame->Y.x);
-	VSTORE3F(normal, &frame->Z.x);
-}
-
-
-void ExtMesh_GetFrame_Private(const float3 normal, const float3 dpdu, const float3 dpdv,
-		Frame *frame) {
-	// Build the local reference system
-
-    float3 ts = normalize(cross(normal, dpdu));
-    float3 ss = cross(ts, normal);
-    ts *= (dot(dpdv, ts) > 0.f) ? 1.f : -1.f;
-
-	frame->X.x = ss.x;
-	frame->X.y = ss.y;
-	frame->X.z = ss.z;
-
-	frame->Y.x = ts.x;
-	frame->Y.y = ts.y;
-	frame->Y.z = ts.z;
-
-	frame->Z.x = normal.x;
-	frame->Z.y = normal.y;
-	frame->Z.z = normal.z;
-}

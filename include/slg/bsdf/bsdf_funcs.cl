@@ -32,6 +32,7 @@ void ExtMesh_GetDifferentials(
 		__global const Triangle *triangles,
 		const uint meshIndex,
 		const uint triangleIndex,
+		float3 shadeNormal,
 		float3 *dpdu, float3 *dpdv,
         float3 *dndu, float3 *dndv) {
 	__global const Mesh *meshDesc = &meshDescs[meshIndex];
@@ -70,29 +71,32 @@ void ExtMesh_GetDifferentials(
 	const float dv2 = uv1.s1 - uv2.s1;
 	const float determinant = du1 * dv2 - dv1 * du2;
 
-	const float3 p0 = VLOAD3F(&iVertices[vi0].x);
-	const float3 p1 = VLOAD3F(&iVertices[vi1].x);
-	const float3 p2 = VLOAD3F(&iVertices[vi2].x);
-	const float3 dp1 = p0 - p2;
-	const float3 dp2 = p1 - p2;
-
 	if (determinant == 0.f) {
 		// Handle 0 determinant for triangle partial derivative matrix
-		CoordinateSystem(normalize(cross(dp1, dp2)), dpdu, dpdv);
+		CoordinateSystem(shadeNormal, dpdu, dpdv);
 		*dndu = ZERO;
 		*dndv = ZERO;
 	} else {
 		const float invdet = 1.f / determinant;
 
+		const float3 p0 = VLOAD3F(&iVertices[vi0].x);
+		const float3 p1 = VLOAD3F(&iVertices[vi1].x);
+		const float3 p2 = VLOAD3F(&iVertices[vi2].x);
+		const float3 dp1 = p0 - p2;
+		const float3 dp2 = p1 - p2;
+
 		//------------------------------------------------------------------
 		// Compute dpdu and dpdv
 		//------------------------------------------------------------------
 
-		*dpdu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		*dpdv = (-du2 * dp1 + du1 * dp2) * invdet;
-		// Transform to global coordinates
-		*dpdu = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dpdu));
-		*dpdv = normalize(Transform_InvApplyNormal(&meshDesc->trans, *dpdv));
+		const float3 ss = Transform_InvApplyNormal(&meshDesc->trans,
+			(dv2 * dp1 - dv1 * dp2) * invdet);
+		const float3 ts = Transform_InvApplyNormal(&meshDesc->trans,
+			(-du2 * dp1 + du1 * dp2) * invdet);
+
+		*dpdv = normalize(cross(shadeNormal, ss));
+		*dpdu = cross(*dpdv, shadeNormal) * length(ss);
+		*dpdv = length(ts) * (dot(ts, *dpdv) > 0.f ? 1.f : -1.f);
 
 		//------------------------------------------------------------------
 		// Compute dndu and dndv
@@ -297,7 +301,7 @@ void BSDF_Init(
 	// Build the local reference system
 	//--------------------------------------------------------------------------
 
-	float3 geometryDndu, geometryDndv, geometryDpdu, geometryDpdv;
+	float3 dndu, dndv, dpdu, dpdv;
 	ExtMesh_GetDifferentials(
 			meshDescs,
 			vertices,
@@ -310,37 +314,32 @@ void BSDF_Init(
 			triangles,
 			meshIndex,
 			triangleIndex,
-			&geometryDpdu, &geometryDpdv,
-			&geometryDndu, &geometryDndv);
+			shadeN,
+			&dpdu, &dpdv,
+			&dndu, &dndv);
 	
-	// Initialize shading differentials
-	float3 shadeDpdv = normalize(cross(shadeN, geometryDpdu));
-	float3 shadeDpdu = cross(shadeDpdv, shadeN);
-	shadeDpdv *= (dot(geometryDpdv, shadeDpdv) > 0.f) ? 1.f : -1.f;
-
 	//--------------------------------------------------------------------------
 	// Apply bump or normal mapping
 	//--------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_BUMPMAPS)
-	VSTORE3F(shadeDpdu, &bsdf->hitPoint.dpdu.x);
-	VSTORE3F(shadeDpdv, &bsdf->hitPoint.dpdv.x);
-	VSTORE3F(geometryDndu, &bsdf->hitPoint.dndu.x);
-	VSTORE3F(geometryDndv, &bsdf->hitPoint.dndv.x);
+	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
+	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
+	VSTORE3F(dndu, &bsdf->hitPoint.dndu.x);
+	VSTORE3F(dndv, &bsdf->hitPoint.dndv.x);
 	Material_Bump(matIndex,
 			&bsdf->hitPoint, 1.f
 			MATERIALS_PARAM);
 	// Re-read the shadeN modified by Material_Bump()
 	shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
-	shadeDpdu = VLOAD3F(&bsdf->hitPoint.dpdu.x);
-	shadeDpdv = VLOAD3F(&bsdf->hitPoint.dpdv.x);
+	dpdu = VLOAD3F(&bsdf->hitPoint.dpdu.x);
+	dpdv = VLOAD3F(&bsdf->hitPoint.dpdv.x);
 #endif
 
 	//--------------------------------------------------------------------------
 	// Build the local reference system
 	//--------------------------------------------------------------------------
-
-	ExtMesh_GetFrame(shadeN, shadeDpdu, shadeDpdv, &bsdf->frame);
+	Frame_Set(&bsdf->frame, dpdu, dpdv, shadeN);
 
 #if defined(PARAM_HAS_VOLUMES)
 	bsdf->isVolume = false;
