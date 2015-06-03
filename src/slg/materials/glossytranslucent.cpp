@@ -36,7 +36,9 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const float cosi = fabsf(localLightDir.z);
 	const float coso = fabsf(localEyeDir.z);
 
-	if (localFixedDir.z * localSampledDir.z <= 0.f) {
+	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
+
+	if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(localSampledDir), hitPoint.geometryN) <= 0.f) {
 		// Transmition
 		*event = DIFFUSE | TRANSMIT;
 
@@ -233,6 +235,10 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			*event = GLOSSY | REFLECT;
 		}
 
+		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
+		if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) <= 0.f)
+			return Spectrum();
+
 		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
 
 		// Absorption
@@ -251,6 +257,9 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	} else {
 		// Transmition
 		*localSampledDir = -Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
+		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
+		if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) > 0.f)
+			return Spectrum();
 		*pdfW *= 0.5f;
 
 		*absCosSampledDir = fabsf(localSampledDir->z);

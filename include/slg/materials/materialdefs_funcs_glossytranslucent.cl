@@ -66,7 +66,11 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
 
-	if (fixedDir.z * sampledDir.z <= 0.f) {
+	const float3 geometryN = VLOAD3F(&hitPoint->geometryN.x);
+	Frame frame;
+	Frame_SetFromZ_Private(&frame, geometryN);
+
+	if (dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, sampledDir), geometryN) <= 0.f) {
 		// Transmition
 		*event = DIFFUSE | TRANSMIT;
 
@@ -352,6 +356,12 @@ float3 GlossyTranslucentMaterial_ConstSample(
 			*event = GLOSSY | REFLECT;
 		}
 
+		const float3 geometryN = VLOAD3F(&hitPoint->geometryN.x);
+		Frame frame;
+		Frame_SetFromZ_Private(&frame, geometryN);
+		if (dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, *sampledDir), geometryN) <= 0.f)
+			return BLACK;
+
 		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
 
 		// Absorption
@@ -375,6 +385,13 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		// Transmition
 		*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 		*sampledDir *= signbit(fixedDir.z) ? 1.f : -1.f;
+
+		const float3 geometryN = VLOAD3F(&hitPoint->geometryN.x);
+		Frame frame;
+		Frame_SetFromZ_Private(&frame, geometryN);
+		if (dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, *sampledDir), geometryN) > 0.f)
+			return BLACK;
+
 		*pdfW *= 0.5f;
 
 		*cosSampledDir = fabs((*sampledDir).z);
