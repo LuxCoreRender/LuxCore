@@ -53,6 +53,22 @@ void Frame_SetFromZ(__global Frame *frame, const float3 Z) {
 	VSTORE3F(Z, &frame->Z.x);
 }
 
+void Frame_SetFromZ_Private(Frame *frame, const float3 Z)
+{
+	float3 X, Y;
+	CoordinateSystem(Z, &X, &Y);
+
+	frame->X.x = X.x;
+	frame->X.y = X.y;
+	frame->X.z = X.z;
+	frame->Y.x = Y.x;
+	frame->Y.y = Y.y;
+	frame->Y.z = Y.z;
+	frame->Z.x = Z.x;
+	frame->Z.y = Z.y;
+	frame->Z.z = Z.z;
+}
+
 float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 v) {
 	return X * v.x + Y * v.y + Z * v.z;
 }
