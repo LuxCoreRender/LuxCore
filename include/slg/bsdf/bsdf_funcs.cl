@@ -82,21 +82,19 @@ void ExtMesh_GetDifferentials(
 		const float3 p0 = VLOAD3F(&iVertices[vi0].x);
 		const float3 p1 = VLOAD3F(&iVertices[vi1].x);
 		const float3 p2 = VLOAD3F(&iVertices[vi2].x);
-		const float3 dp1 = p0 - p2;
-		const float3 dp2 = p1 - p2;
+		const float3 dp1 = Transform_InvApplyVector(&meshDesc->trans, p0 - p2);
+		const float3 dp2 = Transform_InvApplyVector(&meshDesc->trans, p1 - p2);
 
 		//------------------------------------------------------------------
 		// Compute dpdu and dpdv
 		//------------------------------------------------------------------
 
-		const float3 ss = Transform_InvApplyNormal(&meshDesc->trans,
-			(dv2 * dp1 - dv1 * dp2) * invdet);
-		const float3 ts = Transform_InvApplyNormal(&meshDesc->trans,
-			(-du2 * dp1 + du1 * dp2) * invdet);
+		const float3 ss = (dv2 * dp1 - dv1 * dp2) * invdet;
+		const float3 ts = (-du2 * dp1 + du1 * dp2) * invdet;
 
 		*dpdv = normalize(cross(shadeNormal, ss));
 		*dpdu = cross(*dpdv, shadeNormal) * length(ss);
-		*dpdv = length(ts) * (dot(ts, *dpdv) > 0.f ? 1.f : -1.f);
+		*dpdv *= length(ts) * (dot(ts, *dpdv) > 0.f ? 1.f : -1.f);
 
 		//------------------------------------------------------------------
 		// Compute dndu and dndv
