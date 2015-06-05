@@ -92,9 +92,8 @@ void ExtMesh_GetDifferentials(
 		const float3 ss = (dv2 * dp1 - dv1 * dp2) * invdet;
 		const float3 ts = (-du2 * dp1 + du1 * dp2) * invdet;
 
-		*dpdv = normalize(cross(shadeNormal, ss));
-		*dpdu = cross(*dpdv, shadeNormal) * length(ss);
-		*dpdv *= length(ts) * (dot(ts, *dpdv) > 0.f ? 1.f : -1.f);
+		*dpdu = cross(shadeNormal, cross(ss, shadeNormal));
+		*dpdv = cross(shadeNormal, cross(ts, shadeNormal));
 
 		//------------------------------------------------------------------
 		// Compute dndu and dndv

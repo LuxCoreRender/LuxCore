@@ -75,9 +75,8 @@ void ExtMesh::GetDifferentials(const float time, const u_int triIndex, const Nor
 		const Vector ss = ( dv2 * dp1 - dv1 * dp2) * invdet;
 		const Vector ts = (-du2 * dp1 + du1 * dp2) * invdet;
 
-		*dpdv = Normalize(Cross(shadeNormal, ss));
-		*dpdu = Cross(*dpdv, shadeNormal) * ss.Length();
-		*dpdv *= ts.Length() * (Dot(ts, *dpdv) > 0.f ? 1.f : -1.f);
+		*dpdu = Cross(shadeNormal, Cross(ss, shadeNormal));
+		*dpdv = Cross(shadeNormal, Cross(ts, shadeNormal));
 
 		if (HasNormals()) {
 			// Using GetNormal() in order to do all computation relative to
