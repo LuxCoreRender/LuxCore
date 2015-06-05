@@ -64,6 +64,11 @@ public:
 	virtual bool HasColors() const = 0;
 	virtual bool HasAlphas() const = 0;
 
+	virtual Normal *GetNormals() const = 0;
+	virtual UV *GetUVs() const = 0;
+	virtual Spectrum *GetCols() const = 0;
+	virtual float *GetAlphas() const = 0;
+
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const = 0;
 	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const = 0;
 	virtual Normal GetShadeNormal(const float time, const u_int vertIndex) const = 0;
@@ -114,6 +119,11 @@ public:
 	virtual bool HasUVs() const { return uvs != NULL; }
 	virtual bool HasColors() const { return cols != NULL; }
 	virtual bool HasAlphas() const { return alphas != NULL; }
+
+	virtual Normal *GetNormals() const { return normals; }
+	virtual UV *GetUVs() const { return uvs; }
+	virtual Spectrum *GetCols() const { return cols; }
+	virtual float *GetAlphas() const { return alphas; }
 
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
 		return triNormals[triIndex];
@@ -213,6 +223,11 @@ public:
 	virtual bool HasColors() const { return ((ExtTriangleMesh *)mesh)->HasColors(); }
 	virtual bool HasAlphas() const { return ((ExtTriangleMesh *)mesh)->HasAlphas(); }
 
+	virtual Normal *GetNormals() const { return ((ExtTriangleMesh *)mesh)->GetNormals(); }
+	virtual UV *GetUVs() const { return ((ExtTriangleMesh *)mesh)->GetUVs(); }
+	virtual Spectrum *GetCols() const { return ((ExtTriangleMesh *)mesh)->GetCols(); }
+	virtual float *GetAlphas() const { return ((ExtTriangleMesh *)mesh)->GetAlphas(); }
+
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
 		return Normalize(trans * ((ExtTriangleMesh *)mesh)->GetGeometryNormal(time, triIndex));
 	}
@@ -292,6 +307,11 @@ public:
 	virtual bool HasUVs() const { return ((ExtTriangleMesh *)mesh)->HasUVs(); }
 	virtual bool HasColors() const { return ((ExtTriangleMesh *)mesh)->HasColors(); }
 	virtual bool HasAlphas() const { return ((ExtTriangleMesh *)mesh)->HasAlphas(); }
+
+	virtual Normal *GetNormals() const { return ((ExtTriangleMesh *)mesh)->GetNormals(); }
+	virtual UV *GetUVs() const { return ((ExtTriangleMesh *)mesh)->GetUVs(); }
+	virtual Spectrum *GetCols() const { return ((ExtTriangleMesh *)mesh)->GetCols(); }
+	virtual float *GetAlphas() const { return ((ExtTriangleMesh *)mesh)->GetAlphas(); }
 
 	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
 		const Matrix4x4 m = motionSystem.Sample(time);
