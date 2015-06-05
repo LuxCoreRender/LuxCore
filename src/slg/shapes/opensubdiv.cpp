@@ -33,31 +33,37 @@ struct OpenSubdivVertex {
 	OpenSubdivVertex() { }
 
 	OpenSubdivVertex(OpenSubdivVertex const &src) {
-		position[0] = src.position[0];
-		position[1] = src.position[1];
-		position[2] = src.position[2];
-	}
-
-	OpenSubdivVertex(Point const &src) {
-		position[0] = src.x;
-		position[1] = src.y;
-		position[2] = src.z;
+		pos = src.pos;
+		normal = src.normal;
+		uv = src.uv;
+		col = src.col;
+		alpha = src.alpha;
 	}
 
 	void Clear(void * = 0) {
-		position[0] = position[1] = position[2] = 0.f;
+		pos = Point();
+		normal = Normal();
+		uv = UV();
+		col = Spectrum();
+		alpha = 0.f;
 	}
 
 	void AddWithWeight(OpenSubdivVertex const &src, float weight) {
-		position[0] += weight * src.position[0];
-		position[1] += weight * src.position[1];
-		position[2] += weight * src.position[2];
+		pos += weight * src.pos;
+		normal += weight * src.normal;
+		uv += weight * src.uv;
+		col += weight * src.col;
+		alpha += weight * src.alpha;
 	}
 
 	void AddVaryingWithWeight(OpenSubdivVertex const &, float) {
 	}
 
-	float position[3];
+	Point pos;
+	Normal normal;
+	UV uv;
+	Spectrum col;
+	float alpha;
 };
 
 OpenSubdivShape::OpenSubdivShape(ExtMesh *m) : Shape() {
@@ -97,24 +103,49 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	// be the sum of all children vertices up to the highest level of refinement.
 	std::vector<OpenSubdivVertex> vertBuffer(refiner->GetNumVerticesTotal());
 
-	// Initialize coarse mesh positions
+	// Initialize coarse mesh data
 	const u_int nCoarseVerts = mesh->GetTotalVertexCount();
-	copy(mesh->GetVertices(), mesh->GetVertices() + mesh->GetTotalVertexCount(), vertBuffer.begin());
+	const Point *meshVerts = mesh->GetVertices();
+	const Normal *meshNorms = mesh->GetNormals();
+	const UV *meshUVs = mesh->GetUVs();
+	const Spectrum *meshCols = mesh->GetCols();
+	const float *meshAlphas = mesh->GetAlphas();
+	for (u_int i = 0; i < nCoarseVerts; ++i) {
+		OpenSubdivVertex &v = vertBuffer[i];
+		
+		v.pos = meshVerts[i];
+		v.normal = meshNorms ? meshNorms[i] : Normal();
+		v.uv = meshUVs ? meshUVs[i] : UV();
+		v.col = meshCols ? meshCols[i] : Spectrum();
+		v.alpha = meshAlphas ? meshAlphas[i] : 0.f;
+	}
 
 	// Interpolate vertex data
     refiner->Interpolate(&vertBuffer[0], &vertBuffer[0] + nCoarseVerts);
 
 	// Get interpolated vertices
 	const u_int meshVertCount = refiner->GetNumVertices(maxLevel);
+
 	Point *interpolatedVerts = TriangleMesh::AllocVerticesBuffer(meshVertCount);
+	Normal *interpolatedNorms = meshNorms ? (new Normal[meshVertCount]) : NULL;
+	UV *interpolatedUVs = meshUVs ? (new UV[meshVertCount]) : NULL;
+	Spectrum *interpolatedCols = meshCols ? (new Spectrum[meshVertCount]) : NULL;
+	float *interpolatedAlphas = meshAlphas ? (new float[meshVertCount]) : NULL;
+
 	for (u_int level = 0, firstVert = 0; level <= maxLevel; ++level) {
 		if (level == maxLevel) {
 			for (int vert = 0; vert < refiner->GetNumVertices(maxLevel); ++vert) {
 				const OpenSubdivVertex &v = vertBuffer[firstVert + vert];
 
-				interpolatedVerts[vert].x = v.position[0];
-				interpolatedVerts[vert].y = v.position[1];
-				interpolatedVerts[vert].z = v.position[2];
+				interpolatedVerts[vert] = v.pos;
+				if (interpolatedNorms)
+					interpolatedNorms[vert] = Normalize(v.normal);
+				if (interpolatedUVs)
+					interpolatedUVs[vert] = v.uv;
+				if (interpolatedCols)
+					interpolatedCols[vert] = v.col;
+				if (interpolatedAlphas)
+					interpolatedAlphas[vert] = v.alpha;
 			}
 		} else
 			firstVert += refiner->GetNumVertices(level);
@@ -147,18 +178,10 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	// I can free the refiner
 	delete refiner;
 
-	// For some debugging
-	Spectrum *meshCols = new Spectrum[meshVertCount];
-	RandomGenerator rnd(13);
-	for (u_int i = 0; i < meshVertCount; ++i) {
-		meshCols[i].c[0] = rnd.floatValue();
-		meshCols[i].c[1] = rnd.floatValue();
-		meshCols[i].c[2] = rnd.floatValue();
-	}
-
 	// Allocated the interpolated mesh	
 	ExtTriangleMesh *interpolatedMesh = new ExtTriangleMesh(meshVertCount, meshTriCount,
-		interpolatedVerts, interpolatedTris, NULL, NULL, meshCols);
+		interpolatedVerts, interpolatedTris, interpolatedNorms, interpolatedUVs,
+		interpolatedCols, interpolatedAlphas);
 
 	// Free source mesh
 	delete mesh;

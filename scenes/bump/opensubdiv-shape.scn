@@ -1,13 +1,13 @@
 scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
 ################################################################################
-scene.textures.hitpoint_color.type = hitpointcolor
+#scene.textures.hitpoint_color.type = hitpointcolor
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 20. 20. 20.
 scene.materials.mat_light.kd = 0.0 0.0 0.0
 #scene.materials.mat_red.type = matte
-#scene.materials.mat_red.kd = 0.8 0.0 0.0
-scene.materials.mat_red.kd = hitpoint_color
+scene.materials.mat_red.kd = 0.8 0.0 0.0
+#scene.materials.mat_red.kd = hitpoint_color
 scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.8 0.8 0.8
 ################################################################################
