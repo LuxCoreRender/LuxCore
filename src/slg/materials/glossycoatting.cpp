@@ -68,10 +68,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 	const float cosi = fabsf(localLightDir.z);
 	const float coso = fabsf(localEyeDir.z);
 
-	// If Dot(woW, ng) is too small, set sideTest to 0 to discard the result
-	// and avoid numerical instability
-	const float cosWi = Dot(frame.ToWorld(localLightDir), hitPoint.geometryN);
-	const float sideTest = fabsf(cosWi) < MachineEpsilon::E(1.f) ? 0.f : Dot(frame.ToWorld(localEyeDir), hitPoint.geometryN) / cosWi;
+	const float sideTest = Dot(frame.ToWorld(localEyeDir), hitPoint.geometryN) * Dot(frame.ToWorld(localLightDir), hitPoint.geometryN);
 	if (sideTest > 0.f) {
 		HitPoint hitPointBase(hitPoint);
 		matBase->Bump(&hitPointBase, 1.f);
@@ -243,7 +240,6 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
-		*event = GLOSSY | REFLECT;
 
 		coatingF *= coatingPdf;
 
@@ -253,8 +249,8 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		const Vector localLightDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? localFixedDir : *localSampledDir));
 		const Vector localEyeDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? *localSampledDir : localFixedDir));
 
-		BSDFEvent eventBase;
-		baseF = matBase->Evaluate(hitPointBase, localLightDir, localEyeDir, &eventBase, &basePdf);
+		baseF = matBase->Evaluate(hitPointBase, localLightDir, localEyeDir, event, &basePdf);
+		*event = GLOSSY | REFLECT;
 	}
 
 	// Absorption

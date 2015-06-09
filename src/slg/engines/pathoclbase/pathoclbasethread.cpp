@@ -1087,6 +1087,18 @@ void PathOCLBaseRenderThread::InitKernels() {
 		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_MULTIBOUNCE))
 			ss << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE";
 	}
+	if (cscene->IsMaterialCompiled(GLOSSYCOATING)) {
+		ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING";
+
+		if (cscene->IsMaterialCompiled(GLOSSYCOATING_ANISOTROPIC))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC";
+		if (cscene->IsMaterialCompiled(GLOSSYCOATING_ABSORPTION))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION";
+		if (cscene->IsMaterialCompiled(GLOSSYCOATING_INDEX))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX";
+		if (cscene->IsMaterialCompiled(GLOSSYCOATING_MULTIBOUNCE))
+			ss << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE";
+	}
 
 	if (cscene->RequiresPassThrough())
 		ss << " -D PARAM_HAS_PASSTHROUGH";
