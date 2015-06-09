@@ -733,6 +733,41 @@ void CompiledScene::CompileMaterials() {
 					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_MULTIBOUNCE);
 				break;
 			}
+			case GLOSSYCOATING: {
+				const GlossyCoatingMaterial *gcm = static_cast<GlossyCoatingMaterial *>(m);
+
+				mat->type = slg::ocl::GLOSSYCOATING;
+				mat->glossycoating.matBaseIndex = scene->matDefs.GetMaterialIndex(gcm->GetMaterialBase());
+				mat->glossycoating.ksTexIndex = scene->texDefs.GetTextureIndex(gcm->GetKs());
+
+				const Texture *nuTex = gcm->GetNu();
+				const Texture *nvTex = gcm->GetNv();
+				mat->glossycoating.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
+				mat->glossycoating.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
+				// Check if it an anisotropic material
+				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
+						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
+					usedMaterialTypes.insert(GLOSSYCOATING_ANISOTROPIC);
+
+				const Texture *depthTex = gcm->GetDepth();
+				mat->glossycoating.kaTexIndex = scene->texDefs.GetTextureIndex(gcm->GetKa());
+				mat->glossycoating.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
+				// Check if depth is just 0.0
+				if (IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f))
+					usedMaterialTypes.insert(GLOSSYCOATING_ABSORPTION);
+
+				const Texture *indexTex = gcm->GetIndex();
+				mat->glossycoating.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
+				// Check if index is just 0.0
+				if (IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f))
+					usedMaterialTypes.insert(GLOSSYCOATING_INDEX);
+
+				mat->glossycoating.multibounce = gcm->IsMultibounce() ? 1 : 0;
+				// Check if multibounce is enabled
+				if (gcm->IsMultibounce())
+					usedMaterialTypes.insert(GLOSSYCOATING_MULTIBOUNCE);
+				break;
+			}
 			//------------------------------------------------------------------
 			// Volumes
 			//------------------------------------------------------------------
@@ -2919,6 +2954,27 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSourceStandardImplBump(source, i);
 				break;
 			}
+			case slg::ocl::GLOSSYCOATING: {
+				// GLOSSYCOATING material uses a template .cl file
+				string glossycoatingSrc = slg::ocl::KernelSource_materialdefs_template_glossycoating;
+				boost::replace_all(glossycoatingSrc, "<<CS_GLOSSYCOATING_MATERIAL_INDEX>>", ToString(i));
+				boost::replace_all(glossycoatingSrc, "<<CS_MAT_BASE_MATERIAL_INDEX>>", ToString(mat->glossycoating.matBaseIndex));
+				boost::replace_all(glossycoatingSrc, "<<CS_KS_TEXTURE_INDEX>>", ToString(mat->glossycoating.ksTexIndex));
+				boost::replace_all(glossycoatingSrc, "<<CS_NU_TEXTURE_INDEX>>", ToString(mat->glossycoating.nuTexIndex));
+				boost::replace_all(glossycoatingSrc, "<<CS_NV_TEXTURE_INDEX>>", ToString(mat->glossycoating.nvTexIndex));
+				boost::replace_all(glossycoatingSrc, "<<CS_KA_TEXTURE_INDEX>>", ToString(mat->glossycoating.kaTexIndex));
+				boost::replace_all(glossycoatingSrc, "<<CS_DEPTH_TEXTURE_INDEX>>", ToString(mat->glossycoating.depthTexIndex));
+				boost::replace_all(glossycoatingSrc, "<<CS_INDEX_TEXTURE_INDEX>>", ToString(mat->glossycoating.indexTexIndex));
+				if (mat->glossycoating.multibounce)
+					boost::replace_all(glossycoatingSrc, "<<CS_MB_FLAG>>", "true");
+				else
+					boost::replace_all(glossycoatingSrc, "<<CS_MB_FLAG>>", "false");
+				source << glossycoatingSrc;
+
+				// Material_IndexN_Bump()
+				AddMaterialSourceStandardImplBump(source, i);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown material in CompiledScene::GetMaterialsEvaluationSourceCode(): " + boost::lexical_cast<string>(mat->type));
 				break;
@@ -3006,6 +3062,12 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"				MATERIALS_PARAM);\n"
 			"	else\n"
 			"#endif\n"
+			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
+			"	if (material->type == GLOSSYCOATING)\n"
+			"		result = Material_GetEmittedRadianceWithMix(matIndex, hitPoint, oneOverPrimitiveArea\n"
+			"				MATERIALS_PARAM);\n"
+			"	else\n"
+			"#endif\n"
 			"		result = Material_GetEmittedRadianceNoMix(material, hitPoint\n"
 			"				TEXTURES_PARAM);\n"
 			"	return 	VLOAD3F(material->emittedFactor.c) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;\n"
@@ -3017,6 +3079,13 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"	__global const Material *material = &mats[matIndex];\n"
 			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
 			"	if (material->type == MIX)\n"
+			"		Material_BumpWithMix(matIndex, hitPoint,\n"
+			"                weight\n"
+			"                MATERIALS_PARAM);\n"
+			"	else\n"
+			"#endif\n"
+			"#if defined (PARAM_ENABLE_MAT_GLOSSYCOATING)\n"
+			"	if (material->type == GLOSSYCOATING)\n"
 			"		Material_BumpWithMix(matIndex, hitPoint,\n"
 			"                weight\n"
 			"                MATERIALS_PARAM);\n"
@@ -3044,6 +3113,15 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"			MATERIALS_PARAM);\n"
 			"	else\n"
 			"#endif\n"
+			"#if defined (PARAM_ENABLE_MAT_GLOSSYCOATING)\n"
+			"	if (material->type == GLOSSYCOATING)\n"
+			"		return Material_GetInteriorVolumeWithMix(matIndex, hitPoint\n"
+			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
+			"			, passThroughEvent\n"
+			"#endif\n"
+			"			MATERIALS_PARAM);\n"
+			"	else\n"
+			"#endif\n"
 			"		return Material_GetInteriorVolumeNoMix(material);\n"
 			"}\n"
 			"uint Material_GetExteriorVolume(const uint matIndex,\n"
@@ -3055,6 +3133,15 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"	__global const Material *material = &mats[matIndex];\n"
 			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
 			"	if (material->type == MIX)\n"
+			"		return Material_GetExteriorVolumeWithMix(matIndex, hitPoint\n"
+			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
+			"			, passThroughEvent\n"
+			"#endif\n"
+			"			MATERIALS_PARAM);\n"
+			"	else\n"
+			"#endif\n"
+			"#if defined (PARAM_ENABLE_MAT_GLOSSYCOATING)\n"
+			"	if (material->type == GLOSSYCOATING)\n"
 			"		return Material_GetExteriorVolumeWithMix(matIndex, hitPoint\n"
 			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
 			"			, passThroughEvent\n"
@@ -3199,6 +3286,7 @@ bool CompiledScene::RequiresPassThrough() const {
 			IsMaterialCompiled(ROUGHGLASS) ||
 			IsMaterialCompiled(CARPAINT) ||
 			IsMaterialCompiled(GLOSSYTRANSLUCENT) ||
+			IsMaterialCompiled(GLOSSYCOATING) ||
 			IsMaterialCompiled(CLEAR_VOL) ||
 			IsMaterialCompiled(HOMOGENEOUS_VOL) ||
 			IsMaterialCompiled(HETEROGENEOUS_VOL));
