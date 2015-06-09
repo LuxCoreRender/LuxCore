@@ -297,6 +297,8 @@ StrendsShape::StrendsShape(const Scene *scene,
 	const cyHairFileHeader &header = hairFile->GetHeader();
 	if (header.hair_count == 0)
 		throw runtime_error("Empty strands shape are not supported");
+	if (useCameraPosition && !scene->camera)
+		throw runtime_error("The scene camera must be defined in order to enable strands useCameraPosition flag");
 
 	SLG_LOG("Refining " << header.hair_count << " strands");
 	const double start = WallClockTime();
