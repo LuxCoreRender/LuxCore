@@ -86,9 +86,9 @@ float3 Glossy2Material_ConstEvaluate(
 #endif
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(nuVal, 6e-3f, 1.f);
+	const float u = clamp(nuVal, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-	const float v = clamp(nvVal, 6e-3f, 1.f);
+	const float v = clamp(nvVal, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -182,9 +182,9 @@ float3 Glossy2Material_ConstSample(
 #endif
 	ks = Spectrum_Clamp(ks);
 
-	const float u = clamp(nuVal, 6e-3f, 1.f);
+	const float u = clamp(nuVal, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-	const float v = clamp(nvVal, 6e-3f, 1.f);
+	const float v = clamp(nvVal, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);

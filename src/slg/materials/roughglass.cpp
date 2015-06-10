@@ -43,8 +43,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -133,8 +133,8 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 	if (isKtBlack && isKrBlack)
 		return Spectrum();
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -251,8 +251,8 @@ void RoughGlassMaterial::Pdf(const HitPoint &hitPoint,
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 	const float ntc = nt / nc;
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);

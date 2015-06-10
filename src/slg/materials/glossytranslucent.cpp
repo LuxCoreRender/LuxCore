@@ -92,16 +92,16 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		if (localEyeDir.z >= 0.f) {
 			ks = Ks->GetSpectrumValue(hitPoint);
 			i = index->GetFloatValue(hitPoint);
-			u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-			v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+			v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 			alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
 			d = depth->GetFloatValue(hitPoint);
 			mbounce = multibounce;
 		} else {
 			ks = Ks_bf->GetSpectrumValue(hitPoint);
 			i = index_bf->GetFloatValue(hitPoint);
-			u = Clamp(nu_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
-			v = Clamp(nv_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			u = Clamp(nu_bf->GetFloatValue(hitPoint), 0.f, 1.f);
+			v = Clamp(nv_bf->GetFloatValue(hitPoint), 0.f, 1.f);
 			alpha = Ka_bf->GetSpectrumValue(hitPoint).Clamp();
 			d = depth_bf->GetFloatValue(hitPoint);
 			mbounce = multibounce_bf;
@@ -168,16 +168,16 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		if (localFixedDir.z >= 0.f) {
 			ks = Ks->GetSpectrumValue(hitPoint);
 			i = index->GetFloatValue(hitPoint);
-			u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-			v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+			v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 			alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
 			d = depth->GetFloatValue(hitPoint);
 			mbounce = multibounce;
 		} else {
 			ks = Ks_bf->GetSpectrumValue(hitPoint);
 			i = index_bf->GetFloatValue(hitPoint);
-			u = Clamp(nu_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
-			v = Clamp(nv_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			u = Clamp(nu_bf->GetFloatValue(hitPoint), 0.f, 1.f);
+			v = Clamp(nv_bf->GetFloatValue(hitPoint), 0.f, 1.f);
 			alpha = Ka_bf->GetSpectrumValue(hitPoint).Clamp();
 			d = depth_bf->GetFloatValue(hitPoint);
 			mbounce = multibounce_bf;
@@ -291,13 +291,13 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		if (localEyeDir.z >= 0.f) {
 			ks = Ks->GetSpectrumValue(hitPoint);
 			i = index->GetFloatValue(hitPoint);
-			u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-			v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+			v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 		} else {
 			ks = Ks_bf->GetSpectrumValue(hitPoint);
 			i = index_bf->GetFloatValue(hitPoint);
-			u = Clamp(nu_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
-			v = Clamp(nv_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			u = Clamp(nu_bf->GetFloatValue(hitPoint), 0.f, 1.f);
+			v = Clamp(nv_bf->GetFloatValue(hitPoint), 0.f, 1.f);
 		}
 
 		if (i > 0.f) {
