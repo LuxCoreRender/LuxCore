@@ -91,8 +91,8 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		}
 		ks = ks.Clamp();
 
-		const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-		const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+		const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+		const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 		const float u2 = u * u;
 		const float v2 = v * v;
 		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -197,8 +197,8 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	const float wCoating = !(localFixedDir.z > 0.f) ? 0.f : SchlickBSDF_CoatingWeight(ks, localFixedDir);
 	const float wBase = 1.f - wCoating;
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -324,8 +324,8 @@ void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
 	}
 	ks = ks.Clamp();
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);

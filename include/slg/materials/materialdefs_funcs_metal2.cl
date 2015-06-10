@@ -50,9 +50,9 @@ float3 Metal2Material_ConstEvaluate(
 		const float vVal,
 #endif
 		const float3 nVal, const float3 kVal) {
-	const float u = clamp(uVal, 6e-3f, 1.f);
+	const float u = clamp(uVal, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
-	const float v = clamp(vVal, 6e-3f, 1.f);
+	const float v = clamp(vVal, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -93,9 +93,9 @@ float3 Metal2Material_ConstSample(
 			(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
-	const float u = clamp(uVal, 6e-3f, 1.f);
+	const float u = clamp(uVal, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
-	const float v = clamp(vVal, 6e-3f, 1.f);
+	const float v = clamp(vVal, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
