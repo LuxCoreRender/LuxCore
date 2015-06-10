@@ -160,8 +160,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
-		const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_ALPHA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_ALPHA_TEXTURE_INDEX>>],
+		const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
+			&texs[<<CS_KA_TEXTURE_INDEX>>],
 			hitPoint
 			TEXTURES_PARAM));
 		const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
@@ -248,8 +248,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
-		const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_ALPHA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_ALPHA_TEXTURE_INDEX>>],
+		const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
+			&texs[<<CS_KA_TEXTURE_INDEX>>],
 			hitPoint
 			TEXTURES_PARAM));
 		const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
@@ -436,8 +436,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	const float cosi = fabs((*sampledDir).z);
 	const float coso = fabs(fixedDir.z);
 
-	const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_ALPHA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_ALPHA_TEXTURE_INDEX>>],
+	const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
+			&texs[<<CS_KA_TEXTURE_INDEX>>],
 			hitPoint
 			TEXTURES_PARAM));
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
