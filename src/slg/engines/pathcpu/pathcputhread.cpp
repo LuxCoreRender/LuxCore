@@ -128,7 +128,7 @@ void PathCPURenderThread::DirectHitFiniteLight(const BSDFEvent lastBSDFEvent,
 		} else
 			weight = 1.f;
 
-		sampleResult->AddEmission(bsdf.GetLightID(), pathThroughput, weight* emittedRadiance);
+		sampleResult->AddEmission(bsdf.GetLightID(), pathThroughput, weight * emittedRadiance);
 	}
 }
 
