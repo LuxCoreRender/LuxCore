@@ -431,9 +431,9 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		const BSDFEvent materialEventTypes = bsdf.GetEventTypes();
 		sampleResult->lastPathVertex = 
 				(engine->maxPathDepth.depth <= 1) ||
-				(!((engine->maxPathDepth.diffuseDepth > 0) && (materialEventTypes & DIFFUSE)) &&
-				!((engine->maxPathDepth.glossyDepth > 0) && (materialEventTypes & GLOSSY)) &&
-				!((engine->maxPathDepth.specularDepth > 0) && (materialEventTypes & SPECULAR)));
+				((engine->maxPathDepth.diffuseDepth <= 1) && (materialEventTypes & DIFFUSE)) ||
+				((engine->maxPathDepth.glossyDepth <= 1) && (materialEventTypes & GLOSSY)) ||
+				((engine->maxPathDepth.specularDepth <= 1) && (materialEventTypes & SPECULAR));
 
 		if (!bsdf.IsDelta())
 			DirectLightSamplingALL(eyeRay.time, engine->firstVertexLightSampleCount, rndGen,

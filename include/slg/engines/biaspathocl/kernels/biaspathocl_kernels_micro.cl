@@ -354,9 +354,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 		MATERIALS_PARAM);
 	sampleResult->lastPathVertex = 
 			(PARAM_DEPTH_MAX <= 1) ||
-			(!((PARAM_DEPTH_DIFFUSE_MAX > 0) && (materialEventTypes & DIFFUSE)) &&
-			!((PARAM_DEPTH_GLOSSY_MAX > 0) && (materialEventTypes & GLOSSY)) &&
-			!((PARAM_DEPTH_SPECULAR_MAX > 0) && (materialEventTypes & SPECULAR)));
+			((PARAM_DEPTH_DIFFUSE_MAX <= 1) && (materialEventTypes & DIFFUSE)) ||
+			((PARAM_DEPTH_GLOSSY_MAX <= 1) && (materialEventTypes & GLOSSY)) ||
+			((PARAM_DEPTH_SPECULAR_MAX <= 1) && (materialEventTypes & DIFFUSE));
 	task->materialEventTypesPathVertex1 = materialEventTypes;
 
 	// Only if it is not a SPECULAR BSDF
