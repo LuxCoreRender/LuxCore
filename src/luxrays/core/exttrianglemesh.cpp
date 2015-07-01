@@ -79,7 +79,7 @@ void ExtMesh::GetDifferentials(const float time, const u_int triIndex, const Nor
 		*dpdv = Cross(shadeNormal, Cross(ts, shadeNormal));
 
 		if (HasNormals()) {
-			// Using GetNormal() in order to do all computation relative to
+			// Using GetShadeNormal() in order to do all computation relative to
 			// the global coordinate system.
 			const Normal n0 = GetShadeNormal(time, tri.v[0]);
 			const Normal n1 = GetShadeNormal(time, tri.v[1]);

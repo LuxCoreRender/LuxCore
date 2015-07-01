@@ -79,11 +79,13 @@ void ExtMesh_GetDifferentials(
 	} else {
 		const float invdet = 1.f / determinant;
 
+		// Vertices expressed in local coordinates
 		const float3 p0 = VLOAD3F(&iVertices[vi0].x);
 		const float3 p1 = VLOAD3F(&iVertices[vi1].x);
 		const float3 p2 = VLOAD3F(&iVertices[vi2].x);
-		const float3 dp1 = Transform_InvApplyVector(&meshDesc->trans, p0 - p2);
-		const float3 dp2 = Transform_InvApplyVector(&meshDesc->trans, p1 - p2);
+		// Transform to global coordinates
+		const float3 dp1 = Transform_ApplyVector(&meshDesc->trans, p0 - p2);
+		const float3 dp2 = Transform_ApplyVector(&meshDesc->trans, p1 - p2);
 
 		//------------------------------------------------------------------
 		// Compute dpdu and dpdv
