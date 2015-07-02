@@ -62,7 +62,8 @@ void Embree_error_handler(const RTCError code, const char *str) {
 boost::mutex EmbreeAccel::initMutex;
 u_int EmbreeAccel::initCount = 0;
 
-EmbreeAccel::EmbreeAccel(const Context *context) : ctx(context) {
+EmbreeAccel::EmbreeAccel(const Context *context) : ctx(context),
+		uniqueRTCSceneByMesh(MeshPtrCompare) {
 	embreeScene = NULL;
 
 	// Initialize Embree
@@ -75,8 +76,14 @@ EmbreeAccel::EmbreeAccel(const Context *context) : ctx(context) {
 }
 
 EmbreeAccel::~EmbreeAccel() {
-	if (embreeScene)
+	if (embreeScene) {
 		rtcDeleteScene(embreeScene);
+
+		// I have to free all Embree scene used for instances
+		std::pair<const Mesh *, RTCScene> elem;
+		BOOST_FOREACH(elem, uniqueRTCSceneByMesh)
+			rtcDeleteScene(elem.second);
+	}
 
 	// Shutdown Embree if I was the last one
 	boost::unique_lock<boost::mutex> lock(initMutex);
@@ -169,8 +176,6 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 
 	embreeScene = rtcNewScene(RTC_SCENE_STATIC, RTC_INTERSECT1);
 
-	std::map<const Mesh *, RTCScene, bool (*)(const Mesh *, const Mesh *)> uniqueRTCSceneByMesh(MeshPtrCompare);
-
 	BOOST_FOREACH(const Mesh *mesh, meshes) {
 		switch (mesh->GetType()) {
 			case TYPE_TRIANGLE:
@@ -214,7 +219,7 @@ void EmbreeAccel::Init(const std::deque<const Mesh *> &meshes,
 	}
 
 	rtcCommit(embreeScene);
-	
+
 	LR_LOG(ctx, "EmbreeAccel build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 }
 
