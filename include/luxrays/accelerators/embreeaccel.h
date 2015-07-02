@@ -61,6 +61,7 @@ private:
 	const Context *ctx;
 
 	RTCScene embreeScene;
+	std::map<const Mesh *, RTCScene, bool (*)(const Mesh *, const Mesh *)> uniqueRTCSceneByMesh;
 	// Used to normalize between 0.f and 1.f
 	float minTime, maxTime, timeScale;
 };
