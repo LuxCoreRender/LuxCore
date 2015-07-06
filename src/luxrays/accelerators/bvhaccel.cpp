@@ -415,6 +415,7 @@ void BVHAccel::FreeHierarchy(BVHAccelTreeNode *node) {
 	if (node) {
 		FreeHierarchy(node->leftChild);
 		FreeHierarchy(node->rightSibling);
+		delete node;
 	}
 }
 
@@ -440,8 +441,12 @@ BVHAccelTreeNode *BVHAccel::BuildHierarchy(u_int *nNodes, const BVHParams &param
 	float splitValue;
 
 	*nNodes += 1;
-	if (end - begin == 1) // Only a single item in list so return it
-		return list[begin];
+	if (end - begin == 1) {
+		// Only a single item in list so return it
+		BVHAccelTreeNode *node = new BVHAccelTreeNode();
+		*node = *(list[begin]);
+		return node;
+	}
 
 	BVHAccelTreeNode *parent = new BVHAccelTreeNode();
 	parent->leftChild = NULL;
@@ -469,12 +474,11 @@ BVHAccelTreeNode *BVHAccel::BuildHierarchy(u_int *nNodes, const BVHParams &param
 		}
 	}
 
-	BVHAccelTreeNode *child, *lastChild;
 	// Left Child
-	child = BuildHierarchy(nNodes, params, list, splits[0], splits[1], splitAxis);
+	BVHAccelTreeNode *child = BuildHierarchy(nNodes, params, list, splits[0], splits[1], splitAxis);
 	parent->leftChild = child;
 	parent->bbox = child->bbox;
-	lastChild = child;
+	BVHAccelTreeNode *lastChild = child;
 
 	// Add remaining children
 	for (u_int i = 1; i < splits.size() - 1; i++) {

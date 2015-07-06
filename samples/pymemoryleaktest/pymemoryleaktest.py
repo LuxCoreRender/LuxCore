@@ -58,6 +58,7 @@ def SimpleRender():
 
 	# Change the render engine to PATHCPU
 	props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+	#props.Set(pyluxcore.Property("opencl.devices.select", ["0100"]))
 
 	config = pyluxcore.RenderConfig(props)
 	session = pyluxcore.RenderSession(config)
@@ -159,6 +160,7 @@ def SimpleRenderTest():
 ################################################################################
 
 def LogHandler(msg):
+	#print(msg)
 	# Nothing to do
 	pass
 
