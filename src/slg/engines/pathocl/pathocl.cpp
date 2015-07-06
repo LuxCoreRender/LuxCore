@@ -55,14 +55,11 @@ using namespace slg;
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
 		const bool realTime) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime) {
+	sampler = NULL;
+	filter = NULL;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
-	if (editMode)
-		EndSceneEdit(EditActionList());
-	if (started)
-		Stop();
-
 	delete sampler;
 	delete filter;
 }
