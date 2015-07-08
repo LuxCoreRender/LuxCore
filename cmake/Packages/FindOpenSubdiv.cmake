@@ -16,17 +16,31 @@
 # limitations under the License.
 ################################################################################
 
-################################################################################
-#
-# LuxCore library demo
-#
-################################################################################
+# Try to find OpenSubdiv library and include path.
 
-set(LUXCORELIBDEMO_SRCS
-	luxcoredemo.cpp
-	)
+FIND_PATH(OPENSUBDIV_INCLUDE_PATH opensubdiv/version.h
+	${OPENSUBDIV_ROOT}
+	/usr/include
+	/usr/local/include
+	/sw/include
+	/opt/local/include
+	DOC "The directory where opensubdiv/version.h resides")
+FIND_LIBRARY(OPENSUBDIV_LIBRARY
+	NAMES osdCPU
+	PATHS
+	${OPENSUBDIV_LIBRARYDIR}
+	/usr/lib64
+	/usr/lib
+	/usr/local/lib64
+	/usr/local/lib
+	/sw/lib
+	/opt/local/lib
+	DOC "The OpenSubdiv library")
 
-add_executable(luxcoredemo ${LUXCORELIBDEMO_SRCS})
-add_definitions(${VISIBILITY_FLAGS})
+IF (OPENSUBDIV_INCLUDE_PATH)
+	SET(OPENSUBDIV_FOUND 1 CACHE STRING "Set to 1 if OpenSubdiv is found, 0 otherwise")
+ELSE (OPENSUBDIV_INCLUDE_PATH)
+	SET(OPENSUBDIV_FOUND 0 CACHE STRING "Set to 1 if OpenSubdiv is found, 0 otherwise")
+ENDIF (OPENSUBDIV_INCLUDE_PATH)
 
-TARGET_LINK_LIBRARIES(luxcoredemo luxcore smallluxgpu luxrays ${OPENSUBDIV_LIBRARY} ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+MARK_AS_ADVANCED(OPENSUBDIV_FOUND)

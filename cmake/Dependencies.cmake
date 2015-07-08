@@ -61,13 +61,13 @@ set(Boost_ADDITIONAL_VERSIONS "1.47.0" "1.46.1" "1.46" "1.46.0" "1.45" "1.45.0" 
 set(LUXRAYS_BOOST_COMPONENTS thread program_options filesystem serialization iostreams regex system python)
 find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 if (NOT Boost_FOUND)
-        # Try again with the other type of libs
-        if(Boost_USE_STATIC_LIBS)
-                set(Boost_USE_STATIC_LIBS OFF)
-        else()
-                set(Boost_USE_STATIC_LIBS ON)
-        endif()
-        find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
+	# Try again with the other type of libs
+	if(Boost_USE_STATIC_LIBS)
+		set(Boost_USE_STATIC_LIBS OFF)
+	else()
+		set(Boost_USE_STATIC_LIBS ON)
+	endif()
+	find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 endif()
 
 if (Boost_FOUND)
@@ -79,7 +79,7 @@ if (Boost_FOUND)
 		ADD_DEFINITIONS(-DBOOST_STATIC_LIB)
 		ADD_DEFINITIONS(-DBOOST_PYTHON_STATIC_LIB)
 	endif()
-endif ()
+endif()
 
 
 # OpenGL
@@ -97,7 +97,7 @@ endif()
 # GLEW
 if (GLEW_FOUND)
 	include_directories(SYSTEM ${GLEW_INCLUDE_PATH})
-endif ()
+endif()
 
 set(GLUT_ROOT                  "${GLUT_SEARCH_PATH}")
 find_package(GLUT)
@@ -105,7 +105,7 @@ find_package(GLUT)
 # GLUT
 if (GLUT_FOUND)
 	include_directories(SYSTEM ${GLUT_INCLUDE_PATH})
-endif ()
+endif()
 
 # OpenCL
 set(OPENCL_ROOT                "${OPENCL_SEARCH_PATH}")
@@ -113,7 +113,15 @@ find_package(OpenCL)
 
 if (OPENCL_FOUND)
 	include_directories(SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
-endif ()
+endif()
+
+# OpenSubdiv
+set(OPENSUBDIV_ROOT             "${OPENSUBDIV_SEARCH_PATH}")
+find_package(OpenSubdiv)
+
+if (OPENSUBDIV_FOUND)
+	include_directories(SYSTEM ${OPENSUBDIV_INCLUDE_PATH})
+endif()
 
 # Intel Embree
 set(EMBREE_ROOT                "${EMBREE_SEARCH_PATH}")
@@ -121,7 +129,7 @@ find_package(Embree)
 
 if (EMBREE_FOUND)
 	include_directories(SYSTEM ${EMBREE_INCLUDE_PATH})
-endif ()
+endif()
 
 # OpenMP
 if(NOT APPLE)
