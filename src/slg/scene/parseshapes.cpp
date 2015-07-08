@@ -30,6 +30,7 @@
 #include "slg/shapes/pointiness.h"
 #include "slg/shapes/strands.h"
 #include "slg/shapes/opensubdiv.h"
+#include "slg/shapes/harlequin.h"
 
 using namespace std;
 using namespace luxrays;
@@ -226,6 +227,12 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 		const string meshName = props.Get(Property(propName + ".ply")("")).Get<string>();
 
 		shape = new OpenSubdivShape(meshName);
+	} else if (shapeType == "harlequin") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in an harlequin shape: " + shapeName);
+
+		shape = new HarlequinShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

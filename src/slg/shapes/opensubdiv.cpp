@@ -21,7 +21,6 @@
 
 #include "slg/shapes/opensubdiv.h"
 #include "slg/scene/scene.h"
-#include "slg/samplers/random.h"
 
 using namespace std;
 using namespace luxrays;
