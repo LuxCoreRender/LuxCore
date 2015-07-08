@@ -16,7 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <opensubdiv/far/topologyRefinerFactory.h>
+#include <opensubdiv/far/topologyDescriptor.h>
+#include <opensubdiv/far/primvarRefiner.h>
 
 #include "slg/shapes/opensubdiv.h"
 #include "slg/scene/scene.h"
@@ -84,7 +85,7 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	Sdc::Options options;
 	options.SetVtxBoundaryInterpolation(Sdc::Options::VTX_BOUNDARY_EDGE_ONLY);
 
-	Far::TopologyRefinerFactoryBase::TopologyDescriptor desc;
+	Far::TopologyDescriptor desc;
 	desc.numVertices = mesh->GetTotalVertexCount();
 	desc.numFaces = mesh->GetTotalTriangleCount();
 	vector<int> numVertsPerFace(mesh->GetTotalTriangleCount(), 3);
@@ -92,8 +93,8 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	desc.vertIndicesPerFace = (Far::Index *)mesh->GetTriangles();
 
 	// Instantiate a FarTopologyRefiner from the descriptor
-	Far::TopologyRefiner *refiner = Far::TopologyRefinerFactory<Far::TopologyRefinerFactoryBase::TopologyDescriptor>::Create(desc,
-			Far::TopologyRefinerFactory<Far::TopologyRefinerFactoryBase::TopologyDescriptor>::Options(type, options));
+	Far::TopologyRefiner *refiner = Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Create(desc,
+			Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Options(type, options));
 
 	// Uniformly refine the topology up to 'maxlevel'
 	const u_int maxLevel = 3;
@@ -120,11 +121,22 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 		v.alpha = meshAlphas ? meshAlphas[i] : 0.f;
 	}
 
-	// Interpolate vertex data
-    refiner->Interpolate(&vertBuffer[0], &vertBuffer[0] + nCoarseVerts);
+	// Interpolate both vertex and face-varying primvar data
+	Far::PrimvarRefiner primvarRefiner(*refiner);
+
+	OpenSubdivVertex *srcVert = &vertBuffer[0];
+	for (u_int level = 1; level <= maxLevel; ++level) {
+		OpenSubdivVertex *dstVert = srcVert + refiner->GetLevel(level - 1).GetNumVertices();
+
+		primvarRefiner.Interpolate(level, srcVert, dstVert);
+
+		srcVert = dstVert;
+	}
 
 	// Get interpolated vertices
-	const u_int meshVertCount = refiner->GetNumVertices(maxLevel);
+	Far::TopologyLevel const &refLastLevel = refiner->GetLevel(maxLevel);
+	const u_int meshVertCount = refLastLevel.GetNumVertices();
+	const u_int firstOfLastVerts = refiner->GetNumVerticesTotal() - meshVertCount;
 
 	Point *interpolatedVerts = TriangleMesh::AllocVerticesBuffer(meshVertCount);
 	Normal *interpolatedNorms = meshNorms ? (new Normal[meshVertCount]) : NULL;
@@ -132,29 +144,24 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	Spectrum *interpolatedCols = meshCols ? (new Spectrum[meshVertCount]) : NULL;
 	float *interpolatedAlphas = meshAlphas ? (new float[meshVertCount]) : NULL;
 
-	for (u_int level = 0, firstVert = 0; level <= maxLevel; ++level) {
-		if (level == maxLevel) {
-			for (int vert = 0; vert < refiner->GetNumVertices(maxLevel); ++vert) {
-				const OpenSubdivVertex &v = vertBuffer[firstVert + vert];
+	for (u_int vert = 0; vert < meshVertCount; ++vert) {
+		const OpenSubdivVertex &v = vertBuffer[firstOfLastVerts + vert];
 
-				interpolatedVerts[vert] = v.pos;
-				if (interpolatedNorms)
-					interpolatedNorms[vert] = Normalize(v.normal);
-				if (interpolatedUVs)
-					interpolatedUVs[vert] = v.uv;
-				if (interpolatedCols)
-					interpolatedCols[vert] = v.col;
-				if (interpolatedAlphas)
-					interpolatedAlphas[vert] = v.alpha;
-			}
-		} else
-			firstVert += refiner->GetNumVertices(level);
+		interpolatedVerts[vert] = v.pos;
+		if (interpolatedNorms)
+			interpolatedNorms[vert] = Normalize(v.normal);
+		if (interpolatedUVs)
+			interpolatedUVs[vert] = v.uv;
+		if (interpolatedCols)
+			interpolatedCols[vert] = v.col;
+		if (interpolatedAlphas)
+			interpolatedAlphas[vert] = v.alpha;
 	}
 
 	// Check the interpolated triangles count
 	u_int count = 0;
-	for (int face = 0; face < refiner->GetNumFaces(maxLevel); ++face) {
-		Far::ConstIndexArray faceIndices = refiner->GetFaceVertices(maxLevel, face);
+	for (int face = 0; face < refLastLevel.GetNumFaces(); ++face) {
+		Far::ConstIndexArray faceIndices = refLastLevel.GetFaceVertices(face);
 
 		for (int vIndex = 1; vIndex < faceIndices.size(); vIndex += 2)
 			++count;
@@ -163,8 +170,8 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 
 	// Get interpolated vertices
 	Triangle *interpolatedTris = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
-	for (int face = 0, interpolatedIndex = 0; face < refiner->GetNumFaces(maxLevel); ++face) {
-		Far::ConstIndexArray faceIndices = refiner->GetFaceVertices(maxLevel, face);
+	for (int face = 0, interpolatedIndex = 0; face < refLastLevel.GetNumFaces(); ++face) {
+		Far::ConstIndexArray faceIndices = refLastLevel.GetFaceVertices(face);
 
 		for (int vIndex = 1; vIndex < faceIndices.size() - 1; ++vIndex) {
 			interpolatedTris[interpolatedIndex].v[0] = faceIndices[0];

@@ -19,6 +19,7 @@ MESSAGE(STATUS "Using Dade's Linux Configuration settings")
 #SET(OPENIMAGEIO_ROOT_DIR	"/home/david/projects/luxrender-dev/oiio-RB-1.3/dist/linux64")
 #SET(OPENEXR_ROOT			"/usr/local")
 SET(EMBREE_SEARCH_PATH		"/home/david/src/embree-bin-2.4_linux")
+SET(OPENSUBDIV_SEARCH_PATH	"/home/david/src/opensubdiv")
 SET(OPENSUBDIV_LIBRARYDIR	${OPENSUBDIV_SEARCH_PATH}/build/lib")
 
 SET(OPENCL_SEARCH_PATH	$ENV{AMDAPPSDKROOT}")
