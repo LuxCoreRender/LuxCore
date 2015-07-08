@@ -29,6 +29,7 @@
 #include "slg/shapes/meshshape.h"
 #include "slg/shapes/pointiness.h"
 #include "slg/shapes/strands.h"
+#include "slg/shapes/opensubdiv.h"
 
 using namespace std;
 using namespace luxrays;
@@ -221,6 +222,10 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 				adaptiveMaxDepth, adaptiveError,
 				solidSideCount, solidCapBottom, solidCapTop,
 				useCameraPosition);
+	} else if (shapeType == "opensubdiv") {
+		const string meshName = props.Get(Property(propName + ".ply")("")).Get<string>();
+
+		shape = new OpenSubdivShape(meshName);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 
