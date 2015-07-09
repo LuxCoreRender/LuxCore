@@ -201,7 +201,7 @@ class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
 	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) :  InstanceTriangleMesh(m, t) {
 		// The mesh area is compute on demand and cached
-		instancedArea = -1.f;
+		cachedArea = -1.f;
 	}
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}
@@ -250,16 +250,16 @@ public:
 	}
 
 	virtual float GetMeshArea(const float time) const {
-		if (instancedArea < 0.f) {
+		if (cachedArea < 0.f) {
 			float area = 0.f;
 			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
 				area += GetTriangleArea(0.f, i);
 
 			// Cache the result
-			instancedArea = area;
+			cachedArea = area;
 		}
 
-		return instancedArea;
+		return cachedArea;
 	}
 
 	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
@@ -274,23 +274,32 @@ public:
 
 	virtual void WritePly(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->WritePly(fileName); }
 
+	virtual void ApplyTransform(const Transform &t) {
+		InstanceTriangleMesh::ApplyTransform(t);
+
+		// Invalidate the cached result
+		cachedArea = -1.f;
+	}
+
 	const Transform &GetTransformation() const { return trans; }
 	void SetTransformation(const Transform &t) {
 		trans = t;
+
+		// Invalidate the cached result
+		cachedArea = -1.f;
 	}
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 
 private:
-	mutable float instancedArea;
+	mutable float cachedArea;
 };
 
 class ExtMotionTriangleMesh : public MotionTriangleMesh, public ExtMesh {
 public:
 	ExtMotionTriangleMesh(ExtTriangleMesh *m, const MotionSystem &ms) :
 		MotionTriangleMesh(m, ms) {
-		instancedArea = 0.f;
-		for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
-			instancedArea += GetTriangleArea(0.f, i);
+		// The mesh area is compute on demand and cached
+		cachedArea = -1.f;
 	}
 	~ExtMotionTriangleMesh() { }
 	virtual void Delete() {	}
@@ -343,7 +352,16 @@ public:
 	}
 
 	virtual float GetMeshArea(const float time) const {
-		return instancedArea;
+		if (cachedArea < 0.f) {
+			float area = 0.f;
+			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
+				area += GetTriangleArea(0.f, i);
+
+			// Cache the result
+			cachedArea = area;
+		}
+
+		return cachedArea;
 	}
 
 	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
@@ -358,11 +376,18 @@ public:
 
 	virtual void WritePly(const std::string &fileName) const { ((ExtTriangleMesh *)mesh)->WritePly(fileName); }
 
+	virtual void ApplyTransform(const Transform &t) {
+		MotionTriangleMesh::ApplyTransform(t);
+
+		// Invalidate the cached result
+		cachedArea = -1.f;
+	}
+
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 
 private:
-	float instancedArea;
+	mutable float cachedArea;
 };
 
 }
