@@ -28,7 +28,7 @@ using namespace slg;
 
 TriangleLight::TriangleLight() : mesh(NULL), triangleIndex(NULL_INDEX),
 		triangleArea(0.f), invTriangleArea(0.f),
-		meshArea(0.f), invMeshArea(0.f){
+		meshArea(0.f), invMeshArea(0.f) {
 }
 
 TriangleLight::~TriangleLight() {

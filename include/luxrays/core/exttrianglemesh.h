@@ -81,6 +81,7 @@ public:
 	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const = 0;
 
+	// This can be a very expansive function to run
 	virtual float GetMeshArea(const float time) const = 0;
 	virtual float GetTriangleArea(const float time, const unsigned int triIndex) const = 0;
 	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1,
@@ -199,9 +200,8 @@ private:
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
 	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) :  InstanceTriangleMesh(m, t) {
-		instancedArea = 0.f;
-		for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
-			instancedArea += GetTriangleArea(0.f, i);
+		// The mesh area is compute on demand and cached
+		instancedArea = -1.f;
 	}
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}
@@ -250,6 +250,15 @@ public:
 	}
 
 	virtual float GetMeshArea(const float time) const {
+		if (instancedArea < 0.f) {
+			float area = 0.f;
+			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
+				area += GetTriangleArea(0.f, i);
+
+			// Cache the result
+			instancedArea = area;
+		}
+
 		return instancedArea;
 	}
 
@@ -272,7 +281,7 @@ public:
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 
 private:
-	float instancedArea;
+	mutable float instancedArea;
 };
 
 class ExtMotionTriangleMesh : public MotionTriangleMesh, public ExtMesh {
