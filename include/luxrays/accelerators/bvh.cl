@@ -70,7 +70,7 @@ void Accelerator_Intersect(
 		) {
 	// Initialize vertex page references
 #if (BVH_VERTS_PAGE_COUNT > 1)
-	__global const Point *accelVertPages[BVH_VERTS_PAGE_COUNT];
+	__global const Point* restrict accelVertPages[BVH_VERTS_PAGE_COUNT];
 #if defined(BVH_VERTS_PAGE0)
 	accelVertPages[0] = accelVertPage0;
 #endif
@@ -147,7 +147,7 @@ void Accelerator_Intersect(
 	float b1, b2;
 #if (BVH_NODES_PAGE_COUNT == 1)
 	while (currentNode < stopNode) {
-		__global const BVHAccelArrayNode *node = &accelNodePage0[currentNode];
+		__global const BVHAccelArrayNode* restrict node = &accelNodePage0[currentNode];
 #else
 	while ((currentPage < stopPage) || (currentNode < stopNode)) {
 		__global const BVHAccelArrayNode *accelNodePage = accelNodePages[currentPage];

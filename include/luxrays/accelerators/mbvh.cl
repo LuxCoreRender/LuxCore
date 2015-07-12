@@ -86,7 +86,7 @@ void Accelerator_Intersect(
 		) {
 	// Initialize vertex page references
 #if (MBVH_VERTS_PAGE_COUNT > 1)
-	__global const Point *accelVertPages[MBVH_VERTS_PAGE_COUNT];
+	__global const Point* restrict accelVertPages[MBVH_VERTS_PAGE_COUNT];
 #if defined(MBVH_VERTS_PAGE0)
 	accelVertPages[0] = accelVertPage0;
 #endif
@@ -115,7 +115,7 @@ void Accelerator_Intersect(
 
 	// Initialize node page references
 #if (MBVH_NODES_PAGE_COUNT > 1)
-	__global const BVHAccelArrayNode *accelNodePages[MBVH_NODES_PAGE_COUNT];
+	__global const BVHAccelArrayNode* restrict accelNodePages[MBVH_NODES_PAGE_COUNT];
 #if defined(MBVH_NODES_PAGE0)
 	accelNodePages[0] = accelNodePage0;
 #endif
@@ -215,10 +215,10 @@ void Accelerator_Intersect(
 		}
 
 #if (MBVH_NODES_PAGE_COUNT == 1)
-		__global const BVHAccelArrayNode *node = &accelNodePage0[currentNode];
+		__global const BVHAccelArrayNode* restrict node = &accelNodePage0[currentNode];
 #else
-		__global const BVHAccelArrayNode *accelNodePage = accelNodePages[currentPage];
-		__global const BVHAccelArrayNode *node = &accelNodePage[currentNode];
+		__global const BVHAccelArrayNode* restrict accelNodePage = accelNodePages[currentPage];
+		__global const BVHAccelArrayNode* restrict node = &accelNodePage[currentNode];
 #endif
 // Read the node
 		__global float4 *data = (__global float4 *)node;

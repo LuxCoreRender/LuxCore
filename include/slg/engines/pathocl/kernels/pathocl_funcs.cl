@@ -62,7 +62,7 @@ void GenerateCameraPath(
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
 		__global float *sampleData,
-		__global const Camera *camera,
+		__global const Camera* restrict camera,
 		const uint filmWidth,
 		const uint filmHeight,
 		__global Ray *ray,
@@ -191,14 +191,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
 		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum *pathThroughput,
+		__global const Spectrum* restrict pathThroughput,
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	const float3 throughput = VLOAD3F(pathThroughput->c);
 
 	for (uint i = 0; i < envLightCount; ++i) {
-		__global const LightSource *light = &lights[envLightIndices[i]];
+		__global const LightSource* restrict light = &lights[envLightIndices[i]];
 
 		float directPdfW;
 		const float3 lightRadiance = EnvLight_GetRadiance(light, -eyeDir, &directPdfW
@@ -217,7 +217,7 @@ void DirectHitInfiniteLight(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
 		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
+		__global const Spectrum* restrict pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	float directPdfA;
@@ -267,7 +267,7 @@ bool DirectLight_Illuminate(
 	// Pick a light source to sample
 	float lightPickPdf;
 	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
-	__global const LightSource *light = &lights[lightIndex];
+	__global const LightSource* restrict light = &lights[lightIndex];
 
 	info->lightIndex = lightIndex;
 	info->lightID = light->lightID;
@@ -336,7 +336,7 @@ bool DirectLight_BSDFSampling(
 	// MIS between direct light sampling and BSDF sampling
 	//
 	// Note: I have to avoiding MIS on the last path vertex
-	__global const LightSource *light = &lights[info->lightIndex];
+	__global const LightSource* restrict light = &lights[info->lightIndex];
 	const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 		PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
@@ -581,7 +581,7 @@ bool DirectLight_BSDFSampling(
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 #define KERNEL_ARGS_UVS_BUFFER \
-		, __global const UV* restrict vertUVs
+		, __global const UV* restrict restrict vertUVs
 #else
 #define KERNEL_ARGS_UVS_BUFFER
 #endif

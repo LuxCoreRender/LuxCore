@@ -58,7 +58,7 @@ void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *bar
 
 #if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
 void Camera_ApplyArbitraryClippingPlane(
-		__global const Camera *camera,
+		__global const Camera* restrict camera,
 #if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
 		__global
 #endif
@@ -117,7 +117,7 @@ void Camera_ApplyArbitraryClippingPlane(
 #if (PARAM_CAMERA_TYPE == 0)
 
 void Camera_GenerateRay(
-		__global const Camera *camera,
+		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 #if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
 		__global
@@ -206,7 +206,7 @@ void Camera_GenerateRay(
 #if (PARAM_CAMERA_TYPE == 1)
 
 void Camera_GenerateRay(
-		__global const Camera *camera,
+		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 #if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
 		__global
@@ -288,7 +288,7 @@ void Camera_GenerateRay(
 #if (PARAM_CAMERA_TYPE == 2)
 
 void Camera_GenerateRay(
-		__global const Camera *camera,
+		__global const Camera* restrict camera,
 		const uint origFilmWidth, const uint filmHeight,
 #if !defined(CAMERA_GENERATERAY_PARAM_MEM_SPACE_PRIVATE)
 		__global
@@ -299,8 +299,8 @@ void Camera_GenerateRay(
 		, const float dofSampleX, const float dofSampleY
 #endif
 		) {
-	__global const Transform *rasterToCamera;
-	__global const Transform *cameraToWorld;
+	__global const Transform* restrict rasterToCamera;
+	__global const Transform* restrict cameraToWorld;
 	float filmX;
 	const float filmWidth = origFilmWidth /2 ;
 	if (origFilmX < filmWidth) {

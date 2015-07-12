@@ -122,7 +122,7 @@ void Accelerator_Intersect(
                 &ray4,
 				invDir0, invDir1, invDir2);
 #else
-			__global const QBVHNode *node = &nodes[nodeData];
+			__global const QBVHNode* restrict node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
                 node->bboxes[signs0][0], node->bboxes[isigns0][0],
                 node->bboxes[signs1][1], node->bboxes[isigns1][1],
@@ -174,7 +174,7 @@ void Accelerator_Intersect(
                     iny++;
                 }
 #else
-                __global const QuadTiangle *quadTri = &quadTris[primNumber];
+                __global const QuadTiangle* restrict quadTri = &quadTris[primNumber];
                 const float4 origx = quadTri->origx;
                 const float4 origy = quadTri->origy;
                 const float4 origz = quadTri->origz;
