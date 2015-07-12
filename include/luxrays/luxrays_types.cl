@@ -97,6 +97,12 @@ float4 VLOAD4F(const __global float *p) {
 	return vload4(0, p);
 }
 
+// Input address must be aligned to 16B
+// This performs better than vload4()
+float4 VLOAD4F_Align(const __global float *p) {
+	return *((const __global float4 *)p);
+}
+
 float4 VLOAD4F_Private(const float *p) {
 	return vload4(0, p);
 }
