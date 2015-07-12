@@ -219,6 +219,7 @@ protected:
 
 	vector<PathOCLBaseRenderThread *> renderThreads;
 	
+	std::string additionalKernelOptions;
 	bool writeKernelsToFile;
 };
 
