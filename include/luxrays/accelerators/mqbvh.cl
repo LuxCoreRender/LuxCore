@@ -196,7 +196,7 @@ void Accelerator_Intersect(
 
 			if (leafTransformationIndex[leafIndex] != NULL_INDEX) {
 				__global const Matrix4x4* restrict m = &leafTransformations[leafTransformationIndex[leafIndex]];
-				newRayOrig = Matrix4x4_ApplyPoint(m, newRayOrig);
+				newRayOrig = Matrix4x4_ApplyPoint_Align(m, newRayOrig);
 				newRayDir = Matrix4x4_ApplyVector(m, newRayDir);
 			}
 

@@ -282,7 +282,7 @@ void Accelerator_Intersect(
 				if (transformIndex != NULL_INDEX) {
 					// Transform ray origin and direction
 					__global const Matrix4x4* restrict m = &leafTransformations[transformIndex];
-					currentRayOrig = Matrix4x4_ApplyPoint(m, rootRayOrig);
+					currentRayOrig = Matrix4x4_ApplyPoint_Align(m, rootRayOrig);
 					currentRayDir = Matrix4x4_ApplyVector(m, rootRayDir);
 				}
 #endif

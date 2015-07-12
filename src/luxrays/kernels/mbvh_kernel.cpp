@@ -285,7 +285,7 @@ std::string KernelSource_mbvh =
 "				if (transformIndex != NULL_INDEX) {\n"
 "					// Transform ray origin and direction\n"
 "					__global const Matrix4x4* restrict m = &leafTransformations[transformIndex];\n"
-"					currentRayOrig = Matrix4x4_ApplyPoint(m, rootRayOrig);\n"
+"					currentRayOrig = Matrix4x4_ApplyPoint_Align(m, rootRayOrig);\n"
 "					currentRayDir = Matrix4x4_ApplyVector(m, rootRayDir);\n"
 "				}\n"
 "#endif\n"

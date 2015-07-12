@@ -199,7 +199,7 @@ std::string KernelSource_mqbvh =
 "\n"
 "			if (leafTransformationIndex[leafIndex] != NULL_INDEX) {\n"
 "				__global const Matrix4x4* restrict m = &leafTransformations[leafTransformationIndex[leafIndex]];\n"
-"				newRayOrig = Matrix4x4_ApplyPoint(m, newRayOrig);\n"
+"				newRayOrig = Matrix4x4_ApplyPoint_Align(m, newRayOrig);\n"
 "				newRayDir = Matrix4x4_ApplyVector(m, newRayDir);\n"
 "			}\n"
 "\n"
