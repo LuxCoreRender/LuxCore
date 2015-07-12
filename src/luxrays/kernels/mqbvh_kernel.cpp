@@ -121,7 +121,7 @@ std::string KernelSource_mqbvh =
 "#define MQBVH_MOTIONSYSTEMS_PARAM_DECL , __global const MotionSystem* restrict leafMotionSystems , __global const InterpolatedTransform* restrict leafInterpolatedTransforms\n"
 "#define MQBVH_MOTIONSYSTEMS_PARAM , leafMotionSystems, leafInterpolatedTransforms\n"
 "\n"
-"#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const uint* restrict qbvhMemMap, __global const QBVHNode *leafNodes, __global const QuadTiangle* const leafQuadTris MQBVH_TRANSFORMATIONS_PARAM_DECL MQBVH_MOTIONSYSTEMS_PARAM_DECL\n"
+"#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const uint* restrict qbvhMemMap, __global const QBVHNode* restrict leafNodes, __global const QuadTiangle* restrict const leafQuadTris MQBVH_TRANSFORMATIONS_PARAM_DECL MQBVH_MOTIONSYSTEMS_PARAM_DECL\n"
 "#define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris MQBVH_TRANSFORMATIONS_PARAM MQBVH_MOTIONSYSTEMS_PARAM\n"
 "\n"
 "void Accelerator_Intersect(\n"

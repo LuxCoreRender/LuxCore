@@ -118,7 +118,7 @@ void LeafIntersect(
 #define MQBVH_MOTIONSYSTEMS_PARAM_DECL , __global const MotionSystem* restrict leafMotionSystems , __global const InterpolatedTransform* restrict leafInterpolatedTransforms
 #define MQBVH_MOTIONSYSTEMS_PARAM , leafMotionSystems, leafInterpolatedTransforms
 
-#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const uint* restrict qbvhMemMap, __global const QBVHNode *leafNodes, __global const QuadTiangle* const leafQuadTris MQBVH_TRANSFORMATIONS_PARAM_DECL MQBVH_MOTIONSYSTEMS_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const uint* restrict qbvhMemMap, __global const QBVHNode* restrict leafNodes, __global const QuadTiangle* restrict const leafQuadTris MQBVH_TRANSFORMATIONS_PARAM_DECL MQBVH_MOTIONSYSTEMS_PARAM_DECL
 #define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris MQBVH_TRANSFORMATIONS_PARAM MQBVH_MOTIONSYSTEMS_PARAM
 
 void Accelerator_Intersect(
