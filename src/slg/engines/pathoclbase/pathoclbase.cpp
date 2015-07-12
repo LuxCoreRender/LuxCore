@@ -80,6 +80,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 
 	const Properties &cfg = renderConfig->cfg;
 	compiledScene = NULL;
+	additionalKernelOptions = "";
 	writeKernelsToFile = false;
 
 	//--------------------------------------------------------------------------
@@ -153,8 +154,10 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	}
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
+	// Suggested compiler options: -cl-fast-relaxed-math -cl-strict-aliasing -cl-mad-enable
+	additionalKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<std::string>();
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
-
+	
 	//--------------------------------------------------------------------------
 	// Compile the scene
 	//--------------------------------------------------------------------------

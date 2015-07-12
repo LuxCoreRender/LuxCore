@@ -1177,6 +1177,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 	ss << " -D PARAM_DEVICE_INDEX=" << threadIndex;
 	ss << " -D PARAM_DEVICE_COUNT=" << renderEngine->intersectionDevices.size();
 
+	ss << " " << renderEngine->additionalKernelOptions;
+
 	ss << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
