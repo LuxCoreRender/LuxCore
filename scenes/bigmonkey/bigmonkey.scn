@@ -54,6 +54,7 @@ scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply
 scene.objects.red.material = redmat
 scene.objects.red.ply = monkey
+#scene.objects.red.shape = monkey
 #scene.objects.red.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
 scene.objects.l1.material = whitelight
 scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
