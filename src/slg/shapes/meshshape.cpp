@@ -36,6 +36,10 @@ MeshShape::~MeshShape() {
 		delete mesh;
 }
 
+void MeshShape::ApplyTransform(const Transform &trans) {
+	mesh->ApplyTransform(trans);
+}
+
 ExtMesh *MeshShape::RefineImpl(const Scene *scene) {
 	return mesh;
 }

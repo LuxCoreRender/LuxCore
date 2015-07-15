@@ -129,7 +129,9 @@ public:
 		const Triangle &tri = tris[triIndex];
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
-	
+
+	virtual void ApplyTransform(const Transform &trans);
+
 	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
 		if (!normals)
 			return GetGeometryNormal(time, triIndex);
@@ -189,6 +191,8 @@ public:
 	static ExtTriangleMesh *LoadExtTriangleMesh(const std::string &fileName);
 
 private:
+	void Preprocess();
+
 	Normal *normals; // Vertices normals
 	Normal *triNormals; // Triangle normals
 	UV *uvs; // Vertex uvs

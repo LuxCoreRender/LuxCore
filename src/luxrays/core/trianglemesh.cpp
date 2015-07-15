@@ -52,7 +52,7 @@ TriangleMesh::TriangleMesh(const u_int meshVertCount,
 BBox TriangleMesh::GetBBox() const {
 	if (!cachedBBoxValid) {
 		BBox bbox;
-		for (unsigned int i = 0; i < vertCount; ++i)
+		for (u_int i = 0; i < vertCount; ++i)
 			bbox = Union(bbox, vertices[i]);
 		cachedBBox = bbox;
 		
@@ -63,7 +63,7 @@ BBox TriangleMesh::GetBBox() const {
 }
 
 void TriangleMesh::ApplyTransform(const Transform &trans) {
-	for (unsigned int i = 0; i < vertCount; ++i)
+	for (u_int i = 0; i < vertCount; ++i)
 		vertices[i] *= trans;
 
 	cachedBBoxValid = false;
@@ -73,8 +73,8 @@ TriangleMesh *TriangleMesh::Merge(
 	const std::deque<const Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
 	TriangleID **preprocessedMeshTriangleIDs) {
-	unsigned int totalVertexCount = 0;
-	unsigned int totalTriangleCount = 0;
+	u_int totalVertexCount = 0;
+	u_int totalTriangleCount = 0;
 
 	for (std::deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
 		totalVertexCount += (*m)->GetTotalVertexCount();
@@ -85,8 +85,8 @@ TriangleMesh *TriangleMesh::Merge(
 }
 
 TriangleMesh *TriangleMesh::Merge(
-	const unsigned int totalVertexCount,
-	const unsigned int totalTriangleCount,
+	const u_int totalVertexCount,
+	const u_int totalTriangleCount,
 	const std::deque<const Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
 	TriangleID **preprocessedMeshTriangleIDs) {
@@ -102,8 +102,8 @@ TriangleMesh *TriangleMesh::Merge(
 	if (preprocessedMeshTriangleIDs)
 		*preprocessedMeshTriangleIDs = new TriangleID[totalTriangleCount];
 
-	unsigned int vIndex = 0;
-	unsigned int iIndex = 0;
+	u_int vIndex = 0;
+	u_int iIndex = 0;
 	TriangleMeshID currentID = 0;
 	for (std::deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
 		// Copy the mesh vertices
@@ -112,7 +112,7 @@ TriangleMesh *TriangleMesh::Merge(
 		const Triangle *tris = (*m)->GetTriangles();
 
 		// Translate mesh indices
-		for (unsigned int j = 0; j < (*m)->GetTotalTriangleCount(); j++) {
+		for (u_int j = 0; j < (*m)->GetTotalTriangleCount(); j++) {
 			i[iIndex].v[0] = tris[j].v[0] + vIndex;
 			i[iIndex].v[1] = tris[j].v[1] + vIndex;
 			i[iIndex].v[2] = tris[j].v[2] + vIndex;

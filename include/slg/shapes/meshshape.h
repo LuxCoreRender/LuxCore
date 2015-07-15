@@ -33,6 +33,8 @@ public:
 
 	virtual ShapeType GetType() const { return MESH; }
 
+	void ApplyTransform(const luxrays::Transform &trans);
+	
 protected:
 	virtual luxrays::ExtMesh *RefineImpl(const Scene *scene);
 

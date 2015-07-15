@@ -153,7 +153,7 @@ SceneObject *Scene::CreateObject(const string &objName, const Properties &props)
 		const Matrix4x4 mat = props.Get(Property(propName +
 			".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 
-		mesh = extMeshCache.GetExtMesh(meshName, Transform(mat));
+			mesh = extMeshCache.GetExtMesh(meshName, Transform(mat));
 	} else
 		mesh = extMeshCache.GetExtMesh(meshName);
 
