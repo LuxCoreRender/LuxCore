@@ -397,8 +397,12 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	cols = meshCols;
 	alphas = meshAlpha;
 
-	// Compute all triangle normals and mesh area
 	triNormals = new Normal[triCount];
+	Preprocess();
+}
+
+void ExtTriangleMesh::Preprocess() {
+	// Compute all triangle normals and mesh area
 	area = 0.f;
 	for (u_int i = 0; i < triCount; ++i) {
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);
@@ -441,6 +445,19 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 	}
 
 	return allocated ? normals : NULL;
+}
+
+void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
+	TriangleMesh::ApplyTransform(trans);
+
+	if (normals) {
+		for (u_int i = 0; i < vertCount; ++i) {
+			normals[i] *= trans;
+			normals[i] = Normalize(normals[i]);
+		}
+	}
+
+	Preprocess();
 }
 
 void ExtTriangleMesh::WritePly(const string &fileName) const {

@@ -46,9 +46,14 @@ scene.materials.whitelight.emission = lighttex
 scene.materials.whitelight.emission.gain = 0.00015 0.00015 0.00015
 scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################
+scene.shapes.monkey.type = mesh
+scene.shapes.monkey.ply = scenes/bigmonkey/bigmonkey.ply
+scene.shapes.monkey.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
+################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply
 scene.objects.red.material = redmat
-scene.objects.red.ply = scenes/bigmonkey/bigmonkey.ply
+scene.objects.red.ply = monkey
+#scene.objects.red.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
 scene.objects.l1.material = whitelight
 scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
