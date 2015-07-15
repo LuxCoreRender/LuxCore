@@ -524,9 +524,10 @@ boost::python::list Scene_DefineBlenderMesh1(Scene *scene, const string &name,
 					mat.m[i][j] = extract<float>(l[index++]);
 
 			trans = luxrays::Transform(mat);
+			hasTransformation = true;
 		} else {
 			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of alphas of method Scene.DefineMesh(): " + objType);
+			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DefineMesh(): " + objType);
 		}
 	}
 
