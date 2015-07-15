@@ -481,10 +481,11 @@ static void Scene_DefineImageMap(Scene *scene, const string &imgMapName,
 	}
 }
 
-static void Scene_DefineMesh(Scene *scene, const string &meshName,
+static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 		const boost::python::object &p, const boost::python::object &vi,
 		const boost::python::object &n, const boost::python::object &uv,
-		const boost::python::object &cols, const boost::python::object &alphas) {
+		const boost::python::object &cols, const boost::python::object &alphas,
+		const boost::python::object &transformation) {
 	// NOTE: I would like to use boost::scoped_array but
 	// some guy has decided that boost::scoped_array must not have
 	// a release() method for some ideological reason...
@@ -631,7 +632,40 @@ static void Scene_DefineMesh(Scene *scene, const string &meshName,
 		}
 	}
 
-	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
+	luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(plyNbVerts, plyNbTris, points, tris, normals, uvs, colors, as);
+	
+	// Apply the transformation if required
+	if (!transformation.is_none()) {
+		extract<boost::python::list> getTransformationList(transformation);
+		if (getTransformationList.check()) {
+			const boost::python::list &l = getTransformationList();
+			const boost::python::ssize_t size = len(l);
+			if (size != 16) {
+				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.DefineMesh(): " + objType);
+			}
+
+			luxrays::Matrix4x4 mat;
+			boost::python::ssize_t index = 0;
+			for (u_int j = 0; j < 4; ++j)
+				for (u_int i = 0; i < 4; ++i)
+					mat.m[i][j] = extract<float>(l[index++]);
+
+			mesh->ApplyTransform(luxrays::Transform(mat));
+		} else {
+			const string objType = extract<string>((alphas.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of alphas of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
+	scene->DefineMesh(meshName, mesh);
+}
+
+static void Scene_DefineMesh2(Scene *scene, const string &meshName,
+		const boost::python::object &p, const boost::python::object &vi,
+		const boost::python::object &n, const boost::python::object &uv,
+		const boost::python::object &cols, const boost::python::object &alphas) {
+	Scene_DefineMesh1(scene, meshName, p, vi, n, uv, cols, alphas, boost::python::object());
 }
 
 static void Scene_DefineStrands(Scene *scene, const string &shapeName,
@@ -1030,8 +1064,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetObjectCount", &Scene::GetObjectCount)
 		.def("DefineImageMap", &Scene_DefineImageMap)
 		.def("IsImageMapDefined", &Scene::IsImageMapDefined)
-		.def("DefineMesh", &Scene_DefineMesh)
-		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh)
+		.def("DefineMesh", &Scene_DefineMesh1)
+		.def("DefineMesh", &Scene_DefineMesh2)
+		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
+		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
 		.def("DefineStrands", &Scene_DefineStrands)
 		.def("IsMeshDefined", &Scene::IsMeshDefined)
 		.def("IsTextureDefined", &Scene::IsTextureDefined)

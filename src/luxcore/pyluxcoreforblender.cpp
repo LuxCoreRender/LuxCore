@@ -352,7 +352,8 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int 
 static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
-		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex) {
+		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex,
+		const luxrays::Transform *trans) {
 	MFace *blenderFaces = reinterpret_cast<MFace *>(blenderFacesPtr);
 	MVert *blenderFVertices = reinterpret_cast<MVert *>(blenderVerticesPtr);
 	MTFace *blenderUVs = reinterpret_cast<MTFace *>(blenderUVsPtr);
@@ -487,14 +488,48 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 	}
 
 	//cout << "Defining mesh: " << name << "\n";
-	scene->DefineMesh(name, tmpMeshVerts.size(), tmpMeshTris.size(), meshVerts, meshTris,
+	luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(tmpMeshVerts.size(),
+			tmpMeshTris.size(), meshVerts, meshTris,
 			meshNorms, meshUVs, meshCols, NULL);
+	
+	// Apply the transformation if required
+	if (trans)
+		mesh->ApplyTransform(*trans);
+	
+	scene->DefineMesh(name, mesh);
 }
 
-boost::python::list Scene_DefineBlenderMesh(Scene *scene, const string &name,
+boost::python::list Scene_DefineBlenderMesh1(Scene *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
-		const size_t blenderUVsPtr, const size_t blenderColsPtr) {
+		const size_t blenderUVsPtr, const size_t blenderColsPtr,
+		const boost::python::object &transformation) {
+	// Get the transformation if required
+	bool hasTransformation = false;
+	Transform trans;
+	if (!transformation.is_none()) {
+		extract<boost::python::list> getTransformationList(transformation);
+		if (getTransformationList.check()) {
+			const boost::python::list &l = getTransformationList();
+			const boost::python::ssize_t size = len(l);
+			if (size != 16) {
+				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.DefineMesh(): " + objType);
+			}
+
+			luxrays::Matrix4x4 mat;
+			boost::python::ssize_t index = 0;
+			for (u_int j = 0; j < 4; ++j)
+				for (u_int i = 0; i < 4; ++i)
+					mat.m[i][j] = extract<float>(l[index++]);
+
+			trans = luxrays::Transform(mat);
+		} else {
+			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of alphas of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
 	MFace *blenderFaces = reinterpret_cast<MFace *>(blenderFacesPtr);
 
 	// Build the list of mesh material indices
@@ -510,7 +545,8 @@ boost::python::list Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		const string objName = (boost::format(name + "%03d") % matIndex).str();
 
 		Scene_DefineBlenderMesh(scene, "Mesh-" + objName, blenderFaceCount, blenderFacesPtr,
-				blenderVertCount, blenderVerticesPtr, blenderUVsPtr, blenderColsPtr, matIndex);
+				blenderVertCount, blenderVerticesPtr, blenderUVsPtr, blenderColsPtr, matIndex,
+				hasTransformation ? &trans : NULL);
 		
 		boost::python::list meshInfo;
 		meshInfo.append(objName);
@@ -519,6 +555,15 @@ boost::python::list Scene_DefineBlenderMesh(Scene *scene, const string &name,
 	}
 
 	return result;
+}
+
+boost::python::list Scene_DefineBlenderMesh2(Scene *scene, const string &name,
+		const size_t blenderFaceCount, const size_t blenderFacesPtr,
+		const size_t blenderVertCount, const size_t blenderVerticesPtr,
+		const size_t blenderUVsPtr, const size_t blenderColsPtr) {
+	return Scene_DefineBlenderMesh1(scene, name, blenderFaceCount, blenderFacesPtr,
+			blenderVertCount, blenderVerticesPtr, blenderUVsPtr, blenderColsPtr,
+			boost::python::object());
 }
 
 }
