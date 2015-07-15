@@ -654,7 +654,7 @@ static void Scene_DefineMesh1(Scene *scene, const string &meshName,
 			mesh->ApplyTransform(luxrays::Transform(mat));
 		} else {
 			const string objType = extract<string>((alphas.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of alphas of method Scene.DefineMesh(): " + objType);
+			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DefineMesh(): " + objType);
 		}
 	}
 
