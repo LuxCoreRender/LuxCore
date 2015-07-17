@@ -294,12 +294,17 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 					GetTexture(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxn.texture", Property("Kr")(Spectrum(.5f)), matProps) <<
 					Property(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("fresnelapproxk") <<
 					GetTexture(texPrefix + "_LUXCORE_PARSERLXS_fresnelapproxk.texture", Property("Kr")(Spectrum(.5f)), matProps);
+					Property(prefix + ".type")("metal2") <<
+					Property(prefix + ".n")(fresnelTexName + "_LUXCORE_PARSERLXS_fresnelapproxn") <<
+					Property(prefix + ".k")(fresnelTexName + "_LUXCORE_PARSERLXS_fresnelapproxk");
+		} else {
+			*sceneProps <<
+					Property(prefix + ".type")("metal2") <<
+					Property(prefix + ".n")(fresnelTexName) <<
+					Property(prefix + ".k")(Spectrum(.5f));
 		}
 
 		*sceneProps <<
-				Property(prefix + ".type")("metal2") <<
-				Property(prefix + ".n")(fresnelTexName + "_LUXCORE_PARSERLXS_fresnelapproxn") <<
-				Property(prefix + ".k")(fresnelTexName + "_LUXCORE_PARSERLXS_fresnelapproxk") <<
 				GetTexture(prefix + ".uroughness", Property("uroughness")(.1f), matProps) <<
 				GetTexture(prefix + ".vroughness", Property("vroughness")(.1f), matProps);
 	} else if (type == "roughglass") {
