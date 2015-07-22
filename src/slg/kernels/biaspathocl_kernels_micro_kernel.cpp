@@ -359,7 +359,7 @@ std::string KernelSource_biaspathocl_kernels_micro =
 "			(PARAM_DEPTH_MAX <= 1) ||\n"
 "			((PARAM_DEPTH_DIFFUSE_MAX <= 1) && (materialEventTypes & DIFFUSE)) ||\n"
 "			((PARAM_DEPTH_GLOSSY_MAX <= 1) && (materialEventTypes & GLOSSY)) ||\n"
-"			((PARAM_DEPTH_SPECULAR_MAX <= 1) && (materialEventTypes & DIFFUSE));\n"
+"			((PARAM_DEPTH_SPECULAR_MAX <= 1) && (materialEventTypes & SPECULAR));\n"
 "	task->materialEventTypesPathVertex1 = materialEventTypes;\n"
 "\n"
 "	// Only if it is not a SPECULAR BSDF\n"
