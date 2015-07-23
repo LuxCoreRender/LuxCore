@@ -21,6 +21,9 @@
 
 #include <string>
 
+#include <opensubdiv/sdc/options.h>
+#include <opensubdiv/sdc/types.h>
+
 #include "slg/shapes/shape.h"
 
 namespace slg {
@@ -28,10 +31,12 @@ namespace slg {
 class OpenSubdivShape : public Shape {
 public:
 	OpenSubdivShape(luxrays::ExtMesh *mesh);
-	OpenSubdivShape(const std::string &fileName);
 	virtual ~OpenSubdivShape();
 
 	virtual ShapeType GetType() const { return OPENSUBDIV; }
+
+	OpenSubdiv::Sdc::SchemeType schemeType;
+	OpenSubdiv::Sdc::Options options;
 
 protected:
 	virtual luxrays::ExtMesh *RefineImpl(const Scene *scene);
