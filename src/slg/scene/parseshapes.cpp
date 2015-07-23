@@ -224,9 +224,68 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 				solidSideCount, solidCapBottom, solidCapTop,
 				useCameraPosition);
 	} else if (shapeType == "opensubdiv") {
-		const string meshName = props.Get(Property(propName + ".ply")("")).Get<string>();
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in an opensubdiv shape: " + shapeName);
 
-		shape = new OpenSubdivShape(meshName);
+		auto_ptr<OpenSubdivShape> sbdvShape(new OpenSubdivShape(
+				(ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName)));
+
+		// Read OpenSubdiv options
+		const string vtxBoundaryOptions = props.Get(Property(propName + ".options.vtxboundary")("edge_and_corner")).Get<string>();
+		if (vtxBoundaryOptions == "none")
+			sbdvShape->options.SetVtxBoundaryInterpolation(OpenSubdiv::Sdc::Options::VTX_BOUNDARY_NONE);
+		else if (vtxBoundaryOptions == "edge_only")
+			sbdvShape->options.SetVtxBoundaryInterpolation(OpenSubdiv::Sdc::Options::VTX_BOUNDARY_EDGE_ONLY);
+		else if (vtxBoundaryOptions == "edge_and_corner")
+			sbdvShape->options.SetVtxBoundaryInterpolation(OpenSubdiv::Sdc::Options::VTX_BOUNDARY_EDGE_AND_CORNER);
+		else
+			throw runtime_error("OpenSubdiv unknown vertex boundary option: " + vtxBoundaryOptions);
+
+		const string fvarInterpolationRules = props.Get(Property(propName + ".options.fvarlinearinterp")("all")).Get<string>();
+		if (fvarInterpolationRules == "none")
+			sbdvShape->options.SetFVarLinearInterpolation(OpenSubdiv::Sdc::Options::FVAR_LINEAR_NONE);
+		else if (fvarInterpolationRules == "corners_only")
+			sbdvShape->options.SetFVarLinearInterpolation(OpenSubdiv::Sdc::Options::FVAR_LINEAR_CORNERS_ONLY);
+		else if (fvarInterpolationRules == "corners_plus1")
+			sbdvShape->options.SetFVarLinearInterpolation(OpenSubdiv::Sdc::Options::FVAR_LINEAR_CORNERS_PLUS1);
+		else if (fvarInterpolationRules == "corners_plus2")
+			sbdvShape->options.SetFVarLinearInterpolation(OpenSubdiv::Sdc::Options::FVAR_LINEAR_CORNERS_PLUS2);
+		else if (fvarInterpolationRules == "boundaries")
+			sbdvShape->options.SetFVarLinearInterpolation(OpenSubdiv::Sdc::Options::FVAR_LINEAR_BOUNDARIES);
+		else if (fvarInterpolationRules == "all")
+			sbdvShape->options.SetFVarLinearInterpolation(OpenSubdiv::Sdc::Options::FVAR_LINEAR_ALL);
+		else
+			throw runtime_error("OpenSubdiv unknown fvar boundary option: " + fvarInterpolationRules);
+
+		const string creasingMethod = props.Get(Property(propName + ".options.creasingmethod")("chaikin")).Get<string>();
+		if (creasingMethod == "uniform")
+			sbdvShape->options.SetCreasingMethod(OpenSubdiv::Sdc::Options::CREASE_CHAIKIN);
+		else if (creasingMethod == "chaikin")
+			sbdvShape->options.SetCreasingMethod(OpenSubdiv::Sdc::Options::CREASE_CHAIKIN);
+		else
+			throw runtime_error("OpenSubdiv unknown creasing method: " + creasingMethod);
+
+		const string triangleSundiv = props.Get(Property(propName + ".options.trianglesubdiv")("catmark")).Get<string>();
+		if (triangleSundiv == "catmark")
+			sbdvShape->options.SetTriangleSubdivision(OpenSubdiv::Sdc::Options::TRI_SUB_CATMARK);
+		else if (triangleSundiv == "smooth")
+			sbdvShape->options.SetTriangleSubdivision(OpenSubdiv::Sdc::Options::TRI_SUB_SMOOTH);
+		else
+			throw runtime_error("OpenSubdiv unknown creasing method: " + creasingMethod);
+
+		// Read OpenSubdiv scheme type
+		const string schemeTypeStr = props.Get(Property(propName + ".scheme.type")("catmark")).Get<string>();
+		if (schemeTypeStr == "bilinear")
+			sbdvShape->schemeType = OpenSubdiv::Sdc::SCHEME_BILINEAR;
+		else if (schemeTypeStr == "catmark")
+			sbdvShape->schemeType = OpenSubdiv::Sdc::SCHEME_CATMARK;
+		else if (schemeTypeStr == "loop")
+			sbdvShape->schemeType = OpenSubdiv::Sdc::SCHEME_LOOP;
+		else
+			throw runtime_error("OpenSubdiv unknown scheme type: " + schemeTypeStr);
+				
+		shape = sbdvShape.release();
 	} else if (shapeType == "harlequin") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
 		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))

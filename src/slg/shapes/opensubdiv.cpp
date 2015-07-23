@@ -67,23 +67,15 @@ struct OpenSubdivVertex {
 };
 
 OpenSubdivShape::OpenSubdivShape(ExtMesh *m) : Shape() {
+	schemeType = Sdc::SCHEME_CATMARK;
+	options.SetVtxBoundaryInterpolation(Sdc::Options::VTX_BOUNDARY_EDGE_AND_CORNER);
 	mesh = m;
 }
 
-OpenSubdivShape::OpenSubdivShape(const string &fileName) : Shape() {
-	mesh = ExtTriangleMesh::LoadExtTriangleMesh(fileName);
-}
-
 OpenSubdivShape::~OpenSubdivShape() {
-	delete mesh;
 }
 
 ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
-	Sdc::SchemeType type = Sdc::SCHEME_CATMARK;
-
-	Sdc::Options options;
-	options.SetVtxBoundaryInterpolation(Sdc::Options::VTX_BOUNDARY_EDGE_ONLY);
-
 	Far::TopologyDescriptor desc;
 	desc.numVertices = mesh->GetTotalVertexCount();
 	desc.numFaces = mesh->GetTotalTriangleCount();
@@ -93,7 +85,7 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 
 	// Instantiate a FarTopologyRefiner from the descriptor
 	Far::TopologyRefiner *refiner = Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Create(desc,
-			Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Options(type, options));
+			Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Options(schemeType, options));
 
 	// Uniformly refine the topology up to 'maxlevel'
 	const u_int maxLevel = 3;
