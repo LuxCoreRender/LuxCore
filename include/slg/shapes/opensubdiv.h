@@ -30,6 +30,11 @@ namespace slg {
 
 class OpenSubdivShape : public Shape {
 public:
+	typedef enum {
+		REFINE_UNIFORM,
+		REFINE_ADAPTIVE
+	} RefineType;
+
 	OpenSubdivShape(luxrays::ExtMesh *mesh);
 	virtual ~OpenSubdivShape();
 
@@ -37,6 +42,9 @@ public:
 
 	OpenSubdiv::Sdc::SchemeType schemeType;
 	OpenSubdiv::Sdc::Options options;
+
+	RefineType refineType;
+	u_int refineMaxLevel;
 
 protected:
 	virtual luxrays::ExtMesh *RefineImpl(const Scene *scene);

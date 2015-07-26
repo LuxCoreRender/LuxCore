@@ -242,7 +242,7 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 		else
 			throw runtime_error("OpenSubdiv unknown vertex boundary option: " + vtxBoundaryOptions);
 
-		const string fvarInterpolationRules = props.Get(Property(propName + ".options.fvarlinearinterp")("all")).Get<string>();
+		const string fvarInterpolationRules = props.Get(Property(propName + ".options.fvarlinearinterp")("boundaries")).Get<string>();
 		if (fvarInterpolationRules == "none")
 			sbdvShape->options.SetFVarLinearInterpolation(OpenSubdiv::Sdc::Options::FVAR_LINEAR_NONE);
 		else if (fvarInterpolationRules == "corners_only")
@@ -260,7 +260,7 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 
 		const string creasingMethod = props.Get(Property(propName + ".options.creasingmethod")("chaikin")).Get<string>();
 		if (creasingMethod == "uniform")
-			sbdvShape->options.SetCreasingMethod(OpenSubdiv::Sdc::Options::CREASE_CHAIKIN);
+			sbdvShape->options.SetCreasingMethod(OpenSubdiv::Sdc::Options::CREASE_UNIFORM);
 		else if (creasingMethod == "chaikin")
 			sbdvShape->options.SetCreasingMethod(OpenSubdiv::Sdc::Options::CREASE_CHAIKIN);
 		else
@@ -284,7 +284,21 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 			sbdvShape->schemeType = OpenSubdiv::Sdc::SCHEME_LOOP;
 		else
 			throw runtime_error("OpenSubdiv unknown scheme type: " + schemeTypeStr);
-				
+
+		// Read OpenSubdiv refine type
+		const string refineTypeStr = props.Get(Property(propName + ".refine.type")("uniform")).Get<string>();
+		if (refineTypeStr == "uniform")
+			sbdvShape->refineType = OpenSubdivShape::REFINE_UNIFORM;
+		else if (refineTypeStr == "adaptive")
+			sbdvShape->refineType = OpenSubdivShape::REFINE_ADAPTIVE;
+		else
+			throw runtime_error("OpenSubdiv unknown refine type: " + refineTypeStr);
+
+		if (sbdvShape->refineType == OpenSubdivShape::REFINE_UNIFORM)
+			sbdvShape->refineMaxLevel = props.Get(Property(propName + ".refine.uniform.maxlevel")(1)).Get<u_int>();
+		else if (sbdvShape->refineType == OpenSubdivShape::REFINE_ADAPTIVE)
+			sbdvShape->refineMaxLevel = props.Get(Property(propName + ".refine.adaptive.maxlevel")(1)).Get<u_int>();
+
 		shape = sbdvShape.release();
 	} else if (shapeType == "harlequin") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
