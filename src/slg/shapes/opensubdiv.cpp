@@ -68,7 +68,12 @@ struct OpenSubdivVertex {
 
 OpenSubdivShape::OpenSubdivShape(ExtMesh *m) : Shape() {
 	schemeType = Sdc::SCHEME_CATMARK;
+
 	options.SetVtxBoundaryInterpolation(Sdc::Options::VTX_BOUNDARY_EDGE_AND_CORNER);
+	options.SetFVarLinearInterpolation(Sdc::Options::FVAR_LINEAR_BOUNDARIES);
+	options.SetCreasingMethod(OpenSubdiv::Sdc::Options::CREASE_CHAIKIN);
+	options.SetTriangleSubdivision(OpenSubdiv::Sdc::Options::TRI_SUB_CATMARK);
+
 	mesh = m;
 }
 
@@ -87,9 +92,11 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	Far::TopologyRefiner *refiner = Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Create(desc,
 			Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Options(schemeType, options));
 
-	// Uniformly refine the topology up to 'maxlevel'
-	const u_int maxLevel = 3;
-    refiner->RefineUniform(Far::TopologyRefiner::UniformOptions(maxLevel));
+	// Uniformly or adaptively refine the topology up to 'maxlevel'
+	if (refineType == REFINE_UNIFORM)
+		refiner->RefineUniform(Far::TopologyRefiner::UniformOptions(refineMaxLevel));
+	else
+		refiner->RefineAdaptive(Far::TopologyRefiner::AdaptiveOptions(refineMaxLevel));
 
 	// Allocate a buffer for vertex primvar data. The buffer length is set to
 	// be the sum of all children vertices up to the highest level of refinement.
@@ -116,7 +123,7 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	Far::PrimvarRefiner primvarRefiner(*refiner);
 
 	OpenSubdivVertex *srcVert = &vertBuffer[0];
-	for (u_int level = 1; level <= maxLevel; ++level) {
+	for (u_int level = 1; level <= refineMaxLevel; ++level) {
 		OpenSubdivVertex *dstVert = srcVert + refiner->GetLevel(level - 1).GetNumVertices();
 
 		primvarRefiner.Interpolate(level, srcVert, dstVert);
@@ -125,7 +132,7 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	}
 
 	// Get interpolated vertices
-	Far::TopologyLevel const &refLastLevel = refiner->GetLevel(maxLevel);
+	Far::TopologyLevel const &refLastLevel = refiner->GetLevel(refineMaxLevel);
 	const u_int meshVertCount = refLastLevel.GetNumVertices();
 	const u_int firstOfLastVerts = refiner->GetNumVerticesTotal() - meshVertCount;
 
@@ -180,10 +187,6 @@ ExtMesh *OpenSubdivShape::RefineImpl(const Scene *scene) {
 	ExtTriangleMesh *interpolatedMesh = new ExtTriangleMesh(meshVertCount, meshTriCount,
 		interpolatedVerts, interpolatedTris, interpolatedNorms, interpolatedUVs,
 		interpolatedCols, interpolatedAlphas);
-
-	// Free source mesh
-	delete mesh;
-	mesh = NULL;
 
 	return interpolatedMesh;
 }
