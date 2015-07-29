@@ -12,14 +12,14 @@ scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.8 0.8 0.8
 ################################################################################
 scene.shapes.obj_red_src.type = mesh
-#scene.shapes.obj_red_src.ply = scenes/bump/mat_red.ply
-scene.shapes.obj_red_src.ply = scenes/bump/mat_white.ply
+scene.shapes.obj_red_src.ply = scenes/bump/mat_red.ply
+#scene.shapes.obj_red_src.ply = scenes/bump/mat_white.ply
 ##
 scene.shapes.obj_red_sbd.type = opensubdiv
-scene.shapes.obj_red_sbd.refine.type = uniform
-scene.shapes.obj_red_sbd.refine.uniform.maxlevel = 3
-#scene.shapes.obj_red_sbd.refine.type = adaptive
-#scene.shapes.obj_red_sbd.refine.adaptive.maxlevel = 3
+#scene.shapes.obj_red_sbd.refine.type = uniform
+#scene.shapes.obj_red_sbd.refine.uniform.maxlevel = 2
+scene.shapes.obj_red_sbd.refine.type = adaptive
+scene.shapes.obj_red_sbd.refine.adaptive.maxlevel = 1
 ##
 scene.shapes.obj_red_sbd.source = obj_red_src
 scene.shapes.obj_red.type = harlequin
@@ -29,5 +29,5 @@ scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light
 scene.objects.obj_red.shape = obj_red
 scene.objects.obj_red.material = mat_red
-#scene.objects.obj_white.ply = scenes/bump/mat_white.ply
-#scene.objects.obj_white.material = mat_white
+scene.objects.obj_white.ply = scenes/bump/mat_white.ply
+scene.objects.obj_white.material = mat_white

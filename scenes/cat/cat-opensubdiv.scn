@@ -1,6 +1,7 @@
 scene.camera.lookat = 2.296051 -4.236989 2.681252 -2.15708 4.261834 -0.136483
 scene.camera.fieldofview = 45
 ################################################################################
+scene.textures.hitpoint_color.type = hitpointcolor
 scene.textures.cat_png.type = imagemap
 scene.textures.cat_png.file = scenes/cat/EgyptCat.png
 scene.textures.cat_png.gain = 1.0
@@ -11,8 +12,10 @@ scene.textures.ground_kd.type = constfloat3
 scene.textures.ground_kd.value = 1.0 0.850417 0.545883
 ################################################################################
 scene.materials.mat_egyptcat.type = glossy2
-scene.materials.mat_egyptcat.kd = cat_png
-scene.materials.mat_egyptcat.ks = cat_png
+#scene.materials.mat_egyptcat.kd = cat_png
+#scene.materials.mat_egyptcat.ks = cat_png
+scene.materials.mat_egyptcat.kd = hitpoint_color
+scene.materials.mat_egyptcat.ks = hitpoint_color
 scene.materials.mat_egyptcat.uroughness = 0.1
 scene.materials.mat_egyptcat.vroughness = 0.1
 scene.materials.mat_ground.kd = ground_kd
@@ -23,8 +26,12 @@ scene.materials.mat_light.kd = 0.0 0.0 0.0
 ################################################################################
 scene.shapes.egyptcat_src.type = mesh
 scene.shapes.egyptcat_src.ply = scenes/cat/egyptcat.ply
-scene.shapes.egyptcat.type = opensubdiv
-scene.shapes.egyptcat.source = egyptcat_src
+scene.shapes.egyptcat_sbd.type = opensubdiv
+scene.shapes.egyptcat_sbd.source = egyptcat_src
+scene.shapes.egyptcat_sbd.refine.type = uniform
+scene.shapes.egyptcat_sbd.refine.uniform.maxlevel = 1
+scene.shapes.egyptcat.type = harlequin
+scene.shapes.egyptcat.source = egyptcat_sbd
 ################################################################################
 scene.objects.egyptcat.shape = egyptcat
 scene.objects.egyptcat.material = mat_egyptcat
