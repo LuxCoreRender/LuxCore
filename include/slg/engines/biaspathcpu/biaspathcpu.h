@@ -135,6 +135,8 @@ protected:
 	FilterDistribution *pixelFilterDistribution;
 
 private:
+	void PrintSamplesInfo() const;
+
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new BiasPathCPURenderThread(this, index, device);

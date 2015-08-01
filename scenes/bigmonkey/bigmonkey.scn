@@ -48,7 +48,7 @@ scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################
 scene.shapes.monkey.type = mesh
 scene.shapes.monkey.ply = scenes/bigmonkey/bigmonkey.ply
-scene.shapes.monkey.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
+#scene.shapes.monkey.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply
