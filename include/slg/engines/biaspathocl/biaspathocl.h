@@ -124,6 +124,8 @@ public:
 	u_int maxTilePerDevice;
 
 protected:
+	void PrintSamplesInfo() const;
+
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 

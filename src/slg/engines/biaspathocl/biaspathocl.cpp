@@ -45,6 +45,49 @@ BiasPathOCLRenderEngine::~BiasPathOCLRenderEngine() {
 	delete tileRepository;
 }
 
+void BiasPathOCLRenderEngine::PrintSamplesInfo() const {
+	// There is pretty much the same method in BiasPathCPURenderEngine
+
+	// Pixel samples
+	const u_int aaSamplesCount = aaSamples * aaSamples;
+	SLG_LOG("[BiasPathOCLRenderEngine] Pixel samples: " << aaSamplesCount);
+
+	// Diffuse samples
+	const int maxDiffusePathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.diffuseDepth - 1));
+	const u_int diffuseSamplesCount = aaSamplesCount * (diffuseSamples * diffuseSamples);
+	const u_int maxDiffuseSamplesCount = diffuseSamplesCount * maxDiffusePathDepth;
+	SLG_LOG("[BiasPathOCLRenderEngine] Diffuse samples: " << diffuseSamplesCount <<
+			" (with max. bounces " << maxDiffusePathDepth <<": " << maxDiffuseSamplesCount << ")");
+
+	// Glossy samples
+	const int maxGlossyPathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.glossyDepth - 1));
+	const u_int glossySamplesCount = aaSamplesCount * (glossySamples * glossySamples);
+	const u_int maxGlossySamplesCount = glossySamplesCount * maxGlossyPathDepth;
+	SLG_LOG("[BiasPathOCLRenderEngine] Glossy samples: " << glossySamplesCount <<
+			" (with max. bounces " << maxGlossyPathDepth <<": " << maxGlossySamplesCount << ")");
+
+	// Specular samples
+	const int maxSpecularPathDepth = Max<int>(0, Min<int>(maxPathDepth.depth, maxPathDepth.specularDepth - 1));
+	const u_int specularSamplesCount = aaSamplesCount * (specularSamples * specularSamples);
+	const u_int maxSpecularSamplesCount = specularSamplesCount * maxSpecularPathDepth;
+	SLG_LOG("[BiasPathOCLRenderEngine] Specular samples: " << specularSamplesCount <<
+			" (with max. bounces " << maxSpecularPathDepth <<": " << maxSpecularSamplesCount << ")");
+
+	// Direct light samples
+	const u_int directLightSamplesCount = aaSamplesCount * firstVertexLightSampleCount *
+			(directLightSamples * directLightSamples) * renderConfig->scene->lightDefs.GetSize();
+	SLG_LOG("[BiasPathOCLRenderEngine] Direct light samples on first hit: " << directLightSamplesCount);
+
+	// Total samples for a pixel with hit on diffuse surfaces
+	SLG_LOG("[BiasPathOCLRenderEngine] Total samples for a pixel with hit on diffuse surfaces: " <<
+			// Direct light sampling on first hit
+			directLightSamplesCount +
+			// Diffuse samples
+			maxDiffuseSamplesCount +
+			// Direct light sampling for diffuse samples
+			diffuseSamplesCount * Max<int>(0, maxDiffusePathDepth - 1));
+}
+
 PathOCLBaseRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new BiasPathOCLRenderThread(index, device, this);
@@ -71,9 +114,9 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	// Path depth settings
 	maxPathDepth.depth = Max(0, cfg.Get(Property("biaspath.pathdepth.total")(10)).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.diffuse")(2)).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.glossy")(1)).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.specular")(2)).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.diffuse")(4)).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.glossy")(3)).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.specular")(3)).Get<int>());
 
 	// Samples settings
 	aaSamples = Max(1, cfg.Get(Property("biaspath.sampling.aa.size")(
@@ -94,6 +137,8 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	nearStartLight = Max(0.f, cfg.Get(Property("biaspath.lights.nearstart")(.001f)).Get<float>());
 	firstVertexLightSampleCount = Max(1, cfg.Get(Property("biaspath.lights.firstvertexsamples")(
 			(GetEngineType() == RTBIASPATHOCL) ? 1 : 4)).Get<int>());
+
+	PrintSamplesInfo();
 
 	// Tile related parameters
 	u_int tileWidth = 32;
