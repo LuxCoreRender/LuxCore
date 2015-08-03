@@ -80,6 +80,7 @@ Properties Material::ToProperties() const {
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
 	props.Set(Property("scene.materials." + name + ".emission.samples")(emittedSamples));
+	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
 	if (emittedTex)
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
 	if (bumpTex)
