@@ -63,10 +63,19 @@ void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool
 			if (index >= film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size())
 				return;
 
+			// Normalize factor
+			const float factor = film.GetTotalSampleCount() / (film.GetHeight() * film.GetWidth());
+
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (pixelsMask[i]) {
-					float v[3];
-					film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetWeightedPixel(i, v);
+					float v[3] = { 0.f, 0.f, 0.f};
+					film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->AccumulateWeightedPixel(i, v);
+
+					// Normalize the value
+					v[0] *= factor;
+					v[1] *= factor;
+					v[2] *= factor;
+
 					pixels[i] = Spectrum(v);
 				}
 			}

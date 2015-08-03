@@ -1119,10 +1119,17 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 					pixel[2] = 0.f;
 
 					// Accumulate all light groups
+					if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
+						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
+
+						// Normalize the value
+						const float factor = statsTotalSampleCount / pixelCount;
+						pixel[0] *= factor;
+						pixel[1] *= factor;
+						pixel[2] *= factor;
+					}
 					if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size())
 						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
-					if (radianceGroupIndex < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size())
-						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::UV: {
