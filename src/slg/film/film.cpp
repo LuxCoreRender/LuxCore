@@ -1034,6 +1034,7 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 
 			if (pixel == NULL)
 				throw runtime_error("Error while unpacking film data, could not address buffer!");
+
 			switch (type) {
 				case FilmOutputs::RGB: {
 					// Accumulate all light groups			
@@ -1112,6 +1113,11 @@ void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName
 					break;
 				}
 				case FilmOutputs::RADIANCE_GROUP: {
+					// Clear the pixel
+					pixel[0] = 0.f;
+					pixel[1] = 0.f;
+					pixel[2] = 0.f;
+
 					// Accumulate all light groups
 					if (radianceGroupIndex < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size())
 						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
