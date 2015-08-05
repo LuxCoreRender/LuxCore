@@ -61,11 +61,8 @@ public:
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
-		SampleResult *sampleResult = NULL, luxrays::Spectrum *pathEmission = NULL) const;
-	// Just for all code not yet supporting volume rendering
-	bool Intersect(luxrays::IntersectionDevice *device,
-		const bool fromLight, const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
-		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
+		SampleResult *sampleResult = NULL, luxrays::Spectrum *connectionEmission = NULL,
+		vector<luxrays::Spectrum> *connectionEmissions = NULL) const;
 
 	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight);
 

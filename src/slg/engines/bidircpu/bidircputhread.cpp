@@ -107,7 +107,7 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 
 				const float misWeight = 1.f / (lightWeight + 1.f + eyeWeight);
 
-				eyeSampleResult->radiancePerPixelNormalized[0] += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
+				eyeSampleResult->radiance[0] += (misWeight * geometryTerm) * eyeVertex.throughput * eyeBsdfEval *
 						connectionThroughput * lightBsdfEval * lightVertex.throughput;
 			}
 		}
@@ -540,7 +540,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					&connectionThroughput, NULL, NULL, &connectEmission);
 			// I account for volume emission only with path tracing (i.e. here and
 			// not in any other place)
-			eyeSampleResult.radiancePerPixelNormalized[0] += eyeVertex.throughput * connectEmission;
+			eyeSampleResult.radiance[0] += eyeVertex.throughput * connectEmission;
 
 			if (!hit) {
 				// Nothing was hit, look for infinitelight
@@ -550,7 +550,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 				eyeVertex.throughput *= connectionThroughput;
 
-				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
+				DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance[0]);
 
 				if (eyeVertex.depth == 1)
 					eyeSampleResult.alpha = 0.f;
@@ -568,7 +568,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			// Check if it is a light source
 			if (eyeVertex.bsdf.IsLightSource()) {
-				DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
+				DirectHitLight(true, eyeVertex, &eyeSampleResult.radiance[0]);
 
 				// SLG light sources are like black bodies
 				break;
@@ -586,7 +586,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
 					sampler->GetSample(sampleOffset + 5),
-					eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
+					eyeVertex, &eyeSampleResult.radiance[0]);
 
 			//------------------------------------------------------------------
 			// Connect vertex path ray with all light path vertices

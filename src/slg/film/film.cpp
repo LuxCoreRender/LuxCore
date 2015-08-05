@@ -30,6 +30,7 @@ OIIO_NAMESPACE_USING
 #include "luxrays/core/geometry/point.h"
 #include "luxrays/utils/properties.h"
 #include "slg/film/film.h"
+#include "slg/film/sampleresult.h"
 #include "slg/film/filters/gaussian.h"
 #include "slg/editaction.h"
 
@@ -1468,21 +1469,21 @@ void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const 
 void Film::AddSampleResultColor(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight)  {
 	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < Min(sampleResult.radiancePerPixelNormalized.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-			if (sampleResult.radiancePerPixelNormalized[i].IsNaN() || sampleResult.radiancePerPixelNormalized[i].IsInf())
+		for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 				continue;
 
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiancePerPixelNormalized[i].c, weight);
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
 		}
 	}
 
 	// Faster than HasChannel(channel_RADIANCE_PER_SCREEN_NORMALIZED)
 	if ((channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		for (u_int i = 0; i < Min(sampleResult.radiancePerScreenNormalized.size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
-			if (sampleResult.radiancePerScreenNormalized[i].IsNaN() || sampleResult.radiancePerScreenNormalized[i].IsInf())
+		for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
+			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 				continue;
 
-			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiancePerScreenNormalized[i].c, weight);
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
 		}
 	}
 
@@ -1532,11 +1533,11 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.materialID == byMaterialIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min(sampleResult.radiancePerPixelNormalized.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-							if (sampleResult.radiancePerPixelNormalized[i].IsNaN() || sampleResult.radiancePerPixelNormalized[i].IsInf())
+						for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 								continue;
 
-							c += sampleResult.radiancePerPixelNormalized[i];
+							c += sampleResult.radiance[i];
 						}
 					}
 
@@ -1865,86 +1866,4 @@ template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::bina
 	ar << initialized;
 	ar << enabledOverlappedScreenBufferUpdate;
 	ar << rgbTonemapUpdate;
-}
-
-//------------------------------------------------------------------------------
-// SampleResult
-//------------------------------------------------------------------------------
-
-void SampleResult::AddEmission(const u_int lightID, const Spectrum &pathThroughput,
-		const Spectrum &incomingRadiance) {
-	const Spectrum radiance = pathThroughput * incomingRadiance;
-	radiancePerPixelNormalized[lightID] += radiance;
-
-	if (firstPathVertex)
-		emission += radiance;
-	else {
-		indirectShadowMask = 0.f;
-
-		if (firstPathVertexEvent & DIFFUSE)
-			indirectDiffuse += radiance;
-		else if (firstPathVertexEvent & GLOSSY)
-			indirectGlossy += radiance;
-		else if (firstPathVertexEvent & SPECULAR)
-			indirectSpecular += radiance;
-	}
-}
-
-void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent,
-		const Spectrum &pathThroughput, const Spectrum &incomingRadiance, const float lightScale) {
-	const Spectrum radiance = pathThroughput * incomingRadiance;
-	radiancePerPixelNormalized[lightID] += radiance;
-
-	if (firstPathVertex) {
-		// directShadowMask is supposed to be initialized to 1.0
-		directShadowMask = Max(0.f, directShadowMask - lightScale);
-
-		if (bsdfEvent & DIFFUSE)
-			directDiffuse += radiance;
-		else
-			directGlossy += radiance;
-	} else {
-		// indirectShadowMask is supposed to be initialized to 1.0
-		indirectShadowMask = Max(0.f, indirectShadowMask - lightScale);
-
-		if (firstPathVertexEvent & DIFFUSE)
-			indirectDiffuse += radiance;
-		else if (firstPathVertexEvent & GLOSSY)
-			indirectGlossy += radiance;
-		else if (firstPathVertexEvent & SPECULAR)
-			indirectSpecular += radiance;
-
-		irradiance += irradiancePathThroughput * incomingRadiance;
-	}
-}
-
-void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
-	const float filmX, const float filmY,
-	const Spectrum &radiancePPN,
-	const float alpha) {
-	assert(!radiancePPN.IsInf() || !radiancePPN.IsNaN());
-	assert(!isinf(alpha) || !isnan(alpha));
-
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	sampleResults[size].Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
-	sampleResults[size].filmX = filmX;
-	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiancePerPixelNormalized[0] = radiancePPN;
-	sampleResults[size].alpha = alpha;
-}
-
-void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
-	const float filmX, const float filmY,
-	const Spectrum &radiancePSN) {
-	assert(!radiancePSN.IsInf() || !radiancePSN.IsNaN());
-
-	const u_int size = sampleResults.size();
-	sampleResults.resize(size + 1);
-
-	sampleResults[size].Init(Film::RADIANCE_PER_SCREEN_NORMALIZED, 1);
-	sampleResults[size].filmX = filmX;
-	sampleResults[size].filmY = filmY;
-	sampleResults[size].radiancePerScreenNormalized[0] = radiancePSN;
 }
