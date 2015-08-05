@@ -504,10 +504,12 @@ bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput, const Spectrum *pathThroughput,
-		SampleResult *sampleResult, Spectrum *connectionEmission) const {
+		SampleResult *sampleResult, Spectrum *connectionEmission, vector<Spectrum> *connectionEmissions) const {
 	*connectionThroughput = Spectrum(1.f);
 	if (connectionEmission)
 		*connectionEmission = Spectrum();
+	if (connectionEmissions)
+		fill(connectionEmissions->begin(), connectionEmissions->end(), Spectrum());
 
 	float passThrough = initialPassThrough;
 	const float originalMaxT = ray->maxt;
@@ -541,6 +543,8 @@ bool Scene::Intersect(IntersectionDevice *device,
 					sampleResult->AddEmission(rayVolume->GetVolumeLightID(), *pathThroughput, emis);
 				if (connectionEmission)
 					*connectionEmission += emis;
+				if (connectionEmissions)
+					(*connectionEmissions)[rayVolume->GetVolumeLightID()] += emis;
 			}
 
 			if (t > 0.f) {
@@ -596,36 +600,5 @@ bool Scene::Intersect(IntersectionDevice *device,
 		// not really sure about the kind of correlation introduced by this
 		// trick.
 		passThrough = fabsf(passThrough - .5f) * 2.f;
-	}
-}
-
-// Just for all code not yet supporting volume rendering
-bool Scene::Intersect(IntersectionDevice *device,
-		const bool fromLight,
-		const float passThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
-		Spectrum *connectionThroughput) const {
-	*connectionThroughput = Spectrum(1.f);
-	for (;;) {
-		if (!device->TraceRay(ray, rayHit)) {
-			// Nothing was hit
-			return false;
-		} else {
-			// Check if it is a pass through point
-			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, NULL);
-
-			// Mix material can have IsPassThrough() = true and return Spectrum(0.f)
-			Spectrum t = bsdf->GetPassThroughTransparency();
-			if (t.Black())
-				return true;
-
-			*connectionThroughput *= t;
-
-			// It is a transparent material, continue to trace the ray
-			ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
-
-			// A safety check
-			if (ray->mint >= ray->maxt)
-				return false;
-		}
 	}
 }

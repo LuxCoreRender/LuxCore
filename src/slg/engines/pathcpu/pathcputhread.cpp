@@ -202,8 +202,8 @@ void PathCPURenderThread::RenderFunc() {
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Set to 0.0 all result colors
 		sampleResult.emission = Spectrum();
-		for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
-			sampleResult.radiancePerPixelNormalized[i] = Spectrum();
+		for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
+			sampleResult.radiance[i] = Spectrum();
 		sampleResult.directDiffuse = Spectrum();
 		sampleResult.directGlossy = Spectrum();
 		sampleResult.indirectDiffuse = Spectrum();

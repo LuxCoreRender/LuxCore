@@ -45,12 +45,16 @@ private:
 
 	void RenderFunc();
 
-	void ConnectToEye(const float u0,
-			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
-			PathVolumeInfo volInfo, vector<SampleResult> *sampleResults);
-	void TraceEyePath(const float time,
-			Sampler *sampler, PathVolumeInfo volInfo,
-			vector<SampleResult> *sampleResults);
+	void ConnectToEye(const float u0, const LightSource &light,
+			const BSDF &bsdf, const luxrays::Point &lensPoint,
+			const std::vector<luxrays::Spectrum> &flux,
+			std::vector<luxrays::Spectrum> &connectionEmissions,
+			PathVolumeInfo volInfo, vector<SampleResult> &sampleResults);
+	void TraceEyePath(const float time, Sampler *sampler,
+			std::vector<luxrays::Spectrum> &connectionEmissions,
+			PathVolumeInfo volInfo,	vector<SampleResult> &sampleResults);
+
+	SampleResult &AddResult(vector<SampleResult> &sampleResults, const bool fromLight) const;
 	
 	// Used to offset Sampler data
 	static const u_int sampleBootSize = 13;

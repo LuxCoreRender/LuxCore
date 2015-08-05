@@ -25,6 +25,7 @@
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
 #include "slg/film/film.h"
+#include "slg/film/sampleresult.h"
 
 namespace slg {
 

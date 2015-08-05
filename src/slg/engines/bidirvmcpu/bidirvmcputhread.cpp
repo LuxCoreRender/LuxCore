@@ -163,7 +163,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						&connectionThroughput, NULL, NULL, &connectEmission);
 				// I account for volume emission only with path tracing (i.e. here and
 				// not in any other place)
-				eyeSampleResult.radiancePerPixelNormalized[0] += connectEmission;
+				eyeSampleResult.radiance[0] += connectEmission;
 
 				if (!hit) {
 					// Nothing was hit, look for infinitelight
@@ -173,7 +173,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 					eyeVertex.throughput *= connectionThroughput;
 
-					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
+					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance[0]);
 
 					if (eyeVertex.depth == 1)
 						eyeSampleResult.alpha = 0.f;
@@ -191,7 +191,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 				// Check if it is a light source
 				if (eyeVertex.bsdf.IsLightSource())
-					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
+					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiance[0]);
 
 				// Note: pass-through check is done inside Scene::Intersect()
 
@@ -205,7 +205,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						sampler->GetSample(sampleOffset + 3),
 						sampler->GetSample(sampleOffset + 4),
 						sampler->GetSample(sampleOffset + 5),
-						eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
+						eyeVertex, &eyeSampleResult.radiance[0]);
 
 				if (!eyeVertex.bsdf.IsDelta()) {
 					//----------------------------------------------------------
@@ -223,7 +223,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					// Vertex Merging step
 					//----------------------------------------------------------
 
-					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiancePerPixelNormalized[0]);
+					hashGrid.Process(this, eyeVertex, &eyeSampleResult.radiance[0]);
 				}
 
 				//--------------------------------------------------------------
