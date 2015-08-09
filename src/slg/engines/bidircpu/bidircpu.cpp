@@ -37,6 +37,7 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, 
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
+	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
 

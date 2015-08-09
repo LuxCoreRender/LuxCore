@@ -173,7 +173,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 					eyeVertex.throughput *= connectionThroughput;
 
-					DirectHitLight(false, eyeVertex, &eyeSampleResult.radiance[0]);
+					DirectHitLight(false, eyeVertex, eyeSampleResult);
 
 					if (eyeVertex.depth == 1)
 						eyeSampleResult.alpha = 0.f;
@@ -191,7 +191,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 				// Check if it is a light source
 				if (eyeVertex.bsdf.IsLightSource())
-					DirectHitLight(true, eyeVertex, &eyeSampleResult.radiance[0]);
+					DirectHitLight(true, eyeVertex, eyeSampleResult);
 
 				// Note: pass-through check is done inside Scene::Intersect()
 
@@ -205,7 +205,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 						sampler->GetSample(sampleOffset + 3),
 						sampler->GetSample(sampleOffset + 4),
 						sampler->GetSample(sampleOffset + 5),
-						eyeVertex, &eyeSampleResult.radiance[0]);
+						eyeVertex, eyeSampleResult);
 
 				if (!eyeVertex.bsdf.IsDelta()) {
 					//----------------------------------------------------------
@@ -216,7 +216,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 					for (vector<PathVertexVM>::const_iterator lightPathVertex = lightPathVertices.begin();
 							lightPathVertex < lightPathVertices.end(); ++lightPathVertex)
 						ConnectVertices(time,
-								eyeVertex, *lightPathVertex, &eyeSampleResult,
+								eyeVertex, *lightPathVertex, eyeSampleResult,
 								sampler->GetSample(sampleOffset + 6));
 
 					//----------------------------------------------------------
