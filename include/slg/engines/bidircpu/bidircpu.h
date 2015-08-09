@@ -37,7 +37,7 @@ namespace slg {
 typedef struct {
 	BSDF bsdf;
 	luxrays::Spectrum throughput;
-	u_int depth;
+	u_int lightID,  depth;
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
 	// MIS weight computation works (http://www.iliyan.com/publications/ImplementingVCM)
@@ -72,21 +72,22 @@ protected:
 
 	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiDirCPURenderThread::RenderFunc, this); }
 
+	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
 	void RenderFunc();
 
 	void DirectLightSampling(const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
-		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const;
 	void DirectHitLight(const bool finiteLightSource,
-		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const;
 	void DirectHitLight(const LightSource *light, const luxrays::Spectrum &lightRadiance,
 		const float directPdfA, const float emissionPdfW,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
 	void ConnectVertices(const float time,
 		const PathVertexVM &eyeVertex, const PathVertexVM &BiDirVertex,
-		SampleResult *eyeSampleResult, const float u0) const;
+		SampleResult &eyeSampleResult, const float u0) const;
 	void ConnectToEye(const float time,
 		const PathVertexVM &BiDirVertex, const float u0,
 		const luxrays::Point &lensPoint, vector<SampleResult> &sampleResults) const;
