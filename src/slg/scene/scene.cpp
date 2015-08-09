@@ -504,12 +504,8 @@ bool Scene::Intersect(IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput, const Spectrum *pathThroughput,
-		SampleResult *sampleResult, Spectrum *connectionEmission, vector<Spectrum> *connectionEmissions) const {
+		SampleResult *sampleResult) const {
 	*connectionThroughput = Spectrum(1.f);
-	if (connectionEmission)
-		*connectionEmission = Spectrum();
-	if (connectionEmissions)
-		fill(connectionEmissions->begin(), connectionEmissions->end(), Spectrum());
 
 	float passThrough = initialPassThrough;
 	const float originalMaxT = ray->maxt;
@@ -541,10 +537,6 @@ bool Scene::Intersect(IntersectionDevice *device,
 			if (!emis.Black()) {
 				if (sampleResult)
 					sampleResult->AddEmission(rayVolume->GetVolumeLightID(), *pathThroughput, emis);
-				if (connectionEmission)
-					*connectionEmission += emis;
-				if (connectionEmissions)
-					(*connectionEmissions)[rayVolume->GetVolumeLightID()] += emis;
 			}
 
 			if (t > 0.f) {
