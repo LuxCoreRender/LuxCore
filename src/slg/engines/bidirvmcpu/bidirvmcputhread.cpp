@@ -176,7 +176,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 					DirectHitLight(false, eyeVertex, eyeSampleResult);
 
-					if (eyeVertex.depth == 1) {
+					if (eyeSampleResult.firstPathVertex) {
 						eyeSampleResult.alpha = 0.f;
 						eyeSampleResult.depth = std::numeric_limits<float>::infinity();
 					}
