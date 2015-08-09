@@ -132,8 +132,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			Sampler *sampler = samplers[samplerIndex];
 
 			PathVertexVM eyeVertex;
-			SampleResult eyeSampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA, 1);
-			eyeSampleResult.alpha = 1.f;
+			SampleResult &eyeSampleResult = AddResult(samplesResults[samplerIndex], false);
 
 			Ray eyeRay;
 			eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
@@ -152,18 +151,20 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 			eyeVertex.depth = 1;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
+				eyeSampleResult.firstPathVertex = (eyeVertex.depth == 1);
+				eyeSampleResult.lastPathVertex = (eyeVertex.depth == engine->maxEyePathDepth);
+
 				const u_int sampleOffset = sampleBootSizeVM + engine->maxLightPathDepth * sampleLightStepSize +
 					(eyeVertex.depth - 1) * sampleEyeStepSize;
 
+				// NOTE: I account for volume emission only with path tracing (i.e. here and
+				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput, connectEmission;
 				const bool hit = scene->Intersect(device, false,
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
-						&connectionThroughput, NULL, NULL, &connectEmission);
-				// I account for volume emission only with path tracing (i.e. here and
-				// not in any other place)
-				eyeSampleResult.radiance[0] += connectEmission;
+						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);
 
 				if (!hit) {
 					// Nothing was hit, look for infinitelight
@@ -175,13 +176,19 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 					DirectHitLight(false, eyeVertex, eyeSampleResult);
 
-					if (eyeVertex.depth == 1)
+					if (eyeVertex.depth == 1) {
 						eyeSampleResult.alpha = 0.f;
+						eyeSampleResult.depth = std::numeric_limits<float>::infinity();
+					}
 					break;
 				}
 				eyeVertex.throughput *= connectionThroughput;
 
 				// Something was hit
+				if (eyeSampleResult.firstPathVertex) {
+					eyeSampleResult.alpha = 1.f;
+					eyeSampleResult.depth = eyeRayHit.t;
+				}
 
 				// Update MIS constants
 				const float factor = 1.f / MIS(AbsDot(eyeVertex.bsdf.hitPoint.shadeN, eyeVertex.bsdf.hitPoint.fixedDir));
@@ -233,8 +240,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				if (!Bounce(time, sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
 					break;
 			}
-
-			samplesResults[samplerIndex].push_back(eyeSampleResult);
 		}
 
 		//----------------------------------------------------------------------
