@@ -132,12 +132,12 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float u = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
 			&texs[<<CS_NU_TEXTURE_INDEX>>],
 			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+			TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
 		const float v = clamp(Texture_Index<<CS_NV_TEXTURE_INDEX>>_EvaluateFloat(
 			&texs[<<CS_NV_TEXTURE_INDEX>>],
 			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+			TEXTURES_PARAM), 6e-3f, 1.f);
 		const float u2 = u * u;
 		const float v2 = v * v;
 		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
@@ -313,12 +313,12 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	const float u = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
 			&texs[<<CS_NU_TEXTURE_INDEX>>],
 			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+			TEXTURES_PARAM), 6e-3f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
 	const float v = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
 			&texs[<<CS_NV_TEXTURE_INDEX>>],
 			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+			TEXTURES_PARAM), 6e-3f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);

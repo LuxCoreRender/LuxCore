@@ -39,13 +39,13 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
 
 	if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(localSampledDir), hitPoint.geometryN) <= 0.f) {
-		// Transmition
+		// Transmission
 		*event = DIFFUSE | TRANSMIT;
 
 		if (directPdfW)
-			*directPdfW = fabsf(localSampledDir.z) * INV_PI * 0.5f;
+			*directPdfW = fabsf(localSampledDir.z) * INV_PI * .5f;
 		if (reversePdfW)
-			*reversePdfW = fabsf(localFixedDir.z) * INV_PI * 0.5f;
+			*reversePdfW = fabsf(localFixedDir.z) * INV_PI * .5f;
 
 		const Vector H(Normalize(Vector(localLightDir.x + localEyeDir.x, localLightDir.y + localEyeDir.y,
 			localLightDir.z - localEyeDir.z)));
@@ -66,9 +66,9 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			ks *= ti * ti;
 		}
 		if (directPdfW)
-			*directPdfW = 0.5f * fabsf(localSampledDir.z * INV_PI);
+			*directPdfW = .5f * fabsf(localSampledDir.z * INV_PI);
 		if (reversePdfW)
-			*reversePdfW = 0.5f * fabsf(localFixedDir.z * INV_PI);
+			*reversePdfW = .5f * fabsf(localFixedDir.z * INV_PI);
 		ks = ks.Clamp();
 		const Spectrum S2 = FresnelTexture::SchlickEvaluate(ks, u);
 		Spectrum S(Sqrt((Spectrum(1.f) - S1) * (Spectrum(1.f) - S2)));
@@ -92,16 +92,16 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		if (localEyeDir.z >= 0.f) {
 			ks = Ks->GetSpectrumValue(hitPoint);
 			i = index->GetFloatValue(hitPoint);
-			u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
-			v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
+			u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
 			alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
 			d = depth->GetFloatValue(hitPoint);
 			mbounce = multibounce;
 		} else {
 			ks = Ks_bf->GetSpectrumValue(hitPoint);
 			i = index_bf->GetFloatValue(hitPoint);
-			u = Clamp(nu_bf->GetFloatValue(hitPoint), 0.f, 1.f);
-			v = Clamp(nv_bf->GetFloatValue(hitPoint), 0.f, 1.f);
+			u = Clamp(nu_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			v = Clamp(nv_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
 			alpha = Ka_bf->GetSpectrumValue(hitPoint).Clamp();
 			d = depth_bf->GetFloatValue(hitPoint);
 			mbounce = multibounce_bf;
@@ -122,7 +122,7 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
 			const float wBase = 1.f - wCoating;
 
-			*directPdfW = 0.5f * (wBase * fabsf(localSampledDir.z * INV_PI) +
+			*directPdfW = .5f * (wBase * fabsf(localSampledDir.z * INV_PI) +
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir));
 		}
 
@@ -130,7 +130,7 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
 			const float wBaseR = 1.f - wCoatingR;
 
-			*reversePdfW = 0.5f * (wBaseR * fabsf(localFixedDir.z * INV_PI) +
+			*reversePdfW = .5f * (wBaseR * fabsf(localFixedDir.z * INV_PI) +
 				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir));
 		}
 
@@ -168,16 +168,16 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		if (localFixedDir.z >= 0.f) {
 			ks = Ks->GetSpectrumValue(hitPoint);
 			i = index->GetFloatValue(hitPoint);
-			u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
-			v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
+			u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
 			alpha = Ka->GetSpectrumValue(hitPoint).Clamp();
 			d = depth->GetFloatValue(hitPoint);
 			mbounce = multibounce;
 		} else {
 			ks = Ks_bf->GetSpectrumValue(hitPoint);
 			i = index_bf->GetFloatValue(hitPoint);
-			u = Clamp(nu_bf->GetFloatValue(hitPoint), 0.f, 1.f);
-			v = Clamp(nv_bf->GetFloatValue(hitPoint), 0.f, 1.f);
+			u = Clamp(nu_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
+			v = Clamp(nv_bf->GetFloatValue(hitPoint), 6e-3f, 1.f);
 			alpha = Ka_bf->GetSpectrumValue(hitPoint).Clamp();
 			d = depth_bf->GetFloatValue(hitPoint);
 			mbounce = multibounce_bf;
@@ -233,13 +233,13 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			baseF = Kd->GetSpectrumValue(hitPoint).Clamp() * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
 
 			*event = GLOSSY | REFLECT;
-		}
+}
 
 		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
 		if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) <= 0.f)
 			return Spectrum();
 
-		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
+		*pdfW = .5f * (coatingPdf * wCoating + basePdf * wBase);
 
 		// Absorption
 		const float cosi = fabsf(localSampledDir->z);
@@ -255,12 +255,12 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 
 		return (coatingF + absorption * (Spectrum(1.f) - S) * baseF) / *pdfW;
 	} else {
-		// Transmition
+		// Transmission
 		*localSampledDir = -Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
 		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
 		if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) > 0.f)
 			return Spectrum();
-		*pdfW *= 0.5f;
+		*pdfW *= .5f;
 
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
@@ -281,9 +281,9 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 	if (localFixedDir.z * localSampledDir.z <= 0.f) {
 		// Transmition
 		if (directPdfW)
-			*directPdfW = fabsf(localSampledDir.z) * INV_PI * 0.5f;
+			*directPdfW = fabsf(localSampledDir.z) * INV_PI * .5f;
 		if (reversePdfW)
-			*reversePdfW = fabsf(localFixedDir.z) * INV_PI * 0.5f;
+			*reversePdfW = fabsf(localFixedDir.z) * INV_PI * .5f;
 	} else {
 		// Reflection
 		Spectrum ks;
@@ -315,7 +315,7 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
 			const float wBase = 1.f - wCoating;
 
-			*directPdfW = 0.5f * (wBase * fabsf(localSampledDir.z * INV_PI) +
+			*directPdfW = .5f * (wBase * fabsf(localSampledDir.z * INV_PI) +
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir));
 		}
 
@@ -323,7 +323,7 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
 			const float wBaseR = 1.f - wCoatingR;
 
-			*reversePdfW = 0.5f * (wBaseR * fabsf(localFixedDir.z * INV_PI) +
+			*reversePdfW = .5f * (wBaseR * fabsf(localFixedDir.z * INV_PI) +
 				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir));
 		}
 	}

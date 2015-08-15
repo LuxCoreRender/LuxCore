@@ -51,13 +51,19 @@ void PathCPURenderThread::DirectLightSampling(
 		float distance, directPdfW;
 		Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
 				u1, u2, u3, &lightRayDir, &distance, &directPdfW);
+		assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
 		if (!lightRadiance.Black()) {
+			assert (!isnan(directPdfW) && !isinf(directPdfW));
+
 			BSDFEvent event;
 			float bsdfPdfW;
 			Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
+			assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
 			if (!bsdfEval.Black()) {
+				assert (!isnan(bsdfPdfW) && !isnan(bsdfPdfW));
+
 				const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 				Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
 						epsilon,
@@ -320,8 +326,10 @@ void PathCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 6),
 					sampler->GetSample(sampleOffset + 7),
 					&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 			if (bsdfSample.Black())
 				break;
+			assert (!isnan(lastPdfW) && !isnan(lastPdfW));
 
 			if (sampleResult.firstPathVertex)
 				sampleResult.firstPathVertexEvent = lastBSDFEvent;
