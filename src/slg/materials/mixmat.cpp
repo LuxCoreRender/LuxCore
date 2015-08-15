@@ -26,6 +26,42 @@ using namespace slg;
 // Mix material
 //------------------------------------------------------------------------------
 
+MixMaterial::MixMaterial(const Texture *emitted, const Texture *bump,
+		Material *mA, Material *mB, const Texture *mix) :
+		Material(emitted, bump), matA(mA), matB(mB), mixFactor(mix) {
+	Preprocess();
+}
+
+BSDFEvent MixMaterial::GetEventTypesImpl() const {
+	return (matA->GetEventTypes() | matB->GetEventTypes());
+}
+
+bool MixMaterial::IsLightSourceImpl() const {
+	return (Material::IsLightSource() || matA->IsLightSource() || matB->IsLightSource());
+}
+
+bool MixMaterial::HasBumpTexImpl() const { 
+	return (Material::HasBumpTex() || matA->HasBumpTex() || matB->HasBumpTex());
+}
+
+bool MixMaterial::IsDeltaImpl() const {
+	return (matA->IsDelta() && matB->IsDelta());
+}
+
+bool MixMaterial::IsPassThroughImpl() const {
+	return (matA->IsPassThrough() || matB->IsPassThrough());
+}
+
+void MixMaterial::Preprocess() {
+	// Cache values for performance with very large material node trees
+
+	eventTypes = GetEventTypesImpl();
+	isLightSource = IsLightSourceImpl();
+	hasBumpTex = HasBumpTexImpl();
+	isDelta = IsDeltaImpl();
+	isPassThrough = IsPassThroughImpl();
+}
+
 const Volume *MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (interiorVolume)
@@ -254,6 +290,8 @@ void MixMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 	
 	// Update volumes too
 	Material::UpdateMaterialReferences(oldMat, newMat);
+	
+	Preprocess();
 }
 
 bool MixMaterial::IsReferencing(const Material *mat) const {

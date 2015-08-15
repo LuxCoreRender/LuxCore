@@ -160,7 +160,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
 		return Spectrum();
 
-	if (passThroughEvent < 0.5f) {
+	if (passThroughEvent < .5f) {
 		// Reflection
 		Spectrum ks, alpha;
 		float i, u, v, d;
