@@ -60,12 +60,12 @@ float3 RoughGlassMaterial_ConstEvaluate(
 	
 	const float ntc = nt / nc;
 
-	const float u = clamp(nuVal, 6e-3f, 1.f);
+	const float u = clamp(nuVal, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
-	const float v = clamp(nvVal, 6e-3f, 1.f);
+	const float v = clamp(nvVal, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 #else
 	const float anisotropy = 0.f;
@@ -169,12 +169,12 @@ float3 RoughGlassMaterial_ConstSample(
 	if (isKtBlack && isKrBlack)
 		return BLACK;
 
-	const float u = clamp(nuVal, 6e-3f, 1.f);
+	const float u = clamp(nuVal, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
-	const float v = clamp(nvVal, 6e-3f, 1.f);
+	const float v = clamp(nvVal, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f);
 	const float roughness = u * v;
 #else
 	const float anisotropy = 0.f;

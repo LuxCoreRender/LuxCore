@@ -59,11 +59,11 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	}
 	ks = ks.Clamp();
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 
 	if (directPdfW) {
@@ -148,11 +148,11 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	}
 	ks = ks.Clamp();
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 
 	// Coating is used only on the front face
@@ -230,11 +230,11 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	}
 	ks = ks.Clamp();
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 6e-3f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 6e-3f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 0.f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 
 	if (directPdfW) {

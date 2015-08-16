@@ -23,11 +23,14 @@
 //------------------------------------------------------------------------------
 
 float SchlickDistribution_SchlickZ(const float roughness, float cosNH) {
-	const float cosNH2 = cosNH * cosNH;
-	// expanded for increased numerical stability
-	const float d = cosNH2 * roughness + (1.f - cosNH2);
-	// use double division to avoid overflow in d*d product
-	return (roughness / d) / d;
+	if (roughness > 0.f) {
+		const float cosNH2 = cosNH * cosNH;
+		// expanded for increased numerical stability
+		const float d = cosNH2 * roughness + (1.f - cosNH2);
+		// use double division to avoid overflow in d*d product
+		return (roughness / d) / d;
+	}
+	return 0.f;
 }
 
 float SchlickDistribution_SchlickA(const float3 H, const float anisotropy) {
