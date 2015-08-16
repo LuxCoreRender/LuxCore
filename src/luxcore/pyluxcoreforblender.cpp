@@ -354,13 +354,13 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex,
 		const luxrays::Transform *trans) {
-	MFace *blenderFaces = reinterpret_cast<MFace *>(blenderFacesPtr);
-	MVert *blenderFVertices = reinterpret_cast<MVert *>(blenderVerticesPtr);
-	MTFace *blenderUVs = reinterpret_cast<MTFace *>(blenderUVsPtr);
-	MCol *blenderCols = reinterpret_cast<MCol *>(blenderColsPtr);
+	const MFace *blenderFaces = reinterpret_cast<const MFace *>(blenderFacesPtr);
+	const MVert *blenderFVertices = reinterpret_cast<const MVert *>(blenderVerticesPtr);
+	const MTFace *blenderUVs = reinterpret_cast<const MTFace *>(blenderUVsPtr);
+	const MCol *blenderCols = reinterpret_cast<const MCol *>(blenderColsPtr);
 
 	const float normalScale = 1.f / 32767.f;
-	const float rgbScale = 1.0f / 255.0f;
+	const float rgbScale = 1.f / 255.f;
 	u_int vertFreeIndex = 0;
 	boost::unordered_map<u_int, u_int> vertexMap;
 	vector<Point> tmpMeshVerts;
@@ -368,6 +368,7 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 	vector<UV> tmpMeshUVs;
 	vector<Spectrum> tmpMeshCols;
 	vector<Triangle> tmpMeshTris;
+
 	for (u_int faceIndex = 0; faceIndex < blenderFaceCount; ++faceIndex) {
 		const MFace &face = blenderFaces[faceIndex];
 
@@ -387,7 +388,32 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					const MVert &vertex = blenderFVertices[index];
 
 					// Check if it has been already defined
-					if (vertexMap.find(index) == vertexMap.end()) {
+					
+					bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
+					if (alreadyDefined) {
+						if (blenderUVs) {
+							// Check if the already defined vertex has the right UV coordinates
+							if ((blenderUVs[faceIndex].uv[j][0] != tmpMeshUVs[index].u) ||
+									(blenderUVs[faceIndex].uv[j][1] != tmpMeshUVs[index].v)) {
+								// I have to create a new vertex
+								alreadyDefined = false;
+							}
+						}
+
+						if (blenderCols) {
+							// Check if the already defined vertex has the right color
+							if (((blenderCols[faceIndex * 4 + j].b * rgbScale) != blenderCols[index].r) ||
+									((blenderCols[faceIndex * 4 + j].g * rgbScale) != blenderCols[index].g) ||
+									((blenderCols[faceIndex * 4 + j].r * rgbScale) != blenderCols[index].b)) {
+								// I have to create a new vertex
+								alreadyDefined = false;
+							}
+						}
+					}
+
+					if (alreadyDefined)
+						vertIndices[j] = vertexMap[index];
+					else {
 						// Add the vertex
 						tmpMeshVerts.push_back(Point(vertex.co[0], vertex.co[1], vertex.co[2]));
 						// Add the normal
@@ -410,8 +436,7 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 						const u_int vertIndex = vertFreeIndex++;
 						vertexMap[index] = vertIndex;
 						vertIndices[j] = vertIndex;
-					} else
-						vertIndices[j] = vertexMap[index];
+					}
 				}
 			} else {
 				//--------------------------------------------------------------
@@ -451,7 +476,7 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					vertIndices[j] = vertFreeIndex++;
 				}
 			}
-
+			
 			tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
 			if (!triangle)
 				tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[2], vertIndices[3]));
