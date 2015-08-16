@@ -162,11 +162,14 @@ Spectrum slg::CoatingAbsorption(const float cosi, const float coso,
 //------------------------------------------------------------------------------
 
 float slg::SchlickDistribution_SchlickZ(const float roughness, const float cosNH) {
-	const float cosNH2 = cosNH * cosNH;
-	// expanded for increased numerical stability
-	const float d = cosNH2 * roughness + (1.f - cosNH2);
-	// use double division to avoid overflow in d*d product
-	return (roughness / d) / d;
+	if (roughness > 0.f) {
+		const float cosNH2 = cosNH * cosNH;
+		// expanded for increased numerical stability
+		const float d = cosNH2 * roughness + (1.f - cosNH2);
+		// use double division to avoid overflow in d*d product
+		return (roughness / d) / d;
+	}
+	return 0.f;
 }
 
 float slg::SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) {

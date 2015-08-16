@@ -70,7 +70,8 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 	Frame frame;
 	Frame_SetFromZ_Private(&frame, geometryN);
 
-	if (dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, sampledDir), geometryN) <= 0.f) {
+	const float sideTest = dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, sampledDir), geometryN);
+	if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmition
 		*event = DIFFUSE | TRANSMIT;
 
@@ -97,8 +98,6 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 			ks *= ti * ti;
 		}
 #endif
-		if (directPdfW)
-			*directPdfW = 0.5f * fabs(sampledDir.z * M_1_PI_F);
 		ks = Spectrum_Clamp(ks);
 		const float3 S2 = FresnelSchlick_Evaluate(ks, u);
 		float3 S = Spectrum_Sqrt((WHITE - S1) * (WHITE - S2));
@@ -113,7 +112,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 #endif
 		return (M_1_PI_F * coso) * S * Spectrum_Clamp(ktVal) *
 			(WHITE - Spectrum_Clamp(kdVal));
-	} else {
+	} else if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
 		*event = GLOSSY | REFLECT;
 
@@ -140,9 +139,9 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 			index = i;
 #endif
-			u = clamp(nuVal, 6e-3f, 1.f);
+			u = clamp(nuVal, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
-			v = clamp(nvVal, 6e-3f, 1.f);
+			v = clamp(nvVal, 0.f, 1.f);
 #endif
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 			alpha = Spectrum_Clamp(kaVal);
@@ -156,9 +155,9 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 			index = i_bf;
 #endif
-			u = clamp(nuVal_bf, 6e-3f, 1.f);
+			u = clamp(nuVal_bf, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
-			v = clamp(nvVal_bf, 6e-3f, 1.f);
+			v = clamp(nvVal_bf, 0.f, 1.f);
 #endif
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 			alpha = Spectrum_Clamp(kaVal_bf);
@@ -180,7 +179,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
 		const float u2 = u * u;
 		const float v2 = v * v;
-		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 		const float roughness = u * v;
 #else
 		const float anisotropy = 0.f;
@@ -212,6 +211,8 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 		// assumes coating bxdf takes fresnel factor S into account
 
 		return coatingF + absorption * (WHITE - S) * baseF;
+	} else {
+		return BLACK;
 	}
 }
 
@@ -238,11 +239,10 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		const int multibounceVal, const int multibounceVal_bf,
 #endif
 		const float3 kdVal, const float3 ktVal, const float3 ksVal, const float3 ksVal_bf) {
-	if ((!(requestedEvent & (GLOSSY | REFLECT)) && !(requestedEvent & (DIFFUSE | TRANSMIT))) ||
-		(fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	if (passThroughEvent < 0.5f) {
+	if (passThroughEvent < 0.5f && (requestedEvent & (GLOSSY | REFLECT))) {
 		// Reflection
 		float3 ks;
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
@@ -266,9 +266,9 @@ float3 GlossyTranslucentMaterial_ConstSample(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 			index = i;
 #endif
-			u = clamp(nuVal, 6e-3f, 1.f);
+			u = clamp(nuVal, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
-			v = clamp(nvVal, 6e-3f, 1.f);
+			v = clamp(nvVal, 0.f, 1.f);
 #endif
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 			alpha = Spectrum_Clamp(kaVal);
@@ -282,9 +282,9 @@ float3 GlossyTranslucentMaterial_ConstSample(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
 			index = i_bf;
 #endif
-			u = clamp(nuVal_bf, 6e-3f, 1.f);
+			u = clamp(nuVal_bf, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
-			v = clamp(nvVal_bf, 6e-3f, 1.f);
+			v = clamp(nvVal_bf, 0.f, 1.f);
 #endif
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
 			alpha = Spectrum_Clamp(kaVal_bf);
@@ -306,7 +306,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)
 		const float u2 = u * u;
 		const float v2 = v * v;
-		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 		const float roughness = u * v;
 #else
 		const float anisotropy = 0.f;
@@ -359,7 +359,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		const float3 geometryN = VLOAD3F(&hitPoint->geometryN.x);
 		Frame frame;
 		Frame_SetFromZ_Private(&frame, geometryN);
-		if (dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, *sampledDir), geometryN) <= 0.f)
+		if (!(dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, *sampledDir), geometryN) > DEFAULT_COS_EPSILON_STATIC))
 			return BLACK;
 
 		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
@@ -381,7 +381,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		// coatingF already takes fresnel factor S into account
 
 		return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
-	} else {
+	} else if (passThroughEvent >= .5f && (requestedEvent & (DIFFUSE | TRANSMIT))) {
 		// Transmition
 		*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 		*sampledDir *= signbit(fixedDir.z) ? 1.f : -1.f;
@@ -389,7 +389,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 		const float3 geometryN = VLOAD3F(&hitPoint->geometryN.x);
 		Frame frame;
 		Frame_SetFromZ_Private(&frame, geometryN);
-		if (dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, *sampledDir), geometryN) > 0.f)
+		if (!(dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, *sampledDir), geometryN) < -DEFAULT_COS_EPSILON_STATIC))
 			return BLACK;
 
 		*pdfW *= 0.5f;
@@ -437,6 +437,8 @@ float3 GlossyTranslucentMaterial_ConstSample(
 #endif
 		return (M_1_PI_F * coso / *pdfW) * S * Spectrum_Clamp(ktVal) *
 			(WHITE - Spectrum_Clamp(kdVal));
+	} else {
+		return BLACK;
 	}
 }
 
