@@ -61,6 +61,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
+				threadIndex, engine->renderThreads.size(),
 				&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 		sampler->RequestSamples(sampleSize);
 

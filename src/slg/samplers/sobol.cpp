@@ -31,6 +31,16 @@ using namespace slg;
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
+SobolSampler::SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const u_int threadIdx, const u_int threadCnt) : Sampler(rnd, flm),
+			threadIndex(threadIdx), threadCount(threadCnt),
+			directions(NULL), pass(SOBOL_STARTOFFSET + threadIdx) {
+}
+
+SobolSampler::~SobolSampler() {
+	delete directions;
+}
+
 void SobolSampler::RequestSamples(const u_int size) {
 	directions = new u_int[size * SOBOL_BITS];
 	SobolGenerateDirectionVectors(directions, size);
@@ -53,16 +63,12 @@ float SobolSampler::GetSample(const u_int index) {
 	const u_int iResult = SobolDimension(pass, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
 
-	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? rng0 : rng1;
-	const float val = fResult + shift;
-
-	return val - floorf(val);
+	return fResult;
 }
 
 void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 
-	++pass;
+	pass += threadCount;
 }

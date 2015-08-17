@@ -41,10 +41,9 @@ extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions
 
 class SobolSampler : public Sampler {
 public:
-	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm),
-			directions(NULL), rng0(rnd->floatValue()), rng1(rnd->floatValue()),
-			pass(SOBOL_STARTOFFSET) { }
-	virtual ~SobolSampler() { delete directions; }
+	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const u_int threadIndex, const u_int threadCount);
+	virtual ~SobolSampler();
 
 	virtual SamplerType GetType() const { return SOBOL; }
 	virtual void RequestSamples(const u_int size);
@@ -55,9 +54,9 @@ public:
 private:
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
-	u_int *directions;
+	const u_int threadIndex, threadCount;
 
-	float rng0, rng1;
+	u_int *directions;
 	u_int pass;
 };
 

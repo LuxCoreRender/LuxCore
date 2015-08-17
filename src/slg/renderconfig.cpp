@@ -579,6 +579,7 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
+		const u_int threadIndex, const u_int threadCount,
 		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const {
 	const SamplerType samplerType = Sampler::String2SamplerType(GetProperty("sampler.type").Get<string>());
 	switch (samplerType) {
@@ -593,7 +594,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 					metropolisSharedTotalLuminance, metropolisSharedSampleCount);
 		}
 		case SOBOL:
-			return new SobolSampler(rndGen, film);
+			return new SobolSampler(rndGen, film, threadIndex, threadCount);
 		default:
 			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
 	}

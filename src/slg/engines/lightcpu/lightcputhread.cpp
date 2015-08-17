@@ -204,6 +204,7 @@ void LightCPURenderThread::RenderFunc() {
 	// initialized inside MetropolisSampler::RequestSamples()
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
+			threadIndex, engine->renderThreads.size(),
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup

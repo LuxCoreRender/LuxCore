@@ -44,6 +44,7 @@ public:
 
 	Film *AllocFilm(FilmOutputs &filmOutputs) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
+		const u_int threadIndex, const u_int threadCount,
 		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
