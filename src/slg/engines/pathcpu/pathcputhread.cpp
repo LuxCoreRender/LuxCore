@@ -205,7 +205,7 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
 		Get<u_int>() * filmWidth * filmHeight;
 
-	float esimatedSampleLuminance = 0.f;
+	float estimatedSampleLuminance = 0.f;
 
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Set to 0.0 all result colors
@@ -375,25 +375,15 @@ void PathCPURenderThread::RenderFunc() {
 
 		// Adaptive Radiance clamping
 		if (engine->radianceClampMaxValue > 0.f) {
-			// Recover the current pixel value
-			float value[3] = { 0.f, 0.f, 0.f };
-			const int x = Ceil2Int(sampleResult.filmX - .5f);
-			const int y = Ceil2Int(sampleResult.filmY - .5f);
+			const float sampleLuminance = sampleResult.Y();
 
-			if ((x >= 0) && (x < (int)film->GetWidth()) && (y >= 0) && (y < (int)film->GetHeight())) {
-				for (u_int i = 0; i < film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
-					film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
-							x, y, &value[0]);
+			const float adaptiveCapValue = ((estimatedSampleLuminance == 0.f) || (film->GetTotalSampleCount() < 100.0)) ?
+				1.f :
+				(estimatedSampleLuminance * engine->radianceClampMaxValue);
+			sampleResult.ClampRadiance(adaptiveCapValue);
 
-				const float avgValue = Max(value[0], Max(value[1], value[2]));
-				const float adaptiveCapValue = ((esimatedSampleLuminance == 0.f) || (film->GetTotalSampleCount() < 100.0)) ?
-					1.f :
-					(avgValue  + esimatedSampleLuminance * engine->radianceClampMaxValue);
-				sampleResult.ClampRadiance(adaptiveCapValue);
-
-				// Update estimated film luminance with incremental formula
-				esimatedSampleLuminance += (Spectrum(value).Y() - esimatedSampleLuminance) / (film->GetTotalSampleCount() + 1.0);
-			}
+			// Update estimated film luminance with incremental formula
+			estimatedSampleLuminance += (Spectrum(sampleLuminance).Y() - estimatedSampleLuminance) / (film->GetTotalSampleCount() + 1.0);
 		}
 
 		// Old radiance clamping method

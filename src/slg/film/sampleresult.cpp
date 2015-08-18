@@ -44,6 +44,14 @@ void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount
 	lastPathVertex = false;
 }
 
+float SampleResult::Y() const {
+	float luminance = 0.f;
+	for (u_int i = 0; i < radiance.size(); ++i)
+		luminance += radiance[i].Y();
+	
+	return luminance;
+}
+
 void SampleResult::AddEmission(const u_int lightID, const Spectrum &pathThroughput,
 		const Spectrum &incomingRadiance) {
 	const Spectrum r = pathThroughput * incomingRadiance;
@@ -124,20 +132,14 @@ void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 	sampleResults[size].radiance[0] = radiancePSN;
 }
 
-void SampleResult::ClampRadiance(const float cap) {
+void SampleResult::ClampRadiance(const float radianceCap) {
 	for (u_int i = 0; i < radiance.size(); ++i) {
 		Spectrum &rad = radiance[i];
 
-		const float maxValue = Max(rad.c[0], Max(rad.c[1], rad.c[2]));
-		if ((maxValue > 0.f) && (maxValue > cap)) {
-			const float scale = cap / maxValue;
+		const float radianceMaxValue = Max(rad.c[0], Max(rad.c[1], rad.c[2]));
+		if ((radianceMaxValue > 0.f) && (radianceMaxValue > radianceCap)) {
+			const float scale = radianceCap / radianceMaxValue;
 			rad *= scale;
 		}
 	}
 }
-
-// Old clamping method
-//void SampleResult::ClampRadiance(const float cap) {
-//		for (u_int i = 0; i < radiance.size(); ++i)
-//			radiance[i] = radiance[i].Clamp(0.f, cap);
-//}
