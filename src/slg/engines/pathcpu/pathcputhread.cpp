@@ -205,8 +205,6 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
 		Get<u_int>() * filmWidth * filmHeight;
 
-	float estimatedSampleLuminance = 0.f;
-
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Set to 0.0 all result colors
 		sampleResult.emission = Spectrum();
@@ -374,21 +372,25 @@ void PathCPURenderThread::RenderFunc() {
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
 		// Adaptive Radiance clamping
-		if (engine->radianceClampMaxValue > 0.f) {
-			const float sampleLuminance = sampleResult.Y();
+		if (engine->sqrtVarianceClampMaxValue > 0.f) {
+			// Recover the current pixel value
+			const int x = Ceil2Int(sampleResult.filmX - .5f);
+			const int y = Ceil2Int(sampleResult.filmY - .5f);
 
-			const float adaptiveCapValue = ((estimatedSampleLuminance == 0.f) || (film->GetTotalSampleCount() < 100.0)) ?
-				1.f :
-				(estimatedSampleLuminance * engine->radianceClampMaxValue);
-			sampleResult.ClampRadiance(adaptiveCapValue);
+			if ((x >= 0) && (x < (int)film->GetWidth()) && (y >= 0) && (y < (int)film->GetHeight())) {
+				float expectedValue[3] = { 0.f, 0.f, 0.f };
+				for (u_int i = 0; i < film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
+					film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
+							x, y, &expectedValue[0]);
 
-			// Update estimated film luminance with incremental formula
-			estimatedSampleLuminance += (Spectrum(sampleLuminance).Y() - estimatedSampleLuminance) / (film->GetTotalSampleCount() + 1.0);
+				const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
+				const float adaptiveCapValue = (maxExpectedValue == 0.f) ?
+					1.f :
+					(maxExpectedValue + engine->sqrtVarianceClampMaxValue);
+
+				sampleResult.ClampRadiance(adaptiveCapValue);
+			}
 		}
-
-		// Old radiance clamping method
-//		if (engine->radianceClampMaxValue > 0.f)
-//			sampleResult.ClampRadiance(engine->radianceClampMaxValue);
 
 		sampler->NextSample(sampleResults);
 
