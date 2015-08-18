@@ -205,6 +205,8 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
 		Get<u_int>() * filmWidth * filmHeight;
 
+	float esimatedSampleLuminance = 0.f;
+
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Set to 0.0 all result colors
 		sampleResult.emission = Spectrum();
@@ -384,9 +386,13 @@ void PathCPURenderThread::RenderFunc() {
 							x, y, &value[0]);
 
 				const float avgValue = Max(value[0], Max(value[1], value[2]));
-				//const float adaptiveCapValue = (avgValue == 0.f) ? 1.f : (avgValue * engine->radianceClampMaxValue);
-				const float adaptiveCapValue = avgValue + engine->radianceClampMaxValue;
+				const float adaptiveCapValue = ((esimatedSampleLuminance == 0.f) || (film->GetTotalSampleCount() < 100.0)) ?
+					1.f :
+					(avgValue  + esimatedSampleLuminance * engine->radianceClampMaxValue);
 				sampleResult.ClampRadiance(adaptiveCapValue);
+
+				// Update estimated film luminance with incremental formula
+				esimatedSampleLuminance += (Spectrum(value).Y() - esimatedSampleLuminance) / (film->GetTotalSampleCount() + 1.0);
 			}
 		}
 
