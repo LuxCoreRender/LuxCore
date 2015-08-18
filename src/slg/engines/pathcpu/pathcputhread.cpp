@@ -371,9 +371,28 @@ void PathCPURenderThread::RenderFunc() {
 
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
-		// Radiance clamping
-		if (engine->radianceClampMaxValue > 0.f)
-			sampleResult.ClampRadiance(engine->radianceClampMaxValue);
+		// Adaptive Radiance clamping
+		if (engine->radianceClampMaxValue > 0.f) {
+			// Recover the current pixel value
+			float value[3] = { 0.f, 0.f, 0.f };
+			const int x = Ceil2Int(sampleResult.filmX - .5f);
+			const int y = Ceil2Int(sampleResult.filmY - .5f);
+
+			if ((x >= 0) && (x < (int)film->GetWidth()) && (y >= 0) && (y < (int)film->GetHeight())) {
+				for (u_int i = 0; i < film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
+					film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
+							x, y, &value[0]);
+
+				const float avgValue = Max(value[0], Max(value[1], value[2]));
+				//const float adaptiveCapValue = (avgValue == 0.f) ? 1.f : (avgValue * engine->radianceClampMaxValue);
+				const float adaptiveCapValue = avgValue + engine->radianceClampMaxValue;
+				sampleResult.ClampRadiance(adaptiveCapValue);
+			}
+		}
+
+		// Old radiance clamping method
+//		if (engine->radianceClampMaxValue > 0.f)
+//			sampleResult.ClampRadiance(engine->radianceClampMaxValue);
 
 		sampler->NextSample(sampleResults);
 
