@@ -45,10 +45,7 @@ public:
 		const luxrays::Spectrum &pathThroughput, const luxrays::Spectrum &incomingRadiance,
 		const float lightScale);
 
-	void ClampRadiance(const float cap) {
-		for (u_int i = 0; i < radiance.size(); ++i)
-			radiance[i] = radiance[i].Clamp(0.f, cap);
-	}
+	void ClampRadiance(const float cap);
 
 	//--------------------------------------------------------------------------
 	// Used by render engines not supporting AOVs (note: DEPRECATED)
