@@ -74,7 +74,7 @@ public:
 	float rrImportanceCap;
 
 	// Clamping settings
-	float radianceClampMaxValue;
+	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
 	friend class PathCPURenderThread;
