@@ -299,6 +299,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/clear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/heterogenous.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/homogenous.cpp
