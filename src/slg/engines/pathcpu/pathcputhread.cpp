@@ -384,9 +384,7 @@ void PathCPURenderThread::RenderFunc() {
 							x, y, &expectedValue[0]);
 
 				const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
-				const float adaptiveCapValue = (maxExpectedValue == 0.f) ?
-					1.f :
-					(maxExpectedValue + engine->sqrtVarianceClampMaxValue);
+				const float adaptiveCapValue = maxExpectedValue + engine->sqrtVarianceClampMaxValue;
 
 				sampleResult.ClampRadiance(adaptiveCapValue);
 			}
