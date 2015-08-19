@@ -18,6 +18,7 @@
 
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/volumes/volume.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
@@ -188,6 +189,8 @@ void PathCPURenderThread::RenderFunc() {
 		sampleBootSize + // To generate eye ray
 		(engine->maxPathDepth + 1) * sampleStepSize; // For each path vertex
 	sampler->RequestSamples(sampleSize);
+	
+	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
@@ -371,24 +374,8 @@ void PathCPURenderThread::RenderFunc() {
 
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
-		// Adaptive Radiance clamping
-		if (engine->sqrtVarianceClampMaxValue > 0.f) {
-			// Recover the current pixel value
-			const int x = Ceil2Int(sampleResult.filmX - .5f);
-			const int y = Ceil2Int(sampleResult.filmY - .5f);
-
-			if ((x >= 0) && (x < (int)film->GetWidth()) && (y >= 0) && (y < (int)film->GetHeight())) {
-				float expectedValue[3] = { 0.f, 0.f, 0.f };
-				for (u_int i = 0; i < film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
-					film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
-							x, y, &expectedValue[0]);
-
-				const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
-				const float adaptiveCapValue = maxExpectedValue + engine->sqrtVarianceClampMaxValue;
-
-				sampleResult.ClampRadiance(adaptiveCapValue);
-			}
-		}
+		// Variance clamping
+		varianceClamping.Clamp(*film, sampleResult);
 
 		sampler->NextSample(sampleResults);
 
