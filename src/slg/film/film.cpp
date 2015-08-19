@@ -33,6 +33,7 @@ OIIO_NAMESPACE_USING
 #include "slg/film/sampleresult.h"
 #include "slg/film/filters/gaussian.h"
 #include "slg/editaction.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
@@ -409,6 +410,24 @@ void Film::Reset() {
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
+}
+
+void Film::VarianceClampFilm(const VarianceClamping &varianceClamping,
+		const Film &film, const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY) {
+	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && film.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+		for (u_int i = 0; i < Min(radianceGroupCount, film.radianceGroupCount); ++i) {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					float *srcPixel = film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					const float *dstPixel = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(dstOffsetX + x, dstOffsetY + y);
+
+					varianceClamping.Clamp(dstPixel, srcPixel);
+				}
+			}
+		}
+	}
 }
 
 void Film::AddFilm(const Film &film,

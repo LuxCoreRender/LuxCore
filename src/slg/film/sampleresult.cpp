@@ -133,13 +133,6 @@ void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 }
 
 void SampleResult::ClampRadiance(const float radianceCap) {
-	for (u_int i = 0; i < radiance.size(); ++i) {
-		Spectrum &rad = radiance[i];
-
-		const float radianceMaxValue = Max(rad.c[0], Max(rad.c[1], rad.c[2]));
-		if ((radianceMaxValue > 0.f) && (radianceMaxValue > radianceCap)) {
-			const float scale = radianceCap / radianceMaxValue;
-			rad *= scale;
-		}
-	}
+	for (u_int i = 0; i < radiance.size(); ++i)
+		radiance[i] = radiance[i].ScaledClamp(radianceCap);
 }

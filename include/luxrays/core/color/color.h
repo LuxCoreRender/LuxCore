@@ -199,6 +199,20 @@ public:
 		ret.c[2] = luxrays::Clamp(c[2], low, high);
 		return ret;
 	}
+	Color ScaledClamp(const float cap) const {
+		const float maxValue = Max(c[0], Max(c[1], c[2]));
+		if ((maxValue > 0.f) && (maxValue > cap)) {
+			const float scale = cap / maxValue;
+			
+			Color ret;
+			ret.c[0] = c[0] * scale;
+			ret.c[1] = c[0] * scale;
+			ret.c[2] = c[0] * scale;
+			return ret;
+		}
+		
+		return *this;
+	}
 	bool IsNaN() const {
 		if (isnan(c[0])) return true;
 		if (isnan(c[1])) return true;

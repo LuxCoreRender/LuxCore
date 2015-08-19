@@ -19,18 +19,22 @@
 #ifndef _SLG_VARIANCECLAMPING_H
 #define	_SLG_VARIANCECLAMPING_H
 
-#include "slg/film/film.h"
-
 namespace slg {
+
+class Film;
+class SampleResult;
 
 class VarianceClamping {
 public:
 	VarianceClamping();
 	VarianceClamping(const float sqrtMaxValue);
 	
+	bool hasClamping() const { return (sqrtVarianceClampMaxValue > 0.f); }
+	
 	void Clamp(const Film &film, SampleResult &sampleResult) const;
+	// Used by Film::VarianceClampFilm()
+	void Clamp(const float expectedValue[4], float value[4]) const;
 
-private:
 	float sqrtVarianceClampMaxValue;	
 };
 

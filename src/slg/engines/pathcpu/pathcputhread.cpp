@@ -375,7 +375,8 @@ void PathCPURenderThread::RenderFunc() {
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
 		// Variance clamping
-		varianceClamping.Clamp(*film, sampleResult);
+		if (varianceClamping.hasClamping())
+			varianceClamping.Clamp(*film, sampleResult);
 
 		sampler->NextSample(sampleResults);
 
