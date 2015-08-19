@@ -35,27 +35,51 @@ VarianceClamping::VarianceClamping(const float sqrtMaxValue) :
 		sqrtVarianceClampMaxValue(sqrtMaxValue) {
 }
 
-void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const {
-	if (sqrtVarianceClampMaxValue > 0.f) {
-		// Recover the current pixel value
-		const int x = Min(Max(Ceil2Int(sampleResult.filmX - .5f), 0), (int)film.GetWidth());
-		const int y = Min(Max(Ceil2Int(sampleResult.filmY - .5f), 0), (int)film.GetHeight());
+static void ScaledClamp(float value[4], const float cap) {
+	if (value[3] > 0.f) {
+		const float maxValue = Max(value[0], Max(value[1], value[2]));
+		const float scaledCap = cap * value[3];
 
-		float expectedValue[3] = { 0.f, 0.f, 0.f };
-		if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
-			for (u_int i = 0; i < film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
-				film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
-						x, y, &expectedValue[0]);
-		} else {
-			for (u_int i = 0; i < film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
-				film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
-						x, y, &expectedValue[0]);			
+		if ((maxValue > 0.f) && (maxValue > scaledCap)) {
+			const float scale = scaledCap / maxValue;
+
+			value[0] *= scale;
+			value[1] *= scale;
+			value[2] *= scale;
 		}
-
-		// Use the current pixel value as expected value
-		const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
-		const float adaptiveCapValue = maxExpectedValue + sqrtVarianceClampMaxValue;
-
-		sampleResult.ClampRadiance(adaptiveCapValue);
 	}
 }
+
+void VarianceClamping::Clamp(const float expectedValue[4], float value[4]) const {
+	// Use the current pixel value as expected value
+	const float maxExpectedValue = (expectedValue[3] > 0.f) ?
+		(Max(expectedValue[0], Max(expectedValue[1], expectedValue[2])) / expectedValue[3]) :
+		0.f;
+	const float capValue = maxExpectedValue + sqrtVarianceClampMaxValue;
+
+	ScaledClamp(value, capValue);
+}
+
+void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const {
+	// Recover the current pixel value
+	const int x = Min(Max(Ceil2Int(sampleResult.filmX - .5f), 0), (int)film.GetWidth());
+	const int y = Min(Max(Ceil2Int(sampleResult.filmY - .5f), 0), (int)film.GetHeight());
+
+	float expectedValue[3] = { 0.f, 0.f, 0.f };
+	if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
+		for (u_int i = 0; i < film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
+			film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
+					x, y, &expectedValue[0]);
+	} else {
+		for (u_int i = 0; i < film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
+			film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
+					x, y, &expectedValue[0]);			
+	}
+
+	// Use the current pixel value as expected value
+	const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
+	const float capValue = maxExpectedValue + sqrtVarianceClampMaxValue;
+
+	sampleResult.ClampRadiance(capValue);
+}
+

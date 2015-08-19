@@ -45,6 +45,7 @@
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/utils/convtest/convtest.h"
+#include "slg/utils/varianceclamping.h"
 
 namespace slg {
 
@@ -164,6 +165,14 @@ public:
 	}
 
 	//--------------------------------------------------------------------------
+
+	void VarianceClampFilm(const VarianceClamping &varianceClamping, const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY);
+	void VarianceClampFilm(const VarianceClamping &varianceClamping, const Film &film) {
+		VarianceClampFilm(varianceClamping, film, 0, 0, width, height, 0, 0);
+	}
 
 	void AddFilm(const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
