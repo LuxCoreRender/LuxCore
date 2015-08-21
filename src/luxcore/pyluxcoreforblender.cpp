@@ -402,9 +402,9 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 
 						if (blenderCols) {
 							// Check if the already defined vertex has the right color
-							if (((blenderCols[faceIndex * 4 + j].b * rgbScale) != blenderCols[index].r) ||
-									((blenderCols[faceIndex * 4 + j].g * rgbScale) != blenderCols[index].g) ||
-									((blenderCols[faceIndex * 4 + j].r * rgbScale) != blenderCols[index].b)) {
+							if (((blenderCols[faceIndex * 4 + j].b * rgbScale) != tmpMeshCols[index].c[0]) ||
+									((blenderCols[faceIndex * 4 + j].g * rgbScale) != tmpMeshCols[index].c[1]) ||
+									((blenderCols[faceIndex * 4 + j].r * rgbScale) != tmpMeshCols[index].c[2])) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
@@ -476,7 +476,7 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					vertIndices[j] = vertFreeIndex++;
 				}
 			}
-			
+
 			tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
 			if (!triangle)
 				tmpMeshTris.push_back(Triangle(vertIndices[0], vertIndices[2], vertIndices[3]));
