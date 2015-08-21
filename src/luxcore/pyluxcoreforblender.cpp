@@ -393,8 +393,8 @@ static bool Scene_DefineBlenderMesh(Scene *scene, const string &name,
 					if (alreadyDefined) {
 						if (blenderUVs) {
 							// Check if the already defined vertex has the right UV coordinates
-							if ((blenderUVs[faceIndex].uv[j][0] != tmpMeshUVs[index].u) ||
-									(blenderUVs[faceIndex].uv[j][1] != tmpMeshUVs[index].v)) {
+							if ((blenderUVs[faceIndex].uv[j][0] != tmpMeshUVs[vertexMap[index]].u) ||
+									(blenderUVs[faceIndex].uv[j][1] != tmpMeshUVs[vertexMap[index]].v)) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
@@ -402,9 +402,9 @@ static bool Scene_DefineBlenderMesh(Scene *scene, const string &name,
 
 						if (blenderCols) {
 							// Check if the already defined vertex has the right color
-							if (((blenderCols[faceIndex * 4 + j].b * rgbScale) != tmpMeshCols[index].c[0]) ||
-									((blenderCols[faceIndex * 4 + j].g * rgbScale) != tmpMeshCols[index].c[1]) ||
-									((blenderCols[faceIndex * 4 + j].r * rgbScale) != tmpMeshCols[index].c[2])) {
+							if (((blenderCols[faceIndex * 4 + j].b * rgbScale) != tmpMeshCols[vertexMap[index]].c[0]) ||
+									((blenderCols[faceIndex * 4 + j].g * rgbScale) != tmpMeshCols[vertexMap[index]].c[1]) ||
+									((blenderCols[faceIndex * 4 + j].r * rgbScale) != tmpMeshCols[vertexMap[index]].c[2])) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
