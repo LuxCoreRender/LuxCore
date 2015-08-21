@@ -349,7 +349,7 @@ boost::python::list ConvertFilmChannelOutput_3xFloat_To_4xFloatList(const u_int 
 	return l;
 }
 
-static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
+static bool Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		const size_t blenderFaceCount, const size_t blenderFacesPtr,
 		const size_t blenderVertCount, const size_t blenderVerticesPtr,
 		const size_t blenderUVsPtr, const size_t blenderColsPtr, const short matIndex,
@@ -488,7 +488,7 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 
 	// Check if there wasn't any triangles with matIndex
 	if (tmpMeshTris.size() == 0)
-		return;
+		return false;
 
 	// Allocate memory for LuxCore mesh data
 	Triangle *meshTris = TriangleMesh::AllocTrianglesBuffer(tmpMeshTris.size());
@@ -522,6 +522,8 @@ static void Scene_DefineBlenderMesh(Scene *scene, const string &name,
 		mesh->ApplyTransform(*trans);
 	
 	scene->DefineMesh(name, mesh);
+
+	return true;
 }
 
 boost::python::list Scene_DefineBlenderMesh1(Scene *scene, const string &name,
@@ -570,14 +572,14 @@ boost::python::list Scene_DefineBlenderMesh1(Scene *scene, const string &name,
 	BOOST_FOREACH(u_int matIndex, matSet) {		
 		const string objName = (boost::format(name + "%03d") % matIndex).str();
 
-		Scene_DefineBlenderMesh(scene, "Mesh-" + objName, blenderFaceCount, blenderFacesPtr,
+		if (Scene_DefineBlenderMesh(scene, "Mesh-" + objName, blenderFaceCount, blenderFacesPtr,
 				blenderVertCount, blenderVerticesPtr, blenderUVsPtr, blenderColsPtr, matIndex,
-				hasTransformation ? &trans : NULL);
-		
-		boost::python::list meshInfo;
-		meshInfo.append(objName);
-		meshInfo.append(matIndex);
-		result.append(meshInfo);
+				hasTransformation ? &trans : NULL)) {
+			boost::python::list meshInfo;
+			meshInfo.append(objName);
+			meshInfo.append(matIndex);
+			result.append(meshInfo);
+		}
 	}
 
 	return result;
