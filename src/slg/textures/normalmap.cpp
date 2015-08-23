@@ -81,7 +81,7 @@ UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
 
 Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
-
+	
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("normalmap"));
 	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
