@@ -400,6 +400,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float maxVal = props.Get(Property(propName + ".max")(0.f)).Get<float>();
 
 		return new ClampTexture(tex, minVal, maxVal);
+	} else if (texType == "normalmap") {
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+
+		return new NormalMapTexture(tex);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }
