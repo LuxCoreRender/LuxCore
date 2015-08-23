@@ -522,8 +522,8 @@ void Film_AddSample(const uint x, const uint y,
 
 void Film_SplatSample(__global SampleResult *sampleResult, const float weight
 	FILM_PARAM_DECL) {
-	const int x = Ceil2Int(sampleResult->filmX - .5f);
-	const int y = Ceil2Int(sampleResult->filmY - .5f);
+	const int x = Floor2Int(px);
+	const int y = Floor2Int(py);
 
 	if ((x >= 0) && (x < (int)filmWidth) && (y >= 0) && (y < (int)filmHeight)) {
 		Film_AddSampleResultColor((uint)x, (uint)y, sampleResult, weight
@@ -558,8 +558,9 @@ void Film_SplatSample(__global SampleResult *sampleResult, const float weight
 
 #if defined (PARAM_FILM_CHANNELS_HAS_DEPTH) || defined (PARAM_FILM_CHANNELS_HAS_POSITION) || defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_UV) || defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	{
-		const int x = Ceil2Int(px - .5f);
-		const int y = Ceil2Int(py - .5f);
+		const int x = Floor2Int(px);
+		const int y = Floor2Int(py);
+
 		if ((x >= 0) && (x < (int)filmWidth) && (y >= 0) && (y < (int)filmHeight)) {
 			Film_AddSampleResultData((uint)x, (uint)y, sampleResult
 					FILM_PARAM);
