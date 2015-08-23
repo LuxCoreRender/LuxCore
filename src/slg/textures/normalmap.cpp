@@ -28,25 +28,24 @@ using namespace slg;
 
 UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
         const float sampleDistance) const {
-    Spectrum rgb = tex->GetSpectrumValue(hitPoint);
-    rgb.Clamp(-1.f, 1.f);
+    Spectrum rgb = tex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
 	// Normal from normal map
-	Vector n(rgb.c[0], rgb.c[1], rgb.c[2]);
+	Vector n(rgb.c);
 	n = 2.f * n - Vector(1.f, 1.f, 1.f);
 
-	const Vector k = Vector(hitPoint.shadeN);
+	// So the code is easy to translate in OpenCL
+	const Normal &shadeN = hitPoint.shadeN;
+	const Vector &dpdu = hitPoint.dpdu;
+	const Vector &dpdv = hitPoint.dpdv;
+
+	// Compute tangent and bitangent
+	const Vector tangent = Normalize(dpdu);
+	const Vector bitangent = Normalize(dpdv);
+	const float btsign = (Dot(bitangent, shadeN) > 0.f) ? 1.f : -1.f;
 
 	// Transform n from tangent to object space
-	const Vector &t1 = hitPoint.dpdu;
-	const Vector &t2 = hitPoint.dpdv;
-	const float btsign = (Dot(hitPoint.dpdv, hitPoint.shadeN) > 0.f) ? 1.f : -1.f;
-
-	// Magnitude of btsign is the magnitude of the interpolated normal
-	const Vector kk = k * fabsf(btsign);
-
-	// tangent -> object
-	n = Normalize(n.x * t1 + n.y * btsign * t2 + n.z * kk);	
+	n = Normalize(n.x * tangent + n.y * btsign * bitangent + n.z * Vector(shadeN));
 
 	// Since n is stored normalized in the normal map
 	// we need to recover the original length (lambda).
@@ -74,9 +73,9 @@ UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
 	// Since the recovered dh/du will be in units of ||k||, we must divide
 	// by ||k|| to get normalized results. Using dg.nn as k in the last eq 
 	// yields the same result.
-	const Vector nn = (-1.f / Dot(k, n)) * n;
+	const Vector nn = (-1.f / Dot(Vector(shadeN), n)) * n;
 
-	return UV(Dot(hitPoint.dpdu, nn), Dot(hitPoint.dpdv, nn));
+	return UV(Dot(dpdu, nn), Dot(dpdv, nn));
 }
 
 Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {

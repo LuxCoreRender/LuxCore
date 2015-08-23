@@ -78,8 +78,6 @@ float2 NormalMapTexture_GetDuv(
 		__global HitPoint *hitPoint,
 		const float sampleDistance
 		TEXTURES_PARAM_DECL) {
-	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
 	__global Texture *texture = &texs[texIndex];
 	float3 rgb = Texture_GetSpectrumValue(texture->normalMap.texIndex, hitPoint
 			TEXTURES_PARAM);
@@ -88,16 +86,18 @@ float2 NormalMapTexture_GetDuv(
 	// Normal from normal map
 	float3 n = 2.f * rgb - (float3)(1.f, 1.f, 1.f);
 
-	const float3 k = VLOAD3F(&hitPoint->shadeN.x);
+	// So the code is easy to translate in OpenCL
+	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
+
+	// Compute tangent and bitangent
+	const float3 tangent = normalize(dpdu);
+	const float3 bitangent = normalize(dpdv);
+	const float btsign = (dot(bitangent, shadeN) > 0.f) ? 1.f : -1.f;
 
 	// Transform n from tangent to object space
-	const float btsign = (dot(dpdv, k) > 0.f) ? 1.f : -1.f;
-
-	// Magnitude of btsign is the magnitude of the interpolated normal
-	const float3 kk = k * fabs(btsign);
-
-	// tangent -> object
-	n = normalize(n.x * dpdu + n.y * btsign * dpdv + n.z * kk);
+	n = normalize(n.x * tangent + n.y * btsign * bitangent + n.z * shadeN);
 
 	// Since n is stored normalized in the normal map
 	// we need to recover the original length (lambda).
@@ -125,7 +125,7 @@ float2 NormalMapTexture_GetDuv(
 	// Since the recovered dh/du will be in units of ||k||, we must divide
 	// by ||k|| to get normalized results. Using dg.nn as k in the last eq
 	// yields the same result.
-	const float3 nn = (-1.f / dot(k, n)) * n;
+	const float3 nn = (-1.f / dot(shadeN, n)) * n;
 
 	return (float2)(dot(dpdu, nn), dot(dpdv, nn));
 }

@@ -57,7 +57,7 @@ float Material::GetEmittedRadianceY() const {
 void Material::Bump(HitPoint *hitPoint, const float weight) const {
     if (bumpTex && (weight > 0.f)) {
         const UV duv = weight * bumpTex->GetDuv(*hitPoint, bumpSampleDistance);
-
+		
         hitPoint->dpdu += duv.u * Vector(hitPoint->shadeN);
         hitPoint->dpdv += duv.v * Vector(hitPoint->shadeN);
 
