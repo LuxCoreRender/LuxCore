@@ -1,0 +1,39 @@
+scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
+################################################################################
+scene.textures.normalmap.file = scenes/bump/normal.png
+scene.textures.normalmap.gamma = 1.0
+scene.textures.normalmap.mapping.uvscale = 2 2
+scene.textures.bumpmap.type = fbm
+scene.textures.bumpmap.octaves = 8
+scene.textures.bumpmap.omega = 0.5
+scene.textures.bumpmap.mapping.type = globalmapping3d
+scene.textures.bumpmap.mapping.transformation = 20.0 0.0 0.0 0.0  0.0 20.0 0.0 0.0  0.0 0.0 20.0 0.0  40.0 40.0 40.0 1.0
+scene.textures.scaled_bumpmap.type = scale
+scene.textures.scaled_bumpmap.texture1 = 0.05
+scene.textures.scaled_bumpmap.texture2 = bumpmap
+scene.textures.checktex.type = checkerboard2d
+scene.textures.checktex.texture1 = 1.0
+scene.textures.checktex.texture2 = 0.0
+scene.textures.checktex.mapping.uvscale =  5 5
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 20. 20. 20.
+scene.materials.mat_light.kd = 0.0 0.0 0.0
+scene.materials.mat_red.type = matte
+scene.materials.mat_red.kd = 0.8 0.0 0.0
+scene.materials.mat_red.bumptex = scaled_bumpmap
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = 0.8 0.8 0.8
+#scene.materials.mat_white.normaltex = normalmap
+scene.materials.mat_mix.type = mix
+scene.materials.mat_mix.material1 = mat_red
+scene.materials.mat_mix.material2 = mat_white
+scene.materials.mat_mix.amount = checktex
+#scene.materials.mat_mix.bumptex = scaled_bumpmap
+################################################################################
+scene.objects.obj_light.ply = scenes/bump/mat_light.ply
+scene.objects.obj_light.material = mat_light
+scene.objects.obj_red.ply = scenes/bump/mat_red.ply
+scene.objects.obj_red.material = mat_mix
+scene.objects.obj_white.ply = scenes/bump/mat_white.ply
+scene.objects.obj_white.material = mat_mix
