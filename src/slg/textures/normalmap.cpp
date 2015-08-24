@@ -26,56 +26,22 @@ using namespace slg;
 // NormalMap textures
 //------------------------------------------------------------------------------
 
-UV NormalMapTexture::GetDuv(const HitPoint &hitPoint,
-        const float sampleDistance) const {
-    Spectrum rgb = tex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
+void NormalMapTexture::Bump(HitPoint *hitPoint, const float sampleDistance) const {
+    const Spectrum rgb = tex->GetSpectrumValue(*hitPoint).Clamp(0.f, 1.f);
 
 	// Normal from normal map
 	Vector n(rgb.c);
 	n = 2.f * n - Vector(1.f, 1.f, 1.f);
 
-	// So the code is easy to translate in OpenCL
-	const Normal &shadeN = hitPoint.shadeN;
-	const Vector &dpdu = hitPoint.dpdu;
-	const Vector &dpdv = hitPoint.dpdv;
-
-	// Compute tangent and bitangent
-	const Vector tangent = Normalize(dpdu);
-	const Vector bitangent = Normalize(dpdv);
-	const float btsign = (Dot(bitangent, shadeN) > 0.f) ? 1.f : -1.f;
+	const Normal oldShadeN = hitPoint->shadeN;
 
 	// Transform n from tangent to object space
-	n = Normalize(n.x * tangent + n.y * btsign * bitangent + n.z * Vector(shadeN));
+	hitPoint->shadeN = Normal(Normalize(hitPoint->GetFrame().ToWorld(n)));
+	hitPoint->shadeN *= (Dot(oldShadeN, hitPoint->shadeN) < 0.f) ? -1.f : 1.f;
 
-	// Since n is stored normalized in the normal map
-	// we need to recover the original length (lambda).
-	// We do this by solving 
-	//   lambda*n = dp/du x dp/dv
-	// where 
-	//   p(u,v) = base(u,v) + h(u,v) * k
-	// and
-	//   k = dbase/du x dbase/dv
-	//
-	// We recover lambda by dotting the above with k
-	//   k . lambda*n = k . (dp/du x dp/dv)
-	//   lambda = (k . k) / (k . n)
-	// 
-	// We then recover dh/du by dotting the first eq by dp/du
-	//   dp/du . lambda*n = dp/du . (dp/du x dp/dv)
-	//   dp/du . lambda*n = dh/du * [dbase/du . (k x dbase/dv)]
-	//
-	// The term "dbase/du . (k x dbase/dv)" reduces to "-(k . k)", so we get
-	//   dp/du . lambda*n = dh/du * -(k . k)
-	//   dp/du . [(k . k) / (k . n)*n] = dh/du * -(k . k)
-	//   dp/du . [-n / (k . n)] = dh/du
-	// and similar for dh/dv
-	// 
-	// Since the recovered dh/du will be in units of ||k||, we must divide
-	// by ||k|| to get normalized results. Using dg.nn as k in the last eq 
-	// yields the same result.
-	const Vector nn = (-1.f / Dot(Vector(shadeN), n)) * n;
-
-	return UV(Dot(dpdu, nn), Dot(dpdv, nn));
+	// Update dpdu and dpdv so they are still orthogonal to shadeN 
+	hitPoint->dpdu = Cross(hitPoint->shadeN, Cross(hitPoint->dpdu, hitPoint->shadeN));
+	hitPoint->dpdv = Cross(hitPoint->shadeN, Cross(hitPoint->dpdv, hitPoint->shadeN));
 }
 
 Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {

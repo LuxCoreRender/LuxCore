@@ -75,14 +75,8 @@ void ExtMesh::GetDifferentials(const float time, const u_int triIndex, const Nor
 		const Vector geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
 		const Vector geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-		Vector shadingDpDv = Normalize(Cross(shadeNormal, geometryDpDu));
-		Vector shadingDpDu = Cross(shadingDpDv, shadeNormal);
-
-		shadingDpDv *= (Dot(geometryDpDv, shadingDpDv) > 0.f) ? 1.f : -1.f;
-
-		// The length of dpdu/dpdv can be important for bump mapping
-		*dpdu = shadingDpDu * geometryDpDu.Length();
-		*dpdv = shadingDpDv * geometryDpDv.Length();
+		*dpdu = Cross(shadeNormal, Cross(geometryDpDu, shadeNormal));
+		*dpdv = Cross(shadeNormal, Cross(geometryDpDv, shadeNormal));
 
 		if (HasNormals()) {
 			// Using GetShadeNormal() in order to do all computation relative to

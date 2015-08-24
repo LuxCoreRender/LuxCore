@@ -41,34 +41,43 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 // The generic implementation
-UV Texture::GetDuv(const HitPoint &hitPoint, const float sampleDistance) const {
+void Texture::Bump(HitPoint *hitPoint, const float sampleDistance) const {
     // Calculate bump map value at intersection point
-    const float base = GetFloatValue(hitPoint);
+    const float base = GetFloatValue(*hitPoint);
 
     // Compute offset positions and evaluate displacement texture
-    const Point origP = hitPoint.p;
-    const Normal origShadeN = hitPoint.shadeN;
-    const float origU = hitPoint.uv.u;
+    const Point origP = hitPoint->p;
+    const Normal origShadeN = hitPoint->shadeN;
+    const float origU = hitPoint->uv.u;
 
     UV duv;
-    HitPoint hitPointTmp = hitPoint;
+    HitPoint hitPointTmp = *hitPoint;
 
     // Shift hitPointTmp.du in the u direction and calculate value
-    const float uu = sampleDistance / hitPoint.dpdu.Length();
-    hitPointTmp.p += uu * hitPoint.dpdu;
+    const float uu = sampleDistance / hitPoint->dpdu.Length();
+    hitPointTmp.p += uu * hitPoint->dpdu;
     hitPointTmp.uv.u += uu;
-    hitPointTmp.shadeN = Normalize(origShadeN + uu * hitPoint.dndu);
+    hitPointTmp.shadeN = Normalize(origShadeN + uu * hitPoint->dndu);
     duv.u = (GetFloatValue(hitPointTmp) - base) / uu;
 
     // Shift hitPointTmp.dv in the v direction and calculate value
-    const float vv = sampleDistance / hitPoint.dpdv.Length();
-    hitPointTmp.p = origP + vv * hitPoint.dpdv;
+    const float vv = sampleDistance / hitPoint->dpdv.Length();
+    hitPointTmp.p = origP + vv * hitPoint->dpdv;
     hitPointTmp.uv.u = origU;
     hitPointTmp.uv.v += vv;
-    hitPointTmp.shadeN = Normalize(origShadeN + vv * hitPoint.dndv);
+    hitPointTmp.shadeN = Normalize(origShadeN + vv * hitPoint->dndv);
     duv.v = (GetFloatValue(hitPointTmp) - base) / vv;
 
-    return duv;
+	hitPoint->dpdu += duv.u * Vector(hitPoint->shadeN);
+	hitPoint->dpdv += duv.v * Vector(hitPoint->shadeN);
+
+	const Normal oldShadeN = hitPoint->shadeN;
+	hitPoint->shadeN = Normal(Normalize(Cross(hitPoint->dpdu, hitPoint->dpdv)));
+
+	// The above transform keeps the normal in the original normal
+	// hemisphere. If they are opposed, it means UVN was indirect and
+	// the normal needs to be reversed.
+	hitPoint->shadeN *= (Dot(oldShadeN, hitPoint->shadeN) < 0.f) ? -1.f : 1.f;
 }
 
 //------------------------------------------------------------------------------

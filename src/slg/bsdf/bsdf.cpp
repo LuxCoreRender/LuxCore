@@ -71,7 +71,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 		&hitPoint.dndu, &hitPoint.dndv);
 
 	// Apply bump or normal mapping
-	material->Bump(&hitPoint, 1.f);
+	material->Bump(&hitPoint);
 
 	// Build the local reference system
 	frame = hitPoint.GetFrame();

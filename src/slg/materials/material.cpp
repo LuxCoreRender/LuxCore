@@ -54,21 +54,9 @@ float Material::GetEmittedRadianceY() const {
 		return 0.f;
 }
 
-void Material::Bump(HitPoint *hitPoint, const float weight) const {
-    if (bumpTex && (weight > 0.f)) {
-        const UV duv = weight * bumpTex->GetDuv(*hitPoint, bumpSampleDistance);
-		
-        hitPoint->dpdu += duv.u * Vector(hitPoint->shadeN);
-        hitPoint->dpdv += duv.v * Vector(hitPoint->shadeN);
-
-        const Normal oldShadeN = hitPoint->shadeN;
-        hitPoint->shadeN = Normal(Normalize(Cross(hitPoint->dpdu, hitPoint->dpdv)));
-
-        // The above transform keeps the normal in the original normal
-        // hemisphere. If they are opposed, it means UVN was indirect and
-        // the normal needs to be reversed.
-        hitPoint->shadeN *= (Dot(oldShadeN, hitPoint->shadeN) < 0.f) ? -1.f : 1.f;
-    }
+void Material::Bump(HitPoint *hitPoint) const {
+    if (bumpTex)
+		bumpTex->Bump(hitPoint, bumpSampleDistance);
 }
 
 Properties Material::ToProperties() const {
