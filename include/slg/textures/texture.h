@@ -77,8 +77,7 @@ public:
 	virtual float Filter() const = 0;
 
 	// Used for bump/normal mapping support
-    virtual luxrays::UV GetDuv(const HitPoint &hitPoint,
-        const float sampleDistance) const;
+	virtual void Bump(HitPoint *hitPoint, const float sampleDistance) const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);
