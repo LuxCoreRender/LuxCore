@@ -91,11 +91,17 @@ void ExtMesh_GetDifferentials(
 		// Compute dpdu and dpdv
 		//------------------------------------------------------------------
 
-		const float3 ss = (dv2 * dp1 - dv1 * dp2) * invdet;
-		const float3 ts = (-du2 * dp1 + du1 * dp2) * invdet;
+		const float3 geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		const float3 geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-		*dpdu = cross(shadeNormal, cross(ss, shadeNormal));
-		*dpdv = cross(shadeNormal, cross(ts, shadeNormal));
+		float3 shadingDpDv = normalize(cross(shadeNormal, geometryDpDu));
+		float3 shadingDpDu = cross(shadingDpDv, shadeNormal);
+
+		shadingDpDv *= (dot(geometryDpDv, shadingDpDv) > 0.f) ? 1.f : -1.f;
+
+		// The length of dpdu/dpdv can be important for bump mapping
+		*dpdu = shadingDpDu * length(geometryDpDu);
+		*dpdv = shadingDpDv * length(geometryDpDv);
 
 		//------------------------------------------------------------------
 		// Compute dndu and dndv
