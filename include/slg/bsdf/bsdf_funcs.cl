@@ -94,14 +94,8 @@ void ExtMesh_GetDifferentials(
 		const float3 geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
 		const float3 geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-		float3 shadingDpDv = normalize(cross(shadeNormal, geometryDpDu));
-		float3 shadingDpDu = cross(shadingDpDv, shadeNormal);
-
-		shadingDpDv *= (dot(geometryDpDv, shadingDpDv) > 0.f) ? 1.f : -1.f;
-
-		// The length of dpdu/dpdv can be important for bump mapping
-		*dpdu = shadingDpDu * length(geometryDpDu);
-		*dpdv = shadingDpDv * length(geometryDpDv);
+		*dpdu = cross(shadeNormal, cross(geometryDpDu, shadeNormal));
+		*dpdv = cross(shadeNormal, cross(geometryDpDv, shadeNormal));
 
 		//------------------------------------------------------------------
 		// Compute dndu and dndv
@@ -332,8 +326,7 @@ void BSDF_Init(
 	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
 	VSTORE3F(dndu, &bsdf->hitPoint.dndu.x);
 	VSTORE3F(dndv, &bsdf->hitPoint.dndv.x);
-	Material_Bump(matIndex,
-			&bsdf->hitPoint, 1.f
+	Material_Bump(matIndex, &bsdf->hitPoint
 			MATERIALS_PARAM);
 	// Re-read the shadeN modified by Material_Bump()
 	shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);

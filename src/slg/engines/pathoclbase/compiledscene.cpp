@@ -2616,10 +2616,9 @@ static void AddMaterialSourceStandardImplGetEmittedRadiance(stringstream &source
 static void AddMaterialSourceStandardImplBump(stringstream &source, const u_int i) {
 	source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 	AddMaterialSourceGlue(source, "", i, "Bump", "BumpNoMix", "void",
-			"__global const Material *material, __global HitPoint *hitPoint, "
-				"const float weight "
+			"__global const Material *material, __global HitPoint *hitPoint "
 				"MATERIALS_PARAM_DECL",
-			"material, hitPoint, weight TEXTURES_PARAM", false);
+			"material, hitPoint TEXTURES_PARAM", false);
 	source << "#endif\n";
 }
 
@@ -3025,10 +3024,9 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	// Generate the code for generic Material_Bump()
 	source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 	AddMaterialSourceSwitch(source, materialsCount, "BumpWithMix", "Bump", "void", "",
-			"const uint index, __global HitPoint *hitPoint, "
-				"const float weight "
+			"const uint index, __global HitPoint *hitPoint "
 				"MATERIALS_PARAM_DECL",
-			"mat, hitPoint, weight MATERIALS_PARAM", false);
+			"mat, hitPoint MATERIALS_PARAM", false);
 	source << "#endif\n";
 
 	// Generate the code for generic Material_GetPassThroughTransparency()
@@ -3073,26 +3071,22 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"	return 	VLOAD3F(material->emittedFactor.c) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;\n"
 			"}\n"
 			"#if defined(PARAM_HAS_BUMPMAPS)\n"
-			"void Material_Bump(const uint matIndex, __global HitPoint *hitPoint,\n"
-			"        const float weight\n"
+			"void Material_Bump(const uint matIndex, __global HitPoint *hitPoint\n"
 			"        MATERIALS_PARAM_DECL) {\n"
 			"	__global const Material *material = &mats[matIndex];\n"
 			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
 			"	if (material->type == MIX)\n"
-			"		Material_BumpWithMix(matIndex, hitPoint,\n"
-			"                weight\n"
+			"		Material_BumpWithMix(matIndex, hitPoint\n"
 			"                MATERIALS_PARAM);\n"
 			"	else\n"
 			"#endif\n"
 			"#if defined (PARAM_ENABLE_MAT_GLOSSYCOATING)\n"
 			"	if (material->type == GLOSSYCOATING)\n"
-			"		Material_BumpWithMix(matIndex, hitPoint,\n"
-			"                weight\n"
+			"		Material_BumpWithMix(matIndex, hitPoint\n"
 			"                MATERIALS_PARAM);\n"
 			"	else\n"
 			"#endif\n"
-			"		Material_BumpNoMix(material, hitPoint,\n"
-			"                weight\n"
+			"		Material_BumpNoMix(material, hitPoint\n"
 			"                TEXTURES_PARAM);\n"
 			"}\n"
 			"#endif\n"
