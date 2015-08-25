@@ -190,7 +190,7 @@ string PathOCLRenderThread::AdditionalKernelDefinitions() {
 
 	if (engine->sampler->type == slg::ocl::SOBOL) {
 		// Generate the Sobol vectors
-		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
+		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
 		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
 
 		SobolGenerateDirectionVectors(directions, sampleDimensions);
