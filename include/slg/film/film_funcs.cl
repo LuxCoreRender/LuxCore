@@ -522,8 +522,8 @@ void Film_AddSample(const uint x, const uint y,
 
 void Film_SplatSample(__global SampleResult *sampleResult, const float weight
 	FILM_PARAM_DECL) {
-	const int x = Floor2Int(px);
-	const int y = Floor2Int(py);
+	const int x = Floor2Int(sampleResult->filmX);
+	const int y = Floor2Int(sampleResult->filmY);
 
 	if ((x >= 0) && (x < (int)filmWidth) && (y >= 0) && (y < (int)filmHeight)) {
 		Film_AddSampleResultColor((uint)x, (uint)y, sampleResult, weight
