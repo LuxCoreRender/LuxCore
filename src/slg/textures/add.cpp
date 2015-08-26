@@ -34,6 +34,13 @@ Spectrum AddTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return tex1->GetSpectrumValue(hitPoint) + tex2->GetSpectrumValue(hitPoint);
 }
 
+Normal AddTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+	const Normal tex1ShadeN = tex1->Bump(hitPoint, sampleDistance);
+	const Normal tex2ShadeN = tex2->Bump(hitPoint, sampleDistance);
+
+	return Normalize(tex1ShadeN + tex2ShadeN);
+}
+
 Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
