@@ -69,6 +69,13 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 		CompileLights();
 	if (editActions.Has(IMAGEMAPS_EDIT))
 		CompileImageMaps();
+
+	// For some debugging
+//	cout << "=========================================================\n";
+//	cout << GetTexturesEvaluationSourceCode();
+//	cout << "=========================================================\n";
+//	cout << GetMaterialsEvaluationSourceCode();
+//	cout << "=========================================================\n";
 }
 
 bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {

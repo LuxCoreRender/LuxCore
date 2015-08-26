@@ -999,8 +999,8 @@ void CompiledScene::CompileTextures() {
 
 static void AddTextureSource(stringstream &source,  const string &texName, const string &returnType,
 		const string &type, const u_int i, const string &texArgs) {
-	source << returnType << " Texture_Index" << i << "_Evaluate" << type << "(__global const Texture *texture, "
-			"__global HitPoint *hitPoint\n"
+	source << returnType << " Texture_Index" << i << "_Evaluate" << type << "(__global const Texture *texture,\n"
+			"\t\t__global HitPoint *hitPoint\n"
 			"\t\tTEXTURES_PARAM_DECL) {\n"
 			"\treturn " << texName << "Texture_ConstEvaluate" << type << "(hitPoint" <<
 				((texArgs.length() > 0) ? (", " + texArgs) : "") << ");\n"
@@ -1011,6 +1011,44 @@ static void AddTextureSource(stringstream &source,  const string &texName,
 		const u_int i, const string &texArgs) {
 	AddTextureSource(source, texName, "float", "Float", i, texArgs);
 	AddTextureSource(source, texName, "float3", "Spectrum", i, texArgs);
+}
+
+static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Texture> &texs, const u_int i) {
+	const slg::ocl::Texture *tex = &texs[i];
+
+	switch (tex->type) {
+		case slg::ocl::NORMALMAP_TEX: {
+			source << "#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n";
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\treturn NormalMapTexture_Bump(" << i << ", hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"}\n";
+			source << "#endif\n";
+			break;
+		}
+		case slg::ocl::ADD_TEX: {
+			source << "#if defined(PARAM_ENABLE_TEX_ADD)\n";
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\tconst float3 tex1ShadeN = Texture_Index" << tex->addTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tconst float3 tex2ShadeN = Texture_Index" << tex->addTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\treturn normalize(tex1ShadeN + tex2ShadeN - VLOAD3F(&hitPoint->shadeN.x));\n"
+					"}\n";
+			source << "#endif\n";
+			break;
+		}
+
+		default: {
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\treturn GenericTexture_Bump(" << i << ", hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"}\n";
+			break;
+		}
+	}
 }
 
 string CompiledScene::GetTexturesEvaluationSourceCode() const {
@@ -1390,6 +1428,14 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 	source << "\t\tdefault: return BLACK;\n"
 			"\t}\n"
 			"}\n";
+
+	// Add bump and normal mapping functions
+	source << slg::ocl::KernelSource_texture_bump_funcs;
+
+	source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
+	for (u_int i = 0; i < texturesCount; ++i)
+		AddTextureBumpSource(source, texs, i);
+	source << "#endif\n";
 
 	return source.str();
 }

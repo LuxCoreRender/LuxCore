@@ -39,24 +39,6 @@ float3 Material_GetEmittedRadianceNoMix(__global const Material *material, __glo
 				TEXTURES_PARAM);
 }
 
-#if defined(PARAM_HAS_BUMPMAPS)
-void Material_BumpNoMix(__global const Material *material, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	if (material->bumpTexIndex != NULL_INDEX) {
-#if defined(PARAM_ENABLE_TEX_NORMALMAP)
-		if (texs[material->bumpTexIndex].type == NORMALMAP_TEX)
-			NormalMapTexture_Bump(material->bumpTexIndex,
-					hitPoint, material->bumpSampleDistance
-					TEXTURES_PARAM);
-		else
-#endif
-			Texture_Bump(material->bumpTexIndex,
-					hitPoint, material->bumpSampleDistance
-					TEXTURES_PARAM);
-	}
-}
-#endif
-
 #if defined(PARAM_HAS_VOLUMES)
 uint Material_GetInteriorVolumeNoMix(__global const Material *material) {
 	return material->interiorVolumeIndex;

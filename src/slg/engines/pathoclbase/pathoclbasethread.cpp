@@ -1274,7 +1274,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 		"\n";
 
 	ssKernel <<
-		slg::ocl::KernelSource_texture_bump_funcs <<
 		slg::ocl::KernelSource_materialdefs_funcs_generic <<
 		slg::ocl::KernelSource_materialdefs_funcs_archglass <<
 		slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
