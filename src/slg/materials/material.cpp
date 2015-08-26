@@ -55,8 +55,13 @@ float Material::GetEmittedRadianceY() const {
 }
 
 void Material::Bump(HitPoint *hitPoint) const {
-    if (bumpTex)
-		bumpTex->Bump(hitPoint, bumpSampleDistance);
+    if (bumpTex) {
+		hitPoint->shadeN = bumpTex->Bump(*hitPoint, bumpSampleDistance);
+
+		// Update dpdu and dpdv so they are still orthogonal to shadeN 
+		hitPoint->dpdu = Cross(hitPoint->shadeN, Cross(hitPoint->dpdu, hitPoint->shadeN));
+		hitPoint->dpdv = Cross(hitPoint->shadeN, Cross(hitPoint->dpdv, hitPoint->shadeN));
+	}
 }
 
 Properties Material::ToProperties() const {

@@ -38,7 +38,7 @@ public:
 	virtual float Y() const { return 0.f; }
 	virtual float Filter() const { return 0.f; }
 
-    virtual void Bump(HitPoint *hitPoint, const float sampleDistance) const;
+    virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);

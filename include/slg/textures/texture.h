@@ -31,6 +31,7 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/point.h"
+#include "luxrays/core/geometry/normal.h"
 #include "luxrays/core/color/color.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/imagemap/imagemapcache.h"
@@ -77,7 +78,7 @@ public:
 	virtual float Filter() const = 0;
 
 	// Used for bump/normal mapping support
-	virtual void Bump(HitPoint *hitPoint, const float sampleDistance) const;
+	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		referencedTexs.insert(this);

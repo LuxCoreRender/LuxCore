@@ -26,22 +26,20 @@ using namespace slg;
 // NormalMap textures
 //------------------------------------------------------------------------------
 
-void NormalMapTexture::Bump(HitPoint *hitPoint, const float sampleDistance) const {
-    const Spectrum rgb = tex->GetSpectrumValue(*hitPoint).Clamp(0.f, 1.f);
+Normal NormalMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+    const Spectrum rgb = tex->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
 	// Normal from normal map
 	Vector n(rgb.c);
 	n = 2.f * n - Vector(1.f, 1.f, 1.f);
 
-	const Normal oldShadeN = hitPoint->shadeN;
+	const Normal oldShadeN = hitPoint.shadeN;
 
 	// Transform n from tangent to object space
-	hitPoint->shadeN = Normal(Normalize(hitPoint->GetFrame().ToWorld(n)));
-	hitPoint->shadeN *= (Dot(oldShadeN, hitPoint->shadeN) < 0.f) ? -1.f : 1.f;
+	Normal shadeN = Normal(Normalize(hitPoint.GetFrame().ToWorld(n)));
+	shadeN *= (Dot(oldShadeN, shadeN) < 0.f) ? -1.f : 1.f;
 
-	// Update dpdu and dpdv so they are still orthogonal to shadeN 
-	hitPoint->dpdu = Cross(hitPoint->shadeN, Cross(hitPoint->dpdu, hitPoint->shadeN));
-	hitPoint->dpdv = Cross(hitPoint->shadeN, Cross(hitPoint->dpdv, hitPoint->shadeN));
+	return shadeN;
 }
 
 Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
