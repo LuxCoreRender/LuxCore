@@ -584,7 +584,7 @@ std::string KernelSource_pathocl_funcs =
 "#endif\n"
 "#if defined(PARAM_HAS_UVS_BUFFER)\n"
 "#define KERNEL_ARGS_UVS_BUFFER \\\n"
-"		, __global const UV* restrict restrict vertUVs\n"
+"		, __global const UV* restrict vertUVs\n"
 "#else\n"
 "#define KERNEL_ARGS_UVS_BUFFER\n"
 "#endif\n"

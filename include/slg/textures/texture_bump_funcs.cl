@@ -24,7 +24,11 @@
 
 #if defined(PARAM_HAS_BUMPMAPS)
 
-void Texture_Bump(
+//------------------------------------------------------------------------------
+// Generic texture bump mapping
+//------------------------------------------------------------------------------
+
+float3 GenericTexture_Bump(
 		const uint texIndex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance
@@ -78,14 +82,15 @@ void Texture_Bump(
 	// the normal needs to be reversed
 	newShadeN *= (dot(origShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
 
-	// Update HitPoint structure
-	VSTORE3F(newShadeN, &hitPoint->shadeN.x);
-	VSTORE3F(bumpDpdu, &hitPoint->dpdu.x);
-	VSTORE3F(bumpDpdu, &hitPoint->dpdv.x);
+	return newShadeN;
 }
 
+//------------------------------------------------------------------------------
+// NormalMapTexture
+//------------------------------------------------------------------------------
+
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
-void NormalMapTexture_Bump(
+float3 NormalMapTexture_Bump(
 		const uint texIndex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance
@@ -110,14 +115,7 @@ void NormalMapTexture_Bump(
 	float3 shadeN = normalize(Frame_ToWorld_Private(&frame, n));
 	shadeN *= (dot(oldShadeN, shadeN) < 0.f) ? -1.f : 1.f;
 
-	// Update dpdu and dpdv so they are still orthogonal to shadeN 
-	dpdu = cross(shadeN, cross(dpdu, shadeN));
-	dpdv = cross(shadeN, cross(dpdv, shadeN));
-
-	// Update HitPoint structure
-	VSTORE3F(shadeN, &hitPoint->shadeN.x);
-	VSTORE3F(dpdu, &hitPoint->dpdu.x);
-	VSTORE3F(dpdv, &hitPoint->dpdv.x);
+	return shadeN;
 }
 #endif
 
