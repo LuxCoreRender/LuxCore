@@ -1039,7 +1039,32 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			source << "#endif\n";
 			break;
 		}
-
+		case slg::ocl::SUBTRACT_TEX: {
+			source << "#if defined(PARAM_ENABLE_TEX_SUBTRACT)\n";
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\tconst float3 tex1ShadeN = Texture_Index" << tex->addTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tconst float3 tex2ShadeN = Texture_Index" << tex->addTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\treturn normalize(tex1ShadeN - tex2ShadeN + VLOAD3F(&hitPoint->shadeN.x));\n"
+					"}\n";
+			source << "#endif\n";
+			break;
+		}
+		case slg::ocl::MIX_TEX: {
+			source << "#if defined(PARAM_ENABLE_TEX_MIX)\n";
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\tconst float amt = Texture_Index" << tex->mixTex.amountTexIndex << "_EvaluateFloat(&texs[" << tex->mixTex.amountTexIndex << "], hitPoint TEXTURES_PARAM);\n"
+					"\tconst float3 tex1ShadeN = Texture_Index" << tex->mixTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tconst float3 tex2ShadeN = Texture_Index" << tex->mixTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tconst float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
+					"\treturn normalize(shadeN + mix(tex1ShadeN - shadeN, tex2ShadeN - shadeN, clamp(amt, 0.f, 1.f)));\n"
+					"}\n";
+			source << "#endif\n";
+			break;
+		}
 		default: {
 			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
 					"\t\tconst float sampleDistance\n"

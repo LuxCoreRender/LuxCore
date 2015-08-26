@@ -50,6 +50,15 @@ Spectrum MixTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return Lerp(amt, value1, value2);
 }
 
+Normal MixTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
+	const Normal tex1ShadeN = tex1->Bump(hitPoint, sampleDistance);
+	const Normal tex2ShadeN = tex2->Bump(hitPoint, sampleDistance);
+
+	return Normalize(hitPoint.shadeN +
+			Lerp(amt, tex1ShadeN - hitPoint.shadeN, tex2ShadeN - hitPoint.shadeN));
+}
+
 Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
