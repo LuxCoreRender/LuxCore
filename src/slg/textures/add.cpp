@@ -38,7 +38,8 @@ Normal AddTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) co
 	const Normal tex1ShadeN = tex1->Bump(hitPoint, sampleDistance);
 	const Normal tex2ShadeN = tex2->Bump(hitPoint, sampleDistance);
 
-	return Normalize(tex1ShadeN + tex2ShadeN);
+	// Same of Normalize(hitPoint.shadeN + (tex1ShadeN - hitPoint.shadeN) + (tex2ShadeN - hitPoint.shadeN))
+	return Normalize(tex1ShadeN + tex2ShadeN - hitPoint.shadeN);
 }
 
 Properties AddTexture::ToProperties(const ImageMapCache &imgMapCache) const {
