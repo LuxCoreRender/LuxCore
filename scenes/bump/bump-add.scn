@@ -15,7 +15,9 @@ scene.textures.scaled_bumpmap.type = scale
 scene.textures.scaled_bumpmap.texture1 = 0.025
 scene.textures.scaled_bumpmap.texture2 = bumpmap
 ##
-scene.textures.add_bumpnorm.type = add
+scene.textures.add_bumpnorm.type = mix
+scene.textures.add_bumpnorm.amount = .5
+#scene.textures.add_bumpnorm.type = add
 scene.textures.add_bumpnorm.texture1 = normalmap
 scene.textures.add_bumpnorm.texture2 = scaled_bumpmap
 ################################################################################
