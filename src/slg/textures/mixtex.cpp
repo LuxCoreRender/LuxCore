@@ -51,12 +51,31 @@ Spectrum MixTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 }
 
 Normal MixTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
-	const Normal tex1ShadeN = tex1->Bump(hitPoint, sampleDistance);
-	const Normal tex2ShadeN = tex2->Bump(hitPoint, sampleDistance);
+	const Vector u = Normalize(hitPoint.dpdu);
+	const Vector v = Normalize(Cross(Vector(hitPoint.shadeN), hitPoint.dpdu));
+	Normal n = tex1->Bump(hitPoint, sampleDistance);
+	float nn = Dot(n, hitPoint.shadeN);
+	const float du1 = Dot(n, u) / nn;
+	const float dv1 = Dot(n, v) / nn;
 
-	return Normalize(hitPoint.shadeN +
-			Lerp(amt, tex1ShadeN - hitPoint.shadeN, tex2ShadeN - hitPoint.shadeN));
+	n = tex2->Bump(hitPoint, sampleDistance);
+	nn = Dot(n, hitPoint.shadeN);
+	const float du2 = Dot(n, u) / nn;
+	const float dv2 = Dot(n, v) / nn;
+
+	n = amount->Bump(hitPoint, sampleDistance);
+	nn = Dot(n, hitPoint.shadeN);
+	const float dua = Dot(n, u) / nn;
+	const float dva = Dot(n, v) / nn;
+
+	const float t1 = tex1->GetFloatValue(hitPoint);
+	const float t2 = tex2->GetFloatValue(hitPoint);
+	const float amt = Clamp(amount->GetFloatValue(hitPoint), 0.f, 1.f);
+
+	const float du = Lerp(amt, du1, du2) + dua * (t2 - t1);
+	const float dv = Lerp(amt, dv1, dv2) + dva * (t2 - t1);
+
+	return Normal(Normalize(Vector(hitPoint.shadeN) + du * u + dv * v));
 }
 
 Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache) const {

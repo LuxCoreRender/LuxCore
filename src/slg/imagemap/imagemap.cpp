@@ -163,6 +163,50 @@ float ImageMapStorageImpl<T, CHANNELS>::GetAlpha(const u_int index) const {
 }
 
 template <class T, u_int CHANNELS>
+luxrays::UV ImageMapStorageImpl<T, CHANNELS>::GetDuv(const luxrays::UV &uv) const {
+	const float s = uv.u * width;
+	const float t = uv.v * height;
+
+	const int is = Floor2Int(s);
+	const int it = Floor2Int(t);
+
+	const float as = s - is;
+	const float at = t - it;
+
+	int s0, s1;
+	if (as < .5f) {
+		s0 = is - 1;
+		s1 = is;
+	} else {
+		s0 = is;
+		s1 = is + 1;
+	}
+	int t0, t1;
+	if (at < .5f) {
+		t0 = it - 1;
+		t1 = it;
+	} else {
+		t0 = it;
+		t1 = it + 1;
+	}
+
+	UV duv;
+	duv.u = Lerp(at, GetTexel(s1, it)->GetFloat() - GetTexel(s0, it)->GetFloat(),
+		GetTexel(s1, it + 1)->GetFloat() - GetTexel(s0, it + 1)->GetFloat()) *
+		width;
+	duv.v = Lerp(as, GetTexel(is, t1)->GetFloat() - GetTexel(is, t0)->GetFloat(),
+		GetTexel(is + 1, t1)->GetFloat() - GetTexel(is + 1, t0)->GetFloat()) *
+		height;
+	return duv;
+}
+
+template <class T, u_int CHANNELS>
+luxrays::UV ImageMapStorageImpl<T, CHANNELS>::GetDuv(const u_int index) const {
+	UV uv((index % width) + .5f, (index / height) + .5f);
+	return GetDuv(uv);
+}
+
+template <class T, u_int CHANNELS>
 const ImageMapPixel<T, CHANNELS> *ImageMapStorageImpl<T, CHANNELS>::GetTexel(const int s, const int t) const {
 	const u_int u = Mod<int>(s, width);
 	const u_int v = Mod<int>(t, height);

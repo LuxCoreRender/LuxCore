@@ -517,6 +517,8 @@ public:
 	virtual luxrays::Spectrum GetSpectrum(const u_int index) const = 0;
 	virtual float GetAlpha(const luxrays::UV &uv) const = 0;
 	virtual float GetAlpha(const u_int index) const = 0;
+	virtual luxrays::UV GetDuv(const luxrays::UV &uv) const = 0;
+	virtual luxrays::UV GetDuv(const u_int index) const = 0;
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
 
@@ -545,6 +547,8 @@ public:
 	virtual luxrays::Spectrum GetSpectrum(const u_int index) const;
 	virtual float GetAlpha(const luxrays::UV &uv) const;
 	virtual float GetAlpha(const u_int index) const;
+	virtual luxrays::UV GetDuv(const luxrays::UV &uv) const;
+	virtual luxrays::UV GetDuv(const u_int index) const;
 
 	virtual void ReverseGammaCorrection(const float gamma);
 
@@ -642,6 +646,7 @@ public:
 	float GetFloat(const luxrays::UV &uv) const { return pixelStorage->GetFloat(uv); }
 	luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const { return pixelStorage->GetSpectrum(uv); }
 	float GetAlpha(const luxrays::UV &uv) const { return pixelStorage->GetAlpha(uv); }
+	luxrays::UV GetDuv(const luxrays::UV &uv) const { return pixelStorage->GetDuv(uv); }
 
 	void Resize(const u_int newWidth, const u_int newHeight);
 
