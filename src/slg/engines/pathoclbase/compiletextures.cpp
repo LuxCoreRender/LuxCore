@@ -1056,13 +1056,70 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
 					"\t\tconst float sampleDistance\n"
 					"\t\tTEXTURES_PARAM_DECL) {\n"
-					"\tconst float amt = Texture_Index" << tex->mixTex.amountTexIndex << "_EvaluateFloat(&texs[" << tex->mixTex.amountTexIndex << "], hitPoint TEXTURES_PARAM);\n"
-					"\tconst float3 tex1ShadeN = Texture_Index" << tex->mixTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
-					"\tconst float3 tex2ShadeN = Texture_Index" << tex->mixTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
-					"\tconst float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
-					"\treturn normalize(shadeN + mix(tex1ShadeN - shadeN, tex2ShadeN - shadeN, clamp(amt, 0.f, 1.f)));\n"
+					"\t const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
+					"\tconst float3 u = normalize(VLOAD3F(&hitPoint->dpdu.x));\n"
+					"\tconst float3 v = normalize(cross(shadeN, u));\n"
+					"\tfloat3 n = Texture_Index" << tex->mixTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tfloat nn = dot(n, shadeN);\n"
+					"\tconst float du1 = dot(n, u) / nn;\n"
+					"\tconst float dv1 = dot(n, v) / nn;\n"
+					"\tn = Texture_Index" << tex->mixTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tnn = dot(n, shadeN);\n"
+					"\tconst float du2 = dot(n, u) / nn;\n"
+					"\tconst float dv2 = dot(n, v) / nn;\n"
+					"\tn = Texture_Index" << tex->mixTex.amountTexIndex << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tnn = dot(n, shadeN);\n"
+					"\tconst float dua = dot(n, u) / nn;\n"
+					"\tconst float dva = dot(n, v) / nn;\n"
+					"\tconst float t1 = Texture_Index" << tex->mixTex.tex1Index << "_EvaluateFloat(&texs[" << tex->mixTex.tex1Index << "], hitPoint TEXTURES_PARAM);\n"
+					"\tconst float t2 = Texture_Index" << tex->mixTex.tex2Index << "_EvaluateFloat(&texs[" << tex->mixTex.tex2Index << "], hitPoint TEXTURES_PARAM);\n"
+					"\tconst float amt = clamp(Texture_Index" << tex->mixTex.amountTexIndex << "_EvaluateFloat(&texs[" << tex->mixTex.amountTexIndex << "], hitPoint TEXTURES_PARAM), 0.f, 1.f);\n"
+					"\tconst float du = mix(du1, du2, amt) + dua * (t2 - t1);\n"
+					"\tconst float dv = mix(dv1, dv2, amt) + dva * (t2 - t1);\n"
+					"\treturn normalize(shadeN + du * u + dv * v);\n"
 					"}\n";
 			source << "#endif\n";
+			break;
+		}
+		case slg::ocl::SCALE_TEX: {
+			source << "#if defined(PARAM_ENABLE_TEX_SCALE)\n";
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\t const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
+					"\tconst float3 u = normalize(VLOAD3F(&hitPoint->dpdu.x));\n"
+					"\tconst float3 v = normalize(cross(shadeN, u));\n"
+					"\tfloat3 n = Texture_Index" << tex->scaleTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tfloat nn = dot(n, shadeN);\n"
+					"\tconst float du1 = dot(n, u) / nn;\n"
+					"\tconst float dv1 = dot(n, v) / nn;\n"
+					"\tn = Texture_Index" << tex->scaleTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+					"\tnn = dot(n, shadeN);\n"
+					"\tconst float du2 = dot(n, u) / nn;\n"
+					"\tconst float dv2 = dot(n, v) / nn;\n"
+					"\tconst float t1 = Texture_Index" << tex->scaleTex.tex1Index << "_EvaluateFloat(&texs[" << tex->scaleTex.tex1Index << "], hitPoint TEXTURES_PARAM);\n"
+					"\tconst float t2 = Texture_Index" << tex->scaleTex.tex2Index << "_EvaluateFloat(&texs[" << tex->scaleTex.tex2Index << "], hitPoint TEXTURES_PARAM);\n"
+					"\tconst float du = du1 * t2 + t1 * du2;\n"
+					"\tconst float dv = dv1 * t2 + t1 * dv2;\n"
+					"\treturn normalize(shadeN + du * u + dv * v);\n"
+					"}\n";
+			source << "#endif\n";
+			break;
+		}
+		case slg::ocl::CONST_FLOAT: {
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\treturn VLOAD3F(&hitPoint->shadeN.x);\n"
+					"}\n";
+			break;
+		}
+		case slg::ocl::CONST_FLOAT3: {
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\treturn VLOAD3F(&hitPoint->shadeN.x);\n"
+					"}\n";
 			break;
 		}
 		default: {
