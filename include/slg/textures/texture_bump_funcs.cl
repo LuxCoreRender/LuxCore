@@ -86,6 +86,29 @@ float3 GenericTexture_Bump(
 }
 
 //------------------------------------------------------------------------------
+// ImageMapTexture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
+float3 ImageMapTexture_Bump(__global HitPoint *hitPoint,
+		const float sampleDistance, const float gain,
+		const uint imageMapIndex, __global const TextureMapping2D *mapping
+		IMAGEMAPS_PARAM_DECL) {
+	float2 du, dv;
+	const float2 uv = TextureMapping2D_MapDuv(mapping, hitPoint, &du, &dv);
+	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
+	const float2 dst = ImageMap_GetDuv(imageMap, uv.x, uv.y IMAGEMAPS_PARAM);
+	const float2 duv = gain * (float2)(dot(dst, du), dot(dst, dv));
+	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 n = normalize(cross(VLOAD3F(&hitPoint->dpdu.x) + duv.x * shadeN, VLOAD3F(&hitPoint->dpdv.x) + duv.y * shadeN));
+	if (dot(n, shadeN) < 0.f)
+		return -n;
+	else
+		return n;
+}
+#endif
+
+//------------------------------------------------------------------------------
 // NormalMapTexture
 //------------------------------------------------------------------------------
 
