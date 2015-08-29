@@ -1027,6 +1027,21 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			source << "#endif\n";
 			break;
 		}
+		case slg::ocl::IMAGEMAP: {
+			source << "#if defined(PARAM_ENABLE_TEX_IMAGEMAP)\n";
+			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
+					"\t\tconst float sampleDistance\n"
+					"\t\tTEXTURES_PARAM_DECL) {\n"
+					"\tconst __global Texture *texture = &texs[" << i << "];\n"
+					"\treturn ImageMapTexture_Bump(hitPoint, sampleDistance,\n" <<
+						ToString(tex->imageMapTex.gain) << ", " <<
+						ToString(tex->imageMapTex.imageMapIndex) << ", " <<
+						"&texture->imageMapTex.mapping"
+						" IMAGEMAPS_PARAM);\n"
+					"}\n";
+			source << "#endif\n";
+			break;
+		}
 		case slg::ocl::ADD_TEX: {
 			source << "#if defined(PARAM_ENABLE_TEX_ADD)\n";
 			source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
