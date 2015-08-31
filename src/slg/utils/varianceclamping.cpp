@@ -78,7 +78,8 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 
 	// Use the current pixel value as expected value
 	const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
-	const float capValue = maxExpectedValue + sqrtVarianceClampMaxValue;
-
-	sampleResult.ClampRadiance(capValue);
+	const float minExpectedValue = Min(expectedValue[0], Min(expectedValue[1], expectedValue[2]));
+	sampleResult.ClampRadiance(
+			Max(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
+			maxExpectedValue + sqrtVarianceClampMaxValue);
 }

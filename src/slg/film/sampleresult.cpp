@@ -132,7 +132,7 @@ void SampleResult::AddSampleResult(std::vector<SampleResult> &sampleResults,
 	sampleResults[size].radiance[0] = radiancePSN;
 }
 
-void SampleResult::ClampRadiance(const float radianceCap) {
+void SampleResult::ClampRadiance(const float minRadiance, const float maxRadiance) {
 	for (u_int i = 0; i < radiance.size(); ++i)
-		radiance[i] = radiance[i].ScaledClamp(radianceCap);
+		radiance[i] = radiance[i].ScaledClamp(minRadiance, maxRadiance);
 }
