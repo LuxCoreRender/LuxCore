@@ -46,7 +46,7 @@ public:
 		const luxrays::Spectrum &pathThroughput, const luxrays::Spectrum &incomingRadiance,
 		const float lightScale);
 
-	void ClampRadiance(const float radianceCap);
+	void ClampRadiance(const float minRadiance, const float maxRadiance);
 
 	//--------------------------------------------------------------------------
 	// Used by render engines not supporting AOVs (note: DEPRECATED)
