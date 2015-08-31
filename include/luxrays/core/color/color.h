@@ -200,30 +200,28 @@ public:
 		return ret;
 	}
 	Color ScaledClamp(float low = 0.f, float high = INFINITY) const {
+		Color ret = *this;
+
 		const float maxValue = Max(c[0], Max(c[1], c[2]));
 		if (maxValue > 0.f) {
 			if (maxValue > high) {
 				const float scale = high / maxValue;
 
-				Color ret;
-				ret.c[0] = c[0] * scale;
-				ret.c[1] = c[1] * scale;
-				ret.c[2] = c[2] * scale;
-				return ret;
+				ret.c[0] *= scale;
+				ret.c[1] *= scale;
+				ret.c[2] *= scale;
 			}
 
 			if (maxValue < low) {
 				const float scale = low / maxValue;
 
-				Color ret;
-				ret.c[0] = c[0] * scale;
-				ret.c[1] = c[1] * scale;
-				ret.c[2] = c[2] * scale;
-				return ret;
+				ret.c[0] *= scale;
+				ret.c[1] *= scale;
+				ret.c[2] *= scale;
 			}
 		}
 
-		return *this;
+		return ret;
 	}
 	bool IsNaN() const {
 		if (isnan(c[0])) return true;

@@ -110,7 +110,7 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << engine->rrDepth <<
 			" -D PARAM_RR_CAP=" << engine->rrImportanceCap << "f" <<
-			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f" <<
+			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->sqrtVarianceClampMaxValue << "f" <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f"
 			;
 
