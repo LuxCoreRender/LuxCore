@@ -71,7 +71,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 	const float sideTest = Dot(frame.ToWorld(localEyeDir), hitPoint.geometryN) * Dot(frame.ToWorld(localLightDir), hitPoint.geometryN);
 	if (sideTest > 0.f) {
 		HitPoint hitPointBase(hitPoint);
-		matBase->Bump(&hitPointBase, 1.f);
+		matBase->Bump(&hitPointBase);
 		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
@@ -132,7 +132,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
 	} else if (sideTest < 0.f) {
 		HitPoint hitPointBase(hitPoint);
-		matBase->Bump(&hitPointBase, 1.f);
+		matBase->Bump(&hitPointBase);
 		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
@@ -210,7 +210,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 
 	if (passThroughEvent < wBase) {
 		HitPoint hitPointBase(hitPoint);
-		matBase->Bump(&hitPointBase, 1.f);
+		matBase->Bump(&hitPointBase);
 		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector fixedDirBase = frameBase.ToLocal(frame.ToWorld(localFixedDir));
 		// Sample base layer
@@ -244,7 +244,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		coatingF *= coatingPdf;
 
 		HitPoint hitPointBase(hitPoint);
-		matBase->Bump(&hitPointBase, 1.f);
+		matBase->Bump(&hitPointBase);
 		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector localLightDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? localFixedDir : *localSampledDir));
 		const Vector localEyeDir = frameBase.ToLocal(frame.ToWorld(hitPoint.fromLight ? *localSampledDir : localFixedDir));
@@ -305,7 +305,7 @@ void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
 		float *directPdfW, float *reversePdfW) const {
 	const Frame frame(hitPoint.GetFrame());
 	HitPoint hitPointBase(hitPoint);
-	matBase->Bump(&hitPointBase, 1.f);
+	matBase->Bump(&hitPointBase);
 	const Frame frameBase(hitPointBase.GetFrame());
 	const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
 	const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));

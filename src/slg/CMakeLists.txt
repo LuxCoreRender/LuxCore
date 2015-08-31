@@ -170,6 +170,12 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/hashgrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledscene.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilecamera.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilegeometry.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compileimagemaps.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilelights.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilematerials.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiletextures.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathocl.cpp

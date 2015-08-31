@@ -37,6 +37,7 @@ public:
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { return tex1->Y() * tex2->Y(); }
 	virtual float Filter() const { return tex1->Filter() * tex2->Filter(); }
+	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);

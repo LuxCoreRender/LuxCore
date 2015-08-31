@@ -82,4 +82,3 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 
 	sampleResult.ClampRadiance(capValue);
 }
-

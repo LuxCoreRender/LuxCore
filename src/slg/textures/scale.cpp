@@ -34,6 +34,28 @@ Spectrum ScaleTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return tex1->GetSpectrumValue(hitPoint) * tex2->GetSpectrumValue(hitPoint);
 }
 
+Normal ScaleTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+	const Vector u = Normalize(hitPoint.dpdu);
+	const Vector v = Normalize(Cross(Vector(hitPoint.shadeN), hitPoint.dpdu));
+	Normal n = tex1->Bump(hitPoint, sampleDistance);
+	float nn = Dot(n, hitPoint.shadeN);
+	const float du1 = Dot(n, u) / nn;
+	const float dv1 = Dot(n, v) / nn;
+
+	n = tex2->Bump(hitPoint, sampleDistance);
+	nn = Dot(n, hitPoint.shadeN);
+	const float du2 = Dot(n, u) / nn;
+	const float dv2 = Dot(n, v) / nn;
+
+	const float t1 = tex1->GetFloatValue(hitPoint);
+	const float t2 = tex2->GetFloatValue(hitPoint);
+
+	const float du = du1 * t2 + t1 * du2;
+	const float dv = dv1 * t2 + t1 * dv2;
+
+	return Normal(Normalize(Vector(hitPoint.shadeN) + du * u + dv * v));
+}
+
 Properties ScaleTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 
