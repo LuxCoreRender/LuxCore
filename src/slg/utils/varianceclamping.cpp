@@ -35,29 +35,46 @@ VarianceClamping::VarianceClamping(const float sqrtMaxValue) :
 		sqrtVarianceClampMaxValue(sqrtMaxValue) {
 }
 
-static void ScaledClamp(float value[4], const float cap) {
-	if (value[3] > 0.f) {
-		const float maxValue = Max(value[0], Max(value[1], value[2]));
-		const float scaledCap = cap * value[3];
+static void ScaledClamp(float value[4], const float low, const float high) {
+	const float maxValue = Max(value[0], Max(value[1], value[2]));
 
-		if ((maxValue > 0.f) && (maxValue > scaledCap)) {
-			const float scale = scaledCap / maxValue;
+	if (maxValue > 0.f) {
+		if (maxValue > high) {
+			const float scale = high / maxValue;
 
 			value[0] *= scale;
 			value[1] *= scale;
 			value[2] *= scale;
+			return;
+		}
+
+		if (maxValue < low) {
+			const float scale = low / maxValue;
+
+			value[0] *= scale;
+			value[1] *= scale;
+			value[2] *= scale;
+			return;
 		}
 	}
 }
 
 void VarianceClamping::Clamp(const float expectedValue[4], float value[4]) const {
-	// Use the current pixel value as expected value
-	const float maxExpectedValue = (expectedValue[3] > 0.f) ?
-		(Max(expectedValue[0], Max(expectedValue[1], expectedValue[2])) / expectedValue[3]) :
-		0.f;
-	const float capValue = maxExpectedValue + sqrtVarianceClampMaxValue;
+	if (value[3] <= 0.f)
+		return;
 
-	ScaledClamp(value, capValue);
+	// Use the current pixel value as expected value
+	const float minExpectedValue = (expectedValue[3] > 0.f) ?
+		(Min(expectedValue[0], Min(expectedValue[1], expectedValue[2]))) :
+		0.f;
+	const float maxExpectedValue = (expectedValue[3] > 0.f) ?
+		(Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]))) :
+		0.f;
+	const float delta = sqrtVarianceClampMaxValue * ((expectedValue[3] > 0.f) ?	expectedValue[3] : 1.f);
+
+	ScaledClamp(value,
+			Max(minExpectedValue - delta, 0.f),
+			maxExpectedValue + delta);
 }
 
 void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const {
@@ -77,8 +94,8 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 	}
 
 	// Use the current pixel value as expected value
-	const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
 	const float minExpectedValue = Min(expectedValue[0], Min(expectedValue[1], expectedValue[2]));
+	const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
 	sampleResult.ClampRadiance(
 			Max(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
 			maxExpectedValue + sqrtVarianceClampMaxValue);
