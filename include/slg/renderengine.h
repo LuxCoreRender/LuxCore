@@ -272,7 +272,6 @@ public:
 
 	void Clear();
 	void Restart();
-	void SetVarianceClamping(float sqrtVarianceClampMaxValue);
 	void GetPendingTiles(std::deque<const Tile *> &tiles);
 	void GetNotConvergedTiles(std::deque<const Tile *> &tiles);
 	void GetConvergedTiles(std::deque<const Tile *> &tiles);
