@@ -37,6 +37,7 @@ public:
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
 	virtual float Y() const { return color.Y(); }
 	virtual float Filter() const { return color.Filter(); }
+	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const { return hitPoint.shadeN; }
 
 	const luxrays::Spectrum &GetColor() const { return color; };
 

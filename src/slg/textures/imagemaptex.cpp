@@ -42,6 +42,19 @@ Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return gain * imgMap->GetSpectrum(mapping->Map(hitPoint));
 }
 
+Normal ImageMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+	UV dst, du, dv;
+	dst = imgMap->GetDuv(mapping->MapDuv(hitPoint, &du, &dv));
+	UV duv;
+	duv.u = gain * (dst.u * du.u + dst.v * du.v);
+	duv.v = gain * (dst.u * dv.u + dst.v * dv.v);
+	Normal n(Normal(Normalize(Cross(hitPoint.dpdu + duv.u * Vector(hitPoint.shadeN), hitPoint.dpdv + duv.v * Vector(hitPoint.shadeN)))));
+	if (Dot(n, hitPoint.shadeN) < 0.f)
+		return -n;
+	else
+		return n;
+}
+
 Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props;
 

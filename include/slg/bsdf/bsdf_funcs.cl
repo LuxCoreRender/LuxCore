@@ -84,18 +84,18 @@ void ExtMesh_GetDifferentials(
 		const float3 p1 = VLOAD3F(&iVertices[vi1].x);
 		const float3 p2 = VLOAD3F(&iVertices[vi2].x);
 		// Transform to global coordinates
-		const float3 dp1 = Transform_ApplyVector(&meshDesc->trans, p0 - p2);
-		const float3 dp2 = Transform_ApplyVector(&meshDesc->trans, p1 - p2);
+		const float3 dp1 = Transform_InvApplyVector(&meshDesc->trans, p0 - p2);
+		const float3 dp2 = Transform_InvApplyVector(&meshDesc->trans, p1 - p2);
 
 		//------------------------------------------------------------------
 		// Compute dpdu and dpdv
 		//------------------------------------------------------------------
 
-		const float3 ss = (dv2 * dp1 - dv1 * dp2) * invdet;
-		const float3 ts = (-du2 * dp1 + du1 * dp2) * invdet;
+		const float3 geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		const float3 geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-		*dpdu = cross(shadeNormal, cross(ss, shadeNormal));
-		*dpdv = cross(shadeNormal, cross(ts, shadeNormal));
+		*dpdu = cross(shadeNormal, cross(geometryDpDu, shadeNormal));
+		*dpdv = cross(shadeNormal, cross(geometryDpDv, shadeNormal));
 
 		//------------------------------------------------------------------
 		// Compute dndu and dndv
@@ -326,8 +326,7 @@ void BSDF_Init(
 	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
 	VSTORE3F(dndu, &bsdf->hitPoint.dndu.x);
 	VSTORE3F(dndv, &bsdf->hitPoint.dndv.x);
-	Material_Bump(matIndex,
-			&bsdf->hitPoint, 1.f
+	Material_Bump(matIndex, &bsdf->hitPoint
 			MATERIALS_PARAM);
 	// Re-read the shadeN modified by Material_Bump()
 	shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);

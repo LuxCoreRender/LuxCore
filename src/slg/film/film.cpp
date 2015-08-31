@@ -1622,8 +1622,8 @@ void Film::AddSample(const u_int x, const u_int y,
 
 void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
 	if (!filter) {
-		const int x = Ceil2Int(sampleResult.filmX - .5f);
-		const int y = Ceil2Int(sampleResult.filmY - .5f);
+		const int x = Floor2Int(sampleResult.filmX);
+		const int y = Floor2Int(sampleResult.filmY);
 
 		if ((x >= 0) && (x < (int)width) && (y >= 0) && (y < (int)height)) {
 			AddSampleResultColor(x, y, sampleResult, weight);
@@ -1636,8 +1636,8 @@ void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
 		//----------------------------------------------------------------------
 
 		if (hasDataChannel) {
-			const int x = Ceil2Int(sampleResult.filmX - .5f);
-			const int y = Ceil2Int(sampleResult.filmY - .5f);
+			const int x = Floor2Int(sampleResult.filmX);
+			const int y = Floor2Int(sampleResult.filmY);
 
 			if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
 				AddSampleResultData(x, y, sampleResult);
@@ -1653,9 +1653,9 @@ void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
 		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleResult.filmX), dImageY - floorf(sampleResult.filmY));
 		const float *lut = filterLUT->GetLUT();
 
-		const int x0 = Ceil2Int(dImageX - filter->xWidth);
+		const int x0 = Floor2Int(dImageX - filter->xWidth * .5f + .5f);
 		const int x1 = x0 + filterLUT->GetWidth();
-		const int y0 = Ceil2Int(dImageY - filter->yWidth);
+		const int y0 = Floor2Int(dImageY - filter->yWidth * .5f + .5f);
 		const int y1 = y0 + filterLUT->GetHeight();
 
 		for (int iy = y0; iy < y1; ++iy) {

@@ -145,7 +145,7 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	BSDFEvent eventMatA = NONE;
 	if (weight1 > 0.f) {
 		HitPoint hitPointA(hitPoint);
-		matA->Bump(&hitPointA, 1.f);
+		matA->Bump(&hitPointA);
 		const Frame frameA(hitPointA.GetFrame());
 		const Vector lightDirA = frameA.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirA = frameA.ToLocal(frame.ToWorld(localEyeDir));
@@ -164,7 +164,7 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	BSDFEvent eventMatB = NONE;
 	if (weight2 > 0.f) {
 		HitPoint hitPointB(hitPoint);
-		matB->Bump(&hitPointB, 1.f);
+		matB->Bump(&hitPointB);
 		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
@@ -192,11 +192,11 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const BSDFEvent requestedEvent) const {
 	const Frame frame(hitPoint.GetFrame());
 	HitPoint hitPointA(hitPoint);
-	matA->Bump(&hitPointA, 1.f);
+	matA->Bump(&hitPointA);
 	const Frame frameA(hitPointA.GetFrame());
 	const Vector fixedDirA = frameA.ToLocal(frame.ToWorld(localFixedDir));
 	HitPoint hitPointB(hitPoint);
-	matB->Bump(&hitPointB, 1.f);
+	matB->Bump(&hitPointB);
 	const Frame frameB(hitPointB.GetFrame());
 	const Vector fixedDirB = frameB.ToLocal(frame.ToWorld(localFixedDir));
 
@@ -257,7 +257,7 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 	float reversePdfWMatA = 1.f;
 	if (weight1 > 0.f) {
 		HitPoint hitPointA(hitPoint);
-		matA->Bump(&hitPointA, 1.f);
+		matA->Bump(&hitPointA);
 		const Frame frameA(hitPointA.GetFrame());
 		const Vector lightDirA = frameA.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirA = frameA.ToLocal(frame.ToWorld(localEyeDir));
@@ -268,7 +268,7 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 	float reversePdfWMatB = 1.f;
 	if (weight2 > 0.f) {
 		HitPoint hitPointB(hitPoint);
-		matB->Bump(&hitPointB, 1.f);
+		matB->Bump(&hitPointB);
 		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
