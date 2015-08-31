@@ -26,7 +26,6 @@ std::string KernelSource_biaspathocl_kernels_micro =
 "//  PARAM_TILE_WIDTH\n"
 "//  PARAM_TILE_HEIGHT\n"
 "//  PARAM_FIRST_VERTEX_DL_COUNT\n"
-"//  PARAM_RADIANCE_CLAMP_MAXVALUE\n"
 "//  PARAM_PDF_CLAMP_VALUE\n"
 "//  PARAM_AA_SAMPLES\n"
 "//  PARAM_DIRECT_LIGHT_SAMPLES\n"
