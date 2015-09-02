@@ -52,6 +52,9 @@ public:
 	// Directly used only in InfiniteLight and ImageMapTexture
 	virtual luxrays::UV Map(const luxrays::UV &uv) const = 0;
 
+	virtual luxrays::UV MapDuv(const HitPoint &hitPoint,
+		luxrays::UV *ds, luxrays::UV *dt) const = 0;
+
 	virtual luxrays::Properties ToProperties(const std::string &name) const = 0;
 };
 
@@ -88,6 +91,13 @@ public:
 
 	virtual luxrays::UV Map(const luxrays::UV &uv) const {
 		return luxrays::UV(uv.u * uScale + uDelta, uv.v * vScale + vDelta);
+	}
+
+	virtual luxrays::UV MapDuv(const HitPoint &hitPoint,
+		luxrays::UV *ds, luxrays::UV *dt) const {
+		*ds = luxrays::UV(uScale, 0.f);
+		*dt = luxrays::UV(0.f, vScale);
+		return Map(hitPoint.uv);
 	}
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const {

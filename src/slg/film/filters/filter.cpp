@@ -95,10 +95,10 @@ void FilterDistribution::SampleContinuous(const float u0, const float u1, float 
 //------------------------------------------------------------------------------
 
 FilterLUT::FilterLUT(const Filter &filter, const float offsetX, const float offsetY) {
-	const int x0 = luxrays::Ceil2Int(offsetX - filter.xWidth);
-	const int x1 = luxrays::Floor2Int(offsetX + filter.xWidth);
-	const int y0 = luxrays::Ceil2Int(offsetY - filter.yWidth);
-	const int y1 = luxrays::Floor2Int(offsetY + filter.yWidth);
+	const int x0 = luxrays::Floor2Int(offsetX - filter.xWidth * .5f + .5f);
+	const int x1 = luxrays::Floor2Int(offsetX + filter.xWidth * .5f + .5f);
+	const int y0 = luxrays::Floor2Int(offsetY - filter.yWidth * .5f + .5f);
+	const int y1 = luxrays::Floor2Int(offsetY + filter.yWidth * .5f + .5f);
 	lutWidth = x1 - x0 + 1;
 	lutHeight = y1 - y0 + 1;
 	lut = new float[lutWidth * lutHeight];
@@ -134,8 +134,8 @@ FilterLUTs::FilterLUTs(const Filter &filter, const unsigned int size) {
 
 	for (unsigned int iy = 0; iy < lutsSize; ++iy) {
 		for (unsigned int ix = 0; ix < lutsSize; ++ix) {
-			const float x = ix * step - 0.5f + step / 2.f;
-			const float y = iy * step - 0.5f + step / 2.f;
+			const float x = (ix + .5f) * step - 0.5f;
+			const float y = (iy + .5f) * step - 0.5f;
 
 			luts[ix + iy * lutsSize] = new FilterLUT(filter, x, y);
 			/*std::cout << "===============================================\n";

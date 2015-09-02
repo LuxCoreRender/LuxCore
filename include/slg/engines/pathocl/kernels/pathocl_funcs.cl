@@ -581,7 +581,7 @@ bool DirectLight_BSDFSampling(
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 #define KERNEL_ARGS_UVS_BUFFER \
-		, __global const UV* restrict restrict vertUVs
+		, __global const UV* restrict vertUVs
 #else
 #define KERNEL_ARGS_UVS_BUFFER
 #endif

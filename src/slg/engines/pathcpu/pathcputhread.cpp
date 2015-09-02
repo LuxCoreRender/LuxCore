@@ -18,6 +18,7 @@
 
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/volumes/volume.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
@@ -189,6 +190,8 @@ void PathCPURenderThread::RenderFunc() {
 		sampleBootSize + // To generate eye ray
 		(engine->maxPathDepth + 1) * sampleStepSize; // For each path vertex
 	sampler->RequestSamples(sampleSize);
+	
+	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
@@ -372,9 +375,9 @@ void PathCPURenderThread::RenderFunc() {
 
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
-		// Radiance clamping
-		if (engine->radianceClampMaxValue > 0.f)
-			sampleResult.ClampRadiance(engine->radianceClampMaxValue);
+		// Variance clamping
+		if (varianceClamping.hasClamping())
+			varianceClamping.Clamp(*film, sampleResult);
 
 		sampler->NextSample(sampleResults);
 

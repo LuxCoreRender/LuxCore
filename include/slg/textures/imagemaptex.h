@@ -36,6 +36,7 @@ public:
 	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 	virtual float Y() const { return imageY; }
 	virtual float Filter() const { return imageFilter; }
 

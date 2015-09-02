@@ -764,9 +764,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	filmRadianceGroup[7] = filmRadianceGroup7;
 #endif
 
-	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
+	if (PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE > 0.f) {
 		// Radiance clamping
-		SampleResult_ClampRadiance(&sample->result, PARAM_RADIANCE_CLAMP_MAXVALUE);
+		VarianceClamping_Clamp(&sample->result, PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE
+				FILM_PARAM);
 	}
 
 	Sampler_SplatSample(&seedValue, sample, sampleData

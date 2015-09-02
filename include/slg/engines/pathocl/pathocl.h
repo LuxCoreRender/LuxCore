@@ -118,7 +118,7 @@ public:
 	float rrImportanceCap;
 
 	// Clamping settings
-	float radianceClampMaxValue;
+	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
 	u_int taskCount;

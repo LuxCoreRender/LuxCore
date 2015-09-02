@@ -38,6 +38,7 @@ public:
 	void Init(const u_int channelTypes, const u_int radianceGroupCount);
 
 	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
+	float Y() const;
 
 	void AddEmission(const u_int lightID, const luxrays::Spectrum &pathThroughput,
 		const luxrays::Spectrum &incomingRadiance);
@@ -45,10 +46,7 @@ public:
 		const luxrays::Spectrum &pathThroughput, const luxrays::Spectrum &incomingRadiance,
 		const float lightScale);
 
-	void ClampRadiance(const float cap) {
-		for (u_int i = 0; i < radiance.size(); ++i)
-			radiance[i] = radiance[i].Clamp(0.f, cap);
-	}
+	void ClampRadiance(const float minRadiance, const float maxRadiance);
 
 	//--------------------------------------------------------------------------
 	// Used by render engines not supporting AOVs (note: DEPRECATED)
