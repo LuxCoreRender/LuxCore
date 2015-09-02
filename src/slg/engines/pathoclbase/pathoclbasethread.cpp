@@ -1274,7 +1274,6 @@ void PathOCLBaseRenderThread::InitKernels() {
 		"\n";
 
 	ssKernel <<
-		slg::ocl::KernelSource_texture_bump_funcs <<
 		slg::ocl::KernelSource_materialdefs_funcs_generic <<
 		slg::ocl::KernelSource_materialdefs_funcs_archglass <<
 		slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
@@ -1308,7 +1307,9 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_camera_funcs <<
 		slg::ocl::KernelSource_light_funcs <<
 		slg::ocl::KernelSource_filter_funcs <<
+		slg::ocl::KernelSource_sampleresult_funcs <<
 		slg::ocl::KernelSource_film_funcs <<
+		slg::ocl::KernelSource_varianceclamping_funcs <<
 		slg::ocl::KernelSource_sampler_funcs <<
 		slg::ocl::KernelSource_bsdf_funcs <<
 		slg::ocl::KernelSource_scene_funcs <<

@@ -110,7 +110,7 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << engine->rrDepth <<
 			" -D PARAM_RR_CAP=" << engine->rrImportanceCap << "f" <<
-			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f" <<
+			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->sqrtVarianceClampMaxValue << "f" <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f"
 			;
 
@@ -123,23 +123,23 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->box.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->box.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->box.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->box.widthY);
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->box.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->box.widthY * .5f + .5f);
 			break;
 		case slg::ocl::FILTER_GAUSSIAN:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->gaussian.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->gaussian.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->gaussian.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->gaussian.widthY) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->gaussian.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->gaussian.widthY * .5f + .5f) <<
 					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << filter->gaussian.alpha << "f";
 			break;
 		case slg::ocl::FILTER_MITCHELL:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchell.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchell.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->mitchell.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->mitchell.widthY) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->mitchell.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->mitchell.widthY * .5f + .5f) <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchell.C << "f";
 			break;
@@ -147,8 +147,8 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=4" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->blackmanharris.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->blackmanharris.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->blackmanharris.widthY);
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->blackmanharris.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->blackmanharris.widthY * .5f + .5f);
 			break;
 		default:
 			throw runtime_error("Unknown pixel filter type: "  + boost::lexical_cast<string>(filter->type));
@@ -190,7 +190,7 @@ string PathOCLRenderThread::AdditionalKernelDefinitions() {
 
 	if (engine->sampler->type == slg::ocl::SOBOL) {
 		// Generate the Sobol vectors
-		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
+		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
 		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
 
 		SobolGenerateDirectionVectors(directions, sampleDimensions);

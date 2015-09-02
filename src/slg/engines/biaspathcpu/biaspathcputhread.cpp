@@ -542,10 +542,6 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	PathVolumeInfo volInfo;
 	TraceEyePath(rndGen, eyeRay, &volInfo, &sampleResult);
 
-	// Radiance clamping
-	if (engine->radianceClampMaxValue > 0.f)
-		sampleResult.ClampRadiance(engine->radianceClampMaxValue);
-
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
 	tileFilm->AddSampleCount(1.0);

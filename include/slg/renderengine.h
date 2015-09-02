@@ -28,9 +28,9 @@
 #include "slg/slg.h"
 #include "slg/renderconfig.h"
 #include "slg/editaction.h"
-
 #include "slg/film/film.h"
 #include "slg/bsdf/bsdf.h"
+#include "slg/utils/varianceclamping.h"
 
 namespace slg {
 
@@ -250,6 +250,7 @@ public:
 		virtual ~Tile();
 
 		void Restart();
+		void VarianceClamp(Film &tileFilm);
 		void AddPass(const Film &tileFilm);
 		
 		// Read-only for every one but Tile/TileRepository classes
@@ -269,12 +270,6 @@ public:
 	TileRepository(const u_int tileWidth, const u_int tileHeight);
 	~TileRepository();
 
-	void HilberCurveTiles(
-		const Film &film,
-		const u_int n, const int xo, const int yo,
-		const int xd, const int yd, const int xp, const int yp,
-		const int xEnd, const int yEnd);
-
 	void Clear();
 	void Restart();
 	void GetPendingTiles(std::deque<const Tile *> &tiles);
@@ -283,7 +278,7 @@ public:
 
 	void InitTiles(const Film &film);
 	bool NextTile(Film *film, boost::mutex *filmMutex,
-		Tile **tile, const Film *tileFilm);
+		Tile **tile, Film *tileFilm);
 
 	friend class Tile;
 
@@ -292,6 +287,7 @@ public:
 
 	u_int maxPassCount;
 	float convergenceTestThreshold, convergenceTestThresholdReduction;
+	VarianceClamping varianceClamping;
 	bool enableMultipassRendering, enableRenderingDonePrint;
 
 	bool done;
@@ -303,6 +299,12 @@ private:
 			return lt->pass > rt->pass;
 		}
 	};
+
+	void HilberCurveTiles(
+		const Film &film,
+		const u_int n, const int xo, const int yo,
+		const int xd, const int yd, const int xp, const int yp,
+		const int xEnd, const int yEnd);
 
 	void SetDone();
 	bool GetToDoTile(Tile **tile);

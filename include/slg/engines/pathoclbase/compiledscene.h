@@ -97,6 +97,9 @@ public:
 	vector<vector<float> > imageMapMemBlocks;
 
 private:
+	static std::string ToOCLString(const slg::ocl::Spectrum &v);
+	static std::string AddTextureSourceCall(const std::string &type, const u_int i);
+
 	void CompileCamera();
 	void CompileGeometry();
 	void CompileMaterials();

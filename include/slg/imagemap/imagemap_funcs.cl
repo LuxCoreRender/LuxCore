@@ -267,4 +267,49 @@ float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
 	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
 }
 
+float2 ImageMap_GetDuv(__global const ImageMap *imageMap,
+		const float u, const float v
+		IMAGEMAPS_PARAM_DECL) {
+	__global const void *pixels = ImageMap_GetPixelsAddress(
+		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->storageType;
+	const uint channelCount = imageMap->channelCount;
+	const uint width = imageMap->width;
+	const uint height = imageMap->height;
+
+	const float s = u * width;
+	const float t = v * height;
+
+	const int is = Floor2Int(s);
+	const int it = Floor2Int(t);
+
+	const float as = s - is;
+	const float at = t - it;
+
+	int s0, s1;
+	if (as < .5f) {
+		s0 = is - 1;
+		s1 = is;
+	} else {
+		s0 = is;
+		s1 = is + 1;
+	}
+	int t0, t1;
+	if (at < .5f) {
+		t0 = it - 1;
+		t1 = it;
+	} else {
+		t0 = it;
+		t1 = it + 1;
+	}
+
+	float2 duv;
+	duv.x = mix(ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s1, it) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0, it),
+		ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s1, it + 1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, s0, it + 1), at) * width;
+	duv.y = mix(ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, is, t1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, is, t0),
+		ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, is + 1, t1) - ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, is + 1, t0), as) * height;
+
+	return duv;
+}
+
 #endif

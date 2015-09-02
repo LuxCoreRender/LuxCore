@@ -1768,10 +1768,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	// Radiance clamping
 	//--------------------------------------------------------------------------
 
-	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
-		for (uint i = 0; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
-			SampleResult_ClampRadiance(&sampleResult[i], PARAM_RADIANCE_CLAMP_MAXVALUE);
-	}
+	// It is now done at tile level inside the TileRepository on the CPU
 
 	//--------------------------------------------------------------------------
 	// Merge all samples and accumulate statistics

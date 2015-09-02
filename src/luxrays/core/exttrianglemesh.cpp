@@ -72,11 +72,11 @@ void ExtMesh::GetDifferentials(const float time, const u_int triIndex, const Nor
 		const Vector dp1 = p0 - p2;
 		const Vector dp2 = p1 - p2;
 
-		const Vector ss = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		const Vector ts = (-du2 * dp1 + du1 * dp2) * invdet;
+		const Vector geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		const Vector geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-		*dpdu = Cross(shadeNormal, Cross(ss, shadeNormal));
-		*dpdv = Cross(shadeNormal, Cross(ts, shadeNormal));
+		*dpdu = Cross(shadeNormal, Cross(geometryDpDu, shadeNormal));
+		*dpdv = Cross(shadeNormal, Cross(geometryDpDv, shadeNormal));
 
 		if (HasNormals()) {
 			// Using GetShadeNormal() in order to do all computation relative to

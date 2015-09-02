@@ -556,6 +556,10 @@ void TileRepository::Tile::Restart() {
 	done = false;
 }
 
+void TileRepository::Tile::VarianceClamp(Film &tileFilm) {
+	allPassFilm->VarianceClampFilm(tileRepository->varianceClamping, tileFilm);
+}
+
 void TileRepository::Tile::AddPass(const Film &tileFilm) {		
 	// Increase the pass count
 	++pass;
@@ -565,19 +569,11 @@ void TileRepository::Tile::AddPass(const Film &tileFilm) {
 		// Check if convergence test is enable
 		if (tileRepository->convergenceTestThreshold > 0.f) {
 			// Add the tile to the all pass film
-			allPassFilm->AddFilm(tileFilm,
-					0, 0,
-					tileFilm.GetWidth(),
-					tileFilm.GetHeight(),
-					0, 0);
+			allPassFilm->AddFilm(tileFilm);
 
 			if (pass % 2 == 1) {
 				// If it is an odd pass, add also to the even pass film
-				evenPassFilm->AddFilm(tileFilm,
-					0, 0,
-					tileFilm.GetWidth(),
-					tileFilm.GetHeight(),
-					0, 0);
+				evenPassFilm->AddFilm(tileFilm);
 			} else {
 				// Update tileRepository->tileMaxPixelValue before to check the
 				// convergence
@@ -608,14 +604,14 @@ void TileRepository::Tile::UpdateMaxPixelValue() {
 			const float *pixel = allPassFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[j]->GetPixel(i);
 			if (pixel[3] > 0.f) {
 				const float w = 1.f / pixel[3];
-				maxVal = max(maxVal, pixel[0] * w);
-				maxVal = max(maxVal, pixel[1] * w);
-				maxVal = max(maxVal, pixel[2] * w);
+				maxVal = Max(maxVal, pixel[0] * w);
+				maxVal = Max(maxVal, pixel[1] * w);
+				maxVal = Max(maxVal, pixel[2] * w);
 			}
 		}
 	}
 
-	tileRepository->tileMaxPixelValue = max(tileRepository->tileMaxPixelValue, maxVal);
+	tileRepository->tileMaxPixelValue = Max(tileRepository->tileMaxPixelValue, maxVal);
 }
 
 void TileRepository::Tile::CheckConvergence() {
@@ -816,12 +812,17 @@ bool TileRepository::GetToDoTile(Tile **tile) {
 }
 
 bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
-		Tile **tile, const Film *tileFilm) {
+		Tile **tile, Film *tileFilm) {
 	// Now I have to lock the repository
 	boost::unique_lock<boost::mutex> lock(tileMutex);
 
 	// Check if I have to add the tile to the film
 	if (*tile) {
+		if (varianceClamping.hasClamping()) {
+			// Apply variance clamping
+			(*tile)->VarianceClamp(*tileFilm);
+		}
+
 		// Add the pass to the tile
 		(*tile)->AddPass(*tileFilm);
 
