@@ -91,6 +91,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels_micro.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/sampleresult_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/imagemap/imagemap_types.cl
@@ -141,6 +142,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/varianceclamping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volumeinfo_funcs.cl
@@ -305,6 +307,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/clear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/heterogenous.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/homogenous.cpp
@@ -317,6 +320,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampleresult_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/camera_types_kernel.cpp
@@ -361,6 +365,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelcolor_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelconst_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_irregulardata_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/varianceclamping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volumeinfo_funcs_kernel.cpp
