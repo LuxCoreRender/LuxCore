@@ -52,7 +52,7 @@ Properties FresnelConstTexture::ToProperties(const ImageMapCache &imgMapCache) c
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("fresnelconst"));
 	props.Set(Property("scene.textures." + name + ".n")(n));
-	props.Set(Property("scene.textures." + name + ".k")(n));
+	props.Set(Property("scene.textures." + name + ".k")(k));
 
 	return props;
 }
