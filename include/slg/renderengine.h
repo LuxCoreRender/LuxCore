@@ -254,17 +254,20 @@ public:
 		void AddPass(const Film &tileFilm);
 		
 		// Read-only for every one but Tile/TileRepository classes
-		u_int xStart, yStart;
+		u_int xStart, yStart, tileWidth, tileHeight;
 		u_int pass;
 		bool done;
 
 	private:
 		void InitTileFilm(const Film &film, Film **tileFilm);
 		void CheckConvergence();
-		void UpdateMaxPixelValue();
+		void UpdateTileStats();
 
 		TileRepository *tileRepository;
 		Film *allPassFilm, *evenPassFilm;
+
+		float allPassFilmTotalYValue;
+		bool hasEnoughWarmUpSample;
 	};
 
 	TileRepository(const u_int tileWidth, const u_int tileHeight);
@@ -312,7 +315,8 @@ private:
 	boost::mutex tileMutex;
 	double startTime;
 
-	float tileMaxPixelValue; // Updated only if convergence test is enabled
+	u_int filmWidth, filmHeight;
+	float filmTotalYValue; // Updated only if convergence test is enabled
 
 	std::vector<Tile *> tileList;
 

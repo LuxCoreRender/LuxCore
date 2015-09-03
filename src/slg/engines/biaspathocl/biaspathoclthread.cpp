@@ -461,7 +461,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tiles[i]->yStart);
 					//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 					//		"(" << tiles[i]->xStart << ", " << tiles[i]->yStart << ") => " <<
-					//		"(" << tileW << ", " << tileH << ")");
+					//		"(" << tiles[i]->tileWidth << ", " << tiles[i]->tileWidth << ")");
 
 					threadFilms[i]->film->Reset();
 
