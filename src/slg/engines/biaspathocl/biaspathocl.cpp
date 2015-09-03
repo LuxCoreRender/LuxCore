@@ -129,7 +129,11 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	directLightSamples = Max(1, cfg.Get(Property("biaspath.sampling.directlight.size")(1)).Get<int>());
 
 	// Clamping settings
-	radianceClampMaxValue = Max(0.f, cfg.Get(Property("biaspath.clamping.radiance.maxvalue")(10.f)).Get<float>());
+	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
+	sqrtVarianceClampMaxValue = Max(0.f,
+			cfg.Get(Property("biaspath.clamping.variance.maxvalue")(
+				cfg.Get(Property("biaspath.clamping.radiance.maxvalue")(0.f)).Get<float>())
+			).Get<float>());
 	pdfClampValue = Max(0.f, cfg.Get(Property("biaspath.clamping.pdf.value")(0.f)).Get<float>());
 
 	// Light settings
@@ -171,6 +175,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(.04f)).Get<float>();
 	tileRepository->convergenceTestThresholdReduction = cfg.Get(Property("tile.multipass.convergencetest.threshold.reduction")(0.f)).Get<float>();
 	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
+	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
 
 	tileRepository->InitTiles(*film);
 
