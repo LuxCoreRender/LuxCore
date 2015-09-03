@@ -47,6 +47,8 @@ public:
 
 	void Apply(const Film &film, luxrays::Spectrum *pixels, std::vector<bool> &pixelsMask) const;
 
+	static float CalcLinearToneMapScale(const Film &film, const float Y);
+	
 	friend class boost::serialization::access;
 
 private:

@@ -557,9 +557,6 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
-	Film *film = engine->film;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -570,18 +567,16 @@ void BiasPathCPURenderThread::RenderFunc() {
 	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
 		// Render the tile
 		tileFilm->Reset();
-		const u_int tileWidth = Min(engine->tileRepository->tileWidth, filmWidth - tile->xStart);
-		const u_int tileHeight = Min(engine->tileRepository->tileHeight, filmHeight - tile->yStart);
 		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "
 		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-		//		"(" << tileWidth << ", " << tileHeight << ")");
+		//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
 
 		//----------------------------------------------------------------------
 		// Render the tile
 		//----------------------------------------------------------------------
 
-		for (u_int y = 0; y < tileHeight && !interruptionRequested; ++y) {
-			for (u_int x = 0; x < tileWidth && !interruptionRequested; ++x) {
+		for (u_int y = 0; y < tile->tileHeight && !interruptionRequested; ++y) {
+			for (u_int x = 0; x < tile->tileWidth && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
 						RenderPixelSample(rndGen, x, y, tile->xStart, tile->yStart, sampleX, sampleY);

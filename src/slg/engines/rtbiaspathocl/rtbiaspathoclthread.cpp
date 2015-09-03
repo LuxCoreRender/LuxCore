@@ -364,11 +364,9 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film)) {
 				//const double t0 = WallClockTime();
 				threadFilms[0]->film->Reset();
-				//const u_int tileW = Min(engine->tileRepository->tileWidth, engine->film->GetWidth() - tile->xStart);
-				//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tile->yStart);
 				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 				//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-				//		"(" << tileW << ", " << tileH << ")");
+				//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
 
 				// Clear the frame buffer
 				currentQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,

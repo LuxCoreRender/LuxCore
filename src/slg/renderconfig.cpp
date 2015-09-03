@@ -361,7 +361,7 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	} else {
 		// The definition of image pipeline is missing, use the default
 		imagePipeline->AddPlugin(new AutoLinearToneMap());
-		imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f, 4096));
+		imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
 	}
 
 	if (cfg.IsDefined("film.gamma")) {
