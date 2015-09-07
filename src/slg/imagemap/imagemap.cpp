@@ -260,7 +260,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					(selectionType == ImageMapStorage::BLUE)) ? 0 : 1;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -275,7 +275,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				const u_int channel = selectionType - ImageMapStorage::RED;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -298,7 +298,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				const u_int channel = 0;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -342,7 +342,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				ImageMapPixel<T, 3> *dst = newPixels.get();
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)src);
+					dst->Set(&(src->c[0]));
 
 					src++;
 					dst++;
