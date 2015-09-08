@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightSourceDefinitions::LightSourceDefinitions() : lightTypeCount(LIGHT_SOURCE_TYPE_COUNT, 0) {
-	lightStrategy = new LightStrategyPower();
+	lightStrategy = new LightStrategyLogPower();
 	lightGroupCount = 1;
 }
 

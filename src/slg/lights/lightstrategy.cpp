@@ -79,7 +79,7 @@ void LightStrategyPower::Preprocess(const Scene *scn) {
 		float power = l->GetPower(*scene);
 		// In order to avoid over-sampling of distant lights
 		if (l->IsInfinite())
-			power *= invEnvRadius2;			
+			power *= invEnvRadius2;
 		lightPower.push_back(power * l->GetImportance());
 	}
 
@@ -102,8 +102,7 @@ void LightStrategyLogPower::Preprocess(const Scene *scn) {
 	for (u_int i = 0; i < lightCount; ++i) {
 		const LightSource *l = scene->lightDefs.GetLightSource(i);
 
-		float power = logf(1.f + l->GetPower(*scene));
-
+		const float power = logf(1.f + l->GetPower(*scene));
 		lightPower.push_back(power * l->GetImportance());
 	}
 
