@@ -47,7 +47,7 @@ void Scene::ParseObjects(const Properties &props) {
 				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
 				// Delete all old triangle lights
-				lightDefs.DeleteLightSourceStartWith(objName + TRIANGLE_LIGHT_POSTFIX);
+				lightDefs.DeleteLightSourceStartWith(oldObj->GetName() + TRIANGLE_LIGHT_POSTFIX);
 			}
 		}
 
@@ -57,19 +57,9 @@ void Scene::ParseObjects(const Properties &props) {
 		// Check if it is a light source
 		const Material *mat = obj->GetMaterial();
 		if (mat->IsLightSource()) {
-			const ExtMesh *mesh = obj->GetExtMesh();
-			SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
+			SDL_LOG("The " << objName << " object is a light sources with " << obj->GetExtMesh()->GetTotalTriangleCount() << " triangles");
 
-			// Add all new triangle lights
-			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
-				TriangleLight *tl = new TriangleLight();
-				tl->lightMaterial = mat;
-				tl->mesh = mesh;
-				tl->triangleIndex = i;
-				tl->Preprocess();
-
-				lightDefs.DefineLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i), tl);
-			}
+			objDefs.DefineIntersectableLights(lightDefs, obj);
 		}
 
 		++objCount;

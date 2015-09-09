@@ -92,16 +92,23 @@ void Scene::ParseMaterials(const Properties &props) {
 		if (matDefs.IsMaterialDefined(matName)) {
 			// A replacement for an existing material
 			const Material *oldMat = matDefs.GetMaterial(matName);
-			
+
 			// Check if it is a volume
 			if (dynamic_cast<const Volume *>(oldMat))
 				throw runtime_error("You can not replace a material with the volume: " + matName);
 
 			matDefs.DefineMaterial(matName, newMat);
 
+			// If old material was emitting light, delete all TriangleLight
+			if (cachedIsLightSource[oldMat])
+				lightDefs.DeleteLightSourceByMaterial(oldMat);
+				
 			// Replace old material direct references with new one
 			objDefs.UpdateMaterialReferences(oldMat, newMat);
-			lightDefs.UpdateMaterialReferences(oldMat, newMat);
+
+			// If new material is emitting light, create all TriangleLight
+			if (newMat->IsLightSource())
+				objDefs.DefineIntersectableLights(lightDefs, newMat);
 
 			// Check if the old material was or the new material is a light source
 			if (cachedIsLightSource[oldMat] || newMat->IsLightSource())
