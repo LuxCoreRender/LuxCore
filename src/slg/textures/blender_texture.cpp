@@ -1047,7 +1047,7 @@ Properties BlenderVoronoiTexture::ToProperties(const ImageMapCache &imgMapCache)
 
 	props.Set(Property("scene.textures." + name + ".type")("blender_voronoi"));
 	props.Set(Property("scene.textures." + name + ".distancemetric")(dm));
-	props.Set(Property("scene.textures." + name + ".intentity")(intensity));
+	props.Set(Property("scene.textures." + name + ".intensity")(intensity));
 	props.Set(Property("scene.textures." + name + ".exponent")(exponent));
 	props.Set(Property("scene.textures." + name + ".w1")(feature_weight1));
 	props.Set(Property("scene.textures." + name + ".w2")(feature_weight2));
