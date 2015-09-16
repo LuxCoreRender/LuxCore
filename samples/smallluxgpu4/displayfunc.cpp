@@ -201,9 +201,10 @@ static void PrintHelpAndSettings() {
 	PrintString(GLUT_BITMAP_9_BY_15, "Rendering devices:");
 }
 
-static void DrawTiles(const Property &propCoords, const Property &propPasses, 
+static void DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
 		const u_int tileCount, const u_int tileWidth, const u_int tileHeight) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
+	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
 
 	for (u_int i = 0; i < tileCount; ++i) {
 		const u_int xStart = propCoords.Get<u_int>(i * 2);
@@ -218,11 +219,24 @@ static void DrawTiles(const Property &propCoords, const Property &propPasses,
 		glVertex2i(xStart, yStart + height);
 		glEnd();
 
-		if (showPassCount) {
-			const u_int passes = propPasses.Get<u_int>(i);
-			glRasterPos2i(xStart + 2, yStart + 3);
-			const string pass = boost::lexical_cast<string>(passes);
-			PrintString(GLUT_BITMAP_8_BY_13, pass.c_str());
+		if (showPassCount || showError) {
+			u_int ys = yStart + 3;
+
+			if (showError) {
+				const float error = propErrors.Get<float>(i) * 256.f;
+				const string errorStr = boost::str(boost::format("[%.2f]") % error);
+				glRasterPos2i(xStart + 2, ys);
+				PrintString(GLUT_BITMAP_8_BY_13, errorStr.c_str());
+				
+				ys += 13;
+			}
+
+			if (showPassCount) {
+				const u_int pass = propPasses.Get<u_int>(i);
+				const string passStr = boost::lexical_cast<string>(pass);
+				glRasterPos2i(xStart + 2, ys);
+				PrintString(GLUT_BITMAP_8_BY_13, passStr.c_str());
+			}
 		}
 	}
 }
@@ -240,6 +254,7 @@ static void PrintCaptions() {
 			glColor3f(0.f, 1.f, 0.f);
 			DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
 					stats.Get("stats.biaspath.tiles.converged.pass"),
+					stats.Get("stats.biaspath.tiles.converged.error"),
 					stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
 					tileWidth, tileHeight);
 		}
@@ -249,6 +264,7 @@ static void PrintCaptions() {
 			glColor3f(1.f, 0.f, 0.f);
 			DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
 					stats.Get("stats.biaspath.tiles.notconverged.pass"),
+					stats.Get("stats.biaspath.tiles.notconverged.error"),
 					stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
 					tileWidth, tileHeight);
 		}
@@ -257,6 +273,7 @@ static void PrintCaptions() {
 		glColor3f(1.f, 1.f, 0.f);
 		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
 				stats.Get("stats.biaspath.tiles.pending.pass"),
+				stats.Get("stats.biaspath.tiles.pending.error"),
 				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
 				tileWidth, tileHeight);
 	}
