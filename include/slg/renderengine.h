@@ -256,6 +256,7 @@ public:
 		// Read-only for every one but Tile/TileRepository classes
 		u_int xStart, yStart, tileWidth, tileHeight;
 		u_int pass;
+		float error;
 		bool done;
 
 	private:

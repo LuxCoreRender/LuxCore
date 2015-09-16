@@ -511,14 +511,17 @@ static void SetTileProperties(Properties &props, const string &prefix,
 	props.Set(Property(prefix + ".count")((u_int)tiles.size()));
 	Property tileCoordProp(prefix + ".coords");
 	Property tilePassProp(prefix + ".pass");
+	Property tileErrorProp(prefix + ".error");
 
 	BOOST_FOREACH(const slg::TileRepository::Tile *tile, tiles) {
 		tileCoordProp.Add(tile->xStart).Add(tile->yStart);
 		tilePassProp.Add(tile->pass);
+		tileErrorProp.Add(tile->error);
 	}
 
 	props.Set(tileCoordProp);
 	props.Set(tilePassProp);
+	props.Set(tileErrorProp);
 }
 
 void RenderSession::UpdateStats() {

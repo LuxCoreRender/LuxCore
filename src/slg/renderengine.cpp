@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <limits>
 #include <boost/format.hpp>
 #include <boost/thread/condition_variable.hpp>
 
@@ -496,8 +497,8 @@ void CPUNoTileRenderEngine::UpdateCounters() {
 //------------------------------------------------------------------------------
 
 TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
-			xStart(tileX), yStart(tileY), pass(0), done(false),
-			tileRepository(repo), allPassFilm(NULL), evenPassFilm(NULL),
+			xStart(tileX), yStart(tileY), pass(0), error(numeric_limits<float>::infinity()),
+			done(false), tileRepository(repo), allPassFilm(NULL), evenPassFilm(NULL),
 			allPassFilmTotalYValue(0.f) {
 	tileWidth = Min(xStart + tileRepository->tileWidth, film.GetWidth()) - xStart;
 	tileHeight = Min(yStart + tileRepository->tileHeight, film.GetHeight()) - yStart;
@@ -559,6 +560,7 @@ void TileRepository::Tile::Restart() {
 		evenPassFilm->Reset();
 
 	pass = 0;
+	error = numeric_limits<float>::infinity();
 	hasEnoughWarmUpSample = false;
 	done = false;
 	allPassFilmTotalYValue = 0.f;
@@ -686,6 +688,7 @@ void TileRepository::Tile::CheckConvergence() {
 		}
 	}
 
+	error = maxError2;
 	done = (maxError2 < tileRepository->convergenceTestThreshold);
 }
 
@@ -699,7 +702,7 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 
 	maxPassCount = 0;
 	enableMultipassRendering = false;
-	convergenceTestThreshold = .04f;
+	convergenceTestThreshold = 4.f / 256.f;
 	convergenceTestThresholdReduction = 0.f;
 	convergenceTestWarmUpSamples = 32;
 	enableRenderingDonePrint = true;
