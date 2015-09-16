@@ -42,7 +42,7 @@ void Material::SetEmissionMap(const ImageMap *map) {
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	if (emittedTex) {
 		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
-				emittedTex->GetSpectrumValue(hitPoint) * hitPoint.color;
+				emittedTex->GetSpectrumValue(hitPoint);
 	} else
 		return Spectrum();
 }

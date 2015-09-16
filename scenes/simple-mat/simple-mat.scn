@@ -1,9 +1,14 @@
 scene.camera.lookat = 5.951 -7.663 6.017 0.0 0.0 1.0
 ################################################################################
 scene.textures.imagemap.type = imagemap
-scene.textures.imagemap.file = scenes/simple-mat/image.png
+scene.textures.imagemap.file = scenes/simple-mat/rgba.png
 scene.textures.imagemap.mapping.uvscale = 2 2
 scene.textures.imagemap.mapping.uvdelta = 0.25 0.25
+scene.textures.imagemap_alpha.type = imagemap
+scene.textures.imagemap_alpha.file = scenes/simple-mat/rgba.png
+scene.textures.imagemap_alpha.channel = alpha
+scene.textures.imagemap_alpha.mapping.uvscale = 2 2
+scene.textures.imagemap_alpha.mapping.uvdelta = 0.25 0.25
 ################################################################################
 scene.materials.redmirror.type = mirror
 scene.materials.redmirror.kr = 0.75 0.0 0.0
@@ -17,8 +22,15 @@ scene.materials.glass.ioroutside = 1.0
 scene.materials.glass.iorinside = 1.5
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
+##
 scene.materials.texmap.type = matte
 scene.materials.texmap.kd = imagemap
+scene.materials.nullmat.type = null
+scene.materials.mixmat.type = mix
+scene.materials.mixmat.amount = imagemap_alpha
+scene.materials.mixmat.material1 = nullmat
+scene.materials.mixmat.material2 = texmap
+##
 scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = 60.0 60.0 60.0
 scene.materials.whitelight.kd = 0.0 0.0 0.0
@@ -32,7 +44,7 @@ scene.materials.aglass.iorinside = 1
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/simple-mat/simple-mat-back.ply
-scene.objects.back2.material = texmap
+scene.objects.back2.material = mixmat
 scene.objects.back2.ply = scenes/simple-mat/simple-mat-back2.ply
 scene.objects.redmirror.material = redmirror
 scene.objects.redmirror.ply = scenes/simple-mat/simple-mat-cube1.ply
