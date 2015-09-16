@@ -43,7 +43,7 @@ class Film;
 
 class GammaCorrectionPlugin : public ImagePipelinePlugin {
 public:
-	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 4096);
+	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 16384);
 	virtual ~GammaCorrectionPlugin() { }
 
 	virtual ImagePipelinePlugin *Copy() const;

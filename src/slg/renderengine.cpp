@@ -702,7 +702,7 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 
 	maxPassCount = 0;
 	enableMultipassRendering = false;
-	convergenceTestThreshold = 4.f / 256.f;
+	convergenceTestThreshold = 6.f / 256.f;
 	convergenceTestThresholdReduction = 0.f;
 	convergenceTestWarmUpSamples = 32;
 	enableRenderingDonePrint = true;
