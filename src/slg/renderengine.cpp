@@ -621,7 +621,7 @@ void TileRepository::Tile::UpdateTileStats() {
 				const float *pixel = allPassFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[j]->GetPixel(x, y);
 
 				if (pixel[3] > 0.f) {
-					if (pixel[3] < 32.0)
+					if (pixel[3] < tileRepository->convergenceTestThreshold)
 						hasEnoughWarmUpSample = false;
 
 					const float w = 1.f / pixel[3];
@@ -701,6 +701,7 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 	enableMultipassRendering = false;
 	convergenceTestThreshold = .04f;
 	convergenceTestThresholdReduction = 0.f;
+	convergenceTestWarmUpSamples = 32;
 	enableRenderingDonePrint = true;
 
 	done = false;

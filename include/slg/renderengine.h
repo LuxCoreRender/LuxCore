@@ -290,6 +290,7 @@ public:
 
 	u_int maxPassCount;
 	float convergenceTestThreshold, convergenceTestThresholdReduction;
+	u_int convergenceTestWarmUpSamples;
 	VarianceClamping varianceClamping;
 	bool enableMultipassRendering, enableRenderingDonePrint;
 
