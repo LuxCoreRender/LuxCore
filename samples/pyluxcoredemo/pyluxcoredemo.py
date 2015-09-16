@@ -356,11 +356,11 @@ def main():
 	print("LuxCore %s" % pyluxcore.Version())
 	#print("OS:", os.name)
 	
-#	PropertiesTests()
-#	LuxRaysDeviceTests()
-#	SimpleRender()
-#	GetOutputTest()
-#	ExtractConfiguration()
+	PropertiesTests()
+	LuxRaysDeviceTests()
+	SimpleRender()
+	GetOutputTest()
+	ExtractConfiguration()
 	StrandsRender()
 
 	#if (os.name == "posix"):

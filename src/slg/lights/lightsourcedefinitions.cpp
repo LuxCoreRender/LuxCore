@@ -18,9 +18,8 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 
-#include "slg/lights/lightsourcedefinition.h"
-#include "slg/lights/trianglelight.h"
 #include "slg/scene/scene.h"
+#include "slg/lights/trianglelight.h"
 
 using namespace std;
 using namespace luxrays;
@@ -31,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LightSourceDefinitions::LightSourceDefinitions() : lightTypeCount(LIGHT_SOURCE_TYPE_COUNT, 0) {
-	lightStrategy = new LightStrategyPower();
+	lightStrategy = new LightStrategyLogPower();
 	lightGroupCount = 1;
 }
 
@@ -118,15 +117,6 @@ std::vector<std::string> LightSourceDefinitions::GetLightSourceNames() const {
 	return names;
 }
 
-void LightSourceDefinitions::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
-	// Replace old material direct references with new ones
-	BOOST_FOREACH(LightSource *l, lights) {
-		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
-		if (tl)
-			tl->UpdateMaterialReferences(oldMat, newMat);
-	}
-}
-
 void LightSourceDefinitions::DeleteLightSource(const std::string &name) {
 	const u_int index = GetLightSourceIndex(name);
 	--lightTypeCount[lights[index]->GetType()];
@@ -145,7 +135,22 @@ void LightSourceDefinitions::DeleteLightSourceStartWith(const std::string &nameP
 		if (boost::starts_with(name, namePrefix))
 			nameList.push_back(&name);
 	}
-	
+
+	BOOST_FOREACH(const string *name, nameList)
+		DeleteLightSource(*name);
+}
+
+void LightSourceDefinitions::DeleteLightSourceByMaterial(const Material *mat) {
+	// Build the list of lights to delete
+	vector<const string *> nameList;
+	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
+		const string &name = itr->first;
+		const LightSource *l = itr->second;
+
+		if ((l->GetType() == TYPE_TRIANGLE) && (((const TriangleLight *)l)->lightMaterial == mat))
+			nameList.push_back(&name);
+	}
+
 	BOOST_FOREACH(const string *name, nameList)
 		DeleteLightSource(*name);
 }
