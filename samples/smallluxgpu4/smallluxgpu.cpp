@@ -333,12 +333,12 @@ int main(int argc, char *argv[]) {
 		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
-//	} catch (runtime_error err) {
-//		SLG_LOG("RUNTIME ERROR: " << err.what());
-//		return EXIT_FAILURE;
-//	} catch (exception err) {
-//		SLG_LOG("ERROR: " << err.what());
-//		return EXIT_FAILURE;
+	} catch (runtime_error err) {
+		SLG_LOG("RUNTIME ERROR: " << err.what());
+		return EXIT_FAILURE;
+	} catch (exception err) {
+		SLG_LOG("ERROR: " << err.what());
+		return EXIT_FAILURE;
 	}
 
 	delete session;
