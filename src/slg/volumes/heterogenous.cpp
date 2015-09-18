@@ -133,7 +133,7 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float initialU,
 		// The ray is scattered
 		scatterDistance = (s - 1U) * ss - d;
 		t = ray.mint + scatterDistance;
-		pdf *= expf(d * halfWaySigmaS) * oldSigmaS;
+		pdf *= expf(d * halfWaySigmaS) * halfWaySigmaS;
 
 		hitPoint.p = ray(t);
 		*connectionThroughput *= SigmaT(hitPoint);
