@@ -243,6 +243,16 @@ public:
 	 * \param props are the Properties with the definition of an image pipeline.
 	 */
 	void SetImagePipeline(const luxrays::Properties &props);
+	
+	/*!
+	 * \brief Set a radiance channel scale values
+	 *
+	 * \param index is the radiance group index to scale
+	 * \param props are the Properties with the definition of radiance channel scale.
+	 * The list of property names is: globalscale, temperature, rgbscale, enabled.
+	 */
+	void SetRadianceChannelScale(const u_int index, const luxrays::Properties &props);
+
 
 	friend class RenderSession;
 

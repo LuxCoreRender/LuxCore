@@ -1034,6 +1034,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
 		.def("SetImagePipeline", &Film::SetImagePipeline)
+		.def("SetRadianceChannelScale", &Film::SetRadianceChannelScale)
     ;
 
 	//--------------------------------------------------------------------------

@@ -442,6 +442,11 @@ void keyFunc(unsigned char key, int x, int y) {
 				"scene.lights.infinitelight.gain = 3.0 3.0 3.0\n"
 				));
 			session->EndSceneEdit();*/
+			
+			// For some test with simple scene
+			/*session->GetFilm().SetRadianceChannelScale(0, Properties().SetFromString(
+				"globalscale = 10.0\n"
+				));*/
 			break;
 		case 'a': {
 			session->BeginSceneEdit();
