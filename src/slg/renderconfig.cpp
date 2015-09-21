@@ -425,7 +425,7 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 		Film::RadianceChannelScale radianceChannelScale;
 		radianceChannelScale.globalScale = cfg.Get(Property("film.radiancescales." + indexStr + ".globalscale")(1.f)).Get<float>();
 		radianceChannelScale.temperature = cfg.Get(Property("film.radiancescales." + indexStr + ".temperature")(0.f)).Get<float>();
-		radianceChannelScale.rgbScale = cfg.Get(Property("film.radiancescales." + indexStr + ".rgbscale")(1.f)).Get<Spectrum>();
+		radianceChannelScale.rgbScale = cfg.Get(Property("film.radiancescales." + indexStr + ".rgbscale")(1.f, 1.f, 1.f)).Get<Spectrum>();
 		radianceChannelScale.enabled = cfg.Get(Property("film.radiancescales." + indexStr + ".enabled")(true)).Get<bool>();
 
 		film->SetRadianceChannelScale(index, radianceChannelScale);

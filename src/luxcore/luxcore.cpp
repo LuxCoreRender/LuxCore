@@ -217,6 +217,16 @@ void Film::SetImagePipeline(const luxrays::Properties &props) {
 	renderSession.renderSession->SetImagePipeline(props);
 }
 
+void Film::SetRadianceChannelScale(const u_int index, const luxrays::Properties &props) {
+	slg::Film::RadianceChannelScale radianceChannelScale;
+	radianceChannelScale.globalScale = props.Get(Property("globalscale")(1.f)).Get<float>();
+	radianceChannelScale.temperature = props.Get(Property("temperature")(0.f)).Get<float>();
+	radianceChannelScale.rgbScale = props.Get(Property("rgbscale")(1.f, 1.f, 1.f)).Get<Spectrum>();
+	radianceChannelScale.enabled = props.Get(Property("enabled")(true)).Get<bool>();
+
+	renderSession.renderSession->film->SetRadianceChannelScale(index, radianceChannelScale);
+}
+
 //------------------------------------------------------------------------------
 // Camera
 //------------------------------------------------------------------------------
