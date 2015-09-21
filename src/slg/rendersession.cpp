@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "slg/rendersession.h"
 
 using namespace std;
@@ -127,4 +129,23 @@ void RenderSession::SaveFilm() {
 
 	// Save the film
 	film->Output(filmOutputs);
+}
+
+void RenderSession::SetImagePipeline(const luxrays::Properties &props) {
+	boost::unique_lock<boost::mutex> lock(filmMutex);
+
+	// Create the new image pipeline
+	ImagePipeline *imagePipeline = RenderConfig::AllocImagePipeline(props);
+
+	// Use the new image pipeline
+	film->SetImagePipeline(imagePipeline);
+
+	// Delete the old image pipeline properties
+	renderConfig->cfg.DeleteAll(renderConfig->cfg.GetAllNames("film.imagepipeline"));
+
+	// Update the RenderConfig properties with the new image pipeline definition
+	BOOST_FOREACH(string propName, props.GetAllNames()) {
+		if (boost::starts_with(propName, "film.imagepipeline"))
+			renderConfig->cfg.Set(props.Get(propName));
+	}
 }

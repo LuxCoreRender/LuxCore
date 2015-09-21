@@ -150,7 +150,10 @@ public:
 
 	// Note: used mostly for RT modes
 	void SetRGBTonemapUpdateFlag(const bool v) { rgbTonemapUpdate = v; }
-	void SetImagePipeline(ImagePipeline *ip) { imagePipeline = ip; }
+	void SetImagePipeline(ImagePipeline *ip) {
+		delete imagePipeline;
+		imagePipeline = ip;
+	}
 	const ImagePipeline *GetImagePipeline() const { return imagePipeline; }
 
 	void CopyDynamicSettings(const Film &film) {

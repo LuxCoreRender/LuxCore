@@ -19,10 +19,11 @@
 #ifndef _SLG_RENDERSESSION_H
 #define	_SLG_RENDERSESSION_H
 
-#include "slg.h"
-#include "renderconfig.h"
-#include "renderengine.h"
+#include "luxrays/utils/properties.h"
 
+#include "slg/slg.h"
+#include "slg/renderconfig.h"
+#include "slg/renderengine.h"
 #include "slg/film/film.h"
 
 namespace slg {
@@ -40,6 +41,8 @@ public:
 
 	bool NeedPeriodicFilmSave();
 	void SaveFilm();
+
+	void SetImagePipeline(const luxrays::Properties &prop);
 
 	RenderConfig *renderConfig;
 	RenderEngine *renderEngine;
