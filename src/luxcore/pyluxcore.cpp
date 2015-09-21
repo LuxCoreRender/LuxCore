@@ -1033,6 +1033,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
+		.def("SetImagePipeline", &Film::SetImagePipeline)
     ;
 
 	//--------------------------------------------------------------------------

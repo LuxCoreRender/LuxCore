@@ -48,6 +48,7 @@ public:
 		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
+	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &prop);
 	static const luxrays::Properties &GetDefaultProperties();
 
 	luxrays::Properties cfg;

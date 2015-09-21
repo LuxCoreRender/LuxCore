@@ -237,6 +237,13 @@ public:
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
+	/*!
+	 * \brief Set a new image pipeline.
+	 *
+	 * \param props are the Properties with the definition of an image pipeline.
+	 */
+	void SetImagePipeline(const luxrays::Properties &props);
+
 	friend class RenderSession;
 
 private:

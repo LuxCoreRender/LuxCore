@@ -213,6 +213,10 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 	return renderSession.renderSession->film->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
 }
 
+void Film::SetImagePipeline(const luxrays::Properties &props) {
+	renderSession.renderSession->SetImagePipeline(props);
+}
+
 //------------------------------------------------------------------------------
 // Camera
 //------------------------------------------------------------------------------
