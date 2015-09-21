@@ -112,6 +112,22 @@ public:
 		BY_MATERIAL_ID = 1<<20,
 		IRRADIANCE = 1<<21
 	} FilmChannelType;
+	
+	class RadianceChannelScale {
+	public:
+		RadianceChannelScale();
+
+		void Init();
+		void Scale(float v[3]) const;
+		luxrays::Spectrum Scale(const luxrays::Spectrum &v) const;
+
+		float globalScale, temperature;
+		luxrays::Spectrum rgbScale;
+		bool enabled;
+
+	private:
+		luxrays::Spectrum scale;
+	};
 
 	// Used by serialization
 	Film() { }
@@ -161,11 +177,14 @@ public:
 		maskMaterialIDs = film.maskMaterialIDs;
 		byMaterialIDs = film.byMaterialIDs;
 		radianceGroupCount = film.radianceGroupCount;
+		radianceChannelScale = film.radianceChannelScale;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
 		SetImagePipeline(film.GetImagePipeline()->Copy());
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 	}
+
+	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 
 	//--------------------------------------------------------------------------
 
@@ -290,6 +309,8 @@ private:
 	ConvergenceTest *convTest;
 	Filter *filter;
 	FilterLUTs *filterLUTs;
+
+	std::vector<RadianceChannelScale> radianceChannelScale;
 
 	bool initialized, enabledOverlappedScreenBufferUpdate, rgbTonemapUpdate;
 };

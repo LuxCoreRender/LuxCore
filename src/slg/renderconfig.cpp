@@ -400,6 +400,38 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	}
 
 	//--------------------------------------------------------------------------
+	// Initialize radiance channel scales
+	//--------------------------------------------------------------------------
+
+	set<string> radianceScaleIndices;
+	vector<string> radianceScaleKeys = cfg.GetAllNames("film.radiancescales.");
+	for (vector<string>::const_iterator radianceScaleKey = radianceScaleKeys.begin(); radianceScaleKey != radianceScaleKeys.end(); ++radianceScaleKey) {
+		const string &key = *radianceScaleKey;
+		const size_t dot1 = key.find(".", string("film.radiancescales.").length());
+		if (dot1 == string::npos)
+			continue;
+
+		// Extract the radiance channel scale index
+		const string indexStr = Property::ExtractField(key, 2);
+		if (indexStr == "")
+			throw runtime_error("Syntax error in film radiance scale index definition: " + indexStr);
+
+		if (radianceScaleIndices.count(indexStr) > 0)
+			continue;
+		
+		radianceScaleIndices.insert(indexStr);
+		const u_int index = boost::lexical_cast<u_int>(indexStr);
+		
+		Film::RadianceChannelScale radianceChannelScale;
+		radianceChannelScale.globalScale = cfg.Get(Property("film.radiancescales." + indexStr + ".globalscale")(1.f)).Get<float>();
+		radianceChannelScale.temperature = cfg.Get(Property("film.radiancescales." + indexStr + ".temperature")(0.f)).Get<float>();
+		radianceChannelScale.rgbScale = cfg.Get(Property("film.radiancescales." + indexStr + ".rgbscale")(1.f)).Get<Spectrum>();
+		radianceChannelScale.enabled = cfg.Get(Property("film.radiancescales." + indexStr + ".enabled")(true)).Get<bool>();
+
+		film->SetRadianceChannelScale(index, radianceChannelScale);
+	}	
+
+	//--------------------------------------------------------------------------
 	// Initialize the FilmOutputs
 	//--------------------------------------------------------------------------
 
