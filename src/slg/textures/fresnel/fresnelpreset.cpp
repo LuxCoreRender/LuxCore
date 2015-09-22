@@ -169,7 +169,8 @@ FresnelTexture *slg::AllocFresnelPresetTex(const Properties &props, const string
 	IrregularSPD N(&wl[0], &n[0], wl.size());
 	IrregularSPD K(&wl[0], &k[0], wl.size());
 
-	ColorSystem colorSpace;
+	ColorSystem colorSpace(.63f, .34f, .31f, .595f, .155f, .07f,
+		1.f / 3.f, 1.f / 3.f, 1.f);
 	const RGBColor Nrgb = colorSpace.ToRGBConstrained(N.ToNormalizedXYZ());
 	const RGBColor Krgb = colorSpace.ToRGBConstrained(K.ToNormalizedXYZ());
 
