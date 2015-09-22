@@ -42,7 +42,7 @@ public:
 	bool NeedPeriodicFilmSave();
 	void SaveFilm();
 
-	void SetImagePipeline(const luxrays::Properties &prop);
+	void Parse(const luxrays::Properties &props);
 
 	RenderConfig *renderConfig;
 	RenderEngine *renderEngine;

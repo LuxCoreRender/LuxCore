@@ -392,7 +392,6 @@ def ImagePipelineEdit():
 			
 			# Define the new image pipeline
 			props = pyluxcore.Properties()
-
 			props.SetFromString("""
 				film.imagepipeline.0.type = TONEMAP_REINHARD02
 				film.imagepipeline.1.type = CAMERA_RESPONSE_FUNC
@@ -400,13 +399,14 @@ def ImagePipelineEdit():
 				film.imagepipeline.2.type = GAMMA_CORRECTION
 				film.imagepipeline.2.value = 2.2
 				""")
-			session.GetFilm().SetImagePipeline(props)
+			session.Parse(props)
 
+			# Change radiance group scale
 #			props = pyluxcore.Properties()
 #			props.SetFromString("""
-#				rgbscale = 1.0 0.0 0.0
+#				film.radiancescales.0.rgbscale = 1.0 0.0 0.0
 #				""")
-#			session.GetFilm().SetRadianceChannelScale(0, props)
+#			session.Parse(props)
 
 			imageSaved = True
 

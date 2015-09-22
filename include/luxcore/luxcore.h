@@ -237,23 +237,6 @@ public:
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
-	/*!
-	 * \brief Set a new image pipeline.
-	 *
-	 * \param props are the Properties with the definition of an image pipeline.
-	 */
-	void SetImagePipeline(const luxrays::Properties &props);
-	
-	/*!
-	 * \brief Set a radiance channel scale values
-	 *
-	 * \param index is the radiance group index to scale
-	 * \param props are the Properties with the definition of radiance channel scale.
-	 * The list of property names is: globalscale, temperature, rgbscale, enabled.
-	 */
-	void SetRadianceChannelScale(const u_int index, const luxrays::Properties &props);
-
-
 	friend class RenderSession;
 
 private:
@@ -816,6 +799,14 @@ public:
 	 * \return a Properties container with the statistics.
 	 */
 	const luxrays::Properties &GetStats() const;
+
+	/*!
+	 * \brief Dynamic edit the definition of RenderConfig properties
+	 *
+	 * \param props are the Properties with the definition of: film.imagepipeline.*,
+	 * film.radiancescales.*.
+	 */
+	void Parse(const luxrays::Properties &props);
 
 	friend class Film;
 

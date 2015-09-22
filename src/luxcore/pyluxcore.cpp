@@ -1033,8 +1033,6 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
-		.def("SetImagePipeline", &Film::SetImagePipeline)
-		.def("SetRadianceChannelScale", &Film::SetRadianceChannelScale)
     ;
 
 	//--------------------------------------------------------------------------
@@ -1115,8 +1113,9 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("WaitNewFrame", &RenderSession::WaitNewFrame)
 		.def("WaitForDone", &RenderSession::WaitForDone)
 		.def("HasDone", &RenderSession::HasDone)
+		.def("Parse", &RenderSession::Parse)
     ;
-	
+
 	//--------------------------------------------------------------------------
 	// Blender related functions
 	//--------------------------------------------------------------------------
