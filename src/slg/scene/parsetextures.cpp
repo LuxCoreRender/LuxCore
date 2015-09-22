@@ -372,7 +372,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		}
 
 		const float resolution = props.Get(Property(propName + ".resolution")(5.f)).Get<float>();
-		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution);
+		const bool emission = props.Get(Property(propName + ".emission")(true)).Get<bool>();
+		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution, emission);
 	} else if (texType == "lampspectrum") {
 		return AllocLampSpectrumTex(props, propName);
 	} else if (texType == "fresnelcolor") {
