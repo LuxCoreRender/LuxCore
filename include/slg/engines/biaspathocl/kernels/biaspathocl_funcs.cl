@@ -292,12 +292,13 @@ void GenerateCameraRay(
 			sampleIndex % PARAM_AA_SAMPLES, sampleIndex / PARAM_AA_SAMPLES,
 			&u0, &u1);
 
+	// Sample according the pixel filter distribution
 	float2 xy;
 	float distPdf;
 	Distribution2D_SampleContinuous(pixelFilterDistribution, u0, u1, &xy, &distPdf);
 
-	const float filmX = sampleX + .5f + (xy.x - .5f) * PARAM_IMAGE_FILTER_WIDTH_X;
-	const float filmY = sampleY + .5f + (xy.y - .5f) * PARAM_IMAGE_FILTER_WIDTH_Y;
+	const float filmX = sampleX + .5f + PARAM_IMAGE_FILTER_WIDTH_X * (xy.x - .5f);
+	const float filmY = sampleY + .5f + PARAM_IMAGE_FILTER_WIDTH_Y * (xy.y - .5f);
 	sampleResult->filmX = filmX;
 	sampleResult->filmY = filmY;
 
