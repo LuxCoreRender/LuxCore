@@ -240,6 +240,8 @@ void PathCPURenderThread::RenderFunc() {
 
 			float uSubPixelX = ux - sampleResult.pixelX;
 			float uSubPixelY = uy - sampleResult.pixelY;
+
+			// Sample according the pixel filter distribution
 			engine->pixelFilterDistribution->SampleContinuous(uSubPixelX, uSubPixelY, &uSubPixelX, &uSubPixelY);
 
 			const Filter *pixelFilter = threadFilm->GetFilter();
