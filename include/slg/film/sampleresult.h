@@ -29,7 +29,7 @@ namespace slg {
 
 class SampleResult {
 public:
-	SampleResult() { }
+	SampleResult() : useFilmSplat(true) { }
 	SampleResult(const u_int channelTypes, const u_int radianceGroupCount) {
 		Init(channelTypes, radianceGroupCount);
 	}
@@ -60,6 +60,8 @@ public:
 		const luxrays::Spectrum &radiancePSN);
 	//--------------------------------------------------------------------------
 
+	// pixelX and pixelY have to be initialized only if !useFilmSplat
+	u_int pixelX, pixelY;
 	float filmX, filmY;
 	std::vector<luxrays::Spectrum> radiance;
 
@@ -80,6 +82,8 @@ public:
 
 	BSDFEvent firstPathVertexEvent;
 	bool firstPathVertex, lastPathVertex;
+
+	bool useFilmSplat;
 
 private:
 	u_int channels;

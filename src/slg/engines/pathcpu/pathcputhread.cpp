@@ -172,16 +172,15 @@ void PathCPURenderThread::RenderFunc() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
-	Film *film = threadFilm;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
+	const u_int filmWidth = threadFilm->GetWidth();
+	const u_int filmHeight = threadFilm->GetHeight();
 
 	// Setup the sampler
 
 	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
 	// initialized inside MetropolisSampler::RequestSamples()
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm,
 			threadIndex, engine->renderThreads.size(),
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const u_int sampleBootSize = 5;
@@ -209,6 +208,7 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
 		Get<u_int>() * filmWidth * filmHeight;
 
+	sampleResult.useFilmSplat = !(engine->useFastPixelFilter);
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Set to 0.0 all result colors
 		sampleResult.emission = Spectrum();
@@ -227,8 +227,32 @@ void PathCPURenderThread::RenderFunc() {
 		const double deviceRayCount = device->GetTotalRaysCount();
 
 		Ray eyeRay;
-		sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-		sampleResult.filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+		if (engine->useFastPixelFilter) {
+			// Use fast pixel filtering, like the one used in BIASPATH.
+			const float u0 = sampler->GetSample(0);
+			const float u1 = sampler->GetSample(1);
+
+			const float ux = u0 * filmWidth;
+			const float uy = u1 * filmHeight;
+
+			sampleResult.pixelX = Min<u_int>(ux, (u_int)(filmWidth - 1));
+			sampleResult.pixelY = Min<u_int>(uy, (u_int)(filmHeight - 1));
+
+			float uSubPixelX = ux - sampleResult.pixelX;
+			float uSubPixelY = uy - sampleResult.pixelY;
+			engine->pixelFilterDistribution->SampleContinuous(uSubPixelX, uSubPixelY, &uSubPixelX, &uSubPixelY);
+
+			const Filter *pixelFilter = threadFilm->GetFilter();
+
+			sampleResult.filmX = sampleResult.pixelX + .5f + pixelFilter->xWidth * uSubPixelX;
+			sampleResult.filmY = sampleResult.pixelY + .5f + pixelFilter->yWidth * uSubPixelY;
+		} else {
+			// Use old pixel filtering, like the one used in classic LuxRender
+
+			sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+			sampleResult.filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+		}
+
 		camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
 			sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
 
@@ -377,7 +401,7 @@ void PathCPURenderThread::RenderFunc() {
 
 		// Variance clamping
 		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*film, sampleResult);
+			varianceClamping.Clamp(*threadFilm, sampleResult);
 
 		sampler->NextSample(sampleResults);
 

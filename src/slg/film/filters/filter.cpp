@@ -64,8 +64,8 @@ FilterDistribution::FilterDistribution(const Filter *f, const u_int s) {
 		for (u_int x = 0; x < size; ++x) {
 			// Use an uniform distribution if the Filter is missing
 			data[x + y * size] = (filter) ? filter->Evaluate(
-					filter->xWidth * ((x + .5f) * isize - .5),
-					filter->yWidth * ((y + .5f) * isize - .5)) : 1.f;
+					2.f * filter->xWidth * ((x + .5f) * isize - .5),
+					2.f * filter->yWidth * ((y + .5f) * isize - .5)) : 1.f;
 		}
 	}
 

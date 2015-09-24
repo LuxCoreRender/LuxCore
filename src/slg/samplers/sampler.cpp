@@ -52,3 +52,12 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 			throw std::runtime_error("Unknown sampler type: " + boost::lexical_cast<std::string>(type));
 	}
 }
+
+void Sampler::AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight) const {
+	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
+		if (sr->useFilmSplat)
+			film->SplatSample(*sr, weight);
+		else
+			film->AddSample(sr->pixelX, sr->pixelY, *sr, weight);
+	}
+}

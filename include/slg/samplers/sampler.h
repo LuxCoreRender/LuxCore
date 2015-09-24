@@ -63,10 +63,7 @@ public:
 	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
-	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const {
-		for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr)
-			film->SplatSample(*sr, weight);
-	}
+	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 
 	luxrays::RandomGenerator *rndGen;
 	Film *film;
