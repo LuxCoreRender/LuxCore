@@ -63,7 +63,12 @@ float SobolSampler::GetSample(const u_int index) {
 	const u_int iResult = SobolDimension(pass, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
 
-	return fResult;
+	// Cranley-Patterson rotation to reduce visible regular patterns
+	// Note: using just 2 fixed random numbers
+	const float shift = (index & 1) ? .1006308f : .6453069f;
+	const float val = fResult + shift;
+
+	return val - floorf(val);
 }
 
 void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
