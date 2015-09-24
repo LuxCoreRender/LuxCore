@@ -136,13 +136,12 @@ protected:
 
 private:
 	void PrintSamplesInfo() const;
+	void InitPixelFilterDistribution();
 
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new BiasPathCPURenderThread(this, index, device);
 	}
-
-	void InitPixelFilterDistribution();
 };
 
 }

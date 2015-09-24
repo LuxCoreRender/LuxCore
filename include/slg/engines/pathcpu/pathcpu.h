@@ -64,6 +64,7 @@ private:
 class PathCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	PathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~PathCPURenderEngine();
 
 	RenderEngineType GetEngineType() const { return PATHCPU; }
 
@@ -77,12 +78,18 @@ public:
 	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
+	bool useFastPixelFilter;
+
 	friend class PathCPURenderThread;
 
 protected:
 	virtual void StartLockLess();
 
+	FilterDistribution *pixelFilterDistribution;
+
 private:
+	void InitPixelFilterDistribution();
+
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new PathCPURenderThread(this, index, device);

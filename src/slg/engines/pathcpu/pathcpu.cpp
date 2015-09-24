@@ -26,11 +26,21 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
+		CPUNoTileRenderEngine(rcfg, flm, flmMutex), pixelFilterDistribution(NULL) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
 	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
 	film->Init();
+}
+
+PathCPURenderEngine::~PathCPURenderEngine() {
+	delete pixelFilterDistribution;
+}
+
+void PathCPURenderEngine::InitPixelFilterDistribution() {
+	// Compile sample distribution
+	delete pixelFilterDistribution;
+	pixelFilterDistribution = new FilterDistribution(film->GetFilter(), 64);
 }
 
 void PathCPURenderEngine::StartLockLess() {
@@ -51,6 +61,10 @@ void PathCPURenderEngine::StartLockLess() {
 				cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>())
 			).Get<float>());
 	pdfClampValue = Max(0.f, cfg.Get(Property("path.clamping.pdf.value")(0.f)).Get<float>());
+
+	useFastPixelFilter = cfg.Get(Property("path.fastpixelfilter.enable")(true)).Get<bool>();
+	if (useFastPixelFilter)
+		InitPixelFilterDistribution();
 
 	CPUNoTileRenderEngine::StartLockLess();
 }
