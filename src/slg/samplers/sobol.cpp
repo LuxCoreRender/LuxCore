@@ -32,8 +32,10 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 SobolSampler::SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const u_int threadIdx, const u_int threadCnt) : Sampler(rnd, flm),
+			const u_int threadIdx, const u_int threadCnt,
+			const float u0, const float u1) : Sampler(rnd, flm),
 			threadIndex(threadIdx), threadCount(threadCnt),
+			rng0(u0), rng1(u1),
 			directions(NULL), pass(SOBOL_STARTOFFSET + threadIdx) {
 }
 
@@ -64,8 +66,7 @@ float SobolSampler::GetSample(const u_int index) {
 	const float fResult = iResult * (1.f / 0xffffffffu);
 
 	// Cranley-Patterson rotation to reduce visible regular patterns
-	// Note: using just 2 fixed random numbers
-	const float shift = (index & 1) ? .1006308f : .6453069f;
+	const float shift = (index & 1) ? rng0 : rng1;
 	const float val = fResult + shift;
 
 	return val - floorf(val);

@@ -51,6 +51,8 @@
 // (Sobol)
 //  PARAM_SAMPLER_SOBOL_STARTOFFSET
 //  PARAM_SAMPLER_SOBOL_MAXDEPTH
+//  PARAM_SAMPLER_SOBOL_RNG0
+//  PARAM_SAMPLER_SOBOL_RNG1
 
 
 //------------------------------------------------------------------------------

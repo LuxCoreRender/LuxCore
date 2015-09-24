@@ -54,6 +54,8 @@ std::string KernelSource_pathocl_funcs =
 "// (Sobol)\n"
 "//  PARAM_SAMPLER_SOBOL_STARTOFFSET\n"
 "//  PARAM_SAMPLER_SOBOL_MAXDEPTH\n"
+"//  PARAM_SAMPLER_SOBOL_RNG0\n"
+"//  PARAM_SAMPLER_SOBOL_RNG1\n"
 "\n"
 "\n"
 "//------------------------------------------------------------------------------\n"

@@ -193,7 +193,8 @@ void LightCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
+	// (engine->seedBase + 1) seed is used for sharedRndGen
+	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
@@ -203,8 +204,12 @@ void LightCPURenderThread::RenderFunc() {
 	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
 	// initialized inside MetropolisSampler::RequestSamples()
 	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
+	// All threads initialize this RandomGenerator with the same seed in order
+	// to generate the same 2 random numbers
+	RandomGenerator *sharedRndGen = new RandomGenerator(engine->seedBase);
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			threadIndex, engine->renderThreads.size(),
+			sharedRndGen->floatValue(), sharedRndGen->floatValue(),
 			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
