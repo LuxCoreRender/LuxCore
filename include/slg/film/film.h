@@ -125,7 +125,18 @@ public:
 		luxrays::Spectrum rgbScale;
 		bool enabled;
 
+		friend class boost::serialization::access;
+
 	private:
+		template<class Archive> void serialize(Archive &ar, const u_int version) {
+			ar & globalScale;
+			ar & temperature;
+			ar & rgbScale;
+			ar & enabled;
+
+			Init();
+		}
+
 		luxrays::Spectrum scale;
 	};
 
@@ -177,7 +188,7 @@ public:
 		maskMaterialIDs = film.maskMaterialIDs;
 		byMaterialIDs = film.byMaterialIDs;
 		radianceGroupCount = film.radianceGroupCount;
-		radianceChannelScale = film.radianceChannelScale;
+		radianceChannelScales = film.radianceChannelScales;
 		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
 		SetImagePipeline(film.GetImagePipeline()->Copy());
@@ -310,7 +321,7 @@ private:
 	Filter *filter;
 	FilterLUTs *filterLUTs;
 
-	std::vector<RadianceChannelScale> radianceChannelScale;
+	std::vector<RadianceChannelScale> radianceChannelScales;
 
 	bool initialized, enabledOverlappedScreenBufferUpdate, rgbTonemapUpdate;
 };
@@ -325,6 +336,7 @@ template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::bina
 		
 }
 
-BOOST_CLASS_VERSION(slg::Film, 2)
+BOOST_CLASS_VERSION(slg::Film, 3)
+BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 #endif	/* _SLG_FILM_H */

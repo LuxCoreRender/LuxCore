@@ -262,7 +262,7 @@ void Film::Resize(const u_int w, const u_int h) {
 			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
 		}
 	}
-	radianceChannelScale.resize(radianceGroupCount);
+	radianceChannelScales.resize(radianceGroupCount);
 
 	if (HasChannel(ALPHA)) {
 		channel_ALPHA = new GenericFrameBuffer<2, 1, float>(width, height);
@@ -390,10 +390,10 @@ void Film::SetFilter(Filter *flt) {
 }
 
 void Film::SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale) {
-	radianceChannelScale.resize(Max<size_t>(radianceChannelScale.size(), index + 1));
+	radianceChannelScales.resize(Max<size_t>(radianceChannelScales.size(), index + 1));
 
-	radianceChannelScale[index] = scale;
-	radianceChannelScale[index].Init();
+	radianceChannelScales[index] = scale;
+	radianceChannelScales[index].Init();
 }
 
 void Film::Reset() {
@@ -1391,7 +1391,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 				for (u_int i = 0; i < pixelCount; ++i) {
 					float c[3];
 					channel_RADIANCE_PER_PIXEL_NORMALIZEDs[index]->GetWeightedPixel(i, c);
-					radianceChannelScale[index].Scale(c);
+					radianceChannelScales[index].Scale(c);
 
 					*dst++ += c[0];
 					*dst++ += c[1];
@@ -1404,7 +1404,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 				for (u_int i = 0; i < pixelCount; ++i) {
 					float c[3];
 					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetWeightedPixel(i, c);
-					radianceChannelScale[index].Scale(c);
+					radianceChannelScales[index].Scale(c);
 
 					*dst++ += c[0];
 					*dst++ += c[1];
@@ -1450,10 +1450,10 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 	c[2] = 0.f;
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
-		if (radianceChannelScale[i].enabled) {
+		if (radianceChannelScales[i].enabled) {
 			float v[3];
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetWeightedPixel(index, v);
-			radianceChannelScale[i].Scale(v);
+			radianceChannelScales[i].Scale(v);
 
 			c[0] += v[0];
 			c[1] += v[1];
@@ -1464,7 +1464,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 	if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
 		const float factor = statsTotalSampleCount / pixelCount;
 		for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
-			if (radianceChannelScale[i].enabled) {
+			if (radianceChannelScales[i].enabled) {
 				const float *src = channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(index);
 
 				float v[3] = {
@@ -1472,7 +1472,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int index, float *c) const {
 					factor * src[1],
 					factor * src[2]
 				};
-				radianceChannelScale[i].Scale(v);
+				radianceChannelScales[i].Scale(v);
 
 				c[0] += v[0];
 				c[1] += v[1];
@@ -1508,14 +1508,14 @@ void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const 
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (radianceChannelScale[i].enabled) {
+			if (radianceChannelScales[i].enabled) {
 				for (u_int j = 0; j < pixelCount; ++j) {
 					const float *sp = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(j);
 
 					if (sp[3] > 0.f) {
 						Spectrum s(sp);
 						s /= sp[3];
-						s = radianceChannelScale[i].Scale(s);
+						s = radianceChannelScales[i].Scale(s);
 
 						if (frameBufferMask[j])
 							p[j] += s;
@@ -1532,12 +1532,12 @@ void Film::MergeSampleBuffers(Spectrum *p, vector<bool> &frameBufferMask) const 
 		const float factor = pixelCount / statsTotalSampleCount;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (radianceChannelScale[i].enabled) {
+			if (radianceChannelScales[i].enabled) {
 				for (u_int j = 0; j < pixelCount; ++j) {
 					Spectrum s(channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(j));
 
 					if (!s.Black()) {
-						s = factor * radianceChannelScale[i].Scale(s);
+						s = factor * radianceChannelScales[i].Scale(s);
 
 						if (frameBufferMask[j])
 							p[j] += s;
@@ -1908,6 +1908,8 @@ template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::bina
 	} else
 		filterLUTs = NULL;
 
+	ar >> radianceChannelScales;
+
 	ar >> initialized;
 	ar >> enabledOverlappedScreenBufferUpdate;
 	ar >> rgbTonemapUpdate;
@@ -1954,6 +1956,8 @@ template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::bina
 	ar << convTest;
 	ar << filter;
 	// filterLUTs is re-built at load time
+	
+	ar << radianceChannelScales;
 
 	ar << initialized;
 	ar << enabledOverlappedScreenBufferUpdate;
