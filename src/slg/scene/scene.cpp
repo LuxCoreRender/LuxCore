@@ -364,7 +364,7 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 	if (obj->GetMaterial()->IsLightSource()) {
 		// Have to update all light sources using this mesh
 		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-			lightDefs.GetLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
+			lightDefs.GetLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
 	}
 
 	editActions.AddAction(GEOMETRY_EDIT);
@@ -475,7 +475,7 @@ void Scene::DeleteObject(const string &objName) {
 			// Delete all old triangle lights
 			const ExtMesh *mesh = oldObj->GetExtMesh();
 			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-				lightDefs.DeleteLightSource(objName + TRIANGLE_LIGHT_POSTFIX + ToString(i));
+				lightDefs.DeleteLightSource(oldObj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i));
 		}
 
 		objDefs.DeleteSceneObject(objName);
