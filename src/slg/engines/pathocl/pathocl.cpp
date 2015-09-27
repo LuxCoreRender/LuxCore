@@ -54,12 +54,14 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
-		const bool realTime) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime) {
+		const bool realTime) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime),
+		pixelFilterDistribution(NULL) {
 	sampler = NULL;
 	filter = NULL;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
+	delete[] pixelFilterDistribution;
 	delete sampler;
 	delete filter;
 }
@@ -67,6 +69,16 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 PathOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
     OpenCLIntersectionDevice *device) {
     return new PathOCLRenderThread(index, device, this);
+}
+
+
+void PathOCLRenderEngine::InitPixelFilterDistribution() {
+	// Compile sample distribution
+	delete[] pixelFilterDistribution;
+	const Filter *filter = film->GetFilter();
+	const FilterDistribution filterDistribution(filter, 64);
+	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
+			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }
 
 void PathOCLRenderEngine::StartLockLess() {
@@ -190,10 +202,21 @@ void PathOCLRenderEngine::StartLockLess() {
 		filter->blackmanharris.widthY = filmFilter->yWidth;
 	} else
 		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
+	
+	useFastPixelFilter = cfg.Get(Property("path.fastpixelfilter.enable")(true)).Get<bool>();
+	if (useFastPixelFilter)
+		InitPixelFilterDistribution();
 
 	usePixelAtomics = cfg.Get(Property("path.pixelatomics.enable")(false)).Get<bool>();
 
 	PathOCLBaseRenderEngine::StartLockLess();
+}
+
+void PathOCLRenderEngine::StopLockLess() {
+	PathOCLBaseRenderEngine::StopLockLess();
+
+	delete[] pixelFilterDistribution;
+	pixelFilterDistribution = NULL;
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {

@@ -43,6 +43,7 @@
 //  PARAM_IMAGE_FILTER_MITCHELL_C
 
 // (optional)
+//  PARAM_USE_FAST_PIXEL_FILTER
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol)
 // (Metropolis)
 //  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
@@ -149,6 +150,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *pathVolInfos,
 #endif
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		__global float *pixelFilterDistribution,
+#endif
 		__global Ray *rays,
 		__global Camera *camera,
 		const uint filmWidth,
@@ -170,7 +174,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	// Initialize the sample and path
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, sample, sampleData, filmWidth, filmHeight);
+	Sampler_Init(&seed, sample, sampleData, filmWidth, filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			, pixelFilterDistribution
+#endif
+			);
 	GenerateCameraPath(taskDirectLight, taskState, sample, sampleData, camera, filmWidth, filmHeight, &rays[gid], &seed);
 
 	// Save the seed
@@ -672,11 +680,19 @@ bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
 		KERNEL_ARGS_IMAGEMAPS_PAGE_7
 
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+#define KERNEL_ARGS_FAST_PIXEL_FILTER \
+		, __global float *pixelFilterDistribution
+#else
+#define KERNEL_ARGS_FAST_PIXEL_FILTER
+#endif
+
 #define KERNEL_ARGS \
 		__global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
 		, __global GPUTaskStats *taskStats \
+		KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global Sample *samples \
 		, __global float *samplesData \
 		KERNEL_ARGS_VOLUMES \

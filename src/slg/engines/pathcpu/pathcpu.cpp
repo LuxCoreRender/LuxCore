@@ -68,3 +68,10 @@ void PathCPURenderEngine::StartLockLess() {
 
 	CPUNoTileRenderEngine::StartLockLess();
 }
+
+void PathCPURenderEngine::StopLockLess() {
+	CPUNoTileRenderEngine::StopLockLess();
+
+	delete pixelFilterDistribution;
+	pixelFilterDistribution = NULL;
+}

@@ -161,6 +161,43 @@ void PathCPURenderThread::DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent,
 	}
 }
 
+void PathCPURenderThread::GenerateEyeRay(Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) {
+	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
+	const u_int filmWidth = threadFilm->GetWidth();
+	const u_int filmHeight = threadFilm->GetHeight();
+
+	if (engine->useFastPixelFilter) {
+		// Use fast pixel filtering, like the one used in BIASPATH.
+		const float u0 = sampler->GetSample(0);
+		const float u1 = sampler->GetSample(1);
+
+		const float ux = u0 * filmWidth;
+		const float uy = u1 * filmHeight;
+
+		sampleResult.pixelX = Min<u_int>(ux, (u_int)(filmWidth - 1));
+		sampleResult.pixelY = Min<u_int>(uy, (u_int)(filmHeight - 1));
+
+		float uSubPixelX = ux - sampleResult.pixelX;
+		float uSubPixelY = uy - sampleResult.pixelY;
+
+		// Sample according the pixel filter distribution
+		float distX, distY;
+		engine->pixelFilterDistribution->SampleContinuous(uSubPixelX, uSubPixelY, &distX, &distY);
+
+		sampleResult.filmX = sampleResult.pixelX + .5f + distX;
+		sampleResult.filmY = sampleResult.pixelY + .5f + distY;
+	} else {
+		// Use old pixel filtering, like the one used in classic LuxRender
+
+		sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
+		sampleResult.filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
+	}
+
+	Camera *camera = engine->renderConfig->scene->camera;
+	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
+		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+}
+
 void PathCPURenderThread::RenderFunc() {
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
@@ -172,7 +209,6 @@ void PathCPURenderThread::RenderFunc() {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
-	Camera *camera = scene->camera;
 	const u_int filmWidth = threadFilm->GetWidth();
 	const u_int filmHeight = threadFilm->GetHeight();
 
@@ -232,36 +268,7 @@ void PathCPURenderThread::RenderFunc() {
 		const double deviceRayCount = device->GetTotalRaysCount();
 
 		Ray eyeRay;
-		if (engine->useFastPixelFilter) {
-			// Use fast pixel filtering, like the one used in BIASPATH.
-			const float u0 = sampler->GetSample(0);
-			const float u1 = sampler->GetSample(1);
-
-			const float ux = u0 * filmWidth;
-			const float uy = u1 * filmHeight;
-
-			sampleResult.pixelX = Min<u_int>(ux, (u_int)(filmWidth - 1));
-			sampleResult.pixelY = Min<u_int>(uy, (u_int)(filmHeight - 1));
-
-			float uSubPixelX = ux - sampleResult.pixelX;
-			float uSubPixelY = uy - sampleResult.pixelY;
-
-			// Sample according the pixel filter distribution
-			engine->pixelFilterDistribution->SampleContinuous(uSubPixelX, uSubPixelY, &uSubPixelX, &uSubPixelY);
-
-			const Filter *pixelFilter = threadFilm->GetFilter();
-
-			sampleResult.filmX = sampleResult.pixelX + .5f + pixelFilter->xWidth * uSubPixelX;
-			sampleResult.filmY = sampleResult.pixelY + .5f + pixelFilter->yWidth * uSubPixelY;
-		} else {
-			// Use old pixel filtering, like the one used in classic LuxRender
-
-			sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-			sampleResult.filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-		}
-
-		camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
-			sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+		GenerateEyeRay(eyeRay, sampler, sampleResult);
 
 		u_int pathVertexCount = 1;
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS

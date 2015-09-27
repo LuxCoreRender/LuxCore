@@ -91,6 +91,7 @@ protected:
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *pathVolInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
+	cl::Buffer *pixelFilterBuff;
 
 	u_int sampleDimensions;
 
@@ -122,15 +123,21 @@ public:
 	float pdfClampValue;
 
 	u_int taskCount;
-	bool usePixelAtomics;
+	bool usePixelAtomics, useFastPixelFilter;
 
 protected:
+	void InitPixelFilterDistribution();
+
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
+	virtual void StopLockLess();
 
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
+
+	float *pixelFilterDistribution;
+	u_int pixelFilterDistributionSize;
 
 	slg::ocl::Sampler *sampler;
 	slg::ocl::Filter *filter;
