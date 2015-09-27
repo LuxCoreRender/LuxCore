@@ -82,8 +82,8 @@ void FilterDistribution::SampleContinuous(const float u0, const float u1, float 
 		float pdf;
 		distrib->SampleContinuous(u0, u1, uv, &pdf);
 
-		*su0 = (uv[0] - .5f) * filter->xWidth;
-		*su1 = (uv[1] - .5f) * filter->yWidth;
+		*su0 = (uv[0] - .5f) * (2.f * filter->xWidth);
+		*su1 = (uv[1] - .5f) * (2.f * filter->yWidth);
 	} else {
 		*su0 = u0 - .5f;
 		*su1 = u1 - .5f;

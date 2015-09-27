@@ -293,12 +293,10 @@ void GenerateCameraRay(
 			&u0, &u1);
 
 	// Sample according the pixel filter distribution
-	float2 xy;
-	float distPdf;
-	Distribution2D_SampleContinuous(pixelFilterDistribution, u0, u1, &xy, &distPdf);
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, u0, u1, &u0, &u1);
 
-	const float filmX = sampleX + .5f + PARAM_IMAGE_FILTER_WIDTH_X * (xy.x - .5f);
-	const float filmY = sampleY + .5f + PARAM_IMAGE_FILTER_WIDTH_Y * (xy.y - .5f);
+	const float filmX = sampleX + .5f + u0;
+	const float filmY = sampleY + .5f + u1;
 	sampleResult->filmX = filmX;
 	sampleResult->filmY = filmY;
 
@@ -1577,23 +1575,23 @@ uint SampleComponent(
 		KERNEL_ARGS_FILM \
 		/* Scene parameters */ \
 		KERNEL_ARGS_INFINITELIGHTS \
-		, __global const Material* restrict restrict mats \
-		, __global const Texture* restrict restrict texs \
-		, __global const uint* restrict restrict meshMats \
-		, __global const Mesh* restrict restrict meshDescs \
-		, __global const Point* restrict restrict vertices \
+		, __global const Material* restrict mats \
+		, __global const Texture* restrict texs \
+		, __global const uint* restrict meshMats \
+		, __global const Mesh* restrict meshDescs \
+		, __global const Point* restrict vertices \
 		KERNEL_ARGS_NORMALS_BUFFER \
 		KERNEL_ARGS_UVS_BUFFER \
 		KERNEL_ARGS_COLS_BUFFER \
 		KERNEL_ARGS_ALPHAS_BUFFER \
-		, __global const Triangle* restrict restrict triangles \
-		, __global const Camera* restrict restrict camera \
+		, __global const Triangle* restrict triangles \
+		, __global const Camera* restrict camera \
 		/* Lights */ \
-		, __global const LightSource* restrict restrict lights \
+		, __global const LightSource* restrict lights \
 		KERNEL_ARGS_ENVLIGHTS \
-		, __global const uint* restrict restrict meshTriLightDefsOffset \
+		, __global const uint* restrict meshTriLightDefsOffset \
 		KERNEL_ARGS_INFINITELIGHT \
-		, __global const float* restrict restrict lightsDistribution \
+		, __global const float* restrict lightsDistribution \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES \
 		ACCELERATOR_INTERSECT_PARAM_DECL
@@ -1646,7 +1644,7 @@ uint SampleComponent(
 
 #if defined(PARAM_HAS_IMAGEMAPS)
 #define INIT_IMAGEMAPS_PAGES \
-	__global const float* restrict restrict imageMapBuff[PARAM_IMAGEMAPS_COUNT]; \
+	__global const float* restrict imageMapBuff[PARAM_IMAGEMAPS_COUNT]; \
 	INIT_IMAGEMAPS_PAGE_0 \
 	INIT_IMAGEMAPS_PAGE_1 \
 	INIT_IMAGEMAPS_PAGE_2 \

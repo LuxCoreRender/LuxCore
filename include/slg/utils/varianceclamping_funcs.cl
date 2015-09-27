@@ -25,7 +25,8 @@ float3 VarianceClamping_GetWeightedFloat4(__global float *src) {
 		const float k = 1.f / val.w;
 		
 		return ((float3)(val.x, val.y, val.z)) * k;
-	}
+	} else
+		return 0.f;
 }
 
 void VarianceClamping_Clamp(__global SampleResult *sampleResult, const float sqrtVarianceClampMaxValue

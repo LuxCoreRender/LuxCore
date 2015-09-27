@@ -45,6 +45,8 @@ private:
 
 	void RenderFunc();
 
+	void GenerateEyeRay(luxrays::Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult);
+
 	void DirectLightSampling(
 		const float time, const float u0,
 		const float u1, const float u2,
@@ -84,6 +86,7 @@ public:
 
 protected:
 	virtual void StartLockLess();
+	virtual void StopLockLess();
 
 	FilterDistribution *pixelFilterDistribution;
 

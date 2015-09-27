@@ -818,7 +818,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	Sampler_NextSample(&seedValue, sample, sampleData, filmWidth, filmHeight);
+	Sampler_NextSample(&seedValue, sample, sampleData, filmWidth, filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			, pixelFilterDistribution
+#endif
+			);
 
 	// Save the state
 	taskState->state = MK_GENERATE_CAMERA_RAY;

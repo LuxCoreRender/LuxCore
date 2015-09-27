@@ -70,6 +70,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	taskStatsBuff = NULL;
 	pathVolInfosBuff = NULL;
 	directLightVolInfosBuff = NULL;
+	pixelFilterBuff = NULL;
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -182,6 +183,9 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(sampler->type));
 	}
 
+	if (engine->useFastPixelFilter)
+		ss << " -D PARAM_USE_FAST_PIXEL_FILTER";
+		
 	return ss.str();
 }
 
@@ -321,7 +325,9 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	// SampleResult size
 	//--------------------------------------------------------------------------
 
-	const size_t sampleResultSize = GetOpenCLSampleResultSize();
+	const size_t sampleResultSize = GetOpenCLSampleResultSize() +
+		// pixelX and pixelY fields
+		(engine->useFastPixelFilter ? sizeof(u_int) * 2 : 0);
 
 	//--------------------------------------------------------------------------
 	// Sample size
@@ -438,6 +444,15 @@ void PathOCLRenderThread::AdditionalInit() {
 		AllocOCLBufferRW(&pathVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "PathVolumeInfo");
 		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "directLightVolumeInfo");
 	}
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU pixel filter distribution
+	//--------------------------------------------------------------------------
+
+	if (engine->useFastPixelFilter) {
+		AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
+				sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
+	}
 }
 
 void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel) {
@@ -449,6 +464,8 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
 	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
+	if (engine->useFastPixelFilter)
+		advancePathsKernel->setArg(argIndex++, *pixelFilterBuff);
 	advancePathsKernel->setArg(argIndex++, *samplesBuff);
 	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
 	if (cscene->HasVolumes()) {
@@ -551,6 +568,8 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	initKernel->setArg(argIndex++, *sampleDataBuff);
 	if (cscene->HasVolumes())
 		initKernel->setArg(argIndex++, *pathVolInfosBuff);
+	if (engine->useFastPixelFilter)
+		initKernel->setArg(argIndex++, *pixelFilterBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
 	initKernel->setArg(argIndex++, *cameraBuff);
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
@@ -570,6 +589,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&pathVolInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
+	FreeOCLBuffer(&pixelFilterBuff);
 }
 
 void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {

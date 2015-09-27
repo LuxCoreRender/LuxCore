@@ -19,6 +19,21 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
+// FilterDistribution
+//------------------------------------------------------------------------------
+
+void FilterDistribution_SampleContinuous(__global float *pixelFilterDistribution,
+		const float u0, const float u1, float *su0, float *su1) {
+	// Sample according the pixel filter distribution
+	float2 uv;
+	float distPdf;
+	Distribution2D_SampleContinuous(pixelFilterDistribution, u0, u1, &uv, &distPdf);
+
+	*su0 = (uv.x - .5f) * (2.f * PARAM_IMAGE_FILTER_WIDTH_X);
+	*su1 = (uv.y - .5f) * (2.f * PARAM_IMAGE_FILTER_WIDTH_Y);
+}
+
+//------------------------------------------------------------------------------
 // Pixel related functions
 //------------------------------------------------------------------------------
 

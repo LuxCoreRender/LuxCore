@@ -47,8 +47,14 @@ void Sampler_SplatSample(
 		__global float *sampleData
 		FILM_PARAM_DECL
 		) {
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+			&sample->result, 1.f
+			FILM_PARAM);
+#else
 	Film_SplatSample(&sample->result, 1.f
 			FILM_PARAM);
+#endif
 }
 
 void Sampler_NextSample(
@@ -56,6 +62,9 @@ void Sampler_NextSample(
 		__global Sample *sample,
 		__global float *sampleData,
 		const uint filmWidth, const uint filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, __global float *pixelFilterDistribution
+#endif
 		) {
 	// Move to the next sample
 	const float u0 = Rnd_FloatValue(seed);
@@ -66,13 +75,42 @@ void Sampler_NextSample(
 	sampleData[IDX_SCREEN_Y] = u1;
 
 	SampleResult_Init(&sample->result);
+
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	const float ux = u0 * filmWidth;
+	const float uy = u1 * filmHeight;
+
+	const uint pixelX = min((uint)ux, (uint)(filmWidth - 1));
+	const uint pixelY = min((uint)uy, (uint)(filmHeight - 1));
+	sample->result.pixelX = pixelX;
+	sample->result.pixelY = pixelY;
+
+	float uSubPixelX = ux - pixelX;
+	float uSubPixelY = uy - pixelY;
+
+	// Sample according the pixel filter distribution
+	float distX, distY;
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, uSubPixelX, uSubPixelY, &distX, &distY);
+
+	sample->result.filmX = pixelX + .5f + distX;
+	sample->result.filmY = pixelY + .5f + distY;
+#else
 	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
 	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
+#endif
 }
 
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
-		const uint filmWidth, const uint filmHeight) {
-	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight);
+		const uint filmWidth, const uint filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, __global float *pixelFilterDistribution
+#endif
+		) {
+	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			, pixelFilterDistribution
+#endif
+			);
 }
 
 #endif
@@ -157,7 +195,11 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 }
 
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
-		const uint filmWidth, const uint filmHeight) {
+		const uint filmWidth, const uint filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, __global float *pixelFilterDistribution
+#endif
+		) {
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
 
@@ -173,8 +215,29 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 	LargeStep(seed, sampleDataPathBase);
 
 	SampleResult_Init(&sample->result);
+
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	const float ux = sampleDataPathBase[IDX_SCREEN_X] * filmWidth;
+	const float uy = sampleDataPathBase[IDX_SCREEN_Y] * filmHeight;
+
+	const uint pixelX = min((uint)ux, (uint)(filmWidth - 1));
+	const uint pixelY = min((uint)uy, (uint)(filmHeight - 1));
+	sample->result.pixelX = pixelX;
+	sample->result.pixelY = pixelY;
+
+	float uSubPixelX = ux - pixelX;
+	float uSubPixelY = uy - pixelY;
+
+	// Sample according the pixel filter distribution
+	float distX, distY;
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, uSubPixelX, uSubPixelY, &distX, &distY);
+
+	sample->result.filmX = pixelX + .5f + distX;
+	sample->result.filmY = pixelY + .5f + distY;
+#else
 	sample->result.filmX = min(sampleDataPathBase[IDX_SCREEN_X] * filmWidth, (float)(filmWidth - 1));
 	sample->result.filmY = min(sampleDataPathBase[IDX_SCREEN_Y] * filmHeight, (float)(filmHeight - 1));
+#endif
 }
 
 void Sampler_SplatSample(
@@ -194,8 +257,14 @@ void Sampler_SplatSample(
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+				&sample->result, 1.f
+				FILM_PARAM);
+#else
 		Film_SplatSample(&sample->result, 1.f
 					FILM_PARAM);
+#endif
 
 		sample->currentResult = sample->result;
 		sample->totalI = SampleResult_Radiance_Y(&sample->result);
@@ -276,8 +345,14 @@ void Sampler_SplatSample(
 				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
 						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			Film_AddSample(contrib->pixelX, contrib->pixelY,
+					contrib, norm
+					FILM_PARAM);
+#else
 			Film_SplatSample(contrib, norm
 					FILM_PARAM);
+#endif
 		}
 
 		// Check if it is an accepted mutation
@@ -299,6 +374,9 @@ void Sampler_NextSample(
 		__global Sample *sample,
 		__global float *sampleData,
 		const uint filmWidth, const uint filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, __global float *pixelFilterDistribution
+#endif
 		) {
 	//--------------------------------------------------------------------------
 	// Mutate the sample
@@ -316,8 +394,29 @@ void Sampler_NextSample(
 	}
 
 	SampleResult_Init(&sample->result);
+
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	const float ux = proposedU[IDX_SCREEN_X] * filmWidth;
+	const float uy = proposedU[IDX_SCREEN_Y] * filmHeight;
+
+	const uint pixelX = min((uint)ux, (uint)(filmWidth - 1));
+	const uint pixelY = min((uint)uy, (uint)(filmHeight - 1));
+	sample->result.pixelX = pixelX;
+	sample->result.pixelY = pixelY;
+
+	float uSubPixelX = ux - pixelX;
+	float uSubPixelY = uy - pixelY;
+
+	// Sample according the pixel filter distribution
+	float distX, distY;
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, uSubPixelX, uSubPixelY, &distX, &distY);
+
+	sample->result.filmX = pixelX + .5f + distX;
+	sample->result.filmY = pixelY + .5f + distY;
+#else
 	sample->result.filmX = min(proposedU[IDX_SCREEN_X] * filmWidth, (float)(filmWidth - 1));
 	sample->result.filmY = min(proposedU[IDX_SCREEN_Y] * filmHeight, (float)(filmHeight - 1));
+#endif
 }
 
 #endif
@@ -379,8 +478,14 @@ void Sampler_SplatSample(
 		__global float *sampleData
 		FILM_PARAM_DECL
 		) {
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+			&sample->result, 1.f
+			FILM_PARAM);
+#else
 	Film_SplatSample(&sample->result, 1.f
 			FILM_PARAM);
+#endif
 }
 
 void Sampler_NextSample(
@@ -388,6 +493,9 @@ void Sampler_NextSample(
 		__global Sample *sample,
 		__global float *sampleData,
 		const uint filmWidth, const uint filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, __global float *pixelFilterDistribution
+#endif
 		) {
 	// Move to the next sample
 	sample->pass += get_global_size(0);
@@ -399,15 +507,44 @@ void Sampler_NextSample(
 	sampleData[IDX_SCREEN_Y] = u1;
 
 	SampleResult_Init(&sample->result);
+
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	const float ux = u0 * filmWidth;
+	const float uy = u1 * filmHeight;
+
+	const uint pixelX = min((uint)ux, (uint)(filmWidth - 1));
+	const uint pixelY = min((uint)uy, (uint)(filmHeight - 1));
+	sample->result.pixelX = pixelX;
+	sample->result.pixelY = pixelY;
+
+	float uSubPixelX = ux - pixelX;
+	float uSubPixelY = uy - pixelY;
+
+	// Sample according the pixel filter distribution
+	float distX, distY;
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, uSubPixelX, uSubPixelY, &distX, &distY);
+
+	sample->result.filmX = pixelX + .5f + distX;
+	sample->result.filmY = pixelY + .5f + distY;
+#else
 	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
 	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
+#endif
 }
 
 void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
-		const uint filmWidth, const uint filmHeight) {
+		const uint filmWidth, const uint filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, __global float *pixelFilterDistribution
+#endif
+		) {
 	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET + get_global_id(0);
 
-	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight);
+	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			, pixelFilterDistribution
+#endif
+			);
 }
 
 #endif
