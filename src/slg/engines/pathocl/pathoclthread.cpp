@@ -118,7 +118,11 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 	const slg::ocl::Filter *filter = engine->filter;
 	switch (filter->type) {
 		case slg::ocl::FILTER_NONE:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=0"
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=.5f"
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=.5f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=0" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=0";
 			break;
 		case slg::ocl::FILTER_BOX:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
@@ -155,6 +159,9 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			throw runtime_error("Unknown pixel filter type: "  + boost::lexical_cast<string>(filter->type));
 	}
 
+	if (engine->useFastPixelFilter && (filter->type != slg::ocl::FILTER_NONE))
+		ss << " -D PARAM_USE_FAST_PIXEL_FILTER";
+
 	if (engine->usePixelAtomics)
 		ss << " -D PARAM_USE_PIXEL_ATOMICS";
 
@@ -182,10 +189,7 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 		default:
 			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(sampler->type));
 	}
-
-	if (engine->useFastPixelFilter)
-		ss << " -D PARAM_USE_FAST_PIXEL_FILTER";
-		
+	
 	return ss.str();
 }
 
@@ -327,7 +331,8 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 
 	const size_t sampleResultSize = GetOpenCLSampleResultSize() +
 		// pixelX and pixelY fields
-		(engine->useFastPixelFilter ? sizeof(u_int) * 2 : 0);
+		((engine->useFastPixelFilter && (engine->filter->type != slg::ocl::FILTER_NONE)) ?
+			sizeof(u_int) * 2 : 0);
 
 	//--------------------------------------------------------------------------
 	// Sample size
@@ -449,7 +454,7 @@ void PathOCLRenderThread::AdditionalInit() {
 	// Allocate GPU pixel filter distribution
 	//--------------------------------------------------------------------------
 
-	if (engine->useFastPixelFilter) {
+	if (engine->useFastPixelFilter && (engine->filter->type != slg::ocl::FILTER_NONE)) {
 		AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
 				sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 	}
@@ -464,7 +469,7 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
 	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
-	if (engine->useFastPixelFilter)
+	if (engine->useFastPixelFilter && (engine->filter->type != slg::ocl::FILTER_NONE))
 		advancePathsKernel->setArg(argIndex++, *pixelFilterBuff);
 	advancePathsKernel->setArg(argIndex++, *samplesBuff);
 	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
@@ -568,7 +573,7 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	initKernel->setArg(argIndex++, *sampleDataBuff);
 	if (cscene->HasVolumes())
 		initKernel->setArg(argIndex++, *pathVolInfosBuff);
-	if (engine->useFastPixelFilter)
+	if (engine->useFastPixelFilter && (engine->filter->type != slg::ocl::FILTER_NONE))
 		initKernel->setArg(argIndex++, *pixelFilterBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
 	initKernel->setArg(argIndex++, *cameraBuff);
