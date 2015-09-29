@@ -44,12 +44,11 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		*event = DIFFUSE | TRANSMIT;
 
 		if (directPdfW)
-			*directPdfW = fabsf(localSampledDir.z) * INV_PI * .5f;
+			*directPdfW = fabsf(localSampledDir.z) * (INV_PI * .5f);
 		if (reversePdfW)
-			*reversePdfW = fabsf(localFixedDir.z) * INV_PI * .5f;
+			*reversePdfW = fabsf(localFixedDir.z) * (INV_PI * .5f);
 
-		const Vector H(Normalize(Vector(localLightDir.x + localEyeDir.x, localLightDir.y + localEyeDir.y,
-			localLightDir.z - localEyeDir.z)));
+		const Vector H(Normalize(localLightDir + localEyeDir));
 		const float u = AbsDot(localLightDir, H);
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 		float i = index->GetFloatValue(hitPoint);
@@ -234,7 +233,8 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		}
 
 		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
-		if (!(Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) > DEFAULT_COS_EPSILON_STATIC))
+		const float sideTest = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN);
+		if (!(sideTest > DEFAULT_COS_EPSILON_STATIC))
 			return Spectrum();
 
 		*pdfW = .5f * (coatingPdf * wCoating + basePdf * wBase);
@@ -255,9 +255,12 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	} else if (passThroughEvent >= .5f && (requestedEvent & (DIFFUSE | TRANSMIT))) {
 		// Transmission
 		*localSampledDir = -Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
+
 		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
-		if (!(Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) < -DEFAULT_COS_EPSILON_STATIC))
+		const float sideTest = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN);
+		if (!(sideTest < -DEFAULT_COS_EPSILON_STATIC))
 			return Spectrum();
+
 		*pdfW *= .5f;
 
 		*absCosSampledDir = fabsf(localSampledDir->z);
@@ -267,9 +270,8 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL) / *pdfW;
 		else
 			return Evaluate(hitPoint, *localSampledDir, localFixedDir, event, pdfW, NULL) / *pdfW;
-	} else {
+	} else
 		return Spectrum();
-	}
 }
 
 void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
@@ -281,9 +283,9 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 	if (localFixedDir.z * localSampledDir.z < 0.f) {
 		// Transmition
 		if (directPdfW)
-			*directPdfW = fabsf(localSampledDir.z) * INV_PI * .5f;
+			*directPdfW = fabsf(localSampledDir.z) * (INV_PI * .5f);
 		if (reversePdfW)
-			*reversePdfW = fabsf(localFixedDir.z) * INV_PI * .5f;
+			*reversePdfW = fabsf(localFixedDir.z) * (INV_PI * .5f);
 	} else if (localFixedDir.z * localSampledDir.z > 0.f) {
 		// Reflection
 		Spectrum ks;
