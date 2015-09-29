@@ -76,7 +76,8 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			S *= Exp(Ka->GetSpectrumValue(hitPoint).Clamp() * -(depth->GetFloatValue(hitPoint) / coso) +
 				Ka_bf->GetSpectrumValue(hitPoint).Clamp() * -(depth_bf->GetFloatValue(hitPoint) / cosi));
 		}
-		return (INV_PI * coso) * S * Kt->GetSpectrumValue(hitPoint).Clamp() *
+
+		return (INV_PI * cosi) * S * Kt->GetSpectrumValue(hitPoint).Clamp() *
 			(Spectrum(1.f) - Kd->GetSpectrumValue(hitPoint).Clamp());
 	} else if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
@@ -145,9 +146,8 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		// assumes coating bxdf takes fresnel factor S into account
 
 		return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
-	} else {
+	} else
 		return Spectrum();
-	}
 }
 
 Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
