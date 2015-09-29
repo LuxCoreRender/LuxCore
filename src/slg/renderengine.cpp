@@ -1032,7 +1032,9 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 	const bool useCPUs = cfg.Get(Property("opencl.cpu.use")(true)).Get<bool>();
 	const bool useGPUs = cfg.Get(Property("opencl.gpu.use")(true)).Get<bool>();
 	// 0 means use the value suggested by the OpenCL driver
-	const u_int forceGPUWorkSize = cfg.Get(Property("opencl.gpu.workgroup.size")(0)).Get<u_int>();
+	// Note: I'm using 64 because some driver (i.e. NVIDIA) suggests a value and than
+	// throws a clEnqueueNDRangeKernel(CL_OUT_OF_RESOURCES)
+	const u_int forceGPUWorkSize = cfg.Get(Property("opencl.gpu.workgroup.size")(64)).Get<u_int>();
 	// 0 means use the value suggested by the OpenCL driver
 #if defined(__APPLE__)	
 	const u_int forceCPUWorkSize = cfg.Get(Property("opencl.cpu.workgroup.size")(1)).Get<u_int>();
