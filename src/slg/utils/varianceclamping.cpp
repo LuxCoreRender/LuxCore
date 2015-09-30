@@ -79,8 +79,14 @@ void VarianceClamping::Clamp(const float expectedValue[4], float value[4]) const
 
 void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const {
 	// Recover the current pixel value
-	const int x = Min(Max(Ceil2Int(sampleResult.filmX - .5f), 0), (int)film.GetWidth());
-	const int y = Min(Max(Ceil2Int(sampleResult.filmY - .5f), 0), (int)film.GetHeight());
+	int x, y;
+	if (sampleResult.useFilmSplat) {
+		x = Floor2Int(sampleResult.filmX);
+		y = Floor2Int(sampleResult.filmY);
+	} else {
+		x = sampleResult.pixelX;
+		y = sampleResult.pixelY;
+	}
 
 	float expectedValue[3] = { 0.f, 0.f, 0.f };
 	if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
