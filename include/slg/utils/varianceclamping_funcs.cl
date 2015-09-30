@@ -32,8 +32,14 @@ float3 VarianceClamping_GetWeightedFloat4(__global float *src) {
 void VarianceClamping_Clamp(__global SampleResult *sampleResult, const float sqrtVarianceClampMaxValue
 	FILM_PARAM_DECL) {
 	// Recover the current pixel value
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	const int x = sampleResult->pixelX;
+	const int y = sampleResult->pixelY;
+#else
 	const int x = Floor2Int(sampleResult->filmX);
 	const int y = Floor2Int(sampleResult->filmY);
+#endif
+
 	const uint index1 = x + y * filmWidth;
 	const uint index4 = index1 * 4;
 
