@@ -72,7 +72,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 	const float sideTest = CosTheta(lightDir) * CosTheta(eyeDir);
 
 	if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
-		// Transmition
+		// Transmission
 		*event = DIFFUSE | TRANSMIT;
 
 		if (directPdfW)
@@ -211,9 +211,8 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 		// assumes coating bxdf takes fresnel factor S into account
 
 		return coatingF + absorption * (WHITE - S) * baseF;
-	} else {
+	} else
 		return BLACK;
-	}
 }
 
 float3 GlossyTranslucentMaterial_ConstSample(
@@ -383,7 +382,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 
 		return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
 	} else if (passThroughEvent >= .5f && (requestedEvent & (DIFFUSE | TRANSMIT))) {
-		// Transmition
+		// Transmission
 		*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 		*sampledDir *= signbit(fixedDir.z) ? 1.f : -1.f;
 
@@ -437,11 +436,10 @@ float3 GlossyTranslucentMaterial_ConstSample(
 				Spectrum_Clamp(kaVal_bf) * -(d_bf / cosi));
 		}
 #endif
-		return (M_1_PI_F * coso / *pdfW) * S * Spectrum_Clamp(ktVal) *
+		return (M_1_PI_F * cosi / *pdfW) * S * Spectrum_Clamp(ktVal) *
 			(WHITE - Spectrum_Clamp(kdVal));
-	} else {
+	} else
 		return BLACK;
-	}
 }
 
 #endif

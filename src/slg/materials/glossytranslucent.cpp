@@ -266,6 +266,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
+
 		if (hitPoint.fromLight)
 			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL) / *pdfW;
 		else
