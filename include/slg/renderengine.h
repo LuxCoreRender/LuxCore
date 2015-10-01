@@ -230,11 +230,16 @@ public:
 	CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~CPUNoTileRenderEngine();
 
+	virtual void StartLockLess();
+	virtual void StopLockLess();
+
 	friend class CPUNoTileRenderThread;
 
 protected:
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
+
+	SamplerSharedData *samplerSharedData;
 };
 
 //------------------------------------------------------------------------------

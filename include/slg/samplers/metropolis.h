@@ -30,6 +30,23 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
+// MetropolisSamplerSharedData
+//
+// Used to share sampler specific data across multiple threads
+//------------------------------------------------------------------------------
+
+class MetropolisSamplerSharedData : public SamplerSharedData{
+public:
+	MetropolisSamplerSharedData();
+	virtual ~MetropolisSamplerSharedData() { }
+
+	// I'm storing totalLuminance and sampleCount on shared variables
+	// in order to have far more accurate estimation in the image mean intensity
+	// computation
+	double totalLuminance, sampleCount;
+};
+
+//------------------------------------------------------------------------------
 // Metropolis sampler
 //------------------------------------------------------------------------------
 
@@ -37,7 +54,7 @@ class MetropolisSampler : public Sampler {
 public:
 	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film, const u_int maxRej,
 			const float pLarge, const float imgRange,
-			double *sharedTotalLuminance, double *sharedSampleCount);
+			MetropolisSamplerSharedData *samplerSharedData);
 	virtual ~MetropolisSampler();
 
 	virtual SamplerType GetType() const { return METROPOLIS; }
@@ -47,13 +64,10 @@ public:
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 private:
+	MetropolisSamplerSharedData *sharedData;
+
 	u_int maxRejects;
 	float largeMutationProbability, imageMutationRange;
-
-	// I'm storing totalLuminance and sampleCount on external (shared) variables
-	// in order to have far more accurate estimation in the image mean intensity
-	// computation
-	double *sharedTotalLuminance, *sharedSampleCount;
 
 	u_int sampleSize;
 	float *samples;

@@ -30,6 +30,20 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
+// SobolSamplerSharedData
+//
+// Used to share sampler specific data across multiple threads
+//------------------------------------------------------------------------------
+
+class SobolSamplerSharedData : public SamplerSharedData{
+public:
+	SobolSamplerSharedData(luxrays::RandomGenerator *rnd);
+	virtual ~SobolSamplerSharedData() { }
+
+	float rng0, rng1;
+};
+
+//------------------------------------------------------------------------------
 // Sobol sampler
 //
 // This sampler is based on Blender Cycles Sobol implementation.
@@ -43,7 +57,7 @@ class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const u_int threadIndex, const u_int threadCount,
-			const float u0, const float u1);
+			SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 
 	virtual SamplerType GetType() const { return SOBOL; }
@@ -52,11 +66,13 @@ public:
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
+	static SobolSamplerSharedData *AllocSharedData(luxrays::RandomGenerator *rnd);
+
 private:
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
+	SobolSamplerSharedData *sharedData;
 	const u_int threadIndex, threadCount;
-	const float rng0, rng1;
 
 	u_int *directions;
 	u_int pass;

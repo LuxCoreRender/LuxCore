@@ -131,7 +131,7 @@ protected:
 private:
 	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
 		return new BiDirCPURenderThread(this, index, device);
-	}	
+	}
 };
 
 }

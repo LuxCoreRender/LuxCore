@@ -43,10 +43,11 @@ public:
 		u_int *filmSubRegion) const;
 
 	Film *AllocFilm(FilmOutputs &filmOutputs) const;
+
+	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
-		const u_int threadIndex, const u_int threadCount,
-		const float u0, const float u1,
-		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
+		const u_int threadIndex, const u_int threadCount, SamplerSharedData *sharedData) const;
+
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
 	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &prop);

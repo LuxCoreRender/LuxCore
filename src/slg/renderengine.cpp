@@ -456,9 +456,24 @@ void CPUNoTileRenderThread::StartRenderThread() {
 
 CPUNoTileRenderEngine::CPUNoTileRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	CPURenderEngine(cfg, flm, flmMutex) {
+	samplerSharedData = NULL;
 }
 
 CPUNoTileRenderEngine::~CPUNoTileRenderEngine() {
+	delete samplerSharedData;
+}
+
+void CPUNoTileRenderEngine::StartLockLess() {
+	samplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator);
+	
+	CPURenderEngine::StartLockLess();
+}
+
+void CPUNoTileRenderEngine::StopLockLess() {
+	CPURenderEngine::StopLockLess();
+
+	delete samplerSharedData;
+	samplerSharedData = NULL;
 }
 
 void CPUNoTileRenderEngine::UpdateFilmLockLess() {

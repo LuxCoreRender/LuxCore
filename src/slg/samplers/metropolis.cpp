@@ -19,6 +19,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/color/color.h"
+#include "luxrays/utils/atomic.h"
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/metropolis.h"
 
@@ -26,14 +27,24 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// MetropolisSamplerSharedData
+//------------------------------------------------------------------------------
+
+MetropolisSamplerSharedData::MetropolisSamplerSharedData() : SamplerSharedData() {
+	totalLuminance = 0.;
+	sampleCount = 0.;
+}
+
+//------------------------------------------------------------------------------
 // Metropolis sampler
 //------------------------------------------------------------------------------
 
-MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm, const unsigned int maxRej,
+MetropolisSampler::MetropolisSampler(RandomGenerator *rnd,
+		Film *flm, const u_int maxRej,
 		const float pLarge, const float imgRange,
-		double *sharedTotLum, double *sharedSplCount) : Sampler(rnd, flm),
+		MetropolisSamplerSharedData *samplerSharedData) : Sampler(rnd, flm),
+		sharedData(samplerSharedData),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
-		sharedTotalLuminance(sharedTotLum), sharedSampleCount(sharedSplCount),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
 		cooldown(true) {
 }
@@ -78,15 +89,12 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 	}
 }
 
-void MetropolisSampler::RequestSamples(const unsigned int size) {
+void MetropolisSampler::RequestSamples(const u_int size) {
 	sampleSize = size;
 	samples = new float[sampleSize];
-	sampleStamps = new unsigned int[sampleSize];
+	sampleStamps = new u_int[sampleSize];
 	currentSamples = new float[sampleSize];
-	currentSampleStamps = new unsigned int[sampleSize];
-
-	*sharedTotalLuminance = 0.;
-	*sharedSampleCount = 0.;
+	currentSampleStamps = new u_int[sampleSize];
 
 	isLargeMutation = true;
 	weight = 0.f;
@@ -98,10 +106,10 @@ void MetropolisSampler::RequestSamples(const unsigned int size) {
 	currentSampleResult.resize(0);
 }
 
-float MetropolisSampler::GetSample(const unsigned int index) {
+float MetropolisSampler::GetSample(const u_int index) {
 	assert (index < sampleSize);
 
-	unsigned int sampleStamp = sampleStamps[index];
+	u_int sampleStamp = sampleStamps[index];
 
 	float s;
 	if (sampleStamp == 0) {
@@ -113,10 +121,10 @@ float MetropolisSampler::GetSample(const unsigned int index) {
 	// Mutate the sample up to the currentStamp
 	if ((index == 0) || (index == 1)) {
 		// 0 and 1 are used for image X/Y
-		for (unsigned int i = sampleStamp; i < stamp; ++i)
+		for (u_int i = sampleStamp; i < stamp; ++i)
 			s = MutateScaled(s, imageMutationRange, rndGen->floatValue());
 	} else {
-		for (unsigned int i = sampleStamp; i < stamp; ++i)
+		for (u_int i = sampleStamp; i < stamp; ++i)
 			s = Mutate(s, rndGen->floatValue());
 	}
 
@@ -130,7 +138,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	film->AddSampleCount(1.0);
 
 	// Calculate the sample result luminance
-	const unsigned int pixelCount = film->GetWidth() * film->GetHeight();
+	const u_int pixelCount = film->GetWidth() * film->GetHeight();
 	float newLuminance = 0.f;
 	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
 		if (sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
@@ -155,12 +163,14 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	}
 
 	if (isLargeMutation) {
-		*sharedTotalLuminance += newLuminance;
-		*sharedSampleCount += 1.;
+		// Atomic 64bit for double are not available on all CPUs so I simply
+		// avoid synchronization.
+		sharedData->totalLuminance += newLuminance;
+		sharedData->sampleCount += 1.;
 	}
 
-	const float invMeanIntensity = (*sharedTotalLuminance > 0.) ?
-		static_cast<float>(*sharedSampleCount / *sharedTotalLuminance) : 1.f;
+	const float invMeanIntensity = (sharedData->totalLuminance > 0.) ?
+		static_cast<float>(sharedData->sampleCount / sharedData->totalLuminance) : 1.f;
 
 	// Define the probability of large mutations. It is 50% if we are still
 	// inside the cooldown phase.
@@ -209,7 +219,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	// when large mutation probability is very small
 	if (cooldown) {
 		// Check if it is time to end the cooldown
-		if (*sharedSampleCount > pixelCount) {
+		if (sharedData->sampleCount > pixelCount) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 		} else
