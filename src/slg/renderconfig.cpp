@@ -653,8 +653,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
 					(MetropolisSamplerSharedData *)sharedData);
 		}
 		case SOBOL:
-			return new SobolSampler(rndGen, film, threadIndex, threadCount,
-					(SobolSamplerSharedData *)sharedData);
+			return new SobolSampler(rndGen, film, (SobolSamplerSharedData *)sharedData);
 		default:
 			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
 	}

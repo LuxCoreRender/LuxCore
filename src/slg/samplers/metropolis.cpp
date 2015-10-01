@@ -19,7 +19,6 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/color/color.h"
-#include "luxrays/utils/atomic.h"
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/metropolis.h"
 
