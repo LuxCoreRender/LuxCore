@@ -68,7 +68,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 
 	// Note: this is the same side test used by matte translucent material and
 	// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
-	// are not avilable here without bump mapping.
+	// are not available here without bump mapping.
 	const float sideTest = CosTheta(lightDir) * CosTheta(eyeDir);
 
 	if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {

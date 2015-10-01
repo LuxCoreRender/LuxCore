@@ -71,7 +71,7 @@ std::string KernelSource_materialdefs_funcs_glossytranslucent =
 "\n"
 "	// Note: this is the same side test used by matte translucent material and\n"
 "	// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv\n"
-"	// are not avilable here without bump mapping.\n"
+"	// are not available here without bump mapping.\n"
 "	const float sideTest = CosTheta(lightDir) * CosTheta(eyeDir);\n"
 "\n"
 "	if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {\n"
