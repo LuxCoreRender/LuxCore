@@ -26,17 +26,26 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// SobolSamplerSharedData
+//------------------------------------------------------------------------------
+
+SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rnd) : SamplerSharedData() {
+	rng0 = rnd->floatValue();
+	rng1 = rnd->floatValue();
+}
+
+//------------------------------------------------------------------------------
 // Sobol sampler
 //
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
 SobolSampler::SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const u_int threadIdx, const u_int threadCnt,
-			const float u0, const float u1) : Sampler(rnd, flm),
-			threadIndex(threadIdx), threadCount(threadCnt),
-			rng0(u0), rng1(u1),
-			directions(NULL), pass(SOBOL_STARTOFFSET + threadIdx) {
+		const u_int threadIdx, const u_int threadCnt,
+		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm),
+		sharedData(samplerSharedData),
+		threadIndex(threadIdx), threadCount(threadCnt),
+		directions(NULL), pass(SOBOL_STARTOFFSET + threadIdx) {
 }
 
 SobolSampler::~SobolSampler() {
@@ -64,9 +73,9 @@ u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) con
 float SobolSampler::GetSample(const u_int index) {
 	const u_int iResult = SobolDimension(pass, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
-
+	
 	// Cranley-Patterson rotation to reduce visible regular patterns
-	const float shift = (index & 1) ? rng0 : rng1;
+	const float shift = (index & 1) ? sharedData->rng0 : sharedData->rng1;
 	const float val = fResult + shift;
 
 	return val - floorf(val);
@@ -77,4 +86,8 @@ void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 	AddSamplesToFilm(sampleResults);
 
 	pass += threadCount;
+}
+
+SobolSamplerSharedData *SobolSampler::AllocSharedData(luxrays::RandomGenerator *rnd) {
+	return new SobolSamplerSharedData(rnd);
 }

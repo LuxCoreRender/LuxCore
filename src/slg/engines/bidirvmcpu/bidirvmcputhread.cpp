@@ -57,17 +57,11 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		sampleBootSizeVM + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
-	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
-	// initialized inside MetropolisSampler::RequestSamples()
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
-	// All threads initialize this RandomGenerator with the same seed in order
-	// to generate the same 2 random numbers
-	RandomGenerator *sharedRndGen = new RandomGenerator(engine->seedBase);
+
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 				threadIndex, engine->renderThreads.size(),
-				sharedRndGen->floatValue(), sharedRndGen->floatValue(),
-				&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
+				engine->samplerSharedData);
 		sampler->RequestSamples(sampleSize);
 
 		samplers[i] = sampler;

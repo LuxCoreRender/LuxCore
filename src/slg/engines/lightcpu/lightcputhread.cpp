@@ -200,17 +200,9 @@ void LightCPURenderThread::RenderFunc() {
 	Film *film = threadFilm;
 
 	// Setup the sampler
-
-	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
-	// initialized inside MetropolisSampler::RequestSamples()
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
-	// All threads initialize this RandomGenerator with the same seed in order
-	// to generate the same 2 random numbers
-	RandomGenerator *sharedRndGen = new RandomGenerator(engine->seedBase);
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
 			threadIndex, engine->renderThreads.size(),
-			sharedRndGen->floatValue(), sharedRndGen->floatValue(),
-			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
+				engine->samplerSharedData);
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex
