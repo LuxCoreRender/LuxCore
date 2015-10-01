@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/atomic.hpp>
+
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
 #include "slg/film/film.h"
@@ -41,6 +43,7 @@ public:
 	virtual ~SobolSamplerSharedData() { }
 
 	float rng0, rng1;
+	boost::atomic<u_int> pass;
 };
 
 //------------------------------------------------------------------------------
@@ -50,13 +53,13 @@ public:
 //------------------------------------------------------------------------------
 
 #define SOBOL_STARTOFFSET 32
+#define SOBOL_THREAD_WORK_SIZE 4096
 
 extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions);
 
 class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const u_int threadIndex, const u_int threadCount,
 			SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 
@@ -72,10 +75,9 @@ private:
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
 	SobolSamplerSharedData *sharedData;
-	const u_int threadIndex, threadCount;
 
 	u_int *directions;
-	u_int pass;
+	u_int passBase, passOffset;
 };
 
 }

@@ -32,6 +32,7 @@ using namespace slg;
 SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rnd) : SamplerSharedData() {
 	rng0 = rnd->floatValue();
 	rng1 = rnd->floatValue();
+	pass = SOBOL_STARTOFFSET;
 }
 
 //------------------------------------------------------------------------------
@@ -41,11 +42,8 @@ SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rnd) : 
 //------------------------------------------------------------------------------
 
 SobolSampler::SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
-		const u_int threadIdx, const u_int threadCnt,
 		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm),
-		sharedData(samplerSharedData),
-		threadIndex(threadIdx), threadCount(threadCnt),
-		directions(NULL), pass(SOBOL_STARTOFFSET + threadIdx) {
+		sharedData(samplerSharedData), directions(NULL) {
 }
 
 SobolSampler::~SobolSampler() {
@@ -55,6 +53,9 @@ SobolSampler::~SobolSampler() {
 void SobolSampler::RequestSamples(const u_int size) {
 	directions = new u_int[size * SOBOL_BITS];
 	SobolGenerateDirectionVectors(directions, size);
+
+	passBase = sharedData->pass.fetch_add(SOBOL_THREAD_WORK_SIZE);
+	passOffset = 0;
 }
 
 u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) const {
@@ -71,7 +72,7 @@ u_int SobolSampler::SobolDimension(const u_int index, const u_int dimension) con
 }
 
 float SobolSampler::GetSample(const u_int index) {
-	const u_int iResult = SobolDimension(pass, index);
+	const u_int iResult = SobolDimension(passBase + passOffset, index);
 	const float fResult = iResult * (1.f / 0xffffffffu);
 	
 	// Cranley-Patterson rotation to reduce visible regular patterns
@@ -85,7 +86,11 @@ void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 
-	pass += threadCount;
+	++passOffset;
+	if (passOffset >= SOBOL_THREAD_WORK_SIZE) {
+		passBase = sharedData->pass.fetch_add(SOBOL_THREAD_WORK_SIZE);
+		passOffset = 0;
+	}
 }
 
 SobolSamplerSharedData *SobolSampler::AllocSharedData(luxrays::RandomGenerator *rnd) {
