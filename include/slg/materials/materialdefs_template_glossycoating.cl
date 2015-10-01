@@ -62,49 +62,20 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
-	Frame frame;
-/*#if defined(PARAM_HAS_BUMPMAPS)
-	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
-	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
-	Frame_Set_Private(&frame, dpdu, dpdv, shadeN);
-#else*/
-	Frame_SetFromZ_Private(&frame, VLOAD3F(&hitPoint->shadeN.x));
-/*#endif*/
-
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
 
-	const float sideTest = dot(Frame_ToWorld_Private(&frame, eyeDir), VLOAD3F(&hitPoint->geometryN.x)) *
-		dot(Frame_ToWorld_Private(&frame, lightDir), VLOAD3F(&hitPoint->geometryN.x));
-	if (sideTest > 0.f) {
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Bump(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-				hitPoint, 1.f
-				MATERIALS_PARAM);
+	// Note: this is the same side test used by matte translucent material and
+	// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
+	// are not available here without bump mapping.
+	const float sideTest = CosTheta(lightDir) * CosTheta(eyeDir);
 
-		const float3 shadeNBase = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduBase = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvBase = VLOAD3F(&hitPoint->dpdv.x);
-
-		Frame frameBase;
-		Frame_Set_Private(&frameBase, dpduBase, dpdvBase, shadeNBase);
-
-		const float3 lightDirBase = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frame, lightDir));
-		const float3 eyeDirBase = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frame, eyeDir));
-#else*/
+	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		const float3 lightDirBase = lightDir;
 		const float3 eyeDirBase = eyeDir;
-/*#endif*/
 
 		const float3 baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
-
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		VSTORE3F(shadeN, &hitPoint->shadeN.x);
-		VSTORE3F(dpdu, &hitPoint->dpdu.x);
-		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif*/
 
 		// Back face: no coating
 		if (eyeDir.z <= 0.f)
@@ -189,35 +160,13 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		// assumes coating bxdf takes fresnel factor S into account
 
 		return coatingF + absorption * (WHITE - S) * baseF;
-	} else if (sideTest < 0.f) {
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Bump(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-				hitPoint, 1.f
-				MATERIALS_PARAM);
-
-		const float3 shadeNBase = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduBase = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvBase = VLOAD3F(&hitPoint->dpdv.x);
-
-		Frame frameBase;
-		Frame_Set_Private(&frameBase, dpduBase, dpdvBase, shadeNBase);
-
-		const float3 lightDirBase = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frame, lightDir));
-		const float3 eyeDirBase = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frame, eyeDir));
-#else*/
+	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		const float3 lightDirBase = lightDir;
 		const float3 eyeDirBase = eyeDir;
-/*#endif*/
 
 		// Transmission
 		const float3 baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
-
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		VSTORE3F(shadeN, &hitPoint->shadeN.x);
-		VSTORE3F(dpdu, &hitPoint->dpdu.x);
-		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif*/
 
 		float3 ks = Texture_Index<<CS_KS_TEXTURE_INDEX>>_EvaluateSpectrum(
 			&texs[<<CS_KS_TEXTURE_INDEX>>],
@@ -262,7 +211,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 #endif
 
 		// Coating fresnel factor
-		const float3 H = normalize((fixedDir.x + sampledDir.x,  fixedDir.y + sampledDir.y, fixedDir.z - sampledDir.z));
+		const float3 H = normalize(fixedDir + sampledDir);
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
 
 		// filter base layer, the square root is just a heuristic
@@ -280,16 +229,6 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
-	Frame frame;
-/*#if defined(PARAM_HAS_BUMPMAPS)
-	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
-	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
-	Frame_Set_Private(&frame, dpdu, dpdv, shadeN);
-#else*/
-	Frame_SetFromZ_Private(&frame, VLOAD3F(&hitPoint->shadeN.x));
-/*#endif*/
-
 	float3 ks = Texture_Index<<CS_KS_TEXTURE_INDEX>>_EvaluateSpectrum(
 			&texs[<<CS_KS_TEXTURE_INDEX>>],
 			hitPoint
@@ -336,23 +275,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 
 	float basePdf, coatingPdf;
 	float3 baseF, coatingF;
+
 	if (passThroughEvent < wBase) {
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Bump(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-				hitPoint, 1.f
-				MATERIALS_PARAM);
-
-		const float3 shadeNBase = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduBase = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvBase = VLOAD3F(&hitPoint->dpdv.x);
-
-		Frame frameBase;
-		Frame_Set_Private(&frameBase, dpduBase, dpdvBase, shadeNBase);
-
-		const float3 fixedDirBase = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frame, fixedDir));
-#else*/
 		const float3 fixedDirBase = fixedDir;
-/*#endif*/
 
 		// Sample base BSDF
 		baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Sample(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
@@ -362,19 +287,10 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 #endif
 				&basePdf, cosSampledDir, event, requestedEvent MATERIALS_PARAM);
 
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		VSTORE3F(shadeN, &hitPoint->shadeN.x);
-		VSTORE3F(dpdu, &hitPoint->dpdu.x);
-		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif*/
-
 		if (Spectrum_IsBlack(baseF))
 			return BLACK;
 
 		baseF *= basePdf;
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		*sampledDir = Frame_ToLocal_Private(&frame, Frame_ToWorld_Private(&frameBase, *sampledDir));
-#endif*/
 
 		// Don't add the coating scattering if the base sampled
 		// component is specular
@@ -398,34 +314,11 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 		coatingF *= coatingPdf;
 
 		// Evaluate base BSDF
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Bump(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-				hitPoint, 1.f
-				MATERIALS_PARAM);
-
-		const float3 shadeNBase = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduBase = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvBase = VLOAD3F(&hitPoint->dpdv.x);
-
-		Frame frameBase;
-		Frame_Set_Private(&frameBase, dpduBase, dpdvBase, shadeNBase);
-
-		const float3 lightDirBase = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frame, *sampledDir));
-		const float3 eyeDirBase = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frame, fixedDir));
-#else*/
 		const float3 lightDirBase = *sampledDir;
 		const float3 eyeDirBase = fixedDir;
-/*#endif*/
 
-		const float3 baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, &basePdf MATERIALS_PARAM);
-
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		VSTORE3F(shadeN, &hitPoint->shadeN.x);
-		VSTORE3F(dpdu, &hitPoint->dpdu.x);
-		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif*/
-
 		*event = GLOSSY | REFLECT;
 	}
 
@@ -449,10 +342,13 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	const float3 absorption = WHITE;
 #endif
 
-	const float sideTest = dot(Frame_ToWorld_Private(&frame, fixedDir), VLOAD3F(&hitPoint->geometryN.x)) *
-		dot(Frame_ToWorld_Private(&frame, *sampledDir), VLOAD3F(&hitPoint->geometryN.x));
-	if (sideTest > 0.f) {
+	// Note: this is the same side test used by matte translucent material and
+	// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
+	// are not available here without bump mapping.
+	const float sideTest = CosTheta(fixedDir) * CosTheta(*sampledDir);
+	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
+
 		if (!(fixedDir.z > 0.f)) {
 			// Back face reflection: no coating
 			return baseF / basePdf;
@@ -467,10 +363,10 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 			// coatingF already takes fresnel factor S into account
 			return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
 		}
-	} else if (sideTest < 0.f) {
+	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		const float3 H = normalize((float3)(fixedDir.x + (*sampledDir).x,  fixedDir.y + (*sampledDir).y, fixedDir.z - (*sampledDir).z));
+		const float3 H = normalize(fixedDir + (*sampledDir));
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
 
 		// filter base layer, the square root is just a heuristic

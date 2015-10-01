@@ -36,9 +36,9 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const float cosi = fabsf(localLightDir.z);
 	const float coso = fabsf(localEyeDir.z);
 
-	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
-
+	const Frame frame(hitPoint.GetFrame());
 	const float sideTest = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(localSampledDir), hitPoint.geometryN);
+
 	if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		*event = DIFFUSE | TRANSMIT;
@@ -232,7 +232,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			*event = GLOSSY | REFLECT;
 		}
 
-		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
+		const Frame frame(hitPoint.GetFrame());
 		const float sideTest = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN);
 		if (!(sideTest > DEFAULT_COS_EPSILON_STATIC))
 			return Spectrum();
