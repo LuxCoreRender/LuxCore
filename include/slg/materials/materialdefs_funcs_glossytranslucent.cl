@@ -1,4 +1,4 @@
-#line 2 "materialdefs_funcs_glossy2.cl"
+#line 2 "materialdefs_funcs_glossytranslucent.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -78,7 +78,8 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 		if (directPdfW)
 			*directPdfW = fabs(sampledDir.z) * (M_1_PI_F * .5f);
 
-		const float3 H = normalize(lightDir + eyeDir);
+		const float3 H = normalize((float3)(lightDir.x + eyeDir.x, lightDir.y + eyeDir.y,
+			lightDir.z - eyeDir.z));
 		const float u = fabs(dot(lightDir, H));
 		float3 ks = ksVal;
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)

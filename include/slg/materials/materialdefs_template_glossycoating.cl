@@ -71,6 +71,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 	const float sideTest = CosTheta(lightDir) * CosTheta(eyeDir);
 
 	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
+		// Reflection
+
 		const float3 lightDirBase = lightDir;
 		const float3 eyeDirBase = eyeDir;
 
@@ -211,7 +213,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 #endif
 
 		// Coating fresnel factor
-		const float3 H = normalize(fixedDir + sampledDir);
+		const float3 H = normalize((float3)(sampledDir.x + fixedDir.x, sampledDir.y + fixedDir.y,
+			sampledDir.z - fixedDir.z));
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
 
 		// filter base layer, the square root is just a heuristic
@@ -366,7 +369,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		const float3 H = normalize(fixedDir + (*sampledDir));
+		const float3 H = normalize((float3)((*sampledDir).x + fixedDir.x, (*sampledDir).y + fixedDir.y,
+			(*sampledDir).z - fixedDir.z));
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
 
 		// filter base layer, the square root is just a heuristic

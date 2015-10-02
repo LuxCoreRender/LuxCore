@@ -48,7 +48,8 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		if (reversePdfW)
 			*reversePdfW = fabsf(localFixedDir.z) * (INV_PI * .5f);
 
-		const Vector H(Normalize(localLightDir + localEyeDir));
+		const Vector H(Normalize(Vector(localLightDir.x + localEyeDir.x, localLightDir.y + localEyeDir.y,
+			localLightDir.z - localEyeDir.z)));
 		const float u = AbsDot(localLightDir, H);
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 		float i = index->GetFloatValue(hitPoint);
