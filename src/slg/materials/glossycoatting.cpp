@@ -172,10 +172,11 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 		// Coating fresnel factor
-		const Vector H(Normalize(localLightDir + localLightDir));
+		const Vector H(Normalize(Vector(localLightDir.x + localEyeDir.x, localLightDir.y + localEyeDir.y,
+			localLightDir.z - localEyeDir.z)));
 		const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localEyeDir, H));
 
-		// filter base layer, the square root is just a heuristic
+		// Filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor
 		// of 1-S like a reflection
 		return absorption * Sqrt(Spectrum(1.f) - S) * baseF;
@@ -286,10 +287,11 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		const Vector H(Normalize(localFixedDir + *localSampledDir));
+		const Vector H(Normalize(Vector(localFixedDir.x + localSampledDir->x, localFixedDir.y + localSampledDir->y,
+			localFixedDir.z - localSampledDir->z)));
 		const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localFixedDir, H));
 
-		// filter base layer, the square root is just a heuristic
+		// Filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor
 		// of 1-S like a reflection
 		result = absorption * Sqrt(Spectrum(1.f) - S) * baseF;

@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_materialdefs_funcs_glossytranslucent = 
-"#line 2 \"materialdefs_funcs_glossy2.cl\"\n"
+"#line 2 \"materialdefs_funcs_glossytranslucent.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
@@ -81,7 +81,8 @@ std::string KernelSource_materialdefs_funcs_glossytranslucent =
 "		if (directPdfW)\n"
 "			*directPdfW = fabs(sampledDir.z) * (M_1_PI_F * .5f);\n"
 "\n"
-"		const float3 H = normalize(lightDir + eyeDir);\n"
+"		const float3 H = normalize((float3)(lightDir.x + eyeDir.x, lightDir.y + eyeDir.y,\n"
+"			lightDir.z - eyeDir.z));\n"
 "		const float u = fabs(dot(lightDir, H));\n"
 "		float3 ks = ksVal;\n"
 "#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)\n"
