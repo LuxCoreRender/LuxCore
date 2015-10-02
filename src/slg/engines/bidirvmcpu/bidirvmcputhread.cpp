@@ -59,9 +59,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		engine->maxEyePathDepth * sampleEyeStepSize; // For each eye vertex
 
 	for (u_int i = 0; i < samplers.size(); ++i) {
-		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
-				threadIndex, engine->renderThreads.size(),
-				engine->samplerSharedData);
+		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
+				threadIndex, engine->renderThreads.size(), engine->samplerSharedData);
 		sampler->RequestSamples(sampleSize);
 
 		samplers[i] = sampler;

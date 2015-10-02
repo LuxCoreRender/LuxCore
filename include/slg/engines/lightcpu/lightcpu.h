@@ -23,6 +23,7 @@
 #include "slg/renderengine.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filmsamplesplatter.h"
 #include "slg/bsdf/bsdf.h"
 
 namespace slg {
@@ -63,6 +64,7 @@ private:
 class LightCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	LightCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~LightCPURenderEngine();
 
 	RenderEngineType GetEngineType() const { return LIGHTCPU; }
 
@@ -76,12 +78,15 @@ public:
 
 protected:
 	virtual void StartLockLess();
+	virtual void StopLockLess();
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new LightCPURenderThread(this, index, device);
 	}
+
+	FilmSampleSplatter *sampleSplatter;
 };
 
 }

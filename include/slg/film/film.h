@@ -41,7 +41,6 @@
 #include "luxrays/utils/properties.h"
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"
-#include "slg/film/filters/filter.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/utils/convtest/convtest.h"
@@ -172,9 +171,6 @@ public:
 	}
 	bool IsOverlappedScreenBufferUpdate() const { return enabledOverlappedScreenBufferUpdate; }
 
-	void SetFilter(Filter *flt);
-	const Filter *GetFilter() const { return filter; }
-
 	// Note: used mostly for RT modes
 	void SetRGBTonemapUpdateFlag(const bool v) { rgbTonemapUpdate = v; }
 	void SetImagePipeline(ImagePipeline *ip) {
@@ -189,7 +185,6 @@ public:
 		byMaterialIDs = film.byMaterialIDs;
 		radianceGroupCount = film.radianceGroupCount;
 		radianceChannelScales = film.radianceChannelScales;
-		SetFilter(film.GetFilter() ? film.GetFilter()->Clone() : NULL);
 		SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
 		SetImagePipeline(film.GetImagePipeline()->Copy());
 		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
@@ -229,6 +224,9 @@ public:
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
 	}
 
+	bool HasDataChannel() { return hasDataChannel; }
+	bool HasComposingChannel() { return hasComposingChannel; }
+
 	void ExecuteImagePipeline();
 
 	//--------------------------------------------------------------------------
@@ -261,7 +259,10 @@ public:
 
 	void AddSample(const u_int x, const u_int y,
 		const SampleResult &sampleResult, const float weight = 1.f);
-	void SplatSample(const SampleResult &sampleResult, const float weight = 1.f);
+	void AddSampleResultColor(const u_int x, const u_int y,
+		const SampleResult &sampleResult, const float weight);
+	void AddSampleResultData(const u_int x, const u_int y,
+		const SampleResult &sampleResult);
 
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
@@ -302,11 +303,6 @@ private:
 		GetPixelFromMergedSampleBuffers(x + y * width, c);
 	}
 
-	void AddSampleResultColor(const u_int x, const u_int y,
-		const SampleResult &sampleResult, const float weight);
-	void AddSampleResultData(const u_int x, const u_int y,
-		const SampleResult &sampleResult);
-
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
 	std::vector<u_int> maskMaterialIDs, byMaterialIDs;
@@ -318,8 +314,6 @@ private:
 
 	ImagePipeline *imagePipeline;
 	ConvergenceTest *convTest;
-	Filter *filter;
-	FilterLUTs *filterLUTs;
 
 	std::vector<RadianceChannelScale> radianceChannelScales;
 
@@ -336,7 +330,7 @@ template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::bina
 		
 }
 
-BOOST_CLASS_VERSION(slg::Film, 3)
+BOOST_CLASS_VERSION(slg::Film, 4)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 #endif	/* _SLG_FILM_H */

@@ -24,6 +24,7 @@
 
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filmsamplesplatter.h"
 #include "slg/film/sampleresult.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/volumes/volume.h"
@@ -127,6 +128,9 @@ public:
 
 protected:
 	virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	FilmSampleSplatter *sampleSplatter;
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {

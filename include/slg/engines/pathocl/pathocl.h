@@ -31,6 +31,7 @@
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/engines/pathocl/pathocl_datatypes.h"
+#include "slg/film/filters/filter.h"
 
 namespace slg {
 
@@ -136,11 +137,12 @@ protected:
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 
+	Filter *pixelFilter;
 	float *pixelFilterDistribution;
 	u_int pixelFilterDistributionSize;
 
-	slg::ocl::Sampler *sampler;
-	slg::ocl::Filter *filter;
+	slg::ocl::Sampler *oclSampler;
+	slg::ocl::Filter *oclPixelFilter;
 };
 
 }

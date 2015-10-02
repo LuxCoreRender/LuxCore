@@ -42,7 +42,8 @@ SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rnd) : 
 //------------------------------------------------------------------------------
 
 SobolSampler::SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
-		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm),
+		const FilmSampleSplatter *flmSplatter,
+		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
 		sharedData(samplerSharedData), directions(NULL) {
 }
 

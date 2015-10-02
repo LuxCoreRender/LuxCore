@@ -26,7 +26,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		CPUNoTileRenderEngine(rcfg, flm, flmMutex) {
+		CPUNoTileRenderEngine(rcfg, flm, flmMutex), sampleSplatter(NULL) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("BiDir render engine doesn't support stereo camera");
 
@@ -55,5 +55,15 @@ void BiDirCPURenderEngine::StartLockLess() {
 	rrImportanceCap = cfg.Get(Property("light.russianroulette.cap")(
 			cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>())).Get<float>();
 
+	delete sampleSplatter;
+	sampleSplatter = new FilmSampleSplatter(pixelFilter);
+
 	CPUNoTileRenderEngine::StartLockLess();
+}
+
+void BiDirCPURenderEngine::StopLockLess() {
+	CPUNoTileRenderEngine::StopLockLess();
+
+	delete sampleSplatter;
+	sampleSplatter = NULL;
 }
