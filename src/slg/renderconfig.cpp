@@ -360,7 +360,7 @@ void RenderConfig::SetRadianceGroupsScale(Film &film, const Properties &props) {
 	}
 }
 
-Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
+Filter *RenderConfig::AllocPixelFilter() const {
 	//--------------------------------------------------------------------------
 	// Create the filter
 	//--------------------------------------------------------------------------
@@ -401,7 +401,11 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 		default:
 			throw runtime_error("Unknown filter type: " + boost::lexical_cast<string>(filterType));
 	}
+	
+	return filter.release();
+}
 
+Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	//--------------------------------------------------------------------------
 	// Create the image pipeline
 	//--------------------------------------------------------------------------
@@ -417,7 +421,6 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 
 	SLG_LOG("Film resolution: " << filmFullWidth << "x" << filmFullHeight);
 	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight));
-	film->SetFilter(filter.release());
 	film->SetImagePipeline(imagePipeline.release());
 
 	// For compatibility with the past
@@ -638,22 +641,23 @@ SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen)
 	}
 }
 
-Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
+Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
 		const u_int threadIndex, const u_int threadCount, SamplerSharedData *sharedData) const {
 	const SamplerType samplerType = Sampler::String2SamplerType(GetProperty("sampler.type").Get<string>());
 	switch (samplerType) {
 		case RANDOM:
-			return new RandomSampler(rndGen, film);
+			return new RandomSampler(rndGen, film, flmSplatter);
 		case METROPOLIS: {
 			const float rate = GetProperty("sampler.metropolis.largesteprate").Get<float>();
 			const float reject = GetProperty("sampler.metropolis.maxconsecutivereject").Get<float>();
 			const float mutationrate = GetProperty("sampler.metropolis.imagemutationrate").Get<float>();
 
-			return new MetropolisSampler(rndGen, film, reject, rate, mutationrate,
+			return new MetropolisSampler(rndGen, film, flmSplatter,
+					reject, rate, mutationrate,
 					(MetropolisSamplerSharedData *)sharedData);
 		}
 		case SOBOL:
-			return new SobolSampler(rndGen, film, (SobolSamplerSharedData *)sharedData);
+			return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
 		default:
 			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
 	}

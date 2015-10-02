@@ -16,48 +16,35 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/lexical_cast.hpp>
+#ifndef _SLG_FILMSAMPLESPLATTER_H
+#define	_SLG_FILMSAMPLESPLATTER_H
 
-#include "luxrays/core/color/color.h"
-#include "slg/samplers/sampler.h"
+#include "slg/film/film.h"
+#include "slg/film/filters/filter.h"
 
-using namespace luxrays;
-using namespace slg;
+namespace slg {
 
 //------------------------------------------------------------------------------
-// Sampler
+// FilmSampleSplatter
+//
+// Used to splat samples on a Film using PBRT-like pixel filtering.
 //------------------------------------------------------------------------------
 
-SamplerType Sampler::String2SamplerType(const std::string &type) {
-	if ((type.compare("INLINED_RANDOM") == 0) ||
-			(type.compare("RANDOM") == 0))
-		return RANDOM;
-	if (type.compare("METROPOLIS") == 0)
-		return METROPOLIS;
-	if (type.compare("SOBOL") == 0)
-		return SOBOL;
+class FilmSampleSplatter {
+public:
+	FilmSampleSplatter(const Filter *flt);
+	~FilmSampleSplatter();
 
-	throw std::runtime_error("Unknown sampler type: " + type);
+	const Filter *GetFilter() const { return filter; }
+
+	// This method must be thread-safe.
+	void SplatSample(Film &film, const SampleResult &sampleResult, const float weight) const;
+
+private:
+	const Filter *filter;
+	FilterLUTs *filterLUTs;
+};
+		
 }
 
-const std::string Sampler::SamplerType2String(const SamplerType type) {
-	switch (type) {
-		case RANDOM:
-			return "RANDOM";
-		case METROPOLIS:
-			return "METROPOLIS";
-		case SOBOL:
-			return "SOBOL";
-		default:
-			throw std::runtime_error("Unknown sampler type: " + boost::lexical_cast<std::string>(type));
-	}
-}
-
-void Sampler::AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight) const {
-	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
-		if (sr->useFilmSplat)
-			filmSplatter->SplatSample(*film, *sr, weight);
-		else
-			film->AddSample(sr->pixelX, sr->pixelY, *sr, weight);
-	}
-}
+#endif	/* _SLG_FILMSAMPLESPLATTER_H */

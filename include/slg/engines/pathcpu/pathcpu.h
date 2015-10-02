@@ -23,6 +23,7 @@
 #include "slg/renderengine.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filmsamplesplatter.h"
 #include "slg/bsdf/bsdf.h"
 
 namespace slg {
@@ -89,6 +90,7 @@ protected:
 	virtual void StopLockLess();
 
 	FilterDistribution *pixelFilterDistribution;
+	FilmSampleSplatter *sampleSplatter;
 
 private:
 	void InitPixelFilterDistribution();

@@ -25,6 +25,7 @@
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
 #include "slg/film/film.h"
+#include "slg/film/filmsamplesplatter.h"
 #include "slg/film/sampleresult.h"
 
 namespace slg {
@@ -61,7 +62,9 @@ typedef enum {
 
 class Sampler {
 public:
-	Sampler(luxrays::RandomGenerator *rnd, Film *flm) : rndGen(rnd), film(flm) { }
+	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const FilmSampleSplatter *flmSplatter) : rndGen(rnd), film(flm),
+			filmSplatter(flmSplatter) { }
 	virtual ~Sampler() { }
 
 	virtual SamplerType GetType() const = 0;
@@ -79,6 +82,7 @@ protected:
 
 	luxrays::RandomGenerator *rndGen;
 	Film *film;
+	const FilmSampleSplatter *filmSplatter;
 };
 
 }

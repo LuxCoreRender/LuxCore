@@ -38,10 +38,10 @@ MetropolisSamplerSharedData::MetropolisSamplerSharedData() : SamplerSharedData()
 // Metropolis sampler
 //------------------------------------------------------------------------------
 
-MetropolisSampler::MetropolisSampler(RandomGenerator *rnd,
-		Film *flm, const u_int maxRej,
+MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm,
+		const FilmSampleSplatter *flmSplatter, const u_int maxRej,
 		const float pLarge, const float imgRange,
-		MetropolisSamplerSharedData *samplerSharedData) : Sampler(rnd, flm),
+		MetropolisSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
 		sharedData(samplerSharedData),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),

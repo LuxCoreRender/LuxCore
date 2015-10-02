@@ -26,6 +26,7 @@
 #include "slg/slg.h"
 #include "slg/samplers/sampler.h"
 #include "slg/scene/scene.h"
+#include "slg/film/filters/filter.h"
 
 namespace slg {
 
@@ -42,11 +43,14 @@ public:
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
 
+	Filter *AllocPixelFilter() const;
 	Film *AllocFilm(FilmOutputs &filmOutputs) const;
 
 	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
-		const u_int threadIndex, const u_int threadCount, SamplerSharedData *sharedData) const;
+		const FilmSampleSplatter *flmSplatter,
+		const u_int threadIndex, const u_int threadCount,
+		SamplerSharedData *sharedData) const;
 
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 

@@ -124,6 +124,7 @@ protected:
 	vector<luxrays::IntersectionDevice *> intersectionDevices;
 
 	const RenderConfig *renderConfig;
+	Filter *pixelFilter;
 	Film *film;
 	boost::mutex *filmMutex;
 

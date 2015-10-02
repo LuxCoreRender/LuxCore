@@ -23,6 +23,7 @@
 #include "slg/renderengine.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filters/filter.h"
 #include "slg/bsdf/bsdf.h"
 
 namespace slg {

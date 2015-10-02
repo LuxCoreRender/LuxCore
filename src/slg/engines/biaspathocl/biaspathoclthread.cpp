@@ -98,7 +98,7 @@ void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 
-	const Filter *filter = engine->film->GetFilter();
+	const Filter *filter = engine->pixelFilter;
 	const float filterWidthX = filter ? filter->xWidth : 1.f;
 	const float filterWidthY = filter ? filter->yWidth : 1.f;
 

@@ -35,7 +35,8 @@ namespace slg {
 
 class RandomSampler : public Sampler {
 public:
-	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm) : Sampler(rnd, flm) { }
+	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter) { }
 	virtual ~RandomSampler() { }
 
 	virtual SamplerType GetType() const { return RANDOM; }

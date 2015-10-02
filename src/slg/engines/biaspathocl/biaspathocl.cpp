@@ -96,8 +96,7 @@ PathOCLBaseRenderThread *BiasPathOCLRenderEngine::CreateOCLThread(const u_int in
 void BiasPathOCLRenderEngine::InitPixelFilterDistribution() {
 	// Compile sample distribution
 	delete[] pixelFilterDistribution;
-	const Filter *filter = film->GetFilter();
-	const FilterDistribution filterDistribution(filter, 64);
+	const FilterDistribution filterDistribution(pixelFilter, 64);
 	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
 			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }

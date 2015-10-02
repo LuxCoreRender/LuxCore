@@ -88,7 +88,7 @@ void BiasPathCPURenderEngine::PrintSamplesInfo() const {
 void BiasPathCPURenderEngine::InitPixelFilterDistribution() {
 	// Compile sample distribution
 	delete pixelFilterDistribution;
-	pixelFilterDistribution = new FilterDistribution(film->GetFilter(), 64);
+	pixelFilterDistribution = new FilterDistribution(pixelFilter, 64);
 }
 
 void BiasPathCPURenderEngine::StartLockLess() {

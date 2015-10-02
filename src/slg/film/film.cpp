@@ -31,7 +31,6 @@ OIIO_NAMESPACE_USING
 #include "luxrays/utils/properties.h"
 #include "slg/film/film.h"
 #include "slg/film/sampleresult.h"
-#include "slg/film/filters/gaussian.h"
 #include "slg/editaction.h"
 #include "slg/utils/varianceclamping.h"
 #include "luxrays/core/color/spds/blackbodyspd.h"
@@ -125,9 +124,6 @@ Film::Film(const u_int w, const u_int h) {
 	rgbTonemapUpdate = true;
 
 	imagePipeline = NULL;
-	filter = NULL;
-	filterLUTs = NULL;
-	SetFilter(new GaussianFilter(1.5f, 1.5f, 2.f));
 }
 
 Film::~Film() {
@@ -161,9 +157,6 @@ Film::~Film() {
 	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
 		delete channel_BY_MATERIAL_IDs[i];
 	delete channel_IRRADIANCE;
-
-	delete filterLUTs;
-	delete filter;
 }
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
@@ -375,18 +368,6 @@ void Film::Resize(const u_int w, const u_int h) {
 	statsTotalSampleCount = 0.0;
 	statsAvgSampleSec = 0.0;
 	statsStartSampleTime = WallClockTime();
-}
-
-void Film::SetFilter(Filter *flt) {
-	delete filterLUTs;
-	filterLUTs = NULL;
-	delete filter;
-	filter = flt;
-
-	if (filter) {
-		const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
-		filterLUTs = new FilterLUTs(*filter, size);
-	}
 }
 
 void Film::SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale) {
@@ -1693,64 +1674,6 @@ void Film::AddSample(const u_int x, const u_int y,
 		AddSampleResultData(x, y, sampleResult);
 }
 
-void Film::SplatSample(const SampleResult &sampleResult, const float weight) {
-	if (!filter) {
-		const int x = Floor2Int(sampleResult.filmX);
-		const int y = Floor2Int(sampleResult.filmY);
-
-		if ((x >= 0) && (x < (int)width) && (y >= 0) && (y < (int)height)) {
-			AddSampleResultColor(x, y, sampleResult, weight);
-			if (hasDataChannel)
-				AddSampleResultData(x, y, sampleResult);
-		}
-	} else {
-		//----------------------------------------------------------------------
-		// Add all data related information (not filtered)
-		//----------------------------------------------------------------------
-
-		if (hasDataChannel) {
-			const int x = Floor2Int(sampleResult.filmX);
-			const int y = Floor2Int(sampleResult.filmY);
-
-			if ((x >= 0.f) && (x < (int)width) && (y >= 0.f) && (y < (int)height))
-				AddSampleResultData(x, y, sampleResult);
-		}
-
-		//----------------------------------------------------------------------
-		// Add all color related information (filtered)
-		//----------------------------------------------------------------------
-
-		// Compute sample's raster extent
-		const float dImageX = sampleResult.filmX - .5f;
-		const float dImageY = sampleResult.filmY - .5f;
-		const FilterLUT *filterLUT = filterLUTs->GetLUT(dImageX - floorf(sampleResult.filmX), dImageY - floorf(sampleResult.filmY));
-		const float *lut = filterLUT->GetLUT();
-
-		const int x0 = Floor2Int(dImageX - filter->xWidth * .5f + .5f);
-		const int x1 = x0 + filterLUT->GetWidth();
-		const int y0 = Floor2Int(dImageY - filter->yWidth * .5f + .5f);
-		const int y1 = y0 + filterLUT->GetHeight();
-
-		for (int iy = y0; iy < y1; ++iy) {
-			if (iy < 0) {
-				lut += filterLUT->GetWidth();
-				continue;
-			} else if(iy >= (int)height)
-				break;
-
-			for (int ix = x0; ix < x1; ++ix) {
-				const float filterWeight = *lut++;
-
-				if ((ix < 0) || (ix >= (int)width))
-					continue;
-
-				const float filteredWeight = weight * filterWeight;
-				AddSampleResultColor(ix, iy, sampleResult, filteredWeight);
-			}
-		}
-	}
-}
-
 void Film::ResetConvergenceTest() {
 	if (convTest)
 		convTest->Reset();
@@ -1900,13 +1823,6 @@ template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::bina
 
 	ar >> imagePipeline;
 	ar >> convTest;
-	ar >> filter;
-	// filterLUTs is re-built at load time
-	if (filter) {
-		const u_int size = Max<u_int>(4, Max(filter->xWidth, filter->yWidth) + 1);
-		filterLUTs = new FilterLUTs(*filter, size);
-	} else
-		filterLUTs = NULL;
 
 	ar >> radianceChannelScales;
 
@@ -1954,8 +1870,6 @@ template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::bina
 
 	ar << imagePipeline;
 	ar << convTest;
-	ar << filter;
-	// filterLUTs is re-built at load time
 	
 	ar << radianceChannelScales;
 

@@ -52,7 +52,8 @@ public:
 
 class MetropolisSampler : public Sampler {
 public:
-	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film, const u_int maxRej,
+	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film,
+			const FilmSampleSplatter *flmSplatter, const u_int maxRej,
 			const float pLarge, const float imgRange,
 			MetropolisSamplerSharedData *samplerSharedData);
 	virtual ~MetropolisSampler();

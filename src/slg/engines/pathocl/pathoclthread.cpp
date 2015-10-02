@@ -115,7 +115,7 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f"
 			;
 
-	const slg::ocl::Filter *filter = engine->filter;
+	const slg::ocl::Filter *filter = engine->oclPixelFilter;
 	switch (filter->type) {
 		case slg::ocl::FILTER_NONE:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=0"
@@ -165,7 +165,7 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 	if (engine->usePixelAtomics)
 		ss << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	const slg::ocl::Sampler *sampler = engine->sampler;
+	const slg::ocl::Sampler *sampler = engine->oclSampler;
 	switch (sampler->type) {
 		case slg::ocl::RANDOM:
 			ss << " -D PARAM_SAMPLER_TYPE=0";
@@ -196,7 +196,7 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 string PathOCLRenderThread::AdditionalKernelDefinitions() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 
-	if (engine->sampler->type == slg::ocl::SOBOL) {
+	if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		// Generate the Sobol vectors
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
 		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
@@ -331,7 +331,7 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 
 	const size_t sampleResultSize = GetOpenCLSampleResultSize() +
 		// pixelX and pixelY fields
-		((engine->useFastPixelFilter && (engine->filter->type != slg::ocl::FILTER_NONE)) ?
+		((engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE)) ?
 			sizeof(u_int) * 2 : 0);
 
 	//--------------------------------------------------------------------------
@@ -340,14 +340,14 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	size_t sampleSize = sampleResultSize;
 
 	// Add Sample memory size
-	if (engine->sampler->type == slg::ocl::RANDOM) {
+	if (engine->oclSampler->type == slg::ocl::RANDOM) {
 		// Nothing to add
-	} else if (engine->sampler->type == slg::ocl::METROPOLIS) {
+	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
-	} else if (engine->sampler->type == slg::ocl::SOBOL) {
+	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		sampleSize += sizeof(u_int);
 	} else
-		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->sampler->type));
+		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
 	AllocOCLBufferRW(&samplesBuff, sampleSize * taskCount, "Sample");
@@ -377,21 +377,21 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->maxPathDepth;
 
 	size_t uDataSize;
-	if ((engine->sampler->type == slg::ocl::RANDOM) ||
-			(engine->sampler->type == slg::ocl::SOBOL)) {
+	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
+			(engine->oclSampler->type == slg::ocl::SOBOL)) {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		uDataSize = sizeof(float) * 2;
 		
-		if (engine->sampler->type == slg::ocl::SOBOL) {
+		if (engine->oclSampler->type == slg::ocl::SOBOL) {
 			// Limit the number of dimensions where I use Sobol sequence (after,
 			// I switch to Random sampler.
 			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, engine->maxPathDepth);
 		}
-	} else if (engine->sampler->type == slg::ocl::METROPOLIS) {
+	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else
-		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->sampler->type));
+		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
@@ -454,7 +454,7 @@ void PathOCLRenderThread::AdditionalInit() {
 	// Allocate GPU pixel filter distribution
 	//--------------------------------------------------------------------------
 
-	if (engine->useFastPixelFilter && (engine->filter->type != slg::ocl::FILTER_NONE)) {
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE)) {
 		AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
 				sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 	}
@@ -469,7 +469,7 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
 	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
-	if (engine->useFastPixelFilter && (engine->filter->type != slg::ocl::FILTER_NONE))
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
 		advancePathsKernel->setArg(argIndex++, *pixelFilterBuff);
 	advancePathsKernel->setArg(argIndex++, *samplesBuff);
 	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
@@ -573,7 +573,7 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	initKernel->setArg(argIndex++, *sampleDataBuff);
 	if (cscene->HasVolumes())
 		initKernel->setArg(argIndex++, *pathVolInfosBuff);
-	if (engine->useFastPixelFilter && (engine->filter->type != slg::ocl::FILTER_NONE))
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
 		initKernel->setArg(argIndex++, *pixelFilterBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
 	initKernel->setArg(argIndex++, *cameraBuff);

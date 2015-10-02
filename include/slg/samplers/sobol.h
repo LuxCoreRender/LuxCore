@@ -60,6 +60,7 @@ extern void SobolGenerateDirectionVectors(u_int *vectors, const u_int dimensions
 class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const FilmSampleSplatter *flmSplatter,
 			SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 

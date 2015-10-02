@@ -44,6 +44,7 @@ using namespace slg;
 RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	seedBaseGenerator(131) {
 	renderConfig = cfg;
+	pixelFilter = NULL;
 	film = flm;
 	filmMutex = flmMutex;
 	started = false;
@@ -71,6 +72,9 @@ RenderEngine::~RenderEngine() {
 		Stop();
 
 	delete ctx;
+
+	delete pixelFilter;
+	pixelFilter = NULL;
 }
 
 void RenderEngine::Start() {
@@ -78,6 +82,9 @@ void RenderEngine::Start() {
 
 	assert (!started);
 	started = true;
+
+	delete pixelFilter;
+	pixelFilter = renderConfig->AllocPixelFilter();
 
 	const float epsilonMin = renderConfig->cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN)).Get<float>();
 	MachineEpsilon::SetMin(epsilonMin);
@@ -112,6 +119,9 @@ void RenderEngine::Stop() {
 	ctx->Stop();
 
 	UpdateFilmLockLess();
+
+	delete pixelFilter;
+	pixelFilter = NULL;
 }
 
 void RenderEngine::BeginSceneEdit() {
@@ -554,9 +564,6 @@ void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm)->RemoveChannel(Film::RAYCOUNT);
 	(*tileFilm)->RemoveChannel(Film::BY_MATERIAL_ID);
 	(*tileFilm)->RemoveChannel(Film::IRRADIANCE);
-
-	// Disable any kind of pixel filter
-	(*tileFilm)->SetFilter(NULL);
 
 	// Build an image pipeline with only an auto-linear tone mapping and
 	// gamma correction.

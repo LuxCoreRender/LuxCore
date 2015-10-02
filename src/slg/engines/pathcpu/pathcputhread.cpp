@@ -213,9 +213,8 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int filmHeight = threadFilm->GetHeight();
 
 	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm,
-			threadIndex, engine->renderThreads.size(),
-				engine->samplerSharedData);
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, engine->sampleSplatter,
+			threadIndex, engine->renderThreads.size(), engine->samplerSharedData);
 	const u_int sampleBootSize = 5;
 	const u_int sampleStepSize = 9;
 	const u_int sampleSize = 
