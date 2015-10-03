@@ -373,7 +373,7 @@ void timerFunc(int value) {
 	// Check if periodic save is enabled
 	if (session->NeedPeriodicFilmSave()) {
 		// Time to save the image and film
-		session->GetFilm().Save();
+		session->GetFilm().SaveOutputs();
 	}
 
 	glutPostRedisplay();
@@ -404,7 +404,7 @@ static void SetRenderingEngineType(const string &engineType) {
 void keyFunc(unsigned char key, int x, int y) {
 	switch (key) {
 		case 'p': {
-			session->GetFilm().Save();
+			session->GetFilm().SaveOutputs();
 			break;
 		}
 		case 27: { // Escape key

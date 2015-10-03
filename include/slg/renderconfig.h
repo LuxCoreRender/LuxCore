@@ -26,7 +26,6 @@
 #include "slg/slg.h"
 #include "slg/samplers/sampler.h"
 #include "slg/scene/scene.h"
-#include "slg/film/filters/filter.h"
 
 namespace slg {
 
@@ -54,8 +53,6 @@ public:
 
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
-	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &prop);
-	static void SetRadianceGroupsScale(Film &film, const luxrays::Properties &props);
 	static const luxrays::Properties &GetDefaultProperties();
 
 	luxrays::Properties cfg;

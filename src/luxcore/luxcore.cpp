@@ -151,66 +151,113 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 // Film
 //------------------------------------------------------------------------------
 
-Film::Film(const RenderSession &session) : renderSession(session) {
+Film::Film(const std::string &fileName) : renderSession(NULL) {
+	standAloneFilm = slg::Film::LoadSerialized(fileName);
+}
+
+Film::Film(const RenderSession &session) : renderSession(&session),
+		standAloneFilm(NULL) {
 }
 
 Film::~Film() {
+	delete standAloneFilm;
+}
+
+
+slg::Film *Film::GetSLGFilm() const {
+	if (renderSession)
+		return renderSession->renderSession->film;
+	else
+		return standAloneFilm;
 }
 
 u_int Film::GetWidth() const {
-	return renderSession.renderSession->film->GetWidth();
+	return GetSLGFilm()->GetWidth();
 }
 
 u_int Film::GetHeight() const {
-	return renderSession.renderSession->film->GetHeight();
+	return GetSLGFilm()->GetHeight();
 }
 
-void Film::Save() const {
-	renderSession.renderSession->SaveFilm();
+void Film::SaveOutputs() const {
+	if (renderSession)
+		renderSession->renderSession->SaveFilmOutputs();
+	else
+		throw runtime_error("Film::SaveOutputs() can not be used with a stand alone Film");
+}
+
+void Film::SaveOutput(const std::string &fileName, const FilmOutputType type, const Properties &props) const {
+	GetSLGFilm()->Output(fileName, (slg::FilmOutputs::FilmOutputType)type, &props);
+}
+
+void Film::SaveFilm(const string &fileName) const {
+	if (renderSession)
+		renderSession->renderSession->SaveFilm(fileName);
+	else
+		slg::Film::SaveSerialized(fileName, *standAloneFilm);
 }
 
 double Film::GetTotalSampleCount() const {
-	return renderSession.renderSession->film->GetTotalSampleCount(); 
+	return GetSLGFilm()->GetTotalSampleCount(); 
 }
 
 bool Film::HasOutput(const FilmOutputType type) const {
-	return renderSession.renderSession->film->HasOutput((slg::FilmOutputs::FilmOutputType)type);
+	return GetSLGFilm()->HasOutput((slg::FilmOutputs::FilmOutputType)type);
 }
 
 size_t Film::GetOutputSize(const FilmOutputType type) const {
-	return renderSession.renderSession->film->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
+	return GetSLGFilm()->GetOutputSize((slg::FilmOutputs::FilmOutputType)type);
 }
 
 u_int Film::GetRadianceGroupCount() const {
-	return renderSession.renderSession->film->GetRadianceGroupCount();
+	return GetSLGFilm()->GetRadianceGroupCount();
 }
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index) {
-	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-	renderSession.renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		renderSession->renderSession->film->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+	} else
+		standAloneFilm->GetOutput<float>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
 template<> void Film::GetOutput<u_int>(const FilmOutputType type, u_int *buffer, const u_int index) {
-	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-	renderSession.renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+		renderSession->renderSession->film->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
+	} else
+		standAloneFilm->GetOutput<u_int>((slg::FilmOutputs::FilmOutputType)type, buffer, index);
 }
 
 u_int Film::GetChannelCount(const FilmChannelType type) const {
-	return renderSession.renderSession->film->GetChannelCount((slg::Film::FilmChannelType)type);
+	return GetSLGFilm()->GetChannelCount((slg::Film::FilmChannelType)type);
 }
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index) {
-	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-	return renderSession.renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type, index);
+		return renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type, index);
+	} else
+		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type, index);
 }
 
 template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index) {
-	boost::unique_lock<boost::mutex> lock(renderSession.renderSession->filmMutex);
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
 
-	return renderSession.renderSession->film->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
+		return renderSession->renderSession->film->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
+	} else
+		return standAloneFilm->GetChannel<u_int>((slg::Film::FilmChannelType)type, index);
+}
+
+void Film::Parse(const luxrays::Properties &props) {
+	if (renderSession)
+		throw runtime_error("Film::Parse() can be used only with a stand alone Film");
+	else
+		standAloneFilm->Parse(props);
 }
 
 //------------------------------------------------------------------------------

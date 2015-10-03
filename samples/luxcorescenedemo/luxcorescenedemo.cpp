@@ -166,7 +166,7 @@ static void DoRendering(RenderSession *session) {
 	}
 
 	// Save the rendered image
-	session->GetFilm().Save();
+	session->GetFilm().SaveOutputs();
 }
 
 int main(int argc, char *argv[]) {

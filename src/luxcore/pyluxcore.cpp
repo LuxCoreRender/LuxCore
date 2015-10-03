@@ -1023,16 +1023,20 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("IRRADIANCE", Film::IRRADIANCE)
 	;
 
-    class_<Film>("Film", no_init)
+    class_<Film>("Film", init<string>())
 		.def("GetWidth", &Film::GetWidth)
 		.def("GetHeight", &Film::GetHeight)
-		.def("Save", &Film::Save)
+		.def("Save", &Film::SaveOutputs) // Deprecated
+		.def("SaveOutputs", &Film::SaveOutputs)
+		.def("SaveOutput", &Film::SaveOutput)
+		.def("SaveFilm", &Film::SaveFilm)
 		.def("GetRadianceGroupCount", &Film::GetRadianceGroupCount)
 		.def("GetOutputSize", &Film::GetOutputSize)
 		.def("GetOutputFloat", &Film_GetOutputFloat1)
 		.def("GetOutputFloat", &Film_GetOutputFloat2)
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
+		.def("Parse", &Film::Parse)
     ;
 
 	//--------------------------------------------------------------------------

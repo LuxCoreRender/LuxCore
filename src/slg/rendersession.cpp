@@ -118,7 +118,29 @@ bool RenderSession::NeedPeriodicFilmSave() {
 		return false;
 }
 
-void RenderSession::SaveFilm() {
+void RenderSession::SaveFilm(const string &fileName) {
+	assert (started);
+
+	// Ask the RenderEngine to update the film
+	renderEngine->UpdateFilm();
+
+	// renderEngine->UpdateFilm() uses the film lock on its own
+	boost::unique_lock<boost::mutex> lock(filmMutex);
+
+	// Serialize the film
+	ofstream outFile;
+	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
+
+	outFile.open(fileName.c_str());
+
+	boost::archive::binary_oarchive outArchive(outFile);
+
+	outArchive << film;
+}
+
+void RenderSession::SaveFilmOutputs() {
+	assert (started);
+
 	// Ask the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 
@@ -132,19 +154,14 @@ void RenderSession::SaveFilm() {
 void RenderSession::Parse(const luxrays::Properties &props) {
 	assert (started);
 
+	boost::unique_lock<boost::mutex> lock(filmMutex);
+	film->Parse(props);
+
 	//--------------------------------------------------------------------------
-	// Check if there is a new image pipeline definition
+	// Check if there was a new image pipeline definition
 	//--------------------------------------------------------------------------
 
 	if (props.HaveNames("film.imagepipeline")) {
-		boost::unique_lock<boost::mutex> lock(filmMutex);
-
-		// Create the new image pipeline
-		ImagePipeline *imagePipeline = RenderConfig::AllocImagePipeline(props);
-
-		// Use the new image pipeline
-		film->SetImagePipeline(imagePipeline);
-
 		// Delete the old image pipeline properties
 		renderConfig->cfg.DeleteAll(renderConfig->cfg.GetAllNames("film.imagepipeline"));
 
@@ -156,14 +173,10 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 	}
 
 	//--------------------------------------------------------------------------
-	// Check if there are new radiance groups scale
+	// Check if there were new radiance groups scale
 	//--------------------------------------------------------------------------
 
 	if (props.HaveNames("film.radiancescales")) {
-		boost::unique_lock<boost::mutex> lock(filmMutex);
-
-		RenderConfig::SetRadianceGroupsScale(*film, props);
-		
 		// Delete old radiance groups scale properties
 		vector<string> newKeys = props.GetAllNames("film.radiancescales.");
 		BOOST_FOREACH(string &k, newKeys)

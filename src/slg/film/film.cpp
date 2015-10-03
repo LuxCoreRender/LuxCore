@@ -92,6 +92,40 @@ Spectrum Film::RadianceChannelScale::Scale(const Spectrum &v) const {
 // Film
 //------------------------------------------------------------------------------
 
+Film::Film() {
+	initialized = false;
+
+	width = 0;
+	height = 0;
+	radianceGroupCount = 0;
+
+	channel_ALPHA = NULL;
+	channel_RGB_TONEMAPPED = NULL;
+	channel_DEPTH = NULL;
+	channel_POSITION = NULL;
+	channel_GEOMETRY_NORMAL = NULL;
+	channel_SHADING_NORMAL = NULL;
+	channel_MATERIAL_ID = NULL;
+	channel_DIRECT_DIFFUSE = NULL;
+	channel_DIRECT_GLOSSY = NULL;
+	channel_EMISSION = NULL;
+	channel_INDIRECT_DIFFUSE = NULL;
+	channel_INDIRECT_GLOSSY = NULL;
+	channel_INDIRECT_SPECULAR = NULL;
+	channel_DIRECT_SHADOW_MASK = NULL;
+	channel_INDIRECT_SHADOW_MASK = NULL;
+	channel_UV = NULL;
+	channel_RAYCOUNT = NULL;
+	channel_IRRADIANCE = NULL;
+
+	convTest = NULL;
+
+	enabledOverlappedScreenBufferUpdate = true;
+	rgbTonemapUpdate = true;
+
+	imagePipeline = NULL;
+}
+
 Film::Film(const u_int w, const u_int h) {
 	initialized = false;
 
@@ -157,6 +191,17 @@ Film::~Film() {
 	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
 		delete channel_BY_MATERIAL_IDs[i];
 	delete channel_IRRADIANCE;
+}
+
+void Film::CopyDynamicSettings(const Film &film) {
+	channels = film.channels;
+	maskMaterialIDs = film.maskMaterialIDs;
+	byMaterialIDs = film.byMaterialIDs;
+	radianceGroupCount = film.radianceGroupCount;
+	radianceChannelScales = film.radianceChannelScales;
+	SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
+	SetImagePipeline(film.GetImagePipeline()->Copy());
+	SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
 }
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
@@ -890,10 +935,10 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 
 void Film::Output(const FilmOutputs &filmOutputs) {
 	for (u_int i = 0; i < filmOutputs.GetCount(); ++i)
-		Output(filmOutputs.GetType(i), filmOutputs.GetFileName(i), &filmOutputs.GetProperties(i));
+		Output( filmOutputs.GetFileName(i), filmOutputs.GetType(i),&filmOutputs.GetProperties(i));
 }
 
-void Film::Output(const FilmOutputs::FilmOutputType type, const string &fileName,
+void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type,
 		const Properties *props) { 
 	u_int maskMaterialIDsIndex = 0;
 	u_int byMaterialIDsIndex = 0;
@@ -1782,98 +1827,4 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}
-}
-
-template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar,
-		const u_int version) {
-	ar >> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	ar >> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	ar >> channel_ALPHA;
-	ar >> channel_RGB_TONEMAPPED;
-	ar >> channel_DEPTH;
-	ar >> channel_POSITION;
-	ar >> channel_GEOMETRY_NORMAL;
-	ar >> channel_SHADING_NORMAL;
-	ar >> channel_MATERIAL_ID;
-	ar >> channel_DIRECT_DIFFUSE;
-	ar >> channel_DIRECT_GLOSSY;
-	ar >> channel_EMISSION;
-	ar >> channel_INDIRECT_DIFFUSE;
-	ar >> channel_INDIRECT_GLOSSY;
-	ar >> channel_INDIRECT_SPECULAR;
-	ar >> channel_MATERIAL_ID_MASKs;
-	ar >> channel_DIRECT_SHADOW_MASK;
-	ar >> channel_INDIRECT_SHADOW_MASK;
-	ar >> channel_UV;
-	ar >> channel_RAYCOUNT;
-	ar >> channel_BY_MATERIAL_IDs;
-	ar >> channel_IRRADIANCE;
-
-	ar >> channels;
-	ar >> width;
-	ar >> height;
-	ar >> pixelCount;
-	ar >> radianceGroupCount;
-	ar >> maskMaterialIDs;
-	ar >> byMaterialIDs;
-
-	ar >> statsTotalSampleCount;
-	ar >> statsStartSampleTime;
-	ar >> statsAvgSampleSec;
-
-	ar >> imagePipeline;
-	ar >> convTest;
-
-	ar >> radianceChannelScales;
-
-	ar >> initialized;
-	ar >> enabledOverlappedScreenBufferUpdate;
-	ar >> rgbTonemapUpdate;
-}
-
-template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar,
-		const u_int version) const {
-	ar << channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	ar << channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	ar << channel_ALPHA;
-	ar << channel_RGB_TONEMAPPED;
-	ar << channel_DEPTH;
-	ar << channel_POSITION;
-	ar << channel_GEOMETRY_NORMAL;
-	ar << channel_SHADING_NORMAL;
-	ar << channel_MATERIAL_ID;
-	ar << channel_DIRECT_DIFFUSE;
-	ar << channel_DIRECT_GLOSSY;
-	ar << channel_EMISSION;
-	ar << channel_INDIRECT_DIFFUSE;
-	ar << channel_INDIRECT_GLOSSY;
-	ar << channel_INDIRECT_SPECULAR;
-	ar << channel_MATERIAL_ID_MASKs;
-	ar << channel_DIRECT_SHADOW_MASK;
-	ar << channel_INDIRECT_SHADOW_MASK;
-	ar << channel_UV;
-	ar << channel_RAYCOUNT;
-	ar << channel_BY_MATERIAL_IDs;
-	ar << channel_IRRADIANCE;
-
-	ar << channels;
-	ar << width;
-	ar << height;
-	ar << pixelCount;
-	ar << radianceGroupCount;
-	ar << maskMaterialIDs;
-	ar << byMaterialIDs;
-
-	ar << statsTotalSampleCount;
-	ar << statsStartSampleTime;
-	ar << statsAvgSampleSec;
-
-	ar << imagePipeline;
-	ar << convTest;
-	
-	ar << radianceChannelScales;
-
-	ar << initialized;
-	ar << enabledOverlappedScreenBufferUpdate;
-	ar << rgbTonemapUpdate;
 }
