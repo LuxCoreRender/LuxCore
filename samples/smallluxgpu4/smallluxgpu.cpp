@@ -123,7 +123,7 @@ static int BatchSimpleMode() {
 		// Check if periodic save is enabled
 		if (session->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
-			session->GetFilm().Save();
+			session->GetFilm().SaveOutputs();
 		}
 
 		const double elapsedTime = stats.Get("stats.renderengine.time").Get<double>();
@@ -151,7 +151,7 @@ static int BatchSimpleMode() {
 	session->Stop();
 
 	// Save the rendered image
-	session->GetFilm().Save();
+	session->GetFilm().SaveOutputs();
 
 	delete session;
 	SLG_LOG("Done.");

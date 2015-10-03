@@ -139,8 +139,6 @@ public:
 		luxrays::Spectrum scale;
 	};
 
-	// Used by serialization
-	Film() { }
 	Film(const u_int w, const u_int h);
 	~Film();
 
@@ -161,6 +159,7 @@ public:
 	void Init();
 	void Resize(const u_int w, const u_int h);
 	void Reset();
+	void Parse(const luxrays::Properties &props);
 
 	//--------------------------------------------------------------------------
 	// Dynamic settings
@@ -179,16 +178,7 @@ public:
 	}
 	const ImagePipeline *GetImagePipeline() const { return imagePipeline; }
 
-	void CopyDynamicSettings(const Film &film) {
-		channels = film.channels;
-		maskMaterialIDs = film.maskMaterialIDs;
-		byMaterialIDs = film.byMaterialIDs;
-		radianceGroupCount = film.radianceGroupCount;
-		radianceChannelScales = film.radianceChannelScales;
-		SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
-		SetImagePipeline(film.GetImagePipeline()->Copy());
-		SetOverlappedScreenBufferUpdateFlag(film.IsOverlappedScreenBufferUpdate());
-	}
+	void CopyDynamicSettings(const Film &film);
 
 	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 
@@ -214,7 +204,7 @@ public:
 	size_t GetOutputSize(const FilmOutputs::FilmOutputType type) const;
 	bool HasOutput(const FilmOutputs::FilmOutputType type) const;
 	void Output(const FilmOutputs &filmOutputs);
-	void Output(const FilmOutputs::FilmOutputType type, const std::string &fileName,
+	void Output(const std::string &fileName, const FilmOutputs::FilmOutputType type,
 		const luxrays::Properties *props = NULL);
 
 	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0) {
@@ -287,12 +277,18 @@ public:
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_MATERIAL_IDs;
 	GenericFrameBuffer<4, 1, float> *channel_IRRADIANCE;
 
+	static Film *LoadSerialized(const std::string &fileName);
+	static void SaveSerialized(const std::string &fileName, const Film &film);
+
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
 
 	friend class boost::serialization::access;
 
 private:
+	// Used by serialization
+	Film();
+
 	template<class Archive> void load(Archive &ar, const u_int version);
 	template<class Archive> void save(Archive &ar, const u_int version) const;
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -302,6 +298,9 @@ private:
 	void GetPixelFromMergedSampleBuffers(const u_int x, const u_int y, float *c) const {
 		GetPixelFromMergedSampleBuffers(x + y * width, c);
 	}
+
+	void SetRadianceGroupsScale(const luxrays::Properties &props);
+	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props);
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;

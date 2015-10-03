@@ -40,7 +40,8 @@ public:
 	void EndSceneEdit();
 
 	bool NeedPeriodicFilmSave();
-	void SaveFilm();
+	void SaveFilm(const std::string &fileName);
+	void SaveFilmOutputs();
 
 	void Parse(const luxrays::Properties &props);
 
