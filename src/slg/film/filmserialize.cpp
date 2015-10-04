@@ -20,6 +20,8 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 #include "slg/film/film.h"
 
@@ -34,10 +36,14 @@ using namespace slg;
 Film *Film::LoadSerialized(const std::string &fileName) {
 	ifstream inFile;
 	inFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-
 	inFile.open(fileName.c_str());
 
-	boost::archive::binary_iarchive inArchive(inFile);
+	// Enable compression
+	boost::iostreams::filtering_stream<boost::iostreams::input> gzipStream;
+	gzipStream.push(boost::iostreams::gzip_decompressor());
+	gzipStream.push(inFile);
+
+	boost::archive::binary_iarchive inArchive(gzipStream);
 
 	Film *film;
 	inArchive >> film;
@@ -45,107 +51,64 @@ Film *Film::LoadSerialized(const std::string &fileName) {
 	return film;
 }
 
-void Film::SaveSerialized(const std::string &fileName, const Film &film) {
+void Film::SaveSerialized(const std::string &fileName, const Film *film) {
 	// Serialize the film
 	ofstream outFile;
 	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-
 	outFile.open(fileName.c_str());
+	
+	// Enable compression
+	boost::iostreams::filtering_stream<boost::iostreams::output> gzipStream;
+	gzipStream.push(boost::iostreams::gzip_compressor(4));
+	gzipStream.push(outFile);
 
-	boost::archive::binary_oarchive outArchive(outFile);
+	boost::archive::binary_oarchive outArchive(gzipStream);
 	outArchive << film;
 }
 
-template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar,
-		const u_int version) {
-	ar >> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	ar >> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	ar >> channel_ALPHA;
-	ar >> channel_RGB_TONEMAPPED;
-	ar >> channel_DEPTH;
-	ar >> channel_POSITION;
-	ar >> channel_GEOMETRY_NORMAL;
-	ar >> channel_SHADING_NORMAL;
-	ar >> channel_MATERIAL_ID;
-	ar >> channel_DIRECT_DIFFUSE;
-	ar >> channel_DIRECT_GLOSSY;
-	ar >> channel_EMISSION;
-	ar >> channel_INDIRECT_DIFFUSE;
-	ar >> channel_INDIRECT_GLOSSY;
-	ar >> channel_INDIRECT_SPECULAR;
-	ar >> channel_MATERIAL_ID_MASKs;
-	ar >> channel_DIRECT_SHADOW_MASK;
-	ar >> channel_INDIRECT_SHADOW_MASK;
-	ar >> channel_UV;
-	ar >> channel_RAYCOUNT;
-	ar >> channel_BY_MATERIAL_IDs;
-	ar >> channel_IRRADIANCE;
+template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
+	ar & channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
+	ar & channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
+	ar & channel_ALPHA;
+	ar & channel_RGB_TONEMAPPED;
+	ar & channel_DEPTH;
+	ar & channel_POSITION;
+	ar & channel_GEOMETRY_NORMAL;
+	ar & channel_SHADING_NORMAL;
+	ar & channel_MATERIAL_ID;
+	ar & channel_DIRECT_DIFFUSE;
+	ar & channel_DIRECT_GLOSSY;
+	ar & channel_EMISSION;
+	ar & channel_INDIRECT_DIFFUSE;
+	ar & channel_INDIRECT_GLOSSY;
+	ar & channel_INDIRECT_SPECULAR;
+	ar & channel_MATERIAL_ID_MASKs;
+	ar & channel_DIRECT_SHADOW_MASK;
+	ar & channel_INDIRECT_SHADOW_MASK;
+	ar & channel_UV;
+	ar & channel_RAYCOUNT;
+	ar & channel_BY_MATERIAL_IDs;
+	ar & channel_IRRADIANCE;
 
-	ar >> channels;
-	ar >> width;
-	ar >> height;
-	ar >> pixelCount;
-	ar >> radianceGroupCount;
-	ar >> maskMaterialIDs;
-	ar >> byMaterialIDs;
+	ar & channels;
+	ar & width;
+	ar & height;
+	ar & pixelCount;
+	ar & radianceGroupCount;
+	ar & maskMaterialIDs;
+	ar & byMaterialIDs;
 
-	ar >> statsTotalSampleCount;
-	ar >> statsStartSampleTime;
-	ar >> statsAvgSampleSec;
+	ar & statsTotalSampleCount;
+	ar & statsStartSampleTime;
+	ar & statsAvgSampleSec;
 
-	ar >> imagePipeline;
-	ar >> convTest;
+	ar & imagePipeline;
+	ar & convTest;
 
-	ar >> radianceChannelScales;
+	ar & radianceChannelScales;
+	ar & filmOutputs;
 
-	ar >> initialized;
-	ar >> enabledOverlappedScreenBufferUpdate;
-	ar >> rgbTonemapUpdate;
-}
-
-template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar,
-		const u_int version) const {
-	ar << channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
-	ar << channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
-	ar << channel_ALPHA;
-	ar << channel_RGB_TONEMAPPED;
-	ar << channel_DEPTH;
-	ar << channel_POSITION;
-	ar << channel_GEOMETRY_NORMAL;
-	ar << channel_SHADING_NORMAL;
-	ar << channel_MATERIAL_ID;
-	ar << channel_DIRECT_DIFFUSE;
-	ar << channel_DIRECT_GLOSSY;
-	ar << channel_EMISSION;
-	ar << channel_INDIRECT_DIFFUSE;
-	ar << channel_INDIRECT_GLOSSY;
-	ar << channel_INDIRECT_SPECULAR;
-	ar << channel_MATERIAL_ID_MASKs;
-	ar << channel_DIRECT_SHADOW_MASK;
-	ar << channel_INDIRECT_SHADOW_MASK;
-	ar << channel_UV;
-	ar << channel_RAYCOUNT;
-	ar << channel_BY_MATERIAL_IDs;
-	ar << channel_IRRADIANCE;
-
-	ar << channels;
-	ar << width;
-	ar << height;
-	ar << pixelCount;
-	ar << radianceGroupCount;
-	ar << maskMaterialIDs;
-	ar << byMaterialIDs;
-
-	ar << statsTotalSampleCount;
-	ar << statsStartSampleTime;
-	ar << statsAvgSampleSec;
-
-	ar << imagePipeline;
-	ar << convTest;
-	
-	ar << radianceChannelScales;
-
-	ar << initialized;
-	ar << enabledOverlappedScreenBufferUpdate;
-	ar << rgbTonemapUpdate;
+	ar & initialized;
+	ar & enabledOverlappedScreenBufferUpdate;
+	ar & rgbTonemapUpdate;
 }

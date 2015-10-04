@@ -43,15 +43,18 @@ using namespace std;
 // Property class
 //------------------------------------------------------------------------------
 
+Property::Property() : name("") {
+}
+
 Property::Property(const string &propName) : name(propName) {
 }
 
-Property::Property(const std::string &propName, const PropertyValue &val) :
+Property::Property(const string &propName, const PropertyValue &val) :
 	name(propName) {
 	values.push_back(val);
 }
 
-Property::Property(const std::string &propName, const PropertyValues &vals) :
+Property::Property(const string &propName, const PropertyValues &vals) :
 	name(propName) {
 	values = vals;
 }
@@ -64,7 +67,7 @@ Property &Property::Clear() {
 	return *this;
 }
 
-std::string Property::GetValuesString() const {
+string Property::GetValuesString() const {
 	stringstream ss;
 
 	for (u_int i = 0; i < values.size(); ++i) {
@@ -83,43 +86,43 @@ namespace luxrays {
 
 template<> bool Property::Get<bool>() const {
 	if (values.size() != 1)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<bool>(0);
 }
 
 template<> int Property::Get<int>() const {
 	if (values.size() != 1)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<int>(0);
 }
 
 template<> u_int Property::Get<u_int>() const {
 	if (values.size() != 1)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<u_int>(0);
 }
 
 template<> float Property::Get<float>() const {
 	if (values.size() != 1)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<float>(0);
 }
 
 template<> double Property::Get<double>() const {
 	if (values.size() != 1)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<double>(0);
 }
 
 template<> u_longlong Property::Get<u_longlong>() const {
 	if (values.size() != 1)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<u_longlong>(0);
 }
 
 template<> string Property::Get<string>() const {
 	if (values.size() != 1)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Get<string>(0);
 }
 
@@ -131,37 +134,37 @@ template<> string Property::Get<string>() const {
 
 template<> UV Property::Get<UV>() const {
 	if (values.size() != 2)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return UV(Get<float>(0), Get<float>(1));
 }
 
 template<> Vector Property::Get<Vector>() const {
 	if (values.size() != 3)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Vector(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
 template<> Normal Property::Get<Normal>() const {
 	if (values.size() != 3)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Normal(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
 template<> Point Property::Get<Point>() const {
 	if (values.size() != 3)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Point(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
 template<> Spectrum Property::Get<Spectrum>() const {
 	if (values.size() != 3)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Spectrum(Get<float>(0), Get<float>(1), Get<float>(2));
 }
 
 template<> Matrix4x4 Property::Get<Matrix4x4>() const {
 	if (values.size() != 16)
-		throw std::runtime_error("Wrong number of values in property: " + name);
+		throw runtime_error("Wrong number of values in property: " + name);
 	return Matrix4x4(
 			Get<float>(0), Get<float>(4), Get<float>(8), Get<float>(12),
 			Get<float>(1), Get<float>(5), Get<float>(9), Get<float>(13),
@@ -205,7 +208,83 @@ template<> Property &Property::Add<Matrix4x4>(const Matrix4x4 &m) {
 
 //------------------------------------------------------------------------------
 
-std::string Property::ToString() const {
+void Property::FromString(string &line) {
+	const size_t idx = line.find('=');
+	if (idx == string::npos)
+		throw runtime_error("Syntax error in property string: " + line);
+
+	// Check if it is a valid name
+	name = line.substr(0, idx);
+	boost::trim(name);
+
+	values.clear();
+
+	string value(line.substr(idx + 1));
+	// Check if the last char is a LF or a CR and remove that (in case of
+	// a DOS file read under Linux/MacOS)
+	if ((value.size() > 0) && ((value[value.size() - 1] == '\n') || (value[value.size() - 1] == '\r')))
+		value.resize(value.size() - 1);
+	boost::trim(value);
+
+	// Iterate over value and extract all field (handling quotes)
+	u_int first = 0;
+	u_int last = 0;
+	const u_int len = value.length();
+	while (first < len) {
+		// Check if it is a quoted field
+		if ((value[first] == '"') || (value[first] == '\'')) {
+			++first;
+			last = first;
+			bool found = false;
+			while (last < len) {
+				if ((value[last] == '"') || (value[last] == '\'')) {
+					// Replace any escaped " or '
+					string s = value.substr(first, last - first);
+					boost::replace_all(s,"\\\"", "\"");
+					boost::replace_all(s,"\\\'", "'");
+
+					Add(s);
+					found = true;
+					++last;
+
+					// Eat all additional spaces
+					while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
+						++last;
+					break;
+				}
+
+				++last;
+			}
+
+			if (!found) 
+				throw runtime_error("Unterminated quote in property: " + name);
+		} else {
+			last = first;
+			while (last < len) {
+				if ((value[last] == ' ') || (value[last] == '\t') || (last == len - 1)) {
+					string field;
+					if (last == len - 1) {
+						field = value.substr(first, last - first + 1);
+						++last;
+					} else
+						field = value.substr(first, last - first);
+					Add(field);
+
+					// Eat all additional spaces
+					while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
+						++last;
+					break;
+				}
+
+				++last;
+			}
+		}
+
+		first = last;
+	}
+}
+
+string Property::ToString() const {
 	stringstream ss;
 
 	ss << name + " = ";
@@ -255,6 +334,20 @@ string Property::ExtractPrefix(const string &name, const u_int count) {
 	return name.substr(0, index - 1);
 }
 
+template<> void Property::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar,
+		const u_int version) {
+	string s;
+	ar >> s;
+
+	FromString(s);
+}
+
+template<> void Property::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar,
+		const u_int version) const {
+	string s = ToString();
+	ar << s;
+}
+
 //------------------------------------------------------------------------------
 // Properties class
 //------------------------------------------------------------------------------
@@ -275,7 +368,7 @@ Properties &Properties::Set(const Properties &props) {
 	return *this;
 }
 
-Properties &Properties::Set(const Properties &props, const std::string &prefix) {
+Properties &Properties::Set(const Properties &props, const string &prefix) {
 	BOOST_FOREACH(const string &name, props.GetAllNames()) {
 		Set(props.Get(name).AddedNamePrefix(prefix));
 	}
@@ -308,74 +401,8 @@ Properties &Properties::SetFromStream(istream &stream) {
 		if (idx == string::npos)
 			throw runtime_error("Syntax error in a Properties at line " + luxrays::ToString(lineNumber));
 
-		// Check if it is a valid name
-		string name(line.substr(0, idx));
-		boost::trim(name);
-		Property prop(name);
-
-		string value(line.substr(idx + 1));
-		// Check if the last char is a LF or a CR and remove that (in case of
-		// a DOS file read under Linux/MacOS)
-		if ((value.size() > 0) && ((value[value.size() - 1] == '\n') || (value[value.size() - 1] == '\r')))
-			value.resize(value.size() - 1);
-		boost::trim(value);
-
-		// Iterate over value and extract all field (handling quotes)
-		u_int first = 0;
-		u_int last = 0;
-		const u_int len = value.length();
-		while (first < len) {
-			// Check if it is a quoted field
-			if ((value[first] == '"') || (value[first] == '\'')) {
-				++first;
-				last = first;
-				bool found = false;
-				while (last < len) {
-					if ((value[last] == '"') || (value[last] == '\'')) {
-						// Replace any escaped " or '
-						string s = value.substr(first, last - first);
-						boost::replace_all(s,"\\\"", "\"");
-						boost::replace_all(s,"\\\'", "'");
-
-						prop.Add(s);
-						found = true;
-						++last;
-
-						// Eat all additional spaces
-						while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
-							++last;
-						break;
-					}
-
-					++last;
-				}
-
-				if (!found) 
-					throw runtime_error("Unterminated quote in property: " + name);
-			} else {
-				last = first;
-				while (last < len) {
-					if ((value[last] == ' ') || (value[last] == '\t') || (last == len - 1)) {
-						string field;
-						if (last == len - 1) {
-							field = value.substr(first, last - first + 1);
-							++last;
-						} else
-							field = value.substr(first, last - first);
-						prop.Add(field);
-
-						// Eat all additional spaces
-						while ((last < len) && ((value[last] == ' ') || (value[last] == '\t')))
-							++last;
-						break;
-					}
-
-					++last;
-				}
-			}
-
-			first = last;
-		}
+		Property prop;
+		prop.FromString(line);
 
 		Set(prop);
 	}
@@ -434,7 +461,7 @@ vector<string> Properties::GetAllNamesRE(const string &regularExpression) const 
 }
 
 vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
-	const size_t fieldsCount = std::count(prefix.begin(), prefix.end(), '.') + 2;
+	const size_t fieldsCount = count(prefix.begin(), prefix.end(), '.') + 2;
 
 	set<string> definedNames;
 	vector<string> namesSubset;
@@ -453,7 +480,7 @@ vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
 	return namesSubset;
 }
 
-bool Properties::HaveNames(const std::string &prefix) const {
+bool Properties::HaveNames(const string &prefix) const {
 	BOOST_FOREACH(const string &name, names) {
 		if (name.find(prefix) == 0)
 			return true;
@@ -462,7 +489,7 @@ bool Properties::HaveNames(const std::string &prefix) const {
 	return false;
 }
 
-bool Properties::HaveNamesRE(const std::string &regularExpression) const {
+bool Properties::HaveNamesRE(const string &regularExpression) const {
 	boost::regex re(regularExpression);
 
 	BOOST_FOREACH(const string &name, names) {
@@ -473,7 +500,7 @@ bool Properties::HaveNamesRE(const std::string &regularExpression) const {
 	return false;
 }
 
-Properties Properties::GetAllProperties(const std::string &prefix) const {
+Properties Properties::GetAllProperties(const string &prefix) const {
 	Properties subset;
 	BOOST_FOREACH(const string &name, names) {
 		if (name.find(prefix) == 0)
@@ -487,8 +514,8 @@ bool Properties::IsDefined(const string &propName) const {
 	return (props.count(propName) != 0);
 }
 
-const Property &Properties::Get(const std::string &propName) const {
-	boost::unordered_map<std::string, Property>::const_iterator it = props.find(propName);
+const Property &Properties::Get(const string &propName) const {
+	boost::unordered_map<string, Property>::const_iterator it = props.find(propName);
 	if (it == props.end())
 		throw runtime_error("Undefined property in Properties::Get(): " + propName);
 
@@ -496,7 +523,7 @@ const Property &Properties::Get(const std::string &propName) const {
 }
 
 const Property &Properties::Get(const Property &prop) const {
-	boost::unordered_map<std::string, Property>::const_iterator it = props.find(prop.GetName());
+	boost::unordered_map<string, Property>::const_iterator it = props.find(prop.GetName());
 	if (it == props.end())
 		return prop;
 
@@ -536,7 +563,7 @@ Properties &Properties::Set(const Property &prop) {
 		props.erase(propName);
 	}
 
-	props.insert(std::pair<string, Property>(propName, prop));
+	props.insert(pair<string, Property>(propName, prop));
 
 	return *this;
 }
@@ -555,4 +582,26 @@ Properties luxrays::operator<<(const Property &prop0, const Property &prop1) {
 
 Properties luxrays::operator<<(const Property &prop0, const Properties &props) {
 	return Properties() << prop0 << props;
+}
+
+template<> void Properties::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar,
+		const u_int version) {
+	size_t count;
+	ar >> count;
+
+	for (size_t i = 0; i < count; ++i) {
+		Property p;
+		ar >> p;
+		
+		*this << p;
+	}
+}
+
+template<> void Properties::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar,
+		const u_int version) const {
+	const size_t count = names.size();
+	ar << count;
+
+	BOOST_FOREACH(const string &name, names)
+		ar << Get(name);
 }

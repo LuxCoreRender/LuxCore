@@ -30,8 +30,6 @@
 
 #include <boost/thread/mutex.hpp>
 #include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/set.hpp>
 
@@ -248,7 +246,7 @@ public:
 	GenericFrameBuffer<4, 1, float> *channel_IRRADIANCE;
 
 	static Film *LoadSerialized(const std::string &fileName);
-	static void SaveSerialized(const std::string &fileName, const Film &film);
+	static void SaveSerialized(const std::string &fileName, const Film *film);
 
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
@@ -259,9 +257,7 @@ private:
 	// Used by serialization
 	Film();
 
-	template<class Archive> void load(Archive &ar, const u_int version);
-	template<class Archive> void save(Archive &ar, const u_int version) const;
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 
 	void MergeSampleBuffers(luxrays::Spectrum *p, std::vector<bool> &frameBufferMask) const;
 	void GetPixelFromMergedSampleBuffers(const u_int index, float *c) const;
@@ -297,12 +293,9 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index);
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index);
 
-template<> void Film::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
-template<> void Film::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
-		
 }
 
-BOOST_CLASS_VERSION(slg::Film, 4)
+BOOST_CLASS_VERSION(slg::Film, 5)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 #endif	/* _SLG_FILM_H */

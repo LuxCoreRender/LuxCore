@@ -99,11 +99,11 @@ def LoadFilm():
 	film.SaveOutput("simple.png", pyluxcore.FilmOutputType.RGB_TONEMAPPED, pyluxcore.Properties())
 	
 	# Animate radiance groups
-	for i in range(0, 10):
+	for i in range(0, 20):
 		props = pyluxcore.Properties()
 		props.SetFromString("""
 		film.radiancescales.0.globalscale = 1.0
-		film.radiancescales.1.globalscale = """ + str(0.1 + i * (2.0 / 9.0)) + """
+		film.radiancescales.1.globalscale = """ + str(0.025 + i * (3.0 / 19.0)) + """
 			""")
 		film.Parse(props)
 		

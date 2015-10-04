@@ -30,7 +30,10 @@
 #include <boost/unordered_map.hpp>
 #include <boost/type_traits.hpp>
 #include <boost/foreach.hpp>
-#include <boost/serialization/vector.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/split_member.hpp>
 
 #include "luxrays/luxrays.h"
 #include <luxrays/utils/properties.h>
@@ -254,6 +257,10 @@ public:
 	 */
 	std::string GetValuesString() const;
 	/*!
+	 * \brief Initialize the property from a string (ex. "a.b.c = 1 2")
+	 */
+	void FromString(std::string &s);
+	/*!
 	 * \brief Returns a string with the name of the property followed by " = "
 	 * and by all values associated to the property.
 	 * 
@@ -394,10 +401,9 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & name;
-		ar & values;
-	}
+	template<class Archive> void load(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const u_int version) const;
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	template<class T> class GetValueVistor : public boost::static_visitor<T> {
 	public:
@@ -463,6 +469,9 @@ inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 
 	return os;
 }
+
+template<> void Property::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
+template<> void Property::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
 
 //------------------------------------------------------------------------------
 // Properties class
@@ -686,10 +695,9 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & names;
-		ar & props;
-	}
+	template<class Archive> void load(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const u_int version) const;
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 	// This vector used, among other things, to keep track of the insertion order
 	std::vector<std::string> names;
@@ -704,6 +712,9 @@ inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 
 	return os;
 }
+
+template<> void Properties::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
+template<> void Properties::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
 
 }
 
