@@ -128,14 +128,7 @@ void RenderSession::SaveFilm(const string &fileName) {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	// Serialize the film
-	ofstream outFile;
-	outFile.exceptions(ofstream::failbit | ofstream::badbit | ofstream::eofbit);
-
-	outFile.open(fileName.c_str());
-
-	boost::archive::binary_oarchive outArchive(outFile);
-
-	outArchive << film;
+	Film::SaveSerialized(fileName, film);
 }
 
 void RenderSession::SaveFilmOutputs() {

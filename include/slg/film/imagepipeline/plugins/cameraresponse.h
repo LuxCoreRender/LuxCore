@@ -63,6 +63,7 @@ private:
 		ar & BlueI;
 		ar & GreenI;
 		ar & BlueB;
+		ar & color;
 	}
 
 	bool LoadPreset(const std::string &filmName);

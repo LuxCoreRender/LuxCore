@@ -62,13 +62,13 @@ void TestFilmSerialization() {
 
 	// Write the film
 	LC_LOG("Write the film");
-	Film::SaveSerialized("film.flm", film);
+	Film::SaveSerialized("film.flm", &film);
 
 	// Read the film
 	LC_LOG("Read the film");
 	auto_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
 	
-	filmCopy->Output("film-copy.png", FilmOutputs::RGB_TONEMAPPED);
+//	filmCopy->Output("film-copy.png", FilmOutputs::RGB_TONEMAPPED);
 }
 
 //void TestSceneSerialization() {

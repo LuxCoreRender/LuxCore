@@ -163,7 +163,6 @@ Film::~Film() {
 	delete standAloneFilm;
 }
 
-
 slg::Film *Film::GetSLGFilm() const {
 	if (renderSession)
 		return renderSession->renderSession->film;
@@ -194,7 +193,7 @@ void Film::SaveFilm(const string &fileName) const {
 	if (renderSession)
 		renderSession->renderSession->SaveFilm(fileName);
 	else
-		slg::Film::SaveSerialized(fileName, *standAloneFilm);
+		slg::Film::SaveSerialized(fileName, standAloneFilm);
 }
 
 double Film::GetTotalSampleCount() const {
