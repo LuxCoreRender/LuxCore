@@ -30,6 +30,7 @@
 #include <boost/unordered_map.hpp>
 #include <boost/type_traits.hpp>
 #include <boost/foreach.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include "luxrays/luxrays.h"
 #include <luxrays/utils/properties.h>
@@ -390,7 +391,14 @@ public:
 	static std::string ExtractField(const std::string &name, const u_int index);
 	static std::string ExtractPrefix(const std::string &name, const u_int count);
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & name;
+		ar & values;
+	}
+
 	template<class T> class GetValueVistor : public boost::static_visitor<T> {
 	public:
 		T operator()(const bool v) const {
@@ -675,7 +683,14 @@ public:
 	 */
 	std::string ToString() const;
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & names;
+		ar & props;
+	}
+
 	// This vector used, among other things, to keep track of the insertion order
 	std::vector<std::string> names;
 	boost::unordered_map<std::string, Property> props;
@@ -691,5 +706,8 @@ inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 }
 
 }
+
+BOOST_CLASS_VERSION(luxrays::Property, 1)
+BOOST_CLASS_VERSION(luxrays::Properties, 1)
 
 #endif	/* _LUXRAYS_PROPERTIES_H */

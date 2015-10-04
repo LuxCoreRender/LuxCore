@@ -16,54 +16,28 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_RENDERCONFIG_H
-#define	_SLG_RENDERCONFIG_H
+#include "slg/film/filmoutputs.h"
 
-#include <boost/thread/mutex.hpp>
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-#include "luxrays/core/randomgen.h"
-#include "luxrays/utils/properties.h"
-#include "slg/slg.h"
-#include "slg/samplers/sampler.h"
-#include "slg/scene/scene.h"
+//------------------------------------------------------------------------------
+// FilmOutputs
+//------------------------------------------------------------------------------
 
-namespace slg {
-
-class RenderConfig {
-public:
-	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
-	~RenderConfig();
-
-	const luxrays::Property GetProperty(const std::string &name) const;
-
-	void Parse(const luxrays::Properties &props);
-	void Delete(const std::string &prefix);
-
-	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
-		u_int *filmSubRegion) const;
-
-	Filter *AllocPixelFilter() const;
-	Film *AllocFilm() const;
-
-	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen) const;
-	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
-		const FilmSampleSplatter *flmSplatter,
-		const u_int threadIndex, const u_int threadCount,
-		SamplerSharedData *sharedData) const;
-
-	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
-
-	static const luxrays::Properties &GetDefaultProperties();
-
-	luxrays::Properties cfg;
-	Scene *scene;
-
-private:
-	static void InitDefaultProperties();
-	
-	bool allocatedScene;
-};
-
+void FilmOutputs::Clear() {
+	types.clear();
+	fileNames.clear();
+	props.clear();
 }
 
-#endif	/* _SLG_RENDERCONFIG_H */
+void FilmOutputs::Add(const FilmOutputType type, const string &fileName,
+		const Properties *p) {
+	types.push_back(type);
+	fileNames.push_back(fileName);
+	if (p)
+		props.push_back(*p);
+	else
+		props.push_back(Properties());
+}

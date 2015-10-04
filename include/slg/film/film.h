@@ -43,41 +43,11 @@
 #include "slg/bsdf/bsdf.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
+#include "slg/film/filmoutputs.h"
 #include "slg/utils/convtest/convtest.h"
 #include "slg/utils/varianceclamping.h"
 
 namespace slg {
-
-//------------------------------------------------------------------------------
-// FilmOutput
-//------------------------------------------------------------------------------
-
-class FilmOutputs {
-public:
-	typedef enum {
-		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
-		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
-		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
-		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
-		RADIANCE_GROUP, UV, RAYCOUNT, BY_MATERIAL_ID, IRRADIANCE
-	} FilmOutputType;
-
-	FilmOutputs() { }
-	~FilmOutputs() { }
-
-	u_int GetCount() const { return types.size(); }
-	FilmOutputType GetType(const u_int index) const { return types[index]; }
-	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
-	const luxrays::Properties &GetProperties(const u_int index) const { return props[index]; }
-
-	void Add(const FilmOutputType type, const std::string &fileName,
-		const luxrays::Properties *prop = NULL);
-
-private:
-	std::vector<FilmOutputType> types;
-	std::vector<std::string> fileNames;
-	std::vector<luxrays::Properties> props;
-};
 
 //------------------------------------------------------------------------------
 // Film
@@ -203,7 +173,7 @@ public:
 	u_int GetChannelCount(const FilmChannelType type) const;
 	size_t GetOutputSize(const FilmOutputs::FilmOutputType type) const;
 	bool HasOutput(const FilmOutputs::FilmOutputType type) const;
-	void Output(const FilmOutputs &filmOutputs);
+	void Output();
 	void Output(const std::string &fileName, const FilmOutputs::FilmOutputType type,
 		const luxrays::Properties *props = NULL);
 
@@ -299,7 +269,9 @@ private:
 		GetPixelFromMergedSampleBuffers(x + y * width, c);
 	}
 
-	void SetRadianceGroupsScale(const luxrays::Properties &props);
+	void ParseRadianceGroupsScale(const luxrays::Properties &props);
+	void ParseOutputs(const luxrays::Properties &props);
+	
 	static ImagePipeline *AllocImagePipeline(const luxrays::Properties &props);
 
 	std::set<FilmChannelType> channels;
@@ -315,6 +287,7 @@ private:
 	ConvergenceTest *convTest;
 
 	std::vector<RadianceChannelScale> radianceChannelScales;
+	FilmOutputs filmOutputs;
 
 	bool initialized, enabledOverlappedScreenBufferUpdate, rgbTonemapUpdate;
 };
