@@ -291,7 +291,7 @@ Filter *RenderConfig::AllocPixelFilter() const {
 	return filter.release();
 }
 
-Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
+Film *RenderConfig::AllocFilm() const {
 	//--------------------------------------------------------------------------
 	// Create the Film
 	//--------------------------------------------------------------------------
@@ -313,205 +313,21 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	}
 
 	//--------------------------------------------------------------------------
-	// Create the image pipeline and initialize radiance channel scales
+	// Add the default image pipeline
+	//--------------------------------------------------------------------------
+		
+	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
+	imagePipeline->AddPlugin(new AutoLinearToneMap());
+	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
+
+	film->SetImagePipeline(imagePipeline.release());
+
+	//--------------------------------------------------------------------------
+	// Create the image pipeline, initialize radiance channel scales
+	// and film outputs
 	//--------------------------------------------------------------------------
 
 	film->Parse(cfg);
-	
-	if (!film->GetImagePipeline()) {
-		// The definition of image pipeline is missing, use the default
-		
-		auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
-		imagePipeline->AddPlugin(new AutoLinearToneMap());
-		imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
-
-		film->SetImagePipeline(imagePipeline.release());
-	}
-
-	//--------------------------------------------------------------------------
-	// Initialize the FilmOutputs
-	//--------------------------------------------------------------------------
-
-	set<string> outputNames;
-	vector<string> outputKeys = cfg.GetAllNames("film.outputs.");
-	for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {
-		const string &key = *outputKey;
-		const size_t dot1 = key.find(".", string("film.outputs.").length());
-		if (dot1 == string::npos)
-			continue;
-
-		// Extract the output type name
-		const string outputName = Property::ExtractField(key, 2);
-		if (outputName == "")
-			throw runtime_error("Syntax error in film output definition: " + outputName);
-
-		if (outputNames.count(outputName) > 0)
-			continue;
-
-		outputNames.insert(outputName);
-		const string type = cfg.Get(Property("film.outputs." + outputName + ".type")("RGB_TONEMAPPED")).Get<string>();
-		const string fileName = cfg.Get(Property("film.outputs." + outputName + ".filename")("image.png")).Get<string>();
-
-		SDL_LOG("Film output definition: " << type << " [" << fileName << "]");
-
-//		// Check if it is a supported file format
-//		FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
-//		if (fif == FIF_UNKNOWN)
-//			throw runtime_error("Unknown image format in film output: " + outputName);
-
-		// HDR image or not
-		bool hdrImage = false;
-		string lowerFileName = boost::algorithm::to_lower_copy(fileName);
-#if defined _MSC_VER
-        string file_extension  = boost::filesystem::path(lowerFileName).extension().string();
-#else
-        string file_extension  = boost::filesystem::path(lowerFileName).extension().native();
-#endif
-		
-		if (file_extension == ".exr" || file_extension == ".hdr")
-			hdrImage = true;
-
-		if (type == "RGB") {
-			if (hdrImage)
-				filmOutputs.Add(FilmOutputs::RGB, fileName);
-			else
-				throw runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
-		} else if (type == "RGBA") {
-			if (hdrImage) {
-				film->AddChannel(Film::ALPHA);
-				filmOutputs.Add(FilmOutputs::RGBA, fileName);
-			} else
-				throw runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
-		} else if (type == "RGB_TONEMAPPED")
-			filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, fileName);
-		else if (type == "RGBA_TONEMAPPED") {
-			film->AddChannel(Film::ALPHA);
-			filmOutputs.Add(FilmOutputs::RGBA_TONEMAPPED, fileName);
-		} else if (type == "ALPHA") {
-			film->AddChannel(Film::ALPHA);
-			filmOutputs.Add(FilmOutputs::ALPHA, fileName);
-		} else if (type == "DEPTH") {
-			if (hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				filmOutputs.Add(FilmOutputs::DEPTH, fileName);
-			} else
-				throw runtime_error("Depth image can be saved only in HDR formats: " + outputName);
-		} else if (type == "POSITION") {
-			if (hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				film->AddChannel(Film::POSITION);
-				filmOutputs.Add(FilmOutputs::POSITION, fileName);
-			} else
-				throw runtime_error("Position image can be saved only in HDR formats: " + outputName);
-		} else if (type == "GEOMETRY_NORMAL") {
-			if (hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				film->AddChannel(Film::GEOMETRY_NORMAL);
-				filmOutputs.Add(FilmOutputs::GEOMETRY_NORMAL, fileName);
-			} else
-				throw runtime_error("Geometry normal image can be saved only in HDR formats: " + outputName);
-		} else if (type == "SHADING_NORMAL") {
-			if (hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				film->AddChannel(Film::SHADING_NORMAL);
-				filmOutputs.Add(FilmOutputs::SHADING_NORMAL, fileName);
-			} else
-				throw runtime_error("Shading normal image can be saved only in HDR formats: " + outputName);
-		} else if (type == "MATERIAL_ID") {
-			if (!hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				film->AddChannel(Film::MATERIAL_ID);
-				filmOutputs.Add(FilmOutputs::MATERIAL_ID, fileName);
-			} else
-				throw runtime_error("Material ID image can be saved only in non HDR formats: " + outputName);
-		} else if (type == "DIRECT_DIFFUSE") {
-			if (hdrImage) {
-				film->AddChannel(Film::DIRECT_DIFFUSE);
-				filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE, fileName);
-			} else
-				throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
-		} else if (type == "DIRECT_GLOSSY") {
-			if (hdrImage) {
-				film->AddChannel(Film::DIRECT_GLOSSY);
-				filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY, fileName);
-			} else
-				throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
-		} else if (type == "EMISSION") {
-			if (hdrImage) {
-				film->AddChannel(Film::EMISSION);
-				filmOutputs.Add(FilmOutputs::EMISSION, fileName);
-			} else
-				throw runtime_error("Emission image can be saved only in HDR formats: " + outputName);
-		} else if (type == "INDIRECT_DIFFUSE") {
-			if (hdrImage) {
-				film->AddChannel(Film::INDIRECT_DIFFUSE);
-				filmOutputs.Add(FilmOutputs::INDIRECT_DIFFUSE, fileName);
-			} else
-				throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
-		} else if (type == "INDIRECT_GLOSSY") {
-			if (hdrImage) {
-				film->AddChannel(Film::INDIRECT_GLOSSY);
-				filmOutputs.Add(FilmOutputs::INDIRECT_GLOSSY, fileName);
-			} else
-				throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
-		} else if (type == "INDIRECT_SPECULAR") {
-			if (hdrImage) {
-				film->AddChannel(Film::INDIRECT_SPECULAR);
-				filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR, fileName);
-			} else
-				throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
-		} else if (type == "MATERIAL_ID_MASK") {
-			const u_int materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255)).Get<u_int>();
-			Properties prop;
-			prop.Set(Property("id")(materialID));
-
-			film->AddChannel(Film::MATERIAL_ID);
-			film->AddChannel(Film::MATERIAL_ID_MASK, &prop);
-			filmOutputs.Add(FilmOutputs::MATERIAL_ID_MASK, fileName, &prop);
-		} else if (type == "DIRECT_SHADOW_MASK") {
-			film->AddChannel(Film::DIRECT_SHADOW_MASK);
-			filmOutputs.Add(FilmOutputs::DIRECT_SHADOW_MASK, fileName);
-		} else if (type == "INDIRECT_SHADOW_MASK") {
-			film->AddChannel(Film::INDIRECT_SHADOW_MASK);
-			filmOutputs.Add(FilmOutputs::INDIRECT_SHADOW_MASK, fileName);
-		} else if (type == "RADIANCE_GROUP") {
-			const u_int lightID = cfg.Get(Property("film.outputs." + outputName + ".id")(0)).Get<u_int>();
-			Properties prop;
-			prop.Set(Property("id")(lightID));
-
-			filmOutputs.Add(FilmOutputs::RADIANCE_GROUP, fileName, &prop);
-		} else if (type == "UV") {
-			film->AddChannel(Film::DEPTH);
-			film->AddChannel(Film::UV);
-			filmOutputs.Add(FilmOutputs::UV, fileName);
-		} else if (type == "RAYCOUNT") {
-			film->AddChannel(Film::RAYCOUNT);
-			filmOutputs.Add(FilmOutputs::RAYCOUNT, fileName);
-		} else if (type == "BY_MATERIAL_ID") {
-			const u_int materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255)).Get<u_int>();
-			Properties prop;
-			prop.Set(Property("id")(materialID));
-
-			film->AddChannel(Film::MATERIAL_ID);
-			film->AddChannel(Film::BY_MATERIAL_ID, &prop);
-			filmOutputs.Add(FilmOutputs::BY_MATERIAL_ID, fileName, &prop);
-		} else if (type == "IRRADIANCE") {
-			film->AddChannel(Film::IRRADIANCE);
-			filmOutputs.Add(FilmOutputs::IRRADIANCE, fileName);
-		} else
-			throw runtime_error("Unknown type in film output: " + type);
-	}
-
-	// For compatibility with the past
-	if (cfg.IsDefined("image.filename")) {
-		SLG_LOG("WARNING: deprecated property image.filename");
-		filmOutputs.Add(film->HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_TONEMAPPED : FilmOutputs::RGB_TONEMAPPED,
-				cfg.Get(Property("image.filename")("image.png")).Get<string>());
-	}
-
-	// Default setting
-	if (filmOutputs.GetCount() == 0)
-		filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, "image.png");
 
 	return film.release();
 }

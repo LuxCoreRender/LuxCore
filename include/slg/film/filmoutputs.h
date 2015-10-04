@@ -16,53 +16,64 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_CONVTEST_H
-#define _SLG_CONVTEST_H
+#ifndef _SLG_FILMOUTPUTS_H
+#define	_SLG_FILMOUTPUTS_H
 
 #include <vector>
+#include <set>
+
 #include <boost/serialization/version.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/version.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/set.hpp>
 
-#include "slg/utils/convtest/pdiff/metric.h"
+#include "luxrays/utils/properties.h"
 
 namespace slg {
 
-class ConvergenceTest {
-public:
-	ConvergenceTest(const u_int w, const u_int h);
-	virtual ~ConvergenceTest();
+//------------------------------------------------------------------------------
+// FilmOutput
+//------------------------------------------------------------------------------
 
-	void NeedTVI();
-	const float *GetTVI() const { return &tvi[0]; }
-	
-	void Reset();
-	void Reset(const u_int w, const u_int h);
-	u_int Test(const float *image);
+class FilmOutputs {
+public:
+	typedef enum {
+		RGB, RGBA, RGB_TONEMAPPED, RGBA_TONEMAPPED, ALPHA, DEPTH, POSITION,
+		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
+		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
+		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
+		RADIANCE_GROUP, UV, RAYCOUNT, BY_MATERIAL_ID, IRRADIANCE
+	} FilmOutputType;
+
+	FilmOutputs() { }
+	~FilmOutputs() { }
+
+	void Clear();
+	u_int GetCount() const { return types.size(); }
+	FilmOutputType GetType(const u_int index) const { return types[index]; }
+	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
+	const luxrays::Properties &GetProperties(const u_int index) const { return props[index]; }
+
+	void Add(const FilmOutputType type, const std::string &fileName,
+		const luxrays::Properties *prop = NULL);
 
 	friend class boost::serialization::access;
 
 private:
-	// Used by serialization
-	ConvergenceTest() { }
-
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & width;
-		ar & height;
-		ar & reference;
-		ar & tvi;
+		ar & types;
+		ar & fileNames;
+		ar & props;
 	}
 
-	u_int width, height;
-	
-	std::vector<float> reference;
-	std::vector<float> tvi;
+	std::vector<FilmOutputType> types;
+	std::vector<std::string> fileNames;
+	std::vector<luxrays::Properties> props;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::ConvergenceTest, 1)
+BOOST_CLASS_VERSION(slg::FilmOutputs, 1)
 
-#endif
-
+#endif	/* _SLG_FILMOUTPUTS_H */

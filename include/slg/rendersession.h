@@ -50,7 +50,6 @@ public:
 
 	boost::mutex filmMutex;
 	Film *film;
-	FilmOutputs filmOutputs;
 
 protected:
 	double lastPeriodicSave, periodiceSaveTime;

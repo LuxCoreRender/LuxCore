@@ -44,7 +44,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = renderConfig->AllocFilm(filmOutputs);
+	film = renderConfig->AllocFilm();
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
@@ -148,7 +148,7 @@ void RenderSession::SaveFilmOutputs() {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	// Save the film
-	film->Output(filmOutputs);
+	film->Output();
 }
 
 void RenderSession::Parse(const luxrays::Properties &props) {
