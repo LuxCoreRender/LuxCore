@@ -102,8 +102,8 @@ def LoadFilm():
 	for i in range(0, 20):
 		props = pyluxcore.Properties()
 		props.SetFromString("""
-		film.radiancescales.0.globalscale = 1.0
-		film.radiancescales.1.globalscale = """ + str(0.025 + i * (3.0 / 19.0)) + """
+			film.radiancescales.0.globalscale = """ + str(0.025 + (19 - i) * (3.0 / 19.0)) + """
+			film.radiancescales.1.globalscale = """ + str(0.025 + i * (3.0 / 19.0)) + """
 			""")
 		film.Parse(props)
 		
