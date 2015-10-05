@@ -24,90 +24,21 @@
 #include <sstream>
 #include <stdexcept>
 
-// Required when using XInitThread()
-//#include <X11/Xlib.h>
-
 #include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
-#include "luxrays/core/geometry/bbox.h"
-#include "luxrays/core/device.h"
 #include "luxrays/utils/ocl.h"
-
-#include "smallluxgpu.h"
-#include "displayfunc.h"
+#include "luxcore/luxcore.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
-RenderConfig *config = NULL;
-RenderSession *session = NULL;
+static void BatchSimpleMode(RenderConfig *config) {
+	RenderSession *session = new RenderSession(config);
 
-//------------------------------------------------------------------------------
-// Global options
-//------------------------------------------------------------------------------
-
-// Mouse "grab" mode. This is the natural way cameras are usually manipulated
-// The flag is off by default but can be turned on by using the -m switch
-bool optMouseGrabMode = false;
-bool optUseLuxVRName = false;
-bool optOSDPrintHelp = false;
-bool optRealTimeMode = false;
-bool optUseGameMode = false;
-float optMoveScale = 1.f;
-float optMoveStep = .5f;
-float optRotateStep = 4.f;
-
-//------------------------------------------------------------------------------
-
-#if defined(__GNUC__) && !defined(__CYGWIN__)
-#include <execinfo.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <typeinfo>
-#include <cxxabi.h>
-#include <boost/format/format_fwd.hpp>
-
-static string Demangle(const char *symbol) {
-	size_t size;
-	int status;
-	char temp[128];
-	char* result;
-
-	if (1 == sscanf(symbol, "%*[^'(']%*[^'_']%[^')''+']", temp)) {
-		if (NULL != (result = abi::__cxa_demangle(temp, NULL, &size, &status))) {
-			string r = result;
-			return r + " [" + symbol + "]";
-		}
-	}
-
-	if (1 == sscanf(symbol, "%127s", temp))
-		return temp;
-
-	return symbol;
-}
-
-void SLGTerminate(void) {
-	SLG_LOG("=========================================================");
-	SLG_LOG("Unhandled exception");
-
-	void *array[32];
-	size_t size = backtrace(array, 32);
-	char **strings = backtrace_symbols(array, size);
-
-	SLG_LOG("Obtained " << size << " stack frames.");
-
-	for (size_t i = 0; i < size; i++)
-		SLG_LOG("  " << Demangle(strings[i]));
-
-	free(strings);
-}
-#endif
-
-static int BatchSimpleMode() {
 	const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
 	const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
 	const float haltThreshold = config->GetProperty("batch.haltthreshold").Get<float>();
@@ -154,23 +85,13 @@ static int BatchSimpleMode() {
 	session->GetFilm().SaveOutputs();
 
 	delete session;
-	SLG_LOG("Done.");
+	delete config;
+	LC_LOG("Done.");
 
-	return EXIT_SUCCESS;
-}
-
-void UpdateMoveStep() {
-	const BBox &worldBBox = config->GetScene().GetDataSet().GetBBox();
-	int maxExtent = worldBBox.MaximumExtent();
-
-	const float worldSize = Max(worldBBox.pMax[maxExtent] - worldBBox.pMin[maxExtent], .001f);
-	optMoveStep = optMoveScale * worldSize / 50.f;
+	return;
 }
 
 int main(int argc, char *argv[]) {
-//#if defined(__GNUC__) && !defined(__CYGWIN__)
-//	set_terminate(SLGTerminate);
-//#endif
 
 	// This is required to run AMD GPU profiler
 	//XInitThreads();
@@ -179,7 +100,6 @@ int main(int argc, char *argv[]) {
 		// initialize LuxCore
 		luxcore::Init();
 
-		bool batchMode = false;
 		bool removeUnusedMatsAndTexs = false;
 		Properties cmdLineProp;
 		string configFileName;
@@ -188,7 +108,7 @@ int main(int argc, char *argv[]) {
 				// I should check for out of range array index...
 
 				if (argv[i][1] == 'h') {
-					SLG_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
+					LC_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
 							" -o [configuration file]" << endl <<
 							" -f [scene file]" << endl <<
 							" -w [window width]" << endl <<
@@ -218,8 +138,6 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 't') cmdLineProp.Set(Property("batch.halttime")(argv[++i]));
 
-				else if (argv[i][1] == 'm') optMouseGrabMode = true;
-
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.Set(Property(argv[i + 1]).Add(argv[i + 2]));
 					i += 2;
@@ -227,14 +145,10 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
-				else if (argv[i][1] == 'R') optUseLuxVRName = true;
-
-				else if (argv[i][1] == 'g') optUseGameMode = true;
-
 				else if (argv[i][1] == 'c') removeUnusedMatsAndTexs = true;
 
 				else {
-					SLG_LOG("Invalid option: " << argv[i]);
+					LC_LOG("Invalid option: " << argv[i]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
@@ -254,15 +168,16 @@ int main(int argc, char *argv[]) {
 
 		// Check if we have to parse a LuxCore SDL file or a LuxRender SDL file
 		Scene *scene;
+		RenderConfig *config;
 		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
 			// It is a LuxRender SDL file
-			SLG_LOG("Parsing LuxRender SDL file...");
+			LC_LOG("Parsing LuxRender SDL file...");
 			Properties renderConfigProps, sceneProps;
 			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
 
 			// For debugging
-			SLG_LOG("RenderConfig: \n" << renderConfigProps);
-			SLG_LOG("Scene: \n" << sceneProps);
+			//LC_LOG("RenderConfig: \n" << renderConfigProps);
+			//LC_LOG("Scene: \n" << sceneProps);
 
 			renderConfigProps.Set(cmdLineProp);
 
@@ -281,67 +196,41 @@ int main(int argc, char *argv[]) {
 			config->GetScene().RemoveUnusedTextures();
 		}
 
-		const u_int haltTime = config->GetProperty("batch.halttime").Get<u_int>();
-		const u_int haltSpp = config->GetProperty("batch.haltspp").Get<u_int>();
-		const float haltThreshold = config->GetProperty("batch.haltthreshold").Get<float>();
-		const u_int haltDebug = config->GetProperty("batch.haltdebug").Get<u_int>();
-		if ((haltTime > 0) || (haltSpp > 0) || (haltThreshold >= 0.f) || (haltDebug > 0u))
-			batchMode = true;
-		else
-			batchMode = false;
-
 		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");
 		if (fileSaverRenderEngine) {
-			session = new RenderSession(config);
+			RenderSession *session = new RenderSession(config);
 
 			// Save the scene and exit
 			session->Start();
 			session->Stop();
 
 			delete session;
-			SLG_LOG("Done.");
+
+			LC_LOG("Done.");
 
 			return EXIT_SUCCESS;
-		} else if (batchMode) {
+		} else {
 			// Force the film update at 2.5secs (mostly used by PathOCL)
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(2500)));
 
-			session = new RenderSession(config);
-
-			return BatchSimpleMode();
-		} else {
-			// It is important to initialize OpenGL before OpenCL
-			// (require din case of OpenGL/OpenCL inter-operability)
-			u_int width, height;
-			config->GetFilmSize(&width, &height, NULL);
-			InitGlut(argc, argv, width, height);
-
-			session = new RenderSession(config);
-
-			// Start the rendering
-			session->Start();
-			session->UpdateStats();
-			UpdateMoveStep();
-
-			RunGlut();
+			BatchSimpleMode(config);
 		}
-		
+
+		delete config;
 		delete scene;
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
-		SLG_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
+		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
 	} catch (runtime_error err) {
-		SLG_LOG("RUNTIME ERROR: " << err.what());
+		LC_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
 	} catch (exception err) {
-		SLG_LOG("ERROR: " << err.what());
+		LC_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}
-
-	delete session;
-	delete config;
 
 	return EXIT_SUCCESS;
 }
