@@ -2,6 +2,7 @@
 ^lib/libsmallluxgpu.a
 ^lib/libluxcore.a
 ^lib/pyluxcore.so
+^lib/libglfw3.a
 ^doxygen-luxrays.conf
 syntax: regexp
 ^doxygen/luxrays.template

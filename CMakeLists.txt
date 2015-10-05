@@ -137,6 +137,7 @@ endif()
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	add_subdirectory(samples/smallluxgpu4)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
+add_subdirectory(samples/luxcoreconsole)
 
 
 ################################################################################
