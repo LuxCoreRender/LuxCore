@@ -121,6 +121,8 @@ bool RenderSession::NeedPeriodicFilmSave() {
 void RenderSession::SaveFilm(const string &fileName) {
 	assert (started);
 
+	SLG_LOG("Saving film: " << fileName);
+
 	// Ask the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 

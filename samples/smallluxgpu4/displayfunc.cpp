@@ -407,6 +407,10 @@ void keyFunc(unsigned char key, int x, int y) {
 			session->GetFilm().SaveOutputs();
 			break;
 		}
+		case 'P': {
+			session->GetFilm().SaveFilm("film.flm");
+			break;
+		}
 		case 27: { // Escape key
 			delete session;
 
