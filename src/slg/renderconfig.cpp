@@ -323,6 +323,14 @@ Film *RenderConfig::AllocFilm() const {
 	film->SetImagePipeline(imagePipeline.release());
 
 	//--------------------------------------------------------------------------
+	// Add the default output
+	//--------------------------------------------------------------------------
+
+	film->Parse(Properties() << 
+			Property("film.outputs.0.type")("RGB_TONEMAPPED") <<
+			Property("film.outputs.0.filename")("image.png"));
+
+	//--------------------------------------------------------------------------
 	// Create the image pipeline, initialize radiance channel scales
 	// and film outputs
 	//--------------------------------------------------------------------------

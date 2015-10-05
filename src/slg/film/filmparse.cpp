@@ -251,10 +251,6 @@ void Film::ParseOutputs(const Properties &props) {
 		filmOutputs.Add(HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_TONEMAPPED : FilmOutputs::RGB_TONEMAPPED,
 				props.Get(Property("image.filename")("image.png")).Get<string>());
 	}
-
-	// Default setting
-	if (filmOutputs.GetCount() == 0)
-		filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, "image.png");
 }
 		
 //------------------------------------------------------------------------------
