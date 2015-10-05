@@ -25,6 +25,7 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/version.hpp>
 
+#include "luxrays/luxrays.h"
 #include "slg/utils/convtest/pdiff/metric.h"
 
 namespace slg {
