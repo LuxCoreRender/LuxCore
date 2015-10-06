@@ -311,7 +311,7 @@ int main(int argc, char *argv[]) {
 			return BatchSimpleMode();
 		} else {
 			// It is important to initialize OpenGL before OpenCL
-			// (require din case of OpenGL/OpenCL inter-operability)
+			// (required in case of OpenGL/OpenCL inter-operability)
 			u_int width, height;
 			config->GetFilmSize(&width, &height, NULL);
 			InitGlut(argc, argv, width, height);
