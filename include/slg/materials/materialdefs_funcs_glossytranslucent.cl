@@ -1,4 +1,4 @@
-#line 2 "materialdefs_funcs_glossy2.cl"
+#line 2 "materialdefs_funcs_glossytranslucent.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -63,20 +63,20 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
 
-	const float cosi = fabs(sampledDir.z);
-	const float coso = fabs(fixedDir.z);
+	const float cosi = fabs(lightDir.z);
+	const float coso = fabs(eyeDir.z);
 
-	const float3 geometryN = VLOAD3F(&hitPoint->geometryN.x);
-	Frame frame;
-	Frame_SetFromZ_Private(&frame, geometryN);
+	// Note: this is the same side test used by matte translucent material and
+	// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
+	// are not available here without bump mapping.
+	const float sideTest = CosTheta(lightDir) * CosTheta(eyeDir);
 
-	const float sideTest = dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, sampledDir), geometryN);
 	if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
-		// Transmition
+		// Transmission
 		*event = DIFFUSE | TRANSMIT;
 
 		if (directPdfW)
-			*directPdfW = fabs(sampledDir.z) * M_1_PI_F * 0.5f;
+			*directPdfW = fabs(sampledDir.z) * (M_1_PI_F * .5f);
 
 		const float3 H = normalize((float3)(lightDir.x + eyeDir.x, lightDir.y + eyeDir.y,
 			lightDir.z - eyeDir.z));
@@ -110,7 +110,8 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 				Spectrum_Clamp(kaVal_bf) * -(d_bf / cosi));
 		}
 #endif
-		return (M_1_PI_F * coso) * S * Spectrum_Clamp(ktVal) *
+
+		return (M_1_PI_F * cosi) * S * Spectrum_Clamp(ktVal) *
 			(WHITE - Spectrum_Clamp(kdVal));
 	} else if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
@@ -190,7 +191,7 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 			const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 			const float wBase = 1.f - wCoating;
 
-			*directPdfW = 0.5f * (wBase * fabs(sampledDir.z * M_1_PI_F) +
+			*directPdfW = .5f * (wBase * fabs(sampledDir.z * M_1_PI_F) +
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir));
 		}
 
@@ -211,9 +212,8 @@ float3 GlossyTranslucentMaterial_ConstEvaluate(
 		// assumes coating bxdf takes fresnel factor S into account
 
 		return coatingF + absorption * (WHITE - S) * baseF;
-	} else {
+	} else
 		return BLACK;
-	}
 }
 
 float3 GlossyTranslucentMaterial_ConstSample(
@@ -242,7 +242,7 @@ float3 GlossyTranslucentMaterial_ConstSample(
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	if (passThroughEvent < 0.5f && (requestedEvent & (GLOSSY | REFLECT))) {
+	if (passThroughEvent < .5f && (requestedEvent & (GLOSSY | REFLECT))) {
 		// Reflection
 		float3 ks;
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)
@@ -356,13 +356,14 @@ float3 GlossyTranslucentMaterial_ConstSample(
 			*event = GLOSSY | REFLECT;
 		}
 
-		const float3 geometryN = VLOAD3F(&hitPoint->geometryN.x);
-		Frame frame;
-		Frame_SetFromZ_Private(&frame, geometryN);
-		if (!(dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, *sampledDir), geometryN) > DEFAULT_COS_EPSILON_STATIC))
+		// Note: this is the same side test used by matte translucent material and
+		// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
+		// are not available here without bump mapping.
+		const float sideTest = CosTheta(fixedDir) * CosTheta(*sampledDir);
+		if (!(sideTest > DEFAULT_COS_EPSILON_STATIC))
 			return BLACK;
 
-		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
+		*pdfW = .5f * (coatingPdf * wCoating + basePdf * wBase);
 
 		// Absorption
 #if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)
@@ -382,17 +383,18 @@ float3 GlossyTranslucentMaterial_ConstSample(
 
 		return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
 	} else if (passThroughEvent >= .5f && (requestedEvent & (DIFFUSE | TRANSMIT))) {
-		// Transmition
+		// Transmission
 		*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
 		*sampledDir *= signbit(fixedDir.z) ? 1.f : -1.f;
 
-		const float3 geometryN = VLOAD3F(&hitPoint->geometryN.x);
-		Frame frame;
-		Frame_SetFromZ_Private(&frame, geometryN);
-		if (!(dot(Frame_ToWorld_Private(&frame, fixedDir), geometryN) * dot(Frame_ToWorld_Private(&frame, *sampledDir), geometryN) < -DEFAULT_COS_EPSILON_STATIC))
+		// Note: this is the same side test used by matte translucent material and
+		// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
+		// are not available here without bump mapping.
+		const float sideTest = CosTheta(fixedDir) * CosTheta(*sampledDir);
+		if (!(sideTest < -DEFAULT_COS_EPSILON_STATIC))
 			return BLACK;
 
-		*pdfW *= 0.5f;
+		*pdfW *= .5f;
 
 		*cosSampledDir = fabs((*sampledDir).z);
 		if (*cosSampledDir < DEFAULT_COS_EPSILON_STATIC)
@@ -435,11 +437,10 @@ float3 GlossyTranslucentMaterial_ConstSample(
 				Spectrum_Clamp(kaVal_bf) * -(d_bf / cosi));
 		}
 #endif
-		return (M_1_PI_F * coso / *pdfW) * S * Spectrum_Clamp(ktVal) *
+		return (M_1_PI_F * cosi / *pdfW) * S * Spectrum_Clamp(ktVal) *
 			(WHITE - Spectrum_Clamp(kdVal));
-	} else {
+	} else
 		return BLACK;
-	}
 }
 
 #endif
