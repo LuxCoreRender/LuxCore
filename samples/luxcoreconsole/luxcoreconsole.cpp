@@ -24,7 +24,6 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
@@ -85,19 +84,14 @@ static void BatchSimpleMode(RenderConfig *config) {
 	session->GetFilm().SaveOutputs();
 
 	delete session;
-	delete config;
-	LC_LOG("Done.");
-
-	return;
 }
 
 int main(int argc, char *argv[]) {
-
 	// This is required to run AMD GPU profiler
 	//XInitThreads();
 
 	try {
-		// initialize LuxCore
+		// Initialize LuxCore
 		luxcore::Init();
 
 		bool removeUnusedMatsAndTexs = false;
@@ -111,14 +105,11 @@ int main(int argc, char *argv[]) {
 					LC_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
 							" -o [configuration file]" << endl <<
 							" -f [scene file]" << endl <<
-							" -w [window width]" << endl <<
-							" -e [window height]" << endl <<
+							" -w [film width]" << endl <<
+							" -e [film height]" << endl <<
 							" -t [halt time in secs]" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
-							" -m <makes the mouse operations work in \"grab mode\">" << endl << 
-							" -R <use LuxVR name>" << endl <<
-							" -g <enable full screen mode>" << endl <<
 							" -c <remove all unused materials and textures>" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
@@ -205,10 +196,6 @@ int main(int argc, char *argv[]) {
 			session->Stop();
 
 			delete session;
-
-			LC_LOG("Done.");
-
-			return EXIT_SUCCESS;
 		} else {
 			// Force the film update at 2.5secs (mostly used by PathOCL)
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(2500)));
@@ -218,6 +205,8 @@ int main(int argc, char *argv[]) {
 
 		delete config;
 		delete scene;
+
+		LC_LOG("Done.");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
