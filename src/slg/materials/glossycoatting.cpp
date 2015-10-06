@@ -69,13 +69,15 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 	const float coso = fabsf(localEyeDir.z);
 
 	const float sideTest = Dot(frame.ToWorld(localEyeDir), hitPoint.geometryN) * Dot(frame.ToWorld(localLightDir), hitPoint.geometryN);
-	if (sideTest > 0.f) {
+	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
+		// Reflection
+
 		HitPoint hitPointBase(hitPoint);
 		matBase->Bump(&hitPointBase);
 		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
-		// Reflection
+
 		const Spectrum baseF = matBase->Evaluate(hitPointBase, lightDirBase, eyeDirBase, event, directPdfW, reversePdfW);
 		if (!(localLightDir.z > 0.f)) {
 			// Back face: no coating
@@ -130,13 +132,15 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		// assumes coating bxdf takes fresnel factor S into account
 
 		return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
-	} else if (sideTest < 0.f) {
+	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
+		// Transmission
+
 		HitPoint hitPointBase(hitPoint);
 		matBase->Bump(&hitPointBase);
 		const Frame frameBase(hitPointBase.GetFrame());
 		const Vector lightDirBase = frameBase.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirBase = frameBase.ToLocal(frame.ToWorld(localEyeDir));
-		// Transmission
+
 		const Spectrum baseF = matBase->Evaluate(hitPointBase, lightDirBase, eyeDirBase, event, directPdfW, reversePdfW);
 		Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 		const float i = index->GetFloatValue(hitPoint);
@@ -168,11 +172,11 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 		const Spectrum absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 		// Coating fresnel factor
-		const Vector H(Normalize(Vector(localLightDir.x + localLightDir.x, localLightDir.y + localLightDir.y,
-			localLightDir.z - localLightDir.z)));
+		const Vector H(Normalize(Vector(localLightDir.x + localEyeDir.x, localLightDir.y + localEyeDir.y,
+			localLightDir.z - localEyeDir.z)));
 		const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localEyeDir, H));
 
-		// filter base layer, the square root is just a heuristic
+		// Filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor
 		// of 1-S like a reflection
 		return absorption * Sqrt(Spectrum(1.f) - S) * baseF;
@@ -205,7 +209,6 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	const float roughness = u * v;
 
 	float basePdf, coatingPdf;
-
 	Spectrum baseF, coatingF;
 
 	if (passThroughEvent < wBase) {
@@ -265,7 +268,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	const float cosWo = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN);
 	const float sideTest = fabsf(cosWo) < MachineEpsilon::E(1.f) ? 0.f : Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) / cosWo;
 	Spectrum result;
-	if (sideTest > 0.f) {
+	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
 		if (!(cosWo > 0.f)) {
 			// Back face reflection: no coating
@@ -281,14 +284,14 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 			// coatingF already takes fresnel factor S into account
 			result = coatingF + absorption * (Spectrum(1.f) - S) * baseF;
 		}
-	} else if (sideTest < 0.f) {
+	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
 		const Vector H(Normalize(Vector(localFixedDir.x + localSampledDir->x, localFixedDir.y + localSampledDir->y,
 			localFixedDir.z - localSampledDir->z)));
 		const Spectrum S = FresnelTexture::SchlickEvaluate(ks, AbsDot(localFixedDir, H));
 
-		// filter base layer, the square root is just a heuristic
+		// Filter base layer, the square root is just a heuristic
 		// so that a sheet coated on both faces gets a filtering factor
 		// of 1-S like a reflection
 		result = absorption * Sqrt(Spectrum(1.f) - S) * baseF;
@@ -312,9 +315,7 @@ void GlossyCoatingMaterial::Pdf(const HitPoint &hitPoint,
 	matBase->Pdf(hitPointBase, lightDirBase, eyeDirBase, directPdfW, reversePdfW);
 	const Vector localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
 	if (!(localFixedDir.z > 0.f))
-	{
 		return;
-	}
 
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 	const float i = index->GetFloatValue(hitPoint);
