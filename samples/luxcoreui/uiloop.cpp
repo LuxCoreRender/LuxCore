@@ -20,6 +20,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/thread.hpp> 
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
@@ -41,7 +43,7 @@ static void GLFWErrorCallback(int error, const char *description) {
 			"Description: " << description << "\n";
 }
 
-static void RefreshRendering() {
+static void RefreshRenderingTexture() {
 	const u_int filmWidth = renderSession->GetFilm().GetWidth();
 	const u_int filmHeight = renderSession->GetFilm().GetHeight();
 	const float *pixels = renderSession->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
@@ -50,6 +52,15 @@ static void RefreshRendering() {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, filmWidth, filmHeight, 0, GL_RGB, GL_FLOAT, pixels);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	renderSession->UpdateStats();
+}
+
+static void DrawRendering() {
+	const u_int filmWidth = renderSession->GetFilm().GetWidth();
+	const u_int filmHeight = renderSession->GetFilm().GetHeight();
+
+	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
 
 	glEnable(GL_TEXTURE_2D);
 	glBegin(GL_QUADS);
@@ -68,8 +79,6 @@ static void RefreshRendering() {
 
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
-
-	renderSession->UpdateStats();
 }
 
 void UILoop(RenderConfig *renderConfig) {
@@ -81,6 +90,9 @@ void UILoop(RenderConfig *renderConfig) {
 	// (required in case of OpenGL/OpenCL inter-operability)
 	u_int filmWidth, filmHeight;
 	renderConfig->GetFilmSize(&filmWidth, &filmHeight, NULL);
+
+	glfwWindowHint(GLFW_DEPTH_BITS, 0);
+	glfwWindowHint(GLFW_ALPHA_BITS, 0);
 
 	const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxrender.net)";
 	GLFWwindow *window = glfwCreateWindow(filmWidth, filmHeight, windowTitle.c_str(), NULL, NULL);
@@ -95,30 +107,98 @@ void UILoop(RenderConfig *renderConfig) {
     ImGui_ImplGlfw_Init(window, true);
 	ImGui::GetIO().IniFilename = NULL;
 
+	int lastWindowWidth, lastWindowHeight;
+	glfwGetFramebufferSize(window, &lastWindowWidth, &lastWindowHeight);
+
 	// Start the rendering
 	renderSession = new RenderSession(renderConfig);
 	renderSession->Start();
 	renderSession->UpdateStats();
-	
+
+	filmWidth = renderSession->GetFilm().GetWidth();
+	filmHeight = renderSession->GetFilm().GetHeight();
+
+	// Initialize OpenGL
     glGenTextures(1, &renderFrameBufferTexID);
 
-	bool show_another_window = true;
+	glViewport(0, 0, lastWindowWidth, lastWindowHeight);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0.f, filmWidth,
+			0.f, filmHeight,
+			-1.f, 1.f);
+
+	double currentTime;
+	double lastLoop = WallClockTime();
+	double lastScreenRefresh = WallClockTime();
+	double lastwindowSizeRefresh = WallClockTime();
 	while (!glfwWindowShouldClose(window)) {
 		//----------------------------------------------------------------------
 		// Refresh the screen
 		//----------------------------------------------------------------------
-		
-		int width, height;
-		glfwGetFramebufferSize(window, &width, &height);
 
-		glMatrixMode(GL_PROJECTION);
-		glViewport(0, 0, width, height);
-		glLoadIdentity();
-		glOrtho(0.f, filmWidth,
-				0.f, filmHeight,
-				-1.f, 1.f);
-		
-		RefreshRendering();
+		int currentWindowWidth, currentWindowHeight;
+		glfwGetFramebufferSize(window, &currentWindowWidth, &currentWindowHeight);
+		glViewport(0, 0, currentWindowWidth, currentWindowHeight);
+
+		// Refresh the window size at 1HZ
+		if (WallClockTime() - lastwindowSizeRefresh > 1.0) {
+			// Check if the window has been resized
+			if ((currentWindowWidth != lastWindowWidth) ||
+					(currentWindowHeight != lastWindowHeight)) {
+				const float newRatio = currentWindowWidth / (float)currentWindowHeight;
+
+				if (newRatio >= 1.f)
+					filmWidth = (u_int)(filmHeight * newRatio);
+				else
+					filmHeight = (u_int)(filmWidth * (1.f / newRatio));
+				LC_LOG("Film resize: " << filmWidth << "x" << filmHeight <<
+						" (Window size:" << currentWindowWidth << "x" << currentWindowHeight << ")");
+
+				glLoadIdentity();
+				glOrtho(0.f, filmWidth,
+						0.f, filmHeight,
+						-1.f, 1.f);
+
+				lastWindowWidth = currentWindowWidth;
+				lastWindowHeight = currentWindowHeight;
+
+				// Stop the session
+				renderSession->Stop();
+
+				// Delete the session
+				delete renderSession;
+				renderSession = NULL;
+
+				// Change the film size
+				renderConfig->Parse(
+						Property("film.width")(filmWidth) <<
+						Property("film.height")(filmHeight));
+
+				// Delete scene.camera.screenwindow so window resize will
+				// automatically adjust the ratio
+				Properties cameraProps = renderConfig->GetScene().GetProperties().GetAllProperties("scene.camera");
+				cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+				renderConfig->GetScene().Parse(cameraProps);
+
+				renderSession = new RenderSession(renderConfig);
+
+				// Re-start the rendering
+				renderSession->Start();
+			}
+			
+			lastwindowSizeRefresh = WallClockTime();
+		}
+
+		// Check if it is time to update the frame buffer texture
+		const double screenRefreshTime = renderConfig->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
+		currentTime = WallClockTime();
+		if (currentTime - lastScreenRefresh >= screenRefreshTime) {
+			RefreshRenderingTexture();
+			lastScreenRefresh = currentTime;
+		}
+
+		DrawRendering();
 
 		//----------------------------------------------------------------------
 		// Draw the UI
@@ -126,13 +206,6 @@ void UILoop(RenderConfig *renderConfig) {
 
 		glfwPollEvents();
 		ImGui_ImplGlfw_NewFrame();
-
-		if (show_another_window) {
-			ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
-			ImGui::Begin("Another Window", &show_another_window);
-			ImGui::Text("Hello");
-			ImGui::End();
-		}
 
 		ImGui::Render();
 		glfwSwapBuffers(window);
@@ -144,6 +217,25 @@ void UILoop(RenderConfig *renderConfig) {
 		if (renderSession->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
 			renderSession->GetFilm().SaveOutputs();
+		}
+
+		//----------------------------------------------------------------------
+		// Check for how long to sleep
+		//----------------------------------------------------------------------
+
+		currentTime = WallClockTime();
+		const double loopTime = currentTime - lastLoop;
+		//LC_LOG("Loop time: " << loopTime * 1000.0 << "ms");
+		lastLoop = currentTime;
+
+		// The UI loop runs at 100HZ
+		if (loopTime < 0.01) {
+			const double sleepTime = (0.01 - loopTime) * 0.99;
+			const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
+			//LC_LOG("Sleep time: " << msSleepTime<< "ms");
+
+			if (msSleepTime > 0)
+				boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
 		}
 	}
 
