@@ -34,8 +34,11 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
+const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxrender.net)";
+
 static RenderSession *renderSession;
 static GLuint renderFrameBufferTexID;
+static GLFWwindow *window;
 
 static void GLFWErrorCallback(int error, const char *description) {
 	cout <<
@@ -60,6 +63,7 @@ static void DrawRendering() {
 	const u_int filmWidth = renderSession->GetFilm().GetWidth();
 	const u_int filmHeight = renderSession->GetFilm().GetHeight();
 
+	glColor3f(1.f, 1.f, 1.f);
 	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
 
 	glEnable(GL_TEXTURE_2D);
@@ -79,6 +83,158 @@ static void DrawRendering() {
 
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
+}
+
+static void DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
+		const u_int tileCount, const u_int tileWidth, const u_int tileHeight) {
+	const RenderConfig *config = &renderSession->GetRenderConfig();
+	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
+	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
+
+	int frameBufferWidth, frameBufferHeight;
+	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+
+	const u_int filmWidth = renderSession->GetFilm().GetWidth();
+	const u_int filmHeight = renderSession->GetFilm().GetHeight();
+	const ImVec2 imGuiScale(frameBufferWidth / (float)filmWidth, frameBufferHeight / (float)filmHeight);
+
+	for (u_int i = 0; i < tileCount; ++i) {
+		const u_int xStart = propCoords.Get<u_int>(i * 2);
+		const u_int yStart = propCoords.Get<u_int>(i * 2 + 1);
+		const u_int width = Min(tileWidth, filmWidth - xStart - 1);
+		const u_int height = Min(tileHeight, filmHeight - yStart - 1);
+
+		glBegin(GL_LINE_LOOP);
+		glVertex2i(xStart, yStart);
+		glVertex2i(xStart + width, yStart);
+		glVertex2i(xStart + width, yStart + height);
+		glVertex2i(xStart, yStart + height);
+		glEnd();
+
+		if (showPassCount || showError) {
+			float xs = xStart + 3.f;
+			float ys = (filmHeight - yStart - 1.f) - ImGui::GetTextLineHeight() - 3.f;
+
+			if (showError) {
+				const float error = propErrors.Get<float>(i) * 256.f;
+				const string errorStr = boost::str(boost::format("[%.2f]") % error);
+
+				ImGui::SetCursorPos(ImVec2(xs * imGuiScale.x, ys * imGuiScale.y));
+				ImGui::TextUnformatted(errorStr.c_str());
+				
+				ys -= ImGui::GetTextLineHeight();
+			}
+
+			if (showPassCount) {
+				const u_int pass = propPasses.Get<u_int>(i);
+				const string passStr = boost::lexical_cast<string>(pass);
+				
+				ImGui::SetCursorPos(ImVec2(xs * imGuiScale.x, ys * imGuiScale.y));
+				ImGui::TextUnformatted(passStr.c_str());
+			}
+		}
+	}
+}
+
+static void DrawTiles() {
+	// Draw the pending, converged and not converged tiles for BIASPATHCPU or BIASPATHOCL
+	const Properties &stats = renderSession->GetStats();
+	const RenderConfig *config = &renderSession->GetRenderConfig();
+
+	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
+		int frameBufferWidth, frameBufferHeight;
+		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
+		ImGui::SetNextWindowSize(ImVec2((float)frameBufferWidth, (float)frameBufferHeight), ImGuiSetCond_Always);
+
+		bool opened = true;
+		if (ImGui::Begin("BIASPATH tiles", &opened, ImVec2(0.f, 0.f), 0.0f,
+				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+			const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
+			const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
+
+			if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
+				// Draw converged tiles borders
+				glColor3f(0.f, 1.f, 0.f);
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.f, 1.f, 0.f, 1.f));
+
+				DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
+						stats.Get("stats.biaspath.tiles.converged.pass"),
+						stats.Get("stats.biaspath.tiles.converged.error"),
+						stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
+						tileWidth, tileHeight);
+
+				ImGui::PopStyleColor();
+			}
+
+			if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
+				// Draw converged tiles borders
+				glColor3f(1.f, 0.f, 0.f);
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
+
+				DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
+						stats.Get("stats.biaspath.tiles.notconverged.pass"),
+						stats.Get("stats.biaspath.tiles.notconverged.error"),
+						stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
+						tileWidth, tileHeight);
+
+				ImGui::PopStyleColor();
+			}
+
+			// Draw pending tiles borders
+			glColor3f(1.f, 1.f, 0.f);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 0.f, 1.f));
+
+			DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
+					stats.Get("stats.biaspath.tiles.pending.pass"),
+					stats.Get("stats.biaspath.tiles.pending.error"),
+					stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
+					tileWidth, tileHeight);
+
+			ImGui::PopStyleColor();
+		}
+
+		ImGui::End();
+	}
+}
+
+static void PrintCaptions() {
+	const Properties &stats = renderSession->GetStats();
+	int frameBufferWidth, frameBufferHeight;
+	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+
+	// Top screen label (to use only in full-screen mode)
+	/*ImGui::SetNextWindowPos(ImVec2(0.f, -8.f));
+	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, 0.f), ImGuiSetCond_Always);
+
+	bool topOpened = true;
+	if (ImGui::Begin("Top screen label", &topOpened,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+		ImGui::TextUnformatted(windowTitle.c_str());
+	}
+	ImGui::End();*/
+
+	// Bottom screen label
+	ImGui::SetNextWindowPos(ImVec2(0.f, (frameBufferHeight - 25.f)));
+	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, 0.f), ImGuiSetCond_Always);
+
+	bool bottomOpened = true;
+	if (ImGui::Begin("Bottom screen label", &bottomOpened,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+		const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sample %.2f on %.1fK tris]") %
+			stats.Get("stats.renderengine.pass").Get<int>() %
+			(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+			(stats.Get("stats.renderengine.performance.total").Get<double>() /
+				stats.Get("stats.renderengine.total.samplesec").Get<double>()) %
+			(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0));
+
+		ImGui::TextUnformatted(buffer.c_str());
+	}
+	ImGui::End();
 }
 
 static void CenterWindow(GLFWwindow *window) {
@@ -119,8 +275,7 @@ void UILoop(RenderConfig *renderConfig) {
 	// Create the window
 	//--------------------------------------------------------------------------
 
-	const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxrender.net)";
-	GLFWwindow *window = glfwCreateWindow(filmWidth, filmHeight, windowTitle.c_str(), NULL, NULL);
+	window = glfwCreateWindow(filmWidth, filmHeight, windowTitle.c_str(), NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		throw runtime_error("Error while opening GLFW window");
@@ -195,7 +350,7 @@ void UILoop(RenderConfig *renderConfig) {
 				else
 					filmHeight = (u_int)(filmWidth * (1.f / newRatio));
 				LC_LOG("Film resize: " << filmWidth << "x" << filmHeight <<
-						" (Frame buffer size:" << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
+						" (Frame buffer size: " << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
 
 				glLoadIdentity();
 				glOrtho(0.f, filmWidth,
@@ -247,6 +402,9 @@ void UILoop(RenderConfig *renderConfig) {
 		//----------------------------------------------------------------------
 
 		ImGui_ImplGlfw_NewFrame();
+
+		DrawTiles();
+		PrintCaptions();
 
 		ImGui::Render();
 
