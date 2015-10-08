@@ -81,6 +81,16 @@ static void DrawRendering() {
 	glDisable(GL_TEXTURE_2D);
 }
 
+static void CenterWindow(GLFWwindow *window) {
+	GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+	int windowWidth, windowHeight;
+	glfwGetWindowSize(window, &windowWidth, &windowHeight);
+
+	glfwSetWindowPos(window, (mode->width - windowWidth) / 2, (mode->height - windowHeight) / 2);
+}
+
 void UILoop(RenderConfig *renderConfig) {
 	glfwSetErrorCallback(GLFWErrorCallback);
 	if (!glfwInit())
@@ -102,13 +112,14 @@ void UILoop(RenderConfig *renderConfig) {
 	}
 
 	glfwMakeContextCurrent(window);
+	CenterWindow(window);
 
 	// Setup ImGui binding
     ImGui_ImplGlfw_Init(window, true);
 	ImGui::GetIO().IniFilename = NULL;
 
-	int lastWindowWidth, lastWindowHeight;
-	glfwGetFramebufferSize(window, &lastWindowWidth, &lastWindowHeight);
+	int lastFrameBufferWidth, lastFrameBufferHeight;
+	glfwGetFramebufferSize(window, &lastFrameBufferWidth, &lastFrameBufferHeight);
 
 	// Start the rendering
 	renderSession = new RenderSession(renderConfig);
@@ -121,7 +132,7 @@ void UILoop(RenderConfig *renderConfig) {
 	// Initialize OpenGL
     glGenTextures(1, &renderFrameBufferTexID);
 
-	glViewport(0, 0, lastWindowWidth, lastWindowHeight);
+	glViewport(0, 0, lastFrameBufferWidth, lastFrameBufferHeight);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(0.f, filmWidth,
@@ -131,37 +142,37 @@ void UILoop(RenderConfig *renderConfig) {
 	double currentTime;
 	double lastLoop = WallClockTime();
 	double lastScreenRefresh = WallClockTime();
-	double lastwindowSizeRefresh = WallClockTime();
+	double lastFrameBufferSizeRefresh = WallClockTime();
 	while (!glfwWindowShouldClose(window)) {
 		//----------------------------------------------------------------------
 		// Refresh the screen
 		//----------------------------------------------------------------------
 
-		int currentWindowWidth, currentWindowHeight;
-		glfwGetFramebufferSize(window, &currentWindowWidth, &currentWindowHeight);
-		glViewport(0, 0, currentWindowWidth, currentWindowHeight);
+		int currentFrameBufferWidth, currentFrameBufferHeight;
+		glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
+		glViewport(0, 0, currentFrameBufferWidth, currentFrameBufferHeight);
 
-		// Refresh the window size at 1HZ
-		if (WallClockTime() - lastwindowSizeRefresh > 1.0) {
-			// Check if the window has been resized
-			if ((currentWindowWidth != lastWindowWidth) ||
-					(currentWindowHeight != lastWindowHeight)) {
-				const float newRatio = currentWindowWidth / (float)currentWindowHeight;
+		// Refresh the frame buffer size at 1HZ
+		if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
+			// Check if the frame buffer has been resized
+			if ((currentFrameBufferWidth != lastFrameBufferWidth) ||
+					(currentFrameBufferHeight != lastFrameBufferHeight)) {
+				const float newRatio = currentFrameBufferWidth / (float)currentFrameBufferHeight;
 
 				if (newRatio >= 1.f)
 					filmWidth = (u_int)(filmHeight * newRatio);
 				else
 					filmHeight = (u_int)(filmWidth * (1.f / newRatio));
 				LC_LOG("Film resize: " << filmWidth << "x" << filmHeight <<
-						" (Window size:" << currentWindowWidth << "x" << currentWindowHeight << ")");
+						" (Frame buffer size:" << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
 
 				glLoadIdentity();
 				glOrtho(0.f, filmWidth,
 						0.f, filmHeight,
 						-1.f, 1.f);
 
-				lastWindowWidth = currentWindowWidth;
-				lastWindowHeight = currentWindowHeight;
+				lastFrameBufferWidth = currentFrameBufferWidth;
+				lastFrameBufferHeight = currentFrameBufferHeight;
 
 				// Stop the session
 				renderSession->Stop();
@@ -175,7 +186,7 @@ void UILoop(RenderConfig *renderConfig) {
 						Property("film.width")(filmWidth) <<
 						Property("film.height")(filmHeight));
 
-				// Delete scene.camera.screenwindow so window resize will
+				// Delete scene.camera.screenwindow so frame buffer resize will
 				// automatically adjust the ratio
 				Properties cameraProps = renderConfig->GetScene().GetProperties().GetAllProperties("scene.camera");
 				cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
@@ -187,7 +198,7 @@ void UILoop(RenderConfig *renderConfig) {
 				renderSession->Start();
 			}
 			
-			lastwindowSizeRefresh = WallClockTime();
+			lastFrameBufferSizeRefresh = WallClockTime();
 		}
 
 		// Check if it is time to update the frame buffer texture
