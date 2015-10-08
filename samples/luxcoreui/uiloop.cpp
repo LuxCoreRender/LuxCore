@@ -91,7 +91,18 @@ static void CenterWindow(GLFWwindow *window) {
 	glfwSetWindowPos(window, (mode->width - windowWidth) / 2, (mode->height - windowHeight) / 2);
 }
 
+void GLFW_KeyCallback(GLFWwindow *window, int key, int scanCode, int action, int mods) {
+	ImGui_ImplGlFw_KeyCallback(window, key, scanCode, action, mods);
+
+	if ((key == GLFW_KEY_ESCAPE) && (action == GLFW_PRESS))
+        glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
 void UILoop(RenderConfig *renderConfig) {
+	//--------------------------------------------------------------------------
+	// Initialize GLFW
+	//--------------------------------------------------------------------------
+
 	glfwSetErrorCallback(GLFWErrorCallback);
 	if (!glfwInit())
 		exit(EXIT_FAILURE);
@@ -104,6 +115,10 @@ void UILoop(RenderConfig *renderConfig) {
 	glfwWindowHint(GLFW_DEPTH_BITS, 0);
 	glfwWindowHint(GLFW_ALPHA_BITS, 0);
 
+	//--------------------------------------------------------------------------
+	// Create the window
+	//--------------------------------------------------------------------------
+
 	const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxrender.net)";
 	GLFWwindow *window = glfwCreateWindow(filmWidth, filmHeight, windowTitle.c_str(), NULL, NULL);
 	if (!window) {
@@ -112,16 +127,25 @@ void UILoop(RenderConfig *renderConfig) {
 	}
 
 	glfwMakeContextCurrent(window);
+
+	glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
+	glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
+	glfwSetKeyCallback(window, GLFW_KeyCallback);
+	glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+
 	CenterWindow(window);
 
 	// Setup ImGui binding
-    ImGui_ImplGlfw_Init(window, true);
+    ImGui_ImplGlfw_Init(window, false);
 	ImGui::GetIO().IniFilename = NULL;
 
 	int lastFrameBufferWidth, lastFrameBufferHeight;
 	glfwGetFramebufferSize(window, &lastFrameBufferWidth, &lastFrameBufferHeight);
 
+	//--------------------------------------------------------------------------
 	// Start the rendering
+	//--------------------------------------------------------------------------
+
 	renderSession = new RenderSession(renderConfig);
 	renderSession->Start();
 	renderSession->UpdateStats();
@@ -129,7 +153,10 @@ void UILoop(RenderConfig *renderConfig) {
 	filmWidth = renderSession->GetFilm().GetWidth();
 	filmHeight = renderSession->GetFilm().GetHeight();
 
+	//--------------------------------------------------------------------------
 	// Initialize OpenGL
+	//--------------------------------------------------------------------------
+
     glGenTextures(1, &renderFrameBufferTexID);
 
 	glViewport(0, 0, lastFrameBufferWidth, lastFrameBufferHeight);
@@ -138,6 +165,10 @@ void UILoop(RenderConfig *renderConfig) {
 	glOrtho(0.f, filmWidth,
 			0.f, filmHeight,
 			-1.f, 1.f);
+
+	//--------------------------------------------------------------------------
+	// Refresh loop
+	//--------------------------------------------------------------------------
 
 	double currentTime;
 	double lastLoop = WallClockTime();
@@ -215,11 +246,12 @@ void UILoop(RenderConfig *renderConfig) {
 		// Draw the UI
 		//----------------------------------------------------------------------
 
-		glfwPollEvents();
 		ImGui_ImplGlfw_NewFrame();
 
 		ImGui::Render();
+
 		glfwSwapBuffers(window);
+		glfwPollEvents();
 
 		//----------------------------------------------------------------------
 		// Check if periodic save is enabled
@@ -250,8 +282,16 @@ void UILoop(RenderConfig *renderConfig) {
 		}
 	}
 
+
+	//--------------------------------------------------------------------------
 	// Stop the rendering
+	//--------------------------------------------------------------------------
+
 	delete renderSession;
+
+	//--------------------------------------------------------------------------
+	// Exit
+	//--------------------------------------------------------------------------
 
 	glfwDestroyWindow(window);
 	ImGui_ImplGlfw_Shutdown();
