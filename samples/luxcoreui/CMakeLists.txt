@@ -35,7 +35,11 @@ include_directories(deps/imgui-1.45)
 
 set(LUXCOREUI_SRCS
 	luxcoreui.cpp
+	luxcoreapp.cpp
 	uiloop.cpp
+	uikeys.cpp
+	uimenu.cpp
+	uimouse.cpp
 	imgui_impl_glfw.cpp
 	deps/imgui-1.45/imgui.cpp
 	deps/imgui-1.45/imgui_demo.cpp

@@ -22,14 +22,13 @@
 #include <boost/format.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread/thread.hpp> 
+#include <boost/function.hpp>
 
-#include <GLFW/glfw3.h>
 #include <imgui.h>
 #include "imgui_impl_glfw.h"
 
 #include "luxrays/utils/ocl.h"
-#include "luxcore/luxcore.h"
-#include "include/GLFW/glfw3.h"
+#include "luxcoreapp.h"
 
 using namespace std;
 using namespace luxrays;
@@ -37,27 +36,13 @@ using namespace luxcore;
 
 const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxrender.net)";
 
-static RenderSession *session;
-static RenderConfig *config;
-
-static GLuint renderFrameBufferTexID;
-static GLFWwindow *window;
-
-static bool optRealTimeMode = false;
-// Mouse "grab" mode. This is the natural way cameras are usually manipulated
-// The flag is off by default but can be turned on by using the -m switch
-bool optMouseGrabMode = false;
-static float optMoveScale = 1.f;
-static float optMoveStep = .5f;
-static float optRotateStep = 4.f;
-
 static void GLFWErrorCallback(int error, const char *description) {
 	cout <<
 			"GLFW Error: " << error << "\n"
 			"Description: " << description << "\n";
 }
 
-static void UpdateMoveStep() {
+void LuxCoreApp::UpdateMoveStep() {
 	const BBox &worldBBox = config->GetScene().GetDataSet().GetBBox();
 	int maxExtent = worldBBox.MaximumExtent();
 
@@ -65,7 +50,7 @@ static void UpdateMoveStep() {
 	optMoveStep = optMoveScale * worldSize / 50.f;
 }
 
-static void RefreshRenderingTexture() {
+void LuxCoreApp::RefreshRenderingTexture() {
 	const u_int filmWidth = session->GetFilm().GetWidth();
 	const u_int filmHeight = session->GetFilm().GetHeight();
 	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
@@ -78,7 +63,7 @@ static void RefreshRenderingTexture() {
 	session->UpdateStats();
 }
 
-static void DrawRendering() {
+void LuxCoreApp::DrawRendering() {
 	const u_int filmWidth = session->GetFilm().GetWidth();
 	const u_int filmHeight = session->GetFilm().GetHeight();
 
@@ -104,7 +89,7 @@ static void DrawRendering() {
 	glDisable(GL_TEXTURE_2D);
 }
 
-static void DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
+void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
 		const u_int tileCount, const u_int tileWidth, const u_int tileHeight) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
 	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
@@ -154,7 +139,7 @@ static void DrawTiles(const Property &propCoords, const Property &propPasses,  c
 	}
 }
 
-static void DrawTiles() {
+void LuxCoreApp::DrawTiles() {
 	// Draw the pending, converged and not converged tiles for BIASPATHCPU or BIASPATHOCL
 	const Properties &stats = session->GetStats();
 
@@ -217,7 +202,7 @@ static void DrawTiles() {
 	}
 }
 
-static void DrawCaptions() {
+void LuxCoreApp::DrawCaptions() {
 	const Properties &stats = session->GetStats();
 	int frameBufferWidth, frameBufferHeight;
 	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
@@ -265,227 +250,10 @@ static void CenterWindow(GLFWwindow *window) {
 }
 
 //------------------------------------------------------------------------------
-// MainMenuBar
-//------------------------------------------------------------------------------
-
-static void MenuFile() {
-	if (ImGui::MenuItem("Restart", "Space bar")) {
-		// Restart rendering
-		session->Stop();
-		session->Start();
-	}
-	if (ImGui::MenuItem("Quit", "ESC"))
-		glfwSetWindowShouldClose(window, GL_TRUE);
-}
-
-static void MenuFilm() {
-	if (ImGui::MenuItem("Save outputs"))
-		session->GetFilm().SaveOutputs();
-	if (ImGui::MenuItem("Save film"))
-		session->GetFilm().SaveFilm("film.flm");
-}
-
-static void MainMenuBar() {
-	if (ImGui::BeginMainMenuBar()) {
-		if (ImGui::BeginMenu("Rendering")) {
-			MenuFile();
-			ImGui::EndMenu();
-		}
-
-		if (ImGui::BeginMenu("Film")) {
-			MenuFilm();
-			ImGui::EndMenu();
-		}
-
-		ImGui::EndMainMenuBar();
-	}
-}
-
-//------------------------------------------------------------------------------
-// Key bindings
-//------------------------------------------------------------------------------
-
-static void GLFW_KeyCallback(GLFWwindow *window, int key, int scanCode, int action, int mods) {
-	ImGui_ImplGlFw_KeyCallback(window, key, scanCode, action, mods);
-
-	if (action == GLFW_PRESS) {
-		ImGuiIO &io = ImGui::GetIO();
-
-		switch (key) {
-			case GLFW_KEY_ESCAPE:
-				glfwSetWindowShouldClose(window, GL_TRUE);
-				break;
-			case GLFW_KEY_P: {
-				if (io.KeyShift)
-					session->GetFilm().SaveFilm("film.flm");
-				else
-					session->GetFilm().SaveOutputs();
-				break;
-			}
-			case GLFW_KEY_SPACE: {
-				// Restart rendering
-				session->Stop();
-				session->Start();
-			}
-			case  GLFW_KEY_A: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().TranslateLeft(optMoveStep);
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_D: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().TranslateRight(optMoveStep);
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_W: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().TranslateForward(optMoveStep);
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_S: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().TranslateBackward(optMoveStep);
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_R: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, optMoveStep));
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_F: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, -optMoveStep));
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_UP: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().RotateUp(optRotateStep);
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_DOWN: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().RotateDown(optRotateStep);
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_LEFT: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().RotateLeft(optRotateStep);
-				session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_RIGHT: {
-				session->BeginSceneEdit();
-				config->GetScene().GetCamera().RotateRight(optRotateStep);
-				session->EndSceneEdit();
-				break;
-			}
-			default:
-				break;
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
-// Camera handling with mouse
-//------------------------------------------------------------------------------
-
-static bool mouseButton0 = false;
-static bool mouseButton2 = false;
-static double mouseGrabLastX = 0;
-static double mouseGrabLastY = 0;
-static double lastMouseUpdate = 0.0;
-
-static void GLFW_MousePositionCallback(GLFWwindow *window, double x, double y) {
-	const double minInterval = 0.2;
-
-	if (mouseButton0) {
-		// Check elapsed time since last update
-		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
-			const int distX = x - mouseGrabLastX;
-			const int distY = y - mouseGrabLastY;
-
-			session->BeginSceneEdit();
-
-			if (optMouseGrabMode) {
-				config->GetScene().GetCamera().RotateUp(.04f * distY * optRotateStep);
-				config->GetScene().GetCamera().RotateLeft(.04f * distX * optRotateStep);
-			}
-			else {
-				config->GetScene().GetCamera().RotateDown(.04f * distY * optRotateStep);
-				config->GetScene().GetCamera().RotateRight(.04f * distX * optRotateStep);
-			};
-
-			session->EndSceneEdit();
-
-			mouseGrabLastX = x;
-			mouseGrabLastY = y;
-
-			lastMouseUpdate = WallClockTime();
-		}
-	} else if (mouseButton2) {
-		// Check elapsed time since last update
-		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
-			const int distX = x - mouseGrabLastX;
-			const int distY = y - mouseGrabLastY;
-
-			session->BeginSceneEdit();
-
-			if (optMouseGrabMode) {
-				config->GetScene().GetCamera().TranslateLeft(.04f * distX * optMoveStep);
-				config->GetScene().GetCamera().TranslateForward(.04f * distY * optMoveStep);
-			}
-			else {
-				config->GetScene().GetCamera().TranslateRight(.04f * distX * optMoveStep);
-				config->GetScene().GetCamera().TranslateBackward(.04f * distY * optMoveStep);
-			}
-
-			session->EndSceneEdit();
-
-			mouseGrabLastX = x;
-			mouseGrabLastY = y;
-
-			lastMouseUpdate = WallClockTime();
-		}
-	}
-}
-
-void GLFW_MouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
-	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
-
-	if (button == GLFW_MOUSE_BUTTON_LEFT) {
-		if (action == GLFW_PRESS) {
-			// Record start position
-			glfwGetCursorPos(window, &mouseGrabLastX, &mouseGrabLastY);
-			mouseButton0 = true;
-		} else if (action == GLFW_RELEASE) {
-			mouseButton0 = false;
-		}
-	} else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
-		if (action == GLFW_PRESS) {
-			// Record start position
-			glfwGetCursorPos(window, &mouseGrabLastX, &mouseGrabLastY);
-			mouseButton2 = true;
-		} else if (action == GLFW_RELEASE) {
-			mouseButton2 = false;
-		}
-	}
-}
-
-//------------------------------------------------------------------------------
 // UI loop
 //------------------------------------------------------------------------------
 
-void UILoop(RenderConfig *renderConfig) {
-	config = renderConfig;
-
+void LuxCoreApp::RunApp() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const string engineType = config->GetProperty("renderengine.type").Get<string>();
 	if ((engineType == "RTPATHOCL") || (engineType == "RTBIASPATHOCL"))
@@ -518,13 +286,14 @@ void UILoop(RenderConfig *renderConfig) {
 		throw runtime_error("Error while opening GLFW window");
 	}
 
+	glfwSetWindowUserPointer(window, this);
 	glfwMakeContextCurrent(window);
 
-	glfwSetMouseButtonCallback(window, GLFW_MouseButtonCallback);
+	glfwSetMouseButtonCallback(window, GLFW_MouseButtonCallBack);
 	glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
-	glfwSetKeyCallback(window, GLFW_KeyCallback);
+	glfwSetKeyCallback(window, GLFW_KeyCallBack);
 	glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
-	glfwSetCursorPosCallback(window, GLFW_MousePositionCallback);
+	glfwSetCursorPosCallback(window, GLFW_MousePositionCallBack);
 
 	CenterWindow(window);
 
