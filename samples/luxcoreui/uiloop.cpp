@@ -217,7 +217,7 @@ static void DrawTiles() {
 	}
 }
 
-static void PrintCaptions() {
+static void DrawCaptions() {
 	const Properties &stats = session->GetStats();
 	int frameBufferWidth, frameBufferHeight;
 	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
@@ -262,6 +262,43 @@ static void CenterWindow(GLFWwindow *window) {
 	glfwGetWindowSize(window, &windowWidth, &windowHeight);
 
 	glfwSetWindowPos(window, (mode->width - windowWidth) / 2, (mode->height - windowHeight) / 2);
+}
+
+//------------------------------------------------------------------------------
+// MainMenuBar
+//------------------------------------------------------------------------------
+
+static void MenuFile() {
+	if (ImGui::MenuItem("Restart", "Space bar")) {
+		// Restart rendering
+		session->Stop();
+		session->Start();
+	}
+	if (ImGui::MenuItem("Quit", "ESC"))
+		glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
+static void MenuFilm() {
+	if (ImGui::MenuItem("Save outputs"))
+		session->GetFilm().SaveOutputs();
+	if (ImGui::MenuItem("Save film"))
+		session->GetFilm().SaveFilm("film.flm");
+}
+
+static void MainMenuBar() {
+	if (ImGui::BeginMainMenuBar()) {
+		if (ImGui::BeginMenu("Rendering")) {
+			MenuFile();
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Film")) {
+			MenuFilm();
+			ImGui::EndMenu();
+		}
+
+		ImGui::EndMainMenuBar();
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -607,7 +644,8 @@ void UILoop(RenderConfig *renderConfig) {
 		ImGui_ImplGlfw_NewFrame();
 
 		DrawTiles();
-		PrintCaptions();
+		DrawCaptions();
+		MainMenuBar();
 
 		ImGui::Render();
 
