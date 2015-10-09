@@ -29,6 +29,7 @@
 
 #include "luxrays/utils/ocl.h"
 #include "luxcore/luxcore.h"
+#include "include/GLFW/glfw3.h"
 
 using namespace std;
 using namespace luxrays;
@@ -36,9 +37,19 @@ using namespace luxcore;
 
 const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxrender.net)";
 
-static RenderSession *renderSession;
+static RenderSession *session;
+static RenderConfig *config;
+
 static GLuint renderFrameBufferTexID;
 static GLFWwindow *window;
+
+static bool optRealTimeMode = false;
+// Mouse "grab" mode. This is the natural way cameras are usually manipulated
+// The flag is off by default but can be turned on by using the -m switch
+bool optMouseGrabMode = false;
+static float optMoveScale = 1.f;
+static float optMoveStep = .5f;
+static float optRotateStep = 4.f;
 
 static void GLFWErrorCallback(int error, const char *description) {
 	cout <<
@@ -46,22 +57,30 @@ static void GLFWErrorCallback(int error, const char *description) {
 			"Description: " << description << "\n";
 }
 
+static void UpdateMoveStep() {
+	const BBox &worldBBox = config->GetScene().GetDataSet().GetBBox();
+	int maxExtent = worldBBox.MaximumExtent();
+
+	const float worldSize = Max(worldBBox.pMax[maxExtent] - worldBBox.pMin[maxExtent], .001f);
+	optMoveStep = optMoveScale * worldSize / 50.f;
+}
+
 static void RefreshRenderingTexture() {
-	const u_int filmWidth = renderSession->GetFilm().GetWidth();
-	const u_int filmHeight = renderSession->GetFilm().GetHeight();
-	const float *pixels = renderSession->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
+	const u_int filmWidth = session->GetFilm().GetWidth();
+	const u_int filmHeight = session->GetFilm().GetHeight();
+	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
 
 	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, filmWidth, filmHeight, 0, GL_RGB, GL_FLOAT, pixels);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	renderSession->UpdateStats();
+	session->UpdateStats();
 }
 
 static void DrawRendering() {
-	const u_int filmWidth = renderSession->GetFilm().GetWidth();
-	const u_int filmHeight = renderSession->GetFilm().GetHeight();
+	const u_int filmWidth = session->GetFilm().GetWidth();
+	const u_int filmHeight = session->GetFilm().GetHeight();
 
 	glColor3f(1.f, 1.f, 1.f);
 	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
@@ -87,15 +106,14 @@ static void DrawRendering() {
 
 static void DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
 		const u_int tileCount, const u_int tileWidth, const u_int tileHeight) {
-	const RenderConfig *config = &renderSession->GetRenderConfig();
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
 	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
 
 	int frameBufferWidth, frameBufferHeight;
 	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 
-	const u_int filmWidth = renderSession->GetFilm().GetWidth();
-	const u_int filmHeight = renderSession->GetFilm().GetHeight();
+	const u_int filmWidth = session->GetFilm().GetWidth();
+	const u_int filmHeight = session->GetFilm().GetHeight();
 	const ImVec2 imGuiScale(frameBufferWidth / (float)filmWidth, frameBufferHeight / (float)filmHeight);
 
 	for (u_int i = 0; i < tileCount; ++i) {
@@ -138,8 +156,7 @@ static void DrawTiles(const Property &propCoords, const Property &propPasses,  c
 
 static void DrawTiles() {
 	// Draw the pending, converged and not converged tiles for BIASPATHCPU or BIASPATHOCL
-	const Properties &stats = renderSession->GetStats();
-	const RenderConfig *config = &renderSession->GetRenderConfig();
+	const Properties &stats = session->GetStats();
 
 	const string engineType = config->GetProperty("renderengine.type").Get<string>();
 	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
@@ -201,7 +218,7 @@ static void DrawTiles() {
 }
 
 static void PrintCaptions() {
-	const Properties &stats = renderSession->GetStats();
+	const Properties &stats = session->GetStats();
 	int frameBufferWidth, frameBufferHeight;
 	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 
@@ -247,14 +264,191 @@ static void CenterWindow(GLFWwindow *window) {
 	glfwSetWindowPos(window, (mode->width - windowWidth) / 2, (mode->height - windowHeight) / 2);
 }
 
-void GLFW_KeyCallback(GLFWwindow *window, int key, int scanCode, int action, int mods) {
+//------------------------------------------------------------------------------
+// Key bindings
+//------------------------------------------------------------------------------
+
+static void GLFW_KeyCallback(GLFWwindow *window, int key, int scanCode, int action, int mods) {
 	ImGui_ImplGlFw_KeyCallback(window, key, scanCode, action, mods);
 
-	if ((key == GLFW_KEY_ESCAPE) && (action == GLFW_PRESS))
-        glfwSetWindowShouldClose(window, GL_TRUE);
+	if (action == GLFW_PRESS) {
+		ImGuiIO &io = ImGui::GetIO();
+
+		switch (key) {
+			case GLFW_KEY_ESCAPE:
+				glfwSetWindowShouldClose(window, GL_TRUE);
+				break;
+			case GLFW_KEY_P: {
+				if (io.KeyShift)
+					session->GetFilm().SaveFilm("film.flm");
+				else
+					session->GetFilm().SaveOutputs();
+				break;
+			}
+			case GLFW_KEY_SPACE: {
+				// Restart rendering
+				session->Stop();
+				session->Start();
+			}
+			case  GLFW_KEY_A: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().TranslateLeft(optMoveStep);
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_D: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().TranslateRight(optMoveStep);
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_W: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().TranslateForward(optMoveStep);
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_S: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().TranslateBackward(optMoveStep);
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_R: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, optMoveStep));
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_F: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, -optMoveStep));
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_UP: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().RotateUp(optRotateStep);
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_DOWN: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().RotateDown(optRotateStep);
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_LEFT: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().RotateLeft(optRotateStep);
+				session->EndSceneEdit();
+				break;
+			}
+			case GLFW_KEY_RIGHT: {
+				session->BeginSceneEdit();
+				config->GetScene().GetCamera().RotateRight(optRotateStep);
+				session->EndSceneEdit();
+				break;
+			}
+			default:
+				break;
+		}
+	}
 }
 
+//------------------------------------------------------------------------------
+// Camera handling with mouse
+//------------------------------------------------------------------------------
+
+static bool mouseButton0 = false;
+static bool mouseButton2 = false;
+static double mouseGrabLastX = 0;
+static double mouseGrabLastY = 0;
+static double lastMouseUpdate = 0.0;
+
+static void GLFW_MousePositionCallback(GLFWwindow *window, double x, double y) {
+	const double minInterval = 0.2;
+
+	if (mouseButton0) {
+		// Check elapsed time since last update
+		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
+			const int distX = x - mouseGrabLastX;
+			const int distY = y - mouseGrabLastY;
+
+			session->BeginSceneEdit();
+
+			if (optMouseGrabMode) {
+				config->GetScene().GetCamera().RotateUp(.04f * distY * optRotateStep);
+				config->GetScene().GetCamera().RotateLeft(.04f * distX * optRotateStep);
+			}
+			else {
+				config->GetScene().GetCamera().RotateDown(.04f * distY * optRotateStep);
+				config->GetScene().GetCamera().RotateRight(.04f * distX * optRotateStep);
+			};
+
+			session->EndSceneEdit();
+
+			mouseGrabLastX = x;
+			mouseGrabLastY = y;
+
+			lastMouseUpdate = WallClockTime();
+		}
+	} else if (mouseButton2) {
+		// Check elapsed time since last update
+		if (optRealTimeMode || (WallClockTime() - lastMouseUpdate > minInterval)) {
+			const int distX = x - mouseGrabLastX;
+			const int distY = y - mouseGrabLastY;
+
+			session->BeginSceneEdit();
+
+			if (optMouseGrabMode) {
+				config->GetScene().GetCamera().TranslateLeft(.04f * distX * optMoveStep);
+				config->GetScene().GetCamera().TranslateForward(.04f * distY * optMoveStep);
+			}
+			else {
+				config->GetScene().GetCamera().TranslateRight(.04f * distX * optMoveStep);
+				config->GetScene().GetCamera().TranslateBackward(.04f * distY * optMoveStep);
+			}
+
+			session->EndSceneEdit();
+
+			mouseGrabLastX = x;
+			mouseGrabLastY = y;
+
+			lastMouseUpdate = WallClockTime();
+		}
+	}
+}
+
+void GLFW_MouseButtonCallback(GLFWwindow *window, int button, int action, int mods) {
+	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT) {
+		if (action == GLFW_PRESS) {
+			// Record start position
+			glfwGetCursorPos(window, &mouseGrabLastX, &mouseGrabLastY);
+			mouseButton0 = true;
+		} else if (action == GLFW_RELEASE) {
+			mouseButton0 = false;
+		}
+	} else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+		if (action == GLFW_PRESS) {
+			// Record start position
+			glfwGetCursorPos(window, &mouseGrabLastX, &mouseGrabLastY);
+			mouseButton2 = true;
+		} else if (action == GLFW_RELEASE) {
+			mouseButton2 = false;
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// UI loop
+//------------------------------------------------------------------------------
+
 void UILoop(RenderConfig *renderConfig) {
+	config = renderConfig;
+
 	//--------------------------------------------------------------------------
 	// Initialize GLFW
 	//--------------------------------------------------------------------------
@@ -266,7 +460,7 @@ void UILoop(RenderConfig *renderConfig) {
 	// It is important to initialize OpenGL before OpenCL
 	// (required in case of OpenGL/OpenCL inter-operability)
 	u_int filmWidth, filmHeight;
-	renderConfig->GetFilmSize(&filmWidth, &filmHeight, NULL);
+	config->GetFilmSize(&filmWidth, &filmHeight, NULL);
 
 	glfwWindowHint(GLFW_DEPTH_BITS, 0);
 	glfwWindowHint(GLFW_ALPHA_BITS, 0);
@@ -283,10 +477,11 @@ void UILoop(RenderConfig *renderConfig) {
 
 	glfwMakeContextCurrent(window);
 
-	glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
+	glfwSetMouseButtonCallback(window, GLFW_MouseButtonCallback);
 	glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
 	glfwSetKeyCallback(window, GLFW_KeyCallback);
 	glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+	glfwSetCursorPosCallback(window, GLFW_MousePositionCallback);
 
 	CenterWindow(window);
 
@@ -301,12 +496,14 @@ void UILoop(RenderConfig *renderConfig) {
 	// Start the rendering
 	//--------------------------------------------------------------------------
 
-	renderSession = new RenderSession(renderConfig);
-	renderSession->Start();
-	renderSession->UpdateStats();
+	session = new RenderSession(config);
+	session->Start();
+	session->UpdateStats();
 
-	filmWidth = renderSession->GetFilm().GetWidth();
-	filmHeight = renderSession->GetFilm().GetHeight();
+	UpdateMoveStep();
+
+	filmWidth = session->GetFilm().GetWidth();
+	filmHeight = session->GetFilm().GetHeight();
 
 	//--------------------------------------------------------------------------
 	// Initialize OpenGL
@@ -361,34 +558,34 @@ void UILoop(RenderConfig *renderConfig) {
 				lastFrameBufferHeight = currentFrameBufferHeight;
 
 				// Stop the session
-				renderSession->Stop();
+				session->Stop();
 
 				// Delete the session
-				delete renderSession;
-				renderSession = NULL;
+				delete session;
+				session = NULL;
 
 				// Change the film size
-				renderConfig->Parse(
+				config->Parse(
 						Property("film.width")(filmWidth) <<
 						Property("film.height")(filmHeight));
 
 				// Delete scene.camera.screenwindow so frame buffer resize will
 				// automatically adjust the ratio
-				Properties cameraProps = renderConfig->GetScene().GetProperties().GetAllProperties("scene.camera");
+				Properties cameraProps = config->GetScene().GetProperties().GetAllProperties("scene.camera");
 				cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
-				renderConfig->GetScene().Parse(cameraProps);
+				config->GetScene().Parse(cameraProps);
 
-				renderSession = new RenderSession(renderConfig);
+				session = new RenderSession(config);
 
 				// Re-start the rendering
-				renderSession->Start();
+				session->Start();
 			}
 			
 			lastFrameBufferSizeRefresh = WallClockTime();
 		}
 
 		// Check if it is time to update the frame buffer texture
-		const double screenRefreshTime = renderConfig->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
+		const double screenRefreshTime = config->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
 		currentTime = WallClockTime();
 		if (currentTime - lastScreenRefresh >= screenRefreshTime) {
 			RefreshRenderingTexture();
@@ -415,9 +612,9 @@ void UILoop(RenderConfig *renderConfig) {
 		// Check if periodic save is enabled
 		//----------------------------------------------------------------------
 
-		if (renderSession->NeedPeriodicFilmSave()) {
+		if (session->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
-			renderSession->GetFilm().SaveOutputs();
+			session->GetFilm().SaveOutputs();
 		}
 
 		//----------------------------------------------------------------------
@@ -445,7 +642,7 @@ void UILoop(RenderConfig *renderConfig) {
 	// Stop the rendering
 	//--------------------------------------------------------------------------
 
-	delete renderSession;
+	delete session;
 
 	//--------------------------------------------------------------------------
 	// Exit

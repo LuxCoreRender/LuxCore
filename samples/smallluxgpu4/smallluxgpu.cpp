@@ -196,7 +196,7 @@ int main(int argc, char *argv[]) {
 							" -t [halt time in secs]" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
-							" -m <makes the mouse operations work in \"grab mode\">" << endl << 
+							" -m <makes the mouse operations work in \"grab mode\">" << endl <<
 							" -R <use LuxVR name>" << endl <<
 							" -g <enable full screen mode>" << endl <<
 							" -c <remove all unused materials and textures>" << endl <<
