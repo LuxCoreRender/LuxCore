@@ -449,6 +449,12 @@ void GLFW_MouseButtonCallback(GLFWwindow *window, int button, int action, int mo
 void UILoop(RenderConfig *renderConfig) {
 	config = renderConfig;
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	if ((engineType == "RTPATHOCL") || (engineType == "RTBIASPATHOCL"))
+		optRealTimeMode = true;
+#endif
+
 	//--------------------------------------------------------------------------
 	// Initialize GLFW
 	//--------------------------------------------------------------------------
@@ -621,19 +627,23 @@ void UILoop(RenderConfig *renderConfig) {
 		// Check for how long to sleep
 		//----------------------------------------------------------------------
 
-		currentTime = WallClockTime();
-		const double loopTime = currentTime - lastLoop;
-		//LC_LOG("Loop time: " << loopTime * 1000.0 << "ms");
-		lastLoop = currentTime;
+		if (optRealTimeMode)
+			session->WaitNewFrame();
+		else {
+			currentTime = WallClockTime();
+			const double loopTime = currentTime - lastLoop;
+			//LC_LOG("Loop time: " << loopTime * 1000.0 << "ms");
+			lastLoop = currentTime;
 
-		// The UI loop runs at 100HZ
-		if (loopTime < 0.01) {
-			const double sleepTime = (0.01 - loopTime) * 0.99;
-			const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
-			//LC_LOG("Sleep time: " << msSleepTime<< "ms");
+			// The UI loop runs at 100HZ
+			if (loopTime < 0.01) {
+				const double sleepTime = (0.01 - loopTime) * 0.99;
+				const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
+				//LC_LOG("Sleep time: " << msSleepTime<< "ms");
 
-			if (msSleepTime > 0)
-				boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
+				if (msSleepTime > 0)
+					boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
+			}
 		}
 	}
 
