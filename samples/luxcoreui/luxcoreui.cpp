@@ -28,6 +28,7 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 
+extern bool optMouseGrabMode;
 extern void UILoop(RenderConfig *config);
 
 int main(int argc, char *argv[]) {
@@ -51,6 +52,7 @@ int main(int argc, char *argv[]) {
 							" -t [halt time in secs]" << endl <<
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
+							" -m <makes the mouse operations work in \"grab mode\">" << endl << 
 							" -c <remove all unused materials and textures>" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
@@ -69,6 +71,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'f') cmdLineProp.Set(Property("scene.file")(argv[++i]));
 
 				else if (argv[i][1] == 't') cmdLineProp.Set(Property("batch.halttime")(argv[++i]));
+
+				else if (argv[i][1] == 'm') optMouseGrabMode = true;
 
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.Set(Property(argv[i + 1]).Add(argv[i + 2]));
