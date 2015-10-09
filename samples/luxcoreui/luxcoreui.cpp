@@ -22,14 +22,11 @@
 #include <boost/format.hpp>
 
 #include "luxrays/utils/ocl.h"
-#include "luxcore/luxcore.h"
+#include "luxcoreapp.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
-
-extern bool optMouseGrabMode;
-extern void UILoop(RenderConfig *config);
 
 int main(int argc, char *argv[]) {
 	try {
@@ -37,6 +34,7 @@ int main(int argc, char *argv[]) {
 		luxcore::Init();
 
 		bool removeUnusedMatsAndTexs = false;
+		bool mouseGrabMode = false;
 		Properties cmdLineProp;
 		string configFileName;
 		for (int i = 1; i < argc; i++) {
@@ -72,7 +70,7 @@ int main(int argc, char *argv[]) {
 
 				else if (argv[i][1] == 't') cmdLineProp.Set(Property("batch.halttime")(argv[++i]));
 
-				else if (argv[i][1] == 'm') optMouseGrabMode = true;
+				else if (argv[i][1] == 'm') mouseGrabMode = true;
 
 				else if (argv[i][1] == 'D') {
 					cmdLineProp.Set(Property(argv[i + 1]).Add(argv[i + 2]));
@@ -141,8 +139,12 @@ int main(int argc, char *argv[]) {
 			session->Stop();
 
 			delete session;
-		} else
-			UILoop(config);
+		} else {
+			LuxCoreApp app(config);
+			app.optMouseGrabMode = mouseGrabMode;
+
+			app.RunApp();
+		}
 
 		delete config;
 		delete scene;
