@@ -42,6 +42,12 @@ using namespace luxcore;
 void LuxCoreApp::GLFW_MousePositionCallBack(GLFWwindow *window, double x, double y) {
 	LuxCoreApp *app = (LuxCoreApp *)glfwGetWindowUserPointer(window);
 
+	if (ImGui::IsMouseHoveringAnyWindow()) {
+		app->mouseButton0 = false;
+		app->mouseButton2 = false;
+		return;
+	}
+
 	const double minInterval = 0.2;
 
 	if (app->mouseButton0) {
@@ -99,7 +105,13 @@ void LuxCoreApp::GLFW_MouseButtonCallBack(GLFWwindow *window, int button, int ac
 	ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 
 	LuxCoreApp *app = (LuxCoreApp *)glfwGetWindowUserPointer(window);
-	
+
+	if (ImGui::IsMouseHoveringAnyWindow()) {
+		app->mouseButton0 = false;
+		app->mouseButton2 = false;
+		return;
+	}
+
 	if (button == GLFW_MOUSE_BUTTON_LEFT) {
 		if (action == GLFW_PRESS) {
 			// Record start position

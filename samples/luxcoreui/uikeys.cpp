@@ -41,6 +41,9 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 
 	LuxCoreApp *app = (LuxCoreApp *)glfwGetWindowUserPointer(window);
 
+	if (ImGui::IsMouseHoveringAnyWindow())
+		return;
+
 	if (action == GLFW_PRESS) {
 		ImGuiIO &io = ImGui::GetIO();
 
