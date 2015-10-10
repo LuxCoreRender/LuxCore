@@ -46,6 +46,10 @@ private:
 	static void GLFW_MousePositionCallBack(GLFWwindow *window, double x, double y);
 
 	void UpdateMoveStep();
+	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
+	void IncScreenRefreshInterval();
+	void DecScreenRefreshInterval();
+
 	void RefreshRenderingTexture();
 	void DrawRendering();
 	void DrawTiles(const luxrays::Property &propCoords,
@@ -57,6 +61,7 @@ private:
 	void MenuFile();
 	void MenuFilm();
 	void MenuWindow();
+	void MenuScreen();
 	void MainMenuBar();
 
 	static LogWindow *currentLogWindow;

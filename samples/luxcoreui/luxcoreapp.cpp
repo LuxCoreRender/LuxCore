@@ -53,6 +53,72 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) : statsWindow(this) 
 LuxCoreApp::~LuxCoreApp() {
 }
 
+void LuxCoreApp::IncScreenRefreshInterval() {
+	const u_int screenRefreshInterval = config->GetProperty("screen.refresh.interval").Get<u_int>();
+	if (screenRefreshInterval >= 1000)
+		config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 1000)));
+	else if (screenRefreshInterval >= 100)
+		config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 50)));
+	else
+		config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 5)));
+}
+
+void LuxCoreApp::DecScreenRefreshInterval() {
+	const u_int screenRefreshInterval = config->GetProperty("screen.refresh.interval").Get<u_int>();
+	if (screenRefreshInterval > 1000)
+		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(1000u, screenRefreshInterval - 1000))));
+	else if (screenRefreshInterval > 100)
+		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(50u, screenRefreshInterval - 50))));
+	else
+		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(10u, screenRefreshInterval - 5))));
+}
+
+void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
+	u_int filmWidth = width;
+	u_int filmHeight = height;
+
+	int currentFrameBufferWidth, currentFrameBufferHeight;
+	glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
+	const float newRatio = currentFrameBufferWidth / (float)currentFrameBufferHeight;
+
+	if (newRatio >= 1.f)
+		filmWidth = (u_int)(filmHeight * newRatio);
+	else
+		filmHeight = (u_int)(filmWidth * (1.f / newRatio));
+	LA_LOG("Film resize: " << filmWidth << "x" << filmHeight <<
+			" (Frame buffer size: " << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0.f, filmWidth,
+			0.f, filmHeight,
+			-1.f, 1.f);
+
+	// Stop the session
+	session->Stop();
+
+	// Delete the session
+	delete session;
+	session = NULL;
+
+	// Change the film size
+	config->Parse(
+			Property("film.width")(filmWidth) <<
+			Property("film.height")(filmHeight));
+
+	// Delete scene.camera.screenwindow so frame buffer resize will
+	// automatically adjust the ratio
+	Properties cameraProps = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+	config->GetScene().Parse(cameraProps);
+
+	session = new RenderSession(config);
+
+	// Re-start the rendering
+	session->Start();
+	session->UpdateStats();
+}
+
 void LuxCoreApp::LogHandler(const char *msg) {
 	cout << msg << endl;
 

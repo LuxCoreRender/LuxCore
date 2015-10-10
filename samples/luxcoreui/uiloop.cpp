@@ -345,52 +345,20 @@ void LuxCoreApp::RunApp() {
 
 		int currentFrameBufferWidth, currentFrameBufferHeight;
 		glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
+		// This call is outside the block below because the UI is drawn at every loop
+		// and not only every 1 secs.
 		glViewport(0, 0, currentFrameBufferWidth, currentFrameBufferHeight);
 
 		// Refresh the frame buffer size at 1HZ
 		if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
+
 			// Check if the frame buffer has been resized
 			if ((currentFrameBufferWidth != lastFrameBufferWidth) ||
 					(currentFrameBufferHeight != lastFrameBufferHeight)) {
-				const float newRatio = currentFrameBufferWidth / (float)currentFrameBufferHeight;
-
-				if (newRatio >= 1.f)
-					filmWidth = (u_int)(filmHeight * newRatio);
-				else
-					filmHeight = (u_int)(filmWidth * (1.f / newRatio));
-				LA_LOG("Film resize: " << filmWidth << "x" << filmHeight <<
-						" (Frame buffer size: " << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
-
-				glLoadIdentity();
-				glOrtho(0.f, filmWidth,
-						0.f, filmHeight,
-						-1.f, 1.f);
-
+				SetFilmResolution(filmWidth, filmHeight);
+				
 				lastFrameBufferWidth = currentFrameBufferWidth;
 				lastFrameBufferHeight = currentFrameBufferHeight;
-
-				// Stop the session
-				session->Stop();
-
-				// Delete the session
-				delete session;
-				session = NULL;
-
-				// Change the film size
-				config->Parse(
-						Property("film.width")(filmWidth) <<
-						Property("film.height")(filmHeight));
-
-				// Delete scene.camera.screenwindow so frame buffer resize will
-				// automatically adjust the ratio
-				Properties cameraProps = config->GetScene().GetProperties().GetAllProperties("scene.camera");
-				cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
-				config->GetScene().Parse(cameraProps);
-
-				session = new RenderSession(config);
-
-				// Re-start the rendering
-				session->Start();
 			}
 			
 			lastFrameBufferSizeRefresh = WallClockTime();
