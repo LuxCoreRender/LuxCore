@@ -123,6 +123,26 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->session->EndSceneEdit();
 				break;
 			}
+			case GLFW_KEY_N: {
+				const u_int screenRefreshInterval = app->config->GetProperty("screen.refresh.interval").Get<u_int>();
+				if (screenRefreshInterval > 1000)
+					app->config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(1000u, screenRefreshInterval - 1000))));
+				else if (screenRefreshInterval > 100)
+					app->config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(50u, screenRefreshInterval - 50))));
+				else
+					app->config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(10u, screenRefreshInterval - 5))));
+				break;
+			}
+			case GLFW_KEY_M: {
+				const u_int screenRefreshInterval = app->config->GetProperty("screen.refresh.interval").Get<u_int>();
+				if (screenRefreshInterval >= 1000)
+					app->config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 1000)));
+				else if (screenRefreshInterval >= 100)
+					app->config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 50)));
+				else
+					app->config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 5)));
+				break;
+			}
 			default:
 				break;
 		}

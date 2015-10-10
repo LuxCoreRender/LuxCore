@@ -16,46 +16,27 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <iostream>
+#ifndef _LUXCOREAPP_STATSWINDOW_H
+#define	_LUXCOREAPP_STATSWINDOW_H
 
-#include "luxcoreapp.h"
+#include <string>
 
-using namespace std;
-using namespace luxrays;
-using namespace luxcore;
+#include <imgui.h>
 
-LogWindow *LuxCoreApp::currentLogWindow = NULL;
+class LuxCoreApp;
 
-//------------------------------------------------------------------------------
-// LuxCoreApp
-//------------------------------------------------------------------------------
+class StatsWindow {
+public:
+	StatsWindow(LuxCoreApp *a) : title("Statistics"), opened(false), app(a) { }
+	~StatsWindow() { }
 
-LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) : statsWindow(this) {
-	config = renderConfig;
-	session = NULL;
-	window = NULL;
+	void Draw();
 
-	optRealTimeMode = false;
-	optMouseGrabMode = false;
-	optMoveScale = 1.f;
-	optMoveStep = .5f;
-	optRotateStep = 4.f;
+	std::string title;
+	bool opened;
 
-	mouseButton0 = false;
-	mouseButton2 = false;
-	mouseGrabLastX = 0.0;
-	mouseGrabLastY = 0.0;
-	lastMouseUpdate = 0.0;
-	
-	currentLogWindow = &logWindow;
-}
+private:
+	LuxCoreApp *app;
+};
 
-LuxCoreApp::~LuxCoreApp() {
-}
-
-void LuxCoreApp::LogHandler(const char *msg) {
-	cout << msg << endl;
-
-	if (currentLogWindow)
-		currentLogWindow->AddMsg(msg);
-}
+#endif	/* _LUXCOREAPP_STATSWINDOW_H */
