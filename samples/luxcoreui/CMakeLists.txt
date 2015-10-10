@@ -40,6 +40,7 @@ set(LUXCOREUI_SRCS
 	uikeys.cpp
 	uimenu.cpp
 	uimouse.cpp
+	logwindow.cpp
 	imgui_impl_glfw.cpp
 	deps/imgui-1.45/imgui.cpp
 	deps/imgui-1.45/imgui_demo.cpp

@@ -16,69 +16,70 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <imgui.h>
+#include <iostream>
 
-#include "luxcoreapp.h"
+#include "logwindow.h"
 
 using namespace std;
-using namespace luxrays;
-using namespace luxcore;
 
 //------------------------------------------------------------------------------
-// MenuFile
+// LogWindow
 //------------------------------------------------------------------------------
 
-void LuxCoreApp::MenuFile() {
-	if (ImGui::MenuItem("Restart", "Space bar")) {
-		// Restart rendering
-		session->Stop();
-		session->Start();
+void LogWindow::Clear() {
+	buffer.clear();
+	lineOffsets.clear();
+}
+
+void LogWindow::AddMsg(const char *msg) {
+	int oldSize = buffer.size();
+	buffer.append("%s\n", msg);
+
+	for (int newSize = buffer.size(); oldSize < newSize; oldSize++)
+		if (buffer[oldSize] == '\n')
+			lineOffsets.push_back(oldSize);
+
+	scrollToBottom = true;
+}
+
+void LogWindow::Draw() {
+	if (!opened)
+		return;
+
+	ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiSetCond_FirstUseEver);
+
+	if (ImGui::Begin(title.c_str(), &opened)) {
+		if (ImGui::Button("Clear"))
+			Clear();
+		ImGui::SameLine();
+
+		const bool copy = ImGui::Button("Copy");
+		ImGui::SameLine();
+
+		filter.Draw("Filter", -100.0f);
+		ImGui::Separator();
+		ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+		if (copy)
+			ImGui::LogToClipboard();
+
+		if (filter.IsActive()) {
+			const char *bufferBegin = buffer.begin();
+			const char *line = bufferBegin;
+			for (int lineNumber = 0; line != NULL; lineNumber++) {
+				const char *line_end = (lineNumber < lineOffsets.Size) ? bufferBegin + lineOffsets[lineNumber] : NULL;
+
+				if (filter.PassFilter(line, line_end))
+					ImGui::TextUnformatted(line, line_end);
+				line = line_end && line_end[1] ? line_end + 1 : NULL;
+			}
+		} else
+			ImGui::TextUnformatted(buffer.begin());
+
+		if (scrollToBottom)
+			ImGui::SetScrollHere(1.0f);
+		scrollToBottom = false;
+
+		ImGui::EndChild();
 	}
-	if (ImGui::MenuItem("Quit", "ESC"))
-		glfwSetWindowShouldClose(window, GL_TRUE);
-}
-
-//------------------------------------------------------------------------------
-// MenuFilm
-//------------------------------------------------------------------------------
-
-void LuxCoreApp::MenuFilm() {
-	if (ImGui::MenuItem("Save outputs"))
-		session->GetFilm().SaveOutputs();
-	if (ImGui::MenuItem("Save film"))
-		session->GetFilm().SaveFilm("film.flm");
-}
-
-//------------------------------------------------------------------------------
-// MenuWindow
-//------------------------------------------------------------------------------
-
-void LuxCoreApp::MenuWindow() {
-	if (ImGui::MenuItem("Log console"))
-		logWindow.opened = !logWindow.opened;
-}
-
-//------------------------------------------------------------------------------
-// MainMenuBar
-//------------------------------------------------------------------------------
-
-void LuxCoreApp::MainMenuBar() {
-	if (ImGui::BeginMainMenuBar()) {
-		if (ImGui::BeginMenu("Rendering")) {
-			MenuFile();
-			ImGui::EndMenu();
-		}
-
-		if (ImGui::BeginMenu("Film")) {
-			MenuFilm();
-			ImGui::EndMenu();
-		}
-
-		if (ImGui::BeginMenu("Window")) {
-			MenuWindow();
-			ImGui::EndMenu();
-		}
-
-		ImGui::EndMainMenuBar();
-	}
+	ImGui::End();
 }

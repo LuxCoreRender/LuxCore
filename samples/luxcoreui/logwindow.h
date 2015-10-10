@@ -16,46 +16,32 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <iostream>
+#ifndef _LUXCOREAPP_LOGWINDOW_H
+#define	_LUXCOREAPP_LOGWINDOW_H
 
-#include "luxcoreapp.h"
+#include <string>
 
-using namespace std;
-using namespace luxrays;
-using namespace luxcore;
+#include <imgui.h>
 
-LogWindow *LuxCoreApp::currentLogWindow = NULL;
+class LogWindow {
+public:
+	LogWindow() : title("Log"), opened(false) { }
+	~LogWindow() { }
 
-//------------------------------------------------------------------------------
-// LuxCoreApp
-//------------------------------------------------------------------------------
+	void Clear();
+	void AddMsg(const char *msg);
+	void Draw();
 
-LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) {
-	config = renderConfig;
-	session = NULL;
-	window = NULL;
+	std::string title;
+	bool opened;
 
-	optRealTimeMode = false;
-	optMouseGrabMode = false;
-	optMoveScale = 1.f;
-	optMoveStep = .5f;
-	optRotateStep = 4.f;
+private:
+	ImGuiTextBuffer buffer;
+	ImGuiTextFilter filter;
+	ImVector<int> lineOffsets; // Index to lines offset
 
-	mouseButton0 = false;
-	mouseButton2 = false;
-	mouseGrabLastX = 0.0;
-	mouseGrabLastY = 0.0;
-	lastMouseUpdate = 0.0;
-	
-	currentLogWindow = &logWindow;
-}
+	bool scrollToBottom;
+};
 
-LuxCoreApp::~LuxCoreApp() {
-}
+#endif	/* _LUXCOREAPP_LOGWINDOW_H */
 
-void LuxCoreApp::LogHandler(const char *msg) {
-	cout << msg << endl;
-
-	if (currentLogWindow)
-		currentLogWindow->AddMsg(msg);
-}
