@@ -54,6 +54,8 @@ void LuxCoreApp::MenuFilm() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuWindow() {
+	if (ImGui::MenuItem("Statistics"))
+		statsWindow.opened = !statsWindow.opened;
 	if (ImGui::MenuItem("Log console"))
 		logWindow.opened = !logWindow.opened;
 }
