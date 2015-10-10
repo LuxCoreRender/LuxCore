@@ -358,7 +358,7 @@ void LuxCoreApp::RunApp() {
 					filmWidth = (u_int)(filmHeight * newRatio);
 				else
 					filmHeight = (u_int)(filmWidth * (1.f / newRatio));
-				LC_LOG("Film resize: " << filmWidth << "x" << filmHeight <<
+				LA_LOG("Film resize: " << filmWidth << "x" << filmHeight <<
 						" (Frame buffer size: " << currentFrameBufferWidth << "x" << currentFrameBufferHeight << ")");
 
 				glLoadIdentity();
@@ -415,6 +415,7 @@ void LuxCoreApp::RunApp() {
 		DrawTiles();
 		DrawCaptions();
 		MainMenuBar();
+		logWindow.Draw();
 
 		ImGui::Render();
 
@@ -439,14 +440,14 @@ void LuxCoreApp::RunApp() {
 		else {
 			currentTime = WallClockTime();
 			const double loopTime = currentTime - lastLoop;
-			//LC_LOG("Loop time: " << loopTime * 1000.0 << "ms");
+			//LA_LOG("Loop time: " << loopTime * 1000.0 << "ms");
 			lastLoop = currentTime;
 
 			// The UI loop runs at 100HZ
 			if (loopTime < 0.01) {
 				const double sleepTime = (0.01 - loopTime) * 0.99;
 				const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
-				//LC_LOG("Sleep time: " << msSleepTime<< "ms");
+				//LA_LOG("Sleep time: " << msSleepTime<< "ms");
 
 				if (msSleepTime > 0)
 					boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));

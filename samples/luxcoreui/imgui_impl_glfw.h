@@ -1,3 +1,6 @@
+#ifndef _IMGUI_IMPL_GLFW_H
+#define	_IMGUI_IMPL_GLFW_H
+
 // ImGui GLFW binding with OpenGL
 // https://github.com/ocornut/imgui
 
@@ -18,3 +21,5 @@ IMGUI_API void        ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int
 IMGUI_API void        ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 IMGUI_API void        ImGui_ImplGlFw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 IMGUI_API void        ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c);
+
+#endif	/* _IMGUI_IMPL_GLFW_H */

@@ -31,7 +31,7 @@ using namespace luxcore;
 int main(int argc, char *argv[]) {
 	try {
 		// Initialize LuxCore
-		luxcore::Init();
+		luxcore::Init(LuxCoreApp::LogHandler);
 
 		bool removeUnusedMatsAndTexs = false;
 		bool mouseGrabMode = false;
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 				// I should check for out of range array index...
 
 				if (argv[i][1] == 'h') {
-					LC_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
+					LA_LOG("Usage: " << argv[0] << " [options] [configuration file]" << endl <<
 							" -o [configuration file]" << endl <<
 							" -f [scene file]" << endl <<
 							" -w [window width]" << endl <<
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'c') removeUnusedMatsAndTexs = true;
 
 				else {
-					LC_LOG("Invalid option: " << argv[i]);
+					LA_LOG("Invalid option: " << argv[i]);
 					exit(EXIT_FAILURE);
 				}
 			} else {
@@ -105,13 +105,13 @@ int main(int argc, char *argv[]) {
 		RenderConfig *config;
 		if ((configFileName.length() >= 4) && (configFileName.substr(configFileName.length() - 4) == ".lxs")) {
 			// It is a LuxRender SDL file
-			LC_LOG("Parsing LuxRender SDL file...");
+			LA_LOG("Parsing LuxRender SDL file...");
 			Properties renderConfigProps, sceneProps;
 			luxcore::ParseLXS(configFileName, renderConfigProps, sceneProps);
 
 			// For debugging
-			//LC_LOG("RenderConfig: \n" << renderConfigProps);
-			//LC_LOG("Scene: \n" << sceneProps);
+			//LA_LOG("RenderConfig: \n" << renderConfigProps);
+			//LA_LOG("Scene: \n" << sceneProps);
 
 			renderConfigProps.Set(cmdLineProp);
 
@@ -149,18 +149,18 @@ int main(int argc, char *argv[]) {
 		delete config;
 		delete scene;
 
-		LC_LOG("Done.");
+		LA_LOG("Done.");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	} catch (cl::Error err) {
-		LC_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
+		LA_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
 	} catch (runtime_error err) {
-		LC_LOG("RUNTIME ERROR: " << err.what());
+		LA_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
 	} catch (exception err) {
-		LC_LOG("ERROR: " << err.what());
+		LA_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}
 

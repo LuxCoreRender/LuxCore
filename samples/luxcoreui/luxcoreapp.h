@@ -22,6 +22,7 @@
 #include <GLFW/glfw3.h>
 
 #include "luxcore/luxcore.h"
+#include "logwindow.h"
 
 class LuxCoreApp {
 public:
@@ -30,10 +31,12 @@ public:
 
 	void RunApp();
 
+	static void LogHandler(const char *msg);
+
 	// Mouse "grab" mode. This is the natural way cameras are usually manipulated
 	// The flag is off by default but can be turned on by using the -m switch
 	bool optMouseGrabMode;
-	
+
 private:
 	static void GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int action, int mods);
 	static void GLFW_MouseButtonCallBack(GLFWwindow *window, int button, int action, int mods);
@@ -50,7 +53,12 @@ private:
 
 	void MenuFile();
 	void MenuFilm();
+	void MenuWindow();
 	void MainMenuBar();
+
+	static LogWindow *currentLogWindow;
+
+	LogWindow logWindow;
 
 	luxcore::RenderSession *session;
 	luxcore::RenderConfig *config;
@@ -67,6 +75,9 @@ private:
 	double mouseGrabLastX, mouseGrabLastY;
 	double lastMouseUpdate;
 };
+
+
+#define LA_LOG(a) { std::stringstream _LUXCOREUI_LOG_LOCAL_SS; _LUXCOREUI_LOG_LOCAL_SS << a; LuxCoreApp::LogHandler(_LUXCOREUI_LOG_LOCAL_SS.str().c_str()); }
 
 #endif	/* _LUXCOREAPP_H */
 
