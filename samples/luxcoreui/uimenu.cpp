@@ -43,6 +43,28 @@ void LuxCoreApp::MenuFile() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuFilm() {
+	if (ImGui::BeginMenu("Set resolution")) {
+		if (ImGui::MenuItem("640x480"))
+			SetFilmResolution(640, 480);
+		if (ImGui::MenuItem("800x600"))
+			SetFilmResolution(800, 600);
+		if (ImGui::MenuItem("1024x768"))
+			SetFilmResolution(1024, 768);
+		if (ImGui::MenuItem("1280x720"))
+			SetFilmResolution(1280, 720);
+		if (ImGui::MenuItem("1920x1080"))
+			SetFilmResolution(1920, 1080);
+		ImGui::Separator();
+		if (ImGui::MenuItem("Use screen resolution")) {
+			int currentFrameBufferWidth, currentFrameBufferHeight;
+			glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
+
+			SetFilmResolution(currentFrameBufferWidth, currentFrameBufferHeight);
+		}
+
+		ImGui::EndMenu();
+	}
+	ImGui::Separator();
 	if (ImGui::MenuItem("Save outputs"))
 		session->GetFilm().SaveOutputs();
 	if (ImGui::MenuItem("Save film"))
@@ -61,6 +83,37 @@ void LuxCoreApp::MenuWindow() {
 }
 
 //------------------------------------------------------------------------------
+// MenuScreen
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuScreen() {
+	if (ImGui::BeginMenu("Set refresh interval")) {
+		if (ImGui::MenuItem("5ms"))
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(5)));
+		if (ImGui::MenuItem("10ms"))
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(10)));
+		if (ImGui::MenuItem("20ms"))
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(20)));
+		if (ImGui::MenuItem("50ms"))
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(50)));
+		if (ImGui::MenuItem("100ms"))
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(100)));
+		if (ImGui::MenuItem("500ms"))
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(500)));
+		if (ImGui::MenuItem("1000ms"))
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(1000)));
+		if (ImGui::MenuItem("2000ms"))
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(2000)));
+
+		ImGui::EndMenu();
+	}
+	if (ImGui::MenuItem("Decrease refresh interval","n"))
+		DecScreenRefreshInterval();
+	if (ImGui::MenuItem("Increase refresh interval","m"))
+		IncScreenRefreshInterval();
+}
+
+//------------------------------------------------------------------------------
 // MainMenuBar
 //------------------------------------------------------------------------------
 
@@ -73,6 +126,11 @@ void LuxCoreApp::MainMenuBar() {
 
 		if (ImGui::BeginMenu("Film")) {
 			MenuFilm();
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Screen")) {
+			MenuScreen();
 			ImGui::EndMenu();
 		}
 

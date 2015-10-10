@@ -53,6 +53,10 @@ void StatsWindow::Draw() {
 			ImGui::Text("Sampler: %s", samplerName.c_str());
 
 			ImGui::Text("Rendering time: %dsecs", int(stats.Get("stats.renderengine.time").Get<double>()));
+			ImGui::Text("Film resolution: %d x %d", session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+			int frameBufferWidth, frameBufferHeight;
+			glfwGetFramebufferSize(app->window, &frameBufferWidth, &frameBufferHeight);
+			ImGui::Text("Screen resolution: %d x %d", frameBufferWidth, frameBufferHeight);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			if (engineType == "RTPATHOCL") {
@@ -62,7 +66,7 @@ void StatsWindow::Draw() {
 				const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
 				fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
-				ImGui::Text("Screen refresh %d/%dms %.1ffps",
+				ImGui::Text("Screen refresh: %d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 						config->GetProperty("screen.refresh.interval").Get<u_int>(),
 						fps);
@@ -73,7 +77,7 @@ void StatsWindow::Draw() {
 				const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
 				fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
-				ImGui::Text("Screen refresh %d/%dms %.1ffps",
+				ImGui::Text("Screen refresh: %d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 						config->GetProperty("screen.refresh.interval").Get<u_int>(),
 						fps);
