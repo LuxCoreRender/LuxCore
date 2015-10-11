@@ -62,4 +62,4 @@ private:
 
 }
 
-#endif	/* _SLG_SCALETEX_H */
+#endif	/* _SLG_ABSTEX_H */

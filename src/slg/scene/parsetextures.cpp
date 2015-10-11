@@ -29,6 +29,7 @@
 #include "slg/textures/abs.h"
 #include "slg/textures/add.h"
 #include "slg/textures/band.h"
+#include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
@@ -405,6 +406,13 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 
 		return new NormalMapTexture(tex);
+	} else if (texType == "bilerp") {
+		const Texture *t00 = GetTexture(props.Get(Property(propName + ".texture00")(0.f)));
+		const Texture *t01 = GetTexture(props.Get(Property(propName + ".texture01")(1.f)));
+		const Texture *t10 = GetTexture(props.Get(Property(propName + ".texture10")(0.f)));
+		const Texture *t11 = GetTexture(props.Get(Property(propName + ".texture11")(1.f)));
+
+		return new BilerpTexture(t00, t01, t10, t11);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }
