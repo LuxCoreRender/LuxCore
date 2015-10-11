@@ -131,6 +131,37 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->IncScreenRefreshInterval();
 				break;
 			}
+			case GLFW_KEY_1:
+				app->SetRenderingEngineType("PATHOCL");
+				break;
+			case GLFW_KEY_2:
+				app->SetRenderingEngineType("LIGHTCPU");
+				break;
+			case GLFW_KEY_3:
+				app->SetRenderingEngineType("PATHCPU");
+				break;
+			case GLFW_KEY_4:
+				app->SetRenderingEngineType("BIDIRCPU");
+				break;
+			case GLFW_KEY_5:
+				app->SetRenderingEngineType("BIDIRVMCPU");
+				break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+			case GLFW_KEY_6:
+				app->SetRenderingEngineType("RTPATHOCL");
+				break;
+#endif
+			case GLFW_KEY_7:
+				app->SetRenderingEngineType("BIASPATHCPU");
+				break;
+			case GLFW_KEY_8:
+				app->SetRenderingEngineType("BIASPATHOCL");
+				break;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+			case GLFW_KEY_9:
+				app->SetRenderingEngineType("RTBIASPATHOCL");
+				break;
+#endif
 			default:
 				break;
 		}

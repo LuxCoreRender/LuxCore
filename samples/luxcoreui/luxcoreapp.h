@@ -51,6 +51,7 @@ private:
 	static void GLFW_MousePositionCallBack(GLFWwindow *window, double x, double y);
 
 	void UpdateMoveStep();
+	void SetRenderingEngineType(const std::string &engineType);
 	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
@@ -63,7 +64,8 @@ private:
 	void DrawTiles();
 	void DrawCaptions();
 
-	void MenuFile();
+	void MenuRendering();
+	void MenuEngine();
 	void MenuFilm();
 	void MenuWindow();
 	void MenuScreen();

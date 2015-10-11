@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <iostream>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "luxcoreapp.h"
 
@@ -73,6 +74,33 @@ void LuxCoreApp::DecScreenRefreshInterval() {
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(50u, screenRefreshInterval - 50))));
 	else
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(10u, screenRefreshInterval - 5))));
+}
+
+void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
+	if (engineType != config->GetProperty("renderengine.type").Get<string>()) {
+		// Stop the session
+		session->Stop();
+
+		// Delete the session
+		delete session;
+		session = NULL;
+
+		if (boost::starts_with(engineType, "RT")) {
+			if (config->GetProperty("screen.refresh.interval").Get<u_int>() > 25)
+				config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
+			optRealTimeMode = true;
+		} else
+			optRealTimeMode = false;
+		
+		// Change the render engine
+		config->Parse(
+				Properties() <<
+				Property("renderengine.type")(engineType));
+		session = new RenderSession(config);
+
+		// Re-start the rendering
+		session->Start();
+	}
 }
 
 void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
