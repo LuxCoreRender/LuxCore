@@ -116,6 +116,27 @@ void StatsWindow::Draw() {
 
 			}
 		}
+
+		if (ImGui::CollapsingHeader("Intersection devices available", NULL, true, true)) {
+			luxrays::Context ctx;
+			const vector<luxrays::DeviceDescription *> &deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
+
+			// Print device info
+			for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
+				luxrays::DeviceDescription *desc = deviceDescriptions[i];
+
+				if (ImGui::TreeNode(("#" + ToString(i) + " => " + desc->GetName()).c_str())) {
+					luxrays::DeviceDescription *desc = deviceDescriptions[i];
+					LuxCoreApp::ColoredLabelText("Name:", "%s", desc->GetName().c_str());
+					LuxCoreApp::ColoredLabelText("Type:", "%s", luxrays::DeviceDescription::GetDeviceType(desc->GetType()).c_str());
+					LuxCoreApp::ColoredLabelText("Compute units:", "%d", desc->GetComputeUnits());
+					LuxCoreApp::ColoredLabelText("Preferred float vector width:", "%u", desc->GetNativeVectorWidthFloat());
+					LuxCoreApp::ColoredLabelText("Max. allocable memory:", "%luMBytes", (u_long)(desc->GetMaxMemory() / (1024 * 1024)));
+					LuxCoreApp::ColoredLabelText("Max allocable memory block size:", "%luMBytes", (u_long)(desc->GetMaxMemoryAllocSize() / (1024 * 1024)));
+					ImGui::TreePop();
+				}
+			}
+		}
 	}
 	ImGui::End();
 }
