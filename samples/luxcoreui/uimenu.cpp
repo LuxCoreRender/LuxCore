@@ -25,10 +25,10 @@ using namespace luxrays;
 using namespace luxcore;
 
 //------------------------------------------------------------------------------
-// MenuFile
+// MenuRendering
 //------------------------------------------------------------------------------
 
-void LuxCoreApp::MenuFile() {
+void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Restart", "Space bar")) {
 		// Restart rendering
 		session->Stop();
@@ -36,6 +36,37 @@ void LuxCoreApp::MenuFile() {
 	}
 	if (ImGui::MenuItem("Quit", "ESC"))
 		glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
+//------------------------------------------------------------------------------
+// MenuEngine
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuEngine() {
+	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+
+	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL")))
+		SetRenderingEngineType("PATHOCL");
+	if (ImGui::MenuItem("LIGHTCPU", "2", (currentEngineType == "LIGHTCPU")))
+		SetRenderingEngineType("LIGHTCPU");
+	if (ImGui::MenuItem("PATHCPU", "3", (currentEngineType == "PATHCPU")))
+		SetRenderingEngineType("PATHCPU");
+	if (ImGui::MenuItem("BIDIRCPU", "4", (currentEngineType == "BIDIRCPU")))
+		SetRenderingEngineType("BIDIRCPU");
+	if (ImGui::MenuItem("BIDIRVMCPU", "5", (currentEngineType == "BIDIRVMCPU")))
+		SetRenderingEngineType("BIDIRVMCPU");
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL")))
+		SetRenderingEngineType("RTPATHOCL");
+#endif
+	if (ImGui::MenuItem("BIASPATHCPU", "7", (currentEngineType == "BIASPATHCPU")))
+		SetRenderingEngineType("BIASPATHCPU");
+	if (ImGui::MenuItem("BIASPATHOCL", "8", (currentEngineType == "BIASPATHOCL")))
+		SetRenderingEngineType("BIASPATHOCL");
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL")))
+		SetRenderingEngineType("RTBIASPATHOCL");
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -135,7 +166,11 @@ void LuxCoreApp::MenuScreen() {
 void LuxCoreApp::MainMenuBar() {
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("Rendering")) {
-			MenuFile();
+			MenuRendering();
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Engine")) {
+			MenuEngine();
 			ImGui::EndMenu();
 		}
 

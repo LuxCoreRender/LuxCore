@@ -109,8 +109,8 @@ void StatsWindow::Draw() {
 					int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / 1000.0),
 					int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.serial").Get<double>() / 1000.0),
 					int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.dataparallel").Get<double>() / 1000.0),
-					(stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / minPerf),
-					(100.0 * stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / totalPerf),
+					stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / minPerf,
+					100.0 * stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / totalPerf,
 					int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.used").Get<double>() / (1024 * 1024)),
 					int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.total").Get<double>() / (1024 * 1024)));
 
@@ -132,7 +132,7 @@ void StatsWindow::Draw() {
 					LuxCoreApp::ColoredLabelText("Compute units:", "%d", desc->GetComputeUnits());
 					LuxCoreApp::ColoredLabelText("Preferred float vector width:", "%u", desc->GetNativeVectorWidthFloat());
 					LuxCoreApp::ColoredLabelText("Max. allocable memory:", "%luMBytes", (u_long)(desc->GetMaxMemory() / (1024 * 1024)));
-					LuxCoreApp::ColoredLabelText("Max allocable memory block size:", "%luMBytes", (u_long)(desc->GetMaxMemoryAllocSize() / (1024 * 1024)));
+					LuxCoreApp::ColoredLabelText("Max. allocable memory block size:", "%luMBytes", (u_long)(desc->GetMaxMemoryAllocSize() / (1024 * 1024)));
 					ImGui::TreePop();
 				}
 			}
