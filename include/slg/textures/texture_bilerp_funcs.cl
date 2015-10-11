@@ -1,4 +1,4 @@
-#line 2 "texture_abs_funcs.cl"
+#line 2 "texture_bilerp_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -19,19 +19,26 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// Abs texture
+// Bilerp texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_ABS)
+#if defined(PARAM_ENABLE_TEX_BILERP)
 
-float AbsTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float v) {
-	return fabs(v);
+float BilerpTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+		const float v00, const float v01, const float v10, const float v11) {
+	float2 uv = VLOAD2F(&hitPoint->uv.u);
+	uv.x -= Floor2Int(uv.x);
+	uv.y -= Floor2Int(uv.y);
+	return lerp(uv.x, lerp(uv.y, v00, v01), lerp(uv.y, v10, v11));
 }
 
-float3 AbsTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float3 v) {
-	return fabs(v);
+float3 BilerpTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+		const float3 v00, const float3 v01, const float3 v10, const float3 v11) {
+	float2 uv = VLOAD2F(&hitPoint->uv.u);
+	uv.x -= Floor2Int(uv.x);
+	uv.y -= Floor2Int(uv.y);
+	return lerp(uv.x, lerp(uv.y, v00, v01), lerp(uv.y, v10, v11));
 }
 
 #endif
+

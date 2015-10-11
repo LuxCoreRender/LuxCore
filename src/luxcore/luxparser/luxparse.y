@@ -1644,6 +1644,13 @@ ri_stmt: ACCELERATOR STRING paramlist
 					Property(prefix + ".value" + ToString(i))(.7f);
 			}
 		}
+	} else if (texType == "bilerp") {
+		*sceneProps <<
+				Property(prefix + ".type")("bilerp") <<
+				GetTexture(prefix + ".texture00", Property("v00")(0.f), props) <<
+				GetTexture(prefix + ".texture01", Property("v01")(1.f), props) <<
+				GetTexture(prefix + ".texture10", Property("v10")(0.f), props) <<
+				GetTexture(prefix + ".texture11", Property("v11")(1.f), props);
 	}
 	//--------------------------------------------------------------------------
 	// Blender procedural textures

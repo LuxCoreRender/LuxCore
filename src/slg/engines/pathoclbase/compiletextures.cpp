@@ -30,6 +30,7 @@
 #include "slg/textures/abs.h"
 #include "slg/textures/add.h"
 #include "slg/textures/band.h"
+#include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
@@ -983,6 +984,19 @@ void CompiledScene::CompileTextures() {
 				tex->clampTex.maxVal = ct->GetMaxVal();
 				break;
 			}
+			case BILERP_TEX: {
+				BilerpTexture *bt = static_cast<BilerpTexture *>(t);
+				tex->type = slg::ocl::BILERP_TEX;
+				const Texture *t00 = bt->GetTexture00();
+				const Texture *t01 = bt->GetTexture01();
+				const Texture *t10 = bt->GetTexture10();
+				const Texture *t11 = bt->GetTexture11();
+				tex->bilerpTex.t00Index = scene->texDefs.GetTextureIndex(t00);
+				tex->bilerpTex.t01Index = scene->texDefs.GetTextureIndex(t01);
+				tex->bilerpTex.t10Index = scene->texDefs.GetTextureIndex(t10);
+				tex->bilerpTex.t11Index = scene->texDefs.GetTextureIndex(t11);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1496,6 +1510,17 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall("Spectrum", tex->clampTex.texIndex) + ", " +
 						ToString(tex->clampTex.minVal) + ", " +
 						ToString(tex->clampTex.maxVal));
+				break;
+			}
+			case slg::ocl::BILERP_TEX: {
+				AddTextureSource(source, "Bilerp", "float", "Float", i, AddTextureSourceCall("Float", tex->bilerpTex.t00Index) + ", " +
+					AddTextureSourceCall("Float", tex->bilerpTex.t01Index) + ", " +
+					AddTextureSourceCall("Float", tex->bilerpTex.t10Index) + ", " +
+					AddTextureSourceCall("Float", tex->bilerpTex.t11Index));
+				AddTextureSource(source, "Bilerp", "float3", "Spectrum", i, AddTextureSourceCall("Spectrum", tex->bilerpTex.t00Index) + ", " +
+					AddTextureSourceCall("Spectrum", tex->bilerpTex.t01Index) + ", " +
+					AddTextureSourceCall("Spectrum", tex->bilerpTex.t10Index) + ", " +
+					AddTextureSourceCall("Spectrum", tex->bilerpTex.t11Index));
 				break;
 			}
 			default:

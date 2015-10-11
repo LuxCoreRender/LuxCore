@@ -137,6 +137,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_abs_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_clamp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
@@ -277,6 +278,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/abs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/add.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/bilerp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
@@ -365,6 +367,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bump_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_noise_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_abs_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bilerp_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blackbody_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_clamp_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelcolor_funcs_kernel.cpp
