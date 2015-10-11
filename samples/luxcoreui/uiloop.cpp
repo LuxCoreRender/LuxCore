@@ -316,6 +316,8 @@ void LuxCoreApp::RunApp() {
 
 	filmWidth = session->GetFilm().GetWidth();
 	filmHeight = session->GetFilm().GetHeight();
+	newFilmSize[0] = filmWidth;
+	newFilmSize[1] = filmHeight;
 
 	//--------------------------------------------------------------------------
 	// Initialize OpenGL
@@ -351,7 +353,6 @@ void LuxCoreApp::RunApp() {
 
 		// Refresh the frame buffer size at 1HZ
 		if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
-
 			// Check if the frame buffer has been resized
 			if ((currentFrameBufferWidth != lastFrameBufferWidth) ||
 					(currentFrameBufferHeight != lastFrameBufferHeight)) {
@@ -360,7 +361,17 @@ void LuxCoreApp::RunApp() {
 				lastFrameBufferWidth = currentFrameBufferWidth;
 				lastFrameBufferHeight = currentFrameBufferHeight;
 			}
-			
+
+			// Check if the film has been resized
+			newFilmSize[0] = Max(64, newFilmSize[0]);
+			newFilmSize[1] = Max(64, newFilmSize[1]);
+			if ((filmWidth != (u_int)newFilmSize[0]) || (filmHeight != (u_int)newFilmSize[1])) {
+				SetFilmResolution((u_int)newFilmSize[0], (u_int)newFilmSize[1]);
+
+				filmWidth = session->GetFilm().GetWidth();
+				filmHeight = session->GetFilm().GetHeight();
+			}
+
 			lastFrameBufferSizeRefresh = WallClockTime();
 		}
 

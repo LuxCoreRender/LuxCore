@@ -75,6 +75,9 @@ private:
 	GLuint renderFrameBufferTexID;
 	GLFWwindow *window;
 
+	// ImGui inputs
+	int newFilmSize[2];
+	
 	bool optRealTimeMode;
 	float optMoveScale;
 	float optMoveStep;

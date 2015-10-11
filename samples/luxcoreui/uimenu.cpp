@@ -44,6 +44,8 @@ void LuxCoreApp::MenuFile() {
 
 void LuxCoreApp::MenuFilm() {
 	if (ImGui::BeginMenu("Set resolution")) {
+		if (ImGui::MenuItem("320x240"))
+			SetFilmResolution(320, 240);
 		if (ImGui::MenuItem("640x480"))
 			SetFilmResolution(640, 480);
 		if (ImGui::MenuItem("800x600"))
@@ -54,13 +56,26 @@ void LuxCoreApp::MenuFilm() {
 			SetFilmResolution(1280, 720);
 		if (ImGui::MenuItem("1920x1080"))
 			SetFilmResolution(1920, 1080);
+
 		ImGui::Separator();
+
 		if (ImGui::MenuItem("Use screen resolution")) {
 			int currentFrameBufferWidth, currentFrameBufferHeight;
 			glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
 
 			SetFilmResolution(currentFrameBufferWidth, currentFrameBufferHeight);
 		}
+
+		ImGui::Separator();
+
+		int currentFrameBufferWidth, currentFrameBufferHeight;
+		glfwGetFramebufferSize(window, &currentFrameBufferWidth, &currentFrameBufferHeight);
+		const float ratio = currentFrameBufferWidth / (float)currentFrameBufferHeight;
+
+		if (ratio >= 1.f)
+			ImGui::InputInt("height", &newFilmSize[1]);
+		else
+			ImGui::InputInt("width", &newFilmSize[0]);
 
 		ImGui::EndMenu();
 	}
