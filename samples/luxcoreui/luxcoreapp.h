@@ -20,6 +20,7 @@
 #define	_LUXCOREAPP_H
 
 #include <GLFW/glfw3.h>
+#include <imgui.h>
 
 #include "luxcore/luxcore.h"
 #include "logwindow.h"
@@ -33,8 +34,12 @@ public:
 	void RunApp();
 
 	static void LogHandler(const char *msg);
+	static void ColoredLabelText(const ImVec4 &col, const char *label, const char *fmt, ...) IM_PRINTFARGS(3);
+	static void ColoredLabelText(const char *label, const char *fmt, ...) IM_PRINTFARGS(2);
+	
+	static ImVec4 colLabel;
 
-	// Mouse "grab" mode. This is the natural way cameras are usually manipulated
+			// Mouse "grab" mode. This is the natural way cameras are usually manipulated
 	// The flag is off by default but can be turned on by using the -m switch
 	bool optMouseGrabMode;
 
