@@ -45,18 +45,18 @@ void StatsWindow::Draw() {
 		// Rendering information
 		if (ImGui::CollapsingHeader("Rendering information", NULL, true, true)) {
 			const string engineType = config->GetProperty("renderengine.type").Get<string>();
-			ImGui::Text("Render engine: %s", engineType.c_str());
+			LuxCoreApp::ColoredLabelText("Render engine:", "%s", engineType.c_str());
 
 			const string samplerName = ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL") ||
 				(engineType == "RTBIASPATHOCL")) ?
 					"N/A" : config->GetProperty("sampler.type").Get<string>();
-			ImGui::Text("Sampler: %s", samplerName.c_str());
+			LuxCoreApp::ColoredLabelText("Sampler:", "%s", samplerName.c_str());
 
-			ImGui::Text("Rendering time: %dsecs", int(stats.Get("stats.renderengine.time").Get<double>()));
-			ImGui::Text("Film resolution: %d x %d", session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
+			LuxCoreApp::ColoredLabelText("Rendering time:", "%dsecs", int(stats.Get("stats.renderengine.time").Get<double>()));
+			LuxCoreApp::ColoredLabelText("Film resolution:", "%d x %d", session->GetFilm().GetWidth(), session->GetFilm().GetHeight());
 			int frameBufferWidth, frameBufferHeight;
 			glfwGetFramebufferSize(app->window, &frameBufferWidth, &frameBufferHeight);
-			ImGui::Text("Screen resolution: %d x %d", frameBufferWidth, frameBufferHeight);
+			LuxCoreApp::ColoredLabelText("Screen resolution:", "%d x %d", frameBufferWidth, frameBufferHeight);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			if (engineType == "RTPATHOCL") {
@@ -66,7 +66,7 @@ void StatsWindow::Draw() {
 				const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
 				fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
-				ImGui::Text("Screen refresh: %d/%dms (%.1ffps)",
+				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 						config->GetProperty("screen.refresh.interval").Get<u_int>(),
 						fps);
@@ -77,18 +77,18 @@ void StatsWindow::Draw() {
 				const double adjustFactor = (frameTime > 0.1) ? 0.25 : .025;
 				fps = Lerp<float>(adjustFactor, fps, (frameTime > 0.0) ? (1.0 / frameTime) : 0.0);
 
-				ImGui::Text("Screen refresh: %d/%dms (%.1ffps)",
+				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
 						config->GetProperty("screen.refresh.interval").Get<u_int>(),
 						fps);
 			} else
 #endif
 			{
-				ImGui::Text("Screen refresh: %dms", config->GetProperty("screen.refresh.interval").Get<u_int>());
+				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->GetProperty("screen.refresh.interval").Get<u_int>());
 			}
 		}
 
-		if (ImGui::CollapsingHeader("Intersection devices", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("Intersection devices used", NULL, true, true)) {
 			// Intersection devices
 			const Property &deviceNames = stats.Get("stats.renderengine.devices");
 
@@ -105,8 +105,7 @@ void StatsWindow::Draw() {
 			for (u_int i = 0; i < deviceNames.GetSize(); ++i) {
 				const string deviceName = deviceNames.Get<string>(i);
 
-				ImGui::Text("[%s][Rays/sec %dK (%dK + %dK)][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
-					deviceName.c_str(),
+				LuxCoreApp::ColoredLabelText((deviceName + ":").c_str(), "[Rays/sec %dK (%dK + %dK)][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]",
 					int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / 1000.0),
 					int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.serial").Get<double>() / 1000.0),
 					int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.dataparallel").Get<double>() / 1000.0),

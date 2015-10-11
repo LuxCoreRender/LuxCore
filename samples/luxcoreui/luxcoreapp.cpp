@@ -26,6 +26,8 @@ using namespace luxcore;
 
 LogWindow *LuxCoreApp::currentLogWindow = NULL;
 
+ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
+
 //------------------------------------------------------------------------------
 // LuxCoreApp
 //------------------------------------------------------------------------------
@@ -127,4 +129,24 @@ void LuxCoreApp::LogHandler(const char *msg) {
 
 	if (currentLogWindow)
 		currentLogWindow->AddMsg(msg);
+}
+
+void LuxCoreApp::ColoredLabelText(const ImVec4 &col, const char *label, const char *fmt, ...) {
+	ImGui::TextColored(col, "%s", label);
+	ImGui::SameLine();
+
+	va_list args;
+    va_start(args, fmt);
+    ImGui::TextV(fmt, args);
+    va_end(args);
+}
+
+void LuxCoreApp::ColoredLabelText(const char *label, const char *fmt, ...) {
+	ImGui::TextColored(colLabel, "%s", label);
+	ImGui::SameLine();
+
+	va_list args;
+    va_start(args, fmt);
+    ImGui::TextV(fmt, args);
+    va_end(args);
 }
