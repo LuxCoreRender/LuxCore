@@ -310,7 +310,6 @@ void LuxCoreApp::RunApp() {
 
 	session = new RenderSession(config);
 	session->Start();
-	session->UpdateStats();
 
 	UpdateMoveStep();
 

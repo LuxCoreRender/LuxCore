@@ -320,7 +320,6 @@ int main(int argc, char *argv[]) {
 
 			// Start the rendering
 			session->Start();
-			session->UpdateStats();
 			UpdateMoveStep();
 
 			RunGlut();

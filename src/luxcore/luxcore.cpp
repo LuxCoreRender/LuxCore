@@ -518,6 +518,9 @@ const RenderConfig &RenderSession::GetRenderConfig() const {
 
 void RenderSession::Start() {
 	renderSession->Start();
+
+	// In order to populate the stats.* Properties
+	UpdateStats();
 }
 
 void RenderSession::Stop() {
