@@ -28,6 +28,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
+#include "luxrays/luxrays.h"
 #include "luxrays/utils/ocl.h"
 #include "luxcore/luxcore.h"
 

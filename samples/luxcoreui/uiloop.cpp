@@ -27,7 +27,6 @@
 #include <imgui.h>
 #include "imgui_impl_glfw.h"
 
-#include "luxrays/utils/ocl.h"
 #include "luxcoreapp.h"
 
 using namespace std;

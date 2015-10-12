@@ -33,6 +33,7 @@
 
 #include <Python.h>
 
+#include "luxrays/luxrays.h"
 #include <luxrays/utils/cyhair/cyHairFile.h>
 #include <luxcore/luxcore.h>
 #include <luxcore/pyluxcore/pyluxcoreforblender.h>

@@ -117,6 +117,17 @@ endif()
 if (MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
+    foreach (flag CMAKE_C_FLAGS
+                    CMAKE_C_FLAGS_DEBUG
+                    CMAKE_C_FLAGS_RELEASE
+                    CMAKE_C_FLAGS_MINSIZEREL
+                    CMAKE_C_FLAGS_RELWITHDEBINFO)
+
+        if (${flag} MATCHES "/TP")
+            string(REGEX REPLACE "/TP" "/TC" ${flag} "${${flag}}")
+        endif()
+    endforeach()
+
     if (NOT USE_MSVC_RUNTIME_LIBRARY_DLL)
         foreach (flag CMAKE_C_FLAGS
                         CMAKE_C_FLAGS_DEBUG
