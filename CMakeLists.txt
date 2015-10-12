@@ -134,9 +134,15 @@ if(NOT APPLE OR OSX_BUILD_DEMOS)
 	add_subdirectory(samples/luxcorescenedemo)
 	add_subdirectory(samples/luxcoreimplserializationdemo)
 endif()
+
 if(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
 	add_subdirectory(samples/smallluxgpu4)
 endif(OPENGL_FOUND AND GLUT_FOUND AND GLEW_FOUND)
+
+add_subdirectory(samples/luxcoreconsole)
+if(OPENGL_FOUND)
+	add_subdirectory(samples/luxcoreui)
+endif(OPENGL_FOUND)
 
 
 ################################################################################
