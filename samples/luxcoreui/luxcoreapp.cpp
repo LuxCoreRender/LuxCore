@@ -146,7 +146,6 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 
 	// Re-start the rendering
 	session->Start();
-	session->UpdateStats();
 
 	newFilmSize[0] = filmWidth;
 	newFilmSize[1] = filmHeight;
