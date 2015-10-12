@@ -359,7 +359,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 		Properties cameraProps = config->GetScene().GetProperties().GetAllProperties("scene.camera");
 		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 		config->GetScene().Parse(cameraProps);
-		
+
 		session = new RenderSession(config);
 
 		// Re-start the rendering
@@ -414,7 +414,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 27: { // Escape key
 			delete session;
 
-			SLG_LOG("Done.");
+			LC_LOG("Done.");
 			exit(EXIT_SUCCESS);
 			break;
 		}
@@ -541,12 +541,12 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'v':
 			optMoveScale = Max(.0125f, optMoveScale - ((optMoveScale>= 1.f) ? .25f : 0.0125f));
 			UpdateMoveStep();
-			SLG_LOG("Camera move scale: " << optMoveScale);
+			LC_LOG("Camera move scale: " << optMoveScale);
 			break;
 		case 'b':
 			optMoveScale = Min(100.f, optMoveScale +  ((optMoveScale>= 1.f) ? .25f : 0.0125f));
 			UpdateMoveStep();
-			SLG_LOG("Camera move scale: " << optMoveScale);
+			LC_LOG("Camera move scale: " << optMoveScale);
 			break;
 		case 'y': {
 			session->BeginSceneEdit();
@@ -584,7 +584,7 @@ void keyFunc(unsigned char key, int x, int y) {
 				const float currentEyeDistance = config->GetScene().GetProperties().Get(
 					Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
 				const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
-				SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+				LC_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
 				
 				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.eyesdistance")(newEyeDistance));
@@ -601,7 +601,7 @@ void keyFunc(unsigned char key, int x, int y) {
 				const float currentEyeDistance = config->GetScene().GetProperties().Get(
 					Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
 				const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
-				SLG_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
+				LC_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
 				
 				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.eyesdistance")(newEyeDistance));
@@ -618,7 +618,7 @@ void keyFunc(unsigned char key, int x, int y) {
 				const float currentLensDistance = config->GetScene().GetProperties().Get(
 					Property("scene.camera.lensdistance")(.1f)).Get<float>();
 				const float newLensDistance = currentLensDistance + ((currentLensDistance == 0.f) ? .1f : (currentLensDistance * 0.05f));
-				SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+				LC_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
 				
 				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.lensdistance")(newLensDistance));
@@ -635,7 +635,7 @@ void keyFunc(unsigned char key, int x, int y) {
 				const float currentLensDistance = config->GetScene().GetProperties().Get(
 					Property("scene.camera.lensdistance")(.1f)).Get<float>();
 				const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
-				SLG_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
+				LC_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
 				
 				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.lensdistance")(newLensDistance));

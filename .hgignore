@@ -2,6 +2,7 @@
 ^lib/libsmallluxgpu.a
 ^lib/libluxcore.a
 ^lib/pyluxcore.so
+^lib/libglfw3.a
 ^doxygen-luxrays.conf
 syntax: regexp
 ^doxygen/luxrays.template
@@ -12,6 +13,7 @@ syntax: regexp
 ^bin/*
 ^doc/*
 ^samples/(benchsimple|smallluxgpu)/(Debug|Release)/
+samples/luxcoreui/deps/glfw-3.1.1/src/glfw_config.h
 (smallluxgpu|slg|LUXRAYS|benchsimple)\.dir
 ^src/(Debug|Release)/
 ^(Debug|Release|x64)/
