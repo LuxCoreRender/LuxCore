@@ -355,7 +355,7 @@ SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen)
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
-		const u_int threadIndex, const u_int threadCount, SamplerSharedData *sharedData) const {
+		SamplerSharedData *sharedData) const {
 	const SamplerType samplerType = Sampler::String2SamplerType(GetProperty("sampler.type").Get<string>());
 	switch (samplerType) {
 		case RANDOM:
