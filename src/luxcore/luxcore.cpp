@@ -347,15 +347,6 @@ Scene::~Scene() {
 		delete scene;
 }
 
-const Properties &Scene::ToProperties() {
-	if (!scenePropertiesCache.GetSize()) {
-		scenePropertiesCache.Clear();
-		scenePropertiesCache.Set(scene->ToProperties());
-	}
-
-	return scenePropertiesCache;
-}
-
 const DataSet &Scene::GetDataSet() const {
 	return *(scene->dataSet);
 }
@@ -479,6 +470,13 @@ void Scene::RemoveUnusedMeshes() {
 	scene->RemoveUnusedMeshes();
 }
 
+const Properties &Scene::ToProperties() const {
+	if (!scenePropertiesCache.GetSize())
+		scenePropertiesCache << scene->ToProperties();
+
+	return scenePropertiesCache;
+}
+
 Point *Scene::AllocVerticesBuffer(const u_int meshVertCount) {
 	return TriangleMesh::AllocVerticesBuffer(meshVertCount);
 }
@@ -517,11 +515,21 @@ const Property RenderConfig::GetProperty(const std::string &name) const {
 	return renderConfig->GetProperty(name);
 }
 
+const Properties &RenderConfig::ToProperties() const {
+	if (!renderConfigPropertiesCache.GetSize())
+		renderConfigPropertiesCache << renderConfig->ToProperties();
+
+	return renderConfigPropertiesCache;
+}
+
 Scene &RenderConfig::GetScene() {
 	return *scene;
 }
 
 void RenderConfig::Parse(const Properties &props) {
+	// Invalidate the configuration properties cache
+	renderConfigPropertiesCache.Clear();
+
 	renderConfig->Parse(props);
 }
 
@@ -742,5 +750,8 @@ const Properties &RenderSession::GetStats() const {
 }
 
 void RenderSession::Parse(const Properties &props) {
+	// Invalidate the configuration properties cache
+	renderConfig->renderConfigPropertiesCache.Clear();
+	
 	renderSession->Parse(props);
 }

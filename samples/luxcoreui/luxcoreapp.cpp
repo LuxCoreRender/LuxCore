@@ -103,6 +103,22 @@ void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 	}
 }
 
+void LuxCoreApp::EditRenderConfig(const Properties &samplerProps) {
+	// Stop the session
+	session->Stop();
+
+	// Delete the session
+	delete session;
+	session = NULL;
+
+	// Change the sampler
+	config->Parse(samplerProps);
+	session = new RenderSession(config);
+
+	// Re-start the rendering
+	session->Start();
+}
+
 void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 	u_int filmWidth = width;
 	u_int filmHeight = height;

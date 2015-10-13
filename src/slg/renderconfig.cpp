@@ -424,3 +424,28 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<string>(renderEngineType));
 	}
 }
+
+Properties RenderConfig::ToProperties() const {
+	Properties props;
+
+	// Sampler
+	Property samplerTypeProp = GetProperty("sampler.type");
+	props << samplerTypeProp;
+	const SamplerType samplerType = Sampler::String2SamplerType(samplerTypeProp.Get<string>());
+	switch (samplerType) {
+		case RANDOM:
+			break;
+		case METROPOLIS:
+			props <<
+					GetProperty("sampler.metropolis.largesteprate") <<
+					GetProperty("sampler.metropolis.maxconsecutivereject") <<
+					GetProperty("sampler.metropolis.imagemutationrate");
+			break;
+		case SOBOL:
+			break;
+		default:
+			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
+	}
+
+	return props;
+}
