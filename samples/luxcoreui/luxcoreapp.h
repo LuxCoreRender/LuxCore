@@ -25,6 +25,9 @@
 #include "luxcore/luxcore.h"
 #include "logwindow.h"
 #include "statswindow.h"
+#include "samplerwindow.h"
+
+#define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
 class LuxCoreApp {
 public:
@@ -39,10 +42,11 @@ public:
 	
 	static ImVec4 colLabel;
 
-			// Mouse "grab" mode. This is the natural way cameras are usually manipulated
+	// Mouse "grab" mode. This is the natural way cameras are usually manipulated
 	// The flag is off by default but can be turned on by using the -m switch
 	bool optMouseGrabMode;
 
+	friend class SamplerWindow;
 	friend class StatsWindow;
 
 private:
@@ -75,6 +79,7 @@ private:
 
 	static LogWindow *currentLogWindow;
 
+	SamplerWindow samplerWindow;
 	LogWindow logWindow;
 	StatsWindow statsWindow;
 

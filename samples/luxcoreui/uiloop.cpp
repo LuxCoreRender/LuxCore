@@ -396,6 +396,7 @@ void LuxCoreApp::RunApp() {
 		DrawTiles();
 		DrawCaptions();
 		MainMenuBar();
+		samplerWindow.Draw();
 		logWindow.Draw();
 		statsWindow.Draw();
 

@@ -60,13 +60,19 @@ void LuxCoreApp::MenuEngine() {
 	if (ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL")))
 		SetRenderingEngineType("RTPATHOCL");
 #endif
-	if (ImGui::MenuItem("BIASPATHCPU", "7", (currentEngineType == "BIASPATHCPU")))
+	if (ImGui::MenuItem("BIASPATHCPU", "7", (currentEngineType == "BIASPATHCPU"))) {
 		SetRenderingEngineType("BIASPATHCPU");
-	if (ImGui::MenuItem("BIASPATHOCL", "8", (currentEngineType == "BIASPATHOCL")))
+		samplerWindow.opened = false;
+	}
+	if (ImGui::MenuItem("BIASPATHOCL", "8", (currentEngineType == "BIASPATHOCL"))) {
 		SetRenderingEngineType("BIASPATHOCL");
+		samplerWindow.opened = false;
+	}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL")))
+	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL"))) {
 		SetRenderingEngineType("RTBIASPATHOCL");
+		samplerWindow.opened = false;
+	}
 #endif
 }
 
@@ -138,6 +144,9 @@ void LuxCoreApp::MenuFilm() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuWindow() {
+	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+	if (ImGui::MenuItem("Sampler editor", NULL, false, !boost::starts_with(currentEngineType, "BIAS")))
+		samplerWindow.opened = !samplerWindow.opened;
 	if (ImGui::MenuItem("Statistics"))
 		statsWindow.opened = !statsWindow.opened;
 	if (ImGui::MenuItem("Log console"))
