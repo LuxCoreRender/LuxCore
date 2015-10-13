@@ -153,7 +153,8 @@ void LuxCoreApp::DrawTiles() {
 		bool opened = true;
 		if (ImGui::Begin("BIASPATH tiles", &opened, ImVec2(0.f, 0.f), 0.0f,
 				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+				ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
 			const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
 			const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
 
@@ -214,7 +215,8 @@ void LuxCoreApp::DrawCaptions() {
 	bool topOpened = true;
 	if (ImGui::Begin("Top screen label", &topOpened,
 			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
 		ImGui::TextUnformatted(windowTitle.c_str());
 	}
 	ImGui::End();*/
@@ -226,7 +228,8 @@ void LuxCoreApp::DrawCaptions() {
 	bool bottomOpened = true;
 	if (ImGui::Begin("Bottom screen label", &bottomOpened,
 			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
 		const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sample %.2f on %.1fK tris]") %
 			stats.Get("stats.renderengine.pass").Get<int>() %
 			(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
