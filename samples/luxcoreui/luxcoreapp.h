@@ -52,6 +52,7 @@ private:
 
 	void UpdateMoveStep();
 	void SetRenderingEngineType(const std::string &engineType);
+	void EditRenderConfig(const luxrays::Properties &samplerProps);
 	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
@@ -66,6 +67,7 @@ private:
 
 	void MenuRendering();
 	void MenuEngine();
+	void MenuSampler();
 	void MenuFilm();
 	void MenuWindow();
 	void MenuScreen();

@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <imgui.h>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "luxcoreapp.h"
 
@@ -67,6 +68,21 @@ void LuxCoreApp::MenuEngine() {
 	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL")))
 		SetRenderingEngineType("RTBIASPATHOCL");
 #endif
+}
+
+//------------------------------------------------------------------------------
+// MenuSampler
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuSampler() {
+	const string currentSamplerType = config->GetProperty("sampler.type").Get<string>();
+
+	if (ImGui::MenuItem("RANDOM", NULL, (currentSamplerType == "RANDOM")))
+		EditRenderConfig(Properties() << Property("sampler.type")("RANDOM"));
+	if (ImGui::MenuItem("SOBOL", NULL, (currentSamplerType == "SOBOL")))
+		EditRenderConfig(Properties() << Property("sampler.type")("SOBOL"));
+	if (ImGui::MenuItem("METROPOLIS", NULL, (currentSamplerType == "METROPOLIS")))
+		EditRenderConfig(Properties() << Property("sampler.type")("METROPOLIS"));
 }
 
 //------------------------------------------------------------------------------
@@ -169,8 +185,15 @@ void LuxCoreApp::MainMenuBar() {
 			MenuRendering();
 			ImGui::EndMenu();
 		}
+
 		if (ImGui::BeginMenu("Engine")) {
 			MenuEngine();
+			ImGui::EndMenu();
+		}
+
+		const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+		if (ImGui::BeginMenu("Sampler", !boost::starts_with(currentEngineType, "BIAS"))) {
+			MenuSampler();
 			ImGui::EndMenu();
 		}
 

@@ -440,12 +440,6 @@ public:
 	~Scene();
 	
 	/*!
-	 * \brief Returns all the Properties required to define this Scene.
-	 *
-	 * \return a reference to the Properties of this Scene.
-	 */
-	const luxrays::Properties &ToProperties();
-	/*!
 	 * \brief Returns the DataSet of the Scene. It is available only
 	 * during the rendering (i.e. after a RenderSession::Start()).
 	 *
@@ -651,6 +645,13 @@ public:
 	void RemoveUnusedMeshes();
 
 	/*!
+	 * \brief Returns all the Properties required to define this Scene.
+	 *
+	 * \return a reference to the Properties of this Scene.
+	 */
+	const luxrays::Properties &ToProperties() const;
+
+	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
 	static luxrays::Point *AllocVerticesBuffer(const u_int meshVertCount);
@@ -665,7 +666,7 @@ public:
 private:
 	Scene(slg::Scene *scn);
 
-	luxrays::Properties scenePropertiesCache;
+	mutable luxrays::Properties scenePropertiesCache;
 
 	slg::Scene *scene;
 	Camera camera;
@@ -704,6 +705,14 @@ public:
 	 * \return the Property with the given name.
 	 */
 	const luxrays::Property GetProperty(const std::string &name) const;
+
+	/*!
+	 * \brief Returns a reference to all Properties (including default values)
+	 * defining the RenderConfig.
+	 *
+	 * \return the RenderConfig properties.
+	 */
+	const luxrays::Properties &ToProperties() const;
 
 	/*!
 	 * \brief Returns a reference to the Scene used in the RenderConfig.
@@ -756,6 +765,7 @@ public:
 
 private:
 	slg::RenderConfig *renderConfig;
+	mutable luxrays::Properties renderConfigPropertiesCache;
 
 	Scene *scene;
 	bool allocatedScene;

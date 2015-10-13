@@ -52,6 +52,8 @@ public:
 
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
+	luxrays::Properties ToProperties() const;
+	
 	static const luxrays::Properties &GetDefaultProperties();
 
 	luxrays::Properties cfg;
