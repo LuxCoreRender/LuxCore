@@ -42,6 +42,7 @@ set(LUXCOREUI_SRCS
 	uimouse.cpp
 	logwindow.cpp
 	statswindow.cpp
+	samplerwindow.cpp
 	imgui_impl_glfw.cpp
 	deps/imgui-1.45/imgui.cpp
 	deps/imgui-1.45/imgui_demo.cpp

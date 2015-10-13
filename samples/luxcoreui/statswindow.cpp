@@ -33,8 +33,7 @@ void StatsWindow::Draw() {
 	if (!opened)
 		return;
 
-	ImGui::SetNextWindowPos(ImVec2(0, 200), ImGuiSetCond_Appearing);
-	ImGui::SetNextWindowSize(ImVec2(640, 200), ImGuiSetCond_Appearing);
+	ImGui::SetNextWindowSize(ImVec2(512, 200), ImGuiSetCond_Appearing);
 
 	if (ImGui::Begin(title.c_str(), &opened)) {
 		RenderSession *session = app->session;

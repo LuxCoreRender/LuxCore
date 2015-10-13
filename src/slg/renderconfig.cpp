@@ -362,11 +362,11 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const F
 			return new RandomSampler(rndGen, film, flmSplatter);
 		case METROPOLIS: {
 			const float rate = GetProperty("sampler.metropolis.largesteprate").Get<float>();
-			const float reject = GetProperty("sampler.metropolis.maxconsecutivereject").Get<float>();
-			const float mutationrate = GetProperty("sampler.metropolis.imagemutationrate").Get<float>();
+			const u_int reject = GetProperty("sampler.metropolis.maxconsecutivereject").Get<u_int>();
+			const float mutationRate = GetProperty("sampler.metropolis.imagemutationrate").Get<float>();
 
 			return new MetropolisSampler(rndGen, film, flmSplatter,
-					reject, rate, mutationrate,
+					reject, rate, mutationRate,
 					(MetropolisSamplerSharedData *)sharedData);
 		}
 		case SOBOL:
