@@ -347,8 +347,13 @@ Scene::~Scene() {
 		delete scene;
 }
 
-const Properties &Scene::GetProperties() const {
-	return scene->GetProperties();
+const Properties &Scene::ToProperties() {
+	if (!scenePropertiesCache.GetSize()) {
+		scenePropertiesCache.Clear();
+		scenePropertiesCache.Set(scene->ToProperties());
+	}
+
+	return scenePropertiesCache;
 }
 
 const DataSet &Scene::GetDataSet() const {
@@ -368,6 +373,9 @@ void Scene::SetDeleteMeshData(const bool v) {
 }
 
 void Scene::DefineMesh(const string &meshName, ExtTriangleMesh *mesh) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->DefineMesh(meshName, mesh);
 }
 
@@ -375,6 +383,9 @@ void Scene::DefineMesh(const string &meshName,
 	const long plyNbVerts, const long plyNbTris,
 	Point *p, Triangle *vi, Normal *n, UV *uv,
 	Spectrum *cols, float *alphas) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
 }
 
@@ -383,6 +394,9 @@ void Scene::DefineStrands(const string &shapeName, const luxrays::cyHairFile &st
 		const u_int adaptiveMaxDepth, const float adaptiveError,
 		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
 		const bool useCameraPosition) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->DefineStrands(shapeName, strandsFile,
 			(slg::StrendsShape::TessellationType)tesselType, adaptiveMaxDepth, adaptiveError,
 			solidSideCount, solidCapBottom, solidCapTop,
@@ -410,34 +424,58 @@ const u_int  Scene::GetObjectCount() const {
 }
 
 void Scene::Parse(const Properties &props) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->Parse(props);
 }
 
 void Scene::UpdateObjectTransformation(const std::string &objName, const luxrays::Transform &trans) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->UpdateObjectTransformation(objName, trans);
 }
 
 void Scene::DeleteObject(const string &objName) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->DeleteObject(objName);
 }
 
 void Scene::DeleteLight(const string &lightName) {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->DeleteLight(lightName);
 }
 
 void Scene::RemoveUnusedImageMaps() {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->RemoveUnusedImageMaps();
 }
 
 void Scene::RemoveUnusedTextures() {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->RemoveUnusedTextures();
 }
 
 void Scene::RemoveUnusedMaterials() {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->RemoveUnusedMaterials();
 }
 
 void Scene::RemoveUnusedMeshes() {
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
 	scene->RemoveUnusedMeshes();
 }
 

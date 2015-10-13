@@ -444,7 +444,7 @@ public:
 	 *
 	 * \return a reference to the Properties of this Scene.
 	 */
-	const luxrays::Properties &GetProperties() const;
+	const luxrays::Properties &ToProperties();
 	/*!
 	 * \brief Returns the DataSet of the Scene. It is available only
 	 * during the rendering (i.e. after a RenderSession::Start()).
@@ -664,6 +664,8 @@ public:
 
 private:
 	Scene(slg::Scene *scn);
+
+	luxrays::Properties scenePropertiesCache;
 
 	slg::Scene *scene;
 	Camera camera;

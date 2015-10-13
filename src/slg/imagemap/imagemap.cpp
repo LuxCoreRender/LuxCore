@@ -29,6 +29,7 @@
 #include <OpenImageIO/dassert.h>
 
 #include "slg/imagemap/imagemap.h"
+#include "slg/imagemap/imagemapcache.h"
 #include "slg/core/sdl.h"
 
 using namespace std;
@@ -505,6 +506,11 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	}
 	
 	dest.get_pixels(0, newHeight, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
+}
+
+string ImageMap::GetFileName(const ImageMapCache &imgMapCache) const {
+	return "imagemap-" + ((boost::format("%05d") % imgMapCache.GetImageMapIndex(this)).str()) +
+			"." + GetFileExtension();
 }
 
 string ImageMap::GetFileExtension() const {

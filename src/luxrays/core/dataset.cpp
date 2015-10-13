@@ -97,7 +97,11 @@ void DataSet::Preprocess() {
 
 const Accelerator *DataSet::GetAccelerator() {
 	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin();
-	return it->second;
+
+	if (it == accels.end())
+		return NULL;
+	else
+		return it->second;
 }
 
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {

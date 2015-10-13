@@ -356,7 +356,7 @@ void reshapeFunc(int newWidth, int newHeight) {
 
 		// Delete scene.camera.screenwindow so window resize will
 		// automatically adjust the ratio
-		Properties cameraProps = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+		Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 		config->GetScene().Parse(cameraProps);
 
@@ -551,7 +551,7 @@ void keyFunc(unsigned char key, int x, int y) {
 		case 'y': {
 			session->BeginSceneEdit();
 			
-			Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+			Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 			if (config->GetScene().GetCamera().GetType() == Camera::STEREO)
 				props.Set(Property("scene.camera.type")("perspective"));
 			else
@@ -566,10 +566,10 @@ void keyFunc(unsigned char key, int x, int y) {
 				(config->GetScene().GetCamera().GetType() == Camera::PERSPECTIVE)) {
 				session->BeginSceneEdit();
 
-				const bool barrelPostPro = config->GetScene().GetProperties().Get(
+				const bool barrelPostPro = config->GetScene().ToProperties().Get(
 					Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
 				
-				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.oculusrift.barrelpostpro.enable")(!barrelPostPro));
 				config->GetScene().Parse(props);
 
@@ -581,12 +581,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
 				session->BeginSceneEdit();
 
-				const float currentEyeDistance = config->GetScene().GetProperties().Get(
+				const float currentEyeDistance = config->GetScene().ToProperties().Get(
 					Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
 				const float newEyeDistance = currentEyeDistance + ((currentEyeDistance == 0.f) ? .0626f : (currentEyeDistance * 0.05f));
 				LC_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
 				
-				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.eyesdistance")(newEyeDistance));
 				config->GetScene().Parse(props);
 
@@ -598,12 +598,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
 				session->BeginSceneEdit();
 
-				const float currentEyeDistance = config->GetScene().GetProperties().Get(
+				const float currentEyeDistance = config->GetScene().ToProperties().Get(
 					Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
 				const float newEyeDistance = Max(0.f, currentEyeDistance - currentEyeDistance * 0.05f);
 				LC_LOG("Camera horizontal stereo eyes distance: " << newEyeDistance);
 				
-				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.eyesdistance")(newEyeDistance));
 				config->GetScene().Parse(props);
 
@@ -615,12 +615,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
 				session->BeginSceneEdit();
 
-				const float currentLensDistance = config->GetScene().GetProperties().Get(
+				const float currentLensDistance = config->GetScene().ToProperties().Get(
 					Property("scene.camera.lensdistance")(.1f)).Get<float>();
 				const float newLensDistance = currentLensDistance + ((currentLensDistance == 0.f) ? .1f : (currentLensDistance * 0.05f));
 				LC_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
 				
-				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.lensdistance")(newLensDistance));
 				config->GetScene().Parse(props);
 
@@ -632,12 +632,12 @@ void keyFunc(unsigned char key, int x, int y) {
 			if (config->GetScene().GetCamera().GetType() == Camera::STEREO) {
 				session->BeginSceneEdit();
 
-				const float currentLensDistance = config->GetScene().GetProperties().Get(
+				const float currentLensDistance = config->GetScene().ToProperties().Get(
 					Property("scene.camera.lensdistance")(.1f)).Get<float>();
 				const float newLensDistance = Max(0.f, currentLensDistance - currentLensDistance * 0.05f);
 				LC_LOG("Camera horizontal stereo lens distance: " << newLensDistance);
 				
-				Properties props = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+				Properties props = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 				props.Set(Property("scene.camera.lensdistance")(newLensDistance));
 				config->GetScene().Parse(props);
 
