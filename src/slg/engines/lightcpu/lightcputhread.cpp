@@ -201,7 +201,7 @@ void LightCPURenderThread::RenderFunc() {
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
-			threadIndex, engine->renderThreads.size(), engine->samplerSharedData);
+			engine->samplerSharedData);
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial setup
 		engine->maxPathDepth * sampleEyeStepSize + // For each eye vertex

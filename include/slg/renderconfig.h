@@ -48,7 +48,6 @@ public:
 	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
 		const FilmSampleSplatter *flmSplatter,
-		const u_int threadIndex, const u_int threadCount,
 		SamplerSharedData *sharedData) const;
 
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
