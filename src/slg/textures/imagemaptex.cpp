@@ -28,23 +28,23 @@ using namespace slg;
 // ImageMap texture
 //------------------------------------------------------------------------------
 
-ImageMapTexture::ImageMapTexture(const ImageMap * im, const TextureMapping2D *mp, const float g) :
-	imgMap(im), mapping(mp), gain(g) {
-	imageY = gain * imgMap->GetSpectrumMeanY();
-	imageFilter = gain * imgMap->GetSpectrumMean();
+ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp, const float g) :
+	imageMap(img), mapping(mp), gain(g) {
+	imageY = gain * imageMap->GetSpectrumMeanY();
+	imageFilter = gain * imageMap->GetSpectrumMean();
 }
 
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetFloat(mapping->Map(hitPoint));
+	return gain * imageMap->GetFloat(mapping->Map(hitPoint));
 }
 
 Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return gain * imgMap->GetSpectrum(mapping->Map(hitPoint));
+	return gain * imageMap->GetSpectrum(mapping->Map(hitPoint));
 }
 
 Normal ImageMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
 	UV dst, du, dv;
-	dst = imgMap->GetDuv(mapping->MapDuv(hitPoint, &du, &dv));
+	dst = imageMap->GetDuv(mapping->MapDuv(hitPoint, &du, &dv));
 	UV duv;
 	duv.u = gain * (dst.u * du.u + dst.v * du.v);
 	duv.v = gain * (dst.u * dv.u + dst.v * dv.v);
@@ -55,14 +55,12 @@ Normal ImageMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistanc
 		return n;
 }
 
-Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache) const {
+Properties ImageMapTexture::ToProperties(const ImageMapCache &imageMapCache) const {
 	Properties props;
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("imagemap"));
-	props.Set(Property("scene.textures." + name + ".file")("imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imgMap)).str() +
-		"." + imgMap->GetFileExtension()));
+	props.Set(Property("scene.textures." + name + ".file")(imageMap->GetFileName(imageMapCache)));
 	props.Set(Property("scene.textures." + name + ".gamma")(1.f));
 	props.Set(Property("scene.textures." + name + ".gain")(gain));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));

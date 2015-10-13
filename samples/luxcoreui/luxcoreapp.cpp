@@ -138,7 +138,7 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 
 	// Delete scene.camera.screenwindow so frame buffer resize will
 	// automatically adjust the ratio
-	Properties cameraProps = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+	Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 	config->GetScene().Parse(cameraProps);
 

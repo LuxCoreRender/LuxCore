@@ -50,7 +50,9 @@ ProjectiveCamera::ProjectiveCamera(const CameraType type, const float *region,
 }
 
 void ProjectiveCamera::UpdateFocus(const Scene *scene) {
-	if (autoFocus) {
+	// scene->dataSet->GetAccelerator() is there because
+	// FILESAVER engine doesn't initialize any accelerator
+	if (autoFocus && scene->dataSet->GetAccelerator()) {
 		// Trace a ray in the middle of the screen
 		const Point Pras(filmWidth / 2, filmHeight / 2, 0.f);
 

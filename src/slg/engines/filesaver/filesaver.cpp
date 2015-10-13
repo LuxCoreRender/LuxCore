@@ -21,6 +21,7 @@
 #include <fstream>
 
 #include <boost/filesystem.hpp>
+#include <boost/format.hpp>
 
 #include "slg/engines/filesaver/filesaver.h"
 
@@ -98,13 +99,13 @@ void FileSaverRenderEngine::SaveScene() {
 	}
 
 	//--------------------------------------------------------------------------
-	// Export the .scn/.ply/.exr files
+	// Export the .scn
 	//--------------------------------------------------------------------------
+	const std::string sceneFileName = (dirPath / "scene.scn").generic_string();
 	{
-		const std::string sceneFileName = (dirPath / "scene.scn").generic_string();
 		SLG_LOG("[FileSaverRenderEngine] Scene file name: " << sceneFileName);
 
-		Properties props = renderConfig->scene->ToProperties(dirPath.generic_string());
+		Properties props = renderConfig->scene->ToProperties();
 
 		// Write the scene file
 		BOOST_OFSTREAM sceneFile(sceneFileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
@@ -112,5 +113,47 @@ void FileSaverRenderEngine::SaveScene() {
 			throw std::runtime_error("Unable to open: " + sceneFileName);
 		sceneFile << props.ToString();
 		sceneFile.close();
+	}
+
+	//--------------------------------------------------------------------------
+	// Export the .ply/.exr files
+	//--------------------------------------------------------------------------
+	{
+		// Write the image map information
+		SDL_LOG("Saving image maps information:");
+		vector<const ImageMap *> ims;
+		renderConfig->scene->imgMapCache.GetImageMaps(ims);
+		for (u_int i = 0; i < ims.size(); ++i) {
+			const string fileName = (dirPath / ims[i]->GetFileName(renderConfig->scene->imgMapCache)).generic_string();
+			SDL_LOG("  " + fileName);
+			ims[i]->WriteImage(fileName);
+		}
+
+		// Write the mesh information
+		SDL_LOG("Saving meshes information:");
+		const vector<ExtMesh *> &meshes =  renderConfig->scene->extMeshCache.GetMeshes();
+		set<string> savedMeshes;
+		double lastPrint = WallClockTime();
+		for (u_int i = 0; i < meshes.size(); ++i) {
+			if (WallClockTime() - lastPrint > 2.0) {
+				SDL_LOG("  " << i << "/" << meshes.size());
+				lastPrint = WallClockTime();
+			}
+
+			u_int meshIndex;
+			if (meshes[i]->GetType() == TYPE_EXT_TRIANGLE_INSTANCE) {
+				const ExtInstanceTriangleMesh *m = (ExtInstanceTriangleMesh *)meshes[i];
+				meshIndex = renderConfig->scene->extMeshCache.GetExtMeshIndex(m->GetExtTriangleMesh());
+			} else
+				meshIndex = renderConfig->scene->extMeshCache.GetExtMeshIndex(meshes[i]);
+			const string fileName = directoryName + "/mesh-" + (boost::format("%05d") % meshIndex).str() + ".ply";
+
+			// Check if I have already saved this mesh (mostly useful for instances)
+			if (savedMeshes.find(fileName) == savedMeshes.end()) {
+				//SDL_LOG("  " + fileName);
+				meshes[i]->WritePly(fileName);
+				savedMeshes.insert(fileName);
+			}
+		}
 	}
 }

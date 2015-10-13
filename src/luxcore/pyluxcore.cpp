@@ -1062,7 +1062,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
     class_<Scene>("Scene", init<optional<float> >())
 		.def(init<string, optional<float> >())
-		.def("GetProperties", &Scene::GetProperties, return_internal_reference<>())
+		.def("ToProperties", &Scene::ToProperties, return_internal_reference<>())
 		.def("GetCamera", &Scene::GetCamera, return_internal_reference<>())
 		.def("GetLightCount", &Scene::GetLightCount)
 		.def("GetObjectCount", &Scene::GetObjectCount)
