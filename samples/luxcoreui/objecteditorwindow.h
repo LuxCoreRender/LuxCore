@@ -16,26 +16,45 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_SAMPLERWINDOW_H
-#define	_LUXCOREAPP_SAMPLERWINDOW_H
+#ifndef _LUXCOREAPP_OBJECTEDITORWINDOW_H
+#define	_LUXCOREAPP_OBJECTEDITORWINDOW_H
 
 #include <string>
 
 #include <imgui.h>
 
-#include "objecteditorwindow.h"
-
 class LuxCoreApp;
 
-class SamplerWindow : public ObjectEditorWindow {
+class ObjectEditorWindow {
 public:
-	SamplerWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Sampler") { }
-	~SamplerWindow() { }
+	ObjectEditorWindow(LuxCoreApp *a, const std::string &name) :  opened(false), 
+			objectName(name), windowTitle(name + " editor"),app(a) { }
+	~ObjectEditorWindow() { }
 
-private:
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual void DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	void Draw();
+
+	bool opened;
+
+protected:
+	void RefreshGUIProperties();
+	void ParseGUIProperties();
+	void RefreshEditorProperties();
+	void ParseEditorProperties();
+
+	virtual void RefreshObjectProperties(luxrays::Properties &props) = 0;
+	virtual void ParseObjectProperties(const luxrays::Properties &props) = 0;
+	virtual void DrawObjectGUI(luxrays::Properties &props, bool &modifiedProps) = 0;
+
+	std::string objectName, windowTitle;
+
+	LuxCoreApp *app;
+
+	luxrays::Properties objectGUIProps;
+	bool modifiedGUIProps;
+
+	luxrays::Properties objectEditorProps;
+	char advancedEditorText[1024 * 32];
+	bool modifiedEditorProps;
 };
 
-#endif	/* _LUXCOREAPP_SAMPLERWINDOW_H */
+#endif	/* _LUXCOREAPP_OBJECTEDITORWINDOW_H */
