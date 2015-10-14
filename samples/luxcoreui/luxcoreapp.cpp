@@ -52,6 +52,9 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) : samplerWindow(this
 	lastMouseUpdate = 0.0;
 	
 	currentLogWindow = &logWindow;
+
+	renderFrameBufferTexMinFilter = GL_LINEAR;
+	renderFrameBufferTexMagFilter = GL_LINEAR;
 }
 
 LuxCoreApp::~LuxCoreApp() {

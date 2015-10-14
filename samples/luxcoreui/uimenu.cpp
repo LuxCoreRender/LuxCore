@@ -140,25 +140,23 @@ void LuxCoreApp::MenuFilm() {
 }
 
 //------------------------------------------------------------------------------
-// MenuWindow
-//------------------------------------------------------------------------------
-
-void LuxCoreApp::MenuWindow() {
-	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
-	if (ImGui::MenuItem("Sampler editor", NULL, false, !boost::starts_with(currentEngineType, "BIAS")))
-		samplerWindow.opened = !samplerWindow.opened;
-	if (ImGui::MenuItem("Statistics"))
-		statsWindow.opened = !statsWindow.opened;
-	if (ImGui::MenuItem("Log console"))
-		logWindow.opened = !logWindow.opened;
-}
-
-//------------------------------------------------------------------------------
 // MenuScreen
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuScreen() {
-	if (ImGui::BeginMenu("Set refresh interval")) {
+	if (ImGui::BeginMenu("Interpolation mode")) {
+		if (ImGui::MenuItem("Nearest", NULL, (renderFrameBufferTexMinFilter == GL_NEAREST))) {
+			renderFrameBufferTexMinFilter = GL_NEAREST;
+			renderFrameBufferTexMagFilter = GL_NEAREST;
+		}
+		if (ImGui::MenuItem("Linear", NULL, (renderFrameBufferTexMinFilter == GL_LINEAR))) {
+			renderFrameBufferTexMinFilter = GL_LINEAR;
+			renderFrameBufferTexMagFilter = GL_LINEAR;
+		}
+
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Refresh interval")) {
 		if (ImGui::MenuItem("5ms"))
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(5)));
 		if (ImGui::MenuItem("10ms"))
@@ -182,6 +180,21 @@ void LuxCoreApp::MenuScreen() {
 		DecScreenRefreshInterval();
 	if (ImGui::MenuItem("Increase refresh interval","m"))
 		IncScreenRefreshInterval();
+}
+
+//------------------------------------------------------------------------------
+// MenuWindow
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuWindow() {
+	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+	if (ImGui::MenuItem("Sampler editor", NULL, false, !boost::starts_with(currentEngineType, "BIAS")))
+		samplerWindow.opened = !samplerWindow.opened;
+	ImGui::Separator();
+	if (ImGui::MenuItem("Statistics"))
+		statsWindow.opened = !statsWindow.opened;
+	if (ImGui::MenuItem("Log console"))
+		logWindow.opened = !logWindow.opened;
 }
 
 //------------------------------------------------------------------------------

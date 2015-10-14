@@ -152,12 +152,12 @@ void SamplerWindow::Draw() {
 		// Advance editing
 		//----------------------------------------------------------------------
 
-		if (ImGui::CollapsingHeader("Advance editing", NULL, true, false)) {
+		if (ImGui::CollapsingHeader("Advance editor", NULL, true, false)) {
 			//------------------------------------------------------------------
 			// Refresh + Parse
 			//------------------------------------------------------------------
 
-			if (ImGui::InputTextMultiline("Advance editor", advancedEditor, LA_ARRAYSIZE(advancedEditor)))
+			if (ImGui::InputTextMultiline("Properties editor", advancedEditor, LA_ARRAYSIZE(advancedEditor)))
 				modifiedEditor = true;
 
 			//------------------------------------------------------------------
@@ -185,6 +185,11 @@ void SamplerWindow::Draw() {
 				samplerProps.Clear();
 			}
 		}
+	} else {
+		// Clear the properties when the window is first closed so they are
+		// re-initialized the next time.
+		if (samplerProps.GetSize())
+			samplerProps.Clear();
 	}
 	ImGui::End();
 }
