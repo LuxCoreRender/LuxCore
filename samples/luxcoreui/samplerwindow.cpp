@@ -37,7 +37,7 @@ void SamplerWindow::ParseObjectProperties(const luxrays::Properties &props) {
 	app->EditRenderConfig(props);
 }
 
-void SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProps) {
+bool SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProps) {
 	//------------------------------------------------------------------
 	// sampler.type
 	//------------------------------------------------------------------
@@ -52,14 +52,16 @@ void SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProp
 		samplerTypeIndex = 0;
 
 	if (ImGui::Combo("Sampler type", &samplerTypeIndex, "RANDOM\0SOBOL\0METROPOLIS\0\0")) {
-		if (samplerTypeIndex == 1)
-			app->EditRenderConfig(Properties() << Property("sampler.type")("SOBOL"));
-		else if (samplerTypeIndex == 2)
-			app->EditRenderConfig(Properties() << Property("sampler.type")("METROPOLIS"));
-		else
-			app->EditRenderConfig(Properties() << Property("sampler.type")("RANDOM"));
+		props.Clear();
 
-		RefreshObjectProperties(props);
+		if (samplerTypeIndex == 1)
+			props << Property("sampler.type")("SOBOL");
+		else if (samplerTypeIndex == 2)
+			props << Property("sampler.type")("METROPOLIS");
+		else
+			props << Property("sampler.type")("RANDOM");
+
+		return true;
 	}
 	ImGui::SameLine();
 	ImGui::TextDisabled("(?)");
@@ -106,4 +108,6 @@ void SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProp
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("sampler.metropolis.imagemutationrate");
 	}
+
+	return false;
 }

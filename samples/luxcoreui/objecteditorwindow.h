@@ -43,7 +43,7 @@ protected:
 
 	virtual void RefreshObjectProperties(luxrays::Properties &props) = 0;
 	virtual void ParseObjectProperties(const luxrays::Properties &props) = 0;
-	virtual void DrawObjectGUI(luxrays::Properties &props, bool &modifiedProps) = 0;
+	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modifiedProps) = 0;
 
 	std::string objectName, windowTitle;
 

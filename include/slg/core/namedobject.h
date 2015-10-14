@@ -16,26 +16,44 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_SAMPLERWINDOW_H
-#define	_LUXCOREAPP_SAMPLERWINDOW_H
+#ifndef _SLG_NAMEDOBJECT_H
+#define	_SLG_NAMEDOBJECT_H
 
 #include <string>
+#include <boost/atomic.hpp>
 
-#include <imgui.h>
+#include "luxrays/luxrays.h"
+#include "luxrays/utils/properties.h"
 
-#include "objecteditorwindow.h"
+namespace slg {
 
-class LuxCoreApp;
-
-class SamplerWindow : public ObjectEditorWindow {
+class NamedObject {
 public:
-	SamplerWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Sampler") { }
-	~SamplerWindow() { }
+	NamedObject();
+	NamedObject(const std::string &name);
+	virtual ~NamedObject();
+
+	const std::string &GetName() const { return name; }
+	void SetName(const std::string &nm) { name = nm; }
+
+	// Returns the Properties required to create this object
+	virtual luxrays::Properties ToProperties() const;
+
+	// Most sub-class will implement the following methods too:
+	//
+	// Returns the Properties required to create this object as defined in cfg
+	//static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	//
+	// Returns an <Object> defined byt Properties props
+	//static <Object> *FromProperties(const luxrays::Properties &props);
 
 private:
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	std::string name;
+
+	static u_int GetFreeID();
+	static boost::atomic<u_int> freeID;
 };
 
-#endif	/* _LUXCOREAPP_SAMPLERWINDOW_H */
+}
+
+#endif	/* _SLG_NAMEDOBJECT_H */

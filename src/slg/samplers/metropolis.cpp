@@ -232,3 +232,22 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	} else
 		++stamp;
 }
+
+Properties MetropolisSampler::ToProperties() {
+	return Sampler::ToProperties() <<
+			Property("sampler.metropolis.largesteprate")(largeMutationProbability) <<
+			Property("sampler.metropolis.maxconsecutivereject")(maxRejects) <<
+			Property("sampler.metropolis.imagemutationrate")(imageMutationRange);
+}
+
+Properties MetropolisSampler::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			Property("sampler.type")(SamplerType2String(METROPOLIS)) <<
+			cfg.Get(Property("sampler.metropolis.largesteprate")(.4f)) <<
+			cfg.Get(Property("sampler.metropolis.maxconsecutivereject")(512)) <<
+			cfg.Get(Property("sampler.metropolis.imagemutationrate")(.1f));
+}
+
+// Used to register ToProperties(const luxrays::Properties &cfg) static method with parent class
+FuncTableRegister<Sampler::ToPropertiesFuncPtr> MetropolisSampler::toPropertiesFuncTableRegister(
+	Sampler::toPropertiesFuncTable, Sampler::SamplerType2String(METROPOLIS), MetropolisSampler::ToProperties);

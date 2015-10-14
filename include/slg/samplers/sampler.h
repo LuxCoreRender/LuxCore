@@ -24,6 +24,8 @@
 
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
+#include "slg/core/namedobject.h"
+#include "slg/core/functable.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
 #include "slg/film/sampleresult.h"
@@ -60,11 +62,11 @@ typedef enum {
 	SOBOL = 2
 } SamplerType;
 
-class Sampler {
+class Sampler : public NamedObject {
 public:
 	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter) : rndGen(rnd), film(flm),
-			filmSplatter(flmSplatter) { }
+			const FilmSampleSplatter *flmSplatter) : NamedObject("sampler"), 
+			rndGen(rnd), film(flm), filmSplatter(flmSplatter) { }
 	virtual ~Sampler() { }
 
 	virtual SamplerType GetType() const = 0;
@@ -74,10 +76,17 @@ public:
 	virtual float GetSample(const u_int index) = 0;
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
 
+	virtual luxrays::Properties ToProperties() const;
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+
 	static SamplerType String2SamplerType(const std::string &type);
 	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
+	// Used to register all sub-class ToProperties(const luxrays::Properties &cfg) static methods
+	typedef luxrays::Properties (*ToPropertiesFuncPtr)(const luxrays::Properties &cfg);
+	static FuncTable<ToPropertiesFuncPtr> toPropertiesFuncTable;
+
 	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 
 	luxrays::RandomGenerator *rndGen;

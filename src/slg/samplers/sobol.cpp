@@ -97,3 +97,12 @@ void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 SobolSamplerSharedData *SobolSampler::AllocSharedData(luxrays::RandomGenerator *rnd) {
 	return new SobolSamplerSharedData(rnd);
 }
+
+Properties SobolSampler::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			Property("sampler.type")(SamplerType2String(SOBOL));
+}
+
+// Used to register ToProperties(const luxrays::Properties &cfg) static method with parent class
+FuncTableRegister<Sampler::ToPropertiesFuncPtr> SobolSampler::toPropertiesFuncTableRegister(
+	Sampler::toPropertiesFuncTable, Sampler::SamplerType2String(SOBOL), SobolSampler::ToProperties);

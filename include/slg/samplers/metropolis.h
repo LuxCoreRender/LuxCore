@@ -64,7 +64,12 @@ public:
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
+	virtual luxrays::Properties ToProperties();
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+
 private:
+	static FuncTableRegister<ToPropertiesFuncPtr> toPropertiesFuncTableRegister;
+
 	MetropolisSamplerSharedData *sharedData;
 
 	u_int maxRejects;

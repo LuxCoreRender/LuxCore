@@ -33,3 +33,12 @@ void RandomSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 }
+
+Properties RandomSampler::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			Property("sampler.type")(SamplerType2String(RANDOM));
+}
+
+// Used to register ToProperties(const luxrays::Properties &cfg) static method with parent class
+FuncTableRegister<Sampler::ToPropertiesFuncPtr> RandomSampler::toPropertiesFuncTableRegister(
+	Sampler::toPropertiesFuncTable, Sampler::SamplerType2String(RANDOM), RandomSampler::ToProperties);
