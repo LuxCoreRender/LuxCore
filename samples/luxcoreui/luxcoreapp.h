@@ -87,6 +87,7 @@ private:
 	luxcore::RenderConfig *config;
 
 	GLuint renderFrameBufferTexID;
+	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;
 	GLFWwindow *window;
 
 	// ImGui inputs
