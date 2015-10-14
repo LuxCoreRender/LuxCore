@@ -16,26 +16,32 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_SAMPLERWINDOW_H
-#define	_LUXCOREAPP_SAMPLERWINDOW_H
+#include "slg/core/namedobject.h"
 
-#include <string>
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-#include <imgui.h>
+//------------------------------------------------------------------------------
+// NamedObject
+//------------------------------------------------------------------------------
 
-#include "objecteditorwindow.h"
+boost::atomic<u_int> NamedObject::freeID(0);
 
-class LuxCoreApp;
+u_int NamedObject::GetFreeID() {
+	return freeID++;
+}
 
-class SamplerWindow : public ObjectEditorWindow {
-public:
-	SamplerWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Sampler") { }
-	~SamplerWindow() { }
+NamedObject::NamedObject() {
+	name = "NamedObject-" + ToString(GetFreeID());
+}
 
-private:
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
-};
+NamedObject::NamedObject(const string &nm) : name(nm) {
+}
 
-#endif	/* _LUXCOREAPP_SAMPLERWINDOW_H */
+NamedObject::~NamedObject() {
+}
+
+Properties NamedObject::ToProperties() const {
+	throw runtime_error("Named object \"" + name + "\" doesn't implement ToProperties() method");
+}

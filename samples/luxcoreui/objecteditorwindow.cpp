@@ -78,11 +78,15 @@ void ObjectEditorWindow::Draw() {
 		//----------------------------------------------------------------------
 
 		if (ImGui::CollapsingHeader("Sampler properties", NULL, true, true)) {
+			ImGui::PushID("Sampler properties");
+
+
 			//------------------------------------------------------------------
 			// Object GUI
 			//------------------------------------------------------------------
 
-			DrawObjectGUI(objectGUIProps, modifiedGUIProps);
+			if (DrawObjectGUI(objectGUIProps, modifiedGUIProps))
+				ParseGUIProperties();
 
 			//------------------------------------------------------------------
 			// Refresh + Parse buttons
@@ -95,6 +99,8 @@ void ObjectEditorWindow::Draw() {
 
 			if (ImGui::Button(modifiedGUIProps ? "Parse (*)" : "Parse"))
 				ParseGUIProperties();
+
+			ImGui::PopID();
 		}
 
 		//----------------------------------------------------------------------
@@ -102,6 +108,8 @@ void ObjectEditorWindow::Draw() {
 		//----------------------------------------------------------------------
 
 		if (ImGui::CollapsingHeader("Advance editor", NULL, true, false)) {
+			ImGui::PushID("Advance editor");
+
 			//------------------------------------------------------------------
 			// Refresh + Parse buttons
 			//------------------------------------------------------------------
@@ -124,6 +132,8 @@ void ObjectEditorWindow::Draw() {
 
 				ParseEditorProperties();
 			}
+
+			ImGui::PopID();
 		}
 	} else {
 		// Clear the properties when the window is first closed so they are

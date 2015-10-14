@@ -21,6 +21,7 @@
 #include "luxrays/core/color/color.h"
 #include "slg/samplers/sampler.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -28,7 +29,7 @@ using namespace slg;
 // Sampler
 //------------------------------------------------------------------------------
 
-SamplerType Sampler::String2SamplerType(const std::string &type) {
+SamplerType Sampler::String2SamplerType(const string &type) {
 	if ((type.compare("INLINED_RANDOM") == 0) ||
 			(type.compare("RANDOM") == 0))
 		return RANDOM;
@@ -37,10 +38,10 @@ SamplerType Sampler::String2SamplerType(const std::string &type) {
 	if (type.compare("SOBOL") == 0)
 		return SOBOL;
 
-	throw std::runtime_error("Unknown sampler type: " + type);
+	throw runtime_error("Unknown sampler type: " + type);
 }
 
-const std::string Sampler::SamplerType2String(const SamplerType type) {
+const string Sampler::SamplerType2String(const SamplerType type) {
 	switch (type) {
 		case RANDOM:
 			return "RANDOM";
@@ -49,15 +50,31 @@ const std::string Sampler::SamplerType2String(const SamplerType type) {
 		case SOBOL:
 			return "SOBOL";
 		default:
-			throw std::runtime_error("Unknown sampler type: " + boost::lexical_cast<std::string>(type));
+			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(type));
 	}
 }
 
-void Sampler::AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight) const {
-	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
+void Sampler::AddSamplesToFilm(const vector<SampleResult> &sampleResults, const float weight) const {
+	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
 		if (sr->useFilmSplat)
 			filmSplatter->SplatSample(*film, *sr, weight);
 		else
 			film->AddSample(sr->pixelX, sr->pixelY, *sr, weight);
 	}
 }
+
+Properties Sampler::ToProperties() const {
+	return Properties() <<
+			Property("sampler.type")(SamplerType2String(GetType()));
+}
+
+Properties Sampler::ToProperties(const Properties &cfg) {
+	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+	const ToPropertiesFuncPtr func = toPropertiesFuncTable.Get(type);
+	if (func)
+		return Properties() << func(cfg);
+	else
+		throw runtime_error("Unknown sampler type in Sampler::ToProperties(): " + type);
+}
+
+FuncTable<Sampler::ToPropertiesFuncPtr> Sampler::toPropertiesFuncTable;

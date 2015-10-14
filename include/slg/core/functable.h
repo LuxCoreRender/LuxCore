@@ -16,26 +16,45 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_SAMPLERWINDOW_H
-#define	_LUXCOREAPP_SAMPLERWINDOW_H
+#ifndef _SLG_FUNCTABLE_H
+#define	_SLG_FUNCTABLE_H
 
 #include <string>
+#include <boost/unordered_map.hpp>
 
-#include <imgui.h>
+#include "luxrays/luxrays.h"
 
-#include "objecteditorwindow.h"
+namespace slg {
 
-class LuxCoreApp;
-
-class SamplerWindow : public ObjectEditorWindow {
+template <class T> class FuncTable {
 public:
-	SamplerWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Sampler") { }
-	~SamplerWindow() { }
+	FuncTable() { }
+	virtual ~FuncTable() { }
+
+	void Register(const std::string &name, T func) {
+		funcTable[name] = func;
+	}
+
+	T Get(const std::string &name) const {
+		typename boost::unordered_map<std::string, T>::const_iterator it = funcTable.find(name);
+		if (it == funcTable.end())
+			return NULL;
+		else
+			return it->second;
+	}
 
 private:
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	boost::unordered_map<std::string, T> funcTable;
 };
 
-#endif	/* _LUXCOREAPP_SAMPLERWINDOW_H */
+template <class T> class FuncTableRegister {
+public:
+	FuncTableRegister(FuncTable<T> &funcTable, const std::string &name, T func) {
+		funcTable.Register(name, func);
+	}
+	virtual ~FuncTableRegister() { }
+};
+
+}
+
+#endif	/* _SLG_FUNCTABLE_H */

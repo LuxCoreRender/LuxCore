@@ -70,9 +70,12 @@ public:
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static SobolSamplerSharedData *AllocSharedData(luxrays::RandomGenerator *rnd);
 
 private:
+	static FuncTableRegister<ToPropertiesFuncPtr> toPropertiesFuncTableRegister;
+
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
 	SobolSamplerSharedData *sharedData;

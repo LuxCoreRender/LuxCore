@@ -44,6 +44,11 @@ public:
 
 	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
+
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+
+private:
+	static FuncTableRegister<ToPropertiesFuncPtr> toPropertiesFuncTableRegister;
 };
 
 }
