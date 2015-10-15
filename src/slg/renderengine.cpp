@@ -399,10 +399,14 @@ void CPURenderEngine::StartLockLess() {
 }
 
 void CPURenderEngine::StopLockLess() {
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Interrupt();
-	for (size_t i = 0; i < renderThreads.size(); ++i)
-		renderThreads[i]->Stop();
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (renderThreads[i])
+			renderThreads[i]->Interrupt();
+	}
+	for (size_t i = 0; i < renderThreads.size(); ++i) {
+		if (renderThreads[i])
+			renderThreads[i]->Stop();
+	}
 }
 
 void CPURenderEngine::BeginSceneEditLockLess() {

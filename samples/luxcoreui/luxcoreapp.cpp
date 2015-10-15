@@ -82,46 +82,42 @@ void LuxCoreApp::DecScreenRefreshInterval() {
 }
 
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
-	if (engineType != config->GetProperty("renderengine.type").Get<string>()) {
+	if (engineType != config->GetProperty("renderengine.type").Get<string>())
+		EditRenderConfig(Properties() << Property("renderengine.type")(engineType));
+}
+
+void LuxCoreApp::EditRenderConfig(const Properties &props) {
+	if (session) {
 		// Stop the session
 		session->Stop();
 
 		// Delete the session
 		delete session;
 		session = NULL;
+	}
 
-		if (boost::starts_with(engineType, "RT")) {
-			if (config->GetProperty("screen.refresh.interval").Get<u_int>() > 25)
-				config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
-			optRealTimeMode = true;
-		} else
-			optRealTimeMode = false;
-		
-		// Change the render engine
-		config->Parse(
-				Properties() <<
-				Property("renderengine.type")(engineType));
+	// Change the configuration
+	config->Parse(props);
+
+	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	if (boost::starts_with(engineType, "RT")) {
+		if (config->GetProperty("screen.refresh.interval").Get<u_int>() > 25)
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
+		optRealTimeMode = true;
+	} else
+		optRealTimeMode = false;
+
+	try {
 		session = new RenderSession(config);
 
 		// Re-start the rendering
 		session->Start();
+	} catch(exception &ex) {
+		LA_LOG("Parsing error: " << endl << ex.what());
+
+		delete session;
+		session = NULL;
 	}
-}
-
-void LuxCoreApp::EditRenderConfig(const Properties &samplerProps) {
-	// Stop the session
-	session->Stop();
-
-	// Delete the session
-	delete session;
-	session = NULL;
-
-	// Change the sampler
-	config->Parse(samplerProps);
-	session = new RenderSession(config);
-
-	// Re-start the rendering
-	session->Start();
 }
 
 void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {

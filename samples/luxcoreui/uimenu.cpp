@@ -30,7 +30,7 @@ using namespace luxcore;
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuRendering() {
-	if (ImGui::MenuItem("Restart", "Space bar")) {
+	if (session && ImGui::MenuItem("Restart", "Space bar")) {
 		// Restart rendering
 		session->Stop();
 		session->Start();
@@ -133,9 +133,9 @@ void LuxCoreApp::MenuFilm() {
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
-	if (ImGui::MenuItem("Save outputs"))
+	if (session && ImGui::MenuItem("Save outputs"))
 		session->GetFilm().SaveOutputs();
-	if (ImGui::MenuItem("Save film"))
+	if (session && ImGui::MenuItem("Save film"))
 		session->GetFilm().SaveFilm("film.flm");
 }
 
@@ -191,7 +191,7 @@ void LuxCoreApp::MenuWindow() {
 	if (ImGui::MenuItem("Sampler editor", NULL, false, !boost::starts_with(currentEngineType, "BIAS")))
 		samplerWindow.opened = !samplerWindow.opened;
 	ImGui::Separator();
-	if (ImGui::MenuItem("Statistics"))
+	if (session && ImGui::MenuItem("Statistics"))
 		statsWindow.opened = !statsWindow.opened;
 	if (ImGui::MenuItem("Log console"))
 		logWindow.opened = !logWindow.opened;
@@ -208,25 +208,27 @@ void LuxCoreApp::MainMenuBar() {
 			ImGui::EndMenu();
 		}
 
-		if (ImGui::BeginMenu("Engine")) {
-			MenuEngine();
-			ImGui::EndMenu();
-		}
+		if (session) {
+			if (ImGui::BeginMenu("Engine")) {
+				MenuEngine();
+				ImGui::EndMenu();
+			}
 
-		const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
-		if (ImGui::BeginMenu("Sampler", !boost::starts_with(currentEngineType, "BIAS"))) {
-			MenuSampler();
-			ImGui::EndMenu();
-		}
+			const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+			if (ImGui::BeginMenu("Sampler", !boost::starts_with(currentEngineType, "BIAS"))) {
+				MenuSampler();
+				ImGui::EndMenu();
+			}
 
-		if (ImGui::BeginMenu("Film")) {
-			MenuFilm();
-			ImGui::EndMenu();
-		}
+			if (ImGui::BeginMenu("Film")) {
+				MenuFilm();
+				ImGui::EndMenu();
+			}
 
-		if (ImGui::BeginMenu("Screen")) {
-			MenuScreen();
-			ImGui::EndMenu();
+			if (ImGui::BeginMenu("Screen")) {
+				MenuScreen();
+				ImGui::EndMenu();
+			}
 		}
 
 		if (ImGui::BeginMenu("Window")) {

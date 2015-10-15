@@ -314,14 +314,14 @@ int main(int argc, char** argv) {
 
 		std::cerr << "Done." << std::endl;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		std::cout << "OpenCL ERROR: " << err.what() << "(" << luxrays::oclErrorString(err.err()) << ")" << std::endl;
 		return EXIT_FAILURE;
 #endif
-	} catch (std::runtime_error err) {
+	} catch (std::runtime_error &err) {
 		std::cout << "RUNTIME ERROR: " << err.what() << std::endl;
 		return EXIT_FAILURE;
-	} catch (std::exception err) {
+	} catch (std::exception &err) {
 		std::cout << "ERROR: " << err.what() << std::endl;
 		return EXIT_FAILURE;
 	}
