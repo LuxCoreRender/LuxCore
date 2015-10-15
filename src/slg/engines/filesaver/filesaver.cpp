@@ -47,7 +47,7 @@ void FileSaverRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	directoryName = cfg.Get(Property("filesaver.directory")("slg-exported-scene")).Get<string>();
+	directoryName = cfg.Get(Property("filesaver.directory")("luxcore-exported-scene")).Get<string>();
 	renderEngineType = cfg.Get(Property("filesaver.renderengine.type")("PATHOCL")).Get<string>();
 	
 	SaveScene();
