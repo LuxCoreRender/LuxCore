@@ -41,11 +41,11 @@ public:
 
 	// Most sub-class will implement the following methods too:
 	//
-	// Returns the Properties required to create this object as defined in cfg
+	// Returns the Properties required to create this object as defined in cfg:
 	//static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	//
-	// Returns an <Object> defined byt Properties props
-	//static <Object> *FromProperties(const luxrays::Properties &props);
+	// Returns an <Object> defined by Properties props:
+	//static <Object> *FromProperties(const luxrays::Properties &props, ...);
 
 private:
 	std::string name;
