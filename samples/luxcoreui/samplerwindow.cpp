@@ -30,7 +30,14 @@ using namespace luxcore;
 //------------------------------------------------------------------------------
 void SamplerWindow::RefreshObjectProperties(luxrays::Properties &props) {
 	RenderConfig *config = app->config;
-	props = config->ToProperties().GetAllProperties("sampler");
+	try {
+		props = config->ToProperties().GetAllProperties("sampler");
+	} catch(exception &ex) {
+		LA_LOG("Sampler parsing error: " << endl << ex.what());
+
+		// Just revert to the initialized properties (note: they will include the error)
+		props = config->GetProperties().GetAllProperties("sampler");
+	}
 }
 
 void SamplerWindow::ParseObjectProperties(const luxrays::Properties &props) {
@@ -42,14 +49,19 @@ bool SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProp
 	// sampler.type
 	//------------------------------------------------------------------
 
-	const string currentSamplerType = props.Get("sampler.type").Get<string>();
+	const string currentSamplerType = props.Get(Property("sampler.type")("RANDOM")).Get<string>();
 	int samplerTypeIndex;
-	if (currentSamplerType == "SOBOL")
+	if (currentSamplerType == "RANDOM")
+		samplerTypeIndex = 0;
+	else if (currentSamplerType == "SOBOL")
 		samplerTypeIndex = 1;
 	else if (currentSamplerType == "METROPOLIS")
 		samplerTypeIndex = 2;
-	else
+	else {
+		// It is an unknown value, force to RANDOM
 		samplerTypeIndex = 0;
+		props.Set(Property("sampler.type")("RANDOM"));
+	}
 
 	if (ImGui::Combo("Sampler type", &samplerTypeIndex, "RANDOM\0SOBOL\0METROPOLIS\0\0")) {
 		props.Clear();

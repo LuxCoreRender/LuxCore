@@ -77,8 +77,8 @@ void ObjectEditorWindow::Draw() {
 		// Object properties
 		//----------------------------------------------------------------------
 
-		if (ImGui::CollapsingHeader("Sampler properties", NULL, true, true)) {
-			ImGui::PushID("Sampler properties");
+		if (ImGui::CollapsingHeader((objectName + " properties").c_str(), NULL, true, true)) {
+			ImGui::PushID("Object properties");
 
 
 			//------------------------------------------------------------------

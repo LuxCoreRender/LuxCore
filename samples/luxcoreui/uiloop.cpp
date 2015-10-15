@@ -353,39 +353,44 @@ void LuxCoreApp::RunApp() {
 		// and not only every 1 secs.
 		glViewport(0, 0, currentFrameBufferWidth, currentFrameBufferHeight);
 
-		// Refresh the frame buffer size at 1HZ
-		if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
-			// Check if the frame buffer has been resized
-			if ((currentFrameBufferWidth != lastFrameBufferWidth) ||
-					(currentFrameBufferHeight != lastFrameBufferHeight)) {
-				SetFilmResolution(filmWidth, filmHeight);
-				
-				lastFrameBufferWidth = currentFrameBufferWidth;
-				lastFrameBufferHeight = currentFrameBufferHeight;
+		if (session) {
+			// Refresh the frame buffer size at 1HZ
+			if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
+				// Check if the frame buffer has been resized
+				if ((currentFrameBufferWidth != lastFrameBufferWidth) ||
+						(currentFrameBufferHeight != lastFrameBufferHeight)) {
+					SetFilmResolution(filmWidth, filmHeight);
+
+					lastFrameBufferWidth = currentFrameBufferWidth;
+					lastFrameBufferHeight = currentFrameBufferHeight;
+				}
+
+				// Check if the film has been resized
+				newFilmSize[0] = Max(64, newFilmSize[0]);
+				newFilmSize[1] = Max(64, newFilmSize[1]);
+				if ((filmWidth != (u_int)newFilmSize[0]) || (filmHeight != (u_int)newFilmSize[1])) {
+					SetFilmResolution((u_int)newFilmSize[0], (u_int)newFilmSize[1]);
+
+					filmWidth = session->GetFilm().GetWidth();
+					filmHeight = session->GetFilm().GetHeight();
+				}
+
+				lastFrameBufferSizeRefresh = WallClockTime();
 			}
 
-			// Check if the film has been resized
-			newFilmSize[0] = Max(64, newFilmSize[0]);
-			newFilmSize[1] = Max(64, newFilmSize[1]);
-			if ((filmWidth != (u_int)newFilmSize[0]) || (filmHeight != (u_int)newFilmSize[1])) {
-				SetFilmResolution((u_int)newFilmSize[0], (u_int)newFilmSize[1]);
-
-				filmWidth = session->GetFilm().GetWidth();
-				filmHeight = session->GetFilm().GetHeight();
+			// Check if it is time to update the frame buffer texture
+			const double screenRefreshTime = config->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
+			currentTime = WallClockTime();
+			if (currentTime - lastScreenRefresh >= screenRefreshTime) {
+				RefreshRenderingTexture();
+				lastScreenRefresh = currentTime;
 			}
 
-			lastFrameBufferSizeRefresh = WallClockTime();
+			DrawRendering();
+		} else {
+			glClearColor(.3f, .3f, .3f, 0.f);
+			glClear(GL_COLOR_BUFFER_BIT);
 		}
-
-		// Check if it is time to update the frame buffer texture
-		const double screenRefreshTime = config->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
-		currentTime = WallClockTime();
-		if (currentTime - lastScreenRefresh >= screenRefreshTime) {
-			RefreshRenderingTexture();
-			lastScreenRefresh = currentTime;
-		}
-
-		DrawRendering();
 
 		//----------------------------------------------------------------------
 		// Draw the UI
@@ -393,12 +398,17 @@ void LuxCoreApp::RunApp() {
 
 		ImGui_ImplGlfw_NewFrame();
 
-		DrawTiles();
-		DrawCaptions();
+		if (session) {
+			DrawTiles();
+			DrawCaptions();
+		}
+
 		MainMenuBar();
 		samplerWindow.Draw();
-		logWindow.Draw();
-		statsWindow.Draw();
+			logWindow.Draw();
+		
+		if (session)
+			statsWindow.Draw();
 
 		ImGui::Render();
 
@@ -409,7 +419,7 @@ void LuxCoreApp::RunApp() {
 		// Check if periodic save is enabled
 		//----------------------------------------------------------------------
 
-		if (session->NeedPeriodicFilmSave()) {
+		if (session && session->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
 			session->GetFilm().SaveOutputs();
 		}
@@ -418,24 +428,27 @@ void LuxCoreApp::RunApp() {
 		// Check for how long to sleep
 		//----------------------------------------------------------------------
 
-		if (optRealTimeMode)
-			session->WaitNewFrame();
-		else {
-			currentTime = WallClockTime();
-			const double loopTime = currentTime - lastLoop;
-			//LA_LOG("Loop time: " << loopTime * 1000.0 << "ms");
-			lastLoop = currentTime;
+		if (session) {
+			if (optRealTimeMode)
+				session->WaitNewFrame();
+			else {
+				currentTime = WallClockTime();
+				const double loopTime = currentTime - lastLoop;
+				//LA_LOG("Loop time: " << loopTime * 1000.0 << "ms");
+				lastLoop = currentTime;
 
-			// The UI loop runs at 100HZ
-			if (loopTime < 0.01) {
-				const double sleepTime = (0.01 - loopTime) * 0.99;
-				const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
-				//LA_LOG("Sleep time: " << msSleepTime<< "ms");
+				// The UI loop runs at 100HZ
+				if (loopTime < 0.01) {
+					const double sleepTime = (0.01 - loopTime) * 0.99;
+					const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
+					//LA_LOG("Sleep time: " << msSleepTime<< "ms");
 
-				if (msSleepTime > 0)
-					boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
+					if (msSleepTime > 0)
+						boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
+				}
 			}
-		}
+		} else
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
 	}
 
 
