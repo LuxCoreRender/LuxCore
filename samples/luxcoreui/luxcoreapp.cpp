@@ -58,6 +58,7 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) : samplerWindow(this
 }
 
 LuxCoreApp::~LuxCoreApp() {
+	currentLogWindow = NULL;
 }
 
 void LuxCoreApp::IncScreenRefreshInterval() {
