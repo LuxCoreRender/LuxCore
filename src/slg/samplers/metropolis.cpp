@@ -34,6 +34,11 @@ MetropolisSamplerSharedData::MetropolisSamplerSharedData() : SamplerSharedData()
 	sampleCount = 0.;
 }
 
+SamplerSharedData *MetropolisSamplerSharedData::FromProperties(const Properties &cfg,
+		RandomGenerator *rndGen) {
+	return new MetropolisSamplerSharedData();
+}
+
 //------------------------------------------------------------------------------
 // Metropolis sampler
 //------------------------------------------------------------------------------
@@ -248,6 +253,13 @@ Properties MetropolisSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(Property("sampler.metropolis.imagemutationrate")(.1f));
 }
 
-// Used to register ToProperties(const luxrays::Properties &cfg) static method with parent class
-FuncTableRegister<Sampler::ToPropertiesFuncPtr> MetropolisSampler::toPropertiesFuncTableRegister(
-	Sampler::toPropertiesFuncTable, Sampler::SamplerType2String(METROPOLIS), MetropolisSampler::ToProperties);
+Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	const float rate = Clamp(cfg.Get(Property("sampler.metropolis.largesteprate")(.4f)).Get<float>(), 0.f, 1.f);
+	const u_int reject = cfg.Get(Property("sampler.metropolis.maxconsecutivereject")(512)).Get<u_int>();
+	const float mutationRate = Clamp(cfg.Get(Property("sampler.metropolis.imagemutationrate")(.1f)).Get<float>(), 0.f, 1.f);
+
+	return new MetropolisSampler(rndGen, film, flmSplatter,
+			reject, rate, mutationRate,
+			(MetropolisSamplerSharedData *)sharedData);
+}

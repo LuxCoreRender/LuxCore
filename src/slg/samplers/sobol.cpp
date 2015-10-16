@@ -29,10 +29,15 @@ using namespace slg;
 // SobolSamplerSharedData
 //------------------------------------------------------------------------------
 
-SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rnd) : SamplerSharedData() {
-	rng0 = rnd->floatValue();
-	rng1 = rnd->floatValue();
+SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rndGen) : SamplerSharedData() {
+	rng0 = rndGen->floatValue();
+	rng1 = rndGen->floatValue();
 	pass = SOBOL_STARTOFFSET;
+}
+
+SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
+		RandomGenerator *rndGen) {
+	return new SobolSamplerSharedData(rndGen);
 }
 
 //------------------------------------------------------------------------------
@@ -94,15 +99,12 @@ void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 	}
 }
 
-SobolSamplerSharedData *SobolSampler::AllocSharedData(luxrays::RandomGenerator *rnd) {
-	return new SobolSamplerSharedData(rnd);
-}
-
 Properties SobolSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
 			Property("sampler.type")(SamplerType2String(SOBOL));
 }
 
-// Used to register ToProperties(const luxrays::Properties &cfg) static method with parent class
-FuncTableRegister<Sampler::ToPropertiesFuncPtr> SobolSampler::toPropertiesFuncTableRegister(
-	Sampler::toPropertiesFuncTable, Sampler::SamplerType2String(SOBOL), SobolSampler::ToProperties);
+Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
+}

@@ -20,10 +20,35 @@
 
 #include "luxrays/core/color/color.h"
 #include "slg/samplers/sampler.h"
+#include "slg/samplers/random.h"
+#include "slg/samplers/sobol.h"
+#include "slg/samplers/metropolis.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// SamplerSharedData
+//------------------------------------------------------------------------------
+
+SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen) {
+	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+
+	const FromPropertiesFuncPtr func = FUNCTABLE_NAME(FromProperties).GetFunc(type);
+	if (func)
+		return func(cfg, rndGen);
+	else
+		throw runtime_error("Unknown sampler type in SamplerSharedData::FromProperties(): " + type);
+}
+
+FUNCTABLE_DECLARATION(SamplerSharedData, FromProperties);
+// NOTE: you have to place all FUNCTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the FuncTable) or the compiler optimizer
+// will remove the code.
+FUNCTABLE_REGISTER(RandomSamplerSharedData, Sampler::SamplerType2String(RANDOM), FromProperties);
+FUNCTABLE_REGISTER(SobolSamplerSharedData, Sampler::SamplerType2String(SOBOL), FromProperties);
+FUNCTABLE_REGISTER(MetropolisSamplerSharedData, Sampler::SamplerType2String(METROPOLIS), FromProperties);
 
 //------------------------------------------------------------------------------
 // Sampler
@@ -70,11 +95,37 @@ Properties Sampler::ToProperties() const {
 
 Properties Sampler::ToProperties(const Properties &cfg) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
-	const ToPropertiesFuncPtr func = toPropertiesFuncTable.Get(type);
+
+	const ToPropertiesFuncPtr func = FUNCTABLE_NAME(ToProperties).GetFunc(type);
 	if (func)
 		return Properties() << func(cfg);
 	else
 		throw runtime_error("Unknown sampler type in Sampler::ToProperties(): " + type);
 }
 
-FuncTable<Sampler::ToPropertiesFuncPtr> Sampler::toPropertiesFuncTable;
+Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+
+	const FromPropertiesFuncPtr func = FUNCTABLE_NAME(FromProperties).GetFunc(type);
+	if (func)
+		return func(cfg, rndGen, film, flmSplatter, sharedData);
+	else
+		throw runtime_error("Unknown sampler type in Sampler::FromProperties(): " + type);
+}
+
+FUNCTABLE_DECLARATION(Sampler, ToProperties);
+// NOTE: you have to place all FUNCTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the FuncTable) or the compiler optimizer
+// will remove the code.
+FUNCTABLE_REGISTER(RandomSampler, Sampler::SamplerType2String(RANDOM), ToProperties);
+FUNCTABLE_REGISTER(SobolSampler, Sampler::SamplerType2String(SOBOL), ToProperties);
+FUNCTABLE_REGISTER(MetropolisSampler, Sampler::SamplerType2String(METROPOLIS), ToProperties);
+
+FUNCTABLE_DECLARATION(Sampler, FromProperties);
+// NOTE: you have to place all FUNCTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the FuncTable) or the compiler optimizer
+// will remove the code.
+FUNCTABLE_REGISTER(RandomSampler, Sampler::SamplerType2String(RANDOM), FromProperties);
+FUNCTABLE_REGISTER(SobolSampler, Sampler::SamplerType2String(SOBOL), FromProperties);
+FUNCTABLE_REGISTER(MetropolisSampler, Sampler::SamplerType2String(METROPOLIS), FromProperties);

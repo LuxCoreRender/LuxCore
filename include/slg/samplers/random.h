@@ -30,6 +30,25 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
+// RandomSamplerSharedData
+//
+// Used to share sampler specific data across multiple threads
+//------------------------------------------------------------------------------
+
+class RandomSamplerSharedData : public SamplerSharedData {
+public:
+	RandomSamplerSharedData() { }
+	virtual ~RandomSamplerSharedData() { }
+
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+
+	// Nothing to share
+
+private:
+	FUNCTABLE_DECLARE_REGISTRATION(FromProperties);
+};
+
+//------------------------------------------------------------------------------
 // Random sampler
 //------------------------------------------------------------------------------
 
@@ -46,9 +65,12 @@ public:
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 private:
-	static FuncTableRegister<ToPropertiesFuncPtr> toPropertiesFuncTableRegister;
+	FUNCTABLE_DECLARE_REGISTRATION(ToProperties);
+	FUNCTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 }

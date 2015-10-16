@@ -50,6 +50,13 @@ class SamplerSharedData {
 public:
 	SamplerSharedData() { }
 	virtual ~SamplerSharedData() { }
+
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	
+protected:
+	// Used to register all sub-class FromProperties() static methods
+	typedef SamplerSharedData *(*FromPropertiesFuncPtr)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	FUNCTABLE_DECLARE_DECLARATION(FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -78,14 +85,21 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 	static SamplerType String2SamplerType(const std::string &type);
 	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
-	// Used to register all sub-class ToProperties(const luxrays::Properties &cfg) static methods
+	// Used to register all sub-class ToProperties() static methods
 	typedef luxrays::Properties (*ToPropertiesFuncPtr)(const luxrays::Properties &cfg);
-	static FuncTable<ToPropertiesFuncPtr> toPropertiesFuncTable;
+	FUNCTABLE_DECLARE_DECLARATION(ToProperties);
+
+	// Used to register all sub-class FromProperties() static methods
+	typedef Sampler *(*FromPropertiesFuncPtr)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
+	FUNCTABLE_DECLARE_DECLARATION(FromProperties);
 
 	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 
