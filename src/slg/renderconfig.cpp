@@ -341,39 +341,12 @@ Film *RenderConfig::AllocFilm() const {
 }
 
 SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen) const {
-	const SamplerType samplerType = Sampler::String2SamplerType(GetProperty("sampler.type").Get<string>());
-	switch (samplerType) {
-		case RANDOM:
-			return NULL;
-		case METROPOLIS:
-			return new MetropolisSamplerSharedData();
-		case SOBOL:
-			return new SobolSamplerSharedData(rndGen);
-		default:
-			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
-	}
+	return SamplerSharedData::FromProperties(cfg, rndGen);
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
 		SamplerSharedData *sharedData) const {
-	const SamplerType samplerType = Sampler::String2SamplerType(GetProperty("sampler.type").Get<string>());
-	switch (samplerType) {
-		case RANDOM:
-			return new RandomSampler(rndGen, film, flmSplatter);
-		case METROPOLIS: {
-			const float rate = GetProperty("sampler.metropolis.largesteprate").Get<float>();
-			const u_int reject = GetProperty("sampler.metropolis.maxconsecutivereject").Get<u_int>();
-			const float mutationRate = GetProperty("sampler.metropolis.imagemutationrate").Get<float>();
-
-			return new MetropolisSampler(rndGen, film, flmSplatter,
-					reject, rate, mutationRate,
-					(MetropolisSamplerSharedData *)sharedData);
-		}
-		case SOBOL:
-			return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
-		default:
-			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
-	}
+	return Sampler::FromProperties(cfg, rndGen, film, flmSplatter, sharedData);
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMutex) const {

@@ -29,13 +29,11 @@ namespace slg {
 template <class T> class FuncTable {
 public:
 	FuncTable() { }
-	virtual ~FuncTable() { }
+	~FuncTable() { }
 
-	void Register(const std::string &name, T func) {
-		funcTable[name] = func;
-	}
+	T GetFunc(const std::string &name) const {
+		const boost::unordered_map<std::string, T> &funcTable = GetFuncTable();
 
-	T Get(const std::string &name) const {
 		typename boost::unordered_map<std::string, T>::const_iterator it = funcTable.find(name);
 		if (it == funcTable.end())
 			return NULL;
@@ -43,17 +41,41 @@ public:
 			return it->second;
 	}
 
+	class RegisterFunc {
+	public:
+		RegisterFunc(const std::string &name, T func) {
+			boost::unordered_map<std::string, T> &funcTable = GetFuncTable();
+
+			typename boost::unordered_map<std::string, T>::const_iterator it = funcTable.find(name);
+			if (it == funcTable.end())
+				funcTable[name] = func;
+			else
+				throw std::runtime_error("Already registered name in FuncTable::Register(): " + name);
+		}
+		virtual ~RegisterFunc() { }
+	};
+
 private:
-	boost::unordered_map<std::string, T> funcTable;
+	static boost::unordered_map<std::string, T> &GetFuncTable() {
+		static boost::unordered_map<std::string, T> funcTable;
+		return funcTable;
+	}
 };
 
-template <class T> class FuncTableRegister {
-public:
-	FuncTableRegister(FuncTable<T> &funcTable, const std::string &name, T func) {
-		funcTable.Register(name, func);
-	}
-	virtual ~FuncTableRegister() { }
-};
+#define FUNCTABLE_NAME(F) F ## _FuncTable
+
+// Use FUNCTABLE_DECLARE_DECLARATION inside the base class holding the table
+#define FUNCTABLE_DECLARE_DECLARATION(F) static FuncTable<F ## FuncPtr> FUNCTABLE_NAME(F)
+// Use FUNCTABLE_DECLARATION inside the base class .cpp
+#define FUNCTABLE_DECLARATION(C, F) FuncTable<C::F ## FuncPtr> C::FUNCTABLE_NAME(F)
+
+// Use FUNCTABLE_DECLARE_REGISTRATION() inside the class declaration to register
+#define FUNCTABLE_DECLARE_REGISTRATION(F) static FuncTable<F ## FuncPtr>::RegisterFunc F ## _FuncPtrDeclaration
+// Use FUNCTABLE_REGISTER() to register a class
+// NOTE: you have to place all FUNCTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the FuncTable) or the compiler optimizer
+// will remove the code.
+#define FUNCTABLE_REGISTER(C, N, F) FuncTable<C::F ## FuncPtr>::RegisterFunc C::F ## _FuncPtrDeclaration(N, C::F)
 
 }
 

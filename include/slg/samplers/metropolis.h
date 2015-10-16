@@ -35,15 +35,20 @@ namespace slg {
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
-class MetropolisSamplerSharedData : public SamplerSharedData{
+class MetropolisSamplerSharedData : public SamplerSharedData {
 public:
 	MetropolisSamplerSharedData();
 	virtual ~MetropolisSamplerSharedData() { }
+
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
 
 	// I'm storing totalLuminance and sampleCount on shared variables
 	// in order to have far more accurate estimation in the image mean intensity
 	// computation
 	double totalLuminance, sampleCount;
+	
+private:
+	FUNCTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -66,9 +71,12 @@ public:
 
 	virtual luxrays::Properties ToProperties();
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 private:
-	static FuncTableRegister<ToPropertiesFuncPtr> toPropertiesFuncTableRegister;
+	FUNCTABLE_DECLARE_REGISTRATION(ToProperties);
+	FUNCTABLE_DECLARE_REGISTRATION(FromProperties);
 
 	MetropolisSamplerSharedData *sharedData;
 

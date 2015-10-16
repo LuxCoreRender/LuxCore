@@ -26,6 +26,15 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// RandomSamplerSharedData
+//------------------------------------------------------------------------------
+
+SamplerSharedData *RandomSamplerSharedData::FromProperties(const Properties &cfg,
+		RandomGenerator *rndGen) {
+	return new RandomSamplerSharedData();
+}
+
+//------------------------------------------------------------------------------
 // Random sampler
 //------------------------------------------------------------------------------
 
@@ -39,6 +48,7 @@ Properties RandomSampler::ToProperties(const Properties &cfg) {
 			Property("sampler.type")(SamplerType2String(RANDOM));
 }
 
-// Used to register ToProperties(const luxrays::Properties &cfg) static method with parent class
-FuncTableRegister<Sampler::ToPropertiesFuncPtr> RandomSampler::toPropertiesFuncTableRegister(
-	Sampler::toPropertiesFuncTable, Sampler::SamplerType2String(RANDOM), RandomSampler::ToProperties);
+Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	return new RandomSampler(rndGen, film, flmSplatter);
+}

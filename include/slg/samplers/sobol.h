@@ -37,13 +37,18 @@ namespace slg {
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
-class SobolSamplerSharedData : public SamplerSharedData{
+class SobolSamplerSharedData : public SamplerSharedData {
 public:
-	SobolSamplerSharedData(luxrays::RandomGenerator *rnd);
+	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen);
 	virtual ~SobolSamplerSharedData() { }
+
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
 
 	float rng0, rng1;
 	boost::atomic<u_int> pass;
+	
+private:
+	FUNCTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -71,10 +76,12 @@ public:
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	static SobolSamplerSharedData *AllocSharedData(luxrays::RandomGenerator *rnd);
+	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 private:
-	static FuncTableRegister<ToPropertiesFuncPtr> toPropertiesFuncTableRegister;
+	FUNCTABLE_DECLARE_REGISTRATION(ToProperties);
+	FUNCTABLE_DECLARE_REGISTRATION(FromProperties);
 
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
