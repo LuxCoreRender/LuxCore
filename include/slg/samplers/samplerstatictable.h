@@ -55,8 +55,12 @@ public:
 	
 protected:
 	// Used to register all sub-class FromProperties() static methods
-	typedef SamplerSharedData *(*FromPropertiesStaticTableType)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	typedef SamplerSharedData *(*FromPropertiesTablePtr)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
 	STATICTABLE_DECLARE_DECLARATION(FromProperties);
+
+	STATICTABLE_DECLARE_REGISTRATION(RandomSamplerSharedData, FromProperties);
+	STATICTABLE_DECLARE_REGISTRATION(SobolSamplerSharedData, FromProperties);
+	STATICTABLE_DECLARE_REGISTRATION(MetropolisSamplerSharedData, FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -93,11 +97,11 @@ public:
 
 protected:
 	// Used to register all sub-class ToProperties() static methods
-	typedef luxrays::Properties (*ToPropertiesStaticTableType)(const luxrays::Properties &cfg);
+	typedef luxrays::Properties (*ToPropertiesTablePtr)(const luxrays::Properties &cfg);
 	STATICTABLE_DECLARE_DECLARATION(ToProperties);
 
 	// Used to register all sub-class FromProperties() static methods
-	typedef Sampler *(*FromPropertiesStaticTableType)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+	typedef Sampler *(*FromPropertiesTablePtr)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	STATICTABLE_DECLARE_DECLARATION(FromProperties);
 

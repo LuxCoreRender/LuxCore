@@ -45,7 +45,7 @@ public:
 	// Nothing to share
 
 private:
-	FUNCTABLE_DECLARE_REGISTRATION(FromProperties);
+	STATICTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -69,8 +69,8 @@ public:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 private:
-	FUNCTABLE_DECLARE_REGISTRATION(ToProperties);
-	FUNCTABLE_DECLARE_REGISTRATION(FromProperties);
+	STATICTABLE_DECLARE_REGISTRATION(ToProperties);
+	STATICTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 }

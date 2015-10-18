@@ -35,20 +35,20 @@ using namespace slg;
 SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const FromPropertiesFuncPtr func = FUNCTABLE_NAME(FromProperties).GetFunc(type);
+	const FromPropertiesStaticTableType func = STATICTABLE_NAME(FromProperties).Get(type);
 	if (func)
 		return func(cfg, rndGen);
 	else
 		throw runtime_error("Unknown sampler type in SamplerSharedData::FromProperties(): " + type);
 }
 
-FUNCTABLE_DECLARATION(SamplerSharedData, FromProperties);
-// NOTE: you have to place all FUNCTABLE_REGISTER() in the same .cpp file of the
-// main base class (i.e. the one holding the FuncTable) or the compiler optimizer
+STATICTABLE_DECLARATION(SamplerSharedData, FromProperties);
+// NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the StaticTable) or the compiler optimizer
 // will remove the code.
-FUNCTABLE_REGISTER(RandomSamplerSharedData, Sampler::SamplerType2String(RANDOM), FromProperties);
-FUNCTABLE_REGISTER(SobolSamplerSharedData, Sampler::SamplerType2String(SOBOL), FromProperties);
-FUNCTABLE_REGISTER(MetropolisSamplerSharedData, Sampler::SamplerType2String(METROPOLIS), FromProperties);
+STATICTABLE_REGISTER(RandomSamplerSharedData, Sampler::SamplerType2String(RANDOM), FromProperties);
+STATICTABLE_REGISTER(SobolSamplerSharedData, Sampler::SamplerType2String(SOBOL), FromProperties);
+STATICTABLE_REGISTER(MetropolisSamplerSharedData, Sampler::SamplerType2String(METROPOLIS), FromProperties);
 
 //------------------------------------------------------------------------------
 // Sampler
@@ -96,7 +96,7 @@ Properties Sampler::ToProperties() const {
 Properties Sampler::ToProperties(const Properties &cfg) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const ToPropertiesFuncPtr func = FUNCTABLE_NAME(ToProperties).GetFunc(type);
+	const ToPropertiesStaticTableType func = STATICTABLE_NAME(ToProperties).Get(type);
 	if (func)
 		return Properties() << func(cfg);
 	else
@@ -107,25 +107,25 @@ Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const FromPropertiesFuncPtr func = FUNCTABLE_NAME(FromProperties).GetFunc(type);
+	const FromPropertiesStaticTableType func = STATICTABLE_NAME(FromProperties).Get(type);
 	if (func)
 		return func(cfg, rndGen, film, flmSplatter, sharedData);
 	else
 		throw runtime_error("Unknown sampler type in Sampler::FromProperties(): " + type);
 }
 
-FUNCTABLE_DECLARATION(Sampler, ToProperties);
-// NOTE: you have to place all FUNCTABLE_REGISTER() in the same .cpp file of the
-// main base class (i.e. the one holding the FuncTable) or the compiler optimizer
+STATICTABLE_DECLARATION(Sampler, ToProperties);
+// NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the StaticTable) or the compiler optimizer
 // will remove the code.
-FUNCTABLE_REGISTER(RandomSampler, Sampler::SamplerType2String(RANDOM), ToProperties);
-FUNCTABLE_REGISTER(SobolSampler, Sampler::SamplerType2String(SOBOL), ToProperties);
-FUNCTABLE_REGISTER(MetropolisSampler, Sampler::SamplerType2String(METROPOLIS), ToProperties);
+STATICTABLE_REGISTER(RandomSampler, Sampler::SamplerType2String(RANDOM), ToProperties);
+STATICTABLE_REGISTER(SobolSampler, Sampler::SamplerType2String(SOBOL), ToProperties);
+STATICTABLE_REGISTER(MetropolisSampler, Sampler::SamplerType2String(METROPOLIS), ToProperties);
 
-FUNCTABLE_DECLARATION(Sampler, FromProperties);
-// NOTE: you have to place all FUNCTABLE_REGISTER() in the same .cpp file of the
-// main base class (i.e. the one holding the FuncTable) or the compiler optimizer
+STATICTABLE_DECLARATION(Sampler, FromProperties);
+// NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the StaticTable) or the compiler optimizer
 // will remove the code.
-FUNCTABLE_REGISTER(RandomSampler, Sampler::SamplerType2String(RANDOM), FromProperties);
-FUNCTABLE_REGISTER(SobolSampler, Sampler::SamplerType2String(SOBOL), FromProperties);
-FUNCTABLE_REGISTER(MetropolisSampler, Sampler::SamplerType2String(METROPOLIS), FromProperties);
+STATICTABLE_REGISTER(RandomSampler, Sampler::SamplerType2String(RANDOM), FromProperties);
+STATICTABLE_REGISTER(SobolSampler, Sampler::SamplerType2String(SOBOL), FromProperties);
+STATICTABLE_REGISTER(MetropolisSampler, Sampler::SamplerType2String(METROPOLIS), FromProperties);
