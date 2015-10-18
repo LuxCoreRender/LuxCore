@@ -43,9 +43,6 @@ public:
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
 
 	// Nothing to share
-
-private:
-	STATICTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -67,10 +64,6 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
-
-private:
-	STATICTABLE_DECLARE_REGISTRATION(ToProperties);
-	STATICTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 }

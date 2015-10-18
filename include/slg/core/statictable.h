@@ -56,7 +56,7 @@ public:
 	};
 
 private:
-	static boost::unordered_map<std::string, T> &GetTable() {
+	__attribute__ ((visibility ("default"))) static boost::unordered_map<std::string, T> &GetTable() {
 		// Using
 		static boost::unordered_map<std::string, T> *table = new boost::unordered_map<std::string, T>();
 		// instead of:
@@ -74,12 +74,12 @@ private:
 #define STATICTABLE_DECLARATION(C, F) StaticTable<C::F ## StaticTableType> C::STATICTABLE_NAME(F)
 
 // Use STATICTABLE_DECLARE_REGISTRATION() inside the class declaration to register
-#define STATICTABLE_DECLARE_REGISTRATION(F) static StaticTable<F ## StaticTableType>::RegisterTableValue F ## _StaticTableRegisterTableValue
+#define STATICTABLE_DECLARE_REGISTRATION(C, F) static StaticTable<F ## StaticTableType>::RegisterTableValue C ## F ## _StaticTableRegisterTableValue
 // Use STATICTABLE_REGISTER() to register a class
 // NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
-// main base class (i.e. the one holding the StaticTable) or the compiler optimizer
-// will remove the code.
-#define STATICTABLE_REGISTER(C, N, F) StaticTable<C::F ## StaticTableType>::RegisterTableValue C::F ## _StaticTableRegisterTableValue(N, C::F)
+// main base class (i.e. the one holding the StaticTable) because order of static
+// field initialization is otherwise undefined.
+#define STATICTABLE_REGISTER(R, C, N, F) StaticTable<R::F ## StaticTableType>::RegisterTableValue R::C ## F ## _StaticTableRegisterTableValue(N, C::F)
 
 }
 

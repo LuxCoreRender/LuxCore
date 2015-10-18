@@ -46,9 +46,6 @@ public:
 
 	float rng0, rng1;
 	boost::atomic<u_int> pass;
-	
-private:
-	STATICTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -80,9 +77,6 @@ public:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 private:
-	STATICTABLE_DECLARE_REGISTRATION(ToProperties);
-	STATICTABLE_DECLARE_REGISTRATION(FromProperties);
-
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
 	SobolSamplerSharedData *sharedData;

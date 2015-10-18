@@ -20,9 +20,7 @@
 
 #include "luxrays/core/color/color.h"
 #include "slg/samplers/sampler.h"
-#include "slg/samplers/random.h"
-#include "slg/samplers/sobol.h"
-#include "slg/samplers/metropolis.h"
+#include "slg/samplers/samplerregistry.h"
 
 using namespace std;
 using namespace luxrays;
@@ -35,20 +33,13 @@ using namespace slg;
 SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const FromPropertiesStaticTableType func = STATICTABLE_NAME(FromProperties).Get(type);
+	const SamplerSharedDataRegistry::FromPropertiesStaticTableType func =
+			SamplerSharedDataRegistry::STATICTABLE_NAME(FromProperties).Get(type);
 	if (func)
 		return func(cfg, rndGen);
 	else
 		throw runtime_error("Unknown sampler type in SamplerSharedData::FromProperties(): " + type);
 }
-
-STATICTABLE_DECLARATION(SamplerSharedData, FromProperties);
-// NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
-// main base class (i.e. the one holding the StaticTable) or the compiler optimizer
-// will remove the code.
-STATICTABLE_REGISTER(RandomSamplerSharedData, Sampler::SamplerType2String(RANDOM), FromProperties);
-STATICTABLE_REGISTER(SobolSamplerSharedData, Sampler::SamplerType2String(SOBOL), FromProperties);
-STATICTABLE_REGISTER(MetropolisSamplerSharedData, Sampler::SamplerType2String(METROPOLIS), FromProperties);
 
 //------------------------------------------------------------------------------
 // Sampler
@@ -96,7 +87,8 @@ Properties Sampler::ToProperties() const {
 Properties Sampler::ToProperties(const Properties &cfg) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const ToPropertiesStaticTableType func = STATICTABLE_NAME(ToProperties).Get(type);
+	const SamplerRegistry::ToPropertiesStaticTableType func =
+			SamplerRegistry::STATICTABLE_NAME(ToProperties).Get(type);
 	if (func)
 		return Properties() << func(cfg);
 	else
@@ -107,25 +99,46 @@ Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const FromPropertiesStaticTableType func = STATICTABLE_NAME(FromProperties).Get(type);
+	const SamplerRegistry::FromPropertiesStaticTableType func =
+			SamplerRegistry::STATICTABLE_NAME(FromProperties).Get(type);
 	if (func)
 		return func(cfg, rndGen, film, flmSplatter, sharedData);
 	else
 		throw runtime_error("Unknown sampler type in Sampler::FromProperties(): " + type);
 }
 
-STATICTABLE_DECLARATION(Sampler, ToProperties);
+//------------------------------------------------------------------------------
+// SamplerSharedDataRegistry
+//
+// For the registration of each SamplerSharedData sub-class
+// with SamplerSharedData StaticTable
+//
 // NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
-// main base class (i.e. the one holding the StaticTable) or the compiler optimizer
-// will remove the code.
-STATICTABLE_REGISTER(RandomSampler, Sampler::SamplerType2String(RANDOM), ToProperties);
-STATICTABLE_REGISTER(SobolSampler, Sampler::SamplerType2String(SOBOL), ToProperties);
-STATICTABLE_REGISTER(MetropolisSampler, Sampler::SamplerType2String(METROPOLIS), ToProperties);
+// main base class (i.e. the one holding the StaticTable) because otherwise
+// static members initialization order is not defined.
+//------------------------------------------------------------------------------
 
-STATICTABLE_DECLARATION(Sampler, FromProperties);
+STATICTABLE_DECLARATION(SamplerSharedDataRegistry, FromProperties);
+
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER("RANDOM", RandomSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER("SOBOL", SobolSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER("METROPOLIS", MetropolisSamplerSharedData);
+// Just add here any new SamplerSharedData (don't forget in the .h too)
+
+//------------------------------------------------------------------------------
+// SamplerRegistry
+//
+// For the registration of each Sampler sub-class with Sampler StaticTables
+//
 // NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
-// main base class (i.e. the one holding the StaticTable) or the compiler optimizer
-// will remove the code.
-STATICTABLE_REGISTER(RandomSampler, Sampler::SamplerType2String(RANDOM), FromProperties);
-STATICTABLE_REGISTER(SobolSampler, Sampler::SamplerType2String(SOBOL), FromProperties);
-STATICTABLE_REGISTER(MetropolisSampler, Sampler::SamplerType2String(METROPOLIS), FromProperties);
+// main base class (i.e. the one holding the StaticTable) because otherwise
+// static members initialization order is not defined.
+//------------------------------------------------------------------------------
+
+STATICTABLE_DECLARATION(SamplerRegistry, ToProperties);
+STATICTABLE_DECLARATION(SamplerRegistry, FromProperties);
+
+SAMPLER_STATICTABLE_REGISTER(RANDOM, "RANDOM", RandomSampler);
+SAMPLER_STATICTABLE_REGISTER(SOBOL, "SOBOL", SobolSampler);
+SAMPLER_STATICTABLE_REGISTER(METROPOLIS, "METROPOLIS", MetropolisSampler);
+// Just add here any new Sampler (don't forget in the .h too)
