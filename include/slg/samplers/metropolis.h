@@ -46,9 +46,6 @@ public:
 	// in order to have far more accurate estimation in the image mean intensity
 	// computation
 	double totalLuminance, sampleCount;
-	
-private:
-	STATICTABLE_DECLARE_REGISTRATION(FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -75,9 +72,6 @@ public:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 private:
-	STATICTABLE_DECLARE_REGISTRATION(ToProperties);
-	STATICTABLE_DECLARE_REGISTRATION(FromProperties);
-
 	MetropolisSamplerSharedData *sharedData;
 
 	u_int maxRejects;

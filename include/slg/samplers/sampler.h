@@ -25,7 +25,6 @@
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
 #include "slg/core/namedobject.h"
-#include "slg/core/statictable.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
 #include "slg/film/sampleresult.h"
@@ -46,17 +45,14 @@ namespace ocl {
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
+class SamplerSharedDataRegistry;
+
 class SamplerSharedData {
 public:
 	SamplerSharedData() { }
 	virtual ~SamplerSharedData() { }
 
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
-	
-protected:
-	// Used to register all sub-class FromProperties() static methods
-	typedef SamplerSharedData *(*FromPropertiesStaticTableType)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
-	STATICTABLE_DECLARE_DECLARATION(FromProperties);
 };
 
 //------------------------------------------------------------------------------
@@ -92,15 +88,6 @@ public:
 	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
-	// Used to register all sub-class ToProperties() static methods
-	typedef luxrays::Properties (*ToPropertiesStaticTableType)(const luxrays::Properties &cfg);
-	STATICTABLE_DECLARE_DECLARATION(ToProperties);
-
-	// Used to register all sub-class FromProperties() static methods
-	typedef Sampler *(*FromPropertiesStaticTableType)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
-		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
-	STATICTABLE_DECLARE_DECLARATION(FromProperties);
-
 	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 
 	luxrays::RandomGenerator *rndGen;
