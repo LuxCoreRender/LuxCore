@@ -33,9 +33,8 @@ using namespace slg;
 SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const SamplerSharedDataRegistry::FromPropertiesStaticTableType func =
-			SamplerSharedDataRegistry::STATICTABLE_NAME(FromProperties).Get(type);
-	if (func)
+	SamplerSharedDataRegistry::FromPropertiesStaticTableType func;
+	if (SamplerSharedDataRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
 		return func(cfg, rndGen);
 	else
 		throw runtime_error("Unknown sampler type in SamplerSharedData::FromProperties(): " + type);
@@ -46,28 +45,19 @@ SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, Rand
 //------------------------------------------------------------------------------
 
 SamplerType Sampler::String2SamplerType(const string &type) {
-	if ((type.compare("INLINED_RANDOM") == 0) ||
-			(type.compare("RANDOM") == 0))
-		return RANDOM;
-	if (type.compare("METROPOLIS") == 0)
-		return METROPOLIS;
-	if (type.compare("SOBOL") == 0)
-		return SOBOL;
-
-	throw runtime_error("Unknown sampler type: " + type);
+	SamplerRegistry::SamplerTypeStaticTableType st;
+	if (SamplerRegistry::STATICTABLE_NAME(SamplerType).Get(type, st))
+		return st;
+	else
+		throw runtime_error("Unknown sampler type: " + type);
 }
 
 const string Sampler::SamplerType2String(const SamplerType type) {
-	switch (type) {
-		case RANDOM:
-			return "RANDOM";
-		case METROPOLIS:
-			return "METROPOLIS";
-		case SOBOL:
-			return "SOBOL";
-		default:
-			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(type));
-	}
+	SamplerRegistry::StringTypeStaticTableType st;
+	if (SamplerRegistry::STATICTABLE_NAME(StringType).Get(type, st))
+		return st;
+	else
+		throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(type));
 }
 
 void Sampler::AddSamplesToFilm(const vector<SampleResult> &sampleResults, const float weight) const {
@@ -87,9 +77,8 @@ Properties Sampler::ToProperties() const {
 Properties Sampler::ToProperties(const Properties &cfg) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const SamplerRegistry::ToPropertiesStaticTableType func =
-			SamplerRegistry::STATICTABLE_NAME(ToProperties).Get(type);
-	if (func)
+	SamplerRegistry::ToPropertiesStaticTableType func;
+	if (SamplerRegistry::STATICTABLE_NAME(ToProperties).Get(type, func))
 		return Properties() << func(cfg);
 	else
 		throw runtime_error("Unknown sampler type in Sampler::ToProperties(): " + type);
@@ -99,9 +88,8 @@ Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
 	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
 
-	const SamplerRegistry::FromPropertiesStaticTableType func =
-			SamplerRegistry::STATICTABLE_NAME(FromProperties).Get(type);
-	if (func)
+	SamplerRegistry::FromPropertiesStaticTableType func;
+	if (SamplerRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
 		return func(cfg, rndGen, film, flmSplatter, sharedData);
 	else
 		throw runtime_error("Unknown sampler type in Sampler::FromProperties(): " + type);
@@ -118,7 +106,9 @@ Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 // static members initialization order is not defined.
 //------------------------------------------------------------------------------
 
-STATICTABLE_DECLARATION(SamplerSharedDataRegistry, FromProperties);
+STATICTABLE_DECLARATION(SamplerSharedDataRegistry, string, FromProperties);
+
+//------------------------------------------------------------------------------
 
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER("RANDOM", RandomSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER("SOBOL", SobolSamplerSharedData);
@@ -135,8 +125,10 @@ SAMPLERSHAREDDATA_STATICTABLE_REGISTER("METROPOLIS", MetropolisSamplerSharedData
 // static members initialization order is not defined.
 //------------------------------------------------------------------------------
 
-STATICTABLE_DECLARATION(SamplerRegistry, ToProperties);
-STATICTABLE_DECLARATION(SamplerRegistry, FromProperties);
+STATICTABLE_DECLARATION(SamplerRegistry, string, ToProperties);
+STATICTABLE_DECLARATION(SamplerRegistry, string, FromProperties);
+
+//------------------------------------------------------------------------------
 
 SAMPLER_STATICTABLE_REGISTER(RANDOM, "RANDOM", RandomSampler);
 SAMPLER_STATICTABLE_REGISTER(SOBOL, "SOBOL", SobolSampler);
