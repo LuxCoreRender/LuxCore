@@ -16,47 +16,29 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_RENDERSESSION_H
-#define	_SLG_RENDERSESSION_H
+#ifndef _SLG_OCLRENDERENGINE_H
+#define	_SLG_OCLRENDERENGINE_H
 
-#include "luxrays/utils/properties.h"
+
+#include "luxrays/core/utils.h"
 
 #include "slg/slg.h"
-#include "slg/renderconfig.h"
 #include "slg/engines/renderengine.h"
-#include "slg/film/film.h"
 
 namespace slg {
-	
-class RenderSession {
+
+//------------------------------------------------------------------------------
+// Base class for OpenCL render engines
+//------------------------------------------------------------------------------
+
+class OCLRenderEngine : public RenderEngine {
 public:
-	RenderSession(RenderConfig *cfg);
-	~RenderSession();
+	OCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
+		bool fatal = true);
 
-	void Start();
-	void Stop();
-
-	void BeginSceneEdit();
-	void EndSceneEdit();
-
-	bool NeedPeriodicFilmSave();
-	void SaveFilm(const std::string &fileName);
-	void SaveFilmOutputs();
-
-	void Parse(const luxrays::Properties &props);
-
-	RenderConfig *renderConfig;
-	RenderEngine *renderEngine;
-
-	boost::mutex filmMutex;
-	Film *film;
-
-protected:
-	double lastPeriodicSave, periodiceSaveTime;
-
-	bool started, editMode, periodicSaveEnabled;
+	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
 };
 
 }
 
-#endif	/* _SLG_RENDERSESSION_H */
+#endif	/* _SLG_RENDERENGINE_H */

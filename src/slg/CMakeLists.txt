@@ -168,6 +168,10 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/core/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/sphericalfunction.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/photometricdataies.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/renderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/cpurenderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/oclrenderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepository.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcpu.cpp
@@ -256,7 +260,6 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/velvet.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobol.cpp
