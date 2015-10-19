@@ -79,7 +79,10 @@ public:
 	virtual float GetSample(const u_int index) = 0;
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
 
+	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
+	// Transform the current configuration Properties in a complete list of
+	// object Properties (including all defaults values)
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);

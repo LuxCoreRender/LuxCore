@@ -22,6 +22,7 @@
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/random.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -38,17 +39,22 @@ SamplerSharedData *RandomSamplerSharedData::FromProperties(const Properties &cfg
 // Random sampler
 //------------------------------------------------------------------------------
 
-void RandomSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 }
 
 Properties RandomSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			Property("sampler.type")(SamplerType2String(RANDOM));
+			cfg.Get(defaultProps.Get("sampler.type"));
 }
 
 Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
 	return new RandomSampler(rndGen, film, flmSplatter);
 }
+
+Properties RandomSampler::defaultProps = Properties() <<
+			// Not using SamplerType2String(RANDOM) here because the order
+			// of static initialization is not defined across multiple .cpp
+			Property("sampler.type")("RANDOM");

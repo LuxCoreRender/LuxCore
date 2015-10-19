@@ -22,6 +22,7 @@
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/sobol.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -29,7 +30,7 @@ using namespace slg;
 // SobolSamplerSharedData
 //------------------------------------------------------------------------------
 
-SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rndGen) : SamplerSharedData() {
+SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen) : SamplerSharedData() {
 	rng0 = rndGen->floatValue();
 	rng1 = rndGen->floatValue();
 	pass = SOBOL_STARTOFFSET;
@@ -46,7 +47,7 @@ SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
-SobolSampler::SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
+SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter,
 		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
 		sharedData(samplerSharedData), directions(NULL) {
@@ -88,7 +89,7 @@ float SobolSampler::GetSample(const u_int index) {
 	return val - floorf(val);
 }
 
-void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 
@@ -101,10 +102,15 @@ void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 
 Properties SobolSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			Property("sampler.type")(SamplerType2String(SOBOL));
+			cfg.Get(defaultProps.Get("sampler.type"));
 }
 
 Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
 	return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
 }
+
+Properties SobolSampler::defaultProps = Properties() <<
+			// Not using SamplerType2String(SOBOL) here because the order
+			// of static initialization is not defined across multiple .cpp
+			Property("sampler.type")("SOBOL");

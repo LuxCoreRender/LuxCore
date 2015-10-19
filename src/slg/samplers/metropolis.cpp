@@ -22,6 +22,7 @@
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/metropolis.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -104,7 +105,7 @@ void MetropolisSampler::RequestSamples(const u_int size) {
 	weight = 0.f;
 	consecRejects = 0;
 	currentLuminance = 0.;
-	std::fill(sampleStamps, sampleStamps + sampleSize, 0);
+	fill(sampleStamps, sampleStamps + sampleSize, 0);
 	stamp = 1;
 	currentStamp = 1;
 	currentSampleResult.resize(0);
@@ -138,13 +139,13 @@ float MetropolisSampler::GetSample(const u_int index) {
 	return s;
 }
 
-void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 
 	// Calculate the sample result luminance
 	const u_int pixelCount = film->GetWidth() * film->GetHeight();
 	float newLuminance = 0.f;
-	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
+	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
 		if (sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
 			for (u_int i = 0; i < sr->radiance.size(); ++i) {
 				const float luminance = sr->radiance[i].Y();
@@ -200,8 +201,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		weight = newWeight;
 		currentStamp = stamp;
 		currentLuminance = newLuminance;
-		std::copy(samples, samples + sampleSize, currentSamples);
-		std::copy(sampleStamps, sampleStamps + sampleSize, currentSampleStamps);
+		copy(samples, samples + sampleSize, currentSamples);
+		copy(sampleStamps, sampleStamps + sampleSize, currentSampleStamps);
 		currentSampleResult = sampleResults;
 
 		consecRejects = 0;
@@ -213,8 +214,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 
 		// Restart from previous reference
 		stamp = currentStamp;
-		std::copy(currentSamples, currentSamples + sampleSize, samples);
-		std::copy(currentSampleStamps, currentSampleStamps + sampleSize, sampleStamps);
+		copy(currentSamples, currentSamples + sampleSize, samples);
+		copy(currentSampleStamps, currentSampleStamps + sampleSize, sampleStamps);
 
 		++consecRejects;
 	}
@@ -233,7 +234,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 
 	if (isLargeMutation) {
 		stamp = 1;
-		std::fill(sampleStamps, sampleStamps + sampleSize, 0);
+		fill(sampleStamps, sampleStamps + sampleSize, 0);
 	} else
 		++stamp;
 }
@@ -247,19 +248,27 @@ Properties MetropolisSampler::ToProperties() {
 
 Properties MetropolisSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			Property("sampler.type")(SamplerType2String(METROPOLIS)) <<
-			cfg.Get(Property("sampler.metropolis.largesteprate")(.4f)) <<
-			cfg.Get(Property("sampler.metropolis.maxconsecutivereject")(512)) <<
-			cfg.Get(Property("sampler.metropolis.imagemutationrate")(.1f));
+			cfg.Get(defaultProps.Get("sampler.type")) <<
+			cfg.Get(defaultProps.Get("sampler.metropolis.largesteprate")) <<
+			cfg.Get(defaultProps.Get("sampler.metropolis.maxconsecutivereject")) <<
+			cfg.Get(defaultProps.Get("sampler.metropolis.imagemutationrate"));
 }
 
 Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	const float rate = Clamp(cfg.Get(Property("sampler.metropolis.largesteprate")(.4f)).Get<float>(), 0.f, 1.f);
-	const u_int reject = cfg.Get(Property("sampler.metropolis.maxconsecutivereject")(512)).Get<u_int>();
-	const float mutationRate = Clamp(cfg.Get(Property("sampler.metropolis.imagemutationrate")(.1f)).Get<float>(), 0.f, 1.f);
+	const float rate = Clamp(cfg.Get(defaultProps.Get("sampler.metropolis.largesteprate")).Get<float>(), 0.f, 1.f);
+	const u_int reject = cfg.Get(defaultProps.Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+	const float mutationRate = Clamp(cfg.Get(defaultProps.Get("sampler.metropolis.imagemutationrate")).Get<float>(), 0.f, 1.f);
 
 	return new MetropolisSampler(rndGen, film, flmSplatter,
 			reject, rate, mutationRate,
 			(MetropolisSamplerSharedData *)sharedData);
 }
+
+Properties MetropolisSampler::defaultProps = Properties() <<
+			// Not using SamplerType2String(METROPOLIS) here because the order
+			// of static initialization is not defined across multiple .cpp
+			Property("sampler.type")("METROPOLIS") <<
+			Property("sampler.metropolis.largesteprate")(.4f) <<
+			Property("sampler.metropolis.maxconsecutivereject")(512) <<
+			Property("sampler.metropolis.imagemutationrate")(.1f);
