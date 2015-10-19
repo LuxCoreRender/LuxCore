@@ -125,6 +125,8 @@ SAMPLERSHAREDDATA_STATICTABLE_REGISTER("METROPOLIS", MetropolisSamplerSharedData
 // static members initialization order is not defined.
 //------------------------------------------------------------------------------
 
+STATICTABLE_DECLARATION(SamplerRegistry, string, SamplerType);
+STATICTABLE_DECLARATION(SamplerRegistry, SamplerType, StringType);
 STATICTABLE_DECLARATION(SamplerRegistry, string, ToProperties);
 STATICTABLE_DECLARATION(SamplerRegistry, string, FromProperties);
 
