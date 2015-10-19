@@ -95,30 +95,21 @@ bool SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProp
 			props.Set(Property("sampler.metropolis.largesteprate")(fval));
 			modifiedProps = true;
 		}
-		ImGui::SameLine();
-		ImGui::TextDisabled("(?)");
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("sampler.metropolis.largesteprate");
+		LuxCoreApp::HelpMarker("sampler.metropolis.largesteprate");
 
 		ival = props.Get("sampler.metropolis.maxconsecutivereject").Get<float>();
 		if (ImGui::SliderInt("Max. consecutive rejections", &ival, 0, 32768)) {
 			props.Set(Property("sampler.metropolis.maxconsecutivereject")(ival));
 			modifiedProps = true;
 		}
-		ImGui::SameLine();
-		ImGui::TextDisabled("(?)");
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("sampler.metropolis.maxconsecutivereject");
+		LuxCoreApp::HelpMarker("sampler.metropolis.maxconsecutivereject");
 
 		fval = props.Get("sampler.metropolis.imagemutationrate").Get<float>();
 		if (ImGui::SliderFloat("Mutation rate", &fval, 0.f, 1.f)) {
 			props.Set(Property("sampler.metropolis.imagemutationrate")(fval));
 			modifiedProps = true;
 		}
-		ImGui::SameLine();
-		ImGui::TextDisabled("(?)");
-		if (ImGui::IsItemHovered())
-			ImGui::SetTooltip("sampler.metropolis.imagemutationrate");
+		LuxCoreApp::HelpMarker("sampler.metropolis.imagemutationrate");
 	}
 
 	return false;

@@ -188,13 +188,16 @@ void LuxCoreApp::MenuScreen() {
 
 void LuxCoreApp::MenuWindow() {
 	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
-	if (ImGui::MenuItem("Sampler editor", NULL, false, !boost::starts_with(currentEngineType, "BIAS")))
+	if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.opened,
+			!boost::starts_with(currentEngineType, "BIAS")))
 		samplerWindow.opened = !samplerWindow.opened;
 	ImGui::Separator();
-	if (session && ImGui::MenuItem("Statistics"))
+	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.opened))
 		statsWindow.opened = !statsWindow.opened;
-	if (ImGui::MenuItem("Log console"))
+	if (ImGui::MenuItem("Log console", NULL, logWindow.opened))
 		logWindow.opened = !logWindow.opened;
+	if (ImGui::MenuItem("Help", NULL, helpWindow.opened))
+		helpWindow.opened = !helpWindow.opened;
 }
 
 //------------------------------------------------------------------------------

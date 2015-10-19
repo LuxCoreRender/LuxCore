@@ -162,6 +162,9 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->SetRenderingEngineType("RTBIASPATHOCL");
 				break;
 #endif
+			case GLFW_KEY_H:
+				app->helpWindow.opened = !app->helpWindow.opened;
+				break;
 			default:
 				break;
 		}

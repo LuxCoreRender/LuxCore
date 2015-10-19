@@ -405,7 +405,8 @@ void LuxCoreApp::RunApp() {
 
 		MainMenuBar();
 		samplerWindow.Draw();
-			logWindow.Draw();
+		logWindow.Draw();
+		helpWindow.Draw();
 		
 		if (session)
 			statsWindow.Draw();

@@ -46,7 +46,7 @@ void LogWindow::Draw() {
 	if (!opened)
 		return;
 
-	ImGui::SetNextWindowSize(ImVec2(512, 200), ImGuiSetCond_Appearing);
+	ImGui::SetNextWindowSize(ImVec2(512.f, 200.f), ImGuiSetCond_Appearing);
 
 	if (ImGui::Begin(title.c_str(), &opened)) {
 		if (ImGui::Button("Clear"))

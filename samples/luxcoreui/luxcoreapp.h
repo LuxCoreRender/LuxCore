@@ -26,6 +26,7 @@
 #include "logwindow.h"
 #include "statswindow.h"
 #include "samplerwindow.h"
+#include "helpwindow.h"
 
 #define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
@@ -39,6 +40,7 @@ public:
 	static void LogHandler(const char *msg);
 	static void ColoredLabelText(const ImVec4 &col, const char *label, const char *fmt, ...) IM_PRINTFARGS(3);
 	static void ColoredLabelText(const char *label, const char *fmt, ...) IM_PRINTFARGS(2);
+	static void HelpMarker(const char *desc);
 	
 	static ImVec4 colLabel;
 
@@ -80,8 +82,9 @@ private:
 	static LogWindow *currentLogWindow;
 
 	SamplerWindow samplerWindow;
-	LogWindow logWindow;
 	StatsWindow statsWindow;
+	LogWindow logWindow;
+	HelpWindow helpWindow;
 
 	luxcore::RenderSession *session;
 	luxcore::RenderConfig *config;

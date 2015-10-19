@@ -34,7 +34,7 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 //------------------------------------------------------------------------------
 
 LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) : samplerWindow(this),
-		statsWindow(this) {
+		statsWindow(this), helpWindow(this) {
 	config = renderConfig;
 	session = NULL;
 	window = NULL;
@@ -193,4 +193,11 @@ void LuxCoreApp::ColoredLabelText(const char *label, const char *fmt, ...) {
     va_start(args, fmt);
     ImGui::TextV(fmt, args);
     va_end(args);
+}
+
+void LuxCoreApp::HelpMarker(const char *desc) {
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", desc);
 }
