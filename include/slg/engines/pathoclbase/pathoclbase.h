@@ -25,7 +25,7 @@
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/oclrenderengine.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
 
 #include <boost/thread/thread.hpp>

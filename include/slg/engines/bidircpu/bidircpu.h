@@ -20,7 +20,7 @@
 #define	_SLG_BIDIRCPU_H
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/cpurenderengine.h"
 
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"

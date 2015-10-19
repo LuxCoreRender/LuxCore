@@ -20,7 +20,7 @@
 #define	_SLG_FILESAVER_H
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/renderengine.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/bsdf/bsdf.h"

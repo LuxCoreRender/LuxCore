@@ -27,7 +27,7 @@
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/renderengine.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/engines/pathocl/pathocl_datatypes.h"

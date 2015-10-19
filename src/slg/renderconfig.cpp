@@ -24,7 +24,7 @@
 #include <boost/filesystem.hpp>
 
 #include "slg/renderconfig.h"
-#include "slg/renderengine.h"
+#include "slg/engines/renderengine.h"
 #include "slg/film/film.h"
 
 #include "slg/samplers/random.h"
