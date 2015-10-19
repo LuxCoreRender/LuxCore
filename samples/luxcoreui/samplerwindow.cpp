@@ -91,7 +91,7 @@ bool SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProp
 		float fval;
 
 		fval = props.Get("sampler.metropolis.largesteprate").Get<float>();
-		if (ImGui::InputFloat("Large step rate", &fval)) {
+		if (ImGui::SliderFloat("Large step rate", &fval, 0.f, 1.f)) {
 			props.Set(Property("sampler.metropolis.largesteprate")(fval));
 			modifiedProps = true;
 		}
@@ -101,7 +101,7 @@ bool SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProp
 			ImGui::SetTooltip("sampler.metropolis.largesteprate");
 
 		ival = props.Get("sampler.metropolis.maxconsecutivereject").Get<float>();
-		if (ImGui::InputInt("Max. consecutive rejections", &ival)) {
+		if (ImGui::SliderInt("Max. consecutive rejections", &ival, 0, 32768)) {
 			props.Set(Property("sampler.metropolis.maxconsecutivereject")(ival));
 			modifiedProps = true;
 		}
@@ -111,7 +111,7 @@ bool SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProp
 			ImGui::SetTooltip("sampler.metropolis.maxconsecutivereject");
 
 		fval = props.Get("sampler.metropolis.imagemutationrate").Get<float>();
-		if (ImGui::InputFloat("Mutation rate", &fval)) {
+		if (ImGui::SliderFloat("Mutation rate", &fval, 0.f, 1.f)) {
 			props.Set(Property("sampler.metropolis.imagemutationrate")(fval));
 			modifiedProps = true;
 		}
