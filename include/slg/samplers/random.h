@@ -64,6 +64,9 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
+
+private:
+	static luxrays::Properties defaultProps;
 };
 
 }

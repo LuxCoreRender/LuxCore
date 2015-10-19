@@ -72,6 +72,8 @@ public:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 private:
+	static luxrays::Properties defaultProps;
+
 	MetropolisSamplerSharedData *sharedData;
 
 	u_int maxRejects;

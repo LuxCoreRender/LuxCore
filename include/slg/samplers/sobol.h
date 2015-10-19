@@ -77,6 +77,8 @@ public:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 
 private:
+	static luxrays::Properties defaultProps;
+
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
 	SobolSamplerSharedData *sharedData;
