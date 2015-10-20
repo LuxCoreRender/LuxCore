@@ -110,6 +110,14 @@ Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rn
 	return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
 }
 
+slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
+	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
+
+	oclSampler->type = slg::ocl::SOBOL;
+
+	return oclSampler;
+}
+
 Properties SobolSampler::defaultProps = Properties() <<
 			// Not using SamplerType2String(SOBOL) here because the order
 			// of static initialization is not defined across multiple .cpp

@@ -54,6 +54,14 @@ Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *r
 	return new RandomSampler(rndGen, film, flmSplatter);
 }
 
+slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
+	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
+
+	oclSampler->type = slg::ocl::RANDOM;
+
+	return oclSampler;
+}
+
 Properties RandomSampler::defaultProps = Properties() <<
 			// Not using SamplerType2String(RANDOM) here because the order
 			// of static initialization is not defined across multiple .cpp

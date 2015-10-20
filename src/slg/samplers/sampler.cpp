@@ -95,6 +95,16 @@ Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		throw runtime_error("Unknown sampler type in Sampler::FromProperties(): " + type);
 }
 
+slg::ocl::Sampler *Sampler::FromPropertiesOCL(const Properties &cfg) {
+	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+
+	SamplerRegistry::FromPropertiesOCLStaticTableType func;
+	if (SamplerRegistry::STATICTABLE_NAME(FromPropertiesOCL).Get(type, func))
+		return func(cfg);
+	else
+		throw runtime_error("Unknown sampler type in Sampler::FromPropertiesOCL(): " + type);
+}
+
 //------------------------------------------------------------------------------
 // SamplerSharedDataRegistry
 //

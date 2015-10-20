@@ -69,13 +69,15 @@ protected:
 STATICTABLE_DECLARE_REGISTRATION(C, std::string, SamplerType); \
 STATICTABLE_DECLARE_REGISTRATION(C, SamplerType, StringType); \
 STATICTABLE_DECLARE_REGISTRATION(C, std::string, ToProperties); \
-STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromProperties)
+STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromProperties); \
+STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromPropertiesOCL)
 
 #define SAMPLER_STATICTABLE_REGISTER(TAG, STRTAG, C) \
 StaticTable<std::string, SamplerType>::RegisterTableValue SamplerRegistry::C ## SamplerType_StaticTableRegisterTableValue(std::string(STRTAG), TAG); \
 StaticTable<SamplerType, std::string>::RegisterTableValue SamplerRegistry::C ## StringType_StaticTableRegisterTableValue(TAG, std::string(STRTAG)); \
 STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, ToProperties); \
-STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, FromProperties)
+STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, FromProperties); \
+STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, FromPropertiesOCL)
 
 class SamplerRegistry {
 protected:
@@ -97,6 +99,9 @@ protected:
 	typedef Sampler *(*FromPropertiesStaticTableType)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	STATICTABLE_DECLARE_DECLARATION(std::string, FromProperties);
+	// Used to register all sub-class FromPropertiesOCL() static methods
+	typedef slg::ocl::Sampler *(*FromPropertiesOCLStaticTableType)(const luxrays::Properties &cfg);
+	STATICTABLE_DECLARE_DECLARATION(std::string, FromPropertiesOCL);
 	
 	//--------------------------------------------------------------------------
 

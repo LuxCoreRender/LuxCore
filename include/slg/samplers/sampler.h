@@ -84,8 +84,10 @@ public:
 	// Transform the current configuration Properties in a complete list of
 	// object Properties (including all defaults values)
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	// Allocate a Sampler based on the cfg definition
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
+	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 	static SamplerType String2SamplerType(const std::string &type);
 	static const std::string SamplerType2String(const SamplerType type);

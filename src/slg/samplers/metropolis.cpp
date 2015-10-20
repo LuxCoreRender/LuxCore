@@ -265,6 +265,17 @@ Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerato
 			(MetropolisSamplerSharedData *)sharedData);
 }
 
+slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
+	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
+
+	oclSampler->type = slg::ocl::METROPOLIS;
+	oclSampler->metropolis.largeMutationProbability = cfg.Get(defaultProps.Get("sampler.metropolis.largesteprate")).Get<float>();
+	oclSampler->metropolis.imageMutationRange = cfg.Get(defaultProps.Get("sampler.metropolis.imagemutationrate")).Get<float>();
+	oclSampler->metropolis.maxRejects = cfg.Get(defaultProps.Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+
+	return oclSampler;
+}
+
 Properties MetropolisSampler::defaultProps = Properties() <<
 			// Not using SamplerType2String(METROPOLIS) here because the order
 			// of static initialization is not defined across multiple .cpp
