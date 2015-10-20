@@ -141,29 +141,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Sampler
 	//--------------------------------------------------------------------------
 
-	oclSampler = new slg::ocl::Sampler();
-	const SamplerType samplerType = Sampler::String2SamplerType(cfg.Get(Property("sampler.type")("RANDOM")).Get<string>());
-	switch (samplerType) {
-		case RANDOM:
-			oclSampler->type = slg::ocl::RANDOM;
-			break;
-		case METROPOLIS: {
-			const float largeMutationProbability = cfg.Get(Property("sampler.metropolis.largesteprate")(.4f)).Get<float>();
-			const float imageMutationRange = cfg.Get(Property("sampler.metropolis.imagemutationrate")(.1f)).Get<float>();
-			const u_int maxRejects = cfg.Get(Property("sampler.metropolis.maxconsecutivereject")(512)).Get<u_int>();
-
-			oclSampler->type = slg::ocl::METROPOLIS;
-			oclSampler->metropolis.largeMutationProbability = largeMutationProbability;
-			oclSampler->metropolis.imageMutationRange = imageMutationRange;
-			oclSampler->metropolis.maxRejects = maxRejects;
-			break;
-		}
-		case SOBOL:
-			oclSampler->type = slg::ocl::SOBOL;
-			break;
-		default:
-			throw std::runtime_error("Unknown sampler.type: " + boost::lexical_cast<std::string>(samplerType));
-	}
+	oclSampler = Sampler::FromPropertiesOCL(cfg);
 
 	//--------------------------------------------------------------------------
 	// Filter
