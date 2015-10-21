@@ -91,16 +91,16 @@ slg::ocl::Sampler *Sampler::FromPropertiesOCL(const Properties &cfg) {
 }
 
 SamplerType Sampler::String2SamplerType(const string &type) {
-	SamplerRegistry::GetSamplerType func;
-	if (SamplerRegistry::STATICTABLE_NAME(GetSamplerType).Get(type, func))
+	SamplerRegistry::GetObjectType func;
+	if (SamplerRegistry::STATICTABLE_NAME(GetObjectType).Get(type, func))
 		return func();
 	else
 		throw runtime_error("Unknown sampler type in Sampler::String2SamplerType(): " + type);
 }
 
 const string Sampler::SamplerType2String(const SamplerType type) {
-	SamplerRegistry::GetSamplerTag func;
-	if (SamplerRegistry::STATICTABLE_NAME(GetSamplerTag).Get(type, func))
+	SamplerRegistry::GetObjectTag func;
+	if (SamplerRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
 		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + type);
@@ -121,9 +121,9 @@ STATICTABLE_DECLARATION(SamplerSharedDataRegistry, string, FromProperties);
 
 //------------------------------------------------------------------------------
 
-SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RandomSampler::GetSamplerTag(), RandomSamplerSharedData);
-SAMPLERSHAREDDATA_STATICTABLE_REGISTER(SobolSampler::GetSamplerTag(), SobolSamplerSharedData);
-SAMPLERSHAREDDATA_STATICTABLE_REGISTER(MetropolisSampler::GetSamplerTag(), MetropolisSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RandomSampler::GetObjectTag(), RandomSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER(SobolSampler::GetObjectTag(), SobolSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER(MetropolisSampler::GetObjectTag(), MetropolisSamplerSharedData);
 // Just add here any new SamplerSharedData (don't forget in the .h too)
 
 //------------------------------------------------------------------------------
@@ -136,15 +136,11 @@ SAMPLERSHAREDDATA_STATICTABLE_REGISTER(MetropolisSampler::GetSamplerTag(), Metro
 // static members initialization order is not defined.
 //------------------------------------------------------------------------------
 
-STATICTABLE_DECLARATION(SamplerRegistry, std::string, GetSamplerType);
-STATICTABLE_DECLARATION(SamplerRegistry, SamplerType, GetSamplerTag);
-STATICTABLE_DECLARATION(SamplerRegistry, std::string, ToProperties);
-STATICTABLE_DECLARATION(SamplerRegistry, std::string, FromProperties);
-STATICTABLE_DECLARATION(SamplerRegistry, std::string, FromPropertiesOCL);
+OBJECTSTATICREGISTRY_STATICFIELDS(SamplerRegistry);
 
 //------------------------------------------------------------------------------
 
-SAMPLER_STATICTABLE_REGISTER(RandomSampler);
-SAMPLER_STATICTABLE_REGISTER(SobolSampler);
-SAMPLER_STATICTABLE_REGISTER(MetropolisSampler);
+OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RandomSampler);
+OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, SobolSampler);
+OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, MetropolisSampler);
 // Just add here any new Sampler (don't forget in the .h too)
