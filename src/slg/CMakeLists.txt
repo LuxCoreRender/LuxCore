@@ -209,6 +209,13 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/box.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/gaussian.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchell.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/contourlines.cpp

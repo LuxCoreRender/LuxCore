@@ -37,7 +37,7 @@ namespace slg {
 class BoxFilter : public Filter {
 public:
 	// BoxFilter Public Methods
-	BoxFilter(const float xw = 2.f, const float yw = 2.f) :
+	BoxFilter(const float xw, const float yw) :
 		Filter(xw, yw) { }
 	virtual ~BoxFilter() { }
 
@@ -49,9 +49,24 @@ public:
 
 	virtual Filter *Clone() const { return new BoxFilter(xWidth, yWidth); }
 
+	//--------------------------------------------------------------------------
+	// Static methods used by FilterRegistry
+	//--------------------------------------------------------------------------
+
+	static FilterType GetObjectType() { return FILTER_BOX; }
+	static std::string GetObjectTag() { return "BOX"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
+
 	friend class boost::serialization::access;
 
 private:
+	static luxrays::Properties defaultProps;
+
+	// Used by serialization
+	BoxFilter() { }
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
 	}
@@ -60,7 +75,7 @@ private:
 }
 
 
-BOOST_CLASS_VERSION(slg::BoxFilter, 1)
+BOOST_CLASS_VERSION(slg::BoxFilter, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::BoxFilter)
 

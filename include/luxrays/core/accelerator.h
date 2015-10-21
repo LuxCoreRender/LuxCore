@@ -20,8 +20,10 @@
 #define	_LUXRAYS_ACCELERATOR_H
 
 #include <string>
+#include <deque>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/geometry/ray.h"
 #include "luxrays/core/trianglemesh.h"
 
 namespace luxrays {

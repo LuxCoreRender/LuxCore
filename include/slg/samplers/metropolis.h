@@ -68,6 +68,10 @@ public:
 
 	virtual luxrays::Properties ToProperties();
 
+	//--------------------------------------------------------------------------
+	// Static methods used by SamplerRegistry
+	//--------------------------------------------------------------------------
+
 	static SamplerType GetObjectType() { return METROPOLIS; }
 	static std::string GetObjectTag() { return "METROPOLIS"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);

@@ -72,6 +72,10 @@ public:
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
+	//--------------------------------------------------------------------------
+	// Static methods used by SamplerRegistry
+	//--------------------------------------------------------------------------
+
 	static SamplerType GetObjectType() { return SOBOL; }
 	static std::string GetObjectTag() { return "SOBOL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);

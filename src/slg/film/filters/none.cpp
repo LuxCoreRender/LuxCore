@@ -16,35 +16,44 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILMSAMPLESPLATTER_H
-#define	_SLG_FILMSAMPLESPLATTER_H
+#include "slg/film/filters/none.h"
 
-#include "slg/film/film.h"
-#include "slg/film/filters/filterdistribution.h"
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-namespace slg {
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::NoneFilter)
 
 //------------------------------------------------------------------------------
-// FilmSampleSplatter
-//
-// Used to splat samples on a Film using PBRT-like pixel filtering.
+// Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-class FilmSampleSplatter {
-public:
-	FilmSampleSplatter(const Filter *flt);
-	~FilmSampleSplatter();
+Properties NoneFilter::ToProperties(const Properties &cfg) {
+	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
 
-	const Filter *GetFilter() const { return filter; }
-
-	// This method must be thread-safe.
-	void SplatSample(Film &film, const SampleResult &sampleResult, const float weight) const;
-
-private:
-	const Filter *filter;
-	FilterLUTs *filterLUTs;
-};
-		
+	return Properties() <<
+			cfg.Get(defaultProps.Get("film.filter.type")) <<
+			cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)) <<
+			cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth));
 }
 
-#endif	/* _SLG_FILMSAMPLESPLATTER_H */
+
+Filter *NoneFilter::FromProperties(const Properties &cfg) {
+	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
+	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
+	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
+
+	return new NoneFilter(filterXWidth, filterYWidth);
+}
+
+slg::ocl::Filter *NoneFilter::FromPropertiesOCL(const Properties &cfg) {
+	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
+
+	oclFilter->type = slg::ocl::FILTER_NONE;
+
+	return oclFilter;
+}
+
+Properties NoneFilter::defaultProps = Properties() <<
+			Property("film.filter.type")(NoneFilter::GetObjectTag()) <<
+			Property("film.filter.width")(1.f);

@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BLACKMANNHARRIS_FILTER_H
-#define	_SLG_BLACKMANNHARRIS_FILTER_H
+#ifndef _SLG_NONE_FILTER_H
+#define	_SLG_NONE_FILTER_H
 
 #include <boost/serialization/version.hpp>
 #include <boost/archive/binary_iarchive.hpp>
@@ -29,32 +29,33 @@
 #include "slg/film/filters/filter.h"
 
 namespace slg {
-
+	
 //------------------------------------------------------------------------------
-// BlackmanHarrisFilter
+// NoneFilter
 //------------------------------------------------------------------------------
 
-class BlackmanHarrisFilter : public Filter {
+class NoneFilter : public Filter {
 public:
-	// GaussianFilter Public Methods
-	BlackmanHarrisFilter(const float xw, const float yw) :
+	// NoneFilter Public Methods
+	NoneFilter(const float xw, const float yw) :
 		Filter(xw, yw) { }
-	virtual ~BlackmanHarrisFilter() { }
+	virtual ~NoneFilter() { }
 
-	virtual FilterType GetType() const { return FILTER_BLACKMANHARRIS; }
+	virtual FilterType GetType() const { return FILTER_NONE; }
 
 	float Evaluate(const float x, const float y) const {
-		return BlackmanHarris1D(x * invXWidth) * BlackmanHarris1D(y *  invYWidth);
+		// This should be never called
+		throw std::runtime_error("Called NoneFilter::Evaluate()");
 	}
 
-	virtual Filter *Clone() const { return new BlackmanHarrisFilter(xWidth, yWidth); }
+	virtual Filter *Clone() const { return new NoneFilter(xWidth, yWidth); }
 
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------
 
-	static FilterType GetObjectType() { return FILTER_BLACKMANHARRIS; }
-	static std::string GetObjectTag() { return "BLACKMANHARRIS"; }
+	static FilterType GetObjectType() { return FILTER_NONE; }
+	static std::string GetObjectTag() { return "NONE"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static Filter *FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
@@ -63,31 +64,19 @@ public:
 
 private:
 	static luxrays::Properties defaultProps;
-
+	
 	// Used by serialization
-	BlackmanHarrisFilter() { }
+	NoneFilter() { }
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
-	}
-
-	float BlackmanHarris1D(float x) const {
-		if (x < -1.f || x > 1.f)
-			return 0.f;
-		x = (x + 1.f) * .5f;
-		x *= M_PI;
-		const float A0 =  0.35875f;
-		const float A1 = -0.48829f;
-		const float A2 =  0.14128f;
-		const float A3 = -0.01168f;
-		return A0 + A1 * cosf(2.f * x) + A2 * cosf(4.f * x) + A3 * cosf(6.f * x);
 	}
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::BlackmanHarrisFilter, 2)
+BOOST_CLASS_VERSION(slg::NoneFilter, 2)
 
-BOOST_CLASS_EXPORT_KEY(slg::BlackmanHarrisFilter)
+BOOST_CLASS_EXPORT_KEY(slg::NoneFilter)
 
-#endif	/* _SLG_BLACKMANNHARRIS_FILTER_H */
+#endif	/* _SLG_NONE_FILTER_H */

@@ -247,48 +247,7 @@ bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 }
 
 Filter *RenderConfig::AllocPixelFilter() const {
-	//--------------------------------------------------------------------------
-	// Create the filter
-	//--------------------------------------------------------------------------
-
-	const FilterType filterType = Filter::String2FilterType(GetProperty("film.filter.type").Get<string>());
-	const float defaultFilterWidth = GetProperty("film.filter.width").Get<float>();
-	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
-	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
-
-	auto_ptr<Filter> filter;
-	switch (filterType) {
-		case FILTER_NONE:
-			break;
-		case FILTER_BOX:
-			filter.reset(new BoxFilter(filterXWidth, filterYWidth));
-			break;
-		case FILTER_GAUSSIAN: {
-			const float alpha = GetProperty("film.filter.gaussian.alpha").Get<float>();
-			filter.reset(new GaussianFilter(filterXWidth, filterYWidth, alpha));
-			break;
-		}
-		case FILTER_MITCHELL: {
-			const float b = GetProperty("film.filter.mitchell.b").Get<float>();
-			const float c = GetProperty("film.filter.mitchell.c").Get<float>();
-			filter.reset(new MitchellFilter(filterXWidth, filterYWidth, b, c));
-			break;
-		}
-		case FILTER_MITCHELL_SS: {
-			const float b = GetProperty("film.filter.mitchellss.b").Get<float>();
-			const float c = GetProperty("film.filter.mitchellss.c").Get<float>();
-			filter.reset(new MitchellFilterSS(filterXWidth, filterYWidth, b, c));
-			break;
-		}
-		case FILTER_BLACKMANHARRIS: {
-			filter.reset(new BlackmanHarrisFilter(filterXWidth, filterYWidth));
-			break;
-		}
-		default:
-			throw runtime_error("Unknown filter type: " + boost::lexical_cast<string>(filterType));
-	}
-	
-	return filter.release();
+	return Filter::FromProperties(cfg);
 }
 
 Film *RenderConfig::AllocFilm() const {
@@ -401,6 +360,8 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 Properties RenderConfig::ToProperties() const {
 	Properties props;
 
+	// PixelFilter
+	props << Filter::ToProperties(cfg);
 	// Sampler
 	props << Sampler::ToProperties(cfg);
 

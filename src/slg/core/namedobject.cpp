@@ -26,14 +26,8 @@ using namespace slg;
 // NamedObject
 //------------------------------------------------------------------------------
 
-boost::atomic<u_int> NamedObject::freeID(0);
-
-u_int NamedObject::GetFreeID() {
-	return freeID++;
-}
-
 NamedObject::NamedObject() {
-	name = "NamedObject-" + ToString(GetFreeID());
+	name = "NamedObject";
 }
 
 NamedObject::NamedObject(const string &nm) : name(nm) {

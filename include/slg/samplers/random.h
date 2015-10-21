@@ -61,6 +61,10 @@ public:
 	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
+	//--------------------------------------------------------------------------
+	// Static methods used by SamplerRegistry
+	//--------------------------------------------------------------------------
+
 	static SamplerType GetObjectType() { return RANDOM; }
 	static std::string GetObjectTag() { return "RANDOM"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);

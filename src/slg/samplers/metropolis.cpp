@@ -246,6 +246,10 @@ Properties MetropolisSampler::ToProperties() {
 			Property("sampler.metropolis.imagemutationrate")(imageMutationRange);
 }
 
+//------------------------------------------------------------------------------
+// Static methods used by SamplerRegistry
+//------------------------------------------------------------------------------
+
 Properties MetropolisSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
 			cfg.Get(defaultProps.Get("sampler.type")) <<
@@ -277,9 +281,7 @@ slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
 }
 
 Properties MetropolisSampler::defaultProps = Properties() <<
-			// Not using SamplerType2String(METROPOLIS) here because the order
-			// of static initialization is not defined across multiple .cpp
-			Property("sampler.type")("METROPOLIS") <<
+			Property("sampler.type")(MetropolisSampler::GetObjectTag()) <<
 			Property("sampler.metropolis.largesteprate")(.4f) <<
 			Property("sampler.metropolis.maxconsecutivereject")(512) <<
 			Property("sampler.metropolis.imagemutationrate")(.1f);
