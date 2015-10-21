@@ -66,14 +66,14 @@ public:
 			SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 
-	virtual SamplerType GetType() const { return GetSamplerType(); }
+	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual void RequestSamples(const u_int size);
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
-	static SamplerType GetSamplerType() { return SOBOL; }
-	static std::string GetSamplerTag() { return "SOBOL"; }
+	static SamplerType GetObjectType() { return SOBOL; }
+	static std::string GetObjectTag() { return "SOBOL"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);

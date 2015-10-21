@@ -60,7 +60,7 @@ public:
 			MetropolisSamplerSharedData *samplerSharedData);
 	virtual ~MetropolisSampler();
 
-	virtual SamplerType GetType() const { return GetSamplerType(); }
+	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual void RequestSamples(const u_int size);
 
 	virtual float GetSample(const u_int index);
@@ -68,8 +68,8 @@ public:
 
 	virtual luxrays::Properties ToProperties();
 
-	static SamplerType GetSamplerType() { return METROPOLIS; }
-	static std::string GetSamplerTag() { return "METROPOLIS"; }
+	static SamplerType GetObjectType() { return METROPOLIS; }
+	static std::string GetObjectTag() { return "METROPOLIS"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);

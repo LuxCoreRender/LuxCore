@@ -55,14 +55,14 @@ public:
 			const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter) { }
 	virtual ~RandomSampler() { }
 
-	virtual SamplerType GetType() const { return GetSamplerType(); }
+	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual void RequestSamples(const u_int size) { }
 
 	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
-	static SamplerType GetSamplerType() { return RANDOM; }
-	static std::string GetSamplerTag() { return "RANDOM"; }
+	static SamplerType GetObjectType() { return RANDOM; }
+	static std::string GetObjectTag() { return "RANDOM"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
