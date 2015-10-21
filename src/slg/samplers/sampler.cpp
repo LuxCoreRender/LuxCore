@@ -144,7 +144,7 @@ STATICTABLE_DECLARATION(SamplerRegistry, std::string, FromPropertiesOCL);
 
 //------------------------------------------------------------------------------
 
-SAMPLER_STATICTABLE_REGISTER(RandomSampler::GetSamplerType(), RandomSampler::GetSamplerTag(), RandomSampler);
-SAMPLER_STATICTABLE_REGISTER(SobolSampler::GetSamplerType(), SobolSampler::GetSamplerTag(), SobolSampler);
-SAMPLER_STATICTABLE_REGISTER(MetropolisSampler::GetSamplerType(), MetropolisSampler::GetSamplerTag(), MetropolisSampler);
+SAMPLER_STATICTABLE_REGISTER(RandomSampler);
+SAMPLER_STATICTABLE_REGISTER(SobolSampler);
+SAMPLER_STATICTABLE_REGISTER(MetropolisSampler);
 // Just add here any new Sampler (don't forget in the .h too)

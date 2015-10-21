@@ -72,12 +72,12 @@ STATICTABLE_DECLARE_REGISTRATION(C, std::string, ToProperties); \
 STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromProperties); \
 STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromPropertiesOCL)
 
-#define SAMPLER_STATICTABLE_REGISTER(TAG, STRTAG, C) \
-STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, GetSamplerType); \
-STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, GetSamplerTag); \
-STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, ToProperties); \
-STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, FromProperties); \
-STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, FromPropertiesOCL)
+#define SAMPLER_STATICTABLE_REGISTER(C) \
+STATICTABLE_REGISTER(SamplerRegistry, C, C::GetSamplerTag(), std::string, GetSamplerType); \
+STATICTABLE_REGISTER(SamplerRegistry, C, C::GetSamplerTag(), std::string, GetSamplerTag); \
+STATICTABLE_REGISTER(SamplerRegistry, C, C::GetSamplerTag(), std::string, ToProperties); \
+STATICTABLE_REGISTER(SamplerRegistry, C, C::GetSamplerTag(), std::string, FromProperties); \
+STATICTABLE_REGISTER(SamplerRegistry, C, C::GetSamplerTag(), std::string, FromPropertiesOCL)
 
 class SamplerRegistry {
 protected:
