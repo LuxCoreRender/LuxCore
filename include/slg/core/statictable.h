@@ -44,6 +44,8 @@ public:
 		}
 	}
 
+	size_t GetSize() const { return GetTable().size(); }
+	
 	class RegisterTableValue {
 	public:
 		RegisterTableValue(const K &key, const T &val) {
@@ -60,29 +62,26 @@ public:
 
 private:
 	static boost::unordered_map<K, T> &GetTable() {
-		// Using
-		static boost::unordered_map<K, T> *table = new boost::unordered_map<K, T>();
-		// instead of:
-		//static boost::unordered_map<K, T> table;
-		// to avoid possible allocation on thread heap.
-		return *table;
+		static boost::unordered_map<K, T> table;
+
+		return table;
 	}
 };
 
 #define STATICTABLE_NAME(F) F ## _StaticTable
 
 // Use STATICTABLE_DECLARE_DECLARATION inside the base class holding the table
-#define STATICTABLE_DECLARE_DECLARATION(K, F) static StaticTable<K, F ## StaticTableType> STATICTABLE_NAME(F)
+#define STATICTABLE_DECLARE_DECLARATION(K, F) static StaticTable<K, F> STATICTABLE_NAME(F)
 // Use STATICTABLE_DECLARATION inside the base class .cpp
-#define STATICTABLE_DECLARATION(C, K, F) StaticTable<K, C::F ## StaticTableType> C::STATICTABLE_NAME(F)
+#define STATICTABLE_DECLARATION(C, K, F) StaticTable<K, C::F> C::STATICTABLE_NAME(F)
 
 // Use STATICTABLE_DECLARE_REGISTRATION() inside the class declaration to register
-#define STATICTABLE_DECLARE_REGISTRATION(C, K, F) static StaticTable<K, F ## StaticTableType>::RegisterTableValue C ## F ## _StaticTableRegisterTableValue
+#define STATICTABLE_DECLARE_REGISTRATION(C, K, F) static StaticTable<K, F>::RegisterTableValue C ## F ## _StaticTableRegister
 // Use STATICTABLE_REGISTER() to register a class
 // NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
 // main base class (i.e. the one holding the StaticTable) because order of static
 // field initialization is otherwise undefined.
-#define STATICTABLE_REGISTER(R, C, N, K, F) StaticTable<K, R::F ## StaticTableType>::RegisterTableValue R::C ## F ## _StaticTableRegisterTableValue(N, C::F)
+#define STATICTABLE_REGISTER(R, C, N, K, F) StaticTable<K, R::F>::RegisterTableValue R::C ## F ## _StaticTableRegister(N, C::F)
 
 }
 

@@ -47,7 +47,7 @@ class SamplerSharedDataRegistry {
 
 protected:
 	// Used to register all sub-class FromProperties() static methods
-	typedef SamplerSharedData *(*FromPropertiesStaticTableType)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
+	typedef SamplerSharedData *(*FromProperties)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
 	STATICTABLE_DECLARE_DECLARATION(std::string, FromProperties);
 
 	// For the registration of each SamplerSharedData sub-class with SamplerSharedData StaticTable
@@ -66,15 +66,15 @@ protected:
 // For an easy the declaration and registration of each Sampler sub-class
 // with Sampler StaticTable
 #define SAMPLER_STATICTABLE_DECLARE_REGISTRATION(C) \
-STATICTABLE_DECLARE_REGISTRATION(C, std::string, SamplerType); \
-STATICTABLE_DECLARE_REGISTRATION(C, SamplerType, StringType); \
+STATICTABLE_DECLARE_REGISTRATION(C, std::string, GetSamplerType); \
+STATICTABLE_DECLARE_REGISTRATION(C, std::string, GetSamplerTag); \
 STATICTABLE_DECLARE_REGISTRATION(C, std::string, ToProperties); \
 STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromProperties); \
 STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromPropertiesOCL)
 
 #define SAMPLER_STATICTABLE_REGISTER(TAG, STRTAG, C) \
-StaticTable<std::string, SamplerType>::RegisterTableValue SamplerRegistry::C ## SamplerType_StaticTableRegisterTableValue(std::string(STRTAG), TAG); \
-StaticTable<SamplerType, std::string>::RegisterTableValue SamplerRegistry::C ## StringType_StaticTableRegisterTableValue(TAG, std::string(STRTAG)); \
+STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, GetSamplerType); \
+STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, GetSamplerTag); \
 STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, ToProperties); \
 STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, FromProperties); \
 STATICTABLE_REGISTER(SamplerRegistry, C, STRTAG, std::string, FromPropertiesOCL)
@@ -86,21 +86,24 @@ protected:
 	//--------------------------------------------------------------------------
 
 	// Used to register all sub-class String2SamplerType() static methods
-	typedef SamplerType SamplerTypeStaticTableType;
-	STATICTABLE_DECLARE_DECLARATION(std::string, SamplerType);
+	typedef SamplerType (*GetSamplerType)();
+	STATICTABLE_DECLARE_DECLARATION(std::string, GetSamplerType);
+
 	// Used to register all sub-class SamplerType2String() static methods
-	typedef std::string StringTypeStaticTableType;
-	STATICTABLE_DECLARE_DECLARATION(SamplerType, StringType);
+	typedef std::string (*GetSamplerTag)();
+	STATICTABLE_DECLARE_DECLARATION(SamplerType, GetSamplerTag);
 
 	// Used to register all sub-class ToProperties() static methods
-	typedef luxrays::Properties (*ToPropertiesStaticTableType)(const luxrays::Properties &cfg);
+	typedef luxrays::Properties (*ToProperties)(const luxrays::Properties &cfg);
 	STATICTABLE_DECLARE_DECLARATION(std::string, ToProperties);
+
 	// Used to register all sub-class FromProperties() static methods
-	typedef Sampler *(*FromPropertiesStaticTableType)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+	typedef Sampler *(*FromProperties)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	STATICTABLE_DECLARE_DECLARATION(std::string, FromProperties);
+
 	// Used to register all sub-class FromPropertiesOCL() static methods
-	typedef slg::ocl::Sampler *(*FromPropertiesOCLStaticTableType)(const luxrays::Properties &cfg);
+	typedef slg::ocl::Sampler *(*FromPropertiesOCL)(const luxrays::Properties &cfg);
 	STATICTABLE_DECLARE_DECLARATION(std::string, FromPropertiesOCL);
 	
 	//--------------------------------------------------------------------------
