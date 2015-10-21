@@ -83,12 +83,18 @@ void LuxCoreApp::MenuEngine() {
 void LuxCoreApp::MenuSampler() {
 	const string currentSamplerType = config->GetProperty("sampler.type").Get<string>();
 
-	if (ImGui::MenuItem("RANDOM", NULL, (currentSamplerType == "RANDOM")))
+	if (ImGui::MenuItem("RANDOM", NULL, (currentSamplerType == "RANDOM"))) {
+		samplerWindow.opened = false;
 		EditRenderConfig(Properties() << Property("sampler.type")("RANDOM"));
-	if (ImGui::MenuItem("SOBOL", NULL, (currentSamplerType == "SOBOL")))
+	}
+	if (ImGui::MenuItem("SOBOL", NULL, (currentSamplerType == "SOBOL"))) {
+		samplerWindow.opened = false;
 		EditRenderConfig(Properties() << Property("sampler.type")("SOBOL"));
-	if (ImGui::MenuItem("METROPOLIS", NULL, (currentSamplerType == "METROPOLIS")))
+	}
+	if (ImGui::MenuItem("METROPOLIS", NULL, (currentSamplerType == "METROPOLIS"))) {
+		samplerWindow.opened = false;
 		EditRenderConfig(Properties() << Property("sampler.type")("METROPOLIS"));
+	}
 }
 
 //------------------------------------------------------------------------------
