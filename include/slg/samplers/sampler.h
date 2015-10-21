@@ -81,10 +81,15 @@ public:
 
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
+
+	//--------------------------------------------------------------------------
+	// Static methods used by SamplerRegistry
+	//--------------------------------------------------------------------------
+
 	// Transform the current configuration Properties in a complete list of
 	// object Properties (including all defaults values)
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	// Allocate a Sampler based on the cfg definition
+	// Allocate a Object based on the cfg definition
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);

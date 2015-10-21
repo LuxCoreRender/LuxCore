@@ -37,8 +37,8 @@ namespace slg {
 class MitchellFilter : public Filter {
 public:
 	// MitchellFilter Public Methods
-	MitchellFilter(const float xw = 2.f, const float yw = 2.f,
-			const float b = 1.f / 3.f, const float c = 1.f / 3.f) :
+	MitchellFilter(const float xw, const float yw,
+			const float b, const float c) :
 		Filter(xw, yw), B(b), C(c) { }
 	virtual ~MitchellFilter() { }
 
@@ -54,11 +54,26 @@ public:
 
 	virtual Filter *Clone() const { return new MitchellFilter(xWidth, yWidth, B, C); }
 
+	//--------------------------------------------------------------------------
+	// Static methods used by FilterRegistry
+	//--------------------------------------------------------------------------
+
+	static FilterType GetObjectType() { return FILTER_MITCHELL; }
+	static std::string GetObjectTag() { return "MITCHELL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
+
 	float B, C;
 
 	friend class boost::serialization::access;
 
 private:
+	static luxrays::Properties defaultProps;
+
+	// Used by serialization
+	MitchellFilter() { }
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
 		ar & B;
@@ -81,7 +96,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::MitchellFilter, 1)
+BOOST_CLASS_VERSION(slg::MitchellFilter, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::MitchellFilter)
 

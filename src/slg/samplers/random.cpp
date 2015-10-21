@@ -63,6 +63,4 @@ slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
 }
 
 Properties RandomSampler::defaultProps = Properties() <<
-			// Not using SamplerType2String(RANDOM) here because the order
-			// of static initialization is not defined across multiple .cpp
-			Property("sampler.type")("RANDOM");
+			Property("sampler.type")(RandomSampler::GetObjectTag());

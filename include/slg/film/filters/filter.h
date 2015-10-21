@@ -19,17 +19,11 @@
 #ifndef _SLG_FILTER_H
 #define	_SLG_FILTER_H
 
-#include <boost/serialization/version.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
-#include <boost/serialization/vector.hpp>
-
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/utils.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
+#include "slg/core/namedobject.h"
 
 namespace slg {
 
@@ -51,10 +45,11 @@ typedef enum {
 	FILTER_BLACKMANHARRIS
 } FilterType;
 
-class Filter {
+class Filter : public NamedObject {
 public:
 	// Filter Interface
-	Filter(const float xw, const float yw) : xWidth(xw), yWidth(yw),
+	Filter(const float xw, const float yw) : NamedObject("pixelfilter"),
+			xWidth(xw), yWidth(yw),
 			invXWidth(1.f / xw), invYWidth(1.f / yw) { }
 	virtual ~Filter() { }
 
@@ -63,7 +58,22 @@ public:
 
 	virtual Filter *Clone() const = 0;
 
+	// Transform the current object in Properties
+	virtual luxrays::Properties ToProperties() const;
+
+	//--------------------------------------------------------------------------
+	// Static methods used by ObjectRegistry
+	//--------------------------------------------------------------------------
+
+	// Transform the current configuration Properties in a complete list of
+	// object Properties (including all defaults values)
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	// Allocate a Object based on the cfg definition
+	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
+
 	static FilterType String2FilterType(const std::string &type);
+	static const std::string FilterType2String(const FilterType type);
 
 	// Filter Public Data
 	float xWidth, yWidth;
@@ -71,11 +81,12 @@ public:
 
 	friend class boost::serialization::access;
 
-private:
+protected:
 	// Used by serialization
 	Filter() { }
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
 		ar & xWidth;
 		ar & yWidth;
 		ar & invXWidth;
@@ -83,87 +94,10 @@ private:
 	}
 };
 
-class FilterDistribution {
-public:
-	FilterDistribution(const Filter *filter, const u_int size);
-	~FilterDistribution();
-
-	void SampleContinuous(const float u0, const float u1, float *su0, float *su1) const;
-
-	const luxrays::Distribution2D *GetDistribution2D() const { return distrib; }
-
-private:
-	const Filter *filter;
-	u_int size;
-
-	luxrays::Distribution2D *distrib;
-};
-
-//------------------------------------------------------------------------------
-// Filter Look Up Table
-//------------------------------------------------------------------------------
-
-class FilterLUT {
-public:
-	FilterLUT(const Filter &filter, const float offsetX, const float offsetY);
-	~FilterLUT() {
-		delete[] lut;
-	}
-
-	const unsigned int GetWidth() const { return lutWidth; }
-	const unsigned int GetHeight() const { return lutHeight; }
-
-	const float *GetLUT() const {
-		return lut;
-	}
-
-	friend std::ostream &operator<<(std::ostream &os, const FilterLUT &f);
-
-private:
-	unsigned int lutWidth, lutHeight;
-	float *lut;
-};
-
-inline std::ostream &operator<<(std::ostream &os, const FilterLUT &f) {
-	os << "FilterLUT[(" << f.lutWidth << "x" << f.lutHeight << "),";
-
-	os << "[";
-	for (unsigned int iy = 0; iy < f.lutHeight; ++iy) {
-		os << "[";
-		for (unsigned int ix = 0; ix < f.lutWidth; ++ix) {
-			os << f.lut[ix + iy * f.lutWidth];
-			if (ix != f.lutWidth - 1)
-				os << ",";
-		}
-		os << "]";
-	}
-	os << "]";
-
-	return os;
-}
-
-class FilterLUTs {
-public:
-	FilterLUTs(const Filter &filter, const unsigned int size);
-	~FilterLUTs() ;
-
-	const FilterLUT *GetLUT(const float x, const float y) const {
-		const int ix = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (x + 0.5f)), lutsSize - 1));
-		const int iy = luxrays::Max<unsigned int>(0, luxrays::Min<unsigned int>(luxrays::Floor2Int(lutsSize * (y + 0.5f)), lutsSize - 1));
-
-		return luts[ix + iy * lutsSize];
-	}
-
-private:
-	unsigned int lutsSize;
-	float step;
-	FilterLUT **luts;
-};
-
 }
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::Filter)
 
-BOOST_CLASS_VERSION(slg::Filter, 1)
+BOOST_CLASS_VERSION(slg::Filter, 2)
 
 #endif	/* _SLG_FILTER_H */

@@ -20,7 +20,12 @@
 #define	_SLG_NAMEDOBJECT_H
 
 #include <string>
-#include <boost/atomic.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/properties.h"
@@ -39,21 +44,23 @@ public:
 	// Returns the Properties required to create this object
 	virtual luxrays::Properties ToProperties() const;
 
-	// Most sub-class will implement the following methods too:
-	//
-	// Returns the Properties required to create this object as defined in cfg:
-	//static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	//
-	// Returns an <Object> defined by Properties props:
-	//static <Object> *FromProperties(const luxrays::Properties &props, ...);
+	// Most sub-class will implement the many standard static methods used
+	// in ObjectStaticRegistry
+
+	friend class boost::serialization::access;
 
 private:
-	std::string name;
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & name;
+	}
 
-	static u_int GetFreeID();
-	static boost::atomic<u_int> freeID;
+	std::string name;
 };
 
 }
+
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::NamedObject)
+
+BOOST_CLASS_VERSION(slg::NamedObject, 1)
 
 #endif	/* _SLG_NAMEDOBJECT_H */

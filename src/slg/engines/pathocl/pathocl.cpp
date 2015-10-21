@@ -56,13 +56,11 @@ using namespace slg;
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
 		const bool realTime) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime),
 		pixelFilterDistribution(NULL) {
-	pixelFilter = NULL;
 	oclSampler = NULL;
 	oclPixelFilter = NULL;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
-	delete pixelFilter;
 	delete[] pixelFilterDistribution;
 	delete oclSampler;
 	delete oclPixelFilter;
@@ -75,9 +73,11 @@ PathOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
 
 
 void PathOCLRenderEngine::InitPixelFilterDistribution() {
+	auto_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
+
 	// Compile sample distribution
 	delete[] pixelFilterDistribution;
-	const FilterDistribution filterDistribution(pixelFilter, 64);
+	const FilterDistribution filterDistribution(pixelFilter.get(), 64);
 	pixelFilterDistribution = CompiledScene::CompileDistribution2D(
 			filterDistribution.GetDistribution2D(), &pixelFilterDistributionSize);
 }
@@ -147,40 +147,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Filter
 	//--------------------------------------------------------------------------
 
-	pixelFilter = renderConfig->AllocPixelFilter();
-	const FilterType filterType = pixelFilter ? pixelFilter->GetType() : FILTER_NONE;
-
-	oclPixelFilter = new slg::ocl::Filter();
-	// Force pixel filter to NONE if I'm RTPATHOCL
-	if ((filterType == FILTER_NONE) || (GetEngineType() == RTPATHOCL))
-		oclPixelFilter->type = slg::ocl::FILTER_NONE;
-	else if (filterType == FILTER_BOX) {
-		oclPixelFilter->type = slg::ocl::FILTER_BOX;
-		oclPixelFilter->box.widthX = pixelFilter->xWidth;
-		oclPixelFilter->box.widthY = pixelFilter->yWidth;
-	} else if (filterType == FILTER_GAUSSIAN) {
-		oclPixelFilter->type = slg::ocl::FILTER_GAUSSIAN;
-		oclPixelFilter->gaussian.widthX = pixelFilter->xWidth;
-		oclPixelFilter->gaussian.widthY = pixelFilter->yWidth;
-		oclPixelFilter->gaussian.alpha = ((GaussianFilter *)pixelFilter)->alpha;
-	} else if (filterType == FILTER_MITCHELL) {
-		oclPixelFilter->type = slg::ocl::FILTER_MITCHELL;
-		oclPixelFilter->mitchell.widthX = pixelFilter->xWidth;
-		oclPixelFilter->mitchell.widthY = pixelFilter->yWidth;
-		oclPixelFilter->mitchell.B = ((MitchellFilter *)pixelFilter)->B;
-		oclPixelFilter->mitchell.C = ((MitchellFilter *)pixelFilter)->C;
-	} else if (filterType == FILTER_MITCHELL_SS) {
-		oclPixelFilter->type = slg::ocl::FILTER_MITCHELL;
-		oclPixelFilter->mitchell.widthX = pixelFilter->xWidth;
-		oclPixelFilter->mitchell.widthY = pixelFilter->yWidth;
-		oclPixelFilter->mitchell.B = ((MitchellFilterSS *)pixelFilter)->B;
-		oclPixelFilter->mitchell.C = ((MitchellFilterSS *)pixelFilter)->C;
-	} else if (filterType == FILTER_BLACKMANHARRIS) {
-		oclPixelFilter->type = slg::ocl::FILTER_BLACKMANHARRIS;
-		oclPixelFilter->blackmanharris.widthX = pixelFilter->xWidth;
-		oclPixelFilter->blackmanharris.widthY = pixelFilter->yWidth;
-	} else
-		throw std::runtime_error("Unknown path.filter.type: " + boost::lexical_cast<std::string>(filterType));
+	oclPixelFilter = Filter::FromPropertiesOCL(cfg);
 	
 	useFastPixelFilter = cfg.Get(Property("path.fastpixelfilter.enable")(true)).Get<bool>();
 	if (useFastPixelFilter)
@@ -196,8 +163,6 @@ void PathOCLRenderEngine::StopLockLess() {
 
 	delete[] pixelFilterDistribution;
 	pixelFilterDistribution = NULL;
-	delete pixelFilter;
-	pixelFilter = NULL;
 }
 
 void PathOCLRenderEngine::UpdateFilmLockLess() {

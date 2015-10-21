@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen) {
-	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+	const string type = cfg.Get(Property("sampler.type")(RandomSampler::GetObjectTag())).Get<string>();
 
 	SamplerSharedDataRegistry::FromProperties func;
 	if (SamplerSharedDataRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
@@ -58,8 +58,12 @@ Properties Sampler::ToProperties() const {
 			Property("sampler.type")(SamplerType2String(GetType()));
 }
 
+//------------------------------------------------------------------------------
+// Static methods used by SamplerRegistry
+//------------------------------------------------------------------------------
+
 Properties Sampler::ToProperties(const Properties &cfg) {
-	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+	const string type = cfg.Get(Property("sampler.type")(RandomSampler::GetObjectTag())).Get<string>();
 
 	SamplerRegistry::ToProperties func;
 
@@ -71,7 +75,7 @@ Properties Sampler::ToProperties(const Properties &cfg) {
 
 Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+	const string type = cfg.Get(Property("sampler.type")(RandomSampler::GetObjectTag())).Get<string>();
 
 	SamplerRegistry::FromProperties func;
 	if (SamplerRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
@@ -81,7 +85,7 @@ Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 }
 
 slg::ocl::Sampler *Sampler::FromPropertiesOCL(const Properties &cfg) {
-	const string type = cfg.Get(Property("sampler.type")("RANDOM")).Get<string>();
+	const string type = cfg.Get(Property("sampler.type")(RandomSampler::GetObjectTag())).Get<string>();
 
 	SamplerRegistry::FromPropertiesOCL func;
 	if (SamplerRegistry::STATICTABLE_NAME(FromPropertiesOCL).Get(type, func))

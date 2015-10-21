@@ -119,6 +119,4 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 }
 
 Properties SobolSampler::defaultProps = Properties() <<
-			// Not using SamplerType2String(SOBOL) here because the order
-			// of static initialization is not defined across multiple .cpp
-			Property("sampler.type")("SOBOL");
+			Property("sampler.type")(SobolSampler::GetObjectTag());
