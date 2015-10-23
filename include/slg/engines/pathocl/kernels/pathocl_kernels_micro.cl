@@ -818,11 +818,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	Sampler_NextSample(&seedValue, sample, sampleData, filmWidth, filmHeight
-#if defined(PARAM_USE_FAST_PIXEL_FILTER)
-			, pixelFilterDistribution
-#endif
-			);
+	Sampler_NextSample(&seedValue, sample, sampleData);
 
 	// Save the state
 	taskState->state = MK_GENERATE_CAMERA_RAY;
@@ -870,8 +866,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	GenerateCameraPath(&tasksDirectLight[gid], taskState, sample, sampleData, camera, filmWidth, filmHeight, ray, &seedValue);
-	// taskState->state is set to RT_NEXT_VERTEX inside GenerateCameraPath()
+	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			pixelFilterDistribution,
+#endif
+			ray, &seedValue);
+	// taskState->state is set to RT_NEXT_VERTEX inside GenerateEyePath()
 
 	// Re-initialize the volume information
 #if defined(PARAM_HAS_VOLUMES)

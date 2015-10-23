@@ -94,11 +94,19 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete[] gpuTaskStats;
 }
 
-void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
+void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
+		u_int *filmSubRegion) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const Film *engineFilm = engine->film;
+
 	*filmWidth = engineFilm->GetWidth();
 	*filmHeight = engineFilm->GetHeight();
+
+	const u_int *subRegion = engineFilm->GetSubRegion();
+	filmSubRegion[0] = subRegion[0];
+	filmSubRegion[1] = subRegion[1];
+	filmSubRegion[2] = subRegion[2];
+	filmSubRegion[3] = subRegion[3];
 }
 
 string PathOCLRenderThread::AdditionalKernelOptions() {
@@ -579,6 +587,11 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	initKernel->setArg(argIndex++, *cameraBuff);
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
+	const u_int *filmSubRegion = threadFilms[0]->film->GetSubRegion();
+	initKernel->setArg(argIndex++, filmSubRegion[0]);
+	initKernel->setArg(argIndex++, filmSubRegion[1]);
+	initKernel->setArg(argIndex++, filmSubRegion[2]);
+	initKernel->setArg(argIndex++, filmSubRegion[3]);
 }
 
 void PathOCLRenderThread::Stop() {

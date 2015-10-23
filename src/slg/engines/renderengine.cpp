@@ -59,7 +59,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 
 	// Force a complete preprocessing
 	renderConfig->scene->editActions.AddAllAction();
-	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight());
+	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
 
 	samplesCount = 0;
 	elapsedTime = 0.0f;
@@ -156,7 +156,7 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		contextStopped = false;
 
 	// Pre-process scene data
-	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight());
+	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
 
 	if (contextStopped) {
 		// Set the LuxRays DataSet

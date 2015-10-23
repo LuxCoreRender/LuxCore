@@ -503,11 +503,9 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 		const u_int sampleX, const u_int sampleY) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 
-	float u0, u1;
-	SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
-
-	// Sample according the pixel filter distribution
-	engine->pixelFilterDistribution->SampleContinuous(u0, u1, &u0, &u1);
+	//--------------------------------------------------------------------------
+	//Initialize SampleResult
+	//--------------------------------------------------------------------------
 
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
@@ -532,13 +530,27 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
 
+	//--------------------------------------------------------------------------
+	// Sample image plane
+	//--------------------------------------------------------------------------
+
+	float u0, u1;
+	SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
+
+	// Sample according the pixel filter distribution
+	engine->pixelFilterDistribution->SampleContinuous(u0, u1, &u0, &u1);
+
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
+
 	Ray eyeRay;
 	engine->renderConfig->scene->camera->GenerateRay(sampleResult.filmX, sampleResult.filmY,
 			&eyeRay, rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
+	//--------------------------------------------------------------------------
 	// Trace the path
+	//--------------------------------------------------------------------------
+
 	PathVolumeInfo volInfo;
 	TraceEyePath(rndGen, eyeRay, &volInfo, &sampleResult);
 

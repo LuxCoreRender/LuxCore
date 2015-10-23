@@ -61,7 +61,8 @@ public:
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
 		SampleResult *sampleResult = NULL) const;
 
-	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight);
+	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight,
+		const u_int *filmSubRegion);
 
 	luxrays::Properties ToProperties();
 

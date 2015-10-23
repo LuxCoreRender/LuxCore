@@ -35,8 +35,10 @@ TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int t
 			xStart(tileX), yStart(tileY), pass(0), error(numeric_limits<float>::infinity()),
 			done(false), tileRepository(repo), allPassFilm(NULL), evenPassFilm(NULL),
 			allPassFilmTotalYValue(0.f) {
-	tileWidth = Min(xStart + tileRepository->tileWidth, film.GetWidth()) - xStart;
-	tileHeight = Min(yStart + tileRepository->tileHeight, film.GetHeight()) - yStart;
+	const u_int *filmSubRegion = film.GetSubRegion();
+
+	tileWidth = Min(xStart + tileRepository->tileWidth, filmSubRegion[1] + 1) - xStart;
+	tileHeight = Min(yStart + tileRepository->tileHeight, filmSubRegion[3] + 1) - yStart;
 
 	if (tileRepository->enableMultipassRendering && (tileRepository->convergenceTestThreshold > 0.f)) {
 		InitTileFilm(film, &allPassFilm);
@@ -323,21 +325,22 @@ void TileRepository::HilberCurveTiles(
 			xo + xd * static_cast<int>(n2 - 1) + xp * static_cast<int>(n - 1),
 			yo + yd * static_cast<int>(n2 - 1) + yp * static_cast<int>(n - 1),
 			-xp, -yp, -xd, -yd, xEnd, yEnd);
-	}	
+	}
 }
 
 void TileRepository::InitTiles(const Film &film) {
-	filmWidth = film.GetWidth();
-	filmHeight = film.GetHeight();
+	const u_int *filmSubRegion = film.GetSubRegion();
+	const u_int filmRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+	const u_int filmRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 
-	const u_int n = RoundUp(filmWidth, tileWidth) / tileWidth;
-	const u_int m = RoundUp(filmHeight, tileHeight) / tileHeight;
+	const u_int n = RoundUp(filmRegionWidth, tileWidth) / tileWidth;
+	const u_int m = RoundUp(filmRegionHeight, tileHeight) / tileHeight;
 
 	HilberCurveTiles(film, RoundUpPow2(n * m),
-			0, 0,
+			filmSubRegion[0], filmSubRegion[2],
 			0, tileHeight,
 			tileWidth, 0,
-			filmWidth, filmHeight);
+			filmSubRegion[1] + 1, filmSubRegion[3] + 1);
 
 	BOOST_FOREACH(Tile *tile, tileList)
 		todoTiles.push(tile);
@@ -440,7 +443,7 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 				// Reduce the target threshold and continue the rendering				
 				if (enableRenderingDonePrint) {
 					const double elapsedTime = WallClockTime() - startTime;
-					SLG_LOG(boost::format("Threshold %.4f reached: %.2f secs") % convergenceTestThreshold % elapsedTime);
+					SLG_LOG(boost::format("Threshold256 %.4f reached: %.2f secs") % (256.f * convergenceTestThreshold) % elapsedTime);
 				}
 
 				convergenceTestThreshold *= convergenceTestThresholdReduction;
