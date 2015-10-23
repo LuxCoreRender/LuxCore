@@ -53,7 +53,7 @@ public:
 
 protected:
 	virtual void RenderThreadImpl();
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight);
+	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
 	virtual std::string AdditionalKernelDefinitions();

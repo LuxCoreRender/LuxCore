@@ -100,8 +100,6 @@ protected:
 	bool Bounce(const float time, Sampler *sampler, const u_int sampleOffset,
 		PathVertexVM *pathVertex, luxrays::Ray *nextEventRay) const;
 
-	u_int pixelCount;
-
 	float misVmWeightFactor; // Weight of vertex merging (used in VC)
     float misVcWeightFactor; // Weight of vertex connection (used in VM)
 	float vmNormalization; // 1 / (Pi * radius^2 * light_path_count)

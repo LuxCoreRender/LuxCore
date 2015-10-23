@@ -84,7 +84,8 @@ Scene::~Scene() {
 	delete dataSet;
 }
 
-void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight) {
+void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight,
+		const u_int *filmSubRegion) {
 	if (lightDefs.GetSize() == 0) {
 		throw runtime_error("The scene doesn't include any light source (note: volume emission doesn't count for this check)");
 
@@ -109,7 +110,7 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 
 	// Check if I have to update the camera
 	if (editActions.Has(CAMERA_EDIT))
-		camera->Update(filmWidth, filmHeight);
+		camera->Update(filmWidth, filmHeight, filmSubRegion);
 
 	// Check if I have to rebuild the dataset
 	if (editActions.Has(GEOMETRY_EDIT)) {

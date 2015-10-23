@@ -83,6 +83,10 @@ Film::Film() {
 
 	width = 0;
 	height = 0;
+	subRegion[0] = 0;
+	subRegion[1] = 0;
+	subRegion[2] = 0;
+	subRegion[3] = 0;
 	radianceGroupCount = 0;
 
 	channel_ALPHA = NULL;
@@ -112,11 +116,22 @@ Film::Film() {
 	imagePipeline = NULL;
 }
 
-Film::Film(const u_int w, const u_int h) {
+Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	initialized = false;
 
 	width = w;
 	height = h;
+	if (sr) {
+		subRegion[0] = sr[0];
+		subRegion[1] = sr[1];
+		subRegion[2] = sr[2];
+		subRegion[3] = sr[3];
+	} else {
+		subRegion[0] = 0;
+		subRegion[1] = w - 1;
+		subRegion[2] = 0;
+		subRegion[3] = h - 1;
+	}
 	radianceGroupCount = 1;
 
 	channel_ALPHA = NULL;

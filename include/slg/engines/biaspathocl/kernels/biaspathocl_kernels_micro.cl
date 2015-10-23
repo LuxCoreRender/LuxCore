@@ -46,8 +46,8 @@
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GENERATE_CAMERA_RAY(
-		const uint tileStartX,
-		const uint tileStartY,
+		const uint tileStartX, const uint tileStartY,
+		const uint tileWidth, const uint tileHeight,
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -59,6 +59,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GE
 	const uint samplePixelY = samplePixelIndex / PARAM_TILE_WIDTH;
 
 	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
+			(samplePixelX >= tileWidth) ||
+			(samplePixelY >= tileHeight) ||
 			(tileStartX + samplePixelX >= engineFilmWidth) ||
 			(tileStartY + samplePixelY >= engineFilmHeight)) {
 		task->pathState = MK_DONE;
@@ -526,7 +528,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			taskResults,
 			pixelFilterDistribution,
 			// Film parameters
-			filmWidth, filmHeight
+			filmWidth, filmHeight,
+			0, filmWidth - 1,
+			0, filmHeight - 1
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 			, filmRadianceGroup0
 #endif
@@ -689,7 +693,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			taskResults,
 			pixelFilterDistribution,
 			// Film parameters
-			filmWidth, filmHeight
+			filmWidth, filmHeight,
+			0, filmWidth - 1,
+			0, filmHeight - 1
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 			, filmRadianceGroup0
 #endif
@@ -852,7 +858,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 			taskResults,
 			pixelFilterDistribution,
 			// Film parameters
-			filmWidth, filmHeight
+			filmWidth, filmHeight,
+			0, filmWidth - 1,
+			0, filmHeight - 1
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 			, filmRadianceGroup0
 #endif

@@ -379,7 +379,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(initStatWorkGroupSize));
 
 				// Render the tile
-				UpdateKernelArgsForTile(tile->xStart, tile->yStart, 0);
+				UpdateKernelArgsForTile(tile, 0);
 
 				// Render all pixel samples
 				EnqueueRenderSampleKernel(currentQueue);

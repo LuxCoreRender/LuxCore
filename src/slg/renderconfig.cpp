@@ -256,10 +256,13 @@ Film *RenderConfig::AllocFilm() const {
 	//--------------------------------------------------------------------------
 
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
-	GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
+	const bool filmSubRegionUsed = GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
 
 	SLG_LOG("Film resolution: " << filmFullWidth << "x" << filmFullHeight);
-	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight));
+	if (filmSubRegionUsed)
+		SLG_LOG("Film sub-region: " << filmSubRegion[0] << " " << filmSubRegion[1] << filmSubRegion[2] << " " << filmSubRegion[3]);
+	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight,
+			filmSubRegionUsed ? filmSubRegion : NULL));
 
 	// For compatibility with the past
 	if (cfg.IsDefined("film.alphachannel.enable")) {

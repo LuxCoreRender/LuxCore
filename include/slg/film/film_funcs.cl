@@ -18,6 +18,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+void Film_GetSampleXY(const float u0, const float u1, float *filmX, float *filmY,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
+	*filmX = fmin(filmSubRegion0 + u0 * (filmSubRegion1 - filmSubRegion0 + 1), (float)(filmWidth - 1));
+	*filmY = fmin(filmSubRegion2 + u1 * (filmSubRegion3 - filmSubRegion2 + 1), (float)(filmHeight - 1));
+}
+
 #if defined(PARAM_USE_PIXEL_ATOMICS)
 void AtomicAdd(__global float *val, const float delta) {
 	union {
@@ -380,7 +388,9 @@ Error: unknown image filter !!!
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
-		const uint filmWidth, const uint filmHeight
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 		, __global float *filmRadianceGroup0
 #endif

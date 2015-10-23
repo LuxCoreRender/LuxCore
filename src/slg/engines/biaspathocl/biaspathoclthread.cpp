@@ -89,10 +89,15 @@ void BiasPathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&pixelFilterBuff);
 }
 
-void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
+void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
+		u_int *filmSubRegion) {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 	*filmWidth = engine->tileRepository->tileWidth;
 	*filmHeight = engine->tileRepository->tileHeight;
+	filmSubRegion[0] = 0; 
+	filmSubRegion[1] = engine->tileRepository->tileWidth - 1;
+	filmSubRegion[2] = 0;
+	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
 string BiasPathOCLRenderThread::AdditionalKernelOptions() {
@@ -257,6 +262,9 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bo
 
 	u_int argIndex = 0;
 	if (firstKernel) {
+		// They will be set to the right value when the Tile information are available
+		rsKernel->setArg(argIndex++, 0);
+		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
 	}
@@ -364,6 +372,9 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	//--------------------------------------------------------------------------
 
 	argIndex = 0;
+	// They will be set to the right value when the Tile information are available
+	mergePixelSamplesKernel->setArg(argIndex++, 0);
+	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
@@ -403,19 +414,23 @@ void BiasPathOCLRenderThread::EnqueueRenderSampleKernel(cl::CommandQueue &oclQue
 			cl::NDRange(renderSampleWorkGroupSize));
 }
 
-void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const u_int xStart, const u_int yStart,
+void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const TileRepository::Tile *tile,
 		const u_int filmIndex) {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 	
 	// Update renderSampleKernel args
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(0, xStart);
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(1, yStart);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(0, tile->xStart);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(1, tile->yStart);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(2, tile->tileWidth);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(3, tile->tileHeight);
 
 	// Update mergePixelSamplesKernel args
-	mergePixelSamplesKernel->setArg(0, xStart);
-	mergePixelSamplesKernel->setArg(1, yStart);
-	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 5);
+	mergePixelSamplesKernel->setArg(0, tile->xStart);
+	mergePixelSamplesKernel->setArg(1, tile->yStart);
+	mergePixelSamplesKernel->setArg(2, tile->tileWidth);
+	mergePixelSamplesKernel->setArg(3, tile->tileHeight);
+	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 7);
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {
@@ -468,7 +483,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					threadFilms[i]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 
 					// Render the tile
-					UpdateKernelArgsForTile(tiles[i]->xStart, tiles[i]->yStart, i);
+					UpdateKernelArgsForTile(tiles[i], i);
 
 					// Render all pixel samples
 					EnqueueRenderSampleKernel(oclQueue);

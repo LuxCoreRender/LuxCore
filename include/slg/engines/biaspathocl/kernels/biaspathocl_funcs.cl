@@ -1428,6 +1428,8 @@ uint SampleComponent(
 
 #define KERNEL_ARGS_FILM \
 		, const uint filmWidth, const uint filmHeight \
+		, const uint filmSubRegion0, const uint filmSubRegion1 \
+		, const uint filmSubRegion2, const uint filmSubRegion3 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
@@ -1712,10 +1714,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
-		const uint tileStartX
-		, const uint tileStartY
-		, const uint engineFilmWidth, const uint engineFilmHeight
-		, __global SampleResult *taskResults
+		const uint tileStartX, const uint tileStartY,
+		const uint tileWidth, const uint tileHeight,
+		const uint engineFilmWidth, const uint engineFilmHeight,
+		__global SampleResult *taskResults
 		// Film parameters
 		KERNEL_ARGS_FILM
 		) {
@@ -1726,6 +1728,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	sampleY = gid / PARAM_TILE_WIDTH;
 
 	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT) ||
+			(sampleX >= tileWidth) ||
+			(sampleY >= tileHeight) ||
 			(tileStartX + sampleX >= engineFilmWidth) ||
 			(tileStartY + sampleY >= engineFilmHeight))
 		return;

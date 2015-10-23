@@ -202,10 +202,11 @@ void CPUNoTileRenderThread::StartRenderThread() {
 
 	const u_int filmWidth = cpuNoTileEngine->film->GetWidth();
 	const u_int filmHeight = cpuNoTileEngine->film->GetHeight();
+	const u_int *filmSubRegion = cpuNoTileEngine->film->GetSubRegion();
 
 	delete threadFilm;
 
-	threadFilm = new Film(filmWidth, filmHeight);
+	threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
 	threadFilm->CopyDynamicSettings(*(cpuNoTileEngine->film));
 	threadFilm->RemoveChannel(Film::RGB_TONEMAPPED);
 	threadFilm->Init();
@@ -288,7 +289,7 @@ void CPUTileRenderThread::StartRenderThread() {
 	delete tileFilm;
 
 	CPUTileRenderEngine *cpuTileEngine = (CPUTileRenderEngine *)renderEngine;
-	tileFilm = new Film(cpuTileEngine->tileRepository->tileWidth, cpuTileEngine->tileRepository->tileHeight);
+	tileFilm = new Film(cpuTileEngine->tileRepository->tileWidth, cpuTileEngine->tileRepository->tileHeight, NULL);
 	tileFilm->CopyDynamicSettings(*(cpuTileEngine->film));
 	tileFilm->Init();
 

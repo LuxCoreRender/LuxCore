@@ -43,7 +43,7 @@ public:
 
 protected:
 	virtual void RenderThreadImpl();
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight);
+	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
 	virtual std::string AdditionalKernelDefinitions();
@@ -54,7 +54,7 @@ protected:
 	virtual void Stop();
 	
 	void SetRenderSampleKernelArgs(cl::Kernel *renderSampleKernel, bool firstKernel);
-	void UpdateKernelArgsForTile(const u_int xStart, const u_int yStart, const u_int filmIndex);
+	void UpdateKernelArgsForTile(const TileRepository::Tile *tile, const u_int filmIndex);
 	void EnqueueRenderSampleKernel(cl::CommandQueue &oclQueue);
 
 	// OpenCL variables
