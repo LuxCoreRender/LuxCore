@@ -16,29 +16,62 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_SAMPLERWINDOW_H
-#define	_LUXCOREAPP_SAMPLERWINDOW_H
+#ifndef _LUXCOREAPP_TYPETABLE_H
+#define	_LUXCOREAPP_TYPETABLE_H
 
 #include <string>
+#include <boost/unordered_map.hpp>
 
-#include <imgui.h>
-
-#include "objecteditorwindow.h"
-#include "typetable.h"
-
-class LuxCoreApp;
-
-class SamplerWindow : public ObjectEditorWindow {
+class TypeTable {
 public:
-	SamplerWindow(LuxCoreApp *a);
-	~SamplerWindow() { }
+	TypeTable() { }
+	~TypeTable() { }
+
+	TypeTable &Add(const std::string &tag, const int val) {
+		toValTable[tag] = val;
+		toStringTable[val] = tag;
+
+		// Update tagListString
+		tagListString.append(tag);
+		tagListString.push_back(0);
+
+		return *this;
+	}
+
+	void SetDefault(const std::string &tag) {
+		defaultTag = tag;
+	}
+
+	std::string GetDefaultTag() const { return defaultTag; }
+
+	int GetVal(const std::string &tag) {
+		if (toValTable.count(tag) > 0)
+			return toValTable[tag];
+		else
+			return toValTable[defaultTag];
+	}
+
+	std::string GetTag(const int val) {
+		if (toStringTable.count(val) > 0)
+			return toStringTable[val];
+		else
+			return defaultTag;
+	}
+
+	const char *GetTagList() const {
+		std::string l = tagListString;
+		l.push_back(0);
+
+		return l.c_str();
+	}
 
 private:
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	boost::unordered_map<std::string, int> toValTable;
+	boost::unordered_map<int, std::string> toStringTable;
+
+	std::string defaultTag;
 	
-	TypeTable typeTable;
+	std::string tagListString;
 };
 
-#endif	/* _LUXCOREAPP_SAMPLERWINDOW_H */
+#endif	/* _LUXCOREAPP_TYPETABLE_H */

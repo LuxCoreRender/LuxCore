@@ -326,7 +326,7 @@ std::string KernelSource_film_funcs =
 "	}\n"
 "}\n"
 "\n"
-"#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)\n"
+"#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4) || (PARAM_IMAGE_FILTER_TYPE == 5)\n"
 "\n"
 "void Film_AddSampleFilteredResultColor(const int x, const int y,\n"
 "		const float distX, const float distY,\n"

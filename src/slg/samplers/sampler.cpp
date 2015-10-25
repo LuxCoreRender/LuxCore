@@ -75,7 +75,7 @@ Properties Sampler::ToProperties(const Properties &cfg) {
 
 Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	const string type = cfg.Get(Property("sampler.type")(RandomSampler::GetObjectTag())).Get<string>();
+	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
 	SamplerRegistry::FromProperties func;
 	if (SamplerRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))

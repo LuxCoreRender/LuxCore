@@ -25,6 +25,7 @@
 #include "luxcore/luxcore.h"
 #include "logwindow.h"
 #include "statswindow.h"
+#include "pixelfilterwindow.h"
 #include "samplerwindow.h"
 #include "helpwindow.h"
 
@@ -48,6 +49,7 @@ public:
 	// The flag is off by default but can be turned on by using the -m switch
 	bool optMouseGrabMode;
 
+	friend class PixelFilterWindow;
 	friend class SamplerWindow;
 	friend class StatsWindow;
 
@@ -81,6 +83,7 @@ private:
 
 	static LogWindow *currentLogWindow;
 
+	PixelFilterWindow pixelFilterWindow;
 	SamplerWindow samplerWindow;
 	StatsWindow statsWindow;
 	LogWindow logWindow;

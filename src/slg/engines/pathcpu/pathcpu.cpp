@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/engines/pathcpu/pathcpu.h"
+#include "slg/film/filters/filter.h"
 
 using namespace luxrays;
 using namespace slg;

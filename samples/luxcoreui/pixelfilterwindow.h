@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_SAMPLERWINDOW_H
-#define	_LUXCOREAPP_SAMPLERWINDOW_H
+#ifndef _LUXCOREAPP_PIXELFILTERWINDOW_H
+#define	_LUXCOREAPP_PIXELFILTERWINDOW_H
 
 #include <string>
 
@@ -28,17 +28,17 @@
 
 class LuxCoreApp;
 
-class SamplerWindow : public ObjectEditorWindow {
+class PixelFilterWindow : public ObjectEditorWindow {
 public:
-	SamplerWindow(LuxCoreApp *a);
-	~SamplerWindow() { }
+	PixelFilterWindow(LuxCoreApp *a);
+	~PixelFilterWindow() { }
 
 private:
 	virtual void RefreshObjectProperties(luxrays::Properties &props);
 	virtual void ParseObjectProperties(const luxrays::Properties &props);
 	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
-	
+
 	TypeTable typeTable;
 };
 
-#endif	/* _LUXCOREAPP_SAMPLERWINDOW_H */
+#endif	/* _LUXCOREAPP_PIXELFILTERWINDOW_H */

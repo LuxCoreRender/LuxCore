@@ -29,21 +29,12 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::NoneFilter)
 //------------------------------------------------------------------------------
 
 Properties NoneFilter::ToProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
-
 	return Properties() <<
-			cfg.Get(defaultProps.Get("film.filter.type")) <<
-			cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)) <<
-			cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth));
+			cfg.Get(defaultProps.Get("film.filter.type"));
 }
 
-
 Filter *NoneFilter::FromProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
-	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
-	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
-
-	return new NoneFilter(filterXWidth, filterYWidth);
+	return new NoneFilter();
 }
 
 slg::ocl::Filter *NoneFilter::FromPropertiesOCL(const Properties &cfg) {
@@ -54,6 +45,5 @@ slg::ocl::Filter *NoneFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-Properties NoneFilter::defaultProps = Properties() <<
-			Property("film.filter.type")(NoneFilter::GetObjectTag()) <<
-			Property("film.filter.width")(1.f);
+const Properties NoneFilter::defaultProps = Properties() <<
+			Property("film.filter.type")(NoneFilter::GetObjectTag());
