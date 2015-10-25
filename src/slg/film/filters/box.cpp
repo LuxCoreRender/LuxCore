@@ -48,7 +48,7 @@ slg::ocl::Filter *BoxFilter::FromPropertiesOCL(const Properties &cfg) {
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_NONE;
+	oclFilter->type = slg::ocl::FILTER_BOX;
 	oclFilter->box.widthX = filterXWidth;
 	oclFilter->box.widthY = filterYWidth;
 
