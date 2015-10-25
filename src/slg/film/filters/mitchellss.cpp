@@ -29,19 +29,13 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellSSFilter)
 //------------------------------------------------------------------------------
 
 Properties MitchellSSFilter::ToProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
-
 	return Properties() <<
-			cfg.Get(defaultProps.Get("film.filter.type")) <<
-			cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)) <<
-			cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)) <<
 			cfg.Get(defaultProps.Get("film.filter.mitchellss.b")) <<
 			cfg.Get(defaultProps.Get("film.filter.mitchellss.c"));
 }
 
-
 Filter *MitchellSSFilter::FromProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
+	const float defaultFilterWidth = cfg.Get(Filter::defaultProps.Get("film.filter.width")).Get<float>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
@@ -52,7 +46,7 @@ Filter *MitchellSSFilter::FromProperties(const Properties &cfg) {
 }
 
 slg::ocl::Filter *MitchellSSFilter::FromPropertiesOCL(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
+	const float defaultFilterWidth = cfg.Get(Filter::defaultProps.Get("film.filter.width")).Get<float>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
@@ -72,8 +66,7 @@ slg::ocl::Filter *MitchellSSFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-Properties MitchellSSFilter::defaultProps = Properties() <<
+const Properties MitchellSSFilter::defaultProps = Properties() <<
 			Property("film.filter.type")(MitchellSSFilter::GetObjectTag()) <<
-			Property("film.filter.width")(2.f) <<
 			Property("film.filter.mitchellss.b")(1.f / 3.f) <<
 			Property("film.filter.mitchellss.c")(1.f / 3.f);

@@ -66,7 +66,7 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	static luxrays::Properties defaultProps;
+	static const luxrays::Properties defaultProps;
 
 	// Used by serialization
 	GaussianFilter() { }

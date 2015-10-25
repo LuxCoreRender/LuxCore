@@ -37,15 +37,14 @@ namespace slg {
 class NoneFilter : public Filter {
 public:
 	// NoneFilter Public Methods
-	NoneFilter(const float xw, const float yw) :
-		Filter(xw, yw) { }
+	NoneFilter() :
+		Filter(.5f, .5f) { }
 	virtual ~NoneFilter() { }
 
 	virtual FilterType GetType() const { return FILTER_NONE; }
 
 	float Evaluate(const float x, const float y) const {
-		// This should be never called
-		throw std::runtime_error("Called NoneFilter::Evaluate()");
+		return 1.f;
 	}
 
 	//--------------------------------------------------------------------------
@@ -61,10 +60,7 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	static luxrays::Properties defaultProps;
-	
-	// Used by serialization
-	NoneFilter() { }
+	static const luxrays::Properties defaultProps;
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);

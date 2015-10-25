@@ -73,7 +73,7 @@ public:
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 private:
-	static luxrays::Properties defaultProps;
+	static const luxrays::Properties defaultProps;
 };
 
 }

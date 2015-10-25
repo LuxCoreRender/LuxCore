@@ -73,7 +73,7 @@ private:
 	static float CalcA0(const float B, const float C) { return (76.f - 16.f * B + 8.f * C) / 81.f; }
 	static float CalcA1(const float a0) { return (1.f - a0)/ 2.f; }
 
-	static luxrays::Properties defaultProps;
+	static const luxrays::Properties defaultProps;
 
 	// Used by serialization
 	MitchellSSFilter() { }

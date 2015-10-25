@@ -62,5 +62,5 @@ slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-Properties RandomSampler::defaultProps = Properties() <<
+const Properties RandomSampler::defaultProps = Properties() <<
 			Property("sampler.type")(RandomSampler::GetObjectTag());

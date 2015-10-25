@@ -118,5 +118,5 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-Properties SobolSampler::defaultProps = Properties() <<
+const Properties SobolSampler::defaultProps = Properties() <<
 			Property("sampler.type")(SobolSampler::GetObjectTag());

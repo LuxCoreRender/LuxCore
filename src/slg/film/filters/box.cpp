@@ -29,17 +29,12 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::BoxFilter)
 //------------------------------------------------------------------------------
 
 Properties BoxFilter::ToProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
-
 	return Properties() <<
-			cfg.Get(defaultProps.Get("film.filter.type")) <<
-			cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)) <<
-			cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth));
+			cfg.Get(defaultProps.Get("film.filter.type"));
 }
 
-
 Filter *BoxFilter::FromProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
+	const float defaultFilterWidth = cfg.Get(Filter::defaultProps.Get("film.filter.width")).Get<float>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
@@ -47,7 +42,7 @@ Filter *BoxFilter::FromProperties(const Properties &cfg) {
 }
 
 slg::ocl::Filter *BoxFilter::FromPropertiesOCL(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
+	const float defaultFilterWidth = cfg.Get(Filter::defaultProps.Get("film.filter.width")).Get<float>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
@@ -60,6 +55,5 @@ slg::ocl::Filter *BoxFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-Properties BoxFilter::defaultProps = Properties() <<
-			Property("film.filter.type")(BoxFilter::GetObjectTag()) <<
-			Property("film.filter.width")(2.f);
+const Properties BoxFilter::defaultProps = Properties() <<
+			Property("film.filter.type")(BoxFilter::GetObjectTag());

@@ -28,7 +28,16 @@ using namespace luxcore;
 //------------------------------------------------------------------------------
 // SamplerWindow
 //------------------------------------------------------------------------------
-void SamplerWindow::RefreshObjectProperties(luxrays::Properties &props) {
+
+SamplerWindow::SamplerWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Sampler") {
+	typeTable
+		.Add("RANDOM", 0)
+		.Add("SOBOL", 1)
+		.Add("METROPOLIS", 2)
+		.SetDefault("SOBOL");
+}
+
+void SamplerWindow::RefreshObjectProperties(Properties &props) {
 	RenderConfig *config = app->config;
 	try {
 		props = config->ToProperties().GetAllProperties("sampler");
@@ -40,38 +49,21 @@ void SamplerWindow::RefreshObjectProperties(luxrays::Properties &props) {
 	}
 }
 
-void SamplerWindow::ParseObjectProperties(const luxrays::Properties &props) {
-	app->EditRenderConfig(props);
+void SamplerWindow::ParseObjectProperties(const Properties &props) {
+	app->EditRenderConfig(props.GetAllProperties("sampler"));
 }
 
-bool SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProps) {
-	//------------------------------------------------------------------
+bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
+	//--------------------------------------------------------------------------
 	// sampler.type
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
-	const string currentSamplerType = props.Get(Property("sampler.type")("RANDOM")).Get<string>();
-	int samplerTypeIndex;
-	if (currentSamplerType == "RANDOM")
-		samplerTypeIndex = 0;
-	else if (currentSamplerType == "SOBOL")
-		samplerTypeIndex = 1;
-	else if (currentSamplerType == "METROPOLIS")
-		samplerTypeIndex = 2;
-	else {
-		// It is an unknown value, force to RANDOM
-		samplerTypeIndex = 0;
-		props.Set(Property("sampler.type")("RANDOM"));
-	}
-
-	if (ImGui::Combo("Sampler type", &samplerTypeIndex, "RANDOM\0SOBOL\0METROPOLIS\0\0")) {
+	const string currentSamplerType = props.Get(Property("sampler.type")(typeTable.GetDefaultTag())).Get<string>();
+	int typeIndex = typeTable.GetVal(currentSamplerType);
+	if (ImGui::Combo("Sampler type", &typeIndex, typeTable.GetTagList())) {
 		props.Clear();
 
-		if (samplerTypeIndex == 1)
-			props << Property("sampler.type")("SOBOL");
-		else if (samplerTypeIndex == 2)
-			props << Property("sampler.type")("METROPOLIS");
-		else
-			props << Property("sampler.type")("RANDOM");
+		props << Property("sampler.type")(typeTable.GetTag(typeIndex));
 
 		return true;
 	}
@@ -80,13 +72,13 @@ bool SamplerWindow::DrawObjectGUI(luxrays::Properties &props, bool &modifiedProp
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("sampler.type");
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// METROPOLIS
 	//
 	// At the moment, METROPOLIS is the only sampler with some parameter
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
-	if (samplerTypeIndex == 2) {
+	if (typeIndex == typeTable.GetVal("METROPOLIS")) {
 		int ival;
 		float fval;
 
