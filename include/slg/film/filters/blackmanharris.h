@@ -47,8 +47,6 @@ public:
 		return BlackmanHarris1D(x * invXWidth) * BlackmanHarris1D(y *  invYWidth);
 	}
 
-	virtual Filter *Clone() const { return new BlackmanHarrisFilter(xWidth, yWidth); }
-
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------

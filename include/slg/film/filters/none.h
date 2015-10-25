@@ -48,8 +48,6 @@ public:
 		throw std::runtime_error("Called NoneFilter::Evaluate()");
 	}
 
-	virtual Filter *Clone() const { return new NoneFilter(xWidth, yWidth); }
-
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------

@@ -22,7 +22,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellSSFilter);
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellSSFilter)
 
 //------------------------------------------------------------------------------
 // Static methods used by FilterRegistry
@@ -61,11 +61,13 @@ slg::ocl::Filter *MitchellSSFilter::FromPropertiesOCL(const Properties &cfg) {
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_MITCHELL;
-	oclFilter->mitchell.widthX = filterXWidth;
-	oclFilter->mitchell.widthY = filterYWidth;
-	oclFilter->mitchell.B = b;
-	oclFilter->mitchell.C = c;
+	oclFilter->type = slg::ocl::FILTER_MITCHELL_SS;
+	oclFilter->mitchellss.widthX = filterXWidth;
+	oclFilter->mitchellss.widthY = filterYWidth;
+	oclFilter->mitchellss.B = b;
+	oclFilter->mitchellss.C = c;
+	oclFilter->mitchellss.a0 = CalcA0(b, c);
+	oclFilter->mitchellss.a1 = CalcA1(oclFilter->mitchellss.a0);
 
 	return oclFilter;
 }

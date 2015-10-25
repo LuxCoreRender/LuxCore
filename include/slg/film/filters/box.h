@@ -47,8 +47,6 @@ public:
 		return 1.f;
 	}
 
-	virtual Filter *Clone() const { return new BoxFilter(xWidth, yWidth); }
-
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------

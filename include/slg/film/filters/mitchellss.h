@@ -40,7 +40,7 @@ public:
 	MitchellSSFilter(const float xw, const float yw,
 			const float b, const float c) :
 		Filter(xw * 5.f / 3.f, yw * 5.f / 3.f), B(b), C(c),
-		a0((76.f - 16.f * B + 8.f * C) / 81.f), a1((1.f - a0)/ 2.f) { }
+		a0(CalcA0(B, C)), a1(CalcA1(a0)) { }
 	virtual ~MitchellSSFilter() { }
 
 	virtual FilterType GetType() const { return FILTER_MITCHELL; }
@@ -55,8 +55,6 @@ public:
 			a1 * Mitchell1D(dist + 2.f / 3.f);
 	}
 
-	virtual Filter *Clone() const { return new MitchellSSFilter(xWidth, yWidth, B, C); }
-
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------
@@ -67,11 +65,14 @@ public:
 	static Filter *FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	float B, C;
+	float B, C, a0, a1;
 
 	friend class boost::serialization::access;
 
 private:
+	static float CalcA0(const float B, const float C) { return (76.f - 16.f * B + 8.f * C) / 81.f; }
+	static float CalcA1(const float a0) { return (1.f - a0)/ 2.f; }
+
 	static luxrays::Properties defaultProps;
 
 	// Used by serialization
@@ -97,8 +98,6 @@ private:
 				(-3.f + 2.f * B + C)) * x * x +
 				(1.f - B / 3.f);
 	}
-
-	float a0, a1;
 };
 
 }

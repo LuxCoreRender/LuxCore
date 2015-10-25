@@ -3,6 +3,7 @@ scene.camera.lookat.target = 0.0 0.0 0.4
 scene.camera.lensradius = 0.015
 scene.camera.focaldistance = 2.0
 scene.camera.autofocus.enable = 1
+#scene.camera.screenwindow = -1 0 -1 1
 ################################################################################
 scene.materials.shell.type = mirror
 scene.materials.shell.kr = 0.75 0.75 0.75

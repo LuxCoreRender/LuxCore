@@ -56,8 +56,6 @@ public:
 	virtual FilterType GetType() const = 0;
 	virtual float Evaluate(const float x, const float y) const = 0;
 
-	virtual Filter *Clone() const = 0;
-
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
 

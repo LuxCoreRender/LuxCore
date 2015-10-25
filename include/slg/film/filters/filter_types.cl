@@ -36,7 +36,8 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL, FILTER_BLACKMANHARRIS
+	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL,
+	FILTER_MITCHELL_SS, FILTER_BLACKMANHARRIS
 } FilterType;
 
 typedef struct {
@@ -55,6 +56,10 @@ typedef struct {
 			float widthX, widthY;
 			float B, C;
 		} mitchell;
+		struct {
+			float widthX, widthY;
+			float B, C, a0, a1;
+		} mitchellss;
 		struct {
 			float widthX, widthY;
 		} blackmanharris;
