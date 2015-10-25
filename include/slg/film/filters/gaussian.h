@@ -51,8 +51,6 @@ public:
 		return Gaussian(x, expX) * Gaussian(y, expY);
 	}
 
-	virtual Filter *Clone() const { return new GaussianFilter(xWidth, yWidth, alpha); }
-
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------

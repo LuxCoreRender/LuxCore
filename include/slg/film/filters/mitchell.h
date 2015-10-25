@@ -52,8 +52,6 @@ public:
 
 	}
 
-	virtual Filter *Clone() const { return new MitchellFilter(xWidth, yWidth, B, C); }
-
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------
