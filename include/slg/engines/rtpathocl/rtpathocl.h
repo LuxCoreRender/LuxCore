@@ -102,7 +102,9 @@ public:
 	RTPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RTPathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return RTPATHOCL; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
 	double GetFrameTime() const { return frameTime; }
 
 	virtual void BeginSceneEdit();
@@ -110,9 +112,20 @@ public:
 
 	void WaitNewFrame();
 
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return RTPATHOCL; }
+	static std::string GetObjectTag() { return "RTPATHOCL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+
 	friend class RTPathOCLRenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 

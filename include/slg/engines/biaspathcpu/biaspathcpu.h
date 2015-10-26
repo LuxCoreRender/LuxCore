@@ -112,7 +112,17 @@ public:
 	BiasPathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~BiasPathCPURenderEngine();
 
-	RenderEngineType GetEngineType() const { return BIASPATHCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return BIASPATHCPU; }
+	static std::string GetObjectTag() { return "BIASPATHCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Path depth settings
 	PathDepthInfo maxPathDepth;
@@ -131,6 +141,8 @@ public:
 	friend class BiasPathCPURenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual void StartLockLess();
 
 	FilterDistribution *pixelFilterDistribution;

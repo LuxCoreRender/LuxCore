@@ -42,7 +42,8 @@ public:
 		Filter(xw, yw), B(b), C(c) { }
 	virtual ~MitchellFilter() { }
 
-	virtual FilterType GetType() const { return FILTER_MITCHELL; }
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	float Evaluate(const float x, const float y) const {
 		const float distance = sqrtf(x * x * invXWidth * invXWidth +
@@ -51,6 +52,9 @@ public:
 		return Mitchell1D(distance);
 
 	}
+
+	// Transform the current object in Properties
+	virtual luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry

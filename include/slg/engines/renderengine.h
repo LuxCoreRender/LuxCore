@@ -35,16 +35,16 @@
 namespace slg {
 
 typedef enum {
-	PATHOCL = 4,
-	LIGHTCPU = 5,
-	PATHCPU = 6,
-	BIDIRCPU = 7,
-	BIDIRVMCPU = 10,
-	FILESAVER = 11,
-	RTPATHOCL = 12,
-	BIASPATHCPU = 14,
-	BIASPATHOCL = 15,
-	RTBIASPATHOCL = 16
+	PATHOCL,
+	LIGHTCPU,
+	PATHCPU,
+	BIDIRCPU,
+	BIDIRVMCPU,
+	FILESAVER,
+	RTPATHOCL,
+	BIASPATHCPU,
+	BIASPATHOCL,
+	RTBIASPATHOCL
 } RenderEngineType;
 
 //------------------------------------------------------------------------------
@@ -67,7 +67,8 @@ public:
 	void UpdateFilm();
 	virtual void WaitNewFrame() { }
 
-	virtual RenderEngineType GetEngineType() const = 0;
+	virtual RenderEngineType GetType() const = 0;
+	virtual std::string GetTag() const = 0;
 
 	void SetSeed(const unsigned long seed);
 	void GenerateNewSeed();
@@ -105,10 +106,26 @@ public:
 		return luxrays::Clamp(color.Filter(), cap, 1.f);
 	}
 
+	// Transform the current object in Properties
+	virtual luxrays::Properties ToProperties() const;
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	// This method is not used at the moment
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	// Allocate a Object based on the cfg definition
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+	// This method is not used at the moment
+	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
+
 	static RenderEngineType String2RenderEngineType(const std::string &type);
 	static const std::string RenderEngineType2String(const RenderEngineType type);
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;
 

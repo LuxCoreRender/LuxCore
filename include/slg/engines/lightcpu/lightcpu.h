@@ -66,7 +66,17 @@ public:
 	LightCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~LightCPURenderEngine();
 
-	RenderEngineType GetEngineType() const { return LIGHTCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return LIGHTCPU; }
+	static std::string GetObjectTag() { return "LIGHTCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Signed because of the delta parameter
 	int maxPathDepth;
@@ -77,6 +87,8 @@ public:
 	friend class LightCPURenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 

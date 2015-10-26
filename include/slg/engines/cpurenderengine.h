@@ -74,9 +74,13 @@ public:
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
 
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+
 	friend class CPURenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) = 0;
 
@@ -160,12 +164,16 @@ public:
 	u_int GetTileWidth() const { return tileRepository->tileWidth; }
 	u_int GetTileHeight() const { return tileRepository->tileHeight; }
 
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+
 	friend class CPUTileRenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	// I don't implement StartLockLess() here because the step of initializing
 	// the tile repository is left to the sub-class (so some TileRepository
-	// can be set before to start all rendering threads).
+	// parameter can be set before to start all rendering threads).
 	// virtual void StartLockLess();
 	virtual void StopLockLess();
 

@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SAMPLERREGISTER_H
-#define	_SLG_SAMPLERREGISTER_H
+#ifndef _SLG_SAMPLERREGISTRY_H
+#define	_SLG_SAMPLERREGISTRY_H
 
 #include <string>
 #include <vector>
@@ -35,8 +35,8 @@ namespace slg {
 
 // For an easy the declaration and registration of each Sampler sub-class
 // with Sampler StaticTable
-#define SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(C) \
-STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromProperties)
+#define SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(R, C) \
+STATICTABLE_DECLARE_REGISTRATION(R, C, std::string, FromProperties)
 
 #define SAMPLERSHAREDDATA_STATICTABLE_REGISTER(STRTAG, C) \
 STATICTABLE_REGISTER(SamplerSharedDataRegistry, C, STRTAG, std::string, FromProperties)
@@ -47,12 +47,12 @@ class SamplerSharedDataRegistry {
 protected:
 	// Used to register all sub-class FromProperties() static methods
 	typedef SamplerSharedData *(*FromProperties)(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
-	STATICTABLE_DECLARE_DECLARATION(std::string, FromProperties);
+	STATICTABLE_DECLARE_DECLARATION(SamplerSharedDataRegistry, std::string, FromProperties);
 
 	// For the registration of each SamplerSharedData sub-class with SamplerSharedData StaticTable
-	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(RandomSamplerSharedData);
-	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SobolSamplerSharedData);
-	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(MetropolisSamplerSharedData);
+	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, RandomSamplerSharedData);
+	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, SobolSamplerSharedData);
+	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, MetropolisSamplerSharedData);
 	// Just add here any new SamplerSharedData (don't forget in the .cpp too)
 
 	friend class SamplerSharedData;
@@ -81,13 +81,13 @@ protected:
 	// Used to register all sub-class FromPropertiesOCL() static methods
 	typedef slg::ocl::Sampler *(*FromPropertiesOCL)(const luxrays::Properties &cfg);
 
-	OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS;
+	OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(SamplerRegistry);
 
 	//--------------------------------------------------------------------------
 
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RandomSampler);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SobolSampler);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(MetropolisSampler);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, RandomSampler);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, SobolSampler);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, MetropolisSampler);
 	// Just add here any new Sampler (don't forget in the .cpp too)
 
 	friend class Sampler;
@@ -95,4 +95,4 @@ protected:
 
 }
 
-#endif	/* _SLG_SAMPLERREGISTER_H */
+#endif	/* _SLG_SAMPLERREGISTRY_H */

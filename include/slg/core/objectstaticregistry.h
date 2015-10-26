@@ -32,27 +32,27 @@ namespace slg {
 
 // For an easy the declaration and registration of each Object sub-class
 // with Object StaticTable
-#define OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(C) \
-STATICTABLE_DECLARE_REGISTRATION(C, std::string, GetObjectType); \
-STATICTABLE_DECLARE_REGISTRATION(C, std::string, GetObjectTag); \
-STATICTABLE_DECLARE_REGISTRATION(C, std::string, ToProperties); \
-STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromProperties); \
-STATICTABLE_DECLARE_REGISTRATION(C, std::string, FromPropertiesOCL)
+#define OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(R, C) \
+STATICTABLE_DECLARE_REGISTRATION(R, C, std::string, GetObjectType); \
+STATICTABLE_DECLARE_REGISTRATION(R, C, ObjectType, GetObjectTag); \
+STATICTABLE_DECLARE_REGISTRATION(R, C, std::string, ToProperties); \
+STATICTABLE_DECLARE_REGISTRATION(R, C, std::string, FromProperties); \
+STATICTABLE_DECLARE_REGISTRATION(R, C, std::string, FromPropertiesOCL)
 
 #define OBJECTSTATICREGISTRY_REGISTER(R, C) \
 STATICTABLE_REGISTER(R, C, C::GetObjectTag(), std::string, GetObjectType); \
-STATICTABLE_REGISTER(R, C, C::GetObjectTag(), std::string, GetObjectTag); \
+STATICTABLE_REGISTER(R, C, C::GetObjectType(), R::ObjectType, GetObjectTag); \
 STATICTABLE_REGISTER(R, C, C::GetObjectTag(), std::string, ToProperties); \
 STATICTABLE_REGISTER(R, C, C::GetObjectTag(), std::string, FromProperties); \
 STATICTABLE_REGISTER(R, C, C::GetObjectTag(), std::string, FromPropertiesOCL)
 
 // For an easy declaration of ObjectStaticRegistry like SamplerRegistry, etc.
-#define OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS \
-STATICTABLE_DECLARE_DECLARATION(std::string, GetObjectType); \
-STATICTABLE_DECLARE_DECLARATION(ObjectType, GetObjectTag); \
-STATICTABLE_DECLARE_DECLARATION(std::string, ToProperties); \
-STATICTABLE_DECLARE_DECLARATION(std::string, FromProperties); \
-STATICTABLE_DECLARE_DECLARATION(std::string, FromPropertiesOCL) 
+#define OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(R) \
+STATICTABLE_DECLARE_DECLARATION(R, std::string, GetObjectType); \
+STATICTABLE_DECLARE_DECLARATION(R, ObjectType, GetObjectTag); \
+STATICTABLE_DECLARE_DECLARATION(R, std::string, ToProperties); \
+STATICTABLE_DECLARE_DECLARATION(R, std::string, FromProperties); \
+STATICTABLE_DECLARE_DECLARATION(R, std::string, FromPropertiesOCL) 
 
 #define OBJECTSTATICREGISTRY_STATICFIELDS(R) \
 STATICTABLE_DECLARATION(R, std::string, GetObjectType); \

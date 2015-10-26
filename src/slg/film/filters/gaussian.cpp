@@ -24,6 +24,11 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianFilter)
 
+Properties GaussianFilter::ToProperties() const {
+	return Properties() <<
+			Property("film.filter.gaussian.alpha")(alpha);
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------

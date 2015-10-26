@@ -36,19 +36,17 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg, Film *flm,
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
 
-	const bool useCPUs = cfg.Get(Property("opencl.cpu.use")(true)).Get<bool>();
-	const bool useGPUs = cfg.Get(Property("opencl.gpu.use")(true)).Get<bool>();
+	const bool useCPUs = cfg.Get(GetDefaultProps().Get("opencl.cpu.use")).Get<bool>();
+	const bool useGPUs = cfg.Get(GetDefaultProps().Get("opencl.gpu.use")).Get<bool>();
+
+	// 0 means use the value suggested by the OpenCL driver
+	const u_int forceCPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")).Get<u_int>();
 	// 0 means use the value suggested by the OpenCL driver
 	// Note: I'm using 64 because some driver (i.e. NVIDIA) suggests a value and than
 	// throws a clEnqueueNDRangeKernel(CL_OUT_OF_RESOURCES)
-	const u_int forceGPUWorkSize = cfg.Get(Property("opencl.gpu.workgroup.size")(64)).Get<u_int>();
-	// 0 means use the value suggested by the OpenCL driver
-#if defined(__APPLE__)	
-	const u_int forceCPUWorkSize = cfg.Get(Property("opencl.cpu.workgroup.size")(1)).Get<u_int>();
-#else
-	const u_int forceCPUWorkSize = cfg.Get(Property("opencl.cpu.workgroup.size")(0)).Get<u_int>();
-#endif
-	const string oclDeviceConfig = cfg.Get(Property("opencl.devices.select")("")).Get<string>();
+	const u_int forceGPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")).Get<u_int>();
+
+	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
 
 	// Start OpenCL devices
 	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
@@ -101,4 +99,28 @@ size_t OCLRenderEngine::GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSe
 		return 48;
 	else 
 		return 64;
+}
+
+Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
+	return RenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("opencl.cpu.use")) <<
+			cfg.Get(GetDefaultProps().Get("opencl.gpu.use")) <<
+			cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")) <<
+			cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")) <<
+			cfg.Get(GetDefaultProps().Get("opencl.devices.select"));
+}
+
+Properties OCLRenderEngine::GetDefaultProps() {
+	static Properties props = RenderEngine::GetDefaultProps() <<
+			Property("opencl.cpu.use")(true) <<
+			Property("opencl.gpu.use")(true) <<
+#if defined(__APPLE__)	
+			Property("opencl.cpu.workgroup.size")(1) <<
+#else
+			Property("opencl.cpu.workgroup.size")(0) <<
+#endif
+			Property("opencl.gpu.workgroup.size")(64) <<
+			Property("opencl.devices.select")("");
+
+	return props;
 }

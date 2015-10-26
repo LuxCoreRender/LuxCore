@@ -47,8 +47,8 @@ void FileSaverRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	directoryName = cfg.Get(Property("filesaver.directory")("luxcore-exported-scene")).Get<string>();
-	renderEngineType = cfg.Get(Property("filesaver.renderengine.type")("PATHOCL")).Get<string>();
+	directoryName = cfg.Get(GetDefaultProps().Get("filesaver.directory")).Get<string>();
+	renderEngineType = cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type")).Get<string>();
 	
 	SaveScene();
 }
@@ -156,4 +156,26 @@ void FileSaverRenderEngine::SaveScene() {
 			}
 		}
 	}
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties FileSaverRenderEngine::ToProperties(const Properties &cfg) {
+	return RenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("filesaver.directory")) <<
+			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
+}
+
+RenderEngine *FileSaverRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new FileSaverRenderEngine(rcfg, flm, flmMutex);
+}
+
+Properties FileSaverRenderEngine::GetDefaultProps() {
+	static Properties props = RenderEngine::GetDefaultProps() <<
+			Property("filesaver.directory")("luxcore-exported-scene") <<
+			Property("filesaver.renderengine.type")("PATHCPU");
+
+	return props;
 }

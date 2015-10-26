@@ -89,7 +89,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	if (!cfg.IsDefined("opencl.task.count") && (GetEngineType() == RTPATHOCL)) {
+	if (!cfg.IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
 	} else {
@@ -125,17 +125,20 @@ void PathOCLRenderEngine::StartLockLess() {
 	// General path tracing settings
 	//--------------------------------------------------------------------------	
 	
-	maxPathDepth = Max(1, cfg.Get(Property("path.maxdepth")(5)).Get<int>());
-	rrDepth = Max(1, cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>());
-	rrImportanceCap = Clamp(cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>(), 0.f, 1.f);
+	maxPathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.maxdepth")).Get<int>());
+	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = Max(0.f,
-			cfg.Get(Property("path.clamping.variance.maxvalue")(
-				cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>())
-			).Get<float>());
-	pdfClampValue = Max(0.f, cfg.Get(Property("path.clamping.pdf.value")(0.f)).Get<float>());
+	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>();
+	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
+		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<float>();
+	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
+	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")).Get<float>());
+
+	useFastPixelFilter = cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")).Get<bool>();
+	usePixelAtomics = cfg.Get(Property("path.pixelatomics.enable")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Sampler
@@ -149,11 +152,8 @@ void PathOCLRenderEngine::StartLockLess() {
 
 	oclPixelFilter = Filter::FromPropertiesOCL(cfg);
 	
-	useFastPixelFilter = cfg.Get(Property("path.fastpixelfilter.enable")(true)).Get<bool>();
 	if (useFastPixelFilter)
 		InitPixelFilterDistribution();
-
-	usePixelAtomics = cfg.Get(Property("path.pixelatomics.enable")(false)).Get<bool>();
 
 	PathOCLBaseRenderEngine::StartLockLess();
 }
@@ -196,6 +196,38 @@ void PathOCLRenderEngine::UpdateCounters() {
 	for (size_t i = 0; i < intersectionDevices.size(); ++i)
 		totalCount += intersectionDevices[i]->GetTotalRaysCount();
 	raysCount = totalCount;
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
+	return PathOCLRenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
+			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
+			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
+			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
+			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
+			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
+			cfg.Get(GetDefaultProps().Get("path.pixelatomics.enable"));
+}
+
+RenderEngine *PathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new PathOCLRenderEngine(rcfg, flm, flmMutex);
+}
+
+Properties PathOCLRenderEngine::GetDefaultProps() {
+	static Properties props = OCLRenderEngine::GetDefaultProps() <<
+			Property("path.maxdepth")(5) <<
+			Property("path.russianroulette.depth")(3) <<
+			Property("path.russianroulette.cap")(.5f) <<
+			Property("path.clamping.variance.maxvalue")(0.f) <<
+			Property("path.clamping.pdf.value")(0.f) <<
+			Property("path.fastpixelfilter.enable")(true) <<
+			Property("path.pixelatomics.enable")(false);
+
+	return props;
 }
 
 #endif

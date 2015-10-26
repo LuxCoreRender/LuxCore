@@ -45,11 +45,15 @@ public:
 	}
 	virtual ~GaussianFilter() { }
 
-	virtual FilterType GetType() const { return FILTER_GAUSSIAN; }
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	float Evaluate(const float x, const float y) const {
 		return Gaussian(x, expX) * Gaussian(y, expY);
 	}
+
+	// Transform the current object in Properties
+	virtual luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by FilterRegistry

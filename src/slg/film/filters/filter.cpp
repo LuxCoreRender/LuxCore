@@ -27,7 +27,7 @@ using namespace slg;
 // Filter
 //------------------------------------------------------------------------------
 
-luxrays::Properties Filter::ToProperties() const {
+Properties Filter::ToProperties() const {
 	return Properties() <<
 			Property("film.filter.type")(FilterType2String(GetType())) <<
 			Property("film.filter.xwidth")(xWidth) <<
@@ -93,7 +93,7 @@ const string Filter::FilterType2String(const FilterType type) {
 	if (FilterRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown filter type in Filter::FilterType2String(): " + type);
+		throw runtime_error("Unknown filter type in Filter::FilterType2String(): " + boost::lexical_cast<string>(type));
 }
 
 const Properties Filter::defaultProps = Properties() <<

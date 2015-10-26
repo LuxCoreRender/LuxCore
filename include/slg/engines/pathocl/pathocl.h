@@ -109,7 +109,17 @@ public:
 			const bool realTime = false);
 	virtual ~PathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return PATHOCL; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return PATHOCL; }
+	static std::string GetObjectTag() { return "PATHOCL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	friend class PathOCLRenderThread;
 
@@ -127,6 +137,8 @@ public:
 	bool usePixelAtomics, useFastPixelFilter;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	void InitPixelFilterDistribution();
 
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);

@@ -54,6 +54,7 @@ public:
 	virtual ~Filter() { }
 
 	virtual FilterType GetType() const = 0;
+	virtual std::string GetTag() const = 0;
 	virtual float Evaluate(const float x, const float y) const = 0;
 
 	// Transform the current object in Properties

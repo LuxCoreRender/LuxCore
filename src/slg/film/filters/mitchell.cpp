@@ -24,6 +24,12 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellFilter)
 
+Properties MitchellFilter::ToProperties() const {
+	return Properties() <<
+			Property("film.filter.filter.mitchell.b")(B) <<
+			Property("film.filter.filter.mitchell.c")(C);
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by FilterRegistry
 //------------------------------------------------------------------------------

@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILTERREGISTER_H
-#define	_SLG_FILTERREGISTER_H
+#ifndef _SLG_FILTERREGISTRY_H
+#define	_SLG_FILTERREGISTRY_H
 
 #include <string>
 
@@ -53,16 +53,16 @@ protected:
 	// Used to register all sub-class FromPropertiesOCL() static methods
 	typedef slg::ocl::Filter *(*FromPropertiesOCL)(const luxrays::Properties &cfg);
 
-	OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS;
+	OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(FilterRegistry);
 
 	//--------------------------------------------------------------------------
 
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(NoneFilter);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(BoxFilter);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(GaussianFilter);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(MitchellFilter);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(MitchellSSFilter);
-	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(BlackmanHarrisFilter);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, NoneFilter);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, BoxFilter);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, GaussianFilter);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, MitchellFilter);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, MitchellSSFilter);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, BlackmanHarrisFilter);
 	// Just add here any new Filter (don't forget in the .cpp too)
 
 	friend class Filter;
@@ -70,4 +70,4 @@ protected:
 
 }
 
-#endif	/* _SLG_FILTERREGISTER_H */
+#endif	/* _SLG_FILTERREGISTRY_H */

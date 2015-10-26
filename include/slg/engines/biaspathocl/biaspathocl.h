@@ -97,13 +97,23 @@ public:
 			const bool realTime = false);
 	virtual ~BiasPathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return BIASPATHOCL; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	void GetPendingTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetPendingTiles(tiles); }
 	void GetNotConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetNotConvergedTiles(tiles); }
 	void GetConvergedTiles(std::deque<const TileRepository::Tile *> &tiles) { return tileRepository->GetConvergedTiles(tiles); }
 	u_int GetTileWidth() const { return tileRepository->tileWidth; }
 	u_int GetTileHeight() const { return tileRepository->tileHeight; }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return BIASPATHOCL; }
+	static std::string GetObjectTag() { return "BIASPATHOCL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	friend class BiasPathOCLRenderThread;
 
@@ -124,6 +134,8 @@ public:
 	u_int maxTilePerDevice;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	void PrintSamplesInfo() const;
 
 	virtual PathOCLBaseRenderThread *CreateOCLThread(const u_int index,

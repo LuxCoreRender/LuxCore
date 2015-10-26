@@ -73,10 +73,13 @@ public:
 	bool NextTile(Film *film, boost::mutex *filmMutex,
 		Tile **tile, Film *tileFilm);
 
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static TileRepository *FromProperties(const luxrays::Properties &cfg);
+	static luxrays::Properties GetDefaultProps();
+
 	friend class Tile;
 
 	u_int tileWidth, tileHeight;
-	u_int totalSamplesPerPixel;
 
 	u_int maxPassCount;
 	float convergenceTestThreshold, convergenceTestThresholdReduction;

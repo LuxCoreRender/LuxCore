@@ -49,12 +49,9 @@ void LightCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxPathDepth = cfg.Get(Property("light.maxdepth")(
-			cfg.Get(Property("path.maxdepth")(5)).Get<int>())).Get<int>();
-	rrDepth = cfg.Get(Property("light.russianroulette.depth")(
-			cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>())).Get<int>();
-	rrImportanceCap = cfg.Get(Property("light.russianroulette.cap")(
-			cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>())).Get<float>();
+	maxPathDepth = cfg.Get(GetDefaultProps().Get("light.maxdepth")).Get<int>();
+	rrDepth = cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")).Get<int>();
+	rrImportanceCap = cfg.Get(GetDefaultProps().Get("light.russianroulette.cap")).Get<float>();
 
 	delete sampleSplatter;
 	sampleSplatter = new FilmSampleSplatter(pixelFilter);
@@ -67,4 +64,28 @@ void LightCPURenderEngine::StopLockLess() {
 
 	delete sampleSplatter;
 	sampleSplatter = NULL;
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
+	return CPURenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
+			cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")) <<
+			cfg.Get(GetDefaultProps().Get("light.russianroulette.cap"));
+}
+
+RenderEngine *LightCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new LightCPURenderEngine(rcfg, flm, flmMutex);
+}
+
+Properties LightCPURenderEngine::GetDefaultProps() {
+	static Properties props = CPURenderEngine::GetDefaultProps() <<
+			Property("light.maxdepth")(5) <<
+			Property("light.russianroulette.depth")(3) <<
+			Property("light.russianroulette.cap")(.5f);
+
+	return props;
 }
