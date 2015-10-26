@@ -93,8 +93,8 @@ void RenderSession::EndSceneEdit() {
 	// Make a copy of the edit actions
 	const EditActionList editActions = renderConfig->scene->editActions;
 	
-	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
-			(renderEngine->GetEngineType() != RTBIASPATHOCL)) {
+	if ((renderEngine->GetType() != RTPATHOCL) &&
+			(renderEngine->GetType() != RTBIASPATHOCL)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 
 		// RTPATHOCL and RTBIASPATHOCL handle film Reset on their own

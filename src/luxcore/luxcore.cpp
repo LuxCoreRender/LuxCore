@@ -671,7 +671,7 @@ void RenderSession::UpdateStats() {
 	stats.Set(Property("stats.dataset.trianglecount")(renderSession->renderConfig->scene->dataSet->GetTotalTriangleCount()));
 
 	// Some engine specific statistic
-	switch (renderSession->renderEngine->GetEngineType()) {
+	switch (renderSession->renderEngine->GetType()) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		case slg::RTPATHOCL: {
 			slg::RTPathOCLRenderEngine *engine = (slg::RTPathOCLRenderEngine *)renderSession->renderEngine;

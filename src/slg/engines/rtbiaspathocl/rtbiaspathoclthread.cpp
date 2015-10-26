@@ -406,7 +406,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// In order to update the statistics
 				u_int tracedRaysCount = 0;
 				// Statistics are accumulated by MergePixelSample kernel if not enableProgressiveRefinement
-				const u_int step = engine->tileRepository->totalSamplesPerPixel;
+				const u_int step = engine->aaSamples * engine->aaSamples;
 				for (u_int i = 0; i < taskCount; i += step)
 					tracedRaysCount += gpuTaskStats[i].raysCount;
 

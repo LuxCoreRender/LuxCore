@@ -99,62 +99,97 @@ void BiasPathCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(Property("biaspath.pathdepth.total")(10)).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.diffuse")(4)).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.glossy")(3)).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(Property("biaspath.pathdepth.specular")(3)).Get<int>());
+	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")).Get<int>());
 
 	// Samples settings
-	aaSamples = Max(1, cfg.Get(Property("biaspath.sampling.aa.size")(3)).Get<int>());
-	diffuseSamples = Max(0, cfg.Get(Property("biaspath.sampling.diffuse.size")(2)).Get<int>());
-	glossySamples = Max(0, cfg.Get(Property("biaspath.sampling.glossy.size")(2)).Get<int>());
-	specularSamples = Max(0, cfg.Get(Property("biaspath.sampling.specular.size")(1)).Get<int>());
-	directLightSamples = Max(1, cfg.Get(Property("biaspath.sampling.directlight.size")(1)).Get<int>());
+	aaSamples = Max(1, cfg.Get(GetDefaultProps().Get("biaspath.sampling.aa.size")).Get<int>());
+	diffuseSamples = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.sampling.diffuse.size")).Get<int>());
+	glossySamples = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.sampling.glossy.size")).Get<int>());
+	specularSamples = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.sampling.specular.size")).Get<int>());
+	directLightSamples = Max(1, cfg.Get(GetDefaultProps().Get("biaspath.sampling.directlight.size")).Get<int>());
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
-	sqrtVarianceClampMaxValue = Max(0.f,
-			cfg.Get(Property("biaspath.clamping.variance.maxvalue")(
-				cfg.Get(Property("biaspath.clamping.radiance.maxvalue")(0.f)).Get<float>())
-			).Get<float>());
-	pdfClampValue = Max(0.f, cfg.Get(Property("biaspath.clamping.pdf.value")(0.f)).Get<float>());
+	sqrtVarianceClampMaxValue = cfg.Get(Property("biaspath.clamping.radiance.maxvalue")(0.f)).Get<float>();
+	if (cfg.IsDefined("biaspath.clamping.variance.maxvalue"))
+		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("biaspath.clamping.variance.maxvalue")).Get<float>();
+	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
+	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")).Get<float>());
 
 	// Light settings
-	lowLightThreashold = Max(0.f, cfg.Get(Property("biaspath.lights.lowthreshold")(0.f)).Get<float>());
-	nearStartLight = Max(0.f, cfg.Get(Property("biaspath.lights.nearstart")(.001f)).Get<float>());
-	firstVertexLightSampleCount = Max(1, cfg.Get(Property("biaspath.lights.firstvertexsamples")(4)).Get<int>());
+	lowLightThreashold = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")).Get<float>());
+	nearStartLight = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")).Get<float>());
+	firstVertexLightSampleCount = Max(1, cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")).Get<int>());
 
 	PrintSamplesInfo();
 
 	InitPixelFilterDistribution();
 
 	//--------------------------------------------------------------------------
-	// CPUTileRenderEngine initialization
+	// Tile related parameters
 	//--------------------------------------------------------------------------
 
 	film->Reset();
 
-	u_int tileWidth = 32;
-	u_int tileHeight = 32;
-	if (renderConfig->cfg.IsDefined("tile.size"))
-		tileWidth = tileHeight = Max(renderConfig->cfg.Get(Property("tile.size")(32)).Get<u_int>(), 8u);
-	tileWidth = Max(renderConfig->cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>(), 8u);
-	tileHeight = Max(renderConfig->cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>(), 8u);
-	tileRepository = new TileRepository(tileWidth, tileHeight);
-
-	tileRepository->maxPassCount = renderConfig->GetProperty("batch.haltdebug").Get<u_int>();
-	tileRepository->enableMultipassRendering = cfg.Get(Property("tile.multipass.enable")(true)).Get<bool>();
-	tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold")(
-			cfg.Get(Property("tile.multipass.convergencetest.threshold256")(6.f)).Get<float>() / 256.f)).Get<float>();
-	tileRepository->convergenceTestThresholdReduction = cfg.Get(Property("tile.multipass.convergencetest.threshold.reduction")(0.f)).Get<float>();
-	tileRepository->convergenceTestWarmUpSamples = cfg.Get(Property("tile.multipass.convergencetest.warmup.count")(32)).Get<u_int>();
-	tileRepository->totalSamplesPerPixel = aaSamples * aaSamples;
+	tileRepository = TileRepository::FromProperties(renderConfig->cfg);
 	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);
-
 	tileRepository->InitTiles(*film);
 
 	CPURenderEngine::StartLockLess();
 }
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties BiasPathCPURenderEngine::ToProperties(const Properties &cfg) {
+	return CPUTileRenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.aa.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.diffuse.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.glossy.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.specular.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.directlight.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.clamping.variance.maxvalue")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples"));
+}
+
+RenderEngine *BiasPathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new BiasPathCPURenderEngine(rcfg, flm, flmMutex);
+}
+
+Properties BiasPathCPURenderEngine::GetDefaultProps() {
+	static Properties props = CPURenderEngine::GetDefaultProps() <<
+			Property("biaspath.pathdepth.total")(10) <<
+			Property("biaspath.pathdepth.diffuse")(4) <<
+			Property("biaspath.pathdepth.glossy")(3) <<
+			Property("biaspath.pathdepth.specular")(3) <<
+			Property("biaspath.sampling.aa.size")(3) <<
+			Property("biaspath.sampling.diffuse.size")(2) <<
+			Property("biaspath.sampling.glossy.size")(2) <<
+			Property("biaspath.sampling.specular.size")(2) <<
+			Property("biaspath.sampling.directlight.size")(1) <<
+			Property("biaspath.clamping.variance.maxvalue")(0.f) <<
+			Property("biaspath.clamping.pdf.value")(0.f) <<
+			Property("biaspath.lights.lowthreshold")(0.f) <<
+			Property("biaspath.lights.nearstart")(.001f) <<
+			Property("biaspath.lights.firstvertexsamples")(4);
+
+	return props;
+}
+
+//------------------------------------------------------------------------------
+// PathDepthInfo
+//------------------------------------------------------------------------------
 
 PathDepthInfo::PathDepthInfo() {
 	depth = 0;

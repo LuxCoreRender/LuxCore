@@ -73,6 +73,7 @@ public:
 	virtual ~Sampler() { }
 
 	virtual SamplerType GetType() const = 0;
+	virtual std::string GetTag() const = 0;
 	virtual void RequestSamples(const u_int size) = 0;
 
 	// index 0 and 1 are always image X and image Y

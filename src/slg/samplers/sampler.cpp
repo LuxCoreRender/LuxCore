@@ -63,7 +63,7 @@ Properties Sampler::ToProperties() const {
 //------------------------------------------------------------------------------
 
 Properties Sampler::ToProperties(const Properties &cfg) {
-	const string type = cfg.Get(Property("sampler.type")(RandomSampler::GetObjectTag())).Get<string>();
+	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
 	SamplerRegistry::ToProperties func;
 
@@ -85,7 +85,7 @@ Sampler *Sampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 }
 
 slg::ocl::Sampler *Sampler::FromPropertiesOCL(const Properties &cfg) {
-	const string type = cfg.Get(Property("sampler.type")(RandomSampler::GetObjectTag())).Get<string>();
+	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
 	SamplerRegistry::FromPropertiesOCL func;
 	if (SamplerRegistry::STATICTABLE_NAME(FromPropertiesOCL).Get(type, func))
@@ -107,7 +107,7 @@ const string Sampler::SamplerType2String(const SamplerType type) {
 	if (SamplerRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + type);
+		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + boost::lexical_cast<string>(type));
 }
 
 //------------------------------------------------------------------------------

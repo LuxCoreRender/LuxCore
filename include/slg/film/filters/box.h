@@ -41,7 +41,8 @@ public:
 		Filter(xw, yw) { }
 	virtual ~BoxFilter() { }
 
-	virtual FilterType GetType() const { return FILTER_BOX; }
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	float Evaluate(const float x, const float y) const {
 		return 1.f;

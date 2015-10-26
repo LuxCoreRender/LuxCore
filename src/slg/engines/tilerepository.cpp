@@ -483,3 +483,68 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		return GetToDoTile(tile);
 	}
 }
+
+Properties TileRepository::ToProperties(const Properties &cfg) {
+	Properties props;
+
+	// tile.size
+	const u_int defaultSize = cfg.Get(GetDefaultProps().Get("tile.size")).Get<u_int>();
+	const Property sizeX = cfg.Get(Property("tile.size.x")(defaultSize));
+	const Property sizeY = cfg.Get(Property("tile.size.y")(defaultSize));
+
+	if (sizeX.Get<u_int>() == sizeY.Get<u_int>())
+		props << Property("tile.size")(defaultSize);
+	else
+		props << sizeX << sizeY;
+
+	// tile.multipass.convergencetest.threshold
+	if (cfg.IsDefined("tile.multipass.convergencetest.threshold"))
+		props << cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold"));
+	else {
+		const float defaultThreshold = GetDefaultProps().Get("tile.multipass.convergencetest.threshold").Get<float>();
+		props << cfg.Get(Property("tile.multipass.convergencetest.threshold256")(defaultThreshold));
+	}
+
+	props <<
+			cfg.Get(GetDefaultProps().Get("tile.multipass.enable")) <<
+			cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold.reduction")) <<
+			cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.warmup.count"));
+
+	return props;
+}
+
+TileRepository *TileRepository::FromProperties(const luxrays::Properties &cfg) {
+	u_int tileWidth = 32;
+	u_int tileHeight = 32;
+	if (cfg.IsDefined("tile.size"))
+		tileWidth = tileHeight = Max(cfg.Get(GetDefaultProps().Get("tile.size")).Get<u_int>(), 8u);
+	tileWidth = Max(cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>(), 8u);
+	tileHeight = Max(cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>(), 8u);
+	auto_ptr<TileRepository> tileRepository(new TileRepository(tileWidth, tileHeight));
+
+	tileRepository->maxPassCount = cfg.Get(Property("batch.haltdebug")(0)).Get<u_int>();
+	tileRepository->enableMultipassRendering = cfg.Get(GetDefaultProps().Get("tile.multipass.enable")).Get<bool>();
+
+	if (cfg.IsDefined("tile.multipass.convergencetest.threshold"))
+		tileRepository->convergenceTestThreshold = cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold")).Get<float>();
+	else {
+		const float defaultThreshold256 = 256.f * GetDefaultProps().Get("tile.multipass.convergencetest.threshold").Get<float>();
+		tileRepository->convergenceTestThreshold = cfg.Get(Property("tile.multipass.convergencetest.threshold256")(defaultThreshold256)).Get<float>() * (1.f / 256.f);
+	}
+
+	tileRepository->convergenceTestThresholdReduction = cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.threshold.reduction")).Get<float>();
+	tileRepository->convergenceTestWarmUpSamples = cfg.Get(GetDefaultProps().Get("tile.multipass.convergencetest.warmup.count")).Get<u_int>();
+
+	return tileRepository.release();
+}
+
+Properties TileRepository::GetDefaultProps() {
+	static Properties props =  Properties() <<
+			Property("tile.size")(3) <<
+			Property("tile.multipass.enable")(true) <<
+			Property("tile.multipass.convergencetest.threshold")(6.f / 256.f) <<
+			Property("tile.multipass.convergencetest.threshold.reduction")(0.f) <<
+			Property("tile.multipass.convergencetest.warmup.count")(32);
+
+	return props;
+}

@@ -20,14 +20,19 @@
 #define	_SLG_STATICTABLE_H
 
 #include <string>
+#include <sstream>
 #include <boost/unordered_map.hpp>
+#include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/utils.h"
 
 namespace slg {
 
-template <class K, class T> class StaticTable {
+// The REGISTRY template parameter is there to be able to separate different
+// static tables (aka registries, name spaces)
+template <class REGISTRY, class K, class T> class StaticTable {
 public:
 	StaticTable() { }
 	~StaticTable() { }
@@ -45,6 +50,25 @@ public:
 	}
 
 	size_t GetSize() const { return GetTable().size(); }
+
+	std::string ToString() const {
+		std::stringstream ss;
+
+		ss << "StaticTable[";
+		boost::unordered_map<K, T> &table = GetTable();
+		bool first = true;
+		for (typename boost::unordered_map<K, T>::const_iterator it = table.begin(); it != table.end(); ++it) {
+			if (first)
+				first = false;
+			else
+				ss << ",";
+
+			ss << "(" << boost::lexical_cast<std::string>(it->first) << "," << boost::lexical_cast<std::string>(it->second) << ")";
+		}
+		ss << "]";
+
+		return ss.str();
+	}
 	
 	class RegisterTableValue {
 	public:
@@ -55,7 +79,8 @@ public:
 			if (it == table.end())
 				table[key] = val;
 			else
-				throw std::runtime_error("Already registered key in StaticTable::RegisterTableValue::RegisterTableValue(): " + luxrays::ToString(key));
+				throw std::runtime_error("Already registered key in StaticTable::RegisterTableValue::RegisterTableValue(): " +
+						boost::lexical_cast<std::string>(key));
 		}
 		virtual ~RegisterTableValue() { }
 	};
@@ -63,7 +88,7 @@ public:
 private:
 	static boost::unordered_map<K, T> &GetTable() {
 		static boost::unordered_map<K, T> table;
-
+		
 		return table;
 	}
 };
@@ -71,17 +96,17 @@ private:
 #define STATICTABLE_NAME(F) F ## _StaticTable
 
 // Use STATICTABLE_DECLARE_DECLARATION inside the base class holding the table
-#define STATICTABLE_DECLARE_DECLARATION(K, F) static StaticTable<K, F> STATICTABLE_NAME(F)
+#define STATICTABLE_DECLARE_DECLARATION(R, K, F) static StaticTable<R, K, F> STATICTABLE_NAME(F)
 // Use STATICTABLE_DECLARATION inside the base class .cpp
-#define STATICTABLE_DECLARATION(C, K, F) StaticTable<K, C::F> C::STATICTABLE_NAME(F)
+#define STATICTABLE_DECLARATION(R, K, F) StaticTable<R, K, R::F> R::STATICTABLE_NAME(F)
 
 // Use STATICTABLE_DECLARE_REGISTRATION() inside the class declaration to register
-#define STATICTABLE_DECLARE_REGISTRATION(C, K, F) static StaticTable<K, F>::RegisterTableValue C ## F ## _StaticTableRegister
+#define STATICTABLE_DECLARE_REGISTRATION(R, C, K, F) static StaticTable<R, K, F>::RegisterTableValue C ## F ## _StaticTableRegister
 // Use STATICTABLE_REGISTER() to register a class
 // NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
 // main base class (i.e. the one holding the StaticTable) because order of static
 // field initialization is otherwise undefined.
-#define STATICTABLE_REGISTER(R, C, N, K, F) StaticTable<K, R::F>::RegisterTableValue R::C ## F ## _StaticTableRegister(N, C::F)
+#define STATICTABLE_REGISTER(R, C, N, K, F) StaticTable<R, K, R::F>::RegisterTableValue R::C ## F ## _StaticTableRegister(N, C::F)
 
 }
 

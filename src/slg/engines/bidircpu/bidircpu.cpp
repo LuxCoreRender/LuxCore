@@ -48,12 +48,11 @@ void BiDirCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	maxEyePathDepth = (u_int)Max(1, cfg.Get(Property("path.maxdepth")(5)).Get<int>());
-	maxLightPathDepth = (u_int)Max(1, cfg.Get(Property("light.maxdepth")(5)).Get<int>());
-	rrDepth = (u_int)Max(1, cfg.Get(Property("light.russianroulette.depth")(
-			cfg.Get(Property("path.russianroulette.depth")(3)).Get<int>())).Get<int>());
-	rrImportanceCap = cfg.Get(Property("light.russianroulette.cap")(
-			cfg.Get(Property("path.russianroulette.cap")(.5f)).Get<float>())).Get<float>();
+	maxEyePathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.maxdepth")).Get<int>());
+	maxLightPathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("light.maxdepth")).Get<int>());
+	
+	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
 
 	delete sampleSplatter;
 	sampleSplatter = new FilmSampleSplatter(pixelFilter);
@@ -66,4 +65,30 @@ void BiDirCPURenderEngine::StopLockLess() {
 
 	delete sampleSplatter;
 	sampleSplatter = NULL;
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
+	return CPURenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
+			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
+			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
+			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap"));
+}
+
+RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new BiDirCPURenderEngine(rcfg, flm, flmMutex);
+}
+
+Properties BiDirCPURenderEngine::GetDefaultProps() {
+	static Properties props = CPURenderEngine::GetDefaultProps() <<
+			Property("path.maxdepth")(5) <<
+			Property("light.maxdepth")(5) <<
+			Property("path.russianroulette.depth")(3) <<
+			Property("path.russianroulette.cap")(.5f);
+
+	return props;
 }

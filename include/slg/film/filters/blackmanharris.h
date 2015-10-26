@@ -41,7 +41,8 @@ public:
 		Filter(xw, yw) { }
 	virtual ~BlackmanHarrisFilter() { }
 
-	virtual FilterType GetType() const { return FILTER_BLACKMANHARRIS; }
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	float Evaluate(const float x, const float y) const {
 		return BlackmanHarris1D(x * invXWidth) * BlackmanHarris1D(y *  invYWidth);

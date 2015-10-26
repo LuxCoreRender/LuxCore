@@ -56,6 +56,7 @@ public:
 	virtual ~RandomSampler() { }
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 	virtual void RequestSamples(const u_int size) { }
 
 	virtual float GetSample(const u_int index) { return rndGen->floatValue(); }

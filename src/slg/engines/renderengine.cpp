@@ -22,6 +22,7 @@
 
 #include "slg/renderconfig.h"
 #include "slg/engines/renderengine.h"
+#include "slg/engines/renderengineregistry.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
@@ -224,53 +225,88 @@ void RenderEngine::UpdateFilm() {
 	}
 }
 
+Properties RenderEngine::ToProperties() const {
+	throw runtime_error("Called RenderEngine::ToProperties()");
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties RenderEngine::ToProperties(const Properties &cfg) {
+	const string type = cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
+
+	RenderEngineRegistry::ToProperties func;
+
+	if (RenderEngineRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
+		return func(cfg);
+	} else
+		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
+}
+
+RenderEngine *RenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	const string type = rcfg->cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
+	RenderEngineRegistry::FromProperties func;
+	if (RenderEngineRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
+		return func(rcfg, flm, flmMutex);
+	else
+		throw runtime_error("Unknown render engine type in RenderEngine::FromProperties(): " + type);
+}
+
 RenderEngineType RenderEngine::String2RenderEngineType(const string &type) {
-	if ((type.compare("4") == 0) || (type.compare("PATHOCL") == 0))
-		return PATHOCL;
-	if ((type.compare("5") == 0) || (type.compare("LIGHTCPU") == 0))
-		return LIGHTCPU;
-	if ((type.compare("6") == 0) || (type.compare("PATHCPU") == 0))
-		return PATHCPU;
-	if ((type.compare("7") == 0) || (type.compare("BIDIRCPU") == 0))
-		return BIDIRCPU;
-	if ((type.compare("10") == 0) || (type.compare("BIDIRVMCPU") == 0))
-		return BIDIRVMCPU;
-	if ((type.compare("11") == 0) || (type.compare("FILESAVER") == 0))
-		return FILESAVER;
-	if ((type.compare("12") == 0) || (type.compare("RTPATHOCL") == 0))
-		return RTPATHOCL;
-	if ((type.compare("14") == 0) || (type.compare("BIASPATHCPU") == 0))
-		return BIASPATHCPU;
-	if ((type.compare("15") == 0) || (type.compare("BIASPATHOCL") == 0))
-		return BIASPATHOCL;
-	if ((type.compare("16") == 0) || (type.compare("RTBIASPATHOCL") == 0))
-		return RTBIASPATHOCL;
-	throw runtime_error("Unknown render engine type: " + type);
+	RenderEngineRegistry::GetObjectType func;
+	if (RenderEngineRegistry::STATICTABLE_NAME(GetObjectType).Get(type, func))
+		return func();
+	else
+		throw runtime_error("Unknown render engine type in RenderEngine::String2RenderEngineType(): " + type);
+}
+
+string RenderEngine::FromPropertiesOCL(const luxrays::Properties &cfg) {
+	throw runtime_error("Called RenderEngine::FromPropertiesOCL()");
 }
 
 const string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
-	switch (type) {
-		case PATHOCL:
-			return "PATHOCL";
-		case LIGHTCPU:
-			return "LIGHTCPU";
-		case PATHCPU:
-			return "PATHCPU";
-		case BIDIRCPU:
-			return "BIDIRCPU";
-		case BIDIRVMCPU:
-			return "BIDIRVMCPU";
-		case FILESAVER:
-			return "FILESAVER";
-		case RTPATHOCL:
-			return "RTPATHOCL";
-		case BIASPATHCPU:
-			return "BIASPATHCPU";
-		case BIASPATHOCL:
-			return "BIASPATHOCL";
-		case RTBIASPATHOCL:
-			return "RTBIASPATHOCL";
-		default:
-			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<string>(type));
-	}
+	RenderEngineRegistry::GetObjectTag func;
+	if (RenderEngineRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
+		return func();
+	else
+		throw runtime_error("Unknown render engine type in RenderEngine::RenderEngineType2String(): " + boost::lexical_cast<string>(type));
 }
+
+Properties RenderEngine::GetDefaultProps() {
+	static Properties props;
+
+	return Properties();
+}
+
+//------------------------------------------------------------------------------
+// RenderEngineRegistry
+//
+// For the registration of each RenderEngine sub-class with RenderEngine StaticTables
+//
+// NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the StaticTable) because otherwise
+// static members initialization order is not defined.
+//------------------------------------------------------------------------------
+
+OBJECTSTATICREGISTRY_STATICFIELDS(RenderEngineRegistry);
+
+//------------------------------------------------------------------------------
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, PathOCLRenderEngine);
+#endif
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, LightCPURenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, PathCPURenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BiDirCPURenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BiDirVMCPURenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, FileSaverRenderEngine);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTPathOCLRenderEngine);
+#endif
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BiasPathCPURenderEngine);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BiasPathOCLRenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTBiasPathOCLRenderEngine);
+#endif
+// Just add here any new RenderEngine (don't forget in the .h too)

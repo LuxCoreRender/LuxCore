@@ -37,6 +37,10 @@ public:
 		bool fatal = true);
 
 	static size_t GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSet);
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+
+protected:
+	static luxrays::Properties GetDefaultProps();
 };
 
 }
