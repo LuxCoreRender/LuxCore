@@ -34,7 +34,7 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 //------------------------------------------------------------------------------
 
 LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
-		pixelFilterWindow(this), samplerWindow(this),
+		pixelFilterWindow(this), renderEngineWindow(this), samplerWindow(this),
 		statsWindow(this), helpWindow(this) {
 	config = renderConfig;
 	session = NULL;

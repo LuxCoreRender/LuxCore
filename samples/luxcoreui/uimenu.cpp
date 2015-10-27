@@ -194,11 +194,13 @@ void LuxCoreApp::MenuScreen() {
 
 void LuxCoreApp::MenuWindow() {
 	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
-	if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.opened))
-		pixelFilterWindow.opened = !pixelFilterWindow.opened;
+	if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.opened))
+		renderEngineWindow.opened = !renderEngineWindow.opened;
 	if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.opened,
 			!boost::starts_with(currentEngineType, "BIAS")))
 		samplerWindow.opened = !samplerWindow.opened;
+	if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.opened))
+		pixelFilterWindow.opened = !pixelFilterWindow.opened;
 	ImGui::Separator();
 	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.opened))
 		statsWindow.opened = !statsWindow.opened;
