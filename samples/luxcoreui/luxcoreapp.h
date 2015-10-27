@@ -26,6 +26,7 @@
 #include "logwindow.h"
 #include "statswindow.h"
 #include "pixelfilterwindow.h"
+#include "renderenginewindow.h"
 #include "samplerwindow.h"
 #include "helpwindow.h"
 
@@ -50,6 +51,7 @@ public:
 	bool optMouseGrabMode;
 
 	friend class PixelFilterWindow;
+	friend class RenderEngineWindow;
 	friend class SamplerWindow;
 	friend class StatsWindow;
 
@@ -84,6 +86,7 @@ private:
 	static LogWindow *currentLogWindow;
 
 	PixelFilterWindow pixelFilterWindow;
+	RenderEngineWindow renderEngineWindow;
 	SamplerWindow samplerWindow;
 	StatsWindow statsWindow;
 	LogWindow logWindow;

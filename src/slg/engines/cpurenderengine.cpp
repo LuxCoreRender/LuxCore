@@ -99,7 +99,7 @@ void CPURenderThread::WaitForDone() const {
 
 CPURenderEngine::CPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex) :
 	RenderEngine(cfg, flm, flmMutex) {
-	const size_t renderThreadCount =  cfg->cfg.Get(GetDefaultProps().Get("native.threads.count")).Get<u_longlong>();
+	const size_t renderThreadCount =  Max<u_longlong>(1, cfg->cfg.Get(GetDefaultProps().Get("native.threads.count")).Get<u_longlong>());
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
