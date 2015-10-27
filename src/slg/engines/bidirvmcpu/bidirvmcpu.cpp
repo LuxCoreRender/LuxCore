@@ -49,6 +49,7 @@ void BiDirVMCPURenderEngine::StartLockLess() {
 
 Properties BiDirVMCPURenderEngine::ToProperties(const Properties &cfg) {
 	return BiDirCPURenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("bidirvm.lightpath.count")) <<
 			cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")) <<
 			cfg.Get(GetDefaultProps().Get("bidirvm.alpha"));
@@ -60,6 +61,7 @@ RenderEngine *BiDirVMCPURenderEngine::FromProperties(const RenderConfig *rcfg, F
 
 Properties BiDirVMCPURenderEngine::GetDefaultProps() {
 	static Properties props = BiDirCPURenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
 			Property("bidirvm.lightpath.count")(16 * 1024) <<
 			Property("bidirvm.startradius.scale")(.003f) <<
 			Property("bidirvm.alpha")(.95f);

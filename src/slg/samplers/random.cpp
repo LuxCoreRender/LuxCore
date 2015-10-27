@@ -44,9 +44,13 @@ void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	AddSamplesToFilm(sampleResults);
 }
 
+//------------------------------------------------------------------------------
+// Static methods used by SamplerRegistry
+//------------------------------------------------------------------------------
+
 Properties RandomSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			cfg.Get(defaultProps.Get("sampler.type"));
+			cfg.Get(GetDefaultProps().Get("sampler.type"));
 }
 
 Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
@@ -62,5 +66,9 @@ slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-const Properties RandomSampler::defaultProps = Properties() <<
-			Property("sampler.type")(RandomSampler::GetObjectTag());
+Properties RandomSampler::GetDefaultProps() {
+	static Properties props = Sampler::GetDefaultProps() <<
+			Property("sampler.type")(GetObjectTag());
+
+	return props;
+}

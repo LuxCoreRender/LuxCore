@@ -110,6 +110,12 @@ const string Sampler::SamplerType2String(const SamplerType type) {
 		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + boost::lexical_cast<string>(type));
 }
 
+Properties Sampler::GetDefaultProps() {
+	static Properties props;
+
+	return Properties();
+}
+
 //------------------------------------------------------------------------------
 // SamplerSharedDataRegistry
 //

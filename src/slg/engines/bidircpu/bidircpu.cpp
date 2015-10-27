@@ -73,6 +73,7 @@ void BiDirCPURenderEngine::StopLockLess() {
 
 Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 	return CPURenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
@@ -85,6 +86,7 @@ RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg, Fil
 
 Properties BiDirCPURenderEngine::GetDefaultProps() {
 	static Properties props = CPURenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
 			Property("path.maxdepth")(5) <<
 			Property("light.maxdepth")(5) <<
 			Property("path.russianroulette.depth")(3) <<

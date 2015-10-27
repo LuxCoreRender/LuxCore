@@ -147,6 +147,7 @@ void BiasPathCPURenderEngine::StartLockLess() {
 
 Properties BiasPathCPURenderEngine::ToProperties(const Properties &cfg) {
 	return CPUTileRenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")) <<
@@ -169,6 +170,7 @@ RenderEngine *BiasPathCPURenderEngine::FromProperties(const RenderConfig *rcfg, 
 
 Properties BiasPathCPURenderEngine::GetDefaultProps() {
 	static Properties props = CPURenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
 			Property("biaspath.pathdepth.total")(10) <<
 			Property("biaspath.pathdepth.diffuse")(4) <<
 			Property("biaspath.pathdepth.glossy")(3) <<

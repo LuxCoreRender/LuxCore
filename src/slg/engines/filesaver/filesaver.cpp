@@ -164,6 +164,7 @@ void FileSaverRenderEngine::SaveScene() {
 
 Properties FileSaverRenderEngine::ToProperties(const Properties &cfg) {
 	return RenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.directory")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
 }
@@ -174,6 +175,7 @@ RenderEngine *FileSaverRenderEngine::FromProperties(const RenderConfig *rcfg, Fi
 
 Properties FileSaverRenderEngine::GetDefaultProps() {
 	static Properties props = RenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
 			Property("filesaver.directory")("luxcore-exported-scene") <<
 			Property("filesaver.renderengine.type")("PATHCPU");
 

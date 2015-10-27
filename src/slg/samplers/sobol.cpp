@@ -100,9 +100,13 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	}
 }
 
+//------------------------------------------------------------------------------
+// Static methods used by SamplerRegistry
+//------------------------------------------------------------------------------
+
 Properties SobolSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			cfg.Get(defaultProps.Get("sampler.type"));
+			cfg.Get(GetDefaultProps().Get("sampler.type"));
 }
 
 Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
@@ -118,5 +122,9 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-const Properties SobolSampler::defaultProps = Properties() <<
-			Property("sampler.type")(SobolSampler::GetObjectTag());
+Properties SobolSampler::GetDefaultProps() {
+	static Properties props = Sampler::GetDefaultProps() <<
+			Property("sampler.type")(GetObjectTag());
+
+	return props;
+}
