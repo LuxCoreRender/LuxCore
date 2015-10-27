@@ -34,6 +34,7 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 		.Add("PATHCPU", 0)
 		.Add("BIDIRCPU", 1)
 		.Add("LIGHTCPU", 2)
+		.Add("BIDIRVMCPU", 3)
 		.SetDefault("PATHCPU");
 }
 
@@ -42,7 +43,8 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 			cfgProps.GetAllProperties("renderengine") <<
 			cfgProps.GetAllProperties("native.threads") <<
 			cfgProps.GetAllProperties("path") <<
-			cfgProps.GetAllProperties("light");
+			cfgProps.GetAllProperties("light") <<
+			cfgProps.GetAllProperties("bidirvm");
 }
 
 void RenderEngineWindow::RefreshObjectProperties(Properties &props) {
@@ -224,6 +226,77 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("light.russianroulette.cap");
+
+		ival = props.Get("native.threads.count").Get<int>();
+		if (ImGui::SliderInt("Threads count", &ival, 1, boost::thread::hardware_concurrency())) {
+			props.Set(Property("native.threads.count")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("native.threads.count");
+
+		if (ImGui::Button("Open Sampler editor"))
+			app->samplerWindow.opened = true;
+		ImGui::SameLine();
+		if (ImGui::Button("Open Pixel Filter editor"))
+			app->pixelFilterWindow.opened = true;
+	}
+
+	//------------------------------------------------------------------
+	// BIDIRVMCPU
+	//------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("BIDIRVMCPU")) {
+		float fval;
+		int ival;
+
+		ival = props.Get("path.maxdepth").Get<int>();
+		if (ImGui::SliderInt("Maximum eye path recursion depth", &ival, 1, 32)) {
+			props.Set(Property("path.maxdepth")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("path.maxdepth");
+
+		ival = props.Get("light.maxdepth").Get<int>();
+		if (ImGui::SliderInt("Maximum light path recursion depth", &ival, 1, 32)) {
+			props.Set(Property("light.maxdepth")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("light.maxdepth");
+
+		ival = props.Get("path.russianroulette.depth").Get<int>();
+		if (ImGui::SliderInt("Russian Roulette start depth", &ival, 1, 32)) {
+			props.Set(Property("path.russianroulette.depth")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("path.russianroulette.depth");
+
+		fval = props.Get("path.russianroulette.cap").Get<float>();
+		if (ImGui::SliderFloat("Russian Roulette threshold", &fval, 0.f, 1.f)) {
+			props.Set(Property("path.russianroulette.cap")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("path.russianroulette.cap");
+
+		ival = props.Get("bidirvm.lightpath.count").Get<int>();
+		if (ImGui::SliderInt("Light path count for each pass", &ival, 256, 128 * 1024)) {
+			props.Set(Property("bidirvm.lightpath.count")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("bidirvm.lightpath.count");
+
+		fval = props.Get("bidirvm.startradius.scale").Get<float>();
+		if (ImGui::InputFloat("Start radius scale", &fval)) {
+			props.Set(Property("bidirvm.startradius.scale")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("bidirvm.startradius.scale");
+
+		fval = props.Get("bidirvm.alpha").Get<float>();
+		if (ImGui::SliderFloat("Radius reduction", &fval, 0.f, 1.f)) {
+			props.Set(Property("bidirvm.alpha")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("bidirvm.alpha");
 
 		ival = props.Get("native.threads.count").Get<int>();
 		if (ImGui::SliderInt("Threads count", &ival, 1, boost::thread::hardware_concurrency())) {
