@@ -142,6 +142,7 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			//------------------------------------------------------------------
 			// Overwrite some BiasPathOCLRenderEngine property
 			//------------------------------------------------------------------
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")) <<
@@ -170,6 +171,7 @@ Properties RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			//------------------------------------------------------------------
 			// Overwrite some BiasPathOCLRenderEngine property
 			//------------------------------------------------------------------
+			Property("renderengine.type")(GetObjectTag()) <<
 			Property("biaspath.pathdepth.total")(5) <<
 			Property("biaspath.pathdepth.diffuse")(3) <<
 			Property("biaspath.pathdepth.glossy")(3) <<

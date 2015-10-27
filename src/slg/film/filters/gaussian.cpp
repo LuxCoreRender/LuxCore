@@ -25,7 +25,7 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianFilter)
 
 Properties GaussianFilter::ToProperties() const {
-	return Properties() <<
+	return Filter::ToProperties() <<
 			Property("film.filter.gaussian.alpha")(alpha);
 }
 
@@ -35,25 +35,26 @@ Properties GaussianFilter::ToProperties() const {
 
 Properties GaussianFilter::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			cfg.Get(defaultProps.Get("film.filter.gaussian.alpha"));
+			cfg.Get(GetDefaultProps().Get("film.filter.type")) <<
+			cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha"));
 }
 
 Filter *GaussianFilter::FromProperties(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(Filter::defaultProps.Get("film.filter.width")).Get<float>();
+	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<float>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
-	const float alpha = cfg.Get(defaultProps.Get("film.filter.gaussian.alpha")).Get<float>();
+	const float alpha = cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha")).Get<float>();
 
 	return new GaussianFilter(filterXWidth, filterYWidth, alpha);
 }
 
 slg::ocl::Filter *GaussianFilter::FromPropertiesOCL(const Properties &cfg) {
-	const float defaultFilterWidth = cfg.Get(Filter::defaultProps.Get("film.filter.width")).Get<float>();
+	const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<float>();
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
-	const float alpha = cfg.Get(defaultProps.Get("film.filter.gaussian.alpha")).Get<float>();
+	const float alpha = cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha")).Get<float>();
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
@@ -65,6 +66,10 @@ slg::ocl::Filter *GaussianFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-const Properties GaussianFilter::defaultProps = Properties() <<
-			Property("film.filter.type")(GaussianFilter::GetObjectTag()) <<
+Properties GaussianFilter::GetDefaultProps() {
+	static Properties props = Filter::GetDefaultProps() <<
+			Property("film.filter.type")(GetObjectTag()) <<
 			Property("film.filter.gaussian.alpha")(2.f);
+
+	return props;
+}

@@ -153,6 +153,7 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 
 Properties RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return PathOCLRenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")) <<
@@ -167,6 +168,7 @@ RenderEngine *RTPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Fi
 
 Properties RTPathOCLRenderEngine::GetDefaultProps() {
 	static Properties props = PathOCLRenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
 			Property("rtpath.miniterations")(2) <<
 			Property("rtpath.displaydevice.index")(0) <<
 			Property("rtpath.blur.timewindow")(3.f) <<

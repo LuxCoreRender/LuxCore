@@ -252,17 +252,17 @@ Properties MetropolisSampler::ToProperties() {
 
 Properties MetropolisSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			cfg.Get(defaultProps.Get("sampler.type")) <<
-			cfg.Get(defaultProps.Get("sampler.metropolis.largesteprate")) <<
-			cfg.Get(defaultProps.Get("sampler.metropolis.maxconsecutivereject")) <<
-			cfg.Get(defaultProps.Get("sampler.metropolis.imagemutationrate"));
+			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate"));
 }
 
 Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	const float rate = Clamp(cfg.Get(defaultProps.Get("sampler.metropolis.largesteprate")).Get<float>(), 0.f, 1.f);
-	const u_int reject = cfg.Get(defaultProps.Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
-	const float mutationRate = Clamp(cfg.Get(defaultProps.Get("sampler.metropolis.imagemutationrate")).Get<float>(), 0.f, 1.f);
+	const float rate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<float>(), 0.f, 1.f);
+	const u_int reject = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+	const float mutationRate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<float>(), 0.f, 1.f);
 
 	return new MetropolisSampler(rndGen, film, flmSplatter,
 			reject, rate, mutationRate,
@@ -273,15 +273,19 @@ slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
 	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
 
 	oclSampler->type = slg::ocl::METROPOLIS;
-	oclSampler->metropolis.largeMutationProbability = cfg.Get(defaultProps.Get("sampler.metropolis.largesteprate")).Get<float>();
-	oclSampler->metropolis.imageMutationRange = cfg.Get(defaultProps.Get("sampler.metropolis.imagemutationrate")).Get<float>();
-	oclSampler->metropolis.maxRejects = cfg.Get(defaultProps.Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+	oclSampler->metropolis.largeMutationProbability = cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<float>();
+	oclSampler->metropolis.imageMutationRange = cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<float>();
+	oclSampler->metropolis.maxRejects = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
 
 	return oclSampler;
 }
 
-const Properties MetropolisSampler::defaultProps = Properties() <<
-			Property("sampler.type")(MetropolisSampler::GetObjectTag()) <<
+Properties MetropolisSampler::GetDefaultProps() {
+	static Properties props = Sampler::GetDefaultProps() <<
+			Property("sampler.type")(GetObjectTag()) <<
 			Property("sampler.metropolis.largesteprate")(.4f) <<
 			Property("sampler.metropolis.maxconsecutivereject")(512) <<
 			Property("sampler.metropolis.imagemutationrate")(.1f);
+
+	return props;
+}

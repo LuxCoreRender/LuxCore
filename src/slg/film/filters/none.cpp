@@ -30,7 +30,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::NoneFilter)
 
 Properties NoneFilter::ToProperties(const Properties &cfg) {
 	return Properties() <<
-			cfg.Get(defaultProps.Get("film.filter.type"));
+			cfg.Get(GetDefaultProps().Get("film.filter.type"));
 }
 
 Filter *NoneFilter::FromProperties(const Properties &cfg) {
@@ -45,5 +45,9 @@ slg::ocl::Filter *NoneFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-const Properties NoneFilter::defaultProps = Properties() <<
-			Property("film.filter.type")(NoneFilter::GetObjectTag());
+Properties NoneFilter::GetDefaultProps() {
+	static Properties props = Filter::GetDefaultProps() <<
+			Property("film.filter.type")(GetObjectTag());
+
+	return props;
+}

@@ -227,6 +227,7 @@ void BiasPathOCLRenderEngine::UpdateCounters() {
 
 Properties BiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return OCLRenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")) <<
@@ -250,6 +251,7 @@ RenderEngine *BiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, 
 
 Properties BiasPathOCLRenderEngine::GetDefaultProps() {
 	static Properties props = OCLRenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
 			Property("biaspath.pathdepth.total")(10) <<
 			Property("biaspath.pathdepth.diffuse")(4) <<
 			Property("biaspath.pathdepth.glossy")(3) <<

@@ -99,6 +99,8 @@ public:
 	static const std::string SamplerType2String(const SamplerType type);
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 
 	luxrays::RandomGenerator *rndGen;

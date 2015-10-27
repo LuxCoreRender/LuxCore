@@ -85,7 +85,7 @@ public:
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 private:
-	static const luxrays::Properties defaultProps;
+	static luxrays::Properties GetDefaultProps();
 
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 

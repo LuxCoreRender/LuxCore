@@ -28,10 +28,18 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 Properties Filter::ToProperties() const {
-	return Properties() <<
-			Property("film.filter.type")(FilterType2String(GetType())) <<
-			Property("film.filter.xwidth")(xWidth) <<
-			Property("film.filter.ywidth")(yWidth);
+	Properties props;
+	
+	props << Property("film.filter.type")(FilterType2String(GetType()));
+	
+	if (xWidth == yWidth)
+		props << Property("film.filter.width")(xWidth);
+	else
+		props <<
+				Property("film.filter.xwidth")(xWidth) <<
+				Property("film.filter.ywidth")(yWidth);
+	
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -46,7 +54,7 @@ Properties Filter::ToProperties(const Properties &cfg) {
 	if (FilterRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
 		Properties props;
 
-		const float defaultFilterWidth = cfg.Get(defaultProps.Get("film.filter.width")).Get<float>();
+		const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<float>();
 		const Property filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth));
 		const Property filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth));
 
@@ -96,8 +104,12 @@ const string Filter::FilterType2String(const FilterType type) {
 		throw runtime_error("Unknown filter type in Filter::FilterType2String(): " + boost::lexical_cast<string>(type));
 }
 
-const Properties Filter::defaultProps = Properties() <<
+Properties Filter::GetDefaultProps() {
+	static Properties props = Properties() <<
 			Property("film.filter.width")(2.f);
+
+	return props;
+}
 
 //------------------------------------------------------------------------------
 // FilterRegistry
