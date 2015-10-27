@@ -211,7 +211,8 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
 			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
-			cfg.Get(GetDefaultProps().Get("path.pixelatomics.enable"));
+			cfg.Get(GetDefaultProps().Get("path.pixelatomics.enable")) <<
+			Sampler::ToProperties(cfg);
 }
 
 RenderEngine *PathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
