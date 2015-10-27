@@ -239,7 +239,8 @@ Properties RenderEngine::ToProperties(const Properties &cfg) {
 	RenderEngineRegistry::ToProperties func;
 
 	if (RenderEngineRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
-		return func(cfg);
+		return func(cfg) <<
+				Filter::ToProperties(cfg);
 	} else
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
 }

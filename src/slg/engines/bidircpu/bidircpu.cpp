@@ -77,7 +77,8 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
-			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap"));
+			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
+			Sampler::ToProperties(cfg);
 }
 
 RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {

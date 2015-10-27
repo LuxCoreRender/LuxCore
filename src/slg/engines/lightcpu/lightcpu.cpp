@@ -75,7 +75,8 @@ Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")) <<
-			cfg.Get(GetDefaultProps().Get("light.russianroulette.cap"));
+			cfg.Get(GetDefaultProps().Get("light.russianroulette.cap")) <<
+			Sampler::ToProperties(cfg);
 }
 
 RenderEngine *LightCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {

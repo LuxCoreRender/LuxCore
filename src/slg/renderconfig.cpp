@@ -312,61 +312,14 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const F
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMutex) const {
-	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(
-		GetProperty("renderengine.type").Get<string>());
-
-	switch (renderEngineType) {
-		case LIGHTCPU:
-			return new LightCPURenderEngine(this, film, filmMutex);
-		case PATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new PathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-#endif
-		case PATHCPU:
-			return new PathCPURenderEngine(this, film, filmMutex);
-		case BIDIRCPU:
-			return new BiDirCPURenderEngine(this, film, filmMutex);
-		case BIDIRVMCPU:
-			return new BiDirVMCPURenderEngine(this, film, filmMutex);
-		case FILESAVER:
-			return new FileSaverRenderEngine(this, film, filmMutex);
-		case RTPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new PathCPURenderEngine(this, film, filmMutex);
-#endif
-		case BIASPATHCPU:
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-		case BIASPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new BiasPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-#endif
-		case RTBIASPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTBiasPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-#endif
-		default:
-			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<string>(renderEngineType));
-	}
+	return RenderEngine::FromProperties(this, film, filmMutex);
 }
 
 Properties RenderConfig::ToProperties() const {
 	Properties props;
 
-	// PixelFilter
-	props << Filter::ToProperties(cfg);
-	// Sampler
-	props << Sampler::ToProperties(cfg);
+	// RenderEngine (includes PixelFilter and Sampler where applicable)
+	props << RenderEngine::ToProperties(cfg);
 
 	return props;
 }
