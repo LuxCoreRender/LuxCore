@@ -33,6 +33,7 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 	typeTable
 		.Add("PATHCPU", 0)
 		.Add("BIDIRCPU", 1)
+		.Add("LIGHTCPU", 2)
 		.SetDefault("PATHCPU");
 }
 
@@ -180,6 +181,49 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("path.russianroulette.cap");
+
+		ival = props.Get("native.threads.count").Get<int>();
+		if (ImGui::SliderInt("Threads count", &ival, 1, boost::thread::hardware_concurrency())) {
+			props.Set(Property("native.threads.count")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("native.threads.count");
+
+		if (ImGui::Button("Open Sampler editor"))
+			app->samplerWindow.opened = true;
+		ImGui::SameLine();
+		if (ImGui::Button("Open Pixel Filter editor"))
+			app->pixelFilterWindow.opened = true;
+	}
+
+	//------------------------------------------------------------------
+	// LIGHTCPU
+	//------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("LIGHTCPU")) {
+		float fval;
+		int ival;
+
+		ival = props.Get("light.maxdepth").Get<int>();
+		if (ImGui::SliderInt("Maximum light path recursion depth", &ival, 1, 32)) {
+			props.Set(Property("light.maxdepth")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("light.maxdepth");
+
+		ival = props.Get("light.russianroulette.depth").Get<int>();
+		if (ImGui::SliderInt("Russian Roulette start depth", &ival, 1, 32)) {
+			props.Set(Property("light.russianroulette.depth")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("light.russianroulette.depth");
+
+		fval = props.Get("light.russianroulette.cap").Get<float>();
+		if (ImGui::SliderFloat("Russian Roulette threshold", &fval, 0.f, 1.f)) {
+			props.Set(Property("light.russianroulette.cap")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("light.russianroulette.cap");
 
 		ival = props.Get("native.threads.count").Get<int>();
 		if (ImGui::SliderInt("Threads count", &ival, 1, boost::thread::hardware_concurrency())) {
