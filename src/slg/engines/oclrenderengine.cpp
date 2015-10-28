@@ -102,7 +102,7 @@ size_t OCLRenderEngine::GetQBVHEstimatedStackSize(const luxrays::DataSet &dataSe
 }
 
 Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
-	return RenderEngine::ToProperties(cfg) <<
+	return Properties() <<
 			cfg.Get(GetDefaultProps().Get("opencl.cpu.use")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.gpu.use")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")) <<

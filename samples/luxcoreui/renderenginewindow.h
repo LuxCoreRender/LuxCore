@@ -39,6 +39,8 @@ private:
 	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
 	
 	luxrays::Properties GetAllRenderEngineProperties(const luxrays::Properties &cfgProps) const;
+	void PathGUI(luxrays::Properties &props, bool &modifiedProps);
+	void BiDirGUI(luxrays::Properties &props, bool &modifiedProps);
 
 	TypeTable typeTable;
 };
