@@ -554,11 +554,7 @@ bool DirectLightSamplingInit(
 
 			// Setup the shadow ray
 			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
-			const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
-
-			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir,
-				epsilon,
-				distance - epsilon, time);
+			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
 
 			return true;
 		}

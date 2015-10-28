@@ -67,8 +67,7 @@ void OrthographicCamera::InitRay(Ray *ray, const float filmX, const float filmY)
 	const Point Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
 	const Point Pcamera = Point(camTrans.rasterToCamera * Pras);
 
-	ray->o = Pcamera;
-	ray->d = Vector(0.f, 0.f, 1.f);
+	ray->Update(Pcamera, Vector(0.f, 0.f, 1.f));
 }
 
 Properties OrthographicCamera::ToProperties() const {
