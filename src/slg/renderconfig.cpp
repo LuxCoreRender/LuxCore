@@ -88,7 +88,7 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("film.width")(640u));
 
 			// Sampler related Properties
-			defaultProperties->Set(Property("sampler.type")("RANDOM"));
+			defaultProperties->Set(Property("sampler.type")("SOBOL"));
 			defaultProperties->Set(Property("sampler.metropolis.largesteprate")(.4f));
 			defaultProperties->Set(Property("sampler.metropolis.maxconsecutivereject")(512));
 			defaultProperties->Set(Property("sampler.metropolis.imagemutationrate")(.1f));
