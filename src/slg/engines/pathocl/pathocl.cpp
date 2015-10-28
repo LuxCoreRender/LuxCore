@@ -99,19 +99,22 @@ void PathOCLRenderEngine::StartLockLess() {
 		u_int taskCap = defaultTaskCount;
 		BOOST_FOREACH(DeviceDescription *devDescs, selectedDeviceDescs) {
 			if (devDescs->GetMaxMemoryAllocSize() >= 1024u * 1024u * 1024u)
-				taskCap = min(taskCap, 1024u * 1024u);
+				taskCap = Min(taskCap, 1024u * 1024u);
 			else if (devDescs->GetMaxMemoryAllocSize() >= 512u * 1024u * 1024u)
-				taskCap = min(taskCap, 512u * 1024u);
+				taskCap = Min(taskCap, 512u * 1024u);
 			else if (devDescs->GetMaxMemoryAllocSize() >= 256u * 1024u * 1024u)
-				taskCap = min(taskCap, 256u * 1024u);
+				taskCap = Min(taskCap, 256u * 1024u);
 			else if (devDescs->GetMaxMemoryAllocSize() >= 128u * 1024u * 1024u)
-				taskCap = min(taskCap, 128u * 1024u);
+				taskCap = Min(taskCap, 128u * 1024u);
 			else
-				taskCap = min(taskCap, 64u * 1024u);
+				taskCap = Min(taskCap, 64u * 1024u);
 		}
 
-		taskCount = cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<u_int>();
-		taskCount = min(taskCount, taskCap);
+		if (cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<string>() == "AUTO")
+			taskCount = defaultTaskCount;
+		else
+			taskCount = cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<u_int>();
+		taskCount = Min(taskCount, taskCap);
 
 		// I don't know yet the workgroup size of each device so I can not
 		// round up task count to be a multiple of workgroups size of all devices
@@ -203,7 +206,7 @@ void PathOCLRenderEngine::UpdateCounters() {
 //------------------------------------------------------------------------------
 
 Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
-	return PathOCLRenderEngine::ToProperties(cfg) <<
+	return OCLRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
@@ -212,6 +215,7 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
 			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
 			cfg.Get(GetDefaultProps().Get("path.pixelatomics.enable")) <<
+			cfg.Get(GetDefaultProps().Get("opencl.task.count")) <<
 			Sampler::ToProperties(cfg);
 }
 
@@ -228,7 +232,8 @@ Properties PathOCLRenderEngine::GetDefaultProps() {
 			Property("path.clamping.variance.maxvalue")(0.f) <<
 			Property("path.clamping.pdf.value")(0.f) <<
 			Property("path.fastpixelfilter.enable")(true) <<
-			Property("path.pixelatomics.enable")(false);
+			Property("path.pixelatomics.enable")(false) <<
+			Property("opencl.task.count")("AUTO");
 
 	return props;
 }
