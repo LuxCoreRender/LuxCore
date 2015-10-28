@@ -73,11 +73,11 @@ void BiasPathCPURenderThread::DirectLightSampling(
 			const float weight = (!sampleResult->lastPathVertex && (light->IsEnvironmental() || light->IsIntersectable())) ? 
 							PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 			Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
-					epsilon,
-					distance - epsilon,
+					0.f,
+					distance,
 					time);
+			shadowRay.UpdateMinMaxWithEpsilon();
 			RayHit shadowRayHit;
 			BSDF shadowBsdf;
 			Spectrum connectionThroughput;

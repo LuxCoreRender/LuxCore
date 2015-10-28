@@ -63,10 +63,10 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 	Spectrum bsdfEval = bsdf.Evaluate(-eyeDir, &event);
 
 	if (!bsdfEval.Black()) {
-		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
 		Ray eyeRay(lensPoint, eyeDir,
-				epsilon,
-				eyeDistance - epsilon);
+				0.f,
+				eyeDistance);
+		eyeRay.UpdateMinMaxWithEpsilon();
 
 		float filmX, filmY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
@@ -74,10 +74,12 @@ void LightCPURenderThread::ConnectToEye(const float u0, const LightSource &light
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
-			Ray traceRay(bsdf.hitPoint.p, -eyeDir, eyeRay.mint, eyeRay.maxt);
+			Ray traceRay(bsdf.hitPoint.p, -eyeDir,
+					0.f, eyeDistance);
+			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
-			BSDF bsdfConn;
 
+			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			if (!scene->Intersect(device, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
@@ -231,6 +233,7 @@ void LightCPURenderThread::RenderFunc() {
 		lightPathFlux = light->Emit(*scene,
 			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
 			&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+		nextEventRay.UpdateMinMaxWithEpsilon();
 		nextEventRay.time = time;
 
 		if (lightPathFlux.Black()) {

@@ -85,11 +85,11 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 			const float geometryTerm = 1.f / p2pDistance2;
 
 			// Trace ray between the two vertices
-			const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(p2pDistance));
 			Ray p2pRay(eyeVertex.bsdf.hitPoint.p, p2pDir,
-					epsilon,
-					p2pDistance - epsilon,
+					0.f,
+					p2pDistance,
 					time);
+			p2pRay.UpdateMinMaxWithEpsilon();
 			RayHit p2pRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
@@ -146,11 +146,11 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 	const Spectrum bsdfEval = lightVertex.bsdf.Evaluate(-eyeDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 	if (!bsdfEval.Black()) {
-		const float epsilon = Max(MachineEpsilon::E(lensPoint), MachineEpsilon::E(eyeDistance));
 		Ray eyeRay(lensPoint, eyeDir,
-				epsilon,
-				eyeDistance - epsilon,
+				0.f,
+				eyeDistance,
 				time);
+		eyeRay.UpdateMinMaxWithEpsilon();
 
 		float scrX, scrY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &scrX, &scrY)) {
@@ -158,7 +158,9 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 			// the information inside PathVolumeInfo are about the path from
 			// the light toward the camera (i.e. ray.o would be in the wrong
 			// place).
-			Ray traceRay(lightVertex.bsdf.hitPoint.p, -eyeDir, eyeRay.mint, eyeRay.maxt, time);
+			Ray traceRay(lightVertex.bsdf.hitPoint.p, -eyeDir,
+					0.f, eyeDistance, time);
+			traceRay.UpdateMinMaxWithEpsilon();
 			RayHit traceRayHit;
 
 			BSDF bsdfConn;
@@ -230,11 +232,11 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 			const Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 			if (!bsdfEval.Black()) {
-				const float epsilon = Max(MachineEpsilon::E(eyeVertex.bsdf.hitPoint.p), MachineEpsilon::E(distance));
 				Ray shadowRay(eyeVertex.bsdf.hitPoint.p, lightRayDir,
-						epsilon,
-						distance - epsilon,
+						0.f,
+						distance,
 						time);
+				shadowRay.UpdateMinMaxWithEpsilon();
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
@@ -338,6 +340,7 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 	lightVertex.throughput = light->Emit(*scene,
 		sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
 		&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
+	lightRay.UpdateMinMaxWithEpsilon();
 	lightRay.time = time;
 	if (!lightVertex.throughput.Black()) {
 		lightEmitPdfW *= lightPickPdf;
@@ -466,6 +469,7 @@ bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
 	pathVertex->volInfo.Update(event, pathVertex->bsdf);
 
 	*nextEventRay = Ray(pathVertex->bsdf.hitPoint.p, sampledDir);
+	nextEventRay->UpdateMinMaxWithEpsilon();
 	nextEventRay->time = time;
 
 	++pathVertex->depth;

@@ -87,8 +87,7 @@ void PerspectiveCamera::InitRay(Ray *ray, const float filmX, const float filmY) 
 
 	const Point Pcamera = Point(camTrans.rasterToCamera * Pras);
 
-	ray->o = Pcamera;
-	ray->d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
+	ray->Update(Pcamera, Vector(Pcamera.x, Pcamera.y, Pcamera.z));
 }
 
 Properties PerspectiveCamera::ToProperties() const {
