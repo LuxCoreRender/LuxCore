@@ -19,12 +19,16 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// Duv texture information
+// Texture bump/normal mapping
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_BUMPMAPS)
 
-float2 Texture_GetDuv(
+//------------------------------------------------------------------------------
+// Generic texture bump mapping
+//------------------------------------------------------------------------------
+
+float3 GenericTexture_Bump(
 		const uint texIndex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance
@@ -67,20 +71,55 @@ float2 Texture_GetDuv(
 	// Restore HitPoint
 	VSTORE3F(origP, &hitPoint->p.x);
 	VSTORE2F(origUV, &hitPoint->uv.u);
-	VSTORE3F(origShadeN, &hitPoint->shadeN.x);
 
-	return duv;
+	// Compute the new dpdu and dpdv
+	const float3 bumpDpdu = dpdu + duv.s0 * origShadeN;
+	const float3 bumpDpdv = dpdv + duv.s1 * origShadeN;
+	float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
+
+	// The above transform keeps the normal in the original normal
+	// hemisphere. If they are opposed, it means UVN was indirect and
+	// the normal needs to be reversed
+	newShadeN *= (dot(origShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
+
+	return newShadeN;
 }
 
+//------------------------------------------------------------------------------
+// ImageMapTexture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
+float3 ImageMapTexture_Bump(__global HitPoint *hitPoint,
+		const float sampleDistance, const float gain,
+		const uint imageMapIndex, __global const TextureMapping2D *mapping
+		IMAGEMAPS_PARAM_DECL) {
+	float2 du, dv;
+	const float2 uv = TextureMapping2D_MapDuv(mapping, hitPoint, &du, &dv);
+	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
+	const float2 dst = ImageMap_GetDuv(imageMap, uv.x, uv.y IMAGEMAPS_PARAM);
+	const float2 duv = gain * (float2)(dot(dst, du), dot(dst, dv));
+	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 n = normalize(cross(VLOAD3F(&hitPoint->dpdu.x) + duv.x * shadeN, VLOAD3F(&hitPoint->dpdv.x) + duv.y * shadeN));
+	if (dot(n, shadeN) < 0.f)
+		return -n;
+	else
+		return n;
+}
+#endif
+
+//------------------------------------------------------------------------------
+// NormalMapTexture
+//------------------------------------------------------------------------------
+
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
-float2 NormalMapTexture_GetDuv(
+float3 NormalMapTexture_Bump(
 		const uint texIndex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance
 		TEXTURES_PARAM_DECL) {
-	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
-	__global Texture *texture = &texs[texIndex];
+	// Normal from normal map
+	const __global Texture *texture = &texs[texIndex];
 	float3 rgb = Texture_GetSpectrumValue(texture->normalMap.texIndex, hitPoint
 			TEXTURES_PARAM);
 	rgb = clamp(rgb, -1.f, 1.f);
@@ -88,46 +127,18 @@ float2 NormalMapTexture_GetDuv(
 	// Normal from normal map
 	float3 n = 2.f * rgb - (float3)(1.f, 1.f, 1.f);
 
-	const float3 k = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+	float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
+	
+	Frame frame;
+	Frame_Set_Private(&frame, dpdu, dpdv, oldShadeN);
 
 	// Transform n from tangent to object space
-	const float btsign = (dot(dpdv, k) > 0.f) ? 1.f : -1.f;
+	float3 shadeN = normalize(Frame_ToWorld_Private(&frame, n));
+	shadeN *= (dot(oldShadeN, shadeN) < 0.f) ? -1.f : 1.f;
 
-	// Magnitude of btsign is the magnitude of the interpolated normal
-	const float3 kk = k * fabs(btsign);
-
-	// tangent -> object
-	n = normalize(n.x * dpdu + n.y * btsign * dpdv + n.z * kk);
-
-	// Since n is stored normalized in the normal map
-	// we need to recover the original length (lambda).
-	// We do this by solving 
-	//   lambda*n = dp/du x dp/dv
-	// where 
-	//   p(u,v) = base(u,v) + h(u,v) * k
-	// and
-	//   k = dbase/du x dbase/dv
-	//
-	// We recover lambda by dotting the above with k
-	//   k . lambda*n = k . (dp/du x dp/dv)
-	//   lambda = (k . k) / (k . n)
-	// 
-	// We then recover dh/du by dotting the first eq by dp/du
-	//   dp/du . lambda*n = dp/du . (dp/du x dp/dv)
-	//   dp/du . lambda*n = dh/du * [dbase/du . (k x dbase/dv)]
-	//
-	// The term "dbase/du . (k x dbase/dv)" reduces to "-(k . k)", so we get
-	//   dp/du . lambda*n = dh/du * -(k . k)
-	//   dp/du . [(k . k) / (k . n)*n] = dh/du * -(k . k)
-	//   dp/du . [-n / (k . n)] = dh/du
-	// and similar for dh/dv
-	// 
-	// Since the recovered dh/du will be in units of ||k||, we must divide
-	// by ||k|| to get normalized results. Using dg.nn as k in the last eq
-	// yields the same result.
-	const float3 nn = (-1.f / dot(k, n)) * n;
-
-	return (float2)(dot(dpdu, nn), dot(dpdv, nn));
+	return shadeN;
 }
 #endif
 

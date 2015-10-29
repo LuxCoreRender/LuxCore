@@ -94,7 +94,9 @@ public:
 	RTBiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~RTBiasPathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return RTBIASPATHOCL; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
 	double GetFrameTime() const { return frameTime; }
 
 	virtual void BeginSceneEdit();
@@ -102,9 +104,20 @@ public:
 
 	void WaitNewFrame();
 
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return RTBIASPATHOCL; }
+	static std::string GetObjectTag() { return "RTBIASPATHOCL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
+
 	friend class RTBiasPathOCLRenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual BiasPathOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 

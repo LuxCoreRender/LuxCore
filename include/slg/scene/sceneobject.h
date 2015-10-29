@@ -33,6 +33,7 @@
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 #include "slg/scene/extmeshcache.h"
+#include "slg/lights/lightsourcedefinition.h"
 
 namespace slg {
 
@@ -83,6 +84,8 @@ public:
 		return (objsByName.count(name) > 0);
 	}
 	void DefineSceneObject(const std::string &name, SceneObject *m);
+	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const Material *newMat) const;
+	void DefineIntersectableLights(LightSourceDefinitions &lightDefs, const SceneObject *obj) const;
 
 	const SceneObject *GetSceneObject(const std::string &name) const;
 	SceneObject *GetSceneObject(const std::string &name);

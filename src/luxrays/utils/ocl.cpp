@@ -157,7 +157,7 @@ cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &dev
 		VECTOR_CLASS<cl::Device> buildDevice;
 		buildDevice.push_back(device);
 		program->build(buildDevice, kernelsParameters.c_str());
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		const std::string clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
 
 		std::stringstream ss;
@@ -236,17 +236,21 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 // oclKernelPersistentCache
 //------------------------------------------------------------------------------
 
+static std::string SanitizeFileName(const std::string &name) {
+	std::string sanitizedName = name;
+
+	boost::replace_all(sanitizedName, ":", "__");
+	boost::replace_all(sanitizedName, "/", "__");
+	boost::replace_all(sanitizedName, "\\", "__");
+
+	return sanitizedName;
+}
+
 oclKernelPersistentCache::oclKernelPersistentCache(const std::string &applicationName) {
 	appName = applicationName;
 
-	// Just to be safe
-	boost::replace_all(appName, ":", "-");
-	boost::replace_all(appName, " ", "-");
-	boost::replace_all(appName, "/", "-");
-	boost::replace_all(appName, "\\", "-");
-
 	// Crate the cache directory
-	boost::filesystem::create_directories(boost::filesystem::temp_directory_path() / "kernel_cache" / appName);
+	boost::filesystem::create_directories(boost::filesystem::temp_directory_path() / "kernel_cache" / SanitizeFileName(appName));
 }
 
 oclKernelPersistentCache::~oclKernelPersistentCache() {
@@ -291,7 +295,8 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	const std::string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
 	const std::string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
 	const boost::filesystem::path dirPath = boost::filesystem::temp_directory_path() /
-		"kernel_cache" / appName / platformName / deviceName / deviceUnits;
+		"kernel_cache" / SanitizeFileName(appName) / SanitizeFileName(platformName) /
+		SanitizeFileName(deviceName) / SanitizeFileName(deviceUnits);
 	const boost::filesystem::path filePath = dirPath / kernelName;
 	const std::string fileName = filePath.generic_string();
 	

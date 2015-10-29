@@ -25,6 +25,10 @@
 #if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
+	// Used only by PATHOCL
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	uint pixelX, pixelY;
+#endif
 	float filmX, filmY;
 	Spectrum radiancePerPixelNormalized[PARAM_FILM_RADIANCE_GROUP_COUNT];
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)

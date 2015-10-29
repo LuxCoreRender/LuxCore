@@ -47,32 +47,26 @@ void Sampler_SplatSample(
 		__global float *sampleData
 		FILM_PARAM_DECL
 		) {
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+			&sample->result, 1.f
+			FILM_PARAM);
+#else
 	Film_SplatSample(&sample->result, 1.f
 			FILM_PARAM);
+#endif
 }
 
 void Sampler_NextSample(
 		Seed *seed,
 		__global Sample *sample,
-		__global float *sampleData,
-		const uint filmWidth, const uint filmHeight
+		__global float *sampleData
 		) {
-	// Move to the next sample
-	const float u0 = Rnd_FloatValue(seed);
-	const float u1 = Rnd_FloatValue(seed);
-
-	// TODO: remove sampleData[]
-	sampleData[IDX_SCREEN_X] = u0;
-	sampleData[IDX_SCREEN_Y] = u1;
-
-	SampleResult_Init(&sample->result);
-	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
-	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
+	// sampleData[] is not used at all in random sampler
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
-		const uint filmWidth, const uint filmHeight) {
-	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight);
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
+	Sampler_NextSample(seed, sample, sampleData);
 }
 
 #endif
@@ -156,8 +150,7 @@ void SmallStep(Seed *seed, __global float *currentU, __global float *proposedU) 
 		proposedU[i] = Mutate(seed, currentU[i]);
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
-		const uint filmWidth, const uint filmHeight) {
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
 
@@ -171,10 +164,6 @@ void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleDat
 
 	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 	LargeStep(seed, sampleDataPathBase);
-
-	SampleResult_Init(&sample->result);
-	sample->result.filmX = min(sampleDataPathBase[IDX_SCREEN_X] * filmWidth, (float)(filmWidth - 1));
-	sample->result.filmY = min(sampleDataPathBase[IDX_SCREEN_Y] * filmHeight, (float)(filmHeight - 1));
 }
 
 void Sampler_SplatSample(
@@ -194,8 +183,14 @@ void Sampler_SplatSample(
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+				&sample->result, 1.f
+				FILM_PARAM);
+#else
 		Film_SplatSample(&sample->result, 1.f
 					FILM_PARAM);
+#endif
 
 		sample->currentResult = sample->result;
 		sample->totalI = SampleResult_Radiance_Y(&sample->result);
@@ -276,8 +271,14 @@ void Sampler_SplatSample(
 				printf(\"\\t\\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\\n\",
 						contrib.r, contrib.g, contrib.b, norm, consecutiveRejects);*/
 
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			Film_AddSample(contrib->pixelX, contrib->pixelY,
+					contrib, norm
+					FILM_PARAM);
+#else
 			Film_SplatSample(contrib, norm
 					FILM_PARAM);
+#endif
 		}
 
 		// Check if it is an accepted mutation
@@ -297,9 +298,7 @@ void Sampler_SplatSample(
 void Sampler_NextSample(
 		Seed *seed,
 		__global Sample *sample,
-		__global float *sampleData,
-		const uint filmWidth, const uint filmHeight
-		) {
+		__global float *sampleData) {
 	//--------------------------------------------------------------------------
 	// Mutate the sample
 	//--------------------------------------------------------------------------
@@ -314,10 +313,6 @@ void Sampler_NextSample(
 		SmallStep(seed, currentU, proposedU);
 		sample->smallMutationCount += 1;
 	}
-
-	SampleResult_Init(&sample->result);
-	sample->result.filmX = min(proposedU[IDX_SCREEN_X] * filmWidth, (float)(filmWidth - 1));
-	sample->result.filmY = min(proposedU[IDX_SCREEN_Y] * filmHeight, (float)(filmHeight - 1));
 }
 
 #endif
@@ -379,16 +374,20 @@ void Sampler_SplatSample(
 		__global float *sampleData
 		FILM_PARAM_DECL
 		) {
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+			&sample->result, 1.f
+			FILM_PARAM);
+#else
 	Film_SplatSample(&sample->result, 1.f
 			FILM_PARAM);
+#endif
 }
 
 void Sampler_NextSample(
 		Seed *seed,
 		__global Sample *sample,
-		__global float *sampleData,
-		const uint filmWidth, const uint filmHeight
-		) {
+		__global float *sampleData) {
 	// Move to the next sample
 	sample->pass += get_global_size(0);
 
@@ -397,17 +396,12 @@ void Sampler_NextSample(
 
 	sampleData[IDX_SCREEN_X] = u0;
 	sampleData[IDX_SCREEN_Y] = u1;
-
-	SampleResult_Init(&sample->result);
-	sample->result.filmX = min(u0 * filmWidth, (float)(filmWidth - 1));
-	sample->result.filmY = min(u1 * filmHeight, (float)(filmHeight - 1));
 }
 
-void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData,
-		const uint filmWidth, const uint filmHeight) {
+void Sampler_Init(Seed *seed, __global Sample *sample, __global float *sampleData) {
 	sample->pass = PARAM_SAMPLER_SOBOL_STARTOFFSET + get_global_id(0);
 
-	Sampler_NextSample(seed, sample, sampleData, filmWidth, filmHeight);
+	Sampler_NextSample(seed, sample, sampleData);
 }
 
 #endif

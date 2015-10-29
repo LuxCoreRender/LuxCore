@@ -105,8 +105,7 @@ Properties MapPointLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props = PointLight::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("mappoint"));
-	props.Set(Property(prefix + ".mapfile")("imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+	props.Set(Property(prefix + ".mapfile")(imageMap->GetFileName(imgMapCache)));
 
 	return props;
 }

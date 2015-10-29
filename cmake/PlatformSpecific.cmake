@@ -167,7 +167,10 @@ IF(APPLE)
 
 	execute_process(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	if(${MAC_SYS} MATCHES 14)
+	if(${MAC_SYS} MATCHES 15)
+		set(OSX_SYSTEM 10.11)
+		cmake_minimum_required(VERSION 3.0.0) # throw an error here, older cmake cannot handle 2 digit subversion !
+	elseif(${MAC_SYS} MATCHES 14)
 		set(OSX_SYSTEM 10.10)
 		cmake_minimum_required(VERSION 3.0.0) # throw an error here, older cmake cannot handle 2 digit subversion !
 	elseif(${MAC_SYS} MATCHES 13)
@@ -231,8 +234,8 @@ IF(APPLE)
 	set(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}") # cmake emits "-O3 -DNDEBUG" for Release by default, "-O0 -g" for Debug
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,${CMAKE_SOURCE_DIR}/include/luxrays/utils/unexported_symbols.map")
-	set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,${CMAKE_SOURCE_DIR}/include/luxrays/utils/unexported_symbols.map")
+	set(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/include/luxrays/utils/unexported_symbols.map\"")
+	set(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/include/luxrays/utils/unexported_symbols.map\"")
 	
 	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
 	if(${CMAKE_C_COMPILER_ID} MATCHES "Clang" AND NOT ${CMAKE_C_COMPILER_VERSION} LESS 6.0) # Apple LLVM version 6.0 (clang-600.0.54) (based on LLVM 3.5svn)

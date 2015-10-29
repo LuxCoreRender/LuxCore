@@ -33,6 +33,21 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::AutoLinearToneMap)
 
+float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const float Y) {
+	float gamma = 2.2f;
+	const ImagePipeline *ip = film.GetImagePipeline();
+	if (ip) {
+		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
+		if (gc)
+			gamma = gc->gamma;
+	}
+	
+	// Substitute exposure, fstop and sensitivity cancel out; collect constants
+	const float scale = (1.25f / Y * powf(118.f / 255.f, gamma));
+
+	return scale;
+}
+
 void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bool> &pixelsMask) const {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 
@@ -51,16 +66,7 @@ void AutoLinearToneMap::Apply(const Film &film, Spectrum *pixels, std::vector<bo
 	if (Y <= 0.f)
 		return;
 
-	float gamma = 2.2f;
-	const ImagePipeline *ip = film.GetImagePipeline();
-	if (ip) {
-		const GammaCorrectionPlugin *gc = (const GammaCorrectionPlugin *)ip->GetPlugin(typeid(GammaCorrectionPlugin));
-		if (gc)
-			gamma = gc->gamma;
-	}
-	
-	// Substitute exposure, fstop and sensitivity cancel out; collect constants
-	const float scale = (1.25f / Y * powf(118.f / 255.f, gamma));
+	const float scale = CalcLinearToneMapScale(film, Y);
 
 	for (u_int i = 0; i < pixelCount; ++i) {
 		if (pixelsMask[i])

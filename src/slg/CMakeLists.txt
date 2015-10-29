@@ -91,6 +91,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/engines/biaspathocl/kernels/biaspathocl_kernels_micro.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/sampleresult_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/filters/filter_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/imagemap/imagemap_types.cl
@@ -136,11 +137,13 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_abs_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_clamp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/varianceclamping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volumeinfo_funcs.cl
@@ -161,15 +164,26 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/perspective.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/projective.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/stereo.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/core/namedobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/sphericalfunction.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/photometricdataies.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/renderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/cpurenderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/oclrenderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepository.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/hashgrid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledscene.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilecamera.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilegeometry.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compileimagemaps.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilelights.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilematerials.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiletextures.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathocl/pathocl.cpp
@@ -188,7 +202,20 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathocl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/rtbiaspathocl/rtbiaspathoclthread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/film.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutput.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutputs.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmparse.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/box.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/gaussian.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchell.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/contourlines.cpp
@@ -240,7 +267,6 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/velvet.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobol.cpp
@@ -265,6 +291,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/abs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/add.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/bilerp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
@@ -300,6 +327,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/lpyramid.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/pdiff/metric.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/convtest/convtest.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/clear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/heterogenous.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/homogenous.cpp
@@ -312,6 +340,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampler_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/film_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/sampleresult_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/filter_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/camera_types_kernel.cpp
@@ -351,11 +380,13 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bump_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_noise_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_abs_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bilerp_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blackbody_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_clamp_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelcolor_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelconst_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_irregulardata_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/varianceclamping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volume_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/volumeinfo_funcs_kernel.cpp

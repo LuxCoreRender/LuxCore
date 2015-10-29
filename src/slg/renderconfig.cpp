@@ -17,13 +17,14 @@
  ***************************************************************************/
 
 #include <memory>
+
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp> 
 #include <boost/filesystem.hpp>
 
 #include "slg/renderconfig.h"
-#include "slg/renderengine.h"
+#include "slg/engines/renderengine.h"
 #include "slg/film/film.h"
 
 #include "slg/samplers/random.h"
@@ -37,16 +38,7 @@
 #include "slg/film/filters/blackmanharris.h"
 
 #include "slg/film/imagepipeline/plugins/tonemaps/autolinear.h"
-#include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
-#include "slg/film/imagepipeline/plugins/tonemaps/luxlinear.h"
-#include "slg/film/imagepipeline/plugins/tonemaps/reinhard02.h"
-
-#include "slg/film/imagepipeline/plugins/cameraresponse.h"
-#include "slg/film/imagepipeline/plugins/contourlines.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
-#include "slg/film/imagepipeline/plugins/gaussianblur3x3.h"
-#include "slg/film/imagepipeline/plugins/nop.h"
-#include "slg/film/imagepipeline/plugins/outputswitcher.h"
 
 #include "slg/engines/rtpathocl/rtpathocl.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
@@ -96,7 +88,7 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("film.width")(640u));
 
 			// Sampler related Properties
-			defaultProperties->Set(Property("sampler.type")("RANDOM"));
+			defaultProperties->Set(Property("sampler.type")("SOBOL"));
 			defaultProperties->Set(Property("sampler.metropolis.largesteprate")(.4f));
 			defaultProperties->Set(Property("sampler.metropolis.maxconsecutivereject")(512));
 			defaultProperties->Set(Property("sampler.metropolis.imagemutationrate")(.1f));
@@ -117,7 +109,7 @@ const Properties &RenderConfig::GetDefaultProperties() {
 	return *defaultProperties;
 }
 
-RenderConfig::RenderConfig(const luxrays::Properties &props, Scene *scn) : scene(scn) {
+RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 	InitDefaultProperties();
 
 	SLG_LOG("Configuration: ");
@@ -150,7 +142,7 @@ RenderConfig::~RenderConfig() {
 		delete scene;
 }
 
-const luxrays::Property RenderConfig::GetProperty(const std::string &name) const {
+const Property RenderConfig::GetProperty(const string &name) const {
 	if (cfg.IsDefined(name))
 		return cfg.Get(name);
 	else {
@@ -159,7 +151,7 @@ const luxrays::Property RenderConfig::GetProperty(const std::string &name) const
 	}
 }
 
-void RenderConfig::Parse(const luxrays::Properties &props) {
+void RenderConfig::Parse(const Properties &props) {
 	cfg.Set(props);
 
 	scene->enableInstanceSupport = GetProperty("accelerator.instances.enable").Get<bool>();
@@ -254,131 +246,23 @@ bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 	return subRegionUsed;
 }
 
-Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
-	//--------------------------------------------------------------------------
-	// Create the filter
-	//--------------------------------------------------------------------------
+Filter *RenderConfig::AllocPixelFilter() const {
+	return Filter::FromProperties(cfg);
+}
 
-	const FilterType filterType = Filter::String2FilterType(GetProperty("film.filter.type").Get<string>());
-	const float defaultFilterWidth = GetProperty("film.filter.width").Get<float>();
-	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
-	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
-
-	auto_ptr<Filter> filter;
-	switch (filterType) {
-		case FILTER_NONE:
-			break;
-		case FILTER_BOX:
-			filter.reset(new BoxFilter(filterXWidth, filterYWidth));
-			break;
-		case FILTER_GAUSSIAN: {
-			const float alpha = GetProperty("film.filter.gaussian.alpha").Get<float>();
-			filter.reset(new GaussianFilter(filterXWidth, filterYWidth, alpha));
-			break;
-		}
-		case FILTER_MITCHELL: {
-			const float b = GetProperty("film.filter.mitchell.b").Get<float>();
-			const float c = GetProperty("film.filter.mitchell.c").Get<float>();
-			filter.reset(new MitchellFilter(filterXWidth, filterYWidth, b, c));
-			break;
-		}
-		case FILTER_MITCHELL_SS: {
-			const float b = GetProperty("film.filter.mitchellss.b").Get<float>();
-			const float c = GetProperty("film.filter.mitchellss.c").Get<float>();
-			filter.reset(new MitchellFilterSS(filterXWidth, filterYWidth, b, c));
-			break;
-		}
-		case FILTER_BLACKMANHARRIS: {
-			filter.reset(new BlackmanHarrisFilter(filterXWidth, filterYWidth));
-			break;
-		}
-		default:
-			throw runtime_error("Unknown filter type: " + boost::lexical_cast<string>(filterType));
-	}
-
-	//--------------------------------------------------------------------------
-	// Create the image pipeline
-	//--------------------------------------------------------------------------
-
-	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
-	vector<string> imagePipelineKeys = cfg.GetAllUniqueSubNames("film.imagepipeline");
-	if (imagePipelineKeys.size() > 0) {
-		// Sort the entries
-		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
-
-		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
-			// Extract the plugin priority name
-			const string pluginPriority = Property::ExtractField(*imagePipelineKey, 2);
-			if (pluginPriority == "")
-				throw runtime_error("Syntax error in image pipeline plugin definition: " + *imagePipelineKey);
-			const string prefix = "film.imagepipeline." + pluginPriority;
-
-			const string type = cfg.Get(Property(prefix + ".type")("")).Get<string>();
-			if (type == "")
-				throw runtime_error("Syntax error in " + prefix + ".type");
-
-			if (type == "TONEMAP_LINEAR") {
-				imagePipeline->AddPlugin(new LinearToneMap(
-					cfg.Get(Property(prefix + ".scale")(1.f)).Get<float>()));
-			} else if (type == "TONEMAP_REINHARD02") {
-				imagePipeline->AddPlugin(new Reinhard02ToneMap(
-					cfg.Get(Property(prefix + ".prescale")(1.f)).Get<float>(),
-					cfg.Get(Property(prefix + ".postscale")(1.2f)).Get<float>(),
-					cfg.Get(Property(prefix + ".burn")(3.75f)).Get<float>()));
-			} else if (type == "TONEMAP_AUTOLINEAR") {
-				imagePipeline->AddPlugin(new AutoLinearToneMap());
-			} else if (type == "TONEMAP_LUXLINEAR") {
-				imagePipeline->AddPlugin(new LuxLinearToneMap(
-					cfg.Get(Property(prefix + ".sensitivity")(100.f)).Get<float>(),
-					cfg.Get(Property(prefix + ".exposure")(1.f / 1000.f)).Get<float>(),
-					cfg.Get(Property(prefix + ".fstop")(2.8f)).Get<float>()));
-			} else if (type == "NOP") {
-				imagePipeline->AddPlugin(new NopPlugin());
-			} else if (type == "GAMMA_CORRECTION") {
-				imagePipeline->AddPlugin(new GammaCorrectionPlugin(
-					cfg.Get(Property(prefix + ".value")(2.2f)).Get<float>(),
-					// 4096 => 12bit resolution
-					cfg.Get(Property(prefix + ".table.size")(4096u)).Get<u_int>()));
-			} else if (type == "OUTPUT_SWITCHER") {
-				imagePipeline->AddPlugin(new OutputSwitcherPlugin(
-					Film::String2FilmChannelType(cfg.Get(Property(prefix + ".channel")("DEPTH")).Get<string>()),
-					cfg.Get(Property(prefix + ".index")(0u)).Get<u_int>()));
-			} else if (type == "GAUSSIANFILTER_3x3") {
-				imagePipeline->AddPlugin(new GaussianBlur3x3FilterPlugin(
-					cfg.Get(Property(prefix + ".weight")(.15f)).Get<float>()));
-			} else if (type == "CAMERA_RESPONSE_FUNC") {
-				imagePipeline->AddPlugin(new CameraResponsePlugin(
-					cfg.Get(Property(prefix + ".name")("Advantix_100CD")).Get<string>()));
-			} else if (type == "CONTOUR_LINES") {
-				const float scale = cfg.Get(Property(prefix + ".scale")(179.f)).Get<float>();
-				const float range = Max(0.f, cfg.Get(Property(prefix + ".range")(100.f)).Get<float>());
-				const u_int steps = Max(2u, cfg.Get(Property(prefix + ".steps")(8)).Get<u_int>());
-				const int zeroGridSize = cfg.Get(Property(prefix + ".zerogridsize")(8)).Get<int>();
-				imagePipeline->AddPlugin(new ContourLinesPlugin(scale, range, steps, zeroGridSize));
-			} else
-				throw runtime_error("Unknown image pipeline plugin type: " + type);
-		}
-	} else {
-		// The definition of image pipeline is missing, use the default
-		imagePipeline->AddPlugin(new AutoLinearToneMap());
-		imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f, 4096));
-	}
-
-	if (cfg.IsDefined("film.gamma")) {
-		SLG_LOG("WARNING: ignored deprecated property film.gamma");
-	}
-
+Film *RenderConfig::AllocFilm() const {
 	//--------------------------------------------------------------------------
 	// Create the Film
 	//--------------------------------------------------------------------------
 
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
-	GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
+	const bool filmSubRegionUsed = GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
 
 	SLG_LOG("Film resolution: " << filmFullWidth << "x" << filmFullHeight);
-	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight));
-	film->SetFilter(filter.release());
-	film->SetImagePipeline(imagePipeline.release());
+	if (filmSubRegionUsed)
+		SLG_LOG("Film sub-region: " << filmSubRegion[0] << " " << filmSubRegion[1] << filmSubRegion[2] << " " << filmSubRegion[3]);
+	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight,
+			filmSubRegionUsed ? filmSubRegion : NULL));
 
 	// For compatibility with the past
 	if (cfg.IsDefined("film.alphachannel.enable")) {
@@ -391,259 +275,51 @@ Film *RenderConfig::AllocFilm(FilmOutputs &filmOutputs) const {
 	}
 
 	//--------------------------------------------------------------------------
-	// Initialize the FilmOutputs
+	// Add the default image pipeline
+	//--------------------------------------------------------------------------
+		
+	auto_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
+	imagePipeline->AddPlugin(new AutoLinearToneMap());
+	imagePipeline->AddPlugin(new GammaCorrectionPlugin(2.2f));
+
+	film->SetImagePipeline(imagePipeline.release());
+
+	//--------------------------------------------------------------------------
+	// Add the default output
 	//--------------------------------------------------------------------------
 
-	set<string> outputNames;
-	vector<string> outputKeys = cfg.GetAllNames("film.outputs.");
-	for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {
-		const string &key = *outputKey;
-		const size_t dot1 = key.find(".", string("film.outputs.").length());
-		if (dot1 == string::npos)
-			continue;
+	film->Parse(Properties() << 
+			Property("film.outputs.0.type")("RGB_TONEMAPPED") <<
+			Property("film.outputs.0.filename")("image.png"));
 
-		// Extract the output type name
-		const string outputName = Property::ExtractField(key, 2);
-		if (outputName == "")
-			throw runtime_error("Syntax error in film output definition: " + outputName);
+	//--------------------------------------------------------------------------
+	// Create the image pipeline, initialize radiance channel scales
+	// and film outputs
+	//--------------------------------------------------------------------------
 
-		if (outputNames.count(outputName) > 0)
-			continue;
-
-		outputNames.insert(outputName);
-		const string type = cfg.Get(Property("film.outputs." + outputName + ".type")("RGB_TONEMAPPED")).Get<string>();
-		const string fileName = cfg.Get(Property("film.outputs." + outputName + ".filename")("image.png")).Get<string>();
-
-		SDL_LOG("Film output definition: " << type << " [" << fileName << "]");
-
-//		// Check if it is a supported file format
-//		FREE_IMAGE_FORMAT fif = FREEIMAGE_GETFIFFROMFILENAME(FREEIMAGE_CONVFILENAME(fileName).c_str());
-//		if (fif == FIF_UNKNOWN)
-//			throw runtime_error("Unknown image format in film output: " + outputName);
-
-		// HDR image or not
-		bool hdrImage = false;
-		string lowerFileName = boost::algorithm::to_lower_copy(fileName);
-#if defined _MSC_VER
-        string file_extension  = boost::filesystem::path(lowerFileName).extension().string();
-#else
-        string file_extension  = boost::filesystem::path(lowerFileName).extension().native();
-#endif
-		
-		if (file_extension == ".exr" || file_extension == ".hdr")
-			hdrImage = true;
-
-		if (type == "RGB") {
-			if (hdrImage)
-				filmOutputs.Add(FilmOutputs::RGB, fileName);
-			else
-				throw runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
-		} else if (type == "RGBA") {
-			if (hdrImage) {
-				film->AddChannel(Film::ALPHA);
-				filmOutputs.Add(FilmOutputs::RGBA, fileName);
-			} else
-				throw runtime_error("Not tonemapped image can be saved only in HDR formats: " + outputName);
-		} else if (type == "RGB_TONEMAPPED")
-			filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, fileName);
-		else if (type == "RGBA_TONEMAPPED") {
-			film->AddChannel(Film::ALPHA);
-			filmOutputs.Add(FilmOutputs::RGBA_TONEMAPPED, fileName);
-		} else if (type == "ALPHA") {
-			film->AddChannel(Film::ALPHA);
-			filmOutputs.Add(FilmOutputs::ALPHA, fileName);
-		} else if (type == "DEPTH") {
-			if (hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				filmOutputs.Add(FilmOutputs::DEPTH, fileName);
-			} else
-				throw runtime_error("Depth image can be saved only in HDR formats: " + outputName);
-		} else if (type == "POSITION") {
-			if (hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				film->AddChannel(Film::POSITION);
-				filmOutputs.Add(FilmOutputs::POSITION, fileName);
-			} else
-				throw runtime_error("Position image can be saved only in HDR formats: " + outputName);
-		} else if (type == "GEOMETRY_NORMAL") {
-			if (hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				film->AddChannel(Film::GEOMETRY_NORMAL);
-				filmOutputs.Add(FilmOutputs::GEOMETRY_NORMAL, fileName);
-			} else
-				throw runtime_error("Geometry normal image can be saved only in HDR formats: " + outputName);
-		} else if (type == "SHADING_NORMAL") {
-			if (hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				film->AddChannel(Film::SHADING_NORMAL);
-				filmOutputs.Add(FilmOutputs::SHADING_NORMAL, fileName);
-			} else
-				throw runtime_error("Shading normal image can be saved only in HDR formats: " + outputName);
-		} else if (type == "MATERIAL_ID") {
-			if (!hdrImage) {
-				film->AddChannel(Film::DEPTH);
-				film->AddChannel(Film::MATERIAL_ID);
-				filmOutputs.Add(FilmOutputs::MATERIAL_ID, fileName);
-			} else
-				throw runtime_error("Material ID image can be saved only in non HDR formats: " + outputName);
-		} else if (type == "DIRECT_DIFFUSE") {
-			if (hdrImage) {
-				film->AddChannel(Film::DIRECT_DIFFUSE);
-				filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE, fileName);
-			} else
-				throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
-		} else if (type == "DIRECT_GLOSSY") {
-			if (hdrImage) {
-				film->AddChannel(Film::DIRECT_GLOSSY);
-				filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY, fileName);
-			} else
-				throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
-		} else if (type == "EMISSION") {
-			if (hdrImage) {
-				film->AddChannel(Film::EMISSION);
-				filmOutputs.Add(FilmOutputs::EMISSION, fileName);
-			} else
-				throw runtime_error("Emission image can be saved only in HDR formats: " + outputName);
-		} else if (type == "INDIRECT_DIFFUSE") {
-			if (hdrImage) {
-				film->AddChannel(Film::INDIRECT_DIFFUSE);
-				filmOutputs.Add(FilmOutputs::INDIRECT_DIFFUSE, fileName);
-			} else
-				throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
-		} else if (type == "INDIRECT_GLOSSY") {
-			if (hdrImage) {
-				film->AddChannel(Film::INDIRECT_GLOSSY);
-				filmOutputs.Add(FilmOutputs::INDIRECT_GLOSSY, fileName);
-			} else
-				throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
-		} else if (type == "INDIRECT_SPECULAR") {
-			if (hdrImage) {
-				film->AddChannel(Film::INDIRECT_SPECULAR);
-				filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR, fileName);
-			} else
-				throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
-		} else if (type == "MATERIAL_ID_MASK") {
-			const u_int materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255)).Get<u_int>();
-			Properties prop;
-			prop.Set(Property("id")(materialID));
-
-			film->AddChannel(Film::MATERIAL_ID);
-			film->AddChannel(Film::MATERIAL_ID_MASK, &prop);
-			filmOutputs.Add(FilmOutputs::MATERIAL_ID_MASK, fileName, &prop);
-		} else if (type == "DIRECT_SHADOW_MASK") {
-			film->AddChannel(Film::DIRECT_SHADOW_MASK);
-			filmOutputs.Add(FilmOutputs::DIRECT_SHADOW_MASK, fileName);
-		} else if (type == "INDIRECT_SHADOW_MASK") {
-			film->AddChannel(Film::INDIRECT_SHADOW_MASK);
-			filmOutputs.Add(FilmOutputs::INDIRECT_SHADOW_MASK, fileName);
-		} else if (type == "RADIANCE_GROUP") {
-			const u_int lightID = cfg.Get(Property("film.outputs." + outputName + ".id")(0)).Get<u_int>();
-			Properties prop;
-			prop.Set(Property("id")(lightID));
-
-			filmOutputs.Add(FilmOutputs::RADIANCE_GROUP, fileName, &prop);
-		} else if (type == "UV") {
-			film->AddChannel(Film::DEPTH);
-			film->AddChannel(Film::UV);
-			filmOutputs.Add(FilmOutputs::UV, fileName);
-		} else if (type == "RAYCOUNT") {
-			film->AddChannel(Film::RAYCOUNT);
-			filmOutputs.Add(FilmOutputs::RAYCOUNT, fileName);
-		} else if (type == "BY_MATERIAL_ID") {
-			const u_int materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255)).Get<u_int>();
-			Properties prop;
-			prop.Set(Property("id")(materialID));
-
-			film->AddChannel(Film::MATERIAL_ID);
-			film->AddChannel(Film::BY_MATERIAL_ID, &prop);
-			filmOutputs.Add(FilmOutputs::BY_MATERIAL_ID, fileName, &prop);
-		} else if (type == "IRRADIANCE") {
-			film->AddChannel(Film::IRRADIANCE);
-			filmOutputs.Add(FilmOutputs::IRRADIANCE, fileName);
-		} else
-			throw runtime_error("Unknown type in film output: " + type);
-	}
-
-	// For compatibility with the past
-	if (cfg.IsDefined("image.filename")) {
-		SLG_LOG("WARNING: deprecated property image.filename");
-		filmOutputs.Add(film->HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_TONEMAPPED : FilmOutputs::RGB_TONEMAPPED,
-				cfg.Get(Property("image.filename")("image.png")).Get<string>());
-	}
-
-	// Default setting
-	if (filmOutputs.GetCount() == 0)
-		filmOutputs.Add(FilmOutputs::RGB_TONEMAPPED, "image.png");
+	film->Parse(cfg);
 
 	return film.release();
 }
 
-Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film,
-		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const {
-	const SamplerType samplerType = Sampler::String2SamplerType(GetProperty("sampler.type").Get<string>());
-	switch (samplerType) {
-		case RANDOM:
-			return new RandomSampler(rndGen, film);
-		case METROPOLIS: {
-			const float rate = GetProperty("sampler.metropolis.largesteprate").Get<float>();
-			const float reject = GetProperty("sampler.metropolis.maxconsecutivereject").Get<float>();
-			const float mutationrate = GetProperty("sampler.metropolis.imagemutationrate").Get<float>();
+SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen) const {
+	return SamplerSharedData::FromProperties(cfg, rndGen);
+}
 
-			return new MetropolisSampler(rndGen, film, reject, rate, mutationrate,
-					metropolisSharedTotalLuminance, metropolisSharedSampleCount);
-		}
-		case SOBOL:
-			return new SobolSampler(rndGen, film);
-		default:
-			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
-	}
+Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
+		SamplerSharedData *sharedData) const {
+	return Sampler::FromProperties(cfg, rndGen, film, flmSplatter, sharedData);
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMutex) const {
-	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(
-		GetProperty("renderengine.type").Get<string>());
+	return RenderEngine::FromProperties(this, film, filmMutex);
+}
 
-	switch (renderEngineType) {
-		case LIGHTCPU:
-			return new LightCPURenderEngine(this, film, filmMutex);
-		case PATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new PathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-#endif
-		case PATHCPU:
-			return new PathCPURenderEngine(this, film, filmMutex);
-		case BIDIRCPU:
-			return new BiDirCPURenderEngine(this, film, filmMutex);
-		case BIDIRVMCPU:
-			return new BiDirVMCPURenderEngine(this, film, filmMutex);
-		case FILESAVER:
-			return new FileSaverRenderEngine(this, film, filmMutex);
-		case RTPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new PathCPURenderEngine(this, film, filmMutex);
-#endif
-		case BIASPATHCPU:
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-		case BIASPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new BiasPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-#endif
-		case RTBIASPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTBiasPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-#endif
-		default:
-			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<string>(renderEngineType));
-	}
+Properties RenderConfig::ToProperties() const {
+	Properties props;
+
+	// RenderEngine (includes PixelFilter and Sampler where applicable)
+	props << RenderEngine::ToProperties(cfg);
+
+	return props;
 }

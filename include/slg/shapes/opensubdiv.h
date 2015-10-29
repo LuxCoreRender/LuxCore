@@ -46,6 +46,8 @@ public:
 	RefineType refineType;
 	u_int refineMaxLevel;
 
+	void ApplyTransform(const luxrays::Transform &trans);
+	
 protected:
 	virtual luxrays::ExtMesh *RefineImpl(const Scene *scene);
 

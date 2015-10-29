@@ -63,7 +63,7 @@ void LeafIntersect(
 
 		// Leaves are identified by a negative index
 		if (!QBVHNode_IsLeaf(nodeData)) {
-			__global const QBVHNode *node = &nodes[nodeData];
+			__global const QBVHNode* restrict node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
                 node->bboxes[signs0][0], node->bboxes[1 - signs0][0],
                 node->bboxes[signs1][1], node->bboxes[1 - signs1][1],
@@ -88,7 +88,7 @@ void LeafIntersect(
 			const uint offset = QBVHNode_FirstQuadIndex(nodeData);
 
 			for (uint primNumber = offset; primNumber < (offset + nbQuadPrimitives); ++primNumber) {
-                __global const QuadTiangle *quadTri = &quadTris[primNumber];
+                __global const QuadTiangle* restrict quadTri = &quadTris[primNumber];
                 const float4 origx = quadTri->origx;
                 const float4 origy = quadTri->origy;
                 const float4 origz = quadTri->origz;
@@ -118,7 +118,7 @@ void LeafIntersect(
 #define MQBVH_MOTIONSYSTEMS_PARAM_DECL , __global const MotionSystem* restrict leafMotionSystems , __global const InterpolatedTransform* restrict leafInterpolatedTransforms
 #define MQBVH_MOTIONSYSTEMS_PARAM , leafMotionSystems, leafInterpolatedTransforms
 
-#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const uint* restrict qbvhMemMap, __global const QBVHNode *leafNodes, __global const QuadTiangle* const leafQuadTris MQBVH_TRANSFORMATIONS_PARAM_DECL MQBVH_MOTIONSYSTEMS_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const uint* restrict qbvhMemMap, __global const QBVHNode* restrict leafNodes, __global const QuadTiangle* restrict const leafQuadTris MQBVH_TRANSFORMATIONS_PARAM_DECL MQBVH_MOTIONSYSTEMS_PARAM_DECL
 #define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris MQBVH_TRANSFORMATIONS_PARAM MQBVH_MOTIONSYSTEMS_PARAM
 
 void Accelerator_Intersect(
@@ -167,7 +167,7 @@ void Accelerator_Intersect(
 
 		// Leaves are identified by a negative index
 		if (!QBVHNode_IsLeaf(nodeData)) {
-			__global const QBVHNode *node = &nodes[nodeData];
+			__global const QBVHNode* restrict node = &nodes[nodeData];
             const int4 visit = QBVHNode_BBoxIntersect(
                 node->bboxes[signs0][0], node->bboxes[1 - signs0][0],
                 node->bboxes[signs1][1], node->bboxes[1 - signs1][1],
@@ -195,8 +195,8 @@ void Accelerator_Intersect(
 			float3 newRayDir = rayDir;
 
 			if (leafTransformationIndex[leafIndex] != NULL_INDEX) {
-				__global const Matrix4x4 *m = &leafTransformations[leafTransformationIndex[leafIndex]];
-				newRayOrig = Matrix4x4_ApplyPoint(m, newRayOrig);
+				__global const Matrix4x4* restrict m = &leafTransformations[leafTransformationIndex[leafIndex]];
+				newRayOrig = Matrix4x4_ApplyPoint_Align(m, newRayOrig);
 				newRayDir = Matrix4x4_ApplyVector(m, newRayDir);
 			}
 
@@ -220,9 +220,9 @@ void Accelerator_Intersect(
 
             const uint memIndex = leafIndex * 2;
             const uint leafNodeOffset = qbvhMemMap[memIndex];
-            __global const QBVHNode *n = &leafNodes[leafNodeOffset];
+            __global const QBVHNode* restrict n = &leafNodes[leafNodeOffset];
             const uint leafQuadTriOffset = qbvhMemMap[memIndex + 1];
-            __global const QuadTiangle *qt = &leafQuadTris[leafQuadTriOffset];
+            __global const QuadTiangle* restrict qt = &leafQuadTris[leafQuadTriOffset];
 
             RayHit tmpRayHit;
             LeafIntersect(&tray, &tmpRayHit, n, qt);

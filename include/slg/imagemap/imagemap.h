@@ -517,6 +517,8 @@ public:
 	virtual luxrays::Spectrum GetSpectrum(const u_int index) const = 0;
 	virtual float GetAlpha(const luxrays::UV &uv) const = 0;
 	virtual float GetAlpha(const u_int index) const = 0;
+	virtual luxrays::UV GetDuv(const luxrays::UV &uv) const = 0;
+	virtual luxrays::UV GetDuv(const u_int index) const = 0;
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
 
@@ -545,6 +547,8 @@ public:
 	virtual luxrays::Spectrum GetSpectrum(const u_int index) const;
 	virtual float GetAlpha(const luxrays::UV &uv) const;
 	virtual float GetAlpha(const u_int index) const;
+	virtual luxrays::UV GetDuv(const luxrays::UV &uv) const;
+	virtual luxrays::UV GetDuv(const u_int index) const;
 
 	virtual void ReverseGammaCorrection(const float gamma);
 
@@ -624,6 +628,8 @@ template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
 // ImageMap
 //------------------------------------------------------------------------------
 
+class ImageMapCache;
+
 class ImageMap {
 public:
 	ImageMap(const std::string &fileName, const float gamma,
@@ -633,6 +639,7 @@ public:
 
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	
+	std::string GetFileName(const ImageMapCache &imgMapCache) const;
 	float GetGamma() const { return gamma; }
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
 	u_int GetWidth() const { return pixelStorage->width; }
@@ -642,6 +649,7 @@ public:
 	float GetFloat(const luxrays::UV &uv) const { return pixelStorage->GetFloat(uv); }
 	luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const { return pixelStorage->GetSpectrum(uv); }
 	float GetAlpha(const luxrays::UV &uv) const { return pixelStorage->GetAlpha(uv); }
+	luxrays::UV GetDuv(const luxrays::UV &uv) const { return pixelStorage->GetDuv(uv); }
 
 	void Resize(const u_int newWidth, const u_int newHeight);
 

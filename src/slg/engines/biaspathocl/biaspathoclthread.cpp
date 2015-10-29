@@ -89,16 +89,21 @@ void BiasPathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&pixelFilterBuff);
 }
 
-void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
+void BiasPathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
+		u_int *filmSubRegion) {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 	*filmWidth = engine->tileRepository->tileWidth;
 	*filmHeight = engine->tileRepository->tileHeight;
+	filmSubRegion[0] = 0; 
+	filmSubRegion[1] = engine->tileRepository->tileWidth - 1;
+	filmSubRegion[2] = 0;
+	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
 string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 
-	const Filter *filter = engine->film->GetFilter();
+	const Filter *filter = engine->pixelFilter;
 	const float filterWidthX = filter ? filter->xWidth : 1.f;
 	const float filterWidthY = filter ? filter->yWidth : 1.f;
 
@@ -109,7 +114,6 @@ string BiasPathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_TILE_WIDTH=" << engine->tileRepository->tileWidth <<
 			" -D PARAM_TILE_HEIGHT=" << engine->tileRepository->tileHeight <<
 			" -D PARAM_FIRST_VERTEX_DL_COUNT=" << engine->firstVertexLightSampleCount <<
-			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f" <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f" <<
 			" -D PARAM_AA_SAMPLES=" << engine->aaSamples <<
 			" -D PARAM_DIRECT_LIGHT_SAMPLES=" << engine->directLightSamples <<
@@ -258,6 +262,9 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bo
 
 	u_int argIndex = 0;
 	if (firstKernel) {
+		// They will be set to the right value when the Tile information are available
+		rsKernel->setArg(argIndex++, 0);
+		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
 		rsKernel->setArg(argIndex++, 0);
 	}
@@ -365,6 +372,9 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	//--------------------------------------------------------------------------
 
 	argIndex = 0;
+	// They will be set to the right value when the Tile information are available
+	mergePixelSamplesKernel->setArg(argIndex++, 0);
+	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
@@ -404,19 +414,23 @@ void BiasPathOCLRenderThread::EnqueueRenderSampleKernel(cl::CommandQueue &oclQue
 			cl::NDRange(renderSampleWorkGroupSize));
 }
 
-void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const u_int xStart, const u_int yStart,
+void BiasPathOCLRenderThread::UpdateKernelArgsForTile(const TileRepository::Tile *tile,
 		const u_int filmIndex) {
 	BiasPathOCLRenderEngine *engine = (BiasPathOCLRenderEngine *)renderEngine;
 	boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 	
 	// Update renderSampleKernel args
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(0, xStart);
-	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(1, yStart);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(0, tile->xStart);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(1, tile->yStart);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(2, tile->tileWidth);
+	renderSampleKernel_MK_GENERATE_CAMERA_RAY->setArg(3, tile->tileHeight);
 
 	// Update mergePixelSamplesKernel args
-	mergePixelSamplesKernel->setArg(0, xStart);
-	mergePixelSamplesKernel->setArg(1, yStart);
-	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 5);
+	mergePixelSamplesKernel->setArg(0, tile->xStart);
+	mergePixelSamplesKernel->setArg(1, tile->yStart);
+	mergePixelSamplesKernel->setArg(2, tile->tileWidth);
+	mergePixelSamplesKernel->setArg(3, tile->tileHeight);
+	threadFilms[filmIndex]->SetFilmKernelArgs(*mergePixelSamplesKernel, 7);
 }
 
 void BiasPathOCLRenderThread::RenderThreadImpl() {
@@ -461,7 +475,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					//const u_int tileH = Min(engine->tileRepository->tileHeight, engine->film->GetHeight() - tiles[i]->yStart);
 					//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Tile: "
 					//		"(" << tiles[i]->xStart << ", " << tiles[i]->yStart << ") => " <<
-					//		"(" << tileW << ", " << tileH << ")");
+					//		"(" << tiles[i]->tileWidth << ", " << tiles[i]->tileWidth << ")");
 
 					threadFilms[i]->film->Reset();
 
@@ -469,7 +483,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 					threadFilms[i]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
 
 					// Render the tile
-					UpdateKernelArgsForTile(tiles[i]->xStart, tiles[i]->yStart, i);
+					UpdateKernelArgsForTile(tiles[i], i);
 
 					// Render all pixel samples
 					EnqueueRenderSampleKernel(oclQueue);
@@ -530,7 +544,7 @@ void BiasPathOCLRenderThread::RenderThreadImpl() {
 		//SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		SLG_LOG("[BiasPathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << oclErrorString(err.err()) << ")");
 	}

@@ -137,25 +137,25 @@ bool Scene_Intersect(
 		float3 *connectionThroughput,  const float3 pathThroughput,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global const Mesh *meshDescs,
-		__global const uint *meshMats,
+		__global const Mesh* restrict meshDescs,
+		__global const uint* restrict meshMats,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
 #endif
-		__global const Point *vertices,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global const Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global const UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global const Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global const float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global const Triangle *triangles
+		__global const Triangle* restrict triangles
 		MATERIALS_PARAM_DECL
 		) {
 	*connectionThroughput = WHITE;

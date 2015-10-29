@@ -61,6 +61,10 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & scale;
+		ar & range;
+		ar & steps;
+		ar & zeroGridSize;
 	}
 
 	float GetLuminance(const Film &film, const u_int x, const u_int y) const;

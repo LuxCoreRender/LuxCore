@@ -26,6 +26,13 @@ float2 UVMapping2D_Map(__global const TextureMapping2D *mapping, __global HitPoi
 	return uv * scale + delta;
 }
 
+float2 UVMapping2D_MapDuv(__global const TextureMapping2D *mapping, __global HitPoint *hitPoint, float2 *ds, float2 *dt) {
+	(*ds).xy = VLOAD2F(&mapping->uvMapping2D.uScale);
+	(*dt).xy = (float2)(0.f, (*ds).y);
+	(*ds).y = 0.f;
+	return UVMapping2D_Map(mapping, hitPoint);
+}
+
 float3 UVMapping3D_Map(__global const TextureMapping3D *mapping, __global HitPoint *hitPoint) {
 	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	return Transform_ApplyPoint(&mapping->worldToLocal, (float3)(uv.xy, 0.f));
@@ -40,6 +47,15 @@ float2 TextureMapping2D_Map(__global const TextureMapping2D *mapping, __global H
 	switch (mapping->type) {
 		case UVMAPPING2D:
 			return UVMapping2D_Map(mapping, hitPoint);
+		default:
+			return 0.f;
+	}
+}
+
+float2 TextureMapping2D_MapDuv(__global const TextureMapping2D *mapping, __global HitPoint *hitPoint, float2 *ds, float2 *dt) {
+	switch (mapping->type) {
+		case UVMAPPING2D:
+			return UVMapping2D_MapDuv(mapping, hitPoint, ds, dt);
 		default:
 			return 0.f;
 	}

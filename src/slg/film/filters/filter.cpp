@@ -17,140 +17,118 @@
  ***************************************************************************/
 
 #include "slg/film/filters/filter.h"
-#include "slg/film/filters/box.h"
-#include "slg/film/filters/gaussian.h"
-#include "slg/film/filters/mitchell.h"
-#include "slg/film/filters/mitchellss.h"
-#include "slg/film/filters/blackmanharris.h"
+#include "slg/film/filters/filterregistry.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::BoxFilter)
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianFilter)
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellFilter)
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::MitchellFilterSS)
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::BlackmanHarrisFilter)
+//------------------------------------------------------------------------------
+// Filter
+//------------------------------------------------------------------------------
 
-FilterType Filter::String2FilterType(const std::string &type) {
-	if ((type.compare("0") == 0) || (type.compare("NONE") == 0))
-		return FILTER_NONE;
-	else if ((type.compare("1") == 0) || (type.compare("BOX") == 0))
-		return FILTER_BOX;
-	else if ((type.compare("2") == 0) || (type.compare("GAUSSIAN") == 0))
-		return FILTER_GAUSSIAN;
-	else if ((type.compare("3") == 0) || (type.compare("MITCHELL") == 0))
-		return FILTER_MITCHELL;
-	else if ((type.compare("4") == 0) || (type.compare("MITCHELL_SS") == 0))
-		return FILTER_MITCHELL_SS;
-	else if ((type.compare("5") == 0) || (type.compare("BLACKMANHARRIS") == 0))
-		return FILTER_BLACKMANHARRIS;
-	throw std::runtime_error("Unknown filter type: " + type);
+Properties Filter::ToProperties() const {
+	Properties props;
+	
+	props << Property("film.filter.type")(FilterType2String(GetType()));
+	
+	if (xWidth == yWidth)
+		props << Property("film.filter.width")(xWidth);
+	else
+		props <<
+				Property("film.filter.xwidth")(xWidth) <<
+				Property("film.filter.ywidth")(yWidth);
+	
+	return props;
 }
 
 //------------------------------------------------------------------------------
-// PrecomputedFilter
+// Static methods used by FilterRegistry
 //------------------------------------------------------------------------------
 
-FilterDistribution::FilterDistribution(const Filter *f, const u_int s) {
-	filter = f;
-	size = s;
-	distrib = NULL;
+Properties Filter::ToProperties(const Properties &cfg) {
+	const string type = cfg.Get(Property("film.filter.type")(BlackmanHarrisFilter::GetObjectTag())).Get<string>();
 
-	float *data = new float[size * size];
+	FilterRegistry::ToProperties func;
 
-	const float isize = 1.f / (float)size;
-	for (u_int y = 0; y < size; ++y) {
-		for (u_int x = 0; x < size; ++x) {
-			// Use an uniform distribution if the Filter is missing
-			data[x + y * size] = (filter) ? filter->Evaluate(
-					filter->xWidth * ((x + .5f) * isize - .5),
-					filter->yWidth * ((y + .5f) * isize - .5)) : 1.f;
-		}
-	}
+	if (FilterRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
+		Properties props;
 
-	distrib = new Distribution2D(data, size, size);
-	delete data;
+		const float defaultFilterWidth = cfg.Get(GetDefaultProps().Get("film.filter.width")).Get<float>();
+		const Property filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth));
+		const Property filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth));
+
+		if (filterXWidth.Get<float>() == filterYWidth.Get<float>())
+			props << Property("film.filter.width")(filterXWidth.Get<float>());
+		else
+			props << filterXWidth << filterYWidth;
+
+		return func(cfg) << props;
+	} else
+		throw runtime_error("Unknown filter type in Filter::ToProperties(): " + type);
 }
 
-FilterDistribution::~FilterDistribution() {
-	delete distrib;
-}
-void FilterDistribution::SampleContinuous(const float u0, const float u1, float *su0, float *su1) const {
-	if (filter) {
-		float uv[2];
-		float pdf;
-		distrib->SampleContinuous(u0, u1, uv, &pdf);
+Filter *Filter::FromProperties(const Properties &cfg) {
+	const string type = cfg.Get(Property("film.filter.type")(BlackmanHarrisFilter::GetObjectTag())).Get<string>();
 
-		*su0 = (uv[0] - .5f) * filter->xWidth;
-		*su1 = (uv[1] - .5f) * filter->yWidth;
-	} else {
-		*su0 = u0 - .5f;
-		*su1 = u1 - .5f;
-	}
+	FilterRegistry::FromProperties func;
+	if (FilterRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
+		return func(cfg);
+	else
+		throw runtime_error("Unknown filter type in Filter::FromProperties(): " + type);
 }
 
-//------------------------------------------------------------------------------
-// FilterLUT
-//------------------------------------------------------------------------------
+slg::ocl::Filter *Filter::FromPropertiesOCL(const Properties &cfg) {
+	const string type = cfg.Get(Property("film.filter.type")(BlackmanHarrisFilter::GetObjectTag())).Get<string>();
 
-FilterLUT::FilterLUT(const Filter &filter, const float offsetX, const float offsetY) {
-	const int x0 = luxrays::Ceil2Int(offsetX - filter.xWidth);
-	const int x1 = luxrays::Floor2Int(offsetX + filter.xWidth);
-	const int y0 = luxrays::Ceil2Int(offsetY - filter.yWidth);
-	const int y1 = luxrays::Floor2Int(offsetY + filter.yWidth);
-	lutWidth = x1 - x0 + 1;
-	lutHeight = y1 - y0 + 1;
-	lut = new float[lutWidth * lutHeight];
+	FilterRegistry::FromPropertiesOCL func;
+	if (FilterRegistry::STATICTABLE_NAME(FromPropertiesOCL).Get(type, func))
+		return func(cfg);
+	else
+		throw runtime_error("Unknown filter type in Filter::FromPropertiesOCL(): " + type);
+}
 
-	float filterNorm = 0.f;
-	unsigned int index = 0;
-	for (int iy = y0; iy <= y1; ++iy) {
-		for (int ix = x0; ix <= x1; ++ix) {
-			const float filterVal = filter.Evaluate(fabsf(ix - offsetX), fabsf(iy - offsetY));
-			filterNorm += filterVal;
-			lut[index++] = filterVal;
-		}
-	}
+FilterType Filter::String2FilterType(const string &type) {
+	FilterRegistry::GetObjectType func;
+	if (FilterRegistry::STATICTABLE_NAME(GetObjectType).Get(type, func))
+		return func();
+	else
+		throw runtime_error("Unknown filter type in Filter::String2FilterType(): " + type);
+}
 
-	// Normalize LUT
-	filterNorm = 1.f / filterNorm;
-	index = 0;
-	for (int iy = y0; iy <= y1; ++iy) {
-		for (int ix = x0; ix <= x1; ++ix)
-			lut[index++] *= filterNorm;
-	}
+const string Filter::FilterType2String(const FilterType type) {
+	FilterRegistry::GetObjectTag func;
+	if (FilterRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
+		return func();
+	else
+		throw runtime_error("Unknown filter type in Filter::FilterType2String(): " + boost::lexical_cast<string>(type));
+}
+
+Properties Filter::GetDefaultProps() {
+	static Properties props = Properties() <<
+			Property("film.filter.width")(2.f);
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
-// FilterLUTs
+// FilterRegistry
+//
+// For the registration of each Filter sub-class with Filter StaticTables
+//
+// NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the StaticTable) because otherwise
+// static members initialization order is not defined.
 //------------------------------------------------------------------------------
 
-FilterLUTs::FilterLUTs(const Filter &filter, const unsigned int size) {
-	lutsSize = size + 1;
-	step = 1.f / float(size);
+OBJECTSTATICREGISTRY_STATICFIELDS(FilterRegistry);
 
-	luts = new FilterLUT*[lutsSize * lutsSize];
+//------------------------------------------------------------------------------
 
-	for (unsigned int iy = 0; iy < lutsSize; ++iy) {
-		for (unsigned int ix = 0; ix < lutsSize; ++ix) {
-			const float x = ix * step - 0.5f + step / 2.f;
-			const float y = iy * step - 0.5f + step / 2.f;
-
-			luts[ix + iy * lutsSize] = new FilterLUT(filter, x, y);
-			/*std::cout << "===============================================\n";
-			std::cout << ix << "," << iy << "\n";
-			std::cout << x << "," << y << "\n";
-			std::cout << *luts[ix + iy * lutsSize] << "\n";
-			std::cout << "===============================================\n";*/
-		}
-	}
-}
-
-FilterLUTs::~FilterLUTs() {
-	for (unsigned int iy = 0; iy < lutsSize; ++iy)
-		for (unsigned int ix = 0; ix < lutsSize; ++ix)
-			delete luts[ix + iy * lutsSize];
-
-	delete[] luts;
-}
+OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, NoneFilter);
+OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, BoxFilter);
+OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, GaussianFilter);
+OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, MitchellFilter);
+OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, MitchellSSFilter);
+OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, BlackmanHarrisFilter);
+// Just add here any new Filter (don't forget in the .h too)

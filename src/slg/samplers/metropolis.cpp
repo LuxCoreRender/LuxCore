@@ -22,18 +22,34 @@
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/metropolis.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// MetropolisSamplerSharedData
+//------------------------------------------------------------------------------
+
+MetropolisSamplerSharedData::MetropolisSamplerSharedData() : SamplerSharedData() {
+	totalLuminance = 0.;
+	sampleCount = 0.;
+}
+
+SamplerSharedData *MetropolisSamplerSharedData::FromProperties(const Properties &cfg,
+		RandomGenerator *rndGen) {
+	return new MetropolisSamplerSharedData();
+}
 
 //------------------------------------------------------------------------------
 // Metropolis sampler
 //------------------------------------------------------------------------------
 
-MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm, const unsigned int maxRej,
+MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm,
+		const FilmSampleSplatter *flmSplatter, const u_int maxRej,
 		const float pLarge, const float imgRange,
-		double *sharedTotLum, double *sharedSplCount) : Sampler(rnd, flm),
+		MetropolisSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
+		sharedData(samplerSharedData),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
-		sharedTotalLuminance(sharedTotLum), sharedSampleCount(sharedSplCount),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
 		cooldown(true) {
 }
@@ -78,30 +94,27 @@ float MutateScaled(const float x, const float range, const float randomValue) {
 	}
 }
 
-void MetropolisSampler::RequestSamples(const unsigned int size) {
+void MetropolisSampler::RequestSamples(const u_int size) {
 	sampleSize = size;
 	samples = new float[sampleSize];
-	sampleStamps = new unsigned int[sampleSize];
+	sampleStamps = new u_int[sampleSize];
 	currentSamples = new float[sampleSize];
-	currentSampleStamps = new unsigned int[sampleSize];
-
-	*sharedTotalLuminance = 0.;
-	*sharedSampleCount = 0.;
+	currentSampleStamps = new u_int[sampleSize];
 
 	isLargeMutation = true;
 	weight = 0.f;
 	consecRejects = 0;
 	currentLuminance = 0.;
-	std::fill(sampleStamps, sampleStamps + sampleSize, 0);
+	fill(sampleStamps, sampleStamps + sampleSize, 0);
 	stamp = 1;
 	currentStamp = 1;
 	currentSampleResult.resize(0);
 }
 
-float MetropolisSampler::GetSample(const unsigned int index) {
+float MetropolisSampler::GetSample(const u_int index) {
 	assert (index < sampleSize);
 
-	unsigned int sampleStamp = sampleStamps[index];
+	u_int sampleStamp = sampleStamps[index];
 
 	float s;
 	if (sampleStamp == 0) {
@@ -113,10 +126,10 @@ float MetropolisSampler::GetSample(const unsigned int index) {
 	// Mutate the sample up to the currentStamp
 	if ((index == 0) || (index == 1)) {
 		// 0 and 1 are used for image X/Y
-		for (unsigned int i = sampleStamp; i < stamp; ++i)
+		for (u_int i = sampleStamp; i < stamp; ++i)
 			s = MutateScaled(s, imageMutationRange, rndGen->floatValue());
 	} else {
-		for (unsigned int i = sampleStamp; i < stamp; ++i)
+		for (u_int i = sampleStamp; i < stamp; ++i)
 			s = Mutate(s, rndGen->floatValue());
 	}
 
@@ -126,16 +139,16 @@ float MetropolisSampler::GetSample(const unsigned int index) {
 	return s;
 }
 
-void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 
 	// Calculate the sample result luminance
-	const unsigned int pixelCount = film->GetWidth() * film->GetHeight();
+	const u_int pixelCount = film->GetWidth() * film->GetHeight();
 	float newLuminance = 0.f;
-	for (std::vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
+	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
 		if (sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
-			for (u_int i = 0; i < sr->radiancePerPixelNormalized.size(); ++i) {
-				const float luminance = sr->radiancePerPixelNormalized[i].Y();
+			for (u_int i = 0; i < sr->radiance.size(); ++i) {
+				const float luminance = sr->radiance[i].Y();
 				assert (!isnan(luminance) && !isinf(luminance));
 
 				if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
@@ -144,8 +157,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		}
 
 		if (sr->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
-			for (u_int i = 0; i < sr->radiancePerScreenNormalized.size(); ++i) {
-				const float luminance = sr->radiancePerScreenNormalized[i].Y();
+			for (u_int i = 0; i < sr->radiance.size(); ++i) {
+				const float luminance = sr->radiance[i].Y();
 				assert (!isnan(luminance) && !isinf(luminance));
 
 				if ((luminance > 0.f) && !isnan(luminance) && !isinf(luminance))
@@ -155,12 +168,14 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	}
 
 	if (isLargeMutation) {
-		*sharedTotalLuminance += newLuminance;
-		*sharedSampleCount += 1.;
+		// Atomic 64bit for double are not available on all CPUs so I simply
+		// avoid synchronization.
+		sharedData->totalLuminance += newLuminance;
+		sharedData->sampleCount += 1.;
 	}
 
-	const float invMeanIntensity = (*sharedTotalLuminance > 0.) ?
-		static_cast<float>(*sharedSampleCount / *sharedTotalLuminance) : 1.f;
+	const float invMeanIntensity = (sharedData->totalLuminance > 0.) ?
+		static_cast<float>(sharedData->sampleCount / sharedData->totalLuminance) : 1.f;
 
 	// Define the probability of large mutations. It is 50% if we are still
 	// inside the cooldown phase.
@@ -186,8 +201,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 		weight = newWeight;
 		currentStamp = stamp;
 		currentLuminance = newLuminance;
-		std::copy(samples, samples + sampleSize, currentSamples);
-		std::copy(sampleStamps, sampleStamps + sampleSize, currentSampleStamps);
+		copy(samples, samples + sampleSize, currentSamples);
+		copy(sampleStamps, sampleStamps + sampleSize, currentSampleStamps);
 		currentSampleResult = sampleResults;
 
 		consecRejects = 0;
@@ -199,8 +214,8 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 
 		// Restart from previous reference
 		stamp = currentStamp;
-		std::copy(currentSamples, currentSamples + sampleSize, samples);
-		std::copy(currentSampleStamps, currentSampleStamps + sampleSize, sampleStamps);
+		copy(currentSamples, currentSamples + sampleSize, samples);
+		copy(currentSampleStamps, currentSampleStamps + sampleSize, sampleStamps);
 
 		++consecRejects;
 	}
@@ -209,7 +224,7 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 	// when large mutation probability is very small
 	if (cooldown) {
 		// Check if it is time to end the cooldown
-		if (*sharedSampleCount > pixelCount) {
+		if (sharedData->sampleCount > pixelCount) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 		} else
@@ -219,7 +234,58 @@ void MetropolisSampler::NextSample(const std::vector<SampleResult> &sampleResult
 
 	if (isLargeMutation) {
 		stamp = 1;
-		std::fill(sampleStamps, sampleStamps + sampleSize, 0);
+		fill(sampleStamps, sampleStamps + sampleSize, 0);
 	} else
 		++stamp;
+}
+
+Properties MetropolisSampler::ToProperties() {
+	return Sampler::ToProperties() <<
+			Property("sampler.metropolis.largesteprate")(largeMutationProbability) <<
+			Property("sampler.metropolis.maxconsecutivereject")(maxRejects) <<
+			Property("sampler.metropolis.imagemutationrate")(imageMutationRange);
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by SamplerRegistry
+//------------------------------------------------------------------------------
+
+Properties MetropolisSampler::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate"));
+}
+
+Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	const float rate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<float>(), 0.f, 1.f);
+	const u_int reject = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+	const float mutationRate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<float>(), 0.f, 1.f);
+
+	return new MetropolisSampler(rndGen, film, flmSplatter,
+			reject, rate, mutationRate,
+			(MetropolisSamplerSharedData *)sharedData);
+}
+
+slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
+	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
+
+	oclSampler->type = slg::ocl::METROPOLIS;
+	oclSampler->metropolis.largeMutationProbability = cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<float>();
+	oclSampler->metropolis.imageMutationRange = cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<float>();
+	oclSampler->metropolis.maxRejects = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+
+	return oclSampler;
+}
+
+Properties MetropolisSampler::GetDefaultProps() {
+	static Properties props = Sampler::GetDefaultProps() <<
+			Property("sampler.type")(GetObjectTag()) <<
+			Property("sampler.metropolis.largesteprate")(.4f) <<
+			Property("sampler.metropolis.maxconsecutivereject")(512) <<
+			Property("sampler.metropolis.imagemutationrate")(.1f);
+
+	return props;
 }

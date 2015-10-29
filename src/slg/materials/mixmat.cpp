@@ -26,6 +26,42 @@ using namespace slg;
 // Mix material
 //------------------------------------------------------------------------------
 
+MixMaterial::MixMaterial(const Texture *emitted, const Texture *bump,
+		Material *mA, Material *mB, const Texture *mix) :
+		Material(emitted, bump), matA(mA), matB(mB), mixFactor(mix) {
+	Preprocess();
+}
+
+BSDFEvent MixMaterial::GetEventTypesImpl() const {
+	return (matA->GetEventTypes() | matB->GetEventTypes());
+}
+
+bool MixMaterial::IsLightSourceImpl() const {
+	return (Material::IsLightSource() || matA->IsLightSource() || matB->IsLightSource());
+}
+
+bool MixMaterial::HasBumpTexImpl() const { 
+	return (Material::HasBumpTex() || matA->HasBumpTex() || matB->HasBumpTex());
+}
+
+bool MixMaterial::IsDeltaImpl() const {
+	return (matA->IsDelta() && matB->IsDelta());
+}
+
+bool MixMaterial::IsPassThroughImpl() const {
+	return (matA->IsPassThrough() || matB->IsPassThrough());
+}
+
+void MixMaterial::Preprocess() {
+	// Cache values for performance with very large material node trees
+
+	eventTypes = GetEventTypesImpl();
+	isLightSource = IsLightSourceImpl();
+	hasBumpTex = HasBumpTexImpl();
+	isDelta = IsDeltaImpl();
+	isPassThrough = IsPassThroughImpl();
+}
+
 const Volume *MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const {
 	if (interiorVolume)
@@ -109,7 +145,7 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	BSDFEvent eventMatA = NONE;
 	if (weight1 > 0.f) {
 		HitPoint hitPointA(hitPoint);
-		matA->Bump(&hitPointA, 1.f);
+		matA->Bump(&hitPointA);
 		const Frame frameA(hitPointA.GetFrame());
 		const Vector lightDirA = frameA.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirA = frameA.ToLocal(frame.ToWorld(localEyeDir));
@@ -128,7 +164,7 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	BSDFEvent eventMatB = NONE;
 	if (weight2 > 0.f) {
 		HitPoint hitPointB(hitPoint);
-		matB->Bump(&hitPointB, 1.f);
+		matB->Bump(&hitPointB);
 		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
@@ -156,11 +192,11 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const BSDFEvent requestedEvent) const {
 	const Frame frame(hitPoint.GetFrame());
 	HitPoint hitPointA(hitPoint);
-	matA->Bump(&hitPointA, 1.f);
+	matA->Bump(&hitPointA);
 	const Frame frameA(hitPointA.GetFrame());
 	const Vector fixedDirA = frameA.ToLocal(frame.ToWorld(localFixedDir));
 	HitPoint hitPointB(hitPoint);
-	matB->Bump(&hitPointB, 1.f);
+	matB->Bump(&hitPointB);
 	const Frame frameB(hitPointB.GetFrame());
 	const Vector fixedDirB = frameB.ToLocal(frame.ToWorld(localFixedDir));
 
@@ -221,7 +257,7 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 	float reversePdfWMatA = 1.f;
 	if (weight1 > 0.f) {
 		HitPoint hitPointA(hitPoint);
-		matA->Bump(&hitPointA, 1.f);
+		matA->Bump(&hitPointA);
 		const Frame frameA(hitPointA.GetFrame());
 		const Vector lightDirA = frameA.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirA = frameA.ToLocal(frame.ToWorld(localEyeDir));
@@ -232,7 +268,7 @@ void MixMaterial::Pdf(const HitPoint &hitPoint,
 	float reversePdfWMatB = 1.f;
 	if (weight2 > 0.f) {
 		HitPoint hitPointB(hitPoint);
-		matB->Bump(&hitPointB, 1.f);
+		matB->Bump(&hitPointB);
 		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
@@ -254,6 +290,8 @@ void MixMaterial::UpdateMaterialReferences(Material *oldMat, Material *newMat) {
 	
 	// Update volumes too
 	Material::UpdateMaterialReferences(oldMat, newMat);
+	
+	Preprocess();
 }
 
 bool MixMaterial::IsReferencing(const Material *mat) const {

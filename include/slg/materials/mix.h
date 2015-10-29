@@ -30,25 +30,16 @@ namespace slg {
 class MixMaterial : public Material {
 public:
 	MixMaterial(const Texture *emitted, const Texture *bump,
-			Material *mA, Material *mB, const Texture *mix) :
-			Material(emitted, bump), matA(mA), matB(mB), mixFactor(mix) { }
+			Material *mA, Material *mB, const Texture *mix);
 
 	virtual MaterialType GetType() const { return MIX; }
-	virtual BSDFEvent GetEventTypes() const { return (matA->GetEventTypes() | matB->GetEventTypes()); };
+	virtual BSDFEvent GetEventTypes() const { return eventTypes; };
 
-	virtual bool IsLightSource() const {
-		return (Material::IsLightSource() || matA->IsLightSource() || matB->IsLightSource());
-	}
-	virtual bool HasBumpTex() const { 
-		return (Material::HasBumpTex() || matA->HasBumpTex() || matB->HasBumpTex());
-	}
+	virtual bool IsLightSource() const { return isLightSource; }
+	virtual bool HasBumpTex() const { return hasBumpTex; }
+	virtual bool IsDelta() const { return isDelta; }
+	virtual bool IsPassThrough() const { return isPassThrough; }
 
-	virtual bool IsDelta() const {
-		return (matA->IsDelta() && matB->IsDelta());
-	}
-	virtual bool IsPassThrough() const {
-		return (matA->IsPassThrough() || matB->IsPassThrough());
-	}
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent) const;
 
@@ -86,9 +77,23 @@ public:
 	const Texture *GetMixFactor() const { return mixFactor; }
 
 private:
+	// Used by Preprocess()
+	BSDFEvent GetEventTypesImpl() const;
+	bool IsLightSourceImpl() const;
+	bool HasBumpTexImpl() const;
+	bool IsDeltaImpl() const;
+	bool IsPassThroughImpl() const;
+
+	void Preprocess();
+
 	Material *matA;
 	Material *matB;
 	const Texture *mixFactor;
+
+	// Cached values for performance with very large material node trees
+	BSDFEvent eventTypes;
+	bool isLightSource, hasBumpTex, isDelta, isPassThrough;
+	
 };
 
 }

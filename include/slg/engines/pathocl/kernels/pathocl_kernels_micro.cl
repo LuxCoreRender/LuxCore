@@ -764,9 +764,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	filmRadianceGroup[7] = filmRadianceGroup7;
 #endif
 
-	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
+	if (PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE > 0.f) {
 		// Radiance clamping
-		SampleResult_ClampRadiance(&sample->result, PARAM_RADIANCE_CLAMP_MAXVALUE);
+		VarianceClamping_Clamp(&sample->result, PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE
+				FILM_PARAM);
 	}
 
 	Sampler_SplatSample(&seedValue, sample, sampleData
@@ -817,7 +818,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	Sampler_NextSample(&seedValue, sample, sampleData, filmWidth, filmHeight);
+	Sampler_NextSample(&seedValue, sample, sampleData);
 
 	// Save the state
 	taskState->state = MK_GENERATE_CAMERA_RAY;
@@ -865,8 +866,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// End of variables setup
 	//--------------------------------------------------------------------------
 
-	GenerateCameraPath(&tasksDirectLight[gid], taskState, sample, sampleData, camera, filmWidth, filmHeight, ray, &seedValue);
-	// taskState->state is set to RT_NEXT_VERTEX inside GenerateCameraPath()
+	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleData, camera,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			pixelFilterDistribution,
+#endif
+			ray, &seedValue);
+	// taskState->state is set to RT_NEXT_VERTEX inside GenerateEyePath()
 
 	// Re-initialize the volume information
 #if defined(PARAM_HAS_VOLUMES)

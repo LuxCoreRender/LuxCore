@@ -179,10 +179,28 @@ ExtMesh *Scene::CreateShape(const string &shapeName, const Properties &props) {
 	if (shapeType == "mesh") {
 		const string meshName = props.Get(Property(propName + ".ply")("")).Get<string>();
 
-		shape = new MeshShape(meshName);
-	} else if (shapeType == "inlinedmesh")
-		shape = new MeshShape(CreateInlinedMesh(shapeName, propName, props));
-	else if (shapeType == "pointiness") {
+		MeshShape *meshShape = new MeshShape(meshName);
+
+		if (props.IsDefined(propName + ".transformation")) {
+			// Apply the transformation
+			const Matrix4x4 mat = props.Get(Property(propName +
+					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			meshShape->ApplyTransform(Transform(mat));
+		}
+
+		shape = meshShape;
+	} else if (shapeType == "inlinedmesh") {
+		MeshShape *meshShape = new MeshShape(CreateInlinedMesh(shapeName, propName, props));
+
+		if (props.IsDefined(propName + ".transformation")) {
+			// Apply the transformation
+			const Matrix4x4 mat = props.Get(Property(propName +
+					".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+			meshShape->ApplyTransform(Transform(mat));
+		}
+
+		shape = meshShape;
+	} else if (shapeType == "pointiness") {
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
 		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a pointiness shape: " + shapeName);

@@ -32,11 +32,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 OrthographicCamera::OrthographicCamera(const Point &o, const Point &t,
-		const Vector &u, const float *region) :
-		ProjectiveCamera(ORTHOGRAPHIC, region, o, t, u) {
+		const Vector &u, const float *screenWindow) :
+		ProjectiveCamera(ORTHOGRAPHIC, screenWindow, o, t, u) {
 }
 
-void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4]) {
+void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans) {
 	// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
 	// identity matrix.
 	if (orig == target)
@@ -50,16 +50,16 @@ void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans, const flo
 	trans->screenToCamera = Inverse(Orthographic(clipHither, clipYon));
 	trans->screenToWorld = trans->cameraToWorld * trans->screenToCamera;
 	// Compute orthographic camera screen transformations
-	trans->rasterToScreen = luxrays::Translate(Vector(screen[0], screen[3], 0.f)) *
-		Scale(screen[1] - screen[0], screen[2] - screen[3], 1.f) *
+	trans->rasterToScreen = luxrays::Translate(Vector(screenWindow[0], screenWindow[3], 0.f)) *
+		Scale(screenWindow[1] - screenWindow[0], screenWindow[2] - screenWindow[3], 1.f) *
 		Scale(1.f / filmWidth, 1.f / filmHeight, 1.f);
 	trans->rasterToCamera = trans->screenToCamera * trans->rasterToScreen;
 	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
 }
 
-void OrthographicCamera::InitPixelArea(const float screen[4]) {
-	const float xPixelWidth = ((screen[1] - screen[0]) / 2.f);
-	const float yPixelHeight = ((screen[3] - screen[2]) / 2.f);
+void OrthographicCamera::InitPixelArea() {
+	const float xPixelWidth = ((screenWindow[1] - screenWindow[0]) / 2.f);
+	const float yPixelHeight = ((screenWindow[3] - screenWindow[2]) / 2.f);
 	pixelArea = xPixelWidth * yPixelHeight;
 }
 
@@ -67,8 +67,7 @@ void OrthographicCamera::InitRay(Ray *ray, const float filmX, const float filmY)
 	const Point Pras = Point(filmX, filmHeight - filmY - 1.f, 0.f);
 	const Point Pcamera = Point(camTrans.rasterToCamera * Pras);
 
-	ray->o = Pcamera;
-	ray->d = Vector(0.f, 0.f, 1.f);
+	ray->Update(Pcamera, Vector(0.f, 0.f, 1.f));
 }
 
 Properties OrthographicCamera::ToProperties() const {

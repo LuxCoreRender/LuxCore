@@ -46,7 +46,7 @@ PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 		fieldOfView(45.f), enableOculusRiftBarrel(false) {
 }
 
-void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const float screen[4]) {
+void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans) {
 	// This is a trick I use from LuxCoreRenderer to set cameraToWorld to
 	// identity matrix.
 	if (orig == target)
@@ -60,17 +60,17 @@ void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans, const floa
 	trans->screenToCamera = Inverse(Perspective(fieldOfView, clipHither, clipYon));
 	trans->screenToWorld = trans->cameraToWorld * trans->screenToCamera;
 	// Compute projective camera screen transformations
-	trans->rasterToScreen = luxrays::Translate(Vector(screen[0] + screenOffsetX, screen[3] + screenOffsetY, 0.f)) *
-		Scale(screen[1] - screen[0], screen[2] - screen[3], 1.f) *
+	trans->rasterToScreen = luxrays::Translate(Vector(screenWindow[0] + screenOffsetX, screenWindow[3] + screenOffsetY, 0.f)) *
+		Scale(screenWindow[1] - screenWindow[0], screenWindow[2] - screenWindow[3], 1.f) *
 		Scale(1.f / filmWidth, 1.f / filmHeight, 1.f);
 	trans->rasterToCamera = trans->screenToCamera * trans->rasterToScreen;
 	trans->rasterToWorld = trans->screenToWorld * trans->rasterToScreen;
 }
 
-void PerspectiveCamera::InitPixelArea(const float screen[4]) {
+void PerspectiveCamera::InitPixelArea() {
 	const float tanAngle = tanf(Radians(fieldOfView) / 2.f) * 2.f;
-	const float xPixelWidth = tanAngle * ((screen[1] - screen[0]) / 2.f);
-	const float yPixelHeight = tanAngle * ((screen[3] - screen[2]) / 2.f);
+	const float xPixelWidth = tanAngle * ((screenWindow[1] - screenWindow[0]) / 2.f);
+	const float yPixelHeight = tanAngle * ((screenWindow[3] - screenWindow[2]) / 2.f);
 	pixelArea = xPixelWidth * yPixelHeight;
 }
 
@@ -87,8 +87,7 @@ void PerspectiveCamera::InitRay(Ray *ray, const float filmX, const float filmY) 
 
 	const Point Pcamera = Point(camTrans.rasterToCamera * Pras);
 
-	ray->o = Pcamera;
-	ray->d = Vector(Pcamera.x, Pcamera.y, Pcamera.z);
+	ray->Update(Pcamera, Vector(Pcamera.x, Pcamera.y, Pcamera.z));
 }
 
 Properties PerspectiveCamera::ToProperties() const {

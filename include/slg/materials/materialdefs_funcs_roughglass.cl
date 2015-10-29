@@ -65,7 +65,7 @@ float3 RoughGlassMaterial_ConstEvaluate(
 	const float v = clamp(nvVal, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 #else
 	const float anisotropy = 0.f;
@@ -174,7 +174,7 @@ float3 RoughGlassMaterial_ConstSample(
 	const float v = clamp(nvVal, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f);
 	const float roughness = u * v;
 #else
 	const float anisotropy = 0.f;

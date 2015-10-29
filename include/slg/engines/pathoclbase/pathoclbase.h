@@ -25,7 +25,7 @@
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/oclrenderengine.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
 
 #include <boost/thread/thread.hpp>
@@ -64,7 +64,8 @@ protected:
 		virtual ~ThreadFilm();
 		
 		void Init(const Film &engineFilm,
-			const u_int threadFilmWidth, const u_int threadFilmHeight);
+			const u_int threadFilmWidth, const u_int threadFilmHeight,
+			const u_int *threadFilmSubRegion);
 		void FreeAllOCLBuffers();
 		u_int SetFilmKernelArgs(cl::Kernel &filmClearKernel, u_int argIndex) const;
 		void ClearFilm(cl::CommandQueue &oclQueue,
@@ -101,7 +102,7 @@ protected:
 
 	// Implementation specific methods
 	virtual void RenderThreadImpl() = 0;
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) = 0;
+	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) = 0;
 	virtual void AdditionalInit() = 0;
 	virtual std::string AdditionalKernelOptions() = 0;
 	virtual std::string AdditionalKernelDefinitions() = 0;
@@ -219,6 +220,7 @@ protected:
 
 	vector<PathOCLBaseRenderThread *> renderThreads;
 	
+	std::string additionalKernelOptions;
 	bool writeKernelsToFile;
 };
 

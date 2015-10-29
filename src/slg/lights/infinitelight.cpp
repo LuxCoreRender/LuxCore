@@ -162,8 +162,7 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache) const {
 	Properties props = EnvLightSource::ToProperties(imgMapCache);
 
 	props.Set(Property(prefix + ".type")("infinite"));
-	props.Set(Property(prefix + ".file")("imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+	props.Set(Property(prefix + ".file")(imageMap->GetFileName(imgMapCache)));
 	props.Set(Property(prefix + ".gamma")(1.f));
 	props.Set(Property(prefix + ".shift")(mapping.uDelta, mapping.vDelta));
 

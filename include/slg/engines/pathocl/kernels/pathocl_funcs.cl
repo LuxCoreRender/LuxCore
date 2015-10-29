@@ -41,8 +41,14 @@
 // (Mitchell filter)
 //  PARAM_IMAGE_FILTER_MITCHELL_B
 //  PARAM_IMAGE_FILTER_MITCHELL_C
+// (MitchellSS filter)
+//  PARAM_IMAGE_FILTER_MITCHELL_B
+//  PARAM_IMAGE_FILTER_MITCHELL_C
+//  PARAM_IMAGE_FILTER_MITCHELL_A0
+//  PARAM_IMAGE_FILTER_MITCHELL_A1
 
 // (optional)
+//  PARAM_USE_FAST_PIXEL_FILTER
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol)
 // (Metropolis)
 //  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
@@ -51,20 +57,72 @@
 // (Sobol)
 //  PARAM_SAMPLER_SOBOL_STARTOFFSET
 //  PARAM_SAMPLER_SOBOL_MAXDEPTH
+//  PARAM_SAMPLER_SOBOL_RNG0
+//  PARAM_SAMPLER_SOBOL_RNG1
 
 
 //------------------------------------------------------------------------------
 // Init Kernel
 //------------------------------------------------------------------------------
 
-void GenerateCameraPath(
+void InitSampleResult(
+		__global Sample *sample,
+		__global float *sampleData,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, __global float *pixelFilterDistribution
+#endif
+		, Seed *seed) {
+	SampleResult_Init(&sample->result);
+
+#if (PARAM_SAMPLER_TYPE == 1)
+	// Used by Sampler_GetSamplePath() macro
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+#endif
+
+	const float u0 = Sampler_GetSamplePath(IDX_SCREEN_X);
+	const float u1 = Sampler_GetSamplePath(IDX_SCREEN_Y);
+	float ux, uy;
+	Film_GetSampleXY(u0, u1, &ux, &uy,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1,
+			filmSubRegion2, filmSubRegion3);
+
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	const uint pixelX = Floor2UInt(ux);
+	const uint pixelY = Floor2UInt(uy);
+	sample->result.pixelX = pixelX;
+	sample->result.pixelY = pixelY;
+
+	float uSubPixelX = ux - pixelX;
+	float uSubPixelY = uy - pixelY;
+
+	// Sample according the pixel filter distribution
+	float distX, distY;
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, uSubPixelX, uSubPixelY, &distX, &distY);
+
+	sample->result.filmX = pixelX + .5f + distX;
+	sample->result.filmY = pixelY + .5f + distY;
+#else
+	sample->result.filmX = ux;
+	sample->result.filmY = uy;
+#endif
+}
+
+void GenerateEyePath(
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
 		__global float *sampleData,
-		__global const Camera *camera,
-		const uint filmWidth,
-		const uint filmHeight,
+		__global const Camera* restrict camera,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		__global float *pixelFilterDistribution,
+#endif
 		__global Ray *ray,
 		Seed *seed) {
 #if (PARAM_SAMPLER_TYPE == 0)
@@ -105,8 +163,17 @@ void GenerateCameraPath(
 #endif
 #endif
 
-	Camera_GenerateRay(camera, filmWidth, filmHeight, ray,
-			sample->result.filmX, sample->result.filmY, time
+	InitSampleResult(sample, sampleData,
+		filmWidth, filmHeight,
+		filmSubRegion0, filmSubRegion1,
+		filmSubRegion2, filmSubRegion3
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, pixelFilterDistribution
+#endif
+		, seed);
+
+	Camera_GenerateRay(camera, filmWidth, filmHeight,
+			ray, sample->result.filmX, sample->result.filmY, time
 #if defined(PARAM_CAMERA_HAS_DOF)
 			, dofSampleX, dofSampleY
 #endif
@@ -147,10 +214,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *pathVolInfos,
 #endif
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		__global float *pixelFilterDistribution,
+#endif
 		__global Ray *rays,
 		__global Camera *camera,
-		const uint filmWidth,
-		const uint filmHeight
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -168,8 +239,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	// Initialize the sample and path
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, sample, sampleData, filmWidth, filmHeight);
-	GenerateCameraPath(taskDirectLight, taskState, sample, sampleData, camera, filmWidth, filmHeight, &rays[gid], &seed);
+	Sampler_Init(&seed, sample, sampleData);
+	GenerateEyePath(taskDirectLight, taskState, sample, sampleData, camera,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+			pixelFilterDistribution,
+#endif
+			&rays[gid], &seed);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -191,14 +268,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #if defined(PARAM_HAS_ENVLIGHTS)
 void DirectHitInfiniteLight(
 		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum *pathThroughput,
+		__global const Spectrum* restrict pathThroughput,
 		const float3 eyeDir, const float lastPdfW,
 		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	const float3 throughput = VLOAD3F(pathThroughput->c);
 
 	for (uint i = 0; i < envLightCount; ++i) {
-		__global const LightSource *light = &lights[envLightIndices[i]];
+		__global const LightSource* restrict light = &lights[envLightIndices[i]];
 
 		float directPdfW;
 		const float3 lightRadiance = EnvLight_GetRadiance(light, -eyeDir, &directPdfW
@@ -217,7 +294,7 @@ void DirectHitInfiniteLight(
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 void DirectHitFiniteLight(
 		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum *pathThroughput, const float distance, __global BSDF *bsdf,
+		__global const Spectrum* restrict pathThroughput, const float distance, __global BSDF *bsdf,
 		const float lastPdfW, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	float directPdfA;
@@ -267,7 +344,7 @@ bool DirectLight_Illuminate(
 	// Pick a light source to sample
 	float lightPickPdf;
 	const uint lightIndex = Scene_SampleAllLights(lightsDistribution, u0, &lightPickPdf);
-	__global const LightSource *light = &lights[lightIndex];
+	__global const LightSource* restrict light = &lights[lightIndex];
 
 	info->lightIndex = lightIndex;
 	info->lightID = light->lightID;
@@ -336,7 +413,7 @@ bool DirectLight_BSDFSampling(
 	// MIS between direct light sampling and BSDF sampling
 	//
 	// Note: I have to avoiding MIS on the last path vertex
-	__global const LightSource *light = &lights[info->lightIndex];
+	__global const LightSource* restrict light = &lights[info->lightIndex];
 	const float weight = (!lastPathVertex && Light_IsEnvOrIntersectable(light)) ?
 		PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
@@ -349,11 +426,7 @@ bool DirectLight_BSDFSampling(
 	// Setup the shadow ray
 	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
 	const float distance = info->distance;
-	const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
-
-	Ray_Init4(shadowRay, hitPoint, lightRayDir,
-		epsilon,
-		distance - epsilon, time);
+	Ray_Init4(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
 
 	return true;
 }
@@ -535,6 +608,8 @@ bool DirectLight_BSDFSampling(
 
 #define KERNEL_ARGS_FILM \
 		, const uint filmWidth, const uint filmHeight \
+		, const uint filmSubRegion0, const uint filmSubRegion1 \
+		, const uint filmSubRegion2, const uint filmSubRegion3 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
@@ -670,11 +745,19 @@ bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
 		KERNEL_ARGS_IMAGEMAPS_PAGE_7
 
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+#define KERNEL_ARGS_FAST_PIXEL_FILTER \
+		, __global float *pixelFilterDistribution
+#else
+#define KERNEL_ARGS_FAST_PIXEL_FILTER
+#endif
+
 #define KERNEL_ARGS \
 		__global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
 		, __global GPUTaskStats *taskStats \
+		KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global Sample *samples \
 		, __global float *samplesData \
 		KERNEL_ARGS_VOLUMES \

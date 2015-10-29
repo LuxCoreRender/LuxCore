@@ -42,7 +42,7 @@ void Material::SetEmissionMap(const ImageMap *map) {
 Spectrum Material::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	if (emittedTex) {
 		return (emittedFactor * (usePrimitiveArea ? oneOverPrimitiveArea : 1.f)) *
-				emittedTex->GetSpectrumValue(hitPoint) * hitPoint.color;
+				emittedTex->GetSpectrumValue(hitPoint);
 	} else
 		return Spectrum();
 }
@@ -54,21 +54,14 @@ float Material::GetEmittedRadianceY() const {
 		return 0.f;
 }
 
-void Material::Bump(HitPoint *hitPoint, const float weight) const {
-    if (bumpTex && (weight > 0.f)) {
-        const UV duv = weight * bumpTex->GetDuv(*hitPoint, bumpSampleDistance);
+void Material::Bump(HitPoint *hitPoint) const {
+    if (bumpTex) {
+		hitPoint->shadeN = bumpTex->Bump(*hitPoint, bumpSampleDistance);
 
-        hitPoint->dpdu += duv.u * Vector(hitPoint->shadeN);
-        hitPoint->dpdv += duv.v * Vector(hitPoint->shadeN);
-
-        const Normal oldShadeN = hitPoint->shadeN;
-        hitPoint->shadeN = Normal(Normalize(Cross(hitPoint->dpdu, hitPoint->dpdv)));
-
-        // The above transform keeps the normal in the original normal
-        // hemisphere. If they are opposed, it means UVN was indirect and
-        // the normal needs to be reversed.
-        hitPoint->shadeN *= (Dot(oldShadeN, hitPoint->shadeN) < 0.f) ? -1.f : 1.f;
-    }
+		// Update dpdu and dpdv so they are still orthogonal to shadeN 
+		hitPoint->dpdu = Cross(hitPoint->shadeN, Cross(hitPoint->dpdu, hitPoint->shadeN));
+		hitPoint->dpdv = Cross(hitPoint->shadeN, Cross(hitPoint->dpdv, hitPoint->shadeN));
+	}
 }
 
 Properties Material::ToProperties() const {
@@ -80,6 +73,7 @@ Properties Material::ToProperties() const {
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
 	props.Set(Property("scene.materials." + name + ".emission.samples")(emittedSamples));
+	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
 	if (emittedTex)
 		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
 	if (bumpTex)
@@ -161,11 +155,14 @@ Spectrum slg::CoatingAbsorption(const float cosi, const float coso,
 //------------------------------------------------------------------------------
 
 float slg::SchlickDistribution_SchlickZ(const float roughness, const float cosNH) {
-	const float cosNH2 = cosNH * cosNH;
-	// expanded for increased numerical stability
-	const float d = cosNH2 * roughness + (1.f - cosNH2);
-	// use double division to avoid overflow in d*d product
-	return (roughness / d) / d;
+	if (roughness > 0.f) {
+		const float cosNH2 = cosNH * cosNH;
+		// expanded for increased numerical stability
+		const float d = cosNH2 * roughness + (1.f - cosNH2);
+		// use double division to avoid overflow in d*d product
+		return (roughness / d) / d;
+	}
+	return 0.f;
 }
 
 float slg::SchlickDistribution_SchlickA(const Vector &H, const float anisotropy) {

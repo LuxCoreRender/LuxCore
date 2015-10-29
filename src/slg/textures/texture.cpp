@@ -41,7 +41,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 // The generic implementation
-UV Texture::GetDuv(const HitPoint &hitPoint, const float sampleDistance) const {
+Normal Texture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
     // Calculate bump map value at intersection point
     const float base = GetFloatValue(hitPoint);
 
@@ -68,7 +68,18 @@ UV Texture::GetDuv(const HitPoint &hitPoint, const float sampleDistance) const {
     hitPointTmp.shadeN = Normalize(origShadeN + vv * hitPoint.dndv);
     duv.v = (GetFloatValue(hitPointTmp) - base) / vv;
 
-    return duv;
+	const Vector dpdu = hitPoint.dpdu + duv.u * Vector(hitPoint.shadeN);
+	const Vector dpdv = hitPoint.dpdv + duv.v * Vector(hitPoint.shadeN);
+
+	const Normal oldShadeN = hitPoint.shadeN;
+	Normal shadeN = Normal(Normalize(Cross(dpdu, dpdv)));
+
+	// The above transform keeps the normal in the original normal
+	// hemisphere. If they are opposed, it means UVN was indirect and
+	// the normal needs to be reversed.
+	shadeN *= (Dot(oldShadeN, shadeN) < 0.f) ? -1.f : 1.f;
+
+	return shadeN;
 }
 
 //------------------------------------------------------------------------------
