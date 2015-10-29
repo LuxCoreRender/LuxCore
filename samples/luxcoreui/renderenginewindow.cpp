@@ -36,6 +36,7 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 		.Add("BIDIRCPU", 2)
 		.Add("LIGHTCPU", 3)
 		.Add("BIDIRVMCPU", 4)
+		.Add("RTPATHOCL", 5)
 		.SetDefault("PATHCPU");
 }
 
@@ -46,7 +47,8 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 			cfgProps.GetAllProperties("opencl.task.count") <<
 			cfgProps.GetAllProperties("path") <<
 			cfgProps.GetAllProperties("light") <<
-			cfgProps.GetAllProperties("bidirvm");
+			cfgProps.GetAllProperties("bidirvm") <<
+			cfgProps.GetAllProperties("rtpath");
 }
 
 void RenderEngineWindow::RefreshObjectProperties(Properties &props) {
@@ -113,6 +115,40 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	LuxCoreApp::HelpMarker("path.clamping.pdf.value");
 }
 
+void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
+	PathGUI(props, modifiedProps);
+
+	bool bval;
+	int ival;
+
+	bval = props.Get("path.pixelatomics.enable").Get<float>();
+	if (ImGui::Checkbox("Use pixel atomics", &bval)) {
+		props.Set(Property("path.pixelatomics.enable")(bval));
+		modifiedProps = true;
+	}
+	LuxCoreApp::HelpMarker("path.pixelatomics.enable");
+
+	bool autoOCLTaskCount = (props.Get("opencl.task.count").Get<string>() == "AUTO") ? true : false;
+	if (ImGui::Checkbox("Automatic OpenCL task count", &autoOCLTaskCount)) {
+		if (autoOCLTaskCount)
+			props.Set(Property("opencl.task.count")("AUTO"));
+		else
+			props.Set(Property("opencl.task.count")(128 * 1024 * 1024));
+
+		modifiedProps = true;
+	}
+	LuxCoreApp::HelpMarker("opencl.task.count");
+
+	if (!autoOCLTaskCount) {
+		ival = props.Get("opencl.task.count").Get<int>();
+		if (ImGui::InputInt("Threads count", &ival, 8 * 1024, 128 * 1024)) {
+			props.Set(Property("opencl.task.count")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("opencl.task.count");
+	}
+}
+
 void RenderEngineWindow::BiDirGUI(Properties &props, bool &modifiedProps) {
 	float fval;
 	int ival;
@@ -174,41 +210,74 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		ImGui::SetTooltip("renderengine.type");
 
 	//------------------------------------------------------------------
+	// RTPATHOCL
+	//------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("RTPATHOCL")) {
+		PathOCLGUI(props, modifiedProps);
+
+		float fval;
+		int ival;
+
+		ival = props.Get("rtpath.miniterations").Get<float>();
+		if (ImGui::InputInt("Min. pass count per frame", &ival)) {
+			props.Set(Property("rtpath.miniterations")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("rtpath.miniterations");
+
+		ival = props.Get("rtpath.displaydevice.index").Get<float>();
+		if (ImGui::InputInt("OpenCL device index to use for display tasks", &ival)) {
+			props.Set(Property("rtpath.displaydevice.index")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("rtpath.displaydevice.index");
+
+		fval = props.Get("rtpath.blur.timewindow").Get<float>();
+		if (ImGui::InputFloat("Blur time length in secs", &fval)) {
+			props.Set(Property("rtpath.blur.timewindow")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("rtpath.blur.timewindow");
+
+		fval = props.Get("rtpath.blur.mincap").Get<float>();
+		if (ImGui::InputFloat("Blur min. weight", &fval)) {
+			props.Set(Property("rtpath.blur.mincap")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("rtpath.blur.mincap");
+
+		fval = props.Get("rtpath.blur.maxcap").Get<float>();
+		if (ImGui::InputFloat("Blur max. weight", &fval)) {
+			props.Set(Property("rtpath.blur.maxcap")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("rtpath.blur.maxcap");
+
+		fval = props.Get("rtpath.ghosteffect.intensity").Get<float>();
+		if (ImGui::InputFloat("Ghost effect intensity", &fval)) {
+			props.Set(Property("rtpath.ghosteffect.intensity")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("rtpath.ghosteffect.intensity");
+
+		if (ImGui::Button("Open Sampler editor"))
+			app->samplerWindow.opened = true;
+		ImGui::SameLine();
+		if (ImGui::Button("Open Pixel Filter editor"))
+			app->pixelFilterWindow.opened = true;
+		/*ImGui::SameLine();
+		if (ImGui::Button("Open OpenCL device editor")) {
+			// TODO
+		}*/
+	}
+
+	//------------------------------------------------------------------
 	// PATHOCL
 	//------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("PATHOCL")) {
-		PathGUI(props, modifiedProps);
-
-		bool bval;
-		int ival;
-		
-		bval = props.Get("path.pixelatomics.enable").Get<float>();
-		if (ImGui::Checkbox("Use pixel atomics", &bval)) {
-			props.Set(Property("path.pixelatomics.enable")(bval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("path.pixelatomics.enable");
-
-		bool autoOCLTaskCount = (props.Get("opencl.task.count").Get<string>() == "AUTO") ? true : false;
-		if (ImGui::Checkbox("Automatic OpenCL task count", &autoOCLTaskCount)) {
-			if (autoOCLTaskCount)
-				props.Set(Property("opencl.task.count")("AUTO"));
-			else
-				props.Set(Property("opencl.task.count")(128 * 1024 * 1024));
-
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("opencl.task.count");
-
-		if (!autoOCLTaskCount) {
-			ival = props.Get("opencl.task.count").Get<int>();
-			if (ImGui::InputInt("Threads count", &ival, 8 * 1024, 128 * 1024)) {
-				props.Set(Property("opencl.task.count")(ival));
-				modifiedProps = true;
-			}
-			LuxCoreApp::HelpMarker("opencl.task.count");
-		}
+		PathOCLGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
 			app->samplerWindow.opened = true;
