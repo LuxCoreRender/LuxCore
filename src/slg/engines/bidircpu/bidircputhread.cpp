@@ -246,6 +246,10 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 					// I'm ignoring volume emission because it is not sampled in
 					// direct light step.
 
+					// If the light source is not intersectable, it can not be
+					// sampled with BSDF
+					bsdfPdfW *= light->IsIntersectable() ? 1.f : 0.f;
+					
 					// The +1 is there to account the current path vertex used for DL
 					if (eyeVertex.depth + 1 >= engine->rrDepth) {
 						// Russian Roulette
@@ -352,8 +356,13 @@ void BiDirCPURenderThread::TraceLightPath(const float time,
 		// I don't store the light vertex 0 because direct lighting will take
 		// care of these kind of paths
 		lightVertex.dVCM = MIS(lightDirectPdfW / lightEmitPdfW);
-		const float usedCosLight = light->IsEnvironmental() ? 1.f : cosThetaAtLight;
-		lightVertex.dVC = MIS(usedCosLight / lightEmitPdfW);
+		// If the light source is not intersectable, it can not be
+		// sampled with BSDF
+		if (light->IsIntersectable()) {
+			const float usedCosLight = light->IsEnvironmental() ? 1.f : cosThetaAtLight;
+			lightVertex.dVC = MIS(usedCosLight / lightEmitPdfW);
+		} else
+			lightVertex.dVC = 0.f;
 		lightVertex.dVM = lightVertex.dVC * misVcWeightFactor;
 
 		lightVertex.depth = 1;
