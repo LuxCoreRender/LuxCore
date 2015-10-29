@@ -21,6 +21,7 @@
 #include "slg/slg.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -51,11 +52,11 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	minIterations = cfg.Get(GetDefaultProps().Get("rtpath.miniterations")).Get<u_int>();
+	minIterations = Max(1u, cfg.Get(GetDefaultProps().Get("rtpath.miniterations")).Get<u_int>());
 	displayDeviceIndex = cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")).Get<u_int>();
 	if (displayDeviceIndex >= intersectionDevices.size())
-		throw std::runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<std::string>(displayDeviceIndex) +
-				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
+		throw runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<string>(displayDeviceIndex) +
+				" >= " + boost::lexical_cast<string>(intersectionDevices.size()));
 
 	blurTimeWindow = Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")).Get<float>());
 	blurMinCap =  Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.mincap")).Get<float>());
