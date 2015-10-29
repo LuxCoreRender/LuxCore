@@ -70,7 +70,7 @@ void Accelerator_Intersect(
 		) {
 	// Initialize vertex page references
 #if (BVH_VERTS_PAGE_COUNT > 1)
-	__global const Point *accelVertPages[BVH_VERTS_PAGE_COUNT];
+	__global const Point* restrict accelVertPages[BVH_VERTS_PAGE_COUNT];
 #if defined(BVH_VERTS_PAGE0)
 	accelVertPages[0] = accelVertPage0;
 #endif
@@ -147,14 +147,14 @@ void Accelerator_Intersect(
 	float b1, b2;
 #if (BVH_NODES_PAGE_COUNT == 1)
 	while (currentNode < stopNode) {
-		__global const BVHAccelArrayNode *node = &accelNodePage0[currentNode];
+		__global const BVHAccelArrayNode* restrict node = &accelNodePage0[currentNode];
 #else
 	while ((currentPage < stopPage) || (currentNode < stopNode)) {
-		__global const BVHAccelArrayNode *accelNodePage = accelNodePages[currentPage];
-		__global const BVHAccelArrayNode *node = &accelNodePage[currentNode];
+		__global const BVHAccelArrayNode* restrict accelNodePage = accelNodePages[currentPage];
+		__global const BVHAccelArrayNode* restrict node = &accelNodePage[currentNode];
 #endif
 		// Read the node
-		__global float4 *data = (__global float4 *)node;
+		__global float4* restrict data = (__global float4* restrict)node;
 		const float4 data0 = *data++;
 		const float4 data1 = *data;
 
@@ -178,17 +178,17 @@ void Accelerator_Intersect(
 #else
 			const uint pv0 = (v0 & 0xe0000000u) >> 29;
 			const uint iv0 = (v0 & 0x1fffffffu);
-			__global Point *vp0 = accelVertPages[pv0];
+			__global Point* restrict vp0 = accelVertPages[pv0];
 			const float3 p0 = VLOAD3F(&vp0[iv0].x);
 
 			const uint pv1 = (v1 & 0xe0000000u) >> 29;
 			const uint iv1 = (v1 & 0x1fffffffu);
-			__global Point *vp1 = accelVertPages[pv1];
+			__global Point* restrict vp1 = accelVertPages[pv1];
 			const float3 p1 = VLOAD3F(&vp1[iv1].x);
 
 			const uint pv2 = (v2 & 0xe0000000u) >> 29;
 			const uint iv2 = (v2 & 0x1fffffffu);
-			__global Point *vp2 = accelVertPages[pv2];
+			__global Point* restrict vp2 = accelVertPages[pv2];
 			const float3 p2 = VLOAD3F(&vp2[iv2].x);
 #endif
 

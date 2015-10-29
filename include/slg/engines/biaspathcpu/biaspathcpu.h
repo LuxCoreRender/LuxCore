@@ -20,9 +20,10 @@
 #define	_SLG_BIASPATHCPU_H
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/cpurenderengine.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filters/filter.h"
 #include "slg/bsdf/bsdf.h"
 
 namespace slg {
@@ -111,7 +112,17 @@ public:
 	BiasPathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~BiasPathCPURenderEngine();
 
-	RenderEngineType GetEngineType() const { return BIASPATHCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return BIASPATHCPU; }
+	static std::string GetObjectTag() { return "BIASPATHCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Path depth settings
 	PathDepthInfo maxPathDepth;
@@ -120,7 +131,7 @@ public:
 	u_int aaSamples, diffuseSamples, glossySamples, specularSamples, directLightSamples;
 
 	// Clamping settings
-	float radianceClampMaxValue;
+	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
 	// Light settings
@@ -130,17 +141,20 @@ public:
 	friend class BiasPathCPURenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual void StartLockLess();
 
 	FilterDistribution *pixelFilterDistribution;
 
 private:
+	void PrintSamplesInfo() const;
+	void InitPixelFilterDistribution();
+
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new BiasPathCPURenderThread(this, index, device);
 	}
-
-	void InitPixelFilterDistribution();
 };
 
 }

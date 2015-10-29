@@ -36,16 +36,17 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 	const float cosi = fabsf(localLightDir.z);
 	const float coso = fabsf(localEyeDir.z);
 
-	const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
+	const Frame frame(hitPoint.GetFrame());
+	const float sideTest = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(localSampledDir), hitPoint.geometryN);
 
-	if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(localSampledDir), hitPoint.geometryN) <= 0.f) {
-		// Transmition
+	if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
+		// Transmission
 		*event = DIFFUSE | TRANSMIT;
 
 		if (directPdfW)
-			*directPdfW = fabsf(localSampledDir.z) * INV_PI * 0.5f;
+			*directPdfW = fabsf(localSampledDir.z) * (INV_PI * .5f);
 		if (reversePdfW)
-			*reversePdfW = fabsf(localFixedDir.z) * INV_PI * 0.5f;
+			*reversePdfW = fabsf(localFixedDir.z) * (INV_PI * .5f);
 
 		const Vector H(Normalize(Vector(localLightDir.x + localEyeDir.x, localLightDir.y + localEyeDir.y,
 			localLightDir.z - localEyeDir.z)));
@@ -65,10 +66,6 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
 		}
-		if (directPdfW)
-			*directPdfW = 0.5f * fabsf(localSampledDir.z * INV_PI);
-		if (reversePdfW)
-			*reversePdfW = 0.5f * fabsf(localFixedDir.z * INV_PI);
 		ks = ks.Clamp();
 		const Spectrum S2 = FresnelTexture::SchlickEvaluate(ks, u);
 		Spectrum S(Sqrt((Spectrum(1.f) - S1) * (Spectrum(1.f) - S2)));
@@ -79,9 +76,10 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			S *= Exp(Ka->GetSpectrumValue(hitPoint).Clamp() * -(depth->GetFloatValue(hitPoint) / coso) +
 				Ka_bf->GetSpectrumValue(hitPoint).Clamp() * -(depth_bf->GetFloatValue(hitPoint) / cosi));
 		}
-		return (INV_PI * coso) * S * Kt->GetSpectrumValue(hitPoint).Clamp() *
+
+		return (INV_PI * cosi) * S * Kt->GetSpectrumValue(hitPoint).Clamp() *
 			(Spectrum(1.f) - Kd->GetSpectrumValue(hitPoint).Clamp());
-	} else {
+	} else if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
 		// Reflection
 		*event = GLOSSY | REFLECT;
 
@@ -115,14 +113,14 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 
 		const float u2 = u * u;
 		const float v2 = v * v;
-		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 		const float roughness = u * v;
 
 		if (directPdfW) {
 			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
 			const float wBase = 1.f - wCoating;
 
-			*directPdfW = 0.5f * (wBase * fabsf(localSampledDir.z * INV_PI) +
+			*directPdfW = .5f * (wBase * fabsf(localSampledDir.z * INV_PI) +
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir));
 		}
 
@@ -130,7 +128,7 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
 			const float wBaseR = 1.f - wCoatingR;
 
-			*reversePdfW = 0.5f * (wBaseR * fabsf(localFixedDir.z * INV_PI) +
+			*reversePdfW = .5f * (wBaseR * fabsf(localFixedDir.z * INV_PI) +
 				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir));
 		}
 
@@ -148,7 +146,8 @@ Spectrum GlossyTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		// assumes coating bxdf takes fresnel factor S into account
 
 		return coatingF + absorption * (Spectrum(1.f) - S) * baseF;
-	}
+	} else
+		return Spectrum();
 }
 
 Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
@@ -156,11 +155,10 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	const float u0, const float u1, const float passThroughEvent,
 	float *pdfW, float *absCosSampledDir, BSDFEvent *event,
 	const BSDFEvent requestedEvent) const {
-	if ((!(requestedEvent & (GLOSSY | REFLECT)) && !(requestedEvent & (DIFFUSE | TRANSMIT))) ||
-		(fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC))
+	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	if (passThroughEvent < 0.5f) {
+	if (passThroughEvent < .5f && (requestedEvent & (GLOSSY | REFLECT))) {
 		// Reflection
 		Spectrum ks, alpha;
 		float i, u, v, d;
@@ -190,7 +188,7 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 
 		const float u2 = u * u;
 		const float v2 = v * v;
-		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 		const float roughness = u * v;
 
 		const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
@@ -235,11 +233,12 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 			*event = GLOSSY | REFLECT;
 		}
 
-		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
-		if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) <= 0.f)
+		const Frame frame(hitPoint.GetFrame());
+		const float sideTest = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN);
+		if (!(sideTest > DEFAULT_COS_EPSILON_STATIC))
 			return Spectrum();
 
-		*pdfW = 0.5f * (coatingPdf * wCoating + basePdf * wBase);
+		*pdfW = .5f * (coatingPdf * wCoating + basePdf * wBase);
 
 		// Absorption
 		const float cosi = fabsf(localSampledDir->z);
@@ -254,22 +253,27 @@ Spectrum GlossyTranslucentMaterial::Sample(const HitPoint &hitPoint,
 		// coatingF already takes fresnel factor S into account
 
 		return (coatingF + absorption * (Spectrum(1.f) - S) * baseF) / *pdfW;
-	} else {
-		// Transmition
+	} else if (passThroughEvent >= .5f && (requestedEvent & (DIFFUSE | TRANSMIT))) {
+		// Transmission
 		*localSampledDir = -Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
+
 		const Frame frame(hitPoint.dpdu, hitPoint.dpdv, hitPoint.shadeN);
-		if (Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN) > 0.f)
+		const float sideTest = Dot(frame.ToWorld(localFixedDir), hitPoint.geometryN) * Dot(frame.ToWorld(*localSampledDir), hitPoint.geometryN);
+		if (!(sideTest < -DEFAULT_COS_EPSILON_STATIC))
 			return Spectrum();
-		*pdfW *= 0.5f;
+
+		*pdfW *= .5f;
 
 		*absCosSampledDir = fabsf(localSampledDir->z);
 		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
+
 		if (hitPoint.fromLight)
 			return Evaluate(hitPoint, localFixedDir, *localSampledDir, event, pdfW, NULL) / *pdfW;
 		else
 			return Evaluate(hitPoint, *localSampledDir, localFixedDir, event, pdfW, NULL) / *pdfW;
-	}
+	} else
+		return Spectrum();
 }
 
 void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
@@ -278,13 +282,13 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 	const Vector &localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
 	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
-	if (localFixedDir.z * localSampledDir.z <= 0.f) {
+	if (localFixedDir.z * localSampledDir.z < 0.f) {
 		// Transmition
 		if (directPdfW)
-			*directPdfW = fabsf(localSampledDir.z) * INV_PI * 0.5f;
+			*directPdfW = fabsf(localSampledDir.z) * (INV_PI * .5f);
 		if (reversePdfW)
-			*reversePdfW = fabsf(localFixedDir.z) * INV_PI * 0.5f;
-	} else {
+			*reversePdfW = fabsf(localFixedDir.z) * (INV_PI * .5f);
+	} else if (localFixedDir.z * localSampledDir.z > 0.f) {
 		// Reflection
 		Spectrum ks;
 		float i, u, v;
@@ -308,14 +312,14 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 
 		const float u2 = u * u;
 		const float v2 = v * v;
-		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 		const float roughness = u * v;
 
 		if (directPdfW) {
 			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
 			const float wBase = 1.f - wCoating;
 
-			*directPdfW = 0.5f * (wBase * fabsf(localSampledDir.z * INV_PI) +
+			*directPdfW = .5f * (wBase * fabsf(localSampledDir.z * INV_PI) +
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir));
 		}
 
@@ -323,9 +327,14 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
 			const float wBaseR = 1.f - wCoatingR;
 
-			*reversePdfW = 0.5f * (wBaseR * fabsf(localFixedDir.z * INV_PI) +
+			*reversePdfW = .5f * (wBaseR * fabsf(localFixedDir.z * INV_PI) +
 				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir));
 		}
+	} else {
+		if (directPdfW)
+			*directPdfW = 0.f;
+		if (reversePdfW)
+			*reversePdfW = 0.f;
 	}
 }
 

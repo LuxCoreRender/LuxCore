@@ -42,11 +42,18 @@ public:
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 		u_int *filmSubRegion) const;
 
-	Film *AllocFilm(FilmOutputs &filmOutputs) const;
+	Filter *AllocPixelFilter() const;
+	Film *AllocFilm() const;
+
+	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
-		double *metropolisSharedTotalLuminance, double *metropolisSharedSampleCount) const;
+		const FilmSampleSplatter *flmSplatter,
+		SamplerSharedData *sharedData) const;
+
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
+	luxrays::Properties ToProperties() const;
+	
 	static const luxrays::Properties &GetDefaultProperties();
 
 	luxrays::Properties cfg;

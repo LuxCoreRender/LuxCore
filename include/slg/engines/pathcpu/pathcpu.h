@@ -20,9 +20,10 @@
 #define	_SLG_PATHCPU_H
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/cpurenderengine.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filmsamplesplatter.h"
 #include "slg/bsdf/bsdf.h"
 
 namespace slg {
@@ -45,6 +46,8 @@ private:
 
 	void RenderFunc();
 
+	void GenerateEyeRay(luxrays::Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult);
+
 	void DirectLightSampling(
 		const float time, const float u0,
 		const float u1, const float u2,
@@ -64,8 +67,19 @@ private:
 class PathCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	PathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
+	~PathCPURenderEngine();
 
-	RenderEngineType GetEngineType() const { return PATHCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return PATHCPU; }
+	static std::string GetObjectTag() { return "PATHCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Signed because of the delta parameter
 	u_int maxPathDepth;
@@ -74,15 +88,25 @@ public:
 	float rrImportanceCap;
 
 	// Clamping settings
-	float radianceClampMaxValue;
+	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
+
+	bool useFastPixelFilter;
 
 	friend class PathCPURenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	FilterDistribution *pixelFilterDistribution;
+	FilmSampleSplatter *sampleSplatter;
 
 private:
+	void InitPixelFilterDistribution();
+
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new PathCPURenderThread(this, index, device);

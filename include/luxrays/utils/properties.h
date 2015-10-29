@@ -30,6 +30,10 @@
 #include <boost/unordered_map.hpp>
 #include <boost/type_traits.hpp>
 #include <boost/foreach.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/version.hpp>
+#include <boost/serialization/split_member.hpp>
 
 #include "luxrays/luxrays.h"
 #include <luxrays/utils/properties.h>
@@ -253,6 +257,10 @@ public:
 	 */
 	std::string GetValuesString() const;
 	/*!
+	 * \brief Initialize the property from a string (ex. "a.b.c = 1 2")
+	 */
+	void FromString(std::string &s);
+	/*!
 	 * \brief Returns a string with the name of the property followed by " = "
 	 * and by all values associated to the property.
 	 * 
@@ -390,7 +398,13 @@ public:
 	static std::string ExtractField(const std::string &name, const u_int index);
 	static std::string ExtractPrefix(const std::string &name, const u_int count);
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void load(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const u_int version) const;
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	template<class T> class GetValueVistor : public boost::static_visitor<T> {
 	public:
 		T operator()(const bool v) const {
@@ -455,6 +469,9 @@ inline std::ostream &operator<<(std::ostream &os, const Property &p) {
 
 	return os;
 }
+
+template<> void Property::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
+template<> void Property::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
 
 //------------------------------------------------------------------------------
 // Properties class
@@ -675,7 +692,13 @@ public:
 	 */
 	std::string ToString() const;
 
+	friend class boost::serialization::access;
+
 private:
+	template<class Archive> void load(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const u_int version) const;
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
 	// This vector used, among other things, to keep track of the insertion order
 	std::vector<std::string> names;
 	boost::unordered_map<std::string, Property> props;
@@ -690,6 +713,12 @@ inline std::ostream &operator<<(std::ostream &os, const Properties &p) {
 	return os;
 }
 
+template<> void Properties::load<boost::archive::binary_iarchive>(boost::archive::binary_iarchive &ar, const u_int version);
+template<> void Properties::save<boost::archive::binary_oarchive>(boost::archive::binary_oarchive &ar, const u_int version) const;
+
 }
+
+BOOST_CLASS_VERSION(luxrays::Property, 1)
+BOOST_CLASS_VERSION(luxrays::Properties, 1)
 
 #endif	/* _LUXRAYS_PROPERTIES_H */

@@ -40,6 +40,7 @@ typedef struct {
 	luxrays::Normal geometryN;
 	luxrays::Normal shadeN;
 	luxrays::Spectrum color;
+	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
 	luxrays::Vector dpdu, dpdv;
 	luxrays::Normal dndu, dndv;
 	float alpha;

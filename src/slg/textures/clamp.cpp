@@ -40,6 +40,8 @@ Properties ClampTexture::ToProperties(const ImageMapCache &imgMapCache) const {
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("clamp"));
 	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".min")(minVal));
+	props.Set(Property("scene.textures." + name + ".max")(maxVal));
 
 	return props;
 }

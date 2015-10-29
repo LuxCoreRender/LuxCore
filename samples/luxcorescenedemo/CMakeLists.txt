@@ -27,6 +27,5 @@ set(LUXCORESCENEDEMO_SRCS
 	)
 
 add_executable(luxcorescenedemo ${LUXCORESCENEDEMO_SRCS})
-add_definitions(${VISIBILITY_FLAGS})
 
 TARGET_LINK_LIBRARIES(luxcorescenedemo luxcore smallluxgpu luxrays ${OPENSUBDIV_LIBRARY} ${EMBREE_LIBRARY} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})

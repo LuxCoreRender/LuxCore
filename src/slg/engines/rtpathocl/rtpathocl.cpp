@@ -21,6 +21,7 @@
 #include "slg/slg.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -51,17 +52,17 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	minIterations = cfg.Get(Property("rtpath.miniterations")(2)).Get<u_int>();
-	displayDeviceIndex = cfg.Get(Property("rtpath.displaydevice.index")(0)).Get<u_int>();
+	minIterations = Max(1u, cfg.Get(GetDefaultProps().Get("rtpath.miniterations")).Get<u_int>());
+	displayDeviceIndex = cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")).Get<u_int>();
 	if (displayDeviceIndex >= intersectionDevices.size())
-		throw std::runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<std::string>(displayDeviceIndex) +
-				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
+		throw runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<string>(displayDeviceIndex) +
+				" >= " + boost::lexical_cast<string>(intersectionDevices.size()));
 
-	blurTimeWindow = Max(0.f, cfg.Get(Property("rtpath.blur.timewindow")(3.f)).Get<float>());
-	blurMinCap =  Max(0.f, cfg.Get(Property("rtpath.blur.mincap")(0.01f)).Get<float>());
-	blurMaxCap =  Max(0.f, cfg.Get(Property("rtpath.blur.maxcap")(0.2f)).Get<float>());
+	blurTimeWindow = Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")).Get<float>());
+	blurMinCap =  Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.mincap")).Get<float>());
+	blurMaxCap =  Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.maxcap")).Get<float>());
 
-	ghostEffect = 1.f - Clamp(cfg.Get(Property("rtpath.ghosteffect.intensity")(0.05f)).Get<float>(), 0.f, 1.f);
+	ghostEffect = 1.f - Clamp(cfg.Get(GetDefaultProps().Get("rtpath.ghosteffect.intensity")).Get<float>(), 0.f, 1.f);
 
 	PathOCLRenderEngine::StartLockLess();
 }
@@ -145,6 +146,38 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 	const double currentTime = WallClockTime();
 	frameTime = currentTime - frameStartTime;
 	frameStartTime = currentTime;
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties RTPathOCLRenderEngine::ToProperties(const Properties &cfg) {
+	return PathOCLRenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.blur.mincap")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.blur.maxcap")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.ghosteffect.intensity"));
+}
+
+RenderEngine *RTPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new RTPathOCLRenderEngine(rcfg, flm, flmMutex);
+}
+
+Properties RTPathOCLRenderEngine::GetDefaultProps() {
+	static Properties props = PathOCLRenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
+			Property("rtpath.miniterations")(2) <<
+			Property("rtpath.displaydevice.index")(0) <<
+			Property("rtpath.blur.timewindow")(3.f) <<
+			Property("rtpath.blur.mincap")(.01f) <<
+			Property("rtpath.blur.maxcap")(.2f) <<
+			Property("rtpath.ghosteffect.intensity")(.05f);
+
+	return props;
 }
 
 #endif

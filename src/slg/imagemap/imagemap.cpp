@@ -29,6 +29,7 @@
 #include <OpenImageIO/dassert.h>
 
 #include "slg/imagemap/imagemap.h"
+#include "slg/imagemap/imagemapcache.h"
 #include "slg/core/sdl.h"
 
 using namespace std;
@@ -163,6 +164,50 @@ float ImageMapStorageImpl<T, CHANNELS>::GetAlpha(const u_int index) const {
 }
 
 template <class T, u_int CHANNELS>
+luxrays::UV ImageMapStorageImpl<T, CHANNELS>::GetDuv(const luxrays::UV &uv) const {
+	const float s = uv.u * width;
+	const float t = uv.v * height;
+
+	const int is = Floor2Int(s);
+	const int it = Floor2Int(t);
+
+	const float as = s - is;
+	const float at = t - it;
+
+	int s0, s1;
+	if (as < .5f) {
+		s0 = is - 1;
+		s1 = is;
+	} else {
+		s0 = is;
+		s1 = is + 1;
+	}
+	int t0, t1;
+	if (at < .5f) {
+		t0 = it - 1;
+		t1 = it;
+	} else {
+		t0 = it;
+		t1 = it + 1;
+	}
+
+	UV duv;
+	duv.u = Lerp(at, GetTexel(s1, it)->GetFloat() - GetTexel(s0, it)->GetFloat(),
+		GetTexel(s1, it + 1)->GetFloat() - GetTexel(s0, it + 1)->GetFloat()) *
+		width;
+	duv.v = Lerp(as, GetTexel(is, t1)->GetFloat() - GetTexel(is, t0)->GetFloat(),
+		GetTexel(is + 1, t1)->GetFloat() - GetTexel(is + 1, t0)->GetFloat()) *
+		height;
+	return duv;
+}
+
+template <class T, u_int CHANNELS>
+luxrays::UV ImageMapStorageImpl<T, CHANNELS>::GetDuv(const u_int index) const {
+	UV uv((index % width) + .5f, (index / height) + .5f);
+	return GetDuv(uv);
+}
+
+template <class T, u_int CHANNELS>
 const ImageMapPixel<T, CHANNELS> *ImageMapStorageImpl<T, CHANNELS>::GetTexel(const int s, const int t) const {
 	const u_int u = Mod<int>(s, width);
 	const u_int v = Mod<int>(t, height);
@@ -216,7 +261,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					(selectionType == ImageMapStorage::BLUE)) ? 0 : 1;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -231,7 +276,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				const u_int channel = selectionType - ImageMapStorage::RED;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -254,7 +299,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				const u_int channel = 0;
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)&src[channel]);
+					dst->Set(&(src->c[channel]));
 
 					src++;
 					dst++;
@@ -298,7 +343,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 				ImageMapPixel<T, 3> *dst = newPixels.get();
 
 				for (u_int i = 0; i < pixelCount; ++i) {
-					dst->Set((T *)src);
+					dst->Set(&(src->c[0]));
 
 					src++;
 					dst++;
@@ -461,6 +506,11 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 	}
 	
 	dest.get_pixels(0, newHeight, 0, newHeight, 0, 1, baseType, pixelStorage->GetPixelsData());
+}
+
+string ImageMap::GetFileName(const ImageMapCache &imgMapCache) const {
+	return "imagemap-" + ((boost::format("%05d") % imgMapCache.GetImageMapIndex(this)).str()) +
+			"." + GetFileExtension();
 }
 
 string ImageMap::GetFileExtension() const {

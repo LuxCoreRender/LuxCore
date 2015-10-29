@@ -37,7 +37,7 @@ public:
 	: u(_u), v(_v) {
 	}
 
-	UV(float v[2]) : u(v[0]), v(v[1]) {
+	UV(const float v[2]) : u(v[0]), v(v[1]) {
 	}
 
 

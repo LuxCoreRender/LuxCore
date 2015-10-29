@@ -55,21 +55,16 @@ public:
 	Scene(const std::string &fileName, const float imageScale = 1.f);
 	~Scene();
 
-	const luxrays::Properties &GetProperties() const { return sceneProperties; }
-
 	bool Intersect(luxrays::IntersectionDevice *device,
 		const bool fromLight, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
-		SampleResult *sampleResult = NULL, luxrays::Spectrum *pathEmission = NULL) const;
-	// Just for all code not yet supporting volume rendering
-	bool Intersect(luxrays::IntersectionDevice *device,
-		const bool fromLight, const float u0, luxrays::Ray *ray, luxrays::RayHit *rayHit,
-		BSDF *bsdf, luxrays::Spectrum *connectionThroughput) const;
+		SampleResult *sampleResult = NULL) const;
 
-	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight);
+	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight,
+		const u_int *filmSubRegion);
 
-	luxrays::Properties ToProperties(const std::string &directoryName);
+	luxrays::Properties ToProperties();
 
 	//--------------------------------------------------------------------------
 	// Methods to build and edit scene
@@ -163,8 +158,6 @@ protected:
 	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 
 	Texture *GetTexture(const luxrays::Property &name);
-
-	luxrays::Properties sceneProperties;
 };
 
 }

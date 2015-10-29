@@ -43,7 +43,7 @@ class Film;
 
 class GammaCorrectionPlugin : public ImagePipelinePlugin {
 public:
-	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 4096);
+	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 16384);
 	virtual ~GammaCorrectionPlugin() { }
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -57,6 +57,7 @@ public:
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+		ar & gamma;
 		ar & gammaTable;
 	}
 

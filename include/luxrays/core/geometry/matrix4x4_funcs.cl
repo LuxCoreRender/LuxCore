@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float3 Matrix4x4_ApplyPoint(__global const Matrix4x4 *m, const float3 point) {
+float3 Matrix4x4_ApplyPoint(__global const Matrix4x4* restrict m, const float3 point) {
 	const float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
 
 	const float4 row3 = VLOAD4F(&m->m[3][0]);
@@ -27,6 +27,22 @@ float3 Matrix4x4_ApplyPoint(__global const Matrix4x4 *m, const float3 point) {
 	const float4 row0 = VLOAD4F(&m->m[0][0]);
 	const float4 row1 = VLOAD4F(&m->m[1][0]);
 	const float4 row2 = VLOAD4F(&m->m[2][0]);
+	return (float3)(
+			iw * dot(row0, point4),
+			iw * dot(row1, point4),
+			iw * dot(row2, point4)
+			);
+}
+
+float3 Matrix4x4_ApplyPoint_Align(__global const Matrix4x4* restrict m, const float3 point) {
+	const float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
+
+	const float4 row3 = VLOAD4F_Align(&m->m[3][0]);
+	const float iw = 1.f / dot(row3, point4);
+
+	const float4 row0 = VLOAD4F_Align(&m->m[0][0]);
+	const float4 row1 = VLOAD4F_Align(&m->m[1][0]);
+	const float4 row2 = VLOAD4F_Align(&m->m[2][0]);
 	return (float3)(
 			iw * dot(row0, point4),
 			iw * dot(row1, point4),
@@ -50,7 +66,7 @@ float3 Matrix4x4_ApplyPoint_Private(Matrix4x4 *m, const float3 point) {
 			);
 }
 
-float3 Matrix4x4_ApplyVector(__global const Matrix4x4 *m, const float3 vector) {
+float3 Matrix4x4_ApplyVector(__global const Matrix4x4* restrict m, const float3 vector) {
 	const float3 row0 = VLOAD3F(&m->m[0][0]);
 	const float3 row1 = VLOAD3F(&m->m[1][0]);
 	const float3 row2 = VLOAD3F(&m->m[2][0]);
@@ -72,7 +88,7 @@ float3 Matrix4x4_ApplyVector_Private(Matrix4x4 *m, const float3 vector) {
 			);
 }
 
-float3 Matrix4x4_ApplyNormal(__global const Matrix4x4 *m, const float3 normal) {
+float3 Matrix4x4_ApplyNormal(__global const Matrix4x4* restrict m, const float3 normal) {
 	const float3 row0 = (float3)(m->m[0][0], m->m[1][0], m->m[2][0]);
 	const float3 row1 = (float3)(m->m[0][1], m->m[1][1], m->m[2][1]);
 	const float3 row2 = (float3)(m->m[0][2], m->m[1][2], m->m[2][2]);

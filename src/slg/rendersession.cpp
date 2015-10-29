@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "slg/rendersession.h"
 
 using namespace std;
@@ -34,9 +36,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	started = false;
 	editMode = false;
 
-	const Properties &cfg = renderConfig->cfg;
-
-	periodiceSaveTime = cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
+	periodiceSaveTime = renderConfig->cfg.Get(Property("batch.periodicsave")(0.f)).Get<float>();
 	lastPeriodicSave = WallClockTime();
 	periodicSaveEnabled = (periodiceSaveTime > 0.f);
 
@@ -44,7 +44,7 @@ RenderSession::RenderSession(RenderConfig *rcfg) {
 	// Create the Film
 	//--------------------------------------------------------------------------
 
-	film = renderConfig->AllocFilm(filmOutputs);
+	film = renderConfig->AllocFilm();
 
 	//--------------------------------------------------------------------------
 	// Create the RenderEngine
@@ -93,8 +93,8 @@ void RenderSession::EndSceneEdit() {
 	// Make a copy of the edit actions
 	const EditActionList editActions = renderConfig->scene->editActions;
 	
-	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
-			(renderEngine->GetEngineType() != RTBIASPATHOCL)) {
+	if ((renderEngine->GetType() != RTPATHOCL) &&
+			(renderEngine->GetType() != RTBIASPATHOCL)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 
 		// RTPATHOCL and RTBIASPATHOCL handle film Reset on their own
@@ -118,7 +118,24 @@ bool RenderSession::NeedPeriodicFilmSave() {
 		return false;
 }
 
-void RenderSession::SaveFilm() {
+void RenderSession::SaveFilm(const string &fileName) {
+	assert (started);
+
+	SLG_LOG("Saving film: " << fileName);
+
+	// Ask the RenderEngine to update the film
+	renderEngine->UpdateFilm();
+
+	// renderEngine->UpdateFilm() uses the film lock on its own
+	boost::unique_lock<boost::mutex> lock(filmMutex);
+
+	// Serialize the film
+	Film::SaveSerialized(fileName, film);
+}
+
+void RenderSession::SaveFilmOutputs() {
+	assert (started);
+
 	// Ask the RenderEngine to update the film
 	renderEngine->UpdateFilm();
 
@@ -126,5 +143,44 @@ void RenderSession::SaveFilm() {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 
 	// Save the film
-	film->Output(filmOutputs);
+	film->Output();
+}
+
+void RenderSession::Parse(const luxrays::Properties &props) {
+	assert (started);
+
+	boost::unique_lock<boost::mutex> lock(filmMutex);
+	film->Parse(props);
+
+	//--------------------------------------------------------------------------
+	// Check if there was a new image pipeline definition
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.imagepipeline")) {
+		// Delete the old image pipeline properties
+		renderConfig->cfg.DeleteAll(renderConfig->cfg.GetAllNames("film.imagepipeline"));
+
+		// Update the RenderConfig properties with the new image pipeline definition
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.imagepipeline"))
+				renderConfig->cfg.Set(props.Get(propName));
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	// Check if there were new radiance groups scale
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.radiancescales")) {
+		// Delete old radiance groups scale properties
+		vector<string> newKeys = props.GetAllNames("film.radiancescales.");
+		BOOST_FOREACH(string &k, newKeys)
+			renderConfig->cfg.DeleteAll(renderConfig->cfg.GetAllNames(k));
+		
+		// Update the RenderConfig properties with the new radiance groups scale properties
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.radiancescales"))
+				renderConfig->cfg.Set(props.Get(propName));
+		}
+	}
 }

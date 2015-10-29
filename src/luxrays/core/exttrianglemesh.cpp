@@ -72,11 +72,11 @@ void ExtMesh::GetDifferentials(const float time, const u_int triIndex, const Nor
 		const Vector dp1 = p0 - p2;
 		const Vector dp2 = p1 - p2;
 
-		const Vector ss = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		const Vector ts = (-du2 * dp1 + du1 * dp2) * invdet;
+		const Vector geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		const Vector geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-		*dpdu = Cross(shadeNormal, Cross(ss, shadeNormal));
-		*dpdv = Cross(shadeNormal, Cross(ts, shadeNormal));
+		*dpdu = Cross(shadeNormal, Cross(geometryDpDu, shadeNormal));
+		*dpdv = Cross(shadeNormal, Cross(geometryDpDv, shadeNormal));
 
 		if (HasNormals()) {
 			// Using GetShadeNormal() in order to do all computation relative to
@@ -397,8 +397,12 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	cols = meshCols;
 	alphas = meshAlpha;
 
-	// Compute all triangle normals and mesh area
 	triNormals = new Normal[triCount];
+	Preprocess();
+}
+
+void ExtTriangleMesh::Preprocess() {
+	// Compute all triangle normals and mesh area
 	area = 0.f;
 	for (u_int i = 0; i < triCount; ++i) {
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);
@@ -441,6 +445,19 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 	}
 
 	return allocated ? normals : NULL;
+}
+
+void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
+	TriangleMesh::ApplyTransform(trans);
+
+	if (normals) {
+		for (u_int i = 0; i < vertCount; ++i) {
+			normals[i] *= trans;
+			normals[i] = Normalize(normals[i]);
+		}
+	}
+
+	Preprocess();
 }
 
 void ExtTriangleMesh::WritePly(const string &fileName) const {

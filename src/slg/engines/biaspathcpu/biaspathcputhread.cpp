@@ -73,11 +73,11 @@ void BiasPathCPURenderThread::DirectLightSampling(
 			const float weight = (!sampleResult->lastPathVertex && (light->IsEnvironmental() || light->IsIntersectable())) ? 
 							PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
-			const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 			Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
-					epsilon,
-					distance - epsilon,
+					0.f,
+					distance,
 					time);
+			shadowRay.UpdateMinMaxWithEpsilon();
 			RayHit shadowRayHit;
 			BSDF shadowBsdf;
 			Spectrum connectionThroughput;
@@ -503,11 +503,9 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 		const u_int sampleX, const u_int sampleY) {
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 
-	float u0, u1;
-	SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
-
-	// Sample according the pixel filter distribution
-	engine->pixelFilterDistribution->SampleContinuous(u0, u1, &u0, &u1);
+	//--------------------------------------------------------------------------
+	//Initialize SampleResult
+	//--------------------------------------------------------------------------
 
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
@@ -518,8 +516,8 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 
 	// Set to 0.0 all result colors
 	sampleResult.emission = Spectrum();
-	for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
-		sampleResult.radiancePerPixelNormalized[i] = Spectrum();
+	for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
+		sampleResult.radiance[i] = Spectrum();
 	sampleResult.directDiffuse = Spectrum();
 	sampleResult.directGlossy = Spectrum();
 	sampleResult.indirectDiffuse = Spectrum();
@@ -532,19 +530,29 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
 
+	//--------------------------------------------------------------------------
+	// Sample image plane
+	//--------------------------------------------------------------------------
+
+	float u0, u1;
+	SampleGrid(rndGen, engine->aaSamples, sampleX, sampleY, &u0, &u1);
+
+	// Sample according the pixel filter distribution
+	engine->pixelFilterDistribution->SampleContinuous(u0, u1, &u0, &u1);
+
 	sampleResult.filmX = xOffset + x + .5f + u0;
 	sampleResult.filmY = yOffset + y + .5f + u1;
+
 	Ray eyeRay;
 	engine->renderConfig->scene->camera->GenerateRay(sampleResult.filmX, sampleResult.filmY,
 			&eyeRay, rndGen->floatValue(), rndGen->floatValue(), rndGen->floatValue());
 
+	//--------------------------------------------------------------------------
 	// Trace the path
+	//--------------------------------------------------------------------------
+
 	PathVolumeInfo volInfo;
 	TraceEyePath(rndGen, eyeRay, &volInfo, &sampleResult);
-
-	// Radiance clamping
-	if (engine->radianceClampMaxValue > 0.f)
-		sampleResult.ClampRadiance(engine->radianceClampMaxValue);
 
 	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
@@ -561,9 +569,6 @@ void BiasPathCPURenderThread::RenderFunc() {
 
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
-	Film *film = engine->film;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -574,18 +579,16 @@ void BiasPathCPURenderThread::RenderFunc() {
 	while (engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, tileFilm) && !interruptionRequested) {
 		// Render the tile
 		tileFilm->Reset();
-		const u_int tileWidth = Min(engine->tileRepository->tileWidth, filmWidth - tile->xStart);
-		const u_int tileHeight = Min(engine->tileRepository->tileHeight, filmHeight - tile->yStart);
 		//SLG_LOG("[BiasPathCPURenderEngine::" << threadIndex << "] Tile: "
 		//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-		//		"(" << tileWidth << ", " << tileHeight << ")");
+		//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
 
 		//----------------------------------------------------------------------
 		// Render the tile
 		//----------------------------------------------------------------------
 
-		for (u_int y = 0; y < tileHeight && !interruptionRequested; ++y) {
-			for (u_int x = 0; x < tileWidth && !interruptionRequested; ++x) {
+		for (u_int y = 0; y < tile->tileHeight && !interruptionRequested; ++y) {
+			for (u_int x = 0; x < tile->tileWidth && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
 						RenderPixelSample(rndGen, x, y, tile->xStart, tile->yStart, sampleX, sampleY);

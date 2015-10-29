@@ -22,6 +22,6 @@
 // The configured options and settings for SmallLuxGPU
 
 #define LUXCORE_VERSION_MAJOR "1"
-#define LUXCORE_VERSION_MINOR "5RC1"
+#define LUXCORE_VERSION_MINOR "6dev"
 
 #endif	/* _LUXCORE_CFG_H */

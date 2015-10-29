@@ -70,6 +70,7 @@ PathOCLRenderThread::PathOCLRenderThread(const u_int index,
 	taskStatsBuff = NULL;
 	pathVolInfosBuff = NULL;
 	directLightVolInfosBuff = NULL;
+	pixelFilterBuff = NULL;
 }
 
 PathOCLRenderThread::~PathOCLRenderThread() {
@@ -93,11 +94,19 @@ PathOCLRenderThread::~PathOCLRenderThread() {
 	delete[] gpuTaskStats;
 }
 
-void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight) {
+void PathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight,
+		u_int *filmSubRegion) {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const Film *engineFilm = engine->film;
+
 	*filmWidth = engineFilm->GetWidth();
 	*filmHeight = engineFilm->GetHeight();
+
+	const u_int *subRegion = engineFilm->GetSubRegion();
+	filmSubRegion[0] = subRegion[0];
+	filmSubRegion[1] = subRegion[1];
+	filmSubRegion[2] = subRegion[2];
+	filmSubRegion[3] = subRegion[3];
 }
 
 string PathOCLRenderThread::AdditionalKernelOptions() {
@@ -110,54 +119,72 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 			" -D PARAM_MAX_PATH_DEPTH=" << engine->maxPathDepth <<
 			" -D PARAM_RR_DEPTH=" << engine->rrDepth <<
 			" -D PARAM_RR_CAP=" << engine->rrImportanceCap << "f" <<
-			" -D PARAM_RADIANCE_CLAMP_MAXVALUE=" << engine->radianceClampMaxValue << "f" <<
+			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << engine->sqrtVarianceClampMaxValue << "f" <<
 			" -D PARAM_PDF_CLAMP_VALUE=" << engine->pdfClampValue << "f"
 			;
 
-	const slg::ocl::Filter *filter = engine->filter;
+	const slg::ocl::Filter *filter = engine->oclPixelFilter;
 	switch (filter->type) {
 		case slg::ocl::FILTER_NONE:
-			ss << " -D PARAM_IMAGE_FILTER_TYPE=0";
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=0"
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=.5f"
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=.5f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=0" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=0";
 			break;
 		case slg::ocl::FILTER_BOX:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->box.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->box.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->box.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->box.widthY);
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->box.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->box.widthY * .5f + .5f);
 			break;
 		case slg::ocl::FILTER_GAUSSIAN:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->gaussian.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->gaussian.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->gaussian.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->gaussian.widthY) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->gaussian.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->gaussian.widthY * .5f + .5f) <<
 					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << filter->gaussian.alpha << "f";
 			break;
 		case slg::ocl::FILTER_MITCHELL:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchell.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchell.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->mitchell.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->mitchell.widthY) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->mitchell.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->mitchell.widthY * .5f + .5f) <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
 					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchell.C << "f";
 			break;
-		case slg::ocl::FILTER_BLACKMANHARRIS:
+		case slg::ocl::FILTER_MITCHELL_SS:
 			ss << " -D PARAM_IMAGE_FILTER_TYPE=4" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchellss.widthX << "f" <<
+					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchellss.widthY << "f" <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->mitchellss.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->mitchellss.widthY * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchellss.B << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchellss.C << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_A0=" << filter->mitchellss.a0 << "f" <<
+					" -D PARAM_IMAGE_FILTER_MITCHELL_A1=" << filter->mitchellss.a1 << "f";
+			break;
+		case slg::ocl::FILTER_BLACKMANHARRIS:
+			ss << " -D PARAM_IMAGE_FILTER_TYPE=5" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->blackmanharris.widthX << "f" <<
 					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Ceil2Int(filter->blackmanharris.widthX) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Ceil2Int(filter->blackmanharris.widthY);
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->blackmanharris.widthX * .5f + .5f) <<
+					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->blackmanharris.widthY * .5f + .5f);
 			break;
 		default:
 			throw runtime_error("Unknown pixel filter type: "  + boost::lexical_cast<string>(filter->type));
 	}
 
+	if (engine->useFastPixelFilter && (filter->type != slg::ocl::FILTER_NONE))
+		ss << " -D PARAM_USE_FAST_PIXEL_FILTER";
+
 	if (engine->usePixelAtomics)
 		ss << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	const slg::ocl::Sampler *sampler = engine->sampler;
+	const slg::ocl::Sampler *sampler = engine->oclSampler;
 	switch (sampler->type) {
 		case slg::ocl::RANDOM:
 			ss << " -D PARAM_SAMPLER_TYPE=0";
@@ -181,16 +208,16 @@ string PathOCLRenderThread::AdditionalKernelOptions() {
 		default:
 			throw runtime_error("Unknown sampler type: " + boost::lexical_cast<string>(sampler->type));
 	}
-
+	
 	return ss.str();
 }
 
 string PathOCLRenderThread::AdditionalKernelDefinitions() {
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 
-	if (engine->sampler->type == slg::ocl::SOBOL) {
+	if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		// Generate the Sobol vectors
-		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
+		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << sampleDimensions * SOBOL_BITS);
 		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
 
 		SobolGenerateDirectionVectors(directions, sampleDimensions);
@@ -321,7 +348,10 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	// SampleResult size
 	//--------------------------------------------------------------------------
 
-	const size_t sampleResultSize = GetOpenCLSampleResultSize();
+	const size_t sampleResultSize = GetOpenCLSampleResultSize() +
+		// pixelX and pixelY fields
+		((engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE)) ?
+			sizeof(u_int) * 2 : 0);
 
 	//--------------------------------------------------------------------------
 	// Sample size
@@ -329,14 +359,14 @@ void PathOCLRenderThread::InitSamplesBuffer() {
 	size_t sampleSize = sampleResultSize;
 
 	// Add Sample memory size
-	if (engine->sampler->type == slg::ocl::RANDOM) {
+	if (engine->oclSampler->type == slg::ocl::RANDOM) {
 		// Nothing to add
-	} else if (engine->sampler->type == slg::ocl::METROPOLIS) {
+	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
-	} else if (engine->sampler->type == slg::ocl::SOBOL) {
+	} else if (engine->oclSampler->type == slg::ocl::SOBOL) {
 		sampleSize += sizeof(u_int);
 	} else
-		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->sampler->type));
+		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
 	AllocOCLBufferRW(&samplesBuff, sampleSize * taskCount, "Sample");
@@ -366,21 +396,21 @@ void PathOCLRenderThread::InitSampleDataBuffer() {
 	sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * engine->maxPathDepth;
 
 	size_t uDataSize;
-	if ((engine->sampler->type == slg::ocl::RANDOM) ||
-			(engine->sampler->type == slg::ocl::SOBOL)) {
+	if ((engine->oclSampler->type == slg::ocl::RANDOM) ||
+			(engine->oclSampler->type == slg::ocl::SOBOL)) {
 		// Only IDX_SCREEN_X, IDX_SCREEN_Y
 		uDataSize = sizeof(float) * 2;
 		
-		if (engine->sampler->type == slg::ocl::SOBOL) {
+		if (engine->oclSampler->type == slg::ocl::SOBOL) {
 			// Limit the number of dimensions where I use Sobol sequence (after,
 			// I switch to Random sampler.
 			sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * max(SOBOL_MAXDEPTH, engine->maxPathDepth);
 		}
-	} else if (engine->sampler->type == slg::ocl::METROPOLIS) {
+	} else if (engine->oclSampler->type == slg::ocl::METROPOLIS) {
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
 		uDataSize = 2 * sizeof(float) * sampleDimensions;
 	} else
-		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->sampler->type));
+		throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(engine->oclSampler->type));
 
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
@@ -438,6 +468,15 @@ void PathOCLRenderThread::AdditionalInit() {
 		AllocOCLBufferRW(&pathVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "PathVolumeInfo");
 		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "directLightVolumeInfo");
 	}
+
+	//--------------------------------------------------------------------------
+	// Allocate GPU pixel filter distribution
+	//--------------------------------------------------------------------------
+
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE)) {
+		AllocOCLBufferRO(&pixelFilterBuff, engine->pixelFilterDistribution,
+				sizeof(float) * engine->pixelFilterDistributionSize, "Pixel Filter Distribution");
+	}
 }
 
 void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel) {
@@ -449,6 +488,8 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
 	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
 	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
+		advancePathsKernel->setArg(argIndex++, *pixelFilterBuff);
 	advancePathsKernel->setArg(argIndex++, *samplesBuff);
 	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
 	if (cscene->HasVolumes()) {
@@ -551,10 +592,17 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 	initKernel->setArg(argIndex++, *sampleDataBuff);
 	if (cscene->HasVolumes())
 		initKernel->setArg(argIndex++, *pathVolInfosBuff);
+	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
+		initKernel->setArg(argIndex++, *pixelFilterBuff);
 	initKernel->setArg(argIndex++, *raysBuff);
 	initKernel->setArg(argIndex++, *cameraBuff);
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
+	const u_int *filmSubRegion = threadFilms[0]->film->GetSubRegion();
+	initKernel->setArg(argIndex++, filmSubRegion[0]);
+	initKernel->setArg(argIndex++, filmSubRegion[1]);
+	initKernel->setArg(argIndex++, filmSubRegion[2]);
+	initKernel->setArg(argIndex++, filmSubRegion[3]);
 }
 
 void PathOCLRenderThread::Stop() {
@@ -570,6 +618,7 @@ void PathOCLRenderThread::Stop() {
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&pathVolInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
+	FreeOCLBuffer(&pixelFilterBuff);
 }
 
 void PathOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
@@ -719,7 +768,7 @@ void PathOCLRenderThread::RenderThreadImpl() {
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << oclErrorString(err.err()) << ")");
 	}

@@ -21,6 +21,7 @@
 import random
 import time
 import sys
+import os
 from array import *
 sys.path.append("./lib")
 
@@ -349,6 +350,79 @@ def StrandsRender():
 	print("Done.")
 
 ################################################################################
+## Image pipeline editing example
+################################################################################
+
+def ImagePipelineEdit():
+	print("Image pipeline editing examples (requires scenes directory)...")
+
+	# Load the configuration from file
+	props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
+
+	# Change the render engine to PATHCPU
+	props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+
+	config = pyluxcore.RenderConfig(props)
+	session = pyluxcore.RenderSession(config)
+
+	session.Start()
+
+	startTime = time.time()
+	imageSaved = False
+	while True:
+		time.sleep(1)
+
+		elapsedTime = time.time() - startTime
+
+		# Print some information about the rendering progress
+
+		# Update statistics
+		session.UpdateStats()
+
+		stats = session.GetStats();
+		print("[Elapsed time: %3d/10sec][Samples %4d][Avg. samples/sec % 3.2fM on %.1fK tris]" % (
+				stats.Get("stats.renderengine.time").GetFloat(),
+				stats.Get("stats.renderengine.pass").GetInt(),
+				(stats.Get("stats.renderengine.total.samplesec").GetFloat()  / 1000000.0),
+				(stats.Get("stats.dataset.trianglecount").GetFloat() / 1000.0)))
+
+		if elapsedTime > 5.0 and not imageSaved:
+			session.GetFilm().Save()
+			os.rename("luxball_RGB_TONEMAPPED.png", "luxball_RGB_TONEMAPPED-edit1.png")
+			
+			# Define the new image pipeline
+			props = pyluxcore.Properties()
+			props.SetFromString("""
+				film.imagepipeline.0.type = TONEMAP_REINHARD02
+				film.imagepipeline.1.type = CAMERA_RESPONSE_FUNC
+				film.imagepipeline.1.name = Ektachrome_320TCD
+				film.imagepipeline.2.type = GAMMA_CORRECTION
+				film.imagepipeline.2.value = 2.2
+				""")
+			session.Parse(props)
+
+			# Change radiance group scale
+#			props = pyluxcore.Properties()
+#			props.SetFromString("""
+#				film.radiancescales.0.rgbscale = 1.0 0.0 0.0
+#				""")
+#			session.Parse(props)
+
+			imageSaved = True
+
+		if elapsedTime > 10.0:
+			# Time to stop the rendering
+			break
+
+	session.Stop()
+
+	# Save the rendered image
+	session.GetFilm().Save()
+	os.rename("luxball_RGB_TONEMAPPED.png", "luxball_RGB_TONEMAPPED-edit2.png")
+
+	print("Done.")
+
+################################################################################
 
 def main():
 	pyluxcore.Init()
@@ -356,12 +430,13 @@ def main():
 	print("LuxCore %s" % pyluxcore.Version())
 	#print("OS:", os.name)
 	
-#	PropertiesTests()
-#	LuxRaysDeviceTests()
-#	SimpleRender()
-#	GetOutputTest()
-#	ExtractConfiguration()
-	StrandsRender()
+	#PropertiesTests()
+	#LuxRaysDeviceTests()
+	#SimpleRender()
+	#GetOutputTest()
+	#ExtractConfiguration()
+	#StrandsRender()
+	ImagePipelineEdit()
 
 	#if (os.name == "posix"):
 	#	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)

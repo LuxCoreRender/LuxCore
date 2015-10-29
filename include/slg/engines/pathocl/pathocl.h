@@ -27,10 +27,11 @@
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/renderengine.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/engines/pathocl/pathocl_datatypes.h"
+#include "slg/film/filters/filter.h"
 
 namespace slg {
 
@@ -52,7 +53,7 @@ public:
 
 protected:
 	virtual void RenderThreadImpl();
-	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight);
+	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void AdditionalInit();
 	virtual std::string AdditionalKernelOptions();
 	virtual std::string AdditionalKernelDefinitions();
@@ -91,6 +92,7 @@ protected:
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *pathVolInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
+	cl::Buffer *pixelFilterBuff;
 
 	u_int sampleDimensions;
 
@@ -107,7 +109,17 @@ public:
 			const bool realTime = false);
 	virtual ~PathOCLRenderEngine();
 
-	virtual RenderEngineType GetEngineType() const { return PATHOCL; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return PATHOCL; }
+	static std::string GetObjectTag() { return "PATHOCL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	friend class PathOCLRenderThread;
 
@@ -118,22 +130,31 @@ public:
 	float rrImportanceCap;
 
 	// Clamping settings
-	float radianceClampMaxValue;
+	float sqrtVarianceClampMaxValue;
 	float pdfClampValue;
 
 	u_int taskCount;
-	bool usePixelAtomics;
+	bool usePixelAtomics, useFastPixelFilter;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
+	void InitPixelFilterDistribution();
+
 	virtual PathOCLRenderThread *CreateOCLThread(const u_int index, luxrays::OpenCLIntersectionDevice *device);
 
 	virtual void StartLockLess();
+	virtual void StopLockLess();
 
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 
-	slg::ocl::Sampler *sampler;
-	slg::ocl::Filter *filter;
+	Filter *pixelFilter;
+	float *pixelFilterDistribution;
+	u_int pixelFilterDistributionSize;
+
+	slg::ocl::Sampler *oclSampler;
+	slg::ocl::Filter *oclPixelFilter;
 };
 
 }

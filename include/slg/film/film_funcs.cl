@@ -18,222 +18,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void SampleResult_Init(__global SampleResult *sampleResult) {
-	// Initialize only Spectrum fields
-
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[0].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[1].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[2].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[3].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[4].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[5].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[6].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[7].c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-	VSTORE3F(BLACK, sampleResult->directDiffuse.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-	VSTORE3F(BLACK, sampleResult->directGlossy.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-	VSTORE3F(BLACK, sampleResult->emission.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-	VSTORE3F(BLACK, sampleResult->indirectDiffuse.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-	VSTORE3F(BLACK, sampleResult->indirectGlossy.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-	VSTORE3F(BLACK, sampleResult->indirectSpecular.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-	sampleResult->rayCount = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-	VSTORE3F(BLACK, sampleResult->irradiance.c);
-#endif
-
-	sampleResult->firstPathVertexEvent = NONE;
-	sampleResult->firstPathVertex = true;
-	// sampleResult->lastPathVertex can not be really initialized here without knowing
-	// the max. path depth.
-	sampleResult->lastPathVertex = true;
-}
-
-void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,
-		const float3 pathThroughput, const float3 incomingRadiance) {
-	const float3 radiance = pathThroughput * incomingRadiance;
-
-	// Avoid out of bound access if the light group doesn't exist. This can happen
-	// with RT modes.
-	const uint id = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-	VADD3F(sampleResult->radiancePerPixelNormalized[id].c, radiance);
-
-	if (sampleResult->firstPathVertex) {
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-		VADD3F(sampleResult->emission.c, radiance);
-#endif
-	} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-		sampleResult->indirectShadowMask = 0.f;
-#endif
-		const BSDFEvent firstPathVertexEvent = sampleResult->firstPathVertexEvent;
-		if (firstPathVertexEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-			VADD3F(sampleResult->indirectDiffuse.c, radiance);
-#endif
-		} else if (firstPathVertexEvent & GLOSSY) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-			VADD3F(sampleResult->indirectGlossy.c, radiance);
-#endif
-		} else if (firstPathVertexEvent & SPECULAR) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-			VADD3F(sampleResult->indirectSpecular.c, radiance);
-#endif
-		}
-	}
-}
-
-void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint lightID,
-		const BSDFEvent bsdfEvent, const float3 pathThroughput, const float3 incomingRadiance,
-		const float lightScale) {
-	const float3 radiance = pathThroughput * incomingRadiance;
-
-	// Avoid out of bound access if the light group doesn't exist. This can happen
-	// with RT modes.
-	const uint id = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
-	VADD3F(sampleResult->radiancePerPixelNormalized[id].c, radiance);
-
-	if (sampleResult->firstPathVertex) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-		sampleResult->directShadowMask = fmax(0.f, sampleResult->directShadowMask - lightScale);
-#endif
-
-		if (bsdfEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-			VADD3F(sampleResult->directDiffuse.c, radiance);
-#endif
-		} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-			VADD3F(sampleResult->directGlossy.c, radiance);
-#endif
-		}
-	} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-		sampleResult->indirectShadowMask = fmax(0.f, sampleResult->indirectShadowMask - lightScale);
-#endif
-
-		const BSDFEvent firstPathVertexEvent = sampleResult->firstPathVertexEvent;
-		if (firstPathVertexEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-			VADD3F(sampleResult->indirectDiffuse.c, radiance);
-#endif
-		} else if (firstPathVertexEvent & GLOSSY) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-			VADD3F(sampleResult->indirectGlossy.c, radiance);
-#endif
-		} else if (firstPathVertexEvent & SPECULAR) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-			VADD3F(sampleResult->indirectSpecular.c, radiance);
-#endif
-		}
-
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-		VADD3F(sampleResult->irradiance.c, VLOAD3F(sampleResult->irradiancePathThroughput.c) * incomingRadiance);
-#endif
-	}
-}
-
-float SampleResult_Radiance_Y(__global SampleResult *sampleResult) {
-	float y = 0.f;
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[1].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[2].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[3].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[4].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[5].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[6].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[7].c));
-#endif
-
-	return y;
-}
-
-void SampleResult_ClampRadiance(__global SampleResult *sampleResult, const float cap) {
-	// Initialize only Spectrum fields
-
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	sampleResult->radiancePerPixelNormalized[0].c[0] = clamp(sampleResult->radiancePerPixelNormalized[0].c[0], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[0].c[1] = clamp(sampleResult->radiancePerPixelNormalized[0].c[1], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[0].c[2] = clamp(sampleResult->radiancePerPixelNormalized[0].c[2], 0.f, cap);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	sampleResult->radiancePerPixelNormalized[1].c[0] = clamp(sampleResult->radiancePerPixelNormalized[1].c[0], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[1].c[1] = clamp(sampleResult->radiancePerPixelNormalized[1].c[1], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[1].c[2] = clamp(sampleResult->radiancePerPixelNormalized[1].c[2], 0.f, cap);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	sampleResult->radiancePerPixelNormalized[2].c[0] = clamp(sampleResult->radiancePerPixelNormalized[2].c[0], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[2].c[1] = clamp(sampleResult->radiancePerPixelNormalized[2].c[1], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[2].c[2] = clamp(sampleResult->radiancePerPixelNormalized[2].c[2], 0.f, cap);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	sampleResult->radiancePerPixelNormalized[3].c[0] = clamp(sampleResult->radiancePerPixelNormalized[3].c[0], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[3].c[1] = clamp(sampleResult->radiancePerPixelNormalized[3].c[1], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[3].c[2] = clamp(sampleResult->radiancePerPixelNormalized[3].c[2], 0.f, cap);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	sampleResult->radiancePerPixelNormalized[4].c[0] = clamp(sampleResult->radiancePerPixelNormalized[4].c[0], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[4].c[1] = clamp(sampleResult->radiancePerPixelNormalized[4].c[1], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[4].c[2] = clamp(sampleResult->radiancePerPixelNormalized[4].c[2], 0.f, cap);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	sampleResult->radiancePerPixelNormalized[5].c[0] = clamp(sampleResult->radiancePerPixelNormalized[5].c[0], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[5].c[1] = clamp(sampleResult->radiancePerPixelNormalized[5].c[1], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[5].c[2] = clamp(sampleResult->radiancePerPixelNormalized[5].c[2], 0.f, cap);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	sampleResult->radiancePerPixelNormalized[6].c[0] = clamp(sampleResult->radiancePerPixelNormalized[6].c[0], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[6].c[1] = clamp(sampleResult->radiancePerPixelNormalized[6].c[1], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[6].c[2] = clamp(sampleResult->radiancePerPixelNormalized[6].c[2], 0.f, cap);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	sampleResult->radiancePerPixelNormalized[7].c[0] = clamp(sampleResult->radiancePerPixelNormalized[7].c[0], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[7].c[1] = clamp(sampleResult->radiancePerPixelNormalized[7].c[1], 0.f, cap);
-	sampleResult->radiancePerPixelNormalized[7].c[2] = clamp(sampleResult->radiancePerPixelNormalized[7].c[2], 0.f, cap);
-#endif
+void Film_GetSampleXY(const float u0, const float u1, float *filmX, float *filmY,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3) {
+	*filmX = fmin(filmSubRegion0 + u0 * (filmSubRegion1 - filmSubRegion0 + 1), (float)(filmWidth - 1));
+	*filmY = fmin(filmSubRegion2 + u1 * (filmSubRegion3 - filmSubRegion2 + 1), (float)(filmHeight - 1));
 }
 
 #if defined(PARAM_USE_PIXEL_ATOMICS)
@@ -522,8 +312,8 @@ void Film_AddSample(const uint x, const uint y,
 
 void Film_SplatSample(__global SampleResult *sampleResult, const float weight
 	FILM_PARAM_DECL) {
-	const int x = Ceil2Int(sampleResult->filmX - .5f);
-	const int y = Ceil2Int(sampleResult->filmY - .5f);
+	const int x = Floor2Int(sampleResult->filmX);
+	const int y = Floor2Int(sampleResult->filmY);
 
 	if ((x >= 0) && (x < (int)filmWidth) && (y >= 0) && (y < (int)filmHeight)) {
 		Film_AddSampleResultColor((uint)x, (uint)y, sampleResult, weight
@@ -533,7 +323,7 @@ void Film_SplatSample(__global SampleResult *sampleResult, const float weight
 	}
 }
 
-#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4)
+#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4) || (PARAM_IMAGE_FILTER_TYPE == 5)
 
 void Film_AddSampleFilteredResultColor(const int x, const int y,
 		const float distX, const float distY,
@@ -558,8 +348,9 @@ void Film_SplatSample(__global SampleResult *sampleResult, const float weight
 
 #if defined (PARAM_FILM_CHANNELS_HAS_DEPTH) || defined (PARAM_FILM_CHANNELS_HAS_POSITION) || defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_UV) || defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	{
-		const int x = Ceil2Int(px - .5f);
-		const int y = Ceil2Int(py - .5f);
+		const int x = Floor2Int(px);
+		const int y = Floor2Int(py);
+
 		if ((x >= 0) && (x < (int)filmWidth) && (y >= 0) && (y < (int)filmHeight)) {
 			Film_AddSampleResultData((uint)x, (uint)y, sampleResult
 					FILM_PARAM);
@@ -597,7 +388,9 @@ Error: unknown image filter !!!
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
-		const uint filmWidth, const uint filmHeight
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3
 #if defined(PARAM_FILM_RADIANCE_GROUP_0)
 		, __global float *filmRadianceGroup0
 #endif

@@ -21,7 +21,7 @@
  *
  * \brief LuxCore is new the LuxRender C++/Python API.
  * \author Bucciarelli David et al.
- * \version 1.0
+ * \version 1.6
  * \date October 2013
  *
  */
@@ -89,8 +89,8 @@ CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Propertie
 class RenderSession;
 
 /*!
- * \brief Film stores all the outputs of a rendering. It can be obtained only
- * from a RenderSession.
+ * \brief Film stores all the outputs of a rendering. It can be obtained
+ * from a RenderSession or as stand alone object loaded from a file.
  */
 CPP_EXPORT class CPP_API Film {
 public:
@@ -152,6 +152,13 @@ public:
 		CHANNEL_IRRADIANCE = slg::Film::IRRADIANCE
 	} FilmChannelType;
 
+	/*!
+	 * \brief Loads a stand alone Film (i.e. not connected to a rendering session)
+	 * from a file.
+	 * 
+	 * \param fileName is the name of the file with the serialized film to read.
+	 */
+	Film(const std::string &fileName);
 	~Film();
 
 	/*!
@@ -167,9 +174,31 @@ public:
 	 */
 	u_int GetHeight() const;
 	/*!
-	 * \brief Saves all Film output channels.
+	 * \brief Saves all Film output channels defined in the current
+	 * RenderSession. This method can not be used with a standalone film.
 	 */
-	void Save() const;
+	void SaveOutputs() const;
+
+	/*!
+	 * \brief Saves the specified Film output channels.
+	 * 
+	 * \param fileName is the name of the file where to save the output channel.
+	 * \param type is the Film output channel to use. It must be one
+	 * of the enabled channels.
+	 * \param props can include some additional information definied by the
+	 * following property:
+	 * "id" for the ID of MATERIAL_ID_MASK,
+	 * "id" for the index of RADIANCE_GROUP,
+	 * "id" for the ID of BY_MATERIAL_ID.
+	 */
+	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
+
+	/*!
+	 * \brief Serializes a Film in a file.
+	 * 
+	 * \param fileName is the name of the file where to serialize the film.
+	 */
+	void SaveFilm(const std::string &fileName) const;
 
 	/*!
 	 * \brief Returns the total sample count.
@@ -237,12 +266,24 @@ public:
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
 
+	/*!
+	 * \brief Sets configuration Properties with new values. This method can be
+	 * used only when the Film is not in use by a RenderSession. Image pipeline
+	 * and radiance scale values can be redefined with this method.
+	 * 
+	 * \param props are the Properties to set. 
+	 */
+	void Parse(const luxrays::Properties &props);
+
 	friend class RenderSession;
 
 private:
 	Film(const RenderSession &session);
+	
+	slg::Film *GetSLGFilm() const;
 
-	const RenderSession &renderSession;
+	const RenderSession *renderSession;
+	slg::Film *standAloneFilm;
 };
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer, const u_int index);
@@ -398,12 +439,6 @@ public:
 	Scene(const std::string &fileName, const float imageScale = 1.f);
 	~Scene();
 	
-	/*!
-	 * \brief Returns all the Properties required to define this Scene.
-	 *
-	 * \return a reference to the Properties of this Scene.
-	 */
-	const luxrays::Properties &GetProperties() const;
 	/*!
 	 * \brief Returns the DataSet of the Scene. It is available only
 	 * during the rendering (i.e. after a RenderSession::Start()).
@@ -610,6 +645,13 @@ public:
 	void RemoveUnusedMeshes();
 
 	/*!
+	 * \brief Returns all the Properties required to define this Scene.
+	 *
+	 * \return a reference to the Properties of this Scene.
+	 */
+	const luxrays::Properties &ToProperties() const;
+
+	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
 	static luxrays::Point *AllocVerticesBuffer(const u_int meshVertCount);
@@ -623,6 +665,8 @@ public:
 
 private:
 	Scene(slg::Scene *scn);
+
+	mutable luxrays::Properties scenePropertiesCache;
 
 	slg::Scene *scene;
 	Camera camera;
@@ -661,6 +705,14 @@ public:
 	 * \return the Property with the given name.
 	 */
 	const luxrays::Property GetProperty(const std::string &name) const;
+
+	/*!
+	 * \brief Returns a reference to all Properties (including default values)
+	 * defining the RenderConfig.
+	 *
+	 * \return the RenderConfig properties.
+	 */
+	const luxrays::Properties &ToProperties() const;
 
 	/*!
 	 * \brief Returns a reference to the Scene used in the RenderConfig.
@@ -713,6 +765,7 @@ public:
 
 private:
 	slg::RenderConfig *renderConfig;
+	mutable luxrays::Properties renderConfigPropertiesCache;
 
 	Scene *scene;
 	bool allocatedScene;
@@ -799,6 +852,14 @@ public:
 	 * \return a Properties container with the statistics.
 	 */
 	const luxrays::Properties &GetStats() const;
+
+	/*!
+	 * \brief Dynamic edit the definition of RenderConfig properties
+	 *
+	 * \param props are the Properties with the definition of: film.imagepipeline.*,
+	 * film.radiancescales.*.
+	 */
+	void Parse(const luxrays::Properties &props);
 
 	friend class Film;
 

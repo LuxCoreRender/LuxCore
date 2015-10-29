@@ -18,6 +18,7 @@
 
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/volumes/volume.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
@@ -51,18 +52,24 @@ void PathCPURenderThread::DirectLightSampling(
 		float distance, directPdfW;
 		Spectrum lightRadiance = light->Illuminate(*scene, bsdf.hitPoint.p,
 				u1, u2, u3, &lightRayDir, &distance, &directPdfW);
+		assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
 		if (!lightRadiance.Black()) {
+			assert (!isnan(directPdfW) && !isinf(directPdfW));
+
 			BSDFEvent event;
 			float bsdfPdfW;
 			Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
+			assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
 			if (!bsdfEval.Black()) {
-				const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
+				assert (!isnan(bsdfPdfW) && !isnan(bsdfPdfW));
+
 				Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
-						epsilon,
-						distance - epsilon,
+						0.f,
+						distance,
 						time);
+				shadowRay.UpdateMinMaxWithEpsilon();
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
@@ -154,6 +161,35 @@ void PathCPURenderThread::DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent,
 	}
 }
 
+void PathCPURenderThread::GenerateEyeRay(Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) {
+	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
+
+	const float u0 = sampler->GetSample(0);
+	const float u1 = sampler->GetSample(1);
+	threadFilm->GetSampleXY(u0, u1, &sampleResult.filmX, &sampleResult.filmY);
+
+	if (engine->useFastPixelFilter) {
+		// Use fast pixel filtering, like the one used in BIASPATH.
+
+		sampleResult.pixelX = Floor2UInt(sampleResult.filmX);
+		sampleResult.pixelY = Floor2UInt(sampleResult.filmY);
+
+		const float uSubPixelX = sampleResult.filmX - sampleResult.pixelX;
+		const float uSubPixelY = sampleResult.filmY - sampleResult.pixelY;
+
+		// Sample according the pixel filter distribution
+		float distX, distY;
+		engine->pixelFilterDistribution->SampleContinuous(uSubPixelX, uSubPixelY, &distX, &distY);
+
+		sampleResult.filmX = sampleResult.pixelX + .5f + distX;
+		sampleResult.filmY = sampleResult.pixelY + .5f + distY;
+	}
+
+	Camera *camera = engine->renderConfig->scene->camera;
+	camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
+		sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+}
+
 void PathCPURenderThread::RenderFunc() {
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
@@ -162,26 +198,23 @@ void PathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
-	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
+	// (engine->seedBase + 1) seed is used for sharedRndGen
+	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
-	Camera *camera = scene->camera;
-	Film *film = threadFilm;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
+	const u_int filmWidth = threadFilm->GetWidth();
+	const u_int filmHeight = threadFilm->GetHeight();
 
 	// Setup the sampler
-
-	// metropolisSharedTotalLuminance and metropolisSharedSampleCount are
-	// initialized inside MetropolisSampler::RequestSamples()
-	double metropolisSharedTotalLuminance, metropolisSharedSampleCount;
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film,
-			&metropolisSharedTotalLuminance, &metropolisSharedSampleCount);
+	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, engine->sampleSplatter,
+			engine->samplerSharedData);
 	const u_int sampleBootSize = 5;
 	const u_int sampleStepSize = 9;
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		(engine->maxPathDepth + 1) * sampleStepSize; // For each path vertex
 	sampler->RequestSamples(sampleSize);
+	
+	VarianceClamping varianceClamping(engine->sqrtVarianceClampMaxValue);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
@@ -199,11 +232,12 @@ void PathCPURenderThread::RenderFunc() {
 	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
 		Get<u_int>() * filmWidth * filmHeight;
 
+	sampleResult.useFilmSplat = !(engine->useFastPixelFilter);
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Set to 0.0 all result colors
 		sampleResult.emission = Spectrum();
-		for (u_int i = 0; i < sampleResult.radiancePerPixelNormalized.size(); ++i)
-			sampleResult.radiancePerPixelNormalized[i] = Spectrum();
+		for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
+			sampleResult.radiance[i] = Spectrum();
 		sampleResult.directDiffuse = Spectrum();
 		sampleResult.directGlossy = Spectrum();
 		sampleResult.indirectDiffuse = Spectrum();
@@ -217,10 +251,7 @@ void PathCPURenderThread::RenderFunc() {
 		const double deviceRayCount = device->GetTotalRaysCount();
 
 		Ray eyeRay;
-		sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-		sampleResult.filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
-		camera->GenerateRay(sampleResult.filmX, sampleResult.filmY, &eyeRay,
-			sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4));
+		GenerateEyeRay(eyeRay, sampler, sampleResult);
 
 		u_int pathVertexCount = 1;
 		BSDFEvent lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
@@ -320,8 +351,10 @@ void PathCPURenderThread::RenderFunc() {
 					sampler->GetSample(sampleOffset + 6),
 					sampler->GetSample(sampleOffset + 7),
 					&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 			if (bsdfSample.Black())
 				break;
+			assert (!isnan(lastPdfW) && !isnan(lastPdfW));
 
 			if (sampleResult.firstPathVertex)
 				sampleResult.firstPathVertexEvent = lastBSDFEvent;
@@ -363,9 +396,9 @@ void PathCPURenderThread::RenderFunc() {
 
 		sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
 
-		// Radiance clamping
-		if (engine->radianceClampMaxValue > 0.f)
-			sampleResult.ClampRadiance(engine->radianceClampMaxValue);
+		// Variance clamping
+		if (varianceClamping.hasClamping())
+			varianceClamping.Clamp(*threadFilm, sampleResult);
 
 		sampler->NextSample(sampleResults);
 

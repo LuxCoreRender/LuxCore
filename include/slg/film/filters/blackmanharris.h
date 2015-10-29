@@ -37,21 +37,35 @@ namespace slg {
 class BlackmanHarrisFilter : public Filter {
 public:
 	// GaussianFilter Public Methods
-	BlackmanHarrisFilter(const float xw = 2.f, const float yw = 2.f) :
+	BlackmanHarrisFilter(const float xw, const float yw) :
 		Filter(xw, yw) { }
 	virtual ~BlackmanHarrisFilter() { }
 
-	virtual FilterType GetType() const { return FILTER_BLACKMANHARRIS; }
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	float Evaluate(const float x, const float y) const {
 		return BlackmanHarris1D(x * invXWidth) * BlackmanHarris1D(y *  invYWidth);
 	}
 
-	virtual Filter *Clone() const { return new BlackmanHarrisFilter(xWidth, yWidth); }
+	//--------------------------------------------------------------------------
+	// Static methods used by FilterRegistry
+	//--------------------------------------------------------------------------
+
+	static FilterType GetObjectType() { return FILTER_BLACKMANHARRIS; }
+	static std::string GetObjectTag() { return "BLACKMANHARRIS"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 	friend class boost::serialization::access;
 
 private:
+	static luxrays::Properties GetDefaultProps();
+
+	// Used by serialization
+	BlackmanHarrisFilter() { }
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
 	}
@@ -71,7 +85,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::BlackmanHarrisFilter, 1)
+BOOST_CLASS_VERSION(slg::BlackmanHarrisFilter, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::BlackmanHarrisFilter)
 

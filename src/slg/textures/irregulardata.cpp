@@ -30,14 +30,22 @@ using namespace slg;
 
 IrregularDataTexture::IrregularDataTexture(const u_int n,
 		const float *wl, const float *dt,
-		const float resolution) : waveLengths(n), data(n) {
+		const float resolution, bool em) :
+	waveLengths(n), data(n), emission(em)
+{
 	copy(wl, wl + n, waveLengths.begin());
 	copy(dt, dt + n, data.begin());
 
 	IrregularSPD spd(&waveLengths[0], &data[0], n, resolution);
 
-	ColorSystem colorSpace;
-	rgb = colorSpace.ToRGBConstrained(spd.ToXYZ()).Clamp(0.f);
+	if (emission) {
+		ColorSystem colorSpace;
+		rgb = colorSpace.ToRGBConstrained(spd.ToXYZ()).Clamp(0.f);
+	} else {
+		ColorSystem colorSpace(.63f, .34f, .31f, .595f, .155f, .07f,
+			1.f / 3.f, 1.f / 3.f, 1.f);
+		rgb = colorSpace.ToRGBConstrained(spd.ToNormalizedXYZ()).Clamp(0.f);
+	}
 }
 
 Properties IrregularDataTexture::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -47,6 +55,7 @@ Properties IrregularDataTexture::ToProperties(const ImageMapCache &imgMapCache) 
 	props.Set(Property("scene.textures." + name + ".type")("irregulardata"));
 	props.Set(Property("scene.textures." + name + ".wavelengths")(waveLengths));
 	props.Set(Property("scene.textures." + name + ".data")(data));
+	props.Set(Property("scene.textures." + name + ".emission")(emission));
 
 	return props;
 }

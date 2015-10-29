@@ -20,10 +20,12 @@
 #define	_SLG_BIDIRCPU_H
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/cpurenderengine.h"
 
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
+#include "slg/film/filmsamplesplatter.h"
+#include "slg/film/sampleresult.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/volumes/volume.h"
 
@@ -36,7 +38,7 @@ namespace slg {
 typedef struct {
 	BSDF bsdf;
 	luxrays::Spectrum throughput;
-	u_int depth;
+	u_int lightID,  depth;
 
 	// Check Iliyan Georgiev's latest technical report for the details of how
 	// MIS weight computation works (http://www.iliyan.com/publications/ImplementingVCM)
@@ -71,21 +73,22 @@ protected:
 
 	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiDirCPURenderThread::RenderFunc, this); }
 
+	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
 	void RenderFunc();
 
 	void DirectLightSampling(const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
-		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const;
 	void DirectHitLight(const bool finiteLightSource,
-		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
+		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const;
 	void DirectHitLight(const LightSource *light, const luxrays::Spectrum &lightRadiance,
 		const float directPdfA, const float emissionPdfW,
 		const PathVertexVM &eyeVertex, luxrays::Spectrum *radiance) const;
 
 	void ConnectVertices(const float time,
 		const PathVertexVM &eyeVertex, const PathVertexVM &BiDirVertex,
-		SampleResult *eyeSampleResult, const float u0) const;
+		SampleResult &eyeSampleResult, const float u0) const;
 	void ConnectToEye(const float time,
 		const PathVertexVM &BiDirVertex, const float u0,
 		const luxrays::Point &lensPoint, vector<SampleResult> &sampleResults) const;
@@ -97,8 +100,6 @@ protected:
 	bool Bounce(const float time, Sampler *sampler, const u_int sampleOffset,
 		PathVertexVM *pathVertex, luxrays::Ray *nextEventRay) const;
 
-	u_int pixelCount;
-
 	float misVmWeightFactor; // Weight of vertex merging (used in VC)
     float misVcWeightFactor; // Weight of vertex connection (used in VM)
 	float vmNormalization; // 1 / (Pi * radius^2 * light_path_count)
@@ -108,7 +109,17 @@ class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	BiDirCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 
-	RenderEngineType GetEngineType() const { return BIDIRCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return BIDIRCPU; }
+	static std::string GetObjectTag() { return "BIDIRCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Signed because of the delta parameter
 	u_int maxEyePathDepth, maxLightPathDepth;
@@ -124,12 +135,17 @@ public:
 	friend class BiDirCPURenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual void StartLockLess();
+	virtual void StopLockLess();
+
+	FilmSampleSplatter *sampleSplatter;
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {
 		return new BiDirCPURenderThread(this, index, device);
-	}	
+	}
 };
 
 }

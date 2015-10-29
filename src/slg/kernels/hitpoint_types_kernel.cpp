@@ -33,6 +33,7 @@ std::string KernelSource_hitpoint_types =
 "	Normal geometryN;\n"
 "	Normal shadeN;\n"
 "#if defined(PARAM_HAS_BUMPMAPS)\n"
+"	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)\n"
 "	Vector dpdu, dpdv;\n"
 "	Normal dndu, dndv;\n"
 "#endif\n"

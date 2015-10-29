@@ -35,7 +35,7 @@ Spectrum Metal2Material::Evaluate(const HitPoint &hitPoint,
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 
 	const Vector wh(Normalize(localLightDir + localEyeDir));
@@ -76,7 +76,7 @@ Spectrum Metal2Material::Sample(const HitPoint &hitPoint,
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 
 	Vector wh;
@@ -125,7 +125,7 @@ void Metal2Material::Pdf(const HitPoint &hitPoint,
 	const float v = Clamp(nv->GetFloatValue(hitPoint), 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
-	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : (v2 / u2 - 1.f);
+	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 
 	const Vector wh(Normalize(localLightDir + localEyeDir));

@@ -217,7 +217,7 @@ public:
 			VECTOR_CLASS<cl::Device> buildDevice;
 			buildDevice.push_back(oclDevice);
 			program.build(buildDevice, opts.str().c_str());
-		} catch (cl::Error err) {
+		} catch (cl::Error &err) {
 			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
 

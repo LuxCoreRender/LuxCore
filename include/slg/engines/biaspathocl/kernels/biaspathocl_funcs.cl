@@ -278,7 +278,7 @@ void GenerateCameraRay(
 		Seed *seed,
 		__global GPUTask *task,
 		__global SampleResult *sampleResult,
-		__global const Camera *camera,
+		__global const Camera* restrict camera,
 		__global float *pixelFilterDistribution,
 		const uint sampleX, const uint sampleY, const int sampleIndex,
 		const uint tileStartX, const uint tileStartY, 
@@ -292,12 +292,11 @@ void GenerateCameraRay(
 			sampleIndex % PARAM_AA_SAMPLES, sampleIndex / PARAM_AA_SAMPLES,
 			&u0, &u1);
 
-	float2 xy;
-	float distPdf;
-	Distribution2D_SampleContinuous(pixelFilterDistribution, u0, u1, &xy, &distPdf);
+	// Sample according the pixel filter distribution
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, u0, u1, &u0, &u1);
 
-	const float filmX = sampleX + .5f + (xy.x - .5f) * PARAM_IMAGE_FILTER_WIDTH_X;
-	const float filmY = sampleY + .5f + (xy.y - .5f) * PARAM_IMAGE_FILTER_WIDTH_Y;
+	const float filmX = sampleX + .5f + u0;
+	const float filmY = sampleY + .5f + u1;
 	sampleResult->filmX = filmX;
 	sampleResult->filmY = filmY;
 
@@ -336,25 +335,25 @@ uint BIASPATHOCL_Scene_Intersect(
 		float3 *connectionThroughput,  const float3 pathThroughput,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global const Mesh *meshDescs,
-		__global const uint *meshMats,
+		__global const Mesh* restrict meshDescs,
+		__global const uint* restrict meshMats,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
 #endif
-		__global const Point *vertices,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector *vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global const UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global const Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global const float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global const Triangle *triangles
+		__global const Triangle* restrict triangles
 		MATERIALS_PARAM_DECL
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
@@ -464,7 +463,7 @@ void DirectHitInfiniteLight(
 		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	for (uint i = 0; i < envLightCount; ++i) {
-		__global const LightSource *light = &lights[envLightIndices[i]];
+		__global const LightSource* restrict light = &lights[envLightIndices[i]];
 
 		if (sampleResult->firstPathVertex || (light->visibility & (sampleResult->firstPathVertexEvent & (DIFFUSE | GLOSSY | SPECULAR)))) {
 			float directPdfW;
@@ -488,7 +487,7 @@ void DirectHitInfiniteLight(
 //------------------------------------------------------------------------------
 
 bool DirectLightSamplingInit(
-		__global const LightSource *light,
+		__global const LightSource* restrict light,
 		const float lightPickPdf,
 #if defined(PARAM_HAS_INFINITELIGHTS)
 		const float worldCenterX,
@@ -555,11 +554,7 @@ bool DirectLightSamplingInit(
 
 			// Setup the shadow ray
 			const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
-			const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
-
-			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir,
-				epsilon,
-				distance - epsilon, time);
+			Ray_Init4_Private(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
 
 			return true;
 		}
@@ -587,22 +582,22 @@ uint DirectLightSampling_ONE(
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global const Mesh *meshDescs,
-		__global const uint *meshMats,
-		__global const Point *vertices,
+		__global const Mesh* restrict meshDescs,
+		__global const uint* restrict meshMats,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global const Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global const UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global const Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global const float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global const Triangle *triangles
+		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
@@ -728,22 +723,22 @@ uint DirectLightSampling_ALL(
 		__global BSDF *bsdf, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global const Mesh *meshDescs,
-		__global const uint *meshMats,
-		__global const Point *vertices,
+		__global const Mesh* restrict meshDescs,
+		__global const uint* restrict meshMats,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global const Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global const UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global const Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global const float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global const Triangle *triangles
+		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
@@ -755,7 +750,7 @@ uint DirectLightSampling_ALL(
 		float lightPickPdf;
 		const uint lightIndex = Scene_SampleAllLights(lightsDistribution, Rnd_FloatValue(seed), &lightPickPdf);
 
-		__global const LightSource *light = &lights[lightIndex];
+		__global const LightSource* restrict light = &lights[lightIndex];
 		const int lightSamplesCount = light->samples;
 		const uint sampleCount = (lightSamplesCount < 0) ? PARAM_DIRECT_LIGHT_SAMPLES : (uint)lightSamplesCount;
 		const uint sampleCount2 = sampleCount * sampleCount;
@@ -892,22 +887,22 @@ uint ContinueTracePath(
 		__global BSDF *bsdfPathVertexN, __global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global const Mesh *meshDescs,
-		__global const uint *meshMats,
-		__global const Point *vertices,
+		__global const Mesh* restrict meshDescs,
+		__global const uint* restrict meshMats,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global const Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global const UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global const Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global const float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global const Triangle *triangles
+		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
@@ -1120,22 +1115,22 @@ uint SampleComponent(
 		__global BSDF *directLightBSDF,
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
-		__global const Mesh *meshDescs,
-		__global const uint *meshMats,
-		__global const Point *vertices,
+		__global const Mesh* restrict meshDescs,
+		__global const uint* restrict meshMats,
+		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
-		__global const Vector *vertNormals,
+		__global const Vector* restrict vertNormals,
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
-		__global const UV *vertUVs,
+		__global const UV* restrict vertUVs,
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
-		__global const Spectrum *vertCols,
+		__global const Spectrum* restrict vertCols,
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
-		__global const float *vertAlphas,
+		__global const float* restrict vertAlphas,
 #endif
-		__global const Triangle *triangles
+		__global const Triangle* restrict triangles
 		// Accelerator_Intersect parameters
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		// Light related parameters
@@ -1429,6 +1424,8 @@ uint SampleComponent(
 
 #define KERNEL_ARGS_FILM \
 		, const uint filmWidth, const uint filmHeight \
+		, const uint filmSubRegion0, const uint filmSubRegion1 \
+		, const uint filmSubRegion2, const uint filmSubRegion3 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
@@ -1469,39 +1466,39 @@ uint SampleComponent(
 
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 #define KERNEL_ARGS_NORMALS_BUFFER \
-		, __global const Vector *vertNormals
+		, __global const Vector* restrict vertNormals
 #else
 #define KERNEL_ARGS_NORMALS_BUFFER
 #endif
 #if defined(PARAM_HAS_UVS_BUFFER)
 #define KERNEL_ARGS_UVS_BUFFER \
-		, __global const UV *vertUVs
+		, __global const UV* restrict vertUVs
 #else
 #define KERNEL_ARGS_UVS_BUFFER
 #endif
 #if defined(PARAM_HAS_COLS_BUFFER)
 #define KERNEL_ARGS_COLS_BUFFER \
-		, __global const Spectrum *vertCols
+		, __global const Spectrum* restrict vertCols
 #else
 #define KERNEL_ARGS_COLS_BUFFER
 #endif
 #if defined(PARAM_HAS_ALPHAS_BUFFER)
 #define KERNEL_ARGS_ALPHAS_BUFFER \
-		, __global const float *vertAlphas
+		, __global const float* restrict vertAlphas
 #else
 #define KERNEL_ARGS_ALPHAS_BUFFER
 #endif
 
 #if defined(PARAM_HAS_ENVLIGHTS)
 #define KERNEL_ARGS_ENVLIGHTS \
-		, __global const uint *envLightIndices \
+		, __global const uint* restrict envLightIndices \
 		, const uint envLightCount
 #else
 #define KERNEL_ARGS_ENVLIGHTS
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT)
 #define KERNEL_ARGS_INFINITELIGHT \
-		, __global const float *infiniteLightDistribution
+		, __global const float* restrict infiniteLightDistribution
 #else
 #define KERNEL_ARGS_INFINITELIGHT
 #endif
@@ -1713,10 +1710,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
-		const uint tileStartX
-		, const uint tileStartY
-		, const uint engineFilmWidth, const uint engineFilmHeight
-		, __global SampleResult *taskResults
+		const uint tileStartX, const uint tileStartY,
+		const uint tileWidth, const uint tileHeight,
+		const uint engineFilmWidth, const uint engineFilmHeight,
+		__global SampleResult *taskResults
 		// Film parameters
 		KERNEL_ARGS_FILM
 		) {
@@ -1727,6 +1724,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	sampleY = gid / PARAM_TILE_WIDTH;
 
 	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT) ||
+			(sampleX >= tileWidth) ||
+			(sampleY >= tileHeight) ||
 			(tileStartX + sampleX >= engineFilmWidth) ||
 			(tileStartY + sampleY >= engineFilmHeight))
 		return;
@@ -1768,10 +1767,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	// Radiance clamping
 	//--------------------------------------------------------------------------
 
-	if (PARAM_RADIANCE_CLAMP_MAXVALUE > 0.f) {
-		for (uint i = 0; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
-			SampleResult_ClampRadiance(&sampleResult[i], PARAM_RADIANCE_CLAMP_MAXVALUE);
-	}
+	// It is now done at tile level inside the TileRepository on the CPU
 
 	//--------------------------------------------------------------------------
 	// Merge all samples and accumulate statistics
