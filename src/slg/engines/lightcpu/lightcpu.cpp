@@ -71,7 +71,7 @@ void LightCPURenderEngine::StopLockLess() {
 //------------------------------------------------------------------------------
 
 Properties LightCPURenderEngine::ToProperties(const Properties &cfg) {
-	return CPURenderEngine::ToProperties(cfg) <<
+	return CPUNoTileRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("light.russianroulette.depth")) <<
@@ -84,7 +84,7 @@ RenderEngine *LightCPURenderEngine::FromProperties(const RenderConfig *rcfg, Fil
 }
 
 Properties LightCPURenderEngine::GetDefaultProps() {
-	static Properties props = CPURenderEngine::GetDefaultProps() <<
+	static Properties props = CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("light.maxdepth")(5) <<
 			Property("light.russianroulette.depth")(3) <<

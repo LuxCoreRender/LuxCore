@@ -493,7 +493,7 @@ Properties TileRepository::ToProperties(const Properties &cfg) {
 	const Property sizeY = cfg.Get(Property("tile.size.y")(defaultSize));
 
 	if (sizeX.Get<u_int>() == sizeY.Get<u_int>())
-		props << Property("tile.size")(defaultSize);
+		props << Property("tile.size")(sizeX.Get<u_int>());
 	else
 		props << sizeX << sizeY;
 
@@ -517,9 +517,9 @@ TileRepository *TileRepository::FromProperties(const luxrays::Properties &cfg) {
 	u_int tileWidth = 32;
 	u_int tileHeight = 32;
 	if (cfg.IsDefined("tile.size"))
-		tileWidth = tileHeight = Max(cfg.Get(GetDefaultProps().Get("tile.size")).Get<u_int>(), 8u);
-	tileWidth = Max(cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>(), 8u);
-	tileHeight = Max(cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>(), 8u);
+		tileWidth = tileHeight = Max(8u, cfg.Get(GetDefaultProps().Get("tile.size")).Get<u_int>());
+	tileWidth = Max(8u, cfg.Get(Property("tile.size.x")(tileWidth)).Get<u_int>());
+	tileHeight = Max(8u, cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>());
 	auto_ptr<TileRepository> tileRepository(new TileRepository(tileWidth, tileHeight));
 
 	tileRepository->maxPassCount = cfg.Get(Property("batch.haltdebug")(0)).Get<u_int>();
@@ -540,7 +540,7 @@ TileRepository *TileRepository::FromProperties(const luxrays::Properties &cfg) {
 
 Properties TileRepository::GetDefaultProps() {
 	static Properties props =  Properties() <<
-			Property("tile.size")(3) <<
+			Property("tile.size")(32) <<
 			Property("tile.multipass.enable")(true) <<
 			Property("tile.multipass.convergencetest.threshold")(6.f / 256.f) <<
 			Property("tile.multipass.convergencetest.threshold.reduction")(0.f) <<

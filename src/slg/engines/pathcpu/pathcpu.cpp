@@ -92,7 +92,7 @@ void PathCPURenderEngine::StopLockLess() {
 //------------------------------------------------------------------------------
 
 Properties PathCPURenderEngine::ToProperties(const Properties &cfg) {
-	return CPURenderEngine::ToProperties(cfg) <<
+	return CPUNoTileRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
@@ -108,7 +108,7 @@ RenderEngine *PathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film
 }
 
 Properties PathCPURenderEngine::GetDefaultProps() {
-	static Properties props = CPURenderEngine::GetDefaultProps() <<
+	static Properties props = CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("path.maxdepth")(5) <<
 			Property("path.russianroulette.depth")(3) <<
