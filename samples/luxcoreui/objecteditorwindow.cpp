@@ -91,6 +91,7 @@ void ObjectEditorWindow::Draw() {
 
 		if (ImGui::CollapsingHeader((objectName + " properties").c_str(), NULL, true, true)) {
 			ImGui::PushID("Object properties");
+			ImGui::PushItemWidth(ImGui::GetWindowSize().x / 3);
 
 
 			//------------------------------------------------------------------
@@ -112,6 +113,7 @@ void ObjectEditorWindow::Draw() {
 			if (ImGui::Button(modifiedGUIProps ? "Parse (*)" : "Parse"))
 				ParseGUIProperties();
 
+			ImGui::PopItemWidth();
 			ImGui::PopID();
 		}
 
