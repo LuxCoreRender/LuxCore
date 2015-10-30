@@ -155,6 +155,7 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.devices.maxtiles")) <<
 			//------------------------------------------------------------------
+			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")) <<
 			cfg.Get(GetDefaultProps().Get("rtpath.blur.mincap")) <<
@@ -184,6 +185,7 @@ Properties RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.lights.firstvertexsamples")(1) <<
 			Property("biaspath.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
+			Property("rtpath.miniterations")(2) <<
 			Property("rtpath.displaydevice.index")(0) <<
 			Property("rtpath.blur.timewindow")(3.f) <<
 			Property("rtpath.blur.mincap")(.01f) <<
