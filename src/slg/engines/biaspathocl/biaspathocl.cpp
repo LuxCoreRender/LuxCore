@@ -137,7 +137,7 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	nearStartLight = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")).Get<float>());
 	firstVertexLightSampleCount = Max(1, cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")).Get<int>());
 
-	maxTilePerDevice = cfg.Get(Property("biaspath.devices.maxtiles")(16)).Get<u_int>();
+	maxTilePerDevice = cfg.Get(Property("biaspathocl.devices.maxtiles")(16)).Get<u_int>();
 
 	PrintSamplesInfo();
 
@@ -242,7 +242,8 @@ Properties BiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
-			cfg.Get(GetDefaultProps().Get("biaspath.devices.maxtiles"));
+			cfg.Get(GetDefaultProps().Get("biaspathocl.devices.maxtiles")) <<
+			TileRepository::ToProperties(cfg);
 }
 
 RenderEngine *BiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -266,7 +267,8 @@ Properties BiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.lights.lowthreshold")(0.f) <<
 			Property("biaspath.lights.nearstart")(.001f) <<
 			Property("biaspath.lights.firstvertexsamples")(4) <<
-			Property("biaspath.devices.maxtiles")(16);
+			Property("biaspathocl.devices.maxtiles")(16) <<
+			TileRepository::GetDefaultProps();
 
 	return props;
 }

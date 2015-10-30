@@ -46,32 +46,44 @@ void LuxCoreApp::MenuRendering() {
 void LuxCoreApp::MenuEngine() {
 	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
 
-	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL")))
+	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL"))) {
 		SetRenderingEngineType("PATHOCL");
-	if (ImGui::MenuItem("LIGHTCPU", "2", (currentEngineType == "LIGHTCPU")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("LIGHTCPU", "2", (currentEngineType == "LIGHTCPU"))) {
 		SetRenderingEngineType("LIGHTCPU");
-	if (ImGui::MenuItem("PATHCPU", "3", (currentEngineType == "PATHCPU")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("PATHCPU", "3", (currentEngineType == "PATHCPU"))) {
 		SetRenderingEngineType("PATHCPU");
-	if (ImGui::MenuItem("BIDIRCPU", "4", (currentEngineType == "BIDIRCPU")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("BIDIRCPU", "4", (currentEngineType == "BIDIRCPU"))) {
 		SetRenderingEngineType("BIDIRCPU");
-	if (ImGui::MenuItem("BIDIRVMCPU", "5", (currentEngineType == "BIDIRVMCPU")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("BIDIRVMCPU", "5", (currentEngineType == "BIDIRVMCPU"))) {
 		SetRenderingEngineType("BIDIRVMCPU");
+		CloseAllRenderConfigEditors();
+	}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL")))
+	if (ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL"))) {
 		SetRenderingEngineType("RTPATHOCL");
+		CloseAllRenderConfigEditors();
+	}
 #endif
 	if (ImGui::MenuItem("BIASPATHCPU", "7", (currentEngineType == "BIASPATHCPU"))) {
 		SetRenderingEngineType("BIASPATHCPU");
-		samplerWindow.opened = false;
+		CloseAllRenderConfigEditors();
 	}
 	if (ImGui::MenuItem("BIASPATHOCL", "8", (currentEngineType == "BIASPATHOCL"))) {
 		SetRenderingEngineType("BIASPATHOCL");
-		samplerWindow.opened = false;
+		CloseAllRenderConfigEditors();
 	}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL"))) {
 		SetRenderingEngineType("RTBIASPATHOCL");
-		samplerWindow.opened = false;
+		CloseAllRenderConfigEditors();
 	}
 #endif
 }

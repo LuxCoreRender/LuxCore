@@ -132,33 +132,42 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				break;
 			}
 			case GLFW_KEY_1:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("PATHOCL");
 				break;
 			case GLFW_KEY_2:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("LIGHTCPU");
 				break;
 			case GLFW_KEY_3:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("PATHCPU");
 				break;
 			case GLFW_KEY_4:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("BIDIRCPU");
 				break;
 			case GLFW_KEY_5:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("BIDIRVMCPU");
 				break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_6:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("RTPATHOCL");
 				break;
 #endif
 			case GLFW_KEY_7:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("BIASPATHCPU");
 				break;
 			case GLFW_KEY_8:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("BIASPATHOCL");
 				break;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_9:
+				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("RTBIASPATHOCL");
 				break;
 #endif
