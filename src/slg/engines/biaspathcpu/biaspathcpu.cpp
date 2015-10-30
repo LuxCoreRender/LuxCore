@@ -169,7 +169,7 @@ RenderEngine *BiasPathCPURenderEngine::FromProperties(const RenderConfig *rcfg, 
 }
 
 Properties BiasPathCPURenderEngine::GetDefaultProps() {
-	static Properties props = CPURenderEngine::GetDefaultProps() <<
+	static Properties props = CPUTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("biaspath.pathdepth.total")(10) <<
 			Property("biaspath.pathdepth.diffuse")(4) <<

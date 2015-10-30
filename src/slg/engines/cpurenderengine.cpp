@@ -282,6 +282,14 @@ void CPUNoTileRenderEngine::UpdateCounters() {
 	raysCount = totalCount;
 }
 
+Properties CPUNoTileRenderEngine::ToProperties(const Properties &cfg) {
+	return CPURenderEngine::ToProperties(cfg);
+}
+
+Properties CPUNoTileRenderEngine::GetDefaultProps() {
+	return Properties();
+}
+
 //------------------------------------------------------------------------------
 // CPUTileRenderThread
 //------------------------------------------------------------------------------

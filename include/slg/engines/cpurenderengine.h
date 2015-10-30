@@ -124,9 +124,13 @@ public:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+
 	friend class CPUNoTileRenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 
