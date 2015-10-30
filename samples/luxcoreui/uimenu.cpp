@@ -96,15 +96,15 @@ void LuxCoreApp::MenuSampler() {
 	const string currentSamplerType = config->GetProperty("sampler.type").Get<string>();
 
 	if (ImGui::MenuItem("RANDOM", NULL, (currentSamplerType == "RANDOM"))) {
-		samplerWindow.opened = false;
+		samplerWindow.Close();
 		EditRenderConfig(Properties() << Property("sampler.type")("RANDOM"));
 	}
 	if (ImGui::MenuItem("SOBOL", NULL, (currentSamplerType == "SOBOL"))) {
-		samplerWindow.opened = false;
+		samplerWindow.Close();
 		EditRenderConfig(Properties() << Property("sampler.type")("SOBOL"));
 	}
 	if (ImGui::MenuItem("METROPOLIS", NULL, (currentSamplerType == "METROPOLIS"))) {
-		samplerWindow.opened = false;
+		samplerWindow.Close();
 		EditRenderConfig(Properties() << Property("sampler.type")("METROPOLIS"));
 	}
 }
@@ -206,13 +206,14 @@ void LuxCoreApp::MenuScreen() {
 
 void LuxCoreApp::MenuWindow() {
 	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
-	if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.opened))
-		renderEngineWindow.opened = !renderEngineWindow.opened;
-	if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.opened,
+
+	if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
+		renderEngineWindow.Toggle();
+	if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.IsOpen(),
 			!boost::starts_with(currentEngineType, "BIAS")))
-		samplerWindow.opened = !samplerWindow.opened;
-	if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.opened))
-		pixelFilterWindow.opened = !pixelFilterWindow.opened;
+		samplerWindow.Toggle();
+	if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
+		pixelFilterWindow.Toggle();
 	ImGui::Separator();
 	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.opened))
 		statsWindow.opened = !statsWindow.opened;

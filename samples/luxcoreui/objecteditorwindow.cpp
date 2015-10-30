@@ -30,6 +30,18 @@ using namespace luxcore;
 // ObjectEditorWindow
 //------------------------------------------------------------------------------
 
+void ObjectEditorWindow::Open() {
+	opened = true;
+	objectGUIProps.Clear();
+	objectEditorProps.Clear();
+}
+
+void ObjectEditorWindow::Close() {
+	opened = false;
+	objectGUIProps.Clear();
+	objectEditorProps.Clear();
+}
+
 void ObjectEditorWindow::RefreshGUIProperties() {
 	// Refresh objectProps
 	RefreshObjectProperties(objectGUIProps);
