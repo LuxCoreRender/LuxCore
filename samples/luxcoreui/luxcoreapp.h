@@ -66,6 +66,7 @@ private:
 	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
+	void CloseAllRenderConfigEditors();
 
 	void RefreshRenderingTexture();
 	void DrawRendering();

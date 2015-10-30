@@ -82,6 +82,12 @@ void LuxCoreApp::DecScreenRefreshInterval() {
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(10u, screenRefreshInterval - 5))));
 }
 
+void LuxCoreApp::CloseAllRenderConfigEditors() {
+	pixelFilterWindow.opened = false;
+	renderEngineWindow.opened = false;
+	samplerWindow.opened = false;
+}
+
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 	if (engineType != config->GetProperty("renderengine.type").Get<string>())
 		EditRenderConfig(Properties() << Property("renderengine.type")(engineType));

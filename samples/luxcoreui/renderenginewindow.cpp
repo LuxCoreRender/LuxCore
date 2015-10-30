@@ -38,6 +38,7 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 		.Add("BIDIRVMCPU", 4)
 		.Add("RTPATHOCL", 5)
 		.Add("BIASPATHCPU", 6)
+		.Add("BIASPATHOCL", 7)
 		.SetDefault("PATHCPU");
 }
 
@@ -382,6 +383,30 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	ImGui::TextDisabled("(?)");
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("renderengine.type");
+
+	//------------------------------------------------------------------
+	// BIASPATHOCL
+	//------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("BIASPATHOCL")) {
+		BiasPathGUI(props, modifiedProps);
+
+		int ival;
+
+		ival = props.Get("biaspathocl.devices.maxtiles").Get<int>();
+		if (ImGui::SliderInt("Threads count", &ival, 1, 32)) {
+			props.Set(Property("biaspathocl.devices.maxtiles")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("biaspathocl.devices.maxtiles");
+
+		if (ImGui::Button("Open Pixel Filter editor"))
+			app->pixelFilterWindow.opened = true;
+		/*ImGui::SameLine();
+		if (ImGui::Button("Open OpenCL device editor")) {
+			// TODO
+		}*/
+	}
 
 	//------------------------------------------------------------------
 	// BIASPATHCPU
