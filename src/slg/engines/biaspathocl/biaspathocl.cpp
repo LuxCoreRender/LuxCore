@@ -149,9 +149,9 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 
 	film->Reset();
 
-	Properties props = renderConfig->cfg;
+	Properties tileProps = renderConfig->cfg.GetAllProperties("tile");
 	if (GetType() == RTBIASPATHOCL) {
-		props.Delete("tile.size");
+		tileProps.Delete("tile.size");
 
 		// Check if I'm going to use a single device
 		u_int tileWidth, tileHeight;
@@ -166,12 +166,12 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 			tileHeight = film->GetHeight();
 		}
 
-		props <<
+		tileProps <<
 				Property("tile.size.x")(tileWidth) <<
 				Property("tile.size.y")(tileHeight);
 	}
 
-	tileRepository = TileRepository::FromProperties(renderConfig->cfg);
+	tileRepository = TileRepository::FromProperties(tileProps);
 	if (GetType() == RTBIASPATHOCL)
 		tileRepository->enableMultipassRendering = false;
 	tileRepository->varianceClamping = VarianceClamping(sqrtVarianceClampMaxValue);

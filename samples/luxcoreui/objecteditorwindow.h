@@ -27,13 +27,21 @@ class LuxCoreApp;
 
 class ObjectEditorWindow {
 public:
-	ObjectEditorWindow(LuxCoreApp *a, const std::string &name) :  opened(false), 
-			objectName(name), windowTitle(name + " editor"),app(a) { }
+	ObjectEditorWindow(LuxCoreApp *a, const std::string &name) : objectName(name),
+			windowTitle(name + " editor"), app(a), opened(false) { }
 	~ObjectEditorWindow() { }
 
-	void Draw();
+	void Open();
+	bool IsOpen() const { return opened; }
+	void Close();
+	void Toggle() {
+		if (opened)
+			Close();
+		else
+			Open();
+	}
 
-	bool opened;
+	void Draw();
 
 protected:
 	void RefreshGUIProperties();
@@ -55,6 +63,8 @@ protected:
 	luxrays::Properties objectEditorProps;
 	char advancedEditorText[1024 * 32];
 	bool modifiedEditorProps;
+
+	bool opened;
 };
 
 #endif	/* _LUXCOREAPP_OBJECTEDITORWINDOW_H */

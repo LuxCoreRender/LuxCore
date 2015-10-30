@@ -83,9 +83,9 @@ void LuxCoreApp::DecScreenRefreshInterval() {
 }
 
 void LuxCoreApp::CloseAllRenderConfigEditors() {
-	pixelFilterWindow.opened = false;
-	renderEngineWindow.opened = false;
-	samplerWindow.opened = false;
+	pixelFilterWindow.Close();
+	renderEngineWindow.Close();
+	samplerWindow.Close();
 }
 
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {

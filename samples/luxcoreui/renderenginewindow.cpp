@@ -32,13 +32,14 @@ using namespace luxcore;
 RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Render Engine") {
 	typeTable
 		.Add("PATHOCL", 0)
-		.Add("PATHCPU", 1)
-		.Add("BIDIRCPU", 2)
-		.Add("LIGHTCPU", 3)
+		.Add("LIGHTCPU", 1)
+		.Add("PATHCPU", 2)
+		.Add("BIDIRCPU", 3)
 		.Add("BIDIRVMCPU", 4)
 		.Add("RTPATHOCL", 5)
 		.Add("BIASPATHCPU", 6)
 		.Add("BIASPATHOCL", 7)
+		.Add("RTBIASPATHOCL", 8)
 		.SetDefault("PATHCPU");
 }
 
@@ -49,7 +50,7 @@ Properties RenderEngineWindow::GetAllRenderEngineProperties(const Properties &cf
 			cfgProps.GetAllProperties("light") <<
 			cfgProps.GetAllProperties("bidirvm") <<
 			cfgProps.GetAllProperties("rtpath") <<
-			cfgProps.GetAllProperties("biaspath") <<
+			cfgProps.GetAllProperties("biaspath") << 
 			cfgProps.GetAllProperties("tile") <<
 			cfgProps.GetAllProperties("native.threads.count") <<
 			cfgProps.GetAllProperties("opencl.task.count");
@@ -385,10 +386,10 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		ImGui::SetTooltip("renderengine.type");
 
 	//------------------------------------------------------------------
-	// BIASPATHOCL
+	// RTBIASPATHOCL
 	//------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("BIASPATHOCL")) {
+	if (typeIndex == typeTable.GetVal("RTBIASPATHOCL")) {
 		BiasPathGUI(props, modifiedProps);
 
 		int ival;
@@ -401,7 +402,31 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("biaspathocl.devices.maxtiles");
 
 		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.opened = true;
+			app->pixelFilterWindow.Open();
+		/*ImGui::SameLine();
+		if (ImGui::Button("Open OpenCL device editor")) {
+			// TODO
+		}*/
+	}
+
+	//------------------------------------------------------------------
+	// BIASPATHOCL
+	//------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("BIASPATHOCL")) {
+		BiasPathGUI(props, modifiedProps);
+
+		int ival;
+
+		ival = props.Get("biaspathocl.devices.maxtiles").Get<int>();
+		if (ImGui::SliderInt("Max. number of tiles for each device", &ival, 1, 32)) {
+			props.Set(Property("biaspathocl.devices.maxtiles")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("biaspathocl.devices.maxtiles");
+
+		if (ImGui::Button("Open Pixel Filter editor"))
+			app->pixelFilterWindow.Open();
 		/*ImGui::SameLine();
 		if (ImGui::Button("Open OpenCL device editor")) {
 			// TODO
@@ -425,7 +450,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("native.threads.count");
 
 		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.opened = true;
+			app->pixelFilterWindow.Open();
 	}
 
 	//------------------------------------------------------------------
@@ -481,10 +506,10 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("rtpath.ghosteffect.intensity");
 
 		if (ImGui::Button("Open Sampler editor"))
-			app->samplerWindow.opened = true;
+			app->samplerWindow.Open();
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.opened = true;
+			app->pixelFilterWindow.Open();
 		/*ImGui::SameLine();
 		if (ImGui::Button("Open OpenCL device editor")) {
 			// TODO
@@ -499,10 +524,10 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		PathOCLGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
-			app->samplerWindow.opened = true;
+			app->samplerWindow.Open();
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.opened = true;
+			app->pixelFilterWindow.Open();
 		/*ImGui::SameLine();
 		if (ImGui::Button("Open OpenCL device editor")) {
 			// TODO
@@ -526,10 +551,10 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("native.threads.count");
 
 		if (ImGui::Button("Open Sampler editor"))
-			app->samplerWindow.opened = true;
+			app->samplerWindow.Open();
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.opened = true;
+			app->pixelFilterWindow.Open();
 	}
 
 	//------------------------------------------------------------------
@@ -540,10 +565,10 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		BiDirGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
-			app->samplerWindow.opened = true;
+			app->samplerWindow.Open();
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.opened = true;
+			app->pixelFilterWindow.Open();
 	}
 
 	//------------------------------------------------------------------
@@ -585,10 +610,10 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("native.threads.count");
 
 		if (ImGui::Button("Open Sampler editor"))
-			app->samplerWindow.opened = true;
+			app->samplerWindow.Open();
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.opened = true;
+			app->pixelFilterWindow.Open();
 	}
 
 	//------------------------------------------------------------------
@@ -628,10 +653,10 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("native.threads.count");
 
 		if (ImGui::Button("Open Sampler editor"))
-			app->samplerWindow.opened = true;
+			app->samplerWindow.Open();
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
-			app->pixelFilterWindow.opened = true;
+			app->pixelFilterWindow.Open();
 	}
 
 	return false;

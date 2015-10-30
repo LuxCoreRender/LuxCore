@@ -141,7 +141,7 @@ void PathOCLRenderEngine::StartLockLess() {
 	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")).Get<float>());
 
 	useFastPixelFilter = cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")).Get<bool>();
-	usePixelAtomics = cfg.Get(Property("path.pixelatomics.enable")(false)).Get<bool>();
+	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Sampler
@@ -214,7 +214,7 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")) <<
 			cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")) <<
-			cfg.Get(GetDefaultProps().Get("path.pixelatomics.enable")) <<
+			cfg.Get(GetDefaultProps().Get("pathocl.pixelatomics.enable")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.task.count")) <<
 			Sampler::ToProperties(cfg);
 }
@@ -232,7 +232,7 @@ Properties PathOCLRenderEngine::GetDefaultProps() {
 			Property("path.clamping.variance.maxvalue")(0.f) <<
 			Property("path.clamping.pdf.value")(0.f) <<
 			Property("path.fastpixelfilter.enable")(true) <<
-			Property("path.pixelatomics.enable")(false) <<
+			Property("pathocl.pixelatomics.enable")(false) <<
 			Property("opencl.task.count")("AUTO");
 
 	return props;
