@@ -205,17 +205,17 @@ void LuxCoreApp::MenuScreen() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuWindow() {
-	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+	const string currentRenderEngineType = config->GetProperty("renderengine.type").Get<string>();
 
 	if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
 		renderEngineWindow.Toggle();
 	if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.IsOpen(),
-			!boost::starts_with(currentEngineType, "BIAS")))
+			!boost::starts_with(currentRenderEngineType, "BIAS")))
 		samplerWindow.Toggle();
 	if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
 		pixelFilterWindow.Toggle();
 	if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
-			boost::ends_with(currentEngineType, "OCL")))
+			boost::ends_with(currentRenderEngineType, "OCL")))
 		oclDeviceWindow.Toggle();
 	ImGui::Separator();
 	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.opened))

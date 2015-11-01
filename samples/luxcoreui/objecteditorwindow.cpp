@@ -89,6 +89,8 @@ void ObjectEditorWindow::Draw() {
 			RefreshEditorProperties();
 		}
 
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
+
 		//----------------------------------------------------------------------
 		// Object properties
 		//----------------------------------------------------------------------
@@ -96,7 +98,6 @@ void ObjectEditorWindow::Draw() {
 		if (ImGui::CollapsingHeader((objectName + " properties").c_str(), NULL, true, true)) {
 			ImGui::PushID("Object properties");
 			ImGui::PushItemWidth(ImGui::GetWindowSize().x / 3);
-
 
 			//------------------------------------------------------------------
 			// Object GUI
@@ -132,8 +133,10 @@ void ObjectEditorWindow::Draw() {
 			// Refresh + Parse buttons
 			//------------------------------------------------------------------
 
-			if (ImGui::InputTextMultiline("Properties editor", advancedEditorText, LA_ARRAYSIZE(advancedEditorText)))
+			ImGui::PushItemWidth(-1);
+			if (ImGui::InputTextMultiline("##hiddenstuff", advancedEditorText, LA_ARRAYSIZE(advancedEditorText)))
 				modifiedEditorProps = true;
+			ImGui::PopItemWidth();
 
 			//------------------------------------------------------------------
 			// Refresh + Parse
@@ -153,8 +156,10 @@ void ObjectEditorWindow::Draw() {
 
 			ImGui::PopID();
 		}
+
+		ImGui::PopStyleVar();
 	} else {
-		// Clear the properties when the window is first closed so they are
+		// Clear the properties when the window is closed so they are
 		// re-initialized the next time.
 		if (objectGUIProps.GetSize())
 			objectGUIProps.Clear();

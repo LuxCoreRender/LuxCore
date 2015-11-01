@@ -49,6 +49,8 @@ void LogWindow::Draw() {
 	ImGui::SetNextWindowSize(ImVec2(512.f, 200.f), ImGuiSetCond_Appearing);
 
 	if (ImGui::Begin(title.c_str(), &opened)) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
+
 		if (ImGui::Button("Clear"))
 			Clear();
 		ImGui::SameLine();
@@ -80,6 +82,7 @@ void LogWindow::Draw() {
 		scrollToBottom = false;
 
 		ImGui::EndChild();
+		ImGui::PopStyleVar();
 	}
 	ImGui::End();
 }
