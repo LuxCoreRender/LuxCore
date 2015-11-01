@@ -489,10 +489,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
-		/*ImGui::SameLine();
-		if (ImGui::Button("Open OpenCL device editor")) {
-			// TODO
-		}*/
+		ImGui::SameLine();
+		if (ImGui::Button("Open OpenCL device editor"))
+			app->oclDeviceWindow.Open();
 	}
 
 	//------------------------------------------------------------------
@@ -504,10 +503,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
-		/*ImGui::SameLine();
-		if (ImGui::Button("Open OpenCL device editor")) {
-			// TODO
-		}*/
+		ImGui::SameLine();
+		if (ImGui::Button("Open OpenCL device editor"))
+			app->oclDeviceWindow.Open();
 	}
 
 	//------------------------------------------------------------------
@@ -535,10 +533,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
-		/*ImGui::SameLine();
-		if (ImGui::Button("Open OpenCL device editor")) {
-			// TODO
-		}*/
+		ImGui::SameLine();
+		if (ImGui::Button("Open OpenCL device editor"))
+			app->oclDeviceWindow.Open();
 	}
 
 	//------------------------------------------------------------------
@@ -553,10 +550,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		ImGui::SameLine();
 		if (ImGui::Button("Open Pixel Filter editor"))
 			app->pixelFilterWindow.Open();
-		/*ImGui::SameLine();
-		if (ImGui::Button("Open OpenCL device editor")) {
-			// TODO
-		}*/
+		ImGui::SameLine();
+		if (ImGui::Button("Open OpenCL device editor"))
+			app->oclDeviceWindow.Open();
 	}
 
 	//------------------------------------------------------------------

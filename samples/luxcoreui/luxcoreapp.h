@@ -29,6 +29,7 @@
 #include "renderenginewindow.h"
 #include "samplerwindow.h"
 #include "helpwindow.h"
+#include "ocldevicewindow.h"
 
 #define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
@@ -50,6 +51,7 @@ public:
 	// The flag is off by default but can be turned on by using the -m switch
 	bool optMouseGrabMode;
 
+	friend class OCLDeviceWindow;
 	friend class PixelFilterWindow;
 	friend class RenderEngineWindow;
 	friend class SamplerWindow;
@@ -86,6 +88,7 @@ private:
 
 	static LogWindow *currentLogWindow;
 
+	OCLDeviceWindow oclDeviceWindow;
 	PixelFilterWindow pixelFilterWindow;
 	RenderEngineWindow renderEngineWindow;
 	SamplerWindow samplerWindow;

@@ -31,15 +31,19 @@ using namespace luxcore;
 //------------------------------------------------------------------------------
 
 void ObjectEditorWindow::Open() {
-	opened = true;
-	objectGUIProps.Clear();
-	objectEditorProps.Clear();
+	if (!opened) {
+		opened = true;
+		objectGUIProps.Clear();
+		objectEditorProps.Clear();
+	}
 }
 
 void ObjectEditorWindow::Close() {
-	opened = false;
-	objectGUIProps.Clear();
-	objectEditorProps.Clear();
+	if (opened) {
+		opened = false;
+		objectGUIProps.Clear();
+		objectEditorProps.Clear();
+	}
 }
 
 void ObjectEditorWindow::RefreshGUIProperties() {
@@ -110,7 +114,7 @@ void ObjectEditorWindow::Draw() {
 
 			ImGui::SameLine();
 
-			if (ImGui::Button(modifiedGUIProps ? "Parse (*)" : "Parse"))
+			if (ImGui::Button(modifiedGUIProps ? "Apply (*)" : "Apply"))
 				ParseGUIProperties();
 
 			ImGui::PopItemWidth();
