@@ -32,10 +32,25 @@ using namespace luxcore;
 OCLDeviceWindow::OCLDeviceWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "OpenCL devices") {
 }
 
+Properties OCLDeviceWindow::GetOpenCLDeviceProperties(const Properties &cfgProps) const {
+	Properties props = 
+			cfgProps.GetAllProperties("opencl.cpu") <<
+			cfgProps.GetAllProperties("opencl.gpu") <<
+			cfgProps.GetAllProperties("opencl.devices.select");
+
+	if (props.IsDefined("tile.multipass.convergencetest.threshold")) {
+		const float t = props.Get("tile.multipass.convergencetest.threshold").Get<float>();
+		props.Delete("tile.multipass.convergencetest.threshold");
+		props << Property("tile.multipass.convergencetest.threshold256")(t * 256.0);
+	}
+
+	return props;
+}
+
 void OCLDeviceWindow::RefreshObjectProperties(Properties &props) {
 	RenderConfig *config = app->config;
 	try {
-		props = config->ToProperties().GetAllProperties("opencl.devices.select");
+		props = GetOpenCLDeviceProperties(config->ToProperties());
 	} catch(exception &ex) {
 		LA_LOG("OCLDevice parsing error: " << endl << ex.what());
 
@@ -45,7 +60,7 @@ void OCLDeviceWindow::RefreshObjectProperties(Properties &props) {
 }
 
 void OCLDeviceWindow::ParseObjectProperties(const Properties &props) {
-	app->EditRenderConfig(props.GetAllProperties("opencl.devices.select"));
+	app->EditRenderConfig(GetOpenCLDeviceProperties(props));
 }
 
 bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
@@ -53,31 +68,80 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	vector<luxrays::DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
 
+	// Get the device selection string
 	string selection = props.Get("opencl.devices.select").Get<string>();
 	if (selection.length() != deviceDescriptions.size()) {
 		selection.resize(deviceDescriptions.size(), '1');
 		modifiedProps = true;
 	}
 
-	for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
-		luxrays::DeviceDescription *desc = deviceDescriptions[i];
+	if (ImGui::CollapsingHeader("General", NULL, true, true)) {
+		int ival;
+		bool bval;
 
-		bool bval = (selection.at(i) == '1');
-		ImGui::SetNextTreeNodeOpened(true, ImGuiSetCond_Appearing);
-		if (ImGui::TreeNode(("#" + ToString(i) + " => " + desc->GetName() +
-				(bval ? " (Used)" : " (Not used)")).c_str())) {
-			luxrays::DeviceDescription *desc = deviceDescriptions[i];
-			LuxCoreApp::ColoredLabelText("Name:", "%s", desc->GetName().c_str());
+		bval = props.Get("opencl.cpu.use").Get<bool>();
+		if (ImGui::Checkbox("Use all CPU devices", &bval)) {
+			props.Set(Property("opencl.cpu.use")(bval));
+			modifiedProps = true;
 
-			ImGui::SameLine();
-			if (ImGui::Checkbox("Use", &bval)) {
-				selection.at(i) = bval ? '1' : '0';
-				modifiedProps = true;
+			for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
+				if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL_CPU)
+					selection.at(i) = bval ? '1' : '0';;
 			}
-			LuxCoreApp::HelpMarker("opencl.devices.select");
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("opencl.cpu.use");
 
-			LuxCoreApp::ColoredLabelText("Type:", "%s", luxrays::DeviceDescription::GetDeviceType(desc->GetType()).c_str());
-			ImGui::TreePop();
+		bval = props.Get("opencl.gpu.use").Get<bool>();
+		if (ImGui::Checkbox("Use all GPU devices", &bval)) {
+			props.Set(Property("opencl.gpu.use")(bval));
+			modifiedProps = true;
+
+			for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
+				if (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL_GPU)
+					selection.at(i) = bval ? '1' : '0';;
+			}
+		}
+		LuxCoreApp::HelpMarker("opencl.gpu.use");
+
+		ival = props.Get("opencl.cpu.workgroup.size").Get<int>();
+		if (ImGui::InputInt("Workgroup size for CPU devices", &ival)) {
+			props.Set(Property("opencl.cpu.workgroup.size")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("opencl.cpu.workgroup.size");
+
+		ival = props.Get("opencl.gpu.workgroup.size").Get<int>();
+		if (ImGui::InputInt("Workgroup size for GPU devices", &ival)) {
+			props.Set(Property("opencl.gpu.workgroup.size")(ival));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("opencl.gpu.workgroup.size");
+	}
+
+	if (ImGui::CollapsingHeader("Device list", NULL, true, true)) {
+		// Show the device list
+		for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
+			luxrays::DeviceDescription *desc = deviceDescriptions[i];
+
+			bool bval = (selection.at(i) == '1');
+
+			ImGui::SetNextTreeNodeOpened(true, ImGuiSetCond_Appearing);
+			if (ImGui::TreeNode(("#" + ToString(i) + " => " + desc->GetName() +
+					(bval ? " (Used)" : " (Not used)")).c_str())) {
+				luxrays::DeviceDescription *desc = deviceDescriptions[i];
+				LuxCoreApp::ColoredLabelText("Name:", "%s", desc->GetName().c_str());
+
+				ImGui::SameLine();
+				if (ImGui::Checkbox("Use", &bval)) {
+					selection.at(i) = bval ? '1' : '0';
+					modifiedProps = true;
+				}
+				LuxCoreApp::HelpMarker("opencl.devices.select");
+
+				LuxCoreApp::ColoredLabelText("Type:", "%s", luxrays::DeviceDescription::GetDeviceType(desc->GetType()).c_str());
+				ImGui::TreePop();
+			}
 		}
 	}
 

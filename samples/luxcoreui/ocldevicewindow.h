@@ -33,6 +33,8 @@ public:
 	~OCLDeviceWindow() { }
 
 private:
+	luxrays::Properties GetOpenCLDeviceProperties(const luxrays::Properties &cfgProps) const;
+
 	virtual void RefreshObjectProperties(luxrays::Properties &props);
 	virtual void ParseObjectProperties(const luxrays::Properties &props);
 	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
