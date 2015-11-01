@@ -38,12 +38,6 @@ Properties OCLDeviceWindow::GetOpenCLDeviceProperties(const Properties &cfgProps
 			cfgProps.GetAllProperties("opencl.gpu") <<
 			cfgProps.GetAllProperties("opencl.devices.select");
 
-	if (props.IsDefined("tile.multipass.convergencetest.threshold")) {
-		const float t = props.Get("tile.multipass.convergencetest.threshold").Get<float>();
-		props.Delete("tile.multipass.convergencetest.threshold");
-		props << Property("tile.multipass.convergencetest.threshold256")(t * 256.0);
-	}
-
 	return props;
 }
 
@@ -55,7 +49,7 @@ void OCLDeviceWindow::RefreshObjectProperties(Properties &props) {
 		LA_LOG("OCLDevice parsing error: " << endl << ex.what());
 
 		// Just revert to the initialized properties (note: they will include the error)
-		props = config->GetProperties().GetAllProperties("opencl.devices.select");
+		props = GetOpenCLDeviceProperties(config->GetProperties());
 	}
 }
 
@@ -71,7 +65,16 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// Get the device selection string
 	string selection = props.Get("opencl.devices.select").Get<string>();
 	if (selection.length() != deviceDescriptions.size()) {
-		selection.resize(deviceDescriptions.size(), '1');
+		const bool useCPU = props.Get("opencl.cpu.use").Get<bool>();
+		const bool useGPU = props.Get("opencl.gpu.use").Get<bool>();
+
+		selection.resize(deviceDescriptions.size(), '0');
+		for (u_int i = 0; i < deviceDescriptions.size(); ++i) {
+			if ((useCPU && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL_CPU)) ||
+					(useGPU && (deviceDescriptions[i]->GetType() == DEVICE_TYPE_OPENCL_GPU)))
+				selection.at(i) = '1';
+		}
+
 		modifiedProps = true;
 	}
 
