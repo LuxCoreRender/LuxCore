@@ -404,13 +404,13 @@ void LuxCoreApp::RunApp() {
 		}
 
 		MainMenuBar();
+
 		oclDeviceWindow.Draw();
 		pixelFilterWindow.Draw();
 		renderEngineWindow.Draw();
 		samplerWindow.Draw();
 		logWindow.Draw();
 		helpWindow.Draw();
-		
 		if (session)
 			statsWindow.Draw();
 

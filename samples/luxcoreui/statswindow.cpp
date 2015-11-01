@@ -36,6 +36,8 @@ void StatsWindow::Draw() {
 	ImGui::SetNextWindowSize(ImVec2(512.f, 200.f), ImGuiSetCond_Appearing);
 
 	if (ImGui::Begin(title.c_str(), &opened)) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
+
 		RenderSession *session = app->session;
 		RenderConfig *config = app->config;
 
@@ -136,6 +138,8 @@ void StatsWindow::Draw() {
 				}
 			}
 		}
+
+		ImGui::PopStyleVar();
 	}
 	ImGui::End();
 }

@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <boost/format.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "luxcoreapp.h"
 
@@ -468,9 +469,15 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	int typeIndex = typeTable.GetVal(currentRenderEngineType);
 
 	if (ImGui::Combo("Render Engine type", &typeIndex, typeTable.GetTagList())) {
-		props.Clear();
+		const string newRenderEngineType = typeTable.GetTag(typeIndex);
 
-		props << Property("renderengine.type")(typeTable.GetTag(typeIndex));
+		if (boost::starts_with(newRenderEngineType, "BIAS"))
+			app->samplerWindow.Close();
+		if (!boost::ends_with(newRenderEngineType, "OCL"))
+			app->oclDeviceWindow.Close();
+
+		props.Clear();
+		props << Property("renderengine.type")(newRenderEngineType);
 
 		return true;
 	}
