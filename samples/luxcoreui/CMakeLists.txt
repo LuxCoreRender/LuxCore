@@ -43,6 +43,7 @@ set(LUXCOREUI_SRCS
 	helpwindow.cpp
 	logwindow.cpp
 	objecteditorwindow.cpp
+	ocldevicewindow.cpp
 	pixelfilterwindow.cpp
 	renderenginewindow.cpp
 	samplerwindow.cpp

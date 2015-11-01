@@ -214,6 +214,9 @@ void LuxCoreApp::MenuWindow() {
 		samplerWindow.Toggle();
 	if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
 		pixelFilterWindow.Toggle();
+	if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
+			boost::ends_with(currentEngineType, "OCL")))
+		oclDeviceWindow.Toggle();
 	ImGui::Separator();
 	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.opened))
 		statsWindow.opened = !statsWindow.opened;
