@@ -143,7 +143,7 @@ void LuxCoreApp::DrawTiles() {
 	// Draw the pending, converged and not converged tiles for BIASPATHCPU or BIASPATHOCL
 	const Properties &stats = session->GetStats();
 
-	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
 		int frameBufferWidth, frameBufferHeight;
 		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
@@ -258,7 +258,7 @@ static void CenterWindow(GLFWwindow *window) {
 
 void LuxCoreApp::RunApp() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if ((engineType == "RTPATHOCL") || (engineType == "RTBIASPATHOCL"))
 		optRealTimeMode = true;
 #endif
@@ -379,7 +379,7 @@ void LuxCoreApp::RunApp() {
 			}
 
 			// Check if it is time to update the frame buffer texture
-			const double screenRefreshTime = config->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
+			const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<u_int>() / 1000.0;
 			currentTime = WallClockTime();
 			if (currentTime - lastScreenRefresh >= screenRefreshTime) {
 				RefreshRenderingTexture();

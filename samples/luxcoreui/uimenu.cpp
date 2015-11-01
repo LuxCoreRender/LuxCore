@@ -44,7 +44,7 @@ void LuxCoreApp::MenuRendering() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuEngine() {
-	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+	const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 
 	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL"))) {
 		SetRenderingEngineType("PATHOCL");
@@ -93,7 +93,7 @@ void LuxCoreApp::MenuEngine() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuSampler() {
-	const string currentSamplerType = config->GetProperty("sampler.type").Get<string>();
+	const string currentSamplerType = config->ToProperties().Get("sampler.type").Get<string>();
 
 	if (ImGui::MenuItem("RANDOM", NULL, (currentSamplerType == "RANDOM"))) {
 		samplerWindow.Close();
@@ -205,7 +205,7 @@ void LuxCoreApp::MenuScreen() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuWindow() {
-	const string currentRenderEngineType = config->GetProperty("renderengine.type").Get<string>();
+	const string currentRenderEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 
 	if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
 		renderEngineWindow.Toggle();
@@ -243,7 +243,7 @@ void LuxCoreApp::MainMenuBar() {
 				ImGui::EndMenu();
 			}
 
-			const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+			const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 			if (ImGui::BeginMenu("Sampler", !boost::starts_with(currentEngineType, "BIAS"))) {
 				MenuSampler();
 				ImGui::EndMenu();

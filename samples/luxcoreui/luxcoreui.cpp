@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
 			config->GetScene().RemoveUnusedTextures();
 		}
 
-		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");
+		const bool fileSaverRenderEngine = (config->ToProperties().Get("renderengine.type").Get<string>() == "FILESAVER");
 		if (fileSaverRenderEngine) {
 			RenderSession *session = new RenderSession(config);
 

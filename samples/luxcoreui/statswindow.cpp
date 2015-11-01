@@ -45,12 +45,12 @@ void StatsWindow::Draw() {
 
 		// Rendering information
 		if (ImGui::CollapsingHeader("Rendering information", NULL, true, true)) {
-			const string engineType = config->GetProperty("renderengine.type").Get<string>();
+			const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 			LuxCoreApp::ColoredLabelText("Render engine:", "%s", engineType.c_str());
 
 			const string samplerName = ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL") ||
 				(engineType == "RTBIASPATHOCL")) ?
-					"N/A" : config->GetProperty("sampler.type").Get<string>();
+					"N/A" : config->ToProperties().Get("sampler.type").Get<string>();
 			LuxCoreApp::ColoredLabelText("Sampler:", "%s", samplerName.c_str());
 
 			LuxCoreApp::ColoredLabelText("Rendering time:", "%dsecs", int(stats.Get("stats.renderengine.time").Get<double>()));
@@ -69,7 +69,7 @@ void StatsWindow::Draw() {
 
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-						config->GetProperty("screen.refresh.interval").Get<u_int>(),
+						config->ToProperties().Get("screen.refresh.interval").Get<u_int>(),
 						fps);
 			} else if (engineType == "RTBIASPATHOCL") {
 				static float fps = 0.f;
@@ -80,12 +80,12 @@ void StatsWindow::Draw() {
 
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-						config->GetProperty("screen.refresh.interval").Get<u_int>(),
+						config->ToProperties().Get("screen.refresh.interval").Get<u_int>(),
 						fps);
 			} else
 #endif
 			{
-				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->GetProperty("screen.refresh.interval").Get<u_int>());
+				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->ToProperties().Get("screen.refresh.interval").Get<u_int>());
 			}
 		}
 
