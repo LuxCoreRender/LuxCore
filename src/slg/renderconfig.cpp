@@ -318,6 +318,8 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 Properties RenderConfig::ToProperties() const {
 	Properties props;
 
+	props << GetProperty("screen.refresh.interval");
+
 	// RenderEngine (includes PixelFilter and Sampler where applicable)
 	props << RenderEngine::ToProperties(cfg);
 

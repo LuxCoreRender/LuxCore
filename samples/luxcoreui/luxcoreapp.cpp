@@ -64,7 +64,7 @@ LuxCoreApp::~LuxCoreApp() {
 }
 
 void LuxCoreApp::IncScreenRefreshInterval() {
-	const u_int screenRefreshInterval = config->GetProperty("screen.refresh.interval").Get<u_int>();
+	const u_int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<u_int>();
 	if (screenRefreshInterval >= 1000)
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 1000)));
 	else if (screenRefreshInterval >= 100)
@@ -74,7 +74,7 @@ void LuxCoreApp::IncScreenRefreshInterval() {
 }
 
 void LuxCoreApp::DecScreenRefreshInterval() {
-	const u_int screenRefreshInterval = config->GetProperty("screen.refresh.interval").Get<u_int>();
+	const u_int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<u_int>();
 	if (screenRefreshInterval > 1000)
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(1000u, screenRefreshInterval - 1000))));
 	else if (screenRefreshInterval > 100)
@@ -91,7 +91,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 }
 
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
-	if (engineType != config->GetProperty("renderengine.type").Get<string>())
+	if (engineType != config->ToProperties().Get("renderengine.type").Get<string>())
 		EditRenderConfig(Properties() << Property("renderengine.type")(engineType));
 }
 
@@ -108,9 +108,9 @@ void LuxCoreApp::EditRenderConfig(const Properties &props) {
 	// Change the configuration
 	config->Parse(props);
 
-	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if (boost::starts_with(engineType, "RT")) {
-		if (config->GetProperty("screen.refresh.interval").Get<u_int>() > 25)
+		if (config->ToProperties().Get("screen.refresh.interval").Get<u_int>() > 25)
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
 		optRealTimeMode = true;
 	} else
