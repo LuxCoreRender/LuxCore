@@ -87,9 +87,9 @@ void RenderEngine::Start() {
 	delete pixelFilter;
 	pixelFilter = renderConfig->AllocPixelFilter();
 
-	const float epsilonMin = renderConfig->cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN)).Get<float>();
+	const float epsilonMin = renderConfig->GetProperty("scene.epsilon.min").Get<float>();
 	MachineEpsilon::SetMin(epsilonMin);
-	const float epsilonMax = renderConfig->cfg.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX)).Get<float>();
+	const float epsilonMax = renderConfig->GetProperty("scene.epsilon.max").Get<float>();
 	MachineEpsilon::SetMax(epsilonMax);
 
 	ctx->Start();
