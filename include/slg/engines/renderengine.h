@@ -44,7 +44,8 @@ typedef enum {
 	RTPATHOCL,
 	BIASPATHCPU,
 	BIASPATHOCL,
-	RTBIASPATHOCL
+	RTBIASPATHOCL,
+	RENDER_ENGINE_TYPE_COUNT
 } RenderEngineType;
 
 //------------------------------------------------------------------------------
@@ -121,7 +122,7 @@ public:
 	static std::string FromPropertiesOCL(const luxrays::Properties &cfg);
 
 	static RenderEngineType String2RenderEngineType(const std::string &type);
-	static const std::string RenderEngineType2String(const RenderEngineType type);
+	static std::string RenderEngineType2String(const RenderEngineType type);
 
 protected:
 	static luxrays::Properties GetDefaultProps();

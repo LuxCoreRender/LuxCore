@@ -102,7 +102,7 @@ SamplerType Sampler::String2SamplerType(const string &type) {
 		throw runtime_error("Unknown sampler type in Sampler::String2SamplerType(): " + type);
 }
 
-const string Sampler::SamplerType2String(const SamplerType type) {
+string Sampler::SamplerType2String(const SamplerType type) {
 	SamplerRegistry::GetObjectTag func;
 	if (SamplerRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();

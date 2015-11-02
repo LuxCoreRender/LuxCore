@@ -266,7 +266,7 @@ string RenderEngine::FromPropertiesOCL(const luxrays::Properties &cfg) {
 	throw runtime_error("Called RenderEngine::FromPropertiesOCL()");
 }
 
-const string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
+string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
 	RenderEngineRegistry::GetObjectTag func;
 	if (RenderEngineRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();

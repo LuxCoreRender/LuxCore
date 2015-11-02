@@ -35,7 +35,7 @@ public:
 	LightSourceDefinitions();
 	~LightSourceDefinitions();
 
-	void SetLightStrategy(const LightStrategyType type);
+	void SetLightStrategy(LightStrategy *ls);
 
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexByMeshIndex and lightStrategyType

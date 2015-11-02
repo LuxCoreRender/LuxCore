@@ -44,6 +44,7 @@ set(LUXCOREUI_SRCS
 	logwindow.cpp
 	objecteditorwindow.cpp
 	epsilonwindow.cpp
+	lightstrategywindow.cpp
 	ocldevicewindow.cpp
 	pixelfilterwindow.cpp
 	renderenginewindow.cpp

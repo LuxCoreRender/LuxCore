@@ -31,6 +31,7 @@
 #include "helpwindow.h"
 #include "ocldevicewindow.h"
 #include "epsilonwindow.h"
+#include "lightstrategywindow.h"
 
 #define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
@@ -53,6 +54,7 @@ public:
 	bool optMouseGrabMode;
 
 	friend class EpsilonWindow;
+	friend class LightStrategyWindow;
 	friend class OCLDeviceWindow;
 	friend class PixelFilterWindow;
 	friend class RenderEngineWindow;
@@ -91,6 +93,7 @@ private:
 	static LogWindow *currentLogWindow;
 
 	EpsilonWindow epsilonWindow;
+	LightStrategyWindow lightStrategyWindow;
 	OCLDeviceWindow oclDeviceWindow;
 	PixelFilterWindow pixelFilterWindow;
 	RenderEngineWindow renderEngineWindow;
@@ -108,7 +111,7 @@ private:
 
 	// ImGui inputs
 	int newFilmSize[2];
-	
+
 	bool optRealTimeMode;
 	float optMoveScale;
 	float optMoveStep;

@@ -406,6 +406,7 @@ void LuxCoreApp::RunApp() {
 		MainMenuBar();
 
 		epsilonWindow.Draw();
+		lightStrategyWindow.Draw();
 		oclDeviceWindow.Draw();
 		pixelFilterWindow.Draw();
 		renderEngineWindow.Draw();

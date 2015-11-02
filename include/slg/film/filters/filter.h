@@ -42,7 +42,8 @@ using luxrays::ocl::Spectrum;
 
 typedef enum {
 	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL, FILTER_MITCHELL_SS,
-	FILTER_BLACKMANHARRIS
+	FILTER_BLACKMANHARRIS,
+	FILTER_TYPE_COUNT
 } FilterType;
 
 class Filter : public NamedObject {
