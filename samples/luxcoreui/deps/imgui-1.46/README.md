@@ -3,6 +3,8 @@ ImGui
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
+(This library is free but I need your support to sustain its development - there's lots of desirable new features and maintenance to do. If you work for a company using ImGui or have the means to do so, please consider financial support)
+
 [![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui) [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
 ImGui is a bloat-free graphical user interface library for C++. It outputs vertex buffers that you can render in your 3D-pipeline enabled application. It is portable, renderer agnostic and self-contained (no external dependencies). It is based on an "immediate mode" graphical user interface paradigm which enables you to build user interfaces with ease.
@@ -39,7 +41,7 @@ Demo
 ----
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at the features of ImGui, you can download Windows binaries of the demo app here.
-- [imgui-demo-binaries-20150716.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20150716.zip) (Windows binaries, ImGui 1.43 WIP 2015/07/16, 4 executables, 475 KB)
+- [imgui-demo-binaries-20150909.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20150909.zip) (Windows binaries, ImGui 1.46 WIP 2015/09/09, 4 executables, 505 KB)
 
 
 Gallery
@@ -73,8 +75,8 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Jari Komppa's tutorial on building an ImGui library](http://iki.fi/sol/imgui/).
 - [Casey Muratori's original video that popularized the concept](https://mollyrocket.com/861).
 
-Frequently Asked Question
--------------------------
+Frequently Asked Question (FAQ)
+-------------------------------
 
 <b>Where is the documentation?</b>
 
@@ -85,11 +87,15 @@ Frequently Asked Question
 
 <b>How do you use ImGui on a platform that may not have a mouse or keyboard?</b>
 
-I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/synergy/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accomodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
+I recommend using [Synergy](http://synergy-project.org) ([sources](https://github.com/synergy/synergy)). In particular, the _src/micro/uSynergy.c_ file contains a small client that you can use on any platform to connect to your host PC. You can seamlessly use your PC input devices from a video game console or a tablet. ImGui allows to increase the hit box of widgets (via the _TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse to allow optimising for screen real-estate.
 
 <b>I integrated ImGui in my engine and the text or lines are blurry..</b>
 
-In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
+In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f). Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
+
+<b>I integrated ImGui in my engine and some elements are disappearing when I move windows around..</b>
+
+Most likely you are mishandling the clipping rectangles in your render function. Rectangles provided by ImGui are defined as (x1,y1,x2,y2) and NOT as (x1,y1,width,height).
 
 <b>Can you create elaborate/serious tools with ImGui?</b>
 
@@ -132,6 +138,8 @@ Credits
 -------
 
 Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com). 
+
+I first discovered imgui principles at [Q-Games](http://www.q-games.com) where Atman had dropped his own simple imgui implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating on it. 
 
 Embeds [ProggyClean.ttf](http://upperbounds.net) font by Tristan Grimmer (MIT license).
 

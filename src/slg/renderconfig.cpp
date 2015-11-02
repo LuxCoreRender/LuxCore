@@ -96,6 +96,8 @@ void RenderConfig::InitDefaultProperties() {
 			defaultProperties->Set(Property("images.scale")(1.f));
 			defaultProperties->Set(Property("renderengine.type")("PATHOCL"));
 			defaultProperties->Set(Property("scene.file")("scenes/luxball/luxball.scn"));
+			defaultProperties->Set(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));
+			defaultProperties->Set(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
 			defaultProperties->Set(Property("screen.refresh.interval")(100u));
 
 			// Specific RenderEngine settings are defined in each RenderEngine::Start() method
@@ -153,7 +155,11 @@ const Property RenderConfig::GetProperty(const string &name) const {
 
 void RenderConfig::Parse(const Properties &props) {
 	cfg.Set(props);
+cout<<props<<"===========\n";
+	// Scene epsilon is read directly from the cfg properties inside
+	// render engine Start() method
 
+	// Accelerator
 	scene->enableInstanceSupport = GetProperty("accelerator.instances.enable").Get<bool>();
 	const string accelType = GetProperty("accelerator.type").Get<string>();
 	// "-1" is for compatibility with the past. However all other old values are
@@ -174,6 +180,7 @@ void RenderConfig::Parse(const Properties &props) {
 		SLG_LOG("Unknown accelerator type (using AUTO instead): " << accelType);
 	}
 
+	// Light strategy
 	const string lightStrategy = GetProperty("lightstrategy.type").Get<string>();
 	if (lightStrategy == "UNIFORM")
 		scene->lightDefs.SetLightStrategy(TYPE_UNIFORM);
@@ -318,7 +325,11 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 Properties RenderConfig::ToProperties() const {
 	Properties props;
 
-	props << GetProperty("screen.refresh.interval");
+	// Some misc. property
+	props << cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));
+	props << cfg.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
+	// This property isn't really used by LuxCore but is useful for GUIs.
+	props << cfg.Get(Property("screen.refresh.interval")(100u));
 
 	// RenderEngine (includes PixelFilter and Sampler where applicable)
 	props << RenderEngine::ToProperties(cfg);

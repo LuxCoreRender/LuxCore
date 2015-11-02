@@ -1,4 +1,4 @@
-// ImGui library v1.45 WIP
+// ImGui library v1.46
 // Internals
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
 
@@ -13,6 +13,11 @@
 
 #include <stdio.h>      // FILE*
 #include <math.h>       // sqrtf()
+
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4251) // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
+#endif
 
 //-----------------------------------------------------------------------------
 // Forward Declarations
@@ -65,7 +70,7 @@ namespace ImGuiStb
 // Context
 //-----------------------------------------------------------------------------
 
-extern ImGuiState*  GImGui;
+extern IMGUI_API ImGuiState*  GImGui;
 
 //-----------------------------------------------------------------------------
 // Helpers
@@ -75,28 +80,28 @@ extern ImGuiState*  GImGui;
 #define IM_PI                   3.14159265358979323846f
 
 // Helpers: UTF-8 <> wchar
-int                 ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
-int                 ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
-int                 ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
-int                 ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
-int                 ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string as UTF-8 code-points
+IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
+IMGUI_API int           ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // return input UTF-8 bytes count
+IMGUI_API int           ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
+IMGUI_API int           ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
+IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string as UTF-8 code-points
 
 // Helpers: Misc
-ImU32               ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
-bool                ImLoadFileToMemory(const char* filename, const char* file_open_mode, void** out_file_data, int* out_file_size = NULL, int padding_bytes = 0);
-bool                ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c);
-static inline bool  ImCharIsSpace(int c)            { return c == ' ' || c == '\t' || c == 0x3000; }
-static inline int   ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
+IMGUI_API ImU32         ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
+IMGUI_API void*         ImLoadFileToMemory(const char* filename, const char* file_open_mode, int* out_file_size = NULL, int padding_bytes = 0);
+IMGUI_API bool          ImIsPointInTriangle(const ImVec2& p, const ImVec2& a, const ImVec2& b, const ImVec2& c);
+static inline bool      ImCharIsSpace(int c)            { return c == ' ' || c == '\t' || c == 0x3000; }
+static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
 // Helpers: String
-int                 ImStricmp(const char* str1, const char* str2);
-int                 ImStrnicmp(const char* str1, const char* str2, int count);
-char*               ImStrdup(const char* str);
-int                 ImStrlenW(const ImWchar* str);
-const ImWchar*      ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
-const char*         ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
-int                 ImFormatString(char* buf, int buf_size, const char* fmt, ...) IM_PRINTFARGS(3);
-int                 ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args);
+IMGUI_API int           ImStricmp(const char* str1, const char* str2);
+IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, int count);
+IMGUI_API char*         ImStrdup(const char* str);
+IMGUI_API int           ImStrlenW(const ImWchar* str);
+IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin); // Find beginning-of-line
+IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
+IMGUI_API int           ImFormatString(char* buf, int buf_size, const char* fmt, ...) IM_PRINTFARGS(3);
+IMGUI_API int           ImFormatStringV(char* buf, int buf_size, const char* fmt, va_list args);
 
 // Helpers: Math
 // We are keeping those not leaking to the user by default, in the case the user has implicit cast operators between ImVec2 and its own types (when IM_VEC2_CLASS_EXTRA is defined)
@@ -182,7 +187,7 @@ enum ImGuiDataType
 
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators being available here
-struct ImRect
+struct IMGUI_API ImRect
 {
     ImVec2          Min;    // Upper-left
     ImVec2          Max;    // Lower-right
@@ -249,40 +254,41 @@ struct ImGuiGroupData
 };
 
 // Simple column measurement currently used for MenuItem() only. This is very short-sighted for now and not a generic helper.
-struct ImGuiSimpleColumns
+struct IMGUI_API ImGuiSimpleColumns
 {
-    int             Count;
-    float           Spacing;
-    float           Width, NextWidth;
-    float           Pos[8], NextWidths[8];
+    int                 Count;
+    float               Spacing;
+    float               Width, NextWidth;
+    float               Pos[8], NextWidths[8];
 
     ImGuiSimpleColumns();
-    void            Update(int count, float spacing, bool clear);
-    float           DeclColumns(float w0, float w1, float w2);
-    float           CalcExtraSpace(float avail_w);
+    void                Update(int count, float spacing, bool clear);
+    float               DeclColumns(float w0, float w1, float w2);
+    float               CalcExtraSpace(float avail_w);
 };
 
 // Internal state of the currently focused/edited text input box
-struct ImGuiTextEditState
+struct IMGUI_API ImGuiTextEditState
 {
-    ImGuiID             Id;                             // widget id owning the text state
-    ImVector<ImWchar>   Text;                           // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
-    ImVector<char>      InitialText;                    // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
+    ImGuiID             Id;                         // widget id owning the text state
+    ImVector<ImWchar>   Text;                       // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
+    ImVector<char>      InitialText;                // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
     ImVector<char>      TempTextBuffer;
-    int                 CurLenA, CurLenW;               // we need to maintain our buffer length in both UTF-8 and wchar format.
-    int                 BufSizeA;                       // end-user buffer size
+    int                 CurLenA, CurLenW;           // we need to maintain our buffer length in both UTF-8 and wchar format.
+    int                 BufSizeA;                   // end-user buffer size
     float               ScrollX;
     ImGuiStb::STB_TexteditState   StbState;
     float               CursorAnim;
     bool                CursorFollow;
-    ImVec2              InputCursorScreenPos;           // Cursor position in screen space to be used by IME callback.
+    ImVec2              InputCursorScreenPos;       // Cursor position in screen space to be used by IME callback.
     bool                SelectedAllMouseLock;
 
-    ImGuiTextEditState()                                { memset(this, 0, sizeof(*this)); }
-    void                CursorAnimReset()               { CursorAnim = -0.30f; }                                   // After a user-input the cursor stays on for a while without blinking
-    bool                HasSelection() const            { return StbState.select_start != StbState.select_end; }
-    void                ClearSelection()                { StbState.select_start = StbState.select_end = StbState.cursor; }
-    void                SelectAll()                     { StbState.select_start = 0; StbState.select_end = CurLenW; StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
+    ImGuiTextEditState()                            { memset(this, 0, sizeof(*this)); }
+    void                CursorAnimReset()           { CursorAnim = -0.30f; }                                   // After a user-input the cursor stays on for a while without blinking
+    void                CursorClamp()               { StbState.cursor = ImMin(StbState.cursor, CurLenW); StbState.select_start = ImMin(StbState.select_start, CurLenW); StbState.select_end = ImMin(StbState.select_end, CurLenW); }
+    bool                HasSelection() const        { return StbState.select_start != StbState.select_end; }
+    void                ClearSelection()            { StbState.select_start = StbState.select_end = StbState.cursor; }
+    void                SelectAll()                 { StbState.select_start = 0; StbState.select_end = CurLenW; StbState.cursor = StbState.select_end; StbState.has_preferred_x = false; }
     void                OnKeyPressed(int key);
 };
 
@@ -331,6 +337,7 @@ struct ImGuiState
 
     float                   Time;
     int                     FrameCount;
+    int                     FrameCountEnded;
     int                     FrameCountRendered;
     ImVector<ImGuiWindow*>  Windows;
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
@@ -340,12 +347,13 @@ struct ImGuiState
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
     ImGuiID                 HoveredId;                          // Hovered widget
+    bool                    HoveredIdAllowHoveringOthers;
     ImGuiID                 HoveredIdPreviousFrame;
     ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdIsAlive;
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
-    bool                    ActiveIdIsFocusedOnly;              // Set only by active widget. Denote focus but no active interaction
+    bool                    ActiveIdAllowHoveringOthers;        // Set only by active widget
     ImGuiWindow*            ActiveIdWindow;
     ImGuiWindow*            MovedWindow;                        // Track the child window we clicked on to move a window. Pointer is only valid if ActiveID is the "#MOVE" identifier of a window.
     ImVector<ImGuiIniData>  Settings;                           // .ini Settings
@@ -371,6 +379,7 @@ struct ImGuiState
     ImGuiSetCond            SetNextTreeNodeOpenedCond;
 
     // Render
+    ImDrawData              RenderDrawData;                     // Main ImDrawData instance to pass render information to the user
     ImVector<ImDrawList*>   RenderDrawLists[3];
     float                   ModalWindowDarkeningRatio;
     ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
@@ -415,18 +424,19 @@ struct ImGuiState
 
         Time = 0.0f;
         FrameCount = 0;
-        FrameCountRendered = -1;
+        FrameCountEnded = FrameCountRendered = -1;
         CurrentWindow = NULL;
         FocusedWindow = NULL;
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
         HoveredId = 0;
+        HoveredIdAllowHoveringOthers = false;
         HoveredIdPreviousFrame = 0;
         ActiveId = 0;
         ActiveIdPreviousFrame = 0;
         ActiveIdIsAlive = false;
         ActiveIdIsJustActivated = false;
-        ActiveIdIsFocusedOnly = false;
+        ActiveIdAllowHoveringOthers = false;
         ActiveIdWindow = NULL;
         MovedWindow = NULL;
         SettingsDirtyTimer = 0.0f;
@@ -472,7 +482,7 @@ struct ImGuiState
 
 // Transient per-window data, reset at the beginning of the frame
 // FIXME: That's theory, in practice the delimitation between ImGuiWindow and ImGuiDrawContext is quite tenuous and could be reconsidered.
-struct ImGuiDrawContext
+struct IMGUI_API ImGuiDrawContext
 {
     ImVec2                  CursorPos;
     ImVec2                  CursorPosPrevLine;
@@ -495,14 +505,14 @@ struct ImGuiDrawContext
     ImGuiLayoutType         LayoutType;
 
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
-    bool                    ButtonRepeat;           // == ButtonRepeatStack.back() [empty == false]
-    bool                    AllowKeyboardFocus;     // == AllowKeyboardFocusStack.back() [empty == true]
     float                   ItemWidth;              // == ItemWidthStack.back(). 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
     float                   TextWrapPos;            // == TextWrapPosStack.back() [empty == -1.0f]
-    ImVector<bool>          ButtonRepeatStack;
-    ImVector<bool>          AllowKeyboardFocusStack;
+    bool                    AllowKeyboardFocus;     // == AllowKeyboardFocusStack.back() [empty == true]
+    bool                    ButtonRepeat;           // == ButtonRepeatStack.back() [empty == false]
     ImVector<float>         ItemWidthStack;
     ImVector<float>         TextWrapPosStack;
+    ImVector<bool>          AllowKeyboardFocusStack;
+    ImVector<bool>          ButtonRepeatStack;
     ImVector<ImGuiGroupData>GroupStack;
     ImGuiColorEditMode      ColorEditMode;
     int                     StackSizesBackup[6];    // Store size of various stacks for asserting
@@ -551,7 +561,7 @@ struct ImGuiDrawContext
 };
 
 // Windows data
-struct ImGuiWindow
+struct IMGUI_API ImGuiWindow
 {
     char*                   Name;
     ImGuiID                 ID;
@@ -589,7 +599,7 @@ struct ImGuiWindow
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
     ImRect                  ClipRect;                           // = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
     ImRect                  ClippedWindowRect;                  // = ClipRect just after setup in Begin()
-    int                     LastFrameDrawn;
+    int                     LastFrameActive;
     float                   ItemWidthDefault;
     ImGuiSimpleColumns      MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
@@ -630,13 +640,20 @@ public:
 
 namespace ImGui
 {
-    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }        // If this ever crash it means that ImGui::NewFrame() has never been called (which is illegal). We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
+    // We should always have a CurrentWindow in the stack (there is an implicit "Debug" window)
+    // If this ever crash because g.CurrentWindow is NULL it means that either
+    // - ImGui::NewFrame() has never been called, which is illegal.
+    // - You are calling ImGui functions after ImGui::Render() and before the next ImGui::NewFrame(), which is also illegal.
+    inline    ImGuiWindow*  GetCurrentWindowRead()      { ImGuiState& g = *GImGui; return g.CurrentWindow; }
     inline    ImGuiWindow*  GetCurrentWindow()          { ImGuiState& g = *GImGui; g.CurrentWindow->Accessed = true; return g.CurrentWindow; }
     IMGUI_API ImGuiWindow*  GetParentWindow();
     IMGUI_API void          FocusWindow(ImGuiWindow* window);
 
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
+    IMGUI_API void          SetHoveredID(ImGuiID id);
     IMGUI_API void          KeepAliveID(ImGuiID id);
+
+    IMGUI_API void          EndFrame();                 // This automatically called by Render()
 
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
     IMGUI_API void          ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
@@ -682,3 +699,6 @@ namespace ImGui
 
 } // namespace ImGuiP
 
+#ifdef _MSC_VER
+#pragma warning (pop)
+#endif
