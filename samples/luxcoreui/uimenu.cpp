@@ -217,6 +217,8 @@ void LuxCoreApp::MenuWindow() {
 	if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
 			boost::ends_with(currentRenderEngineType, "OCL")))
 		oclDeviceWindow.Toggle();
+	if (ImGui::MenuItem("Light Strategy editor", NULL, lightStrategyWindow.IsOpen()))
+		lightStrategyWindow.Toggle();
 	if (ImGui::MenuItem("Epsilon editor", NULL, epsilonWindow.IsOpen()))
 		epsilonWindow.Toggle();
 	ImGui::Separator();

@@ -60,9 +60,8 @@ public:
 //------------------------------------------------------------------------------
 
 typedef enum {
-	RANDOM = 0,
-	METROPOLIS = 1,
-	SOBOL = 2
+	RANDOM, METROPOLIS, SOBOL,
+	SAMPLER_TYPE_COUNT
 } SamplerType;
 
 class Sampler : public NamedObject {
@@ -96,7 +95,7 @@ public:
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 	static SamplerType String2SamplerType(const std::string &type);
-	static const std::string SamplerType2String(const SamplerType type);
+	static std::string SamplerType2String(const SamplerType type);
 
 protected:
 	static luxrays::Properties GetDefaultProps();

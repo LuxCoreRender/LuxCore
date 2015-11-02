@@ -49,6 +49,7 @@
 #include "slg/engines/filesaver/filesaver.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
 #include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/lights/lightstrategyregistry.h"
 
 using namespace std;
 using namespace luxrays;
@@ -181,16 +182,7 @@ void RenderConfig::Parse(const Properties &props) {
 	}
 
 	// Light strategy
-	const string lightStrategy = GetProperty("lightstrategy.type").Get<string>();
-	if (lightStrategy == "UNIFORM")
-		scene->lightDefs.SetLightStrategy(TYPE_UNIFORM);
-	else if (lightStrategy == "POWER")
-		scene->lightDefs.SetLightStrategy(TYPE_POWER);
-	else if (lightStrategy == "LOG_POWER")
-		scene->lightDefs.SetLightStrategy(TYPE_LOG_POWER);
-	else {
-		SLG_LOG("Unknown light strategy type (using AUTO instead): " << lightStrategy);
-	}
+	scene->lightDefs.SetLightStrategy(LightStrategy::FromProperties(cfg));
 
 	// Update the Camera
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
@@ -325,11 +317,15 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 Properties RenderConfig::ToProperties() const {
 	Properties props;
 
-	// Some misc. property
+	// Scene epsilon
 	props << cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));
 	props << cfg.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
+
 	// This property isn't really used by LuxCore but is useful for GUIs.
 	props << cfg.Get(Property("screen.refresh.interval")(100u));
+
+	// LightStrategy
+	props << LightStrategy::ToProperties(cfg);
 
 	// RenderEngine (includes PixelFilter and Sampler where applicable)
 	props << RenderEngine::ToProperties(cfg);
