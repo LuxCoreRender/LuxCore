@@ -155,7 +155,7 @@ const Property RenderConfig::GetProperty(const string &name) const {
 
 void RenderConfig::Parse(const Properties &props) {
 	cfg.Set(props);
-cout<<props<<"===========\n";
+
 	// Scene epsilon is read directly from the cfg properties inside
 	// render engine Start() method
 
