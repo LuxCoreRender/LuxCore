@@ -182,7 +182,8 @@ void RenderConfig::Parse(const Properties &props) {
 	}
 
 	// Light strategy
-	scene->lightDefs.SetLightStrategy(LightStrategy::FromProperties(cfg));
+	if (LightStrategy::GetType(cfg) != scene->lightDefs.GetLightStrategy()->GetType())
+		scene->lightDefs.SetLightStrategy(LightStrategy::FromProperties(cfg));
 
 	// Update the Camera
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
@@ -321,8 +322,18 @@ Properties RenderConfig::ToProperties() const {
 	props << cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));
 	props << cfg.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
 
+	props << cfg.Get(Property("images.scale")(1.f));
+	props << cfg.Get(Property("scene.file")("scenes/luxball/luxball.scn"));
+
 	// This property isn't really used by LuxCore but is useful for GUIs.
 	props << cfg.Get(Property("screen.refresh.interval")(100u));
+
+	// The following properties aren't really used by LuxCore but they are useful for
+	// applications using LuxCore
+	props << cfg.Get(Property("batch.halttime")(0u));
+	props << cfg.Get(Property("batch.haltspp")(0u));
+	props << cfg.Get(Property("batch.haltthreshold")(-1.f));
+	props << cfg.Get(Property("batch.haltdebug")(0u));
 
 	// LightStrategy
 	props << LightStrategy::ToProperties(cfg);

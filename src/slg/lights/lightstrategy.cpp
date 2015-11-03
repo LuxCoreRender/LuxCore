@@ -44,6 +44,12 @@ Properties LightStrategy::ToProperties() const {
 			Property("lightstrategy.type")(LightStrategyType2String(GetType()));
 }
 
+LightStrategyType LightStrategy::GetType(const luxrays::Properties &cfg) {
+	const string type = cfg.Get(Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())).Get<string>();
+	
+	return String2LightStrategyType(type);
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by LightStrategyRegistry
 //------------------------------------------------------------------------------
