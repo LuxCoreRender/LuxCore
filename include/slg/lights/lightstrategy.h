@@ -51,6 +51,8 @@ public:
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
 
+	static LightStrategyType GetType(const luxrays::Properties &cfg);
+
 	//--------------------------------------------------------------------------
 	// Static methods used by LightStrategyRegistry
 	//--------------------------------------------------------------------------
