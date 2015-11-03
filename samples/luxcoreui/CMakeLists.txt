@@ -43,6 +43,7 @@ set(LUXCOREUI_SRCS
 	helpwindow.cpp
 	logwindow.cpp
 	objecteditorwindow.cpp
+	acceleratorwindow.cpp
 	epsilonwindow.cpp
 	lightstrategywindow.cpp
 	ocldevicewindow.cpp

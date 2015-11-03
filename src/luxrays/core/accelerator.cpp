@@ -18,9 +18,10 @@
 
 #include "luxrays/core/accelerator.h"
 
+using namespace std;
 using namespace luxrays;
 
-std::string Accelerator::AcceleratorType2String(const AcceleratorType type) {
+string Accelerator::AcceleratorType2String(const AcceleratorType type) {
 	switch(type) {
 		case ACCEL_AUTO:
 			return "AUTO";
@@ -35,6 +36,23 @@ std::string Accelerator::AcceleratorType2String(const AcceleratorType type) {
 		case ACCEL_EMBREE:
 			return "EMBREE";
 		default:
-			throw std::runtime_error("Unknown AcceleratorType in AcceleratorType2String()");
+			throw runtime_error("Unknown accelerator type in AcceleratorType2String(): " + ToString(type));
 	}
+}
+
+AcceleratorType Accelerator::String2AcceleratorType(const string &type) {
+	if (type == "AUTO")
+		return ACCEL_AUTO;
+	else if (type == "BVH")
+		return ACCEL_BVH;
+	else if (type == "MBVH")
+		return ACCEL_MBVH;
+	else if (type == "QBVH")
+		return ACCEL_QBVH;
+	else if (type == "MQBVH")
+		return ACCEL_MQBVH;
+	else if (type == "EMBREE")
+		return ACCEL_EMBREE;
+	else
+		throw runtime_error("Unknown accelerator type in String2AcceleratorType(): " + type);
 }

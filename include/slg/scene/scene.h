@@ -61,8 +61,9 @@ public:
 		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
 		SampleResult *sampleResult = NULL) const;
 
-	void Preprocess(luxrays::Context *ctx, const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion);
+	void Preprocess(luxrays::Context *ctx,
+		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
+		const luxrays::AcceleratorType accelType, const bool enableInstanceSupport);
 
 	luxrays::Properties ToProperties();
 
@@ -129,8 +130,6 @@ public:
 	LightSourceDefinitions lightDefs; // LightSource definitions
 
 	luxrays::DataSet *dataSet;
-	luxrays::AcceleratorType accelType;
-	bool enableInstanceSupport;
 
 	EditActionList editActions;
 

@@ -32,6 +32,7 @@
 #include "ocldevicewindow.h"
 #include "epsilonwindow.h"
 #include "lightstrategywindow.h"
+#include "acceleratorwindow.h"
 
 #define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
@@ -53,6 +54,7 @@ public:
 	// The flag is off by default but can be turned on by using the -m switch
 	bool optMouseGrabMode;
 
+	friend class AcceleratorWindow;
 	friend class EpsilonWindow;
 	friend class LightStrategyWindow;
 	friend class OCLDeviceWindow;
@@ -92,6 +94,7 @@ private:
 
 	static LogWindow *currentLogWindow;
 
+	AcceleratorWindow acceleratorWindow;
 	EpsilonWindow epsilonWindow;
 	LightStrategyWindow lightStrategyWindow;
 	OCLDeviceWindow oclDeviceWindow;

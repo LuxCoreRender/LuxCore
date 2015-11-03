@@ -53,8 +53,6 @@ Scene::Scene(const float imageScale) {
 	camera = NULL;
 
 	dataSet = NULL;
-	accelType = ACCEL_AUTO;
-	enableInstanceSupport = true;
 
 	editActions.AddAllAction();
 	imgMapCache.SetImageResize(imageScale);
@@ -66,8 +64,6 @@ Scene::Scene(const string &fileName, const float imageScale) {
     camera = NULL;
 
 	dataSet = NULL;
-	accelType = ACCEL_AUTO;
-	enableInstanceSupport = true;
 
 	editActions.AddAllAction();
 	imgMapCache.SetImageResize(imageScale);
@@ -84,8 +80,9 @@ Scene::~Scene() {
 	delete dataSet;
 }
 
-void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeight,
-		const u_int *filmSubRegion) {
+void Scene::Preprocess(Context *ctx,
+		const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion,
+		const AcceleratorType accelType, const bool enableInstanceSupport) {
 	if (lightDefs.GetSize() == 0) {
 		throw runtime_error("The scene doesn't include any light source (note: volume emission doesn't count for this check)");
 

@@ -16,46 +16,29 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_ACCELERATOR_H
-#define	_LUXRAYS_ACCELERATOR_H
+#ifndef _LUXCOREAPP_ACCELERATORWINDOW_H
+#define	_LUXCOREAPP_ACCELERATORWINDOW_H
 
 #include <string>
-#include <deque>
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/ray.h"
-#include "luxrays/core/trianglemesh.h"
+#include <imgui.h>
 
-namespace luxrays {
+#include "objecteditorwindow.h"
+#include "typetable.h"
 
-typedef enum {
-	ACCEL_AUTO, ACCEL_BVH, ACCEL_QBVH, ACCEL_MQBVH, ACCEL_MBVH, ACCEL_EMBREE
-} AcceleratorType;
+class LuxCoreApp;
 
-class OpenCLKernels;
-class OpenCLIntersectionDevice;
-
-class Accelerator {
+class AcceleratorWindow : public ObjectEditorWindow {
 public:
-	Accelerator() { }
-	virtual ~Accelerator() { }
+	AcceleratorWindow(LuxCoreApp *a);
+	~AcceleratorWindow() { }
 
-	virtual AcceleratorType GetType() const = 0;
+private:
+	virtual void RefreshObjectProperties(luxrays::Properties &props);
+	virtual void ParseObjectProperties(const luxrays::Properties &props);
+	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
 
-	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const = 0;
-	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const { return true; }
-
-	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;
-	virtual bool DoesSupportUpdate() const { return false; }
-	virtual void Update() { throw new std::runtime_error("Internal error in Accelerator::Update()"); }
-
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
-
-	static std::string AcceleratorType2String(const AcceleratorType type);
-	static AcceleratorType String2AcceleratorType(const std::string &type);
+	TypeTable typeTable;
 };
 
-}
-
-#endif	/* _LUXRAYS_ACCELERATOR_H */
+#endif	/* _LUXCOREAPP_ACCELERATORWINDOW_H */
