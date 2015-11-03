@@ -160,26 +160,8 @@ void RenderConfig::Parse(const Properties &props) {
 	// Scene epsilon is read directly from the cfg properties inside
 	// render engine Start() method
 
-	// Accelerator
-	scene->enableInstanceSupport = GetProperty("accelerator.instances.enable").Get<bool>();
-	const string accelType = GetProperty("accelerator.type").Get<string>();
-	// "-1" is for compatibility with the past. However all other old values are
-	// not emulated (i.e. the "AUTO" behavior is preferred in that case)
-	if ((accelType == "AUTO") || (accelType == "-1"))
-		scene->accelType = ACCEL_AUTO;
-	else if (accelType == "BVH")
-		scene->accelType = ACCEL_BVH;
-	else if (accelType == "MBVH")
-		scene->accelType = ACCEL_MBVH;
-	else if (accelType == "QBVH")
-		scene->accelType = ACCEL_QBVH;
-	else if (accelType == "MQBVH")
-		scene->accelType = ACCEL_MQBVH;
-	else if (accelType == "EMBREE")
-		scene->accelType = ACCEL_EMBREE;
-	else {
-		SLG_LOG("Unknown accelerator type (using AUTO instead): " << accelType);
-	}
+	// Accelerator settings are read directly from the cfg properties inside
+	// the render engine
 
 	// Light strategy
 	if (LightStrategy::GetType(cfg) != scene->lightDefs.GetLightStrategy()->GetType())
@@ -318,12 +300,16 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 Properties RenderConfig::ToProperties() const {
 	Properties props;
 
+	// Ray intersection accelerators
+	props << cfg.Get(Property("accelerator.type")("AUTO"));
+	props << cfg.Get(Property("accelerator.instances.enable")(true));
+
 	// Scene epsilon
 	props << cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));
 	props << cfg.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
 
-	props << cfg.Get(Property("images.scale")(1.f));
 	props << cfg.Get(Property("scene.file")("scenes/luxball/luxball.scn"));
+	props << cfg.Get(Property("images.scale")(1.f));
 
 	// This property isn't really used by LuxCore but is useful for GUIs.
 	props << cfg.Get(Property("screen.refresh.interval")(100u));

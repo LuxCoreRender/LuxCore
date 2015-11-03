@@ -219,6 +219,8 @@ void LuxCoreApp::MenuWindow() {
 		oclDeviceWindow.Toggle();
 	if (ImGui::MenuItem("Light Strategy editor", NULL, lightStrategyWindow.IsOpen()))
 		lightStrategyWindow.Toggle();
+	if (ImGui::MenuItem("Accelerator editor", NULL, acceleratorWindow.IsOpen()))
+		acceleratorWindow.Toggle();
 	if (ImGui::MenuItem("Epsilon editor", NULL, epsilonWindow.IsOpen()))
 		epsilonWindow.Toggle();
 	ImGui::Separator();

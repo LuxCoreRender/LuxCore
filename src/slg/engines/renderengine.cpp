@@ -60,7 +60,10 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 
 	// Force a complete preprocessing
 	renderConfig->scene->editActions.AddAllAction();
-	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+	renderConfig->scene->Preprocess(ctx,
+			film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
+			Accelerator::String2AcceleratorType(renderConfig->GetProperty("accelerator.type").Get<string>()),
+			renderConfig->GetProperty("accelerator.instances.enable").Get<bool>());
 
 	samplesCount = 0;
 	elapsedTime = 0.0f;
@@ -157,7 +160,10 @@ void RenderEngine::EndSceneEdit(const EditActionList &editActions) {
 		contextStopped = false;
 
 	// Pre-process scene data
-	renderConfig->scene->Preprocess(ctx, film->GetWidth(), film->GetHeight(), film->GetSubRegion());
+	renderConfig->scene->Preprocess(ctx,
+			film->GetWidth(), film->GetHeight(), film->GetSubRegion(),
+			Accelerator::String2AcceleratorType(renderConfig->GetProperty("accelerator.type").Get<string>()),
+			renderConfig->GetProperty("accelerator.instances.enable").Get<bool>());
 
 	if (contextStopped) {
 		// Set the LuxRays DataSet
