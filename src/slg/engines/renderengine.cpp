@@ -55,7 +55,7 @@ RenderEngine::RenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flm
 	film->AddChannel(Film::RGB_TONEMAPPED);
 
 	// Create LuxRays context
-	const int oclPlatformIndex = renderConfig->cfg.Get(Property("opencl.platform.index")(-1)).Get<int>();
+	oclPlatformIndex = renderConfig->cfg.Get(Property("opencl.platform.index")(-1)).Get<int>();
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler, oclPlatformIndex);
 
 	// Force a complete preprocessing
@@ -246,7 +246,8 @@ Properties RenderEngine::ToProperties(const Properties &cfg) {
 
 	if (RenderEngineRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
 		return func(cfg) <<
-				Filter::ToProperties(cfg);
+				Filter::ToProperties(cfg) <<
+				cfg.Get(GetDefaultProps().Get("opencl.platform.index"));
 	} else
 		throw runtime_error("Unknown render engine type in RenderEngine::ToProperties(): " + type);
 }
@@ -281,9 +282,10 @@ string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
 }
 
 Properties RenderEngine::GetDefaultProps() {
-	static Properties props;
+	static Properties props = Properties() <<
+		Property("opencl.platform.index")(-1);
 
-	return Properties();
+	return props;
 }
 
 //------------------------------------------------------------------------------
