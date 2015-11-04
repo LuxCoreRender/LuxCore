@@ -516,10 +516,7 @@ const Property RenderConfig::GetProperty(const std::string &name) const {
 }
 
 const Properties &RenderConfig::ToProperties() const {
-	if (!renderConfigPropertiesCache.GetSize())
-		renderConfigPropertiesCache << renderConfig->ToProperties();
-
-	return renderConfigPropertiesCache;
+	return renderConfig->ToProperties();
 }
 
 Scene &RenderConfig::GetScene() {
@@ -527,9 +524,6 @@ Scene &RenderConfig::GetScene() {
 }
 
 void RenderConfig::Parse(const Properties &props) {
-	// Invalidate the configuration properties cache
-	renderConfigPropertiesCache.Clear();
-
 	renderConfig->Parse(props);
 }
 
@@ -750,8 +744,5 @@ const Properties &RenderSession::GetStats() const {
 }
 
 void RenderSession::Parse(const Properties &props) {
-	// Invalidate the configuration properties cache
-	renderConfig->renderConfigPropertiesCache.Clear();
-	
 	renderSession->Parse(props);
 }

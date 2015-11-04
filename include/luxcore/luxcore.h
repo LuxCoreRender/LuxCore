@@ -765,7 +765,6 @@ public:
 
 private:
 	slg::RenderConfig *renderConfig;
-	mutable luxrays::Properties renderConfigPropertiesCache;
 
 	Scene *scene;
 	bool allocatedScene;
