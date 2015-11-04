@@ -63,45 +63,11 @@ void RenderConfig::InitDefaultProperties() {
 	if (!defaultProperties.get()) {
 		boost::unique_lock<boost::mutex> lock(defaultPropertiesMutex);
 		if (!defaultProperties.get()) {
-			defaultProperties.reset(new Properties());
+			Properties *props = new Properties();
+			*props << RenderConfig::ToProperties(Properties());
 
-			defaultProperties->Set(Property("accelerator.instances.enable")(true));
-			defaultProperties->Set(Property("accelerator.type")("AUTO"));
-
-			defaultProperties->Set(Property("lightstrategy.type")("LOG_POWER"));
-
-			// Batch related Properties
-			defaultProperties->Set(Property("batch.halttime")(0u));
-			defaultProperties->Set(Property("batch.haltspp")(0u));
-			defaultProperties->Set(Property("batch.haltthreshold")(-1.f));
-			defaultProperties->Set(Property("batch.haltdebug")(0u));
-
-			// Film Filter related Properties
-			defaultProperties->Set(Property("film.filter.type")("BLACKMANHARRIS"));
-			defaultProperties->Set(Property("film.filter.width")(2.f));
-			defaultProperties->Set(Property("film.filter.gaussian.alpha")(2.f));
-			defaultProperties->Set(Property("film.filter.mitchell.b")(1.f / 3.f));
-			defaultProperties->Set(Property("film.filter.mitchell.c")(1.f / 3.f));
-			defaultProperties->Set(Property("film.filter.mitchellss.b")(1.f / 3.f));
-			defaultProperties->Set(Property("film.filter.mitchellss.c")(1.f / 3.f));
-
-			defaultProperties->Set(Property("film.height")(480u));
-			defaultProperties->Set(Property("film.width")(640u));
-
-			// Sampler related Properties
-			defaultProperties->Set(Property("sampler.type")("SOBOL"));
-			defaultProperties->Set(Property("sampler.metropolis.largesteprate")(.4f));
-			defaultProperties->Set(Property("sampler.metropolis.maxconsecutivereject")(512));
-			defaultProperties->Set(Property("sampler.metropolis.imagemutationrate")(.1f));
-			
-			defaultProperties->Set(Property("images.scale")(1.f));
-			defaultProperties->Set(Property("renderengine.type")("PATHOCL"));
-			defaultProperties->Set(Property("scene.file")("scenes/luxball/luxball.scn"));
-			defaultProperties->Set(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));
-			defaultProperties->Set(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
-			defaultProperties->Set(Property("screen.refresh.interval")(100u));
-
-			// Specific RenderEngine settings are defined in each RenderEngine::Start() method
+			defaultProperties.reset(props);
+cout<<*props;
 		}
 	}
 }
@@ -146,15 +112,13 @@ RenderConfig::~RenderConfig() {
 }
 
 const Property RenderConfig::GetProperty(const string &name) const {
-	if (cfg.IsDefined(name))
-		return cfg.Get(name);
-	else {
-		// Use the default value
-		return defaultProperties->Get(name);
-	}
+	return ToProperties().Get(name);
 }
 
 void RenderConfig::Parse(const Properties &props) {
+	// Reset the properties cache
+	propsCache.Clear();
+
 	cfg.Set(props);
 
 	// Scene epsilon is read directly from the cfg properties inside
@@ -175,6 +139,9 @@ void RenderConfig::Parse(const Properties &props) {
 }
 
 void RenderConfig::Delete(const string &prefix) {
+	// Reset the properties cache
+	propsCache.Clear();
+
 	cfg.DeleteAll(cfg.GetAllNames(prefix));
 }
 
@@ -297,7 +264,14 @@ RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMute
 	return RenderEngine::FromProperties(this, film, filmMutex);
 }
 
-Properties RenderConfig::ToProperties() const {
+const Properties &RenderConfig::ToProperties() const {
+	if (!propsCache.GetSize())
+		propsCache = ToProperties(cfg);
+
+	return propsCache;
+}
+
+Properties RenderConfig::ToProperties(const Properties &cfg) {
 	Properties props;
 
 	// Ray intersection accelerators
@@ -326,6 +300,9 @@ Properties RenderConfig::ToProperties() const {
 
 	// RenderEngine (includes PixelFilter and Sampler where applicable)
 	props << RenderEngine::ToProperties(cfg);
+	
+	props << cfg.Get(Property("film.height")(480u));
+	props << cfg.Get(Property("film.width")(640u));
 
 	return props;
 }
