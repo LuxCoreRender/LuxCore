@@ -67,7 +67,6 @@ void RenderConfig::InitDefaultProperties() {
 			*props << RenderConfig::ToProperties(Properties());
 
 			defaultProperties.reset(props);
-cout<<*props;
 		}
 	}
 }
