@@ -119,6 +119,7 @@ void RenderConfig::Parse(const Properties &props) {
 	propsCache.Clear();
 
 	cfg.Set(props);
+	UpdateFilmProperties(props);
 
 	// Scene epsilon is read directly from the cfg properties inside
 	// render engine Start() method
@@ -135,6 +136,62 @@ void RenderConfig::Parse(const Properties &props) {
 	u_int *subRegion = GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion) ?
 		filmSubRegion : NULL;
 	scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
+}
+
+void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
+	//--------------------------------------------------------------------------
+	// Check if there was a new image pipeline definition
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.imagepipeline.")) {
+		// Delete the old image pipeline properties
+		cfg.DeleteAll(cfg.GetAllNames("film.imagepipeline."));
+
+		// Update the RenderConfig properties with the new image pipeline definition
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.imagepipeline."))
+				cfg.Set(props.Get(propName));
+		}
+		
+		// Reset the properties cache
+		propsCache.Clear();
+	}
+
+	//--------------------------------------------------------------------------
+	// Check if there were new radiance groups scale
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.radiancescales.")) {
+		// Delete old radiance groups scale properties
+		cfg.DeleteAll(cfg.GetAllNames("film.radiancescales."));
+		
+		// Update the RenderConfig properties with the new radiance groups scale properties
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.radiancescales."))
+				cfg.Set(props.Get(propName));
+		}
+
+		// Reset the properties cache
+		propsCache.Clear();
+	}
+
+	//--------------------------------------------------------------------------
+	// Check if there were new outputs definition
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.outputs.")) {
+		// Delete old radiance groups scale properties
+		cfg.DeleteAll(cfg.GetAllNames("film.outputs."));
+		
+		// Update the RenderConfig properties with the new outputs definition properties
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.outputs."))
+				cfg.Set(props.Get(propName));
+		}
+
+		// Reset the properties cache
+		propsCache.Clear();
+	}
 }
 
 void RenderConfig::Delete(const string &prefix) {
@@ -299,9 +356,9 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 
 	// RenderEngine (includes PixelFilter and Sampler where applicable)
 	props << RenderEngine::ToProperties(cfg);
-	
-	props << cfg.Get(Property("film.height")(480u));
-	props << cfg.Get(Property("film.width")(640u));
+
+	// Film
+	props << Film::ToProperties(cfg);
 
 	return props;
 }

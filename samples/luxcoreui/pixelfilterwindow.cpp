@@ -53,13 +53,13 @@ void PixelFilterWindow::RefreshObjectProperties(Properties &props) {
 }
 
 void PixelFilterWindow::ParseObjectProperties(const Properties &props) {
-	app->EditRenderConfig(props.GetAllProperties("film.filter"));
+	app->RenderConfigParse(props.GetAllProperties("film.filter"));
 }
 
 bool PixelFilterWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// film.filter.type
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	const string currentSamplerType = props.Get(Property("film.filter.type")(typeTable.GetDefaultTag())).Get<string>();
 	int typeIndex = typeTable.GetVal(currentSamplerType);
@@ -76,9 +76,9 @@ bool PixelFilterWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("film.filter.type");
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// Common to all filters
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex != typeTable.GetVal("NONE")) {
 		float fval;
@@ -113,9 +113,9 @@ bool PixelFilterWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		}
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// GAUSSIAN
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("GAUSSIAN")) {
 		float fval;

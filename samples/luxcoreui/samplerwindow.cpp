@@ -50,7 +50,7 @@ void SamplerWindow::RefreshObjectProperties(Properties &props) {
 }
 
 void SamplerWindow::ParseObjectProperties(const Properties &props) {
-	app->EditRenderConfig(props.GetAllProperties("sampler"));
+	app->RenderConfigParse(props.GetAllProperties("sampler"));
 }
 
 bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {

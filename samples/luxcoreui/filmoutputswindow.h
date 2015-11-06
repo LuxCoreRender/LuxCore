@@ -16,65 +16,37 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_TYPETABLE_H
-#define	_LUXCOREAPP_TYPETABLE_H
+#ifndef _LUXCOREAPP_FILMOUTPUTSWINDOW_H
+#define	_LUXCOREAPP_FILMOUTPUTSWINDOW_H
 
 #include <string>
-#include <boost/unordered_map.hpp>
 
-class TypeTable {
+#include <imgui.h>
+
+#include "objecteditorwindow.h"
+#include "typetable.h"
+
+class LuxCoreApp;
+
+class FilmOutputsWindow : public ObjectEditorWindow {
 public:
-	TypeTable() { }
-	~TypeTable() { }
-
-	TypeTable &Add(const std::string &tag, const int val) {
-		toValTable[tag] = val;
-		toStringTable[val] = tag;
-
-		// Remove the last \0
-		if (tagListString.length() > 0)
-			tagListString = tagListString.substr(0, tagListString.length() - 1);
-
-		// Update tagListString
-		tagListString.append(tag);
-		tagListString.push_back(0);
-		
-		tagListString.push_back(0);
-
-		return *this;
-	}
-
-	void SetDefault(const std::string &tag) {
-		defaultTag = tag;
-	}
-
-	std::string GetDefaultTag() const { return defaultTag; }
-
-	int GetVal(const std::string &tag) {
-		if (toValTable.count(tag) > 0)
-			return toValTable[tag];
-		else
-			return toValTable[defaultTag];
-	}
-
-	std::string GetTag(const int val) {
-		if (toStringTable.count(val) > 0)
-			return toStringTable[val];
-		else
-			return defaultTag;
-	}
-
-	const char *GetTagList() const {
-		return tagListString.c_str();
-	}
+	FilmOutputsWindow(LuxCoreApp *a);
+	~FilmOutputsWindow() { }
 
 private:
-	boost::unordered_map<std::string, int> toValTable;
-	boost::unordered_map<int, std::string> toStringTable;
+	luxrays::Properties GetFilmOutputsProperties(const luxrays::Properties &cfgProps) const;
 
-	std::string defaultTag;
-	
-	std::string tagListString;
+	virtual void RefreshObjectProperties(luxrays::Properties &props);
+	virtual void ParseObjectProperties(const luxrays::Properties &props);
+	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+
+	TypeTable typeTable;
+
+	int newType;
+	char newOutputNameBuff[4 * 1024];
+	char newFileNameBuff[4 * 1024];
+	int newFileType;
+	int newID;
 };
 
-#endif	/* _LUXCOREAPP_TYPETABLE_H */
+#endif	/* _LUXCOREAPP_FILMOUTPUTSWINDOW_H */

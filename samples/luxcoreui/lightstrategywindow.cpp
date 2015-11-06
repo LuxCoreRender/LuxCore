@@ -50,13 +50,13 @@ void LightStrategyWindow::RefreshObjectProperties(Properties &props) {
 }
 
 void LightStrategyWindow::ParseObjectProperties(const Properties &props) {
-	app->EditRenderConfig(props.GetAllProperties("lightstrategy"));
+	app->RenderConfigParse(props.GetAllProperties("lightstrategy"));
 }
 
 bool LightStrategyWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// lightstrategy.type
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	const string currentSamplerType = props.Get(Property("lightstrategy.type")(typeTable.GetDefaultTag())).Get<string>();
 	int typeIndex = typeTable.GetVal(currentSamplerType);

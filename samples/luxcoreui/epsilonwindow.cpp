@@ -49,7 +49,7 @@ void EpsilonWindow::RefreshObjectProperties(Properties &props) {
 }
 
 void EpsilonWindow::ParseObjectProperties(const Properties &props) {
-	app->EditRenderConfig(GetEpsilonProperties(props));
+	app->RenderConfigParse(GetEpsilonProperties(props));
 }
 
 bool EpsilonWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
