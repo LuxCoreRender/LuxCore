@@ -55,7 +55,7 @@ void OCLDeviceWindow::RefreshObjectProperties(Properties &props) {
 }
 
 void OCLDeviceWindow::ParseObjectProperties(const Properties &props) {
-	app->EditRenderConfig(GetOpenCLDeviceProperties(props));
+	app->RenderConfigParse(GetOpenCLDeviceProperties(props));
 }
 
 bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {

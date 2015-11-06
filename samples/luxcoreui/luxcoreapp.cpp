@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <cstdlib>
 #include <iostream>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -34,8 +35,8 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 //------------------------------------------------------------------------------
 
 LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
-		acceleratorWindow(this),
-		epsilonWindow(this), lightStrategyWindow(this),
+		acceleratorWindow(this), epsilonWindow(this),
+		filmOutputsWindow(this), lightStrategyWindow(this),
 		oclDeviceWindow(this), pixelFilterWindow(this),
 		renderEngineWindow(this), samplerWindow(this),
 		statsWindow(this), helpWindow(this) {
@@ -88,6 +89,7 @@ void LuxCoreApp::DecScreenRefreshInterval() {
 void LuxCoreApp::CloseAllRenderConfigEditors() {
 	acceleratorWindow.Close();
 	epsilonWindow.Close();
+	filmOutputsWindow.Close();
 	lightStrategyWindow.Close();
 	oclDeviceWindow.Close();
 	pixelFilterWindow.Close();
@@ -97,10 +99,10 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
 	if (engineType != config->ToProperties().Get("renderengine.type").Get<string>())
-		EditRenderConfig(Properties() << Property("renderengine.type")(engineType));
+		RenderConfigParse(Properties() << Property("renderengine.type")(engineType));
 }
 
-void LuxCoreApp::EditRenderConfig(const Properties &props) {
+void LuxCoreApp::RenderConfigParse(const Properties &props) {
 	if (session) {
 		// Stop the session
 		session->Stop();
@@ -110,8 +112,15 @@ void LuxCoreApp::EditRenderConfig(const Properties &props) {
 		session = NULL;
 	}
 
-	// Change the configuration
-	config->Parse(props);
+	// Change the configuration	
+	try {
+		config->Parse(props);
+	} catch(exception &ex) {
+		LA_LOG("RenderConfig fatal parse error: " << endl << ex.what());
+		// I can not recover from a RenderConfig parse error: I would have to create
+		// a new RenderConfig
+		exit(EXIT_FAILURE);
+	}
 
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if (boost::starts_with(engineType, "RT")) {
@@ -127,7 +136,18 @@ void LuxCoreApp::EditRenderConfig(const Properties &props) {
 		// Re-start the rendering
 		session->Start();
 	} catch(exception &ex) {
-		LA_LOG("Parsing error: " << endl << ex.what());
+		LA_LOG("RenderSession starting error: " << endl << ex.what());
+
+		delete session;
+		session = NULL;
+	}
+}
+
+void LuxCoreApp::RenderSessionParse(const Properties &props) {
+	try {
+		session->Parse(props);
+	} catch(exception &ex) {
+		LA_LOG("RenderSession parse error: " << endl << ex.what());
 
 		delete session;
 		session = NULL;

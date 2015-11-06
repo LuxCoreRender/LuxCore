@@ -78,7 +78,7 @@ void RenderEngineWindow::RefreshObjectProperties(Properties &props) {
 }
 
 void RenderEngineWindow::ParseObjectProperties(const Properties &props) {
-	app->EditRenderConfig(GetAllRenderEngineProperties(props));
+	app->RenderConfigParse(GetAllRenderEngineProperties(props));
 }
 
 void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
@@ -461,9 +461,9 @@ void RenderEngineWindow::ThreadsGUI(Properties &props, bool &modifiedProps) {
 }
 
 bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// renderengine.type
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	const string currentRenderEngineType = props.Get(Property("renderengine.type")(typeTable.GetDefaultTag())).Get<string>();
 	int typeIndex = typeTable.GetVal(currentRenderEngineType);
@@ -486,9 +486,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (ImGui::IsItemHovered())
 		ImGui::SetTooltip("renderengine.type");
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// RTBIASPATHOCL
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("RTBIASPATHOCL")) {
 		BiasPathOCLGUI(props, modifiedProps);
@@ -501,9 +501,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			app->oclDeviceWindow.Open();
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// BIASPATHOCL
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("BIASPATHOCL")) {
 		BiasPathOCLGUI(props, modifiedProps);
@@ -515,9 +515,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			app->oclDeviceWindow.Open();
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// BIASPATHCPU
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("BIASPATHCPU")) {
 		BiasPathGUI(props, modifiedProps);
@@ -527,9 +527,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			app->pixelFilterWindow.Open();
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// RTPATHOCL
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("RTPATHOCL")) {
 		PathOCLGUI(props, modifiedProps);
@@ -545,9 +545,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			app->oclDeviceWindow.Open();
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// PATHOCL
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("PATHOCL")) {
 		PathOCLGUI(props, modifiedProps);
@@ -562,9 +562,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			app->oclDeviceWindow.Open();
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// PATHCPU
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("PATHCPU")) {
 		PathGUI(props, modifiedProps);
@@ -577,9 +577,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			app->pixelFilterWindow.Open();
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// BIDIRCPU
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("BIDIRCPU")) {
 		BiDirGUI(props, modifiedProps);
@@ -591,9 +591,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			app->pixelFilterWindow.Open();
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// BIDIRVMCPU
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("BIDIRVMCPU")) {
 		BiDirGUI(props, modifiedProps);
@@ -633,9 +633,9 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			app->pixelFilterWindow.Open();
 	}
 
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 	// LIGHTCPU
-	//------------------------------------------------------------------
+	//--------------------------------------------------------------------------
 
 	if (typeIndex == typeTable.GetVal("LIGHTCPU")) {
 		float fval;

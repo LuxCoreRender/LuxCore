@@ -97,15 +97,15 @@ void LuxCoreApp::MenuSampler() {
 
 	if (ImGui::MenuItem("RANDOM", NULL, (currentSamplerType == "RANDOM"))) {
 		samplerWindow.Close();
-		EditRenderConfig(Properties() << Property("sampler.type")("RANDOM"));
+		RenderConfigParse(Properties() << Property("sampler.type")("RANDOM"));
 	}
 	if (ImGui::MenuItem("SOBOL", NULL, (currentSamplerType == "SOBOL"))) {
 		samplerWindow.Close();
-		EditRenderConfig(Properties() << Property("sampler.type")("SOBOL"));
+		RenderConfigParse(Properties() << Property("sampler.type")("SOBOL"));
 	}
 	if (ImGui::MenuItem("METROPOLIS", NULL, (currentSamplerType == "METROPOLIS"))) {
 		samplerWindow.Close();
-		EditRenderConfig(Properties() << Property("sampler.type")("METROPOLIS"));
+		RenderConfigParse(Properties() << Property("sampler.type")("METROPOLIS"));
 	}
 }
 
@@ -223,6 +223,9 @@ void LuxCoreApp::MenuWindow() {
 		acceleratorWindow.Toggle();
 	if (ImGui::MenuItem("Epsilon editor", NULL, epsilonWindow.IsOpen()))
 		epsilonWindow.Toggle();
+	ImGui::Separator();
+	if (ImGui::MenuItem("Film Outputs editor", NULL, filmOutputsWindow.IsOpen()))
+		filmOutputsWindow.Toggle();
 	ImGui::Separator();
 	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.opened))
 		statsWindow.opened = !statsWindow.opened;

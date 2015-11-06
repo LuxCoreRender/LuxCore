@@ -33,6 +33,7 @@
 #include "epsilonwindow.h"
 #include "lightstrategywindow.h"
 #include "acceleratorwindow.h"
+#include "filmoutputswindow.h"
 
 #define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
@@ -56,6 +57,7 @@ public:
 
 	friend class AcceleratorWindow;
 	friend class EpsilonWindow;
+	friend class FilmOutputsWindow;
 	friend class LightStrategyWindow;
 	friend class OCLDeviceWindow;
 	friend class PixelFilterWindow;
@@ -70,7 +72,8 @@ private:
 
 	void UpdateMoveStep();
 	void SetRenderingEngineType(const std::string &engineType);
-	void EditRenderConfig(const luxrays::Properties &samplerProps);
+	void RenderConfigParse(const luxrays::Properties &samplerProps);
+	void RenderSessionParse(const luxrays::Properties &samplerProps);
 	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
@@ -96,6 +99,7 @@ private:
 
 	AcceleratorWindow acceleratorWindow;
 	EpsilonWindow epsilonWindow;
+	FilmOutputsWindow filmOutputsWindow;
 	LightStrategyWindow lightStrategyWindow;
 	OCLDeviceWindow oclDeviceWindow;
 	PixelFilterWindow pixelFilterWindow;

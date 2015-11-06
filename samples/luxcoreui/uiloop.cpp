@@ -407,6 +407,7 @@ void LuxCoreApp::RunApp() {
 
 		acceleratorWindow.Draw();
 		epsilonWindow.Draw();
+		filmOutputsWindow.Draw();
 		lightStrategyWindow.Draw();
 		oclDeviceWindow.Draw();
 		pixelFilterWindow.Draw();
