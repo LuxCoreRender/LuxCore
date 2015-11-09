@@ -91,6 +91,7 @@ private:
 	void MenuRendering();
 	void MenuEngine();
 	void MenuSampler();
+	void MenuTiles();
 	void MenuFilm();
 	void MenuWindow();
 	void MenuScreen();
