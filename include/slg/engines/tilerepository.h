@@ -109,7 +109,7 @@ private:
 	boost::mutex tileMutex;
 	double startTime;
 
-	u_int filmWidth, filmHeight;
+	u_int filmRegionWidth, filmRegionHeight;
 	float filmTotalYValue; // Updated only if convergence test is enabled
 
 	std::vector<Tile *> tileList;
