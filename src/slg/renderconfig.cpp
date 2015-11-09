@@ -341,16 +341,6 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("scene.file")("scenes/luxball/luxball.scn"));
 	props << cfg.Get(Property("images.scale")(1.f));
 
-	// This property isn't really used by LuxCore but is useful for GUIs.
-	props << cfg.Get(Property("screen.refresh.interval")(100u));
-
-	// The following properties aren't really used by LuxCore but they are useful for
-	// applications using LuxCore
-	props << cfg.Get(Property("batch.halttime")(0u));
-	props << cfg.Get(Property("batch.haltspp")(0u));
-	props << cfg.Get(Property("batch.haltthreshold")(-1.f));
-	props << cfg.Get(Property("batch.haltdebug")(0u));
-
 	// LightStrategy
 	props << LightStrategy::ToProperties(cfg);
 
@@ -359,6 +349,23 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 
 	// Film
 	props << Film::ToProperties(cfg);
+
+	// This property isn't really used by LuxCore but is useful for GUIs.
+	props << cfg.Get(Property("screen.refresh.interval")(100u));
+
+	props << cfg.Get(Property("screen.tiles.pending.show")(true));
+	props << cfg.Get(Property("screen.tiles.converged.show")(false));
+	props << cfg.Get(Property("screen.tiles.notconverged.show")(false));
+
+	props << cfg.Get(Property("screen.tiles.passcount.show")(false));
+	props << cfg.Get(Property("screen.tiles.error.show")(false));
+
+	// The following properties aren't really used by LuxCore but they are useful for
+	// applications using LuxCore
+	props << cfg.Get(Property("batch.halttime")(0u));
+	props << cfg.Get(Property("batch.haltspp")(0u));
+	props << cfg.Get(Property("batch.haltthreshold")(-1.f));
+	props << cfg.Get(Property("batch.haltdebug")(0u));
 
 	return props;
 }

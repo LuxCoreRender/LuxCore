@@ -110,6 +110,34 @@ void LuxCoreApp::MenuSampler() {
 }
 
 //------------------------------------------------------------------------------
+// MenuTiles
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuTiles() {
+	bool showPending = config->GetProperties().Get(Property("screen.tiles.pending.show")(true)).Get<bool>();
+	if (ImGui::MenuItem("Show pending", NULL, showPending))
+		RenderConfigParse(Properties() << Property("screen.tiles.pending.show")(!showPending));
+
+	bool showConverged = config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>();
+	if (ImGui::MenuItem("Show converged", NULL, showConverged))
+		RenderConfigParse(Properties() << Property("screen.tiles.converged.show")(!showConverged));
+	
+	bool showNotConverged = config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>();
+	if (ImGui::MenuItem("Show not converged", NULL, showNotConverged))
+		RenderConfigParse(Properties() << Property("screen.tiles.notconverged.show")(!showNotConverged));
+
+	ImGui::Separator();
+
+	bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
+	if (ImGui::MenuItem("Show pass count", NULL, showPassCount))
+		RenderConfigParse(Properties() << Property("screen.tiles.passcount.show")(!showPassCount));
+
+	bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
+	if (ImGui::MenuItem("Show error", NULL, showError))
+		RenderConfigParse(Properties() << Property("screen.tiles.error.show")(!showError));
+}
+
+//------------------------------------------------------------------------------
 // MenuFilm
 //------------------------------------------------------------------------------
 
@@ -247,14 +275,20 @@ void LuxCoreApp::MainMenuBar() {
 		}
 
 		if (session) {
+			const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
+
 			if (ImGui::BeginMenu("Engine")) {
 				MenuEngine();
 				ImGui::EndMenu();
 			}
 
-			const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
-			if (ImGui::BeginMenu("Sampler", !boost::starts_with(currentEngineType, "BIAS"))) {
+			if (!boost::starts_with(currentEngineType, "BIAS") && ImGui::BeginMenu("Sampler")) {
 				MenuSampler();
+				ImGui::EndMenu();
+			}
+
+			if (boost::starts_with(currentEngineType, "BIAS") && ImGui::BeginMenu("Tiles")) {
+				MenuTiles();
 				ImGui::EndMenu();
 			}
 
