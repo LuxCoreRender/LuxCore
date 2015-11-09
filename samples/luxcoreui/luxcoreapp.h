@@ -83,7 +83,8 @@ private:
 	void DrawRendering();
 	void DrawTiles(const luxrays::Property &propCoords,
 		const luxrays::Property &propPasses, const luxrays::Property &propErrors,
-		const u_int tileCount, const u_int tileWidth, const u_int tileHeight);
+		const u_int tileCount, const u_int tileWidth, const u_int tileHeight,
+		const ImU32 col);
 	void DrawTiles();
 	void DrawCaptions();
 
