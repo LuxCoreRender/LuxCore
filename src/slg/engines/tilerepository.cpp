@@ -34,7 +34,7 @@ using namespace slg;
 TileRepository::Tile::Tile(TileRepository *repo, const Film &film, const u_int tileX, const u_int tileY) :
 			xStart(tileX), yStart(tileY), pass(0), error(numeric_limits<float>::infinity()),
 			done(false), tileRepository(repo), allPassFilm(NULL), evenPassFilm(NULL),
-			allPassFilmTotalYValue(0.f) {
+			allPassFilmTotalYValue(0.f), hasEnoughWarmUpSample(false) {
 	const u_int *filmSubRegion = film.GetSubRegion();
 
 	tileWidth = Min(xStart + tileRepository->tileWidth, filmSubRegion[1] + 1) - xStart;
@@ -128,7 +128,7 @@ void TileRepository::Tile::AddPass(const Film &tileFilm) {
 
 				// This is the same scale of AutoLinearToneMap::CalcLinearToneMapScale() with gamma set to 1.0
 				const float scale = AutoLinearToneMap::CalcLinearToneMapScale(*allPassFilm,
-						tileRepository->filmTotalYValue / (tileRepository->filmWidth * tileRepository->filmHeight));
+						tileRepository->filmTotalYValue / (tileRepository->filmRegionWidth * tileRepository->filmRegionHeight));
 
 				LinearToneMap *allLT = (LinearToneMap *)allPassFilm->GetImagePipeline()->GetPlugin(typeid(LinearToneMap));
 				allLT->scale = scale;
@@ -157,18 +157,22 @@ void TileRepository::Tile::UpdateTileStats() {
 				const float *pixel = allPassFilm->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[j]->GetPixel(x, y);
 
 				if (pixel[3] > 0.f) {
-					if (pixel[3] < tileRepository->convergenceTestThreshold)
+					if (pixel[3] < tileRepository->convergenceTestWarmUpSamples)
 						hasEnoughWarmUpSample = false;
 
 					const float w = 1.f / pixel[3];
-					totalYValue += Spectrum(pixel[0] * w, pixel[1] * w, pixel[2] * w).Y();
+					const float Y = Spectrum(pixel[0] * w, pixel[1] * w, pixel[2] * w).Y();
+					if ((Y <= 0.f) || isinf(Y))
+						continue;
+
+					totalYValue += Y;
 				} else
 					hasEnoughWarmUpSample = false;
 			}
 		}
 	}
 
-	// Remove old avg. luminance value and the new one
+	// Remove old avg. luminance value and add the new one
 	tileRepository->filmTotalYValue += totalYValue - allPassFilmTotalYValue;
 	allPassFilmTotalYValue = totalYValue;
 }
@@ -330,8 +334,8 @@ void TileRepository::HilberCurveTiles(
 
 void TileRepository::InitTiles(const Film &film) {
 	const u_int *filmSubRegion = film.GetSubRegion();
-	const u_int filmRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
-	const u_int filmRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+	filmRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+	filmRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 
 	const u_int n = RoundUp(filmRegionWidth, tileWidth) / tileWidth;
 	const u_int m = RoundUp(filmRegionHeight, tileHeight) / tileHeight;
