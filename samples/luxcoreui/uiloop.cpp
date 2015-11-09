@@ -64,33 +64,31 @@ void LuxCoreApp::RefreshRenderingTexture() {
 }
 
 void LuxCoreApp::DrawRendering() {
-	const u_int filmWidth = session->GetFilm().GetWidth();
-	const u_int filmHeight = session->GetFilm().GetHeight();
+	int frameBufferWidth, frameBufferHeight;
+	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+		
+	ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
+	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiSetCond_Always);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
-	glColor3f(1.f, 1.f, 1.f);
-	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
+	bool opened = true;
+	if (ImGui::Begin("Rendering", &opened, ImVec2(0.f, 0.f), 0.0f,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
+		ImGui::Image((void *) (intptr_t) renderFrameBufferTexID,
+				ImVec2(frameBufferWidth, frameBufferHeight),
+				ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
 
-	glEnable(GL_TEXTURE_2D);
-	glBegin(GL_QUADS);
+		DrawTiles();
+	}
+	ImGui::End();
 
-	glTexCoord2f(0.f, 0.f);
-	glVertex2i(0, 0);
-
-	glTexCoord2f(0.f, 1.f);
-	glVertex2i(0, (GLint)filmHeight);
-
-	glTexCoord2f(1.f, 1.f);
-	glVertex2i((GLint)filmWidth, (GLint)filmHeight);
-
-	glTexCoord2f(1.f, 0.f);
-	glVertex2i((GLint)filmWidth, 0);
-
-	glEnd();
-	glDisable(GL_TEXTURE_2D);
+	ImGui::PopStyleVar(1);
 }
 
 void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
-		const u_int tileCount, const u_int tileWidth, const u_int tileHeight) {
+		const u_int tileCount, const u_int tileWidth, const u_int tileHeight, const ImU32 col) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
 	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
 
@@ -107,22 +105,20 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 		const u_int width = Min(tileWidth, filmWidth - xStart - 1);
 		const u_int height = Min(tileHeight, filmHeight - yStart - 1);
 
-		glBegin(GL_LINE_LOOP);
-		glVertex2i(xStart, yStart);
-		glVertex2i(xStart + width, yStart);
-		glVertex2i(xStart + width, yStart + height);
-		glVertex2i(xStart, yStart + height);
-		glEnd();
+		ImGui::GetWindowDrawList()->AddRect(
+				ImVec2(xStart * imGuiScale.x, (filmHeight - yStart - 1) * imGuiScale.y),
+				ImVec2((xStart + width) * imGuiScale.x, (filmHeight - (yStart + height) - 1) * imGuiScale.y),
+				col);
 
 		if (showPassCount || showError) {
-			float xs = xStart + 3.f;
-			float ys = (filmHeight - yStart - 1.f) - ImGui::GetTextLineHeight() - 3.f;
+			float xs = xStart * imGuiScale.x + 3.f;
+			float ys = (filmHeight - yStart - 1.f) * imGuiScale.y - ImGui::GetTextLineHeight() - 3.f;
 
 			if (showError) {
 				const float error = propErrors.Get<float>(i) * 256.f;
 				const string errorStr = boost::str(boost::format("[%.2f]") % error);
 
-				ImGui::SetCursorPos(ImVec2(xs * imGuiScale.x, ys * imGuiScale.y));
+				ImGui::SetCursorPos(ImVec2(xs, ys));
 				ImGui::TextUnformatted(errorStr.c_str());
 				
 				ys -= ImGui::GetTextLineHeight();
@@ -132,7 +128,7 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 				const u_int pass = propPasses.Get<u_int>(i);
 				const string passStr = boost::lexical_cast<string>(pass);
 				
-				ImGui::SetCursorPos(ImVec2(xs * imGuiScale.x, ys * imGuiScale.y));
+				ImGui::SetCursorPos(ImVec2(xs, ys));
 				ImGui::TextUnformatted(passStr.c_str());
 			}
 		}
@@ -145,61 +141,48 @@ void LuxCoreApp::DrawTiles() {
 
 	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
-		int frameBufferWidth, frameBufferHeight;
-		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
-		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
-		ImGui::SetNextWindowSize(ImVec2((float)frameBufferWidth, (float)frameBufferHeight), ImGuiSetCond_Always);
+		const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
+		const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
 
-		bool opened = true;
-		if (ImGui::Begin("BIASPATH tiles", &opened, ImVec2(0.f, 0.f), 0.0f,
-				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
-				ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
-			const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
-			const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
+		if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
+			// Draw converged tiles borders
+			glColor3f(0.f, 1.f, 0.f);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.f, 1.f, 0.f, 1.f));
 
-			if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
-				// Draw converged tiles borders
-				glColor3f(0.f, 1.f, 0.f);
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.f, 1.f, 0.f, 1.f));
-
-				DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
-						stats.Get("stats.biaspath.tiles.converged.pass"),
-						stats.Get("stats.biaspath.tiles.converged.error"),
-						stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
-						tileWidth, tileHeight);
-
-				ImGui::PopStyleColor();
-			}
-
-			if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
-				// Draw converged tiles borders
-				glColor3f(1.f, 0.f, 0.f);
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
-
-				DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
-						stats.Get("stats.biaspath.tiles.notconverged.pass"),
-						stats.Get("stats.biaspath.tiles.notconverged.error"),
-						stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
-						tileWidth, tileHeight);
-
-				ImGui::PopStyleColor();
-			}
-
-			// Draw pending tiles borders
-			glColor3f(1.f, 1.f, 0.f);
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 0.f, 1.f));
-
-			DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
-					stats.Get("stats.biaspath.tiles.pending.pass"),
-					stats.Get("stats.biaspath.tiles.pending.error"),
-					stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
-					tileWidth, tileHeight);
+			DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
+					stats.Get("stats.biaspath.tiles.converged.pass"),
+					stats.Get("stats.biaspath.tiles.converged.error"),
+					stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
+					tileWidth, tileHeight, 0xff00ff00);
 
 			ImGui::PopStyleColor();
 		}
 
-		ImGui::End();
+		if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
+			// Draw converged tiles borders
+			glColor3f(1.f, 0.f, 0.f);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
+
+			DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
+					stats.Get("stats.biaspath.tiles.notconverged.pass"),
+					stats.Get("stats.biaspath.tiles.notconverged.error"),
+					stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
+					tileWidth, tileHeight, 0xff0000ff);
+
+			ImGui::PopStyleColor();
+		}
+
+		// Draw pending tiles borders
+		glColor3f(1.f, 1.f, 0.f);
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 0.f, 1.f));
+
+		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
+				stats.Get("stats.biaspath.tiles.pending.pass"),
+				stats.Get("stats.biaspath.tiles.pending.error"),
+				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
+				tileWidth, tileHeight, 0xff00ffff);
+
+		ImGui::PopStyleColor();
 	}
 }
 
@@ -385,8 +368,6 @@ void LuxCoreApp::RunApp() {
 				RefreshRenderingTexture();
 				lastScreenRefresh = currentTime;
 			}
-
-			DrawRendering();
 		} else {
 			glClearColor(.3f, .3f, .3f, 0.f);
 			glClear(GL_COLOR_BUFFER_BIT);
@@ -399,7 +380,7 @@ void LuxCoreApp::RunApp() {
 		ImGui_ImplGlfw_NewFrame();
 
 		if (session) {
-			DrawTiles();
+			DrawRendering();
 			DrawCaptions();
 		}
 
