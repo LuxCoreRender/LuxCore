@@ -34,6 +34,7 @@
 #include "lightstrategywindow.h"
 #include "acceleratorwindow.h"
 #include "filmoutputswindow.h"
+#include "filmchannelswindow.h"
 
 #define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
@@ -58,6 +59,8 @@ public:
 	friend class AcceleratorWindow;
 	friend class EpsilonWindow;
 	friend class FilmOutputsWindow;
+	friend class FilmChannelWindow;
+	friend class FilmChannelsWindow;
 	friend class LightStrategyWindow;
 	friend class OCLDeviceWindow;
 	friend class PixelFilterWindow;
@@ -101,6 +104,7 @@ private:
 
 	AcceleratorWindow acceleratorWindow;
 	EpsilonWindow epsilonWindow;
+	FilmChannelsWindow filmChannelsWindow;
 	FilmOutputsWindow filmOutputsWindow;
 	LightStrategyWindow lightStrategyWindow;
 	OCLDeviceWindow oclDeviceWindow;

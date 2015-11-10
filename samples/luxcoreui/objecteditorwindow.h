@@ -19,29 +19,20 @@
 #ifndef _LUXCOREAPP_OBJECTEDITORWINDOW_H
 #define	_LUXCOREAPP_OBJECTEDITORWINDOW_H
 
-#include <string>
-
-#include <imgui.h>
+#include "objectwindow.h"
 
 class LuxCoreApp;
 
-class ObjectEditorWindow {
+class ObjectEditorWindow : public ObjectWindow {
 public:
-	ObjectEditorWindow(LuxCoreApp *a, const std::string &name) : objectName(name),
-			windowTitle(name + " editor"), app(a), opened(false) { }
-	~ObjectEditorWindow() { }
+	ObjectEditorWindow(LuxCoreApp *a, const std::string &name) :
+		ObjectWindow(a, name + " editor"), objectName(name) { }
+	virtual ~ObjectEditorWindow() { }
 
-	void Open();
-	bool IsOpen() const { return opened; }
-	void Close();
-	void Toggle() {
-		if (opened)
-			Close();
-		else
-			Open();
-	}
+	virtual void Open();
+	virtual void Close();
 
-	void Draw();
+	virtual void Draw();
 
 protected:
 	void RefreshGUIProperties();
@@ -53,9 +44,7 @@ protected:
 	virtual void ParseObjectProperties(const luxrays::Properties &props) = 0;
 	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modifiedProps) = 0;
 
-	std::string objectName, windowTitle;
-
-	LuxCoreApp *app;
+	std::string objectName;
 
 	luxrays::Properties objectGUIProps;
 	bool modifiedGUIProps;
@@ -63,8 +52,6 @@ protected:
 	luxrays::Properties objectEditorProps;
 	char advancedEditorText[1024 * 32];
 	bool modifiedEditorProps;
-
-	bool opened;
 };
 
 #endif	/* _LUXCOREAPP_OBJECTEDITORWINDOW_H */

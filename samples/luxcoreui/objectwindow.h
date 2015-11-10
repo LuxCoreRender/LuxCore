@@ -16,29 +16,40 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_ACCELERATORWINDOW_H
-#define	_LUXCOREAPP_ACCELERATORWINDOW_H
+#ifndef _LUXCOREAPP_OBJECTWINDOW_H
+#define	_LUXCOREAPP_OBJECTWINDOW_H
 
 #include <string>
 
 #include <imgui.h>
 
-#include "objecteditorwindow.h"
-#include "typetable.h"
-
 class LuxCoreApp;
 
-class AcceleratorWindow : public ObjectEditorWindow {
+class ObjectWindow {
 public:
-	AcceleratorWindow(LuxCoreApp *a);
-	virtual ~AcceleratorWindow() { }
+	ObjectWindow(LuxCoreApp *a, const std::string &name) :
+			windowTitle(name), app(a), opened(false) { }
+	virtual ~ObjectWindow() { }
 
-private:
-	virtual void RefreshObjectProperties(luxrays::Properties &props);
-	virtual void ParseObjectProperties(const luxrays::Properties &props);
-	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+	virtual void Open();
+	virtual void Close();
+	void Toggle() {
+		if (opened)
+			Close();
+		else
+			Open();
+	}
 
-	TypeTable typeTable;
+	bool IsOpen() const { return opened; }
+
+	virtual void Draw() = 0;
+
+protected:
+	std::string windowTitle;
+
+	LuxCoreApp *app;
+
+	bool opened;
 };
 
-#endif	/* _LUXCOREAPP_ACCELERATORWINDOW_H */
+#endif	/* _LUXCOREAPP_OBJECTWINDOW_H */

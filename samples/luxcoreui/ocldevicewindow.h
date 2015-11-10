@@ -19,10 +19,6 @@
 #ifndef _LUXCOREAPP_OCLDEVICEWINDOW_H
 #define	_LUXCOREAPP_OCLDEVICEWINDOW_H
 
-#include <string>
-
-#include <imgui.h>
-
 #include "objecteditorwindow.h"
 
 class LuxCoreApp;
@@ -30,7 +26,7 @@ class LuxCoreApp;
 class OCLDeviceWindow : public ObjectEditorWindow {
 public:
 	OCLDeviceWindow(LuxCoreApp *a);
-	~OCLDeviceWindow() { }
+	virtual ~OCLDeviceWindow() { }
 
 private:
 	luxrays::Properties GetOpenCLDeviceProperties(const luxrays::Properties &cfgProps) const;

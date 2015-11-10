@@ -19,21 +19,17 @@
 #ifndef _LUXCOREAPP_LOGWINDOW_H
 #define	_LUXCOREAPP_LOGWINDOW_H
 
-#include <string>
+#include "objectwindow.h"
 
-#include <imgui.h>
-
-class LogWindow {
+class LogWindow : public ObjectWindow {
 public:
-	LogWindow() : title("Log"), opened(false) { }
-	~LogWindow() { }
+	LogWindow(LuxCoreApp *a) : ObjectWindow(a, "Log window") { }
+	virtual ~LogWindow() { }
 
 	void Clear();
 	void AddMsg(const char *msg);
-	void Draw();
 
-	std::string title;
-	bool opened;
+	virtual void Draw();
 
 private:
 	ImGuiTextBuffer buffer;

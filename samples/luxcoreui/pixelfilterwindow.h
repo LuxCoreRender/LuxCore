@@ -19,10 +19,6 @@
 #ifndef _LUXCOREAPP_PIXELFILTERWINDOW_H
 #define	_LUXCOREAPP_PIXELFILTERWINDOW_H
 
-#include <string>
-
-#include <imgui.h>
-
 #include "objecteditorwindow.h"
 #include "typetable.h"
 
@@ -31,7 +27,7 @@ class LuxCoreApp;
 class PixelFilterWindow : public ObjectEditorWindow {
 public:
 	PixelFilterWindow(LuxCoreApp *a);
-	~PixelFilterWindow() { }
+	virtual  ~PixelFilterWindow() { }
 
 private:
 	virtual void RefreshObjectProperties(luxrays::Properties &props);

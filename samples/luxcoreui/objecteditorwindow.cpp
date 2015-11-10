@@ -32,17 +32,19 @@ using namespace luxcore;
 
 void ObjectEditorWindow::Open() {
 	if (!opened) {
-		opened = true;
 		objectGUIProps.Clear();
 		objectEditorProps.Clear();
+
+		ObjectWindow::Open();
 	}
 }
 
 void ObjectEditorWindow::Close() {
 	if (opened) {
-		opened = false;
 		objectGUIProps.Clear();
 		objectEditorProps.Clear();
+
+		ObjectWindow::Close();
 	}
 }
 
@@ -158,7 +160,10 @@ void ObjectEditorWindow::Draw() {
 		}
 
 		ImGui::PopStyleVar();
-	} else {
+	}
+	ImGui::End();
+
+	if (!opened) {
 		// Clear the properties when the window is closed so they are
 		// re-initialized the next time.
 		if (objectGUIProps.GetSize())
@@ -166,5 +171,4 @@ void ObjectEditorWindow::Draw() {
 		if (objectEditorProps.GetSize())
 			objectEditorProps.Clear();
 	}
-	ImGui::End();
 }

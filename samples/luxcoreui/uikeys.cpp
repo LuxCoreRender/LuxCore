@@ -172,7 +172,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				break;
 #endif
 			case GLFW_KEY_H:
-				app->helpWindow.opened = !app->helpWindow.opened;
+				app->helpWindow.Toggle();
 				break;
 			default:
 				break;

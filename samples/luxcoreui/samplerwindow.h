@@ -19,10 +19,6 @@
 #ifndef _LUXCOREAPP_SAMPLERWINDOW_H
 #define	_LUXCOREAPP_SAMPLERWINDOW_H
 
-#include <string>
-
-#include <imgui.h>
-
 #include "objecteditorwindow.h"
 #include "typetable.h"
 
@@ -31,7 +27,7 @@ class LuxCoreApp;
 class SamplerWindow : public ObjectEditorWindow {
 public:
 	SamplerWindow(LuxCoreApp *a);
-	~SamplerWindow() { }
+	virtual ~SamplerWindow() { }
 
 private:
 	virtual void RefreshObjectProperties(luxrays::Properties &props);

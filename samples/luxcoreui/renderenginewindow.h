@@ -19,10 +19,6 @@
 #ifndef _LUXCOREAPP_RENDERENGINEWINDOW_H
 #define	_LUXCOREAPP_RENDERENGINEWINDOW_H
 
-#include <string>
-
-#include <imgui.h>
-
 #include "objecteditorwindow.h"
 #include "typetable.h"
 
@@ -31,7 +27,7 @@ class LuxCoreApp;
 class RenderEngineWindow : public ObjectEditorWindow {
 public:
 	RenderEngineWindow(LuxCoreApp *a);
-	~RenderEngineWindow() { }
+	virtual ~RenderEngineWindow() { }
 
 private:
 	virtual void RefreshObjectProperties(luxrays::Properties &props);

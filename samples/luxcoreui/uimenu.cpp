@@ -254,13 +254,15 @@ void LuxCoreApp::MenuWindow() {
 	ImGui::Separator();
 	if (ImGui::MenuItem("Film Outputs editor", NULL, filmOutputsWindow.IsOpen()))
 		filmOutputsWindow.Toggle();
+	if (ImGui::MenuItem("Film Channels window", NULL, filmChannelsWindow.IsOpen()))
+		filmChannelsWindow.Toggle();
 	ImGui::Separator();
-	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.opened))
-		statsWindow.opened = !statsWindow.opened;
-	if (ImGui::MenuItem("Log console", NULL, logWindow.opened))
-		logWindow.opened = !logWindow.opened;
-	if (ImGui::MenuItem("Help", NULL, helpWindow.opened))
-		helpWindow.opened = !helpWindow.opened;
+	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.IsOpen()))
+		statsWindow.Toggle();
+	if (ImGui::MenuItem("Log console", NULL, logWindow.IsOpen()))
+		logWindow.Toggle();
+	if (ImGui::MenuItem("Help", NULL, helpWindow.IsOpen()))
+		helpWindow.Toggle();
 }
 
 //------------------------------------------------------------------------------

@@ -35,11 +35,11 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 //------------------------------------------------------------------------------
 
 LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
-		acceleratorWindow(this), epsilonWindow(this),
+		acceleratorWindow(this), epsilonWindow(this), filmChannelsWindow(this),
 		filmOutputsWindow(this), lightStrategyWindow(this),
 		oclDeviceWindow(this), pixelFilterWindow(this),
 		renderEngineWindow(this), samplerWindow(this),
-		statsWindow(this), helpWindow(this) {
+		statsWindow(this), logWindow(this), helpWindow(this) {
 	config = renderConfig;
 	session = NULL;
 	window = NULL;
@@ -89,6 +89,7 @@ void LuxCoreApp::DecScreenRefreshInterval() {
 void LuxCoreApp::CloseAllRenderConfigEditors() {
 	acceleratorWindow.Close();
 	epsilonWindow.Close();
+	filmChannelsWindow.Close();
 	filmOutputsWindow.Close();
 	lightStrategyWindow.Close();
 	oclDeviceWindow.Close();

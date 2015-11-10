@@ -31,7 +31,7 @@ class LuxCoreApp;
 class FilmOutputsWindow : public ObjectEditorWindow {
 public:
 	FilmOutputsWindow(LuxCoreApp *a);
-	~FilmOutputsWindow() { }
+	virtual ~FilmOutputsWindow() { }
 
 private:
 	luxrays::Properties GetFilmOutputsProperties(const luxrays::Properties &cfgProps) const;
