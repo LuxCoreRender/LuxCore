@@ -31,7 +31,7 @@ class LuxCoreApp;
 class LightStrategyWindow : public ObjectEditorWindow {
 public:
 	LightStrategyWindow(LuxCoreApp *a);
-	~LightStrategyWindow() { }
+	virtual ~LightStrategyWindow() { }
 
 private:
 	virtual void RefreshObjectProperties(luxrays::Properties &props);

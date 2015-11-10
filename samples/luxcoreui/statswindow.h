@@ -25,18 +25,12 @@
 
 class LuxCoreApp;
 
-class StatsWindow {
+class StatsWindow : public ObjectWindow {
 public:
-	StatsWindow(LuxCoreApp *a) : title("Statistics"), opened(false), app(a) { }
-	~StatsWindow() { }
+	StatsWindow(LuxCoreApp *a) : ObjectWindow(a, "Statistics window") { }
+	virtual ~StatsWindow() { }
 
-	void Draw();
-
-	std::string title;
-	bool opened;
-
-private:
-	LuxCoreApp *app;
+	virtual void Draw();
 };
 
 #endif	/* _LUXCOREAPP_STATSWINDOW_H */

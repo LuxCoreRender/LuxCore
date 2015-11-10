@@ -19,24 +19,16 @@
 #ifndef _LUXCOREAPP_HELPWINDOW_H
 #define	_LUXCOREAPP_HELPWINDOW_H
 
-#include <string>
-
-#include <imgui.h>
+#include "objectwindow.h"
 
 class LuxCoreApp;
 
-class HelpWindow {
+class HelpWindow : public ObjectWindow {
 public:
-	HelpWindow(LuxCoreApp *a) : title("Help"), opened(false), app(a) { }
-	~HelpWindow() { }
+	HelpWindow(LuxCoreApp *a) : ObjectWindow(a, "Help window") { }
+	virtual ~HelpWindow() { }
 
-	void Draw();
-
-	std::string title;
-	bool opened;
-
-private:
-	LuxCoreApp *app;
+	virtual void Draw();
 };
 
 #endif	/* _LUXCOREAPP_HELPWINDOW_H */

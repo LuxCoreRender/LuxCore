@@ -30,7 +30,7 @@ class LuxCoreApp;
 class EpsilonWindow : public ObjectEditorWindow {
 public:
 	EpsilonWindow(LuxCoreApp *a);
-	~EpsilonWindow() { }
+	virtual ~EpsilonWindow() { }
 
 private:
 	luxrays::Properties GetEpsilonProperties(const luxrays::Properties &cfgProps) const;

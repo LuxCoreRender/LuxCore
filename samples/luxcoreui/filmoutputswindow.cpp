@@ -239,7 +239,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 	if (ImGui::CollapsingHeader("Current Film channel(s)", NULL, true, true)) {
 		const Film &film = app->session->GetFilm();
-		int count;
+		u_int count;
 
 		count = film.GetChannelCount(Film::CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED);
 		if (count)

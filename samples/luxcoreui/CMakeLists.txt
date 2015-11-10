@@ -42,9 +42,11 @@ set(LUXCOREUI_SRCS
 	uimouse.cpp
 	helpwindow.cpp
 	logwindow.cpp
+	objectwindow.cpp
 	objecteditorwindow.cpp
 	acceleratorwindow.cpp
 	epsilonwindow.cpp
+	filmchannelswindow.cpp
 	filmoutputswindow.cpp
 	lightstrategywindow.cpp
 	ocldevicewindow.cpp

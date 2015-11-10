@@ -33,7 +33,7 @@ void HelpWindow::Draw() {
 	if (!opened)
 		return;
 
-	if (ImGui::Begin(title.c_str(), &opened)) {
+	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
 		//----------------------------------------------------------------------
 		// GUI help
 		//----------------------------------------------------------------------
