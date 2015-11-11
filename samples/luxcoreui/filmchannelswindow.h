@@ -56,12 +56,17 @@ private:
 			const u_int filmWidth, const u_int filmHeight) const;
 	void AutoLinearToneMap(const float *src, float *dst,
 			const u_int filmWidth, const u_int filmHeight) const;
+	void UpdateStats(const float *pixels,
+			const u_int filmWidth, const u_int filmHeight);
 
 	FilmChannelsWindow *channelsWindow;
 	const luxcore::Film::FilmChannelType type;
 	const u_int index;
 
 	GLuint channelTexID;
+	float imgScale;
+	// Some image statistics
+	float imgMin[3], imgMax[3], imgAvg[3];
 };
 
 class FilmChannelsWindow : public ObjectWindow {

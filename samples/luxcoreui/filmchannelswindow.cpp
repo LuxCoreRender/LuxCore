@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <iostream>
+#include <limits>
 #include <boost/format.hpp>
 
 #include "luxcoreapp.h"
@@ -31,7 +32,8 @@ using namespace luxcore;
 
 FilmChannelWindow::FilmChannelWindow(FilmChannelsWindow *cs, const string &title,
 			const luxcore::Film::FilmChannelType t, const u_int i) :
-	ObjectWindow(cs->app, title), channelsWindow(cs), type(t), index(i) {
+	ObjectWindow(cs->app, title), channelsWindow(cs), type(t), index(i),
+	imgScale(100.f) {
 	glGenTextures(1, &channelTexID);
 }
 
@@ -162,6 +164,31 @@ void FilmChannelWindow::AutoLinearToneMap(const float *src, float *dst,
 		dst[i] = scale * src[i];
 }
 
+void FilmChannelWindow::UpdateStats(const float *pixels,
+		const u_int filmWidth, const u_int filmHeight) {
+	imgMin[0] = imgMin[1] = imgMin[2] = numeric_limits<float>::max();
+	imgMax[0] = imgMax[1] = imgMax[2] = numeric_limits<float>::min();
+	imgAvg[0] = imgAvg[1] = imgAvg[2] = 0.f;
+
+	for (u_int y = 0; y < filmHeight; ++y) {
+		for (u_int x = 0; x < filmWidth; ++x) {
+			const u_int index = x + y * filmWidth;
+			const float *src = &pixels[index * 3];
+
+			for (u_int i = 0; i < 3; ++i) {
+				imgMin[i] = Min(imgMin[i], src[i]);
+				imgMax[i] = Max(imgMax[i], src[i]);
+				imgAvg[i] += src[i];
+			}
+		}
+	}
+
+	const u_int pixelCount = filmWidth * filmHeight;
+	imgAvg[0] /= pixelCount;
+	imgAvg[1] /= pixelCount;
+	imgAvg[2] /= pixelCount;
+}
+
 void FilmChannelWindow::RefreshTexture() {
 	app->session->UpdateStats();
 
@@ -240,6 +267,8 @@ void FilmChannelWindow::RefreshTexture() {
 			throw runtime_error("Unknown film channel type in FilmChannelWindow::RefreshTexture(): " + ToString(type));
 	}
 
+	UpdateStats(pixels.get(), filmWidth, filmHeight);
+	
 	glBindTexture(GL_TEXTURE_2D, channelTexID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, filmWidth, filmHeight, 0, GL_RGB, GL_FLOAT, pixels.get());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, app->renderFrameBufferTexMinFilter);
@@ -261,18 +290,32 @@ void FilmChannelWindow::Draw() {
 	int frameBufferWidth, frameBufferHeight;
 	glfwGetFramebufferSize(app->window, &frameBufferWidth, &frameBufferHeight);
 
-	ImGui::SetWindowSize(ImVec2(frameBufferWidth / 3.f, frameBufferHeight / 3.f), ImGuiSetCond_Appearing);
-	if (ImGui::Begin(windowTitle.c_str(), &opened, ImGuiWindowFlags_HorizontalScrollbar)) {
-		if (ImGui::Button("Refresh"))
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(ImVec2(450.f, 300.f)));
+	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
+		if (ImGui::Button("Refresh image"))
 			RefreshTexture();
+
+		ImGui::SameLine();
+		ImGui::SliderFloat("Zoom", &imgScale, 10.f, 1000.f, "%.1f%%");
+
+		LuxCoreApp::ColoredLabelText("Min. value:", "(%f, %f, %f)", imgMin[0], imgMin[1], imgMin[2]);
+		LuxCoreApp::ColoredLabelText("Max. value:", "(%f, %f, %f)", imgMax[0], imgMax[1], imgMax[2]);
+		LuxCoreApp::ColoredLabelText("Avg. value:", "(%f, %f, %f)", imgAvg[0], imgAvg[1], imgAvg[2]);
+
+		ImGui::PushStyleVar(ImGuiStyleVar_ChildWindowRounding, 4.f);
+		ImGui::BeginChild("Image", ImVec2(0.f, 0.f), true, ImGuiWindowFlags_HorizontalScrollbar);
 
 		const u_int filmWidth = app->session->GetFilm().GetWidth();
 		const u_int filmHeight = app->session->GetFilm().GetHeight();
 		ImGui::Image((void *) (intptr_t) channelTexID,
-				ImVec2(filmWidth, filmHeight),
+				ImVec2(.01f * imgScale * filmWidth, .01f * imgScale * filmHeight),
 				ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
+
+		ImGui::EndChild();
+		ImGui::PopStyleVar();
 	}
 	ImGui::End();
+	ImGui::PopStyleVar();
 
 	if (!opened)
 		channelsWindow->DeleteWindow(type, index);
