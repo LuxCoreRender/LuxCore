@@ -120,8 +120,8 @@ public:
 		OUTPUT_RADIANCE_GROUP = slg::FilmOutputs::RADIANCE_GROUP,
 		OUTPUT_UV = slg::FilmOutputs::UV,
 		OUTPUT_RAYCOUNT = slg::FilmOutputs::RAYCOUNT,
-		BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
-		IRRADIANCE = slg::FilmOutputs::IRRADIANCE
+		OUTPUT_BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
+		OUTPUT_IRRADIANCE = slg::FilmOutputs::IRRADIANCE
 	} FilmOutputType;
 
 	/*!
