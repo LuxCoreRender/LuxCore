@@ -60,7 +60,12 @@ void LuxCoreApp::RefreshRenderingTexture() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, renderFrameBufferTexMinFilter);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, renderFrameBufferTexMagFilter);
 
+	const double t1 = WallClockTime();
 	session->UpdateStats();
+	const double t2 = WallClockTime();
+
+	// The average over last 10 frames
+	guiFilmUpdateTime += (1.0 / 10.0) * (t2 - t1 - guiFilmUpdateTime);
 }
 
 void LuxCoreApp::DrawRendering() {
@@ -427,6 +432,9 @@ void LuxCoreApp::RunApp() {
 				//LA_LOG("Loop time: " << loopTime * 1000.0 << "ms");
 				lastLoop = currentTime;
 
+				// The average over last 500 frames
+				guiLoopTime += (1.0 / 500.0) * (loopTime - guiLoopTime);
+
 				// The UI loop runs at 100HZ
 				if (loopTime < 0.01) {
 					const double sleepTime = (0.01 - loopTime) * 0.99;
@@ -435,12 +443,15 @@ void LuxCoreApp::RunApp() {
 
 					if (msSleepTime > 0)
 						boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
-				}
+
+					// The average over last 500 frames
+					guiSleepTime += (1.0 / 500.0) * (sleepTime - guiSleepTime);
+				} else
+					guiSleepTime -= (1.0 / 500.0) * guiSleepTime;
 			}
 		} else
 			boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
 	}
-
 
 	//--------------------------------------------------------------------------
 	// Stop the rendering

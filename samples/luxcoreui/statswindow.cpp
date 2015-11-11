@@ -43,6 +43,13 @@ void StatsWindow::Draw() {
 
 		const Properties &stats = session->GetStats();
 
+		// GUI information
+		if (ImGui::CollapsingHeader("GUI information", NULL, true, true)) {
+			LuxCoreApp::ColoredLabelText("GUI loop time:", "%fms", 1000.0 * app->guiLoopTime);
+			LuxCoreApp::ColoredLabelText("GUI sleep time:", "%fms", 1000.0 * app->guiSleepTime);
+			LuxCoreApp::ColoredLabelText("Film update time:", "%fms", 1000.0 * app->guiFilmUpdateTime);
+		}
+
 		// Rendering information
 		if (ImGui::CollapsingHeader("Rendering information", NULL, true, true)) {
 			const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
