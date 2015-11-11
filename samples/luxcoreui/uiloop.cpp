@@ -424,30 +424,31 @@ void LuxCoreApp::RunApp() {
 		//----------------------------------------------------------------------
 
 		if (session) {
-			if (optRealTimeMode)
+			currentTime = WallClockTime();
+			const double loopTime = currentTime - lastLoop;
+			//LA_LOG("Loop time: " << loopTime * 1000.0 << "ms");
+			lastLoop = currentTime;
+
+			// The average over last 200 frames
+			guiLoopTime += (1.0 / 200.0) * (loopTime - guiLoopTime);
+
+			if (optRealTimeMode) {
 				session->WaitNewFrame();
-			else {
-				currentTime = WallClockTime();
-				const double loopTime = currentTime - lastLoop;
-				//LA_LOG("Loop time: " << loopTime * 1000.0 << "ms");
-				lastLoop = currentTime;
-
-				// The average over last 500 frames
-				guiLoopTime += (1.0 / 500.0) * (loopTime - guiLoopTime);
-
-				// The UI loop runs at 100HZ
-				if (loopTime < 0.01) {
-					const double sleepTime = (0.01 - loopTime) * 0.99;
+				guiSleepTime = 0.0;
+			} else {
+				// The UI loop runs at 50HZ
+				if (guiLoopTime < 0.02) {
+					const double sleepTime = (0.02 - guiLoopTime) * 0.99;
 					const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
 					//LA_LOG("Sleep time: " << msSleepTime<< "ms");
 
 					if (msSleepTime > 0)
 						boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
 
-					// The average over last 500 frames
-					guiSleepTime += (1.0 / 500.0) * (sleepTime - guiSleepTime);
+					// The average over last 200 frames
+					guiSleepTime += (1.0 / 200.0) * (sleepTime - guiSleepTime);
 				} else
-					guiSleepTime -= (1.0 / 500.0) * guiSleepTime;
+					guiSleepTime -= (1.0 / 200.0) * guiSleepTime;
 			}
 		} else
 			boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
