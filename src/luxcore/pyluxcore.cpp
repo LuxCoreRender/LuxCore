@@ -1019,8 +1019,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("RADIANCE_GROUP", Film::OUTPUT_RADIANCE_GROUP)
 		.value("UV", Film::OUTPUT_UV)
 		.value("RAYCOUNT", Film::OUTPUT_RAYCOUNT)
-		.value("BY_MATERIAL_ID", Film::BY_MATERIAL_ID)
-		.value("IRRADIANCE", Film::IRRADIANCE)
+		.value("BY_MATERIAL_ID", Film::OUTPUT_BY_MATERIAL_ID)
+		.value("IRRADIANCE", Film::OUTPUT_IRRADIANCE)
 	;
 
     class_<Film>("Film", init<string>())
