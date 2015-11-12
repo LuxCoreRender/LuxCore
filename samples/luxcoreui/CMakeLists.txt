@@ -48,6 +48,7 @@ set(LUXCOREUI_SRCS
 	epsilonwindow.cpp
 	filmchannelswindow.cpp
 	filmoutputswindow.cpp
+	imagewindow.cpp
 	lightstrategywindow.cpp
 	ocldevicewindow.cpp
 	pixelfilterwindow.cpp

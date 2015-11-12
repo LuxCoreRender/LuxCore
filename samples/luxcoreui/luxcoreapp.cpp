@@ -160,6 +160,10 @@ void LuxCoreApp::RenderSessionParse(const Properties &props) {
 }
 
 void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
+	// Close film related editors
+	filmChannelsWindow.Close();
+	filmOutputsWindow.Close();
+
 	u_int filmWidth = width;
 	u_int filmHeight = height;
 
