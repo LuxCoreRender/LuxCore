@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCOREAPP_FILMCHANNELSWINDOW_H
-#define	_LUXCOREAPP_FILMCHANNELSWINDOW_H
+#ifndef _LUXCOREAPP_IMAGEWINDOW_H
+#define	_LUXCOREAPP_IMAGEWINDOW_H
 
 #include <string>
 #include <boost/unordered_map.hpp>
@@ -25,45 +25,42 @@
 #include <imgui.h>
 
 #include "luxcore/luxcore.h"
-#include "imagewindow.h"
-#include "typetable.h"
+#include "objectwindow.h"
 
 class LuxCoreApp;
 
-class FilmChannelWindow : public ImageWindow {
+class ImageWindow : public ObjectWindow {
 public:
-	FilmChannelWindow(LuxCoreApp *app, const std::string &title,
-			const luxcore::Film::FilmChannelType type, const u_int index);
-	virtual ~FilmChannelWindow();
+	ImageWindow(LuxCoreApp *app, const std::string &title);
+	virtual ~ImageWindow();
 
-private:
-	virtual void RefreshTexture();
-
-	const luxcore::Film::FilmChannelType type;
-	const u_int index;
-};
-
-class FilmChannelsWindow : public ObjectWindow {
-public:
-	FilmChannelsWindow(LuxCoreApp *a);
-	virtual ~FilmChannelsWindow();
-
-	virtual void Close();
+	virtual void Open();
 	virtual void Draw();
 
-	friend class FilmChannelWindow;
+protected:
+	virtual void RefreshTexture() = 0;
 
-private:
-	void DeleteWindow(const std::string &key);
-	void DeleteWindow(const luxcore::Film::FilmChannelType type, const u_int index);
-	void DeleteAllWindow();
-	std::string GetKey(const luxcore::Film::FilmChannelType type, const u_int index) const;
-	void DrawShowCheckBox(const std::string &label, const luxcore::Film::FilmChannelType type,
-			const u_int index);
-	void DrawChannelInfo(const std::string &label, const luxcore::Film::FilmChannelType type);
+	void Copy1(const float *filmPixels, float *pixels,
+			const u_int filmWidth, const u_int filmHeight) const;
+	void Copy2(const float *filmPixels, float *pixels,
+			const u_int filmWidth, const u_int filmHeight) const;
+	void Copy1UINT(const u_int *filmPixels, float *pixels,
+			const u_int filmWidth, const u_int filmHeight) const;
+	void Copy3(const float *filmPixels, float *pixels,
+			const u_int filmWidth, const u_int filmHeight) const;
+	void Normalize1(const float *filmPixels, float *pixels,
+			const u_int filmWidth, const u_int filmHeight) const;
+	void Normalize3(const float *filmPixels, float *pixels,
+			const u_int filmWidth, const u_int filmHeight) const;
+	void AutoLinearToneMap(const float *src, float *dst,
+			const u_int filmWidth, const u_int filmHeight) const;
+	void UpdateStats(const float *pixels,
+			const u_int filmWidth, const u_int filmHeight);
 
-	typedef boost::unordered_map<std::string, FilmChannelWindow *> FilmChannelWindowMap;
-	FilmChannelWindowMap filmChannelWindows;
+	GLuint channelTexID;
+	float imgScale;
+	// Some image statistics
+	float imgMin[3], imgMax[3], imgAvg[3];
 };
 
-#endif	/* _LUXCOREAPP_FILMCHANNELSWINDOW_H */
+#endif	/* _LUXCOREAPP_FILMWINDOW_H */

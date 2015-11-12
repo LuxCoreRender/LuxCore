@@ -58,9 +58,11 @@ public:
 
 	friend class AcceleratorWindow;
 	friend class EpsilonWindow;
+	friend class FilmOutputWindow;
 	friend class FilmOutputsWindow;
 	friend class FilmChannelWindow;
 	friend class FilmChannelsWindow;
+	friend class ImageWindow;
 	friend class LightStrategyWindow;
 	friend class OCLDeviceWindow;
 	friend class PixelFilterWindow;
