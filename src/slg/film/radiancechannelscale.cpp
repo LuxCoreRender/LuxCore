@@ -1,3 +1,4 @@
+
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -17,21 +18,42 @@
  ***************************************************************************/
 
 #include "slg/film/film.h"
+#include "luxrays/core/color/spds/blackbodyspd.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-Properties Film::ToProperties(const Properties &cfg) {
-	Properties props;
-	
-	props <<
-			cfg.Get(Property("film.width")(640u)) <<
-			cfg.Get(Property("film.height")(480u)) <<
-			FilmOutputs::ToProperties(cfg);
-	
-	// Add also radiance group scales related property
-	props << cfg.GetAllProperties("film.radiancescales.");
+//------------------------------------------------------------------------------
+// RadianceChannelScale
+//------------------------------------------------------------------------------
 
-	return props;
+Film::RadianceChannelScale::RadianceChannelScale() : globalScale(1.f), temperature(0.f), rgbScale(1.f),
+		enabled(true) {
+	Init();
+}
+
+void Film::RadianceChannelScale::Init() {
+	if (temperature > 0.f) {
+		BlackbodySPD spd(temperature);
+		XYZColor colorTemp = spd.ToXYZ();
+		colorTemp /= colorTemp.Y();
+
+		ColorSystem colorSpace;
+		scale = colorSpace.ToRGBConstrained(colorTemp).Clamp(0.f, 1.f) * rgbScale;
+	} else
+		scale = rgbScale;
+
+	scale *= globalScale;
+	scale = scale.Clamp(0.f);
+}
+
+void Film::RadianceChannelScale::Scale(float v[3]) const {
+	v[0] *= scale.c[0];
+	v[1] *= scale.c[1];
+	v[2] *= scale.c[2];
+}
+
+Spectrum Film::RadianceChannelScale::Scale(const Spectrum &v) const {
+	return v * scale;
 }

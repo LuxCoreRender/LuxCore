@@ -252,6 +252,8 @@ void LuxCoreApp::MenuWindow() {
 	if (ImGui::MenuItem("Epsilon editor", NULL, epsilonWindow.IsOpen()))
 		epsilonWindow.Toggle();
 	ImGui::Separator();
+	if (ImGui::MenuItem("Film Radiance Groups editor", NULL, filmRadianceGroupsWindow.IsOpen()))
+		filmRadianceGroupsWindow.Toggle();
 	if (ImGui::MenuItem("Film Outputs editor", NULL, filmOutputsWindow.IsOpen()))
 		filmOutputsWindow.Toggle();
 	if (ImGui::MenuItem("Film Channels window", NULL, filmChannelsWindow.IsOpen()))

@@ -112,13 +112,15 @@ void ObjectEditorWindow::Draw() {
 			// Refresh + Parse buttons
 			//------------------------------------------------------------------
 
-			if (ImGui::Button("Refresh"))
-				RefreshGUIProperties();
+			if (!IsDynamicEditor()) {
+				if (ImGui::Button("Refresh"))
+					RefreshGUIProperties();
 
-			ImGui::SameLine();
+				ImGui::SameLine();
 
-			if (ImGui::Button(modifiedGUIProps ? "Apply (*)" : "Apply"))
-				ParseGUIProperties();
+				if (ImGui::Button(modifiedGUIProps ? "Apply (*)" : "Apply"))
+					ParseGUIProperties();
+			}
 
 			ImGui::PopItemWidth();
 			ImGui::PopID();
