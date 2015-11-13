@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "slg/core/sdl.h"
 #include "slg/film/film.h"
@@ -47,7 +48,7 @@ void Film::ParseOutputs(const Properties &props) {
 
 	filmOutputs.Clear();
 
-	set<string> outputNames;
+	boost::unordered_set<string> outputNames;
 	vector<string> outputKeys = props.GetAllNames("film.outputs.");
 	for (vector<string>::const_iterator outputKey = outputKeys.begin(); outputKey != outputKeys.end(); ++outputKey) {
 		const string &key = *outputKey;
@@ -308,7 +309,7 @@ void Film::ParseOutputs(const Properties &props) {
 //------------------------------------------------------------------------------
 
 void Film::ParseRadianceGroupsScale(const Properties &props) {
-	set<string> radianceScaleIndices;
+	boost::unordered_set<string> radianceScaleIndices;
 	vector<string> radianceScaleKeys = props.GetAllNames("film.radiancescales.");
 	for (vector<string>::const_iterator radianceScaleKey = radianceScaleKeys.begin(); radianceScaleKey != radianceScaleKeys.end(); ++radianceScaleKey) {
 		const string &key = *radianceScaleKey;
@@ -327,12 +328,13 @@ void Film::ParseRadianceGroupsScale(const Properties &props) {
 		
 		radianceScaleIndices.insert(indexStr);
 		const u_int index = boost::lexical_cast<u_int>(indexStr);
-		
+
+		const string prefix = "film.radiancescales." + indexStr;
 		Film::RadianceChannelScale radianceChannelScale;
-		radianceChannelScale.globalScale = props.Get(Property("film.radiancescales." + indexStr + ".globalscale")(1.f)).Get<float>();
-		radianceChannelScale.temperature = props.Get(Property("film.radiancescales." + indexStr + ".temperature")(0.f)).Get<float>();
-		radianceChannelScale.rgbScale = props.Get(Property("film.radiancescales." + indexStr + ".rgbscale")(1.f, 1.f, 1.f)).Get<Spectrum>();
-		radianceChannelScale.enabled = props.Get(Property("film.radiancescales." + indexStr + ".enabled")(true)).Get<bool>();
+		radianceChannelScale.globalScale = props.Get(Property(prefix + ".globalscale")(1.f)).Get<float>();
+		radianceChannelScale.temperature = props.Get(Property(prefix + ".temperature")(0.f)).Get<float>();
+		radianceChannelScale.rgbScale = props.Get(Property(prefix + ".rgbscale")(1.f, 1.f, 1.f)).Get<Spectrum>();
+		radianceChannelScale.enabled = props.Get(Property(prefix + ".enabled")(true)).Get<bool>();
 
 		SetRadianceChannelScale(index, radianceChannelScale);
 	}

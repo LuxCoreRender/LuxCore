@@ -35,8 +35,9 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 //------------------------------------------------------------------------------
 
 LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
-		acceleratorWindow(this), epsilonWindow(this), filmChannelsWindow(this),
-		filmOutputsWindow(this), lightStrategyWindow(this),
+		acceleratorWindow(this), epsilonWindow(this),
+		filmChannelsWindow(this), filmOutputsWindow(this),
+		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
 		oclDeviceWindow(this), pixelFilterWindow(this),
 		renderEngineWindow(this), samplerWindow(this),
 		statsWindow(this), logWindow(this), helpWindow(this) {
@@ -95,6 +96,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	epsilonWindow.Close();
 	filmChannelsWindow.Close();
 	filmOutputsWindow.Close();
+	filmRadianceGroupsWindow.Close();
 	lightStrategyWindow.Close();
 	oclDeviceWindow.Close();
 	pixelFilterWindow.Close();
@@ -163,6 +165,7 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 	// Close film related editors
 	filmChannelsWindow.Close();
 	filmOutputsWindow.Close();
+	filmRadianceGroupsWindow.Close();
 
 	u_int filmWidth = width;
 	u_int filmHeight = height;

@@ -395,6 +395,7 @@ void LuxCoreApp::RunApp() {
 		epsilonWindow.Draw();
 		filmChannelsWindow.Draw();
 		filmOutputsWindow.Draw();
+		filmRadianceGroupsWindow.Draw();
 		lightStrategyWindow.Draw();
 		oclDeviceWindow.Draw();
 		pixelFilterWindow.Draw();

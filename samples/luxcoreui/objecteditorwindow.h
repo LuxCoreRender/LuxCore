@@ -29,6 +29,8 @@ public:
 		ObjectWindow(a, name + " editor"), objectName(name) { }
 	virtual ~ObjectEditorWindow() { }
 
+	virtual bool IsDynamicEditor() const { return false; }
+
 	virtual void Open();
 	virtual void Close();
 

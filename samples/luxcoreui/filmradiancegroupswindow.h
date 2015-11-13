@@ -16,22 +16,31 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/film/film.h"
+#ifndef _LUXCOREAPP_FILMRADIANCEGROUPSWINDOW_H
+#define	_LUXCOREAPP_FILMRADIANCEGROUPSWINDOW_H
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include <string>
 
-Properties Film::ToProperties(const Properties &cfg) {
-	Properties props;
-	
-	props <<
-			cfg.Get(Property("film.width")(640u)) <<
-			cfg.Get(Property("film.height")(480u)) <<
-			FilmOutputs::ToProperties(cfg);
-	
-	// Add also radiance group scales related property
-	props << cfg.GetAllProperties("film.radiancescales.");
+#include <imgui.h>
 
-	return props;
-}
+#include "objecteditorwindow.h"
+#include "typetable.h"
+
+class LuxCoreApp;
+
+class FilmRadianceGroupsWindow : public ObjectEditorWindow {
+public:
+	FilmRadianceGroupsWindow(LuxCoreApp *a);
+	virtual ~FilmRadianceGroupsWindow() { }
+
+	virtual bool IsDynamicEditor() const { return true; }
+
+private:
+	luxrays::Properties GetFilmRadianceGroupsProperties(const luxrays::Properties &cfgProps) const;
+
+	virtual void RefreshObjectProperties(luxrays::Properties &props);
+	virtual void ParseObjectProperties(const luxrays::Properties &props);
+	virtual bool DrawObjectGUI(luxrays::Properties &props, bool &modified);
+};
+
+#endif	/* _LUXCOREAPP_FILMRADIANCEGROUPSWINDOW_H */
