@@ -48,3 +48,27 @@ uint Material_GetExteriorVolumeNoMix(__global const Material *material) {
 	return material->exteriorVolumeIndex;
 }
 #endif
+
+#if defined(PARAM_HAS_BUMPMAPS)
+void Material_Bump(const uint matIndex, __global HitPoint *hitPoint
+	MATERIALS_PARAM_DECL) {
+	const uint bumpTexIndex = mats[matIndex].bumpTexIndex;
+	
+	if (bumpTexIndex != NULL_INDEX) {
+		float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+
+		shadeN = Texture_Bump(mats[matIndex].bumpTexIndex, hitPoint, mats[matIndex].bumpSampleDistance
+			TEXTURES_PARAM);
+
+		// Update dpdu and dpdv so they are still orthogonal to shadeN
+		float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+		float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
+		dpdu = cross(shadeN, cross(dpdu, shadeN));
+		dpdv = cross(shadeN, cross(dpdv, shadeN));
+		// Update HitPoint structure
+		VSTORE3F(shadeN, &hitPoint->shadeN.x);
+		VSTORE3F(dpdu, &hitPoint->dpdu.x);
+		VSTORE3F(dpdv, &hitPoint->dpdv.x);
+	}
+}
+#endif
