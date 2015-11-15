@@ -97,7 +97,6 @@ typedef struct {
 //	CumulusSphere *spheres;
 } CloudTexParam;
 
-
 typedef struct {
 	TextureMapping3D mapping;
 	int octaves;
