@@ -304,6 +304,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelapprox.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcauchy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcolor.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelconst.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelluxpop.cpp

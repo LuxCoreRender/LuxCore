@@ -41,6 +41,7 @@
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
+#include "slg/textures/fresnel/fresnelcauchy.h"
 #include "slg/textures/fresnel/fresnelcolor.h"
 #include "slg/textures/fresnel/fresnelconst.h"
 #include "slg/textures/fresnel/fresnelluxpop.h"
@@ -377,6 +378,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution, emission);
 	} else if (texType == "lampspectrum") {
 		return AllocLampSpectrumTex(props, propName);
+	} else if (texType == "fresnelabbe") {
+		return AllocFresnelAbbeTex(props, propName);
+	} else if (texType == "fresnelcauchy") {
+		return AllocFresnelCauchyTex(props, propName);
 	} else if (texType == "fresnelcolor") {
 		const Texture *col = GetTexture(props.Get(Property(propName + ".kr")(.5f)));
 
@@ -388,10 +393,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new FresnelConstTexture(n, k);
 	} else if (texType == "fresnelluxpop") {
 		return AllocFresnelLuxPopTex(props, propName);
-	} else if (texType == "fresnelsopra") {
-		return AllocFresnelSopraTex(props, propName);
 	} else if (texType == "fresnelpreset") {
 		return AllocFresnelPresetTex(props, propName);
+	} else if (texType == "fresnelsopra") {
+		return AllocFresnelSopraTex(props, propName);
 	} else if (texType == "abs") {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 

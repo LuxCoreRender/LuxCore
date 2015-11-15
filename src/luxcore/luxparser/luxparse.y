@@ -1492,6 +1492,11 @@ ri_stmt: ACCELERATOR STRING paramlist
 			*sceneProps <<
 				Property(prefix + ".type")("constfloat3") <<
 				Property(prefix + ".value")(props.Get(Property("value")(Spectrum(1.f))).Get<Spectrum>());
+		} else if (channels == "fresnel") {
+			*sceneProps <<
+				Property(prefix + ".type")("fresnelconst") <<
+				Property(prefix + ".n")(props.Get(Property("value")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".k")(Spectrum(0.f));
 		} else  {
 			LC_LOG("LuxCore doesn't support the constant texture type: " << channels);
 
@@ -1776,20 +1781,40 @@ ri_stmt: ACCELERATOR STRING paramlist
 						-1 : channel);
 	} else if (texType == "fresnelcolor") {
 		*sceneProps <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.type")("fresnelapproxn") <<
-				GetTexture(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.texture", Property("Kr")(Spectrum(.5f)), props) <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("fresnelapproxk") <<
-				GetTexture(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.texture", Property("Kr")(Spectrum(.5f)), props);
+				Property(prefix + ".type")("fresnelcolor") <<
+				Property(prefix + ".kr")(props.Get(Property("Kr")(Spectrum(.5f))).Get<Spectrum>());
 	} else if (texType == "preset") {
-		string presetName = props.Get("name").Get<string>();
-		Spectrum n, k;
-		FresnelPreset(presetName, &n, &k);
-
 		*sceneProps <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.type")("constfloat3") <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.value")(n) <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("constfloat3") <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.value")(k);
+				Property(prefix + ".type")("fresnelpreset") <<
+				Property(prefix + ".name")(props.Get(Property("name")("aluminium")).Get<string>());
+	} else if (texType == "sopra") {
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelsopra") <<
+				Property(prefix + ".file")(props.Get(Property("filename")("")).Get<string>());
+	} else if (texType == "luxpop") {
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelluxpop") <<
+				Property(prefix + ".file")(props.Get(Property("filename")("")).Get<string>());
+	} else if (texType == "cauchy") {
+		const float index = props.Get(Property("index")(-1.f)).Get<float>();
+		const float b = props.Get(Property("cauchyb")(0.f)).Get<float>();
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelcauchy") <<
+				Property(prefix + ".a")(props.Get(Property("cauchya")(index > 0.f ? (index - b * 1e6f / (720.f * 380.f)) : 1.5f)).Get<float>()) <<
+				Property(prefix + ".b")(b);
+	} else if (texType == "abbe") {
+		const string mode = props.Get(Property("type")("d")).Get<string>();
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelabbe") <<
+				Property(prefix + ".mode")(props.Get(Property("type")("d")).Get<string>()) <<
+				Property(prefix + ".v")(props.Get(Property("V")(64.17f)).Get<float>()) <<
+				Property(prefix + ".n")(props.Get(Property("n")(1.5168f)).Get<float>());
+		if (mode == "custom") {
+			*sceneProps <<
+				Property(prefix + ".d")(props.Get(Property("lambda_D")(587.5618f)).Get<float>()) <<
+				Property(prefix + ".f")(props.Get(Property("lambda_F")(486.13f)).Get<float>()) <<
+				Property(prefix + ".c")(props.Get(Property("lambda_C")(656.28f)).Get<float>());
+		}
 	} else {
 		LC_LOG("LuxCore doesn't support the texture type: " << texType);
 
