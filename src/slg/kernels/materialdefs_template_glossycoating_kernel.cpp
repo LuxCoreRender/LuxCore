@@ -203,7 +203,7 @@ std::string KernelSource_materialdefs_template_glossycoating =
 "#endif\n"
 "		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent\n"
 "		MATERIALS_PARAM_DECL) {\n"
-"	float3 ks = CS_KS_TEXTURE;\n"
+"	float3 ks = <<CS_KS_TEXTURE>>;\n"
 "#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)\n"
 "	const float i = <<CS_INDEX_TEXTURE>>;\n"
 "	if (i > 0.f) {\n"

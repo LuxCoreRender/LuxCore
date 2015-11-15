@@ -134,7 +134,8 @@ static const float AluminiumK[] = {
 };
 
 FresnelTexture *slg::AllocFresnelPresetTex(const Properties &props, const string &propName) {
-	const string presetName = props.Get(Property(propName + ".name")("aluminium")).Get<string>();
+	const string presetName = props.Get(Property(propName + ".preset")(
+			props.Get(Property(propName + ".name")("aluminium")).Get<string>())).Get<string>();
 
 	vector<float> wl;
 	vector<float> n;

@@ -200,7 +200,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
-	float3 ks = CS_KS_TEXTURE;
+	float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
 	const float i = <<CS_INDEX_TEXTURE>>;
 	if (i > 0.f) {
