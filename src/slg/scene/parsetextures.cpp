@@ -88,7 +88,7 @@ void Scene::ParseTextures(const Properties &props) {
 			// A replacement for an existing texture
 			const Texture *oldTex = texDefs.GetTexture(texName);
 
-			// Check if it is not a FresnelTexture but must be
+			// FresnelTexture can be replace donly with other FresnelTexture
 			if (dynamic_cast<const FresnelTexture *>(oldTex) && !dynamic_cast<const FresnelTexture *>(tex))
 				throw runtime_error("You can not replace a fresnel texture with the texture: " + texName);
 

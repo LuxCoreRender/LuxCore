@@ -1191,7 +1191,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 	source << "float3 Texture_Bump(const uint texIndex, "
 			"__global HitPoint *hitPoint, const float sampleDistance "
 			"TEXTURES_PARAM_DECL) {\n"
-			"\t __global const Texture *tex = &texs[texIndex];\n";
+			"\t__global const Texture *tex = &texs[texIndex];\n";
 
 	// For textures source code that it is not dynamically generated
 	source << "\tswitch (tex->type) {\n" <<
@@ -1342,109 +1342,109 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::BLENDER_BLEND:
 				AddTextureSource(source, "BlenderBlend", i,
-						ToString(tex->blenderBlend.type) + ", " +
-						ToString(tex->blenderBlend.direction) + ", " +
-						ToString(tex->blenderBlend.contrast) + ", " +
-						ToString(tex->blenderBlend.bright) + ", " +
+						"texture->blenderBlend.type, "
+						"texture->blenderBlend.direction, "
+						"texture->blenderBlend.contrast, "
+						"texture->blenderBlend.bright, "
 						"&texture->blenderBlend.mapping");
 				break;
 			case slg::ocl::BLENDER_CLOUDS:
 				AddTextureSource(source, "BlenderClouds", i,
-						ToString(tex->blenderClouds.noisebasis) + ", " +
-						ToString(tex->blenderClouds.noisesize) + ", " +
-						ToString(tex->blenderClouds.noisedepth) + ", " +
-						ToString(tex->blenderClouds.contrast) + ", " +
-						ToString(tex->blenderClouds.bright) + ", " +
-						ToString(tex->blenderClouds.hard) + ", " +
+						"texture->blenderClouds.noisebasis, "
+						"texture->blenderClouds.noisesize, "
+						"texture->blenderClouds.noisedepth, "
+						"texture->blenderClouds.contrast, "
+						"texture->blenderClouds.bright, "
+						"texture->blenderClouds.hard, "
 						"&texture->blenderClouds.mapping");
 				break;
 			case slg::ocl::BLENDER_DISTORTED_NOISE:
 				AddTextureSource(source, "BlenderDistortedNoise", i,
-						ToString(tex->blenderDistortedNoise.noisedistortion) + ", " +
-						ToString(tex->blenderDistortedNoise.noisebasis) + ", " +
-						ToString(tex->blenderDistortedNoise.distortion) + ", " +
-						ToString(tex->blenderDistortedNoise.noisesize) + ", " +
-						ToString(tex->blenderDistortedNoise.contrast) + ", " +
-						ToString(tex->blenderDistortedNoise.bright) + ", " +
+						"texture->blenderDistortedNoise.noisedistortion, "
+						"texture->blenderDistortedNoise.noisebasis, "
+						"texture->blenderDistortedNoise.distortion, "
+						"texture->blenderDistortedNoise.noisesize, "
+						"texture->blenderDistortedNoise.contrast, "
+						"texture->blenderDistortedNoise.bright, "
 						"&texture->blenderDistortedNoise.mapping");
 				break;
 			case slg::ocl::BLENDER_MAGIC:
 				AddTextureSource(source, "BlenderMagic", "float", "Float", i,
-						ToString(tex->blenderMagic.noisedepth) + ", " +
-						ToString(tex->blenderMagic.turbulence) + ", " +
-						ToString(tex->blenderMagic.contrast) + ", " +
-						ToString(tex->blenderMagic.bright) + ", " +
+						"texture->blenderMagic.noisedepth, "
+						"texture->blenderMagic.turbulence, "
+						"texture->blenderMagic.contrast, "
+						"texture->blenderMagic.bright, "
 						"&texture->blenderMagic.mapping");
 				AddTextureSource(source, "BlenderMagic", "float3", "Spectrum", i,
-						ToString(tex->blenderMagic.noisedepth) + ", " +
-						ToString(tex->blenderMagic.turbulence) + ", " +
-						ToString(tex->blenderMagic.contrast) + ", " +
-						ToString(tex->blenderMagic.bright) + ", " +
+						"texture->blenderMagic.noisedepth, "
+						"texture->blenderMagic.turbulence, "
+						"texture->blenderMagic.contrast, "
+						"texture->blenderMagic.bright, "
 						"&texture->blenderMagic.mapping");
 				break;
 			case slg::ocl::BLENDER_MARBLE:
 				AddTextureSource(source, "BlenderMarble", i,
-						ToString(tex->blenderMarble.type) + ", " +
-						ToString(tex->blenderMarble.noisebasis) + ", " +
-						ToString(tex->blenderMarble.noisebasis2) + ", " +
-						ToString(tex->blenderMarble.noisesize) + ", " +
-						ToString(tex->blenderMarble.turbulence) + ", " +
-						ToString(tex->blenderMarble.noisedepth) + ", " +
-						ToString(tex->blenderMarble.contrast) + ", " +
-						ToString(tex->blenderMarble.bright) + ", " +
-						ToString(tex->blenderMarble.hard) + ", " +
+						"texture->blenderMarble.type, "
+						"texture->blenderMarble.noisebasis, "
+						"texture->blenderMarble.noisebasis2, "
+						"texture->blenderMarble.noisesize, "
+						"texture->blenderMarble.turbulence, "
+						"texture->blenderMarble.noisedepth, "
+						"texture->blenderMarble.contrast, "
+						"texture->blenderMarble.bright, "
+						"texture->blenderMarble.hard, "
 						"&texture->blenderMagic.mapping");
 				break;
 			case slg::ocl::BLENDER_MUSGRAVE:
 				AddTextureSource(source, "BlenderMusgrave", i,
-						ToString(tex->blenderMusgrave.type) + ", " +
-						ToString(tex->blenderMusgrave.noisebasis) + ", " +
-						ToString(tex->blenderMusgrave.dimension) + ", " +
-						ToString(tex->blenderMusgrave.intensity) + ", " +
-						ToString(tex->blenderMusgrave.lacunarity) + ", " +
-						ToString(tex->blenderMusgrave.offset) + ", " +
-						ToString(tex->blenderMusgrave.gain) + ", " +
-						ToString(tex->blenderMusgrave.octaves) + ", " +
-						ToString(tex->blenderMusgrave.noisesize) + ", " +
-						ToString(tex->blenderMusgrave.contrast) + ", " +
-						ToString(tex->blenderMusgrave.bright) + ", " +
+						"texture->blenderMusgrave.type, "
+						"texture->blenderMusgrave.noisebasis, "
+						"texture->blenderMusgrave.dimension, "
+						"texture->blenderMusgrave.intensity, "
+						"texture->blenderMusgrave.lacunarity, "
+						"texture->blenderMusgrave.offset, "
+						"texture->blenderMusgrave.gain, "
+						"texture->blenderMusgrave.octaves, "
+						"texture->blenderMusgrave.noisesize, "
+						"texture->blenderMusgrave.contrast, "
+						"texture->blenderMusgrave.bright, "
 						"&texture->blenderMusgrave.mapping");
 				break;
 			case slg::ocl::BLENDER_STUCCI:
 				AddTextureSource(source, "BlenderStucci", i,
-						ToString(tex->blenderStucci.type) + ", " +
-						ToString(tex->blenderStucci.noisebasis) + ", " +
-						ToString(tex->blenderStucci.noisesize) + ", " +
-						ToString(tex->blenderStucci.turbulence) + ", " +
-						ToString(tex->blenderStucci.contrast) + ", " +
-						ToString(tex->blenderStucci.bright) + ", " +
-						ToString(tex->blenderStucci.hard) + ", " +
+						"texture->blenderStucci.type, "
+						"texture->blenderStucci.noisebasis, "
+						"texture->blenderStucci.noisesize, "
+						"texture->blenderStucci.turbulence, "
+						"texture->blenderStucci.contrast, "
+						"texture->blenderStucci.bright, "
+						"texture->blenderStucci.hard, "
 						"&texture->blenderStucci.mapping");
 				break;
             case slg::ocl::BLENDER_WOOD:
 				AddTextureSource(source, "BlenderWood", i,
-						ToString(tex->blenderWood.type) + ", " +
-						ToString(tex->blenderWood.noisebasis2) + ", " +
-						ToString(tex->blenderWood.noisebasis) + ", " +
-						ToString(tex->blenderWood.noisesize) + ", " +
-						ToString(tex->blenderWood.turbulence) + ", " +
-						ToString(tex->blenderWood.contrast) + ", " +
-						ToString(tex->blenderWood.bright) + ", " +
-						ToString(tex->blenderWood.hard) + ", " +
+						"texture->blenderWood.type, "
+						"texture->blenderWood.noisebasis2, "
+						"texture->blenderWood.noisebasis, "
+						"texture->blenderWood.noisesize, "
+						"texture->blenderWood.turbulence, "
+						"texture->blenderWood.contrast, "
+						"texture->blenderWood.bright, "
+						"texture->blenderWood.hard, "
 						"&texture->blenderWood.mapping");
 				break;
 			case slg::ocl::BLENDER_VORONOI:
 				AddTextureSource(source, "BlenderVoronoi", i,
-						ToString(tex->blenderVoronoi.distancemetric) + ", " +
-						ToString(tex->blenderVoronoi.feature_weight1) + ", " +
-						ToString(tex->blenderVoronoi.feature_weight2) + ", " +
-						ToString(tex->blenderVoronoi.feature_weight3) + ", " +
-						ToString(tex->blenderVoronoi.feature_weight4) + ", " +
-						ToString(tex->blenderVoronoi.noisesize) + ", " +
-						ToString(tex->blenderVoronoi.intensity) + ", " +
-						ToString(tex->blenderVoronoi.exponent) + ", " +
-						ToString(tex->blenderVoronoi.contrast) + ", " +
-						ToString(tex->blenderVoronoi.bright) + ", " +
+						"texture->blenderVoronoi.distancemetric, "
+						"texture->blenderVoronoi.feature_weight1, "
+						"texture->blenderVoronoi.feature_weight2, "
+						"texture->blenderVoronoi.feature_weight3, "
+						"texture->blenderVoronoi.feature_weight4, "
+						"texture->blenderVoronoi.noisesize, "
+						"texture->blenderVoronoi.intensity, "
+						"texture->blenderVoronoi.exponent, "
+						"texture->blenderVoronoi.contrast, "
+						"texture->blenderVoronoi.bright, "
 						"&texture->blenderVoronoi.mapping");
 				break;
 			case slg::ocl::CHECKERBOARD2D:
@@ -1469,32 +1469,32 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::CLOUD_TEX:
 				AddTextureSource(source, "Cloud", i,
-					ToString(tex->cloud.radius) + ", " +
-					ToString(tex->cloud.numspheres) + ", " +
-					ToString(tex->cloud.spheresize) + ", " +
-					ToString(tex->cloud.sharpness) + ", " +
-					ToString(tex->cloud.basefadedistance) + ", " +
-					ToString(tex->cloud.baseflatness) + ", " +
-					ToString(tex->cloud.variability) + ", " +
-					ToString(tex->cloud.omega) + ", " +
-					ToString(tex->cloud.noisescale) + ", " +
-					ToString(tex->cloud.noiseoffset) + ", " +
-					ToString(tex->cloud.turbulence) + ", " +
-					ToString(tex->cloud.octaves) + ", " +
+					"texture->cloud.radius, "
+					"texture->cloud.numspheres, "
+					"texture->cloud.spheresize, "
+					"texture->cloud.sharpness, "
+					"texture->cloud.basefadedistance, "
+					"texture->cloud.baseflatness, "
+					"texture->cloud.variability, "
+					"texture->cloud.omega, "
+					"texture->cloud.noisescale, "
+					"texture->cloud.noiseoffset, "
+					"texture->cloud.turbulence, "
+					"texture->cloud.octaves, "
 					"&texture->cloud.mapping");
 				break;			
 			case slg::ocl::FBM_TEX:
 				AddTextureSource(source, "FBM", i,
-						ToString(tex->fbm.omega) + ", " +
-						ToString(tex->fbm.octaves) + ", " +
+						"texture->fbm.omega, "
+						"texture->fbm.octaves, "
 						"&texture->fbm.mapping");
 				break;
 			case slg::ocl::MARBLE:
 				AddTextureSource(source, "Marble", i,
-						ToString(tex->marble.scale) + ", " +
-						ToString(tex->marble.omega) + ", " +
-						ToString(tex->marble.octaves) + ", " +
-						ToString(tex->marble.variation) + ", " +
+						"texture->marble.scale, "
+						"texture->marble.omega, "
+						"texture->marble.octaves, "
+						"texture->marble.variation, "
 						"&texture->marble.mapping");
 				break;
 			case slg::ocl::DOTS:
@@ -1512,35 +1512,35 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Float", tex->brick.tex1Index) + ", " +
 						AddTextureSourceCall(texs, "Float", tex->brick.tex2Index) + ", " +
 						AddTextureSourceCall(texs, "Float", tex->brick.tex3Index) + ", " +
-						ToString(tex->brick.bond) + ", " +
-						ToString(tex->brick.brickwidth) + ", " +
-						ToString(tex->brick.brickheight) + ", " +
-						ToString(tex->brick.brickdepth) + ", " +
-						ToString(tex->brick.mortarsize) + ", " +
-						"(float3)(" + ToString(tex->brick.offsetx) + ", " + ToString(tex->brick.offsetx) + ", " + ToString(tex->brick.offsetx) + "), " +
-						ToString(tex->brick.run) + ", " +
-						ToString(tex->brick.mortarwidth) + ", " +
-						ToString(tex->brick.mortarheight) + ", " +
-						ToString(tex->brick.mortardepth) + ", " +
-						ToString(tex->brick.proportion) + ", " +
-						ToString(tex->brick.invproportion) + ", " +
+						"texture->brick.bond, "
+						"texture->brick.brickwidth, "
+						"texture->brick.brickheight, "
+						"texture->brick.brickdepth, "
+						"texture->brick.mortarsize, "
+						"(float3)(texture->brick.offsetx, texture->brick.offsety, texture->brick.offsetz), "
+						"texture->brick.run, "
+						"texture->brick.mortarwidth, "
+						"texture->brick.mortarheight, "
+						"texture->brick.mortardepth, "
+						"texture->brick.proportion, "
+						"texture->brick.invproportion, "
 						"&texture->brick.mapping");
 				AddTextureSource(source, "Brick", "float3", "Spectrum", i,
 						AddTextureSourceCall(texs, "Spectrum", tex->brick.tex1Index) + ", " +
 						AddTextureSourceCall(texs, "Spectrum", tex->brick.tex2Index) + ", " +
 						AddTextureSourceCall(texs, "Spectrum", tex->brick.tex3Index) + ", " +
-						ToString(tex->brick.bond) + ", " +
-						ToString(tex->brick.brickwidth) + ", " +
-						ToString(tex->brick.brickheight) + ", " +
-						ToString(tex->brick.brickdepth) + ", " +
-						ToString(tex->brick.mortarsize) + ", " +
-						"(float3)(" + ToString(tex->brick.offsetx) + ", " + ToString(tex->brick.offsetx) + ", " + ToString(tex->brick.offsetx) + "), " +
-						ToString(tex->brick.run) + ", " +
-						ToString(tex->brick.mortarwidth) + ", " +
-						ToString(tex->brick.mortarheight) + ", " +
-						ToString(tex->brick.mortardepth) + ", " +
-						ToString(tex->brick.proportion) + ", " +
-						ToString(tex->brick.invproportion) + ", " +
+						"texture->brick.bond, "
+						"texture->brick.brickwidth, "
+						"texture->brick.brickheight, "
+						"texture->brick.brickdepth, "
+						"texture->brick.mortarsize, "
+						"(float3)(texture->brick.offsetx, texture->brick.offsety, texture->brick.offsetz), "
+						"texture->brick.run, "
+						"texture->brick.mortarwidth, "
+						"texture->brick.mortarheight, "
+						"texture->brick.mortardepth, "
+						"texture->brick.proportion, "
+						"texture->brick.invproportion, "
 						"&texture->brick.mapping");
 				break;
 			case slg::ocl::WINDY:
@@ -1549,8 +1549,8 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::WRINKLED:
 				AddTextureSource(source, "Wrinkled", i,
-						ToString(tex->marble.omega) + ", " +
-						ToString(tex->marble.octaves) + ", " +
+						"texture->marble.omega, "
+						"texture->marble.octaves, "
 						"&texture->wrinkled.mapping");
 				break;
 			case slg::ocl::UV_TEX:
@@ -1559,14 +1559,14 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			case slg::ocl::BAND_TEX:
 				AddTextureSource(source, "Band", "float", "Float", i,
-						"texture->band.interpType, " +
-						ToString(tex->band.size) + ", " +
+						"texture->band.interpType, "
+						"texture->band.size, "
 						"texture->band.offsets, "
 						"texture->band.values, " +
 						AddTextureSourceCall(texs, "Float", tex->band.amountTexIndex));
 				AddTextureSource(source, "Band", "float3", "Spectrum", i,
-						"texture->band.interpType, " +
-						ToString(tex->band.size) + ", " +
+						"texture->band.interpType, "
+						"texture->band.size, "
 						"texture->band.offsets, "
 						"texture->band.values, " +
 						AddTextureSourceCall(texs, "Float", tex->band.amountTexIndex));
@@ -1600,12 +1600,12 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 			case slg::ocl::CLAMP_TEX: {
 				AddTextureSource(source, "Clamp", "float", "Float", i,
 						AddTextureSourceCall(texs, "Float", tex->clampTex.texIndex) + ", " +
-						ToString(tex->clampTex.minVal) + ", " +
-						ToString(tex->clampTex.maxVal));
+						"texture->clampTex.minVal, "
+						"texture->clampTex.maxVal");
 				AddTextureSource(source, "Clamp", "float3", "Spectrum", i,
 						AddTextureSourceCall(texs, "Spectrum", tex->clampTex.texIndex) + ", " +
-						ToString(tex->clampTex.minVal) + ", " +
-						ToString(tex->clampTex.maxVal));
+						"texture->clampTex.minVal, "
+						"texture->clampTex.maxVal");
 				break;
 			}
 			case slg::ocl::BILERP_TEX: {

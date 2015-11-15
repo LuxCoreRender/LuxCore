@@ -100,7 +100,6 @@ std::string KernelSource_texture_types =
 "//	CumulusSphere *spheres;\n"
 "} CloudTexParam;\n"
 "\n"
-"\n"
 "typedef struct {\n"
 "	TextureMapping3D mapping;\n"
 "	int octaves;\n"
