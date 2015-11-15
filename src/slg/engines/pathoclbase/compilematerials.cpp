@@ -507,8 +507,8 @@ void CompiledScene::CompileMaterials() {
 //------------------------------------------------------------------------------
 
 static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
-		const string &type, const u_int i) {
-	return "Texture_Get" + type + "Value(" + ToString(i) + ", hitPoint TEXTURES_PARAM)";
+		const string &type, const string &index) {
+	return "Texture_Get" + type + "Value(" + index + ", hitPoint TEXTURES_PARAM)";
 }
 
 static void AddMaterialSourceGlue(stringstream &source,
@@ -637,23 +637,23 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 		switch (mat->type) {
 			case slg::ocl::MATTE: {
 				AddMaterialSource(source, "Matte", i,
-						"Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint TEXTURES_PARAM)");
+						AddTextureSourceCall(texs, "Spectrum", "material->matte.kdTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
 			case slg::ocl::ROUGHMATTE: {
 				AddMaterialSource(source, "RoughMatte", i,
-						"Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURES_PARAM), "
-						"Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint TEXTURES_PARAM)");
+						AddTextureSourceCall(texs, "Float", "material->roughmatte.sigmaTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->roughmatte.kdTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
 			case slg::ocl::ARCHGLASS: {
 				AddMaterialSource(source, "ArchGlass", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->archglass.ktTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->archglass.krTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->archglass.ktTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->archglass.krTexIndex") + ", " +
 						"ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->archglass.interiorIorTexIndex TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
@@ -662,18 +662,18 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			}
 			case slg::ocl::CARPAINT: {
 				AddMaterialSource(source, "CarPaint", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->carpaint.KaTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->carpaint.depthTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->carpaint.KdTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->carpaint.Ks1TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->carpaint.M1TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->carpaint.R1TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->carpaint.Ks2TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->carpaint.M2TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->carpaint.R2TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->carpaint.Ks3TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->carpaint.M3TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->carpaint.R3TexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->carpaint.KaTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->carpaint.depthTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->carpaint.KdTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->carpaint.Ks1TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->carpaint.M1TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->carpaint.R1TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->carpaint.Ks2TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->carpaint.M2TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->carpaint.R2TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->carpaint.Ks3TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->carpaint.M3TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->carpaint.R3TexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
@@ -681,21 +681,21 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			case slg::ocl::CLOTH: {
 				AddMaterialSource(source, "Cloth", i,
 						ClothPreset2String(mat->cloth.Preset) + ", " +
-						ToString(mat->cloth.Repeat_U) + ", " +
-						ToString(mat->cloth.Repeat_V) + ", " +
-						ToString(mat->cloth.specularNormalization) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->cloth.Warp_KsIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->cloth.Weft_KsIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->cloth.Warp_KdIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->cloth.Weft_KdIndex));
+						"material->cloth.Repeat_U, " +
+						"material->cloth.Repeat_V, " +
+						"material->cloth.specularNormalization, " +
+						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Warp_KsIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Weft_KsIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Warp_KdIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Weft_KdIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
 			case slg::ocl::GLASS: {
 				AddMaterialSource(source, "Glass", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->glass.ktTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->glass.krTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glass.ktTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glass.krTexIndex") + ", " +
 						"ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
@@ -705,38 +705,38 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			case slg::ocl::GLOSSY2: {
 				AddMaterialSource(source, "Glossy2", i,
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)\n" +
-						AddTextureSourceCall(texs, "Float", mat->glossy2.indexTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossy2.indexTexIndex") + ", " +
 						"\n#endif\n" +
-						AddTextureSourceCall(texs, "Float", mat->glossy2.nuTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossy2.nuTexIndex") + ", " +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)\n" +
-						AddTextureSourceCall(texs, "Float", mat->glossy2.nvTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossy2.nvTexIndex") + ", " +
 						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)\n" +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossy2.kaTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->glossy2.depthTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glossy2.kaTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossy2.depthTexIndex") + ", " +
 						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)\n" +
-						ToString(mat->glossy2.multibounce) + ", " +
+						"material->glossy2.multibounce, " +
 						"\n#endif\n" +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossy2.kdTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossy2.ksTexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->glossy2.kdTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glossy2.ksTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
 			case slg::ocl::MATTETRANSLUCENT: {
 				AddMaterialSource(source, "MatteTranslucent", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->matteTranslucent.krTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->matteTranslucent.ktTexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->matteTranslucent.krTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->matteTranslucent.ktTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
 			case slg::ocl::ROUGHMATTETRANSLUCENT: {
 				AddMaterialSource(source, "RoughMatteTranslucent", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->roughmatteTranslucent.krTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->roughmatteTranslucent.ktTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->roughmatteTranslucent.sigmaTexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->roughmatteTranslucent.krTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->roughmatteTranslucent.ktTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->roughmatteTranslucent.sigmaTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
@@ -749,8 +749,8 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 
 					switch (fresnelTex.type) {
 						case slg::ocl::FRESNELCOLOR_TEX:
-							nTexString = "FresnelApproxN3(" + AddTextureSourceCall(texs, "Spectrum", fresnelTex.fresnelColor.krIndex) + ")";
-							kTexString = "FresnelApproxK3(" + AddTextureSourceCall(texs, "Spectrum", fresnelTex.fresnelColor.krIndex) + ")";
+							nTexString = "FresnelApproxN3(" + AddTextureSourceCall(texs, "Spectrum", "texs[material->metal2.fresnelTexIndex].fresnelColor.krIndex") + ")";
+							kTexString = "FresnelApproxK3(" + AddTextureSourceCall(texs, "Spectrum", "texs[material->metal2.fresnelTexIndex].fresnelColor.krIndex") + ")";
 							break;
 						case slg::ocl::FRESNELCONST_TEX:
 							nTexString = ToOCLString(fresnelTex.fresnelConst.n);
@@ -761,13 +761,13 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 							break;
 					}
 				} else {
-					nTexString = AddTextureSourceCall(texs, "Spectrum", mat->metal2.nTexIndex);
-					kTexString = AddTextureSourceCall(texs, "Spectrum", mat->metal2.kTexIndex);
+					nTexString = AddTextureSourceCall(texs, "Spectrum", "material->metal2.nTexIndex");
+					kTexString = AddTextureSourceCall(texs, "Spectrum", "material->metal2.kTexIndex");
 				}
 				AddMaterialSource(source, "Metal2", i,
-						AddTextureSourceCall(texs, "Float", mat->metal2.nuTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->metal2.nuTexIndex") + ", " +
 						"\n#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)\n" +
-						AddTextureSourceCall(texs, "Float", mat->metal2.nvTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->metal2.nvTexIndex") + ", " +
 						"\n#endif\n" +
 						nTexString + ", " +
 						kTexString);
@@ -777,7 +777,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			}
 			case slg::ocl::MIRROR: {
 				AddMaterialSource(source, "Mirror", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->mirror.krTexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->mirror.krTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
@@ -790,11 +790,11 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			}
 			case slg::ocl::ROUGHGLASS: {
 				AddMaterialSource(source, "RoughGlass", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->roughglass.ktTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->roughglass.krTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->roughglass.nuTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->roughglass.ktTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->roughglass.krTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->roughglass.nuTexIndex") + ", " +
 						"\n#if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)\n" +
-						AddTextureSourceCall(texs, "Float", mat->roughglass.nvTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->roughglass.nvTexIndex") + ", " +
 						"\n#endif\n" +
 						"ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM)");
@@ -804,11 +804,11 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			}
 			case slg::ocl::VELVET: {
 				AddMaterialSource(source, "Velvet", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->velvet.kdTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->velvet.p1TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->velvet.p2TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->velvet.p3TexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->velvet.thicknessTexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->velvet.kdTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->velvet.p1TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->velvet.p2TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->velvet.p3TexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->velvet.thicknessTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
@@ -816,29 +816,29 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			case slg::ocl::GLOSSYTRANSLUCENT: {
 				AddMaterialSource(source, "GlossyTranslucent", i,
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX)\n" +
-						AddTextureSourceCall(texs, "Float", mat->glossytranslucent.indexTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->glossytranslucent.indexbfTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossytranslucent.indexTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossytranslucent.indexbfTexIndex") + ", " +
 						"\n#endif\n" +
-						AddTextureSourceCall(texs, "Float", mat->glossytranslucent.nuTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->glossytranslucent.nubfTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossytranslucent.nuTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossytranslucent.nubfTexIndex") + ", " +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC)\n" +
-						AddTextureSourceCall(texs, "Float", mat->glossytranslucent.nvTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->glossytranslucent.nvbfTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossytranslucent.nvTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossytranslucent.nvbfTexIndex") + ", " +
 						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION)\n" +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossytranslucent.kaTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossytranslucent.kabfTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->glossytranslucent.depthTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Float", mat->glossytranslucent.depthbfTexIndex) + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.kaTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.kabfTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossytranslucent.depthTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Float", "material->glossytranslucent.depthbfTexIndex") + ", " +
 						"\n#endif\n" +
 						"\n#if defined(PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE)\n" +
-						ToString(mat->glossytranslucent.multibounce) + ", " +
-						ToString(mat->glossytranslucent.multibouncebf) + ", " +
+						"material->glossytranslucent.multibounce, " +
+						"material->glossytranslucent.multibouncebf, " +
 						"\n#endif\n" +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossytranslucent.kdTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossytranslucent.ktTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossytranslucent.ksTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->glossytranslucent.ksbfTexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.kdTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.ktTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.ksTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.ksbfTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
@@ -851,18 +851,18 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			}
 			case slg::ocl::HOMOGENEOUS_VOL: {
 				AddMaterialSource(source, "HomogeneousVol", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->volume.homogenous.sigmaSTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->volume.homogenous.sigmaATexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->volume.homogenous.gTexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->volume.homogenous.sigmaSTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->volume.homogenous.sigmaATexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->volume.homogenous.gTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
 			case slg::ocl::HETEROGENEOUS_VOL: {
 				AddMaterialSource(source, "HeterogeneousVol", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->volume.heterogenous.sigmaSTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->volume.heterogenous.sigmaATexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->volume.heterogenous.gTexIndex));
+						AddTextureSourceCall(texs, "Spectrum", "material->volume.heterogenous.sigmaSTexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->volume.heterogenous.sigmaATexIndex") + ", " +
+						AddTextureSourceCall(texs, "Spectrum", "material->volume.heterogenous.gTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
@@ -873,7 +873,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				boost::replace_all(mixSrc, "<<CS_MIX_MATERIAL_INDEX>>", ToString(i));
 				boost::replace_all(mixSrc, "<<CS_MAT_A_MATERIAL_INDEX>>", ToString(mat->mix.matAIndex));
 				boost::replace_all(mixSrc, "<<CS_MAT_B_MATERIAL_INDEX>>", ToString(mat->mix.matBIndex));
-				boost::replace_all(mixSrc, "<<CS_FACTOR_TEXTURE>>", AddTextureSourceCall(texs, "Float", mat->mix.mixFactorTexIndex));
+				boost::replace_all(mixSrc, "<<CS_FACTOR_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->mix.mixFactorTexIndex"));
 				source << mixSrc;
 				break;
 			}
@@ -882,12 +882,12 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				string glossycoatingSrc = slg::ocl::KernelSource_materialdefs_template_glossycoating;
 				boost::replace_all(glossycoatingSrc, "<<CS_GLOSSYCOATING_MATERIAL_INDEX>>", ToString(i));
 				boost::replace_all(glossycoatingSrc, "<<CS_MAT_BASE_MATERIAL_INDEX>>", ToString(mat->glossycoating.matBaseIndex));
-				boost::replace_all(glossycoatingSrc, "<<CS_KS_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", mat->glossycoating.ksTexIndex));
-				boost::replace_all(glossycoatingSrc, "<<CS_NU_TEXTURE>>", AddTextureSourceCall(texs, "Float", mat->glossycoating.nuTexIndex));
-				boost::replace_all(glossycoatingSrc, "<<CS_NV_TEXTURE>>", AddTextureSourceCall(texs, "Float", mat->glossycoating.nvTexIndex));
-				boost::replace_all(glossycoatingSrc, "<<CS_KA_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", mat->glossycoating.kaTexIndex));
-				boost::replace_all(glossycoatingSrc, "<<CS_DEPTH_TEXTURE>>", AddTextureSourceCall(texs, "Float", mat->glossycoating.depthTexIndex));
-				boost::replace_all(glossycoatingSrc, "<<CS_INDEX_TEXTURE_>>", AddTextureSourceCall(texs, "Float", mat->glossycoating.indexTexIndex));
+				boost::replace_all(glossycoatingSrc, "<<CS_KS_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.ksTexIndex"));
+				boost::replace_all(glossycoatingSrc, "<<CS_NU_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nuTexIndex"));
+				boost::replace_all(glossycoatingSrc, "<<CS_NV_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nvTexIndex"));
+				boost::replace_all(glossycoatingSrc, "<<CS_KA_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.kaTexIndex"));
+				boost::replace_all(glossycoatingSrc, "<<CS_DEPTH_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.depthTexIndex"));
+				boost::replace_all(glossycoatingSrc, "<<CS_INDEX_TEXTURE_>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.indexTexIndex"));
 				if (mat->glossycoating.multibounce)
 					boost::replace_all(glossycoatingSrc, "<<CS_MB_FLAG>>", "true");
 				else
