@@ -506,6 +506,11 @@ void CompiledScene::CompileMaterials() {
 // Dynamic OpenCL code generation for material evaluation
 //------------------------------------------------------------------------------
 
+static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
+		const string &type, const u_int i) {
+	return "Texture_Get" + type + "Value(" + ToString(i) + ", hitPoint TEXTURES_PARAM)";
+}
+
 static void AddMaterialSourceGlue(stringstream &source,
 		const string &matName, const u_int i, const string &funcName1, const string &funcName2,
 		const string &returnType, const string &args,  const string &params, const bool hasReturn = true) {
@@ -632,15 +637,15 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 		switch (mat->type) {
 			case slg::ocl::MATTE: {
 				AddMaterialSource(source, "Matte", i,
-						AddTextureSourceCall(texs, "Spectrum", mat->matte.kdTexIndex));
+						"Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;
 			}
 			case slg::ocl::ROUGHMATTE: {
 				AddMaterialSource(source, "RoughMatte", i,
-						AddTextureSourceCall(texs, "Float", mat->roughmatte.sigmaTexIndex) + ", " +
-						AddTextureSourceCall(texs, "Spectrum", mat->roughmatte.kdTexIndex));
+						"Texture_GetFloatValue(material->roughmatte.sigmaTexIndex, hitPoint TEXTURES_PARAM), "
+						"Texture_GetSpectrumValue(material->roughmatte.kdTexIndex, hitPoint TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
 				AddMaterialSourceStandardImplGetvolume(source, i);
 				break;

@@ -35,6 +35,8 @@ float3 ConstFloatTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
 	return tex->constFloat.value;
 }
 
+// Note: ConstFloatTexture_Bump() is defined in texture_bump_funcs.cl
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -54,6 +56,8 @@ float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global const Texture *tex) {
 	return VLOAD3F(tex->constFloat3.color.c);
 }
 
+// Note: ConstFloat3Texture_Bump() is defined in texture_bump_funcs.cl
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -64,8 +68,6 @@ float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global const Texture *tex) {
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)
-
-// Note: ImageMapTexture_Bump() is defined in texture_bump_funcs.cl
 
 float ImageMapTexture_ConstEvaluateFloat(__global const Texture *tex,
 		__global HitPoint *hitPoint
@@ -96,6 +98,8 @@ float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture *tex,
 			mapUV.s0, mapUV.s1
 			IMAGEMAPS_PARAM);
 }
+
+// Note: ImageMapTexture_Bump() is defined in texture_bump_funcs.cl
 
 #endif
 

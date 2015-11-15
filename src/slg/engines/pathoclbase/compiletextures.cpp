@@ -1017,7 +1017,7 @@ void CompiledScene::CompileTextures() {
 // Dynamic OpenCL code generation for texture evaluation
 //------------------------------------------------------------------------------
 
-string CompiledScene::AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
+static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
 		const string &type, const u_int i) {
 	stringstream ss;
 
@@ -1034,6 +1034,27 @@ string CompiledScene::AddTextureSourceCall(const vector<slg::ocl::Texture> &texs
 			break;
 		default:
 			ss << "Texture_Index" << i << "_Evaluate" << type << "(&texs[" << i << "], hitPoint TEXTURES_PARAM)";
+	}
+
+	return ss.str();
+}
+
+static string AddTextureBumpSourceCall(const vector<slg::ocl::Texture> &texs, const u_int i) {
+	stringstream ss;
+
+	const slg::ocl::Texture *tex = &texs[i];
+	switch (tex->type) {
+		case slg::ocl::CONST_FLOAT:
+			ss << "ConstFloatTexture_Bump(hitPoint)";
+			break;
+		case slg::ocl::CONST_FLOAT3:
+			ss << "ConstFloat3Texture_Bump(hitPoint)";
+			break;
+		case slg::ocl::IMAGEMAP:
+			ss << "ImageMapTexture_Bump(&texs[" << i << "], hitPoint, sampleDistance IMAGEMAPS_PARAM)";
+			break;
+		default:
+			ss << "Texture_Index" << i << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM)";
 	}
 
 	return ss.str();
@@ -1062,6 +1083,10 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 		const slg::ocl::Texture *tex = &texs[i];
 
 		switch (tex->type) {
+			case slg::ocl::CONST_FLOAT:
+			case slg::ocl::CONST_FLOAT3:
+			case slg::ocl::IMAGEMAP:
+				break;
 			case slg::ocl::NORMALMAP_TEX: {
 				source << "#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n";
 				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
@@ -1072,28 +1097,13 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 				source << "#endif\n";
 				break;
 			}
-			case slg::ocl::IMAGEMAP: {
-				source << "#if defined(PARAM_ENABLE_TEX_IMAGEMAP)\n";
-				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
-						"\t\tconst float sampleDistance\n"
-						"\t\tTEXTURES_PARAM_DECL) {\n"
-						"\tconst __global Texture *texture = &texs[" << i << "];\n"
-						"\treturn ImageMapTexture_Bump(hitPoint, sampleDistance,\n" <<
-							ToString(tex->imageMapTex.gain) << ", " <<
-							ToString(tex->imageMapTex.imageMapIndex) << ", " <<
-							"&texture->imageMapTex.mapping"
-							" IMAGEMAPS_PARAM);\n"
-						"}\n";
-				source << "#endif\n";
-				break;
-			}
 			case slg::ocl::ADD_TEX: {
 				source << "#if defined(PARAM_ENABLE_TEX_ADD)\n";
 				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
 						"\t\tconst float sampleDistance\n"
 						"\t\tTEXTURES_PARAM_DECL) {\n"
-						"\tconst float3 tex1ShadeN = Texture_Index" << tex->addTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
-						"\tconst float3 tex2ShadeN = Texture_Index" << tex->addTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+						"\tconst float3 tex1ShadeN = " << AddTextureBumpSourceCall(texs, tex->addTex.tex1Index) <<";\n"
+						"\tconst float3 tex2ShadeN = " << AddTextureBumpSourceCall(texs, tex->addTex.tex2Index) <<";\n"
 						"\treturn normalize(tex1ShadeN + tex2ShadeN - VLOAD3F(&hitPoint->shadeN.x));\n"
 						"}\n";
 				source << "#endif\n";
@@ -1104,8 +1114,8 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
 						"\t\tconst float sampleDistance\n"
 						"\t\tTEXTURES_PARAM_DECL) {\n"
-						"\tconst float3 tex1ShadeN = Texture_Index" << tex->addTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
-						"\tconst float3 tex2ShadeN = Texture_Index" << tex->addTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+						"\tconst float3 tex1ShadeN = " << AddTextureBumpSourceCall(texs, tex->subtractTex.tex1Index) << ";\n"
+						"\tconst float3 tex2ShadeN = " << AddTextureBumpSourceCall(texs, tex->subtractTex.tex2Index) << ";\n"
 						"\treturn normalize(tex1ShadeN - tex2ShadeN + VLOAD3F(&hitPoint->shadeN.x));\n"
 						"}\n";
 				source << "#endif\n";
@@ -1119,21 +1129,21 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 						"\t const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
 						"\tconst float3 u = normalize(VLOAD3F(&hitPoint->dpdu.x));\n"
 						"\tconst float3 v = normalize(cross(shadeN, u));\n"
-						"\tfloat3 n = Texture_Index" << tex->mixTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+						"\tfloat3 n = " << AddTextureBumpSourceCall(texs, tex->mixTex.tex1Index) << ";\n"
 						"\tfloat nn = dot(n, shadeN);\n"
 						"\tconst float du1 = dot(n, u) / nn;\n"
 						"\tconst float dv1 = dot(n, v) / nn;\n"
-						"\tn = Texture_Index" << tex->mixTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+						"\tn = " << AddTextureBumpSourceCall(texs, tex->mixTex.tex2Index) << ";\n"
 						"\tnn = dot(n, shadeN);\n"
 						"\tconst float du2 = dot(n, u) / nn;\n"
 						"\tconst float dv2 = dot(n, v) / nn;\n"
-						"\tn = Texture_Index" << tex->mixTex.amountTexIndex << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+						"\tn = " << AddTextureBumpSourceCall(texs, tex->mixTex.amountTexIndex) << ";\n"
 						"\tnn = dot(n, shadeN);\n"
 						"\tconst float dua = dot(n, u) / nn;\n"
 						"\tconst float dva = dot(n, v) / nn;\n"
-						"\tconst float t1 = " << CompiledScene::AddTextureSourceCall(texs, "Float", tex->mixTex.tex1Index) << ";\n"
-						"\tconst float t2 = " << CompiledScene::AddTextureSourceCall(texs, "Float", tex->mixTex.tex2Index) << ";\n"
-						"\tconst float amt = clamp(" << CompiledScene::AddTextureSourceCall(texs, "Float", tex->mixTex.amountTexIndex) << ", 0.f, 1.f);\n"
+						"\tconst float t1 = " << AddTextureSourceCall(texs, "Float", tex->mixTex.tex1Index) << ";\n"
+						"\tconst float t2 = " << AddTextureSourceCall(texs, "Float", tex->mixTex.tex2Index) << ";\n"
+						"\tconst float amt = clamp(" << AddTextureSourceCall(texs, "Float", tex->mixTex.amountTexIndex) << ", 0.f, 1.f);\n"
 						"\tconst float du = mix(du1, du2, amt) + dua * (t2 - t1);\n"
 						"\tconst float dv = mix(dv1, dv2, amt) + dva * (t2 - t1);\n"
 						"\treturn normalize(shadeN + du * u + dv * v);\n"
@@ -1149,37 +1159,21 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 						"\t const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
 						"\tconst float3 u = normalize(VLOAD3F(&hitPoint->dpdu.x));\n"
 						"\tconst float3 v = normalize(cross(shadeN, u));\n"
-						"\tfloat3 n = Texture_Index" << tex->scaleTex.tex1Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+						"\tfloat3 n = " << AddTextureBumpSourceCall(texs, tex->scaleTex.tex1Index) << ";\n"
 						"\tfloat nn = dot(n, shadeN);\n"
 						"\tconst float du1 = dot(n, u) / nn;\n"
 						"\tconst float dv1 = dot(n, v) / nn;\n"
-						"\tn = Texture_Index" << tex->scaleTex.tex2Index << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n"
+						"\nn = " << AddTextureBumpSourceCall(texs, tex->scaleTex.tex2Index) << ";\n"
 						"\tnn = dot(n, shadeN);\n"
 						"\tconst float du2 = dot(n, u) / nn;\n"
 						"\tconst float dv2 = dot(n, v) / nn;\n"
-						"\tconst float t1 = " << CompiledScene::AddTextureSourceCall(texs, "Float", tex->scaleTex.tex1Index) << ";\n"
-						"\tconst float t2 = " << CompiledScene::AddTextureSourceCall(texs, "Float", tex->scaleTex.tex2Index) << ";\n"
+						"\tconst float t1 = " << AddTextureSourceCall(texs, "Float", tex->scaleTex.tex1Index) << ";\n"
+						"\tconst float t2 = " << AddTextureSourceCall(texs, "Float", tex->scaleTex.tex2Index) << ";\n"
 						"\tconst float du = du1 * t2 + t1 * du2;\n"
 						"\tconst float dv = dv1 * t2 + t1 * dv2;\n"
 						"\treturn normalize(shadeN + du * u + dv * v);\n"
 						"}\n";
 				source << "#endif\n";
-				break;
-			}
-			case slg::ocl::CONST_FLOAT: {
-				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
-						"\t\tconst float sampleDistance\n"
-						"\t\tTEXTURES_PARAM_DECL) {\n"
-						"\treturn VLOAD3F(&hitPoint->shadeN.x);\n"
-						"}\n";
-				break;
-			}
-			case slg::ocl::CONST_FLOAT3: {
-				source << "float3 Texture_Index" << i << "_Bump(__global HitPoint *hitPoint,\n"
-						"\t\tconst float sampleDistance\n"
-						"\t\tTEXTURES_PARAM_DECL) {\n"
-						"\treturn VLOAD3F(&hitPoint->shadeN.x);\n"
-						"}\n";
 				break;
 			}
 			default: {
@@ -1197,9 +1191,35 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 	source << "float3 Texture_Bump(const uint texIndex, "
 			"__global HitPoint *hitPoint, const float sampleDistance "
 			"TEXTURES_PARAM_DECL) {\n"
-			"\tswitch (texIndex) {\n";
-	for (u_int i = 0; i < texturesCount; ++i)
-		source << "\t\tcase " << i << ": return Texture_Index" << i << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n";
+			"\t __global const Texture *tex = &texs[texIndex];\n";
+
+	// For textures source code that it is not dynamically generated
+	source << "\tswitch (tex->type) {\n" <<
+			"\t\tcase CONST_FLOAT: return ConstFloatTexture_Bump(hitPoint);\n" <<
+			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_Bump(hitPoint);\n" <<
+			// I can have an IMAGEMAP texture only if PARAM_HAS_IMAGEMAPS is defined
+			"#if defined(PARAM_HAS_IMAGEMAPS)\n"
+			"\t\tcase IMAGEMAP: return ImageMapTexture_Bump(tex, hitPoint, sampleDistance IMAGEMAPS_PARAM);\n" <<
+			"#endif\n"
+			"\t\tdefault: break;\n" <<
+			"\t}\n";
+
+	source <<  "\tswitch (texIndex) {\n";
+	for (u_int i = 0; i < texturesCount; ++i) {
+		// Generate the case only for dynamically generated code
+		const slg::ocl::Texture *tex = &texs[i];
+
+		switch (tex->type) {
+			case slg::ocl::CONST_FLOAT:
+			case slg::ocl::CONST_FLOAT3:
+			case slg::ocl::IMAGEMAP:
+				// For textures source code that it is not dynamically generated
+				break;
+			default:
+				source << "\t\tcase " << i << ": return Texture_Index" << i << "_Bump(hitPoint, sampleDistance TEXTURES_PARAM);\n";
+				break;
+		}
+	}
 	source << "\t\tdefault: return 0.f;\n"
 			"\t}\n"
 			"}\n";
