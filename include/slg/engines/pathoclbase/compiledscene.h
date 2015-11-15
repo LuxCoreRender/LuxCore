@@ -51,8 +51,6 @@ public:
 	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
 
 	static std::string ToOCLString(const slg::ocl::Spectrum &v);
-	static std::string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
-			const std::string &type, const u_int i);
 
 	Scene *scene;
 	Film *film;
