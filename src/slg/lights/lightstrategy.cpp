@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/lights/lightstrategy.h"
+#include "slg/lights/lightstrategyregistry.h"
 #include "slg/scene/scene.h"
 
 using namespace std;
@@ -38,6 +39,87 @@ float LightStrategy::SampleLightPdf(const LightSource *light) const {
 	return lightsDistribution->Pdf(light->lightSceneIndex);
 }
 
+Properties LightStrategy::ToProperties() const {
+	return Properties() <<
+			Property("lightstrategy.type")(LightStrategyType2String(GetType()));
+}
+
+LightStrategyType LightStrategy::GetType(const luxrays::Properties &cfg) {
+	const string type = cfg.Get(Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())).Get<string>();
+	
+	return String2LightStrategyType(type);
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by LightStrategyRegistry
+//------------------------------------------------------------------------------
+
+Properties LightStrategy::ToProperties(const Properties &cfg) {
+	const string type = cfg.Get(Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())).Get<string>();
+
+	LightStrategyRegistry::ToProperties func;
+
+	if (LightStrategyRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
+		return func(cfg);
+	} else
+		throw runtime_error("Unknown light strategy type in LightStrategy::ToProperties(): " + type);
+}
+
+LightStrategy *LightStrategy::FromProperties(const Properties &cfg) {
+	const string type = cfg.Get(Property("lightstrategy.type")(LightStrategyLogPower::GetObjectTag())).Get<string>();
+
+	LightStrategyRegistry::FromProperties func;
+	if (LightStrategyRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
+		return func(cfg);
+	else
+		throw runtime_error("Unknown filter type in LightStrategy::FromProperties(): " + type);
+}
+
+string LightStrategy::FromPropertiesOCL(const Properties &cfg) {
+	throw runtime_error("Called LightStrategy::FromPropertiesOCL()");
+}
+
+LightStrategyType LightStrategy::String2LightStrategyType(const string &type) {
+	LightStrategyRegistry::GetObjectType func;
+	if (LightStrategyRegistry::STATICTABLE_NAME(GetObjectType).Get(type, func))
+		return func();
+	else
+		throw runtime_error("Unknown light strategy type in LightStrategy::String2LightStrategyType(): " + type);
+}
+
+string LightStrategy::LightStrategyType2String(const LightStrategyType type) {
+	LightStrategyRegistry::GetObjectTag func;
+	if (LightStrategyRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
+		return func();
+	else
+		throw runtime_error("Unknown light strategy type in LightStrategy::LightStrategyType2String(): " + boost::lexical_cast<string>(type));
+}
+
+Properties LightStrategy::GetDefaultProps() {
+	static Properties props;
+
+	return Properties();
+}
+
+//------------------------------------------------------------------------------
+// LightStrategyRegistry
+//
+// For the registration of each LightStrategy sub-class with LightStrategy StaticTables
+//
+// NOTE: you have to place all STATICTABLE_REGISTER() in the same .cpp file of the
+// main base class (i.e. the one holding the StaticTable) because otherwise
+// static members initialization order is not defined.
+//------------------------------------------------------------------------------
+
+OBJECTSTATICREGISTRY_STATICFIELDS(LightStrategyRegistry);
+
+//------------------------------------------------------------------------------
+
+OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyUniform);
+OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyPower);
+OBJECTSTATICREGISTRY_REGISTER(LightStrategyRegistry, LightStrategyLogPower);
+// Just add here any new LightStrategy (don't forget in the .h too)
+
 //------------------------------------------------------------------------------
 // LightStrategyUniform
 //------------------------------------------------------------------------------
@@ -57,6 +139,24 @@ void LightStrategyUniform::Preprocess(const Scene *scn) {
 
 	delete lightsDistribution;
 	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+}
+
+// Static methods used by LightStrategyRegistry
+
+Properties LightStrategyUniform::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
+}
+
+LightStrategy *LightStrategyUniform::FromProperties(const Properties &cfg) {
+	return new LightStrategyUniform();
+}
+
+Properties LightStrategyUniform::GetDefaultProps() {
+	static Properties props = LightStrategy::GetDefaultProps() <<
+			Property("lightstrategy.type")(GetObjectTag());
+
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -88,6 +188,24 @@ void LightStrategyPower::Preprocess(const Scene *scn) {
 	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
 }
 
+// Static methods used by LightStrategyRegistry
+
+Properties LightStrategyPower::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
+}
+
+LightStrategy *LightStrategyPower::FromProperties(const Properties &cfg) {
+	return new LightStrategyPower();
+}
+
+Properties LightStrategyPower::GetDefaultProps() {
+	static Properties props = LightStrategy::GetDefaultProps() <<
+			Property("lightstrategy.type")(GetObjectTag());
+
+	return props;
+}
+
 //------------------------------------------------------------------------------
 // LightStrategyLogPower
 //------------------------------------------------------------------------------
@@ -109,4 +227,22 @@ void LightStrategyLogPower::Preprocess(const Scene *scn) {
 	// Build the data to power based light sampling
 	delete lightsDistribution;
 	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
+}
+
+// Static methods used by LightStrategyRegistry
+
+Properties LightStrategyLogPower::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			cfg.Get(GetDefaultProps().Get("lightstrategy.type"));
+}
+
+LightStrategy *LightStrategyLogPower::FromProperties(const Properties &cfg) {
+	return new LightStrategyPower();
+}
+
+Properties LightStrategyLogPower::GetDefaultProps() {
+	static Properties props = LightStrategy::GetDefaultProps() <<
+			Property("lightstrategy.type")(GetObjectTag());
+
+	return props;
 }

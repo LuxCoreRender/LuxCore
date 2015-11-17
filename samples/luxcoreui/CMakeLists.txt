@@ -31,7 +31,7 @@ include_directories(deps/glfw-3.1.1/include)
 #
 #############################################################################
 
-include_directories(deps/imgui-1.45)
+include_directories(deps/imgui-1.46)
 
 set(LUXCOREUI_SRCS
 	luxcoreui.cpp
@@ -40,12 +40,26 @@ set(LUXCOREUI_SRCS
 	uikeys.cpp
 	uimenu.cpp
 	uimouse.cpp
+	helpwindow.cpp
 	logwindow.cpp
+	objectwindow.cpp
+	objecteditorwindow.cpp
+	acceleratorwindow.cpp
+	epsilonwindow.cpp
+	filmchannelswindow.cpp
+	filmoutputswindow.cpp
+	filmradiancegroupswindow.cpp
+	imagewindow.cpp
+	lightstrategywindow.cpp
+	ocldevicewindow.cpp
+	pixelfilterwindow.cpp
+	renderenginewindow.cpp
+	samplerwindow.cpp
 	statswindow.cpp
 	imgui_impl_glfw.cpp
-	deps/imgui-1.45/imgui.cpp
-	deps/imgui-1.45/imgui_demo.cpp
-	deps/imgui-1.45/imgui_draw.cpp
+	deps/imgui-1.46/imgui.cpp
+	deps/imgui-1.46/imgui_demo.cpp
+	deps/imgui-1.46/imgui_draw.cpp
 	)
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})

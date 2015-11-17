@@ -20,8 +20,10 @@
 #define	_LUXRAYS_ACCELERATOR_H
 
 #include <string>
+#include <deque>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/geometry/ray.h"
 #include "luxrays/core/trianglemesh.h"
 
 namespace luxrays {
@@ -51,6 +53,7 @@ public:
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
 
 	static std::string AcceleratorType2String(const AcceleratorType type);
+	static AcceleratorType String2AcceleratorType(const std::string &type);
 };
 
 }

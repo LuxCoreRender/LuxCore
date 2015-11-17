@@ -137,6 +137,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_abs_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_clamp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
@@ -163,9 +164,14 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/perspective.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/projective.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/stereo.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/core/namedobject.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sdl.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/sphericalfunction.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/sphericalfunction/photometricdataies.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/renderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/cpurenderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/oclrenderengine.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepository.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidirvmcpu/bidirvmcpu.cpp
@@ -201,8 +207,17 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmparse.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmtoproperties.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/radiancechannelscale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/box.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/gaussian.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchell.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/contourlines.cpp
@@ -254,7 +269,6 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/velvet.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/rendersession.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/renderconfig.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/renderengine.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobol.cpp
@@ -277,6 +291,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/abs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/add.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/bilerp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
@@ -289,6 +304,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelapprox.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcauchy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcolor.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelconst.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelluxpop.cpp
@@ -365,6 +381,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bump_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_noise_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_abs_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_bilerp_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blackbody_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_clamp_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_fresnelcolor_funcs_kernel.cpp

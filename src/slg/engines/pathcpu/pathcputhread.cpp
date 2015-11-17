@@ -65,11 +65,11 @@ void PathCPURenderThread::DirectLightSampling(
 			if (!bsdfEval.Black()) {
 				assert (!isnan(bsdfPdfW) && !isnan(bsdfPdfW));
 
-				const float epsilon = Max(MachineEpsilon::E(bsdf.hitPoint.p), MachineEpsilon::E(distance));
 				Ray shadowRay(bsdf.hitPoint.p, lightRayDir,
-						epsilon,
-						distance - epsilon,
+						0.f,
+						distance,
 						time);
+				shadowRay.UpdateMinMaxWithEpsilon();
 				RayHit shadowRayHit;
 				BSDF shadowBsdf;
 				Spectrum connectionThroughput;
@@ -163,22 +163,19 @@ void PathCPURenderThread::DirectHitInfiniteLight(const BSDFEvent lastBSDFEvent,
 
 void PathCPURenderThread::GenerateEyeRay(Ray &eyeRay, Sampler *sampler, SampleResult &sampleResult) {
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
-	const u_int filmWidth = threadFilm->GetWidth();
-	const u_int filmHeight = threadFilm->GetHeight();
+
+	const float u0 = sampler->GetSample(0);
+	const float u1 = sampler->GetSample(1);
+	threadFilm->GetSampleXY(u0, u1, &sampleResult.filmX, &sampleResult.filmY);
 
 	if (engine->useFastPixelFilter) {
 		// Use fast pixel filtering, like the one used in BIASPATH.
-		const float u0 = sampler->GetSample(0);
-		const float u1 = sampler->GetSample(1);
 
-		const float ux = u0 * filmWidth;
-		const float uy = u1 * filmHeight;
+		sampleResult.pixelX = Floor2UInt(sampleResult.filmX);
+		sampleResult.pixelY = Floor2UInt(sampleResult.filmY);
 
-		sampleResult.pixelX = Min<u_int>(ux, (u_int)(filmWidth - 1));
-		sampleResult.pixelY = Min<u_int>(uy, (u_int)(filmHeight - 1));
-
-		float uSubPixelX = ux - sampleResult.pixelX;
-		float uSubPixelY = uy - sampleResult.pixelY;
+		const float uSubPixelX = sampleResult.filmX - sampleResult.pixelX;
+		const float uSubPixelY = sampleResult.filmY - sampleResult.pixelY;
 
 		// Sample according the pixel filter distribution
 		float distX, distY;
@@ -186,11 +183,6 @@ void PathCPURenderThread::GenerateEyeRay(Ray &eyeRay, Sampler *sampler, SampleRe
 
 		sampleResult.filmX = sampleResult.pixelX + .5f + distX;
 		sampleResult.filmY = sampleResult.pixelY + .5f + distY;
-	} else {
-		// Use old pixel filtering, like the one used in classic LuxRender
-
-		sampleResult.filmX = Min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-		sampleResult.filmY = Min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 	}
 
 	Camera *camera = engine->renderConfig->scene->camera;
@@ -214,7 +206,7 @@ void PathCPURenderThread::RenderFunc() {
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, threadFilm, engine->sampleSplatter,
-			threadIndex, engine->renderThreads.size(), engine->samplerSharedData);
+			engine->samplerSharedData);
 	const u_int sampleBootSize = 5;
 	const u_int sampleStepSize = 9;
 	const u_int sampleSize = 

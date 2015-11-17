@@ -29,6 +29,7 @@
 #include "slg/textures/abs.h"
 #include "slg/textures/add.h"
 #include "slg/textures/band.h"
+#include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
@@ -40,6 +41,7 @@
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
+#include "slg/textures/fresnel/fresnelcauchy.h"
 #include "slg/textures/fresnel/fresnelcolor.h"
 #include "slg/textures/fresnel/fresnelconst.h"
 #include "slg/textures/fresnel/fresnelluxpop.h"
@@ -87,7 +89,7 @@ void Scene::ParseTextures(const Properties &props) {
 			// A replacement for an existing texture
 			const Texture *oldTex = texDefs.GetTexture(texName);
 
-			// Check if it is not a FresnelTexture but must be
+			// FresnelTexture can be replace donly with other FresnelTexture
 			if (dynamic_cast<const FresnelTexture *>(oldTex) && !dynamic_cast<const FresnelTexture *>(tex))
 				throw runtime_error("You can not replace a fresnel texture with the texture: " + texName);
 
@@ -376,6 +378,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new IrregularDataTexture(waveLengths.size(), &waveLengths[0], &data[0], resolution, emission);
 	} else if (texType == "lampspectrum") {
 		return AllocLampSpectrumTex(props, propName);
+	} else if (texType == "fresnelabbe") {
+		return AllocFresnelAbbeTex(props, propName);
+	} else if (texType == "fresnelcauchy") {
+		return AllocFresnelCauchyTex(props, propName);
 	} else if (texType == "fresnelcolor") {
 		const Texture *col = GetTexture(props.Get(Property(propName + ".kr")(.5f)));
 
@@ -387,10 +393,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		return new FresnelConstTexture(n, k);
 	} else if (texType == "fresnelluxpop") {
 		return AllocFresnelLuxPopTex(props, propName);
-	} else if (texType == "fresnelsopra") {
-		return AllocFresnelSopraTex(props, propName);
 	} else if (texType == "fresnelpreset") {
 		return AllocFresnelPresetTex(props, propName);
+	} else if (texType == "fresnelsopra") {
+		return AllocFresnelSopraTex(props, propName);
 	} else if (texType == "abs") {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 
@@ -405,6 +411,13 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 
 		return new NormalMapTexture(tex);
+	} else if (texType == "bilerp") {
+		const Texture *t00 = GetTexture(props.Get(Property(propName + ".texture00")(0.f)));
+		const Texture *t01 = GetTexture(props.Get(Property(propName + ".texture01")(1.f)));
+		const Texture *t10 = GetTexture(props.Get(Property(propName + ".texture10")(0.f)));
+		const Texture *t11 = GetTexture(props.Get(Property(propName + ".texture11")(1.f)));
+
+		return new BilerpTexture(t00, t01, t10, t11);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 }

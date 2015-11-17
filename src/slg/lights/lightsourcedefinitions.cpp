@@ -155,26 +155,9 @@ void LightSourceDefinitions::DeleteLightSourceByMaterial(const Material *mat) {
 		DeleteLightSource(*name);
 }
 
-void LightSourceDefinitions::SetLightStrategy(const LightStrategyType type) {
-	if (lightStrategy && (lightStrategy->GetType() == type))
-		return;
-
+void LightSourceDefinitions::SetLightStrategy(LightStrategy *ls) {
 	delete lightStrategy;
-	lightStrategy = NULL;
-
-	switch (type) {
-		case TYPE_UNIFORM:
-			lightStrategy = new LightStrategyUniform();
-			break;
-		case TYPE_POWER:
-			lightStrategy = new LightStrategyPower();
-			break;
-		case TYPE_LOG_POWER:
-			lightStrategy = new LightStrategyLogPower();
-			break;
-		default:
-			throw runtime_error("Unknown LightStrategyType in LightSourceDefinitions::SetLightStrategy(): " + ToString(type));
-	}
+	lightStrategy = ls;
 }
 
 void LightSourceDefinitions::Preprocess(const Scene *scene) {

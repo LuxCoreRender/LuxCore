@@ -33,23 +33,31 @@ void StatsWindow::Draw() {
 	if (!opened)
 		return;
 
-	ImGui::SetNextWindowPos(ImVec2(0, 200), ImGuiSetCond_Appearing);
-	ImGui::SetNextWindowSize(ImVec2(640, 200), ImGuiSetCond_Appearing);
+	ImGui::SetNextWindowSize(ImVec2(512.f, 200.f), ImGuiSetCond_Appearing);
 
-	if (ImGui::Begin(title.c_str(), &opened)) {
+	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
+
 		RenderSession *session = app->session;
 		RenderConfig *config = app->config;
 
 		const Properties &stats = session->GetStats();
 
+		// GUI information
+		if (ImGui::CollapsingHeader("GUI information", NULL, true, true)) {
+			LuxCoreApp::ColoredLabelText("GUI loop time:", "%fms", 1000.0 * app->guiLoopTime);
+			LuxCoreApp::ColoredLabelText("GUI sleep time:", "%fms", 1000.0 * app->guiSleepTime);
+			LuxCoreApp::ColoredLabelText("Film update time:", "%fms", 1000.0 * app->guiFilmUpdateTime);
+		}
+
 		// Rendering information
 		if (ImGui::CollapsingHeader("Rendering information", NULL, true, true)) {
-			const string engineType = config->GetProperty("renderengine.type").Get<string>();
+			const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 			LuxCoreApp::ColoredLabelText("Render engine:", "%s", engineType.c_str());
 
 			const string samplerName = ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL") ||
 				(engineType == "RTBIASPATHOCL")) ?
-					"N/A" : config->GetProperty("sampler.type").Get<string>();
+					"N/A" : config->ToProperties().Get("sampler.type").Get<string>();
 			LuxCoreApp::ColoredLabelText("Sampler:", "%s", samplerName.c_str());
 
 			LuxCoreApp::ColoredLabelText("Rendering time:", "%dsecs", int(stats.Get("stats.renderengine.time").Get<double>()));
@@ -68,7 +76,7 @@ void StatsWindow::Draw() {
 
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-						config->GetProperty("screen.refresh.interval").Get<u_int>(),
+						config->ToProperties().Get("screen.refresh.interval").Get<u_int>(),
 						fps);
 			} else if (engineType == "RTBIASPATHOCL") {
 				static float fps = 0.f;
@@ -79,12 +87,12 @@ void StatsWindow::Draw() {
 
 				LuxCoreApp::ColoredLabelText("Screen refresh:", "%d/%dms (%.1ffps)",
 						int((fps > 0.f) ? (1000.0 / fps) : 0.0),
-						config->GetProperty("screen.refresh.interval").Get<u_int>(),
+						config->ToProperties().Get("screen.refresh.interval").Get<u_int>(),
 						fps);
 			} else
 #endif
 			{
-				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->GetProperty("screen.refresh.interval").Get<u_int>());
+				LuxCoreApp::ColoredLabelText("Screen refresh:", "%dms", config->ToProperties().Get("screen.refresh.interval").Get<u_int>());
 			}
 		}
 
@@ -137,6 +145,8 @@ void StatsWindow::Draw() {
 				}
 			}
 		}
+
+		ImGui::PopStyleVar();
 	}
 	ImGui::End();
 }

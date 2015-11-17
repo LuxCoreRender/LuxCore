@@ -93,8 +93,8 @@ void RenderSession::EndSceneEdit() {
 	// Make a copy of the edit actions
 	const EditActionList editActions = renderConfig->scene->editActions;
 	
-	if ((renderEngine->GetEngineType() != RTPATHOCL) &&
-			(renderEngine->GetEngineType() != RTBIASPATHOCL)) {
+	if ((renderEngine->GetType() != RTPATHOCL) &&
+			(renderEngine->GetType() != RTBIASPATHOCL)) {
 		SLG_LOG("[RenderSession] Edit actions: " << editActions);
 
 		// RTPATHOCL and RTBIASPATHOCL handle film Reset on their own
@@ -152,35 +152,6 @@ void RenderSession::Parse(const luxrays::Properties &props) {
 	boost::unique_lock<boost::mutex> lock(filmMutex);
 	film->Parse(props);
 
-	//--------------------------------------------------------------------------
-	// Check if there was a new image pipeline definition
-	//--------------------------------------------------------------------------
-
-	if (props.HaveNames("film.imagepipeline")) {
-		// Delete the old image pipeline properties
-		renderConfig->cfg.DeleteAll(renderConfig->cfg.GetAllNames("film.imagepipeline"));
-
-		// Update the RenderConfig properties with the new image pipeline definition
-		BOOST_FOREACH(string propName, props.GetAllNames()) {
-			if (boost::starts_with(propName, "film.imagepipeline"))
-				renderConfig->cfg.Set(props.Get(propName));
-		}
-	}
-
-	//--------------------------------------------------------------------------
-	// Check if there were new radiance groups scale
-	//--------------------------------------------------------------------------
-
-	if (props.HaveNames("film.radiancescales")) {
-		// Delete old radiance groups scale properties
-		vector<string> newKeys = props.GetAllNames("film.radiancescales.");
-		BOOST_FOREACH(string &k, newKeys)
-			renderConfig->cfg.DeleteAll(renderConfig->cfg.GetAllNames(k));
-		
-		// Update the RenderConfig properties with the new radiance groups scale properties
-		BOOST_FOREACH(string propName, props.GetAllNames()) {
-			if (boost::starts_with(propName, "film.radiancescales"))
-				renderConfig->cfg.Set(props.Get(propName));
-		}
-	}
+	// Update render config properties
+	renderConfig->UpdateFilmProperties(props);
 }

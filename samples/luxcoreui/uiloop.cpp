@@ -56,40 +56,43 @@ void LuxCoreApp::RefreshRenderingTexture() {
 
 	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, filmWidth, filmHeight, 0, GL_RGB, GL_FLOAT, pixels);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, renderFrameBufferTexMinFilter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, renderFrameBufferTexMagFilter);
 
+	const double t1 = WallClockTime();
 	session->UpdateStats();
+	const double t2 = WallClockTime();
+
+	// The average over last 10 frames
+	guiFilmUpdateTime += (1.0 / 10.0) * (t2 - t1 - guiFilmUpdateTime);
 }
 
 void LuxCoreApp::DrawRendering() {
-	const u_int filmWidth = session->GetFilm().GetWidth();
-	const u_int filmHeight = session->GetFilm().GetHeight();
+	int frameBufferWidth, frameBufferHeight;
+	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+		
+	ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
+	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiSetCond_Always);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
-	glColor3f(1.f, 1.f, 1.f);
-	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
+	bool opened = true;
+	if (ImGui::Begin("Rendering", &opened, ImVec2(0.f, 0.f), 0.0f,
+			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
+		ImGui::Image((void *) (intptr_t) renderFrameBufferTexID,
+				ImVec2(frameBufferWidth, frameBufferHeight),
+				ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
 
-	glEnable(GL_TEXTURE_2D);
-	glBegin(GL_QUADS);
+		DrawTiles();
+	}
+	ImGui::End();
 
-	glTexCoord2f(0.f, 0.f);
-	glVertex2i(0, 0);
-
-	glTexCoord2f(0.f, 1.f);
-	glVertex2i(0, (GLint)filmHeight);
-
-	glTexCoord2f(1.f, 1.f);
-	glVertex2i((GLint)filmWidth, (GLint)filmHeight);
-
-	glTexCoord2f(1.f, 0.f);
-	glVertex2i((GLint)filmWidth, 0);
-
-	glEnd();
-	glDisable(GL_TEXTURE_2D);
+	ImGui::PopStyleVar(1);
 }
 
 void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses,  const Property &propErrors,
-		const u_int tileCount, const u_int tileWidth, const u_int tileHeight) {
+		const u_int tileCount, const u_int tileWidth, const u_int tileHeight, const ImU32 col) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
 	const bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
 
@@ -106,22 +109,20 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 		const u_int width = Min(tileWidth, filmWidth - xStart - 1);
 		const u_int height = Min(tileHeight, filmHeight - yStart - 1);
 
-		glBegin(GL_LINE_LOOP);
-		glVertex2i(xStart, yStart);
-		glVertex2i(xStart + width, yStart);
-		glVertex2i(xStart + width, yStart + height);
-		glVertex2i(xStart, yStart + height);
-		glEnd();
+		ImGui::GetWindowDrawList()->AddRect(
+				ImVec2(xStart * imGuiScale.x, (filmHeight - yStart - 1) * imGuiScale.y),
+				ImVec2((xStart + width) * imGuiScale.x, (filmHeight - (yStart + height) - 1) * imGuiScale.y),
+				col);
 
 		if (showPassCount || showError) {
-			float xs = xStart + 3.f;
-			float ys = (filmHeight - yStart - 1.f) - ImGui::GetTextLineHeight() - 3.f;
+			float xs = xStart * imGuiScale.x + 3.f;
+			float ys = (filmHeight - yStart - 1.f) * imGuiScale.y - ImGui::GetTextLineHeight() - 3.f;
 
 			if (showError) {
 				const float error = propErrors.Get<float>(i) * 256.f;
 				const string errorStr = boost::str(boost::format("[%.2f]") % error);
 
-				ImGui::SetCursorPos(ImVec2(xs * imGuiScale.x, ys * imGuiScale.y));
+				ImGui::SetCursorPos(ImVec2(xs, ys));
 				ImGui::TextUnformatted(errorStr.c_str());
 				
 				ys -= ImGui::GetTextLineHeight();
@@ -131,7 +132,7 @@ void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasse
 				const u_int pass = propPasses.Get<u_int>(i);
 				const string passStr = boost::lexical_cast<string>(pass);
 				
-				ImGui::SetCursorPos(ImVec2(xs * imGuiScale.x, ys * imGuiScale.y));
+				ImGui::SetCursorPos(ImVec2(xs, ys));
 				ImGui::TextUnformatted(passStr.c_str());
 			}
 		}
@@ -142,62 +143,50 @@ void LuxCoreApp::DrawTiles() {
 	// Draw the pending, converged and not converged tiles for BIASPATHCPU or BIASPATHOCL
 	const Properties &stats = session->GetStats();
 
-	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if ((engineType == "BIASPATHCPU") || (engineType == "BIASPATHOCL")) {
-		int frameBufferWidth, frameBufferHeight;
-		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
-		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
-		ImGui::SetNextWindowSize(ImVec2((float)frameBufferWidth, (float)frameBufferHeight), ImGuiSetCond_Always);
+		const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
+		const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
 
-		bool opened = true;
-		if (ImGui::Begin("BIASPATH tiles", &opened, ImVec2(0.f, 0.f), 0.0f,
-				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
-			const u_int tileWidth = stats.Get("stats.biaspath.tiles.size.x").Get<u_int>();
-			const u_int tileHeight = stats.Get("stats.biaspath.tiles.size.y").Get<u_int>();
+		if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
+			// Draw converged tiles borders
+			glColor3f(0.f, 1.f, 0.f);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.f, 1.f, 0.f, 1.f));
 
-			if (config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>()) {
-				// Draw converged tiles borders
-				glColor3f(0.f, 1.f, 0.f);
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.f, 1.f, 0.f, 1.f));
-
-				DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
-						stats.Get("stats.biaspath.tiles.converged.pass"),
-						stats.Get("stats.biaspath.tiles.converged.error"),
-						stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
-						tileWidth, tileHeight);
-
-				ImGui::PopStyleColor();
-			}
-
-			if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
-				// Draw converged tiles borders
-				glColor3f(1.f, 0.f, 0.f);
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
-
-				DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
-						stats.Get("stats.biaspath.tiles.notconverged.pass"),
-						stats.Get("stats.biaspath.tiles.notconverged.error"),
-						stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
-						tileWidth, tileHeight);
-
-				ImGui::PopStyleColor();
-			}
-
-			// Draw pending tiles borders
-			glColor3f(1.f, 1.f, 0.f);
-			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 0.f, 1.f));
-
-			DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
-					stats.Get("stats.biaspath.tiles.pending.pass"),
-					stats.Get("stats.biaspath.tiles.pending.error"),
-					stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
-					tileWidth, tileHeight);
+			DrawTiles(stats.Get("stats.biaspath.tiles.converged.coords"),
+					stats.Get("stats.biaspath.tiles.converged.pass"),
+					stats.Get("stats.biaspath.tiles.converged.error"),
+					stats.Get("stats.biaspath.tiles.converged.count").Get<u_int>(),
+					tileWidth, tileHeight, 0xff00ff00);
 
 			ImGui::PopStyleColor();
 		}
 
-		ImGui::End();
+		if (config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>()) {
+			// Draw converged tiles borders
+			glColor3f(1.f, 0.f, 0.f);
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 0.f, 0.f, 1.f));
+
+			DrawTiles(stats.Get("stats.biaspath.tiles.notconverged.coords"),
+					stats.Get("stats.biaspath.tiles.notconverged.pass"),
+					stats.Get("stats.biaspath.tiles.notconverged.error"),
+					stats.Get("stats.biaspath.tiles.notconverged.count").Get<u_int>(),
+					tileWidth, tileHeight, 0xff0000ff);
+
+			ImGui::PopStyleColor();
+		}
+
+		// Draw pending tiles borders
+		glColor3f(1.f, 1.f, 0.f);
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.f, 1.f, 0.f, 1.f));
+
+		DrawTiles(stats.Get("stats.biaspath.tiles.pending.coords"),
+				stats.Get("stats.biaspath.tiles.pending.pass"),
+				stats.Get("stats.biaspath.tiles.pending.error"),
+				stats.Get("stats.biaspath.tiles.pending.count").Get<u_int>(),
+				tileWidth, tileHeight, 0xff00ffff);
+
+		ImGui::PopStyleColor();
 	}
 }
 
@@ -213,7 +202,8 @@ void LuxCoreApp::DrawCaptions() {
 	bool topOpened = true;
 	if (ImGui::Begin("Top screen label", &topOpened,
 			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
 		ImGui::TextUnformatted(windowTitle.c_str());
 	}
 	ImGui::End();*/
@@ -225,7 +215,8 @@ void LuxCoreApp::DrawCaptions() {
 	bool bottomOpened = true;
 	if (ImGui::Begin("Bottom screen label", &bottomOpened,
 			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse)) {
+			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
+			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
 		const string buffer = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sample %.2f on %.1fK tris]") %
 			stats.Get("stats.renderengine.pass").Get<int>() %
 			(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
@@ -254,7 +245,7 @@ static void CenterWindow(GLFWwindow *window) {
 
 void LuxCoreApp::RunApp() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	const string engineType = config->GetProperty("renderengine.type").Get<string>();
+	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
 	if ((engineType == "RTPATHOCL") || (engineType == "RTBIASPATHOCL"))
 		optRealTimeMode = true;
 #endif
@@ -309,7 +300,6 @@ void LuxCoreApp::RunApp() {
 
 	session = new RenderSession(config);
 	session->Start();
-	session->UpdateStats();
 
 	UpdateMoveStep();
 
@@ -350,39 +340,42 @@ void LuxCoreApp::RunApp() {
 		// and not only every 1 secs.
 		glViewport(0, 0, currentFrameBufferWidth, currentFrameBufferHeight);
 
-		// Refresh the frame buffer size at 1HZ
-		if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
-			// Check if the frame buffer has been resized
-			if ((currentFrameBufferWidth != lastFrameBufferWidth) ||
-					(currentFrameBufferHeight != lastFrameBufferHeight)) {
-				SetFilmResolution(filmWidth, filmHeight);
-				
-				lastFrameBufferWidth = currentFrameBufferWidth;
-				lastFrameBufferHeight = currentFrameBufferHeight;
+		if (session) {
+			// Refresh the frame buffer size at 1HZ
+			if (WallClockTime() - lastFrameBufferSizeRefresh > 1.0) {
+				// Check if the frame buffer has been resized
+				if ((currentFrameBufferWidth != lastFrameBufferWidth) ||
+						(currentFrameBufferHeight != lastFrameBufferHeight)) {
+					SetFilmResolution(filmWidth, filmHeight);
+
+					lastFrameBufferWidth = currentFrameBufferWidth;
+					lastFrameBufferHeight = currentFrameBufferHeight;
+				}
+
+				// Check if the film has been resized
+				newFilmSize[0] = Max(64, newFilmSize[0]);
+				newFilmSize[1] = Max(64, newFilmSize[1]);
+				if ((filmWidth != (u_int)newFilmSize[0]) || (filmHeight != (u_int)newFilmSize[1])) {
+					SetFilmResolution((u_int)newFilmSize[0], (u_int)newFilmSize[1]);
+
+					filmWidth = session->GetFilm().GetWidth();
+					filmHeight = session->GetFilm().GetHeight();
+				}
+
+				lastFrameBufferSizeRefresh = WallClockTime();
 			}
 
-			// Check if the film has been resized
-			newFilmSize[0] = Max(64, newFilmSize[0]);
-			newFilmSize[1] = Max(64, newFilmSize[1]);
-			if ((filmWidth != (u_int)newFilmSize[0]) || (filmHeight != (u_int)newFilmSize[1])) {
-				SetFilmResolution((u_int)newFilmSize[0], (u_int)newFilmSize[1]);
-
-				filmWidth = session->GetFilm().GetWidth();
-				filmHeight = session->GetFilm().GetHeight();
+			// Check if it is time to update the frame buffer texture
+			const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<u_int>() / 1000.0;
+			currentTime = WallClockTime();
+			if (currentTime - lastScreenRefresh >= screenRefreshTime) {
+				RefreshRenderingTexture();
+				lastScreenRefresh = currentTime;
 			}
-
-			lastFrameBufferSizeRefresh = WallClockTime();
+		} else {
+			glClearColor(.3f, .3f, .3f, 0.f);
+			glClear(GL_COLOR_BUFFER_BIT);
 		}
-
-		// Check if it is time to update the frame buffer texture
-		const double screenRefreshTime = config->GetProperty("screen.refresh.interval").Get<u_int>() / 1000.0;
-		currentTime = WallClockTime();
-		if (currentTime - lastScreenRefresh >= screenRefreshTime) {
-			RefreshRenderingTexture();
-			lastScreenRefresh = currentTime;
-		}
-
-		DrawRendering();
 
 		//----------------------------------------------------------------------
 		// Draw the UI
@@ -390,11 +383,27 @@ void LuxCoreApp::RunApp() {
 
 		ImGui_ImplGlfw_NewFrame();
 
-		DrawTiles();
-		DrawCaptions();
+		if (session) {
+			DrawRendering();
+			DrawCaptions();
+		}
+
 		MainMenuBar();
+
+		acceleratorWindow.Draw();
+		epsilonWindow.Draw();
+		filmChannelsWindow.Draw();
+		filmOutputsWindow.Draw();
+		filmRadianceGroupsWindow.Draw();
+		lightStrategyWindow.Draw();
+		oclDeviceWindow.Draw();
+		pixelFilterWindow.Draw();
+		renderEngineWindow.Draw();
+		samplerWindow.Draw();
 		logWindow.Draw();
-		statsWindow.Draw();
+		helpWindow.Draw();
+		if (session)
+			statsWindow.Draw();
 
 		ImGui::Render();
 
@@ -405,7 +414,7 @@ void LuxCoreApp::RunApp() {
 		// Check if periodic save is enabled
 		//----------------------------------------------------------------------
 
-		if (session->NeedPeriodicFilmSave()) {
+		if (session && session->NeedPeriodicFilmSave()) {
 			// Time to save the image and film
 			session->GetFilm().SaveOutputs();
 		}
@@ -414,26 +423,36 @@ void LuxCoreApp::RunApp() {
 		// Check for how long to sleep
 		//----------------------------------------------------------------------
 
-		if (optRealTimeMode)
-			session->WaitNewFrame();
-		else {
+		if (session) {
 			currentTime = WallClockTime();
 			const double loopTime = currentTime - lastLoop;
 			//LA_LOG("Loop time: " << loopTime * 1000.0 << "ms");
 			lastLoop = currentTime;
 
-			// The UI loop runs at 100HZ
-			if (loopTime < 0.01) {
-				const double sleepTime = (0.01 - loopTime) * 0.99;
-				const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
-				//LA_LOG("Sleep time: " << msSleepTime<< "ms");
+			// The average over last 200 frames
+			guiLoopTime += (1.0 / 200.0) * (loopTime - guiLoopTime);
 
-				if (msSleepTime > 0)
-					boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
+			if (optRealTimeMode) {
+				session->WaitNewFrame();
+				guiSleepTime = 0.0;
+			} else {
+				// The UI loop runs at 50HZ
+				if (guiLoopTime < 0.02) {
+					const double sleepTime = (0.02 - guiLoopTime) * 0.99;
+					const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
+					//LA_LOG("Sleep time: " << msSleepTime<< "ms");
+
+					if (msSleepTime > 0)
+						boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
+
+					// The average over last 200 frames
+					guiSleepTime += (1.0 / 200.0) * (sleepTime - guiSleepTime);
+				} else
+					guiSleepTime -= (1.0 / 200.0) * guiSleepTime;
 			}
-		}
+		} else
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
 	}
-
 
 	//--------------------------------------------------------------------------
 	// Stop the rendering

@@ -36,9 +36,35 @@ void BiDirVMCPURenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	lightPathsCount = Max(1024u, cfg.Get(Property("bidirvm.lightpath.count")(16 * 1024)).Get<u_int>());
-	baseRadius = cfg.Get(Property("bidirvm.startradius.scale")(.003f)).Get<float>() * renderConfig->scene->dataSet->GetBSphere().rad;
-	radiusAlpha = cfg.Get(Property("bidirvm.alpha")(.95f)).Get<float>();
+	lightPathsCount = Max(1024u, cfg.Get(GetDefaultProps().Get("bidirvm.lightpath.count")).Get<u_int>());
+	baseRadius = cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")).Get<float>() * renderConfig->scene->dataSet->GetBSphere().rad;
+	radiusAlpha = cfg.Get(GetDefaultProps().Get("bidirvm.alpha")).Get<float>();
 
 	BiDirCPURenderEngine::StartLockLess();
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties BiDirVMCPURenderEngine::ToProperties(const Properties &cfg) {
+	return BiDirCPURenderEngine::ToProperties(cfg) <<
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps().Get("bidirvm.lightpath.count")) <<
+			cfg.Get(GetDefaultProps().Get("bidirvm.startradius.scale")) <<
+			cfg.Get(GetDefaultProps().Get("bidirvm.alpha"));
+}
+
+RenderEngine *BiDirVMCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new BiDirVMCPURenderEngine(rcfg, flm, flmMutex);
+}
+
+Properties BiDirVMCPURenderEngine::GetDefaultProps() {
+	static Properties props = BiDirCPURenderEngine::GetDefaultProps() <<
+			Property("renderengine.type")(GetObjectTag()) <<
+			Property("bidirvm.lightpath.count")(16 * 1024) <<
+			Property("bidirvm.startradius.scale")(.003f) <<
+			Property("bidirvm.alpha")(.95f);
+
+	return props;
 }

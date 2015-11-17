@@ -17,6 +17,7 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
+
 void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
 		const float mint, const float maxt, const float time) {
 	ray->o.x = orig.x;
@@ -27,8 +28,8 @@ void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
 	ray->d.y = dir.y;
 	ray->d.z = dir.z;
 
-	ray->mint = mint;
-	ray->maxt = maxt;
+	ray->mint = mint + MachineEpsilon_E_Float3(orig);
+	ray->maxt = maxt - MachineEpsilon_E_Float3(orig + dir * maxt);
 
 	ray->time = time;
 }
@@ -64,13 +65,14 @@ void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir, const floa
 	ray->time = time;
 }
 
+// Note: Ray_Init4() work like CPU with a call to Ray::UpdateMinMaxWithEpsilon())
 void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
 		const float mint, const float maxt, const float time) {
 	VSTORE3F(orig, &ray->o.x);
 	VSTORE3F(dir, &ray->d.x);
 
-	ray->mint = mint;
-	ray->maxt = maxt;
+	ray->mint = mint + MachineEpsilon_E_Float3(orig);
+	ray->maxt = maxt - MachineEpsilon_E_Float3(orig + dir * maxt);
 
 	ray->time = time;
 }

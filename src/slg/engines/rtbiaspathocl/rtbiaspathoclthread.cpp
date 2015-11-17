@@ -379,7 +379,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					cl::NDRange(initStatWorkGroupSize));
 
 				// Render the tile
-				UpdateKernelArgsForTile(tile->xStart, tile->yStart, 0);
+				UpdateKernelArgsForTile(tile, 0);
 
 				// Render all pixel samples
 				EnqueueRenderSampleKernel(currentQueue);
@@ -406,7 +406,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 				// In order to update the statistics
 				u_int tracedRaysCount = 0;
 				// Statistics are accumulated by MergePixelSample kernel if not enableProgressiveRefinement
-				const u_int step = engine->tileRepository->totalSamplesPerPixel;
+				const u_int step = engine->aaSamples * engine->aaSamples;
 				for (u_int i = 0; i < taskCount; i += step)
 					tracedRaysCount += gpuTaskStats[i].raysCount;
 
@@ -548,7 +548,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 		//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
 				"(" << oclErrorString(err.err()) << ")");
 	}

@@ -199,8 +199,7 @@ Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache) const
 	props.Set(Property(prefix + ".position")(localPos));
 	props.Set(Property(prefix + ".target")(localTarget));
 	props.Set(Property(prefix + ".fov")(fov));
-	props.Set(Property(prefix + ".mapfile")("imagemap-" + 
-		(boost::format("%05d") % imgMapCache.GetImageMapIndex(imageMap)).str() + ".exr"));
+	props.Set(Property(prefix + ".mapfile")(imageMap->GetFileName(imgMapCache)));
 
 	return props;
 }

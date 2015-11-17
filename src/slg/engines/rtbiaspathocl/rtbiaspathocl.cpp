@@ -51,16 +51,16 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
-	displayDeviceIndex = cfg.Get(Property("rtpath.displaydevice.index")(0)).Get<u_int>();
+	displayDeviceIndex = cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")).Get<u_int>();
 	if (displayDeviceIndex >= intersectionDevices.size())
 		throw std::runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<std::string>(displayDeviceIndex) +
 				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
 
-	blurTimeWindow = Max(0.f, cfg.Get(Property("rtpath.blur.timewindow")(3.f)).Get<float>());
-	blurMinCap =  Max(0.f, cfg.Get(Property("rtpath.blur.mincap")(0.01f)).Get<float>());
-	blurMaxCap =  Max(0.f, cfg.Get(Property("rtpath.blur.maxcap")(0.2f)).Get<float>());
+	blurTimeWindow = Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")).Get<float>());
+	blurMinCap =  Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.mincap")).Get<float>());
+	blurMaxCap =  Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.maxcap")).Get<float>());
 
-	ghostEffect = 1.f - Clamp(cfg.Get(Property("rtpath.ghosteffect.intensity")(0.05f)).Get<float>(), 0.f, 1.f);
+	ghostEffect = 1.f - Clamp(cfg.Get(GetDefaultProps().Get("rtpath.ghosteffect.intensity")).Get<float>(), 0.f, 1.f);
 
 	BiasPathOCLRenderEngine::StartLockLess();
 
@@ -131,6 +131,68 @@ void RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	const double currentTime = WallClockTime();
 	frameTime = currentTime - frameStartTime;
 	frameStartTime = currentTime;
+}
+
+//------------------------------------------------------------------------------
+// Static methods used by RenderEngineRegistry
+//------------------------------------------------------------------------------
+
+Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
+	return BiasPathOCLRenderEngine::ToProperties(cfg) <<
+			//------------------------------------------------------------------
+			// Overwrite some BiasPathOCLRenderEngine property
+			//------------------------------------------------------------------
+			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.aa.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.diffuse.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.glossy.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.specular.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.sampling.directlight.size")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
+			cfg.Get(GetDefaultProps().Get("biaspath.devices.maxtiles")) <<
+			//------------------------------------------------------------------
+			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.blur.mincap")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.blur.maxcap")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.ghosteffect.intensity"));
+}
+
+RenderEngine *RTBiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
+	return new RTBiasPathOCLRenderEngine(rcfg, flm, flmMutex);
+}
+
+Properties RTBiasPathOCLRenderEngine::GetDefaultProps() {
+	static Properties props = BiasPathOCLRenderEngine::GetDefaultProps() <<
+			//------------------------------------------------------------------
+			// Overwrite some BiasPathOCLRenderEngine property
+			//------------------------------------------------------------------
+			Property("renderengine.type")(GetObjectTag()) <<
+			Property("biaspath.pathdepth.total")(5) <<
+			Property("biaspath.pathdepth.diffuse")(3) <<
+			Property("biaspath.pathdepth.glossy")(3) <<
+			Property("biaspath.pathdepth.specular")(3) <<
+			Property("biaspath.sampling.aa.size")(1) <<
+			Property("biaspath.sampling.diffuse.size")(1) <<
+			Property("biaspath.sampling.glossy.size")(1) <<
+			Property("biaspath.sampling.specular.size")(1) <<
+			Property("biaspath.sampling.directlight.size")(1) <<
+			Property("biaspath.lights.firstvertexsamples")(1) <<
+			Property("biaspath.devices.maxtiles")(1) <<
+			//------------------------------------------------------------------
+			Property("rtpath.miniterations")(2) <<
+			Property("rtpath.displaydevice.index")(0) <<
+			Property("rtpath.blur.timewindow")(3.f) <<
+			Property("rtpath.blur.mincap")(.01f) <<
+			Property("rtpath.blur.maxcap")(.2f) <<
+			Property("rtpath.ghosteffect.intensity")(.05f);
+
+	return props;
 }
 
 #endif

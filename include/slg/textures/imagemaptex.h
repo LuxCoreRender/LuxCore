@@ -30,7 +30,7 @@ namespace slg {
 
 class ImageMapTexture : public Texture {
 public:
-	ImageMapTexture(const ImageMap* im, const TextureMapping2D *mp, const float g);
+	ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp, const float g);
 	virtual ~ImageMapTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
@@ -40,18 +40,18 @@ public:
 	virtual float Y() const { return imageY; }
 	virtual float Filter() const { return imageFilter; }
 
-	const ImageMap *GetImageMap() const { return imgMap; }
+	const ImageMap *GetImageMap() const { return imageMap; }
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const float GetGain() const { return gain; }
 
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		referencedImgMaps.insert(imgMap);
+		referencedImgMaps.insert(imageMap);
 	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache) const;
 
 private:
-	const ImageMap *imgMap;
+	const ImageMap *imageMap;
 	const TextureMapping2D *mapping;
 	float gain;
 	// Cached image information

@@ -21,7 +21,7 @@
  *
  * \brief LuxCore is new the LuxRender C++/Python API.
  * \author Bucciarelli David et al.
- * \version 1.0
+ * \version 1.6
  * \date October 2013
  *
  */
@@ -120,8 +120,8 @@ public:
 		OUTPUT_RADIANCE_GROUP = slg::FilmOutputs::RADIANCE_GROUP,
 		OUTPUT_UV = slg::FilmOutputs::UV,
 		OUTPUT_RAYCOUNT = slg::FilmOutputs::RAYCOUNT,
-		BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
-		IRRADIANCE = slg::FilmOutputs::IRRADIANCE
+		OUTPUT_BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
+		OUTPUT_IRRADIANCE = slg::FilmOutputs::IRRADIANCE
 	} FilmOutputType;
 
 	/*!
@@ -440,12 +440,6 @@ public:
 	~Scene();
 	
 	/*!
-	 * \brief Returns all the Properties required to define this Scene.
-	 *
-	 * \return a reference to the Properties of this Scene.
-	 */
-	const luxrays::Properties &GetProperties() const;
-	/*!
 	 * \brief Returns the DataSet of the Scene. It is available only
 	 * during the rendering (i.e. after a RenderSession::Start()).
 	 *
@@ -651,6 +645,13 @@ public:
 	void RemoveUnusedMeshes();
 
 	/*!
+	 * \brief Returns all the Properties required to define this Scene.
+	 *
+	 * \return a reference to the Properties of this Scene.
+	 */
+	const luxrays::Properties &ToProperties() const;
+
+	/*!
 	 * \brief This must be used to allocate Mesh vertices buffer.
 	 */
 	static luxrays::Point *AllocVerticesBuffer(const u_int meshVertCount);
@@ -664,6 +665,8 @@ public:
 
 private:
 	Scene(slg::Scene *scn);
+
+	mutable luxrays::Properties scenePropertiesCache;
 
 	slg::Scene *scene;
 	Camera camera;
@@ -702,6 +705,14 @@ public:
 	 * \return the Property with the given name.
 	 */
 	const luxrays::Property GetProperty(const std::string &name) const;
+
+	/*!
+	 * \brief Returns a reference to all Properties (including default values)
+	 * defining the RenderConfig.
+	 *
+	 * \return the RenderConfig properties.
+	 */
+	const luxrays::Properties &ToProperties() const;
 
 	/*!
 	 * \brief Returns a reference to the Scene used in the RenderConfig.

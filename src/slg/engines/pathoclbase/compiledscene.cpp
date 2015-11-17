@@ -51,13 +51,6 @@ string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {
 	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
 }
 
-string CompiledScene::AddTextureSourceCall(const string &type, const u_int i) {
-	stringstream ss;
-	ss << "Texture_Index" << i << "_Evaluate" << type << "(&texs[" << i << "], hitPoint TEXTURES_PARAM)";
-
-	return ss.str();
-}
-
 void CompiledScene::Recompile(const EditActionList &editActions) {
 	if (editActions.Has(CAMERA_EDIT))
 		CompileCamera();

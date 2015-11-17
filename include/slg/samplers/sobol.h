@@ -37,10 +37,12 @@ namespace slg {
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
-class SobolSamplerSharedData : public SamplerSharedData{
+class SobolSamplerSharedData : public SamplerSharedData {
 public:
-	SobolSamplerSharedData(luxrays::RandomGenerator *rnd);
+	SobolSamplerSharedData(luxrays::RandomGenerator *rndGen);
 	virtual ~SobolSamplerSharedData() { }
+
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
 
 	float rng0, rng1;
 	boost::atomic<u_int> pass;
@@ -64,15 +66,27 @@ public:
 			SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 
-	virtual SamplerType GetType() const { return SOBOL; }
+	virtual SamplerType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 	virtual void RequestSamples(const u_int size);
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
-	static SobolSamplerSharedData *AllocSharedData(luxrays::RandomGenerator *rnd);
+	//--------------------------------------------------------------------------
+	// Static methods used by SamplerRegistry
+	//--------------------------------------------------------------------------
+
+	static SamplerType GetObjectType() { return SOBOL; }
+	static std::string GetObjectTag() { return "SOBOL"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
+	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 private:
+	static luxrays::Properties GetDefaultProps();
+
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
 
 	SobolSamplerSharedData *sharedData;

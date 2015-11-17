@@ -20,7 +20,7 @@
 #define	_SLG_FILMSAMPLESPLATTER_H
 
 #include "slg/film/film.h"
-#include "slg/film/filters/filter.h"
+#include "slg/film/filters/filterdistribution.h"
 
 namespace slg {
 

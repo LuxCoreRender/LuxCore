@@ -245,7 +245,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
 
 		const Texture *n, *k;
-		if (props.IsDefined(propName + ".preset")) {
+		if (props.IsDefined(propName + ".preset") || props.IsDefined(propName + ".name")) {
 			FresnelTexture *presetTex = AllocFresnelPresetTex(props, propName);
 			texDefs.DefineTexture(matName + "-Implicit-FresnelPreset-" + boost::lexical_cast<string>(presetTex), presetTex);
 			

@@ -50,6 +50,8 @@ public:
 	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
 	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
 
+	static std::string ToOCLString(const slg::ocl::Spectrum &v);
+
 	Scene *scene;
 	Film *film;
 	u_int maxMemPageSize;
@@ -97,9 +99,6 @@ public:
 	vector<vector<float> > imageMapMemBlocks;
 
 private:
-	static std::string ToOCLString(const slg::ocl::Spectrum &v);
-	static std::string AddTextureSourceCall(const std::string &type, const u_int i);
-
 	void CompileCamera();
 	void CompileGeometry();
 	void CompileMaterials();
@@ -110,7 +109,7 @@ private:
 	void CompileLights();
 	
 	bool useBumpMapping;
-};
+}; 
 
 }
 

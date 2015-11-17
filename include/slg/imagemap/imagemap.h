@@ -628,6 +628,8 @@ template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
 // ImageMap
 //------------------------------------------------------------------------------
 
+class ImageMapCache;
+
 class ImageMap {
 public:
 	ImageMap(const std::string &fileName, const float gamma,
@@ -637,6 +639,7 @@ public:
 
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	
+	std::string GetFileName(const ImageMapCache &imgMapCache) const;
 	float GetGamma() const { return gamma; }
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
 	u_int GetWidth() const { return pixelStorage->width; }

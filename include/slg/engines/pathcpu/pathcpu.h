@@ -20,7 +20,7 @@
 #define	_SLG_PATHCPU_H
 
 #include "slg/slg.h"
-#include "slg/renderengine.h"
+#include "slg/engines/cpurenderengine.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
@@ -69,7 +69,17 @@ public:
 	PathCPURenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	~PathCPURenderEngine();
 
-	RenderEngineType GetEngineType() const { return PATHCPU; }
+	virtual RenderEngineType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	//--------------------------------------------------------------------------
+	// Static methods used by RenderEngineRegistry
+	//--------------------------------------------------------------------------
+
+	static RenderEngineType GetObjectType() { return PATHCPU; }
+	static std::string GetObjectTag() { return "PATHCPU"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
 	// Signed because of the delta parameter
 	u_int maxPathDepth;
@@ -86,6 +96,8 @@ public:
 	friend class PathCPURenderThread;
 
 protected:
+	static luxrays::Properties GetDefaultProps();
+
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 

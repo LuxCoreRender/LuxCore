@@ -23,7 +23,7 @@
 
 #include "slg/slg.h"
 #include "slg/renderconfig.h"
-#include "slg/renderengine.h"
+#include "slg/engines/renderengine.h"
 #include "slg/film/film.h"
 
 namespace slg {
