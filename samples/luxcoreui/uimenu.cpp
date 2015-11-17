@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <imgui.h>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "luxcoreapp.h"
 
@@ -29,7 +30,7 @@ using namespace luxcore;
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuRendering() {
-	if (ImGui::MenuItem("Restart", "Space bar")) {
+	if (session && ImGui::MenuItem("Restart", "Space bar")) {
 		// Restart rendering
 		session->Stop();
 		session->Start();
@@ -43,30 +44,97 @@ void LuxCoreApp::MenuRendering() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuEngine() {
-	const string currentEngineType = config->GetProperty("renderengine.type").Get<string>();
+	const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 
-	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL")))
+	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL"))) {
 		SetRenderingEngineType("PATHOCL");
-	if (ImGui::MenuItem("LIGHTCPU", "2", (currentEngineType == "LIGHTCPU")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("LIGHTCPU", "2", (currentEngineType == "LIGHTCPU"))) {
 		SetRenderingEngineType("LIGHTCPU");
-	if (ImGui::MenuItem("PATHCPU", "3", (currentEngineType == "PATHCPU")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("PATHCPU", "3", (currentEngineType == "PATHCPU"))) {
 		SetRenderingEngineType("PATHCPU");
-	if (ImGui::MenuItem("BIDIRCPU", "4", (currentEngineType == "BIDIRCPU")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("BIDIRCPU", "4", (currentEngineType == "BIDIRCPU"))) {
 		SetRenderingEngineType("BIDIRCPU");
-	if (ImGui::MenuItem("BIDIRVMCPU", "5", (currentEngineType == "BIDIRVMCPU")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("BIDIRVMCPU", "5", (currentEngineType == "BIDIRVMCPU"))) {
 		SetRenderingEngineType("BIDIRVMCPU");
+		CloseAllRenderConfigEditors();
+	}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL")))
+	if (ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL"))) {
 		SetRenderingEngineType("RTPATHOCL");
+		CloseAllRenderConfigEditors();
+	}
 #endif
-	if (ImGui::MenuItem("BIASPATHCPU", "7", (currentEngineType == "BIASPATHCPU")))
+	if (ImGui::MenuItem("BIASPATHCPU", "7", (currentEngineType == "BIASPATHCPU"))) {
 		SetRenderingEngineType("BIASPATHCPU");
-	if (ImGui::MenuItem("BIASPATHOCL", "8", (currentEngineType == "BIASPATHOCL")))
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("BIASPATHOCL", "8", (currentEngineType == "BIASPATHOCL"))) {
 		SetRenderingEngineType("BIASPATHOCL");
+		CloseAllRenderConfigEditors();
+	}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL")))
+	if (ImGui::MenuItem("RTBIASPATHOCL", "9", (currentEngineType == "RTBIASPATHOCL"))) {
 		SetRenderingEngineType("RTBIASPATHOCL");
+		CloseAllRenderConfigEditors();
+	}
 #endif
+}
+
+//------------------------------------------------------------------------------
+// MenuSampler
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuSampler() {
+	const string currentSamplerType = config->ToProperties().Get("sampler.type").Get<string>();
+
+	if (ImGui::MenuItem("RANDOM", NULL, (currentSamplerType == "RANDOM"))) {
+		samplerWindow.Close();
+		RenderConfigParse(Properties() << Property("sampler.type")("RANDOM"));
+	}
+	if (ImGui::MenuItem("SOBOL", NULL, (currentSamplerType == "SOBOL"))) {
+		samplerWindow.Close();
+		RenderConfigParse(Properties() << Property("sampler.type")("SOBOL"));
+	}
+	if (ImGui::MenuItem("METROPOLIS", NULL, (currentSamplerType == "METROPOLIS"))) {
+		samplerWindow.Close();
+		RenderConfigParse(Properties() << Property("sampler.type")("METROPOLIS"));
+	}
+}
+
+//------------------------------------------------------------------------------
+// MenuTiles
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuTiles() {
+	bool showPending = config->GetProperties().Get(Property("screen.tiles.pending.show")(true)).Get<bool>();
+	if (ImGui::MenuItem("Show pending", NULL, showPending))
+		RenderConfigParse(Properties() << Property("screen.tiles.pending.show")(!showPending));
+
+	bool showConverged = config->GetProperties().Get(Property("screen.tiles.converged.show")(false)).Get<bool>();
+	if (ImGui::MenuItem("Show converged", NULL, showConverged))
+		RenderConfigParse(Properties() << Property("screen.tiles.converged.show")(!showConverged));
+	
+	bool showNotConverged = config->GetProperties().Get(Property("screen.tiles.notconverged.show")(false)).Get<bool>();
+	if (ImGui::MenuItem("Show not converged", NULL, showNotConverged))
+		RenderConfigParse(Properties() << Property("screen.tiles.notconverged.show")(!showNotConverged));
+
+	ImGui::Separator();
+
+	bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
+	if (ImGui::MenuItem("Show pass count", NULL, showPassCount))
+		RenderConfigParse(Properties() << Property("screen.tiles.passcount.show")(!showPassCount));
+
+	bool showError = config->GetProperties().Get(Property("screen.tiles.error.show")(false)).Get<bool>();
+	if (ImGui::MenuItem("Show error", NULL, showError))
+		RenderConfigParse(Properties() << Property("screen.tiles.error.show")(!showError));
 }
 
 //------------------------------------------------------------------------------
@@ -111,21 +179,10 @@ void LuxCoreApp::MenuFilm() {
 		ImGui::EndMenu();
 	}
 	ImGui::Separator();
-	if (ImGui::MenuItem("Save outputs"))
+	if (session && ImGui::MenuItem("Save outputs"))
 		session->GetFilm().SaveOutputs();
-	if (ImGui::MenuItem("Save film"))
+	if (session && ImGui::MenuItem("Save film"))
 		session->GetFilm().SaveFilm("film.flm");
-}
-
-//------------------------------------------------------------------------------
-// MenuWindow
-//------------------------------------------------------------------------------
-
-void LuxCoreApp::MenuWindow() {
-	if (ImGui::MenuItem("Statistics"))
-		statsWindow.opened = !statsWindow.opened;
-	if (ImGui::MenuItem("Log console"))
-		logWindow.opened = !logWindow.opened;
 }
 
 //------------------------------------------------------------------------------
@@ -133,7 +190,19 @@ void LuxCoreApp::MenuWindow() {
 //------------------------------------------------------------------------------
 
 void LuxCoreApp::MenuScreen() {
-	if (ImGui::BeginMenu("Set refresh interval")) {
+	if (ImGui::BeginMenu("Interpolation mode")) {
+		if (ImGui::MenuItem("Nearest", NULL, (renderFrameBufferTexMinFilter == GL_NEAREST))) {
+			renderFrameBufferTexMinFilter = GL_NEAREST;
+			renderFrameBufferTexMagFilter = GL_NEAREST;
+		}
+		if (ImGui::MenuItem("Linear", NULL, (renderFrameBufferTexMinFilter == GL_LINEAR))) {
+			renderFrameBufferTexMinFilter = GL_LINEAR;
+			renderFrameBufferTexMagFilter = GL_LINEAR;
+		}
+
+		ImGui::EndMenu();
+	}
+	if (ImGui::BeginMenu("Refresh interval")) {
 		if (ImGui::MenuItem("5ms"))
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(5)));
 		if (ImGui::MenuItem("10ms"))
@@ -160,6 +229,45 @@ void LuxCoreApp::MenuScreen() {
 }
 
 //------------------------------------------------------------------------------
+// MenuWindow
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuWindow() {
+	const string currentRenderEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
+
+	if (ImGui::MenuItem("Render Engine editor", NULL, renderEngineWindow.IsOpen()))
+		renderEngineWindow.Toggle();
+	if (ImGui::MenuItem("Sampler editor", NULL, samplerWindow.IsOpen(),
+			!boost::starts_with(currentRenderEngineType, "BIAS")))
+		samplerWindow.Toggle();
+	if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
+		pixelFilterWindow.Toggle();
+	if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
+			boost::ends_with(currentRenderEngineType, "OCL")))
+		oclDeviceWindow.Toggle();
+	if (ImGui::MenuItem("Light Strategy editor", NULL, lightStrategyWindow.IsOpen()))
+		lightStrategyWindow.Toggle();
+	if (ImGui::MenuItem("Accelerator editor", NULL, acceleratorWindow.IsOpen()))
+		acceleratorWindow.Toggle();
+	if (ImGui::MenuItem("Epsilon editor", NULL, epsilonWindow.IsOpen()))
+		epsilonWindow.Toggle();
+	ImGui::Separator();
+	if (ImGui::MenuItem("Film Radiance Groups editor", NULL, filmRadianceGroupsWindow.IsOpen()))
+		filmRadianceGroupsWindow.Toggle();
+	if (ImGui::MenuItem("Film Outputs editor", NULL, filmOutputsWindow.IsOpen()))
+		filmOutputsWindow.Toggle();
+	if (ImGui::MenuItem("Film Channels window", NULL, filmChannelsWindow.IsOpen()))
+		filmChannelsWindow.Toggle();
+	ImGui::Separator();
+	if (session && ImGui::MenuItem("Statistics", NULL, statsWindow.IsOpen()))
+		statsWindow.Toggle();
+	if (ImGui::MenuItem("Log console", NULL, logWindow.IsOpen()))
+		logWindow.Toggle();
+	if (ImGui::MenuItem("Help", NULL, helpWindow.IsOpen()))
+		helpWindow.Toggle();
+}
+
+//------------------------------------------------------------------------------
 // MainMenuBar
 //------------------------------------------------------------------------------
 
@@ -169,19 +277,34 @@ void LuxCoreApp::MainMenuBar() {
 			MenuRendering();
 			ImGui::EndMenu();
 		}
-		if (ImGui::BeginMenu("Engine")) {
-			MenuEngine();
-			ImGui::EndMenu();
-		}
 
-		if (ImGui::BeginMenu("Film")) {
-			MenuFilm();
-			ImGui::EndMenu();
-		}
+		if (session) {
+			const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 
-		if (ImGui::BeginMenu("Screen")) {
-			MenuScreen();
-			ImGui::EndMenu();
+			if (ImGui::BeginMenu("Engine")) {
+				MenuEngine();
+				ImGui::EndMenu();
+			}
+
+			if (!boost::starts_with(currentEngineType, "BIAS") && ImGui::BeginMenu("Sampler")) {
+				MenuSampler();
+				ImGui::EndMenu();
+			}
+
+			if (boost::starts_with(currentEngineType, "BIAS") && ImGui::BeginMenu("Tiles")) {
+				MenuTiles();
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Film")) {
+				MenuFilm();
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Screen")) {
+				MenuScreen();
+				ImGui::EndMenu();
+			}
 		}
 
 		if (ImGui::BeginMenu("Window")) {

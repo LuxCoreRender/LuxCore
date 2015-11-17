@@ -93,6 +93,10 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 	ar & channels;
 	ar & width;
 	ar & height;
+	ar & subRegion[0];
+	ar & subRegion[1];
+	ar & subRegion[2];
+	ar & subRegion[3];
 	ar & pixelCount;
 	ar & radianceGroupCount;
 	ar & maskMaterialIDs;

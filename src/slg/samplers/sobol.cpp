@@ -22,6 +22,7 @@
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/sobol.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 
@@ -29,10 +30,15 @@ using namespace slg;
 // SobolSamplerSharedData
 //------------------------------------------------------------------------------
 
-SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rnd) : SamplerSharedData() {
-	rng0 = rnd->floatValue();
-	rng1 = rnd->floatValue();
+SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen) : SamplerSharedData() {
+	rng0 = rndGen->floatValue();
+	rng1 = rndGen->floatValue();
 	pass = SOBOL_STARTOFFSET;
+}
+
+SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
+		RandomGenerator *rndGen) {
+	return new SobolSamplerSharedData(rndGen);
 }
 
 //------------------------------------------------------------------------------
@@ -41,7 +47,7 @@ SobolSamplerSharedData::SobolSamplerSharedData(luxrays::RandomGenerator *rnd) : 
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
-SobolSampler::SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
+SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter,
 		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
 		sharedData(samplerSharedData), directions(NULL) {
@@ -83,7 +89,7 @@ float SobolSampler::GetSample(const u_int index) {
 	return val - floorf(val);
 }
 
-void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
+void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	film->AddSampleCount(1.0);
 	AddSamplesToFilm(sampleResults);
 
@@ -94,6 +100,31 @@ void SobolSampler::NextSample(const std::vector<SampleResult> &sampleResults) {
 	}
 }
 
-SobolSamplerSharedData *SobolSampler::AllocSharedData(luxrays::RandomGenerator *rnd) {
-	return new SobolSamplerSharedData(rnd);
+//------------------------------------------------------------------------------
+// Static methods used by SamplerRegistry
+//------------------------------------------------------------------------------
+
+Properties SobolSampler::ToProperties(const Properties &cfg) {
+	return Properties() <<
+			cfg.Get(GetDefaultProps().Get("sampler.type"));
+}
+
+Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
+}
+
+slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
+	slg::ocl::Sampler *oclSampler = new slg::ocl::Sampler();
+
+	oclSampler->type = slg::ocl::SOBOL;
+
+	return oclSampler;
+}
+
+Properties SobolSampler::GetDefaultProps() {
+	static Properties props = Sampler::GetDefaultProps() <<
+			Property("sampler.type")(GetObjectTag());
+
+	return props;
 }

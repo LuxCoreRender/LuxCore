@@ -25,6 +25,19 @@
 #include "luxcore/luxcore.h"
 #include "logwindow.h"
 #include "statswindow.h"
+#include "pixelfilterwindow.h"
+#include "renderenginewindow.h"
+#include "samplerwindow.h"
+#include "helpwindow.h"
+#include "ocldevicewindow.h"
+#include "epsilonwindow.h"
+#include "lightstrategywindow.h"
+#include "acceleratorwindow.h"
+#include "filmoutputswindow.h"
+#include "filmchannelswindow.h"
+#include "filmradiancegroupswindow.h"
+
+#define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
 class LuxCoreApp {
 public:
@@ -36,13 +49,27 @@ public:
 	static void LogHandler(const char *msg);
 	static void ColoredLabelText(const ImVec4 &col, const char *label, const char *fmt, ...) IM_PRINTFARGS(3);
 	static void ColoredLabelText(const char *label, const char *fmt, ...) IM_PRINTFARGS(2);
+	static void HelpMarker(const char *desc);
 	
 	static ImVec4 colLabel;
 
-			// Mouse "grab" mode. This is the natural way cameras are usually manipulated
+	// Mouse "grab" mode. This is the natural way cameras are usually manipulated
 	// The flag is off by default but can be turned on by using the -m switch
 	bool optMouseGrabMode;
 
+	friend class AcceleratorWindow;
+	friend class EpsilonWindow;
+	friend class FilmChannelWindow;
+	friend class FilmChannelsWindow;
+	friend class FilmOutputWindow;
+	friend class FilmOutputsWindow;
+	friend class FilmRadianceGroupsWindow;
+	friend class ImageWindow;
+	friend class LightStrategyWindow;
+	friend class OCLDeviceWindow;
+	friend class PixelFilterWindow;
+	friend class RenderEngineWindow;
+	friend class SamplerWindow;
 	friend class StatsWindow;
 
 private:
@@ -52,20 +79,26 @@ private:
 
 	void UpdateMoveStep();
 	void SetRenderingEngineType(const std::string &engineType);
+	void RenderConfigParse(const luxrays::Properties &samplerProps);
+	void RenderSessionParse(const luxrays::Properties &samplerProps);
 	void SetFilmResolution(const u_int filmWidth, const u_int filmHeight);
 	void IncScreenRefreshInterval();
 	void DecScreenRefreshInterval();
+	void CloseAllRenderConfigEditors();
 
 	void RefreshRenderingTexture();
 	void DrawRendering();
 	void DrawTiles(const luxrays::Property &propCoords,
 		const luxrays::Property &propPasses, const luxrays::Property &propErrors,
-		const u_int tileCount, const u_int tileWidth, const u_int tileHeight);
+		const u_int tileCount, const u_int tileWidth, const u_int tileHeight,
+		const ImU32 col);
 	void DrawTiles();
 	void DrawCaptions();
 
 	void MenuRendering();
 	void MenuEngine();
+	void MenuSampler();
+	void MenuTiles();
 	void MenuFilm();
 	void MenuWindow();
 	void MenuScreen();
@@ -73,18 +106,30 @@ private:
 
 	static LogWindow *currentLogWindow;
 
-	LogWindow logWindow;
+	AcceleratorWindow acceleratorWindow;
+	EpsilonWindow epsilonWindow;
+	FilmChannelsWindow filmChannelsWindow;
+	FilmOutputsWindow filmOutputsWindow;
+	FilmRadianceGroupsWindow filmRadianceGroupsWindow;
+	LightStrategyWindow lightStrategyWindow;
+	OCLDeviceWindow oclDeviceWindow;
+	PixelFilterWindow pixelFilterWindow;
+	RenderEngineWindow renderEngineWindow;
+	SamplerWindow samplerWindow;
 	StatsWindow statsWindow;
+	LogWindow logWindow;
+	HelpWindow helpWindow;
 
 	luxcore::RenderSession *session;
 	luxcore::RenderConfig *config;
 
 	GLuint renderFrameBufferTexID;
+	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;
 	GLFWwindow *window;
 
 	// ImGui inputs
 	int newFilmSize[2];
-	
+
 	bool optRealTimeMode;
 	float optMoveScale;
 	float optMoveStep;
@@ -93,6 +138,9 @@ private:
 	bool mouseButton0, mouseButton2;
 	double mouseGrabLastX, mouseGrabLastY;
 	double lastMouseUpdate;
+
+	// Same GUI loop statistic
+	double guiLoopTime, guiSleepTime, guiFilmUpdateTime;
 };
 
 #define LA_LOG(a) { std::stringstream _LUXCOREUI_LOG_LOCAL_SS; _LUXCOREUI_LOG_LOCAL_SS << a; LuxCoreApp::LogHandler(_LUXCOREUI_LOG_LOCAL_SS.str().c_str()); }

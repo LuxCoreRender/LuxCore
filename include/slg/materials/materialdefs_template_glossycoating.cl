@@ -27,12 +27,12 @@
 // Preprocessing parameters:
 //  <<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 //  <<CS_MAT_BASE_MATERIAL_INDEX>>
-//  <<CS_KS_TEXTURE_INDEX>>
-//  <<CS_NU_TEXTURE_INDEX>>
-//  <<CS_NV_TEXTURE_INDEX>>
-//  <<CS_KA_TEXTURE_INDEX>>
-//  <<CS_DEPTH_TEXTURE_INDEX>>
-//  <<CS_INDEX_TEXTURE_INDEX>>
+//  <<CS_KS_TEXTURE>>
+//  <<CS_NU_TEXTURE>>
+//  <<CS_NV_TEXTURE>>
+//  <<CS_KA_TEXTURE>>
+//  <<CS_DEPTH_TEXTURE>>
+//  <<CS_INDEX_TEXTURE>>
 //  <<CS_MB_FLAG>>
 //------------------------------------------------------------------------------
 
@@ -86,15 +86,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		// Front face: coating+base
 		*event |= GLOSSY | REFLECT;
 
-		float3 ks = Texture_Index<<CS_KS_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KS_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
-		const float i = Texture_Index<<CS_INDEX_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_INDEX_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		const float i = <<CS_INDEX_TEXTURE>>;
 		if (i > 0.f) {
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
@@ -102,15 +96,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 #endif
 		ks = Spectrum_Clamp(ks);
 
-		const float u = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_NU_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+		const float u = clamp(<<CS_NU_TEXTURE>>, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
-		const float v = clamp(Texture_Index<<CS_NV_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_NV_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+		const float v = clamp(<<CS_NV_TEXTURE>>, 0.f, 1.f);
 		const float u2 = u * u;
 		const float v2 = v * v;
 		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -133,15 +121,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
-		const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KA_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
-		const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
-			Texture_Index<<CS_DEPTH_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_DEPTH_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
+		const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
+		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
 #else
 		const float3 absorption = WHITE;
 #endif
@@ -170,15 +151,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float3 baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
 
-		float3 ks = Texture_Index<<CS_KS_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KS_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
-		const float i = Texture_Index<<CS_INDEX_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_INDEX_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		const float i = <<CS_INDEX_TEXTURE>>;
 		if (i > 0.f) {
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
@@ -199,15 +174,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
-		const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KA_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
-		const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
-			Texture_Index<<CS_DEPTH_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_DEPTH_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
+		const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
+		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
 #else
 		const float3 absorption = WHITE;
 #endif
@@ -232,15 +200,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
-	float3 ks = Texture_Index<<CS_KS_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KS_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+	float3 ks = <<CS_KS_TEXTURE>>;
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
-	const float i = Texture_Index<<CS_INDEX_TEXTURE_INDEX>>_EvaluateFloat(
-		&texs[<<CS_INDEX_TEXTURE_INDEX>>],
-		hitPoint
-		TEXTURES_PARAM);
+	const float i = <<CS_INDEX_TEXTURE>>;
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
@@ -252,15 +214,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
-	const float u = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_NU_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+	const float u = clamp(<<CS_NU_TEXTURE>>, 0.f, 1.f);
 #if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
-	const float v = clamp(Texture_Index<<CS_NU_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_NV_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM), 0.f, 1.f);
+	const float v = clamp(<<CS_NU_TEXTURE>>, 0.f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -332,15 +288,8 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 	const float cosi = fabs((*sampledDir).z);
 	const float coso = fabs(fixedDir.z);
 
-	const float3 alpha = Spectrum_Clamp(Texture_Index<<CS_KA_TEXTURE_INDEX>>_EvaluateSpectrum(
-			&texs[<<CS_KA_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
-	const float3 absorption = CoatingAbsorption(cosi, coso, alpha,
-			Texture_Index<<CS_DEPTH_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_DEPTH_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM));
+	const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
+	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
 #else
 	const float3 absorption = WHITE;
 #endif

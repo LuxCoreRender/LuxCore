@@ -33,7 +33,7 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// FilmOutput
+// FilmOutputs
 //------------------------------------------------------------------------------
 
 class FilmOutputs {
@@ -43,7 +43,8 @@ public:
 		GEOMETRY_NORMAL, SHADING_NORMAL, MATERIAL_ID, DIRECT_DIFFUSE,
 		DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY,
 		INDIRECT_SPECULAR, MATERIAL_ID_MASK, DIRECT_SHADOW_MASK, INDIRECT_SHADOW_MASK,
-		RADIANCE_GROUP, UV, RAYCOUNT, BY_MATERIAL_ID, IRRADIANCE
+		RADIANCE_GROUP, UV, RAYCOUNT, BY_MATERIAL_ID, IRRADIANCE,
+		FILMOUTPUT_TYPE_COUNT
 	} FilmOutputType;
 
 	FilmOutputs() { }
@@ -53,10 +54,14 @@ public:
 	u_int GetCount() const { return types.size(); }
 	FilmOutputType GetType(const u_int index) const { return types[index]; }
 	const std::string &GetFileName(const u_int index) const { return fileNames[index]; }
-	const luxrays::Properties &GetProperties(const u_int index) const { return props[index]; }
+	const luxrays::Properties &GetProperties(const u_int index) const { return outputProps[index]; }
 
 	void Add(const FilmOutputType type, const std::string &fileName,
 		const luxrays::Properties *prop = NULL);
+
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static FilmOutputType String2FilmOutputType(const std::string &type);
+	static const std::string FilmOutputType2String(const FilmOutputType type);
 
 	friend class boost::serialization::access;
 
@@ -64,12 +69,12 @@ private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & types;
 		ar & fileNames;
-		ar & props;
+		ar & outputProps;
 	}
 
 	std::vector<FilmOutputType> types;
 	std::vector<std::string> fileNames;
-	std::vector<luxrays::Properties> props;
+	std::vector<luxrays::Properties> outputProps;
 };
 
 }

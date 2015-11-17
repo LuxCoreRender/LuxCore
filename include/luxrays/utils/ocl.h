@@ -33,6 +33,7 @@
 #else
 #include <CL/cl.hpp>
 #endif
+#include "luxrays/core/utils.h"
 
 namespace luxrays {
 

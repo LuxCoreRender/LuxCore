@@ -31,19 +31,20 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// MitchellFilterSS
+// MitchellSSFilter
 //------------------------------------------------------------------------------
 
-class MitchellFilterSS : public Filter {
+class MitchellSSFilter : public Filter {
 public:
-	// GaussianFilter Public Methods
-	MitchellFilterSS(const float xw = 2.f, const float yw = 2.f,
-			const float b = 1.f / 3.f, const float c = 1.f / 3.f) :
+	// MitchelSSFilter Public Methods
+	MitchellSSFilter(const float xw, const float yw,
+			const float b, const float c) :
 		Filter(xw * 5.f / 3.f, yw * 5.f / 3.f), B(b), C(c),
-		a0((76.f - 16.f * B + 8.f * C) / 81.f), a1((1.f - a0)/ 2.f) { }
-	virtual ~MitchellFilterSS() { }
+		a0(CalcA0(B, C)), a1(CalcA1(a0)) { }
+	virtual ~MitchellSSFilter() { }
 
-	virtual FilterType GetType() const { return FILTER_MITCHELL; }
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	float Evaluate(const float x, const float y) const {
 		const float distance = sqrtf(x * x * invXWidth * invXWidth +
@@ -55,17 +56,38 @@ public:
 			a1 * Mitchell1D(dist + 2.f / 3.f);
 	}
 
-	virtual Filter *Clone() const { return new MitchellFilterSS(xWidth, yWidth, B, C); }
+	// Transform the current object in Properties
+	virtual luxrays::Properties ToProperties() const;
 
-	float B, C;
+	//--------------------------------------------------------------------------
+	// Static methods used by FilterRegistry
+	//--------------------------------------------------------------------------
+
+	static FilterType GetObjectType() { return FILTER_MITCHELL_SS; }
+	static std::string GetObjectTag() { return "MITCHELL_SS"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Filter *FromProperties(const luxrays::Properties &cfg);
+	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
+
+	float B, C, a0, a1;
 
 	friend class boost::serialization::access;
 
 private:
+	static float CalcA0(const float B, const float C) { return (76.f - 16.f * B + 8.f * C) / 81.f; }
+	static float CalcA1(const float a0) { return (1.f - a0)/ 2.f; }
+
+	static luxrays::Properties GetDefaultProps();
+
+	// Used by serialization
+	MitchellSSFilter() { }
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
 		ar & B;
 		ar & C;
+		ar & a0;
+		ar & a1;
 	}
 
 	float Mitchell1D(float x) const {
@@ -80,14 +102,12 @@ private:
 				(-3.f + 2.f * B + C)) * x * x +
 				(1.f - B / 3.f);
 	}
-
-	const float a0, a1;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::MitchellFilterSS, 1)
+BOOST_CLASS_VERSION(slg::MitchellSSFilter, 2)
 
-BOOST_CLASS_EXPORT_KEY(slg::MitchellFilterSS)
+BOOST_CLASS_EXPORT_KEY(slg::MitchellSSFilter)
 
 #endif	/* _SLG_MITCHELLSS_FILTER_H */

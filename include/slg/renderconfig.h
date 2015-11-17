@@ -37,6 +37,7 @@ public:
 	const luxrays::Property GetProperty(const std::string &name) const;
 
 	void Parse(const luxrays::Properties &props);
+	void UpdateFilmProperties(const luxrays::Properties &props);
 	void Delete(const std::string &prefix);
 
 	bool GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
@@ -48,11 +49,13 @@ public:
 	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
 		const FilmSampleSplatter *flmSplatter,
-		const u_int threadIndex, const u_int threadCount,
 		SamplerSharedData *sharedData) const;
 
 	RenderEngine *AllocRenderEngine(Film *film, boost::mutex *filmMutex) const;
 
+	const luxrays::Properties &ToProperties() const;
+
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProperties();
 
 	luxrays::Properties cfg;
@@ -60,7 +63,9 @@ public:
 
 private:
 	static void InitDefaultProperties();
-	
+
+	mutable luxrays::Properties propsCache;
+
 	bool allocatedScene;
 };
 

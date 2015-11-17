@@ -24,7 +24,7 @@
 #include <boost/filesystem.hpp>
 
 #include "slg/renderconfig.h"
-#include "slg/renderengine.h"
+#include "slg/engines/renderengine.h"
 #include "slg/film/film.h"
 
 #include "slg/samplers/random.h"
@@ -49,6 +49,7 @@
 #include "slg/engines/filesaver/filesaver.h"
 #include "slg/engines/biaspathcpu/biaspathcpu.h"
 #include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/lights/lightstrategyregistry.h"
 
 using namespace std;
 using namespace luxrays;
@@ -62,43 +63,10 @@ void RenderConfig::InitDefaultProperties() {
 	if (!defaultProperties.get()) {
 		boost::unique_lock<boost::mutex> lock(defaultPropertiesMutex);
 		if (!defaultProperties.get()) {
-			defaultProperties.reset(new Properties());
+			Properties *props = new Properties();
+			*props << RenderConfig::ToProperties(Properties());
 
-			defaultProperties->Set(Property("accelerator.instances.enable")(true));
-			defaultProperties->Set(Property("accelerator.type")("AUTO"));
-
-			defaultProperties->Set(Property("lightstrategy.type")("LOG_POWER"));
-
-			// Batch related Properties
-			defaultProperties->Set(Property("batch.halttime")(0u));
-			defaultProperties->Set(Property("batch.haltspp")(0u));
-			defaultProperties->Set(Property("batch.haltthreshold")(-1.f));
-			defaultProperties->Set(Property("batch.haltdebug")(0u));
-
-			// Film Filter related Properties
-			defaultProperties->Set(Property("film.filter.type")("BLACKMANHARRIS"));
-			defaultProperties->Set(Property("film.filter.width")(2.f));
-			defaultProperties->Set(Property("film.filter.gaussian.alpha")(2.f));
-			defaultProperties->Set(Property("film.filter.mitchell.b")(1.f / 3.f));
-			defaultProperties->Set(Property("film.filter.mitchell.c")(1.f / 3.f));
-			defaultProperties->Set(Property("film.filter.mitchellss.b")(1.f / 3.f));
-			defaultProperties->Set(Property("film.filter.mitchellss.c")(1.f / 3.f));
-
-			defaultProperties->Set(Property("film.height")(480u));
-			defaultProperties->Set(Property("film.width")(640u));
-
-			// Sampler related Properties
-			defaultProperties->Set(Property("sampler.type")("RANDOM"));
-			defaultProperties->Set(Property("sampler.metropolis.largesteprate")(.4f));
-			defaultProperties->Set(Property("sampler.metropolis.maxconsecutivereject")(512));
-			defaultProperties->Set(Property("sampler.metropolis.imagemutationrate")(.1f));
-			
-			defaultProperties->Set(Property("images.scale")(1.f));
-			defaultProperties->Set(Property("renderengine.type")("PATHOCL"));
-			defaultProperties->Set(Property("scene.file")("scenes/luxball/luxball.scn"));
-			defaultProperties->Set(Property("screen.refresh.interval")(100u));
-
-			// Specific RenderEngine settings are defined in each RenderEngine::Start() method
+			defaultProperties.reset(props);
 		}
 	}
 }
@@ -143,47 +111,25 @@ RenderConfig::~RenderConfig() {
 }
 
 const Property RenderConfig::GetProperty(const string &name) const {
-	if (cfg.IsDefined(name))
-		return cfg.Get(name);
-	else {
-		// Use the default value
-		return defaultProperties->Get(name);
-	}
+	return ToProperties().Get(name);
 }
 
 void RenderConfig::Parse(const Properties &props) {
+	// Reset the properties cache
+	propsCache.Clear();
+
 	cfg.Set(props);
+	UpdateFilmProperties(props);
 
-	scene->enableInstanceSupport = GetProperty("accelerator.instances.enable").Get<bool>();
-	const string accelType = GetProperty("accelerator.type").Get<string>();
-	// "-1" is for compatibility with the past. However all other old values are
-	// not emulated (i.e. the "AUTO" behavior is preferred in that case)
-	if ((accelType == "AUTO") || (accelType == "-1"))
-		scene->accelType = ACCEL_AUTO;
-	else if (accelType == "BVH")
-		scene->accelType = ACCEL_BVH;
-	else if (accelType == "MBVH")
-		scene->accelType = ACCEL_MBVH;
-	else if (accelType == "QBVH")
-		scene->accelType = ACCEL_QBVH;
-	else if (accelType == "MQBVH")
-		scene->accelType = ACCEL_MQBVH;
-	else if (accelType == "EMBREE")
-		scene->accelType = ACCEL_EMBREE;
-	else {
-		SLG_LOG("Unknown accelerator type (using AUTO instead): " << accelType);
-	}
+	// Scene epsilon is read directly from the cfg properties inside
+	// render engine Start() method
 
-	const string lightStrategy = GetProperty("lightstrategy.type").Get<string>();
-	if (lightStrategy == "UNIFORM")
-		scene->lightDefs.SetLightStrategy(TYPE_UNIFORM);
-	else if (lightStrategy == "POWER")
-		scene->lightDefs.SetLightStrategy(TYPE_POWER);
-	else if (lightStrategy == "LOG_POWER")
-		scene->lightDefs.SetLightStrategy(TYPE_LOG_POWER);
-	else {
-		SLG_LOG("Unknown light strategy type (using AUTO instead): " << lightStrategy);
-	}
+	// Accelerator settings are read directly from the cfg properties inside
+	// the render engine
+
+	// Light strategy
+	if (LightStrategy::GetType(cfg) != scene->lightDefs.GetLightStrategy()->GetType())
+		scene->lightDefs.SetLightStrategy(LightStrategy::FromProperties(cfg));
 
 	// Update the Camera
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
@@ -192,7 +138,66 @@ void RenderConfig::Parse(const Properties &props) {
 	scene->camera->Update(filmFullWidth, filmFullHeight, subRegion);
 }
 
+void RenderConfig::UpdateFilmProperties(const luxrays::Properties &props) {
+	//--------------------------------------------------------------------------
+	// Check if there was a new image pipeline definition
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.imagepipeline.")) {
+		// Delete the old image pipeline properties
+		cfg.DeleteAll(cfg.GetAllNames("film.imagepipeline."));
+
+		// Update the RenderConfig properties with the new image pipeline definition
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.imagepipeline."))
+				cfg.Set(props.Get(propName));
+		}
+		
+		// Reset the properties cache
+		propsCache.Clear();
+	}
+
+	//--------------------------------------------------------------------------
+	// Check if there were new radiance groups scale
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.radiancescales.")) {
+		// Delete old radiance groups scale properties
+		cfg.DeleteAll(cfg.GetAllNames("film.radiancescales."));
+		
+		// Update the RenderConfig properties with the new radiance groups scale properties
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.radiancescales."))
+				cfg.Set(props.Get(propName));
+		}
+
+		// Reset the properties cache
+		propsCache.Clear();
+	}
+
+	//--------------------------------------------------------------------------
+	// Check if there were new outputs definition
+	//--------------------------------------------------------------------------
+
+	if (props.HaveNames("film.outputs.")) {
+		// Delete old radiance groups scale properties
+		cfg.DeleteAll(cfg.GetAllNames("film.outputs."));
+		
+		// Update the RenderConfig properties with the new outputs definition properties
+		BOOST_FOREACH(string propName, props.GetAllNames()) {
+			if (boost::starts_with(propName, "film.outputs."))
+				cfg.Set(props.Get(propName));
+		}
+
+		// Reset the properties cache
+		propsCache.Clear();
+	}
+}
+
 void RenderConfig::Delete(const string &prefix) {
+	// Reset the properties cache
+	propsCache.Clear();
+
 	cfg.DeleteAll(cfg.GetAllNames(prefix));
 }
 
@@ -247,48 +252,7 @@ bool RenderConfig::GetFilmSize(u_int *filmFullWidth, u_int *filmFullHeight,
 }
 
 Filter *RenderConfig::AllocPixelFilter() const {
-	//--------------------------------------------------------------------------
-	// Create the filter
-	//--------------------------------------------------------------------------
-
-	const FilterType filterType = Filter::String2FilterType(GetProperty("film.filter.type").Get<string>());
-	const float defaultFilterWidth = GetProperty("film.filter.width").Get<float>();
-	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
-	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
-
-	auto_ptr<Filter> filter;
-	switch (filterType) {
-		case FILTER_NONE:
-			break;
-		case FILTER_BOX:
-			filter.reset(new BoxFilter(filterXWidth, filterYWidth));
-			break;
-		case FILTER_GAUSSIAN: {
-			const float alpha = GetProperty("film.filter.gaussian.alpha").Get<float>();
-			filter.reset(new GaussianFilter(filterXWidth, filterYWidth, alpha));
-			break;
-		}
-		case FILTER_MITCHELL: {
-			const float b = GetProperty("film.filter.mitchell.b").Get<float>();
-			const float c = GetProperty("film.filter.mitchell.c").Get<float>();
-			filter.reset(new MitchellFilter(filterXWidth, filterYWidth, b, c));
-			break;
-		}
-		case FILTER_MITCHELL_SS: {
-			const float b = GetProperty("film.filter.mitchellss.b").Get<float>();
-			const float c = GetProperty("film.filter.mitchellss.c").Get<float>();
-			filter.reset(new MitchellFilterSS(filterXWidth, filterYWidth, b, c));
-			break;
-		}
-		case FILTER_BLACKMANHARRIS: {
-			filter.reset(new BlackmanHarrisFilter(filterXWidth, filterYWidth));
-			break;
-		}
-		default:
-			throw runtime_error("Unknown filter type: " + boost::lexical_cast<string>(filterType));
-	}
-	
-	return filter.release();
+	return Filter::FromProperties(cfg);
 }
 
 Film *RenderConfig::AllocFilm() const {
@@ -297,10 +261,13 @@ Film *RenderConfig::AllocFilm() const {
 	//--------------------------------------------------------------------------
 
 	u_int filmFullWidth, filmFullHeight, filmSubRegion[4];
-	GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
+	const bool filmSubRegionUsed = GetFilmSize(&filmFullWidth, &filmFullHeight, filmSubRegion);
 
 	SLG_LOG("Film resolution: " << filmFullWidth << "x" << filmFullHeight);
-	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight));
+	if (filmSubRegionUsed)
+		SLG_LOG("Film sub-region: " << filmSubRegion[0] << " " << filmSubRegion[1] << filmSubRegion[2] << " " << filmSubRegion[3]);
+	auto_ptr<Film> film(new Film(filmFullWidth, filmFullHeight,
+			filmSubRegionUsed ? filmSubRegion : NULL));
 
 	// For compatibility with the past
 	if (cfg.IsDefined("film.alphachannel.enable")) {
@@ -341,86 +308,64 @@ Film *RenderConfig::AllocFilm() const {
 }
 
 SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen) const {
-	const SamplerType samplerType = Sampler::String2SamplerType(GetProperty("sampler.type").Get<string>());
-	switch (samplerType) {
-		case RANDOM:
-			return NULL;
-		case METROPOLIS:
-			return new MetropolisSamplerSharedData();
-		case SOBOL:
-			return new SobolSamplerSharedData(rndGen);
-		default:
-			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
-	}
+	return SamplerSharedData::FromProperties(cfg, rndGen);
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
-		const u_int threadIndex, const u_int threadCount, SamplerSharedData *sharedData) const {
-	const SamplerType samplerType = Sampler::String2SamplerType(GetProperty("sampler.type").Get<string>());
-	switch (samplerType) {
-		case RANDOM:
-			return new RandomSampler(rndGen, film, flmSplatter);
-		case METROPOLIS: {
-			const float rate = GetProperty("sampler.metropolis.largesteprate").Get<float>();
-			const float reject = GetProperty("sampler.metropolis.maxconsecutivereject").Get<float>();
-			const float mutationrate = GetProperty("sampler.metropolis.imagemutationrate").Get<float>();
-
-			return new MetropolisSampler(rndGen, film, flmSplatter,
-					reject, rate, mutationrate,
-					(MetropolisSamplerSharedData *)sharedData);
-		}
-		case SOBOL:
-			return new SobolSampler(rndGen, film, flmSplatter, (SobolSamplerSharedData *)sharedData);
-		default:
-			throw runtime_error("Unknown sampler.type: " + boost::lexical_cast<string>(samplerType));
-	}
+		SamplerSharedData *sharedData) const {
+	return Sampler::FromProperties(cfg, rndGen, film, flmSplatter, sharedData);
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine(Film *film, boost::mutex *filmMutex) const {
-	const RenderEngineType renderEngineType = RenderEngine::String2RenderEngineType(
-		GetProperty("renderengine.type").Get<string>());
+	return RenderEngine::FromProperties(this, film, filmMutex);
+}
 
-	switch (renderEngineType) {
-		case LIGHTCPU:
-			return new LightCPURenderEngine(this, film, filmMutex);
-		case PATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new PathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-#endif
-		case PATHCPU:
-			return new PathCPURenderEngine(this, film, filmMutex);
-		case BIDIRCPU:
-			return new BiDirCPURenderEngine(this, film, filmMutex);
-		case BIDIRVMCPU:
-			return new BiDirVMCPURenderEngine(this, film, filmMutex);
-		case FILESAVER:
-			return new FileSaverRenderEngine(this, film, filmMutex);
-		case RTPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new PathCPURenderEngine(this, film, filmMutex);
-#endif
-		case BIASPATHCPU:
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-		case BIASPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new BiasPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-#endif
-		case RTBIASPATHOCL:
-#ifndef LUXRAYS_DISABLE_OPENCL
-			return new RTBiasPathOCLRenderEngine(this, film, filmMutex);
-#else
-			SLG_LOG("OpenCL unavailable, falling back to CPU rendering");
-			return new BiasPathCPURenderEngine(this, film, filmMutex);
-#endif
-		default:
-			throw runtime_error("Unknown render engine type: " + boost::lexical_cast<string>(renderEngineType));
-	}
+const Properties &RenderConfig::ToProperties() const {
+	if (!propsCache.GetSize())
+		propsCache = ToProperties(cfg);
+
+	return propsCache;
+}
+
+Properties RenderConfig::ToProperties(const Properties &cfg) {
+	Properties props;
+
+	// Ray intersection accelerators
+	props << cfg.Get(Property("accelerator.type")("AUTO"));
+	props << cfg.Get(Property("accelerator.instances.enable")(true));
+
+	// Scene epsilon
+	props << cfg.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN));
+	props << cfg.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
+
+	props << cfg.Get(Property("scene.file")("scenes/luxball/luxball.scn"));
+	props << cfg.Get(Property("images.scale")(1.f));
+
+	// LightStrategy
+	props << LightStrategy::ToProperties(cfg);
+
+	// RenderEngine (includes PixelFilter and Sampler where applicable)
+	props << RenderEngine::ToProperties(cfg);
+
+	// Film
+	props << Film::ToProperties(cfg);
+
+	// This property isn't really used by LuxCore but is useful for GUIs.
+	props << cfg.Get(Property("screen.refresh.interval")(100u));
+
+	props << cfg.Get(Property("screen.tiles.pending.show")(true));
+	props << cfg.Get(Property("screen.tiles.converged.show")(false));
+	props << cfg.Get(Property("screen.tiles.notconverged.show")(false));
+
+	props << cfg.Get(Property("screen.tiles.passcount.show")(false));
+	props << cfg.Get(Property("screen.tiles.error.show")(false));
+
+	// The following properties aren't really used by LuxCore but they are useful for
+	// applications using LuxCore
+	props << cfg.Get(Property("batch.halttime")(0u));
+	props << cfg.Get(Property("batch.haltspp")(0u));
+	props << cfg.Get(Property("batch.haltthreshold")(-1.f));
+	props << cfg.Get(Property("batch.haltdebug")(0u));
+
+	return props;
 }

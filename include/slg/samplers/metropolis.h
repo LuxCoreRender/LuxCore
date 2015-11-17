@@ -35,10 +35,12 @@ namespace slg {
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
-class MetropolisSamplerSharedData : public SamplerSharedData{
+class MetropolisSamplerSharedData : public SamplerSharedData {
 public:
 	MetropolisSamplerSharedData();
 	virtual ~MetropolisSamplerSharedData() { }
+
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen);
 
 	// I'm storing totalLuminance and sampleCount on shared variables
 	// in order to have far more accurate estimation in the image mean intensity
@@ -58,13 +60,29 @@ public:
 			MetropolisSamplerSharedData *samplerSharedData);
 	virtual ~MetropolisSampler();
 
-	virtual SamplerType GetType() const { return METROPOLIS; }
+	virtual SamplerType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 	virtual void RequestSamples(const u_int size);
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
+	virtual luxrays::Properties ToProperties();
+
+	//--------------------------------------------------------------------------
+	// Static methods used by SamplerRegistry
+	//--------------------------------------------------------------------------
+
+	static SamplerType GetObjectType() { return METROPOLIS; }
+	static std::string GetObjectTag() { return "METROPOLIS"; }
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
+		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
+	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
+
 private:
+	static luxrays::Properties GetDefaultProps();
+
 	MetropolisSamplerSharedData *sharedData;
 
 	u_int maxRejects;

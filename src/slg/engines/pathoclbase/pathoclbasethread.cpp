@@ -80,14 +80,15 @@ PathOCLBaseRenderThread::ThreadFilm::~ThreadFilm() {
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
-		const u_int threadFilmWidth, const u_int threadFilmHeight) {
+		const u_int threadFilmWidth, const u_int threadFilmHeight,
+		const u_int *threadFilmSubRegion) {
 	const u_int filmPixelCount = threadFilmWidth * threadFilmHeight;
 
 	// Delete previous allocated Film
 	delete film;
 
 	// Allocate the new Film
-	film = new Film(threadFilmWidth, threadFilmHeight);
+	film = new Film(threadFilmWidth, threadFilmHeight, threadFilmSubRegion);
 	film->CopyDynamicSettings(engineFilm);
 	film->Init();
 
@@ -238,6 +239,13 @@ u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmCle
 	// Film parameters
 	filmClearKernel.setArg(argIndex++, film->GetWidth());
 	filmClearKernel.setArg(argIndex++, film->GetHeight());
+
+	const u_int *filmSubRegion = film->GetSubRegion();
+	filmClearKernel.setArg(argIndex++, filmSubRegion[0]);
+	filmClearKernel.setArg(argIndex++, filmSubRegion[1]);
+	filmClearKernel.setArg(argIndex++, filmSubRegion[2]);
+	filmClearKernel.setArg(argIndex++, filmSubRegion[3]);
+
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
 		filmClearKernel.setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
 	if (film->HasChannel(Film::ALPHA))
@@ -713,11 +721,12 @@ void PathOCLBaseRenderThread::InitFilm() {
 	if (threadFilms.size() == 0)
 		IncThreadFilms();
 
-	u_int threadFilmWidth, threadFilmHeight;
-	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight);
+	u_int threadFilmWidth, threadFilmHeight, threadFilmSubRegion[4];
+	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight, threadFilmSubRegion);
 
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
-		threadFilm->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight);
+		threadFilm->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight,
+			threadFilmSubRegion);
 }
 
 void PathOCLBaseRenderThread::InitCamera() {
@@ -856,7 +865,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 	ss << scientific <<
 			" -D LUXRAYS_OPENCL_KERNEL" <<
 			" -D SLG_OPENCL_KERNEL" <<
-			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetEngineType()) <<
+			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetType()) <<
 			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << InfiniteLightSource::LIGHT_WORLD_RADIUS_SCALE << "f"
@@ -1022,6 +1031,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_ABS";
 	if (cscene->IsTextureCompiled(CLAMP_TEX))
 		ss << " -D PARAM_ENABLE_TEX_CLAMP";
+	if (cscene->IsTextureCompiled(BILERP_TEX))
+		ss << " -D PARAM_ENABLE_TEX_BILERP";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -1260,6 +1271,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
 		slg::ocl::KernelSource_texture_blender_funcs <<
 		slg::ocl::KernelSource_texture_abs_funcs <<
+		slg::ocl::KernelSource_texture_bilerp_funcs <<
 		slg::ocl::KernelSource_texture_blackbody_funcs <<
 		slg::ocl::KernelSource_texture_clamp_funcs <<
 		slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
@@ -1595,10 +1607,11 @@ void PathOCLBaseRenderThread::IncThreadFilms() {
 	threadFilms.push_back(new ThreadFilm(this));
 
 	// Initialize the new thread film
-	u_int threadFilmWidth, threadFilmHeight;
-	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight);
+	u_int threadFilmWidth, threadFilmHeight, threadFilmSubRegion[4];
+	GetThreadFilmSize(&threadFilmWidth, &threadFilmHeight, threadFilmSubRegion);
 
-	threadFilms.back()->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight);
+	threadFilms.back()->Init(*(renderEngine->film), threadFilmWidth, threadFilmHeight,
+			threadFilmSubRegion);
 }
 
 void PathOCLBaseRenderThread::ClearThreadFilms(cl::CommandQueue &oclQueue) {

@@ -47,9 +47,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
 	Film *film = threadFilm;
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
-	pixelCount = filmWidth * filmHeight;
 
 	// Setup the samplers
 	vector<Sampler *> samplers(engine->lightPathsCount, NULL);
@@ -60,7 +57,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, engine->sampleSplatter,
-				threadIndex, engine->renderThreads.size(), engine->samplerSharedData);
+				engine->samplerSharedData);
 		sampler->RequestSamples(sampleSize);
 
 		samplers[i] = sampler;
@@ -133,9 +130,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 			PathVertexVM eyeVertex;
 			SampleResult &eyeSampleResult = AddResult(samplesResults[samplerIndex], false);
 
+			film->GetSampleXY(sampler->GetSample(0), sampler->GetSample(1),
+				&eyeSampleResult.filmX, &eyeSampleResult.filmY);
 			Ray eyeRay;
-			eyeSampleResult.filmX = min(sampler->GetSample(0) * filmWidth, (float)(filmWidth - 1));
-			eyeSampleResult.filmY = min(sampler->GetSample(1) * filmHeight, (float)(filmHeight - 1));
 			camera->GenerateRay(eyeSampleResult.filmX, eyeSampleResult.filmY, &eyeRay,
 				sampler->GetSample(9), sampler->GetSample(10), time);
 

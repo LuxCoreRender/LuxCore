@@ -41,6 +41,11 @@
 // (Mitchell filter)
 //  PARAM_IMAGE_FILTER_MITCHELL_B
 //  PARAM_IMAGE_FILTER_MITCHELL_C
+// (MitchellSS filter)
+//  PARAM_IMAGE_FILTER_MITCHELL_B
+//  PARAM_IMAGE_FILTER_MITCHELL_C
+//  PARAM_IMAGE_FILTER_MITCHELL_A0
+//  PARAM_IMAGE_FILTER_MITCHELL_A1
 
 // (optional)
 //  PARAM_USE_FAST_PIXEL_FILTER
@@ -60,14 +65,64 @@
 // Init Kernel
 //------------------------------------------------------------------------------
 
-void GenerateCameraPath(
+void InitSampleResult(
+		__global Sample *sample,
+		__global float *sampleData,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, __global float *pixelFilterDistribution
+#endif
+		, Seed *seed) {
+	SampleResult_Init(&sample->result);
+
+#if (PARAM_SAMPLER_TYPE == 1)
+	// Used by Sampler_GetSamplePath() macro
+	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+#endif
+
+	const float u0 = Sampler_GetSamplePath(IDX_SCREEN_X);
+	const float u1 = Sampler_GetSamplePath(IDX_SCREEN_Y);
+	float ux, uy;
+	Film_GetSampleXY(u0, u1, &ux, &uy,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1,
+			filmSubRegion2, filmSubRegion3);
+
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+	const uint pixelX = Floor2UInt(ux);
+	const uint pixelY = Floor2UInt(uy);
+	sample->result.pixelX = pixelX;
+	sample->result.pixelY = pixelY;
+
+	float uSubPixelX = ux - pixelX;
+	float uSubPixelY = uy - pixelY;
+
+	// Sample according the pixel filter distribution
+	float distX, distY;
+	FilterDistribution_SampleContinuous(pixelFilterDistribution, uSubPixelX, uSubPixelY, &distX, &distY);
+
+	sample->result.filmX = pixelX + .5f + distX;
+	sample->result.filmY = pixelY + .5f + distY;
+#else
+	sample->result.filmX = ux;
+	sample->result.filmY = uy;
+#endif
+}
+
+void GenerateEyePath(
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
 		__global float *sampleData,
 		__global const Camera* restrict camera,
-		const uint filmWidth,
-		const uint filmHeight,
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3,
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		__global float *pixelFilterDistribution,
+#endif
 		__global Ray *ray,
 		Seed *seed) {
 #if (PARAM_SAMPLER_TYPE == 0)
@@ -108,8 +163,17 @@ void GenerateCameraPath(
 #endif
 #endif
 
-	Camera_GenerateRay(camera, filmWidth, filmHeight, ray,
-			sample->result.filmX, sample->result.filmY, time
+	InitSampleResult(sample, sampleData,
+		filmWidth, filmHeight,
+		filmSubRegion0, filmSubRegion1,
+		filmSubRegion2, filmSubRegion3
+#if defined(PARAM_USE_FAST_PIXEL_FILTER)
+		, pixelFilterDistribution
+#endif
+		, seed);
+
+	Camera_GenerateRay(camera, filmWidth, filmHeight,
+			ray, sample->result.filmX, sample->result.filmY, time
 #if defined(PARAM_CAMERA_HAS_DOF)
 			, dofSampleX, dofSampleY
 #endif
@@ -155,8 +219,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #endif
 		__global Ray *rays,
 		__global Camera *camera,
-		const uint filmWidth,
-		const uint filmHeight
+		const uint filmWidth, const uint filmHeight,
+		const uint filmSubRegion0, const uint filmSubRegion1,
+		const uint filmSubRegion2, const uint filmSubRegion3
 		) {
 	const size_t gid = get_global_id(0);
 	if (gid >= PARAM_TASK_COUNT)
@@ -174,12 +239,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	// Initialize the sample and path
 	__global Sample *sample = &samples[gid];
 	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	Sampler_Init(&seed, sample, sampleData, filmWidth, filmHeight
+	Sampler_Init(&seed, sample, sampleData);
+	GenerateEyePath(taskDirectLight, taskState, sample, sampleData, camera,
+			filmWidth, filmHeight,
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 #if defined(PARAM_USE_FAST_PIXEL_FILTER)
-			, pixelFilterDistribution
+			pixelFilterDistribution,
 #endif
-			);
-	GenerateCameraPath(taskDirectLight, taskState, sample, sampleData, camera, filmWidth, filmHeight, &rays[gid], &seed);
+			&rays[gid], &seed);
 
 	// Save the seed
 	task->seed.s1 = seed.s1;
@@ -359,11 +426,7 @@ bool DirectLight_BSDFSampling(
 	// Setup the shadow ray
 	const float3 hitPoint = VLOAD3F(&bsdf->hitPoint.p.x);
 	const float distance = info->distance;
-	const float epsilon = fmax(MachineEpsilon_E_Float3(hitPoint), MachineEpsilon_E(distance));
-
-	Ray_Init4(shadowRay, hitPoint, lightRayDir,
-		epsilon,
-		distance - epsilon, time);
+	Ray_Init4(shadowRay, hitPoint, lightRayDir, 0.f, distance, time);
 
 	return true;
 }
@@ -545,6 +608,8 @@ bool DirectLight_BSDFSampling(
 
 #define KERNEL_ARGS_FILM \
 		, const uint filmWidth, const uint filmHeight \
+		, const uint filmSubRegion0, const uint filmSubRegion1 \
+		, const uint filmSubRegion2, const uint filmSubRegion3 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
 		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \

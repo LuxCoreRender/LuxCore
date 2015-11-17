@@ -157,7 +157,7 @@ cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &dev
 		VECTOR_CLASS<cl::Device> buildDevice;
 		buildDevice.push_back(device);
 		program->build(buildDevice, kernelsParameters.c_str());
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		const std::string clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
 
 		std::stringstream ss;

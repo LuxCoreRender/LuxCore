@@ -28,7 +28,7 @@
 //  <<CS_MIX_MATERIAL_INDEX>>
 //  <<CS_MAT_A_MATERIAL_INDEX>>
 //  <<CS_MAT_B_MATERIAL_INDEX>>
-//  <<CS_FACTOR_TEXTURE_INDEX>>
+//  <<CS_FACTOR_TEXTURE>>
 //------------------------------------------------------------------------------
 
 BSDFEvent Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEventTypes(__global const Material *material
@@ -53,10 +53,7 @@ bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__global const Material *ma
 float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material *material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
-	const float factor = Texture_Index<<CS_FACTOR_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_FACTOR_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+	const float factor = <<CS_FACTOR_TEXTURE>>;
 	const float weight2 = clamp(factor, 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
@@ -82,10 +79,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 #endif*/
 
 	float3 result = BLACK;
-	const float factor = Texture_Index<<CS_FACTOR_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_FACTOR_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+	const float factor = <<CS_FACTOR_TEXTURE>>;
 	const float weight2 = clamp(factor, 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
@@ -186,10 +180,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 #endif
 		float *pdfW, float *cosSampledDir, BSDFEvent *event, const BSDFEvent requestedEvent
 		MATERIALS_PARAM_DECL) {
-	const float factor = Texture_Index<<CS_FACTOR_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_FACTOR_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+	const float factor = <<CS_FACTOR_TEXTURE>>;
 	const float weight2 = clamp(factor, 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
@@ -318,10 +309,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const
 		return Material_GetEmittedRadianceNoMix(material, hitPoint TEXTURES_PARAM);
 	else {
 		float3 result = BLACK;
-		const float factor = Texture_Index<<CS_FACTOR_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_FACTOR_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		const float factor = <<CS_FACTOR_TEXTURE>>;
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
 
@@ -345,10 +333,7 @@ uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetInteriorVolume(__global const Ma
 		if (material->interiorVolumeIndex != NULL_INDEX)
 			return material->interiorVolumeIndex;
 
-		const float factor = Texture_Index<<CS_FACTOR_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_FACTOR_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		const float factor = <<CS_FACTOR_TEXTURE>>;
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
 		if (passThroughEvent < weight1)
@@ -367,10 +352,7 @@ uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetExteriorVolume(__global const Ma
 		if (material->exteriorVolumeIndex != NULL_INDEX)
 			return material->exteriorVolumeIndex;
 
-		const float factor = Texture_Index<<CS_FACTOR_TEXTURE_INDEX>>_EvaluateFloat(
-			&texs[<<CS_FACTOR_TEXTURE_INDEX>>],
-			hitPoint
-			TEXTURES_PARAM);
+		const float factor = <<CS_FACTOR_TEXTURE>>;
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
 

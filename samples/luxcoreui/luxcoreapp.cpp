@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <cstdlib>
 #include <iostream>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -33,7 +34,13 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 // LuxCoreApp
 //------------------------------------------------------------------------------
 
-LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) : statsWindow(this) {
+LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
+		acceleratorWindow(this), epsilonWindow(this),
+		filmChannelsWindow(this), filmOutputsWindow(this),
+		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
+		oclDeviceWindow(this), pixelFilterWindow(this),
+		renderEngineWindow(this), samplerWindow(this),
+		statsWindow(this), logWindow(this), helpWindow(this) {
 	config = renderConfig;
 	session = NULL;
 	window = NULL;
@@ -51,13 +58,21 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) : statsWindow(this) 
 	lastMouseUpdate = 0.0;
 	
 	currentLogWindow = &logWindow;
+
+	renderFrameBufferTexMinFilter = GL_LINEAR;
+	renderFrameBufferTexMagFilter = GL_LINEAR;
+	
+	guiLoopTime = 0.0;
+	guiSleepTime = 0.0;
+	guiFilmUpdateTime = 0.0;
 }
 
 LuxCoreApp::~LuxCoreApp() {
+	currentLogWindow = NULL;
 }
 
 void LuxCoreApp::IncScreenRefreshInterval() {
-	const u_int screenRefreshInterval = config->GetProperty("screen.refresh.interval").Get<u_int>();
+	const u_int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<u_int>();
 	if (screenRefreshInterval >= 1000)
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(screenRefreshInterval + 1000)));
 	else if (screenRefreshInterval >= 100)
@@ -67,7 +82,7 @@ void LuxCoreApp::IncScreenRefreshInterval() {
 }
 
 void LuxCoreApp::DecScreenRefreshInterval() {
-	const u_int screenRefreshInterval = config->GetProperty("screen.refresh.interval").Get<u_int>();
+	const u_int screenRefreshInterval = config->ToProperties().Get("screen.refresh.interval").Get<u_int>();
 	if (screenRefreshInterval > 1000)
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(1000u, screenRefreshInterval - 1000))));
 	else if (screenRefreshInterval > 100)
@@ -76,34 +91,82 @@ void LuxCoreApp::DecScreenRefreshInterval() {
 		config->Parse(Properties().Set(Property("screen.refresh.interval")(Max(10u, screenRefreshInterval - 5))));
 }
 
+void LuxCoreApp::CloseAllRenderConfigEditors() {
+	acceleratorWindow.Close();
+	epsilonWindow.Close();
+	filmChannelsWindow.Close();
+	filmOutputsWindow.Close();
+	filmRadianceGroupsWindow.Close();
+	lightStrategyWindow.Close();
+	oclDeviceWindow.Close();
+	pixelFilterWindow.Close();
+	renderEngineWindow.Close();
+	samplerWindow.Close();
+}
+
 void LuxCoreApp::SetRenderingEngineType(const string &engineType) {
-	if (engineType != config->GetProperty("renderengine.type").Get<string>()) {
+	if (engineType != config->ToProperties().Get("renderengine.type").Get<string>())
+		RenderConfigParse(Properties() << Property("renderengine.type")(engineType));
+}
+
+void LuxCoreApp::RenderConfigParse(const Properties &props) {
+	if (session) {
 		// Stop the session
 		session->Stop();
 
 		// Delete the session
 		delete session;
 		session = NULL;
+	}
 
-		if (boost::starts_with(engineType, "RT")) {
-			if (config->GetProperty("screen.refresh.interval").Get<u_int>() > 25)
-				config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
-			optRealTimeMode = true;
-		} else
-			optRealTimeMode = false;
-		
-		// Change the render engine
-		config->Parse(
-				Properties() <<
-				Property("renderengine.type")(engineType));
+	// Change the configuration	
+	try {
+		config->Parse(props);
+	} catch(exception &ex) {
+		LA_LOG("RenderConfig fatal parse error: " << endl << ex.what());
+		// I can not recover from a RenderConfig parse error: I would have to create
+		// a new RenderConfig
+		exit(EXIT_FAILURE);
+	}
+
+	const string engineType = config->ToProperties().Get("renderengine.type").Get<string>();
+	if (boost::starts_with(engineType, "RT")) {
+		if (config->ToProperties().Get("screen.refresh.interval").Get<u_int>() > 25)
+			config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
+		optRealTimeMode = true;
+	} else
+		optRealTimeMode = false;
+
+	try {
 		session = new RenderSession(config);
 
 		// Re-start the rendering
 		session->Start();
+	} catch(exception &ex) {
+		LA_LOG("RenderSession starting error: " << endl << ex.what());
+
+		delete session;
+		session = NULL;
+	}
+}
+
+void LuxCoreApp::RenderSessionParse(const Properties &props) {
+	try {
+		session->Parse(props);
+	} catch(exception &ex) {
+		LA_LOG("RenderSession parse error: " << endl << ex.what());
+
+		delete session;
+		session = NULL;
 	}
 }
 
 void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
+	// Close film related editors
+	filmChannelsWindow.Close();
+	filmOutputsWindow.Close();
+	filmRadianceGroupsWindow.Close();
+
 	u_int filmWidth = width;
 	u_int filmHeight = height;
 
@@ -138,7 +201,7 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 
 	// Delete scene.camera.screenwindow so frame buffer resize will
 	// automatically adjust the ratio
-	Properties cameraProps = config->GetScene().GetProperties().GetAllProperties("scene.camera");
+	Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
 	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
 	config->GetScene().Parse(cameraProps);
 
@@ -146,7 +209,6 @@ void LuxCoreApp::SetFilmResolution(const u_int width, const u_int height) {
 
 	// Re-start the rendering
 	session->Start();
-	session->UpdateStats();
 
 	newFilmSize[0] = filmWidth;
 	newFilmSize[1] = filmHeight;
@@ -177,4 +239,11 @@ void LuxCoreApp::ColoredLabelText(const char *label, const char *fmt, ...) {
     va_start(args, fmt);
     ImGui::TextV(fmt, args);
     va_end(args);
+}
+
+void LuxCoreApp::HelpMarker(const char *desc) {
+	ImGui::SameLine();
+	ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", desc);
 }

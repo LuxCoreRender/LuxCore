@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
 			config->GetScene().RemoveUnusedTextures();
 		}
 
-		const bool fileSaverRenderEngine = (config->GetProperty("renderengine.type").Get<string>() == "FILESAVER");
+		const bool fileSaverRenderEngine = (config->ToProperties().Get("renderengine.type").Get<string>() == "FILESAVER");
 		if (fileSaverRenderEngine) {
 			RenderSession *session = new RenderSession(config);
 
@@ -153,14 +153,14 @@ int main(int argc, char *argv[]) {
 		LA_LOG("Done.");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error err) {
+	} catch (cl::Error &err) {
 		LA_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
 		return EXIT_FAILURE;
 #endif
-	} catch (runtime_error err) {
+	} catch (runtime_error &err) {
 		LA_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;
-	} catch (exception err) {
+	} catch (exception &err) {
 		LA_LOG("ERROR: " << err.what());
 		return EXIT_FAILURE;
 	}

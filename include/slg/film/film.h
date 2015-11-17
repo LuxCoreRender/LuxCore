@@ -56,28 +56,28 @@ class SampleResult;
 class Film {
 public:
 	typedef enum {
-		RADIANCE_PER_PIXEL_NORMALIZED = 1<<0,
-		RADIANCE_PER_SCREEN_NORMALIZED = 1<<1,
-		ALPHA = 1<<2,
-		RGB_TONEMAPPED = 1<<3,
-		DEPTH = 1<<4,
-		POSITION = 1<<5,
-		GEOMETRY_NORMAL = 1<<6,
-		SHADING_NORMAL = 1<<7,
-		MATERIAL_ID = 1<<8,
-		DIRECT_DIFFUSE = 1<<9,
-		DIRECT_GLOSSY = 1<<10,
-		EMISSION = 1<<11,
-		INDIRECT_DIFFUSE = 1<<12,
-		INDIRECT_GLOSSY = 1<<13,
-		INDIRECT_SPECULAR = 1<<14,
-		MATERIAL_ID_MASK = 1<<15,
-		DIRECT_SHADOW_MASK = 1<<16,
-		INDIRECT_SHADOW_MASK = 1<<17,
-		UV = 1<<18,
-		RAYCOUNT = 1<<19,
-		BY_MATERIAL_ID = 1<<20,
-		IRRADIANCE = 1<<21
+		RADIANCE_PER_PIXEL_NORMALIZED = 1 << 0,
+		RADIANCE_PER_SCREEN_NORMALIZED = 1 << 1,
+		ALPHA = 1 << 2,
+		RGB_TONEMAPPED = 1 << 3,
+		DEPTH = 1 << 4,
+		POSITION = 1 << 5,
+		GEOMETRY_NORMAL = 1 << 6,
+		SHADING_NORMAL = 1 << 7,
+		MATERIAL_ID = 1 << 8,
+		DIRECT_DIFFUSE = 1 << 9,
+		DIRECT_GLOSSY = 1 << 10,
+		EMISSION = 1 << 11,
+		INDIRECT_DIFFUSE = 1 << 12,
+		INDIRECT_GLOSSY = 1 << 13,
+		INDIRECT_SPECULAR = 1 << 14,
+		MATERIAL_ID_MASK = 1 << 15,
+		DIRECT_SHADOW_MASK = 1 << 16,
+		INDIRECT_SHADOW_MASK = 1 << 17,
+		UV = 1 << 18,
+		RAYCOUNT = 1 << 19,
+		BY_MATERIAL_ID = 1 << 20,
+		IRRADIANCE = 1 << 21
 	} FilmChannelType;
 	
 	class RadianceChannelScale {
@@ -107,7 +107,7 @@ public:
 		luxrays::Spectrum scale;
 	};
 
-	Film(const u_int w, const u_int h);
+	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
 	~Film();
 
 	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
@@ -191,6 +191,7 @@ public:
 
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
+	const u_int *GetSubRegion() const { return subRegion; }
 	double GetTotalSampleCount() const {
 		return statsTotalSampleCount;
 	}
@@ -199,6 +200,10 @@ public:
 	}
 	double GetAvgSampleSec() {
 		return GetTotalSampleCount() / GetTotalTime();
+	}
+	void GetSampleXY(const float u0, const float u1, float *filmX, float *filmY) const {
+		*filmX = luxrays::Min<float>(subRegion[0] + u0 * (subRegion[1] - subRegion[0] + 1), (float)(width - 1));
+		*filmY = luxrays::Min<float>(subRegion[2] + u1 * (subRegion[3] - subRegion[2] + 1), (float)(height - 1));
 	}
 
 	//--------------------------------------------------------------------------
@@ -248,6 +253,8 @@ public:
 	static Film *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Film *film);
 
+	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
+
 	static FilmChannelType String2FilmChannelType(const std::string &type);
 	static const std::string FilmChannelType2String(const FilmChannelType type);
 
@@ -272,6 +279,7 @@ private:
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;
+	u_int subRegion[4];
 	std::vector<u_int> maskMaterialIDs, byMaterialIDs;
 
 	// Used to speedup sample splatting, initialized inside Init()
@@ -295,7 +303,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 5)
+BOOST_CLASS_VERSION(slg::Film, 6)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 #endif	/* _SLG_FILM_H */
