@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, RandomGenerator *rndGen) {
-	const string type = cfg.Get(Property("sampler.type")(RandomSampler::GetObjectTag())).Get<string>();
+	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
 	SamplerSharedDataRegistry::FromProperties func;
 	if (SamplerSharedDataRegistry::STATICTABLE_NAME(FromProperties).Get(type, func))
