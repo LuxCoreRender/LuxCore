@@ -78,7 +78,6 @@ string Property::GetValuesString() const {
 	return ss.str();
 }
 
-
 //------------------------------------------------------------------------------
 
 void Property::FromString(string &line) {

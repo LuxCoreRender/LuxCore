@@ -44,7 +44,7 @@
 #include <luxcore/cfg.h>
 #include <luxrays/utils/properties.h>
 #include <luxrays/utils/exportdefs.h>
-#include "luxrays/utils/cyhair/cyHairFile.h"
+#include <luxrays/utils/cyhair/cyHairFile.h>
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
 #include <slg/scene/scene.h>

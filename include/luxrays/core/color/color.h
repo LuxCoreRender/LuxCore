@@ -23,7 +23,7 @@
 #include <ostream>
 #include <boost/serialization/access.hpp>
 
-#include <luxrays/utils/exportdefs.h>
+#include "luxrays/utils/exportdefs.h"
 #include "luxrays/core/utils.h"
 #include "luxrays/core/color/color.h"
 
@@ -39,7 +39,7 @@ class SpectrumWavelengths;
 class SWCSpectrum;
 
 // Color Declarations
- class   Color {
+class Color {
 #define COLOR_SAMPLES 3
     // Dade - serialization here is required by network rendering
 	friend class boost::serialization::access;
@@ -254,7 +254,7 @@ private:
 };
 
 // RGBColor Declarations
- class  RGBColor : public Color {
+class RGBColor : public Color {
 public:
 	// RGBColor Public Methods
 	RGBColor() { c[0] = 0.f; c[1] = 0.f; c[2] = 0.f; }
@@ -274,7 +274,7 @@ public:
 };
 
 // RGBAColor Declarations
- class  RGBAColor : public Color {
+class RGBAColor : public Color {
 public:
 	// RGBAColor Public Methods
 	RGBAColor() { c[0] = 0.f; c[1] = 0.f; c[2] = 0.f; alpha = 0.f; }
@@ -297,7 +297,7 @@ public:
 };
 
 // XYZColor Declarations
- class  XYZColor : public Color {
+class XYZColor : public Color {
     // Dade - serialization here is required by network rendering
     friend class boost::serialization::access;
 
@@ -333,7 +333,7 @@ public:
 //! The additional definition of the white point intensity allow for
 //! intensity adaptation
 //!
- class  ColorSystem {
+class ColorSystem {
 public:
 	// Default is SMPTE
 	ColorSystem(float xR = .63f, float yR = .34f,
@@ -404,7 +404,7 @@ public:
 //!
 //! Color space white point conversion using Bradford matrices
 //!
- class  ColorAdaptator {
+class ColorAdaptator {
 public:
 	//!
 	//! \param[in] from initial color

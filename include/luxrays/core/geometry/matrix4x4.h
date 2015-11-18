@@ -20,7 +20,8 @@
 #define _LUXRAYS_MATRIX4X4_H
 
 #include <ostream>
-#include <luxrays/utils/exportdefs.h>
+
+#include "luxrays/utils/exportdefs.h"
 
 namespace luxrays {
 
