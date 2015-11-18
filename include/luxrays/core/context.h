@@ -59,7 +59,7 @@ class OpenCLIntersectionDevice;
  * methods to list and create devices, to define the data set to use and to
  * start/stop all the activities.
  */
-class Context {
+CPP_EXPORT class CPP_API Context {
 public:
 	/*!
 	 * \brief Construct a new LuxRays Context for the optionally defined OpenCL platform.

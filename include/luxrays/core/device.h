@@ -45,7 +45,7 @@ typedef enum {
 		DEVICE_TYPE_VIRTUAL
 } DeviceType;
 
-class DeviceDescription {
+CPP_EXPORT class CPP_API DeviceDescription {
 public:
 	DeviceDescription(const std::string deviceName,
 		const DeviceType deviceType) :

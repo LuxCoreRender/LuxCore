@@ -38,7 +38,7 @@ namespace ocl {
 class Point;
 class Normal;
 
-class Vector {
+CPP_EXPORT class CPP_API Vector {
 	friend class boost::serialization::access;
 public:
 	// Vector Public Methods
