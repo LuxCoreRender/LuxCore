@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <luxrays/utils/exportdefs.h>
 
 namespace luxrays {
 
@@ -67,7 +68,7 @@ struct cyHairFileHeader
 //-------------------------------------------------------------------------------
 
 /// HAIR file class
-class cyHairFile
+CPP_EXPORT class CPP_API cyHairFile
 {
 public:
 	cyHairFile() : segments(NULL), points(NULL), thickness(NULL), transparency(NULL), colors(NULL), uvs(NULL) { Initialize(); }

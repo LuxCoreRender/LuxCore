@@ -31,7 +31,7 @@ namespace ocl {
 #include "luxrays/core/geometry/point_types.cl"
 }
 
-class Point {
+CPP_EXPORT class CPP_API Point {
 	friend class boost::serialization::access;
 public:
 	// Point Methods

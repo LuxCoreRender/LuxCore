@@ -28,7 +28,7 @@ namespace ocl {
 #include "luxrays/core/geometry/normal_types.cl"
 }
 
-class Normal {
+CPP_EXPORT class CPP_API Normal {
 	friend class boost::serialization::access;
 public:
 	// Normal Methods

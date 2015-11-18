@@ -29,7 +29,7 @@ namespace ocl {
 #include "luxrays/core/geometry/uv_types.cl"
 }
 
-class UV {
+CPP_EXPORT class CPP_API UV {
 public:
 	// UV Methods
 
