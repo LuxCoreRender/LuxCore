@@ -1187,7 +1187,10 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 		}
 	}
 
+	//--------------------------------------------------------------------------
 	// Generate the code for evaluating a generic texture bump
+	//--------------------------------------------------------------------------
+
 	source << "float3 Texture_Bump(const uint texIndex, "
 			"__global HitPoint *hitPoint, const float sampleDistance "
 			"TEXTURES_PARAM_DECL) {\n"
@@ -1195,10 +1198,14 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 
 	// For textures source code that it is not dynamically generated
 	source << "\tswitch (tex->type) {\n" <<
+			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)\n"
 			"\t\tcase CONST_FLOAT: return ConstFloatTexture_Bump(hitPoint);\n" <<
+			"#endif\n"
+			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)\n"
 			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_Bump(hitPoint);\n" <<
+			"#endif\n"
 			// I can have an IMAGEMAP texture only if PARAM_HAS_IMAGEMAPS is defined
-			"#if defined(PARAM_HAS_IMAGEMAPS)\n"
+			"#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)\n"
 			"\t\tcase IMAGEMAP: return ImageMapTexture_Bump(tex, hitPoint, sampleDistance IMAGEMAPS_PARAM);\n" <<
 			"#endif\n"
 			"\t\tdefault: break;\n" <<
@@ -1235,10 +1242,14 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 
 	// For textures source code that it is not dynamically generated
 	source << "\tswitch (tex->type) {\n" <<
+			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)\n"
 			"\t\tcase CONST_FLOAT: return ConstFloatTexture_ConstEvaluate" << type << "(tex);\n" <<
+			"#endif\n"
+			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)\n"
 			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_ConstEvaluate" << type << "(tex);\n" <<
+			"#endif\n"
 			// I can have an IMAGEMAP texture only if PARAM_HAS_IMAGEMAPS is defined
-			"#if defined(PARAM_HAS_IMAGEMAPS)\n"
+			"#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)\n"
 			"\t\tcase IMAGEMAP: return ImageMapTexture_ConstEvaluate" << type << "(tex, hitPoint IMAGEMAPS_PARAM);\n" <<
 			"#endif\n"
 			"\t\tdefault: break;\n" <<

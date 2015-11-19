@@ -1160,8 +1160,8 @@ static const yytype_uint16 yyrline[] =
      864,   871,   876,   887,   922,   935,   939,   948,   951,   997,
     1001,  1004,  1017,  1181,  1188,  1195,  1208,  1212,  1216,  1219,
     1228,  1232,  1236,  1240,  1243,  1246,  1286,  1310,  1313,  1318,
-    1344,  1349,  1352,  1441,  1445,  1471,  1803,  1807,  1816,  1830,
-    1835,  1839,  1843,  1846
+    1344,  1349,  1352,  1441,  1445,  1471,  1828,  1832,  1841,  1855,
+    1860,  1864,  1868,  1871
 };
 #endif
 
@@ -3048,6 +3048,11 @@ yyreduce:
 			*sceneProps <<
 				Property(prefix + ".type")("constfloat3") <<
 				Property(prefix + ".value")(props.Get(Property("value")(Spectrum(1.f))).Get<Spectrum>());
+		} else if (channels == "fresnel") {
+			*sceneProps <<
+				Property(prefix + ".type")("fresnelconst") <<
+				Property(prefix + ".n")(props.Get(Property("value")(Spectrum(1.f))).Get<Spectrum>()) <<
+				Property(prefix + ".k")(Spectrum(0.f));
 		} else  {
 			LC_LOG("LuxCore doesn't support the constant texture type: " << channels);
 
@@ -3332,20 +3337,40 @@ yyreduce:
 						-1 : channel);
 	} else if (texType == "fresnelcolor") {
 		*sceneProps <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.type")("fresnelapproxn") <<
-				GetTexture(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.texture", Property("Kr")(Spectrum(.5f)), props) <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("fresnelapproxk") <<
-				GetTexture(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.texture", Property("Kr")(Spectrum(.5f)), props);
+				Property(prefix + ".type")("fresnelcolor") <<
+				Property(prefix + ".kr")(props.Get(Property("Kr")(Spectrum(.5f))).Get<Spectrum>());
 	} else if (texType == "preset") {
-		string presetName = props.Get("name").Get<string>();
-		Spectrum n, k;
-		FresnelPreset(presetName, &n, &k);
-
 		*sceneProps <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.type")("constfloat3") <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxn.value")(n) <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.type")("constfloat3") <<
-				Property(prefix + "_LUXCORE_PARSERLXS_fresnelapproxk.value")(k);
+				Property(prefix + ".type")("fresnelpreset") <<
+				Property(prefix + ".name")(props.Get(Property("name")("aluminium")).Get<string>());
+	} else if (texType == "sopra") {
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelsopra") <<
+				Property(prefix + ".file")(props.Get(Property("filename")("")).Get<string>());
+	} else if (texType == "luxpop") {
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelluxpop") <<
+				Property(prefix + ".file")(props.Get(Property("filename")("")).Get<string>());
+	} else if (texType == "cauchy") {
+		const float index = props.Get(Property("index")(-1.f)).Get<float>();
+		const float b = props.Get(Property("cauchyb")(0.f)).Get<float>();
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelcauchy") <<
+				Property(prefix + ".a")(props.Get(Property("cauchya")(index > 0.f ? (index - b * 1e6f / (720.f * 380.f)) : 1.5f)).Get<float>()) <<
+				Property(prefix + ".b")(b);
+	} else if (texType == "abbe") {
+		const string mode = props.Get(Property("type")("d")).Get<string>();
+		*sceneProps <<
+				Property(prefix + ".type")("fresnelabbe") <<
+				Property(prefix + ".mode")(props.Get(Property("type")("d")).Get<string>()) <<
+				Property(prefix + ".v")(props.Get(Property("V")(64.17f)).Get<float>()) <<
+				Property(prefix + ".n")(props.Get(Property("n")(1.5168f)).Get<float>());
+		if (mode == "custom") {
+			*sceneProps <<
+				Property(prefix + ".d")(props.Get(Property("lambda_D")(587.5618f)).Get<float>()) <<
+				Property(prefix + ".f")(props.Get(Property("lambda_F")(486.13f)).Get<float>()) <<
+				Property(prefix + ".c")(props.Get(Property("lambda_C")(656.28f)).Get<float>());
+		}
 	} else {
 		LC_LOG("LuxCore doesn't support the texture type: " << texType);
 
@@ -3356,19 +3381,19 @@ yyreduce:
 
 	FreeArgs();
 }
-#line 3360 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3385 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 66:
-#line 1804 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1829 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	transformsStack.push_back(currentTransform);
 }
-#line 3368 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3393 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 67:
-#line 1808 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1833 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	if (!(transformsStack.size() > graphicsStatesStack.size())) {
 		LC_LOG("Unmatched TransformEnd encountered. Ignoring it.");
@@ -3377,11 +3402,11 @@ yyreduce:
 		transformsStack.pop_back();
 	}
 }
-#line 3381 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3406 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 68:
-#line 1817 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1842 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	if (VerifyArrayLength((yyvsp[0].ribarray), 16, "Transform")) {
 		const float *tr = static_cast<float *>((yyvsp[0].ribarray)->array);
@@ -3395,50 +3420,50 @@ yyreduce:
 
 	ArrayFree((yyvsp[0].ribarray));
 }
-#line 3399 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3424 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 69:
-#line 1831 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1856 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	Transform t(Translate(Vector((yyvsp[-2].num), (yyvsp[-1].num), (yyvsp[0].num))));
 	currentTransform = currentTransform * t;
 }
-#line 3408 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3433 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 70:
-#line 1836 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1861 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	FreeArgs();
 }
-#line 3416 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3441 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 71:
-#line 1840 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1865 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 	FreeArgs();
 }
-#line 3424 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3449 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 72:
-#line 1844 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1869 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 }
-#line 3431 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3456 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
   case 73:
-#line 1847 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
+#line 1872 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1646  */
     {
 }
-#line 3438 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3463 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
     break;
 
 
-#line 3442 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
+#line 3467 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.cpp" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -3666,5 +3691,5 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 1849 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1906  */
+#line 1874 "/home/david/projects/luxrender-dev/luxrays/src/luxcore/luxparser/luxparse.y" /* yacc.c:1906  */
 
