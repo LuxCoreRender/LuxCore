@@ -723,6 +723,19 @@ void CompiledScene::CompileTextures() {
 				tex->blenderStucci.contrast = wt->GetContrast();
 				tex->blenderStucci.hard = wt->GetNoiseType();
 
+				switch (wt->GetStucciType()) {
+					default:
+					case TEX_PLASTIC:
+						tex->blenderStucci.type = slg::ocl::TEX_PLASTIC;
+						break;
+					case TEX_WALL_IN:
+						tex->blenderStucci.type = slg::ocl::TEX_WALL_IN;
+						break;
+					case TEX_WALL_OUT:
+						tex->blenderStucci.type = slg::ocl::TEX_WALL_OUT;
+						break;
+				}
+
 				switch (wt->GetNoiseBasis()) {
 					default:
 					case BLENDER_ORIGINAL:
