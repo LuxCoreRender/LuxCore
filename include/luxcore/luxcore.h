@@ -719,7 +719,7 @@ public:
 	 *
 	 * \return the reference to the RenderConfig Scene.
 	 */
-	Scene &GetScene();
+	Scene &GetScene() const;
 
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
