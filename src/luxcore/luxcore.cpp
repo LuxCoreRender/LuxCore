@@ -522,7 +522,7 @@ const Properties &RenderConfig::ToProperties() const {
 	return renderConfig->ToProperties();
 }
 
-Scene &RenderConfig::GetScene() {
+Scene &RenderConfig::GetScene() const {
 	return *scene;
 }
 
