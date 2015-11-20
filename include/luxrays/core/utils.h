@@ -31,9 +31,6 @@
 #include <float.h>
 #define isnan(a) _isnan(a)
 #define isinf(f) (!_finite((f)))
-#else
-using std::isinf;
-using std::isnan;
 #endif
 
 #if defined(WIN32)
