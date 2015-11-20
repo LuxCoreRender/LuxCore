@@ -84,11 +84,13 @@ public:
 	u_int lightsDistributionSize;
 	bool hasInfiniteLights, hasEnvLights, hasTriangleLightWithVertexColors;
 
-	// Compiled Materials (and Volumes))
+	// Compiled Materials (and Volumes)
 	std::set<MaterialType> usedMaterialTypes;
 	vector<slg::ocl::Material> mats;
-	vector<u_int> meshMats;
 	u_int defaultWorldVolumeIndex;
+
+	// The Mesh <=> Material relation
+	vector<u_int> meshMats;
 
 	// Compiled Textures
 	std::set<TextureType> usedTextureTypes;
@@ -102,6 +104,7 @@ private:
 	void CompileCamera();
 	void CompileGeometry();
 	void CompileMaterials();
+	void CompileMeshMaterials();
 	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
 	void CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);
 	void CompileTextures();

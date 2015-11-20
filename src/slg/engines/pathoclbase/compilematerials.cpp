@@ -482,6 +482,17 @@ void CompiledScene::CompileMaterials() {
 	}
 
 	//--------------------------------------------------------------------------
+	// Default scene volume
+	//--------------------------------------------------------------------------
+	defaultWorldVolumeIndex = scene->defaultWorldVolume ?
+		scene->matDefs.GetMaterialIndex(scene->defaultWorldVolume) : NULL_INDEX;
+
+	const double tEnd = WallClockTime();
+	SLG_LOG("Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+}
+
+void CompiledScene::CompileMeshMaterials() {
+	//--------------------------------------------------------------------------
 	// Translate mesh material indices
 	//--------------------------------------------------------------------------
 
@@ -491,15 +502,6 @@ void CompiledScene::CompileMaterials() {
 		const Material *m = scene->objDefs.GetSceneObject(i)->GetMaterial();
 		meshMats[i] = scene->matDefs.GetMaterialIndex(m);
 	}
-
-	//--------------------------------------------------------------------------
-	// Default scene volume
-	//--------------------------------------------------------------------------
-	defaultWorldVolumeIndex = scene->defaultWorldVolume ?
-		scene->matDefs.GetMaterialIndex(scene->defaultWorldVolume) : NULL_INDEX;
-
-	const double tEnd = WallClockTime();
-	SLG_LOG("Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
 //------------------------------------------------------------------------------

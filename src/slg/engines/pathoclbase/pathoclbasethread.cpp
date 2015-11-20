@@ -775,7 +775,9 @@ void PathOCLBaseRenderThread::InitMaterials() {
 	const size_t materialsCount = renderEngine->compiledScene->mats.size();
 	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
 			sizeof(slg::ocl::Material) * materialsCount, "Materials");
+}
 
+void PathOCLBaseRenderThread::InitMeshMaterials() {
 	const u_int meshCount = renderEngine->compiledScene->meshMats.size();
 	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
 			sizeof(u_int) * meshCount, "Mesh material index");
@@ -1423,6 +1425,12 @@ void PathOCLBaseRenderThread::InitRender() {
 	InitMaterials();
 
 	//--------------------------------------------------------------------------
+	// Mesh <=> Material links
+	//--------------------------------------------------------------------------
+
+	InitMeshMaterials();
+
+	//--------------------------------------------------------------------------
 	// Light definitions
 	//--------------------------------------------------------------------------
 
@@ -1551,6 +1559,11 @@ void PathOCLBaseRenderThread::EndSceneEdit(const EditActionList &editActions) {
 		// Update Scene Textures and Materials
 		InitTextures();
 		InitMaterials();
+	}
+
+	if (editActions.Has(GEOMETRY_EDIT) || editActions.Has(MATERIALS_EDIT) || editActions.Has(MATERIAL_TYPES_EDIT)) {
+		// Update Mesh <=> Material relation
+		InitMeshMaterials();
 	}
 
 	if  (editActions.Has(LIGHTS_EDIT)) {
