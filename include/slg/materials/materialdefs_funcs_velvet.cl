@@ -40,7 +40,7 @@ float3 VelvetMaterial_GetPassThroughTransparency(__global const Material *materi
 }
 #endif
 
-float3 VelvetMaterial_ConstEvaluate(
+float3 VelvetMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kdVal,
@@ -72,7 +72,7 @@ float3 VelvetMaterial_ConstEvaluate(
 	return p * kd;
 }
 
-float3 VelvetMaterial_ConstSample(
+float3 VelvetMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

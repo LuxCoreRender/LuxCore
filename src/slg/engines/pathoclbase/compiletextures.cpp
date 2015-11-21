@@ -1209,7 +1209,10 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			"TEXTURES_PARAM_DECL) {\n"
 			"\t__global const Texture *tex = &texs[texIndex];\n";
 
+	//--------------------------------------------------------------------------
 	// For textures source code that it is not dynamically generated
+	//--------------------------------------------------------------------------
+
 	source << "\tswitch (tex->type) {\n" <<
 			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)\n"
 			"\t\tcase CONST_FLOAT: return ConstFloatTexture_Bump(hitPoint);\n" <<
@@ -1223,6 +1226,10 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			"#endif\n"
 			"\t\tdefault: break;\n" <<
 			"\t}\n";
+
+	//--------------------------------------------------------------------------
+	// For textures source code that it is dynamically generated
+	//--------------------------------------------------------------------------
 
 	source <<  "\tswitch (texIndex) {\n";
 	for (u_int i = 0; i < texturesCount; ++i) {
@@ -1253,7 +1260,9 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 	source << returnType << " Texture_Get" << type << "Value(const uint texIndex, __global HitPoint *hitPoint TEXTURES_PARAM_DECL) {\n"
 			"\t __global const Texture *tex = &texs[texIndex];\n";
 
+	//--------------------------------------------------------------------------
 	// For textures source code that it is not dynamically generated
+	//--------------------------------------------------------------------------
 	source << "\tswitch (tex->type) {\n" <<
 			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)\n"
 			"\t\tcase CONST_FLOAT: return ConstFloatTexture_ConstEvaluate" << type << "(tex);\n" <<
@@ -1267,6 +1276,10 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 			"#endif\n"
 			"\t\tdefault: break;\n" <<
 			"\t}\n";
+
+	//--------------------------------------------------------------------------
+	// For textures source code that it is dynamically generated
+	//--------------------------------------------------------------------------
 
 	source << "\tswitch (texIndex) {\n";
 	for (u_int i = 0; i < texturesCount; ++i) {

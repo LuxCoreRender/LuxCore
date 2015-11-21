@@ -40,7 +40,7 @@ float3 RoughGlassMaterial_GetPassThroughTransparency(__global const Material *ma
 }
 #endif
 
-float3 RoughGlassMaterial_ConstEvaluate(
+float3 RoughGlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktVal, const float3 krVal,
@@ -142,7 +142,7 @@ float3 RoughGlassMaterial_ConstEvaluate(
 	}
 }
 
-float3 RoughGlassMaterial_ConstSample(
+float3 RoughGlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

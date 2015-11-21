@@ -1306,13 +1306,15 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 		slg::ocl::KernelSource_materialdefs_funcs_velvet <<
 		slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
-		slg::ocl::KernelSource_material_funcs;
+		slg::ocl::KernelSource_material_main_withoutdynamic;
 
 	// Generate the code to evaluate the textures
 	ssKernel <<
+		// This is the dynamic generated code (aka "WithDynamic")
 		"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
 		cscene->GetMaterialsEvaluationSourceCode() <<
-		"\n";
+		"\n" <<
+		slg::ocl::KernelSource_material_main;
 
 	ssKernel <<
 		slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs

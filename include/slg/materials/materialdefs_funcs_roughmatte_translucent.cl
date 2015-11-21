@@ -40,7 +40,7 @@ float3 RoughMatteTranslucentMaterial_GetPassThroughTransparency(__global const M
 }
 #endif
 
-float3 RoughMatteTranslucentMaterial_ConstEvaluate(
+float3 RoughMatteTranslucentMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 krVal, const float3 ktVal, const float sigma) {
@@ -99,7 +99,7 @@ float3 RoughMatteTranslucentMaterial_ConstEvaluate(
 	}
 }
 
-float3 RoughMatteTranslucentMaterial_ConstSample(
+float3 RoughMatteTranslucentMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

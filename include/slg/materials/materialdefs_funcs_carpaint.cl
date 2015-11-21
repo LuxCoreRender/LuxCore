@@ -42,7 +42,7 @@ float3 CarPaintMaterial_GetPassThroughTransparency(__global const Material *mate
 }
 #endif
 
-float3 CarPaintMaterial_ConstEvaluate(
+float3 CarPaintMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kaVal, const float d, const float3 kdVal, 
@@ -108,7 +108,7 @@ float3 CarPaintMaterial_ConstEvaluate(
 	return result;
 }
 
-float3 CarPaintMaterial_ConstSample(
+float3 CarPaintMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
