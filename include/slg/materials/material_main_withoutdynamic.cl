@@ -21,11 +21,15 @@
 //------------------------------------------------------------------------------
 // Generic material functions
 //
-// They include the support for all material but Mix
-// (because OpenCL doesn't support recursion)
+// They include the support for all material but one requiring dynamic code
+// generation like Mix (because OpenCL doesn't support recursion)
 //------------------------------------------------------------------------------
 
-float3 Material_GetEmittedRadianceNoMix(__global const Material *material, __global HitPoint *hitPoint
+//------------------------------------------------------------------------------
+// Material_GetEmittedRadianceWithoutDynamic
+//------------------------------------------------------------------------------
+
+float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material *material, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	const uint emitTexIndex = material->emitTexIndex;
 	if (emitTexIndex == NULL_INDEX)
@@ -39,36 +43,22 @@ float3 Material_GetEmittedRadianceNoMix(__global const Material *material, __glo
 				TEXTURES_PARAM);
 }
 
-#if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolumeNoMix(__global const Material *material) {
-	return material->interiorVolumeIndex;
-}
+//------------------------------------------------------------------------------
+// Material_GetInteriorVolumeWithoutDynamic
+//------------------------------------------------------------------------------
 
-uint Material_GetExteriorVolumeNoMix(__global const Material *material) {
-	return material->exteriorVolumeIndex;
+#if defined(PARAM_HAS_VOLUMES)
+uint Material_GetInteriorVolumeWithoutDynamic(__global const Material *material) {
+	return material->interiorVolumeIndex;
 }
 #endif
 
-#if defined(PARAM_HAS_BUMPMAPS)
-void Material_Bump(const uint matIndex, __global HitPoint *hitPoint
-	MATERIALS_PARAM_DECL) {
-	const uint bumpTexIndex = mats[matIndex].bumpTexIndex;
-	
-	if (bumpTexIndex != NULL_INDEX) {
-		float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+//------------------------------------------------------------------------------
+// Material_GetExteriorVolumeWithoutDynamic
+//------------------------------------------------------------------------------
 
-		shadeN = Texture_Bump(mats[matIndex].bumpTexIndex, hitPoint, mats[matIndex].bumpSampleDistance
-			TEXTURES_PARAM);
-
-		// Update dpdu and dpdv so they are still orthogonal to shadeN
-		float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-		float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
-		dpdu = cross(shadeN, cross(dpdu, shadeN));
-		dpdv = cross(shadeN, cross(dpdv, shadeN));
-		// Update HitPoint structure
-		VSTORE3F(shadeN, &hitPoint->shadeN.x);
-		VSTORE3F(dpdu, &hitPoint->dpdu.x);
-		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-	}
+#if defined(PARAM_HAS_VOLUMES)
+uint Material_GetExteriorVolumeWithoutDynamic(__global const Material *material) {
+	return material->exteriorVolumeIndex;
 }
 #endif

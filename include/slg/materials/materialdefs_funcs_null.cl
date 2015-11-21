@@ -40,13 +40,13 @@ float3 NullMaterial_GetPassThroughTransparency(__global const Material *material
 }
 #endif
 
-float3 NullMaterial_ConstEvaluate(
+float3 NullMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW) {
 	return BLACK;
 }
 
-float3 NullMaterial_ConstSample(
+float3 NullMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

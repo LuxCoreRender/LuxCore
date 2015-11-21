@@ -331,13 +331,13 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 }
 
 float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material *material,
-		__global HitPoint *hitPoint, const float oneOverPrimitiveArea
+		__global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)
-		return Material_GetEmittedRadianceNoMix(material, hitPoint TEXTURES_PARAM);
+		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint TEXTURES_PARAM);
 	else
 		return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetEmittedRadiance(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-				   hitPoint, oneOverPrimitiveArea
+				   hitPoint
 				   MATERIALS_PARAM);
 }
 

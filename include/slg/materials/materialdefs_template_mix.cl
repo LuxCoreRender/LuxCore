@@ -303,10 +303,10 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 }
 
 float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material *material,
-		__global HitPoint *hitPoint, const float oneOverPrimitiveArea
+		__global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)
-		return Material_GetEmittedRadianceNoMix(material, hitPoint TEXTURES_PARAM);
+		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint TEXTURES_PARAM);
 	else {
 		float3 result = BLACK;
 		const float factor = <<CS_FACTOR_TEXTURE>>;
@@ -315,11 +315,11 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const
 
 		if (weight1 > 0.f)
 		   result += weight1 * Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_GetEmittedRadiance(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
-				   hitPoint, oneOverPrimitiveArea
+				   hitPoint
 				   MATERIALS_PARAM);
 		if (weight2 > 0.f)
 		   result += weight2 * Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_GetEmittedRadiance(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
-				   hitPoint, oneOverPrimitiveArea
+				   hitPoint
 				   MATERIALS_PARAM);
 
 		return result;

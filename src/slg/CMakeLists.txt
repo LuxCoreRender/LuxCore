@@ -125,7 +125,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_glossycoating.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_mix.cl
-	${LuxRays_SOURCE_DIR}/include/slg/materials/material_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main_withoutdynamic.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_funcs.cl
@@ -372,7 +373,8 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_velvet_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_template_glossycoating_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_template_mix_kernel.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_main_withoutdynamic_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_main_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/texture_blender_noise_funcs_kernel.cpp

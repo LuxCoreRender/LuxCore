@@ -40,7 +40,7 @@ float3 GlassMaterial_GetPassThroughTransparency(__global const Material *materia
 }
 #endif
 
-float3 GlassMaterial_ConstEvaluate(
+float3 GlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktTexVal, const float3 krTexVal,
@@ -48,7 +48,7 @@ float3 GlassMaterial_ConstEvaluate(
 	return BLACK;
 }
 
-float3 GlassMaterial_ConstSample(
+float3 GlassMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

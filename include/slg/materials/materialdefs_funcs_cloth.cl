@@ -540,7 +540,7 @@ float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const f
 	return EvalIntegrand(Weave, yarn, uv, umax, &om_i, &om_r);
 }
 
-float3 ClothMaterial_ConstEvaluate(
+float3 ClothMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
@@ -568,7 +568,7 @@ float3 ClothMaterial_ConstEvaluate(
 	return (kdVal + ksVal * scale) * M_1_PI_F * fabs(localLightDir.z);
 }
 
-float3 ClothMaterial_ConstSample(
+float3 ClothMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)

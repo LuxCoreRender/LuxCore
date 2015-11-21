@@ -40,7 +40,7 @@ float3 MatteMaterial_GetPassThroughTransparency(__global const Material *materia
 }
 #endif
 
-float3 MatteMaterial_ConstEvaluate(
+float3 MatteMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kdVal) {
@@ -52,7 +52,7 @@ float3 MatteMaterial_ConstEvaluate(
 	return Spectrum_Clamp(kdVal) * fabs(lightDir.z * M_1_PI_F);
 }
 
-float3 MatteMaterial_ConstSample(__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+float3 MatteMaterial_Sample(__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
@@ -99,7 +99,7 @@ float3 RoughMatteMaterial_GetPassThroughTransparency(__global const Material *ma
 }
 #endif
 
-float3 RoughMatteMaterial_ConstEvaluate(
+float3 RoughMatteMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float s, const float3 kdVal) {
@@ -123,7 +123,7 @@ float3 RoughMatteMaterial_ConstEvaluate(
 		(A + B * maxcos * sinthetai * sinthetao / fmax(fabs(CosTheta(lightDir)), fabs(CosTheta(eyeDir))));
 }
 
-float3 RoughMatteMaterial_ConstSample(
+float3 RoughMatteMaterial_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 #if defined(PARAM_HAS_PASSTHROUGH)

@@ -530,14 +530,14 @@ static void AddMaterialSource(stringstream &source,
 			"__global const Material *material MATERIALS_PARAM_DECL", "");
 	AddMaterialSourceGlue(source, matName, i, "IsDelta", "IsDelta", "bool",
 			"__global const Material *material MATERIALS_PARAM_DECL", "");
-	AddMaterialSourceGlue(source, matName, i, "Evaluate", "ConstEvaluate", "float3",
+	AddMaterialSourceGlue(source, matName, i, "Evaluate", "Evaluate", "float3",
 			"__global const Material *material, "
 				"__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
 				"BSDFEvent *event, float *directPdfW "
 				"MATERIALS_PARAM_DECL",
 			"hitPoint, lightDir, eyeDir, event, directPdfW" +
 				((params.length() > 0) ? (", " + params) : ""));
-	AddMaterialSourceGlue(source, matName, i, "Sample", "ConstSample", "float3",
+	AddMaterialSourceGlue(source, matName, i, "Sample", "Sample", "float3",
 			"__global const Material *material, __global HitPoint *hitPoint, "
 				"const float3 fixedDir, float3 *sampledDir, "
 				"const float u0, const float u1,\n"
@@ -564,18 +564,18 @@ static void AddMaterialSource(stringstream &source,
 }
 
 static void AddMaterialSourceStandardImplGetEmittedRadiance(stringstream &source, const u_int i) {
-	AddMaterialSourceGlue(source, "", i, "GetEmittedRadiance", "GetEmittedRadianceNoMix", "float3",
-			"__global const Material *material, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL",
+	AddMaterialSourceGlue(source, "", i, "GetEmittedRadiance", "GetEmittedRadianceWithoutDynamic", "float3",
+			"__global const Material *material, __global HitPoint *hitPoint MATERIALS_PARAM_DECL",
 			"material, hitPoint TEXTURES_PARAM");
 }
 
-static void AddMaterialSourceStandardImplGetvolume(stringstream &source, const u_int i) {
+static void AddMaterialSourceStandardImplGetVolume(stringstream &source, const u_int i) {
 	source << "#if defined(PARAM_HAS_VOLUMES)\n";
-	AddMaterialSourceGlue(source, "", i, "GetInteriorVolume", "GetInteriorVolumeNoMix", "uint",
+	AddMaterialSourceGlue(source, "", i, "GetInteriorVolume", "GetInteriorVolumeWithoutDynamic", "uint",
 			"__global const Material *material, __global HitPoint *hitPoint, "
 				"const float passThroughEvent MATERIALS_PARAM_DECL",
 			"material");
-	AddMaterialSourceGlue(source, "", i, "GetExteriorVolume", "GetExteriorVolumeNoMix", "uint",
+	AddMaterialSourceGlue(source, "", i, "GetExteriorVolume", "GetExteriorVolumeWithoutDynamic", "uint",
 			"__global const Material *material, __global HitPoint *hitPoint, "
 				"const float passThroughEvent MATERIALS_PARAM_DECL",
 			"material");
@@ -641,7 +641,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSource(source, "Matte", i,
 						AddTextureSourceCall(texs, "Spectrum", "material->matte.kdTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::ROUGHMATTE: {
@@ -649,7 +649,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Float", "material->roughmatte.sigmaTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->roughmatte.kdTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::ARCHGLASS: {
@@ -659,7 +659,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->archglass.interiorIorTexIndex TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::CARPAINT: {
@@ -677,7 +677,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Float", "material->carpaint.M3TexIndex") + ", " +
 						AddTextureSourceCall(texs, "Float", "material->carpaint.R3TexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::CLOTH: {
@@ -691,7 +691,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Warp_KdIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Weft_KdIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::GLASS: {
@@ -701,7 +701,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::GLOSSY2: {
@@ -723,7 +723,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->glossy2.kdTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->glossy2.ksTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::MATTETRANSLUCENT: {
@@ -731,7 +731,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->matteTranslucent.krTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->matteTranslucent.ktTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::ROUGHMATTETRANSLUCENT: {
@@ -740,7 +740,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->roughmatteTranslucent.ktTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Float", "material->roughmatteTranslucent.sigmaTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::METAL2: {
@@ -774,20 +774,20 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						nTexString + ", " +
 						kTexString);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::MIRROR: {
 				AddMaterialSource(source, "Mirror", i,
 						AddTextureSourceCall(texs, "Spectrum", "material->mirror.krTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::NULLMAT: {
 				AddMaterialSource(source, "Null", i, "");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::ROUGHGLASS: {
@@ -801,7 +801,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM)");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::VELVET: {
@@ -812,7 +812,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Float", "material->velvet.p3TexIndex") + ", " +
 						AddTextureSourceCall(texs, "Float", "material->velvet.thicknessTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::GLOSSYTRANSLUCENT: {
@@ -842,13 +842,13 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.ksTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.ksbfTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::CLEAR_VOL: {
 				AddMaterialSource(source, "ClearVol", i, "");
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::HOMOGENEOUS_VOL: {
@@ -857,7 +857,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.homogenous.sigmaATexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.homogenous.gTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::HETEROGENEOUS_VOL: {
@@ -866,7 +866,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.heterogenous.sigmaATexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.heterogenous.gTexIndex"));
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, i);
-				AddMaterialSourceStandardImplGetvolume(source, i);
+				AddMaterialSourceStandardImplGetVolume(source, i);
 				break;
 			}
 			case slg::ocl::MIX: {
@@ -903,31 +903,26 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 		}
 	}
 
-	// Generate the code for generic Material_GetEventTypes
-	AddMaterialSourceSwitch(source, materialsCount, "GetEventTypes", "GetEventTypes", "BSDFEvent", "NONE",
+	// Generate the code for generic Material_GetEventTypesWithDynamic())
+	AddMaterialSourceSwitch(source, materialsCount, "GetEventTypesWithDynamic", "GetEventTypes", "BSDFEvent", "NONE",
 			"const uint index MATERIALS_PARAM_DECL",
 			"mat MATERIALS_PARAM");
 
-	// Generate the code for generic Material_IsDelta()
-	AddMaterialSourceSwitch(source, materialsCount, "IsDelta", "IsDelta", "bool", "true",
+	// Generate the code for generic Material_IsDeltaWithDynamic()
+	AddMaterialSourceSwitch(source, materialsCount, "IsDeltaWithDynamic", "IsDelta", "bool", "true",
 			"const uint index MATERIALS_PARAM_DECL",
 			"mat MATERIALS_PARAM");
 
-	// Generate the code for generic Material_GetEmittedRadianceWithMix()
-	AddMaterialSourceSwitch(source, materialsCount, "GetEmittedRadianceWithMix", "GetEmittedRadiance", "float3", "BLACK",
-			"const uint index, __global HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL",
-			"mat, hitPoint, oneOverPrimitiveArea MATERIALS_PARAM");
-
-	// Generate the code for generic Material_Evaluate()
-	AddMaterialSourceSwitch(source, materialsCount, "Evaluate", "Evaluate", "float3", "BLACK",
+	// Generate the code for generic Material_EvaluateWithDynamic()
+	AddMaterialSourceSwitch(source, materialsCount, "EvaluateWithDynamic", "Evaluate", "float3", "BLACK",
 			"const uint index, "
 				"__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
 				"BSDFEvent *event, float *directPdfW "
 				"MATERIALS_PARAM_DECL",
 			"mat, hitPoint, lightDir, eyeDir, event, directPdfW MATERIALS_PARAM");
 
-	// Generate the code for generic Material_Sample()
-	AddMaterialSourceSwitch(source, materialsCount, "Sample", "Sample", "float3", "BLACK",
+	// Generate the code for generic Material_SampleWithDynamic()
+	AddMaterialSourceSwitch(source, materialsCount, "SampleWithDynamic", "Sample", "float3", "BLACK",
 			"const uint index, "
 				"__global HitPoint *hitPoint, "
 				"const float3 fixedDir, float3 *sampledDir, "
@@ -944,103 +939,28 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				"#endif\n"
 				"\t\t\tpdfW,  cosSampledDir, event, requestedEvent MATERIALS_PARAM");
 
-	// Generate the code for generic Material_GetPassThroughTransparency()
+	// Generate the code for generic GetPassThroughTransparencyWithDynamic()
 	source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
-	AddMaterialSourceSwitch(source, materialsCount, "GetPassThroughTransparency", "GetPassThroughTransparency", "float3", "BLACK",
+	AddMaterialSourceSwitch(source, materialsCount, "GetPassThroughTransparencyWithDynamic", "GetPassThroughTransparency", "float3", "BLACK",
 			"const uint index, __global HitPoint *hitPoint, "
-				"const float3 localFixedDir, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL",
-			"mat, hitPoint, localFixedDir, oneOverPrimitiveArea MATERIALS_PARAM");
+				"const float3 localFixedDir, const float passThroughEvent MATERIALS_PARAM_DECL",
+			"mat, hitPoint, localFixedDir, passThroughEvent MATERIALS_PARAM");
 	source << "#endif\n";
 
-	// Generate the code for generic Material_GetInteriorVolumeWithMix() and Material_GetExteriorVolumeWithMix()
+	// Generate the code for generic Material_GetEmittedRadianceWithDynamic()
+	AddMaterialSourceSwitch(source, materialsCount, "GetEmittedRadianceWithDynamic", "GetEmittedRadiance", "float3", "BLACK",
+			"const uint index, __global HitPoint *hitPoint MATERIALS_PARAM_DECL",
+			"mat, hitPoint MATERIALS_PARAM");
+
+	// Generate the code for generic Material_GetInteriorVolumeWithDynamic() and Material_GetExteriorVolumeWithDynamic()
 	source << "#if defined(PARAM_HAS_VOLUMES)\n";
-	AddMaterialSourceSwitch(source, materialsCount, "GetInteriorVolumeWithMix", "GetInteriorVolume", "uint", "NULL_INDEX",
+	AddMaterialSourceSwitch(source, materialsCount, "GetInteriorVolumeWithDynamic", "GetInteriorVolume", "uint", "NULL_INDEX",
 			"const uint index, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
 			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
-	AddMaterialSourceSwitch(source, materialsCount, "GetExteriorVolumeWithMix", "GetExteriorVolume", "uint", "NULL_INDEX",
+	AddMaterialSourceSwitch(source, materialsCount, "GetExteriorVolumeWithDynamic", "GetExteriorVolume", "uint", "NULL_INDEX",
 			"const uint index, __global HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
 			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
 	source << "#endif\n";
-
-	// This glue is used to have fast path in case the first material is not MIX
-	source <<
-			"float3 Material_GetEmittedRadiance(const uint matIndex,\n"
-			"		__global HitPoint *hitPoint, const float oneOverPrimitiveArea\n"
-			"		MATERIALS_PARAM_DECL) {\n"
-			"	__global const Material *material = &mats[matIndex];\n"
-			"	float3 result;\n"
-			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
-			"	if (material->type == MIX)\n"
-			"		result = Material_GetEmittedRadianceWithMix(matIndex, hitPoint, oneOverPrimitiveArea\n"
-			"				MATERIALS_PARAM);\n"
-			"	else\n"
-			"#endif\n"
-			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
-			"	if (material->type == GLOSSYCOATING)\n"
-			"		result = Material_GetEmittedRadianceWithMix(matIndex, hitPoint, oneOverPrimitiveArea\n"
-			"				MATERIALS_PARAM);\n"
-			"	else\n"
-			"#endif\n"
-			"		result = Material_GetEmittedRadianceNoMix(material, hitPoint\n"
-			"				TEXTURES_PARAM);\n"
-			"	return 	VLOAD3F(material->emittedFactor.c) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;\n"
-			"}\n"
-			"#if defined(PARAM_HAS_VOLUMES)\n"
-			"uint Material_GetInteriorVolume(const uint matIndex,\n"
-			"		__global HitPoint *hitPoint\n"
-			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-			"		, const float passThroughEvent\n"
-			"#endif\n"
-			"		MATERIALS_PARAM_DECL) {\n"
-			"	__global const Material *material = &mats[matIndex];\n"
-			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
-			"	if (material->type == MIX)\n"
-			"		return Material_GetInteriorVolumeWithMix(matIndex, hitPoint\n"
-			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-			"			, passThroughEvent\n"
-			"#endif\n"
-			"			MATERIALS_PARAM);\n"
-			"	else\n"
-			"#endif\n"
-			"#if defined (PARAM_ENABLE_MAT_GLOSSYCOATING)\n"
-			"	if (material->type == GLOSSYCOATING)\n"
-			"		return Material_GetInteriorVolumeWithMix(matIndex, hitPoint\n"
-			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-			"			, passThroughEvent\n"
-			"#endif\n"
-			"			MATERIALS_PARAM);\n"
-			"	else\n"
-			"#endif\n"
-			"		return Material_GetInteriorVolumeNoMix(material);\n"
-			"}\n"
-			"uint Material_GetExteriorVolume(const uint matIndex,\n"
-			"		__global HitPoint *hitPoint\n"
-			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-			"		, const float passThroughEvent\n"
-			"#endif\n"
-			"		MATERIALS_PARAM_DECL) {\n"
-			"	__global const Material *material = &mats[matIndex];\n"
-			"#if defined (PARAM_ENABLE_MAT_MIX)\n"
-			"	if (material->type == MIX)\n"
-			"		return Material_GetExteriorVolumeWithMix(matIndex, hitPoint\n"
-			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-			"			, passThroughEvent\n"
-			"#endif\n"
-			"			MATERIALS_PARAM);\n"
-			"	else\n"
-			"#endif\n"
-			"#if defined (PARAM_ENABLE_MAT_GLOSSYCOATING)\n"
-			"	if (material->type == GLOSSYCOATING)\n"
-			"		return Material_GetExteriorVolumeWithMix(matIndex, hitPoint\n"
-			"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-			"			, passThroughEvent\n"
-			"#endif\n"
-			"			MATERIALS_PARAM);\n"
-			"	else\n"
-			"#endif\n"
-			"		return Material_GetExteriorVolumeNoMix(material);\n"
-			"}\n"
-			"#endif\n";
 
 	return source.str();
 }

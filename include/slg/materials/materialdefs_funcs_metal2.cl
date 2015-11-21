@@ -42,7 +42,7 @@ float3 Metal2Material_GetPassThroughTransparency(__global const Material *materi
 }
 #endif
 
-float3 Metal2Material_ConstEvaluate(
+float3 Metal2Material_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float uVal,
@@ -76,7 +76,7 @@ float3 Metal2Material_ConstEvaluate(
 	return SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z)) * F;
 }
 
-float3 Metal2Material_ConstSample(
+float3 Metal2Material_Sample(
 		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
