@@ -35,6 +35,7 @@
 #include "slg/textures/brick.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/clamp.h"
+#include "slg/textures/colordepth.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
@@ -407,6 +408,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float maxVal = props.Get(Property(propName + ".max")(0.f)).Get<float>();
 
 		return new ClampTexture(tex, minVal, maxVal);
+	} else if (texType == "colordepth") {
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const float depth = props.Get(Property(propName + ".depth")(1.0f)).Get<float>();
+
+		return new ColorDepthTexture(depth, tex);
 	} else if (texType == "normalmap") {
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 

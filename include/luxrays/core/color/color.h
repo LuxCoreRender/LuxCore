@@ -178,6 +178,13 @@ public:
 		ret.c[2] = expf(s.c[2]);
 		return ret;
 	}
+	friend Color Ln(const Color &s) {
+		Color ret;
+		ret.c[0] = logf(s.c[0]);
+		ret.c[1] = logf(s.c[1]);
+		ret.c[2] = logf(s.c[2]);
+		return ret;
+	}
 	friend Color Pow(const Color &s, const Color &f) {
 		Color ret;
 		ret.c[0] = s.c[0] > 0 ? powf(s.c[0], f.c[0]) : 0.f;

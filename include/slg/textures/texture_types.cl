@@ -24,7 +24,7 @@ typedef enum {
 	CONST_FLOAT, CONST_FLOAT3, IMAGEMAP, SCALE_TEX, FRESNEL_APPROX_N,
 	FRESNEL_APPROX_K, MIX_TEX, ADD_TEX, SUBTRACT_TEX, HITPOINTCOLOR, HITPOINTALPHA,
 	HITPOINTGREY, NORMALMAP_TEX, BLACKBODY_TEX, IRREGULARDATA_TEX,
-	ABS_TEX, CLAMP_TEX, BILERP_TEX,
+	ABS_TEX, CLAMP_TEX, BILERP_TEX, COLORDEPTH_TEX,
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
 	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
@@ -328,6 +328,11 @@ typedef struct {
 } BilerpTexParam;
 
 typedef struct {
+	float dVal;
+	unsigned int ktIndex;
+} ColorDepthTexParam;
+
+typedef struct {
 	TextureType type;
 	union {
 		BlenderBlendTexParam blenderBlend;
@@ -369,6 +374,7 @@ typedef struct {
 		AbsTexParam absTex;
 		ClampTexParam clampTex;
 		BilerpTexParam bilerpTex;
+		ColorDepthTexParam colorDepthTex;
 	};
 } Texture;
 

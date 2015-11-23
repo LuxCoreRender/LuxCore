@@ -1035,6 +1035,8 @@ void PathOCLBaseRenderThread::InitKernels() {
 		ss << " -D PARAM_ENABLE_TEX_CLAMP";
 	if (cscene->IsTextureCompiled(BILERP_TEX))
 		ss << " -D PARAM_ENABLE_TEX_BILERP";
+	if (cscene->IsTextureCompiled(COLORDEPTH_TEX))
+		ss << " -D PARAM_ENABLE_TEX_COLORDEPTH";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ss << " -D PARAM_ENABLE_MAT_MATTE";
@@ -1276,6 +1278,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_texture_bilerp_funcs <<
 		slg::ocl::KernelSource_texture_blackbody_funcs <<
 		slg::ocl::KernelSource_texture_clamp_funcs <<
+		slg::ocl::KernelSource_texture_colordepth_funcs <<
 		slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
 		slg::ocl::KernelSource_texture_fresnelconst_funcs <<
 		slg::ocl::KernelSource_texture_irregulardata_funcs <<

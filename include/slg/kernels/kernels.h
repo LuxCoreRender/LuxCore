@@ -76,6 +76,7 @@ extern std::string KernelSource_texture_abs_funcs;
 extern std::string KernelSource_texture_bilerp_funcs;
 extern std::string KernelSource_texture_blackbody_funcs;
 extern std::string KernelSource_texture_clamp_funcs;
+extern std::string KernelSource_texture_colordepth_funcs;
 extern std::string KernelSource_texture_fresnelcolor_funcs;
 extern std::string KernelSource_texture_fresnelconst_funcs;
 extern std::string KernelSource_texture_irregulardata_funcs;

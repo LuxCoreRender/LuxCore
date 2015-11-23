@@ -36,6 +36,7 @@
 #include "slg/textures/brick.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/clamp.h"
+#include "slg/textures/colordepth.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
@@ -1016,6 +1017,15 @@ void CompiledScene::CompileTextures() {
 				tex->bilerpTex.t11Index = scene->texDefs.GetTextureIndex(t11);
 				break;
 			}
+			case COLORDEPTH_TEX: {
+				ColorDepthTexture *ct = static_cast<ColorDepthTexture *>(t);
+
+				tex->type = slg::ocl::COLORDEPTH_TEX;
+				const Texture *ktTex = ct->GetKt();
+				tex->colorDepthTex.ktIndex = scene->texDefs.GetTextureIndex(ktTex);
+				tex->colorDepthTex.dVal = ct->GetD();
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -1654,6 +1664,15 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 					AddTextureSourceCall(texs, "Spectrum", tex->bilerpTex.t01Index) + ", " +
 					AddTextureSourceCall(texs, "Spectrum", tex->bilerpTex.t10Index) + ", " +
 					AddTextureSourceCall(texs, "Spectrum", tex->bilerpTex.t11Index));
+				break;
+			}
+			case slg::ocl::COLORDEPTH_TEX: {
+				AddTextureSource(source, "ColorDepth", "float", "Float", i,
+						"texture->colorDepthTex.dVal, " +
+						AddTextureSourceCall(texs, "Float", tex->colorDepthTex.ktIndex));
+				AddTextureSource(source, "ColorDepth", "float3", "Spectrum", i,
+						"texture->colorDepthTex.dVal, " +
+						AddTextureSourceCall(texs, "Spectrum", tex->colorDepthTex.ktIndex));
 				break;
 			}
 			default:
