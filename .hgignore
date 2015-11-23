@@ -1,0 +1,59 @@
+^lib/libluxrays.a
+^lib/libsmallluxgpu.a
+^lib/libluxcore.a
+^lib/pyluxcore.so
+^lib/libglfw3.a
+^doxygen-luxrays.conf
+syntax: regexp
+^doxygen/luxrays.template
+^doxygen-slg.conf
+^doxygen/slg.template
+^doxygen-luxcore.conf
+^doxygen/luxcore.template
+^bin/*
+^doc/*
+^samples/(benchsimple|smallluxgpu)/(Debug|Release)/
+samples/luxcoreui/deps/glfw-3.1.1/src/glfw_config.h
+(smallluxgpu|slg|LUXRAYS|benchsimple)\.dir
+^src/(Debug|Release)/
+^(Debug|Release|x64)/
+^nbproject/*
+^scenes/strands/.*\.hair
+^pyunittests/images/.*\.png
+^pyunittests/referenceimages/.*\.png
+^pyunittests/.*\.log
+syntax: glob
+*~
+*CMakeFiles
+*CMakeCache.txt
+*Makefile
+*cmake_install.cmake
+moc_*.cxx
+ui_*.h
+qrc_*.cxx
+*.sdf
+*.vcxproj*
+build
+
+###########################
+# XCode
+
+*.pbxuser
+*.perspective
+*.perspectivev3
+*.mode1v3
+*.mode2v3
+*.user
+
+# XCode 4
+xcuserdata/
+*.xcworkspace
+*.xccheckout
+
+###########################
+# OS OSX, junk
+.DS_Store
+*.swp
+*~.nib
+*.out
+._*
