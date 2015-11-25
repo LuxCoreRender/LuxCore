@@ -52,7 +52,54 @@ void LuxCoreApp::UpdateMoveStep() {
 void LuxCoreApp::RefreshRenderingTexture() {
 	const u_int filmWidth = session->GetFilm().GetWidth();
 	const u_int filmHeight = session->GetFilm().GetHeight();
+
 	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
+	if (currentTool == TOOL_OBJECT_SELECTION) {
+		// Allocate the selectionBuffer if needed
+		if (!selectionBuffer || (selectionFilmWidth != filmWidth) || (selectionFilmHeight != filmHeight)) {
+			delete[] selectionBuffer;
+			selectionFilmWidth = filmWidth;
+			selectionFilmHeight = filmHeight;
+			selectionBuffer = new float[selectionFilmWidth * selectionFilmHeight * 3];
+		}
+
+		// Get the mouse coordinates
+		int frameBufferWidth, frameBufferHeight;
+		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
+
+		const ImVec2 imGuiScale(frameBufferWidth / (float)filmWidth, frameBufferHeight / (float)filmHeight);
+		const u_int mouseX = Floor2UInt(ImGui::GetIO().MousePos.x * imGuiScale.x);
+		const u_int mouseY = Floor2UInt((filmHeight - ImGui::GetIO().MousePos.y - 1) * imGuiScale.y);
+
+		// Get the selected object ID
+		const u_int *objIDpixels = session->GetFilm().GetChannel<u_int>(Film::CHANNEL_OBJECT_ID);
+		u_int objID = NULL_INDEX;
+		if ((mouseX >= 0) && (mouseX < selectionFilmWidth) &&
+				(mouseY >= 0) && (mouseY < selectionFilmHeight))
+			objID = objIDpixels[mouseX + mouseY * selectionFilmWidth];
+
+		if (objID != NULL_INDEX) {
+			// Blend the current selection over the rendering
+			for (u_int y = 0; y < filmHeight; ++y) {
+				for (u_int x = 0; x < filmWidth; ++x) {
+					const u_int index = x + y * selectionFilmWidth;
+					const u_int index3 = index * 3;
+
+					if (objIDpixels[index] == objID) {
+						selectionBuffer[index3] = Lerp(.5f, pixels[index3], 1.f);
+						selectionBuffer[index3 + 1] = Lerp(.5f, pixels[index3 + 1], 1.f);
+						selectionBuffer[index3 + 2] = pixels[index3 + 2];						
+					} else {
+						selectionBuffer[index3] = pixels[index3];
+						selectionBuffer[index3 + 1] = pixels[index3 + 1];
+						selectionBuffer[index3 + 2] = pixels[index3 + 2];
+					}
+				}
+			}
+
+			pixels = selectionBuffer;
+		}
+	}
 
 	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, filmWidth, filmHeight, 0, GL_RGB, GL_FLOAT, pixels);
@@ -80,7 +127,7 @@ void LuxCoreApp::DrawRendering() {
 			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
-		ImGui::Image((void *) (intptr_t) renderFrameBufferTexID,
+		ImGui::Image((void *)(intptr_t)renderFrameBufferTexID,
 				ImVec2(frameBufferWidth, frameBufferHeight),
 				ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
 
@@ -313,6 +360,7 @@ void LuxCoreApp::RunApp() {
 	//--------------------------------------------------------------------------
 
     glGenTextures(1, &renderFrameBufferTexID);
+	glGenTextures(1, &selectionTexID);
 
 	glViewport(0, 0, lastFrameBufferWidth, lastFrameBufferHeight);
 	glMatrixMode(GL_PROJECTION);

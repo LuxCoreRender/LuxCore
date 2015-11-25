@@ -36,6 +36,75 @@ using namespace luxcore;
 // Key bindings
 //------------------------------------------------------------------------------
 
+void LuxCoreApp::ToolCameraEditKeys(GLFWwindow *window, int key, int scanCode, int action, int mods) {
+	LuxCoreApp *app = (LuxCoreApp *)glfwGetWindowUserPointer(window);
+
+	switch (key) {
+		case  GLFW_KEY_A: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().TranslateLeft(app->optMoveStep);
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_D: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().TranslateRight(app->optMoveStep);
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_W: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().TranslateForward(app->optMoveStep);
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_S: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().TranslateBackward(app->optMoveStep);
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_R: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, app->optMoveStep));
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_F: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, -app->optMoveStep));
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_UP: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().RotateUp(app->optRotateStep);
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_DOWN: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().RotateDown(app->optRotateStep);
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_LEFT: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().RotateLeft(app->optRotateStep);
+			app->session->EndSceneEdit();
+			break;
+		}
+		case GLFW_KEY_RIGHT: {
+			app->session->BeginSceneEdit();
+			app->config->GetScene().GetCamera().RotateRight(app->optRotateStep);
+			app->session->EndSceneEdit();
+			break;
+		}
+		default:
+			break;
+	}
+}
+		
 void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int action, int mods) {
 	ImGui_ImplGlFw_KeyCallback(window, key, scanCode, action, mods);
 
@@ -62,66 +131,6 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				// Restart rendering
 				app->session->Stop();
 				app->session->Start();
-			}
-			case  GLFW_KEY_A: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().TranslateLeft(app->optMoveStep);
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_D: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().TranslateRight(app->optMoveStep);
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_W: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().TranslateForward(app->optMoveStep);
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_S: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().TranslateBackward(app->optMoveStep);
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_R: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, app->optMoveStep));
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_F: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().Translate(Vector(0.f, 0.f, -app->optMoveStep));
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_UP: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().RotateUp(app->optRotateStep);
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_DOWN: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().RotateDown(app->optRotateStep);
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_LEFT: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().RotateLeft(app->optRotateStep);
-				app->session->EndSceneEdit();
-				break;
-			}
-			case GLFW_KEY_RIGHT: {
-				app->session->BeginSceneEdit();
-				app->config->GetScene().GetCamera().RotateRight(app->optRotateStep);
-				app->session->EndSceneEdit();
-				break;
 			}
 			case GLFW_KEY_N: {
 				app->DecScreenRefreshInterval();
@@ -174,6 +183,16 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 			case GLFW_KEY_H:
 				app->helpWindow.Toggle();
 				break;
+			default:
+				break;
+		}
+
+		// Tool specific keys
+		switch(app->currentTool) {
+			case TOOL_CAMERA_EDIT: {
+				LuxCoreApp::ToolCameraEditKeys(window, key, scanCode, action, mods);
+				break;
+			}
 			default:
 				break;
 		}
