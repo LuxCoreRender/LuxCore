@@ -33,6 +33,8 @@ namespace ocl {
 #include "luxrays/core/color/color_types.cl"
 }
 
+using namespace std;
+
 class SPD;
 class SpectrumWavelengths;
 class SWCSpectrum;
