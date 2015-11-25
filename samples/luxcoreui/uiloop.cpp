@@ -52,8 +52,8 @@ void LuxCoreApp::UpdateMoveStep() {
 void LuxCoreApp::RefreshRenderingTexture() {
 	const u_int filmWidth = session->GetFilm().GetWidth();
 	const u_int filmHeight = session->GetFilm().GetHeight();
-
 	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_RGB_TONEMAPPED);
+
 	if (currentTool == TOOL_OBJECT_SELECTION) {
 		// Allocate the selectionBuffer if needed
 		if (!selectionBuffer || (selectionFilmWidth != filmWidth) || (selectionFilmHeight != filmHeight)) {
@@ -67,9 +67,9 @@ void LuxCoreApp::RefreshRenderingTexture() {
 		int frameBufferWidth, frameBufferHeight;
 		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 
-		const ImVec2 imGuiScale(frameBufferWidth / (float)filmWidth, frameBufferHeight / (float)filmHeight);
+		const ImVec2 imGuiScale(filmWidth /  (float)frameBufferWidth,  filmHeight / (float)frameBufferHeight);
 		const u_int mouseX = Floor2UInt(ImGui::GetIO().MousePos.x * imGuiScale.x);
-		const u_int mouseY = Floor2UInt((filmHeight - ImGui::GetIO().MousePos.y - 1) * imGuiScale.y);
+		const u_int mouseY = Floor2UInt((frameBufferHeight - ImGui::GetIO().MousePos.y - 1) * imGuiScale.y);
 
 		// Get the selected object ID
 		const u_int *objIDpixels = session->GetFilm().GetChannel<u_int>(Film::CHANNEL_OBJECT_ID);
