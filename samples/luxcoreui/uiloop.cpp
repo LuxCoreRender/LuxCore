@@ -360,7 +360,6 @@ void LuxCoreApp::RunApp() {
 	//--------------------------------------------------------------------------
 
     glGenTextures(1, &renderFrameBufferTexID);
-	glGenTextures(1, &selectionTexID);
 
 	glViewport(0, 0, lastFrameBufferWidth, lastFrameBufferHeight);
 	glMatrixMode(GL_PROJECTION);
