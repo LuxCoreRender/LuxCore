@@ -66,6 +66,7 @@ extern std::string KernelSource_materialdefs_funcs_velvet;
 extern std::string KernelSource_material_main_withoutdynamic;
 extern std::string KernelSource_material_main;
 extern std::string KernelSource_sampleresult_funcs;
+extern std::string KernelSource_sceneobject_types;
 extern std::string KernelSource_texture_noise_funcs;
 extern std::string KernelSource_texture_blender_noise_funcs;
 extern std::string KernelSource_texture_blender_noise_funcs2;

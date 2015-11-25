@@ -72,7 +72,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			&samples[gid].result,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
 #endif
@@ -180,6 +180,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 		sample->result.materialID = NULL_INDEX;
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+		sample->result.objectID = NULL_INDEX;
+#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sample->result.uv.u = INFINITY;
 		sample->result.uv.v = INFINITY;
@@ -244,6 +247,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 		sample->result.materialID = BSDF_GetMaterialID(bsdf
 				MATERIALS_PARAM);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+		sample->result.objectID = BSDF_GetObjectID(bsdf, sceneObjs);
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sample->result.uv = bsdf->hitPoint.uv;
@@ -325,7 +331,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			NULL,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
 #endif

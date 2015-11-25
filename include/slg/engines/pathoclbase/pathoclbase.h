@@ -95,6 +95,9 @@ protected:
 		cl::Buffer *channel_RAYCOUNT_Buff;
 		cl::Buffer *channel_BY_MATERIAL_ID_Buff;
 		cl::Buffer *channel_IRRADIANCE_Buff;
+		cl::Buffer *channel_OBJECT_ID_Buff;
+		cl::Buffer *channel_OBJECT_ID_MASK_Buff;
+		cl::Buffer *channel_BY_OBJECT_ID_Buff;
 
 	private:
 		PathOCLBaseRenderThread *renderThread;
@@ -155,7 +158,7 @@ protected:
 	cl::Buffer *texturesBuff;
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *meshDescsBuff;
-	cl::Buffer *meshMatsBuff;
+	cl::Buffer *scnObjsBuff;
 	cl::Buffer *lightsBuff;
 	cl::Buffer *envLightIndicesBuff;
 	cl::Buffer *lightsDistributionBuff;

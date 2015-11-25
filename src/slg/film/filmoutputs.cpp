@@ -223,6 +223,23 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				props << type << fileName;
 				break;
 			}
+			case OBJECT_ID: {
+				if (!hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Object ID image can be saved only in non HDR formats: " + outputName);
+				break;
+			}
+			case OBJECT_ID_MASK: {
+				const Property materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255));
+				props << type << fileName << materialID;
+				break;
+			}
+			case BY_OBJECT_ID: {
+				const Property materialID = cfg.Get(Property("film.outputs." + outputName + ".id")(255));
+				props << type << fileName << materialID;
+				break;
+			}
 			default:
 				throw runtime_error("Unknown film output type: " + type.Get<string>());
 		}
@@ -280,6 +297,12 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return BY_MATERIAL_ID;
 	else if (type == "IRRADIANCE")
 		return IRRADIANCE;
+	else if (type == "OBJECT_ID")
+		return OBJECT_ID;
+	else if (type == "OBJECT_ID_MASK")
+		return OBJECT_ID_MASK;
+	else if (type == "BY_OBJECT_ID")
+		return BY_OBJECT_ID;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -334,6 +357,12 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "BY_MATERIAL_ID";
 		case IRRADIANCE:
 			return "IRRADIANCE";
+		case OBJECT_ID:
+			return "OBJECT_ID";
+		case OBJECT_ID_MASK:
+			return "OBJECT_ID_MASK";
+		case BY_OBJECT_ID:
+			return "BY_OBJECT_ID";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}

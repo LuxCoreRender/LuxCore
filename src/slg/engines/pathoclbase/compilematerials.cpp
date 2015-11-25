@@ -491,19 +491,6 @@ void CompiledScene::CompileMaterials() {
 	SLG_LOG("Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
-void CompiledScene::CompileMeshMaterials() {
-	//--------------------------------------------------------------------------
-	// Translate mesh material indices
-	//--------------------------------------------------------------------------
-
-	const u_int objCount = scene->objDefs.GetSize();
-	meshMats.resize(objCount);
-	for (u_int i = 0; i < objCount; ++i) {
-		const Material *m = scene->objDefs.GetSceneObject(i)->GetMaterial();
-		meshMats[i] = scene->matDefs.GetMaterialIndex(m);
-	}
-}
-
 //------------------------------------------------------------------------------
 // Dynamic OpenCL code generation for material evaluation
 //------------------------------------------------------------------------------

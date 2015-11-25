@@ -69,6 +69,9 @@ PathOCLBaseRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseRenderThread *thread)
 	channel_RAYCOUNT_Buff = NULL;
 	channel_BY_MATERIAL_ID_Buff = NULL;
 	channel_IRRADIANCE_Buff = NULL;
+	channel_OBJECT_ID_Buff = NULL;
+	channel_OBJECT_ID_MASK_Buff = NULL;
+	channel_BY_OBJECT_ID_Buff = NULL;
 
 	renderThread = thread;
 }
@@ -206,6 +209,29 @@ void PathOCLBaseRenderThread::ThreadFilm::Init(const Film &engineFilm,
 		renderThread->AllocOCLBufferRW(&channel_IRRADIANCE_Buff, sizeof(float[4]) * filmPixelCount, "IRRADIANCE");
 	else
 		renderThread->FreeOCLBuffer(&channel_IRRADIANCE_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::OBJECT_ID))
+		renderThread->AllocOCLBufferRW(&channel_OBJECT_ID_Buff, sizeof(u_int) * filmPixelCount, "OBJECT_ID");
+	else
+		renderThread->FreeOCLBuffer(&channel_OBJECT_ID_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::OBJECT_ID_MASK)) {
+		if (film->GetMaskMaterialIDCount() > 1)
+			throw runtime_error("PathOCL supports only 1 OBJECT_ID_MASK");
+		else
+			renderThread->AllocOCLBufferRW(&channel_OBJECT_ID_MASK_Buff,
+					sizeof(float[2]) * filmPixelCount, "OBJECT_ID_MASK");
+	} else
+		renderThread->FreeOCLBuffer(&channel_OBJECT_ID_MASK_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::BY_OBJECT_ID)) {
+		if (film->GetByMaterialIDCount() > 1)
+			throw runtime_error("PathOCL supports only 1 BY_OBJECT_ID");
+		else
+			renderThread->AllocOCLBufferRW(&channel_BY_OBJECT_ID_Buff,
+					sizeof(float[4]) * filmPixelCount, "BY_OBJECT_ID");
+	} else
+		renderThread->FreeOCLBuffer(&channel_BY_OBJECT_ID_Buff);
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
@@ -232,6 +258,9 @@ void PathOCLBaseRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->FreeOCLBuffer(&channel_RAYCOUNT_Buff);
 	renderThread->FreeOCLBuffer(&channel_BY_MATERIAL_ID_Buff);
 	renderThread->FreeOCLBuffer(&channel_IRRADIANCE_Buff);
+	renderThread->FreeOCLBuffer(&channel_OBJECT_ID_Buff);
+	renderThread->FreeOCLBuffer(&channel_OBJECT_ID_MASK_Buff);
+	renderThread->FreeOCLBuffer(&channel_BY_OBJECT_ID_Buff);
 }
 
 u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmClearKernel,
@@ -286,6 +315,12 @@ u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmCle
 		filmClearKernel.setArg(argIndex++, *channel_BY_MATERIAL_ID_Buff);
 	if (film->HasChannel(Film::IRRADIANCE))
 		filmClearKernel.setArg(argIndex++, *channel_IRRADIANCE_Buff);
+	if (film->HasChannel(Film::OBJECT_ID))
+		filmClearKernel.setArg(argIndex++, *channel_OBJECT_ID_Buff);
+	if (film->HasChannel(Film::OBJECT_ID_MASK))
+		filmClearKernel.setArg(argIndex++, *channel_OBJECT_ID_MASK_Buff);
+	if (film->HasChannel(Film::BY_OBJECT_ID))
+		filmClearKernel.setArg(argIndex++, *channel_BY_OBJECT_ID_Buff);
 
 	return argIndex;
 }
@@ -464,6 +499,30 @@ void PathOCLBaseRenderThread::ThreadFilm::TransferFilm(cl::CommandQueue &oclQueu
 			channel_IRRADIANCE_Buff->getInfo<CL_MEM_SIZE>(),
 			film->channel_IRRADIANCE->GetPixels());
 	}
+	if (channel_OBJECT_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_OBJECT_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_OBJECT_ID->GetPixels());
+	}
+	if (channel_OBJECT_ID_MASK_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_OBJECT_ID_MASK_Buff,
+			CL_FALSE,
+			0,
+			channel_OBJECT_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_OBJECT_ID_MASKs[0]->GetPixels());
+	}
+	if (channel_BY_OBJECT_ID_Buff) {
+		oclQueue.enqueueReadBuffer(
+			*channel_BY_OBJECT_ID_Buff,
+			CL_FALSE,
+			0,
+			channel_BY_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			film->channel_BY_OBJECT_IDs[0]->GetPixels());
+	}
 }
 
 void PathOCLBaseRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
@@ -500,7 +559,7 @@ PathOCLBaseRenderThread::PathOCLBaseRenderThread(const u_int index,
 	materialsBuff = NULL;
 	texturesBuff = NULL;
 	meshDescsBuff = NULL;
-	meshMatsBuff = NULL;
+	scnObjsBuff = NULL;
 	lightsBuff = NULL;
 	envLightIndicesBuff = NULL;
 	lightsDistributionBuff = NULL;
@@ -568,6 +627,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLBSDFSize() const {
 	size_t bsdfSize = GetOpenCLHitPointSize();
 	// Add BSDF.materialIndex memory size
 	bsdfSize += sizeof(u_int);
+	// Add BSDF.sceneObjectIndex memory size
+	bsdfSize += sizeof(u_int);
 	// Add BSDF.triangleLightSourceIndex memory size
 	if (renderEngine->compiledScene->lightTypeCounts[TYPE_TRIANGLE] > 0)
 		bsdfSize += sizeof(u_int);
@@ -604,6 +665,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Normal);
 	if (threadFilm->HasChannel(Film::MATERIAL_ID))
 		sampleResultSize += sizeof(u_int);
+	if (threadFilm->HasChannel(Film::OBJECT_ID))
+		sampleResultSize += sizeof(u_int);
 	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
 		sampleResultSize += sizeof(Spectrum);
 	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
@@ -616,8 +679,6 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 		sampleResultSize += sizeof(Spectrum);
 	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
 		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK))
-		sampleResultSize += sizeof(float);
 	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
 		sampleResultSize += sizeof(float);
 	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
@@ -778,9 +839,9 @@ void PathOCLBaseRenderThread::InitMaterials() {
 }
 
 void PathOCLBaseRenderThread::InitMeshMaterials() {
-	const u_int meshCount = renderEngine->compiledScene->meshMats.size();
-	AllocOCLBufferRO(&meshMatsBuff, &renderEngine->compiledScene->meshMats[0],
-			sizeof(u_int) * meshCount, "Mesh material index");
+	const u_int sceneObjsCount = renderEngine->compiledScene->sceneObjs.size();
+	AllocOCLBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
+			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Mesh material index");
 }
 
 void PathOCLBaseRenderThread::InitTextures() {
@@ -945,6 +1006,16 @@ void PathOCLBaseRenderThread::InitKernels() {
 	}
 	if (threadFilm->HasChannel(Film::IRRADIANCE))
 		ss << " -D PARAM_FILM_CHANNELS_HAS_IRRADIANCE";
+	if (threadFilm->HasChannel(Film::OBJECT_ID))
+		ss << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID";
+	if (threadFilm->HasChannel(Film::OBJECT_ID_MASK)) {
+		ss << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK" <<
+				" -D PARAM_FILM_MASK_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
+	}
+	if (threadFilm->HasChannel(Film::BY_OBJECT_ID)) {
+		ss << " -D PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID" <<
+				" -D PARAM_FILM_BY_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
+	}
 
 	if (normalsBuff)
 		ss << " -D PARAM_HAS_NORMALS_BUFFER";
@@ -1262,6 +1333,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 		slg::ocl::KernelSource_sampler_types <<
 		slg::ocl::KernelSource_camera_types <<
 		slg::ocl::KernelSource_light_types <<
+		slg::ocl::KernelSource_sceneobject_types <<
 		// OpenCL SLG Funcs
 		slg::ocl::KernelSource_mc_funcs <<
 		slg::ocl::KernelSource_randomgen_funcs <<
@@ -1497,7 +1569,7 @@ void PathOCLBaseRenderThread::Stop() {
 	FreeOCLBuffer(&materialsBuff);
 	FreeOCLBuffer(&texturesBuff);
 	FreeOCLBuffer(&meshDescsBuff);
-	FreeOCLBuffer(&meshMatsBuff);
+	FreeOCLBuffer(&scnObjsBuff);
 	FreeOCLBuffer(&normalsBuff);
 	FreeOCLBuffer(&uvsBuff);
 	FreeOCLBuffer(&colsBuff);

@@ -56,7 +56,8 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_INDIRECT_GLOSSY:
 		case Film::CHANNEL_INDIRECT_SPECULAR:
 		case Film::CHANNEL_BY_MATERIAL_ID:
-		case Film::CHANNEL_IRRADIANCE: {
+		case Film::CHANNEL_IRRADIANCE:
+		case Film::CHANNEL_BY_OBJECT_ID:{
 			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Normalize3(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -74,7 +75,8 @@ void FilmChannelWindow::RefreshTexture() {
 		case Film::CHANNEL_ALPHA:
 		case Film::CHANNEL_MATERIAL_ID_MASK:
 		case Film::CHANNEL_DIRECT_SHADOW_MASK:
-		case Film::CHANNEL_INDIRECT_SHADOW_MASK: {
+		case Film::CHANNEL_INDIRECT_SHADOW_MASK:
+		case Film::CHANNEL_OBJECT_ID_MASK:{
 			const float *filmPixels = app->session->GetFilm().GetChannel<float>(type, index);
 
 			Normalize1(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -106,7 +108,8 @@ void FilmChannelWindow::RefreshTexture() {
 			AutoLinearToneMap(filmPixels, pixels.get(), filmWidth, filmHeight);
 			break;
 		}
-		case Film::CHANNEL_MATERIAL_ID: {
+		case Film::CHANNEL_MATERIAL_ID:
+		case Film::CHANNEL_OBJECT_ID: {
 			const u_int *filmPixels = app->session->GetFilm().GetChannel<u_int>(type, index);
 
 			Copy1UINT(filmPixels, pixels.get(), filmWidth, filmHeight);
@@ -230,7 +233,9 @@ void FilmChannelsWindow::Draw() {
 		DrawChannelInfo("CHANNEL_RAYCOUNT", Film::CHANNEL_RAYCOUNT);
 		DrawChannelInfo("CHANNEL_BY_MATERIAL_ID", Film::CHANNEL_BY_MATERIAL_ID);
 		DrawChannelInfo("CHANNEL_IRRADIANCE", Film::CHANNEL_IRRADIANCE);
-
+		DrawChannelInfo("CHANNEL_OBJECT_ID", Film::CHANNEL_OBJECT_ID);
+		DrawChannelInfo("CHANNEL_OBJECT_ID_MASK", Film::CHANNEL_OBJECT_ID_MASK);
+		DrawChannelInfo("CHANNEL_BY_OBJECT_ID", Film::CHANNEL_BY_OBJECT_ID);
 	}
 	ImGui::End();
 

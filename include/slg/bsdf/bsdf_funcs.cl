@@ -131,7 +131,7 @@ void BSDF_Init(
 		__global BSDF *bsdf,
 		//const bool fromL,
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint* restrict meshTriLightDefsOffset,
 #endif
@@ -188,8 +188,11 @@ void BSDF_Init(
 	__global const Point* restrict iVertices = &vertices[meshDesc->vertsOffset];
 	__global const Triangle* restrict iTriangles = &triangles[meshDesc->trisOffset];
 
+	// Save the scene object index
+	bsdf->sceneObjectIndex = meshIndex;
+	
 	// Get the material
-	const uint matIndex = meshMats[meshIndex];
+	const uint matIndex = sceneObjs[meshIndex].materialIndex;
 	bsdf->materialIndex = matIndex;
 
 	//--------------------------------------------------------------------------
@@ -368,6 +371,7 @@ void BSDF_InitVolume(
 
 	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
+	bsdf->sceneObjectIndex = NULL_INDEX;
 	bsdf->materialIndex = volumeIndex;
 
 	VSTORE3F(shadeN, &bsdf->hitPoint.geometryN.x);

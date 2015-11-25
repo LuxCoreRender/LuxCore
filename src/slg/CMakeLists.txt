@@ -128,6 +128,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main_withoutdynamic.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/scene/sceneobject_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
@@ -185,6 +186,7 @@ set(SLG_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compileimagemaps.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilelights.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilematerials.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilesceneobjects.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiletextures.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbase.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/pathoclbasethread.cpp
@@ -399,6 +401,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/light_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/light_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/scene_funcs_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/sceneobject_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/mapping_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/hitpoint_types_kernel.cpp

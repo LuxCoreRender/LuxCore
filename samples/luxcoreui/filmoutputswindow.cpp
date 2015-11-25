@@ -86,7 +86,8 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_INDIRECT_SPECULAR:
 		case Film::OUTPUT_RADIANCE_GROUP:
 		case Film::OUTPUT_BY_MATERIAL_ID:
-		case Film::OUTPUT_IRRADIANCE: {
+		case Film::OUTPUT_IRRADIANCE:
+		case Film::OUTPUT_BY_OBJECT_ID: {
 			app->session->GetFilm().GetOutput<float>(type, pixels.get(), index);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
@@ -121,7 +122,8 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_MATERIAL_ID_MASK:
 		case Film::OUTPUT_DIRECT_SHADOW_MASK:
 		case Film::OUTPUT_INDIRECT_SHADOW_MASK:
-		case Film::OUTPUT_RAYCOUNT: {
+		case Film::OUTPUT_RAYCOUNT:
+		case Film::OUTPUT_OBJECT_ID_MASK: {
 			auto_ptr<float> filmPixels;
 			filmPixels.reset(new float[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<float>(type, filmPixels.get(), index);
@@ -131,7 +133,8 @@ void FilmOutputWindow::RefreshTexture() {
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
 			break;
 		}
-		case Film::OUTPUT_MATERIAL_ID: {
+		case Film::OUTPUT_MATERIAL_ID:
+		case Film::OUTPUT_OBJECT_ID: {
 			auto_ptr<u_int> filmPixels;
 			filmPixels.reset(new u_int[app->session->GetFilm().GetOutputSize(type)]);
 			app->session->GetFilm().GetOutput<u_int>(type, filmPixels.get(), index);
@@ -191,6 +194,9 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("RAYCOUNT", 21)
 		.Add("BY_MATERIAL_ID", 22)
 		.Add("IRRADIANCE", 23)
+		.Add("OBJECT_ID", 24)
+		.Add("OBJECT_ID_MASK", 25)
+		.Add("BY_OBJECT_ID", 26)
 		.SetDefault("RGB");
 
 	newType = 0;
@@ -290,6 +296,14 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			ImGui::SetTooltip("%s", (prefix + ".type").c_str());
 
 		// Film output file name
+		static string imageExts[4] = {
+			".exr",
+			".hdr",
+			".png",
+			".jpg"
+		};
+		string imageExt;
+
 		ImGui::InputText("", newFileNameBuff, 4 * 1024);
 		ImGui::SameLine();
 		const string tag = typeTable.GetTag(newType);
@@ -303,17 +317,27 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				(tag == "UV") ||
 				(tag == "RAYCOUNT") ||
 				(tag == "BY_MATERIAL_ID") ||
-				(tag == "IRRADIANCE"))
+				(tag == "IRRADIANCE") ||
+				(tag == "OBJECT_ID_MASK") ||
+				(tag == "BY_OBJECT_ID")) {
 			ImGui::Combo("File name", &newFileType, "EXR\0HDR\0PNG\0JPG\0\0");
-		else
+			imageExt = imageExts[newFileType];
+		} else if ((tag == "MATERIAL_ID") ||
+				(tag == "OBJECT_ID")) {
+			ImGui::Combo("File name", &newFileType, "PNG\0JPG\0\0");
+			imageExt = imageExts[newFileType + 2];
+		} else {
 			ImGui::Combo("File name", &newFileType, "EXR\0HDR\0\0");
+			imageExt = imageExts[newFileType];
+		}
 		ImGui::SameLine();
 		ImGui::TextDisabled("(?)");
 		if (ImGui::IsItemHovered())
 			ImGui::SetTooltip("%s", (prefix + ".filename").c_str());
 
 		// Film output (optional) ids
-		if ((tag == "MATERIAL_ID_MASK") || (tag == "BY_MATERIAL_ID")) {
+		if ((tag == "MATERIAL_ID_MASK") || (tag == "BY_MATERIAL_ID") ||
+				(tag == "OBJECT_ID_MASK") || (tag == "BY_OBJECT_ID")) {
 			ImGui::InputInt("ID", &newID);
 			ImGui::SameLine();
 			ImGui::TextDisabled("(?)");
@@ -338,19 +362,14 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		// Add button
 		const string newOutputName(newOutputNameBuff);
 		if (ImGui::Button("Add") && (newOutputName.length() > 0)) {
-			static string exts[4] = {
-				".exr",
-				".hdr",
-				".png",
-				".jpg"
-			};
-
 			props <<
 					Property(prefix + ".type")(tag) <<
-					Property(prefix + ".filename")(newOutputName + exts[newFileType]);
+					Property(prefix + ".filename")(newOutputName + imageExt);
 			if ((tag == "MATERIAL_ID_MASK") ||
 				(tag == "RADIANCE_GROUP") ||
-				(tag == "BY_MATERIAL_ID"))
+				(tag == "BY_MATERIAL_ID") ||
+				(tag == "OBJECT_ID_MASK") ||
+				(tag == "BY_OBJECT_ID"))
 				props << Property(prefix + ".id")(newID);
 
 			newType = 0;
@@ -410,7 +429,9 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 				if ((type == "MATERIAL_ID_MASK") ||
 						(type == "RADIANCE_GROUP") ||
-						(type == "BY_MATERIAL_ID")) {
+						(type == "BY_MATERIAL_ID") ||
+						(type == "OBJECT_ID_MASK") ||
+						(type == "BY_OBJECT_ID")) {
 					int id = props.Get("film.outputs." + outputName + ".id").Get<int>();
 					if (ImGui::InputInt("ID", &id)) {
 						props.Set(Property("film.outputs." + outputName + ".id")(id));
@@ -530,6 +551,18 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		count = film.GetChannelCount(Film::CHANNEL_IRRADIANCE);
 		if (count)
 			LuxCoreApp::ColoredLabelText("CHANNEL_IRRADIANCE:", "%d", count);
+
+		count = film.GetChannelCount(Film::CHANNEL_OBJECT_ID);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_OBJECT_ID:", "%d", count);
+
+		count = film.GetChannelCount(Film::CHANNEL_OBJECT_ID_MASK);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_OBJECT_ID_MASK:", "%d", count);
+
+		count = film.GetChannelCount(Film::CHANNEL_BY_OBJECT_ID);
+		if (count)
+			LuxCoreApp::ColoredLabelText("CHANNEL_BY_OBJECT_ID:", "%d", count);
 	}
 
 	return false;
