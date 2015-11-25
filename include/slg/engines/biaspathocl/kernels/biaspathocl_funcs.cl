@@ -122,6 +122,10 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 		// Note: MATERIAL_ID_MASK and BY_MATERIAL_ID are calculated starting from materialID field
 		dst->materialID = src->materialID;
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+		// Note: OBJECT_ID_MASK and BY_OBJECT_ID are calculated starting from objectID field
+		dst->materialID = src->materialID;
+#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		dst->uv = src->uv;
 #endif
@@ -336,7 +340,7 @@ uint BIASPATHOCL_Scene_Intersect(
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
 #endif
@@ -383,7 +387,7 @@ uint BIASPATHOCL_Scene_Intersect(
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
 #endif
@@ -583,7 +587,7 @@ uint DirectLightSampling_ONE(
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
@@ -659,7 +663,7 @@ uint DirectLightSampling_ONE(
 				sampleResult,
 				// BSDF_Init parameters
 				meshDescs,
-				meshMats,
+				sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				meshTriLightDefsOffset,
 #endif
@@ -724,7 +728,7 @@ uint DirectLightSampling_ALL(
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
@@ -812,7 +816,7 @@ uint DirectLightSampling_ALL(
 						sampleResult,
 						// BSDF_Init parameters
 						meshDescs,
-						meshMats,
+						sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 						meshTriLightDefsOffset,
 #endif
@@ -888,7 +892,7 @@ uint ContinueTracePath(
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
@@ -930,7 +934,7 @@ uint ContinueTracePath(
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 			meshTriLightDefsOffset,
 #endif
@@ -1029,7 +1033,7 @@ uint ContinueTracePath(
 				sampleResult,
 				// BSDF_Init parameters
 				meshDescs,
-				meshMats,
+				sceneObjs,
 				vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 				vertNormals,
@@ -1116,7 +1120,7 @@ uint SampleComponent(
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 		__global const Point* restrict vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 		__global const Vector* restrict vertNormals,
@@ -1220,7 +1224,7 @@ uint SampleComponent(
 					sampleResult,
 					// BSDF_Init parameters
 					meshDescs,
-					meshMats,
+					sceneObjs,
 					vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 					vertNormals,
@@ -1380,10 +1384,10 @@ uint SampleComponent(
 #define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
-#define KERNEL_ARGS_FILM_CHANNELS_ID_MASK \
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK \
 		, __global float *filmMaterialIDMask
 #else
-#define KERNEL_ARGS_FILM_CHANNELS_ID_MASK
+#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 #define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
@@ -1421,6 +1425,24 @@ uint SampleComponent(
 #else
 #define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID \
+		, __global uint *filmObjectID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
+#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK \
+		, __global float *filmObjectIDMask
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
+#define KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID \
+		, __global float *filmByObjectID
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID
+#endif
 
 #define KERNEL_ARGS_FILM \
 		, const uint filmWidth, const uint filmHeight \
@@ -1446,13 +1468,16 @@ uint SampleComponent(
 		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
 		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
 		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
-		KERNEL_ARGS_FILM_CHANNELS_ID_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK \
 		KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
 		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
 		KERNEL_ARGS_FILM_CHANNELS_UV \
 		KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
 		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
-		KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
+		KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
+		KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID \
+		KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK \
+		KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID
 
 #if defined(PARAM_HAS_INFINITELIGHTS)
 #define KERNEL_ARGS_INFINITELIGHTS \
@@ -1575,7 +1600,7 @@ uint SampleComponent(
 		KERNEL_ARGS_INFINITELIGHTS \
 		, __global const Material* restrict mats \
 		, __global const Texture* restrict texs \
-		, __global const uint* restrict meshMats \
+		, __global const SceneObject* restrict sceneObjs \
 		, __global const Mesh* restrict meshDescs \
 		, __global const Point* restrict vertices \
 		KERNEL_ARGS_NORMALS_BUFFER \

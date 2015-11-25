@@ -77,7 +77,10 @@ public:
 		UV = 1 << 18,
 		RAYCOUNT = 1 << 19,
 		BY_MATERIAL_ID = 1 << 20,
-		IRRADIANCE = 1 << 21
+		IRRADIANCE = 1 << 21,
+		OBJECT_ID = 1 << 22,
+		OBJECT_ID_MASK = 1 << 23,
+		BY_OBJECT_ID = 1 << 24
 	} FilmChannelType;
 	
 	class RadianceChannelScale {
@@ -123,6 +126,10 @@ public:
 	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }
 	u_int GetByMaterialIDCount() const { return byMaterialIDs.size(); }
 	u_int GetByMaterialID(const u_int index) const { return byMaterialIDs[index]; }
+	u_int GetMaskObjectIDCount() const { return maskObjectIDs.size(); }
+	u_int GetMaskObjectID(const u_int index) const { return maskObjectIDs[index]; }
+	u_int GetByObjectIDCount() const { return byObjectIDs.size(); }
+	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
 	
 	void Init();
 	void Resize(const u_int w, const u_int h);
@@ -249,6 +256,9 @@ public:
 	GenericFrameBuffer<1, 0, float> *channel_RAYCOUNT;
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_MATERIAL_IDs;
 	GenericFrameBuffer<4, 1, float> *channel_IRRADIANCE;
+	GenericFrameBuffer<1, 0, u_int> *channel_OBJECT_ID;
+	std::vector<GenericFrameBuffer<2, 1, float> *> channel_OBJECT_ID_MASKs;
+	std::vector<GenericFrameBuffer<4, 1, float> *> channel_BY_OBJECT_IDs;
 
 	static Film *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Film *film);
@@ -281,6 +291,7 @@ private:
 	u_int width, height, pixelCount, radianceGroupCount;
 	u_int subRegion[4];
 	std::vector<u_int> maskMaterialIDs, byMaterialIDs;
+	std::vector<u_int> maskObjectIDs, byObjectIDs;
 
 	// Used to speedup sample splatting, initialized inside Init()
 	bool hasDataChannel, hasComposingChannel;
@@ -303,7 +314,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 6)
+BOOST_CLASS_VERSION(slg::Film, 7)
 BOOST_CLASS_VERSION(slg::Film::RadianceChannelScale, 1)
 
 #endif	/* _SLG_FILM_H */

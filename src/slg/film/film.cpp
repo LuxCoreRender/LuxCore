@@ -73,6 +73,7 @@ Film::Film() {
 	channel_UV = NULL;
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
+	channel_OBJECT_ID = NULL;
 
 	convTest = NULL;
 
@@ -118,6 +119,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) {
 	channel_UV = NULL;
 	channel_RAYCOUNT = NULL;
 	channel_IRRADIANCE = NULL;
+	channel_OBJECT_ID = NULL;
 
 	convTest = NULL;
 
@@ -158,12 +160,19 @@ Film::~Film() {
 	for (u_int i = 0; i < channel_BY_MATERIAL_IDs.size(); ++i)
 		delete channel_BY_MATERIAL_IDs[i];
 	delete channel_IRRADIANCE;
+	delete channel_OBJECT_ID;
+	for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i)
+		delete channel_OBJECT_ID_MASKs[i];
+	for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
+		delete channel_BY_OBJECT_IDs[i];
 }
 
 void Film::CopyDynamicSettings(const Film &film) {
 	channels = film.channels;
 	maskMaterialIDs = film.maskMaterialIDs;
 	byMaterialIDs = film.byMaterialIDs;
+	maskObjectIDs = film.maskObjectIDs;
+	byObjectIDs = film.byObjectIDs;
 	radianceGroupCount = film.radianceGroupCount;
 	radianceChannelScales = film.radianceChannelScales;
 	SetRGBTonemapUpdateFlag(film.rgbTonemapUpdate);
@@ -187,6 +196,18 @@ void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
 			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
 			if (count(byMaterialIDs.begin(), byMaterialIDs.end(), id) == 0)
 				byMaterialIDs.push_back(id);
+			break;
+		}
+		case OBJECT_ID_MASK: {
+			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
+			if (count(maskObjectIDs.begin(), maskObjectIDs.end(), id) == 0)
+				maskObjectIDs.push_back(id);
+			break;
+		}
+		case BY_OBJECT_ID: {
+			const u_int id = prop->Get(Property("id")(255)).Get<u_int>();
+			if (count(byObjectIDs.begin(), byObjectIDs.end(), id) == 0)
+				byObjectIDs.push_back(id);
 			break;
 		}
 		default:
@@ -249,6 +270,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		delete channel_BY_MATERIAL_IDs[i];
 	channel_BY_MATERIAL_IDs.clear();
 	delete channel_IRRADIANCE;
+	delete channel_OBJECT_ID;
+	for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i)
+		delete channel_OBJECT_ID_MASKs[i];
+	for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
+		delete channel_BY_OBJECT_IDs[i];
 
 	// Allocate all required channels
 	hasDataChannel = false;
@@ -375,6 +401,27 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_IRRADIANCE->Clear();
 		hasComposingChannel = true;
 	}
+	if (HasChannel(OBJECT_ID)) {
+		channel_OBJECT_ID = new GenericFrameBuffer<1, 0, u_int>(width, height);
+		channel_OBJECT_ID->Clear(numeric_limits<u_int>::max());
+		hasDataChannel = true;
+	}
+	if (HasChannel(OBJECT_ID_MASK)) {
+		for (u_int i = 0; i < maskObjectIDs.size(); ++i) {
+			GenericFrameBuffer<2, 1, float> *buf = new GenericFrameBuffer<2, 1, float>(width, height);
+			buf->Clear();
+			channel_OBJECT_ID_MASKs.push_back(buf);
+		}
+		hasComposingChannel = true;
+	}
+	if (HasChannel(BY_OBJECT_ID)) {
+		for (u_int i = 0; i < byObjectIDs.size(); ++i) {
+			GenericFrameBuffer<4, 1, float> *buf = new GenericFrameBuffer<4, 1, float>(width, height);
+			buf->Clear();
+			channel_BY_OBJECT_IDs.push_back(buf);
+		}
+		hasComposingChannel = true;
+	}
 
 	// Initialize the stats
 	statsTotalSampleCount = 0.0;
@@ -440,6 +487,16 @@ void Film::Reset() {
 	}
 	if (HasChannel(IRRADIANCE))
 		channel_IRRADIANCE->Clear();
+	if (HasChannel(OBJECT_ID))
+		channel_OBJECT_ID->Clear(numeric_limits<float>::max());
+	if (HasChannel(OBJECT_ID_MASK)) {
+		for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i)
+			channel_OBJECT_ID_MASKs[i]->Clear();
+	}
+	if (HasChannel(BY_OBJECT_ID)) {
+		for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i)
+			channel_BY_OBJECT_IDs[i]->Clear();
+	}
 
 	// convTest has to be reset explicitly
 
@@ -728,6 +785,57 @@ void Film::AddFilm(const Film &film,
 		}
 	}
 
+	if (HasChannel(OBJECT_ID) && film.HasChannel(OBJECT_ID)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+			// Used DEPTH information to merge Films
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					if (film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y)[0] < channel_DEPTH->GetPixel(dstOffsetX + x, dstOffsetY + y)[0]) {
+						const u_int *srcPixel = film.channel_OBJECT_ID->GetPixel(srcOffsetX + x, srcOffsetY + y);
+						channel_OBJECT_ID->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					}
+				}
+			}
+		} else {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const u_int *srcPixel = film.channel_OBJECT_ID->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_OBJECT_ID->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
+			}
+		}
+	}
+
+	if (HasChannel(OBJECT_ID_MASK) && film.HasChannel(OBJECT_ID_MASK)) {
+		for (u_int i = 0; i < channel_OBJECT_ID_MASKs.size(); ++i) {
+			for (u_int j = 0; j < film.maskObjectIDs.size(); ++j) {
+				if (maskObjectIDs[i] == film.maskObjectIDs[j]) {
+					for (u_int y = 0; y < srcHeight; ++y) {
+						for (u_int x = 0; x < srcWidth; ++x) {
+							const float *srcPixel = film.channel_OBJECT_ID_MASKs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+							channel_OBJECT_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (HasChannel(BY_OBJECT_ID) && film.HasChannel(BY_OBJECT_ID)) {
+		for (u_int i = 0; i < channel_BY_OBJECT_IDs.size(); ++i) {
+			for (u_int j = 0; j < film.byObjectIDs.size(); ++j) {
+				if (byObjectIDs[i] == film.byObjectIDs[j]) {
+					for (u_int y = 0; y < srcHeight; ++y) {
+						for (u_int x = 0; x < srcWidth; ++x) {
+							const float *srcPixel = film.channel_BY_OBJECT_IDs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
+							channel_BY_OBJECT_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// NOTE: update DEPTH channel last because it is used to merge other channels
 	if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
 		for (u_int y = 0; y < srcHeight; ++y) {
@@ -785,8 +893,14 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_BY_MATERIAL_IDs.size();
 		case IRRADIANCE:
 			return channel_IRRADIANCE ? 1 : 0;
+		case OBJECT_ID:
+			return channel_OBJECT_ID ? 1 : 0;
+		case OBJECT_ID_MASK:
+			return channel_OBJECT_ID_MASKs.size();
+		case BY_OBJECT_ID:
+			return channel_BY_OBJECT_IDs.size();
 		default:
-			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount>(): " + ToString(type));
+			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
 }
 
@@ -836,6 +950,10 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type, cons
 			return channel_BY_MATERIAL_IDs[index]->GetPixels();
 		case IRRADIANCE:
 			return channel_IRRADIANCE->GetPixels();
+		case OBJECT_ID_MASK:
+			return channel_OBJECT_ID_MASKs[index]->GetPixels();
+		case BY_OBJECT_ID:
+			return channel_BY_OBJECT_IDs[index]->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<float>(): " + ToString(type));
 	}
@@ -845,6 +963,8 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, cons
 	switch (type) {
 		case MATERIAL_ID:
 			return channel_MATERIAL_ID->GetPixels();
+		case OBJECT_ID:
+			return channel_OBJECT_ID->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<u_int>(): " + ToString(type));
 	}
@@ -1055,6 +1175,36 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 		// Faster than HasChannel(IRRADIANCE)
 		if (channel_IRRADIANCE && sampleResult.HasChannel(IRRADIANCE))
 			channel_IRRADIANCE->AddWeightedPixel(x, y, sampleResult.irradiance.c, weight);
+
+		// This is OBJECT_ID_MASK and BY_OBJECT_ID
+		if (sampleResult.HasChannel(OBJECT_ID)) {
+			// OBJECT_ID_MASK
+			for (u_int i = 0; i < maskObjectIDs.size(); ++i) {
+				float pixel[2];
+				pixel[0] = (sampleResult.objectID == maskObjectIDs[i]) ? weight : 0.f;
+				pixel[1] = weight;
+				channel_OBJECT_ID_MASKs[i]->AddPixel(x, y, pixel);
+			}
+
+			// BY_OBJECT_ID
+			if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
+				for (u_int index = 0; index < byObjectIDs.size(); ++index) {
+					Spectrum c;
+
+					if (sampleResult.objectID == byObjectIDs[index]) {
+						// Merge all radiance groups
+						for (u_int i = 0; i < Min(sampleResult.radiance.size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
+								continue;
+
+							c += sampleResult.radiance[i];
+						}
+					}
+
+					channel_BY_OBJECT_IDs[index]->AddWeightedPixel(x, y, c.c, weight);
+				}
+			}
+		}
 	}
 }
 
@@ -1086,6 +1236,11 @@ void Film::AddSampleResultData(const u_int x, const u_int y,
 		// Faster than HasChannel(UV)
 		if (channel_UV && sampleResult.HasChannel(UV))
 			channel_UV->SetPixel(x, y, &sampleResult.uv.u);
+
+		// Faster than HasChannel(OBJECT_ID)
+		if (channel_OBJECT_ID && sampleResult.HasChannel(OBJECT_ID) &&
+				(sampleResult.objectID != std::numeric_limits<u_int>::max()))
+			channel_OBJECT_ID->SetPixel(x, y, &sampleResult.objectID);
 	}
 
 	if (channel_RAYCOUNT && sampleResult.HasChannel(RAYCOUNT))
@@ -1156,6 +1311,12 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return BY_MATERIAL_ID;
 	else if (type == "IRRADIANCE")
 		return IRRADIANCE;
+	else if (type == "OBJECT_ID")
+		return OBJECT_ID;
+	else if (type == "OBJECT_ID_MASK")
+		return OBJECT_ID_MASK;
+	else if (type == "BY_OBJECT_ID")
+		return BY_OBJECT_ID;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -1204,6 +1365,12 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "BY_MATERIAL_ID";
 		case Film::IRRADIANCE:
 			return "IRRADIANCE";
+		case Film::OBJECT_ID:
+			return "OBJECT_ID";
+		case Film::OBJECT_ID_MASK:
+			return "OBJECT_ID_MASK";
+		case Film::BY_OBJECT_ID:
+			return "BY_OBJECT_ID";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}

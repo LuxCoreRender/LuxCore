@@ -262,6 +262,40 @@ void OutputSwitcherPlugin::Apply(const Film &film, Spectrum *pixels, vector<bool
 			}
 			break;
 		}
+		case Film::OBJECT_ID: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					u_int *v = film.channel_OBJECT_ID->GetPixel(i);
+					pixels[i].c[0] = (*v) & 0xff;
+					pixels[i].c[1] = ((*v) & 0xff00) >> 8;
+					pixels[i].c[2] = ((*v) & 0xff0000) >> 16;
+				}
+			}
+			break;
+		}
+		case Film::OBJECT_ID_MASK: {
+			if (index >= film.channel_OBJECT_ID_MASKs.size())
+				return;
+
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i]) {
+					float v;
+					film.channel_OBJECT_ID_MASKs[index]->GetWeightedPixel(i, &v);
+					pixels[i] = Spectrum(v);
+				}
+			}
+			break;
+		}
+		case Film::BY_OBJECT_ID: {
+			if (index >= film.channel_BY_OBJECT_IDs.size())
+				return;
+
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (pixelsMask[i])
+					film.channel_BY_OBJECT_IDs[index]->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in OutputSwitcherPlugin::Apply(): " + ToString(type));
 	}

@@ -289,7 +289,7 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bo
 	}
 	rsKernel->setArg(argIndex++, *materialsBuff);
 	rsKernel->setArg(argIndex++, *texturesBuff);
-	rsKernel->setArg(argIndex++, *meshMatsBuff);
+	rsKernel->setArg(argIndex++, *scnObjsBuff);
 	rsKernel->setArg(argIndex++, *meshDescsBuff);
 	rsKernel->setArg(argIndex++, *vertsBuff);
 	if (normalsBuff)

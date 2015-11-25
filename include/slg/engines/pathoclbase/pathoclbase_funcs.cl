@@ -83,6 +83,9 @@
 //  PARAM_FILM_CHANNELS_HAS_RAYCOUNT
 //  PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID (and PARAM_FILM_BY_MATERIAL_ID)
 //  PARAM_FILM_CHANNELS_HAS_IRRADIANCE
+//  PARAM_FILM_CHANNELS_HAS_OBJECT_ID
+//  PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK (and PARAM_FILM_MASK_OBJECT_ID)
+//  PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID (and PARAM_FILM_BY_OBJECT_ID)
 
 // (optional)
 //  PARAM_CAMERA_HAS_DOF
@@ -138,7 +141,7 @@ bool Scene_Intersect(
 		__global SampleResult *sampleResult,
 		// BSDF_Init parameters
 		__global const Mesh* restrict meshDescs,
-		__global const uint* restrict meshMats,
+		__global const SceneObject* restrict sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		__global const uint *meshTriLightDefsOffset,
 #endif
@@ -168,7 +171,7 @@ bool Scene_Intersect(
 		// Initialize the BSDF of the hit point
 		BSDF_Init(bsdf,
 				meshDescs,
-				meshMats,
+				sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 				meshTriLightDefsOffset,
 #endif

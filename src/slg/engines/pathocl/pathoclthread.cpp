@@ -511,7 +511,7 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	}
 	advancePathsKernel->setArg(argIndex++, *materialsBuff);
 	advancePathsKernel->setArg(argIndex++, *texturesBuff);
-	advancePathsKernel->setArg(argIndex++, *meshMatsBuff);
+	advancePathsKernel->setArg(argIndex++, *scnObjsBuff);
 	advancePathsKernel->setArg(argIndex++, *meshDescsBuff);
 	advancePathsKernel->setArg(argIndex++, *vertsBuff);
 	if (normalsBuff)

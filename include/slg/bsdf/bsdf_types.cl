@@ -40,7 +40,7 @@ typedef int BSDFEvent;
 typedef struct {
 	HitPoint hitPoint;
 
-	unsigned int materialIndex;
+	unsigned int materialIndex, sceneObjectIndex;
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 	unsigned int triangleLightSourceIndex;
 #endif

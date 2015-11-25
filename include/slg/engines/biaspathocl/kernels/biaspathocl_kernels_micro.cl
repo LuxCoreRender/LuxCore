@@ -158,7 +158,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_TR
 		sampleResult,
 		// BSDF_Init parameters
 		meshDescs,
-		meshMats,
+		sceneObjs,
 #if (PARAM_TRIANGLE_LIGHT_COUNT > 0)
 		meshTriLightDefsOffset,
 #endif
@@ -256,6 +256,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
 		sampleResult->materialID = NULL_INDEX;
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+		sampleResult->objectID = NULL_INDEX;
+#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sampleResult->uv.u = INFINITY;
 		sampleResult->uv.v = INFINITY;
@@ -307,8 +310,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 	sampleResult->shadingNormal = task->bsdfPathVertex1.hitPoint.shadeN;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-	sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1
-		MATERIALS_PARAM);
+	sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1);
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+	sampleResult->materialID = BSDF_GetObjectID(&task->bsdfPathVertex1, scneeObjs);
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 	sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
@@ -394,7 +399,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_DL
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
@@ -489,7 +494,7 @@ void RenderSample_MK_BSDF_SAMPLE(
 			sampleResult,
 			// BSDF_Init parameters
 			meshDescs,
-			meshMats,
+			sceneObjs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
 			vertNormals,
@@ -612,6 +617,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 			, filmIrradiance
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+			, filmObjectID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
+			, filmObjectIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
+			, filmByObjectID
+#endif
 			,
 			// Scene parameters
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -622,7 +636,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			mats,
 			texs,
-			meshMats,
+			sceneObjs,
 			meshDescs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
@@ -777,6 +791,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 			, filmIrradiance
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+			, filmObjectID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
+			, filmObjectIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
+			, filmByObjectID
+#endif
 			,
 			// Scene parameters
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -787,7 +810,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			mats,
 			texs,
-			meshMats,
+			sceneObjs,
 			meshDescs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)
@@ -942,6 +965,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 			, filmIrradiance
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
+			, filmObjectID
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
+			, filmObjectIDMask
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
+			, filmByObjectID
+#endif
 			,
 			// Scene parameters
 #if defined(PARAM_HAS_INFINITELIGHTS)
@@ -952,7 +984,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_BS
 #endif
 			mats,
 			texs,
-			meshMats,
+			sceneObjs,
 			meshDescs,
 			vertices,
 #if defined(PARAM_HAS_NORMALS_BUFFER)

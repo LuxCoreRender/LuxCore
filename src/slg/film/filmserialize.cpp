@@ -89,6 +89,9 @@ template<class Archive> void Film::serialize(Archive &ar, const u_int version) {
 	ar & channel_RAYCOUNT;
 	ar & channel_BY_MATERIAL_IDs;
 	ar & channel_IRRADIANCE;
+	ar & channel_OBJECT_ID;
+	ar & channel_OBJECT_ID_MASKs;
+	ar & channel_BY_OBJECT_IDs;
 
 	ar & channels;
 	ar & width;
