@@ -73,6 +73,13 @@ public:
 	friend class StatsWindow;
 
 private:
+	typedef enum {
+		TOOL_CAMERA_EDIT,
+		TOOL_OBJECT_SELECTION
+	} AppToolType;
+
+	static void ToolCameraEditKeys(GLFWwindow *window, int key, int scanCode, int action, int mods);
+
 	static void GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int action, int mods);
 	static void GLFW_MouseButtonCallBack(GLFWwindow *window, int button, int action, int mods);
 	static void GLFW_MousePositionCallBack(GLFWwindow *window, double x, double y);
@@ -100,8 +107,9 @@ private:
 	void MenuSampler();
 	void MenuTiles();
 	void MenuFilm();
-	void MenuWindow();
 	void MenuScreen();
+	void MenuTool();
+	void MenuWindow();
 	void MainMenuBar();
 
 	static LogWindow *currentLogWindow;
@@ -125,7 +133,14 @@ private:
 
 	GLuint renderFrameBufferTexID;
 	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;
+
+	GLuint selectionTexID;
+	u_int selectionFilmWidth, selectionFilmHeight;
+	float *selectionBuffer;
+	
 	GLFWwindow *window;
+
+	AppToolType currentTool;
 
 	// ImGui inputs
 	int newFilmSize[2];

@@ -229,6 +229,27 @@ void LuxCoreApp::MenuScreen() {
 }
 
 //------------------------------------------------------------------------------
+// MenuTool
+//------------------------------------------------------------------------------
+
+void LuxCoreApp::MenuTool() {
+	if (ImGui::MenuItem("Camera edit", NULL, (currentTool == TOOL_CAMERA_EDIT)))
+		currentTool = TOOL_CAMERA_EDIT;
+	if (ImGui::MenuItem("Object selection", NULL, (currentTool == TOOL_OBJECT_SELECTION))) {
+		// Check if the session a OBJECT_ID AOV enabled
+		if(!session->GetFilm().HasOutput(Film::OUTPUT_OBJECT_ID)) {
+			// Enable OBJECT_ID AOV
+			RenderConfigParse(
+					Properties() <<
+						Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.type")("OBJECT_ID") <<
+						Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.filename")("dummy.png"));
+		}
+
+		currentTool = TOOL_OBJECT_SELECTION;
+	}
+}
+
+//------------------------------------------------------------------------------
 // MenuWindow
 //------------------------------------------------------------------------------
 
@@ -305,6 +326,11 @@ void LuxCoreApp::MainMenuBar() {
 				MenuScreen();
 				ImGui::EndMenu();
 			}
+		}
+
+		if (ImGui::BeginMenu("Tool")) {
+			MenuTool();
+			ImGui::EndMenu();
 		}
 
 		if (ImGui::BeginMenu("Window")) {

@@ -55,18 +55,25 @@ void LuxCoreApp::GLFW_MousePositionCallBack(GLFWwindow *window, double x, double
 			const int distX = x - app->mouseGrabLastX;
 			const int distY = y - app->mouseGrabLastY;
 
-			app->session->BeginSceneEdit();
+			switch(app->currentTool) {
+				case TOOL_CAMERA_EDIT: {
+					app->session->BeginSceneEdit();
 
-			if (app->optMouseGrabMode) {
-				app->config->GetScene().GetCamera().RotateUp(.04f * distY * app->optRotateStep);
-				app->config->GetScene().GetCamera().RotateLeft(.04f * distX * app->optRotateStep);
+					if (app->optMouseGrabMode) {
+						app->config->GetScene().GetCamera().RotateUp(.04f * distY * app->optRotateStep);
+						app->config->GetScene().GetCamera().RotateLeft(.04f * distX * app->optRotateStep);
+					}
+					else {
+						app->config->GetScene().GetCamera().RotateDown(.04f * distY * app->optRotateStep);
+						app->config->GetScene().GetCamera().RotateRight(.04f * distX * app->optRotateStep);
+					};
+
+					app->session->EndSceneEdit();
+					break;
+				}
+				default:
+					break;
 			}
-			else {
-				app->config->GetScene().GetCamera().RotateDown(.04f * distY * app->optRotateStep);
-				app->config->GetScene().GetCamera().RotateRight(.04f * distX * app->optRotateStep);
-			};
-
-			app->session->EndSceneEdit();
 
 			app->mouseGrabLastX = x;
 			app->mouseGrabLastY = y;
@@ -79,18 +86,26 @@ void LuxCoreApp::GLFW_MousePositionCallBack(GLFWwindow *window, double x, double
 			const int distX = x - app->mouseGrabLastX;
 			const int distY = y - app->mouseGrabLastY;
 
-			app->session->BeginSceneEdit();
+			switch(app->currentTool) {
+				case TOOL_CAMERA_EDIT: {
+					app->session->BeginSceneEdit();
 
-			if (app->optMouseGrabMode) {
-				app->config->GetScene().GetCamera().TranslateLeft(.04f * distX * app->optMoveStep);
-				app->config->GetScene().GetCamera().TranslateForward(.04f * distY * app->optMoveStep);
-			}
-			else {
-				app->config->GetScene().GetCamera().TranslateRight(.04f * distX * app->optMoveStep);
-				app->config->GetScene().GetCamera().TranslateBackward(.04f * distY * app->optMoveStep);
-			}
+					if (app->optMouseGrabMode) {
+						app->config->GetScene().GetCamera().TranslateLeft(.04f * distX * app->optMoveStep);
+						app->config->GetScene().GetCamera().TranslateForward(.04f * distY * app->optMoveStep);
+					}
+					else {
+						app->config->GetScene().GetCamera().TranslateRight(.04f * distX * app->optMoveStep);
+						app->config->GetScene().GetCamera().TranslateBackward(.04f * distY * app->optMoveStep);
+					}
 
-			app->session->EndSceneEdit();
+					app->session->EndSceneEdit();
+					break;
+				}
+				default:
+					break;
+					
+			}
 
 			app->mouseGrabLastX = x;
 			app->mouseGrabLastY = y;

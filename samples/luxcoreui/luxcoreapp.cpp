@@ -45,6 +45,12 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 	session = NULL;
 	window = NULL;
 
+	selectionBuffer = NULL;
+	selectionFilmWidth = 0xffffffffu;
+	selectionFilmHeight = 0xffffffffu;
+			
+	currentTool = TOOL_CAMERA_EDIT;
+
 	optRealTimeMode = false;
 	optMouseGrabMode = false;
 	optMoveScale = 1.f;
@@ -69,6 +75,7 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 
 LuxCoreApp::~LuxCoreApp() {
 	currentLogWindow = NULL;
+	delete[] selectionBuffer;
 }
 
 void LuxCoreApp::IncScreenRefreshInterval() {
