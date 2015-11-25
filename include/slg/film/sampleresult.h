@@ -70,6 +70,8 @@ public:
 	luxrays::Normal geometryNormal, shadingNormal;
 	// Note: MATERIAL_ID_MASK is calculated starting from materialID field
 	u_int materialID;
+	// Note: OBJECT_ID_MASK is calculated starting from objectID field
+	u_int objectID;
 	luxrays::Spectrum directDiffuse, directGlossy;
 	luxrays::Spectrum emission;
 	luxrays::Spectrum indirectDiffuse, indirectGlossy, indirectSpecular;

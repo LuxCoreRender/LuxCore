@@ -131,6 +131,8 @@ private:
 	int newFilmSize[2];
 
 	bool optRealTimeMode;
+
+	// Mouse related information
 	float optMoveScale;
 	float optMoveStep;
 	float optRotateStep;

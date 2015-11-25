@@ -121,7 +121,10 @@ public:
 		OUTPUT_UV = slg::FilmOutputs::UV,
 		OUTPUT_RAYCOUNT = slg::FilmOutputs::RAYCOUNT,
 		OUTPUT_BY_MATERIAL_ID = slg::FilmOutputs::BY_MATERIAL_ID,
-		OUTPUT_IRRADIANCE = slg::FilmOutputs::IRRADIANCE
+		OUTPUT_IRRADIANCE = slg::FilmOutputs::IRRADIANCE,
+		OUTPUT_OBJECT_ID = slg::FilmOutputs::OBJECT_ID,
+		OUTPUT_OBJECT_ID_MASK = slg::FilmOutputs::OBJECT_ID_MASK,
+		OUTPUT_BY_OBJECT_ID = slg::FilmOutputs::BY_OBJECT_ID
 	} FilmOutputType;
 
 	/*!
@@ -149,7 +152,10 @@ public:
 		CHANNEL_UV = slg::Film::UV,
 		CHANNEL_RAYCOUNT = slg::Film::RAYCOUNT,
 		CHANNEL_BY_MATERIAL_ID = slg::Film::BY_MATERIAL_ID,
-		CHANNEL_IRRADIANCE = slg::Film::IRRADIANCE
+		CHANNEL_IRRADIANCE = slg::Film::IRRADIANCE,
+		CHANNEL_OBJECT_ID = slg::Film::OBJECT_ID,
+		CHANNEL_OBJECT_ID_MASK = slg::Film::OBJECT_ID_MASK,
+		CHANNEL_BY_OBJECT_ID = slg::Film::BY_OBJECT_ID
 	} FilmChannelType;
 
 	/*!
@@ -190,6 +196,8 @@ public:
 	 * "id" for the ID of MATERIAL_ID_MASK,
 	 * "id" for the index of RADIANCE_GROUP,
 	 * "id" for the ID of BY_MATERIAL_ID.
+	 * "id" for the ID of OBJECT_ID_MASK,
+	 * "id" for the ID of BY_OBJECT_ID.
 	 */
 	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
 

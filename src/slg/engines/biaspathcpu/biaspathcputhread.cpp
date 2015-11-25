@@ -403,6 +403,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 				numeric_limits<float>::infinity(),
 				numeric_limits<float>::infinity());
 		sampleResult->materialID = numeric_limits<u_int>::max();
+		sampleResult->objectID = numeric_limits<u_int>::max();
 		sampleResult->uv = UV(numeric_limits<float>::infinity(),
 				numeric_limits<float>::infinity());
 	} else {
@@ -413,6 +414,7 @@ void BiasPathCPURenderThread::TraceEyePath(RandomGenerator *rndGen, const Ray &r
 		sampleResult->geometryNormal = bsdf.hitPoint.geometryN;
 		sampleResult->shadingNormal = bsdf.hitPoint.shadeN;
 		sampleResult->materialID = bsdf.GetMaterialID();
+		sampleResult->objectID = bsdf.GetObjectID();
 		sampleResult->uv = bsdf.hitPoint.uv;
 
 		// Check if it is a light source
@@ -504,14 +506,15 @@ void BiasPathCPURenderThread::RenderPixelSample(RandomGenerator *rndGen,
 	BiasPathCPURenderEngine *engine = (BiasPathCPURenderEngine *)renderEngine;
 
 	//--------------------------------------------------------------------------
-	//Initialize SampleResult
+	// Initialize SampleResult
 	//--------------------------------------------------------------------------
 
 	SampleResult sampleResult(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE,
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
+		Film::OBJECT_ID,
 		engine->film->GetRadianceGroupCount());
 
 	// Set to 0.0 all result colors

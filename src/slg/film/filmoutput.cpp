@@ -95,6 +95,12 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return 3 * pixelCount;
 		case FilmOutputs::IRRADIANCE:
 			return 3 * pixelCount;
+		case FilmOutputs::OBJECT_ID:
+			return pixelCount;
+		case FilmOutputs::OBJECT_ID_MASK:
+			return pixelCount;
+		case FilmOutputs::BY_OBJECT_ID:
+			return 3 * pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -150,6 +156,12 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(BY_MATERIAL_ID);
 		case FilmOutputs::IRRADIANCE:
 			return HasChannel(IRRADIANCE);
+		case FilmOutputs::OBJECT_ID:
+			return HasChannel(OBJECT_ID);
+		case FilmOutputs::OBJECT_ID_MASK:
+			return HasChannel(OBJECT_ID_MASK);
+		case FilmOutputs::BY_OBJECT_ID:
+			return HasChannel(BY_OBJECT_ID);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -164,6 +176,8 @@ void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type
 		const Properties *props) { 
 	u_int maskMaterialIDsIndex = 0;
 	u_int byMaterialIDsIndex = 0;
+	u_int maskObjectIDsIndex = 0;
+	u_int byObjectIDsIndex = 0;
 	u_int radianceGroupIndex = 0;
 	u_int channelCount = 3;
 
@@ -303,6 +317,45 @@ void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type
 			if (!HasChannel(IRRADIANCE))
 				return;
 			break;
+		case FilmOutputs::OBJECT_ID:
+			if (!HasChannel(OBJECT_ID))
+				return;
+			break;
+		case FilmOutputs::OBJECT_ID_MASK:
+			if (HasChannel(OBJECT_ID_MASK) && props) {
+				channelCount = 1;		
+				// Look for the object mask ID index
+				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
+				bool found = false;
+				for (u_int i = 0; i < maskObjectIDs.size(); ++i) {
+					if (maskObjectIDs[i] == id) {
+						maskObjectIDsIndex = i;
+						found = true;
+						break;
+					}
+				}
+				if (!found)
+					return;
+			} else
+				return;
+			break;
+		case FilmOutputs::BY_OBJECT_ID:
+			if (HasChannel(BY_OBJECT_ID) && props) {
+				// Look for the object mask ID index
+				const u_int id = props->Get(Property("id")(255)).Get<u_int>();
+				bool found = false;
+				for (u_int i = 0; i < byObjectIDs.size(); ++i) {
+					if (byObjectIDs[i] == id) {
+						byObjectIDsIndex = i;
+						found = true;
+						break;
+					}
+				}
+				if (!found)
+					return;
+			} else
+				return;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -311,10 +364,12 @@ void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type
 	
 	SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
 
-	if (type == FilmOutputs::MATERIAL_ID) {
-		// For material IDs we must copy into int buffer first or risk screwing up the ID
+	if ((type == FilmOutputs::MATERIAL_ID) || (type == FilmOutputs::OBJECT_ID)) {
+		// For IDs we must copy into int buffer first or risk screwing up the IDs
 		ImageSpec spec(width, height, channelCount, TypeDesc::UINT8);
 		buffer.reset(spec);
+		GenericFrameBuffer<1, 0, u_int> *channel = (type == FilmOutputs::MATERIAL_ID) ?
+			channel_MATERIAL_ID : channel_OBJECT_ID;
 		for (ImageBuf::ConstIterator<BYTE> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
@@ -323,11 +378,11 @@ void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type
 			
 			if (pixel == NULL)
 				throw runtime_error("Error while unpacking film data, could not address buffer!");
-			
-			const u_int *src = channel_MATERIAL_ID->GetPixel(x, y);
-			pixel[0] = (BYTE)src[0];
-			pixel[1] = (BYTE)src[1];
-			pixel[2] = (BYTE)src[2];
+
+			const u_int src = *(channel->GetPixel(x, y));
+			pixel[0] = (BYTE)(src & 0x0000ffu);
+			pixel[1] = (BYTE)((src & 0x00ff00u) >> 8);
+			pixel[2] = (BYTE)((src & 0xff0000u) >> 16);
 		}
 	} else {
 		// OIIO 1 channel EXR output is apparently not working, I write 3 channels as
@@ -458,6 +513,14 @@ void Film::Output( const string &fileName,const FilmOutputs::FilmOutputType type
 				}
 				case FilmOutputs::IRRADIANCE: {
 					channel_IRRADIANCE->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::OBJECT_ID_MASK: {
+					channel_OBJECT_ID_MASKs[maskObjectIDsIndex]->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::BY_OBJECT_ID: {
+					channel_BY_OBJECT_IDs[byObjectIDsIndex]->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				default:
@@ -617,6 +680,16 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 				channel_IRRADIANCE->GetWeightedPixel(i, &buffer[i]);
 			break;
 		}
+		case FilmOutputs::OBJECT_ID_MASK: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_OBJECT_ID_MASKs[index]->GetWeightedPixel(i, &buffer[i]);
+			break;
+		}
+		case FilmOutputs::BY_OBJECT_ID: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_BY_OBJECT_IDs[index]->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
 	}
@@ -626,6 +699,9 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 	switch (type) {
 		case FilmOutputs::MATERIAL_ID:
 			copy(channel_MATERIAL_ID->GetPixels(), channel_MATERIAL_ID->GetPixels() + pixelCount, buffer);
+			break;
+		case FilmOutputs::OBJECT_ID:
+			copy(channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetPixels() + pixelCount, buffer);
 			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<u_int>(): " + ToString(type));

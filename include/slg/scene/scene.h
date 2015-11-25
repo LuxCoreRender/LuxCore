@@ -152,7 +152,7 @@ protected:
 	Volume *CreateVolume(const u_int defaultVolID, const std::string &volName, const luxrays::Properties &props);
 	Material *CreateMaterial(const u_int defaultMatID, const std::string &matName, const luxrays::Properties &props);
 	luxrays::ExtMesh *CreateShape(const std::string &shapeName, const luxrays::Properties &props);
-	SceneObject *CreateObject(const std::string &objName, const luxrays::Properties &props);
+	SceneObject *CreateObject(const u_int defaultObjID, const std::string &objName, const luxrays::Properties &props);
 	ImageMap *CreateEmissionMap(const std::string &propName, const luxrays::Properties &props);
 	LightSource *CreateLightSource(const std::string &lightName, const luxrays::Properties &props);
 

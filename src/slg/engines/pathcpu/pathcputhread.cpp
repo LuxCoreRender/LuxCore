@@ -226,7 +226,8 @@ void PathCPURenderThread::RenderFunc() {
 		Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
 		Film::DIRECT_DIFFUSE | Film::DIRECT_GLOSSY | Film::EMISSION | Film::INDIRECT_DIFFUSE |
 		Film::INDIRECT_GLOSSY | Film::INDIRECT_SPECULAR | Film::DIRECT_SHADOW_MASK |
-		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE,
+		Film::INDIRECT_SHADOW_MASK | Film::UV | Film::RAYCOUNT | Film::IRRADIANCE |
+		Film::OBJECT_ID,
 		engine->film->GetRadianceGroupCount());
 
 	const u_int haltDebug = engine->renderConfig->GetProperty("batch.haltdebug").
@@ -295,6 +296,7 @@ void PathCPURenderThread::RenderFunc() {
 							std::numeric_limits<float>::infinity(),
 							std::numeric_limits<float>::infinity());
 					sampleResult.materialID = std::numeric_limits<u_int>::max();
+					sampleResult.objectID = std::numeric_limits<u_int>::max();
 					sampleResult.uv = UV(std::numeric_limits<float>::infinity(),
 							std::numeric_limits<float>::infinity());
 				}
@@ -309,6 +311,7 @@ void PathCPURenderThread::RenderFunc() {
 				sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
 				sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
 				sampleResult.materialID = bsdf.GetMaterialID();
+				sampleResult.objectID = bsdf.GetObjectID();
 				sampleResult.uv = bsdf.hitPoint.uv;
 			}
 

@@ -28,6 +28,7 @@
 
 #include "slg/film/film.h"
 #include "slg/scene/scene.h"
+#include "slg/scene/sceneobject.h"
 
 namespace slg {
 
@@ -61,7 +62,7 @@ public:
 	slg::ocl::Camera camera;
 	bool enableCameraDOF, enableCameraClippingPlane, enableCameraOculusRiftBarrel;
 
-	// Compiled Scene Geometry
+	// Compiled Scene Meshes
 	vector<luxrays::Point> verts;
 	vector<luxrays::Normal> normals;
 	vector<luxrays::UV> uvs;
@@ -70,6 +71,9 @@ public:
 	vector<luxrays::Triangle> tris;
 	vector<luxrays::ocl::Mesh> meshDescs;
 	luxrays::BSphere worldBSphere;
+
+	// Compiled Scene Objects
+	vector<slg::ocl::SceneObject> sceneObjs;
 
 	// Compiled Lights
 	vector<slg::ocl::LightSource> lightDefs;
@@ -89,9 +93,6 @@ public:
 	vector<slg::ocl::Material> mats;
 	u_int defaultWorldVolumeIndex;
 
-	// The Mesh <=> Material relation
-	vector<u_int> meshMats;
-
 	// Compiled Textures
 	std::set<TextureType> usedTextureTypes;
 	vector<slg::ocl::Texture> texs;
@@ -102,9 +103,9 @@ public:
 
 private:
 	void CompileCamera();
+	void CompileSceneObjects();
 	void CompileGeometry();
 	void CompileMaterials();
-	void CompileMeshMaterials();
 	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
 	void CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);
 	void CompileTextures();
