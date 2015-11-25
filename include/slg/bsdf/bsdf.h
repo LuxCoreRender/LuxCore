@@ -38,6 +38,7 @@ namespace ocl {
 }
 
 class Scene;
+class SceneObject;
 
 class BSDF {
 public:
@@ -67,6 +68,7 @@ public:
 	bool IsVisibleIndirectSpecular() const { return material->IsVisibleIndirectSpecular(); }
 	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
 	int GetSamples() const { return material->GetSamples(); }
+	u_int GetObjectID() const;
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }
 	const Volume *GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
@@ -92,6 +94,7 @@ public:
 	HitPoint hitPoint;
 
 private:
+	const SceneObject *sceneObject;
 	const luxrays::ExtMesh *mesh;
 	const Material *material;
 	const TriangleLight *triangleLightSource; // != NULL only if it is an area light

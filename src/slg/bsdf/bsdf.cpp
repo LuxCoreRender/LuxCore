@@ -31,7 +31,8 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 	hitPoint.p = ray(rayHit.t);
 	hitPoint.fixedDir = -ray.d;
 
-	const SceneObject *sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
+	// Get the scene object
+	sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
 	
 	// Get the triangle
 	mesh = sceneObject->GetExtMesh();
@@ -86,6 +87,7 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 	hitPoint.p = ray(t);
 	hitPoint.fixedDir = -ray.d;
 
+	sceneObject = NULL;
 	mesh = NULL;
 	material = &volume;
 
@@ -107,6 +109,10 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ra
 
 	// Build the local reference system
 	frame.SetFromZ(hitPoint.shadeN);
+}
+
+u_int BSDF::GetObjectID() const {
+	return (sceneObject) ? sceneObject->GetID() : std::numeric_limits<u_int>::max();
 }
 
 Spectrum BSDF::Evaluate(const Vector &generatedDir,

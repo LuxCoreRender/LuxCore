@@ -291,6 +291,41 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::IRRADIANCE, fileName);
 				break;
 			}
+			case FilmOutputs::OBJECT_ID: {
+				if (!hdrImage) {
+					if (!initialized) {
+						AddChannel(Film::DEPTH);
+						AddChannel(Film::OBJECT_ID);
+					}
+					filmOutputs.Add(FilmOutputs::OBJECT_ID, fileName);
+				} else
+					throw runtime_error("Object ID image can be saved only in non HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::OBJECT_ID_MASK: {
+				const u_int materialID = props.Get(Property("film.outputs." + outputName + ".id")(255)).Get<u_int>();
+				Properties prop;
+				prop.Set(Property("id")(materialID));
+
+				if (!initialized) {
+					AddChannel(Film::OBJECT_ID);
+					AddChannel(Film::OBJECT_ID_MASK, &prop);
+				}
+				filmOutputs.Add(FilmOutputs::OBJECT_ID_MASK, fileName, &prop);
+				break;
+			}
+			case FilmOutputs::BY_OBJECT_ID: {
+				const u_int materialID = props.Get(Property("film.outputs." + outputName + ".id")(255)).Get<u_int>();
+				Properties prop;
+				prop.Set(Property("id")(materialID));
+
+				if (!initialized) {
+					AddChannel(Film::OBJECT_ID);
+					AddChannel(Film::BY_OBJECT_ID, &prop);
+				}
+				filmOutputs.Add(FilmOutputs::BY_OBJECT_ID, fileName, &prop);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}

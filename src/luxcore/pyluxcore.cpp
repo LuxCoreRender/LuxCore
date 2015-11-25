@@ -1022,6 +1022,9 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("RAYCOUNT", Film::OUTPUT_RAYCOUNT)
 		.value("BY_MATERIAL_ID", Film::OUTPUT_BY_MATERIAL_ID)
 		.value("IRRADIANCE", Film::OUTPUT_IRRADIANCE)
+		.value("OBJECT_ID", Film::OUTPUT_OBJECT_ID)
+		.value("OBJECT_ID_MASK", Film::OUTPUT_OBJECT_ID_MASK)
+		.value("BY_OBJECT_ID", Film::OUTPUT_BY_OBJECT_ID)
 	;
 
     class_<Film>("Film", init<string>())

@@ -16,12 +16,29 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCORE_CFG_H
-#define	_LUXCORE_CFG_H
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
-// The configured options and settings for LuxCore
+#include "slg/engines/pathoclbase/compiledscene.h"
 
-#define LUXCORE_VERSION_MAJOR "1"
-#define LUXCORE_VERSION_MINOR "6dev"
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-#endif	/* _LUXCORE_CFG_H */
+void CompiledScene::CompileSceneObjects() {
+	//--------------------------------------------------------------------------
+	// Translate mesh material indices
+	//--------------------------------------------------------------------------
+
+	const u_int objCount = scene->objDefs.GetSize();
+	sceneObjs.resize(objCount);
+	for (u_int i = 0; i < objCount; ++i) {
+		const SceneObject *sobj = scene->objDefs.GetSceneObject(i);
+
+		sceneObjs[i].objectID = sobj->GetID();
+
+		const Material *m = sobj->GetMaterial();
+		sceneObjs[i].materialIndex = scene->matDefs.GetMaterialIndex(m);
+	}
+}
+
+#endif

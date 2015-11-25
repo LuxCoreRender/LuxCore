@@ -1,3 +1,5 @@
+#line 2 "scene_types.cl"
+
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -16,12 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCORE_CFG_H
-#define	_LUXCORE_CFG_H
-
-// The configured options and settings for LuxCore
-
-#define LUXCORE_VERSION_MAJOR "1"
-#define LUXCORE_VERSION_MINOR "6dev"
-
-#endif	/* _LUXCORE_CFG_H */
+typedef struct {
+	unsigned int objectID;
+	unsigned int materialIndex;
+} SceneObject;
