@@ -134,7 +134,6 @@ private:
 	GLuint renderFrameBufferTexID;
 	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;
 
-	GLuint selectionTexID;
 	u_int selectionFilmWidth, selectionFilmHeight;
 	float *selectionBuffer;
 	
