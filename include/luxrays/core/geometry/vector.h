@@ -28,8 +28,6 @@
 
 #include "luxrays/core/utils.h"
 
-using namespace std;
-
 namespace luxrays {
 
 // OpenCL data types

@@ -24,7 +24,6 @@
 #include <boost/serialization/access.hpp>
 
 #include "luxrays/core/utils.h"
-#include "luxrays/core/color/color.h"
 
 namespace luxrays {
 
@@ -32,8 +31,6 @@ namespace luxrays {
 namespace ocl {
 #include "luxrays/core/color/color_types.cl"
 }
-
-using namespace std;
 
 class SPD;
 class SpectrumWavelengths;
