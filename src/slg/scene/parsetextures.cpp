@@ -409,7 +409,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		return new ClampTexture(tex, minVal, maxVal);
 	} else if (texType == "colordepth") {
-		const Texture *tex = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".kt")(1.f)));
 		const float depth = props.Get(Property(propName + ".depth")(1.0f)).Get<float>();
 
 		return new ColorDepthTexture(depth, tex);
