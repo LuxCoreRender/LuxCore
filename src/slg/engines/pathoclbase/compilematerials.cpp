@@ -930,20 +930,27 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			}
 			case slg::ocl::GLOSSYCOATING: {
 				// GLOSSYCOATING material uses a template .cl file
-				string glossycoatingSrc = slg::ocl::KernelSource_materialdefs_template_glossycoating;
-				boost::replace_all(glossycoatingSrc, "<<CS_GLOSSYCOATING_MATERIAL_INDEX>>", ToString(i));
-				boost::replace_all(glossycoatingSrc, "<<CS_MAT_BASE_MATERIAL_INDEX>>", ToString(mat->glossycoating.matBaseIndex));
-				boost::replace_all(glossycoatingSrc, "<<CS_KS_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.ksTexIndex"));
-				boost::replace_all(glossycoatingSrc, "<<CS_NU_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nuTexIndex"));
-				boost::replace_all(glossycoatingSrc, "<<CS_NV_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nvTexIndex"));
-				boost::replace_all(glossycoatingSrc, "<<CS_KA_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.kaTexIndex"));
-				boost::replace_all(glossycoatingSrc, "<<CS_DEPTH_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.depthTexIndex"));
-				boost::replace_all(glossycoatingSrc, "<<CS_INDEX_TEXTURE_>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.indexTexIndex"));
+				string glossyCoatingSrc = slg::ocl::KernelSource_materialdefs_template_glossycoating;
+				boost::replace_all(glossyCoatingSrc, "<<CS_GLOSSYCOATING_MATERIAL_INDEX>>", ToString(i));
+
+				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_MATERIAL_INDEX>>", ToString(mat->glossycoating.matBaseIndex));
+				const bool isDynamicMatBase = IsMaterialDynamic(&mats[mat->glossycoating.matBaseIndex]);
+				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_PREFIX>>", isDynamicMatBase ?
+					("Material_Index" + ToString(mat->glossycoating.matBaseIndex)) : "Material");
+				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_POSTFIX>>", isDynamicMatBase ?
+					"" : "WithoutDynamic");
+
+				boost::replace_all(glossyCoatingSrc, "<<CS_KS_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.ksTexIndex"));
+				boost::replace_all(glossyCoatingSrc, "<<CS_NU_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nuTexIndex"));
+				boost::replace_all(glossyCoatingSrc, "<<CS_NV_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nvTexIndex"));
+				boost::replace_all(glossyCoatingSrc, "<<CS_KA_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.kaTexIndex"));
+				boost::replace_all(glossyCoatingSrc, "<<CS_DEPTH_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.depthTexIndex"));
+				boost::replace_all(glossyCoatingSrc, "<<CS_INDEX_TEXTURE_>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.indexTexIndex"));
 				if (mat->glossycoating.multibounce)
-					boost::replace_all(glossycoatingSrc, "<<CS_MB_FLAG>>", "true");
+					boost::replace_all(glossyCoatingSrc, "<<CS_MB_FLAG>>", "true");
 				else
-					boost::replace_all(glossycoatingSrc, "<<CS_MB_FLAG>>", "false");
-				source << glossycoatingSrc;
+					boost::replace_all(glossyCoatingSrc, "<<CS_MB_FLAG>>", "false");
+				source << glossyCoatingSrc;
 				break;
 			}
 			default:

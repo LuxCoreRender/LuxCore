@@ -27,6 +27,8 @@
 // Preprocessing parameters:
 //  <<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 //  <<CS_MAT_BASE_MATERIAL_INDEX>>
+//  <<CS_MAT_BASE_PREFIX>>_
+//  <<CS_MAT_BASE_POSTFIX>>
 //  <<CS_KS_TEXTURE>>
 //  <<CS_NU_TEXTURE>>
 //  <<CS_NV_TEXTURE>>
@@ -39,7 +41,7 @@
 BSDFEvent Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEventTypes(__global const Material* restrict material
 		MATERIALS_PARAM_DECL) {
 	return
-			Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetEventTypes(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>]
+			<<CS_MAT_BASE_PREFIX>>_GetEventTypes<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>]
 				MATERIALS_PARAM) |
 			GLOSSY | REFLECT;
 }
@@ -53,7 +55,7 @@ bool Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_IsDelta(__global const Ma
 float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material* restrict material,
 		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
-	return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetPassThroughTransparency(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+	return <<CS_MAT_BASE_PREFIX>>_GetPassThroughTransparency<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 			hitPoint, localFixedDir, passThroughEvent MATERIALS_PARAM);
 }
 #endif
@@ -76,7 +78,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float3 lightDirBase = lightDir;
 		const float3 eyeDirBase = eyeDir;
 
-		const float3 baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		const float3 baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
 
 		// Back face: no coating
@@ -148,7 +150,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const
 		const float3 eyeDirBase = eyeDir;
 
 		// Transmission
-		const float3 baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		const float3 baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, directPdfW MATERIALS_PARAM);
 
 		float3 ks = <<CS_KS_TEXTURE>>;
@@ -239,7 +241,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 		const float3 fixedDirBase = fixedDir;
 
 		// Sample base BSDF
-		baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Sample(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		baseF = <<CS_MAT_BASE_PREFIX>>_Sample<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 			hitPoint, fixedDirBase, sampledDir, u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent / wBase,
@@ -276,7 +278,7 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const M
 		const float3 lightDirBase = *sampledDir;
 		const float3 eyeDirBase = fixedDir;
 
-		baseF = Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		baseF = <<CS_MAT_BASE_PREFIX>>_Evaluate<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, lightDirBase, eyeDirBase, event, &basePdf MATERIALS_PARAM);
 		*event = GLOSSY | REFLECT;
 	}
@@ -334,9 +336,9 @@ float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__gl
 		__global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)
-		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint TEXTURES_PARAM);
+		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint MATERIALS_PARAM);
 	else
-		return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetEmittedRadiance(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		return <<CS_MAT_BASE_PREFIX>>_GetEmittedRadiance<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				   hitPoint
 				   MATERIALS_PARAM);
 }
@@ -347,8 +349,8 @@ uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetInteriorVolume(__globa
 		MATERIALS_PARAM_DECL) {
 		if (material->interiorVolumeIndex != NULL_INDEX)
 			return material->interiorVolumeIndex;
-
-		return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetInteriorVolume(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		else
+			return <<CS_MAT_BASE_PREFIX>>_GetInteriorVolume<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				hitPoint, passThroughEvent
 				MATERIALS_PARAM);
 }
@@ -358,8 +360,8 @@ uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetExteriorVolume(__globa
 		MATERIALS_PARAM_DECL) {
 		if (material->exteriorVolumeIndex != NULL_INDEX)
 			return material->exteriorVolumeIndex;
-
-		return Material_Index<<CS_MAT_BASE_MATERIAL_INDEX>>_GetExteriorVolume(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
+		else
+			return <<CS_MAT_BASE_PREFIX>>_GetExteriorVolume<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 					hitPoint, passThroughEvent
 					MATERIALS_PARAM);
 }
