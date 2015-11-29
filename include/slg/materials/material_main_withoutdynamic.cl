@@ -29,7 +29,7 @@
 // Material_GetEventTypes
 //------------------------------------------------------------------------------
 
-BSDFEvent Material_GetEventTypesWithoutDynamic(__global const Material *material) {
+BSDFEvent Material_GetEventTypesWithoutDynamic(__global const Material* restrict material) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
@@ -113,7 +113,7 @@ BSDFEvent Material_GetEventTypesWithoutDynamic(__global const Material *material
 // Material_IsDeltaWithoutDynamic
 //------------------------------------------------------------------------------
 
-bool Material_IsDeltaWithoutDynamic(__global const Material *material) {
+bool Material_IsDeltaWithoutDynamic(__global const Material* restrict material) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -140,7 +140,7 @@ bool Material_IsDeltaWithoutDynamic(__global const Material *material) {
 // Material_EvaluateWithoutDynamic
 //------------------------------------------------------------------------------
 
-float3 Material_EvaluateWithoutDynamic(__global const Material *material,
+float3 Material_EvaluateWithoutDynamic(__global const Material* restrict material,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
@@ -212,23 +212,9 @@ float3 Material_EvaluateWithoutDynamic(__global const Material *material,
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2: {
 			float3 n, k;
-
-			const uint fresnelTexIndex = material->metal2.fresnelTexIndex;
-			if (fresnelTexIndex != NULL_INDEX) {
-				__global const Texture* restrict fresnelTex = &texs[fresnelTexIndex];
-
-				if (fresnelTex->type == FRESNELCOLOR_TEX) {
-					const float3 f = Texture_GetSpectrumValue(fresnelTex->fresnelColor.krIndex, hitPoint TEXTURES_PARAM);
-					n = FresnelApproxN3(f);
-					k = FresnelApproxK3(f);
-				} else {
-					n = VLOAD3F(&fresnelTex->fresnelConst.n.c[0]);
-					k = VLOAD3F(&fresnelTex->fresnelConst.k.c[0]);
-				}
-			} else {
-				n = Texture_GetSpectrumValue(material->metal2.nTexIndex, hitPoint TEXTURES_PARAM);
-				k = Texture_GetSpectrumValue(material->metal2.kTexIndex, hitPoint TEXTURES_PARAM);
-			}
+			Metal2Material_GetNK(material, hitPoint,
+					&n, &k
+					TEXTURES_PARAM);
 
 			return Metal2Material_Evaluate(
 					hitPoint, lightDir, eyeDir, event, directPdfW,
@@ -368,7 +354,7 @@ float3 Material_EvaluateWithoutDynamic(__global const Material *material,
 // Material_SampleWithoutDynamic
 //------------------------------------------------------------------------------
 
-float3 Material_SampleWithoutDynamic(__global const Material *material, __global HitPoint *hitPoint,
+float3 Material_SampleWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
@@ -473,23 +459,9 @@ float3 Material_SampleWithoutDynamic(__global const Material *material, __global
 #if defined (PARAM_ENABLE_MAT_METAL2)
 		case METAL2: {
 			float3 n, k;
-
-			const uint fresnelTexIndex = material->metal2.fresnelTexIndex;
-			if (fresnelTexIndex != NULL_INDEX) {
-				__global const Texture* restrict fresnelTex = &texs[fresnelTexIndex];
-
-				if (fresnelTex->type == FRESNELCOLOR_TEX) {
-					const float3 f = Texture_GetSpectrumValue(fresnelTex->fresnelColor.krIndex, hitPoint TEXTURES_PARAM);
-					n = FresnelApproxN3(f);
-					k = FresnelApproxK3(f);
-				} else {
-					n = VLOAD3F(&fresnelTex->fresnelConst.n.c[0]);
-					k = VLOAD3F(&fresnelTex->fresnelConst.k.c[0]);
-				}
-			} else {
-				n = Texture_GetSpectrumValue(material->metal2.nTexIndex, hitPoint TEXTURES_PARAM);
-				k = Texture_GetSpectrumValue(material->metal2.kTexIndex, hitPoint TEXTURES_PARAM);
-			}
+			Metal2Material_GetNK(material, hitPoint,
+					&n, &k
+					TEXTURES_PARAM);
 
 			return Metal2Material_Sample(
 					hitPoint, fixedDir, sampledDir, u0, u1,
@@ -670,7 +642,7 @@ float3 Material_SampleWithoutDynamic(__global const Material *material, __global
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material *material, __global HitPoint *hitPoint,
+float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint,
 		const float3 localFixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
@@ -692,7 +664,7 @@ float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material
 // Material_GetEmittedRadianceWithoutDynamic
 //------------------------------------------------------------------------------
 
-float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material *material, __global HitPoint *hitPoint
+float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	return DefaultMaterial_GetEmittedRadiance(material, hitPoint
 		TEXTURES_PARAM);
@@ -703,7 +675,7 @@ float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material *materi
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolumeWithoutDynamic(__global const Material *material) {
+uint Material_GetInteriorVolumeWithoutDynamic(__global const Material* restrict material) {
 	return DefaultMaterial_GetInteriorVolume(material);
 }
 #endif
@@ -713,7 +685,7 @@ uint Material_GetInteriorVolumeWithoutDynamic(__global const Material *material)
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetExteriorVolumeWithoutDynamic(__global const Material *material) {
+uint Material_GetExteriorVolumeWithoutDynamic(__global const Material* restrict material) {
 	return DefaultMaterial_GetExteriorVolume(material);
 }
 #endif
