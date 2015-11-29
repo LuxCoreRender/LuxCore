@@ -42,8 +42,16 @@ bool Material_IsDynamic(__global const Material *material) {
 
 BSDFEvent Material_GetEventTypes(const uint matIndex
 		MATERIALS_PARAM_DECL) {
-	return Material_GetEventTypesWithDynamic(matIndex
+	__global const Material *material = &mats[matIndex];
+
+	BSDFEvent result;
+	if (Material_IsDynamic(material))
+		result = Material_GetEventTypesWithDynamic(matIndex
 			MATERIALS_PARAM);
+	else
+		result = Material_GetEventTypesWithoutDynamic(material);
+
+	return result;
 }
 
 //------------------------------------------------------------------------------
