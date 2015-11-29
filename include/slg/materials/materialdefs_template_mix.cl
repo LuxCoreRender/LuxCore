@@ -27,25 +27,29 @@
 // Preprocessing parameters:
 //  <<CS_MIX_MATERIAL_INDEX>>
 //  <<CS_MAT_A_MATERIAL_INDEX>>
+//  <<CS_MAT_A_PREFIX>>
+//  <<CS_MAT_A_POSTFIX>>
 //  <<CS_MAT_B_MATERIAL_INDEX>>
+//  <<CS_MAT_B_PREFIX>>
+//  <<CS_MAT_B_POSTFIX>>
 //  <<CS_FACTOR_TEXTURE>>
 //------------------------------------------------------------------------------
 
 BSDFEvent Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEventTypes(__global const Material *material
 		MATERIALS_PARAM_DECL) {
 	return
-			Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_GetEventTypes(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
+			<<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
 				MATERIALS_PARAM) |
-			Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_GetEventTypes(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
+			<<CS_MAT_B_PREFIX>>_GetEventTypes<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
 				MATERIALS_PARAM);
 }
 
 bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__global const Material *material
 		MATERIALS_PARAM_DECL) {
 	return
-			Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_IsDelta(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
+			<<CS_MAT_A_PREFIX>>_IsDelta<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
 				MATERIALS_PARAM) &&
-			Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_IsDelta(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
+			<<CS_MAT_B_PREFIX>>_IsDelta<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
 				MATERIALS_PARAM);
 }
 
@@ -58,10 +62,10 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__glob
 	const float weight1 = 1.f - weight2;
 
 	if (passThroughEvent < weight1)
-		return Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_GetPassThroughTransparency(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
+		return <<CS_MAT_A_PREFIX>>_GetPassThroughTransparency<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
 			hitPoint, localFixedDir, passThroughEvent / weight1 MATERIALS_PARAM);
 	else
-		return Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_GetPassThroughTransparency(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
+		return <<CS_MAT_B_PREFIX>>_GetPassThroughTransparency<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
 			hitPoint, localFixedDir, (passThroughEvent - weight1) / weight2 MATERIALS_PARAM);
 }
 #endif
@@ -92,39 +96,19 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 
 	BSDFEvent eventMatA = NONE;
 	if (weight1 > 0.f) {
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Bump(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
-				hitPoint, 1.f
-				MATERIALS_PARAM);
-
-		const float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
-
-		Frame frameA;
-		Frame_Set_Private(&frameA, dpduA, dpdvA, shadeNA);
-
-		const float3 lightDirA = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frame, lightDir));
-		const float3 eyeDirA = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frame, eyeDir));
-#else*/
 		const float3 lightDirA = lightDir;
 		const float3 eyeDirA = eyeDir;
-/*#endif*/
 		float directPdfWMatA;
-		const float3 matAResult = Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
+
+		const float3 matAResult = <<CS_MAT_A_PREFIX>>_Evaluate<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
 				hitPoint, lightDirA, eyeDirA, &eventMatA, &directPdfWMatA
 				MATERIALS_PARAM);
+
 		if (!Spectrum_IsBlack(matAResult)) {
 			result += weight1 * matAResult;
 			if (directPdfW)
 				*directPdfW += weight1 * directPdfWMatA;
 		}
-
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		VSTORE3F(shadeN, &hitPoint->shadeN.x);
-		VSTORE3F(dpdu, &hitPoint->dpdu.x);
-		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif*/
 	}
 	
 	//--------------------------------------------------------------------------
@@ -133,39 +117,19 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(__global const Material 
 	
 	BSDFEvent eventMatB = NONE;
 	if (weight2 > 0.f) {
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Bump(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
-				hitPoint, 1.f
-				MATERIALS_PARAM);
-
-		const float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
-
-		Frame frameB;
-		Frame_Set_Private(&frameB, dpduB, dpdvB, shadeNB);
-
-		const float3 lightDirB = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frame, lightDir));
-		const float3 eyeDirB = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frame, eyeDir));
-#else*/
 		const float3 lightDirB = lightDir;
 		const float3 eyeDirB = eyeDir;
-/*#endif*/
 		float directPdfWMatB;
-		const float3 matBResult = Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Evaluate(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
+
+		const float3 matBResult = <<CS_MAT_B_PREFIX>>_Evaluate<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
 				hitPoint, lightDirB, eyeDirB, &eventMatB, &directPdfWMatB
 				MATERIALS_PARAM);
+
 		if (!Spectrum_IsBlack(matBResult)) {
 			result += weight2 * matBResult;
 			if (directPdfW)
 				*directPdfW += weight2 * directPdfWMatB;
 		}
-
-/*#if defined(PARAM_HAS_BUMPMAPS)
-		VSTORE3F(shadeN, &hitPoint->shadeN.x);
-		VSTORE3F(dpdu, &hitPoint->dpdu.x);
-		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif*/
 	}
 
 	*event = eventMatA | eventMatB;
@@ -193,56 +157,21 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 	__global const Material *matA = &mats[<<CS_MAT_A_MATERIAL_INDEX>>];
 	__global const Material *matB = &mats[<<CS_MAT_B_MATERIAL_INDEX>>];
 
-/*#if defined(PARAM_HAS_BUMPMAPS)
-	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
-	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
-
-	Frame frame;
-	Frame_Set_Private(&frame, dpdu, dpdv, shadeN);
-
-	Frame frameFirst;
-	if (sampleMatA) {
-		Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Bump(matA, hitPoint, 1.f
-				MATERIALS_PARAM);
-
-		const float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
-		Frame_Set_Private(&frameFirst, dpduA, dpdvA, shadeNA);
-	} else {
-		Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Bump(matB, hitPoint, 1.f
-				MATERIALS_PARAM);
-		const float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
-		Frame_Set_Private(&frameFirst, dpduB, dpdvB, shadeNB);
-	}
-
-	const float3 fixedDirFirst = Frame_ToLocal_Private(&frameFirst, Frame_ToWorld_Private(&frame, fixedDir));
-#else*/
 	const float3 fixedDirFirst = fixedDir;
-/*#endif*/
 
 	float3 result = sampleMatA ?
-			Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Sample(matA, hitPoint, fixedDirFirst, sampledDir,
+			<<CS_MAT_A_PREFIX>>_Sample<<CS_MAT_A_POSTFIX>>(matA, hitPoint, fixedDirFirst, sampledDir,
 				u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEventFirst,
 #endif
 				pdfW, cosSampledDir, event, requestedEvent MATERIALS_PARAM):
-			Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Sample(matB, hitPoint, fixedDirFirst, sampledDir,
+			<<CS_MAT_B_PREFIX>>_Sample<<CS_MAT_B_POSTFIX>>(matB, hitPoint, fixedDirFirst, sampledDir,
 				u0, u1,
 #if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEventFirst,
 #endif
 				pdfW, cosSampledDir, event, requestedEvent MATERIALS_PARAM);
-
-/*#if defined(PARAM_HAS_BUMPMAPS)
-	VSTORE3F(shadeN, &hitPoint->shadeN.x);
-	VSTORE3F(dpdu, &hitPoint->dpdu.x);
-	VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif*/
 
 	if (Spectrum_IsBlack(result))
 		return BLACK;
@@ -252,52 +181,19 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *m
 
 	BSDFEvent eventSecond;
 	float pdfWSecond;
-/*#if defined(PARAM_HAS_BUMPMAPS)
-	Frame frameSecond;
-	if (sampleMatA) {
-		Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Bump(matB, hitPoint, 1.f
-				MATERIALS_PARAM);
-
-		const float3 shadeNB = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduB = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvB = VLOAD3F(&hitPoint->dpdv.x);
-		Frame_Set_Private(&frameSecond, dpduB, dpdvB, shadeNB);
-	} else {
-		Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Bump(matA, hitPoint, 1.f
-				MATERIALS_PARAM);
-
-		const float3 shadeNA = VLOAD3F(&hitPoint->shadeN.x);
-		const float3 dpduA = VLOAD3F(&hitPoint->dpdu.x);
-		const float3 dpdvA = VLOAD3F(&hitPoint->dpdv.x);
-		Frame_Set_Private(&frameSecond, dpduA, dpdvA, shadeNA);
-	}
-
-	const float3 fixedDirSecond = Frame_ToLocal_Private(&frameSecond, Frame_ToWorld_Private(&frame, fixedDir));
-	*sampledDir = Frame_ToWorld_Private(&frameFirst, *sampledDir);
-	const float3 sampledDirSecond = Frame_ToLocal_Private(&frameSecond, *sampledDir);
-	*sampledDir = Frame_ToLocal_Private(&frame, *sampledDir);
-#else*/
 	const float3 fixedDirSecond = fixedDir;
 	const float3 sampledDirSecond = *sampledDir;
-/*#endif*/
-
 	float3 evalSecond = sampleMatA ?
-			Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_Evaluate(matB, hitPoint,
+			<<CS_MAT_B_PREFIX>>_Evaluate<<CS_MAT_B_POSTFIX>>(matB, hitPoint,
 					sampledDirSecond, fixedDirSecond, &eventSecond, &pdfWSecond
 					MATERIALS_PARAM) :
-			Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_Evaluate(matA, hitPoint,
+			<<CS_MAT_A_PREFIX>>_Evaluate<<CS_MAT_A_POSTFIX>>(matA, hitPoint,
 					sampledDirSecond, fixedDirSecond, &eventSecond, &pdfWSecond
 					MATERIALS_PARAM);
 	if (!Spectrum_IsBlack(evalSecond)) {
 		result += weightSecond * evalSecond;
 		*pdfW += weightSecond * pdfWSecond;
 	}
-
-/*#if defined(PARAM_HAS_BUMPMAPS)
-	VSTORE3F(shadeN, &hitPoint->shadeN.x);
-	VSTORE3F(dpdu, &hitPoint->dpdu.x);
-	VSTORE3F(dpdv, &hitPoint->dpdv.x);
-#endif*/
 
 	return result / *pdfW;
 }
@@ -306,7 +202,7 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const
 		__global HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 	if (material->emitTexIndex != NULL_INDEX)
-		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint TEXTURES_PARAM);
+		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint MATERIALS_PARAM);
 	else {
 		float3 result = BLACK;
 		const float factor = <<CS_FACTOR_TEXTURE>>;
@@ -314,11 +210,11 @@ float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const
 		const float weight1 = 1.f - weight2;
 
 		if (weight1 > 0.f)
-		   result += weight1 * Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_GetEmittedRadiance(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
+		   result += weight1 * <<CS_MAT_A_PREFIX>>_GetEmittedRadiance<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
 				   hitPoint
 				   MATERIALS_PARAM);
 		if (weight2 > 0.f)
-		   result += weight2 * Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_GetEmittedRadiance(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
+		   result += weight2 * <<CS_MAT_B_PREFIX>>_GetEmittedRadiance<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
 				   hitPoint
 				   MATERIALS_PARAM);
 
@@ -337,11 +233,11 @@ uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetInteriorVolume(__global const Ma
 		const float weight2 = clamp(factor, 0.f, 1.f);
 		const float weight1 = 1.f - weight2;
 		if (passThroughEvent < weight1)
-			return Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_GetInteriorVolume(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
+			return <<CS_MAT_A_PREFIX>>_GetInteriorVolume<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
 					hitPoint, passThroughEvent / weight1
 					MATERIALS_PARAM);
 		else
-			return Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_GetInteriorVolume(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
+			return <<CS_MAT_B_PREFIX>>_GetInteriorVolume<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
 					hitPoint, (passThroughEvent - weight1) / weight2
 					MATERIALS_PARAM);
 }
@@ -357,11 +253,11 @@ uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetExteriorVolume(__global const Ma
 		const float weight1 = 1.f - weight2;
 
 		if (passThroughEvent < weight1)
-			return Material_Index<<CS_MAT_A_MATERIAL_INDEX>>_GetExteriorVolume(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
+			return <<CS_MAT_A_PREFIX>>_GetExteriorVolume<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
 					hitPoint, passThroughEvent / weight1
 					MATERIALS_PARAM);
 		else
-			return Material_Index<<CS_MAT_B_MATERIAL_INDEX>>_GetExteriorVolume(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
+			return <<CS_MAT_B_PREFIX>>_GetExteriorVolume<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
 					hitPoint, (passThroughEvent - weight1) / weight2
 					MATERIALS_PARAM);
 }

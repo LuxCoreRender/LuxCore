@@ -29,7 +29,8 @@
 // Material_GetEventTypes
 //------------------------------------------------------------------------------
 
-BSDFEvent Material_GetEventTypesWithoutDynamic(__global const Material* restrict material) {
+BSDFEvent Material_GetEventTypesWithoutDynamic(__global const Material* restrict material
+		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_MATTE)
 		case MATTE:
@@ -113,7 +114,8 @@ BSDFEvent Material_GetEventTypesWithoutDynamic(__global const Material* restrict
 // Material_IsDeltaWithoutDynamic
 //------------------------------------------------------------------------------
 
-bool Material_IsDeltaWithoutDynamic(__global const Material* restrict material) {
+bool Material_IsDeltaWithoutDynamic(__global const Material* restrict material
+		MATERIALS_PARAM_DECL) {
 	switch (material->type) {
 #if defined (PARAM_ENABLE_MAT_ARCHGLASS)
 		case ARCHGLASS:
@@ -665,7 +667,7 @@ float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material
 //------------------------------------------------------------------------------
 
 float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material, __global HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetEmittedRadiance(material, hitPoint
 		TEXTURES_PARAM);
 }
@@ -675,7 +677,8 @@ float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restri
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolumeWithoutDynamic(__global const Material* restrict material) {
+uint Material_GetInteriorVolumeWithoutDynamic(__global const Material* restrict material
+		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetInteriorVolume(material);
 }
 #endif
@@ -685,7 +688,8 @@ uint Material_GetInteriorVolumeWithoutDynamic(__global const Material* restrict 
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetExteriorVolumeWithoutDynamic(__global const Material* restrict material) {
+uint Material_GetExteriorVolumeWithoutDynamic(__global const Material* restrict material
+		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetExteriorVolume(material);
 }
 #endif
