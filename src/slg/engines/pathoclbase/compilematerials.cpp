@@ -61,6 +61,10 @@ static bool IsTexConstant(const Texture *tex) {
 			(dynamic_cast<const ConstFloat3Texture *>(tex));
 }
 
+static bool IsMaterialDynamic(const slg::ocl::Material *material) {
+		return (material->type == slg::ocl::MIX) || (material->type == slg::ocl::GLOSSYCOATING);
+}
+
 static float GetTexConstantFloatValue(const Texture *tex) {
 	// Check if a texture is constant and return the value
 	const ConstFloatTexture *cft = dynamic_cast<const ConstFloatTexture *>(tex);
@@ -905,8 +909,21 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				// MIX material uses a template .cl file
 				string mixSrc = slg::ocl::KernelSource_materialdefs_template_mix;
 				boost::replace_all(mixSrc, "<<CS_MIX_MATERIAL_INDEX>>", ToString(i));
+
 				boost::replace_all(mixSrc, "<<CS_MAT_A_MATERIAL_INDEX>>", ToString(mat->mix.matAIndex));
+				const bool isDynamicMatA = IsMaterialDynamic(&mats[mat->mix.matAIndex]);
+				boost::replace_all(mixSrc, "<<CS_MAT_A_PREFIX>>", isDynamicMatA ?
+					("Material_Index" + ToString(mat->mix.matAIndex)) : "Material");
+				boost::replace_all(mixSrc, "<<CS_MAT_A_POSTFIX>>", isDynamicMatA ?
+					"" : "WithoutDynamic");
+
 				boost::replace_all(mixSrc, "<<CS_MAT_B_MATERIAL_INDEX>>", ToString(mat->mix.matBIndex));
+				const bool isDynamicMatB = IsMaterialDynamic(&mats[mat->mix.matBIndex]);
+				boost::replace_all(mixSrc, "<<CS_MAT_B_PREFIX>>", isDynamicMatB ?
+					("Material_Index" + ToString(mat->mix.matBIndex)) : "Material");
+				boost::replace_all(mixSrc, "<<CS_MAT_B_POSTFIX>>", isDynamicMatB ?
+					"" : "WithoutDynamic");
+
 				boost::replace_all(mixSrc, "<<CS_FACTOR_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->mix.mixFactorTexIndex"));
 				source << mixSrc;
 				break;

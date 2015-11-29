@@ -48,7 +48,8 @@ BSDFEvent Material_GetEventTypes(const uint matIndex
 		return Material_GetEventTypesWithDynamic(matIndex
 			MATERIALS_PARAM);
 	else
-		return Material_GetEventTypesWithoutDynamic(material);
+		return Material_GetEventTypesWithoutDynamic(material
+			MATERIALS_PARAM);
 }
 
 //------------------------------------------------------------------------------
@@ -63,7 +64,8 @@ bool Material_IsDelta(const uint matIndex
 		return Material_IsDeltaWithDynamic(matIndex
 			MATERIALS_PARAM);
 	else
-		return Material_IsDeltaWithoutDynamic(material);
+		return Material_IsDeltaWithoutDynamic(material
+			MATERIALS_PARAM);
 }
 
 //------------------------------------------------------------------------------
@@ -155,7 +157,7 @@ float3 Material_GetEmittedRadiance(const uint matIndex,
 			MATERIALS_PARAM);
 	else
 		result = Material_GetEmittedRadianceWithoutDynamic(material, hitPoint
-			TEXTURES_PARAM);
+			MATERIALS_PARAM);
 
 	return VLOAD3F(material->emittedFactor.c) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;
 }
@@ -180,7 +182,8 @@ uint Material_GetInteriorVolume(const uint matIndex,
 #endif
 			MATERIALS_PARAM);
 	else
-		return Material_GetInteriorVolumeWithoutDynamic(material);
+		return Material_GetInteriorVolumeWithoutDynamic(material
+				MATERIALS_PARAM);
 }
 #endif
 
@@ -204,7 +207,8 @@ uint Material_GetExteriorVolume(const uint matIndex,
 #endif
 			MATERIALS_PARAM);
 	else
-		return Material_GetExteriorVolumeWithoutDynamic(material);
+		return Material_GetExteriorVolumeWithoutDynamic(material
+				MATERIALS_PARAM);
 }
 #endif
 
