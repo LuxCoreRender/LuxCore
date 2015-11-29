@@ -167,9 +167,7 @@ Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
 void SkyLight2::Preprocess() {
 	absoluteSunDir = Normalize(lightToWorld * localSunDir);
 
-	const Spectrum albedo(0.f);
-
-	ComputeModel(turbidity, albedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
+	ComputeModel(turbidity, groundAlbedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
 	aTerm = model[0];
 	bTerm = model[1];
@@ -351,6 +349,7 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property(prefix + ".type")("sky2"));
 	props.Set(Property(prefix + ".dir")(localSunDir));
 	props.Set(Property(prefix + ".turbidity")(turbidity));
+	props.Set(Property(prefix + ".groundalbedo")(groundAlbedo));
 
 	return props;
 }

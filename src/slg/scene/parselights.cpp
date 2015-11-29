@@ -207,6 +207,7 @@ LightSource *Scene::CreateLightSource(const string &lightName, const luxrays::Pr
 		SkyLight2 *sl = new SkyLight2();
 		sl->lightToWorld = light2World;
 		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
+		sl->groundAlbedo = props.Get(Property(propName + ".groundalbedo")(Spectrum())).Get<Spectrum>().Clamp(0.f);
 		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
 		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
