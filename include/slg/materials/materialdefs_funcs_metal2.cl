@@ -26,6 +26,27 @@
 
 #if defined (PARAM_ENABLE_MAT_METAL2)
 
+void Metal2Material_GetNK(__global const Material* restrict material, __global HitPoint *hitPoint,
+		float3 *n, float3 *k
+		TEXTURES_PARAM_DECL) {
+	const uint fresnelTexIndex = material->metal2.fresnelTexIndex;
+	if (fresnelTexIndex != NULL_INDEX) {
+		__global const Texture* restrict fresnelTex = &texs[fresnelTexIndex];
+
+		if (fresnelTex->type == FRESNELCOLOR_TEX) {
+			const float3 f = Texture_GetSpectrumValue(fresnelTex->fresnelColor.krIndex, hitPoint TEXTURES_PARAM);
+			*n = FresnelApproxN3(f);
+			*k = FresnelApproxK3(f);
+		} else {
+			*n = VLOAD3F(&fresnelTex->fresnelConst.n.c[0]);
+			*k = VLOAD3F(&fresnelTex->fresnelConst.k.c[0]);
+		}
+	} else {
+		*n = Texture_GetSpectrumValue(material->metal2.nTexIndex, hitPoint TEXTURES_PARAM);
+		*k = Texture_GetSpectrumValue(material->metal2.kTexIndex, hitPoint TEXTURES_PARAM);
+	}
+}
+
 BSDFEvent Metal2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
