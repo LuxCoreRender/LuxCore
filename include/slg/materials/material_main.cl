@@ -80,42 +80,26 @@ float3 Material_Evaluate(const uint matIndex,
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
-	return Material_EvaluateWithDynamic(matIndex, hitPoint,
+	__global const Material *material = &mats[matIndex];
+
+	float3 result;
+	if (Material_IsDynamic(material))
+		result = Material_EvaluateWithDynamic(matIndex, hitPoint,
 			lightDir, eyeDir,
 			event, directPdfW
 			MATERIALS_PARAM);
+	else
+		result = Material_EvaluateWithoutDynamic(material, hitPoint,
+			lightDir, eyeDir,
+			event, directPdfW
+			MATERIALS_PARAM);
+
+	return result;
 }
 
 //------------------------------------------------------------------------------
 // Material_Sample
 //------------------------------------------------------------------------------
-
-//float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
-//		const float3 fixedDir, float3 *sampledDir,
-//		const float u0, const float u1,
-//#if defined(PARAM_HAS_PASSTHROUGH)
-//		const float passThroughEvent,
-//#endif
-//		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-//		const BSDFEvent requestedEvent
-//		MATERIALS_PARAM_DECL) {
-//	__global const Material *material = &mats[matIndex];
-//
-//	if (Material_IsDynamic(material))
-//		return Material_SampleWithDynamic(mat, hitPoint, fixedDir, sampledDir, u0, u1,
-//#if defined(PARAM_HAS_PASSTHROUGH)
-//				passThroughEvent,
-//#endif
-//				pdfW,  cosSampledDir, event, requestedEvent
-//				MATERIALS_PARAM);
-//	else
-//		return Material_SampleWithoutDynamic(mat, hitPoint, fixedDir, sampledDir, u0, u1,
-//#if defined(PARAM_HAS_PASSTHROUGH)
-//				passThroughEvent,
-//#endif
-//				pdfW,  cosSampledDir, event, requestedEvent
-//				MATERIALS_PARAM);
-//}
 
 float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
 		const float3 fixedDir, float3 *sampledDir,
