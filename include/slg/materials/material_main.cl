@@ -126,9 +126,19 @@ float3 Material_Sample(const uint matIndex, __global HitPoint *hitPoint,
 float3 Material_GetPassThroughTransparency(const uint matIndex, __global HitPoint *hitPoint,
 		const float3 localFixedDir, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
-	return Material_GetPassThroughTransparencyWithDynamic(matIndex, hitPoint,
+	__global const Material *material = &mats[matIndex];
+
+	float3 result;
+	if (Material_IsDynamic(material))
+		result = Material_GetPassThroughTransparencyWithDynamic(matIndex, hitPoint,
 			localFixedDir, passThroughEvent
 			MATERIALS_PARAM);
+	else
+		result = Material_GetPassThroughTransparencyWithoutDynamic(material, hitPoint,
+			localFixedDir, passThroughEvent
+			MATERIALS_PARAM);
+
+	return result;
 }
 #endif
 
