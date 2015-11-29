@@ -1364,6 +1364,7 @@ void PathOCLBaseRenderThread::InitKernels() {
 
 	ssKernel <<
 		slg::ocl::KernelSource_materialdefs_funcs_generic <<
+		slg::ocl::KernelSource_materialdefs_funcs_default <<
 		slg::ocl::KernelSource_materialdefs_funcs_archglass <<
 		slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
 		slg::ocl::KernelSource_materialdefs_funcs_clearvol <<

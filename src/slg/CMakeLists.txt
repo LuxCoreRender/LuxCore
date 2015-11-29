@@ -106,6 +106,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/hitpoint_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_generic.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_default.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_archglass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_carpaint.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_clearvol.cl
@@ -358,6 +359,7 @@ set(SLG_SRCS_KERNELS
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/imagemap_funcs_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/material_types_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_generic_kernel.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_default_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_archglass_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_carpaint_kernel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/kernels/materialdefs_funcs_clearvol_kernel.cpp

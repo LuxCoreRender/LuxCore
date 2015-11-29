@@ -32,14 +32,6 @@ bool RoughGlassMaterial_IsDelta() {
 	return false;
 }
 
-#if defined(PARAM_HAS_PASSTHROUGH)
-float3 RoughGlassMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
-		TEXTURES_PARAM_DECL) {
-	return BLACK;
-}
-#endif
-
 float3 RoughGlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,

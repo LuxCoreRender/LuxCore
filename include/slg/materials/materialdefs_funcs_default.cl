@@ -19,61 +19,51 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// Generic material functions
-//
-// They include the support for all material but one requiring dynamic code
-// generation like Mix (because OpenCL doesn't support recursion)
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Material_GetPassThroughTransparencyWithoutDynamic
+// Default material functions
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_PASSTHROUGH)
-float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material *material, __global HitPoint *hitPoint,
-		const float3 localFixedDir, const float passThroughEvent
-		MATERIALS_PARAM_DECL) {
-	switch (material->type) {
-#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
-		case ARCHGLASS:
-			return ArchGlassMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent TEXTURES_PARAM);
-#endif
-#if defined (PARAM_ENABLE_MAT_NULL)
-		case NULLMAT:
-			return NullMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent TEXTURES_PARAM);
-#endif
-		default:
-			return DefaultMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent TEXTURES_PARAM);
-	}
-}
-#endif
-
-//------------------------------------------------------------------------------
-// Material_GetEmittedRadianceWithoutDynamic
-//------------------------------------------------------------------------------
-
-float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material *material, __global HitPoint *hitPoint
+float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *material,
+		__global HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent
 		TEXTURES_PARAM_DECL) {
-	return DefaultMaterial_GetEmittedRadiance(material, hitPoint
-		TEXTURES_PARAM);
-}
-
-//------------------------------------------------------------------------------
-// Material_GetInteriorVolumeWithoutDynamic
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolumeWithoutDynamic(__global const Material *material) {
-	return DefaultMaterial_GetInteriorVolume(material);
+	return BLACK;
 }
 #endif
 
 //------------------------------------------------------------------------------
-// Material_GetExteriorVolumeWithoutDynamic
+// DefaultMaterial_GetEmittedRadiance
+//------------------------------------------------------------------------------
+
+float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material, __global HitPoint *hitPoint
+		TEXTURES_PARAM_DECL) {
+	const uint emitTexIndex = material->emitTexIndex;
+	if (emitTexIndex == NULL_INDEX)
+		return BLACK;
+
+	return
+#if defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+		VLOAD3F(hitPoint->color.c) *
+#endif
+		Texture_GetSpectrumValue(emitTexIndex, hitPoint
+				TEXTURES_PARAM);
+}
+
+//------------------------------------------------------------------------------
+// DefaultMaterial_GetInteriorVolume
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetExteriorVolumeWithoutDynamic(__global const Material *material) {
-	return DefaultMaterial_GetExteriorVolume(material);
+uint DefaultMaterial_GetInteriorVolume(__global const Material *material) {
+	return material->interiorVolumeIndex;
+}
+#endif
+
+//------------------------------------------------------------------------------
+// DefaultMaterial_GetExteriorVolume
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_HAS_VOLUMES)
+uint DefaultMaterial_GetExteriorVolume(__global const Material *material) {
+	return material->exteriorVolumeIndex;
 }
 #endif
