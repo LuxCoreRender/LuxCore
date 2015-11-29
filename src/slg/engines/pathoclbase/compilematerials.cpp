@@ -515,8 +515,6 @@ static void AddMaterialSource(stringstream &source,
 		const string &matName, const u_int i, const string &params) {
 	AddMaterialSourceGlue(source, matName, i, "GetEventTypes", "GetEventTypes", "BSDFEvent",
 			"__global const Material *material MATERIALS_PARAM_DECL", "");
-	AddMaterialSourceGlue(source, matName, i, "IsDelta", "IsDelta", "bool",
-			"__global const Material *material MATERIALS_PARAM_DECL", "");
 	AddMaterialSourceGlue(source, matName, i, "Evaluate", "Evaluate", "float3",
 			"__global const Material *material, "
 				"__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
@@ -540,6 +538,12 @@ static void AddMaterialSource(stringstream &source,
 				"#endif\n"
 				"\t\tpdfW,  cosSampledDir, event, requestedEvent" +
 				((params.length() > 0) ? (", " + params) : ""));
+}
+
+static void AddMaterialSourceStandardImplIsDelta(stringstream &source,
+		const string &matName, const u_int i) {
+	AddMaterialSourceGlue(source, matName, i, "IsDelta", "IsDelta", "bool",
+			"__global const Material *material MATERIALS_PARAM_DECL", "");
 }
 
 static void AddMaterialSourceStandardImplGetPassThroughTransparency(stringstream &source,
@@ -632,6 +636,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			case slg::ocl::MATTE: {
 				AddMaterialSource(source, "Matte", i,
 						AddTextureSourceCall(texs, "Spectrum", "material->matte.kdTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -641,6 +646,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSource(source, "RoughMatte", i,
 						AddTextureSourceCall(texs, "Float", "material->roughmatte.sigmaTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->roughmatte.kdTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -652,6 +658,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->archglass.krTexIndex") + ", " +
 						"ExtractExteriorIors(hitPoint, material->archglass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->archglass.interiorIorTexIndex TEXTURES_PARAM)");
+				AddMaterialSourceStandardImplIsDelta(source, "ArchGlass", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "ArchGlass", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -671,6 +678,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->carpaint.Ks3TexIndex") + ", " +
 						AddTextureSourceCall(texs, "Float", "material->carpaint.M3TexIndex") + ", " +
 						AddTextureSourceCall(texs, "Float", "material->carpaint.R3TexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -686,6 +694,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Weft_KsIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Warp_KdIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->cloth.Weft_KdIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -697,6 +706,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->glass.krTexIndex") + ", " +
 						"ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM)");
+				AddMaterialSourceStandardImplIsDelta(source, "Glass", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -720,6 +730,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\n#endif\n" +
 						AddTextureSourceCall(texs, "Spectrum", "material->glossy2.kdTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->glossy2.ksTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -729,6 +740,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				AddMaterialSource(source, "MatteTranslucent", i,
 						AddTextureSourceCall(texs, "Spectrum", "material->matteTranslucent.krTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->matteTranslucent.ktTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -739,6 +751,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->roughmatteTranslucent.krTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->roughmatteTranslucent.ktTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Float", "material->roughmatteTranslucent.sigmaTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -774,6 +787,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\n#endif\n" +
 						nTexString + ", " +
 						kTexString);
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -782,6 +796,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			case slg::ocl::MIRROR: {
 				AddMaterialSource(source, "Mirror", i,
 						AddTextureSourceCall(texs, "Spectrum", "material->mirror.krTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Mirror", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -789,6 +804,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			}
 			case slg::ocl::NULLMAT: {
 				AddMaterialSource(source, "Null", i, "");
+				AddMaterialSourceStandardImplIsDelta(source, "Null", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Null", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -804,6 +820,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						"\n#endif\n" +
 						"ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM)" + ", " +
 						"ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM)");
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -816,6 +833,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Float", "material->velvet.p2TexIndex") + ", " +
 						AddTextureSourceCall(texs, "Float", "material->velvet.p3TexIndex") + ", " +
 						AddTextureSourceCall(texs, "Float", "material->velvet.thicknessTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -847,6 +865,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.ktTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.ksTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->glossytranslucent.ksbfTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -854,6 +873,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			}
 			case slg::ocl::CLEAR_VOL: {
 				AddMaterialSource(source, "ClearVol", i, "");
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -864,6 +884,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.homogenous.sigmaSTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.homogenous.sigmaATexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.homogenous.gTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);
@@ -874,6 +895,7 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.heterogenous.sigmaSTexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.heterogenous.sigmaATexIndex") + ", " +
 						AddTextureSourceCall(texs, "Spectrum", "material->volume.heterogenous.gTexIndex"));
+				AddMaterialSourceStandardImplIsDelta(source, "Default", i);
 				AddMaterialSourceStandardImplGetPassThroughTransparency(source, "Default", i);
 				AddMaterialSourceStandardImplGetEmittedRadiance(source, "Default", i);
 				AddMaterialSourceStandardImplGetVolume(source, "Default", i);

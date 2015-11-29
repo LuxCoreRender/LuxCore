@@ -1,7 +1,7 @@
 #include <string>
 namespace slg { namespace ocl {
 std::string KernelSource_materialdefs_funcs_default = 
-"#line 2 \"material_funcs.cl\"\n"
+"#line 2 \"material_funcs_default.cl\"\n"
 "\n"
 "/***************************************************************************\n"
 " * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *\n"
@@ -23,6 +23,18 @@ std::string KernelSource_materialdefs_funcs_default =
 "\n"
 "//------------------------------------------------------------------------------\n"
 "// Default material functions\n"
+"//------------------------------------------------------------------------------\n"
+"\n"
+"//------------------------------------------------------------------------------\n"
+"// DefaultMatteMaterial_IsDelta\n"
+"//------------------------------------------------------------------------------\n"
+"\n"
+"bool DefaultMaterial_IsDelta() {\n"
+"	return false;\n"
+"}\n"
+"\n"
+"//------------------------------------------------------------------------------\n"
+"// DefaultMaterial_GetPassThroughTransparency\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
 "#if defined(PARAM_HAS_PASSTHROUGH)\n"

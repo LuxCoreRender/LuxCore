@@ -52,8 +52,16 @@ BSDFEvent Material_GetEventTypes(const uint matIndex
 
 bool Material_IsDelta(const uint matIndex
 		MATERIALS_PARAM_DECL) {
-	return Material_IsDeltaWithDynamic(matIndex
+	__global const Material *material = &mats[matIndex];
+
+	bool result;
+	if (Material_IsDynamic(material))
+		result = Material_IsDeltaWithDynamic(matIndex
 			MATERIALS_PARAM);
+	else
+		result = Material_IsDeltaWithoutDynamic(material);
+
+	return result;
 }
 
 //------------------------------------------------------------------------------

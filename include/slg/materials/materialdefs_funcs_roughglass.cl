@@ -28,10 +28,6 @@ BSDFEvent RoughGlassMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT | TRANSMIT;
 }
 
-bool RoughGlassMaterial_IsDelta() {
-	return false;
-}
-
 float3 RoughGlassMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,

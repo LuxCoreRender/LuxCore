@@ -28,10 +28,6 @@ BSDFEvent MatteMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-bool MatteMaterial_IsDelta() {
-	return false;
-}
-
 float3 MatteMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

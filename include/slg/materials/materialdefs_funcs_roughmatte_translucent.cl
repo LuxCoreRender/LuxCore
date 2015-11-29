@@ -28,10 +28,6 @@ BSDFEvent RoughMatteTranslucentMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT | TRANSMIT;
 }
 
-bool RoughMatteTranslucentMaterial_IsDelta() {
-	return false;
-}
-
 float3 RoughMatteTranslucentMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
