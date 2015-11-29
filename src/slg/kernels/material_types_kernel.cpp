@@ -287,7 +287,7 @@ std::string KernelSource_material_types =
 "		Metal2Param metal2;\n"
 "		RoughGlassParam roughglass;\n"
 "		VelvetParam velvet;\n"
-"        	ClothParam cloth;\n"
+"        ClothParam cloth;\n"
 "		CarPaintParam carpaint;\n"
 "		GlossyTranslucentParam glossytranslucent;\n"
 "		GlossyCoatingParam glossycoating;\n"

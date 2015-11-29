@@ -284,7 +284,7 @@ typedef struct {
 		Metal2Param metal2;
 		RoughGlassParam roughglass;
 		VelvetParam velvet;
-        	ClothParam cloth;
+        ClothParam cloth;
 		CarPaintParam carpaint;
 		GlossyTranslucentParam glossytranslucent;
 		GlossyCoatingParam glossycoating;
