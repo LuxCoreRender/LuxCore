@@ -28,10 +28,6 @@ BSDFEvent ClothMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
-bool ClothMaterial_IsDelta() {
-	return false;
-}
-
 __constant WeaveConfig ClothWeaves[] = {
     // DenimWeave
     {

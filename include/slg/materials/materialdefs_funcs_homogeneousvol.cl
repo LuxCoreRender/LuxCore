@@ -28,10 +28,6 @@ BSDFEvent HomogeneousVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-bool HomogeneousVolMaterial_IsDelta() {
-	return false;
-}
-
 float3 HomogeneousVolMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

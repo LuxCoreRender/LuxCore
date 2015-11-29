@@ -30,10 +30,6 @@ BSDFEvent Glossy2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
-bool Glossy2Material_IsDelta() {
-	return false;
-}
-
 float3 Glossy2Material_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

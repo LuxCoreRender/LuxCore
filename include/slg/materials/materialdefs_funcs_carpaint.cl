@@ -30,10 +30,6 @@ BSDFEvent CarPaintMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
 
-bool CarPaintMaterial_IsDelta() {
-	return false;
-}
-
 float3 CarPaintMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

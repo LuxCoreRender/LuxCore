@@ -1,4 +1,4 @@
-#line 2 "material_funcs.cl"
+#line 2 "material_main_withoutdynamic.cl"
 
 /***************************************************************************
  * Copyright 1998-2015 by authors (see AUTHORS.txt)                        *
@@ -24,6 +24,33 @@
 // They include the support for all material but one requiring dynamic code
 // generation like Mix (because OpenCL doesn't support recursion)
 //------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Material_IsDeltaWithoutDynamic
+//------------------------------------------------------------------------------
+
+bool Material_IsDeltaWithoutDynamic(__global const Material *material) {
+	switch (material->type) {
+#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
+		case ARCHGLASS:
+			return ArchGlassMaterial_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_GLASS)
+		case GLASS:
+			return GlassMaterial_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_MIRROR)
+		case MIRROR:
+			return MirrorMaterial_IsDelta();
+#endif
+#if defined (PARAM_ENABLE_MAT_NULL)
+		case NULLMAT:
+			return NullMaterial_IsDelta();
+#endif
+		default:
+			return DefaultMaterial_IsDelta();
+	}
+}
 
 //------------------------------------------------------------------------------
 // Material_GetPassThroughTransparencyWithoutDynamic

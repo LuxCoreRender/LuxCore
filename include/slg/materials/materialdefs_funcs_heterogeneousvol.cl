@@ -121,10 +121,6 @@ BSDFEvent HeterogeneousVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-bool HeterogeneousVolMaterial_IsDelta() {
-	return false;
-}
-
 float3 HeterogeneousVolMaterial_Evaluate(
 		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
