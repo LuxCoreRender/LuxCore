@@ -15,6 +15,7 @@ scene.objects.Mirror.ply = scenes/sky/Mirror.ply
 scene.lights.skylight.type = sky2
 scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
 scene.lights.skylight.turbidity = 2.2
+scene.lights.skylight.groundalbedo = 0.0 0.0 0.0
 scene.lights.skylight.gain = .00005 .00005 .00005
 scene.lights.sunlight.type = sun
 scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085

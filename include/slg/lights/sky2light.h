@@ -58,6 +58,7 @@ public:
 
 	luxrays::Vector localSunDir;
 	float turbidity;
+	luxrays::Spectrum groundAlbedo;
 
 private:
 	luxrays::Spectrum ComputeRadiance(const luxrays::Vector &w) const;
