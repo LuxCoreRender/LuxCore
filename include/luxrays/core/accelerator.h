@@ -43,7 +43,7 @@ public:
 	virtual AcceleratorType GetType() const = 0;
 
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const = 0;
+		const u_int kernelCount, const u_int stackSize) const = 0;
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const { return true; }
 
 	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;

@@ -90,7 +90,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 	std::vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	// Check if I have to disable image storage and set max. QBVH stack size
-	const bool enableImageStorage = cfg.Get(Property("accelerator.imagestorage.enable")(true)).Get<bool>();
 	const size_t qbvhStackSize = cfg.Get(Property("accelerator.qbvh.stacksize.max")(
 			(u_longlong)OCLRenderEngine::GetQBVHEstimatedStackSize(*(renderConfig->scene->dataSet)))).Get<u_longlong>();
 	SLG_LOG("OpenCL Devices used:");
@@ -100,7 +99,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film 
 		intersectionDevices.push_back(devs[i]);
 
 		OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-		oclIntersectionDevice->SetEnableImageStorage(enableImageStorage);
 		// Disable the support for hybrid rendering
 		oclIntersectionDevice->SetDataParallelSupport(false);
 

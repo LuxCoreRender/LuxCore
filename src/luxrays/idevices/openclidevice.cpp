@@ -278,7 +278,7 @@ void OpenCLIntersectionDevice::Start() {
 	oclQueues.clear();
 	if (dataParallelSupport) {
 		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize, enableImageStorage);
+		kernels = accel->NewOpenCLKernels(this, queueCount * bufferCount, stackSize);
 
 		for (u_int i = 0; i < queueCount; ++i) {
 			// Create the OpenCL queue
@@ -286,7 +286,7 @@ void OpenCLIntersectionDevice::Start() {
 		}
 	} else {
 		// Compile all required kernels
-		kernels = accel->NewOpenCLKernels(this, 1, stackSize, enableImageStorage);
+		kernels = accel->NewOpenCLKernels(this, 1, stackSize);
 
 		// I need to create at least one queue (for GPU rendering)
 		oclQueues.push_back(new OpenCLDeviceQueue(this, 0));

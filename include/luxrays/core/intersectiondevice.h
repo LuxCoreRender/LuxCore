@@ -35,10 +35,6 @@ public:
 		stackSize = s;
 	}
 
-	virtual void SetEnableImageStorage(const bool v) {
-		enableImageStorage = v;
-	}
-
 	//--------------------------------------------------------------------------
 	// Statistics
 	//--------------------------------------------------------------------------
@@ -124,7 +120,7 @@ protected:
 	u_int queueCount, bufferCount;
 	size_t stackSize;
 
-	bool dataParallelSupport, enableImageStorage;
+	bool dataParallelSupport;
 };
 
 class HardwareIntersectionDevice : public IntersectionDevice {
