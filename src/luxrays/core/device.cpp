@@ -247,7 +247,7 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 IntersectionDevice::IntersectionDevice(const Context *context,
 	const DeviceType type, const size_t index) :
 	Device(context, type, index), dataSet(NULL), queueCount(1), bufferCount(3),
-	stackSize(24), dataParallelSupport(true), enableImageStorage(true) {
+	stackSize(24), dataParallelSupport(true) {
 }
 
 IntersectionDevice::~IntersectionDevice() {

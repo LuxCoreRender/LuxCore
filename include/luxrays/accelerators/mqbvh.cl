@@ -112,6 +112,13 @@ void LeafIntersect(
 	}
 }
 
+#if defined(MQBVH_IS_EMPTY)
+
+#define ACCELERATOR_INTERSECT_PARAM_DECL
+#define ACCELERATOR_INTERSECT_PARAM
+
+#else
+
 #define MQBVH_TRANSFORMATIONS_PARAM_DECL , __global const uint* restrict leafTransformationIndex , __global const Matrix4x4* restrict leafTransformations
 #define MQBVH_TRANSFORMATIONS_PARAM , leafTransformationIndex, leafTransformations
 
@@ -121,11 +128,21 @@ void LeafIntersect(
 #define ACCELERATOR_INTERSECT_PARAM_DECL ,__global const QBVHNode* restrict nodes, __global const uint* restrict qbvhMemMap, __global const QBVHNode* restrict leafNodes, __global const QuadTiangle* restrict const leafQuadTris MQBVH_TRANSFORMATIONS_PARAM_DECL MQBVH_MOTIONSYSTEMS_PARAM_DECL
 #define ACCELERATOR_INTERSECT_PARAM ,nodes, qbvhMemMap, leafNodes, leafQuadTris MQBVH_TRANSFORMATIONS_PARAM MQBVH_MOTIONSYSTEMS_PARAM
 
+#endif
+
 void Accelerator_Intersect(
 		const Ray *ray,
 		RayHit *rayHit
 		ACCELERATOR_INTERSECT_PARAM_DECL
 		) {
+#if defined(MQBVH_IS_EMPTY)
+	rayHit->t = ray->maxt;
+	rayHit->meshIndex = NULL_INDEX;
+	rayHit->triangleIndex = NULL_INDEX;
+	
+	return;
+#else
+
 	// Prepare the ray for intersection
     const float3 rayOrig = VLOAD3F_Private(&ray->o.x);
     const float3 rayDir = VLOAD3F_Private(&ray->d.x);
@@ -238,6 +255,7 @@ void Accelerator_Intersect(
             }
 		}
 	}
+#endif
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(

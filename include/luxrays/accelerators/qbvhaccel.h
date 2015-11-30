@@ -388,7 +388,7 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_QBVH; }
 	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount, const u_int stackSize, const bool enableImageStorage) const;
+		const u_int kernelCount, const u_int stackSize) const;
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
@@ -401,6 +401,10 @@ public:
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 	friend class MQBVHAccel;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	friend class OpenCLQBVHKernels;
+	friend class OpenCLMQBVHKernels;
+#endif
 
 private:
 	// A special initialization method used only by MQBVHAccel
