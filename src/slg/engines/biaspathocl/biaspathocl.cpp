@@ -24,6 +24,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/biaspathocl/biaspathocl.h"
+#include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 
 using namespace std;
 using namespace luxrays;
@@ -33,9 +34,8 @@ using namespace slg;
 // BiasPathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
-			const bool realTime) :
-		PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime) {
+BiasPathOCLRenderEngine::BiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
+		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex) {
 	pixelFilterDistribution = NULL;
 	tileRepository = NULL;
 }
@@ -111,31 +111,35 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
+	Properties defaultProps = (GetType() == BIASPATHOCL) ?
+		BiasPathOCLRenderEngine::GetDefaultProps() :
+		RTBiasPathOCLRenderEngine::GetDefaultProps();
+
 	// Path depth settings
-	maxPathDepth.depth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.total")).Get<int>());
-	maxPathDepth.diffuseDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.diffuse")).Get<int>());
-	maxPathDepth.glossyDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.glossy")).Get<int>());
-	maxPathDepth.specularDepth = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.pathdepth.specular")).Get<int>());
+	maxPathDepth.depth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.total")).Get<int>());
+	maxPathDepth.diffuseDepth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.diffuse")).Get<int>());
+	maxPathDepth.glossyDepth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.glossy")).Get<int>());
+	maxPathDepth.specularDepth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.specular")).Get<int>());
 
 	// Samples settings
-	aaSamples = Max(1, cfg.Get(GetDefaultProps().Get("biaspath.sampling.aa.size")).Get<int>());
-	diffuseSamples = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.sampling.diffuse.size")).Get<int>());
-	glossySamples = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.sampling.glossy.size")).Get<int>());
-	specularSamples = Max(0, cfg.Get(GetDefaultProps().Get("biaspath.sampling.specular.size")).Get<int>());
-	directLightSamples = Max(1, cfg.Get(GetDefaultProps().Get("biaspath.sampling.directlight.size")).Get<int>());
+	aaSamples = Max(1, cfg.Get(defaultProps.Get("biaspath.sampling.aa.size")).Get<int>());
+	diffuseSamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.diffuse.size")).Get<int>());
+	glossySamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.glossy.size")).Get<int>());
+	specularSamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.specular.size")).Get<int>());
+	directLightSamples = Max(1, cfg.Get(defaultProps.Get("biaspath.sampling.directlight.size")).Get<int>());
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
 	sqrtVarianceClampMaxValue = cfg.Get(Property("biaspath.clamping.radiance.maxvalue")(0.f)).Get<float>();
 	if (cfg.IsDefined("biaspath.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("biaspath.clamping.variance.maxvalue")).Get<float>();
+		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("biaspath.clamping.variance.maxvalue")).Get<float>();
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
-	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.clamping.pdf.value")).Get<float>());
+	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("biaspath.clamping.pdf.value")).Get<float>());
 
 	// Light settings
-	lowLightThreashold = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.lights.lowthreshold")).Get<float>());
-	nearStartLight = Max(0.f, cfg.Get(GetDefaultProps().Get("biaspath.lights.nearstart")).Get<float>());
-	firstVertexLightSampleCount = Max(1, cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")).Get<int>());
+	lowLightThreashold = Max(0.f, cfg.Get(defaultProps.Get("biaspath.lights.lowthreshold")).Get<float>());
+	nearStartLight = Max(0.f, cfg.Get(defaultProps.Get("biaspath.lights.nearstart")).Get<float>());
+	firstVertexLightSampleCount = Max(1, cfg.Get(defaultProps.Get("biaspath.lights.firstvertexsamples")).Get<int>());
 
 	maxTilePerDevice = cfg.Get(Property("biaspathocl.devices.maxtiles")(16)).Get<u_int>();
 

@@ -411,14 +411,6 @@ void LuxCoreApp::RunApp() {
 
 				lastFrameBufferSizeRefresh = WallClockTime();
 			}
-
-			// Check if it is time to update the frame buffer texture
-			const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<u_int>() / 1000.0;
-			currentTime = WallClockTime();
-			if (currentTime - lastScreenRefresh >= screenRefreshTime) {
-				RefreshRenderingTexture();
-				lastScreenRefresh = currentTime;
-			}
 		} else {
 			glClearColor(.3f, .3f, .3f, 0.f);
 			glClear(GL_COLOR_BUFFER_BIT);
@@ -467,6 +459,23 @@ void LuxCoreApp::RunApp() {
 		}
 
 		//----------------------------------------------------------------------
+		// Rendering texture refresh
+		//----------------------------------------------------------------------
+
+		// Real-time modes refresh the rendering texture at every frame
+		if (optRealTimeMode) {
+			session->WaitNewFrame();
+			RefreshRenderingTexture();
+		} else {
+			const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<u_int>() / 1000.0;
+			currentTime = WallClockTime();
+			if (currentTime - lastScreenRefresh >= screenRefreshTime) {
+				RefreshRenderingTexture();
+				lastScreenRefresh = currentTime;
+			}
+		}
+
+		//----------------------------------------------------------------------
 		// Check for how long to sleep
 		//----------------------------------------------------------------------
 
@@ -479,10 +488,9 @@ void LuxCoreApp::RunApp() {
 			// The average over last 200 frames
 			guiLoopTime += (1.0 / 200.0) * (loopTime - guiLoopTime);
 
-			if (optRealTimeMode) {
-				session->WaitNewFrame();
+			if (optRealTimeMode)
 				guiSleepTime = 0.0;
-			} else {
+			else {
 				// The UI loop runs at 50HZ
 				if (guiLoopTime < 0.02) {
 					const double sleepTime = (0.02 - guiLoopTime) * 0.99;

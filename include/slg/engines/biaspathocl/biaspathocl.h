@@ -93,8 +93,7 @@ protected:
 
 class BiasPathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	BiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-			const bool realTime = false);
+	BiasPathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~BiasPathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }

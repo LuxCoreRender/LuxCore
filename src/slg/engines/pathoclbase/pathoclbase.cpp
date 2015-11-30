@@ -47,35 +47,11 @@ using namespace slg;
 // PathOCLBaseRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
-		const bool realTime) : OCLRenderEngine(rcfg, flm, flmMutex) {
+PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg, Film *flm,
+		boost::mutex *flmMutex) : OCLRenderEngine(rcfg, flm, flmMutex) {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film->SetOverlappedScreenBufferUpdateFlag(true);
-	if (realTime) {
-		film->SetRadianceGroupCount(1);
-		film->SetRGBTonemapUpdateFlag(false);
-
-		// Remove all Film channels
-		film->RemoveChannel(Film::ALPHA);
-		film->RemoveChannel(Film::DEPTH);
-		film->RemoveChannel(Film::POSITION);
-		film->RemoveChannel(Film::GEOMETRY_NORMAL);
-		film->RemoveChannel(Film::SHADING_NORMAL);
-		film->RemoveChannel(Film::MATERIAL_ID);
-		film->RemoveChannel(Film::DIRECT_DIFFUSE);
-		film->RemoveChannel(Film::DIRECT_GLOSSY);
-		film->RemoveChannel(Film::EMISSION);
-		film->RemoveChannel(Film::INDIRECT_DIFFUSE);
-		film->RemoveChannel(Film::INDIRECT_GLOSSY);
-		film->RemoveChannel(Film::INDIRECT_SPECULAR);
-		film->RemoveChannel(Film::MATERIAL_ID_MASK);
-		film->RemoveChannel(Film::DIRECT_SHADOW_MASK);
-		film->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
-		film->RemoveChannel(Film::UV);
-		film->RemoveChannel(Film::RAYCOUNT);
-		film->RemoveChannel(Film::BY_MATERIAL_ID);
-	} else
-		film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
+	film->SetRadianceGroupCount(rcfg->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 
 	const Properties &cfg = renderConfig->cfg;

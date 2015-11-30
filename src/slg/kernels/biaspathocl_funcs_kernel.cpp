@@ -127,7 +127,7 @@ std::string KernelSource_biaspathocl_funcs =
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)\n"
 "		// Note: OBJECT_ID_MASK and BY_OBJECT_ID are calculated starting from objectID field\n"
-"		dst->materialID = src->materialID;\n"
+"		dst->objectID = src->objectID;\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_UV)\n"
 "		dst->uv = src->uv;\n"

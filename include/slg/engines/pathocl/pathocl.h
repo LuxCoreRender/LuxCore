@@ -105,8 +105,7 @@ protected:
 
 class PathOCLRenderEngine : public PathOCLBaseRenderEngine {
 public:
-	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-			const bool realTime = false);
+	PathOCLRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLRenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
@@ -146,6 +145,7 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
+	void MergeThreadFilms();
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 

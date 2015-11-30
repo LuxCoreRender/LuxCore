@@ -401,51 +401,13 @@ void RenderEngineWindow::BiDirGUI(Properties &props, bool &modifiedProps) {
 }
 
 void RenderEngineWindow::RealTimeGUI(Properties &props, bool &modifiedProps) {
-	float fval;
-	int ival;
-
 	if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
-		ival = props.Get("rtpath.miniterations").Get<float>();
+		int ival = props.Get("rtpath.miniterations").Get<float>();
 		if (ImGui::InputInt("Min. pass count per frame", &ival)) {
 			props.Set(Property("rtpath.miniterations")(ival));
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("rtpath.miniterations");
-
-		ival = props.Get("rtpath.displaydevice.index").Get<float>();
-		if (ImGui::InputInt("OpenCL device index to use for display tasks", &ival)) {
-			props.Set(Property("rtpath.displaydevice.index")(ival));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("rtpath.displaydevice.index");
-
-		fval = props.Get("rtpath.blur.timewindow").Get<float>();
-		if (ImGui::InputFloat("Blur time length in secs", &fval)) {
-			props.Set(Property("rtpath.blur.timewindow")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("rtpath.blur.timewindow");
-
-		fval = props.Get("rtpath.blur.mincap").Get<float>();
-		if (ImGui::InputFloat("Blur min. weight", &fval)) {
-			props.Set(Property("rtpath.blur.mincap")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("rtpath.blur.mincap");
-
-		fval = props.Get("rtpath.blur.maxcap").Get<float>();
-		if (ImGui::InputFloat("Blur max. weight", &fval)) {
-			props.Set(Property("rtpath.blur.maxcap")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("rtpath.blur.maxcap");
-
-		fval = props.Get("rtpath.ghosteffect.intensity").Get<float>();
-		if (ImGui::InputFloat("Ghost effect intensity", &fval)) {
-			props.Set(Property("rtpath.ghosteffect.intensity")(fval));
-			modifiedProps = true;
-		}
-		LuxCoreApp::HelpMarker("rtpath.ghosteffect.intensity");
 	}
 }
 

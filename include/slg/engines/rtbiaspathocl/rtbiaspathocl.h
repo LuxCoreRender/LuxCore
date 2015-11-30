@@ -38,7 +38,6 @@ public:
 	virtual ~RTBiasPathOCLRenderThread();
 
 	virtual void Interrupt();
-	virtual void Stop();
 
 	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
@@ -47,42 +46,7 @@ public:
 
 protected:
 	virtual void RenderThreadImpl();
-	virtual void AdditionalInit();
-	virtual std::string AdditionalKernelOptions();
-	virtual std::string AdditionalKernelSources();
-	virtual void SetAdditionalKernelArgs();
-	virtual void CompileAdditionalKernels(cl::Program *program);
-
-	void InitDisplayThread();
 	void UpdateOCLBuffers(const EditActionList &updateActions);
-
-	double lastEditTime;
-
-	cl::Kernel *clearFBKernel;
-	size_t clearFBWorkGroupSize;
-	cl::Kernel *clearSBKernel;
-	size_t clearSBWorkGroupSize;
-	size_t mergeFBWorkGroupSize;
-	cl::Kernel *normalizeFBKernel;
-	size_t normalizeFBWorkGroupSize;
-	cl::Kernel *applyBlurFilterXR1Kernel;
-	size_t applyBlurFilterXR1WorkGroupSize;
-	cl::Kernel *applyBlurFilterYR1Kernel;
-	size_t applyBlurFilterYR1WorkGroupSize;
-	// For Linear tone mapping
-	cl::Kernel *toneMapLinearKernel;
-	size_t toneMapLinearWorkGroupSize;
-	// For AutoLinear tone mapping (workgroup size is always 256))
-	cl::Kernel *sumRGBValuesReduceKernel;
-	cl::Kernel *sumRGBValueAccumulateKernel;
-	cl::Kernel *toneMapAutoLinearKernel;
-	cl::Kernel *updateScreenBufferKernel;
-	size_t updateScreenBufferWorkGroupSize;
-
-	// OpenCL variables
-	cl::Buffer *tmpFrameBufferBuff;
-	cl::Buffer *mergedFrameBufferBuff;
-	cl::Buffer *screenBufferBuff;
 };
 
 //------------------------------------------------------------------------------
@@ -99,7 +63,6 @@ public:
 
 	double GetFrameTime() const { return frameTime; }
 
-	virtual void BeginSceneEdit();
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
 	void WaitNewFrame();
@@ -113,6 +76,7 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex);
 
+	friend class BiasPathOCLRenderEngine;
 	friend class RTBiasPathOCLRenderThread;
 
 protected:
@@ -124,10 +88,6 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 	virtual void UpdateFilmLockLess();
-
-	u_int displayDeviceIndex;
-	float blurTimeWindow, blurMinCap, blurMaxCap;
-	float ghostEffect;
 
  	boost::mutex editMutex;
 	boost::condition_variable_any editCanStart;
