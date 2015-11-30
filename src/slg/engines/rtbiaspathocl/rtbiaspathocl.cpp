@@ -29,7 +29,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RTBiasPathOCLRenderEngine::RTBiasPathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) :
-		BiasPathOCLRenderEngine(rcfg, flm, flmMutex, true) {
+		BiasPathOCLRenderEngine(rcfg, flm, flmMutex) {
 	frameBarrier = new boost::barrier(renderThreads.size() + 1);
 	frameStartTime = 0.f;
 	frameTime = 0.f;
@@ -45,22 +45,9 @@ BiasPathOCLRenderThread *RTBiasPathOCLRenderEngine::CreateOCLThread(const u_int 
 }
 
 void RTBiasPathOCLRenderEngine::StartLockLess() {
-	const Properties &cfg = renderConfig->cfg;
-
 	//--------------------------------------------------------------------------
 	// Rendering parameters
 	//--------------------------------------------------------------------------
-
-	displayDeviceIndex = cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")).Get<u_int>();
-	if (displayDeviceIndex >= intersectionDevices.size())
-		throw std::runtime_error("Not valid rtpath.displaydevice.index value: " + boost::lexical_cast<std::string>(displayDeviceIndex) +
-				" >= " + boost::lexical_cast<std::string>(intersectionDevices.size()));
-
-	blurTimeWindow = Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")).Get<float>());
-	blurMinCap =  Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.mincap")).Get<float>());
-	blurMaxCap =  Max(0.f, cfg.Get(GetDefaultProps().Get("rtpath.blur.maxcap")).Get<float>());
-
-	ghostEffect = 1.f - Clamp(cfg.Get(GetDefaultProps().Get("rtpath.ghosteffect.intensity")).Get<float>(), 0.f, 1.f);
 
 	BiasPathOCLRenderEngine::StartLockLess();
 
@@ -71,6 +58,7 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 }
 
 void RTBiasPathOCLRenderEngine::StopLockLess() {
+	frameBarrier->wait();
 	frameBarrier->wait();
 
 	// All render threads are now suspended and I can set the interrupt signal
@@ -84,16 +72,13 @@ void RTBiasPathOCLRenderEngine::StopLockLess() {
 	BiasPathOCLRenderEngine::StopLockLess();
 }
 
-void RTBiasPathOCLRenderEngine::BeginSceneEdit() {
-	BiasPathOCLRenderEngine::BeginSceneEdit();
-}
-
 void RTBiasPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	const bool requireSync = editActions.HasAnyAction() && !editActions.HasOnly(CAMERA_EDIT);
 
 	editMutex.lock();
 	if (requireSync) {
 		// This is required to move the rendering thread forward
+		frameBarrier->wait();
 		frameBarrier->wait();
 		editCanStart.wait(editMutex);
 	}
@@ -118,7 +103,9 @@ void RTBiasPathOCLRenderEngine::WaitNewFrame() {
 
 	frameBarrier->wait();
 
-	// Display thread does all frame post-processing steps 
+	// Threads splat their tiles on the film
+
+	frameBarrier->wait();
 
 	// Re-initialize the tile queue for the next frame
 	tileRepository->Restart();
@@ -155,12 +142,7 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.devices.maxtiles")) <<
 			//------------------------------------------------------------------
-			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.displaydevice.index")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.blur.timewindow")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.blur.mincap")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.blur.maxcap")) <<
-			cfg.Get(GetDefaultProps().Get("rtpath.ghosteffect.intensity"));
+			cfg.Get(GetDefaultProps().Get("rtpath.miniterations"));
 }
 
 RenderEngine *RTBiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -185,12 +167,7 @@ Properties RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.lights.firstvertexsamples")(1) <<
 			Property("biaspath.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
-			Property("rtpath.miniterations")(2) <<
-			Property("rtpath.displaydevice.index")(0) <<
-			Property("rtpath.blur.timewindow")(3.f) <<
-			Property("rtpath.blur.mincap")(.01f) <<
-			Property("rtpath.blur.maxcap")(.2f) <<
-			Property("rtpath.ghosteffect.intensity")(.05f);
+			Property("rtpath.miniterations")(2);
 
 	return props;
 }

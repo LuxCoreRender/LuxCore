@@ -196,8 +196,7 @@ protected:
 
 class PathOCLBaseRenderEngine : public OCLRenderEngine {
 public:
-	PathOCLBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex,
-		const bool realTime = false);
+	PathOCLBaseRenderEngine(const RenderConfig *cfg, Film *flm, boost::mutex *flmMutex);
 	virtual ~PathOCLBaseRenderEngine();
 
 	virtual bool IsMaterialCompiled(const MaterialType type) const {

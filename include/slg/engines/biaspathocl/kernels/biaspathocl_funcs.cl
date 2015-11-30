@@ -124,7 +124,7 @@ void SR_Accumulate(__global SampleResult *src, SampleResult *dst) {
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
 		// Note: OBJECT_ID_MASK and BY_OBJECT_ID are calculated starting from objectID field
-		dst->materialID = src->materialID;
+		dst->objectID = src->objectID;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		dst->uv = src->uv;

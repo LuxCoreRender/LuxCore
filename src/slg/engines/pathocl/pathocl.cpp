@@ -53,8 +53,8 @@ using namespace slg;
 // PathOCLRenderEngine
 //------------------------------------------------------------------------------
 
-PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex,
-		const bool realTime) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex, realTime),
+PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg, Film *flm,
+		boost::mutex *flmMutex) : PathOCLBaseRenderEngine(rcfg, flm, flmMutex),
 		pixelFilterDistribution(NULL) {
 	oclSampler = NULL;
 	oclPixelFilter = NULL;
@@ -84,6 +84,10 @@ void PathOCLRenderEngine::InitPixelFilterDistribution() {
 
 void PathOCLRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
+
+	Properties defaultProps = (GetType() == PATHOCL) ?
+		PathOCLRenderEngine::GetDefaultProps() :
+		RTPathOCLRenderEngine::GetDefaultProps();
 
 	//--------------------------------------------------------------------------
 	// Rendering parameters
@@ -128,19 +132,19 @@ void PathOCLRenderEngine::StartLockLess() {
 	// General path tracing settings
 	//--------------------------------------------------------------------------	
 	
-	maxPathDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.maxdepth")).Get<int>());
-	rrDepth = (u_int)Max(1, cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")).Get<int>());
-	rrImportanceCap = Clamp(cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
+	maxPathDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("path.maxdepth")).Get<int>());
+	rrDepth = (u_int)Max(1, cfg.Get(defaultProps.Get("path.russianroulette.depth")).Get<int>());
+	rrImportanceCap = Clamp(cfg.Get(defaultProps.Get("path.russianroulette.cap")).Get<float>(), 0.f, 1.f);
 
 	// Clamping settings
 	// clamping.radiance.maxvalue is the old radiance clamping, now converted in variance clamping
 	sqrtVarianceClampMaxValue = cfg.Get(Property("path.clamping.radiance.maxvalue")(0.f)).Get<float>();
 	if (cfg.IsDefined("path.clamping.variance.maxvalue"))
-		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<float>();
+		sqrtVarianceClampMaxValue = cfg.Get(defaultProps.Get("path.clamping.variance.maxvalue")).Get<float>();
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
-	pdfClampValue = Max(0.f, cfg.Get(GetDefaultProps().Get("path.clamping.pdf.value")).Get<float>());
+	pdfClampValue = Max(0.f, cfg.Get(defaultProps.Get("path.clamping.pdf.value")).Get<float>());
 
-	useFastPixelFilter = cfg.Get(GetDefaultProps().Get("path.fastpixelfilter.enable")).Get<bool>();
+	useFastPixelFilter = cfg.Get(defaultProps.Get("path.fastpixelfilter.enable")).Get<bool>();
 	usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
@@ -168,14 +172,18 @@ void PathOCLRenderEngine::StopLockLess() {
 	pixelFilterDistribution = NULL;
 }
 
-void PathOCLRenderEngine::UpdateFilmLockLess() {
-	boost::unique_lock<boost::mutex> lock(*filmMutex);
-
+void PathOCLRenderEngine::MergeThreadFilms() {
 	film->Reset();
 	for (size_t i = 0; i < renderThreads.size(); ++i) {
         if (renderThreads[i])
             film->AddFilm(*(((PathOCLRenderThread *)(renderThreads[i]))->threadFilms[0]->film));
     }
+}
+
+void PathOCLRenderEngine::UpdateFilmLockLess() {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	MergeThreadFilms();
 }
 
 void PathOCLRenderEngine::UpdateCounters() {
