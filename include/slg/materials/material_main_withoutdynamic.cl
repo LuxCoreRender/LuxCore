@@ -619,7 +619,11 @@ float3 Material_SampleWithoutDynamic(__global const Material* restrict material,
 #if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
 		case CLEAR_VOL:
 			return ClearVolMaterial_Sample(
-					hitPoint, lightDir, eyeDir, event, directPdfW);
+					hitPoint, fixedDir, sampledDir, u0, u1,
+#if defined(PARAM_HAS_PASSTHROUGH)
+					passThroughEvent,
+#endif
+					pdfW,  cosSampledDir, event, requestedEvent);
 #endif
 #if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
 		case HETEROGENEOUS_VOL:
