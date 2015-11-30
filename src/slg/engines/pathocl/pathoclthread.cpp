@@ -484,20 +484,20 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 	CompiledScene *cscene = engine->compiledScene;
 
 	u_int argIndex = 0;
-	advancePathsKernel->setArg(argIndex++, *tasksBuff);
-	advancePathsKernel->setArg(argIndex++, *tasksDirectLightBuff);
-	advancePathsKernel->setArg(argIndex++, *tasksStateBuff);
-	advancePathsKernel->setArg(argIndex++, *taskStatsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
 	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
-		advancePathsKernel->setArg(argIndex++, *pixelFilterBuff);
-	advancePathsKernel->setArg(argIndex++, *samplesBuff);
-	advancePathsKernel->setArg(argIndex++, *sampleDataBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	if (cscene->HasVolumes()) {
-		advancePathsKernel->setArg(argIndex++, *pathVolInfosBuff);
-		advancePathsKernel->setArg(argIndex++, *directLightVolInfosBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
 	}
-	advancePathsKernel->setArg(argIndex++, *raysBuff);
-	advancePathsKernel->setArg(argIndex++, *hitsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), hitsBuff);
 
 	// Film parameters
 	argIndex = threadFilms[0]->SetFilmKernelArgs(*advancePathsKernel, argIndex);
@@ -509,38 +509,38 @@ void PathOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKern
 		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
 		advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	}
-	advancePathsKernel->setArg(argIndex++, *materialsBuff);
-	advancePathsKernel->setArg(argIndex++, *texturesBuff);
-	advancePathsKernel->setArg(argIndex++, *scnObjsBuff);
-	advancePathsKernel->setArg(argIndex++, *meshDescsBuff);
-	advancePathsKernel->setArg(argIndex++, *vertsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
 	if (normalsBuff)
-		advancePathsKernel->setArg(argIndex++, *normalsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
 	if (uvsBuff)
-		advancePathsKernel->setArg(argIndex++, *uvsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
 	if (colsBuff)
-		advancePathsKernel->setArg(argIndex++, *colsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	if (alphasBuff)
-		advancePathsKernel->setArg(argIndex++, *alphasBuff);
-	advancePathsKernel->setArg(argIndex++, *trianglesBuff);
-	advancePathsKernel->setArg(argIndex++, *cameraBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	// Lights
-	advancePathsKernel->setArg(argIndex++, *lightsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
 	if (envLightIndicesBuff) {
-		advancePathsKernel->setArg(argIndex++, *envLightIndicesBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
 		advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
 	}
-	advancePathsKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshTriLightDefsOffsetBuff);
 	if (infiniteLightDistributionsBuff)
-		advancePathsKernel->setArg(argIndex++, *infiniteLightDistributionsBuff);
-	advancePathsKernel->setArg(argIndex++, *lightsDistributionBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
 
 	// Images
 	if (imageMapDescsBuff) {
-		advancePathsKernel->setArg(argIndex++, *imageMapDescsBuff);
+		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			advancePathsKernel->setArg(argIndex++, *(imageMapsBuff[i]));
+			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), (imageMapsBuff[i]));
 	}
 }
 
@@ -584,18 +584,18 @@ void PathOCLRenderThread::SetAdditionalKernelArgs() {
 
 	u_int argIndex = 0;
 	initKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
-	initKernel->setArg(argIndex++, *tasksBuff);
-	initKernel->setArg(argIndex++, *tasksDirectLightBuff);
-	initKernel->setArg(argIndex++, *tasksStateBuff);
-	initKernel->setArg(argIndex++, *taskStatsBuff);
-	initKernel->setArg(argIndex++, *samplesBuff);
-	initKernel->setArg(argIndex++, *sampleDataBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	if (cscene->HasVolumes())
-		initKernel->setArg(argIndex++, *pathVolInfosBuff);
+		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
 	if (engine->useFastPixelFilter && (engine->oclPixelFilter->type != slg::ocl::FILTER_NONE))
-		initKernel->setArg(argIndex++, *pixelFilterBuff);
-	initKernel->setArg(argIndex++, *raysBuff);
-	initKernel->setArg(argIndex++, *cameraBuff);
+		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 	initKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
 	const u_int *filmSubRegion = threadFilms[0]->film->GetSubRegion();

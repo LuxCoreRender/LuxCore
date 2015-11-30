@@ -84,11 +84,13 @@ void DataSet::Preprocess() {
 	LR_LOG(context, "Total vertex count: " << totalVertexCount);
 	LR_LOG(context, "Total triangle count: " << totalTriangleCount);
 
-	if (totalTriangleCount == 0)
-		throw std::runtime_error("An empty DataSet can not be preprocessed");
-
-	BOOST_FOREACH(const Mesh *m, meshes)
-		bbox = Union(bbox, m->GetBBox());
+	if (totalTriangleCount == 0) {
+		// Just initialize with some default value to avoid problems
+		bbox = Union(Union(bbox, Point(-1.f, -1.f, -1.f)), Point(1.f, 1.f, 1.f));
+	} else {
+		BOOST_FOREACH(const Mesh *m, meshes)
+			bbox = Union(bbox, m->GetBBox());
+	}
 	bsphere = bbox.BoundingSphere();
 
 	preprocessed = true;
@@ -110,9 +112,6 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 		LR_LOG(context, "Adding DataSet accelerator: " << Accelerator::AcceleratorType2String(accelType));
 		LR_LOG(context, "Total vertex count: " << totalVertexCount);
 		LR_LOG(context, "Total triangle count: " << totalTriangleCount);
-
-		if (totalTriangleCount == 0)
-			throw std::runtime_error("An empty DataSet can not be preprocessed");
 
 		// Build the Accelerator
 		Accelerator *accel;

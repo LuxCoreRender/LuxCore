@@ -203,7 +203,7 @@ void RTBiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 		u_int argIndex = 0;
 		clearFBKernel->setArg(argIndex++, engine->film->GetWidth());
 		clearFBKernel->setArg(argIndex++, engine->film->GetHeight());
-		clearFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		clearFBKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 
 		argIndex = 0;
 		clearSBKernel->setArg(argIndex++, engine->film->GetWidth());
@@ -213,38 +213,38 @@ void RTBiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 		argIndex = 0;
 		normalizeFBKernel->setArg(argIndex++, engine->film->GetWidth());
 		normalizeFBKernel->setArg(argIndex++, engine->film->GetHeight());
-		normalizeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		normalizeFBKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 
 		argIndex = 0;
 		applyBlurFilterXR1Kernel->setArg(argIndex++, engine->film->GetWidth());
 		applyBlurFilterXR1Kernel->setArg(argIndex++, engine->film->GetHeight());
-		applyBlurFilterXR1Kernel->setArg(argIndex++, *screenBufferBuff);
-		applyBlurFilterXR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		applyBlurFilterXR1Kernel->setArg(argIndex++, sizeof(cl::Buffer), screenBufferBuff);
+		applyBlurFilterXR1Kernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
 		argIndex = 0;
 		applyBlurFilterYR1Kernel->setArg(argIndex++, engine->film->GetWidth());
 		applyBlurFilterYR1Kernel->setArg(argIndex++, engine->film->GetHeight());
-		applyBlurFilterYR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
-		applyBlurFilterYR1Kernel->setArg(argIndex++, *screenBufferBuff);
+		applyBlurFilterYR1Kernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
+		applyBlurFilterYR1Kernel->setArg(argIndex++, sizeof(cl::Buffer), screenBufferBuff);
 
 		argIndex = 0;
 		toneMapLinearKernel->setArg(argIndex++, engine->film->GetWidth());
 		toneMapLinearKernel->setArg(argIndex++, engine->film->GetHeight());
-		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		toneMapLinearKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 
 		argIndex = 0;
 		sumRGBValuesReduceKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		sumRGBValuesReduceKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		sumRGBValuesReduceKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-		sumRGBValuesReduceKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		sumRGBValuesReduceKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
+		sumRGBValuesReduceKernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
 
 		argIndex = 0;
 		sumRGBValueAccumulateKernel->setArg(argIndex++, 0);
-		sumRGBValueAccumulateKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		sumRGBValueAccumulateKernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
 
 		argIndex = 0;
 		toneMapAutoLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		toneMapAutoLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		toneMapAutoLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		toneMapAutoLinearKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 		float gamma = 2.2f;
 		const ImagePipeline *ip = engine->film->GetImagePipeline();
 		if (ip) {
@@ -253,13 +253,13 @@ void RTBiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 				gamma = gc->gamma;
 		}
 		toneMapAutoLinearKernel->setArg(argIndex++, gamma);
-		toneMapAutoLinearKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		toneMapAutoLinearKernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
 
 		argIndex = 0;
 		updateScreenBufferKernel->setArg(argIndex++, engine->film->GetWidth());
 		updateScreenBufferKernel->setArg(argIndex++, engine->film->GetHeight());
-		updateScreenBufferKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-		updateScreenBufferKernel->setArg(argIndex++, *screenBufferBuff);
+		updateScreenBufferKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
+		updateScreenBufferKernel->setArg(argIndex++, sizeof(cl::Buffer), screenBufferBuff);
 	}
 }
 

@@ -491,17 +491,17 @@ private:
 	   The number of primitives in the node that makes switch
 	   to full sweep for binning
 	*/
-	u_int fullSweepThreshold;
+	const u_int fullSweepThreshold;
 
 	/**
 	   The skip factor for binning
 	*/
-	u_int skipFactor;
+	const u_int skipFactor;
 
 	/**
 	   The maximum number of primitives per leaf
 	*/
-	u_int maxPrimsPerLeaf;
+	const u_int maxPrimsPerLeaf;
 
 	const Context *ctx;
 	std::deque<const Mesh *> meshes;

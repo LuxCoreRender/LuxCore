@@ -61,7 +61,7 @@ public:
 		if (device->GetType() != DEVICE_TYPE_OPENCL_CPU)
 			kernelDefs << "#define QBVH_USE_LOCAL_MEMORY\n";
 		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] QBVH kernel definitions: \n" << kernelDefs.str());
-
+			
 		intersectionKernelSource = kernelDefs.str() +
 				luxrays::ocl::KernelSource_qbvh_types +
 				luxrays::ocl::KernelSource_qbvh;
@@ -113,13 +113,13 @@ public:
 		}
 	}
 	virtual ~OpenCLQBVHKernels() {
-		device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
-		delete trisBuff;
-		trisBuff = NULL;
-		device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
-		delete qbvhBuff;
-		qbvhBuff = NULL;
-	}
+			device->FreeMemory(trisBuff->getInfo<CL_MEM_SIZE>());
+			delete trisBuff;
+			trisBuff = NULL;
+			device->FreeMemory(qbvhBuff->getInfo<CL_MEM_SIZE>());
+			delete qbvhBuff;
+			qbvhBuff = NULL;
+		}
 
 	void SetBuffers(cl::Buffer *trisBuff, cl::Buffer *qbvhBuff);
 	virtual void Update(const DataSet *newDataSet) { assert(false); }
@@ -159,8 +159,8 @@ void OpenCLQBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int
 
 u_int OpenCLQBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
 	u_int argIndex = index;
-	kernel.setArg(argIndex++, *qbvhBuff);
-	kernel.setArg(argIndex++, *trisBuff);
+		kernel.setArg(argIndex++, *qbvhBuff);
+		kernel.setArg(argIndex++, *trisBuff);
 
 	// I use local memory only if I'm not running on a CPU
 	if (device->GetType() != DEVICE_TYPE_OPENCL_CPU) {
@@ -520,6 +520,16 @@ QBVHAccel::~QBVHAccel() {
 void QBVHAccel::Init(const std::deque<const Mesh *> &ms, const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount) {
 	assert (!initialized);
+	
+	// Handle the empty DataSet case
+	if (totalTriangleCount == 0) {
+		LR_LOG(ctx, "Empty QBVH");
+		prims = NULL;
+		nodes = NULL;
+		initialized = true;
+
+		return;
+	}
 
 	meshes = ms;
 
@@ -852,8 +862,12 @@ void QBVHAccel::CreateSwizzledLeaf(int32_t parentIndex, int32_t childIndex,
 /***************************************************/
 
 bool QBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
-	Ray ray(*initialRay);
+	rayHit->t = initialRay->maxt;
 	rayHit->SetMiss();
+	if (!nodes)
+		return false;
+
+	Ray ray(*initialRay);
 
 	//------------------------------
 	// Prepare the ray for intersection
