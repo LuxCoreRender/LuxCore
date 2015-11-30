@@ -533,6 +533,16 @@ void MQBVHAccel::Init(const std::deque<const Mesh *> &meshes, const u_longlong t
 		const u_longlong totalTriangleCount) {
 	assert (!initialized);
 
+	// Handle the empty DataSet case
+	if (totalTriangleCount == 0) {
+		LR_LOG(ctx, "Empty MQBVH");
+		nodes = NULL;
+		leafs = NULL;
+		initialized = true;
+
+		return;
+	}
+
 	meshList = meshes;
 
 	// Build a QBVH for each mesh
@@ -906,8 +916,12 @@ void MQBVHAccel::CreateLeaf(int32_t parentIndex, int32_t childIndex,
 }
 
 bool MQBVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
-	Ray ray(*initialRay);
+	rayHit->t = initialRay->maxt;
 	rayHit->SetMiss();
+	if (!nodes)
+		return false;
+
+	Ray ray(*initialRay);
 
 	// Prepare the ray for intersection
 	QuadRay ray4(ray);

@@ -191,7 +191,7 @@ public:
 	 * \param fileName is the name of the file where to save the output channel.
 	 * \param type is the Film output channel to use. It must be one
 	 * of the enabled channels.
-	 * \param props can include some additional information definied by the
+	 * \param props can include some additional information defined by the
 	 * following property:
 	 * "id" for the ID of MATERIAL_ID_MASK,
 	 * "id" for the index of RADIANCE_GROUP,

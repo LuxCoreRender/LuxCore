@@ -276,51 +276,51 @@ u_int PathOCLBaseRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &filmCle
 	filmClearKernel.setArg(argIndex++, filmSubRegion[3]);
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		filmClearKernel.setArg(argIndex++, *(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]));
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
 	if (film->HasChannel(Film::ALPHA))
-		filmClearKernel.setArg(argIndex++, *channel_ALPHA_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALPHA_Buff);
 	if (film->HasChannel(Film::DEPTH))
-		filmClearKernel.setArg(argIndex++, *channel_DEPTH_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DEPTH_Buff);
 	if (film->HasChannel(Film::POSITION))
-		filmClearKernel.setArg(argIndex++, *channel_POSITION_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_POSITION_Buff);
 	if (film->HasChannel(Film::GEOMETRY_NORMAL))
-		filmClearKernel.setArg(argIndex++, *channel_GEOMETRY_NORMAL_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_GEOMETRY_NORMAL_Buff);
 	if (film->HasChannel(Film::SHADING_NORMAL))
-		filmClearKernel.setArg(argIndex++, *channel_SHADING_NORMAL_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SHADING_NORMAL_Buff);
 	if (film->HasChannel(Film::MATERIAL_ID))
-		filmClearKernel.setArg(argIndex++, *channel_MATERIAL_ID_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_Buff);
 	if (film->HasChannel(Film::DIRECT_DIFFUSE))
-		filmClearKernel.setArg(argIndex++, *channel_DIRECT_DIFFUSE_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_DIFFUSE_Buff);
 	if (film->HasChannel(Film::DIRECT_GLOSSY))
-		filmClearKernel.setArg(argIndex++, *channel_DIRECT_GLOSSY_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_GLOSSY_Buff);
 	if (film->HasChannel(Film::EMISSION))
-		filmClearKernel.setArg(argIndex++, *channel_EMISSION_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_EMISSION_Buff);
 	if (film->HasChannel(Film::INDIRECT_DIFFUSE))
-		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_DIFFUSE_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_DIFFUSE_Buff);
 	if (film->HasChannel(Film::INDIRECT_GLOSSY))
-		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_GLOSSY_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_GLOSSY_Buff);
 	if (film->HasChannel(Film::INDIRECT_SPECULAR))
-		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_SPECULAR_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SPECULAR_Buff);
 	if (film->HasChannel(Film::MATERIAL_ID_MASK))
-		filmClearKernel.setArg(argIndex++, *channel_MATERIAL_ID_MASK_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_MASK_Buff);
 	if (film->HasChannel(Film::DIRECT_SHADOW_MASK))
-		filmClearKernel.setArg(argIndex++, *channel_DIRECT_SHADOW_MASK_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_SHADOW_MASK_Buff);
 	if (film->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		filmClearKernel.setArg(argIndex++, *channel_INDIRECT_SHADOW_MASK_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SHADOW_MASK_Buff);
 	if (film->HasChannel(Film::UV))
-		filmClearKernel.setArg(argIndex++, *channel_UV_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_UV_Buff);
 	if (film->HasChannel(Film::RAYCOUNT))
-		filmClearKernel.setArg(argIndex++, *channel_RAYCOUNT_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RAYCOUNT_Buff);
 	if (film->HasChannel(Film::BY_MATERIAL_ID))
-		filmClearKernel.setArg(argIndex++, *channel_BY_MATERIAL_ID_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_MATERIAL_ID_Buff);
 	if (film->HasChannel(Film::IRRADIANCE))
-		filmClearKernel.setArg(argIndex++, *channel_IRRADIANCE_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_IRRADIANCE_Buff);
 	if (film->HasChannel(Film::OBJECT_ID))
-		filmClearKernel.setArg(argIndex++, *channel_OBJECT_ID_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_Buff);
 	if (film->HasChannel(Film::OBJECT_ID_MASK))
-		filmClearKernel.setArg(argIndex++, *channel_OBJECT_ID_MASK_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_MASK_Buff);
 	if (film->HasChannel(Film::BY_OBJECT_ID))
-		filmClearKernel.setArg(argIndex++, *channel_BY_OBJECT_ID_Buff);
+		filmClearKernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_OBJECT_ID_Buff);
 
 	return argIndex;
 }
@@ -696,7 +696,8 @@ size_t PathOCLBaseRenderThread::GetOpenCLSampleResultSize() const {
 	return sampleResultSize;
 }
 
-void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
+void PathOCLBaseRenderThread::AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+		void *src, const size_t size, const string &desc) {
 	// Check if the buffer is too big
 	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
 		stringstream ss;
@@ -705,6 +706,19 @@ void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, con
 				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
 				"): try to reduce related parameters";
 		throw runtime_error(ss.str());
+	}
+
+	// Handle the case of an empty buffer
+	if (!size) {
+		if (*buff) {
+			// Free the buffer
+			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+			delete *buff;
+		}
+
+		*buff = NULL;
+
+		return;
 	}
 
 	if (*buff) {
@@ -714,9 +728,11 @@ void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, con
 			// I can reuse the buffer; just update the content
 
 			//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
-			cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-			oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
-			return;
+			if (src) {
+				cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+				oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
+				return;
+			}
 		} else {
 			// Free the buffer
 			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
@@ -729,44 +745,17 @@ void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, con
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer size: " <<
 			(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 	*buff = new cl::Buffer(oclContext,
-			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+			clFlags,
 			size, src);
 	intersectionDevice->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
 }
 
+void PathOCLBaseRenderThread::AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const string &desc) {
+	AllocOCLBuffer(CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, buff, src, size, desc);
+}
+
 void PathOCLBaseRenderThread::AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const string &desc) {
-	// Check if the buffer is too big
-	if (intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
-		stringstream ss;
-		ss << "The " << desc << " buffer is too big for " << intersectionDevice->GetName() <<
-				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				intersectionDevice->GetDeviceDesc()->GetMaxMemoryAllocSize() <<
-				"): try to reduce related parameters";
-		throw runtime_error(ss.str());
-	}
-
-	if (*buff) {
-		// Check the size of the already allocated buffer
-
-		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
-			// I can reuse the buffer
-			//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer reused for size: " << (size / 1024) << "Kbytes");
-			return;
-		} else {
-			// Free the buffer
-			intersectionDevice->FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-			delete *buff;
-		}
-	}
-
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << desc << " buffer size: " <<
-			(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
-	*buff = new cl::Buffer(oclContext,
-			CL_MEM_READ_WRITE,
-			size);
-	intersectionDevice->AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+	AllocOCLBuffer(CL_MEM_READ_WRITE, buff, NULL, size, desc);
 }
 
 void PathOCLBaseRenderThread::FreeOCLBuffer(cl::Buffer **buff) {

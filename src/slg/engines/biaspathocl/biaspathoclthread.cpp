@@ -270,12 +270,12 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bo
 	}
 	rsKernel->setArg(argIndex++, engine->film->GetWidth());
 	rsKernel->setArg(argIndex++, engine->film->GetHeight());
-	rsKernel->setArg(argIndex++, *tasksBuff);
-	rsKernel->setArg(argIndex++, *tasksDirectLightBuff);
-	rsKernel->setArg(argIndex++, *tasksPathVertexNBuff);
-	rsKernel->setArg(argIndex++, *taskStatsBuff);
-	rsKernel->setArg(argIndex++, *taskResultsBuff);
-	rsKernel->setArg(argIndex++, *pixelFilterBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksPathVertexNBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskResultsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
 
 	// Film parameters
 	argIndex = threadFilms[0]->SetFilmKernelArgs(*rsKernel, argIndex);
@@ -287,37 +287,37 @@ void BiasPathOCLRenderThread::SetRenderSampleKernelArgs(cl::Kernel *rsKernel, bo
 		rsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
 		rsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	}
-	rsKernel->setArg(argIndex++, *materialsBuff);
-	rsKernel->setArg(argIndex++, *texturesBuff);
-	rsKernel->setArg(argIndex++, *scnObjsBuff);
-	rsKernel->setArg(argIndex++, *meshDescsBuff);
-	rsKernel->setArg(argIndex++, *vertsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
 	if (normalsBuff)
-		rsKernel->setArg(argIndex++, *normalsBuff);
+		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
 	if (uvsBuff)
-		rsKernel->setArg(argIndex++, *uvsBuff);
+		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
 	if (colsBuff)
-		rsKernel->setArg(argIndex++, *colsBuff);
+		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	if (alphasBuff)
-		rsKernel->setArg(argIndex++, *alphasBuff);
-	rsKernel->setArg(argIndex++, *trianglesBuff);
-	rsKernel->setArg(argIndex++, *cameraBuff);
+		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	// Lights
-	rsKernel->setArg(argIndex++, *lightsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
 	if (envLightIndicesBuff) {
-		rsKernel->setArg(argIndex++, *envLightIndicesBuff);
+		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
 		rsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
 	}
-	rsKernel->setArg(argIndex++, *meshTriLightDefsOffsetBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshTriLightDefsOffsetBuff);
 	if (infiniteLightDistributionsBuff)
-		rsKernel->setArg(argIndex++, *infiniteLightDistributionsBuff);
-	rsKernel->setArg(argIndex++, *lightsDistributionBuff);
+		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightDistributionsBuff);
+	rsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
 	// Images
 	if (imageMapDescsBuff) {
-		rsKernel->setArg(argIndex++, *imageMapDescsBuff);
+		rsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			rsKernel->setArg(argIndex++, *(imageMapsBuff[i]));
+			rsKernel->setArg(argIndex++, sizeof(cl::Buffer), (imageMapsBuff[i]));
 	}
 
 	argIndex = intersectionDevice->SetIntersectionKernelArgs(*rsKernel, argIndex);
@@ -337,14 +337,14 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 
 	u_int argIndex = 0;
 	initSeedKernel->setArg(argIndex++, engine->seedBase + threadIndex * engine->taskCount);
-	initSeedKernel->setArg(argIndex++, *tasksBuff);
+	initSeedKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
 
 	//--------------------------------------------------------------------------
 	// initStatKernel
 	//--------------------------------------------------------------------------
 
 	argIndex = 0;
-	initStatKernel->setArg(argIndex++, *taskStatsBuff);
+	initStatKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
 
 	//--------------------------------------------------------------------------
 	// renderSampleKernel
@@ -379,7 +379,7 @@ void BiasPathOCLRenderThread::SetAdditionalKernelArgs() {
 	mergePixelSamplesKernel->setArg(argIndex++, 0);
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetWidth());
 	mergePixelSamplesKernel->setArg(argIndex++, engine->film->GetHeight());
-	mergePixelSamplesKernel->setArg(argIndex++, *taskResultsBuff);
+	mergePixelSamplesKernel->setArg(argIndex++, sizeof(cl::Buffer), taskResultsBuff);
 	argIndex = threadFilms[0]->SetFilmKernelArgs(*mergePixelSamplesKernel, argIndex);
 }
 

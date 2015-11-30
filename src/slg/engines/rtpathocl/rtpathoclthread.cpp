@@ -212,7 +212,7 @@ void RTPathOCLRenderThread::SetAdditionalKernelArgs() {
 		u_int argIndex = 0;
 		clearFBKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		clearFBKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		clearFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		clearFBKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 
 		argIndex = 0;
 		clearSBKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
@@ -222,38 +222,38 @@ void RTPathOCLRenderThread::SetAdditionalKernelArgs() {
 		argIndex = 0;
 		normalizeFBKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		normalizeFBKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		normalizeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		normalizeFBKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 
 		argIndex = 0;
 		applyBlurFilterXR1Kernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		applyBlurFilterXR1Kernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		applyBlurFilterXR1Kernel->setArg(argIndex++, *screenBufferBuff);
-		applyBlurFilterXR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		applyBlurFilterXR1Kernel->setArg(argIndex++, sizeof(cl::Buffer), screenBufferBuff);
+		applyBlurFilterXR1Kernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
 		argIndex = 0;
 		applyBlurFilterYR1Kernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		applyBlurFilterYR1Kernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		applyBlurFilterYR1Kernel->setArg(argIndex++, *tmpFrameBufferBuff);
-		applyBlurFilterYR1Kernel->setArg(argIndex++, *screenBufferBuff);
+		applyBlurFilterYR1Kernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
+		applyBlurFilterYR1Kernel->setArg(argIndex++, sizeof(cl::Buffer), screenBufferBuff);
 
 		argIndex = 0;
 		toneMapLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		toneMapLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		toneMapLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		toneMapLinearKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 
 		argIndex = 0;
 		sumRGBValuesReduceKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		sumRGBValuesReduceKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		sumRGBValuesReduceKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-		sumRGBValuesReduceKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		sumRGBValuesReduceKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
+		sumRGBValuesReduceKernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
 
 		argIndex = 0;
 		sumRGBValueAccumulateKernel->setArg(argIndex++, 0);
-		sumRGBValueAccumulateKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		sumRGBValueAccumulateKernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
 
 		argIndex = 0;
 		toneMapAutoLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		toneMapAutoLinearKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		toneMapAutoLinearKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+		toneMapAutoLinearKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 		float gamma = 2.2f;
 		const ImagePipeline *ip = engine->film->GetImagePipeline();
 		if (ip) {
@@ -262,13 +262,13 @@ void RTPathOCLRenderThread::SetAdditionalKernelArgs() {
 				gamma = gc->gamma;
 		}
 		toneMapAutoLinearKernel->setArg(argIndex++, gamma);
-		toneMapAutoLinearKernel->setArg(argIndex++, *tmpFrameBufferBuff);
+		toneMapAutoLinearKernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
 
 		argIndex = 0;
 		updateScreenBufferKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 		updateScreenBufferKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-		updateScreenBufferKernel->setArg(argIndex++, *mergedFrameBufferBuff);
-		updateScreenBufferKernel->setArg(argIndex++, *screenBufferBuff);
+		updateScreenBufferKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
+		updateScreenBufferKernel->setArg(argIndex++, sizeof(cl::Buffer), screenBufferBuff);
 	}
 }
 
@@ -442,8 +442,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						u_int argIndex = 0;
 						mergeFBKernel->setArg(argIndex++, threadFilms[0]->film->GetWidth());
 						mergeFBKernel->setArg(argIndex++, threadFilms[0]->film->GetHeight());
-						mergeFBKernel->setArg(argIndex++, *(threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[0]));
-						mergeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+						mergeFBKernel->setArg(argIndex++, sizeof(cl::Buffer), (threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[0]));
+						mergeFBKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 						currentQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
 								cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, mergeFBWorkGroupSize)),
 								cl::NDRange(mergeFBWorkGroupSize));
@@ -458,8 +458,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						u_int argIndex = 0;
 						mergeFBKernel->setArg(argIndex++, thread->threadFilms[0]->film->GetWidth());
 						mergeFBKernel->setArg(argIndex++, thread->threadFilms[0]->film->GetHeight());
-						mergeFBKernel->setArg(argIndex++, *tmpFrameBufferBuff);
-						mergeFBKernel->setArg(argIndex++, *mergedFrameBufferBuff);
+						mergeFBKernel->setArg(argIndex++, sizeof(cl::Buffer), tmpFrameBufferBuff);
+						mergeFBKernel->setArg(argIndex++, sizeof(cl::Buffer), mergedFrameBufferBuff);
 						currentQueue.enqueueNDRangeKernel(*mergeFBKernel, cl::NullRange,
 								cl::NDRange(RoundUp<u_int>(filmBufferPixelCount, mergeFBWorkGroupSize)),
 								cl::NDRange(mergeFBWorkGroupSize));

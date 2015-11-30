@@ -113,6 +113,8 @@ protected:
 	virtual void SetAdditionalKernelArgs() = 0;
 	virtual void CompileAdditionalKernels(cl::Program *program) = 0;
 
+	void AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+			void *src, const size_t size, const std::string &desc);
 	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc);
 	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc);
 	void FreeOCLBuffer(cl::Buffer **buff);
