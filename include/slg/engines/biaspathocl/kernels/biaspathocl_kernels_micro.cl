@@ -313,7 +313,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 	sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1);
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
-	sampleResult->materialID = BSDF_GetObjectID(&task->bsdfPathVertex1, scneeObjs);
+	sampleResult->objectID = BSDF_GetObjectID(&task->bsdfPathVertex1, sceneObjs);
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 	sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;
