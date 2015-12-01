@@ -112,7 +112,7 @@ std::string KernelSource_texture_bump_funcs =
 "// ImageMapTexture\n"
 "//------------------------------------------------------------------------------\n"
 "\n"
-"#if defined(PARAM_ENABLE_TEX_IMAGEMAP)\n"
+"#if defined(PARAM_ENABLE_TEX_IMAGEMAP)  && defined(PARAM_HAS_IMAGEMAPS)\n"
 "float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitPoint,\n"
 "		const float sampleDistance\n"
 "		IMAGEMAPS_PARAM_DECL) {\n"
