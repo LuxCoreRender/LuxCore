@@ -161,7 +161,7 @@ float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
 
 float MixTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
 		const float amt, const float value1, const float value2) {
-	return Lerp(clamp(amt, 0.f, 1.f), value1, value2);
+	return mix(value1, value2, clamp(amt, 0.f, 1.f));
 }
 
 float3 MixTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
