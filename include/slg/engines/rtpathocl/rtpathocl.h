@@ -99,8 +99,6 @@ protected:
 
 	u_int minIterations;
 
-  	boost::mutex editMutex;
-	boost::condition_variable_any editCanStart;
 	EditActionList updateActions;
 
 	boost::barrier *frameBarrier;

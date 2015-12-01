@@ -59,9 +59,12 @@ void RTPathOCLRenderEngine::StartLockLess() {
 
 void RTPathOCLRenderEngine::StopLockLess() {
 	frameBarrier->wait();
+	frameBarrier->wait();
+
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderThreads.size(); ++i)
 		((RTPathOCLRenderThread *)renderThreads[i])->renderThread->interrupt();
+
 	frameBarrier->wait();
 	// Render threads will now detect the interruption
 
@@ -71,20 +74,17 @@ void RTPathOCLRenderEngine::StopLockLess() {
 void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	const bool requireSync = editActions.HasAnyAction() && !editActions.HasOnly(CAMERA_EDIT);
 
-	editMutex.lock();
 	if (requireSync) {
 		// This is required to move the rendering thread forward
 		frameBarrier->wait();
-		editCanStart.wait(editMutex);
 	}
 
 	PathOCLRenderEngine::EndSceneEdit(editActions);
-
 	updateActions.AddActions(editActions.GetActions());
-	editMutex.unlock();
 
 	if (requireSync) {
 		// This is required to move the rendering thread forward
+		frameBarrier->wait();
 		frameBarrier->wait();
 	}
 }
@@ -99,6 +99,8 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 	frameBarrier->wait();
 
 	// Display thread merges all frame buffers and does all frame post-processing steps 
+	
+	frameBarrier->wait();
 
 	// Re-balance threads
 	//SLG_LOG("[RTPathOCLRenderEngine] Load balancing:");

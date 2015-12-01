@@ -75,21 +75,22 @@ void RTBiasPathOCLRenderEngine::StopLockLess() {
 void RTBiasPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	const bool requireSync = editActions.HasAnyAction() && !editActions.HasOnly(CAMERA_EDIT);
 
-	editMutex.lock();
 	if (requireSync) {
 		// This is required to move the rendering thread forward
 		frameBarrier->wait();
-		frameBarrier->wait();
-		editCanStart.wait(editMutex);
 	}
 
+	// While threads splat their tiles on the film I can finish the scene edit
 	BiasPathOCLRenderEngine::EndSceneEdit(editActions);
-
 	updateActions.AddActions(editActions.GetActions());
-	editMutex.unlock();
 
 	if (requireSync) {
 		// This is required to move the rendering thread forward
+		frameBarrier->wait();
+
+		// Re-initialize the tile queue for the next frame
+		tileRepository->Restart();
+
 		frameBarrier->wait();
 	}
 }
