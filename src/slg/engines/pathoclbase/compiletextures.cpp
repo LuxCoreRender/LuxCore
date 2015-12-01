@@ -1303,7 +1303,7 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 				// For textures source code that it is not dynamically generated
 				break;
 			default:
-				source << "\t\tcase " << i << ": return Texture_Index" << i << "_EvaluateFloat(tex, hitPoint TEXTURES_PARAM);\n";
+				source << "\t\tcase " << i << ": return Texture_Index" << i << "_Evaluate" << type << "(tex, hitPoint TEXTURES_PARAM);\n";
 				break;
 		}
 	}

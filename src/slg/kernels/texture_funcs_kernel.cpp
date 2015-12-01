@@ -164,7 +164,7 @@ std::string KernelSource_texture_funcs =
 "\n"
 "float MixTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,\n"
 "		const float amt, const float value1, const float value2) {\n"
-"	return Lerp(clamp(amt, 0.f, 1.f), value1, value2);\n"
+"	return mix(value1, value2, clamp(amt, 0.f, 1.f));\n"
 "}\n"
 "\n"
 "float3 MixTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,\n"
