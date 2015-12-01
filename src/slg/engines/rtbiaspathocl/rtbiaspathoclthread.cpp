@@ -142,81 +142,89 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			TileRepository::Tile *tile = NULL;
 			engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film);
 
-			//const double t0 = WallClockTime();
-			threadFilms[0]->film->Reset();
-			//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile: "
-			//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
-			//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
+			// tile can be NULL after a scene edit
+			if (tile) {
+				//const double t0 = WallClockTime();
+				threadFilms[0]->film->Reset();
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile: "
+				//		"(" << tile->xStart << ", " << tile->yStart << ") => " <<
+				//		"(" << tile->tileWidth << ", " << tile->tileHeight << ")");
 
-			// Clear the frame buffer
-			threadFilms[0]->ClearFilm(currentQueue, *filmClearKernel, filmClearWorkGroupSize);
+				// Clear the frame buffer
+				threadFilms[0]->ClearFilm(currentQueue, *filmClearKernel, filmClearWorkGroupSize);
 
-			// Initialize the statistics
-			currentQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
-				cl::NDRange(RoundUp<u_int>(taskCount, initStatWorkGroupSize)),
-				cl::NDRange(initStatWorkGroupSize));
+				// Initialize the statistics
+				currentQueue.enqueueNDRangeKernel(*initStatKernel, cl::NullRange,
+					cl::NDRange(RoundUp<u_int>(taskCount, initStatWorkGroupSize)),
+					cl::NDRange(initStatWorkGroupSize));
 
-			// Render the tile
-			UpdateKernelArgsForTile(tile, 0);
+				// Render the tile
+				UpdateKernelArgsForTile(tile, 0);
 
-			// Render all pixel samples
-			EnqueueRenderSampleKernel(currentQueue);
+				// Render all pixel samples
+				EnqueueRenderSampleKernel(currentQueue);
 
-			// Merge all pixel samples and accumulate statistics
-			currentQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
-					cl::NDRange(RoundUp<u_int>(threadFilmPixelCount, mergePixelSamplesWorkGroupSize)),
-					cl::NDRange(mergePixelSamplesWorkGroupSize));
+				// Merge all pixel samples and accumulate statistics
+				currentQueue.enqueueNDRangeKernel(*mergePixelSamplesKernel, cl::NullRange,
+						cl::NDRange(RoundUp<u_int>(threadFilmPixelCount, mergePixelSamplesWorkGroupSize)),
+						cl::NDRange(mergePixelSamplesWorkGroupSize));
 
-			// Async. transfer of the Film buffers
-			threadFilms[0]->TransferFilm(currentQueue);
-			threadFilms[0]->film->AddSampleCount(taskCount);
+				// Async. transfer of the Film buffers
+				threadFilms[0]->TransferFilm(currentQueue);
+				threadFilms[0]->film->AddSampleCount(taskCount);
 
-			// Async. transfer of GPU task statistics
-			currentQueue.enqueueReadBuffer(
-				*(taskStatsBuff),
-				CL_FALSE,
-				0,
-				sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount,
-				gpuTaskStats);
+				// Async. transfer of GPU task statistics
+				currentQueue.enqueueReadBuffer(
+					*(taskStatsBuff),
+					CL_FALSE,
+					0,
+					sizeof(slg::ocl::biaspathocl::GPUTaskStats) * engine->taskCount,
+					gpuTaskStats);
 
-			currentQueue.finish();
+				currentQueue.finish();
 
-			// In order to update the statistics
-			u_int tracedRaysCount = 0;
-			// Statistics are accumulated by MergePixelSample kernel if not enableProgressiveRefinement
-			const u_int step = engine->aaSamples * engine->aaSamples;
-			for (u_int i = 0; i < taskCount; i += step)
-				tracedRaysCount += gpuTaskStats[i].raysCount;
+				// In order to update the statistics
+				u_int tracedRaysCount = 0;
+				// Statistics are accumulated by MergePixelSample kernel if not enableProgressiveRefinement
+				const u_int step = engine->aaSamples * engine->aaSamples;
+				for (u_int i = 0; i < taskCount; i += step)
+					tracedRaysCount += gpuTaskStats[i].raysCount;
 
-			intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
+				intersectionDevice->IntersectionKernelExecuted(tracedRaysCount);
 
-			//const double t1 = WallClockTime();
-			//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
+				//const double t1 = WallClockTime();
+				//SLG_LOG("[RTBiasPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
+			}
 
 			//------------------------------------------------------------------
-
 			frameBarrier->wait();
+			//------------------------------------------------------------------
 
-			if (pendingFilmClear) {
+			if ((threadIndex == 0) && pendingFilmClear) {
+				boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
 				engine->film->Reset();
 				pendingFilmClear = false;
 			}
 
-			// Now I can splat the tile on the tile repository. It is done now to
-			// not obliterate the CHANNEL_RGB_TONEMAPPED while the screen refresh
-			// thread is probably using it to draw the screen.
-			engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film);
+			if (tile) {
+				// Now I can splat the tile on the tile repository. It is done now to
+				// not obliterate the CHANNEL_RGB_TONEMAPPED while the screen refresh
+				// thread is probably using it to draw the screen.
+				engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film);
 
+				// There is only one tile for each device in RTBIASPATHOCL
+				assert (!tile);
+			}
+
+			//------------------------------------------------------------------
 			frameBarrier->wait();
+			//------------------------------------------------------------------
 
 			//------------------------------------------------------------------
 			// Update OpenCL buffers if there is any edit action
 			//------------------------------------------------------------------
 
 			if (threadIndex == 0) {
-				engine->editCanStart.notify_one();
-				engine->editMutex.lock();
-
 				if (engine->updateActions.HasAnyAction()) {
 					// Update all threads
 					for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
@@ -230,13 +238,11 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 					// Clear the film
 					pendingFilmClear = true;
 				}
-
-				engine->editMutex.unlock();
 			}
 
 			//------------------------------------------------------------------
-
 			frameBarrier->wait();
+			//------------------------------------------------------------------
 
 			// Time to render a new frame
 		}

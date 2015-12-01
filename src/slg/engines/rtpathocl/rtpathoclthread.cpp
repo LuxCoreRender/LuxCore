@@ -178,11 +178,10 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			frameTime = WallClockTime() - startTime;
 
 			//------------------------------------------------------------------
-
 			frameBarrier->wait();
+			//------------------------------------------------------------------
 
 			if (threadIndex == 0) {
-				// Last step include a film update
 				boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
 
 				if (pendingFilmClear) {
@@ -195,13 +194,14 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			}
 
 			//------------------------------------------------------------------
+			frameBarrier->wait();
+			//------------------------------------------------------------------
+
+			//------------------------------------------------------------------
 			// Update OpenCL buffers if there is any edit action
 			//------------------------------------------------------------------
 
 			if (threadIndex == 0) {
-				engine->editCanStart.notify_one();
-				engine->editMutex.lock();
-
 				if (engine->updateActions.HasAnyAction()) {
 					// Update all threads
 					for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
@@ -215,13 +215,11 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					// Clear the film (on the next frame)
 					pendingFilmClear = true;
 				}
-
-				engine->editMutex.unlock();
 			}
 
 			//------------------------------------------------------------------
-
 			frameBarrier->wait();
+			//------------------------------------------------------------------
 
 			// Time to render a new frame
 		}
