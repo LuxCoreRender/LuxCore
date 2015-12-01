@@ -316,7 +316,7 @@ std::string KernelSource_biaspathocl_kernels_micro =
 "	sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1);\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)\n"
-"	sampleResult->materialID = BSDF_GetObjectID(&task->bsdfPathVertex1, scneeObjs);\n"
+"	sampleResult->objectID = BSDF_GetObjectID(&task->bsdfPathVertex1, sceneObjs);\n"
 "#endif\n"
 "#if defined(PARAM_FILM_CHANNELS_HAS_UV)\n"
 "	sampleResult->uv = task->bsdfPathVertex1.hitPoint.uv;\n"
