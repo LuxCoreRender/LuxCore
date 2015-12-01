@@ -46,7 +46,7 @@ Properties SubtractTexture::ToProperties(const ImageMapCache &imgMapCache) const
 	Properties props;
 	
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("substract"));
+	props.Set(Property("scene.textures." + name + ".type")("subtract"));
 	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
 	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
 	
