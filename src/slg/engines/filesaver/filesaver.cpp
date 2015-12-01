@@ -163,7 +163,7 @@ void FileSaverRenderEngine::SaveScene() {
 //------------------------------------------------------------------------------
 
 Properties FileSaverRenderEngine::ToProperties(const Properties &cfg) {
-	return RenderEngine::ToProperties(cfg) <<
+	return Properties() <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.directory")) <<
 			cfg.Get(GetDefaultProps().Get("filesaver.renderengine.type"));
