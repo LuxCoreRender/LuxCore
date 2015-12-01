@@ -131,6 +131,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		bool pendingFilmClear = false;
+		tile = NULL;
 		while (!boost::this_thread::interruption_requested()) {
 			cl::CommandQueue &currentQueue = intersectionDevice->GetOpenCLQueue();
 
@@ -138,8 +139,7 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			// Render the tile (there is only one tile for each device
 			// in RTBIASPATHOCL)
 			//------------------------------------------------------------------
-			
-			TileRepository::Tile *tile = NULL;
+
 			engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film);
 
 			// tile can be NULL after a scene edit
@@ -200,20 +200,27 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			frameBarrier->wait();
 			//------------------------------------------------------------------
 
-			if ((threadIndex == 0) && pendingFilmClear) {
-				boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
-				engine->film->Reset();
-				pendingFilmClear = false;
-			}
+			if (threadIndex == 0) {
+				if (pendingFilmClear) {
+					boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
+					engine->film->Reset();
+					pendingFilmClear = false;
+				}
 
-			if (tile) {
 				// Now I can splat the tile on the tile repository. It is done now to
 				// not obliterate the CHANNEL_RGB_TONEMAPPED while the screen refresh
 				// thread is probably using it to draw the screen.
-				engine->tileRepository->NextTile(engine->film, engine->filmMutex, &tile, threadFilms[0]->film);
+				// It is also done by thread #0 for all threads.
+				for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
+					RTBiasPathOCLRenderThread *thread = (RTBiasPathOCLRenderThread *)(engine->renderThreads[i]);
 
-				// There is only one tile for each device in RTBIASPATHOCL
-				assert (!tile);
+					if (thread->tile) {
+						engine->tileRepository->NextTile(engine->film, engine->filmMutex, &thread->tile, thread->threadFilms[0]->film);
+
+						// There is only one tile for each device in RTBIASPATHOCL
+						thread->tile = NULL;
+					}
+				}
 			}
 
 			//------------------------------------------------------------------
@@ -221,7 +228,8 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			//------------------------------------------------------------------
 
 			//------------------------------------------------------------------
-			// Update OpenCL buffers if there is any edit action
+			// Update OpenCL buffers if there is any edit action. It is done by
+			// thread #0 for all threads.
 			//------------------------------------------------------------------
 
 			if (threadIndex == 0) {

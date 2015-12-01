@@ -21,6 +21,7 @@
 #include "slg/slg.h"
 #include "slg/engines/rtbiaspathocl/rtbiaspathocl.h"
 
+using namespace std;
 using namespace luxrays;
 using namespace slg;
 

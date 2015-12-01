@@ -47,6 +47,8 @@ public:
 protected:
 	virtual void RenderThreadImpl();
 	void UpdateOCLBuffers(const EditActionList &updateActions);
+
+	TileRepository::Tile *tile;
 };
 
 //------------------------------------------------------------------------------
