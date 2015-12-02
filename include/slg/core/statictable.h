@@ -75,12 +75,18 @@ public:
 		RegisterTableValue(const K &key, const T &val) {
 			boost::unordered_map<K, T> &table = GetTable();
 
+			/* This safety check is triggered when importing LuxCore module in
+			 * Blender Python on Linux like if static fields were initialized 2
+			 * times. Something wrong with the compiler and/or Blender.
 			typename boost::unordered_map<K, T>::const_iterator it = table.find(key);
 			if (it == table.end())
 				table[key] = val;
 			else
 				throw std::runtime_error("Already registered key in StaticTable::RegisterTableValue::RegisterTableValue(): " +
 						boost::lexical_cast<std::string>(key));
+			 */
+			
+			table[key] = val;
 		}
 		virtual ~RegisterTableValue() { }
 	};
