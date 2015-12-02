@@ -403,39 +403,32 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 			p0, p1, p2,
 			u0, u1,
 			&b0, &b1, &b2);
+
 	*dir = samplePoint - p;
 	const float distanceSquared = dot(*dir, *dir);;
 	*distance = sqrt(distanceSquared);
 	*dir /= (*distance);
+	
+	const float3 n0 = VLOAD3F(&triLight->triangle.n0.x);
+	const float3 n1 = VLOAD3F(&triLight->triangle.n1.x);
+	const float3 n2 = VLOAD3F(&triLight->triangle.n2.x);
+	const float3 shadeN = Triangle_InterpolateNormal(n0, n1, n2, b0, b1, b2);
 
-	const float3 sampleN = Triangle_GetGeometryNormal(p0, p1, p2); // Light sources are supposed to be flat
-
-	const float cosAtLight = dot(sampleN, -(*dir));
+	const float cosAtLight = dot(shadeN, -(*dir));
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	// FIXME: use correct shading normal
-//	float3 shadeN;
-//#if defined(PARAM_HAS_NORMALS_BUFFER)
-//	if (meshDesc->normalsOffset != NULL_INDEX) {
-//		__global const Vector *iVertNormals = &vertNormals[meshDesc->normalsOffset];
-//		// Shading normal expressed in local coordinates
-//		shadeN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleIndex, b1, b2);
-//		// Transform to global coordinates
-//		shadeN = normalize(Transform_InvApplyNormal(&meshDesc->trans, shadeN));
-//	} else
-//#endif
-//		shadeN = geometryN;
-
+	// Build a temporary hit point on the emitting point of the light source
 	VSTORE3F(samplePoint, &tmpHitPoint->p.x);
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 	tmpHitPoint->passThroughEvent = passThroughEvent;
 #endif
 
-	VSTORE3F(sampleN, &tmpHitPoint->geometryN.x);
-    VSTORE3F(sampleN, &tmpHitPoint->shadeN.x);
-	VSTORE3F(-sampleN, &tmpHitPoint->fixedDir.x);
+	const float3 geometryN = VLOAD3F(&triLight->triangle.geometryN.x);
+	VSTORE3F(geometryN, &tmpHitPoint->geometryN.x);
+    VSTORE3F(shadeN, &tmpHitPoint->shadeN.x);
+	VSTORE3F(-shadeN, &tmpHitPoint->fixedDir.x);
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	const float3 rgb0 = VLOAD3F(triLight->triangle.rgb0.c);
@@ -446,7 +439,8 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 	VSTORE3F(triColor, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	VSTORE2F(1.f, &tmpHitPoint->alpha);
+	tmpHitPoint->alpha = Triangle_InterpolateAlpha(triLight->triangle.alpha0,
+			triLight->triangle.alpha1, triLight->triangle.alpha2, b0, b1, b2);
 #endif
 #if defined(PARAM_HAS_VOLUMES)
 	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
@@ -463,7 +457,7 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 	// Apply Bump mapping and get proper differentials?
 #if defined(PARAM_HAS_BUMPMAPS)
 	float3 dpdu, dpdv;
-	CoordinateSystem(sampleN, &dpdu, &dpdv);
+	CoordinateSystem(shadeN, &dpdu, &dpdv);
 	VSTORE3F(dpdu, &tmpHitPoint->dpdu.x);
 	VSTORE3F(dpdv, &tmpHitPoint->dpdv.x);
 #endif
@@ -473,9 +467,9 @@ float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
 		// Build the local frame
 		float3 X, Y;
-		CoordinateSystem(sampleN, &X, &Y);
+		CoordinateSystem(shadeN, &X, &Y);
 
-		const float3 localFromLight = ToLocal(X, Y, sampleN, -(*dir));
+		const float3 localFromLight = ToLocal(X, Y, shadeN, -(*dir));
 
 		// Retrieve the image map information
 		__global const ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];

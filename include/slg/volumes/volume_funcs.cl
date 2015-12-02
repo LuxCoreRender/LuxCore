@@ -79,7 +79,7 @@ float ClearVolume_Scatter(__global const Volume *vol,
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	VSTORE2F(1.f, &tmpHitPoint->alpha);
+	tmpHitPoint->alpha = 0.f;
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
 	tmpHitPoint->passThroughEvent = passThroughEvent;
@@ -166,7 +166,7 @@ float HomogeneousVolume_Scatter(__global const Volume *vol,
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	VSTORE2F(1.f, &tmpHitPoint->alpha);
+	tmpHitPoint->alpha = 0.f;
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
 	tmpHitPoint->passThroughEvent = passThroughEvent;
@@ -313,7 +313,7 @@ float HeterogeneousVolume_Scatter(__global const Volume *vol,
 	VSTORE3F(WHITE, tmpHitPoint->color.c);
 #endif
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	VSTORE2F(1.f, &tmpHitPoint->alpha);
+	tmpHitPoint->alpha = 0.f;
 #endif
 #if defined(PARAM_HAS_PASSTHROUGH)
 	tmpHitPoint->passThroughEvent = passThroughEvent;

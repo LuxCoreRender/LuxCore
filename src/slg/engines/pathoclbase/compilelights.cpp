@@ -96,6 +96,17 @@ void CompiledScene::CompileLights() {
 				ASSIGN_VECTOR(oclLight->triangle.v0, mesh->GetVertex(0.f, tri->v[0]));
 				ASSIGN_VECTOR(oclLight->triangle.v1, mesh->GetVertex(0.f, tri->v[1]));
 				ASSIGN_VECTOR(oclLight->triangle.v2, mesh->GetVertex(0.f, tri->v[2]));
+				const Normal geometryN = mesh->GetGeometryNormal(0.f, tl->triangleIndex);
+				ASSIGN_VECTOR(oclLight->triangle.geometryN, geometryN);
+				if (mesh->HasNormals()) {
+					ASSIGN_VECTOR(oclLight->triangle.n0, mesh->GetShadeNormal(0.f, tl->triangleIndex, 0));
+					ASSIGN_VECTOR(oclLight->triangle.n1, mesh->GetShadeNormal(0.f, tl->triangleIndex, 1));
+					ASSIGN_VECTOR(oclLight->triangle.n2, mesh->GetShadeNormal(0.f, tl->triangleIndex, 2));
+				} else {
+					ASSIGN_VECTOR(oclLight->triangle.n0, geometryN);
+					ASSIGN_VECTOR(oclLight->triangle.n1, geometryN);
+					ASSIGN_VECTOR(oclLight->triangle.n2, geometryN);
+				}
 				if (mesh->HasUVs()) {
 					ASSIGN_UV(oclLight->triangle.uv0, mesh->GetUV(tri->v[0]));
 					ASSIGN_UV(oclLight->triangle.uv1, mesh->GetUV(tri->v[1]));
@@ -115,6 +126,15 @@ void CompiledScene::CompileLights() {
 					ASSIGN_SPECTRUM(oclLight->triangle.rgb0, one);
 					ASSIGN_SPECTRUM(oclLight->triangle.rgb1, one);
 					ASSIGN_SPECTRUM(oclLight->triangle.rgb2, one);
+				}
+				if (mesh->HasAlphas()) {
+					oclLight->triangle.alpha0 = mesh->GetAlpha(tri->v[0]);
+					oclLight->triangle.alpha1 = mesh->GetAlpha(tri->v[1]);
+					oclLight->triangle.alpha2 = mesh->GetAlpha(tri->v[2]);
+				} else {
+					oclLight->triangle.alpha0 = 1.f;
+					oclLight->triangle.alpha1 = 1.f;
+					oclLight->triangle.alpha2 = 1.f;
 				}
 
 				oclLight->triangle.invTriangleArea = 1.f / tl->GetTriangleArea();
