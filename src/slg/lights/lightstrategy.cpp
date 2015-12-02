@@ -95,10 +95,10 @@ string LightStrategy::LightStrategyType2String(const LightStrategyType type) {
 		throw runtime_error("Unknown light strategy type in LightStrategy::LightStrategyType2String(): " + boost::lexical_cast<string>(type));
 }
 
-Properties LightStrategy::GetDefaultProps() {
+const Properties &LightStrategy::GetDefaultProps() {
 	static Properties props;
 
-	return Properties();
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -152,8 +152,9 @@ LightStrategy *LightStrategyUniform::FromProperties(const Properties &cfg) {
 	return new LightStrategyUniform();
 }
 
-Properties LightStrategyUniform::GetDefaultProps() {
-	static Properties props = LightStrategy::GetDefaultProps() <<
+const Properties &LightStrategyUniform::GetDefaultProps() {
+	static Properties props = Properties() <<
+			LightStrategy::GetDefaultProps() <<
 			Property("lightstrategy.type")(GetObjectTag());
 
 	return props;
@@ -199,8 +200,9 @@ LightStrategy *LightStrategyPower::FromProperties(const Properties &cfg) {
 	return new LightStrategyPower();
 }
 
-Properties LightStrategyPower::GetDefaultProps() {
-	static Properties props = LightStrategy::GetDefaultProps() <<
+const Properties &LightStrategyPower::GetDefaultProps() {
+	static Properties props = Properties() <<
+			LightStrategy::GetDefaultProps() <<
 			Property("lightstrategy.type")(GetObjectTag());
 
 	return props;
@@ -240,8 +242,9 @@ LightStrategy *LightStrategyLogPower::FromProperties(const Properties &cfg) {
 	return new LightStrategyPower();
 }
 
-Properties LightStrategyLogPower::GetDefaultProps() {
-	static Properties props = LightStrategy::GetDefaultProps() <<
+const Properties &LightStrategyLogPower::GetDefaultProps() {
+	static Properties props = Properties() <<
+			LightStrategy::GetDefaultProps() <<
 			Property("lightstrategy.type")(GetObjectTag());
 
 	return props;

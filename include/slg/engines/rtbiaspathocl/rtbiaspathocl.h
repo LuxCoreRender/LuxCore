@@ -82,7 +82,7 @@ public:
 	friend class RTBiasPathOCLRenderThread;
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	virtual BiasPathOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);

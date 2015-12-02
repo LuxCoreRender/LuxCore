@@ -98,7 +98,7 @@ public:
 	static std::string SamplerType2String(const SamplerType type);
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	void AddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 

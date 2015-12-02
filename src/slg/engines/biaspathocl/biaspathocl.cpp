@@ -254,8 +254,9 @@ RenderEngine *BiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, 
 	return new BiasPathOCLRenderEngine(rcfg, flm, flmMutex);
 }
 
-Properties BiasPathOCLRenderEngine::GetDefaultProps() {
-	static Properties props = OCLRenderEngine::GetDefaultProps() <<
+const Properties &BiasPathOCLRenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("biaspath.pathdepth.total")(10) <<
 			Property("biaspath.pathdepth.diffuse")(4) <<

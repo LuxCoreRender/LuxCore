@@ -71,7 +71,7 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	// Used by serialization
 	MitchellFilter() { }

@@ -188,8 +188,9 @@ Properties CPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("native.threads.count"));
 }
 
-Properties CPURenderEngine::GetDefaultProps() {
-	static Properties props = RenderEngine::GetDefaultProps() <<
+const Properties &CPURenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			RenderEngine::GetDefaultProps() <<
 			Property("native.threads.count")(boost::thread::hardware_concurrency());
 
 	return props;
@@ -286,8 +287,9 @@ Properties CPUNoTileRenderEngine::ToProperties(const Properties &cfg) {
 	return CPURenderEngine::ToProperties(cfg);
 }
 
-Properties CPUNoTileRenderEngine::GetDefaultProps() {
-	return Properties();
+const Properties &CPUNoTileRenderEngine::GetDefaultProps() {
+	static Properties props;
+	return props;
 }
 
 //------------------------------------------------------------------------------
@@ -366,6 +368,6 @@ Properties CPUTileRenderEngine::ToProperties(const Properties &cfg) {
 			TileRepository::ToProperties(cfg);
 }
 
-Properties CPUTileRenderEngine::GetDefaultProps() {
+const Properties &CPUTileRenderEngine::GetDefaultProps() {
 	return TileRepository::GetDefaultProps();
 }

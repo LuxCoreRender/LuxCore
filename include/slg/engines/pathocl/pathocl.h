@@ -136,7 +136,7 @@ public:
 	bool usePixelAtomics, useFastPixelFilter;
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	void InitPixelFilterDistribution();
 

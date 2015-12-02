@@ -231,8 +231,9 @@ RenderEngine *PathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film
 	return new PathOCLRenderEngine(rcfg, flm, flmMutex);
 }
 
-Properties PathOCLRenderEngine::GetDefaultProps() {
-	static Properties props = OCLRenderEngine::GetDefaultProps() <<
+const Properties &PathOCLRenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("path.maxdepth")(5) <<
 			Property("path.russianroulette.depth")(3) <<

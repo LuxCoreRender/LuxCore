@@ -110,8 +110,9 @@ Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("opencl.devices.select"));
 }
 
-Properties OCLRenderEngine::GetDefaultProps() {
-	static Properties props = RenderEngine::GetDefaultProps() <<
+const Properties &OCLRenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			RenderEngine::GetDefaultProps() <<
 			Property("opencl.cpu.use")(true) <<
 			Property("opencl.gpu.use")(true) <<
 #if defined(__APPLE__)	

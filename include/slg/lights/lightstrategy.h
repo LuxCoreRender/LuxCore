@@ -68,7 +68,7 @@ public:
 	static std::string LightStrategyType2String(const LightStrategyType type);
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	LightStrategy(const LightStrategyType t) : scene(NULL), lightsDistribution(NULL), type(t) { }
 
@@ -102,7 +102,7 @@ public:
 	static LightStrategy *FromProperties(const luxrays::Properties &cfg);
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 };
 
 //------------------------------------------------------------------------------
@@ -128,7 +128,7 @@ public:
 	static LightStrategy *FromProperties(const luxrays::Properties &cfg);
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 };
 
 //------------------------------------------------------------------------------
@@ -154,7 +154,7 @@ public:
 	static LightStrategy *FromProperties(const luxrays::Properties &cfg);
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 };
 
 }

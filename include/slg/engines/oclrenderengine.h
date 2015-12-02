@@ -40,7 +40,7 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 };
 
 }

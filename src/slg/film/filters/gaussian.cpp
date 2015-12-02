@@ -66,8 +66,9 @@ slg::ocl::Filter *GaussianFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-Properties GaussianFilter::GetDefaultProps() {
-	static Properties props = Filter::GetDefaultProps() <<
+const Properties &GaussianFilter::GetDefaultProps() {
+	static Properties props = Properties() <<
+			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag()) <<
 			Property("film.filter.gaussian.alpha")(2.f);
 

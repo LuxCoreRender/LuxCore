@@ -71,8 +71,9 @@ slg::ocl::Filter *MitchellFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-Properties MitchellFilter::GetDefaultProps() {
-	static Properties props = Filter::GetDefaultProps() <<
+const Properties &MitchellFilter::GetDefaultProps() {
+	static Properties props = Properties() <<
+			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag()) <<
 			Property("film.filter.mitchell.b")(1.f / 3.f) <<
 			Property("film.filter.mitchell.c")(1.f / 3.f);

@@ -51,7 +51,7 @@ public:
 	virtual void WaitForDone() const { }
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	virtual void StartLockLess();
 	virtual void StopLockLess() { }

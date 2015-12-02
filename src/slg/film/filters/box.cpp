@@ -55,8 +55,9 @@ slg::ocl::Filter *BoxFilter::FromPropertiesOCL(const Properties &cfg) {
 	return oclFilter;
 }
 
-Properties BoxFilter::GetDefaultProps() {
-	static Properties props = Filter::GetDefaultProps() <<
+const Properties &BoxFilter::GetDefaultProps() {
+	static Properties props = Properties() <<
+			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag());
 
 	return props;

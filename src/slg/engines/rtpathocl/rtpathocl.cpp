@@ -150,8 +150,9 @@ RenderEngine *RTPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Fi
 	return new RTPathOCLRenderEngine(rcfg, flm, flmMutex);
 }
 
-Properties RTPathOCLRenderEngine::GetDefaultProps() {
-	static Properties props = PathOCLRenderEngine::GetDefaultProps() <<
+const Properties &RTPathOCLRenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			PathOCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("rtpath.miniterations")(2);
 
