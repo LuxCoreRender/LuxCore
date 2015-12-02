@@ -281,7 +281,7 @@ string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
 		throw runtime_error("Unknown render engine type in RenderEngine::RenderEngineType2String(): " + boost::lexical_cast<string>(type));
 }
 
-Properties RenderEngine::GetDefaultProps() {
+const Properties &RenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 		Property("opencl.platform.index")(-1);
 

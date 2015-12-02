@@ -85,8 +85,9 @@ RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg, Fil
 	return new BiDirCPURenderEngine(rcfg, flm, flmMutex);
 }
 
-Properties BiDirCPURenderEngine::GetDefaultProps() {
-	static Properties props = CPUNoTileRenderEngine::GetDefaultProps() <<
+const Properties &BiDirCPURenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("path.maxdepth")(5) <<
 			Property("light.maxdepth")(5) <<

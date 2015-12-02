@@ -87,7 +87,7 @@ public:
 	friend class LightCPURenderThread;
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();

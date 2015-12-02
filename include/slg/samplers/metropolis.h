@@ -81,7 +81,7 @@ public:
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
 private:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	MetropolisSamplerSharedData *sharedData;
 

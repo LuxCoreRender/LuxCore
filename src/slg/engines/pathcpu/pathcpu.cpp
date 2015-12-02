@@ -108,8 +108,9 @@ RenderEngine *PathCPURenderEngine::FromProperties(const RenderConfig *rcfg, Film
 	return new PathCPURenderEngine(rcfg, flm, flmMutex);
 }
 
-Properties PathCPURenderEngine::GetDefaultProps() {
-	static Properties props = CPUNoTileRenderEngine::GetDefaultProps() <<
+const Properties &PathCPURenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("path.maxdepth")(5) <<
 			Property("path.russianroulette.depth")(3) <<

@@ -151,8 +151,9 @@ RenderEngine *RTBiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg
 	return new RTBiasPathOCLRenderEngine(rcfg, flm, flmMutex);
 }
 
-Properties RTBiasPathOCLRenderEngine::GetDefaultProps() {
-	static Properties props = BiasPathOCLRenderEngine::GetDefaultProps() <<
+const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			BiasPathOCLRenderEngine::GetDefaultProps() <<
 			//------------------------------------------------------------------
 			// Overwrite some BiasPathOCLRenderEngine property
 			//------------------------------------------------------------------

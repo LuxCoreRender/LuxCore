@@ -280,8 +280,9 @@ slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-Properties MetropolisSampler::GetDefaultProps() {
-	static Properties props = Sampler::GetDefaultProps() <<
+const Properties &MetropolisSampler::GetDefaultProps() {
+	static Properties props = Properties() <<
+			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
 			Property("sampler.metropolis.largesteprate")(.4f) <<
 			Property("sampler.metropolis.maxconsecutivereject")(512) <<

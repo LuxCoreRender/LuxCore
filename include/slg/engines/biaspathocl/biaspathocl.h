@@ -133,7 +133,7 @@ public:
 	u_int maxTilePerDevice;
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	void PrintSamplesInfo() const;
 

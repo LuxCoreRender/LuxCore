@@ -75,7 +75,7 @@ public:
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static TileRepository *FromProperties(const luxrays::Properties &cfg);
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	friend class Tile;
 

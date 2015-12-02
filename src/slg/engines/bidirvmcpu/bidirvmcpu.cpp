@@ -59,8 +59,9 @@ RenderEngine *BiDirVMCPURenderEngine::FromProperties(const RenderConfig *rcfg, F
 	return new BiDirVMCPURenderEngine(rcfg, flm, flmMutex);
 }
 
-Properties BiDirVMCPURenderEngine::GetDefaultProps() {
-	static Properties props = BiDirCPURenderEngine::GetDefaultProps() <<
+const Properties &BiDirVMCPURenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			BiDirCPURenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("bidirvm.lightpath.count")(16 * 1024) <<
 			Property("bidirvm.startradius.scale")(.003f) <<

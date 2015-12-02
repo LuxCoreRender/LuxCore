@@ -55,8 +55,9 @@ slg::ocl::Filter *BlackmanHarrisFilter::FromPropertiesOCL(const Properties &cfg)
 	return oclFilter;
 }
 
-Properties BlackmanHarrisFilter::GetDefaultProps() {
-	static Properties props = Filter::GetDefaultProps() <<
+const Properties &BlackmanHarrisFilter::GetDefaultProps() {
+	static Properties props = Properties() <<
+			Filter::GetDefaultProps() <<
 			Property("film.filter.type")(GetObjectTag());
 
 	return props;

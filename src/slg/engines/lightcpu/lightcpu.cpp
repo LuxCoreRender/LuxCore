@@ -83,8 +83,9 @@ RenderEngine *LightCPURenderEngine::FromProperties(const RenderConfig *rcfg, Fil
 	return new LightCPURenderEngine(rcfg, flm, flmMutex);
 }
 
-Properties LightCPURenderEngine::GetDefaultProps() {
-	static Properties props = CPUNoTileRenderEngine::GetDefaultProps() <<
+const Properties &LightCPURenderEngine::GetDefaultProps() {
+	static Properties props = Properties() <<
+			CPUNoTileRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("light.maxdepth")(5) <<
 			Property("light.russianroulette.depth")(3) <<

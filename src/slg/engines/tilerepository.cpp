@@ -545,7 +545,7 @@ TileRepository *TileRepository::FromProperties(const luxrays::Properties &cfg) {
 	return tileRepository.release();
 }
 
-Properties TileRepository::GetDefaultProps() {
+const Properties &TileRepository::GetDefaultProps() {
 	static Properties props =  Properties() <<
 			Property("tile.size")(32) <<
 			Property("tile.multipass.enable")(true) <<

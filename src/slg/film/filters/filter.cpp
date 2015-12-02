@@ -104,7 +104,7 @@ const string Filter::FilterType2String(const FilterType type) {
 		throw runtime_error("Unknown filter type in Filter::FilterType2String(): " + boost::lexical_cast<string>(type));
 }
 
-Properties Filter::GetDefaultProps() {
+const Properties &Filter::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Property("film.filter.width")(2.f);
 

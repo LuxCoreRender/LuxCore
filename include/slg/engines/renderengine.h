@@ -125,7 +125,7 @@ public:
 	static std::string RenderEngineType2String(const RenderEngineType type);
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	virtual void StartLockLess() = 0;
 	virtual void StopLockLess() = 0;

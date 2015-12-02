@@ -141,7 +141,7 @@ public:
 	friend class BiasPathCPURenderThread;
 
 protected:
-	static luxrays::Properties GetDefaultProps();
+	static const luxrays::Properties &GetDefaultProps();
 
 	virtual void StartLockLess();
 
