@@ -1186,7 +1186,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 						"\tfloat nn = dot(n, shadeN);\n"
 						"\tconst float du1 = dot(n, u) / nn;\n"
 						"\tconst float dv1 = dot(n, v) / nn;\n"
-						"\nn = " << AddTextureBumpSourceCall(texs, tex->scaleTex.tex2Index) << ";\n"
+						"\tn = " << AddTextureBumpSourceCall(texs, tex->scaleTex.tex2Index) << ";\n"
 						"\tnn = dot(n, shadeN);\n"
 						"\tconst float du2 = dot(n, u) / nn;\n"
 						"\tconst float dv2 = dot(n, v) / nn;\n"
