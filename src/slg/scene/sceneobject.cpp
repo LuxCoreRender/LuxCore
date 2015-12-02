@@ -108,7 +108,7 @@ void SceneObjectDefinitions::DefineSceneObject(const std::string &name, SceneObj
 void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &lightDefs,
 		const Material *mat) const {
 	for (u_int i = 0; i < objs.size(); ++i) {
-		if (objs[i]->GetMaterial() == mat);
+		if (objs[i]->GetMaterial() == mat)
 			DefineIntersectableLights(lightDefs, objs[i]);
 	}
 }
