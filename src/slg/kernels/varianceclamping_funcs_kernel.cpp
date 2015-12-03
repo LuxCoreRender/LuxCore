@@ -67,7 +67,7 @@ std::string KernelSource_varianceclamping_funcs =
 "	expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[5])[index4]));\n"
 "#endif\n"
 "#if defined(PARAM_FILM_RADIANCE_GROUP_6)\n"
-"	expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[6]])[index4]));\n"
+"	expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[6])[index4]));\n"
 "#endif\n"
 "#if defined(PARAM_FILM_RADIANCE_GROUP_7)\n"
 "	expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[7])[index4]));\n"

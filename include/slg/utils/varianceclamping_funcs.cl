@@ -64,7 +64,7 @@ void VarianceClamping_Clamp(__global SampleResult *sampleResult, const float sqr
 	expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[5])[index4]));
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[6]])[index4]));
+	expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[6])[index4]));
 #endif
 #if defined(PARAM_FILM_RADIANCE_GROUP_7)
 	expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[7])[index4]));
