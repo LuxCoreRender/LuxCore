@@ -681,7 +681,8 @@ float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restri
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetInteriorVolumeWithoutDynamic(__global const Material* restrict material
+uint Material_GetInteriorVolumeWithoutDynamic(__global const Material *material,
+		__global HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetInteriorVolume(material);
 }
@@ -692,7 +693,8 @@ uint Material_GetInteriorVolumeWithoutDynamic(__global const Material* restrict 
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_HAS_VOLUMES)
-uint Material_GetExteriorVolumeWithoutDynamic(__global const Material* restrict material
+uint Material_GetExteriorVolumeWithoutDynamic(__global const Material *material,
+		__global HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetExteriorVolume(material);
 }

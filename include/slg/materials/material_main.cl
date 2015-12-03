@@ -182,8 +182,11 @@ uint Material_GetInteriorVolume(const uint matIndex,
 #endif
 			MATERIALS_PARAM);
 	else
-		return Material_GetInteriorVolumeWithoutDynamic(material
-				MATERIALS_PARAM);
+		return Material_GetInteriorVolumeWithoutDynamic(material, hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+			, passThroughEvent
+#endif
+			MATERIALS_PARAM);
 }
 #endif
 
@@ -207,8 +210,11 @@ uint Material_GetExteriorVolume(const uint matIndex,
 #endif
 			MATERIALS_PARAM);
 	else
-		return Material_GetExteriorVolumeWithoutDynamic(material
-				MATERIALS_PARAM);
+		return Material_GetExteriorVolumeWithoutDynamic(material, hitPoint
+#if defined(PARAM_HAS_PASSTHROUGH)
+			, passThroughEvent
+#endif
+			MATERIALS_PARAM);
 }
 #endif
 
