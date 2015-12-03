@@ -145,6 +145,10 @@ private:
 	int newFilmSize[2];
 
 	bool optRealTimeMode;
+	// Use by RT modes to keep track of dropped frames (or not). '+' sign means
+	// dropped frames while '-' not dropped
+	int droppedFramesCount;
+	u_int refreshDecoupling;
 
 	// Mouse related information
 	float optMoveScale;
@@ -156,7 +160,7 @@ private:
 	double lastMouseUpdate;
 
 	// Same GUI loop statistic
-	double guiLoopTime, guiSleepTime, guiFilmUpdateTime;
+	double guiLoopTimeShortAvg, guiLoopTimeLongAvg, guiSleepTime, guiFilmUpdateTime;
 };
 
 #define LA_LOG(a) { std::stringstream _LUXCOREUI_LOG_LOCAL_SS; _LUXCOREUI_LOG_LOCAL_SS << a; LuxCoreApp::LogHandler(_LUXCOREUI_LOG_LOCAL_SS.str().c_str()); }

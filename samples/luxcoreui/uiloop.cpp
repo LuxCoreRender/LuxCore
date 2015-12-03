@@ -376,6 +376,7 @@ void LuxCoreApp::RunApp() {
 	double lastLoop = WallClockTime();
 	double lastScreenRefresh = WallClockTime();
 	double lastFrameBufferSizeRefresh = WallClockTime();
+	u_int currentFrame = 0;
 	while (!glfwWindowShouldClose(window)) {
 		//----------------------------------------------------------------------
 		// Refresh the screen
@@ -464,8 +465,40 @@ void LuxCoreApp::RunApp() {
 
 		// Real-time modes refresh the rendering texture at every frame
 		if (optRealTimeMode) {
-			session->WaitNewFrame();
-			RefreshRenderingTexture();
+			// Check if I'm running to slow and the GUI is becoming not responsive
+			// (i.e. when the loop runs at less than 50Hz)
+			if (guiLoopTimeShortAvg > 0.02) {
+				// Increase the drop count proportional to the delay
+				int dropAmount = Clamp(int((guiLoopTimeShortAvg - 0.02) / 0.02), 1, 10);
+				//LA_LOG("Drop amount: " << dropAmount);
+				droppedFramesCount += dropAmount;
+
+				// If I have dropped more than 25 frames increase the refresh decoupling
+				if (droppedFramesCount > 25) {
+					++refreshDecoupling;
+					droppedFramesCount = 0;
+				}
+			} else {
+				// I use long avg. for this check: fast to increase the
+				// decoupling and slow to decrease
+				if (guiLoopTimeLongAvg <= 0.02) {
+					--droppedFramesCount;
+
+					// If I have done ok more than 150 frames (about 3 secs)
+					// decrease the refresh decoupling
+					if (droppedFramesCount < -150) {
+						refreshDecoupling = Max(1u, refreshDecoupling - 1);
+						droppedFramesCount = 0;
+					}
+				}
+			}
+			//LA_LOG("Dropped frames count: " << droppedFramesCount << " (Refresh decoupling = " << refreshDecoupling << ")");
+
+			// Refresh the rendering texture only if I'm not dropping frames
+			if (currentFrame % refreshDecoupling == 0) {
+				session->WaitNewFrame();
+				RefreshRenderingTexture();
+			}
 		} else {
 			const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<u_int>() / 1000.0;
 			currentTime = WallClockTime();
@@ -485,17 +518,19 @@ void LuxCoreApp::RunApp() {
 			//LA_LOG("Loop time: " << loopTime * 1000.0 << "ms");
 			lastLoop = currentTime;
 
+			// The average over last 20 frames
+			guiLoopTimeShortAvg += (1.0 / 20.0) * (loopTime - guiLoopTimeShortAvg);
 			// The average over last 200 frames
-			guiLoopTime += (1.0 / 200.0) * (loopTime - guiLoopTime);
+			guiLoopTimeLongAvg += (1.0 / 200.0) * (loopTime - guiLoopTimeLongAvg);
 
 			if (optRealTimeMode)
 				guiSleepTime = 0.0;
 			else {
 				// The UI loop runs at 50HZ
-				if (guiLoopTime < 0.02) {
-					const double sleepTime = (0.02 - guiLoopTime) * 0.99;
+				if (guiLoopTimeLongAvg < 0.02) {
+					const double sleepTime = (0.02 - guiLoopTimeLongAvg) * 0.99;
 					const u_int msSleepTime = (u_int)(sleepTime * 1000.0);
-					//LA_LOG("Sleep time: " << msSleepTime<< "ms");
+					//LA_LOG("Sleep time: " << msSleepTime << "ms");
 
 					if (msSleepTime > 0)
 						boost::this_thread::sleep_for(boost::chrono::milliseconds(msSleepTime));
@@ -507,6 +542,8 @@ void LuxCoreApp::RunApp() {
 			}
 		} else
 			boost::this_thread::sleep_for(boost::chrono::milliseconds(10));
+		
+		++currentFrame;
 	}
 
 	//--------------------------------------------------------------------------

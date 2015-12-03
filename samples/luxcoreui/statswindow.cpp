@@ -45,9 +45,12 @@ void StatsWindow::Draw() {
 
 		// GUI information
 		if (ImGui::CollapsingHeader("GUI information", NULL, true, true)) {
-			LuxCoreApp::ColoredLabelText("GUI loop time:", "%fms", 1000.0 * app->guiLoopTime);
+			LuxCoreApp::ColoredLabelText("GUI loop time:", "%fms (%fms)",
+					1000.0 * app->guiLoopTimeShortAvg, 1000.0 * app->guiLoopTimeLongAvg);
 			LuxCoreApp::ColoredLabelText("GUI sleep time:", "%fms", 1000.0 * app->guiSleepTime);
 			LuxCoreApp::ColoredLabelText("Film update time:", "%fms", 1000.0 * app->guiFilmUpdateTime);
+			LuxCoreApp::ColoredLabelText("GUI RT dropped frames count:", "%d (Refresh decoupling = %d)",
+					app->droppedFramesCount, app->refreshDecoupling);
 		}
 
 		// Rendering information
