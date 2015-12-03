@@ -1,6 +1,10 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
+scene.volumes.volglass.type = clear
+scene.volumes.volglass.absorption = 0.1 0.1 0.1
+scene.volumes.volglass.ior = 1.45
+################################################################################
 scene.textures.tex.type = imagemap
 scene.textures.tex.file = scenes/luxball/lux.png
 scene.textures.tex.gain = 1.0
@@ -12,6 +16,14 @@ scene.textures.scaled_bumpmap.type = scale
 scene.textures.scaled_bumpmap.texture1 = 0.01
 scene.textures.scaled_bumpmap.texture2 = bumpmap
 ################################################################################
+scene.materials.inner_mat.type = glass
+scene.materials.inner_mat.kr = 0.69 0.78 1.0
+scene.materials.inner_mat.kt = 0.69 0.78 1.0
+#scene.materials.inner_mat.exteriorior = 1.0
+#scene.materials.inner_mat.interiorior = 1.45
+scene.materials.inner_mat.volume.interior = volglass
+scene.materials.inner_mat.samples = 3
+##
 scene.materials.mat1.type = matte
 scene.materials.mat1.kd = 0.65 0.0 0.0
 scene.materials.mat2.type = mirror
@@ -36,7 +48,7 @@ scene.materials.whitelight.kd = 0.0 0.0 0.0
 scene.objects.room.ply = scenes/luxball/room.ply
 scene.objects.room.material = whitematte
 scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
-scene.objects.luxinner.material = whitematte
+scene.objects.luxinner.material = inner_mat
 scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
 scene.objects.luxtext.material = luxtext
 scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
