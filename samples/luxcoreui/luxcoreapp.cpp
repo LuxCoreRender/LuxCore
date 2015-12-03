@@ -52,6 +52,9 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 	currentTool = TOOL_CAMERA_EDIT;
 
 	optRealTimeMode = false;
+	droppedFramesCount = 0;
+	refreshDecoupling = 1;
+
 	optMouseGrabMode = false;
 	optMoveScale = 1.f;
 	optMoveStep = .5f;
@@ -68,7 +71,8 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 	renderFrameBufferTexMinFilter = GL_LINEAR;
 	renderFrameBufferTexMagFilter = GL_LINEAR;
 	
-	guiLoopTime = 0.0;
+	guiLoopTimeShortAvg = 0.0;
+	guiLoopTimeLongAvg = 0.0;
 	guiSleepTime = 0.0;
 	guiFilmUpdateTime = 0.0;
 }
@@ -141,6 +145,9 @@ void LuxCoreApp::RenderConfigParse(const Properties &props) {
 		if (config->ToProperties().Get("screen.refresh.interval").Get<u_int>() > 25)
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(25)));
 		optRealTimeMode = true;
+		// Reset the dropped frames counter
+		droppedFramesCount = 0;
+		refreshDecoupling = 1;
 	} else
 		optRealTimeMode = false;
 
