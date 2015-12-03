@@ -310,7 +310,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_IL
 	sampleResult->shadingNormal = task->bsdfPathVertex1.hitPoint.shadeN;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-	sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1);
+	sampleResult->materialID = BSDF_GetMaterialID(&task->bsdfPathVertex1
+				MATERIALS_PARAM);
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
 	sampleResult->objectID = BSDF_GetObjectID(&task->bsdfPathVertex1, sceneObjs);
