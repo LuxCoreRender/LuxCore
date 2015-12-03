@@ -175,7 +175,6 @@ RenderEngine *FileSaverRenderEngine::FromProperties(const RenderConfig *rcfg, Fi
 
 const Properties &FileSaverRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
-			RenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("filesaver.directory")("luxcore-exported-scene") <<
 			Property("filesaver.renderengine.type")("PATHCPU");
