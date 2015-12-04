@@ -463,48 +463,52 @@ void LuxCoreApp::RunApp() {
 		// Rendering texture refresh
 		//----------------------------------------------------------------------
 
-		// Real-time modes refresh the rendering texture at every frame
-		if (optRealTimeMode) {
-			// Check if I'm running to slow and the GUI is becoming not responsive
-			// (i.e. when the loop runs at less than 50Hz)
-			if (guiLoopTimeShortAvg > 0.02) {
-				// Increase the drop count proportional to the delay
-				int dropAmount = Clamp(int((guiLoopTimeShortAvg - 0.02) / 0.02), 1, 10);
-				//LA_LOG("Drop amount: " << dropAmount);
-				droppedFramesCount += dropAmount;
+		// Refresh (and WaitNewFrame() for RT modes) the rendering texture only
+		// if we have an active session
+		if (session) {
+			// Real-time modes refresh the rendering texture at every frame
+			if (optRealTimeMode) {
+				// Check if I'm running to slow and the GUI is becoming not responsive
+				// (i.e. when the loop runs at less than 50Hz)
+				if (guiLoopTimeShortAvg > 0.02) {
+					// Increase the drop count proportional to the delay
+					int dropAmount = Clamp(int((guiLoopTimeShortAvg - 0.02) / 0.02), 1, 10);
+					//LA_LOG("Drop amount: " << dropAmount);
+					droppedFramesCount += dropAmount;
 
-				// If I have dropped more than 25 frames increase the refresh decoupling
-				if (droppedFramesCount > 25) {
-					++refreshDecoupling;
-					droppedFramesCount = 0;
-				}
-			} else {
-				// I use long avg. for this check: fast to increase the
-				// decoupling and slow to decrease
-				if (guiLoopTimeLongAvg <= 0.02) {
-					--droppedFramesCount;
-
-					// If I have done ok more than 150 frames (about 3 secs)
-					// decrease the refresh decoupling
-					if (droppedFramesCount < -150) {
-						refreshDecoupling = Max(1u, refreshDecoupling - 1);
+					// If I have dropped more than 25 frames increase the refresh decoupling
+					if (droppedFramesCount > 25) {
+						++refreshDecoupling;
 						droppedFramesCount = 0;
 					}
-				}
-			}
-			//LA_LOG("Dropped frames count: " << droppedFramesCount << " (Refresh decoupling = " << refreshDecoupling << ")");
+				} else {
+					// I use long avg. for this check: fast to increase the
+					// decoupling and slow to decrease
+					if (guiLoopTimeLongAvg <= 0.02) {
+						--droppedFramesCount;
 
-			// Refresh the rendering texture only if I'm not dropping frames
-			if (currentFrame % refreshDecoupling == 0) {
-				session->WaitNewFrame();
-				RefreshRenderingTexture();
-			}
-		} else {
-			const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<u_int>() / 1000.0;
-			currentTime = WallClockTime();
-			if (currentTime - lastScreenRefresh >= screenRefreshTime) {
-				RefreshRenderingTexture();
-				lastScreenRefresh = currentTime;
+						// If I have done ok more than 150 frames (about 3 secs)
+						// decrease the refresh decoupling
+						if (droppedFramesCount < -150) {
+							refreshDecoupling = Max(1u, refreshDecoupling - 1);
+							droppedFramesCount = 0;
+						}
+					}
+				}
+				//LA_LOG("Dropped frames count: " << droppedFramesCount << " (Refresh decoupling = " << refreshDecoupling << ")");
+
+				// Refresh the rendering texture only if I'm not dropping frames
+				if (currentFrame % refreshDecoupling == 0) {
+					session->WaitNewFrame();
+					RefreshRenderingTexture();
+				}
+			} else {
+				const double screenRefreshTime = config->ToProperties().Get("screen.refresh.interval").Get<u_int>() / 1000.0;
+				currentTime = WallClockTime();
+				if (currentTime - lastScreenRefresh >= screenRefreshTime) {
+					RefreshRenderingTexture();
+					lastScreenRefresh = currentTime;
+				}
 			}
 		}
 
