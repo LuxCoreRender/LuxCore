@@ -45,7 +45,9 @@ public:
 	friend class RTBiasPathOCLRenderEngine;
 
 protected:
+	virtual std::string AdditionalKernelOptions();
 	virtual void RenderThreadImpl();
+
 	void UpdateOCLBuffers(const EditActionList &updateActions);
 
 	TileRepository::Tile *tile;
@@ -91,10 +93,14 @@ protected:
 	virtual void StopLockLess();
 	virtual void UpdateFilmLockLess();
 
+	// Must be a power of 2
+	u_int resolutionReduction;
+
 	EditActionList updateActions;
 
 	boost::barrier *frameBarrier;
 	double frameStartTime, frameTime;
+	u_int frameCounter;
 };
 
 }

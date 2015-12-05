@@ -50,9 +50,13 @@ void RTBiasPathOCLRenderEngine::StartLockLess() {
 	// Rendering parameters
 	//--------------------------------------------------------------------------
 
+	const Properties &cfg = renderConfig->cfg;
+	resolutionReduction = Min(RoundUpPow2(Max(1, cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction")).Get<int>())), 64);
+
 	BiasPathOCLRenderEngine::StartLockLess();
 
 	tileRepository->enableRenderingDonePrint = false;
+	frameCounter = 0;
 
 	// To synchronize the start of all threads
 	frameBarrier->wait();
@@ -85,12 +89,14 @@ void RTBiasPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) 
 	BiasPathOCLRenderEngine::EndSceneEdit(editActions);
 	updateActions.AddActions(editActions.GetActions());
 
+	frameCounter = 0;
+
 	if (requireSync) {
 		// This is required to move the rendering thread forward
 		frameBarrier->wait();
 
 		// Re-initialize the tile queue for the next frame
-		tileRepository->Restart();
+		tileRepository->Restart(frameCounter);
 
 		frameBarrier->wait();
 	}
@@ -110,7 +116,7 @@ void RTBiasPathOCLRenderEngine::WaitNewFrame() {
 	frameBarrier->wait();
 
 	// Re-initialize the tile queue for the next frame
-	tileRepository->Restart();
+	tileRepository->Restart(frameCounter++);
 
 	frameBarrier->wait();
 
@@ -144,7 +150,8 @@ Properties RTBiasPathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("biaspath.lights.firstvertexsamples")) <<
 			cfg.Get(GetDefaultProps().Get("biaspath.devices.maxtiles")) <<
 			//------------------------------------------------------------------
-			cfg.Get(GetDefaultProps().Get("rtpath.miniterations"));
+			cfg.Get(GetDefaultProps().Get("rtpath.miniterations")) <<
+			cfg.Get(GetDefaultProps().Get("rtpath.resolutionreduction"));
 }
 
 RenderEngine *RTBiasPathOCLRenderEngine::FromProperties(const RenderConfig *rcfg, Film *flm, boost::mutex *flmMutex) {
@@ -170,7 +177,8 @@ const Properties &RTBiasPathOCLRenderEngine::GetDefaultProps() {
 			Property("biaspath.lights.firstvertexsamples")(1) <<
 			Property("biaspath.devices.maxtiles")(1) <<
 			//------------------------------------------------------------------
-			Property("rtpath.miniterations")(2);
+			Property("rtpath.miniterations")(2) <<
+			Property("rtpath.resolutionreduction")(4);
 
 	return props;
 }

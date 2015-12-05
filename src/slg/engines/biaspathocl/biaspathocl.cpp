@@ -122,7 +122,9 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 	maxPathDepth.specularDepth = Max(0, cfg.Get(defaultProps.Get("biaspath.pathdepth.specular")).Get<int>());
 
 	// Samples settings
-	aaSamples = Max(1, cfg.Get(defaultProps.Get("biaspath.sampling.aa.size")).Get<int>());
+	aaSamples = (GetType() == BIASPATHOCL) ?
+		Max(1, cfg.Get(defaultProps.Get("biaspath.sampling.aa.size")).Get<int>()) :
+		1;
 	diffuseSamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.diffuse.size")).Get<int>());
 	glossySamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.glossy.size")).Get<int>());
 	specularSamples = Max(0, cfg.Get(defaultProps.Get("biaspath.sampling.specular.size")).Get<int>());
@@ -169,6 +171,10 @@ void BiasPathOCLRenderEngine::StartLockLess() {
 			tileWidth = (film->GetWidth() + 1) / intersectionDevices.size();
 			tileHeight = film->GetHeight();
 		}
+
+		// Tile width must be a multiple of RESOLUTION_REDUCTION to support RT variable resolution rendering
+		RTBiasPathOCLRenderEngine *rtengine = (RTBiasPathOCLRenderEngine *)this;
+		tileWidth = RoundUp(tileWidth, rtengine->resolutionReduction);
 
 		tileProps <<
 				Property("tile.size.x")(tileWidth) <<

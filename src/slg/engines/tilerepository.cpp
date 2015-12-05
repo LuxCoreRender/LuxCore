@@ -90,13 +90,13 @@ void TileRepository::Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm)->Init();
 }
 
-void TileRepository::Tile::Restart() {
+void TileRepository::Tile::Restart(const u_int startPass) {
 	if (allPassFilm)
 		allPassFilm->Reset();
 	if (evenPassFilm)
 		evenPassFilm->Reset();
 
-	pass = 0;
+	pass = startPass;
 	error = numeric_limits<float>::infinity();
 	hasEnoughWarmUpSample = false;
 	done = false;
@@ -269,13 +269,13 @@ void TileRepository::Clear() {
 	convergedTiles.clear();
 }
 
-void TileRepository::Restart() {
+void TileRepository::Restart(const u_int startPass) {
 	todoTiles.clear();
 	pendingTiles.clear();
 	convergedTiles.clear();
 
 	BOOST_FOREACH(Tile *tile, tileList) {
-		tile->Restart();
+		tile->Restart(startPass);
 		todoTiles.push(tile);		
 	}
 	
