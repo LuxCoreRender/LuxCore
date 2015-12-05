@@ -472,12 +472,12 @@ void LuxCoreApp::RunApp() {
 				// (i.e. when the loop runs at less than 50Hz)
 				if (guiLoopTimeShortAvg > 0.02) {
 					// Increase the drop count proportional to the delay
-					int dropAmount = Clamp(int((guiLoopTimeShortAvg - 0.02) / 0.02), 1, 10);
+					int dropAmount = Clamp(int((guiLoopTimeShortAvg - 0.02) / 0.02), 1, 20);
 					//LA_LOG("Drop amount: " << dropAmount);
 					droppedFramesCount += dropAmount;
 
-					// If I have dropped more than 25 frames increase the refresh decoupling
-					if (droppedFramesCount > 25) {
+					// If I have dropped more than 20 frames increase the refresh decoupling
+					if (droppedFramesCount > 20) {
 						++refreshDecoupling;
 						droppedFramesCount = 0;
 					}

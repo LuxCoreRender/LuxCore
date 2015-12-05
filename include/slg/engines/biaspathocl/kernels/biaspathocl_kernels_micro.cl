@@ -46,6 +46,7 @@
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GENERATE_CAMERA_RAY(
+		const uint pass,
 		const uint tileStartX, const uint tileStartY,
 		const uint tileWidth, const uint tileHeight,
 		KERNEL_ARGS
@@ -53,10 +54,24 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void RenderSample_MK_GE
 	const size_t gid = get_global_id(0);
 	__global GPUTask *task = &tasks[gid];
 
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+	// RTBIASPATHOCL renders first passes at a lower resolution
+	// (PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)
+	// and always with only one sample per pixel
+
+	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >> min(pass, 16u));
+
+	const uint sampleIndex = 0;
+	const uint samplePixelIndex = gid * resolutionReduction;
+	const uint samplePixelX = samplePixelIndex % PARAM_TILE_WIDTH;
+	const uint samplePixelY = samplePixelIndex / PARAM_TILE_WIDTH * resolutionReduction;
+#else
+	// Normal BIASPATHOCL
 	const uint sampleIndex = gid % (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
 	const uint samplePixelIndex = gid / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES);
 	const uint samplePixelX = samplePixelIndex % PARAM_TILE_WIDTH;
 	const uint samplePixelY = samplePixelIndex / PARAM_TILE_WIDTH;
+#endif
 
 	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES) ||
 			(samplePixelX >= tileWidth) ||

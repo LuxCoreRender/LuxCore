@@ -1735,6 +1735,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitStat(
 //------------------------------------------------------------------------------
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
+		const uint pass,
 		const uint tileStartX, const uint tileStartY,
 		const uint tileWidth, const uint tileHeight,
 		const uint engineFilmWidth, const uint engineFilmHeight,
@@ -1744,18 +1745,29 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 		) {
 	const size_t gid = get_global_id(0);
 
-	uint sampleX, sampleY;
-	sampleX = gid % PARAM_TILE_WIDTH;
-	sampleY = gid / PARAM_TILE_WIDTH;
+	const uint pixelX = gid % PARAM_TILE_WIDTH;
+	const uint pixelY = gid / PARAM_TILE_WIDTH;
 
 	if ((gid >= PARAM_TILE_WIDTH * PARAM_TILE_HEIGHT) ||
-			(sampleX >= tileWidth) ||
-			(sampleY >= tileHeight) ||
-			(tileStartX + sampleX >= engineFilmWidth) ||
-			(tileStartY + sampleY >= engineFilmHeight))
+			(pixelX >= tileWidth) ||
+			(pixelY >= tileHeight) ||
+			(tileStartX + pixelX >= engineFilmWidth) ||
+			(tileStartY + pixelY >= engineFilmHeight))
 		return;
 
+#if defined(RENDER_ENGINE_RTBIASPATHOCL)
+	// RTBIASPATHOCL renders first passes at a lower resolution
+	// (PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION x PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION)
+	// and always with only one sample per pixel
+
+	const uint resolutionReduction = max(1, PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION >> min(pass, 16u));
+
+	const uint index = pixelX / resolutionReduction +
+			(pixelY / resolutionReduction) * (PARAM_TILE_WIDTH / resolutionReduction);
+#else
+	// Normal BIASPATHOCL
 	const uint index = gid * PARAM_AA_SAMPLES * PARAM_AA_SAMPLES;
+#endif
 	__global SampleResult *sampleResult = &taskResults[index];
 
 	//--------------------------------------------------------------------------
@@ -1799,20 +1811,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void MergePixelSamples(
 	//--------------------------------------------------------------------------
 
 #if (PARAM_AA_SAMPLES == 1)
-	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
+	Film_AddSample(pixelX, pixelY, sampleResult, PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
 			FILM_PARAM);
 #else
 	SampleResult result = sampleResult[0];
 	uint totalRaysCount = 0;
-	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i) {
+	for (uint i = 1; i < PARAM_AA_SAMPLES * PARAM_AA_SAMPLES; ++i)
 		SR_Accumulate(&sampleResult[i], &result);
-	}
 	SR_Normalize(&result, 1.f / (PARAM_AA_SAMPLES * PARAM_AA_SAMPLES));
 
 	// I have to save result in __global space in order to be able
 	// to use Film_AddSample(). OpenCL can be so stupid some time...
 	sampleResult[0] = result;
-	Film_AddSample(sampleX, sampleY, &sampleResult[0], PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
+	Film_AddSample(pixelX, pixelY, sampleResult, PARAM_AA_SAMPLES * PARAM_AA_SAMPLES
 			FILM_PARAM);
 #endif
 }

@@ -52,6 +52,18 @@ void RTBiasPathOCLRenderThread::BeginSceneEdit() {
 void RTBiasPathOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
 }
 
+string RTBiasPathOCLRenderThread::AdditionalKernelOptions() {
+	RTBiasPathOCLRenderEngine *engine = (RTBiasPathOCLRenderEngine *)renderEngine;
+
+	stringstream ss;
+	ss.precision(6);
+	ss << scientific <<
+			BiasPathOCLRenderThread::AdditionalKernelOptions() <<
+			" -D PARAM_RTBIASPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction;
+
+	return ss.str();
+}
+
 void RTBiasPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions) {
 	//--------------------------------------------------------------------------
 	// Update OpenCL buffers
@@ -201,7 +213,10 @@ void RTBiasPathOCLRenderThread::RenderThreadImpl() {
 			//------------------------------------------------------------------
 
 			if (threadIndex == 0) {
-				if (pendingFilmClear) {
+				// Clear the film if pendingFilmClear or I'm rendering the very first pass
+				// without resolution reduction
+				const uint resolutionReduction = tile ? (engine->resolutionReduction >> Min(tile->pass, 16u)) : 1;
+				if (pendingFilmClear || (resolutionReduction == 1)) {
 					boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
 					engine->film->Reset();
 					pendingFilmClear = false;

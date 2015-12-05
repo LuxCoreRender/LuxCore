@@ -38,7 +38,7 @@ public:
 				const u_int xStart, const u_int yStart);
 		virtual ~Tile();
 
-		void Restart();
+		void Restart(const u_int pass = 0);
 		void VarianceClamp(Film &tileFilm);
 		void AddPass(const Film &tileFilm);
 		
@@ -64,7 +64,7 @@ public:
 	~TileRepository();
 
 	void Clear();
-	void Restart();
+	void Restart(const u_int pass = 0);
 	void GetPendingTiles(std::deque<const Tile *> &tiles);
 	void GetNotConvergedTiles(std::deque<const Tile *> &tiles);
 	void GetConvergedTiles(std::deque<const Tile *> &tiles);

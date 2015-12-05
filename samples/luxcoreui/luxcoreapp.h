@@ -145,7 +145,7 @@ private:
 	int newFilmSize[2];
 
 	bool optRealTimeMode;
-	// Use by RT modes to keep track of dropped frames (or not). '+' sign means
+	// Used by RT modes to keep track of dropped frames (or not). '+' sign means
 	// dropped frames while '-' not dropped
 	int droppedFramesCount;
 	u_int refreshDecoupling;
