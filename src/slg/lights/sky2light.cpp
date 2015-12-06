@@ -166,6 +166,7 @@ Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
 
 void SkyLight2::Preprocess() {
 	absoluteSunDir = Normalize(lightToWorld * localSunDir);
+	absoluteUpDir = Normalize(lightToWorld * Vector(0.f, 0.f, 1.f));
 
 	ComputeModel(turbidity, groundAlbedo, M_PI * .5f - SphericalTheta(absoluteSunDir), model);
 
@@ -181,7 +182,7 @@ void SkyLight2::Preprocess() {
 	radianceTerm = model[9];
 }
 
-void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
+void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData, float *radianceTermData) const {
@@ -189,6 +190,12 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData,
 		absoluteSunDirData[0] = absoluteSunDir.x;
 		absoluteSunDirData[1] = absoluteSunDir.y;
 		absoluteSunDirData[2] = absoluteSunDir.z;
+	}
+
+	if (absoluteUpDirData) {
+		absoluteUpDirData[0] = absoluteUpDir.x;
+		absoluteUpDirData[1] = absoluteUpDir.y;
+		absoluteUpDirData[2] = absoluteUpDir.z;
 	}
 
 	if (aTermData) {
@@ -339,7 +346,14 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 		*emissionPdfW = 1.f / (4.f * M_PI * M_PI * envRadius * envRadius);
 	}
 
-	return gain * ComputeRadiance(-dir);
+	const Vector w = -dir;
+	if (hasGround && (Dot(w, absoluteUpDir) < 0.f)) {
+		// Higher hemisphere
+		return groundColor;
+	} else {
+		// Lower hemisphere
+		return gain * ComputeRadiance(w);
+	}
 }
 
 Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
@@ -350,6 +364,8 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache) const {
 	props.Set(Property(prefix + ".dir")(localSunDir));
 	props.Set(Property(prefix + ".turbidity")(turbidity));
 	props.Set(Property(prefix + ".groundalbedo")(groundAlbedo));
+	props.Set(Property(prefix + ".ground.enable")(hasGround));
+	props.Set(Property(prefix + ".ground.color")(groundColor));
 
 	return props;
 }

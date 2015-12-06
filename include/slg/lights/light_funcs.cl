@@ -293,9 +293,18 @@ float3 SkyLight2_ComputeRadiance(__global const LightSource *skyLight2, const fl
 float3 SkyLight2_GetRadiance(__global const LightSource *skyLight2, const float3 dir,
 		float *directPdfA) {
 	*directPdfA = 1.f / (4.f * M_PI_F);
-	const float3 s = SkyLight2_ComputeRadiance(skyLight2, -dir);
+	
+	const float3 w = -dir;
+	if (skyLight2->notIntersectable.sky2.hasGround &&
+			(dot(w, VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteUpDir.x)) < 0.f)) {
+		// Higher hemisphere
+		return VLOAD3F(skyLight2->notIntersectable.sky2.groundColor.c);
+	} else {
+		// Lower hemisphere
+		const float3 s = SkyLight2_ComputeRadiance(skyLight2, w);
 
-	return VLOAD3F(skyLight2->notIntersectable.gain.c) * s;
+		return VLOAD3F(skyLight2->notIntersectable.gain.c) * s;
+	}
 }
 
 float3 SkyLight2_Illuminate(__global const LightSource *skyLight2,
