@@ -81,6 +81,14 @@ bool CompiledScene::IsTextureCompiled(const TextureType type) const {
 	return (usedTextureTypes.find(type) != usedTextureTypes.end());
 }
 
+bool CompiledScene::IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const {
+	return (usedImageMapFormats.find(type) != usedImageMapFormats.end());
+}
+
+bool CompiledScene::IsImageMapChannelCountCompiled(const u_int count) const {
+	return (usedImageMapChannels.find(count) != usedImageMapChannels.end());
+}
+
 bool CompiledScene::HasBumpMaps() const {
 	return useBumpMapping;
 }
